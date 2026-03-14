@@ -840,16 +840,13 @@ def _release(context):
                     _run_local(context, "mkdir -p target/release/data", module)
                     _run_local(context, "mkdir -p target/release/image", module)
                     module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
-
-
-
-
                     if isdir(module_go_main_path):
                         target_arch = HOSTS[_get_host_label(host)][1]
                         if target_arch == "x86_64":
                             target_arch = "amd64"
                         target_os = HOSTS[_get_host_label(host)][3]
                         module_go_bin = join(ROOT_MODULE_DIR, module, "target/package/main/resources")
+                        _run_local(context, "mkdir -p {}".format(module_go_bin), module)
                         _run_local(context, "GOOS={} GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
                             target_os,
                             target_arch,
@@ -857,9 +854,6 @@ def _release(context):
                             module_go_bin,
                             module_go_bin,
                         ), module_go_main_path)
-
-
-
                     Path(join(ROOT_MODULE_DIR, module, "target/release/hosts")) \
                         .write_text("\n".join(["{}-{}".format(HOSTS[host][0], host) for host in HOSTS]) + "\n")
                     if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/install*")):
