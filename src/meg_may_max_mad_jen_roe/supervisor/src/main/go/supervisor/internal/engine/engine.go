@@ -233,7 +233,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		process := func(guid metric.RecordGUID, record *metric.Record) {
 			if record.Topic != "" && record.Value.Pulse != nil {
 				if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
-					client.Publish(record.Topic, 0, false, payload)
+					client.Publish(record.Topic, 0, true, payload)
 				} else {
 					slog.Debug("run all probes publish loop: marshal failed", "topic", record.Topic, "error", jsonErr)
 				}
