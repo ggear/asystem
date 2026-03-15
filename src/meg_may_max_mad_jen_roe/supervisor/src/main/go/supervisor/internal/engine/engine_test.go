@@ -49,7 +49,7 @@ func TestEngine_RunAllProbesOnce(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testutil.RequiresDocker(t)
-			t.Cleanup(config.ResetCache)
+			t.Cleanup(config.Reset)
 			if tt.createServiceCount > 0 {
 				var createServiceNames []string
 				for i := 0; i < tt.createServiceCount; i++ {
@@ -112,7 +112,7 @@ func TestEngine_RunListeningProbesLoop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testutil.RequiresDocker(t)
-			t.Cleanup(config.ResetCache)
+			t.Cleanup(config.Reset)
 			if tt.createServiceCount > 0 {
 				var createServiceNames []string
 				for i := 0; i < tt.createServiceCount; i++ {

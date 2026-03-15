@@ -28,7 +28,7 @@ var (
 	configCacheMu sync.RWMutex
 )
 
-func ResetCache() {
+func Reset() {
 	configCacheMu.Lock()
 	defer configCacheMu.Unlock()
 	clear(configCache)

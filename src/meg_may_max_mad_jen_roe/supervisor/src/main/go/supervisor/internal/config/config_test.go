@@ -107,7 +107,7 @@ func TestConfig_Version(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Cleanup(ResetCache)
+			t.Cleanup(Reset)
 			config := Load(testCase.configPath)
 			if testCase.expectedError {
 				t.Fatalf("Got no error, expected error for %s", testCase.name)
@@ -178,7 +178,7 @@ func TestConfig_Host(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Cleanup(ResetCache)
+			t.Cleanup(Reset)
 			if testCase.envHost != "" {
 				t.Setenv("SUPERVISOR_HOST", testCase.envHost)
 			}
@@ -260,7 +260,7 @@ func TestConfig_Broker(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Cleanup(ResetCache)
+			t.Cleanup(Reset)
 			if testCase.envHost != "" {
 				t.Setenv("VERNEMQ_HOST", testCase.envHost)
 			}
@@ -345,7 +345,7 @@ func TestConfig_Database(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Cleanup(ResetCache)
+			t.Cleanup(Reset)
 			if testCase.envHost != "" {
 				t.Setenv("INFLUXDB_HOST", testCase.envHost)
 			}
@@ -437,7 +437,7 @@ func TestConfig_Hosts(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Cleanup(ResetCache)
+			t.Cleanup(Reset)
 			config := Load(testCase.configPath)
 			hosts := config.Hosts()
 			if !reflect.DeepEqual(hosts, testCase.expected) {
@@ -533,7 +533,7 @@ func TestConfig_Services(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Cleanup(ResetCache)
+			t.Cleanup(Reset)
 			config := Load(testCase.configPath)
 			services := config.Services(testCase.hostName)
 			if !reflect.DeepEqual(services, testCase.expected) {
