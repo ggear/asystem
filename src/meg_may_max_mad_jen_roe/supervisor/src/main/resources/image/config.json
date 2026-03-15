@@ -11,12 +11,6 @@
     },
     "schema": [
       {
-        "host": "macbook-roe",
-        "services": [
-          "supervisor"
-        ]
-      },
-      {
         "host": "macmini-mad",
         "services": [
           "monitor",

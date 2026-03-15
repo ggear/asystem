@@ -1059,6 +1059,10 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
     _run_local(context, "echo 'SERVICE_DATA_DIR={}' >> {}/.env"
                .format("{}/{}/{}".format(HOME_DIR, service, _get_versions()[0]) if is_release else
                        "{}/{}/target/runtime-system".format(ROOT_MODULE_DIR, module), working_path), module)
+    _run_local(context, "echo 'SERVICE_FORM_FACTOR={}' >> {}/.env"
+               .format(
+        HOSTS[_get_host_label(filter_host)][4] if (is_release and filter_host is not None) else "server",
+        working_path), module)
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
         host_names_prod = _get_hosts(dependency) if _name(module) != _name(dependency) or \

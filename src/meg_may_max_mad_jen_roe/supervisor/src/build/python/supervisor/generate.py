@@ -1,6 +1,6 @@
 from operator import itemgetter
 
-from fabfile import _get_modules_by_hosts
+from fabfile import _get_modules_by_hosts, _get_host_label, HOSTS
 from homeassistant.generate import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
@@ -24,6 +24,13 @@ if __name__ == "__main__":
     write_entity_metadata("supervisor", join(DIR_ROOT, "src/main/resources/image/mqtt"), metadata_supervisor_df,
                           "homeassistant/+/supervisor/#", "asystem/supervisor/#")
 
+    # Build config
+    hosts = []
+    modules_all = _get_modules_by_hosts("docker-compose.yml")
+    modules_server = {}
+    for host, services in modules_all.items():
+        if HOSTS[_get_host_label(host)][4] == "server":
+            modules_server[host] = sorted(modules_all[host])
     metadata_supervisor_path = abspath(join(DIR_ROOT, "src/main/resources/image/config.json"))
     with open(metadata_supervisor_path, 'w') as metadata_supervisor_file:
         metadata_supervisor_file.write(json.dumps({
@@ -40,8 +47,7 @@ if __name__ == "__main__":
                 "schema": [{
                     "host": host,
                     "services": sorted(services)
-                } for host, services in sorted(_get_modules_by_hosts("docker-compose.yml").items(), key=itemgetter(0))]
+                } for host, services in sorted(modules_server.items(), key=itemgetter(0))]
             },
         }, indent=2))
     print("Build generate script [supervisor] service metadata persisted to [{}]".format(metadata_supervisor_path))
-

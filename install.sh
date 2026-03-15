@@ -33,7 +33,8 @@ fi
 rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
 touch .env
 chmod 600 .env
-if [ $(uname) == "Linux" ]; then
+source .env
+if [ ${SERVICE_FORM_FACTOR} == "server" ]; then
   [ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
   if [ -f "docker-compose.yml" ]; then
     docker compose --compatibility --ansi never up --force-recreate -d

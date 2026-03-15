@@ -54,9 +54,6 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 }
 
 func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
-	streamHostStatusMu.Lock()
-	streamHostStatus = make(map[string]bool)
-	streamHostStatusMu.Unlock()
 	for host, ids := range cache.ListenerIDs() {
 		for _, id := range ids {
 			record := metric.NewRecord(metric.NewNilValue())
@@ -78,7 +75,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			guid := b.GUID
 			client.Subscribe(b.Topic, 0, func(_ mqtt.Client, msg mqtt.Message) {
-				if !isOnline(guid.Host) {
+				if !isHostOnline(guid.Host) {
 					return
 				}
 				var value metric.ValueData
@@ -111,7 +108,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				return
 			}
 			hostName := tokens[1]
-			if !isOnline(hostName) {
+			if !isHostOnline(hostName) {
 				return
 			}
 			for _, b := range cache.RegisterService(hostName, serviceName) {
@@ -129,9 +126,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			payload := strings.TrimSpace(string(msg.Payload()))
 			switch payload {
 			case hostStatusOnline:
-				storeOnline(hostName, true)
+				storeHostStatus(hostName, true)
 			case hostStatusOffline:
-				storeOnline(hostName, false)
+				storeHostStatus(hostName, false)
 				for _, svc := range cache.Services(hostName) {
 					cache.Evict(hostName, svc)
 				}
@@ -144,7 +141,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 		})
 	}
-	client, err := brokerConnect(configPath, onConnect)
+	client, err := brokerConnect(configPath, onConnect, "", "")
 	if err != nil {
 		slog.Error("run listening stream loop", "error", err)
 		return
@@ -202,15 +199,14 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		slog.Error("run all probes publish loop: create failed", "error", err)
 		return
 	}
-	client, err := brokerConnect(configPath, nil)
+	hostName := config.LocalHostName()
+	statusTopic := "supervisor/" + hostName + "/status"
+	client, err := brokerConnect(configPath, nil, statusTopic, hostStatusOffline)
 	if err != nil {
 		slog.Error("run all probes publish loop: broker connect failed", "error", err)
 		return
 	}
 	defer client.Disconnect(250)
-	hostName := config.LocalHostName()
-	snapshotTopic := "supervisor/" + hostName + "/snapshot"
-	statusTopic := "supervisor/" + hostName + "/status"
 	var lineProtocol strings.Builder
 	err = probe.Run(ctx, func(isHeartbeat bool) {
 		lineProtocol.Reset()
@@ -284,9 +280,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			lineProtocol.WriteString(ts)
 			lineProtocol.WriteByte('\n')
 		}
+
+		// TODO: Publish to database
 		if lineProtocol.Len() > 0 {
-			client.Publish(snapshotTopic, 0, false, lineProtocol.String())
 		}
+
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Error("run all probes publish loop: run failed", "error", err)
@@ -299,19 +297,23 @@ const (
 )
 
 var (
-	streamHostStatusMu sync.RWMutex
-	streamHostStatus   = make(map[string]bool)
+	hostStatusMutex sync.RWMutex
+	hostStatus      map[string]bool
 )
 
-func isOnline(hostName string) bool {
-	streamHostStatusMu.RLock()
-	online, known := streamHostStatus[hostName]
-	streamHostStatusMu.RUnlock()
+func init() {
+	hostStatus = make(map[string]bool)
+}
+
+func isHostOnline(hostName string) bool {
+	hostStatusMutex.RLock()
+	online, known := hostStatus[hostName]
+	hostStatusMutex.RUnlock()
 	return !known || online
 }
 
-func storeOnline(hostName string, online bool) {
-	streamHostStatusMu.Lock()
-	streamHostStatus[hostName] = online
-	streamHostStatusMu.Unlock()
+func storeHostStatus(hostName string, online bool) {
+	hostStatusMutex.Lock()
+	hostStatus[hostName] = online
+	hostStatusMutex.Unlock()
 }

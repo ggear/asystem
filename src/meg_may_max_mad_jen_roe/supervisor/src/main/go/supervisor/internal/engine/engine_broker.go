@@ -17,7 +17,7 @@ func (b *brokerDeletesListener) Unsubscribe(topic string) {
 	b.client.Unsubscribe(topic)
 }
 
-func brokerConnect(configPath string, onConnect func(mqtt.Client)) (mqtt.Client, error) {
+func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("config load failed: %w", err)
@@ -34,6 +34,9 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client)) (mqtt.Client,
 		SetConnectTimeout(5 * time.Second).
 		SetAutoReconnect(true).
 		SetOnConnectHandler(onConnect)
+	if willTopic != "" {
+		opts.SetWill(willTopic, willPayload, 1, true)
+	}
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
 	token.Wait()
