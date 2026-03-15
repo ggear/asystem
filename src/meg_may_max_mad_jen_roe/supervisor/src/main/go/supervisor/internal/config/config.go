@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"sort"
 	"sync"
 )
+
+const defaultVersion = "10.100.1000-SNAPSHOT"
 
 var DefaultConfigPath = "/var/lib/asystem/install/supervisor/latest/image/config.json"
 
@@ -22,89 +23,160 @@ type Periods struct {
 	HeartbeatSecs int
 }
 
-func Load(path string) (*Config, error) {
-	if path == "" {
-		return nil, errors.New("config path is required")
-	}
-	return load(path)
+var (
+	configCache   = map[string]*Config{}
+	configCacheMu sync.RWMutex
+)
+
+func ResetCache() {
+	configCacheMu.Lock()
+	defer configCacheMu.Unlock()
+	clear(configCache)
 }
 
-func load(path string) (*Config, error) {
+func Load(path string) *Config {
+	configCacheMu.RLock()
+	if cached, ok := configCache[path]; ok {
+		configCacheMu.RUnlock()
+		return cached
+	}
+	configCacheMu.RUnlock()
+	loaded := load(path)
+	configCacheMu.Lock()
+	configCache[path] = loaded
+	configCacheMu.Unlock()
+	return loaded
+}
+
+func load(path string) *Config {
+	result := &Config{asystem: configData{Schema: []configServices{}}}
+	if path == "" {
+		slog.Debug("config: no path provided, using defaults")
+		return result
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read config file [%s]: %w", path, err)
+		slog.Debug("config: file not found, using defaults", "path", path)
+		return result
 	}
 	var raw struct{ Asystem configData }
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("unmarshal config: %w", err)
+		slog.Warn("config: failed to parse, using defaults", "path", path, "error", err)
+		return result
 	}
-	config := Config{asystem: raw.Asystem}
-	if !VersionPattern.MatchString(config.asystem.Version) {
-		return nil, fmt.Errorf("invalid version [%s]", config.asystem.Version)
+	result.asystem = raw.Asystem
+	if result.asystem.Schema == nil {
+		result.asystem.Schema = []configServices{}
 	}
 	seenHosts := map[string]bool{}
-	for i := range config.asystem.Schema {
-		hostServices := &config.asystem.Schema[i]
-		if hostServices.Host == "" {
-			return nil, errors.New("empty host name")
+	validSchema := make([]configServices, 0, len(result.asystem.Schema))
+	for _, hostSchema := range result.asystem.Schema {
+		if hostSchema.Host == "" {
+			slog.Warn("config: empty host in schema, skipping")
+			continue
 		}
-		if seenHosts[hostServices.Host] {
-			return nil, fmt.Errorf("duplicate host [%s]", hostServices.Host)
+		if seenHosts[hostSchema.Host] {
+			slog.Warn("config: duplicate host in schema, skipping", "host", hostSchema.Host)
+			continue
 		}
-		seenHosts[hostServices.Host] = true
+		seenHosts[hostSchema.Host] = true
 		seenServices := map[string]bool{}
-		for _, service := range hostServices.Services {
+		validServices := make([]string, 0, len(hostSchema.Services))
+		for _, service := range hostSchema.Services {
 			if service == "" {
-				return nil, fmt.Errorf("empty service for host [%s]", hostServices.Host)
+				slog.Warn("config: empty service, skipping", "host", hostSchema.Host)
+				continue
 			}
 			if seenServices[service] {
-				return nil, fmt.Errorf("duplicate service [%s] on host [%s]", service, hostServices.Host)
+				slog.Warn("config: duplicate service, skipping", "host", hostSchema.Host, "service", service)
+				continue
 			}
 			seenServices[service] = true
+			validServices = append(validServices, service)
 		}
+		hostSchema.Services = validServices
+		validSchema = append(validSchema, hostSchema)
 	}
-	if config.asystem.Broker.Host == "" {
-		return nil, errors.New("broker host is required")
-	}
-	if config.asystem.Broker.Port == "" {
-		return nil, errors.New("broker port is required")
-	}
-	if config.asystem.Database.Host == "" {
-		return nil, errors.New("database host is required")
-	}
-	if config.asystem.Database.Port == "" {
-		return nil, errors.New("database port is required")
-	}
-	return &config, nil
+	result.asystem.Schema = validSchema
+	return result
 }
 
-func (s *Config) Version() string { return s.asystem.Version }
+func (s *Config) Version() string {
+	if s != nil && VersionPattern.MatchString(s.asystem.Version) {
+		return s.asystem.Version
+	}
+	return defaultVersion
+}
+
+func (s *Config) Host() string {
+	if s != nil && s.asystem.Host != "" {
+		return s.asystem.Host
+	}
+	if supervisorHost := os.Getenv("SUPERVISOR_HOST"); supervisorHost != "" {
+		return supervisorHost
+	}
+	cachedHostOnceMu.Do(func() {
+		hostName, err := os.Hostname()
+		if err != nil {
+			slog.Error("config: failed to get hostname", "error", err)
+			return
+		}
+		cachedHostName = hostName
+	})
+	return cachedHostName
+}
+
+var (
+	cachedHostName  string
+	cachedHostOnceMu sync.Once
+)
 
 func (s *Config) Broker() string {
-	host := s.asystem.Broker.Host
-	port := s.asystem.Broker.Port
-	if host == "" {
+	var brokerHost, brokerPort string
+	if s != nil {
+		brokerHost = s.asystem.Broker.Host
+		brokerPort = s.asystem.Broker.Port
+	}
+	if brokerHost == "" {
+		brokerHost = os.Getenv("VERNEMQ_HOST")
+	}
+	if brokerPort == "" {
+		brokerPort = os.Getenv("VERNEMQ_API_PORT")
+	}
+	if brokerHost == "" {
 		return ""
 	}
-	if port == "" {
-		return host
+	if brokerPort == "" {
+		return brokerHost
 	}
-	return fmt.Sprintf("%s:%s", host, port)
+	return fmt.Sprintf("%s:%s", brokerHost, brokerPort)
 }
 
 func (s *Config) Database() string {
-	host := s.asystem.Database.Host
-	port := s.asystem.Database.Port
-	if host == "" {
+	var databaseHost, databasePort string
+	if s != nil {
+		databaseHost = s.asystem.Database.Host
+		databasePort = s.asystem.Database.Port
+	}
+	if databaseHost == "" {
+		databaseHost = os.Getenv("INFLUXDB_HOST")
+	}
+	if databasePort == "" {
+		databasePort = os.Getenv("INFLUXDB_HTTP_PORT")
+	}
+	if databaseHost == "" {
 		return ""
 	}
-	if port == "" {
-		return host
+	if databasePort == "" {
+		return databaseHost
 	}
-	return fmt.Sprintf("%s:%s", host, port)
+	return fmt.Sprintf("%s:%s", databaseHost, databasePort)
 }
 
 func (s *Config) Hosts() []string {
+	if s == nil {
+		return []string{}
+	}
 	hosts := make([]string, len(s.asystem.Schema))
 	for i := range s.asystem.Schema {
 		hosts[i] = s.asystem.Schema[i].Host
@@ -114,6 +186,9 @@ func (s *Config) Hosts() []string {
 }
 
 func (s *Config) Services(host string) []string {
+	if s == nil {
+		return []string{}
+	}
 	for i := range s.asystem.Schema {
 		services := &s.asystem.Schema[i]
 		if services.Host == host {
@@ -125,22 +200,13 @@ func (s *Config) Services(host string) []string {
 	return []string{}
 }
 
-var LocalHostName = func() string {
-	cachedHostOnce.Do(func() {
-		hostName, err := os.Hostname()
-		if err != nil {
-			slog.Error("failed to get hostname", "error", err)
-			return
-		}
-		cachedHostName = hostName
-	})
-	return cachedHostName
-}
+var VersionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}(-SNAPSHOT)?$`)
 
 type Config struct{ asystem configData }
 
 type configData struct {
 	Version  string
+	Host     string
 	Broker   configEndpoint
 	Database configEndpoint
 	Schema   []configServices
@@ -155,8 +221,3 @@ type configEndpoint struct {
 	Host string
 	Port string
 }
-
-var VersionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}(-SNAPSHOT)?$`)
-
-var cachedHostName string
-var cachedHostOnce sync.Once

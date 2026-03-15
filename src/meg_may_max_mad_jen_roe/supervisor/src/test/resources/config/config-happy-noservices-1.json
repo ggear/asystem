@@ -1,6 +1,7 @@
 {
   "asystem": {
     "version": "10.100.6792",
+    "host": "macmini-mad",
     "broker": {
       "host": "vernemq.local.janeandgraham.com",
       "port": "1000"

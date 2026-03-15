@@ -1,7 +1,6 @@
 {
   "asystem": {
     "version": "10.100.6792",
-    "host": "ahost",
     "broker": {
       "host": "vernemq.local.janeandgraham.com",
       "port": "1000"

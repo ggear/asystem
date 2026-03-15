@@ -18,9 +18,10 @@ import (
 )
 
 type servicesProbe struct {
-	cache   *metric.RecordCache
-	mask    [metric.MetricMax]bool
-	periods config.Periods
+	cache    *metric.RecordCache
+	mask     [metric.MetricMax]bool
+	periods  config.Periods
+	hostName string
 
 	servicesBool           *stats.BoolStats
 	servicesMaxMemoryFloat *stats.FloatStats
@@ -50,6 +51,7 @@ type servicesProbe struct {
 
 func newServicesProbe() *servicesProbe {
 	return &servicesProbe{
+		hostName: config.Load("").Host(),
 
 		serviceBool:          make(map[string]*stats.BoolStats),
 		backupStatusBool:     make(map[string]*stats.BoolStats),
@@ -110,11 +112,9 @@ func (p *servicesProbe) create(configPath string, cache *metric.RecordCache, mas
 	p.periods = periods
 	p.servicesBool = stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
 	p.servicesMaxMemoryFloat = stats.NewFloatStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
-	c, err := config.Load(configPath)
-	if err != nil {
-		return err
-	}
-	p.configuredServiceNames = c.Services(config.LocalHostName())
+	c := config.Load(configPath)
+	p.hostName = c.Host()
+	p.configuredServiceNames = c.Services(p.hostName)
 	return nil
 }
 
@@ -127,10 +127,10 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	for name := range servicesByName {
 		polledServiceNames[name] = struct{}{}
 	}
-	for _, cachedServiceName := range p.cache.Services(config.LocalHostName()) {
+	for _, cachedServiceName := range p.cache.Services(p.hostName) {
 		if _, exists := polledServiceNames[cachedServiceName]; !exists {
-			p.cache.Delete(config.LocalHostName(), cachedServiceName)
-			p.cache.Evict(config.LocalHostName(), cachedServiceName)
+			p.cache.Delete(p.hostName, cachedServiceName)
+			p.cache.Evict(p.hostName, cachedServiceName)
 		}
 	}
 	newBool := func() *stats.BoolStats {

@@ -425,7 +425,7 @@ func TestProbeServices_Run(t *testing.T) {
 		{
 			name: "happy_evict_on_first_missing_poll",
 			setupFunc: func(p *servicesProbe, cache *metric.RecordCache) {
-				host := config.LocalHostName()
+				host := config.Load("").Host()
 				value := metric.ValueData{Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}
 				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a"), &metric.Record{Value: value})
 				p.listContainers = func(_ context.Context, _ *client.Client) ([]container.Summary, error) {
@@ -436,7 +436,7 @@ func TestProbeServices_Run(t *testing.T) {
 				if err := p.run(context.Background(), true); err != nil {
 					t.Fatalf("Got run error = %v, expected nil", err)
 				}
-				host := config.LocalHostName()
+				host := config.Load("").Host()
 				record, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a"))
 				if !ok || record == nil {
 					t.Fatalf("Got guid missing after first missing poll, expected evicted guid preserved")
@@ -449,7 +449,7 @@ func TestProbeServices_Run(t *testing.T) {
 		{
 			name: "happy_delete_on_second_missing_poll",
 			setupFunc: func(p *servicesProbe, cache *metric.RecordCache) {
-				host := config.LocalHostName()
+				host := config.Load("").Host()
 				value := metric.ValueData{Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}
 				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a"), &metric.Record{Value: value})
 				p.listContainers = func(_ context.Context, _ *client.Client) ([]container.Summary, error) {
@@ -457,7 +457,7 @@ func TestProbeServices_Run(t *testing.T) {
 				}
 			},
 			checkFunc: func(t *testing.T, p *servicesProbe, cache *metric.RecordCache) {
-				host := config.LocalHostName()
+				host := config.Load("").Host()
 				if err := p.run(context.Background(), true); err != nil {
 					t.Fatalf("Got run error on poll 1 = %v", err)
 				}
@@ -497,7 +497,7 @@ func TestProbeServices_Run(t *testing.T) {
 		{
 			name: "happy_partial_delete_on_second_missing_poll",
 			setupFunc: func(p *servicesProbe, cache *metric.RecordCache) {
-				host := config.LocalHostName()
+				host := config.Load("").Host()
 				value := metric.ValueData{Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "v"}}
 				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a"), &metric.Record{Value: value})
 				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceHealthStatus, host, "svc-a"), &metric.Record{Value: value})
@@ -506,7 +506,7 @@ func TestProbeServices_Run(t *testing.T) {
 				}
 			},
 			checkFunc: func(t *testing.T, p *servicesProbe, cache *metric.RecordCache) {
-				host := config.LocalHostName()
+				host := config.Load("").Host()
 				if err := p.run(context.Background(), true); err != nil {
 					t.Fatalf("Got run error on poll 1 = %v", err)
 				}

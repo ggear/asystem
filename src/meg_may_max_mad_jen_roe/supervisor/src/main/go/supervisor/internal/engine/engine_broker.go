@@ -18,11 +18,7 @@ func (b *brokerDeletesListener) Unsubscribe(topic string) {
 }
 
 func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
-	cfg, err := config.Load(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("config load failed: %w", err)
-	}
-	broker := cfg.Broker()
+	broker := config.Load(configPath).Broker()
 	if broker == "" {
 		return nil, errors.New("broker address is empty")
 	}

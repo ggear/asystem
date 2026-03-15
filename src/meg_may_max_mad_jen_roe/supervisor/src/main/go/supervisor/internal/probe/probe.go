@@ -62,6 +62,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 	slog.Debug("profiling", "probe", "*", "phase", "create_probe", "duration", time.Since(createStart).Truncate(time.Millisecond))
 	execProbes = probeMap
 	execPeriods = periods
+	execConfigPath = configPath
 	return nil
 }
 
@@ -270,7 +271,7 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 	if !isPulse {
 		return
 	}
-	hostName := config.LocalHostName()
+	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
 		slog.Error("metric task missing hostName name", "id", task.metricID)
 		return
@@ -303,3 +304,4 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 
 var execPeriods config.Periods
 var execProbes map[probe][metric.MetricMax]bool
+var execConfigPath string

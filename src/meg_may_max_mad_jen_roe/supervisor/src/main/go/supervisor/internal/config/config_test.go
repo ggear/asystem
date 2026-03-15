@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"reflect"
 	"supervisor/internal/testutil"
 	"testing"
@@ -32,79 +33,159 @@ func TestConfig_Version(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "sad_a_missing_file_1",
+			name:          "happy_missing_file_defaults_version",
 			configPath:    "non-existent-file.json",
-			expectedError: true,
+			expected:      defaultVersion,
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_1",
+			name:          "happy_corrupt_invalid_json_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
-			expectedError: true,
+			expected:      defaultVersion,
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_2",
+			name:          "happy_corrupt_empty_obj_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-2.json", "config"),
-			expectedError: true,
+			expected:      defaultVersion,
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_3",
+			name:          "happy_corrupt_empty_asystem_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-3.json", "config"),
-			expectedError: true,
+			expected:      defaultVersion,
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_4",
+			name:          "happy_corrupt_snapshot_version_preserved",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-4.json", "config"),
-			expectedError: true,
+			expected:      "10.100.6792-SNAPSHOT",
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_5",
+			name:          "happy_corrupt_invalid_semver_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-5.json", "config"),
-			expectedError: true,
+			expected:      defaultVersion,
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_6",
+			name:          "happy_corrupt_array_version_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-6.json", "config"),
-			expectedError: true,
+			expected:      defaultVersion,
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_7",
+			name:          "happy_corrupt_empty_version_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-7.json", "config"),
-			expectedError: true,
+			expected:      defaultVersion,
+			expectedError: false,
 		},
 		{
-			name:          "sad_duplicate_host_1",
+			name:          "happy_duplicate_host_version_preserved",
 			configPath:    testutil.FindTestFile(t, "config-sad-duplicate-host-1.json", "config"),
 			expected:      "10.100.6792",
-			expectedError: true,
+			expectedError: false,
 		},
 		{
-			name:          "sad_duplicate_service_1",
+			name:          "happy_duplicate_service_version_preserved",
 			configPath:    testutil.FindTestFile(t, "config-sad-duplicate-service-1.json", "config"),
 			expected:      "10.100.6792",
-			expectedError: true,
+			expectedError: false,
 		},
 		{
-			name:          "sad_empty_host_1",
+			name:          "happy_empty_schema_host_version_preserved",
 			configPath:    testutil.FindTestFile(t, "config-sad-empty-host-1.json", "config"),
-			expectedError: true,
+			expected:      "10.100.6792",
+			expectedError: false,
 		},
 		{
-			name:          "sad_empty_service_1",
+			name:          "happy_empty_schema_service_version_preserved",
 			configPath:    testutil.FindTestFile(t, "config-sad-empty-service-1.json", "config"),
-			expectedError: true,
+			expected:      "10.100.6792",
+			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			config, err := Load(testCase.configPath)
-			if (err != nil) != testCase.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
+			t.Cleanup(ResetCache)
+			config := Load(testCase.configPath)
+			if testCase.expectedError {
+				t.Fatalf("Got no error, expected error for %s", testCase.name)
 			}
-			if err == nil {
-				version := config.Version()
-				if version != testCase.expected {
-					t.Fatalf("Got version = %q, expected %q", version, testCase.expected)
-				}
+			version := config.Version()
+			if version != testCase.expected {
+				t.Fatalf("Got version = %q, expected %q", version, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestConfig_Host(t *testing.T) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Fatalf("os.Hostname failed: %v", err)
+	}
+	tests := []struct {
+		name          string
+		configPath    string
+		envHost       string
+		expected      string
+		expectedError bool
+	}{
+		{
+			name:          "happy_production_like_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			expected:      "macmini-mad",
+			expectedError: false,
+		},
+		{
+			name:          "happy_noschema_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-noschema-1.json", "config"),
+			expected:      "ahost",
+			expectedError: false,
+		},
+		{
+			name:          "happy_noservices_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
+			expected:      "macmini-mad",
+			expectedError: false,
+		},
+		{
+			name:          "happy_no_host_field_defaults_to_hostname",
+			configPath:    testutil.FindTestFile(t, "config-sad-no-host-1.json", "config"),
+			expected:      hostname,
+			expectedError: false,
+		},
+		{
+			name:          "happy_missing_file_defaults_to_hostname",
+			configPath:    "non-existent-file.json",
+			expected:      hostname,
+			expectedError: false,
+		},
+		{
+			name:          "happy_corrupt_file_defaults_to_hostname",
+			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
+			expected:      hostname,
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_supervisor_host_overrides_hostname",
+			configPath:    "non-existent-file.json",
+			envHost:       "envhost",
+			expected:      "envhost",
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(ResetCache)
+			if testCase.envHost != "" {
+				t.Setenv("SUPERVISOR_HOST", testCase.envHost)
+			}
+			config := Load(testCase.configPath)
+			host := config.Host()
+			if host != testCase.expected {
+				t.Fatalf("Got host = %q, expected %q", host, testCase.expected)
 			}
 		})
 	}
@@ -114,6 +195,8 @@ func TestConfig_Broker(t *testing.T) {
 	tests := []struct {
 		name          string
 		configPath    string
+		envHost       string
+		envPort       string
 		expected      string
 		expectedError bool
 	}{
@@ -136,37 +219,58 @@ func TestConfig_Broker(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "sad_no_port_1",
+			name:          "happy_no_port_in_file_uses_host_only",
 			configPath:    testutil.FindTestFile(t, "config-sad-no-broker-port-1.json", "config"),
-			expectedError: true,
+			expected:      "vernemq.local.janeandgraham.com",
+			expectedError: false,
 		},
 		{
-			name:          "sad_no_broker_1",
+			name:          "happy_no_broker_in_file_empty",
 			configPath:    testutil.FindTestFile(t, "config-sad-no-broker-1.json", "config"),
-			expectedError: true,
+			expected:      "",
+			expectedError: false,
 		},
 		{
-			name:          "sad_a_missing_file_1",
+			name:          "happy_missing_file_empty",
 			configPath:    "non-existent-file.json",
-			expectedError: true,
+			expected:      "",
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_1",
+			name:          "happy_corrupt_file_empty",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
-			expectedError: true,
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_fallback_host_and_port",
+			configPath:    "non-existent-file.json",
+			envHost:       "envbroker.local",
+			envPort:       "9999",
+			expected:      "envbroker.local:9999",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_fallback_host_only",
+			configPath:    "non-existent-file.json",
+			envHost:       "envbroker.local",
+			expected:      "envbroker.local",
+			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			config, err := Load(testCase.configPath)
-			if (err != nil) != testCase.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
+			t.Cleanup(ResetCache)
+			if testCase.envHost != "" {
+				t.Setenv("VERNEMQ_HOST", testCase.envHost)
 			}
-			if err == nil {
-				broker := config.Broker()
-				if broker != testCase.expected {
-					t.Fatalf("Got broker = %q, expected %q", broker, testCase.expected)
-				}
+			if testCase.envPort != "" {
+				t.Setenv("VERNEMQ_API_PORT", testCase.envPort)
+			}
+			config := Load(testCase.configPath)
+			broker := config.Broker()
+			if broker != testCase.expected {
+				t.Fatalf("Got broker = %q, expected %q", broker, testCase.expected)
 			}
 		})
 	}
@@ -176,6 +280,8 @@ func TestConfig_Database(t *testing.T) {
 	tests := []struct {
 		name          string
 		configPath    string
+		envHost       string
+		envPort       string
 		expected      string
 		expectedError bool
 	}{
@@ -198,37 +304,58 @@ func TestConfig_Database(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "sad_no_port_1",
+			name:          "happy_no_port_in_file_uses_host_only",
 			configPath:    testutil.FindTestFile(t, "config-sad-no-database-port-1.json", "config"),
-			expectedError: true,
+			expected:      "influxdb.local.janeandgraham.com",
+			expectedError: false,
 		},
 		{
-			name:          "sad_no_database_1",
+			name:          "happy_no_database_in_file_empty",
 			configPath:    testutil.FindTestFile(t, "config-sad-no-database-1.json", "config"),
-			expectedError: true,
+			expected:      "",
+			expectedError: false,
 		},
 		{
-			name:          "sad_a_missing_file_1",
+			name:          "happy_missing_file_empty",
 			configPath:    "non-existent-file.json",
-			expectedError: true,
+			expected:      "",
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_1",
+			name:          "happy_corrupt_file_empty",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
-			expectedError: true,
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_fallback_host_and_port",
+			configPath:    "non-existent-file.json",
+			envHost:       "envdb.local",
+			envPort:       "8086",
+			expected:      "envdb.local:8086",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_fallback_host_only",
+			configPath:    "non-existent-file.json",
+			envHost:       "envdb.local",
+			expected:      "envdb.local",
+			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			config, err := Load(testCase.configPath)
-			if (err != nil) != testCase.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
+			t.Cleanup(ResetCache)
+			if testCase.envHost != "" {
+				t.Setenv("INFLUXDB_HOST", testCase.envHost)
 			}
-			if err == nil {
-				database := config.Database()
-				if database != testCase.expected {
-					t.Fatalf("Got database = %q, expected %q", database, testCase.expected)
-				}
+			if testCase.envPort != "" {
+				t.Setenv("INFLUXDB_HTTP_PORT", testCase.envPort)
+			}
+			config := Load(testCase.configPath)
+			database := config.Database()
+			if database != testCase.expected {
+				t.Fatalf("Got database = %q, expected %q", database, testCase.expected)
 			}
 		})
 	}
@@ -260,59 +387,61 @@ func TestConfig_Hosts(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "sad_a_missing_file_1",
+			name:          "happy_missing_file_empty",
 			configPath:    "non-existent-file.json",
-			expectedError: true,
+			expected:      []string{},
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_1",
+			name:          "happy_corrupt_file_empty",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
-			expectedError: true,
+			expected:      []string{},
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_2",
+			name:          "happy_corrupt_2_empty",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-2.json", "config"),
-			expectedError: true,
+			expected:      []string{},
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_3",
+			name:          "happy_corrupt_3_empty",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-3.json", "config"),
-			expectedError: true,
+			expected:      []string{},
+			expectedError: false,
 		},
 		{
-			name:          "sad_duplicate_host_1",
+			name:          "happy_duplicate_host_first_kept",
 			configPath:    testutil.FindTestFile(t, "config-sad-duplicate-host-1.json", "config"),
 			expected:      []string{"macmini-mad"},
-			expectedError: true,
+			expectedError: false,
 		},
 		{
-			name:          "sad_duplicate_service_1",
+			name:          "happy_duplicate_service_host_kept",
 			configPath:    testutil.FindTestFile(t, "config-sad-duplicate-service-1.json", "config"),
 			expected:      []string{"macmini-mad"},
-			expectedError: true,
+			expectedError: false,
 		},
 		{
-			name:          "sad_empty_host_1",
+			name:          "happy_empty_schema_host_skipped",
 			configPath:    testutil.FindTestFile(t, "config-sad-empty-host-1.json", "config"),
-			expectedError: true,
+			expected:      []string{},
+			expectedError: false,
 		},
 		{
-			name:          "sad_empty_service_1",
+			name:          "happy_empty_service_host_kept",
 			configPath:    testutil.FindTestFile(t, "config-sad-empty-service-1.json", "config"),
-			expectedError: true,
+			expected:      []string{"macmini-mad"},
+			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			config, err := Load(testCase.configPath)
-			if (err != nil) != testCase.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
-			}
-			if err == nil {
-				hosts := config.Hosts()
-				if !reflect.DeepEqual(hosts, testCase.expected) {
-					t.Fatalf("Got hosts = %v, expected %v", hosts, testCase.expected)
-				}
+			t.Cleanup(ResetCache)
+			config := Load(testCase.configPath)
+			hosts := config.Hosts()
+			if !reflect.DeepEqual(hosts, testCase.expected) {
+				t.Fatalf("Got hosts = %v, expected %v", hosts, testCase.expected)
 			}
 		})
 	}
@@ -362,55 +491,53 @@ func TestConfig_Services(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "sad_a_missing_file_1",
+			name:          "happy_missing_file_empty",
 			configPath:    "non-existent-file.json",
-			expectedError: true,
+			expected:      []string{},
+			expectedError: false,
 		},
 		{
-			name:          "sad_corrupt_1",
+			name:          "happy_corrupt_file_empty",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
-			expectedError: true,
+			expected:      []string{},
+			expectedError: false,
 		},
 		{
-			name:          "sad_duplicate_host_1",
+			name:          "happy_duplicate_host_first_kept",
 			hostName:      "macmini-mad",
 			configPath:    testutil.FindTestFile(t, "config-sad-duplicate-host-1.json", "config"),
 			expected:      []string{"monitor", "rhasspy"},
-			expectedError: true,
+			expectedError: false,
 		},
 		{
-			name:          "sad_duplicate_service_1",
+			name:          "happy_duplicate_service_deduped",
 			hostName:      "macmini-mad",
 			configPath:    testutil.FindTestFile(t, "config-sad-duplicate-service-1.json", "config"),
 			expected:      []string{"monitor"},
-			expectedError: true,
+			expectedError: false,
 		},
 		{
-			name:          "sad_empty_host_1",
+			name:          "happy_empty_schema_host_skipped",
 			hostName:      "macmini-mad",
 			configPath:    testutil.FindTestFile(t, "config-sad-empty-host-1.json", "config"),
 			expected:      []string{},
-			expectedError: true,
+			expectedError: false,
 		},
 		{
-			name:          "sad_empty_service_1",
+			name:          "happy_empty_service_skipped",
 			hostName:      "macmini-mad",
 			configPath:    testutil.FindTestFile(t, "config-sad-empty-service-1.json", "config"),
-			expected:      []string{},
-			expectedError: true,
+			expected:      []string{"monitor"},
+			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			config, err := Load(testCase.configPath)
-			if (err != nil) != testCase.expectedError {
-				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
-			}
-			if err == nil {
-				services := config.Services(testCase.hostName)
-				if !reflect.DeepEqual(services, testCase.expected) {
-					t.Fatalf("Got services = %v, expected %v", services, testCase.expected)
-				}
+			t.Cleanup(ResetCache)
+			config := Load(testCase.configPath)
+			services := config.Services(testCase.hostName)
+			if !reflect.DeepEqual(services, testCase.expected) {
+				t.Fatalf("Got services = %v, expected %v", services, testCase.expected)
 			}
 		})
 	}

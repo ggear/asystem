@@ -81,11 +81,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	case mode == "local":
 	case mode == "remote":
 		isRemote = true
-		if c, err := config.Load(configPath); err != nil {
-			return err
-		} else {
-			hosts = c.Hosts()
-		}
+		hosts = config.Load(configPath).Hosts()
 	case strings.HasPrefix(mode, "remote[") && strings.HasSuffix(mode, "]"):
 		isRemote = true
 		inner := mode[len("remote[") : len(mode)-1]

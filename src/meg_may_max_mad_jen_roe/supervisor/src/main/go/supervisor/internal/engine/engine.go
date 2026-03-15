@@ -163,7 +163,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.RecordCache) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())
-		cache.Store(metric.NewServiceSchemaRecordGUID(id, config.LocalHostName(), 0), &record)
+		cache.Store(metric.NewServiceSchemaRecordGUID(id, config.Load(configPath).Host(), 0), &record)
 	}
 	periods := config.Periods{
 		PollMillis:   500,
@@ -193,13 +193,13 @@ type lpKey struct {
 func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())
-		cache.Store(metric.NewServiceSchemaRecordGUID(id, config.LocalHostName(), 0), &record)
+		cache.Store(metric.NewServiceSchemaRecordGUID(id, config.Load(configPath).Host(), 0), &record)
 	}
 	if err := probe.Create(configPath, cache, periods); err != nil {
 		slog.Error("run all probes publish loop: create failed", "error", err)
 		return
 	}
-	hostName := config.LocalHostName()
+	hostName := config.Load(configPath).Host()
 	statusTopic := "supervisor/" + hostName + "/status"
 	client, err := brokerConnect(configPath, nil, statusTopic, hostStatusOffline)
 	if err != nil {

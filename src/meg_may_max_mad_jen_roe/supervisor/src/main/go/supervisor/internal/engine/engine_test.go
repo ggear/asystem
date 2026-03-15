@@ -49,9 +49,7 @@ func TestEngine_RunAllProbesOnce(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testutil.RequiresDocker(t)
-			orig := config.LocalHostName
-			config.LocalHostName = func() string { return tt.hostName }
-			t.Cleanup(func() { config.LocalHostName = orig })
+			t.Cleanup(config.ResetCache)
 			if tt.createServiceCount > 0 {
 				var createServiceNames []string
 				for i := 0; i < tt.createServiceCount; i++ {
@@ -114,9 +112,7 @@ func TestEngine_RunListeningProbesLoop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testutil.RequiresDocker(t)
-			orig := config.LocalHostName
-			config.LocalHostName = func() string { return tt.hostName }
-			t.Cleanup(func() { config.LocalHostName = orig })
+			t.Cleanup(config.ResetCache)
 			if tt.createServiceCount > 0 {
 				var createServiceNames []string
 				for i := 0; i < tt.createServiceCount; i++ {
@@ -165,10 +161,10 @@ func (m *mockUpdatesListener) MarkDirty() {}
 func TestEngine_HostStatus(t *testing.T) {
 	value := metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "v"}}
 	tests := []struct {
-		name           string
-		setupFunc      func()
-		checkFunc      func(*testing.T)
-		expectedError  bool
+		name          string
+		setupFunc     func()
+		checkFunc     func(*testing.T)
+		expectedError bool
 	}{
 		{
 			name: "happy_unknown_host_is_online",
@@ -370,7 +366,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 	}
 	host := os.Getenv("VERNEMQ_HOST")
 	port := os.Getenv("VERNEMQ_API_PORT")
-	configContent := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","broker":{"host":%q,"port":%q},"database":{"host":"db.local","port":"2000"}}}`, host, port)
+	configContent := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":"ahost","broker":{"host":%q,"port":%q},"database":{"host":"db.local","port":"2000"}}}`, host, port)
 	configFile := filepath.Join(t.TempDir(), "config.json")
 	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
 		t.Fatalf("write config file failed: %v", err)

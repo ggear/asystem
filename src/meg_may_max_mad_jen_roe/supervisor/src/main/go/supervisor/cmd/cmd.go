@@ -34,11 +34,7 @@ var rootCmd = &cobra.Command{
 		showVersion, _ := cmd.Flags().GetBool("version")
 		if showVersion {
 			configPath, _ := cmd.Flags().GetString("config")
-			if c, err := config.Load(configPath); err != nil {
-				return err
-			} else {
-				fmt.Println(c.Version())
-			}
+			fmt.Println(config.Load(configPath).Version())
 			os.Exit(0)
 		}
 		if len(args) == 0 {

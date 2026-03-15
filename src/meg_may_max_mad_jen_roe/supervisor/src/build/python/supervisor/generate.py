@@ -36,6 +36,7 @@ if __name__ == "__main__":
         metadata_supervisor_file.write(json.dumps({
             "asystem": {
                 "version": "$SERVICE_VERSION_ABSOLUTE",
+                "host": "$SUPERVISOR_HOST",
                 "broker": {
                     "host": "$VERNEMQ_SERVICE",
                     "port": "$VERNEMQ_API_PORT"
