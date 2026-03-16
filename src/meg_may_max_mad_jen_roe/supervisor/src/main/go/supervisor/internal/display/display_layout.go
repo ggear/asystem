@@ -385,13 +385,10 @@ func (b *box) drawValue(display *Display) {
 	} else {
 		record, ok = display.cache.Load(*b.recordGUID)
 	}
-	if !ok || record == nil {
+	if !ok || record == nil || record.Value.Pulse == nil || record.Value.Pulse.IsZero() {
 		if metric.GetIDKind(b.recordGUID.ID) == metric.MetricKindService {
 			display.terminal.draw(b.position.cols, b.position.rows, strings.Repeat(" ", b.compiled.length), colourDefault)
 		}
-		return
-	}
-	if record.Value.Pulse == nil || record.Value.Pulse.IsZero() {
 		return
 	}
 	location := dimensions{b.position.rows, b.position.cols + b.compiled.valOffset}

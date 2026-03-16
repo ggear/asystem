@@ -156,6 +156,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				slog.Warn("profiling", "engine", "stream", "phase", "status", "host", hostName, "status", hostStatusOffline)
 				for _, svc := range cache.Services(hostName) {
 					cache.Evict(hostName, svc)
+					cache.Delete(hostName, svc)
 				}
 				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
 					record := metric.NewRecord(metric.NewNilValue())
