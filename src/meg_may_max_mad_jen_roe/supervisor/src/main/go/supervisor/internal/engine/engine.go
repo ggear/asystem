@@ -244,7 +244,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		slog.Error("run all probes publish loop: broker connect failed", "error", err)
 		return
 	}
-	defer client.Disconnect(250)
+	defer func() {
+		client.Publish(statusTopic, 1, true, hostStatusOffline)
+		client.Disconnect(250)
+	}()
 	cache.SubscribeDeletes(&brokerPublishDeletesListener{client: client})
 	var lineProtocol strings.Builder
 	err = probe.Run(ctx, func(isHeartbeat bool) {
