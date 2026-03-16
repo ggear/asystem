@@ -245,7 +245,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		return
 	}
 	defer func() {
-		client.Publish(statusTopic, 1, true, hostStatusOffline)
+		client.Publish(statusTopic, 1, true, hostStatusOffline).WaitTimeout(2 * time.Second)
 		client.Disconnect(250)
 	}()
 	cache.SubscribeDeletes(&brokerPublishDeletesListener{client: client})
