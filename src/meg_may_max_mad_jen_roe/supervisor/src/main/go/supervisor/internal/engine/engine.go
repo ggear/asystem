@@ -63,6 +63,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	var rxCount atomic.Int64
 	onConnect := func(client mqtt.Client) {
+		hostStatusMutex.Lock()
+		clear(hostStatus)
+		hostStatusMutex.Unlock()
 		var subscribedMu sync.Mutex
 		subscribed := make(map[string]struct{})
 		subscribe := func(b metric.TopicBinding) {
@@ -209,7 +212,19 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	}
 	hostName := config.Load(configPath).Host()
 	statusTopic := "supervisor/" + hostName + "/status"
-	client, err := brokerConnect(configPath, nil, statusTopic, hostStatusOffline)
+	serviceNameTopic := "supervisor/" + hostName + "/data/service/+/name"
+	onConnect := func(client mqtt.Client) {
+		client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+			var value metric.ValueData
+			if err := json.Unmarshal(msg.Payload(), &value); err != nil || value.Pulse == nil {
+				return
+			}
+			if serviceName := value.Pulse.ValueString; serviceName != "" {
+				cache.RegisterService(hostName, serviceName)
+			}
+		})
+	}
+	client, err := brokerConnect(configPath, onConnect, statusTopic, hostStatusOffline)
 	if err != nil {
 		slog.Error("run all probes publish loop: broker connect failed", "error", err)
 		return
