@@ -83,12 +83,17 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				if !isHostOnline(guid.Host) {
 					return
 				}
+				rxCount.Add(1)
+				if len(msg.Payload()) == 0 {
+					cache.Evict(guid.Host, guid.ServiceName)
+					cache.Delete(guid.Host, guid.ServiceName)
+					return
+				}
 				var value metric.ValueData
 				if err := json.Unmarshal(msg.Payload(), &value); err != nil {
 					slog.Debug("stream: unmarshal failed", "topic", msg.Topic(), "error", err)
 					return
 				}
-				rxCount.Add(1)
 				if value.Pulse == nil {
 					cache.Evict(guid.Host, guid.ServiceName)
 					return
