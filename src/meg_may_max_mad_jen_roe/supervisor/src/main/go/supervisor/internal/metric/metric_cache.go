@@ -163,59 +163,47 @@ func (c *RecordCache) Store(guid RecordGUID, record *Record) {
 	}
 }
 
-func (c *RecordCache) ForceRegisterService(hostName, serviceName string) {
-	if c == nil || hostName == "" || serviceName == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
-		return
-	}
-	c.mutex.Lock()
-	added := false
-	for id := ID(0); id < MetricMax; id++ {
-		if GetIDKind(id) != MetricKindService {
-			continue
-		}
-		guid := RecordGUID{ID: id, Host: hostName, ServiceName: serviceName, ServiceIndex: ServiceIndexUnset}
-		gk := guid.key()
-		if _, exists := c.records[gk]; exists {
-			continue
-		}
-		record := NewRecord(NewNilValue())
-		index, exists := slices.BinarySearchFunc(c.guids, guid, compareRecordGUID)
-		if !exists {
-			c.guids = slices.Insert(c.guids, index, guid)
-			c.records[gk] = &record
-			added = true
-		}
-	}
-	if !added {
-		c.mutex.Unlock()
-		return
-	}
-	c.reindex()
-	c.mutex.Unlock()
-	c.NotifyUpdates()
-}
-
-func (c *RecordCache) RegisterService(hostName, serviceName string) []TopicBinding {
+func (c *RecordCache) RegisterService(hostName, serviceName string, all bool) []TopicBinding {
 	if c == nil || hostName == "" || serviceName == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
 		return nil
 	}
 	c.mutex.Lock()
 	added := false
-	for k := range c.listeners {
-		if k.Host != hostName || GetIDKind(k.ID) != MetricKindService {
-			continue
+	if all {
+		for id := ID(0); id < MetricMax; id++ {
+			if GetIDKind(id) != MetricKindService {
+				continue
+			}
+			guid := RecordGUID{ID: id, Host: hostName, ServiceName: serviceName, ServiceIndex: ServiceIndexUnset}
+			gk := guid.key()
+			if _, exists := c.records[gk]; exists {
+				continue
+			}
+			record := NewRecord(NewNilValue())
+			index, exists := slices.BinarySearchFunc(c.guids, guid, compareRecordGUID)
+			if !exists {
+				c.guids = slices.Insert(c.guids, index, guid)
+				c.records[gk] = &record
+				added = true
+			}
 		}
-		guid := RecordGUID{ID: k.ID, Host: hostName, ServiceName: serviceName, ServiceIndex: ServiceIndexUnset}
-		gk := guid.key()
-		if _, exists := c.records[gk]; exists {
-			continue
-		}
-		record := NewRecord(NewNilValue())
-		index, exists := slices.BinarySearchFunc(c.guids, guid, compareRecordGUID)
-		if !exists {
-			c.guids = slices.Insert(c.guids, index, guid)
-			c.records[gk] = &record
-			added = true
+	} else {
+		for k := range c.listeners {
+			if k.Host != hostName || GetIDKind(k.ID) != MetricKindService {
+				continue
+			}
+			guid := RecordGUID{ID: k.ID, Host: hostName, ServiceName: serviceName, ServiceIndex: ServiceIndexUnset}
+			gk := guid.key()
+			if _, exists := c.records[gk]; exists {
+				continue
+			}
+			record := NewRecord(NewNilValue())
+			index, exists := slices.BinarySearchFunc(c.guids, guid, compareRecordGUID)
+			if !exists {
+				c.guids = slices.Insert(c.guids, index, guid)
+				c.records[gk] = &record
+				added = true
+			}
 		}
 	}
 	if !added {

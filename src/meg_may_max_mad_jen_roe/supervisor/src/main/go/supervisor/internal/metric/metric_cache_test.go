@@ -1883,7 +1883,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &mockListener{})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				bindings := cache.RegisterService("alpha", "svc-a")
+				bindings := cache.RegisterService("alpha", "svc-a", false)
 				t.Logf("Cache:\n%s", cache.String())
 				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); !ok {
 					t.Fatalf("Got svc-a not found, expected registered")
@@ -1906,7 +1906,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceHealthStatus, "alpha", 0), &mockListener{})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.RegisterService("alpha", "svc-a")
+				cache.RegisterService("alpha", "svc-a", false)
 				t.Logf("Cache:\n%s", cache.String())
 				for _, id := range []ID{MetricServiceName, MetricServiceUsedProcessor, MetricServiceHealthStatus} {
 					if _, ok := cache.Load(NewServiceRecordGUID(id, "alpha", "svc-a")); !ok {
@@ -1920,10 +1920,10 @@ func TestRecordCache_RegisterService(t *testing.T) {
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &Record{})
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &mockListener{})
-				cache.RegisterService("alpha", "svc-a")
+				cache.RegisterService("alpha", "svc-a", false)
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				bindings := cache.RegisterService("alpha", "svc-a")
+				bindings := cache.RegisterService("alpha", "svc-a", false)
 				if len(bindings) != 0 {
 					t.Fatalf("Got %d bindings, expected 0 for already-registered service", len(bindings))
 				}
@@ -1938,7 +1938,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceUsedProcessor, "alpha", 0), &mockListener{})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				bindings := cache.RegisterService("alpha", "svc-a")
+				bindings := cache.RegisterService("alpha", "svc-a", false)
 				t.Logf("Cache:\n%s", cache.String())
 				for _, b := range bindings {
 					if b.GUID.ID == MetricServiceName {
@@ -1958,7 +1958,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				drainChannel(cache.Updates())
-				cache.RegisterService("alpha", "svc-a")
+				cache.RegisterService("alpha", "svc-a", false)
 				select {
 				case <-cache.Updates():
 				default:
@@ -1974,7 +1974,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.RegisterService("alpha", "svc-b")
+				cache.RegisterService("alpha", "svc-b", false)
 				t.Logf("Cache:\n%s", cache.String())
 				record, ok := cache.LoadByID(MetricServiceName, "alpha", 0)
 				if !ok || record == nil {
@@ -1991,7 +1991,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 			setupFunc: func(cache *RecordCache) {},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				var nilCache *RecordCache
-				if bindings := nilCache.RegisterService("alpha", "svc-a"); bindings != nil {
+				if bindings := nilCache.RegisterService("alpha", "svc-a", false); bindings != nil {
 					t.Fatalf("Got non-nil from nil cache, expected nil")
 				}
 			},
@@ -2000,7 +2000,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 			name:      "happy_empty_host_returns_nil",
 			setupFunc: func(cache *RecordCache) {},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				if bindings := cache.RegisterService("", "svc-a"); bindings != nil {
+				if bindings := cache.RegisterService("", "svc-a", false); bindings != nil {
 					t.Fatalf("Got non-nil for empty host, expected nil")
 				}
 			},
@@ -2009,7 +2009,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 			name:      "happy_empty_service_name_returns_nil",
 			setupFunc: func(cache *RecordCache) {},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				if bindings := cache.RegisterService("alpha", ""); bindings != nil {
+				if bindings := cache.RegisterService("alpha", "", false); bindings != nil {
 					t.Fatalf("Got non-nil for empty service name, expected nil")
 				}
 			},
@@ -2038,7 +2038,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 				cache.Store(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &Record{})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				if bindings := cache.RegisterService("alpha", "svc-a"); bindings != nil {
+				if bindings := cache.RegisterService("alpha", "svc-a", false); bindings != nil {
 					t.Fatalf("Got non-nil with no listeners, expected nil")
 				}
 			},
@@ -2050,7 +2050,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 				cache.SubscribeUpdates(NewRecordGUID(MetricHost, "alpha"), &mockListener{})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				bindings := cache.RegisterService("alpha", "svc-a")
+				bindings := cache.RegisterService("alpha", "svc-a", false)
 				if len(bindings) != 0 {
 					t.Fatalf("Got %d bindings, expected 0 for host-only listeners", len(bindings))
 				}
@@ -2065,7 +2065,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, "beta", 0), &mockListener{})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.RegisterService("alpha", "svc-a")
+				cache.RegisterService("alpha", "svc-a", false)
 				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); !ok {
 					t.Fatalf("Got alpha svc-a not found, expected registered")
 				}

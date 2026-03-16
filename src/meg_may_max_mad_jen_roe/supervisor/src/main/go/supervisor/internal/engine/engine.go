@@ -123,7 +123,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				return
 			}
 			rxCount.Add(1)
-			for _, b := range cache.RegisterService(hostName, serviceName) {
+			for _, b := range cache.RegisterService(hostName, serviceName, false) {
 				subscribe(b)
 			}
 			record := metric.NewRecord(value)
@@ -225,7 +225,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				return
 			}
 			if serviceName := value.Pulse.ValueString; serviceName != "" {
-				cache.ForceRegisterService(hostName, serviceName)
+				cache.RegisterService(hostName, serviceName, true)
 			}
 		})
 	}
