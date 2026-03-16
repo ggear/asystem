@@ -710,7 +710,11 @@ func version(containerInfo container.InspectResponse) (string, error) {
 		}
 	}
 	if version == "" {
-		slog.Error("version not available", "name", containerInfo.Name, "image", containerInfo.Config.Image)
+		image := ""
+		if containerInfo.Config != nil {
+			image = containerInfo.Config.Image
+		}
+		slog.Error("version not available", "name", containerInfo.Name, "image", image)
 		return "-", nil
 	}
 	return version, nil

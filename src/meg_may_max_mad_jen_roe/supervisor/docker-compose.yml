@@ -3,6 +3,11 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
+    - HOST_NAME
+    - VERNEMQ_SERVICE
+    - VERNEMQ_API_PORT
+    - INFLUXDB_SERVICE
+    - INFLUXDB_HTTP_PORT
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
     - /:/hostfs:ro

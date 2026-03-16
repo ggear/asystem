@@ -3,6 +3,7 @@ package engine
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"supervisor/internal/config"
 	"time"
 
@@ -29,7 +30,18 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 		SetCleanSession(true).
 		SetConnectTimeout(5 * time.Second).
 		SetAutoReconnect(true).
-		SetOnConnectHandler(onConnect)
+		SetOnConnectHandler(func(client mqtt.Client) {
+			slog.Debug("profiling", "engine", "broker", "phase", "connect", "broker", brokerURL)
+			if onConnect != nil {
+				onConnect(client)
+			}
+		}).
+		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
+			slog.Warn("profiling", "engine", "broker", "phase", "disconnect", "broker", brokerURL, "error", err)
+		}).
+		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
+			slog.Debug("profiling", "engine", "broker", "phase", "reconnect", "broker", brokerURL)
+		})
 	if willTopic != "" {
 		opts.SetWill(willTopic, willPayload, 1, true)
 	}

@@ -11,6 +11,7 @@ import (
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -60,6 +61,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			cache.Store(metric.NewServiceSchemaRecordGUID(id, host, 0), &record)
 		}
 	}
+	var rxCount atomic.Int64
 	onConnect := func(client mqtt.Client) {
 		var subscribedMu sync.Mutex
 		subscribed := make(map[string]struct{})
@@ -83,6 +85,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					slog.Debug("stream: unmarshal failed", "topic", msg.Topic(), "error", err)
 					return
 				}
+				rxCount.Add(1)
 				if value.Pulse == nil {
 					cache.Evict(guid.Host, guid.ServiceName)
 					return
@@ -111,6 +114,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if !isHostOnline(hostName) {
 				return
 			}
+			rxCount.Add(1)
 			for _, b := range cache.RegisterService(hostName, serviceName) {
 				subscribe(b)
 			}
@@ -124,11 +128,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			hostName := tokens[1]
 			payload := strings.TrimSpace(string(msg.Payload()))
+			rxCount.Add(1)
 			switch payload {
 			case hostStatusOnline:
 				storeHostStatus(hostName, true)
+				slog.Debug("profiling", "engine", "stream", "phase", "status", "host", hostName, "status", hostStatusOnline)
 			case hostStatusOffline:
 				storeHostStatus(hostName, false)
+				slog.Warn("profiling", "engine", "stream", "phase", "status", "host", hostName, "status", hostStatusOffline)
 				for _, svc := range cache.Services(hostName) {
 					cache.Evict(hostName, svc)
 				}
@@ -156,6 +163,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return
 		case <-purgeTicker.C:
 			cache.Purge(periods.HeartbeatSecs + 10)
+			slog.Debug("profiling", "engine", "stream", "phase", "purge", "rx", rxCount.Swap(0))
 		}
 	}
 }
@@ -209,8 +217,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	defer client.Disconnect(250)
 	var lineProtocol strings.Builder
 	err = probe.Run(ctx, func(isHeartbeat bool) {
+		pulseStart := time.Now()
+		txCount := 0
 		lineProtocol.Reset()
 		groups := make(map[lpKey]*strings.Builder)
+		var toDelete []lpKey
 		addToGroup := func(key lpKey, field, suffix string, d *metric.ValueDataDetail) {
 			if d.Kind != metric.ValueInt && d.Kind != metric.ValueFloat {
 				return
@@ -231,11 +242,22 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 		}
 		process := func(guid metric.RecordGUID, record *metric.Record) {
-			if record.Topic != "" && record.Value.Pulse != nil {
-				if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
-					client.Publish(record.Topic, 0, true, payload)
-				} else {
-					slog.Debug("run all probes publish loop: marshal failed", "topic", record.Topic, "error", jsonErr)
+			if record.Topic != "" {
+				if record.Value.Pulse != nil {
+					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
+						client.Publish(record.Topic, 0, true, payload)
+						txCount++
+					} else {
+						slog.Debug("run all probes publish loop: marshal failed", "topic", record.Topic, "error", jsonErr)
+					}
+				} else if guid.ServiceName != metric.ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, metric.ServiceNameSchema) {
+					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
+						client.Publish(record.Topic, 0, true, payload)
+						txCount++
+					}
+					client.Publish(record.Topic, 0, true, "")
+					txCount++
+					toDelete = append(toDelete, lpKey{host: guid.Host, service: guid.ServiceName})
 				}
 			}
 			if record.Value.Pulse == nil || len(record.Tags) == 0 {
@@ -257,6 +279,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			})
 			cache.Take()
 			client.Publish(statusTopic, 1, true, hostStatusOnline)
+			txCount++
 		} else {
 			for _, guid := range cache.Take() {
 				record, ok := cache.Load(guid)
@@ -264,6 +287,13 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 					continue
 				}
 				process(guid, record)
+			}
+		}
+		deleted := make(map[lpKey]bool)
+		for _, k := range toDelete {
+			if !deleted[k] {
+				deleted[k] = true
+				cache.Delete(k.host, k.service)
 			}
 		}
 		ts := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -285,6 +315,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if lineProtocol.Len() > 0 {
 		}
 
+		slog.Debug("profiling", "engine", "publish", "phase", "pulse", "tx", txCount, "is_heartbeat", isHeartbeat, "duration", time.Since(pulseStart).Truncate(time.Millisecond))
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Error("run all probes publish loop: run failed", "error", err)
