@@ -28,10 +28,10 @@ supervisor/$HOST/$SCOPE/host/running_time
 supervisor/$HOST/$SCOPE/host/temperature
 
 # Services Booleans
-supervisor/$HOST/$SCOPE/services
+supervisor/$HOST/$SCOPE/host/services
 
 # Services Floats
-supervisor/$HOST/$SCOPE/services/max_memory
+supervisor/$HOST/$SCOPE/host/services_max_memory
 
 # Service Booleans
 supervisor/$HOST/$SCOPE/service/$SERVICE

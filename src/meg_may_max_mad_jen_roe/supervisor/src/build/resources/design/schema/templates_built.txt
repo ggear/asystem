@@ -46,12 +46,12 @@ supervisor/labnode-one/meta/host/temperature
 supervisor/labnode-one/data/host/temperature
 
 # Services Booleans
-supervisor/labnode-one/meta/services
-supervisor/labnode-one/data/services
+supervisor/labnode-one/meta/host/services
+supervisor/labnode-one/data/host/services
 
 # Services Floats
-supervisor/labnode-one/meta/services/max_memory
-supervisor/labnode-one/data/services/max_memory
+supervisor/labnode-one/meta/host/services_max_memory
+supervisor/labnode-one/data/host/services_max_memory
 
 # Service Booleans
 supervisor/labnode-one/meta/service/a-service
