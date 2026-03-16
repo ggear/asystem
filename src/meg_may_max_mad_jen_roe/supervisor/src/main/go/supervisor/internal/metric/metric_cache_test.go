@@ -2018,7 +2018,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 			name:      "happy_unset_service_name_returns_nil",
 			setupFunc: func(cache *RecordCache) {},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				if bindings := cache.RegisterService("alpha", ServiceNameUnset); bindings != nil {
+				if bindings := cache.RegisterService("alpha", ServiceNameUnset, false); bindings != nil {
 					t.Fatalf("Got non-nil for unset service name, expected nil")
 				}
 			},
@@ -2027,7 +2027,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 			name:      "happy_schema_service_name_returns_nil",
 			setupFunc: func(cache *RecordCache) {},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				if bindings := cache.RegisterService("alpha", ServiceNameSchema); bindings != nil {
+				if bindings := cache.RegisterService("alpha", ServiceNameSchema, false); bindings != nil {
 					t.Fatalf("Got non-nil for schema service name, expected nil")
 				}
 			},
