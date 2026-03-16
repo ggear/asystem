@@ -88,8 +88,8 @@ func (*servicesProbe) name() string { return "services" }
 
 func (p *servicesProbe) metrics() []metric.ID {
 	return []metric.ID{
-		metric.MetricServices,
-		metric.MetricServicesMaxMemory,
+		metric.MetricHostServices,
+		metric.MetricHostServicesMaxMemory,
 		metric.MetricService,
 		metric.MetricServiceBackupStatus,
 		metric.MetricServiceHealthStatus,
@@ -312,7 +312,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	runMetricCacheTasks(p, isPulse, []cacheMetricTask{
 		newCacheMetricTask(
 			metric.ValueBool,
-			metric.MetricServices,
+			metric.MetricHostServices,
 			metric.ServiceNameUnset,
 			func() (bool, error) { return p.servicesStatus() },
 			p.servicesBool,
@@ -323,7 +323,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		),
 		newCacheMetricTask(
 			metric.ValueFloat,
-			metric.MetricServicesMaxMemory,
+			metric.MetricHostServicesMaxMemory,
 			metric.ServiceNameUnset,
 			func() (float64, error) { return p.servicesMaxMemory() },
 			p.servicesMaxMemoryFloat,

@@ -31,7 +31,7 @@ var metricBuildersByID = []builder{
 	MetricHostAllocatedMemory: {
 		id:       MetricHostAllocatedMemory,
 		template: "supervisor/$HOST/$SCOPE/host/allocated_memory",
-		deps:     []ID{MetricServicesMaxMemory},
+		deps:     []ID{MetricHostServicesMaxMemory},
 	},
 	MetricHostFailedLogs: {
 		id:       MetricHostFailedLogs,
@@ -90,14 +90,14 @@ var metricBuildersByID = []builder{
 		id:       MetricHostTemperature,
 		template: "supervisor/$HOST/$SCOPE/host/temperature",
 	},
-	MetricServices: {
-		id:       MetricServices,
-		template: "supervisor/$HOST/$SCOPE/services",
+	MetricHostServices: {
+		id:       MetricHostServices,
+		template: "supervisor/$HOST/$SCOPE/host/services",
 		skipHist: true,
 	},
-	MetricServicesMaxMemory: {
-		id:       MetricServicesMaxMemory,
-		template: "supervisor/$HOST/$SCOPE/services/max_memory",
+	MetricHostServicesMaxMemory: {
+		id:       MetricHostServicesMaxMemory,
+		template: "supervisor/$HOST/$SCOPE/host/services_max_memory",
 		skipHist: true,
 	},
 	MetricService: {

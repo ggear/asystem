@@ -22,8 +22,8 @@ const (
 	MetricHostUsedNetwork
 	MetricHostRunningTime
 	MetricHostTemperature
-	MetricServices
-	MetricServicesMaxMemory
+	MetricHostServices
+	MetricHostServicesMaxMemory
 	MetricService
 	MetricServiceBackupStatus
 	MetricServiceHealthStatus
