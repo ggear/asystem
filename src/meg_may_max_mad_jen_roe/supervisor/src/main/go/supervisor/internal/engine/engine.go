@@ -141,7 +141,17 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			case hostStatusOnline:
 				storeHostStatus(hostName, true)
 				slog.Debug("profiling", "engine", "stream", "phase", "status", "host", hostName, "status", hostStatusOnline)
-			case hostStatusOffline:
+				for _, b := range cache.Topics() {
+					if b.GUID.Host != hostName {
+						continue
+					}
+					subscribedMu.Lock()
+					delete(subscribed, b.Topic)
+					subscribedMu.Unlock()
+					client.Unsubscribe(b.Topic)
+					subscribe(b)
+				}
+			case hostStatusOffline, "":
 				storeHostStatus(hostName, false)
 				slog.Warn("profiling", "engine", "stream", "phase", "status", "host", hostName, "status", hostStatusOffline)
 				for _, svc := range cache.Services(hostName) {
@@ -295,12 +305,12 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 		}
 		if isHeartbeat {
+			client.Publish(statusTopic, 1, true, hostStatusOnline)
+			txCount++
 			cache.Records(func(guid metric.RecordGUID, record *metric.Record) {
 				process(guid, record)
 			})
 			cache.Take()
-			client.Publish(statusTopic, 1, true, hostStatusOnline)
-			txCount++
 		} else {
 			for _, guid := range cache.Take() {
 				record, ok := cache.Load(guid)

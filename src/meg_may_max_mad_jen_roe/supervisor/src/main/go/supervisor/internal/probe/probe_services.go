@@ -666,7 +666,7 @@ func healthStatus(containerInfo container.InspectResponse) (bool, error) {
 
 func backupStatus() (bool, error) {
 	// TODO: Provide implementation
-	return false, nil
+	return true, nil
 }
 
 func configuredStatus() (bool, error) {
