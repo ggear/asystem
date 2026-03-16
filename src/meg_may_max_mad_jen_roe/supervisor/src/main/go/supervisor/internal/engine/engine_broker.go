@@ -18,6 +18,14 @@ func (b *brokerDeletesListener) Unsubscribe(topic string) {
 	b.client.Unsubscribe(topic)
 }
 
+type brokerPublishDeletesListener struct {
+	client mqtt.Client
+}
+
+func (b *brokerPublishDeletesListener) Unsubscribe(topic string) {
+	b.client.Publish(topic, 0, true, "")
+}
+
 func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
 	broker := config.Load(configPath).Broker()
 	if broker == "" {

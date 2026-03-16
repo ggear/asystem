@@ -225,7 +225,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				return
 			}
 			if serviceName := value.Pulse.ValueString; serviceName != "" {
-				cache.RegisterService(hostName, serviceName)
+				cache.ForceRegisterService(hostName, serviceName)
 			}
 		})
 	}
@@ -235,6 +235,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		return
 	}
 	defer client.Disconnect(250)
+	cache.SubscribeDeletes(&brokerPublishDeletesListener{client: client})
 	var lineProtocol strings.Builder
 	err = probe.Run(ctx, func(isHeartbeat bool) {
 		pulseStart := time.Now()
