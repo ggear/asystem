@@ -386,7 +386,7 @@ func (b *box) drawValue(display *Display) {
 		record, ok = display.cache.Load(*b.recordGUID)
 	}
 	if !ok || record == nil || record.Value.Pulse == nil || record.Value.Pulse.IsZero() {
-		display.terminal.draw(b.position.cols, b.position.rows, strings.Repeat(" ", b.compiled.length), colourDefault)
+		display.terminal.draw(b.position.cols+b.compiled.valOffset, b.position.rows, strings.Repeat(" ", b.compiled.length-b.compiled.valOffset), colourDefault)
 		return
 	}
 	location := dimensions{b.position.rows, b.position.cols + b.compiled.valOffset}
