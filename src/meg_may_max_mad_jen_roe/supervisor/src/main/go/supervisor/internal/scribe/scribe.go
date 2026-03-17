@@ -136,7 +136,7 @@ func (h *bufferHandler) Enabled(_ context.Context, level slog.Level) bool {
 
 func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
 	var sb strings.Builder
-	sb.WriteString(record.Message)
+	sb.WriteString(messagePadder.pad(record.Message))
 	record.Attrs(func(a slog.Attr) bool {
 		sb.WriteByte(' ')
 		sb.WriteString(a.Key)
@@ -176,6 +176,8 @@ func (p *padder) pad(s string) string {
 	}
 	return s + strings.Repeat(" ", w-len(s))
 }
+
+var messagePadder = newPadder(9)
 
 var padders = map[string]*padder{
 	"probe":    newPadder(8),

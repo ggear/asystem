@@ -43,13 +43,13 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 			if onConnect != nil {
 				onConnect(client)
 			}
-			slog.Debug("state", "engine", "broker", "phase", "connect", "duration", time.Since(connectStart).Truncate(time.Millisecond), "broker", brokerURL)
+			slog.Info("state", "engine", "broker", "phase", "connect", "duration", time.Since(connectStart).Truncate(time.Millisecond), "broker", brokerURL)
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
 			slog.Warn("state", "engine", "broker", "phase", "disconnect", "duration", "0s", "broker", brokerURL, "error", err)
 		}).
 		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
-			slog.Debug("state", "engine", "broker", "phase", "reconnect", "duration", "0s", "broker", brokerURL)
+			slog.Warn("state", "engine", "broker", "phase", "reconnect", "duration", "0s", "broker", brokerURL)
 		})
 	if willTopic != "" {
 		opts.SetWill(willTopic, willPayload, 1, true)
