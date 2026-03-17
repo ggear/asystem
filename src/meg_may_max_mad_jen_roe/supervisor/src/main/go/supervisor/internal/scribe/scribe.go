@@ -137,14 +137,20 @@ func (h *bufferHandler) Enabled(_ context.Context, level slog.Level) bool {
 func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
 	var sb strings.Builder
 	sb.WriteString(messagePadder.pad(record.Message))
+	first := true
 	record.Attrs(func(a slog.Attr) bool {
 		sb.WriteByte(' ')
-		sb.WriteString(a.Key)
-		sb.WriteByte('=')
+		if first {
+			first = false
+			sb.WriteString(scopePadder.pad(a.Key + "=" + a.Value.String()))
+			return true
+		}
 		val := a.Value.String()
 		if p, ok := padders[a.Key]; ok {
 			val = p.pad(val)
 		}
+		sb.WriteString(a.Key)
+		sb.WriteByte('=')
 		sb.WriteString(val)
 		return true
 	})
@@ -178,10 +184,9 @@ func (p *padder) pad(s string) string {
 }
 
 var messagePadder = newPadder(9)
+var scopePadder = newPadder(18)
 
 var padders = map[string]*padder{
-	"probe":    newPadder(8),
-	"engine":   newPadder(10),
 	"phase":    newPadder(9),
 	"duration": newPadder(8),
 	"received": newPadder(8),

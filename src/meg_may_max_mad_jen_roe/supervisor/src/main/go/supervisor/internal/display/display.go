@@ -421,7 +421,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			force = true
-			slog.Debug("profiling", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond))
+			slog.Info("display", "display", "main", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond))
 		case <-d.cache.Updates():
 		case event, ok := <-d.terminal.events():
 			if !ok {
@@ -459,7 +459,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					}
 				}
 				force = true
-				slog.Debug("profiling", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart).Truncate(time.Millisecond), "cols", cols, "rows", rows)
+				slog.Info("display", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart).Truncate(time.Millisecond), "cols", cols, "rows", rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
@@ -477,7 +477,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 						}
 					}
 					force = true
-					slog.Debug("profiling", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond))
+					slog.Info("display", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond))
 				}
 				if ev.Key() == tcell.KeyEscape && d.logBuffer != nil {
 					d.logOverlay = !d.logOverlay
@@ -524,7 +524,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			d.terminal.show()
-			slog.Debug("profiling", "engine", "display", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "boxes", drawnCount)
+			slog.Info("display", "display", "main", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "drawn", fmt.Sprintf("%dboxes", drawnCount))
 			force = false
 		}
 	}
