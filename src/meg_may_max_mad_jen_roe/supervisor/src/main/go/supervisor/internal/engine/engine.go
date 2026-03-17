@@ -89,6 +89,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Evict(guid.Host, guid.ServiceName)
 					return
 				}
+				value.Timestamp = time.Now().Unix()
 				record := metric.NewRecord(value)
 				cache.Store(guid, &record)
 			})
@@ -117,6 +118,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			for _, b := range cache.RegisterService(hostName, serviceName, false) {
 				subscribe(b)
 			}
+			value.Timestamp = time.Now().Unix()
 			record := metric.NewRecord(value)
 			cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, hostName, serviceName), &record)
 		})
