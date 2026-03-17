@@ -371,6 +371,70 @@ func (c *RecordCache) Delete(hostName, serviceName string) bool {
 	return removedGuids
 }
 
+func (c *RecordCache) EvictAndDelete(hostName, serviceName string) bool {
+	if c == nil || hostName == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
+		return false
+	}
+	nilValue := NewNilValue()
+	c.mutex.Lock()
+	if len(c.guids) == 0 {
+		c.mutex.Unlock()
+		return false
+	}
+	var allListeners []UpdatesListener
+	var removedTopics []string
+	removedGuids := false
+	deletesListener := c.deletesListener
+	updated := c.guids[:0]
+	for _, guid := range c.guids {
+		if guid.Host != hostName || guid.ServiceName != serviceName {
+			updated = append(updated, guid)
+			continue
+		}
+		k := guid.key()
+		record := c.records[k]
+		if record == nil {
+			removedGuids = true
+			continue
+		}
+		if record.Topic != "" {
+			removedTopics = append(removedTopics, record.Topic)
+		}
+		if !record.Value.Equal(&nilValue) {
+			c.dirty[k] = guid
+			allListeners = append(allListeners, c.listeners[k]...)
+			if GetIDKind(guid.ID) == MetricKindService {
+				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
+				allListeners = append(allListeners, c.listeners[schemaKey]...)
+			}
+		}
+		delete(c.dirty, k)
+		delete(c.records, k)
+		delete(c.listeners, k)
+		removedGuids = true
+	}
+	if removedGuids {
+		for i := len(updated); i < len(c.guids); i++ {
+			c.guids[i] = RecordGUID{}
+		}
+		c.guids = updated
+		c.reindex()
+	}
+	c.mutex.Unlock()
+	if removedGuids {
+		for _, listener := range allListeners {
+			listener.MarkDirty()
+		}
+		if deletesListener != nil {
+			for _, topic := range removedTopics {
+				deletesListener.Unsubscribe(topic)
+			}
+		}
+		c.NotifyUpdates()
+	}
+	return removedGuids
+}
+
 func (c *RecordCache) Purge(evictSecs int) {
 	if c == nil {
 		return

@@ -131,8 +131,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	}
 	for _, cachedServiceName := range p.cache.Services(p.hostName) {
 		if _, exists := polledServiceNames[cachedServiceName]; !exists {
-			p.cache.Evict(p.hostName, cachedServiceName)
-			p.cache.Delete(p.hostName, cachedServiceName)
+			p.cache.EvictAndDelete(p.hostName, cachedServiceName)
 		}
 	}
 	newBool := func() *stats.BoolStats {
