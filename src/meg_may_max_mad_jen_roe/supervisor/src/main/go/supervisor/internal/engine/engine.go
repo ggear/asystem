@@ -248,11 +248,11 @@ type lpKey struct {
 // RunAllProbesPublishLoop runs local probes and publishes metrics to MQTT and the database.
 // Lifecycle: all probe metrics registered (not filtered). Subscribes to own service/name topic to discover services via retained messages.
 // Heartbeat: publishes online status + ALL records (not just dirty) + drains dirty. Non-heartbeat: publishes dirty records only.
-// Nil service records: publishes nil-pulse JSON then empty tombstone to clear retained topic, then Delete removes locally.
 // Line protocol: int/float metrics grouped per host+service for database writes.
 // Cache: own instance, not shared with any display. Take drains dirty map each pulse.
 // Shutdown: publishes offline status and empty payloads for all topics with retained messages.
-// Cleanup: missing service → Evict (nil) → next pulse publishes nil + empty tombstone → Delete removes nil records.
+// Cleanup: missing service → Evict (nil) + Delete removes nil records and publishes empty tombstones via deletesListener.
+// Safety net: if a nil-pulse record survives to the pulse handler (e.g. MQTT interleave), it publishes nil JSON + empty tombstone then deletes locally.
 func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())
