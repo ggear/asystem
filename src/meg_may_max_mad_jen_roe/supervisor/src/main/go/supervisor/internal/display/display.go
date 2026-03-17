@@ -64,6 +64,7 @@ type Display struct {
 	logBuffer     *scribe.LogBuffer
 	logOverlay    bool
 	logGeneration uint64
+	refreshPeriod time.Duration
 }
 
 type dirtyBoxes struct {
@@ -84,20 +85,22 @@ func NewDisplay(
 	isRemote bool,
 	configPath string,
 	logBuffer *scribe.LogBuffer,
+	refreshPeriod time.Duration,
 ) (*Display, error) {
 	return &Display{
-		hosts:        hosts,
-		dimsInit:     dimensions{rows: height, cols: width},
-		dimsTerminal: dimensions{rows: maxHeight, cols: maxWidth},
-		symbols:      symbols,
-		periods:      periods,
-		configPath:   configPath,
-		isRemote:     isRemote,
-		format:       format,
-		formatInit:   format,
-		factory:      factory,
-		cache:        cache,
-		logBuffer:    logBuffer,
+		hosts:         hosts,
+		dimsInit:      dimensions{rows: height, cols: width},
+		dimsTerminal:  dimensions{rows: maxHeight, cols: maxWidth},
+		symbols:       symbols,
+		periods:       periods,
+		configPath:    configPath,
+		isRemote:      isRemote,
+		format:        format,
+		formatInit:    format,
+		factory:       factory,
+		cache:         cache,
+		logBuffer:     logBuffer,
+		refreshPeriod: refreshPeriod,
 	}, nil
 }
 
@@ -393,11 +396,19 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 	}
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
+	var refreshC <-chan time.Time
+	if d.refreshPeriod > 0 {
+		refreshTicker := time.NewTicker(d.refreshPeriod)
+		defer refreshTicker.Stop()
+		refreshC = refreshTicker.C
+	}
 	var force bool
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-refreshC:
+			force = true
 		case <-d.cache.Updates():
 		case event, ok := <-d.terminal.events():
 			if !ok {
@@ -438,6 +449,9 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
 					return
+				}
+				if ev.Key() == tcell.KeyCtrlR {
+					force = true
 				}
 				if ev.Key() == tcell.KeyEscape && d.logBuffer != nil {
 					d.logOverlay = !d.logOverlay

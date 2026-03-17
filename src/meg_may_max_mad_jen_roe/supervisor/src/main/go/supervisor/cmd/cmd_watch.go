@@ -10,6 +10,7 @@ import (
 	"supervisor/internal/display"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
+	"time"
 	"unicode"
 
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ type watchOptions struct {
 	cachePeriod     string
 	snapshotPeriod  string
 	heartbeatFactor string
+	refreshPeriod   string
 	consoleWidth    int
 	consoleHeight   int
 	json            bool
@@ -57,6 +59,7 @@ func newWatchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", "24h", "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h] (default: 24h)")
 	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", "24h", "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h] (default: 24h)")
 	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h] (default: 5m)")
+	cmd.Flags().StringVarP(&opts.refreshPeriod, "refresh-period", "R", "15m", "period for performing a full screen refresh, uses unit suffixes [s, m, h] (default: 15m)")
 	cmd.Flags().IntVarP(&opts.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
 	cmd.Flags().IntVarP(&opts.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
 	cmd.Flags().BoolVarP(&opts.json, "json", "J", false, "output JSON instead of the default text format. Assumes local mode, respects poll and bin period options and ignores all formating options")
@@ -144,6 +147,13 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if err != nil {
 		return err
 	}
+	refreshPeriod, err := time.ParseDuration(opts.refreshPeriod)
+	if err != nil {
+		return fmt.Errorf("invalid refresh period: %w", err)
+	}
+	if refreshPeriod <= 0 {
+		return fmt.Errorf("invalid refresh period: must be > 0")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	d, err := display.NewDisplay(
@@ -160,6 +170,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		isRemote,
 		configPath,
 		logBuffer,
+		refreshPeriod,
 	)
 	if err != nil {
 		return err

@@ -10,10 +10,7 @@ x-common: &common
     - INFLUXDB_HTTP_PORT
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
-    - /:/hostfs:ro
-    - /dev:/dev:ro
-    - /run/udev:/run/udev:ro
-    - /run/utmp:/hostfs/var/run/utmp:ro
+    - /:/${SUPERVISOR_HOST_FS}:ro
     - /var/run/docker.sock:/var/run/docker.sock
   logging:
     driver: "json-file"

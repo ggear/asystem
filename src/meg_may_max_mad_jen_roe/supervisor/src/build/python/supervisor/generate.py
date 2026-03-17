@@ -37,6 +37,7 @@ if __name__ == "__main__":
             "asystem": {
                 "version": "$SERVICE_VERSION_ABSOLUTE",
                 "host": "$SUPERVISOR_HOST",
+                "host_file_system": "$SUPERVISOR_HOST_FS",
                 "broker": {
                     "host": "$VERNEMQ_SERVICE",
                     "port": "$VERNEMQ_API_PORT"

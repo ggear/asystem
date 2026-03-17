@@ -57,6 +57,9 @@ Options:
   -S, --snapshot-period duration
       period for publishing a metric snapshot, uses unit suffixes [s, m, h] (default: 5m)
 
+  -R, --refresh-period duration
+      period for performing a full screen refresh, uses unit suffixes [s, m, h] (default: 15m)
+
   -W --console-width int
       override the console width with the specified value
 

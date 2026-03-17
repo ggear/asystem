@@ -314,6 +314,7 @@ func TestDisplay(t *testing.T) {
 					true,
 					"",
 					nil,
+					0,
 				)
 				if newErr != nil {
 					t.Fatalf("New Display err = %v, expected nil", newErr)

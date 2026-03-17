@@ -152,7 +152,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					client.Unsubscribe(b.Topic)
 					subscribe(b)
 				}
-				slog.Debug("profiling", "engine", "stream", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
+				slog.Warn("profiling", "engine", "stream", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
 			case hostStatusOffline, "":
 				statusStart := time.Now()
 				storeHostStatus(hostName, false)
