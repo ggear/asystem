@@ -238,8 +238,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedProcessorInts[polledServiceName],
 				func() int8 { return usedProcessorInts[polledServiceName].PulseMax() },
 				func() int8 { return usedProcessorInts[polledServiceName].TrendP95() },
-				func(p int8) bool { return p <= 90 },
-				func(t int8) bool { return t <= 70 },
+				func(p int8) bool { return healthyAndConfigured && p <= 90 },
+				func(t int8) bool { return healthyAndConfigured && t <= 70 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -249,8 +249,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedMemoryInts[polledServiceName],
 				func() int8 { return usedMemoryInts[polledServiceName].PulseMax() },
 				func() int8 { return usedMemoryInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return p <= 90 },
-				func(t int8) bool { return t <= 75 },
+				func(p int8) bool { return healthyAndConfigured && p <= 90 },
+				func(t int8) bool { return healthyAndConfigured && t <= 75 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -260,8 +260,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedDiskOpsInts[polledServiceName],
 				func() int8 { return usedDiskOpsInts[polledServiceName].PulseMax() },
 				func() int8 { return usedDiskOpsInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return p <= 90 },
-				func(t int8) bool { return t <= 80 },
+				func(p int8) bool { return healthyAndConfigured && p <= 90 },
+				func(t int8) bool { return healthyAndConfigured && t <= 80 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -271,8 +271,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedNetworkInts[polledServiceName],
 				func() int8 { return usedNetworkInts[polledServiceName].PulseMax() },
 				func() int8 { return usedNetworkInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return p <= 90 },
-				func(t int8) bool { return t <= 80 },
+				func(p int8) bool { return healthyAndConfigured && p <= 90 },
+				func(t int8) bool { return healthyAndConfigured && t <= 80 },
 			),
 			newCacheMetricTask(
 				metric.ValueFloat,
@@ -304,8 +304,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				restartCountFloats[polledServiceName],
 				func() float64 { return restartCountFloats[polledServiceName].PulseLast() },
 				func() float64 { return restartCountFloats[polledServiceName].TrendMax() },
-				func(p float64) bool { return p <= 80 },
-				func(t float64) bool { return t <= 70 },
+				func(p float64) bool { return healthyAndConfigured && p <= 80 },
+				func(t float64) bool { return healthyAndConfigured && t <= 70 },
 			),
 		})
 	}

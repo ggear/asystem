@@ -158,6 +158,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Evict(hostName, svc)
 					cache.Delete(hostName, svc)
 				}
+				hostPrefix := "supervisor/" + hostName + "/"
+				subscribedMu.Lock()
+				for topic := range subscribed {
+					if strings.HasPrefix(topic, hostPrefix) {
+						delete(subscribed, topic)
+					}
+				}
+				subscribedMu.Unlock()
 				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
 					record := metric.NewRecord(metric.NewNilValue())
 					cache.Store(metric.NewRecordGUID(id, hostName), &record)
