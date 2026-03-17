@@ -44,7 +44,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeriod, heartbeatFactor string) (config.Periods, error) {
+func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeriod, heartbeatPeriod string) (config.Periods, error) {
 	toDuration := func(raw string, unit time.Duration, name string) (int, error) {
 		d, err := time.ParseDuration(raw)
 		if err != nil {
@@ -86,20 +86,22 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 	if err != nil {
 		return config.Periods{}, err
 	}
-	heartbeatFactorInt, err := strconv.Atoi(heartbeatFactor)
+	heartbeatDuration, err := time.ParseDuration(heartbeatPeriod)
 	if err != nil {
-		return config.Periods{}, fmt.Errorf("invalid heartbeat factor: %w", err)
+		return config.Periods{}, fmt.Errorf("invalid heartbeat period: %w", err)
 	}
-	if heartbeatFactorInt < 1 {
-		return config.Periods{}, fmt.Errorf("invalid heartbeat factor: must be >= 1")
+	if heartbeatDuration <= 0 {
+		return config.Periods{}, fmt.Errorf("invalid heartbeat period: must be > 0")
 	}
+	heartbeatMillis := int(heartbeatDuration / time.Millisecond)
+	heartbeatSecs := (heartbeatMillis + pulseMillis - 1) / pulseMillis * pulseMillis / 1000
 	return config.Periods{
 		PollMillis:    pollMillis,
 		PulseMillis:   pulseMillis,
 		TrendHours:    trendHours,
 		CacheHours:    cacheHours,
 		SnapshotMins:  snapshotMins,
-		HeartbeatSecs: heartbeatFactorInt * pulseMillis / 1000,
+		HeartbeatSecs: heartbeatSecs,
 	}, nil
 }
 

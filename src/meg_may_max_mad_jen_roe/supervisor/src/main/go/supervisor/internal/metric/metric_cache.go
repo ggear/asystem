@@ -99,6 +99,7 @@ type RecordCache struct {
 	listeners       map[guidKey][]UpdatesListener
 	deletesListener DeletesListener
 	dirty           map[guidKey]RecordGUID
+	hostLastSeen    map[string]int64
 }
 
 func NewRecordCache() *RecordCache {
@@ -109,6 +110,7 @@ func NewRecordCache() *RecordCache {
 		notify:       make(chan struct{}, 1),
 		listeners:    make(map[guidKey][]UpdatesListener),
 		dirty:        make(map[guidKey]RecordGUID),
+		hostLastSeen: make(map[string]int64),
 	}
 }
 
@@ -148,6 +150,9 @@ func (c *RecordCache) Store(guid RecordGUID, record *Record) {
 	}
 	if notify && (!record.Value.Equal(&nilValue) || (found && cached != nil && !cached.Value.Equal(&nilValue))) {
 		c.dirty[k] = guid
+	}
+	if !record.Value.Equal(&nilValue) && guid.Host != "" && record.Value.Timestamp > c.hostLastSeen[guid.Host] {
+		c.hostLastSeen[guid.Host] = record.Value.Timestamp
 	}
 	listeners = append([]UpdatesListener(nil), c.listeners[k]...)
 	if notify && GetIDKind(guid.ID) == MetricKindService && guid.ServiceName != ServiceNameUnset && guid.ServiceName != ServiceNameSchema {
@@ -394,7 +399,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 			updated = append(updated, guid)
 			continue
 		}
-		if !record.Value.Equal(&nilValue) && now-record.Value.Timestamp > int64(evictSecs) {
+		if !record.Value.Equal(&nilValue) && now-c.hostLastSeen[guid.Host] > int64(evictSecs) {
 			c.records[k] = &Record{Topic: record.Topic, Tags: record.Tags, Value: nilValue}
 			c.dirty[k] = guid
 			allListeners = append(allListeners, c.listeners[k]...)

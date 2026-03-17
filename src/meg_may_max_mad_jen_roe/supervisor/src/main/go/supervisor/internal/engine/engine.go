@@ -185,7 +185,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return
 		case <-purgeTicker.C:
 			purgeStart := time.Now()
-			cache.Purge(periods.HeartbeatSecs + 10)
+			cache.Purge(periods.HeartbeatSecs + 10*periods.PulseMillis/1000)
 			rx := rxCount.Swap(0)
 			rate := int64(0)
 			if secs := int64(purgeInterval.Seconds()); secs > 0 {
