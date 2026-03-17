@@ -11,7 +11,6 @@ import (
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
-	"supervisor/internal/scribe"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -141,8 +140,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			rxCount.Add(1)
 			switch payload {
 			case hostStatusOnline:
+				statusStart := time.Now()
 				storeHostStatus(hostName, true)
-				slog.Debug("profiling", "engine", scribe.PadSource.Pad("stream"), "phase", scribe.PadPhase.Pad("status"), "host", hostName, "status", hostStatusOnline)
 				for _, b := range cache.Topics() {
 					if b.GUID.Host != hostName {
 						continue
@@ -153,9 +152,10 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					client.Unsubscribe(b.Topic)
 					subscribe(b)
 				}
+				slog.Debug("profiling", "engine", "stream", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
 			case hostStatusOffline, "":
+				statusStart := time.Now()
 				storeHostStatus(hostName, false)
-				slog.Debug("profiling", "engine", scribe.PadSource.Pad("stream"), "phase", scribe.PadPhase.Pad("status"), "host", hostName, "status", hostStatusOffline)
 				for _, svc := range cache.Services(hostName) {
 					cache.Evict(hostName, svc)
 					cache.Delete(hostName, svc)
@@ -172,6 +172,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					record := metric.NewRecord(metric.NewNilValue())
 					cache.Store(metric.NewRecordGUID(id, hostName), &record)
 				}
+				slog.Debug("profiling", "engine", "stream", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOffline)
 			default:
 				slog.Debug("stream unknown status payload", "host", hostName, "payload", payload)
 			}
@@ -199,7 +200,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if secs := int64(purgeInterval.Seconds()); secs > 0 {
 				rate = rx / secs
 			}
-			slog.Debug("profiling", "engine", scribe.PadSource.Pad("stream"), "phase", scribe.PadPhase.Pad("purge"), "duration", scribe.PadDuration.Pad(time.Since(purgeStart).Truncate(time.Millisecond).String()), "received", fmt.Sprintf("%dmsg", rx), "rate", fmt.Sprintf("%dmsg/s", rate))
+			slog.Debug("profiling", "engine", "stream", "phase", "purge", "duration", time.Since(purgeStart).Truncate(time.Millisecond), "received", fmt.Sprintf("%dmsg", rx), "rate", fmt.Sprintf("%dmsg/s", rate))
 		}
 	}
 }
@@ -376,7 +377,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if isHeartbeat {
 			phase = "heartbeat"
 		}
-		slog.Debug("profiling", "engine", scribe.PadSource.Pad("publish"), "phase", scribe.PadPhase.Pad(phase), "duration", scribe.PadDuration.Pad(time.Since(pulseStart).Truncate(time.Millisecond).String()), "transmit", fmt.Sprintf("%dmsg", txCount))
+		slog.Debug("profiling", "engine", "publish", "phase", phase, "duration", time.Since(pulseStart).Truncate(time.Millisecond), "transmit", fmt.Sprintf("%dmsg", txCount))
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Error("run all probes publish loop: run failed", "error", err)

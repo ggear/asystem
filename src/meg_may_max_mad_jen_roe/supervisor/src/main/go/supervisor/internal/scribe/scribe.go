@@ -141,7 +141,11 @@ func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
 		sb.WriteByte(' ')
 		sb.WriteString(a.Key)
 		sb.WriteByte('=')
-		sb.WriteString(a.Value.String())
+		val := a.Value.String()
+		if p, ok := padders[a.Key]; ok {
+			val = p.pad(val)
+		}
+		sb.WriteString(val)
 		return true
 	})
 	h.buffer.Push(LogLine{Time: record.Time, Level: record.Level, Message: sb.String()})
@@ -151,16 +155,16 @@ func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
 func (h *bufferHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 func (h *bufferHandler) WithGroup(_ string) slog.Handler      { return h }
 
-type Padder struct {
+type padder struct {
 	mu    sync.Mutex
 	width int
 }
 
-func NewPadder(minWidth int) *Padder {
-	return &Padder{width: minWidth}
+func newPadder(minWidth int) *padder {
+	return &padder{width: minWidth}
 }
 
-func (p *Padder) Pad(s string) string {
+func (p *padder) pad(s string) string {
 	p.mu.Lock()
 	if len(s) > p.width {
 		p.width = len(s)
@@ -173,11 +177,14 @@ func (p *Padder) Pad(s string) string {
 	return s + strings.Repeat(" ", w-len(s))
 }
 
-var (
-	PadSource   = NewPadder(8)
-	PadPhase    = NewPadder(9)
-	PadDuration = NewPadder(6)
-)
+var padders = map[string]*padder{
+	"probe":    newPadder(8),
+	"engine":   newPadder(8),
+	"phase":    newPadder(9),
+	"duration": newPadder(8),
+	"received": newPadder(8),
+	"transmit": newPadder(8),
+}
 
 var (
 	scribeLoggerMutex    sync.Mutex
