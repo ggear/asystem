@@ -19,9 +19,9 @@ import (
 )
 
 // RunListeningProbesLoop runs local probes and writes directly to the display cache.
-// Lifecycle: probes filtered to metrics with cache listeners (display boxes) plus their deps.
+// Lifecycle: seeds nil records for listener IDs and their deps, then runs probes filtered to those metrics.
 // Cache: shared with display. Probe stats cleaned by syncStatsFields; prevCPUStats pruned by active container ID.
-// Cleanup: missing service → Evict (nil) → Delete removes nil records and reindexes. No Purge.
+// Cleanup: missing service → Evict (nil) + Delete removes nil records and reindexes. No Purge needed (local probes manage staleness directly).
 func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for host, ids := range cache.ListenerIDs() {
 		for _, id := range ids {
