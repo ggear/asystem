@@ -11,10 +11,14 @@ import (
 )
 
 type brokerDeletesListener struct {
-	client mqtt.Client
+	client   mqtt.Client
+	onDelete func(topic string)
 }
 
 func (b *brokerDeletesListener) Unsubscribe(topic string) {
+	if b.onDelete != nil {
+		b.onDelete(topic)
+	}
 	b.client.Unsubscribe(topic)
 }
 

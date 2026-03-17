@@ -43,9 +43,12 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 }
 
 // RunListeningStreamLoop subscribes to MQTT and writes remote metrics to the display cache.
-// Lifecycle: probes filtered to metrics with cache listeners (display boxes). RegisterService adds entries for new services.
-// Cache: shared with display. Receives data from RunAllProbesPublishLoop on remote hosts.
-// Cleanup: empty/nil payload → Evict (nil) → Delete removes nil records and reindexes. Host offline → Evict (nil). Purge evicts stale non-nil to nil, then deletes stale nil service records and reindexes.
+// Lifecycle: seeds nil records for listener IDs (no deps), subscribes to data topics, service/name discovery, and host status.
+// Cache: shared with display. Receives data published by RunAllProbesPublishLoop on remote hosts.
+// Discovery: service/name messages trigger RegisterService which adds nil entries and returns new topic bindings to subscribe.
+// Host online: unsubscribe+resubscribe forces broker to redeliver retained messages, restoring records. Unknown hosts default to online.
+// Host offline: Evict (nil) all services (keeps slots for repopulation), store nil for host-kind metrics, drop from subscribed map.
+// Cleanup: empty/nil payload → Evict (nil) + Delete. Purge evicts stale non-nil to nil (via hostLastSeen), then deletes stale nil service records and reindexes.
 func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for host, ids := range cache.ListenerIDs() {
 		for _, id := range ids {
@@ -54,50 +57,53 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 	}
 	var rxCount atomic.Int64
+	var subscribedMu sync.Mutex
+	subscribed := make(map[string]struct{})
+	subscribe := func(client mqtt.Client, b metric.TopicBinding) {
+		subscribedMu.Lock()
+		_, exists := subscribed[b.Topic]
+		if !exists {
+			subscribed[b.Topic] = struct{}{}
+		}
+		subscribedMu.Unlock()
+		if exists {
+			return
+		}
+		guid := b.GUID
+		client.Subscribe(b.Topic, 0, func(_ mqtt.Client, msg mqtt.Message) {
+			if !isHostOnline(guid.Host) {
+				return
+			}
+			rxCount.Add(1)
+			if len(msg.Payload()) == 0 {
+				cache.Evict(guid.Host, guid.ServiceName)
+				cache.Delete(guid.Host, guid.ServiceName)
+				return
+			}
+			var value metric.ValueData
+			if err := json.Unmarshal(msg.Payload(), &value); err != nil {
+				slog.Warn("stream unmarshal failed", "topic", msg.Topic(), "error", err)
+				return
+			}
+			if value.Pulse == nil {
+				cache.Evict(guid.Host, guid.ServiceName)
+				cache.Delete(guid.Host, guid.ServiceName)
+				return
+			}
+			value.Timestamp = time.Now().Unix()
+			record := metric.NewRecord(value)
+			cache.Store(guid, &record)
+		})
+	}
 	onConnect := func(client mqtt.Client) {
 		hostStatusMutex.Lock()
 		clear(hostStatus)
 		hostStatusMutex.Unlock()
-		var subscribedMu sync.Mutex
-		subscribed := make(map[string]struct{})
-		subscribe := func(b metric.TopicBinding) {
-			subscribedMu.Lock()
-			_, exists := subscribed[b.Topic]
-			if !exists {
-				subscribed[b.Topic] = struct{}{}
-			}
-			subscribedMu.Unlock()
-			if exists {
-				return
-			}
-			guid := b.GUID
-			client.Subscribe(b.Topic, 0, func(_ mqtt.Client, msg mqtt.Message) {
-				if !isHostOnline(guid.Host) {
-					return
-				}
-				rxCount.Add(1)
-				if len(msg.Payload()) == 0 {
-					cache.Evict(guid.Host, guid.ServiceName)
-					cache.Delete(guid.Host, guid.ServiceName)
-					return
-				}
-				var value metric.ValueData
-				if err := json.Unmarshal(msg.Payload(), &value); err != nil {
-					slog.Warn("stream unmarshal failed", "topic", msg.Topic(), "error", err)
-					return
-				}
-				if value.Pulse == nil {
-					cache.Evict(guid.Host, guid.ServiceName)
-					cache.Delete(guid.Host, guid.ServiceName)
-					return
-				}
-				value.Timestamp = time.Now().Unix()
-				record := metric.NewRecord(value)
-				cache.Store(guid, &record)
-			})
-		}
+		subscribedMu.Lock()
+		clear(subscribed)
+		subscribedMu.Unlock()
 		for _, b := range cache.Topics() {
-			subscribe(b)
+			subscribe(client, b)
 		}
 		client.Subscribe("supervisor/+/data/service/+/name", 1, func(_ mqtt.Client, msg mqtt.Message) {
 			var value metric.ValueData
@@ -118,7 +124,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			rxCount.Add(1)
 			for _, b := range cache.RegisterService(hostName, serviceName, false) {
-				subscribe(b)
+				subscribe(client, b)
 			}
 			value.Timestamp = time.Now().Unix()
 			record := metric.NewRecord(value)
@@ -144,7 +150,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					delete(subscribed, b.Topic)
 					subscribedMu.Unlock()
 					client.Unsubscribe(b.Topic)
-					subscribe(b)
+					subscribe(client, b)
 				}
 				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
 			case hostStatusOffline, "":
@@ -177,7 +183,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		return
 	}
 	defer client.Disconnect(250)
-	cache.SubscribeDeletes(&brokerDeletesListener{client: client})
+	cache.SubscribeDeletes(&brokerDeletesListener{
+		client: client,
+		onDelete: func(topic string) {
+			subscribedMu.Lock()
+			delete(subscribed, topic)
+			subscribedMu.Unlock()
+		},
+	})
 	purgeInterval := time.Duration(max(periods.PulseMillis+1000, 2000)) * time.Millisecond
 	purgeTicker := time.NewTicker(purgeInterval)
 	defer purgeTicker.Stop()
@@ -199,9 +212,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 }
 
 // RunAllProbesOnce runs all probes for a single pulse cycle then exits.
-// Lifecycle: all probe metrics registered (not filtered). Runs with a 3x pulse timeout, no trend tracking.
+// Lifecycle: all probe metrics registered (not filtered). Runs with a 3x pulse timeout (3s default), no trend tracking, no onPulse callback.
 // Cache: caller-owned, short-lived, discarded on return.
-// Cleanup: none needed.
+// Cleanup: none needed (cache is ephemeral).
 func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.RecordCache) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())
@@ -233,9 +246,13 @@ type lpKey struct {
 }
 
 // RunAllProbesPublishLoop runs local probes and publishes metrics to MQTT and the database.
-// Lifecycle: all probe metrics registered (not filtered). Probes poll each tick; onPulse publishes to MQTT. On shutdown, publishes offline status and empty payloads to clear retained topics.
+// Lifecycle: all probe metrics registered (not filtered). Subscribes to own service/name topic to discover services via retained messages.
+// Heartbeat: publishes online status + ALL records (not just dirty) + drains dirty. Non-heartbeat: publishes dirty records only.
+// Nil service records: publishes nil-pulse JSON then empty tombstone to clear retained topic, then Delete removes locally.
+// Line protocol: int/float metrics grouped per host+service for database writes.
 // Cache: own instance, not shared with any display. Take drains dirty map each pulse.
-// Cleanup: missing service → Evict (nil) → next pulse publishes nil + empty tombstone → Delete removes nil records. Delete is safe here (no display indices to destabilise).
+// Shutdown: publishes offline status and empty payloads for all topics with retained messages.
+// Cleanup: missing service → Evict (nil) → next pulse publishes nil + empty tombstone → Delete removes nil records.
 func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())

@@ -709,7 +709,6 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 					}
 				}
 			}
-
 		}
 	}
 	if version == "" {
