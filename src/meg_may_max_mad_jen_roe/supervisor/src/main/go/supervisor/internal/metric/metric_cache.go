@@ -382,6 +382,8 @@ func (c *RecordCache) Purge(evictSecs int) {
 	removedGuids := false
 	updated := c.guids[:0]
 	var allListeners []UpdatesListener
+	var removedTopics []string
+	deletesListener := c.deletesListener
 	for _, guid := range c.guids {
 		k := guid.key()
 		record := c.records[k]
@@ -396,7 +398,19 @@ func (c *RecordCache) Purge(evictSecs int) {
 			continue
 		}
 		if record.Value.Equal(&nilValue) && guid.ServiceName != ServiceNameUnset && now-record.Value.Timestamp > int64(evictSecs) {
-			updated = append(updated, guid)
+			if record.Topic != "" {
+				removedTopics = append(removedTopics, record.Topic)
+			}
+			allListeners = append(allListeners, c.listeners[k]...)
+			if GetIDKind(guid.ID) == MetricKindService {
+				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
+				allListeners = append(allListeners, c.listeners[schemaKey]...)
+			}
+			delete(c.records, k)
+			delete(c.dirty, k)
+			delete(c.listeners, k)
+			removedGuids = true
+			changed = true
 			continue
 		}
 		if !record.Value.Equal(&nilValue) && now-c.hostLastSeen[guid.Host] > int64(evictSecs) {
@@ -422,6 +436,11 @@ func (c *RecordCache) Purge(evictSecs int) {
 	if changed {
 		for _, listener := range allListeners {
 			listener.MarkDirty()
+		}
+		if deletesListener != nil {
+			for _, topic := range removedTopics {
+				deletesListener.Unsubscribe(topic)
+			}
 		}
 		c.NotifyUpdates()
 	}

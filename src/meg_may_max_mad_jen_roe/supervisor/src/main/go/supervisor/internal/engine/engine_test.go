@@ -385,20 +385,20 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 		checkFunc func(*testing.T, *metric.RecordCache, metric.TopicBinding)
 	}{
 		{
-			name: "happy_nil_mqtt_value_evicts_service",
+			name: "happy_nil_mqtt_value_deletes_service",
 			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
 				return []byte(`{}`)
 			},
 			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
 				deadline := time.Now().Add(3 * time.Second)
 				for time.Now().Before(deadline) {
-					record, ok := cache.Load(b.GUID)
-					if ok && record != nil && record.Value.Pulse == nil {
+					_, ok := cache.Load(b.GUID)
+					if !ok {
 						return
 					}
 					time.Sleep(50 * time.Millisecond)
 				}
-				t.Fatalf("Got non-nil pulse after nil publish, expected service evicted to nil")
+				t.Fatalf("Got record still present after nil publish, expected service deleted")
 			},
 		},
 		{

@@ -77,6 +77,17 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	// TODO: START
 	//  - Implement JSON
 
+	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return err
+	}
+	if opts.consoleWidth > 0 && opts.consoleWidth < width {
+		width = opts.consoleWidth
+	}
+	if opts.consoleHeight > 0 && opts.consoleHeight < height {
+		height = opts.consoleHeight
+	}
+	logBuffer := scribe.EnableBuffer(slog.LevelDebug, height)
 	mode := opts.mode
 	var isRemote bool
 	var hosts []string
@@ -106,17 +117,6 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		}
 		hosts = []string{hostname}
 	}
-	width, height, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		return err
-	}
-	if opts.consoleWidth > 0 && opts.consoleWidth < width {
-		width = opts.consoleWidth
-	}
-	if opts.consoleHeight > 0 && opts.consoleHeight < height {
-		height = opts.consoleHeight
-	}
-	logBuffer := scribe.EnableBuffer(slog.LevelDebug, height)
 	format := display.FormatAuto
 	switch strings.ToLower(opts.format) {
 	case "auto":

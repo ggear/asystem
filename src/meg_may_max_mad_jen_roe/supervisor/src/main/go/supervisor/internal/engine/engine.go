@@ -21,7 +21,7 @@ import (
 // RunListeningProbesLoop runs local probes and writes directly to the display cache.
 // Lifecycle: probes filtered to metrics with cache listeners (display boxes) plus their deps.
 // Cache: shared with display. Probe stats cleaned by syncStatsFields; prevCPUStats pruned by active container ID.
-// Cleanup: missing service → Evict (nil). No Delete or Purge — nil records retained for stable display indices.
+// Cleanup: missing service → Evict (nil) → Delete removes nil records and reindexes. No Purge.
 func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for host, ids := range cache.ListenerIDs() {
 		for _, id := range ids {
@@ -45,7 +45,7 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 // RunListeningStreamLoop subscribes to MQTT and writes remote metrics to the display cache.
 // Lifecycle: probes filtered to metrics with cache listeners (display boxes). RegisterService adds entries for new services.
 // Cache: shared with display. Receives data from RunAllProbesPublishLoop on remote hosts.
-// Cleanup: empty/nil payload or host offline → Evict (nil). Purge evicts stale non-nil to nil. No Delete — nil records retained for stable display indices.
+// Cleanup: empty/nil payload → Evict (nil) → Delete removes nil records and reindexes. Host offline → Evict (nil). Purge evicts stale non-nil to nil, then deletes stale nil service records and reindexes.
 func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for host, ids := range cache.ListenerIDs() {
 		for _, id := range ids {
@@ -78,6 +78,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				rxCount.Add(1)
 				if len(msg.Payload()) == 0 {
 					cache.Evict(guid.Host, guid.ServiceName)
+					cache.Delete(guid.Host, guid.ServiceName)
 					return
 				}
 				var value metric.ValueData
@@ -87,6 +88,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 				if value.Pulse == nil {
 					cache.Evict(guid.Host, guid.ServiceName)
+					cache.Delete(guid.Host, guid.ServiceName)
 					return
 				}
 				value.Timestamp = time.Now().Unix()
