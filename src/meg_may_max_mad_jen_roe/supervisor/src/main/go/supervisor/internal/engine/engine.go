@@ -152,7 +152,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					client.Unsubscribe(b.Topic)
 					subscribe(b)
 				}
-				slog.Warn("profiling", "engine", "subscribe", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
+				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
 			case hostStatusOffline, "":
 				statusStart := time.Now()
 				storeHostStatus(hostName, false)
@@ -172,7 +172,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					record := metric.NewRecord(metric.NewNilValue())
 					cache.Store(metric.NewRecordGUID(id, hostName), &record)
 				}
-				slog.Debug("profiling", "engine", "subscribe", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOffline)
+				slog.Warn("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOffline)
 			default:
 				slog.Debug("stream unknown status payload", "host", hostName, "payload", payload)
 			}

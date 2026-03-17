@@ -369,7 +369,7 @@ func (d *Display) Logging() {
 	for row, line := range lines {
 		ts := line.Time.Format("15:04:05")
 		lvl := line.Level.String()
-		text := fmt.Sprintf("%s %s %s", ts, lvl, line.Message)
+		text := fmt.Sprintf("%s %-5s %s", ts, lvl, line.Message)
 		runes := []rune(text)
 		if len(runes) > d.dimsInit.cols {
 			if d.dimsInit.cols >= 2 {
@@ -385,6 +385,8 @@ func (d *Display) Logging() {
 			c = colourRed
 		case line.Level >= slog.LevelWarn:
 			c = colourBlue
+		case line.Level >= slog.LevelInfo:
+			c = colourGreen
 		}
 		d.terminal.draw(0, row, text, c)
 	}
@@ -408,7 +410,18 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 		case <-ctx.Done():
 			return
 		case <-refreshC:
+			refreshStart := time.Now()
+			d.terminal.sync()
+			d.terminal.clear()
+			if d.logOverlay {
+				d.Logging()
+			} else {
+				for _, b := range d.boxes {
+					b.drawLabels(d)
+				}
+			}
 			force = true
+			slog.Debug("profiling", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond))
 		case <-d.cache.Updates():
 		case event, ok := <-d.terminal.events():
 			if !ok {
@@ -416,6 +429,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 			switch ev := event.(type) {
 			case *tcell.EventResize:
+				resizeStart := time.Now()
 				cols, rows := ev.Size()
 				if d.dimsTerminal.cols > 0 && cols > d.dimsTerminal.cols {
 					cols = d.dimsTerminal.cols
@@ -445,13 +459,25 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					}
 				}
 				force = true
+				slog.Debug("profiling", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart).Truncate(time.Millisecond), "cols", cols, "rows", rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
 					return
 				}
 				if ev.Key() == tcell.KeyCtrlR {
+					refreshStart := time.Now()
+					d.terminal.sync()
+					d.terminal.clear()
+					if d.logOverlay {
+						d.Logging()
+					} else {
+						for _, b := range d.boxes {
+							b.drawLabels(d)
+						}
+					}
 					force = true
+					slog.Debug("profiling", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond))
 				}
 				if ev.Key() == tcell.KeyEscape && d.logBuffer != nil {
 					d.logOverlay = !d.logOverlay
@@ -485,7 +511,10 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			if !force && len(dirtyIndexes) == 0 {
 				continue
 			}
+			drawStart := time.Now()
+			drawnCount := len(dirtyIndexes)
 			if force {
+				drawnCount = len(d.boxes)
 				for i := range d.boxes {
 					d.boxes[i].drawValue(d)
 				}
@@ -495,6 +524,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			d.terminal.show()
+			slog.Debug("profiling", "engine", "display", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "boxes", drawnCount)
 			force = false
 		}
 	}

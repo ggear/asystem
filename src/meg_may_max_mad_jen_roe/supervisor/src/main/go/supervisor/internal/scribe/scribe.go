@@ -179,7 +179,7 @@ func (p *padder) pad(s string) string {
 
 var padders = map[string]*padder{
 	"probe":    newPadder(8),
-	"engine":   newPadder(8),
+	"engine":   newPadder(10),
 	"phase":    newPadder(9),
 	"duration": newPadder(8),
 	"received": newPadder(8),
