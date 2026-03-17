@@ -152,7 +152,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					client.Unsubscribe(b.Topic)
 					subscribe(b)
 				}
-				slog.Warn("profiling", "engine", "stream", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
+				slog.Warn("profiling", "engine", "subscribe", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
 			case hostStatusOffline, "":
 				statusStart := time.Now()
 				storeHostStatus(hostName, false)
@@ -172,7 +172,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					record := metric.NewRecord(metric.NewNilValue())
 					cache.Store(metric.NewRecordGUID(id, hostName), &record)
 				}
-				slog.Debug("profiling", "engine", "stream", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOffline)
+				slog.Debug("profiling", "engine", "subscribe", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOffline)
 			default:
 				slog.Debug("stream unknown status payload", "host", hostName, "payload", payload)
 			}
@@ -200,7 +200,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if secs := int64(purgeInterval.Seconds()); secs > 0 {
 				rate = rx / secs
 			}
-			slog.Debug("profiling", "engine", "stream", "phase", "purge", "duration", time.Since(purgeStart).Truncate(time.Millisecond), "received", fmt.Sprintf("%dmsg", rx), "rate", fmt.Sprintf("%dmsg/s", rate))
+			slog.Debug("profiling", "engine", "subscribe", "phase", "purge", "duration", time.Since(purgeStart).Truncate(time.Millisecond), "received", fmt.Sprintf("%dmsg", rx), "rate", fmt.Sprintf("%dmsg/s", rate))
 		}
 	}
 }
