@@ -191,6 +191,62 @@ func TestConfig_Host(t *testing.T) {
 	}
 }
 
+func TestConfig_Mount(t *testing.T) {
+	tests := []struct {
+		name          string
+		configPath    string
+		envMount     string
+		expected      string
+		expectedError bool
+	}{
+		{
+			name:          "happy_production_like_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			expected:      "/host-fs",
+			expectedError: false,
+		},
+		{
+			name:          "happy_no_field_missing_file_empty",
+			configPath:    "non-existent-file.json",
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_no_field_in_file_empty",
+			configPath:    testutil.FindTestFile(t, "config-happy-noschema-1.json", "config"),
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_supervisor_mount_used",
+			configPath:    "non-existent-file.json",
+			envMount:     "/env-host-fs",
+			expected:      "/env-host-fs",
+			expectedError: false,
+		},
+		{
+			name:          "happy_file_takes_precedence_over_env",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			envMount:     "/env-host-fs",
+			expected:      "/host-fs",
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(Reset)
+			if testCase.envMount != "" {
+				t.Setenv("SUPERVISOR_MOUNT", testCase.envMount)
+			}
+			config := Load(testCase.configPath)
+			mount := config.Mount()
+			if mount != testCase.expected {
+				t.Fatalf("Got mount = %q, expected %q", mount, testCase.expected)
+			}
+		})
+	}
+}
+
 func TestConfig_Broker(t *testing.T) {
 	tests := []struct {
 		name          string

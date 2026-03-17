@@ -51,12 +51,12 @@ func Load(path string) *Config {
 func load(path string) *Config {
 	result := &Config{asystem: configData{Schema: []configServices{}}}
 	if path == "" {
-		slog.Debug("config: no path provided, using defaults")
+		slog.Warn("config: no path provided, using defaults")
 		return result
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		slog.Debug("config: file not found, using defaults", "path", path)
+		slog.Warn("config: file not found, using defaults", "path", path)
 		return result
 	}
 	var raw struct{ Asystem configData }
@@ -130,6 +130,13 @@ var (
 	cachedHostName  string
 	cachedHostOnceMu sync.Once
 )
+
+func (s *Config) Mount() string {
+	if s != nil && s.asystem.Mount != "" {
+		return s.asystem.Mount
+	}
+	return os.Getenv("SUPERVISOR_MOUNT")
+}
 
 func (s *Config) Broker() string {
 	var brokerHost, brokerPort string
@@ -205,11 +212,12 @@ var VersionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}(-SNAPSHOT)?$`)
 type Config struct{ asystem configData }
 
 type configData struct {
-	Version  string
-	Host     string
-	Broker   configEndpoint
-	Database configEndpoint
-	Schema   []configServices
+	Version        string
+	Host           string
+	Mount string `json:"mount"`
+	Broker         configEndpoint
+	Database       configEndpoint
+	Schema         []configServices
 }
 
 type configServices struct {

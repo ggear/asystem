@@ -1689,14 +1689,14 @@ func TestRecordCache_Purge(t *testing.T) {
 			},
 		},
 		{
-			name: "happy_purge_deletes_stale_nil_service_record",
+			name: "happy_purge_preserves_stale_nil_service_record",
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: ValueData{Timestamp: oldTimestamp}})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				cache.Purge(100)
-				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); ok {
-					t.Fatalf("Got stale nil service record preserved, expected deleted by purge")
+				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); !ok {
+					t.Fatalf("Got stale nil service record deleted, expected preserved by purge")
 				}
 			},
 		},
@@ -1742,7 +1742,7 @@ func TestRecordCache_Purge(t *testing.T) {
 			},
 		},
 		{
-			name: "happy_purge_evict_then_delete_after_stale",
+			name: "happy_purge_evict_then_preserve_after_stale",
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
 			},
@@ -1763,8 +1763,8 @@ func TestRecordCache_Purge(t *testing.T) {
 				}
 				cache.mutex.Unlock()
 				cache.Purge(100)
-				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); ok {
-					t.Fatalf("Got stale nil service record preserved on second purge, expected deleted")
+				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); !ok {
+					t.Fatalf("Got stale nil service record deleted on second purge, expected preserved")
 				}
 			},
 		},

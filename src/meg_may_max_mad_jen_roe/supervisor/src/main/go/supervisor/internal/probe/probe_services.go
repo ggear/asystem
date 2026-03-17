@@ -18,10 +18,11 @@ import (
 )
 
 type servicesProbe struct {
-	cache    *metric.RecordCache
-	mask     [metric.MetricMax]bool
-	periods  config.Periods
-	hostName string
+	cache      *metric.RecordCache
+	mask       [metric.MetricMax]bool
+	periods    config.Periods
+	hostName   string
+	configPath string
 
 	servicesBool           *stats.BoolStats
 	servicesMaxMemoryFloat *stats.FloatStats
@@ -112,6 +113,7 @@ func (p *servicesProbe) create(configPath string, cache *metric.RecordCache, mas
 	p.periods = periods
 	p.servicesBool = stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
 	p.servicesMaxMemoryFloat = stats.NewFloatStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
+	p.configPath = configPath
 	c := config.Load(configPath)
 	p.hostName = c.Host()
 	p.configuredServiceNames = c.Services(p.hostName)
@@ -129,7 +131,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	}
 	for _, cachedServiceName := range p.cache.Services(p.hostName) {
 		if _, exists := polledServiceNames[cachedServiceName]; !exists {
-			p.cache.Delete(p.hostName, cachedServiceName)
 			p.cache.Evict(p.hostName, cachedServiceName)
 		}
 	}
@@ -399,7 +400,7 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 		}
 		seenNames[name] = struct{}{}
 		service := service{nameValue: name}
-		fetchedStats, err := fetchStats(ctx, dockerClient, p.statsOneShot, serviceContainer.ID)
+		fetchedStats, err := p.fetchStats(ctx, dockerClient, serviceContainer.ID)
 		if err != nil {
 			service.usedProcessorErr = err
 			service.usedMemoryErr = err
@@ -410,59 +411,59 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 				service.usedProcessorErr = errProbeWarmingUp
 			} else {
 				fetchedStats.PreCPUStats = prev
-				usedProcessor, processorErr := processorUsed(fetchedStats)
+				usedProcessor, processorErr := p.processorUsed(fetchedStats)
 				if processorErr != nil {
 					service.usedProcessorErr = processorErr
 				} else {
 					service.usedProcessorValue = usedProcessor
 				}
 			}
-			usedMemory, memoryErr := memoryUsed(fetchedStats)
+			usedMemory, memoryErr := p.memoryUsed(fetchedStats)
 			if memoryErr != nil {
 				service.usedMemoryErr = memoryErr
 			} else {
 				service.usedMemoryValue = usedMemory
 			}
 		}
-		fetchedInspect, err := fetchInspect(ctx, dockerClient, p.inspectContainer, serviceContainer.ID)
+		fetchedInspect, err := p.fetchInspect(ctx, dockerClient, serviceContainer.ID)
 		if err != nil {
 			service.healthStatusErr = err
 			service.runningTimeErr = err
 			service.restartCountErr = err
 			service.versionErr = err
 		} else {
-			healthStatusValue, healthErr := healthStatus(fetchedInspect)
+			healthStatusValue, healthErr := p.healthStatus(fetchedInspect)
 			if healthErr != nil {
 				service.healthStatusErr = healthErr
 			} else {
 				service.healthStatusValue = healthStatusValue
 			}
-			runningTimeValue, runningTimeErr := runningTime(fetchedInspect)
+			runningTimeValue, runningTimeErr := p.runningTime(fetchedInspect)
 			if runningTimeErr != nil {
 				service.runningTimeErr = runningTimeErr
 			} else {
 				service.runningTimeValue = runningTimeValue
 			}
-			restartCountValue, restartErr := restartCount(fetchedInspect)
+			restartCountValue, restartErr := p.restartCount(fetchedInspect)
 			if restartErr != nil {
 				service.restartCountErr = restartErr
 			} else {
 				service.restartCountValue = restartCountValue
 			}
-			versionValue, versionErr := version(fetchedInspect)
+			versionValue, versionErr := p.version(fetchedInspect)
 			if versionErr != nil {
 				service.versionErr = versionErr
 			} else {
 				service.versionValue = versionValue
 			}
 		}
-		configuredStatusValue, configuredErr := configuredStatus()
+		configuredStatusValue, configuredErr := p.configuredStatus()
 		if configuredErr != nil {
 			service.configuredStatusErr = configuredErr
 		} else {
 			service.configuredStatusValue = configuredStatusValue
 		}
-		backupStatusValue, backupErr := backupStatus()
+		backupStatusValue, backupErr := p.backupStatus()
 		if backupErr != nil {
 			service.backupStatusErr = backupErr
 		} else {
@@ -599,8 +600,8 @@ func (p *servicesProbe) reconnectDockerClient() (*client.Client, error) {
 	return p.ensureDockerClient()
 }
 
-func fetchStats(ctx context.Context, dockerClient *client.Client, statsOneShot func(context.Context, *client.Client, string) (container.StatsResponseReader, error), id string) (container.StatsResponse, error) {
-	statsReader, err := statsOneShot(ctx, dockerClient, id)
+func (p *servicesProbe) fetchStats(ctx context.Context, dockerClient *client.Client, id string) (container.StatsResponse, error) {
+	statsReader, err := p.statsOneShot(ctx, dockerClient, id)
 	if err != nil {
 		return container.StatsResponse{}, fmt.Errorf("fetch container statsResponse for id [%s]: %w", id, err)
 	}
@@ -614,15 +615,15 @@ func fetchStats(ctx context.Context, dockerClient *client.Client, statsOneShot f
 	return statsResponse, nil
 }
 
-func fetchInspect(ctx context.Context, dockerClient *client.Client, inspectContainer func(context.Context, *client.Client, string) (container.InspectResponse, error), id string) (container.InspectResponse, error) {
-	info, err := inspectContainer(ctx, dockerClient, id)
+func (p *servicesProbe) fetchInspect(ctx context.Context, dockerClient *client.Client, id string) (container.InspectResponse, error) {
+	info, err := p.inspectContainer(ctx, dockerClient, id)
 	if err != nil {
 		return container.InspectResponse{}, fmt.Errorf("inspect container for id [%s]: %w", id, err)
 	}
 	return info, nil
 }
 
-func processorUsed(response container.StatsResponse) (int8, error) {
+func (p *servicesProbe) processorUsed(response container.StatsResponse) (int8, error) {
 	cpuDelta := float64(response.CPUStats.CPUUsage.TotalUsage - response.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(response.CPUStats.SystemUsage - response.PreCPUStats.SystemUsage)
 	if systemDelta <= 0 {
@@ -636,7 +637,7 @@ func processorUsed(response container.StatsResponse) (int8, error) {
 	return stats.ConvertToInt(usedPercent), nil
 }
 
-func memoryUsed(response container.StatsResponse) (int8, error) {
+func (p *servicesProbe) memoryUsed(response container.StatsResponse) (int8, error) {
 	if response.MemoryStats.Limit == 0 {
 		return 0, errors.New("memory limit must be > 0")
 	}
@@ -652,7 +653,7 @@ func memoryUsed(response container.StatsResponse) (int8, error) {
 	return stats.ConvertToInt(usedPercent), nil
 }
 
-func healthStatus(containerInfo container.InspectResponse) (bool, error) {
+func (p *servicesProbe) healthStatus(containerInfo container.InspectResponse) (bool, error) {
 	if containerInfo.State == nil || containerInfo.State.Health == nil {
 		return false, nil
 	}
@@ -664,17 +665,17 @@ func healthStatus(containerInfo container.InspectResponse) (bool, error) {
 	}
 }
 
-func backupStatus() (bool, error) {
+func (p *servicesProbe) backupStatus() (bool, error) {
 	// TODO: Provide implementation
 	return true, nil
 }
 
-func configuredStatus() (bool, error) {
+func (p *servicesProbe) configuredStatus() (bool, error) {
 	// TODO: Provide implementation
 	return false, nil
 }
 
-func restartCount(containerInfo container.InspectResponse) (float64, error) {
+func (p *servicesProbe) restartCount(containerInfo container.InspectResponse) (float64, error) {
 	if containerInfo.ContainerJSONBase == nil {
 		return 0, errors.New("restart count not available")
 	}
@@ -682,7 +683,7 @@ func restartCount(containerInfo container.InspectResponse) (float64, error) {
 	return float64(containerInfo.RestartCount), nil
 }
 
-func version(containerInfo container.InspectResponse) (string, error) {
+func (p *servicesProbe) version(containerInfo container.InspectResponse) (string, error) {
 	version := ""
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
 		tokens := strings.Split(containerInfo.Config.Image, ":")
@@ -692,13 +693,13 @@ func version(containerInfo container.InspectResponse) (string, error) {
 			}
 		}
 		if version == "" {
-			name := containerInfo.Name
+			name := strings.TrimPrefix(containerInfo.Name, "/")
 			if name == "" {
 				tokens = strings.Split(tokens[0], "/")
 				name = tokens[0]
 			}
 			if name != "" {
-				if data, err := os.ReadFile("/root/install/" + name + "/latest/.env"); err == nil {
+				if data, err := os.ReadFile(config.Load(p.configPath).Mount() + "/root/install/" + name + "/latest/.env"); err == nil {
 					for _, line := range strings.Split(string(data), "\n") {
 						if v, ok := strings.CutPrefix(line, "SERVICE_VERSION_ABSOLUTE="); ok {
 							version = v
@@ -714,13 +715,13 @@ func version(containerInfo container.InspectResponse) (string, error) {
 		if containerInfo.Config != nil {
 			image = containerInfo.Config.Image
 		}
-		slog.Error("version not available", "name", containerInfo.Name, "image", image)
+		slog.Debug("version not available", "name", containerInfo.Name, "image", image)
 		return "-", nil
 	}
 	return version, nil
 }
 
-func runningTime(containerInfo container.InspectResponse) (float64, error) {
+func (p *servicesProbe) runningTime(containerInfo container.InspectResponse) (float64, error) {
 	if containerInfo.State == nil || containerInfo.State.StartedAt == "" {
 		return 0, errors.New("started at time not available")
 	}

@@ -18,23 +18,10 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// DONE:
-//  - Indexer to ignore Shadows
-//  - Update Size() to ignore schema
-//  - Remove index from newCacheMetricTask
-//  - Make sure display reconciles ServiceIndexSchema to ServiceIndex for GUID on lookup
-//  - Add probe profile debug logs
-//  - Add config services, test
-//  - Make sure Evict to only work on non __SCHEMA services, to only evict from specific host and service name, to set value to nil
-//  - Delete to only work on non __SCHEMA services, to only delete from specific host and service name, to only delete if value is nil
-//  - Implement cache Purge func and routine for stream, Evict and Delete across entire cache.
-// TODO:
-//  - Purge invoked as a goroutine for stream, procedurally for probes in execute
-//  - Implement all Load funcs and test cases
-//  - drawValue to ~ out if necessary
-//  - Implement display update tests
-//  - Validate hot path is fast, validate dont recompute tags/topics
-
+// RunListeningProbesLoop runs local probes and writes directly to the display cache.
+// Lifecycle: probes filtered to metrics with cache listeners (display boxes) plus their deps.
+// Cache: shared with display. Probe stats cleaned by syncStatsFields; prevCPUStats pruned by active container ID.
+// Cleanup: missing service → Evict (nil). No Delete or Purge — nil records retained for stable display indices.
 func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for host, ids := range cache.ListenerIDs() {
 		for _, id := range ids {
@@ -55,6 +42,10 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 	}
 }
 
+// RunListeningStreamLoop subscribes to MQTT and writes remote metrics to the display cache.
+// Lifecycle: probes filtered to metrics with cache listeners (display boxes). RegisterService adds entries for new services.
+// Cache: shared with display. Receives data from RunAllProbesPublishLoop on remote hosts.
+// Cleanup: empty/nil payload or host offline → Evict (nil). Purge evicts stale non-nil to nil. No Delete — nil records retained for stable display indices.
 func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for host, ids := range cache.ListenerIDs() {
 		for _, id := range ids {
@@ -87,12 +78,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				rxCount.Add(1)
 				if len(msg.Payload()) == 0 {
 					cache.Evict(guid.Host, guid.ServiceName)
-					cache.Delete(guid.Host, guid.ServiceName)
 					return
 				}
 				var value metric.ValueData
 				if err := json.Unmarshal(msg.Payload(), &value); err != nil {
-					slog.Debug("stream unmarshal failed", "topic", msg.Topic(), "error", err)
+					slog.Warn("stream unmarshal failed", "topic", msg.Topic(), "error", err)
 					return
 				}
 				if value.Pulse == nil {
@@ -158,7 +148,6 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				storeHostStatus(hostName, false)
 				for _, svc := range cache.Services(hostName) {
 					cache.Evict(hostName, svc)
-					cache.Delete(hostName, svc)
 				}
 				hostPrefix := "supervisor/" + hostName + "/"
 				subscribedMu.Lock()
@@ -174,7 +163,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 				slog.Warn("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOffline)
 			default:
-				slog.Debug("stream unknown status payload", "host", hostName, "payload", payload)
+				slog.Warn("stream unknown status payload", "host", hostName, "payload", payload)
 			}
 		})
 	}
@@ -205,6 +194,10 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 }
 
+// RunAllProbesOnce runs all probes for a single pulse cycle then exits.
+// Lifecycle: all probe metrics registered (not filtered). Runs with a 3x pulse timeout, no trend tracking.
+// Cache: caller-owned, short-lived, discarded on return.
+// Cleanup: none needed.
 func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.RecordCache) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())
@@ -235,6 +228,10 @@ type lpKey struct {
 	service string
 }
 
+// RunAllProbesPublishLoop runs local probes and publishes metrics to MQTT and the database.
+// Lifecycle: all probe metrics registered (not filtered). Probes poll each tick; onPulse publishes to MQTT. On shutdown, publishes offline status and empty payloads to clear retained topics.
+// Cache: own instance, not shared with any display. Take drains dirty map each pulse.
+// Cleanup: missing service → Evict (nil) → next pulse publishes nil + empty tombstone → Delete removes nil records. Delete is safe here (no display indices to destabilise).
 func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())
@@ -306,7 +303,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 						client.Publish(record.Topic, 0, true, payload)
 						txCount++
 					} else {
-						slog.Debug("publish marshal failed", "topic", record.Topic, "error", jsonErr)
+						slog.Warn("publish marshal failed", "topic", record.Topic, "error", jsonErr)
 					}
 				} else if guid.ServiceName != metric.ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, metric.ServiceNameSchema) {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {

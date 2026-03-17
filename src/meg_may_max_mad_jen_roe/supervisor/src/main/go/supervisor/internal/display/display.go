@@ -325,7 +325,7 @@ func (d *Display) Compile() (Format, error) {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			slog.Debug("layout relaxed compilation failed, fallback to compact", "error", err)
+			slog.Warn("layout relaxed compilation failed, fallback to compact", "error", err)
 		}
 		d.format = FormatCompact
 	}
@@ -420,7 +420,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			force = true
-			slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "drawn", fmt.Sprintf("%dbox", len(d.boxes)))
+			slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "boxes", len(d.boxes))
 		case <-d.cache.Updates():
 		case event, ok := <-d.terminal.events():
 			if !ok {
@@ -475,7 +475,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 						}
 					}
 					force = true
-					slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "drawn", fmt.Sprintf("%dbox", len(d.boxes)))
+					slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "boxes", len(d.boxes))
 				}
 				if ev.Key() == tcell.KeyEscape && d.logBuffer != nil {
 					d.logOverlay = !d.logOverlay
@@ -522,7 +522,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			d.terminal.show()
-			slog.Debug("profiling", "engine", "display", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "drawn", fmt.Sprintf("%dbox", drawnCount))
+			slog.Info("state", "engine", "display", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "boxes", drawnCount)
 			force = false
 		}
 	}

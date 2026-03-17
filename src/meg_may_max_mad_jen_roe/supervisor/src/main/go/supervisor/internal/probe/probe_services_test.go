@@ -447,7 +447,7 @@ func TestProbeServices_Run(t *testing.T) {
 			},
 		},
 		{
-			name: "happy_delete_on_second_missing_poll",
+			name: "happy_evict_on_missing_poll",
 			setupFunc: func(p *servicesProbe, cache *metric.RecordCache) {
 				host := config.Load("").Host()
 				value := metric.ValueData{Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}
@@ -461,14 +461,18 @@ func TestProbeServices_Run(t *testing.T) {
 				if err := p.run(context.Background(), true); err != nil {
 					t.Fatalf("Got run error on poll 1 = %v", err)
 				}
-				if _, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a")); !ok {
+				record, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a"))
+				if !ok || record == nil {
 					t.Fatalf("Got guid missing after poll 1, expected evicted guid preserved")
+				}
+				if record.Value.Pulse != nil {
+					t.Fatalf("Got non-nil pulse after poll 1, expected evicted to nil")
 				}
 				if err := p.run(context.Background(), true); err != nil {
 					t.Fatalf("Got run error on poll 2 = %v", err)
 				}
-				if _, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a")); ok {
-					t.Fatalf("Got guid still present after poll 2, expected deleted")
+				if _, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a")); !ok {
+					t.Fatalf("Got guid missing after poll 2, expected preserved")
 				}
 			},
 		},
@@ -495,7 +499,7 @@ func TestProbeServices_Run(t *testing.T) {
 			},
 		},
 		{
-			name: "happy_partial_delete_on_second_missing_poll",
+			name: "happy_partial_evict_preserves_all_records",
 			setupFunc: func(p *servicesProbe, cache *metric.RecordCache) {
 				host := config.Load("").Host()
 				value := metric.ValueData{Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "v"}}
@@ -515,12 +519,16 @@ func TestProbeServices_Run(t *testing.T) {
 				if err := p.run(context.Background(), true); err != nil {
 					t.Fatalf("Got run error on poll 2 = %v", err)
 				}
-				if _, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceHealthStatus, host, "svc-a")); ok {
-					t.Fatalf("Got health guid present after poll 2, expected deleted (was nil)")
-				}
-				record, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a"))
+				record, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceHealthStatus, host, "svc-a"))
 				if !ok || record == nil {
-					t.Fatalf("Got name guid missing after poll 2, expected preserved (was non-nil before delete)")
+					t.Fatalf("Got health guid missing after poll 2, expected preserved as nil")
+				}
+				if record.Value.Pulse != nil {
+					t.Fatalf("Got health pulse non-nil after poll 2, expected evicted to nil")
+				}
+				record, ok = cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, host, "svc-a"))
+				if !ok || record == nil {
+					t.Fatalf("Got name guid missing after poll 2, expected preserved")
 				}
 				if record.Value.Pulse != nil {
 					t.Fatalf("Got name pulse non-nil after poll 2, expected evicted to nil")

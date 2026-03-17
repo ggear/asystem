@@ -15,9 +15,10 @@ import (
 )
 
 type hostProbe struct {
-	cache   *metric.RecordCache
-	mask    [metric.MetricMax]bool
-	periods config.Periods
+	cache      *metric.RecordCache
+	mask       [metric.MetricMax]bool
+	periods    config.Periods
+	configPath string
 
 	hostBool           *stats.BoolStats
 	usedProcessorInt   *stats.IntStats
@@ -78,10 +79,11 @@ func (p *hostProbe) metrics() []metric.ID {
 	}
 }
 
-func (p *hostProbe) create(_ string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
+func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
 	p.cache = cache
 	p.mask = mask
 	p.periods = periods
+	p.configPath = configPath
 
 	p.hostBool = stats.NewBoolStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedProcessorInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
