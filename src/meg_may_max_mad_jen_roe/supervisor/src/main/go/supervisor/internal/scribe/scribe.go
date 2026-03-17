@@ -151,6 +151,34 @@ func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
 func (h *bufferHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 func (h *bufferHandler) WithGroup(_ string) slog.Handler      { return h }
 
+type Padder struct {
+	mu    sync.Mutex
+	width int
+}
+
+func NewPadder(minWidth int) *Padder {
+	return &Padder{width: minWidth}
+}
+
+func (p *Padder) Pad(s string) string {
+	p.mu.Lock()
+	if len(s) > p.width {
+		p.width = len(s)
+	}
+	w := p.width
+	p.mu.Unlock()
+	if len(s) >= w {
+		return s
+	}
+	return s + strings.Repeat(" ", w-len(s))
+}
+
+var (
+	PadSource   = NewPadder(8)
+	PadPhase    = NewPadder(9)
+	PadDuration = NewPadder(6)
+)
+
 var (
 	scribeLoggerMutex    sync.Mutex
 	scribeLoggerLevel    slog.Level

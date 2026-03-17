@@ -322,7 +322,7 @@ func (d *Display) Compile() (Format, error) {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			slog.Debug("Layout [relaxed] compilation failed, fallback to [compact]", "error", err)
+			slog.Debug("layout relaxed compilation failed, fallback to compact", "error", err)
 		}
 		d.format = FormatCompact
 	}

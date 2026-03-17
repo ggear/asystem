@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
+	"supervisor/internal/scribe"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -91,7 +93,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 				var value metric.ValueData
 				if err := json.Unmarshal(msg.Payload(), &value); err != nil {
-					slog.Debug("stream: unmarshal failed", "topic", msg.Topic(), "error", err)
+					slog.Debug("stream unmarshal failed", "topic", msg.Topic(), "error", err)
 					return
 				}
 				if value.Pulse == nil {
@@ -140,7 +142,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			switch payload {
 			case hostStatusOnline:
 				storeHostStatus(hostName, true)
-				slog.Debug("profiling", "engine", "stream", "phase", "status", "host", hostName, "status", hostStatusOnline)
+				slog.Debug("profiling", "engine", scribe.PadSource.Pad("stream"), "phase", scribe.PadPhase.Pad("status"), "host", hostName, "status", hostStatusOnline)
 				for _, b := range cache.Topics() {
 					if b.GUID.Host != hostName {
 						continue
@@ -153,7 +155,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 			case hostStatusOffline, "":
 				storeHostStatus(hostName, false)
-				slog.Warn("profiling", "engine", "stream", "phase", "status", "host", hostName, "status", hostStatusOffline)
+				slog.Debug("profiling", "engine", scribe.PadSource.Pad("stream"), "phase", scribe.PadPhase.Pad("status"), "host", hostName, "status", hostStatusOffline)
 				for _, svc := range cache.Services(hostName) {
 					cache.Evict(hostName, svc)
 					cache.Delete(hostName, svc)
@@ -171,7 +173,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Store(metric.NewRecordGUID(id, hostName), &record)
 				}
 			default:
-				slog.Debug("stream: unknown status payload", "host", hostName, "payload", payload)
+				slog.Debug("stream unknown status payload", "host", hostName, "payload", payload)
 			}
 		})
 	}
@@ -182,15 +184,22 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	defer client.Disconnect(250)
 	cache.SubscribeDeletes(&brokerDeletesListener{client: client})
-	purgeTicker := time.NewTicker(time.Duration(max(periods.PulseMillis+1000, 2000)) * time.Millisecond)
+	purgeInterval := time.Duration(max(periods.PulseMillis+1000, 2000)) * time.Millisecond
+	purgeTicker := time.NewTicker(purgeInterval)
 	defer purgeTicker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-purgeTicker.C:
+			purgeStart := time.Now()
 			cache.Purge(periods.HeartbeatSecs + 10)
-			slog.Debug("profiling", "engine", "stream", "phase", "purge", "rx", rxCount.Swap(0))
+			rx := rxCount.Swap(0)
+			rate := int64(0)
+			if secs := int64(purgeInterval.Seconds()); secs > 0 {
+				rate = rx / secs
+			}
+			slog.Debug("profiling", "engine", scribe.PadSource.Pad("stream"), "phase", scribe.PadPhase.Pad("purge"), "duration", scribe.PadDuration.Pad(time.Since(purgeStart).Truncate(time.Millisecond).String()), "received", fmt.Sprintf("%dmsg", rx), "rate", fmt.Sprintf("%dmsg/s", rate))
 		}
 	}
 }
@@ -296,7 +305,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 						client.Publish(record.Topic, 0, true, payload)
 						txCount++
 					} else {
-						slog.Debug("run all probes publish loop: marshal failed", "topic", record.Topic, "error", jsonErr)
+						slog.Debug("publish marshal failed", "topic", record.Topic, "error", jsonErr)
 					}
 				} else if guid.ServiceName != metric.ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, metric.ServiceNameSchema) {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
@@ -363,7 +372,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if lineProtocol.Len() > 0 {
 		}
 
-		slog.Debug("profiling", "engine", "publish", "phase", "pulse", "tx", txCount, "is_heartbeat", isHeartbeat, "duration", time.Since(pulseStart).Truncate(time.Millisecond))
+		phase := "pulse"
+		if isHeartbeat {
+			phase = "heartbeat"
+		}
+		slog.Debug("profiling", "engine", scribe.PadSource.Pad("publish"), "phase", scribe.PadPhase.Pad(phase), "duration", scribe.PadDuration.Pad(time.Since(pulseStart).Truncate(time.Millisecond).String()), "transmit", fmt.Sprintf("%dmsg", txCount))
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Error("run all probes publish loop: run failed", "error", err)

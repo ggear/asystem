@@ -1688,6 +1688,86 @@ func TestRecordCache_Purge(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "happy_purge_deletes_stale_nil_service_record",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: ValueData{Timestamp: oldTimestamp}})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); ok {
+					t.Fatalf("Got stale nil service record preserved, expected deleted by purge")
+				}
+			},
+		},
+		{
+			name: "happy_purge_preserves_fresh_nil_service_record",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: NewNilValue()})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); !ok {
+					t.Fatalf("Got fresh nil service record deleted, expected preserved by purge")
+				}
+			},
+		},
+		{
+			name: "happy_purge_does_not_delete_stale_nil_host_record",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: ValueData{Timestamp: oldTimestamp}})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				if _, ok := cache.Load(NewRecordGUID(MetricHost, "alpha")); !ok {
+					t.Fatalf("Got stale nil host record deleted, expected preserved by purge")
+				}
+			},
+		},
+		{
+			name: "happy_purge_delete_does_not_call_deletes_listener",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{
+					Topic: "supervisor/alpha/data/service/svc-a/name",
+					Value: ValueData{Timestamp: oldTimestamp},
+				})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				listener := &mockDeletesListener{}
+				cache.SubscribeDeletes(listener)
+				cache.Purge(100)
+				if listener.unsubscribeCount != 0 {
+					t.Fatalf("Got deletes listener count = %d, expected 0 — purge must not unsubscribe MQTT topics", listener.unsubscribeCount)
+				}
+			},
+		},
+		{
+			name: "happy_purge_evict_then_delete_after_stale",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				record, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"))
+				if !ok || record == nil {
+					t.Fatalf("Got record deleted on first purge, expected evicted to nil")
+				}
+				if record.Value.Pulse != nil {
+					t.Fatalf("Got non-nil pulse after first purge, expected nil")
+				}
+				cache.mutex.Lock()
+				k := NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a").key()
+				r := cache.records[k]
+				if r != nil {
+					r.Value.Timestamp = oldTimestamp
+				}
+				cache.mutex.Unlock()
+				cache.Purge(100)
+				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); ok {
+					t.Fatalf("Got stale nil service record preserved on second purge, expected deleted")
+				}
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

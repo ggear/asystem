@@ -9,6 +9,7 @@ import (
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 	"supervisor/internal/stats"
 	"time"
 )
@@ -54,12 +55,12 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		if err != nil {
 			slog.Error("error creating probe", "probe", p.name(), "error", err)
 			delete(probeMap, p)
-			slog.Debug("profiling", "probe", p.name(), "phase", "create_probe", "duration", time.Since(probeCreateStart).Truncate(time.Millisecond), "success", false)
+			slog.Debug("profiling", "probe", scribe.PadSource.Pad(p.name()), "phase", scribe.PadPhase.Pad("create"), "duration", scribe.PadDuration.Pad(time.Since(probeCreateStart).Truncate(time.Millisecond).String()), "success", false)
 			continue
 		}
-		slog.Debug("profiling", "probe", p.name(), "phase", "create_probe", "duration", time.Since(probeCreateStart).Truncate(time.Millisecond), "success", true)
+		slog.Debug("profiling", "probe", scribe.PadSource.Pad(p.name()), "phase", scribe.PadPhase.Pad("create"), "duration", scribe.PadDuration.Pad(time.Since(probeCreateStart).Truncate(time.Millisecond).String()), "success", true)
 	}
-	slog.Debug("profiling", "probe", "*", "phase", "create_probe", "duration", time.Since(createStart).Truncate(time.Millisecond))
+	slog.Debug("profiling", "probe", scribe.PadSource.Pad("*"), "phase", scribe.PadPhase.Pad("create"), "duration", time.Since(createStart).Truncate(time.Millisecond))
 	execProbes = probeMap
 	execPeriods = periods
 	execConfigPath = configPath
@@ -88,12 +89,16 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 				isPulse = true
 				pulseTickCount = pulseEveryTick
 			}
+			phase := "tick"
+			if isPulse {
+				phase = "pulse"
+			}
 			for p := range execProbes {
 				probeStart := time.Now()
 				if err := p.run(ctx, isPulse); err != nil {
 					slog.Error("error executing probe", "probe", p.name(), "error", err)
 				}
-				slog.Debug("profiling", "probe", p.name(), "phase", "tick", "duration", time.Since(probeStart).Truncate(time.Millisecond), "is_pulse", isPulse)
+				slog.Debug("profiling", "probe", scribe.PadSource.Pad(p.name()), "phase", scribe.PadPhase.Pad(phase), "duration", time.Since(probeStart).Truncate(time.Millisecond))
 			}
 			if isPulse {
 				heartbeatPulseCount--
@@ -105,7 +110,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 					onPulse(isHeartbeat)
 				}
 			}
-			slog.Debug("profiling", "probe", "*", "phase", "tick", "duration", time.Since(tickStart).Truncate(time.Millisecond), "is_pulse", isPulse)
+			slog.Debug("profiling", "probe", scribe.PadSource.Pad("*"), "phase", scribe.PadPhase.Pad(phase), "duration", time.Since(tickStart).Truncate(time.Millisecond))
 		}
 	}
 }
@@ -273,7 +278,7 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 	}
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
-		slog.Error("metric task missing hostName name", "id", task.metricID)
+		slog.Error("metric task missing host name", "id", task.metricID)
 		return
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)

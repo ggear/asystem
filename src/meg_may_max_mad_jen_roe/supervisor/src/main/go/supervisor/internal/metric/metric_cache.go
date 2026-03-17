@@ -390,6 +390,19 @@ func (c *RecordCache) Purge(evictSecs int) {
 			updated = append(updated, guid)
 			continue
 		}
+		if record.Value.Equal(&nilValue) && guid.ServiceName != ServiceNameUnset && now-record.Value.Timestamp > int64(evictSecs) {
+			allListeners = append(allListeners, c.listeners[k]...)
+			if GetIDKind(guid.ID) == MetricKindService {
+				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
+				allListeners = append(allListeners, c.listeners[schemaKey]...)
+			}
+			delete(c.dirty, k)
+			delete(c.records, k)
+			delete(c.listeners, k)
+			removedGuids = true
+			changed = true
+			continue
+		}
 		if !record.Value.Equal(&nilValue) && now-record.Value.Timestamp > int64(evictSecs) {
 			c.records[k] = &Record{Topic: record.Topic, Tags: record.Tags, Value: nilValue}
 			c.dirty[k] = guid

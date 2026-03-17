@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"supervisor/internal/config"
+	"supervisor/internal/scribe"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -39,16 +40,16 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 		SetConnectTimeout(5 * time.Second).
 		SetAutoReconnect(true).
 		SetOnConnectHandler(func(client mqtt.Client) {
-			slog.Debug("profiling", "engine", "broker", "phase", "connect", "broker", brokerURL)
+			slog.Debug("profiling", "engine", scribe.PadSource.Pad("broker"), "phase", scribe.PadPhase.Pad("connect"), "broker", brokerURL)
 			if onConnect != nil {
 				onConnect(client)
 			}
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-			slog.Warn("profiling", "engine", "broker", "phase", "disconnect", "broker", brokerURL, "error", err)
+			slog.Warn("profiling", "engine", scribe.PadSource.Pad("broker"), "phase", scribe.PadPhase.Pad("disconnect"), "broker", brokerURL, "error", err)
 		}).
 		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
-			slog.Debug("profiling", "engine", "broker", "phase", "reconnect", "broker", brokerURL)
+			slog.Debug("profiling", "engine", scribe.PadSource.Pad("broker"), "phase", scribe.PadPhase.Pad("reconnect"), "broker", brokerURL)
 		})
 	if willTopic != "" {
 		opts.SetWill(willTopic, willPayload, 1, true)
