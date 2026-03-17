@@ -187,10 +187,10 @@ var messagePadder = newPadder(9)
 var scopePadder = newPadder(18)
 
 var padders = map[string]*padder{
-	"phase":    newPadder(9),
-	"duration": newPadder(8),
-	"received": newPadder(8),
-	"transmit": newPadder(8),
+	"phase":    newPadder(10),
+	"duration": newPadder(9),
+	"received": newPadder(9),
+	"transmit": newPadder(9),
 }
 
 var (

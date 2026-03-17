@@ -411,7 +411,6 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			return
 		case <-refreshC:
 			refreshStart := time.Now()
-			d.terminal.sync()
 			d.terminal.clear()
 			if d.logOverlay {
 				d.Logging()
@@ -421,7 +420,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			force = true
-			slog.Info("display", "display", "main", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond))
+			slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "drawn", fmt.Sprintf("%dbox", len(d.boxes)))
 		case <-d.cache.Updates():
 		case event, ok := <-d.terminal.events():
 			if !ok {
@@ -459,7 +458,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					}
 				}
 				force = true
-				slog.Info("display", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart).Truncate(time.Millisecond), "cols", cols, "rows", rows)
+				slog.Info("state", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart).Truncate(time.Millisecond), "cols", cols, "rows", rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
@@ -467,7 +466,6 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 				if ev.Key() == tcell.KeyCtrlR {
 					refreshStart := time.Now()
-					d.terminal.sync()
 					d.terminal.clear()
 					if d.logOverlay {
 						d.Logging()
@@ -477,7 +475,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 						}
 					}
 					force = true
-					slog.Info("display", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond))
+					slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "drawn", fmt.Sprintf("%dbox", len(d.boxes)))
 				}
 				if ev.Key() == tcell.KeyEscape && d.logBuffer != nil {
 					d.logOverlay = !d.logOverlay
@@ -524,7 +522,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			d.terminal.show()
-			slog.Info("display", "display", "main", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "drawn", fmt.Sprintf("%dboxes", drawnCount))
+			slog.Debug("profiling", "engine", "display", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "drawn", fmt.Sprintf("%dbox", drawnCount))
 			force = false
 		}
 	}
