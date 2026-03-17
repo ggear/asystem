@@ -76,7 +76,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			rxCount.Add(1)
 			if len(msg.Payload()) == 0 {
-				cache.EvictAndDelete(guid.Host, guid.ServiceName)
+				cache.Evict(guid.Host, guid.ServiceName)
+				cache.Delete(guid.Host, guid.ServiceName)
 				return
 			}
 			var value metric.ValueData
@@ -85,7 +86,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				return
 			}
 			if value.Pulse == nil {
-				cache.EvictAndDelete(guid.Host, guid.ServiceName)
+				cache.Evict(guid.Host, guid.ServiceName)
+				cache.Delete(guid.Host, guid.ServiceName)
 				return
 			}
 			value.Timestamp = time.Now().Unix()
