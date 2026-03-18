@@ -15,16 +15,18 @@
 #  forecasts_days: 7
 #  warnings_basename: darlington_warnings
 
-template:
+sensor:
 
-  - sensor:
-      - unique_id: bom_current_text
-        state: >
+  - platform: template
+    sensors:
+
+      bom_current_text:
+        value_template: >
           {% set val = states('sensor.darlington_forecast_short_text_0').split('.')[0] %}
           {{ val | title }}
 
-      - unique_id: bom_uv_alert
-        state: >
+      bom_uv_alert:
+        value_template: >
           {%- if states('sensor.darlington_forecast_uv_max_index_0') | lower not in ['unavailable', 'unknown', 'none', 'n/a'] and states('sensor.bom_today_uv') | lower not in ['unavailable', 'unknown', 'none', 'n/a'] and states('sensor.darlington_forecast_uv_end_time_0') | lower not in ['unavailable', 'unknown', 'none', 'n/a'] and states('sensor.darlington_forecast_uv_start_time_0') | lower not in ['unavailable', 'unknown', 'none', 'n/a']-%}
             {% set to = as_timestamp(states('sensor.darlington_forecast_uv_end_time_0')) | timestamp_custom(' %I:%M %p') %}
             {% set from = as_timestamp(states('sensor.darlington_forecast_uv_start_time_0')) | timestamp_custom(' %I:%M %p') %}
@@ -35,8 +37,8 @@ template:
             {%- endif -%}
           {%- endif -%}
 
-      - unique_id: bom_fire_danger
-        state: >
+      bom_fire_danger:
+        value_template: >
           {% set fire = states('sensor.darlington_forecast_fire_danger_0') %}
           {%- if fire == None -%}
             Fire danger is rated Low today.
@@ -44,42 +46,46 @@ template:
             Fire danger is rated {{ states('sensor.darlington_forecast_fire_danger_0') }}.
           {%- endif -%}
 
-      - unique_id: beaufort
-        state: >
+      # Beaufort
+      # https://en.wikipedia.org/wiki/Beaufort_scale
+      beaufort:
+        value_template: >
           {%- if states('sensor.darlington_wind_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
           0
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 118 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 118 -%}
           12
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 103 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 103 -%}
           11
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 89 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 89 -%}
           10
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 75 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 75 -%}
           9
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 62 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 62 -%}
           8
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 50 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 50 -%}
           7
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 39 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 39 -%}
           6
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 29 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 29 -%}
           5
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 20 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 20 -%}
           4
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 12 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 12 -%}
           3
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 6 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 6 -%}
           2
-          {%- elif states('sensor.darlington_wind_speed_kilometre') | float >= 2 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 2 -%}
           1
           {%- else -%}
           0
           {%- endif -%}
 
-      - unique_id: heatindex
+      # Heatindex
+      # https://en.wikipedia.org/wiki/Heat_index
+      heatindex:
         unit_of_measurement: °C
         device_class: temperature
-        state: >
+        value_template: >
           {%- if states('sensor.darlington_temp') not in ['unavailable', 'unknown', 'none', 'n/a'] and (states('sensor.darlington_temp') | float > 27) and states('sensor.darlington_humidity') not in ['unavailable', 'unknown', 'none', 'n/a'] and (states('sensor.darlington_humidity') | float > 40) -%}
           {% set T = states('sensor.darlington_temp') | float %}
           {% set R = states('sensor.darlington_humidity') | float %}
@@ -92,284 +98,379 @@ template:
           {% set c7 = 0.002211732 %}
           {% set c8 = 0.00072546 %}
           {% set c9 = -0.000003582 %}
-          {% set HI = c1 + (c2 * T) + (c3 * R) + (c4 * T * R) + (c5 * T**2) + (c6 * R**2) + (c7 * T**2 * R) + (c8 * T * R**2) + (c9 * T**2 * R**2) %}
+          {% set HI = c1 + (c2 * T ) + (c3 * R) + ( c4 * T * R ) + ( c5 * T**2 ) + ( c6 * R**2 ) + ( c7 * T**2 * R ) + ( c8 * T * R**2 ) + ( c9 * T**2 * R**2 ) %}
           {{ HI | round }}
           {%- else -%}
           0
           {%- endif -%}
-
-      - unique_id: heatindexrating
-        state: >
+      heatindexrating:
+        value_template: >
           {%- if states('sensor.heatindex') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
           Out of range
-          {%- elif states('sensor.heatindex') | float >= 54 -%}
+          {%- elif states('sensor.heatindex') | float  >= 54 -%}
           Extreme danger: heat stroke imminent
-          {%- elif states('sensor.heatindex') | float >= 41 -%}
+          {%- elif states('sensor.heatindex') | float  >= 41 -%}
           Danger: cramps, exhaustion heat stroke probable
-          {%- elif states('sensor.heatindex') | float >= 32 -%}
+          {%- elif states('sensor.heatindex') | float  >= 32 -%}
           Extreme caution: cramps and exhaustion possible
-          {%- elif states('sensor.heatindex') | float >= 26 -%}
+          {%- elif states('sensor.heatindex') | float  >= 26 -%}
           Caution: fatigue possible
           {%- else -%}
           Normal
           {%- endif -%}
 
-      - unique_id: bom_forecast_0
-        name: "Today"
-        state: >
+      bom_forecast_0:
+        friendly_name: "Today"
+        value_template: >
           {% if states('sensor.darlington_forecast_temp_min_0') in ['unavailable', 'unknown', 'none', 'n/a'] %} {% set min = states('sensor.bom_today_min') %} {% else %} {% set min = states('sensor.darlington_forecast_temp_min_0') %} {% endif %}
           {% if states('sensor.darlington_forecast_temp_max_0') in ['unavailable', 'unknown', 'none', 'n/a'] %} {% set max = states('sensor.bom_today_max') %} {% else %} {% set max = states('sensor.darlington_forecast_temp_max_0') %} {% endif %}
           {% if states('sensor.darlington_forecast_rain_chance_0') in ['unavailable', 'unknown', 'none', 'n/a'] %} {% set rain = 0 %} {% else %} {% set rain = states('sensor.darlington_forecast_rain_chance_0') %} {% endif %}
           {{ max|float(0)|round(0)}}°/{{ min|float(0)|round(0)}}°/{{ rain|float(0)|round(0) }}%
-        picture: >-
+        entity_picture_template: >-
           {%- if states('sun.sun') == 'below_horizon' and (states('sensor.darlington_forecast_icon_descriptor_0') == 'fog' or states('sensor.darlington_forecast_icon_descriptor_0') == 'haze' or states('sensor.darlington_forecast_icon_descriptor_0') == 'hazy' or states('sensor.darlington_forecast_icon_descriptor_0') == 'light-showers' or states('sensor.darlington_forecast_icon_descriptor_0') == 'partly-cloudy' or states('sensor.darlington_forecast_icon_descriptor_0') == 'showers' or states('sensor.darlington_forecast_icon_descriptor_0') == 'shower' or states('sensor.darlington_forecast_icon_descriptor_0') == 'light_showers' or states('sensor.darlington_forecast_icon_descriptor_0') == 'light_shower' or states('sensor.darlington_forecast_icon_descriptor_0') == 'partly_cloudy' or states('sensor.darlington_forecast_icon_descriptor_0') == 'mostly_sunny') -%}
           {{ '/local/icons/bom_icons/' ~ states('sensor.darlington_forecast_icon_descriptor_0') ~ '-night.png' }}
           {%- else -%}
           {{ '/local/icons/bom_icons/' ~ states('sensor.darlington_forecast_icon_descriptor_0') ~ '.png' }}
           {%- endif -%}
 
-      - unique_id: bom_forecast_1
-        name: >
-          {%- set date = as_timestamp(now()) + (1 * 86400) -%}
+      bom_forecast_1:
+        friendly_name_template: >
+          {%- set date = as_timestamp(now()) + (1 * 86400 ) -%}
           {{ date | timestamp_custom('Tomorrow (%-d/%-m)') }}
-        state: >
+        value_template: >
           {{states('sensor.darlington_forecast_temp_max_1')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_temp_min_1')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_rain_chance_1')|float(0)|round(0)}}%
-        picture: >-
+        entity_picture_template: >-
           {{ '/local/icons/bom_icons/' ~ states('sensor.darlington_forecast_icon_descriptor_1') ~ '.png' }}
 
-      - unique_id: bom_forecast_2
-        name: >
-          {%- set date = as_timestamp(now()) + (2 * 86400) -%}
+      bom_forecast_2:
+        friendly_name_template: >
+          {%- set date = as_timestamp(now()) + (2 * 86400 ) -%}
           {{ date | timestamp_custom('%A (%-d/%-m)') }}
-        state: >
+        value_template: >
           {{states('sensor.darlington_forecast_temp_max_2')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_temp_min_2')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_rain_chance_2')|float(0)|round(0)}}%
-        picture: >-
+        entity_picture_template: >-
           {{ '/local/icons/bom_icons/' ~ states('sensor.darlington_forecast_icon_descriptor_2') ~ '.png' }}
 
-      - unique_id: bom_forecast_3
-        name: >
-          {%- set date = as_timestamp(now()) + (3 * 86400) -%}
+      bom_forecast_3:
+        friendly_name_template: >
+          {%- set date = as_timestamp(now()) + (3 * 86400 ) -%}
           {{ date | timestamp_custom('%A (%-d/%-m)') }}
-        state: >
+        value_template: >
           {{states('sensor.darlington_forecast_temp_max_3')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_temp_min_3')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_rain_chance_3')|float(0)|round(0)}}%
-        picture: >-
+        entity_picture_template: >-
           {{ '/local/icons/bom_icons/' ~ states('sensor.darlington_forecast_icon_descriptor_3') ~ '.png' }}
 
-      - unique_id: bom_forecast_4
-        name: >
-          {%- set date = as_timestamp(now()) + (4 * 86400) -%}
+      bom_forecast_4:
+        friendly_name_template: >
+          {%- set date = as_timestamp(now()) + (4 * 86400 ) -%}
           {{ date | timestamp_custom('%A (%-d/%-m)') }}
-        state: >
+        value_template: >
           {{states('sensor.darlington_forecast_temp_max_4')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_temp_min_4')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_rain_chance_4')|float(0)|round(0)}}%
-        picture: >-
+        entity_picture_template: >-
           {{ '/local/icons/bom_icons/' ~ states('sensor.darlington_forecast_icon_descriptor_4') ~ '.png' }}
 
-      - unique_id: bom_forecast_5
-        name: >
-          {%- set date = as_timestamp(now()) + (5 * 86400) -%}
+      bom_forecast_5:
+        friendly_name_template: >
+          {%- set date = as_timestamp(now()) + (5 * 86400 ) -%}
           {{ date | timestamp_custom('%A (%-d/%-m)') }}
-        state: >
+        value_template: >
           {{states('sensor.darlington_forecast_temp_max_5')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_temp_min_5')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_rain_chance_5')|float(0)|round(0)}}%
-        picture: >-
+        entity_picture_template: >-
           {{ '/local/icons/bom_icons/' ~ states('sensor.darlington_forecast_icon_descriptor_5') ~ '.png' }}
 
-      - unique_id: bom_forecast_6
-        name: >
-          {%- set date = as_timestamp(now()) + (6 * 86400) -%}
+      bom_forecast_6:
+        friendly_name_template: >
+          {%- set date = as_timestamp(now()) + (6 * 86400 ) -%}
           {{ date | timestamp_custom('%A (%-d/%-m)') }}
-        state: >
+        value_template: >
           {{states('sensor.darlington_forecast_temp_max_6')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_temp_min_6')|float(0)|round(0)}}°/{{states('sensor.darlington_forecast_rain_chance_6')|float(0)|round(0)}}%
-        picture: >-
+        entity_picture_template: >-
           {{ '/local/icons/bom_icons/' ~ states('sensor.darlington_forecast_icon_descriptor_6') ~ '.png' }}
 
-      - unique_id: bom_rain_range_0
-        state: >
+      bom_rain_range_0:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_amount_range_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             0
           {% else %}
           {{ states('sensor.darlington_forecast_rain_amount_range_0') | replace(" to ", "-") }}
           {% endif %}
 
-      - unique_id: bom_rain_range_1
-        state: >
+      bom_rain_range_1:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_amount_range_1') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             0
           {% else %}
           {{ states('sensor.darlington_forecast_rain_amount_range_1') | replace(" to ", "-") }}
           {% endif %}
 
-      - unique_id: bom_rain_range_2
-        state: >
+      bom_rain_range_2:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_amount_range_2') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             0
           {% else %}
           {{ states('sensor.darlington_forecast_rain_amount_range_2') | replace(" to ", "-") }}
           {% endif %}
 
-      - unique_id: bom_rain_range_3
-        state: >
+      bom_rain_range_3:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_amount_range_3') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             0
           {% else %}
           {{ states('sensor.darlington_forecast_rain_amount_range_3') | replace(" to ", "-") }}
           {% endif %}
 
-      - unique_id: bom_rain_range_4
-        state: >
+      bom_rain_range_4:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_amount_range_4') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             0
           {% else %}
           {{ states('sensor.darlington_forecast_rain_amount_range_4') | replace(" to ", "-") }}
           {% endif %}
 
-      - unique_id: bom_rain_range_5
-        state: >
+      bom_rain_range_5:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_amount_range_5') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             0
           {% else %}
           {{ states('sensor.darlington_forecast_rain_amount_range_5') | replace(" to ", "-") }}
           {% endif %}
 
-      - unique_id: bom_rain_range_6
-        state: >
+      bom_rain_range_6:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_amount_range_6') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             0
           {% else %}
           {{ states('sensor.darlington_forecast_rain_amount_range_6') | replace(" to ", "-") }}
           {% endif %}
 
-      - unique_id: bom_rain_chance_1
-        state: >
+
+      bom_rain_chance_1:
+        value_template: >
           {{ states('sensor.darlington_forecast_rain_chance_1') | float(0) }}
 
-      - unique_id: bom_rain_chance_2
-        state: >
+      bom_rain_chance_2:
+        value_template: >
           {{ states('sensor.darlington_forecast_rain_chance_2') | float(0) }}
 
-      - unique_id: bom_rain_chance_3
-        state: >
+      bom_rain_chance_3:
+        value_template: >
           {{ states('sensor.darlington_forecast_rain_chance_3') | float(0) }}
 
-      - unique_id: bom_rain_chance_4
-        state: >
+      bom_rain_chance_4:
+        value_template: >
           {{ states('sensor.darlington_forecast_rain_chance_4') | float(0) }}
 
-      - unique_id: bom_rain_chance_5
-        state: >
+      bom_rain_chance_5:
+        value_template: >
           {{ states('sensor.darlington_forecast_rain_chance_5') | float(0) }}
 
-      - unique_id: bom_today_rain_chance
-        state: >
+      bom_today_rain_chance:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_chance_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ state_attr('sensor.today_rain_chance_bom', 'max_value') | float(0) }}
           {% else %}
             {{ states('sensor.darlington_forecast_rain_chance_0') }}
           {% endif %}
 
-      - unique_id: bom_today_rain
-        state: >
+      bom_today_rain:
+        value_template: >
           {%- if states('sensor.darlington_forecast_rain_amount_range_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_rain') }}
           {% else %}
             {{ states('sensor.darlington_forecast_rain_amount_range_0') | replace(" to ", "-") }}
           {% endif %}
 
-      - unique_id: bom_today_humidity
-        state: >
+      bom_today_humidity:
+        value_template: >
           {%- if states('sensor.darlington_humidity') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_humidity') }}
           {% else %}
             {{ states('sensor.darlington_humidity') }}
           {% endif %}
 
-      - unique_id: bom_today_wind_direction
-        state: >
+      bom_today_wind_direction:
+        value_template: >
           {%- if states('sensor.darlington_wind_direction') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_wind_direction') }}
           {% else %}
             {{ states('sensor.darlington_wind_direction') }}
           {% endif %}
 
-      - unique_id: bom_today_wind_speed
-        state: >
+      bom_today_wind_speed:
+        value_template: >
           {%- if states('sensor.darlington_wind_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_wind_speed') }}
           {% else %}
             {{ states('sensor.darlington_wind_speed_kilometre') }}
           {% endif %}
 
-      - unique_id: bom_today_wind_speed_gust
-        state: >
+      bom_today_wind_speed_gust:
+        value_template: >
           {%- if states('sensor.darlington_gust_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_wind_speed_gust') }}
           {% else %}
             {{ states('sensor.darlington_gust_speed_kilometre') }}
           {% endif %}
 
-      - unique_id: bom_today_uv
-        state: >
+      bom_today_uv:
+        value_template: >
           {%- if states('sensor.darlington_forecast_uv_category_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_uv') | title }}
           {% else %}
             {{ states('sensor.darlington_forecast_uv_category_0') | replace('very', 'very ') | title }}
           {% endif %}
 
-      - unique_id: bom_today_fire
-        state: >
+      bom_today_fire:
+        value_template: >
           {%- if states('sensor.darlington_forecast_fire_danger_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_fire') }}
           {% else %}
             {{ states('sensor.darlington_forecast_fire_danger_0') }}
           {% endif %}
 
-      - unique_id: bom_today_max
-        state: >
+      # ONLY USE ONE bom_today_max below:
+      #      bom_today_max:
+      #        value_template: >
+      #          {{ state_attr('sensor.today_temp_bom', 'max_value') }}
+
+      bom_today_max:
+        value_template: >
           {%- if states('sensor.darlington_forecast_temp_max_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ state_attr('sensor.today_temp_bom', 'max_value') }}
           {% else %}
             {{ states('sensor.darlington_forecast_temp_max_0') }}
           {% endif %}
 
-      - unique_id: bom_today_maxs
-        state: >
+      bom_today_maxs:
+        value_template: >
           {{ states('sensor.bom_today_max') | float(0) | round | int }} ({{ state_attr('sensor.today_temp_roof', 'max_value') | float(0) | round(0, 'ceil') }})
 
-      - unique_id: bom_today_min
-        state: >
+      # ONLY USE ONE bom_today_min below:
+      #      bom_today_min:
+      #        value_template: >
+      #          {{ state_attr('sensor.today_temp_bom', 'min_value') }}
+
+      bom_today_min:
+        value_template: >
           {%- if states('sensor.darlington_forecast_temp_min_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ state_attr('sensor.today_temp_bom', 'min_value') }}
           {% else %}
             {{ states('sensor.darlington_forecast_temp_min_0') }}
           {% endif %}
 
-      - unique_id: bom_today_mins
-        state: >
-          {{ states('sensor.bom_today_min') | float(0) | round | int }} ({{ state_attr('sensor.today_temp_roof', 'min_value') | float(0) | round(0, 'floor') }})
+      bom_today_mins:
+        value_template: >
+          {{ states('sensor.bom_today_min') | float(0) | round | int }} ({{ state_attr('sensor.today_temp_roof', 'min_value') | float(0) |round(0, 'floor') }})
 
-      - unique_id: bom_today_rains
-        state: >
+      bom_today_rains:
+        value_template: >
           {{ states('sensor.bom_today_rain') }} (
           {%- if states('sensor.roof_daily_rain') in ['unavailable', 'unknown', 'none', 'n/a'] -%}unknown)
           {% else %}{{ states('sensor.roof_daily_rain') | float(0) | round | int }})
           {% endif %}
 
-      - unique_id: bom_today_humiditys
-        state: >
+      bom_today_humiditys:
+        value_template: >
           {{ states('sensor.bom_today_humidity') }} ({{ states('sensor.today_humidity_roof') | float(0) | round | int }})
 
-      - unique_id: bom_today_wind_gusts
-        state: >
+      bom_today_wind_gusts:
+        value_template: >
           {{ states('sensor.bom_today_wind_speed_gust') | float(0) }} ({{ state_attr('sensor.today_gusts_roof', 'max_value') | float(0) | round | int }})
 
-      - unique_id: illuminance
-        name: "Solar Illuminance Estimate"
-        icon: mdi:brightness-auto
+
+  # IMPORTANT NOTE IF YOU USE average, you must comment out the below statistics sensor. Both cannot exist
+  # https://github.com/Limych/ha-average
+  - platform: average
+    name: today_temp_bom
+    entities:
+      - sensor.darlington_temp
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  - platform: average
+    name: today_rain_chance_bom
+    entities:
+      - sensor.bom_today_rain_chance
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  - platform: average
+    name: today_temp_roof
+    entities:
+      - sensor.roof_temperature
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  - platform: average
+    name: today_rain_roof
+    entities:
+      - sensor.roof_daily_rain
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  - platform: average
+    name: today_humidity_roof
+    entities:
+      - sensor.roof_humidity
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  - platform: average
+    name: today_gusts_roof
+    entities:
+      - sensor.roof_wind_gust_speed
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  # IMPORTANT NOTE IF YOU USE statistics, you must comment out the above average sensor. Both cannot exist
+  #  - platform: statistics
+  #    name: today_temp_bom
+  #    sampling_size: 150
+  #    entity_id: sensor.darlington_temp
+  #    max_age:
+  #      hours: 24
+
+  # INFO: YAML config removed in 2024.3.1
+  #  - platform: sun2w
+  #    monitored_conditions:
+  #      - solar_midnight
+  #      - astronomical_dawn
+  #      - nautical_dawn
+  #      - dawn
+  #      - sunrise
+  #      - solar_noon
+  #      - sunset
+  #      - dusk
+  #      - nautical_dusk
+  #      - astronomical_dusk
+  #      - daylight
+  #      - civil_daylight
+  #      - nautical_daylight
+  #      - astronomical_daylight
+  #      - night
+  #      - civil_night
+  #      - nautical_night
+  #      - astronomical_night
+  #      - elevation
+  #      - min_elevation
+  #      - max_elevation
+  #    entity_namespace: solar
+
+  - platform: template
+    sensors:
+      illuminance:
+        friendly_name: "Solar Illuminance Estimate"
+        icon_template: mdi:brightness-auto
         device_class: illuminance
         unit_of_measurement: lx
-        state: |
+        value_template: |
           {%- set factors = namespace(condition='',sun='') %}
+
+          {#- Retrieve the current condition and normalize the value #}
           {%- set current_condition = states("weather.darlington_forecast") %}
           {%- set current_condition = current_condition|lower|replace("partly cloudy w/ ","")|replace("mostly cloudy w/ ","")|replace("freezing","")|replace("and","")|replace(" ", "")|replace("-", " ")|replace("_", " ")|replace("(","")|replace(")","") %}
+
+          {#- Assign a seemingly arbitrary number to the condition factor #}
           {%- set condition_factors = {
             "10000": ("clear", "clearnight", "sunny", "windy", "wind", "windyvariant", "exceptional"),
             "7500": ("partlycloudy", "partlysunny", "mostlysunny", "mostlyclear", "hazy", "hazey", "hazysunshine", "intermittentclouds", "lightrain"),
@@ -380,6 +481,8 @@ template:
           {%- for factor in condition_factors if current_condition in condition_factors[factor] %}
             {%- set factors.condition = factor %}
           {%- endfor %}
+
+          {#- Compute Sun Factor #}
           {%- set right_now = now() | as_timestamp(0) %}
           {%- set sunrise = states("sensor.solar_sunrise") | as_timestamp(0) %}
           {%- set sunrise_begin = states("sensor.solar_dawn") | as_timestamp(0) %}
@@ -397,6 +500,45 @@ template:
             {%- set factors.sun = (sunset_end - right_now) / (60*60) %}
           {%- endif %}
           {%- set factors.sun = 1 if factors.sun > 1 else factors.sun %}
+
+          {# Take an educated guess #}
           {%- set illuminance = (factors.sun | float(0) * factors.condition | float(0)) | round %}
           {%- set illuminance = 10 if illuminance < 10 else illuminance %}
           {{ illuminance }}
+
+binary_sensor:
+
+# INFO: YAML config removed in 2024.3.1
+#  - platform: sun2
+#    monitored_conditions:
+#      - elevation
+#      - elevation:
+#          above: 25
+#          name: Sun Above 25
+
+#  - platform: workday
+#    country: AU
+#    province: WA
+#    workdays: [ mon, tue, wed, thu, fri ]
+#    excludes: [ sat, sun, holiday ]
+
+automation:
+  - id: weather_ipdate_bom_icons
+    alias: 'Weather: Update BOM Icons'
+    triggers:
+      - trigger: state
+        entity_id: sun.sun
+        to: 'above_horizon'
+      - trigger: state
+        entity_id: sun.sun
+        to: 'below_horizon'
+    actions:
+      - action: homeassistant.update_entity
+        entity_id:
+          - sensor.bom_forecast_0
+          - sensor.bom_forecast_1
+          - sensor.bom_forecast_2
+          - sensor.bom_forecast_3
+          - sensor.bom_forecast_4
+          - sensor.bom_forecast_5
+          - sensor.bom_forecast_6
