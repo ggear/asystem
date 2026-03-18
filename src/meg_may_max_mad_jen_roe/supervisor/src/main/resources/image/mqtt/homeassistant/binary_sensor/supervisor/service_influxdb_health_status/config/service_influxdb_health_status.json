@@ -3,6 +3,7 @@
   "unique_id": "service_influxdb_health_status",
   "name": "Service Influxdb Health Status",
   "device_class": "running",
+  "icon": "mdi:cog",
   "force_update": "false",
   "state_topic": "supervisor/macmini-meg/data/service/influxdb/health/status",
   "value_template": "{{ value }}",

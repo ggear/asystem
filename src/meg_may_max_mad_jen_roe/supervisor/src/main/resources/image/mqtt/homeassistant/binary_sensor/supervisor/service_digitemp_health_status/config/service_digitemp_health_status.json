@@ -3,6 +3,7 @@
   "unique_id": "service_digitemp_health_status",
   "name": "Service Digitemp Health Status",
   "device_class": "running",
+  "icon": "mdi:cog",
   "force_update": "false",
   "state_topic": "supervisor/macmini-meg/data/service/digitemp/health/status",
   "value_template": "{{ value }}",
