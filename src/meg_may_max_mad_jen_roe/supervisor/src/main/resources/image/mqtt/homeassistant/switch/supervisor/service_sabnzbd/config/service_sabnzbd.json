@@ -6,6 +6,7 @@
   "force_update": "false",
   "state_topic": "supervisor/macmini-mad/data/service/sabnzbd/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
+  "command_topic": "supervisor/macmini-mad/cmd/service/sabnzbd",
   "availability_topic": "supervisor/macmini-mad/status",
   "qos": "1",
   "device": {
