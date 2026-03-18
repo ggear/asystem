@@ -613,7 +613,7 @@ sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Davis Console'
 sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
-binary_sensor.service_homeassistant_health_status:
+binary_sensor.service_homeassistant:
   friendly_name: 'Home Assistant'
 binary_sensor.service_plex_health_status:
   friendly_name: 'Plex'
