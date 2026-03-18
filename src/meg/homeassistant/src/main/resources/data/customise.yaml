@@ -615,36 +615,52 @@ sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
 binary_sensor.service_homeassistant:
   friendly_name: 'Home Assistant'
+  icon: 'mdi:cog'
 binary_sensor.service_plex_health_status:
   friendly_name: 'Plex'
+  icon: 'mdi:cog'
 binary_sensor.service_grafana_health_status:
   friendly_name: 'Grafana'
+  icon: 'mdi:cog'
 binary_sensor.service_wrangle_health_status:
   friendly_name: 'Wrangle'
+  icon: 'mdi:cog'
 binary_sensor.service_internet_health_status:
   friendly_name: 'Internet'
+  icon: 'mdi:cog'
 binary_sensor.service_unifi_health_status:
   friendly_name: 'UniFi'
+  icon: 'mdi:cog'
 binary_sensor.service_zigbee2mqtt_health_status:
   friendly_name: 'Zigbee2Mqtt'
+  icon: 'mdi:cog'
 binary_sensor.service_weewx_health_status:
   friendly_name: 'Weewx'
+  icon: 'mdi:cog'
 binary_sensor.service_digitemp_health_status:
   friendly_name: 'Digitemp'
+  icon: 'mdi:cog'
 binary_sensor.service_nginx_health_status:
   friendly_name: 'Nginx'
+  icon: 'mdi:cog'
 binary_sensor.service_influxdb_health_status:
   friendly_name: 'Influxdb'
+  icon: 'mdi:cog'
 binary_sensor.service_mariadb_health_status:
   friendly_name: 'Mariadb'
+  icon: 'mdi:cog'
 binary_sensor.service_postgres_health_status:
   friendly_name: 'Postgres'
+  icon: 'mdi:cog'
 binary_sensor.service_letsencrypt_health_status:
   friendly_name: 'Letsencrypt'
+  icon: 'mdi:cog'
 binary_sensor.service_unifipoller_health_status:
   friendly_name: 'Unifipoller'
+  icon: 'mdi:cog'
 binary_sensor.service_monitor_health_status:
   friendly_name: 'Monitor'
+  icon: 'mdi:cog'
 button.google_assistant_synchronize_devices:
   friendly_name: 'Google Device Syncronise'
 sensor.template_utility_temperature_proxy:
