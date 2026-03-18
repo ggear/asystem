@@ -6,7 +6,7 @@
   "icon": "mdi:cog",
   "force_update": "false",
   "state_topic": "supervisor/macmini-meg/data/service/homeassistant/health_status",
-  "value_template": "{{ value_json.get('pulse', {}).get('ok', false) }}",
+  "value_template": "{{ (value_json | default({})).get('pulse', {}).get('ok', false) | bool }}",
   "availability_topic": "supervisor/macmini-meg/status",
   "qos": "1",
   "device": {
