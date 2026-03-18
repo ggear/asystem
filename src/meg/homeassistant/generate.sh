@@ -8,22 +8,22 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 pull_repo "${ROOT_DIR}" "${1}" homeassistant homeassistant-core home-assistant/core "${HOMEASSISTANT_VERSION}"
 
 # NOTES: https://github.com/DavidFW1960/bom-weather-card/releases
-VERSION=0.90a
-pull_repo "${ROOT_DIR}" "${1}" homeassistant bom-weather-card davidfw1960/bom-weather-card "${VERSION}"
-rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
-mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/bom_icons"
-unzip "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/bom_icons.zip" -d "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/bom_icons"
-mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/weather_icons"
-unzip "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/weather_icons.zip" -d "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/weather_icons"
-mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
-cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/bom-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
-sed -i '' 's/\/local\/icons/\/local\/custom_ui\/bom-weather-card\/icons/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/bom-weather-card.js"
-for FILE in illuminance.yaml lovelace.yaml weather.yaml; do
-  mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
-  cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/${FILE}" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
-  sed -i '' 's/kariong/darlington_forecast/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/${FILE}"
-  sed -i '' 's/gosford/darlington/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/${FILE}"
-done
+#VERSION=0.90a
+#pull_repo "${ROOT_DIR}" "${1}" homeassistant bom-weather-card davidfw1960/bom-weather-card "${VERSION}"
+#rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
+#mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/bom_icons"
+#unzip "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/bom_icons.zip" -d "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/bom_icons"
+#mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/weather_icons"
+#unzip "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/weather_icons.zip" -d "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/weather_icons"
+#mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
+#cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/bom-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
+#sed -i '' 's/\/local\/icons/\/local\/custom_ui\/bom-weather-card\/icons/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/bom-weather-card.js"
+#for FILE in illuminance.yaml lovelace.yaml weather.yaml; do
+#  mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
+#  cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/${FILE}" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
+#  sed -i '' 's/kariong/darlington_forecast/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/${FILE}"
+#  sed -i '' 's/gosford/darlington/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/${FILE}"
+#done
 
 # NOTES: https://github.com/Makin-Things/bom-radar-card/releases
 VERSION=v4.1.0
