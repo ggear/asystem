@@ -1,0 +1,20 @@
+{
+  "object_id": "service_internet",
+  "unique_id": "service_internet",
+  "name": "Service Internet",
+  "icon": "mdi:pulse",
+  "force_update": "false",
+  "state_topic": "supervisor/macmini-meg/data/service/internet/health_status",
+  "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
+  "availability_topic": "supervisor/macmini-meg/status",
+  "qos": "1",
+  "device": {
+    "via_device": "Supervisor",
+    "identifiers": "asystem-rack-supervisor",
+    "name": "Rack Supervisor",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

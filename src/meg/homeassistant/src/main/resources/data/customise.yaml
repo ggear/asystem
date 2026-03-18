@@ -609,70 +609,70 @@ sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Davis Console'
 sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
-binary_sensor.service_plex:
+switch.service_plex:
   friendly_name: 'Plex'
   icon: 'mdi:pulse'
-binary_sensor.service_sabnzbd:
+switch.service_sabnzbd:
   friendly_name: 'SABnzbd'
   icon: 'mdi:pulse'
-binary_sensor.service_influxdb3:
+switch.service_influxdb3:
   friendly_name: 'InfluxDB3'
   icon: 'mdi:pulse'
-binary_sensor.service_mlflow:
+switch.service_mlflow:
   friendly_name: 'MLFlow'
   icon: 'mdi:pulse'
-binary_sensor.service_mlserver:
+switch.service_mlserver:
   friendly_name: 'MLServer'
   icon: 'mdi:pulse'
-binary_sensor.service_openra:
+switch.service_openra:
   friendly_name: 'OpenRA'
   icon: 'mdi:pulse'
-binary_sensor.service_rhasspy:
+switch.service_rhasspy:
   friendly_name: 'Rhasspy'
   icon: 'mdi:pulse'
-binary_sensor.service_digitemp:
+switch.service_digitemp:
   friendly_name: 'DigiTemp'
   icon: 'mdi:pulse'
-binary_sensor.service_grafana:
+switch.service_grafana:
   friendly_name: 'Grafana'
   icon: 'mdi:pulse'
-binary_sensor.service_influxdb:
+switch.service_influxdb:
   friendly_name: 'InfluxDB3'
   icon: 'mdi:pulse'
-binary_sensor.service_letsencrypt:
+switch.service_letsencrypt:
   friendly_name: 'LetsEncrypt'
   icon: 'mdi:pulse'
-binary_sensor.service_sonarr:
+switch.service_sonarr:
   friendly_name: 'Sonarr'
   icon: 'mdi:pulse'
-binary_sensor.service_unpoller:
+switch.service_unpoller:
   friendly_name: 'Unpoller'
   icon: 'mdi:pulse'
-binary_sensor.service_wrangle:
+switch.service_wrangle:
   friendly_name: 'Wrangle'
   icon: 'mdi:pulse'
-binary_sensor.service_homeassistant:
+switch.service_homeassistant:
   friendly_name: 'Home Assistant'
   icon: 'mdi:pulse'
-binary_sensor.service_internet:
+switch.service_internet:
   friendly_name: 'Internet'
   icon: 'mdi:pulse'
-binary_sensor.service_mariadb:
+switch.service_mariadb:
   friendly_name: 'MariaDB'
   icon: 'mdi:pulse'
-binary_sensor.service_nginx:
+switch.service_nginx:
   friendly_name: 'Nginx'
   icon: 'mdi:pulse'
-binary_sensor.service_postgres:
+switch.service_postgres:
   friendly_name: 'Postgres'
   icon: 'mdi:pulse'
-binary_sensor.service_vernemq:
+switch.service_vernemq:
   friendly_name: 'VerneMQ'
   icon: 'mdi:pulse'
-binary_sensor.service_weewx:
+switch.service_weewx:
   friendly_name: 'WeeWX'
   icon: 'mdi:pulse'
-binary_sensor.service_zigbee2mqtt:
+switch.service_zigbee2mqtt:
   friendly_name: 'Zigbee2MQTT'
   icon: 'mdi:pulse'
 button.google_assistant_synchronize_devices:

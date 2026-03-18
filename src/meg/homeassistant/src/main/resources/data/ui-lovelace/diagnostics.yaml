@@ -39,71 +39,72 @@
 ################################################################################
 - type: entities
   title: Service Availability
+  show_header_toggle: false
   entities:
-    - entity: binary_sensor.service_plex
+    - entity: switch.service_plex
       name: Plex
       icon: mdi:pulse
-    - entity: binary_sensor.service_sabnzbd
+    - entity: switch.service_sabnzbd
       name: SABnzbd
       icon: mdi:pulse
-    - entity: binary_sensor.service_influxdb3
+    - entity: switch.service_influxdb3
       name: InfluxDB3
       icon: mdi:pulse
-    - entity: binary_sensor.service_mlflow
+    - entity: switch.service_mlflow
       name: MLFlow
       icon: mdi:pulse
-    - entity: binary_sensor.service_mlserver
+    - entity: switch.service_mlserver
       name: MLServer
       icon: mdi:pulse
-    - entity: binary_sensor.service_openra
+    - entity: switch.service_openra
       name: OpenRA
       icon: mdi:pulse
-    - entity: binary_sensor.service_rhasspy
+    - entity: switch.service_rhasspy
       name: Rhasspy
       icon: mdi:pulse
-    - entity: binary_sensor.service_digitemp
+    - entity: switch.service_digitemp
       name: DigiTemp
       icon: mdi:pulse
-    - entity: binary_sensor.service_grafana
+    - entity: switch.service_grafana
       name: Grafana
       icon: mdi:pulse
-    - entity: binary_sensor.service_influxdb
+    - entity: switch.service_influxdb
       name: InfluxDB3
       icon: mdi:pulse
-    - entity: binary_sensor.service_letsencrypt
+    - entity: switch.service_letsencrypt
       name: LetsEncrypt
       icon: mdi:pulse
-    - entity: binary_sensor.service_sonarr
+    - entity: switch.service_sonarr
       name: Sonarr
       icon: mdi:pulse
-    - entity: binary_sensor.service_unpoller
+    - entity: switch.service_unpoller
       name: Unpoller
       icon: mdi:pulse
-    - entity: binary_sensor.service_wrangle
+    - entity: switch.service_wrangle
       name: Wrangle
       icon: mdi:pulse
-    - entity: binary_sensor.service_homeassistant
+    - entity: switch.service_homeassistant
       name: Home Assistant
       icon: mdi:pulse
-    - entity: binary_sensor.service_internet
+    - entity: switch.service_internet
       name: Internet
       icon: mdi:pulse
-    - entity: binary_sensor.service_mariadb
+    - entity: switch.service_mariadb
       name: MariaDB
       icon: mdi:pulse
-    - entity: binary_sensor.service_nginx
+    - entity: switch.service_nginx
       name: Nginx
       icon: mdi:pulse
-    - entity: binary_sensor.service_postgres
+    - entity: switch.service_postgres
       name: Postgres
       icon: mdi:pulse
-    - entity: binary_sensor.service_vernemq
+    - entity: switch.service_vernemq
       name: VerneMQ
       icon: mdi:pulse
-    - entity: binary_sensor.service_weewx
+    - entity: switch.service_weewx
       name: WeeWX
       icon: mdi:pulse
-    - entity: binary_sensor.service_zigbee2mqtt
+    - entity: switch.service_zigbee2mqtt
       name: Zigbee2MQTT
       icon: mdi:pulse
 ################################################################################
