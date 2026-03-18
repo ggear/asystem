@@ -15,7 +15,6 @@
       {
         "host": "macmini-mad",
         "services": [
-          "monitor",
           "plex",
           "sabnzbd",
           "supervisor"
@@ -27,7 +26,6 @@
           "influxdb3",
           "mlflow",
           "mlserver",
-          "monitor",
           "openra",
           "rhasspy",
           "supervisor"
@@ -40,7 +38,6 @@
           "grafana",
           "influxdb",
           "letsencrypt",
-          "monitor",
           "sonarr",
           "supervisor",
           "unpoller",
@@ -53,7 +50,6 @@
           "homeassistant",
           "internet",
           "mariadb",
-          "monitor",
           "nginx",
           "postgres",
           "supervisor",
@@ -61,9 +57,14 @@
         ]
       },
       {
+        "host": "nullsvr-zzz",
+        "services": [
+          "monitor"
+        ]
+      },
+      {
         "host": "raspbpi-jen",
         "services": [
-          "monitor",
           "supervisor",
           "weewx",
           "zigbee2mqtt"
