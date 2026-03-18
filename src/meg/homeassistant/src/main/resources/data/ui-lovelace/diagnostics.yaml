@@ -52,70 +52,70 @@
   entities:
     - entity: switch.service_plex
       name: Plex
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_sabnzbd
       name: SABnzbd
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_influxdb3
       name: InfluxDB3
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_mlflow
       name: MLFlow
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_mlserver
       name: MLServer
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_openra
       name: OpenRA
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_rhasspy
       name: Rhasspy
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_digitemp
       name: DigiTemp
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_grafana
       name: Grafana
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_influxdb
       name: InfluxDB3
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_letsencrypt
       name: LetsEncrypt
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_sonarr
       name: Sonarr
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_unpoller
       name: Unpoller
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_wrangle
       name: Wrangle
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_homeassistant
       name: Home Assistant
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_internet
       name: Internet
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_mariadb
       name: MariaDB
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_nginx
       name: Nginx
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_postgres
       name: Postgres
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_vernemq
       name: VerneMQ
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_weewx
       name: WeeWX
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
     - entity: switch.service_zigbee2mqtt
       name: Zigbee2MQTT
-      icon: mdi:pulse
+      icon: mdi:heart-pulse
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -160,6 +160,8 @@
     - entity: sensor.compensation_sensor_host_jen_temperature
       name: Raspberry Pi Jen
       icon: mdi:thermometer
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: entities
   title: Device Batteries

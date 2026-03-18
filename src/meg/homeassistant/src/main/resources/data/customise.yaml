@@ -613,70 +613,70 @@ sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
 switch.service_plex:
   friendly_name: 'Plex'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_sabnzbd:
   friendly_name: 'SABnzbd'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_influxdb3:
   friendly_name: 'InfluxDB3'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_mlflow:
   friendly_name: 'MLFlow'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_mlserver:
   friendly_name: 'MLServer'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_openra:
   friendly_name: 'OpenRA'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_rhasspy:
   friendly_name: 'Rhasspy'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_digitemp:
   friendly_name: 'DigiTemp'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_grafana:
   friendly_name: 'Grafana'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_influxdb:
   friendly_name: 'InfluxDB3'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_letsencrypt:
   friendly_name: 'LetsEncrypt'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_sonarr:
   friendly_name: 'Sonarr'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_unpoller:
   friendly_name: 'Unpoller'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_wrangle:
   friendly_name: 'Wrangle'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_homeassistant:
   friendly_name: 'Home Assistant'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_internet:
   friendly_name: 'Internet'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_mariadb:
   friendly_name: 'MariaDB'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_nginx:
   friendly_name: 'Nginx'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_postgres:
   friendly_name: 'Postgres'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_vernemq:
   friendly_name: 'VerneMQ'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_weewx:
   friendly_name: 'WeeWX'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 switch.service_zigbee2mqtt:
   friendly_name: 'Zigbee2MQTT'
-  icon: 'mdi:pulse'
+  icon: 'mdi:heart-pulse'
 sensor.template_utility_temperature_proxy:
   friendly_name: 'Rack Ambient'
   icon: 'mdi:thermometer'
