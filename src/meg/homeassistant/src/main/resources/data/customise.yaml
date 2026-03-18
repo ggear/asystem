@@ -613,48 +613,38 @@ sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Davis Console'
 sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
-binary_sensor.service_homeassistant_availability:
+binary_sensor.service_homeassistant_health_status:
   friendly_name: 'Home Assistant'
-binary_sensor.service_plex_availability:
+binary_sensor.service_plex_health_status:
   friendly_name: 'Plex'
-binary_sensor.service_grafana_availability:
+binary_sensor.service_grafana_health_status:
   friendly_name: 'Grafana'
-binary_sensor.service_wrangle_availability:
+binary_sensor.service_wrangle_health_status:
   friendly_name: 'Wrangle'
-binary_sensor.service_internet_availability:
+binary_sensor.service_internet_health_status:
   friendly_name: 'Internet'
-binary_sensor.service_unifi_availability:
+binary_sensor.service_unifi_health_status:
   friendly_name: 'UniFi'
-binary_sensor.service_zigbee2mqtt_availability:
+binary_sensor.service_zigbee2mqtt_health_status:
   friendly_name: 'Zigbee2Mqtt'
-binary_sensor.service_weewx_availability:
+binary_sensor.service_weewx_health_status:
   friendly_name: 'Weewx'
-binary_sensor.service_digitemp_availability:
+binary_sensor.service_digitemp_health_status:
   friendly_name: 'Digitemp'
-binary_sensor.service_nginx_availability:
+binary_sensor.service_nginx_health_status:
   friendly_name: 'Nginx'
-binary_sensor.service_influxdb_availability:
+binary_sensor.service_influxdb_health_status:
   friendly_name: 'Influxdb'
-binary_sensor.service_mariadb_availability:
+binary_sensor.service_mariadb_health_status:
   friendly_name: 'Mariadb'
-binary_sensor.service_postgres_availability:
+binary_sensor.service_postgres_health_status:
   friendly_name: 'Postgres'
-binary_sensor.service_letsencrypt_availability:
+binary_sensor.service_letsencrypt_health_status:
   friendly_name: 'Letsencrypt'
-binary_sensor.service_unifipoller_availability:
+binary_sensor.service_unifipoller_health_status:
   friendly_name: 'Unifipoller'
-binary_sensor.service_monitor_availability:
+binary_sensor.service_monitor_health_status:
   friendly_name: 'Monitor'
-binary_sensor.host_mad_availability:
-  friendly_name: 'Mac Mini Mad'
-binary_sensor.host_max_availability:
-  friendly_name: 'Mac Mini Max'
-binary_sensor.host_may_availability:
-  friendly_name: 'Mac Mini May'
-binary_sensor.host_meg_availability:
-  friendly_name: 'Mac Mini Meg'
-binary_sensor.host_jen_availability:
-  friendly_name: 'Raspberry Pi Jen'
 button.google_assistant_synchronize_devices:
   friendly_name: 'Google Device Syncronise'
 sensor.template_utility_temperature_proxy:

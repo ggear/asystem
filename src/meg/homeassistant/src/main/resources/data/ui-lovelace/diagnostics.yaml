@@ -44,52 +44,38 @@
 - type: entities
   title: Service Availability
   entities:
-    - entity: binary_sensor.service_homeassistant_availability
+    - entity: binary_sensor.service_homeassistant_health_status
       name: Home Assistant
-    - entity: binary_sensor.service_plex_availability
+    - entity: binary_sensor.service_plex_health_status
       name: Plex
-    - entity: binary_sensor.service_grafana_availability
+    - entity: binary_sensor.service_grafana_health_status
       name: Grafana
-    - entity: binary_sensor.service_wrangle_availability
+    - entity: binary_sensor.service_wrangle_health_status
       name: Wrangle
-    - entity: binary_sensor.service_internet_availability
+    - entity: binary_sensor.service_internet_health_status
       name: Internet
-    - entity: binary_sensor.service_unifi_availability
+    - entity: binary_sensor.service_unifi_health_status
       name: UniFi
-    - entity: binary_sensor.service_zigbee2mqtt_availability
+    - entity: binary_sensor.service_zigbee2mqtt_health_status
       name: Zigbee2Mqtt
-    - entity: binary_sensor.service_weewx_availability
+    - entity: binary_sensor.service_weewx_health_status
       name: Weewx
-    - entity: binary_sensor.service_digitemp_availability
+    - entity: binary_sensor.service_digitemp_health_status
       name: Digitemp
-    - entity: binary_sensor.service_nginx_availability
+    - entity: binary_sensor.service_nginx_health_status
       name: Nginx
-    - entity: binary_sensor.service_influxdb_availability
+    - entity: binary_sensor.service_influxdb_health_status
       name: Influxdb
-    - entity: binary_sensor.service_mariadb_availability
+    - entity: binary_sensor.service_mariadb_health_status
       name: Mariadb
-    - entity: binary_sensor.service_postgres_availability
+    - entity: binary_sensor.service_postgres_health_status
       name: Postgres
-    - entity: binary_sensor.service_letsencrypt_availability
+    - entity: binary_sensor.service_letsencrypt_health_status
       name: Letsencrypt
-    - entity: binary_sensor.service_unifipoller_availability
+    - entity: binary_sensor.service_unifipoller_health_status
       name: Unifipoller
-    - entity: binary_sensor.service_monitor_availability
+    - entity: binary_sensor.service_monitor_health_status
       name: Monitor
-################################################################################
-- type: entities
-  title: Host Availability
-  entities:
-    - entity: binary_sensor.host_mad_availability
-      name: Mac Mini Mad
-    - entity: binary_sensor.host_max_availability
-      name: Mac Mini Max
-    - entity: binary_sensor.host_may_availability
-      name: Mac Mini May
-    - entity: binary_sensor.host_meg_availability
-      name: Mac Mini Meg
-    - entity: binary_sensor.host_jen_availability
-      name: Raspberry Pi Jen
 ################################################################################
 - type: custom:layout-break
 ################################################################################
