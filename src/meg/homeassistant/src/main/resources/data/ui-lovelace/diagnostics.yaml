@@ -2,6 +2,13 @@
 # WARNING: This file is written by the build process, any manual edits will be lost!
 ################################################################################
 - type: entities
+  title: Device Maintenance
+  show_header_toggle: false
+  entities:
+    - entity: button.google_assistant_synchronize_devices
+      name: Google Device Syncronise
+################################################################################
+- type: entities
   title: Internet Telemetry
   entities:
     - entity: sensor.network_internet_ping
@@ -111,13 +118,6 @@
       icon: mdi:pulse
 ################################################################################
 - type: custom:layout-break
-################################################################################
-- type: entities
-  title: Device Maintenance
-  show_header_toggle: false
-  entities:
-    - entity: button.google_assistant_synchronize_devices
-      name: Google Device Syncronise
 ################################################################################
 - type: entities
   title: Device Conditions Rack
@@ -241,78 +241,4 @@
     - entity: switch.ceiling_network_switch_plug
       name: Ceiling Network Devices
       icon: mdi:server-network
-################################################################################
-- type: entities
-  title: Reset Adaptive Lighting
-  show_header_toggle: false
-  entities:
-    - entity: input_boolean.lighting_reset_adaptive_lighting_all
-      name: All Lights
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
-      name: Ada Lamp
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
-      name: Edwin Lamp
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_night_light
-      name: Edwin Night Light
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_hallway_main
-      name: Hallway Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_hallway_sconces
-      name: Hallway Sconces
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_dining_main
-      name: Dining Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_main
-      name: Lounge Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
-      name: Lounge Lamp
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_reading
-      name: Lounge Lamp
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_parents_main
-      name: Parents Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_parents_jane_bedside
-      name: Jane Bedside
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_parents_graham_bedside
-      name: Graham Bedside
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_study_lamp
-      name: Study Lamp
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_kitchen_main
-      name: Kitchen Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_laundry_main
-      name: Laundry Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_pantry_main
-      name: Pantry Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_office_main
-      name: Office Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_bathroom_main
-      name: Bathroom Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_bathroom_sconces
-      name: Bathroom Sconces
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_ensuite_main
-      name: Ensuite Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces
-      name: Ensuite Sconces
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
-      name: Wardrobe Main
-      icon: mdi:lightbulb-group
 ################################################################################

@@ -579,6 +579,8 @@ sensor.servers_network_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
+button.google_assistant_synchronize_devices:
+  friendly_name: 'Google Device Syncronise'
 sensor.network_internet_ping:
   friendly_name: 'Ping'
   icon: 'mdi:cloud-refresh'
@@ -675,8 +677,6 @@ switch.service_weewx:
 switch.service_zigbee2mqtt:
   friendly_name: 'Zigbee2MQTT'
   icon: 'mdi:pulse'
-button.google_assistant_synchronize_devices:
-  friendly_name: 'Google Device Syncronise'
 sensor.template_utility_temperature_proxy:
   friendly_name: 'Rack Ambient'
   icon: 'mdi:thermometer'
