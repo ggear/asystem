@@ -605,62 +605,76 @@ sensor.template_kitchen_fan_outlet_linkquality_percentage:
   friendly_name: 'Kitchen Fan Outlet'
 sensor.template_deck_fans_outlet_linkquality_percentage:
   friendly_name: 'Deck Fans Outlet'
-sensor.template_ada_desk_outlet_linkquality_percentage:
-  friendly_name: 'Ada Desk Outlet'
-sensor.template_edwin_desk_outlet_linkquality_percentage:
-  friendly_name: 'Edwin Desk Outlet'
 sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Davis Console'
 sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
+binary_sensor.service_plex:
+  friendly_name: 'Plex'
+  icon: 'mdi:pulse'
+binary_sensor.service_sabnzbd:
+  friendly_name: 'SABnzbd'
+  icon: 'mdi:pulse'
+binary_sensor.service_influxdb3:
+  friendly_name: 'InfluxDB3'
+  icon: 'mdi:pulse'
+binary_sensor.service_mlflow:
+  friendly_name: 'MLFlow'
+  icon: 'mdi:pulse'
+binary_sensor.service_mlserver:
+  friendly_name: 'MLServer'
+  icon: 'mdi:pulse'
+binary_sensor.service_openra:
+  friendly_name: 'OpenRA'
+  icon: 'mdi:pulse'
+binary_sensor.service_rhasspy:
+  friendly_name: 'Rhasspy'
+  icon: 'mdi:pulse'
+binary_sensor.service_digitemp:
+  friendly_name: 'DigiTemp'
+  icon: 'mdi:pulse'
+binary_sensor.service_grafana:
+  friendly_name: 'Grafana'
+  icon: 'mdi:pulse'
+binary_sensor.service_influxdb:
+  friendly_name: 'InfluxDB3'
+  icon: 'mdi:pulse'
+binary_sensor.service_letsencrypt:
+  friendly_name: 'LetsEncrypt'
+  icon: 'mdi:pulse'
+binary_sensor.service_sonarr:
+  friendly_name: 'Sonarr'
+  icon: 'mdi:pulse'
+binary_sensor.service_unpoller:
+  friendly_name: 'Unpoller'
+  icon: 'mdi:pulse'
+binary_sensor.service_wrangle:
+  friendly_name: 'Wrangle'
+  icon: 'mdi:pulse'
 binary_sensor.service_homeassistant:
   friendly_name: 'Home Assistant'
-  icon: 'mdi:cog'
-binary_sensor.service_plex_health_status:
-  friendly_name: 'Plex'
-  icon: 'mdi:cog'
-binary_sensor.service_grafana_health_status:
-  friendly_name: 'Grafana'
-  icon: 'mdi:cog'
-binary_sensor.service_wrangle_health_status:
-  friendly_name: 'Wrangle'
-  icon: 'mdi:cog'
-binary_sensor.service_internet_health_status:
+  icon: 'mdi:pulse'
+binary_sensor.service_internet:
   friendly_name: 'Internet'
-  icon: 'mdi:cog'
-binary_sensor.service_unifi_health_status:
-  friendly_name: 'UniFi'
-  icon: 'mdi:cog'
-binary_sensor.service_zigbee2mqtt_health_status:
-  friendly_name: 'Zigbee2Mqtt'
-  icon: 'mdi:cog'
-binary_sensor.service_weewx_health_status:
-  friendly_name: 'Weewx'
-  icon: 'mdi:cog'
-binary_sensor.service_digitemp_health_status:
-  friendly_name: 'Digitemp'
-  icon: 'mdi:cog'
-binary_sensor.service_nginx_health_status:
+  icon: 'mdi:pulse'
+binary_sensor.service_mariadb:
+  friendly_name: 'MariaDB'
+  icon: 'mdi:pulse'
+binary_sensor.service_nginx:
   friendly_name: 'Nginx'
-  icon: 'mdi:cog'
-binary_sensor.service_influxdb_health_status:
-  friendly_name: 'Influxdb'
-  icon: 'mdi:cog'
-binary_sensor.service_mariadb_health_status:
-  friendly_name: 'Mariadb'
-  icon: 'mdi:cog'
-binary_sensor.service_postgres_health_status:
+  icon: 'mdi:pulse'
+binary_sensor.service_postgres:
   friendly_name: 'Postgres'
-  icon: 'mdi:cog'
-binary_sensor.service_letsencrypt_health_status:
-  friendly_name: 'Letsencrypt'
-  icon: 'mdi:cog'
-binary_sensor.service_unifipoller_health_status:
-  friendly_name: 'Unifipoller'
-  icon: 'mdi:cog'
-binary_sensor.service_monitor_health_status:
-  friendly_name: 'Monitor'
-  icon: 'mdi:cog'
+  icon: 'mdi:pulse'
+binary_sensor.service_vernemq:
+  friendly_name: 'VerneMQ'
+  icon: 'mdi:pulse'
+binary_sensor.service_weewx:
+  friendly_name: 'WeeWX'
+  icon: 'mdi:pulse'
+binary_sensor.service_zigbee2mqtt:
+  friendly_name: 'Zigbee2MQTT'
+  icon: 'mdi:pulse'
 button.google_assistant_synchronize_devices:
   friendly_name: 'Google Device Syncronise'
 sensor.template_utility_temperature_proxy:

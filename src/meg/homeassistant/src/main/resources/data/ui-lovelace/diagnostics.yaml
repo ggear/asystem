@@ -30,10 +30,6 @@
       name: Kitchen Fan Outlet
     - entity: sensor.template_deck_fans_outlet_linkquality_percentage
       name: Deck Fans Outlet
-    - entity: sensor.template_ada_desk_outlet_linkquality_percentage
-      name: Ada Desk Outlet
-    - entity: sensor.template_edwin_desk_outlet_linkquality_percentage
-      name: Edwin Desk Outlet
 ################################################################################
 - type: entities
   title: Radio Link Quality
@@ -44,56 +40,72 @@
 - type: entities
   title: Service Availability
   entities:
+    - entity: binary_sensor.service_plex
+      name: Plex
+      icon: mdi:pulse
+    - entity: binary_sensor.service_sabnzbd
+      name: SABnzbd
+      icon: mdi:pulse
+    - entity: binary_sensor.service_influxdb3
+      name: InfluxDB3
+      icon: mdi:pulse
+    - entity: binary_sensor.service_mlflow
+      name: MLFlow
+      icon: mdi:pulse
+    - entity: binary_sensor.service_mlserver
+      name: MLServer
+      icon: mdi:pulse
+    - entity: binary_sensor.service_openra
+      name: OpenRA
+      icon: mdi:pulse
+    - entity: binary_sensor.service_rhasspy
+      name: Rhasspy
+      icon: mdi:pulse
+    - entity: binary_sensor.service_digitemp
+      name: DigiTemp
+      icon: mdi:pulse
+    - entity: binary_sensor.service_grafana
+      name: Grafana
+      icon: mdi:pulse
+    - entity: binary_sensor.service_influxdb
+      name: InfluxDB3
+      icon: mdi:pulse
+    - entity: binary_sensor.service_letsencrypt
+      name: LetsEncrypt
+      icon: mdi:pulse
+    - entity: binary_sensor.service_sonarr
+      name: Sonarr
+      icon: mdi:pulse
+    - entity: binary_sensor.service_unpoller
+      name: Unpoller
+      icon: mdi:pulse
+    - entity: binary_sensor.service_wrangle
+      name: Wrangle
+      icon: mdi:pulse
     - entity: binary_sensor.service_homeassistant
       name: Home Assistant
-      icon: mdi:cog
-    - entity: binary_sensor.service_plex_health_status
-      name: Plex
-      icon: mdi:cog
-    - entity: binary_sensor.service_grafana_health_status
-      name: Grafana
-      icon: mdi:cog
-    - entity: binary_sensor.service_wrangle_health_status
-      name: Wrangle
-      icon: mdi:cog
-    - entity: binary_sensor.service_internet_health_status
+      icon: mdi:pulse
+    - entity: binary_sensor.service_internet
       name: Internet
-      icon: mdi:cog
-    - entity: binary_sensor.service_unifi_health_status
-      name: UniFi
-      icon: mdi:cog
-    - entity: binary_sensor.service_zigbee2mqtt_health_status
-      name: Zigbee2Mqtt
-      icon: mdi:cog
-    - entity: binary_sensor.service_weewx_health_status
-      name: Weewx
-      icon: mdi:cog
-    - entity: binary_sensor.service_digitemp_health_status
-      name: Digitemp
-      icon: mdi:cog
-    - entity: binary_sensor.service_nginx_health_status
+      icon: mdi:pulse
+    - entity: binary_sensor.service_mariadb
+      name: MariaDB
+      icon: mdi:pulse
+    - entity: binary_sensor.service_nginx
       name: Nginx
-      icon: mdi:cog
-    - entity: binary_sensor.service_influxdb_health_status
-      name: Influxdb
-      icon: mdi:cog
-    - entity: binary_sensor.service_mariadb_health_status
-      name: Mariadb
-      icon: mdi:cog
-    - entity: binary_sensor.service_postgres_health_status
+      icon: mdi:pulse
+    - entity: binary_sensor.service_postgres
       name: Postgres
-      icon: mdi:cog
-    - entity: binary_sensor.service_letsencrypt_health_status
-      name: Letsencrypt
-      icon: mdi:cog
-    - entity: binary_sensor.service_unifipoller_health_status
-      name: Unifipoller
-      icon: mdi:cog
-    - entity: binary_sensor.service_monitor_health_status
-      name: Monitor
-      icon: mdi:cog
-################################################################################
-- type: custom:layout-break
+      icon: mdi:pulse
+    - entity: binary_sensor.service_vernemq
+      name: VerneMQ
+      icon: mdi:pulse
+    - entity: binary_sensor.service_weewx
+      name: WeeWX
+      icon: mdi:pulse
+    - entity: binary_sensor.service_zigbee2mqtt
+      name: Zigbee2MQTT
+      icon: mdi:pulse
 ################################################################################
 - type: entities
   title: Device Maintenance
