@@ -37,6 +37,8 @@
     - entity: sensor.template_weatherstation_coms_signal_quality_percentage
       name: Davis Console
 ################################################################################
+- type: custom:layout-break
+################################################################################
 - type: entities
   title: Service Availability
   show_header_toggle: false
@@ -107,6 +109,8 @@
     - entity: switch.service_zigbee2mqtt
       name: Zigbee2MQTT
       icon: mdi:pulse
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: entities
   title: Device Maintenance
