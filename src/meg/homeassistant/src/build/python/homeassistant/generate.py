@@ -562,7 +562,7 @@ mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT -F '%t' -t "{}" -W 1
     echo "Destroying: $topic"
     mosquitto_pub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT -t "$topic" -r -n
   done
-mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 30 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 10 2>/dev/null
 
 printf "\\nEntity Metadata publish script [{}] sleeping before dropping data topics ... " && sleep 2 && printf "done\\n\\n"
 
@@ -572,7 +572,7 @@ mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT -F '%t' -t "{}" -W 1
     echo "Destroying: $topic"
     mosquitto_pub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT -t "$topic" -r -n
   done
-mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 30 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 10 2>/dev/null
 
 printf "\\nEntity Metadata publish script [{}] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\\n\\n"
 
