@@ -22,8 +22,8 @@ if __name__ == "__main__":
         (metadata_df["state_topic"].str.len() > 0)
         ]
     write_entity_metadata("supervisor", join(DIR_ROOT, "src/main/resources/image/mqtt"), metadata_supervisor_df,
-                          "homeassistant/+/supervisor/${SUPERVISOR_HOST}/+/config",
-                          "supervisor/${SUPERVISOR_HOST}/data/+/+/+")
+                          "homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
+                          "supervisor/${SUPERVISOR_HOST}/data/+/+/+", "supervisor_${SUPERVISOR_HOST}")
 
     # Build config
     hosts = []

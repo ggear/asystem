@@ -439,7 +439,7 @@ fi
               .format(module_name, script_path))
 
 
-def write_entity_metadata(module_name, working_dir, metadata_df, topics_discovery, topics_data):
+def write_entity_metadata(module_name, working_dir, metadata_df, topics_discovery, topics_data, topics_path="*"):
     if len(metadata_df) > 0:
         def _coerce_bool(value):
             if isinstance(value, bool):
@@ -565,7 +565,7 @@ mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t'
 printf "\\nEntity Metadata publish script [{}] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\\n\\n"
 
 printf "Entity Metadata publish script [{}] publishing discovery topics:\\n"
-find $ROOT_DIR -name "*.json" -print0 | while read -d $'\\0' METADATA_FILE; do
+find $ROOT_DIR -path "*/{}/*" -name "*.json" -print0 | while read -d $'\\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${{METADATA_FILE/$ROOT_DIR\\//}}")
   mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t $METADATA_TOPIC -f $METADATA_FILE -r
   printf "$METADATA_TOPIC\\n"
@@ -579,6 +579,7 @@ printf "\\n"
                 topics_data,
                 module_name,
                 module_name,
+                topics_path,
             ).strip())
         os.chmod(metadata_publish_script_path, 0o750)
         print("Build generate script [{}] entity metadata publish script persisted to [{}]"
