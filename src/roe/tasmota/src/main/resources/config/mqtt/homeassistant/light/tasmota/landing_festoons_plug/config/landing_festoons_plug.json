@@ -1,9 +1,9 @@
 {
-  "object_id": "landing_festoons_plug",
+  "default_entity_id": "light.landing_festoons_plug",
   "unique_id": "landing_festoons_plug",
   "name": "Landing Festoons Plug",
   "icon": "mdi:lightbulb-group",
-  "force_update": "false",
+  "force_update": false,
   "optimistic": "true",
   "state_topic": "tasmota/device/landing_festoons_plug/stat/POWER",
   "value_template": "{{ value }}",
@@ -13,11 +13,12 @@
   "payload_off": "OFF",
   "payload_available": "Online",
   "payload_not_available": "Offline",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "Tasmota",
     "configuration_url": "http://10.0.4.108/?",
-    "identifiers": "sonoff-landing-festoons",
+    "identifiers": [
+      "sonoff-landing-festoons"
+    ],
     "name": "Landing Festoons",
     "model": "THR316D / DS18x20",
     "manufacturer": "SONOFF",

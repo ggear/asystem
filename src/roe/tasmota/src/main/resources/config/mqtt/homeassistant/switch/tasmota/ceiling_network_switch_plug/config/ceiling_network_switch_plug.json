@@ -1,9 +1,9 @@
 {
-  "object_id": "ceiling_network_switch_plug",
+  "default_entity_id": "switch.ceiling_network_switch_plug",
   "unique_id": "ceiling_network_switch_plug",
   "name": "Ceiling Network Switch Plug",
   "icon": "mdi:server-network",
-  "force_update": "false",
+  "force_update": false,
   "optimistic": "true",
   "state_topic": "tasmota/device/ceiling_network_switch_plug/stat/POWER",
   "value_template": "{{ value }}",
@@ -13,11 +13,12 @@
   "payload_off": "OFF",
   "payload_available": "Online",
   "payload_not_available": "Offline",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "Tasmota",
     "configuration_url": "http://10.0.4.105/?",
-    "identifiers": "sonoff-ceiling-network-switch",
+    "identifiers": [
+      "sonoff-ceiling-network-switch"
+    ],
     "name": "Ceiling Network Switch",
     "model": "POWR316D",
     "manufacturer": "SONOFF",

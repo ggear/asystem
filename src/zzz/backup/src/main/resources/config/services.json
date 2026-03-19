@@ -1,39 +1,42 @@
 {
-  "raspbpi-jen": [
-    "zigbee2mqtt",
-    "weewx",
-    "monitor"
-  ],
   "macmini-meg": [
+    "supervisor",
     "homeassistant",
     "mariadb",
     "vernemq",
     "postgres",
     "internet",
-    "nginx",
-    "monitor"
-  ],
-  "macmini-max": [
-    "openra",
-    "mlflow",
-    "mlserver",
-    "rhasspy",
-    "influxdb3",
-    "monitor"
-  ],
-  "macmini-mad": [
-    "sabnzbd",
-    "plex",
-    "monitor"
+    "nginx"
   ],
   "macmini-may": [
+    "supervisor",
     "letsencrypt",
     "grafana",
     "influxdb",
     "wrangle",
     "digitemp",
     "sonarr",
-    "unpoller",
-    "monitor"
+    "unpoller"
+  ],
+  "macmini-max": [
+    "supervisor",
+    "openra",
+    "mlflow",
+    "mlserver",
+    "rhasspy",
+    "influxdb3"
+  ],
+  "macmini-mad": [
+    "supervisor",
+    "sabnzbd",
+    "plex"
+  ],
+  "raspbpi-jen": [
+    "supervisor",
+    "zigbee2mqtt",
+    "weewx"
+  ],
+  "macbook-roe": [
+    "supervisor"
   ]
 }

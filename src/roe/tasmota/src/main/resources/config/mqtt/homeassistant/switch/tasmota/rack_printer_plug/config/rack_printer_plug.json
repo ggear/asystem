@@ -1,9 +1,9 @@
 {
-  "object_id": "rack_printer_plug",
+  "default_entity_id": "switch.rack_printer_plug",
   "unique_id": "rack_printer_plug",
   "name": "Rack Printer Plug",
   "icon": "mdi:printer",
-  "force_update": "false",
+  "force_update": false,
   "optimistic": "true",
   "state_topic": "tasmota/device/rack_printer_plug/stat/POWER",
   "value_template": "{{ value }}",
@@ -13,11 +13,12 @@
   "payload_off": "OFF",
   "payload_available": "Online",
   "payload_not_available": "Offline",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "Tasmota",
     "configuration_url": "http://10.0.4.111/?",
-    "identifiers": "sonoff-rack-printer",
+    "identifiers": [
+      "sonoff-rack-printer"
+    ],
     "name": "Rack Printer",
     "model": "BASICR2",
     "manufacturer": "SONOFF",

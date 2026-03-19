@@ -1,9 +1,9 @@
 {
-  "object_id": "rack_outlet_plug",
+  "default_entity_id": "switch.rack_outlet_plug",
   "unique_id": "rack_outlet_plug",
   "name": "Rack Outlet Plug",
   "icon": "mdi:server",
-  "force_update": "false",
+  "force_update": false,
   "optimistic": "true",
   "state_topic": "tasmota/device/rack_outlet_plug/stat/POWER",
   "value_template": "{{ value }}",
@@ -13,11 +13,12 @@
   "payload_off": "OFF",
   "payload_available": "Online",
   "payload_not_available": "Offline",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "Tasmota",
     "configuration_url": "http://10.0.4.102/?",
-    "identifiers": "sonoff-rack-outlet",
+    "identifiers": [
+      "sonoff-rack-outlet"
+    ],
     "name": "Rack Outlet",
     "model": "POWR316D",
     "manufacturer": "SONOFF",

@@ -1,17 +1,18 @@
 {
-  "object_id": "roof_barometer_pressure",
+  "default_entity_id": "sensor.roof_barometer_pressure",
   "unique_id": "roof_barometer_pressure",
   "name": "Roof Barometer Pressure",
   "state_class": "measurement",
   "unit_of_measurement": "mbar",
   "device_class": "pressure",
-  "force_update": "false",
+  "force_update": false,
   "state_topic": "weewx/roof_barometer_pressure",
   "value_template": "{{ (value | int(0)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_barometer_pressure') | int(None)) }}",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "WeeWX",
-    "identifiers": "davis-roof-weather-station",
+    "identifiers": [
+      "davis-roof-weather-station"
+    ],
     "name": "Roof Weather Station",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",

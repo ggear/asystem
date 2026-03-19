@@ -1,17 +1,18 @@
 {
-  "object_id": "roof_24hour_rain",
+  "default_entity_id": "sensor.roof_24hour_rain",
   "unique_id": "roof_24hour_rain",
   "name": "Roof 24Hour Rain",
   "state_class": "total",
   "unit_of_measurement": "mm",
   "icon": "mdi:weather-pouring",
-  "force_update": "false",
+  "force_update": false,
   "state_topic": "weewx/roof_24hour_rain",
   "value_template": "{{ (('%0.2f' | format(value | float * 100 | int / 10)) if (value is defined and value | float(-1) >= 0) else ('%0.2f' | format(states('sensor.roof_24hour_rain') | float * 100 | int / 100))) | float }}",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "WeeWX",
-    "identifiers": "davis-roof-weather-station",
+    "identifiers": [
+      "davis-roof-weather-station"
+    ],
     "name": "Roof Weather Station",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",

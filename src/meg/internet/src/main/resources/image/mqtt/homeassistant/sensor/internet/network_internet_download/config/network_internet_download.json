@@ -1,18 +1,19 @@
 {
-  "object_id": "network_internet_download",
+  "default_entity_id": "sensor.network_internet_download",
   "unique_id": "network_internet_download",
   "name": "Network Internet Download",
   "state_class": "measurement",
   "unit_of_measurement": "MB/s",
   "device_class": "data_rate",
   "icon": "mdi:cloud-download",
-  "force_update": "false",
+  "force_update": false,
   "state_topic": "telegraf/macmini-meg/internet",
   "value_template": "{{ (value_json[\"metrics\"] | selectattr('tags.metric', 'eq', 'download') | map(attribute='fields.download_mbps') | first | default(0) | float(0)) | round(2) if (value_json['metrics'] is defined) else (states('sensor.network_internet_download') | float(0)) }}",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "Internet",
-    "identifiers": "asystem-rack-internet-script",
+    "identifiers": [
+      "asystem-rack-internet-script"
+    ],
     "name": "Rack Internet Script",
     "model": "Python Script",
     "manufacturer": "ASYSTEM",

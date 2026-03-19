@@ -1,9 +1,9 @@
 {
-  "object_id": "deck_festoons_plug",
+  "default_entity_id": "light.deck_festoons_plug",
   "unique_id": "deck_festoons_plug",
   "name": "Deck Festoons Plug",
   "icon": "mdi:lightbulb-group",
-  "force_update": "false",
+  "force_update": false,
   "optimistic": "true",
   "state_topic": "tasmota/device/deck_festoons_plug/stat/POWER",
   "value_template": "{{ value }}",
@@ -13,11 +13,12 @@
   "payload_off": "OFF",
   "payload_available": "Online",
   "payload_not_available": "Offline",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "Tasmota",
     "configuration_url": "http://10.0.4.107/?",
-    "identifiers": "sonoff-deck-festoons",
+    "identifiers": [
+      "sonoff-deck-festoons"
+    ],
     "name": "Deck Festoons",
     "model": "THR316D / SI7021",
     "manufacturer": "SONOFF",

@@ -1,17 +1,18 @@
 {
-  "object_id": "roof_cloud_base",
+  "default_entity_id": "sensor.roof_cloud_base",
   "unique_id": "roof_cloud_base",
   "name": "Roof Cloud Base",
   "state_class": "measurement",
   "unit_of_measurement": "m",
   "icon": "mdi:cloud-outline",
-  "force_update": "false",
+  "force_update": false,
   "state_topic": "weewx/roof_cloud_base",
   "value_template": "{{ (value | int(0)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_cloud_base') | int(None)) }}",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "WeeWX",
-    "identifiers": "davis-roof-weather-station",
+    "identifiers": [
+      "davis-roof-weather-station"
+    ],
     "name": "Roof Weather Station",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",

@@ -1,9 +1,9 @@
 {
-  "object_id": "rack_fans_plug",
+  "default_entity_id": "switch.rack_fans_plug",
   "unique_id": "rack_fans_plug",
   "name": "Rack Fans Plug",
   "icon": "mdi:server-remove",
-  "force_update": "false",
+  "force_update": false,
   "optimistic": "true",
   "state_topic": "tasmota/device/rack_fans_plug/stat/POWER",
   "value_template": "{{ value }}",
@@ -13,11 +13,12 @@
   "payload_off": "OFF",
   "payload_available": "Online",
   "payload_not_available": "Offline",
-  "qos": "1",
+  "qos": 1,
   "device": {
-    "via_device": "Tasmota",
     "configuration_url": "http://10.0.4.101/?",
-    "identifiers": "sonoff-rack-fans",
+    "identifiers": [
+      "sonoff-rack-fans"
+    ],
     "name": "Rack Fans",
     "model": "BASICR2",
     "manufacturer": "SONOFF",
