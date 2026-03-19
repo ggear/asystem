@@ -17,7 +17,3 @@ cat >/usr/local/bin/atops <<'EOF'
 
 EOF
 chmod +x /usr/local/bin/atops
-
-if [ "${SERVICE_FORM_FACTOR}" == "server" ]; then
-  docker exec supervisor /asystem/etc/mqtt.sh
-fi

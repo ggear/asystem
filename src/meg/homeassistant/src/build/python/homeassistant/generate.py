@@ -1902,13 +1902,15 @@ automation:
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 powercalc:
-  force_update_frequency: 00:00:05
-  enable_autodiscovery: false
+  group_power_update_interval: 5
+  energy_update_interval: 5
   power_sensor_precision: 1
   energy_sensor_precision: 3
   power_sensor_naming: '{} Power'
   energy_sensor_naming: '{} Energy'
   create_utility_meters: true
+  discovery:
+    enabled: false  
   utility_meter_types:
     - daily
     - weekly
