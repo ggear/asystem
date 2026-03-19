@@ -1,0 +1,22 @@
+{
+  "default_entity_id": "switch.service_postgres",
+  "unique_id": "service_postgres",
+  "name": "Service Postgres",
+  "icon": "mdi:heart-pulse",
+  "force_update": false,
+  "state_topic": "supervisor/macmini-meg/data/service/postgres/health_status",
+  "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
+  "command_topic": "supervisor/macmini-meg/command/service/postgres",
+  "availability_topic": "supervisor/macmini-meg/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-supervisor"
+    ],
+    "name": "Rack Supervisor",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

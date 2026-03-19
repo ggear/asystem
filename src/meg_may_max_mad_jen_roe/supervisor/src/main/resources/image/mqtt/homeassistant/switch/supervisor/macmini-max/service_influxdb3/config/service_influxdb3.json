@@ -1,0 +1,22 @@
+{
+  "default_entity_id": "switch.service_influxdb3",
+  "unique_id": "service_influxdb3",
+  "name": "Service Influxdb3",
+  "icon": "mdi:heart-pulse",
+  "force_update": false,
+  "state_topic": "supervisor/macmini-max/data/service/influxdb3/health_status",
+  "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
+  "command_topic": "supervisor/macmini-max/command/service/influxdb3",
+  "availability_topic": "supervisor/macmini-max/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-supervisor"
+    ],
+    "name": "Rack Supervisor",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

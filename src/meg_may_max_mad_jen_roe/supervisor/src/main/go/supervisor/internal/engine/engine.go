@@ -265,6 +265,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	hostName := config.Load(configPath).Host()
 	statusTopic := "supervisor/" + hostName + "/status"
 	serviceNameTopic := "supervisor/" + hostName + "/data/service/+/name"
+	commandTopic := "supervisor/+/command/service/+"
 	onConnect := func(client mqtt.Client) {
 		client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
 			var value metric.ValueData
@@ -274,6 +275,16 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			if serviceName := value.Pulse.ValueString; serviceName != "" {
 				cache.RegisterService(hostName, serviceName, true)
 			}
+		})
+		client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+			tokens := strings.Split(msg.Topic(), "/")
+			if len(tokens) < 5 || tokens[1] == "" || tokens[4] == "" {
+				return
+			}
+
+			// TODO: Implement command handling
+
+			slog.Debug("command", "host", tokens[1], "service", tokens[4], "payload", string(msg.Payload()))
 		})
 	}
 	client, err := brokerConnect(configPath, onConnect, statusTopic, hostStatusOffline)

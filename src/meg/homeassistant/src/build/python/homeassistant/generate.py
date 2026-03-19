@@ -441,6 +441,58 @@ fi
 
 def write_entity_metadata(module_name, working_dir, metadata_df, topics_discovery, topics_data):
     if len(metadata_df) > 0:
+        def _coerce_bool(value):
+            if isinstance(value, bool):
+                return value
+            if value is None:
+                return value
+            if isinstance(value, (int, float)):
+                return bool(value)
+            if isinstance(value, str):
+                normalized = value.strip().lower()
+                if normalized in {"true", "yes", "y", "1", "on"}:
+                    return True
+                if normalized in {"false", "no", "n", "0", "off"}:
+                    return False
+            return value
+
+        def _coerce_int(value):
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float) and value.is_integer():
+                return int(value)
+            if isinstance(value, str):
+                normalized = value.strip()
+                if normalized == "":
+                    return value
+                try:
+                    return int(normalized)
+                except ValueError:
+                    try:
+                        return int(float(normalized))
+                    except ValueError:
+                        return value
+            return value
+
+        def _coerce_identifiers(value):
+            if value is None:
+                return value
+            if isinstance(value, list):
+                return [str(item) for item in value]
+            if isinstance(value, str):
+                normalized = value.strip()
+                if normalized == "":
+                    return []
+                if normalized.startswith("["):
+                    try:
+                        parsed = json.loads(normalized)
+                        if isinstance(parsed, list):
+                            return [str(item) for item in parsed]
+                    except ValueError:
+                        pass
+                return [item.strip() for item in normalized.split(",") if item.strip()]
+            return [str(value)]
+
         metadata_df = metadata_df.copy()
         metadata_columns = [column for column in metadata_df.columns if
                             (column.startswith("device_") and column != "device_class")]
@@ -450,6 +502,7 @@ def write_entity_metadata(module_name, working_dir, metadata_df, topics_discover
         for _, row in metadata_df.iterrows():
             metadata_dict = row[[
                 "unique_id",
+                "entity_namespace",
                 "name",
                 "state_class",
                 "unit_of_measurement",
@@ -467,13 +520,22 @@ def write_entity_metadata(module_name, working_dir, metadata_df, topics_discover
                 "payload_not_available",
                 "qos",
             ]].dropna().to_dict()
+            if "force_update" in metadata_dict:
+                metadata_dict["force_update"] = _coerce_bool(metadata_dict["force_update"])
+            if "qos" in metadata_dict:
+                metadata_dict["qos"] = _coerce_int(metadata_dict["qos"])
             metadata_unique_id = metadata_dict["unique_id"]
-            metadata_dict_clone = {"object_id": metadata_dict["unique_id"]}
+            metadata_dict_clone = {
+                "default_entity_id": metadata_dict["entity_namespace"] + "." + metadata_dict["unique_id"]}
+            del metadata_dict["entity_namespace"]
             metadata_dict_clone.update(metadata_dict)
             metadata_dict = metadata_dict_clone
             metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
+            del metadata_dict["device"]["via_device"]
             if "connections" in metadata_dict["device"]:
                 metadata_dict["device"]["connections"] = json.loads(metadata_dict["device"]["connections"])
+            if "identifiers" in metadata_dict["device"]:
+                metadata_dict["device"]["identifiers"] = _coerce_identifiers(metadata_dict["device"]["identifiers"])
             metadata_publish_dir = abspath(join(working_dir, row['discovery_topic']))
             os.makedirs(metadata_publish_dir)
             metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
@@ -493,12 +555,12 @@ def write_entity_metadata(module_name, working_dir, metadata_df, topics_discover
 ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
 
 printf "\\nEntity Metadata publish script [{}] dropping discovery topics:\\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t '{}' -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 1 2>/dev/null
 
 printf "\\nEntity Metadata publish script [{}] sleeping before dropping data topics ... " && sleep 2 && printf "done\\n\\n"
 
 printf "Entity Metadata publish script [{}] dropping data topics:\\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t '{}' -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 1 2>/dev/null
 
 printf "\\nEntity Metadata publish script [{}] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\\n\\n"
 
