@@ -8,12 +8,20 @@ ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
 . ${ROOT_DIR}/../../.env
 
 printf "\nEntity Metadata publish script [weewx] dropping discovery topics:\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "homeassistant/+/weewx/#" -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant/+/weewx/#" -W 10 2>/dev/null |   while read topic; do
+    echo "Destroying: $topic"
+    mosquitto_pub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT -t "$topic" -r -n
+  done
+mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "homeassistant/+/weewx/#" -W 30 2>/dev/null
 
 printf "\nEntity Metadata publish script [weewx] sleeping before dropping data topics ... " && sleep 2 && printf "done\n\n"
 
 printf "Entity Metadata publish script [weewx] dropping data topics:\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "weewx/#" -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT -F '%t' -t "weewx/#" -W 10 2>/dev/null |   while read topic; do
+    echo "Destroying: $topic"
+    mosquitto_pub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT -t "$topic" -r -n
+  done
+mosquitto_sub -h $VERNEMQ_SERVICE_PROD -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "weewx/#" -W 30 2>/dev/null
 
 printf "\nEntity Metadata publish script [weewx] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\n\n"
 
