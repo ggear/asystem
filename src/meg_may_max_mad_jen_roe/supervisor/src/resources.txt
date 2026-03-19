@@ -1,2 +1,4 @@
 ../install.sh
+../install_pre.sh
+../install_post.sh
 main/resources/image/config.json
