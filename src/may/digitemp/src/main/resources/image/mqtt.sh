@@ -5,7 +5,7 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")/mqtt"
 
-. "$ROOT_DIR/../../.env"
+for f in "$ROOT_DIR/../../.env" "$ROOT_DIR/../../../../.env"; do [ -f "$f" ] && . "$f"; done
 
 printf "\nEntity Metadata publish script [digitemp] dropping discovery topics:\n"
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant/+/digitemp/#" -W 5 2>/dev/null | sort -u | \
