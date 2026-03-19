@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. ./.env
+
 chmod +x /var/lib/asystem/install/supervisor/latest/data/supervisor
 cat >/usr/local/bin/atop <<'EOF'
 #!/bin/bash
@@ -16,6 +18,6 @@ cat >/usr/local/bin/atops <<'EOF'
 EOF
 chmod +x /usr/local/bin/atops
 
-if [ ${SERVICE_FORM_FACTOR} == "server" ]; then
+if [ "${SERVICE_FORM_FACTOR}" == "server" ]; then
   docker exec supervisor /asystem/etc/mqtt.sh
 fi
