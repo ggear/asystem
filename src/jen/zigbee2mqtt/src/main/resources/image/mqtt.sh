@@ -1,15 +1,34 @@
 #!/bin/bash
 
-ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
+ROOT_DIR="$(dirname "$(readlink -f "$0")")/mqtt"
+
+. "$ROOT_DIR/../../.env"
 
 printf "\nEntity Metadata publish script [zigbee2mqtt] dropping discovery topics:\n"
-mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -F '%t' -t 'homeassistant/#' -W 1 2>/dev/null | while read METADATA_TOPIC; do
-  ([[ $(basename $(dirname $(dirname ${METADATA_TOPIC}))) == 0x* ]] || [[ $(basename $(dirname $(dirname ${METADATA_TOPIC}))) == 122* ]]) && printf "${METADATA_TOPIC}\n" && mosquitto_pub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -t "${METADATA_TOPIC}" -n -r
-done
+mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant/#" -W 5 2>/dev/null | sort -u |
+  while read topic; do
+    base=$(basename "$(dirname "$(dirname "$topic")")")
+    if [[ "$base" == 0x* ]] || [[ "$base" == 122* ]]; then
+      echo "Destroying: $topic"
+      mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$topic" -r -n
+    fi
+  done
+mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant/#" -W 5 2>/dev/null | sort -u |
+  while read topic; do
+    base=$(basename "$(dirname "$(dirname "$topic")")")
+    if [[ "$base" == 0x* ]] || [[ "$base" == 122* ]]; then
+      mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "$topic" -W 1 2>/dev/null
+    fi
+  done
 
 printf "\nEntity Metadata publish script [zigbee2mqtt] sleeping before dropping data topics ... " && sleep 2 && printf "done\n\n"
 
 printf "Entity Metadata publish script [zigbee2mqtt] dropping data topics:\n"
-mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} --remove-retained -F '%t' -t 'zigbee/#' -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "zigbee/#" -W 5 2>/dev/null | sort -u |
+  while read topic; do
+    echo "Destroying: $topic"
+    mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$topic" -r -n
+  done
+mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "zigbee/#" -W 5 2>/dev/null
 
 printf "\nEntity Metadata publish script [zigbee2mqtt] sleeping before publishing discovery and data topics ... " && sleep 2 && printf "done\n\n"
