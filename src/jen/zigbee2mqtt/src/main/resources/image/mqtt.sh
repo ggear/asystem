@@ -9,7 +9,7 @@ mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant
   while read topic; do
     base=$(basename "$(dirname "$(dirname "$topic")")")
     if [[ "$base" == 0x* ]] || [[ "$base" == 122* ]]; then
-      echo "Destroying: $topic"
+      echo "$topic"
       mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$topic" -r -n
     fi
   done
@@ -26,7 +26,7 @@ printf "\nEntity Metadata publish script [zigbee2mqtt] sleeping before dropping 
 printf "Entity Metadata publish script [zigbee2mqtt] dropping data topics:\n"
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "zigbee/#" -W 5 2>/dev/null | sort -u |
   while read topic; do
-    echo "Destroying: $topic"
+    echo "$topic"
     mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$topic" -r -n
   done
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "zigbee/#" -W 5 2>/dev/null
