@@ -5,6 +5,8 @@
 
 ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
 
+. ${ROOT_DIR}/../../.env
+
 printf "\nEntity Metadata publish script [supervisor] dropping discovery topics:\n"
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config" -W 1 2>/dev/null
 

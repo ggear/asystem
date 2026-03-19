@@ -554,6 +554,8 @@ def write_entity_metadata(module_name, working_dir, metadata_df, topics_discover
 
 ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
 
+. ${{ROOT_DIR}}/../../.env
+
 printf "\\nEntity Metadata publish script [{}] dropping discovery topics:\\n"
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 1 2>/dev/null
 
