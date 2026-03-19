@@ -95,7 +95,6 @@ type RecordCache struct {
 	guids           []RecordGUID
 	records         map[guidKey]*Record
 	serviceIndex    map[indexKey]guidKey
-	notify          chan struct{}
 	listeners       map[guidKey][]UpdatesListener
 	deletesListener DeletesListener
 	dirty           map[guidKey]RecordGUID
@@ -107,7 +106,6 @@ func NewRecordCache() *RecordCache {
 		guids:        make([]RecordGUID, 0),
 		records:      make(map[guidKey]*Record),
 		serviceIndex: make(map[indexKey]guidKey),
-		notify:       make(chan struct{}, 1),
 		listeners:    make(map[guidKey][]UpdatesListener),
 		dirty:        make(map[guidKey]RecordGUID),
 		hostLastSeen: make(map[string]int64),
@@ -164,7 +162,6 @@ func (c *RecordCache) Store(guid RecordGUID, record *Record) {
 		for _, listener := range listeners {
 			listener.MarkDirty()
 		}
-		c.NotifyUpdates()
 	}
 }
 
@@ -231,7 +228,6 @@ func (c *RecordCache) RegisterService(hostName, serviceName string, all bool) []
 		bindings = append(bindings, TopicBinding{Topic: record.Topic, GUID: guid})
 	}
 	c.mutex.Unlock()
-	c.NotifyUpdates()
 	return bindings
 }
 
@@ -305,7 +301,6 @@ func (c *RecordCache) Evict(hostName, serviceName string) bool {
 		for _, listener := range allListeners {
 			listener.MarkDirty()
 		}
-		c.NotifyUpdates()
 	}
 	return evicted
 }
@@ -366,7 +361,6 @@ func (c *RecordCache) Delete(hostName, serviceName string) bool {
 				deletesListener.Unsubscribe(topic)
 			}
 		}
-		c.NotifyUpdates()
 	}
 	return removedGuids
 }
@@ -442,7 +436,6 @@ func (c *RecordCache) Purge(evictSecs int) {
 				deletesListener.Unsubscribe(topic)
 			}
 		}
-		c.NotifyUpdates()
 	}
 }
 
@@ -602,23 +595,6 @@ func (c *RecordCache) SubscribeUpdates(guid RecordGUID, listener UpdatesListener
 	defer c.mutex.Unlock()
 	k := guid.key()
 	c.listeners[k] = append(c.listeners[k], listener)
-}
-
-func (c *RecordCache) Updates() <-chan struct{} {
-	if c == nil {
-		return nil
-	}
-	return c.notify
-}
-
-func (c *RecordCache) NotifyUpdates() {
-	if c == nil || c.notify == nil {
-		return
-	}
-	select {
-	case c.notify <- struct{}{}:
-	default:
-	}
 }
 
 func (c *RecordCache) Size() int {

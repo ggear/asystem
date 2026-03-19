@@ -2,7 +2,7 @@
   "object_id": "service_weewx",
   "unique_id": "service_weewx",
   "name": "Service Weewx",
-  "icon": "mdi:pulse",
+  "icon": "mdi:heart-pulse",
   "force_update": "false",
   "state_topic": "supervisor/raspbpi-jen/data/service/weewx/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",

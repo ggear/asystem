@@ -411,6 +411,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			return
 		case <-refreshC:
 			refreshStart := time.Now()
+			d.terminal.sync()
 			d.terminal.clear()
 			if d.logOverlay {
 				d.Logging()
@@ -421,7 +422,6 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 			force = true
 			slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "boxes", len(d.boxes))
-		case <-d.cache.Updates():
 		case event, ok := <-d.terminal.events():
 			if !ok {
 				return
@@ -466,6 +466,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 				if ev.Key() == tcell.KeyCtrlR {
 					refreshStart := time.Now()
+					d.terminal.sync()
 					d.terminal.clear()
 					if d.logOverlay {
 						d.Logging()

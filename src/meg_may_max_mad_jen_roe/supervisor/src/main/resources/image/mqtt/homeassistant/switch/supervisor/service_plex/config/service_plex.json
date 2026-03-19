@@ -2,7 +2,7 @@
   "object_id": "service_plex",
   "unique_id": "service_plex",
   "name": "Service Plex",
-  "icon": "mdi:pulse",
+  "icon": "mdi:heart-pulse",
   "force_update": "false",
   "state_topic": "supervisor/macmini-mad/data/service/plex/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",

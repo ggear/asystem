@@ -2,7 +2,7 @@
   "object_id": "service_unpoller",
   "unique_id": "service_unpoller",
   "name": "Service Unpoller",
-  "icon": "mdi:pulse",
+  "icon": "mdi:heart-pulse",
   "force_update": "false",
   "state_topic": "supervisor/macmini-may/data/service/unpoller/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",

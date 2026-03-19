@@ -2,7 +2,7 @@
   "object_id": "service_vernemq",
   "unique_id": "service_vernemq",
   "name": "Service Vernemq",
-  "icon": "mdi:pulse",
+  "icon": "mdi:heart-pulse",
   "force_update": "false",
   "state_topic": "supervisor/macmini-meg/data/service/vernemq/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
