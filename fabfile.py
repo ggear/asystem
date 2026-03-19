@@ -1118,7 +1118,7 @@ def _get_env(env_path):
                 env_line = env_line.replace("export ", "").rstrip()
                 if "=" in env_line and not env_line.startswith("#"):
                     env_key, env_value = env_line.split("=", 1)
-                    env[env_key] = env_value
+                    env[env_key] = env_value.strip('"')
     return env
 
 
