@@ -22,7 +22,6 @@ homeassistant:
   packages: !include_dir_named custom_packages
 #######################################################################################
 http:
-  server_host: '0.0.0.0'
   server_port: !env_var HOMEASSISTANT_HTTP_PORT
   ip_ban_enabled: true
   login_attempts_threshold: 5
