@@ -1,2 +1,4 @@
 ../install.sh
+../install_pre.sh
+../install_prep.sh
 ./main/resources/data/configuration.yaml

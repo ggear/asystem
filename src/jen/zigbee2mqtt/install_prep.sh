@@ -1,4 +1,4 @@
 #!/bin/bash
 
-docker exec zigbee2mqtt /asystem/etc/mqtt.sh
+chmod 666 /dev/ttyUSBZB3DongleP
 rm -rf /root/home/zigbee2mqtt/latest/log
