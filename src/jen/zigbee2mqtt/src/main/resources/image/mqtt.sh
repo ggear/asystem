@@ -4,7 +4,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")/mqtt"
 
 . "$ROOT_DIR/../../.env"
 
-printf "\nEntity Metadata publish script [zigbee2mqtt] dropping discovery topics:\n"
+printf "\nEntity Metadata publish script [zigbee2mqtt] dropping discovery topics on [$VERNEMQ_SERVICE]:\n"
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant/#" -W 5 2>/dev/null | sort -u |
   while read topic; do
     base=$(basename "$(dirname "$(dirname "$topic")")")
@@ -23,7 +23,7 @@ mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant
 
 printf "\nEntity Metadata publish script [zigbee2mqtt] sleeping before dropping data topics ... " && sleep 2 && printf "done\n\n"
 
-printf "Entity Metadata publish script [zigbee2mqtt] dropping data topics:\n"
+printf "Entity Metadata publish script [zigbee2mqtt] dropping data topics on [$VERNEMQ_SERVICE]:\n"
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "zigbee/#" -W 5 2>/dev/null | sort -u |
   while read topic; do
     echo "$topic"
