@@ -3,7 +3,7 @@ ARG ASYSTEM_TELEGRAF_VERSION="latest"
 FROM telegraf:${ASYSTEM_TELEGRAF_VERSION} AS image_upstream
 USER root
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b9 && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b10 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install coreutils=9.1-1 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2+deb12u2 && \
@@ -12,7 +12,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libbz2-dev=1.0.8-5+b1 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libffi-dev=3.4.4-1 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install zlib1g-dev=1:1.2.13.dfsg-1 && \
-    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libssl-dev=3.0.17-1~deb12u3 && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libssl-dev=3.0.18-1~deb12u2 && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
