@@ -560,7 +560,7 @@ docker rm -vf "$CONTAINER_NAME"
             elif exists(docker_compose_path):
                 docker_image_metadata = \
                     get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
-            docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "0a", "0b", "b1"]
+            docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "a", "0a", "0b", "b1", "b"]
             if all(key in docker_image_metadata for key in
                    ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
                     and not docker_image_metadata["skipped"]:
