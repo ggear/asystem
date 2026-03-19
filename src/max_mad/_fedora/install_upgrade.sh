@@ -48,6 +48,7 @@ ASYSTEM_PACKAGES_DNF=(
   cups
   avahi
   inotify-tools
+  mosquitto
   powertop
   python3
   python3-pip
