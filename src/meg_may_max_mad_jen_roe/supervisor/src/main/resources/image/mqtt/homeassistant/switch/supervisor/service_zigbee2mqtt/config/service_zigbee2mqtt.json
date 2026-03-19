@@ -6,7 +6,7 @@
   "force_update": "false",
   "state_topic": "supervisor/raspbpi-jen/data/service/zigbee2mqtt/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
-  "command_topic": "supervisor/raspbpi-jen/cmd/service/zigbee2mqtt",
+  "command_topic": "supervisor/raspbpi-jen/command/service/zigbee2mqtt",
   "availability_topic": "supervisor/raspbpi-jen/status",
   "qos": "1",
   "device": {

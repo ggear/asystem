@@ -6,7 +6,7 @@
   "force_update": "false",
   "state_topic": "supervisor/macmini-meg/data/service/homeassistant/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
-  "command_topic": "supervisor/macmini-meg/cmd/service/homeassistant",
+  "command_topic": "supervisor/macmini-meg/command/service/homeassistant",
   "availability_topic": "supervisor/macmini-meg/status",
   "qos": "1",
   "device": {
