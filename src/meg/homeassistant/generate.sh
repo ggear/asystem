@@ -52,10 +52,11 @@ cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/pirateweather-component/custom
 
 # NOTES: https://github.com/pkissling/clock-weather-card/releases
 VERSION=v2.9.2
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "pkissling/clock-weather-card" "${VERSION}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock-weather-card" "master" "https://github.com/pkissling/clock-weather-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
-wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js" "https://github.com/pkissling/clock-weather-card/releases/download/${VERSION}/clock-weather-card.js"
+(cd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" && npm install --legacy-peer-deps && npm run build)
+cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
 
 # NOTES: https://github.com/thomasloven/lovelace-card-mod/releases
 VERSION=v4.2.1
