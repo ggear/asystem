@@ -10,8 +10,11 @@ services:
       - VERNEMQ_API_PORT
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/mnt:rw
-    devices:
-      - /dev/ttyUSBTempProbe:/dev/ttyUSB0:rw
+
+# TODO: Remove this when the device is fixed
+#    devices:
+#      - /dev/ttyUSBTempProbe:/dev/ttyUSB0:rw
+
     healthcheck:
       test: /asystem/etc/checkhealthy.sh
       interval: 2m
