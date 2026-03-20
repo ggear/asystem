@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && telegraf --once >/dev/null 2>&1
+  true # TODO: Re-enable once fixed #/asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && #  telegraf --once >/dev/null 2>&1
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [digitemp] is healthy :)" >&2

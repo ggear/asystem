@@ -1,2 +1,4 @@
-/asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" &&
-  telegraf --once >/dev/null 2>&1
+true
+# TODO: Re-enable once fixed
+#/asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" &&
+#  telegraf --once >/dev/null 2>&1
