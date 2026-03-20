@@ -50,6 +50,20 @@ rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/pirateweather"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/pirateweather-component/custom_components/pirateweather" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
+# NOTES: https://github.com/pkissling/clock-weather-card/releases
+VERSION=v2.9.2
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "pkissling/clock-weather-card" "${VERSION}"
+rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
+mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
+wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js" "https://github.com/pkissling/clock-weather-card/releases/download/${VERSION}/clock-weather-card.js"
+
+# NOTES: https://github.com/thomasloven/lovelace-card-mod/releases
+VERSION=v4.2.1
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-card-mod" "thomasloven/lovelace-card-mod" "${VERSION}"
+rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
+mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
+cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/lovelace-card-mod/card-mod.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
+
 # NOTES: https://github.com/thomasloven/lovelace-layout-card/releases
 VERSION=v2.4.7
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}"

@@ -110,6 +110,12 @@ automation: !include automations.yaml
 #######################################################################################
 panel_custom: !include ui-panel-custom.yaml
 #######################################################################################
+
+# NOTE: Not required and introduces a top padding issue
+#frontend:
+#  extra_module_url:
+#    - '/local/custom_ui/card-mod/card-mod.js?v=v4.2.1'
+
 lovelace:
   mode: 'yaml'
   resources:
@@ -119,9 +125,7 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.13.0'
       type: 'module'
-    - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v4.1.0'
-      type: 'module'
-    - url: '/local/custom_ui/bom-weather-card-hacked/bom-weather-card.js?v=0.90a-HACKED-V3'
+    - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2'
       type: 'module'
   dashboards:
     lovelace-generated:
