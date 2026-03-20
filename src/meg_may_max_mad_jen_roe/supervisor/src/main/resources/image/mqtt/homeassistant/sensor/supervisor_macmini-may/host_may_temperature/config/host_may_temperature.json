@@ -1,0 +1,23 @@
+{
+  "default_entity_id": "sensor.host_may_temperature",
+  "unique_id": "host_may_temperature",
+  "name": "Host May Temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": false,
+  "state_topic": "supervisor/macmini-may/data/host/may/temperature/health_status",
+  "availability_topic": "supervisor/macmini-may/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-supervisor"
+    ],
+    "name": "Rack Supervisor",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

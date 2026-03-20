@@ -1,0 +1,23 @@
+{
+  "default_entity_id": "sensor.host_meg_temperature",
+  "unique_id": "host_meg_temperature",
+  "name": "Host Meg Temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": false,
+  "state_topic": "supervisor/macmini-meg/data/host/meg/temperature/health_status",
+  "availability_topic": "supervisor/macmini-meg/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-supervisor"
+    ],
+    "name": "Rack Supervisor",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

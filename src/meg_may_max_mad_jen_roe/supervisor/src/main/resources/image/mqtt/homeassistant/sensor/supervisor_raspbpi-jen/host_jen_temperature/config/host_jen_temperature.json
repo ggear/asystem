@@ -1,0 +1,23 @@
+{
+  "default_entity_id": "sensor.host_jen_temperature",
+  "unique_id": "host_jen_temperature",
+  "name": "Host Jen Temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": false,
+  "state_topic": "supervisor/raspbpi-jen/data/host/jen/temperature/health_status",
+  "availability_topic": "supervisor/raspbpi-jen/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-wardrobe-supervisor"
+    ],
+    "name": "Wardrobe Supervisor",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Wardrobe"
+  }
+}
