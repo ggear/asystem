@@ -10,7 +10,7 @@ for FILE in src/main/resources/config/parse/*.sh; do
 done
 
 RESULTS_DIR=${ROOT_DIR}/src/test/resources/results/profiles/$(date +%F)
-HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
+HOSTS=$(echo $(basename $(dirname ${ROOT_DIR})) | tr "_" "\n")
 
 rm -rf ${RESULTS_DIR} && mkdir -p ${RESULTS_DIR}
 for HOST in ${HOSTS}; do

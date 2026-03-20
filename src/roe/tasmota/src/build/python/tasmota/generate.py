@@ -133,7 +133,7 @@ echo ''
                             metadata_tasmota_dict["unique_id"],
                             metadata_tasmota_dict["connection_ip"],
                         ))
-                    tasmota_config_file.write("\tprintf '\n'\n")
+                    tasmota_config_file.write("\tprintf '\\n'\n")
                     tasmota_config_file.write(
                         "\tTIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && "
                         "while ! (echo >/dev/tcp/{}/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && "

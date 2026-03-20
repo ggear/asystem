@@ -86,14 +86,14 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/average-component/custom_components/average" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/basnijholt/adaptive-lighting/releases
-VERSION=v1.29.0
+VERSION=v1.30.1
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "adaptive-lighting-component" "basnijholt/adaptive-lighting" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/adaptive_lighting"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/bramstroker/homeassistant-powercalc/releases
-VERSION=v1.20.1
+VERSION=v1.20.9
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "ggear-powercalc" "https://github.com/bramstroker/homeassistant-powercalc.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/powercalc"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"

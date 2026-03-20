@@ -426,6 +426,7 @@ class GroupedSensor(BaseEntity, SensorEntity):
     _attr_should_poll = False
     _unrecorded_attributes = frozenset({ATTR_ENTITIES, ATTR_IS_GROUP})
     _is_energy_sensor = False
+    _attr_force_update = True
 
     def __init__(
         self,
@@ -455,27 +456,32 @@ class GroupedSensor(BaseEntity, SensorEntity):
         self._attr_suggested_display_precision = self._rounding_digits
         if unique_id:
             self._attr_unique_id = unique_id
-        self._prev_state_store: PreviousStateStore = PreviousStateStore(hass)
         self._native_value_exact = Decimal(0)
         self._member_states: dict[str, Decimal] = {}
         self._ignore_unavailable_state = bool(self._sensor_config.get(CONF_IGNORE_UNAVAILABLE_STATE))
         self._group_type = group_type
         self._start_time: float = time.time()
         self._last_update_time: float = 0
-        self._update_interval_exceeded_callback: CALLBACK_TYPE = lambda *args: None
+        self._update_interval_exceeded_callback: CALLBACK_TYPE | None = None
         self._unit_converter_cache: dict[str, Callable[[float], float]] = {}
 
     async def async_added_to_hass(self) -> None:
         """Register state listeners."""
         await super().async_added_to_hass()
 
-        self._prev_state_store = await PreviousStateStore.async_get_instance(self.hass)
         if self._update_interval > 0:
             self.async_on_remove(self._cancel_update_interval_exceeded_callback)
 
         self.async_on_remove(start.async_at_start(self.hass, self.on_start))
 
-        self._async_hide_members(self._sensor_config.get(CONF_HIDE_MEMBERS) or False)
+        if CONF_HIDE_MEMBERS in self._sensor_config:
+            self._async_hide_members(bool(self._sensor_config.get(CONF_HIDE_MEMBERS)))
+
+        if not self._sensor_config.get(CONF_DISABLE_EXTENDED_ATTRIBUTES, False):
+            self._attr_extra_state_attributes = {
+                ATTR_ENTITIES: self._entities,
+                ATTR_IS_GROUP: True,
+            }
 
     async def async_will_remove_from_hass(self) -> None:
         """
@@ -545,12 +551,6 @@ class GroupedSensor(BaseEntity, SensorEntity):
             ),
         )
 
-        if not self._sensor_config.get(CONF_DISABLE_EXTENDED_ATTRIBUTES, False):
-            self._attr_extra_state_attributes = {
-                ATTR_ENTITIES: self._entities,
-                ATTR_IS_GROUP: True,
-            }
-
         await self.initial_update()
 
     async def initial_update(self) -> None:
@@ -572,14 +572,20 @@ class GroupedSensor(BaseEntity, SensorEntity):
             self.async_write_ha_state()
             return
 
-        current_time = time.time()
-        throttled = self._should_throttle(current_time)
-
         self._attr_available = True
-        if throttled:
+        self._set_native_value(state, write_state=False)
+
+        # Throttled future update pending, return early
+        if self._update_interval_exceeded_callback:
+            return
+
+        current_time = time.time()
+        if self._should_throttle(current_time):
 
             @callback
             def _update_interval_callback(now: datetime) -> None:
+                self._update_interval_exceeded_callback = None
+                self._last_update_time = time.time()
                 self.async_write_ha_state()
 
             self._update_interval_exceeded_callback = async_call_later(
@@ -587,12 +593,11 @@ class GroupedSensor(BaseEntity, SensorEntity):
                 self._update_interval,
                 _update_interval_callback,
             )
-            self._set_native_value(state, write_state=False)
             return
 
         self._cancel_update_interval_exceeded_callback()
-        self._set_native_value(state, write_state=True)
         self._last_update_time = current_time
+        self.async_write_ha_state()
 
     def _should_throttle(self, current_time: float) -> bool:
         if self._update_interval == 0:
@@ -602,10 +607,19 @@ class GroupedSensor(BaseEntity, SensorEntity):
         if current_time - self._start_time < 5:
             return False
 
+        if self._last_update_time == 0:
+            return False  # pragma: no cover
+
+        # Apply a minimum throttle of 100ms to prevent flooding during rapid changes
+        if current_time - self._last_update_time < 0.1:
+            return True
+
         return current_time - self._last_update_time < self._update_interval
 
     def _cancel_update_interval_exceeded_callback(self) -> None:
-        self._update_interval_exceeded_callback()
+        if self._update_interval_exceeded_callback:  # pragma: no cover
+            self._update_interval_exceeded_callback()
+            self._update_interval_exceeded_callback = None
 
     def _get_state_value_in_native_unit(self, state: State) -> Decimal:
         """Convert value of member entity state to match the unit of measurement of the group sensor."""
@@ -718,9 +732,15 @@ class GroupedEnergySensor(GroupedSensor, RestoreSensor, EnergySensor):
             sensor_config.get(CONF_ENERGY_SENSOR_UNIT_PREFIX, UnitPrefix.NONE),
             UnitOfEnergy.WATT_HOUR,
         )
+        self._prev_state_store: PreviousStateStore = PreviousStateStore(hass)
 
     async def async_added_to_hass(self) -> None:
         """Register state listeners."""
+
+        self._prev_state_store = await PreviousStateStore.async_get_instance(self.hass)
+        # Clean up any entities that are no longer part of the group
+        self._prev_state_store.cleanup_entity_states(self.entity_id, self._entities)
+
         await self.restore_last_state()
 
         await super().async_added_to_hass()
@@ -897,6 +917,20 @@ class PreviousStateStore:
     def set_entity_state(self, group: str, entity_id: str, state: State) -> None:
         """Set the state for an energy sensor."""
         self.states.setdefault(group, {})[entity_id] = state
+
+    def cleanup_entity_states(self, group: str, current_entities: set[str]) -> None:
+        """Remove entity states that are no longer part of the group."""
+        group_states = self.states.get(group)
+        if group_states is None:
+            return
+
+        # Find entities that are in the store but not in the current set
+        entities_to_remove = set(group_states.keys()) - current_entities
+
+        # Remove those entities from the store
+        for entity_id in entities_to_remove:
+            _LOGGER.debug("Removing entity %s from group %s in PreviousStateStore", entity_id, group)
+            group_states.pop(entity_id, None)
 
     async def persist_states(self) -> None:
         """Save the current states to storage."""

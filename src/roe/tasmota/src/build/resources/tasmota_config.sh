@@ -93,8 +93,7 @@ if netcat -zw 1 10.0.4.100 80 2>/dev/null; then
 		echo 'Config set skipped, [CurrentHigh] already set to [0]'
 	fi
 	printf 'Restarting [ceiling_water_booster_plug] with response: ' && curl -s -m 5 http://10.0.4.100/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.100/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [ceiling_water_booster_plug] at [http://10.0.4.100/?] given it is unresponsive'
@@ -130,8 +129,7 @@ if netcat -zw 1 10.0.4.101 80 2>/dev/null; then
 		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	printf 'Restarting [rack_fans_plug] with response: ' && curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.101/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [rack_fans_plug] at [http://10.0.4.101/?] given it is unresponsive'
@@ -227,8 +225,7 @@ if netcat -zw 1 10.0.4.102 80 2>/dev/null; then
 		echo 'Config set skipped, [CurrentHigh] already set to [0]'
 	fi
 	printf 'Restarting [rack_outlet_plug] with response: ' && curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.102/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [rack_outlet_plug] at [http://10.0.4.102/?] given it is unresponsive'
@@ -264,8 +261,7 @@ if netcat -zw 1 10.0.4.103 80 2>/dev/null; then
 		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	printf 'Restarting [kitchen_bench_lights_plug] with response: ' && curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.103/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [kitchen_bench_lights_plug] at [http://10.0.4.103/?] given it is unresponsive'
@@ -361,8 +357,7 @@ if netcat -zw 1 10.0.4.104 80 2>/dev/null; then
 		echo 'Config set skipped, [CurrentHigh] already set to [0]'
 	fi
 	printf 'Restarting [kitchen_fan_plug] with response: ' && curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.104/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [kitchen_fan_plug] at [http://10.0.4.104/?] given it is unresponsive'
@@ -458,8 +453,7 @@ if netcat -zw 1 10.0.4.105 80 2>/dev/null; then
 		echo 'Config set skipped, [CurrentHigh] already set to [0]'
 	fi
 	printf 'Restarting [ceiling_network_switch_plug] with response: ' && curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.105/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [ceiling_network_switch_plug] at [http://10.0.4.105/?] given it is unresponsive'
@@ -555,8 +549,7 @@ if netcat -zw 1 10.0.4.106 80 2>/dev/null; then
 		echo 'Config set skipped, [CurrentHigh] already set to [0]'
 	fi
 	printf 'Restarting [garden_pool_filter_plug] with response: ' && curl -s -m 5 http://10.0.4.106/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.106/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [garden_pool_filter_plug] at [http://10.0.4.106/?] given it is unresponsive'
@@ -598,8 +591,7 @@ if netcat -zw 1 10.0.4.107 80 2>/dev/null; then
 		echo 'Config set skipped, [TelePeriod] already set to [10]'
 	fi
 	printf 'Restarting [deck_festoons_plug] with response: ' && curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.107/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [deck_festoons_plug] at [http://10.0.4.107/?] given it is unresponsive'
@@ -641,8 +633,7 @@ if netcat -zw 1 10.0.4.108 80 2>/dev/null; then
 		echo 'Config set skipped, [TelePeriod] already set to [10]'
 	fi
 	printf 'Restarting [landing_festoons_plug] with response: ' && curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.108/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [landing_festoons_plug] at [http://10.0.4.108/?] given it is unresponsive'
@@ -678,8 +669,7 @@ if netcat -zw 1 10.0.4.109 80 2>/dev/null; then
 		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	printf 'Restarting [rack_screen_plug] with response: ' && curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.109/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [rack_screen_plug] at [http://10.0.4.109/?] given it is unresponsive'
@@ -715,8 +705,7 @@ if netcat -zw 1 10.0.4.110 80 2>/dev/null; then
 		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	printf 'Restarting [rack_backup_plug] with response: ' && curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.110/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [rack_backup_plug] at [http://10.0.4.110/?] given it is unresponsive'
@@ -752,8 +741,7 @@ if netcat -zw 1 10.0.4.111 80 2>/dev/null; then
 		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	printf 'Restarting [rack_printer_plug] with response: ' && curl -s -m 5 http://10.0.4.111/cm? --data-urlencode 'cmnd=Restart 1'
-	printf '
-'
+	printf '\n'
 	TIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! (echo >/dev/tcp/10.0.4.111/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && if [ "$ELAPSED" -ge "$TIMEOUT" ]; then printf ' abort\n' && exit 1; fi; done && printf ' done\n'
 else
 	echo 'Skipping config for device [rack_printer_plug] at [http://10.0.4.111/?] given it is unresponsive'

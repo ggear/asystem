@@ -19,6 +19,8 @@ from homeassistant.const import (
 
 MIN_HA_VERSION = "2025.1"
 
+BUILT_IN_LIBRARY_DIR = "powercalc_profiles"
+
 DOMAIN = "powercalc"
 DOMAIN_CONFIG = "config"
 
@@ -40,6 +42,7 @@ DATA_ENTITY_TYPES: Literal["entity_types"] = "entity_types"
 DATA_STRATEGIES: Literal["strategies"] = "strategies"
 DATA_GROUP_SIZES: Literal["group_sizes"] = "group_sizes"
 DATA_HAS_GROUP_INCLUDE: Literal["has_group_include"] = "has_group_include"
+DATA_POWER_PROFILE_SOURCES: Literal["power_profile_sources"] = "power_profile_sources"
 
 ENTRY_DATA_ENERGY_ENTITY = "_energy_entity"
 ENTRY_DATA_POWER_ENTITY = "_power_entity"
@@ -114,6 +117,7 @@ CONF_INCLUDE = "include"
 CONF_INCLUDE_NON_POWERCALC_SENSORS = "include_non_powercalc_sensors"
 CONF_LABEL = "label"
 CONF_LINEAR = "linear"
+CONF_LUT = "lut"
 CONF_MAIN_POWER_SENSOR = "main_power_sensor"
 CONF_MANUFACTURER = "manufacturer"
 CONF_MAX_POWER = "max_power"
@@ -138,6 +142,7 @@ CONF_POWER_SENSOR_ID = "power_sensor_id"
 CONF_POWER_SENSOR_NAMING = "power_sensor_naming"
 CONF_POWER_SENSOR_PRECISION = "power_sensor_precision"
 CONF_POWER_TEMPLATE = "power_template"
+CONF_POWER_UPDATE_INTERVAL = "power_update_interval"
 CONF_REPEAT = "repeat"
 CONF_SELF_USAGE_INCLUDED = "self_usage_included"
 CONF_SENSOR_TYPE = "sensor_type"
@@ -145,6 +150,7 @@ CONF_SENSORS = "sensors"
 CONF_SLEEP_POWER = "sleep_power"
 CONF_STANDBY_POWER = "standby_power"
 CONF_START_TIME = "start_time"
+CONF_STATE = "state"
 CONF_STATES_POWER = "states_power"
 CONF_STATE_TRIGGER = "state_trigger"
 CONF_STATES_TRIGGER = "states_trigger"
@@ -294,3 +300,11 @@ class EntityType(StrEnum):
     UTILITY_METER = "utility_meter"
     TARIFF_SELECT = "tariff_select"
     UNKNOWN = "unknown"
+
+
+class PowerProfileSource(StrEnum):
+    """Possible power profile sources."""
+
+    MANUAL = "manual"
+    LIBRARY_BUILTIN = "library_builtin"
+    LIBRARY_CUSTOM = "library_custom"
