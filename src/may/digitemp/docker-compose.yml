@@ -11,7 +11,7 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/mnt:rw
 
-# TODO: Remove this when the device is fixed
+# TODO: Re-enable once fixed
 #    devices:
 #      - /dev/ttyUSBTempProbe:/dev/ttyUSB0:rw
 
