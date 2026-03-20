@@ -110,12 +110,6 @@ automation: !include automations.yaml
 #######################################################################################
 panel_custom: !include ui-panel-custom.yaml
 #######################################################################################
-
-# NOTE: Not required and introduces a top padding issue
-#frontend:
-#  extra_module_url:
-#    - '/local/custom_ui/card-mod/card-mod.js?v=v4.2.1'
-
 lovelace:
   mode: 'yaml'
   resources:
