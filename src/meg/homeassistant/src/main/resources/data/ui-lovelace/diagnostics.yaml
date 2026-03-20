@@ -131,6 +131,18 @@
     - entity: sensor.compensation_sensor_rack_bottom_temperature
       name: Rack Bottom
       icon: mdi:thermometer
+    - entity: sensor.compensation_sensor_host_mad_temperature
+      name: Mac Mini Mad
+      icon: mdi:thermometer
+    - entity: sensor.compensation_sensor_host_max_temperature
+      name: Mac Mini Max
+      icon: mdi:thermometer
+    - entity: sensor.compensation_sensor_host_may_temperature
+      name: Mac Mini May
+      icon: mdi:thermometer
+    - entity: sensor.compensation_sensor_host_meg_temperature
+      name: Mac Mini Meg
+      icon: mdi:thermometer
 ################################################################################
 - type: entities
   title: Device Conditions Ceiling
@@ -144,6 +156,9 @@
   entities:
     - entity: sensor.template_wardrobe_temperature_proxy
       name: Wardrobe Ambient
+      icon: mdi:thermometer
+    - entity: sensor.compensation_sensor_host_jen_temperature
+      name: Raspberry Pi Jen
       icon: mdi:thermometer
 ################################################################################
 - type: custom:layout-break
