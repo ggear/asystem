@@ -43,6 +43,14 @@ rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/bureau_of_meteorol
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
+# NOTES: https://github.com/Makin-Things/platinum-weather-card/releases
+VERSION=1.0.5
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bureau_of_meteorology-component" "bremor/bureau_of_meteorology" "${VERSION}"
+rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/bureau_of_meteorology"
+mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
+cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology" "${ROOT_DIR}/src/main/resources/data/custom_components"
+
+
 # NOTES: https://github.com/thomasloven/lovelace-layout-card/releases
 VERSION=v2.4.7
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}"
