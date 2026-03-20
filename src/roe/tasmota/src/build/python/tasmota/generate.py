@@ -87,11 +87,12 @@ echo ''
                         env["TASMOTA_FIRMWARE_VERSION"],
                     ))
                 if not exists(tasmota_device_path + "-backup.json"):
-                    os.system("netcat -zw 1 {} 80 2>/dev/null && decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
-                        metadata_tasmota_dict["connection_ip"],
-                        metadata_tasmota_dict["connection_ip"],
-                        tasmota_device_path,
-                    ))
+                    os.system(
+                        "netcat -zw 1 {} 80 2>/dev/null && decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
+                            metadata_tasmota_dict["connection_ip"],
+                            metadata_tasmota_dict["connection_ip"],
+                            tasmota_device_path,
+                        ))
                 tasmota_config_file.write(
                     "\tdecode-config.py -s {} -i {}.json\n".format(
                         metadata_tasmota_dict["connection_ip"],
@@ -134,11 +135,12 @@ echo ''
                         ))
                     tasmota_config_file.write("\tprintf '\n'\n")
                     tasmota_config_file.write(
-                        "\tprintf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 {} 80 2>/dev/null; do printf '.' && sleep 1; done\n".format(
+                        "\tTIMEOUT=30; ELAPSED=0; printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && "
+                        "while ! (echo >/dev/tcp/{}/80) 2>/dev/null; do printf '.' && sleep 1 && ELAPSED=$((ELAPSED + 1)) && "
+                        "if [ \"$ELAPSED\" -ge \"$TIMEOUT\" ]; then printf ' abort\\n' && exit 1; fi; done && printf ' done\\n'\n".format(
                             metadata_tasmota_dict["connection_ip"],
-                            metadata_tasmota_dict["unique_id"],
-                        ))
-                    tasmota_config_file.write("\tprintf ' done\n'\n")
+                        )
+                    )
                 tasmota_config_file.write(
                     "else\n\techo 'Skipping config for device [{}] at [http://{}/?] given it is unresponsive'\n".format(
                         metadata_tasmota_dict["unique_id"],

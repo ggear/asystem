@@ -24,11 +24,6 @@ mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant
 printf "\nEntity Metadata publish script [zigbee2mqtt] sleeping before dropping data topics ... " && sleep 2 && printf "done\n\n"
 
 printf "Entity Metadata publish script [zigbee2mqtt] dropping data topics on [$VERNEMQ_SERVICE]:\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "zigbee/#" -W 5 2>/dev/null | sort -u |
-  while read topic; do
-    echo "$topic"
-    mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$topic" -r -n
-  done
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "zigbee/#" -W 5 2>/dev/null
+mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} --remove-retained -F '%t' -t 'zigbee/#' -W 1 2>/dev/null
 
 printf "\nEntity Metadata publish script [zigbee2mqtt] sleeping before publishing discovery and data topics ... " && sleep 2 && printf "done\n\n"
