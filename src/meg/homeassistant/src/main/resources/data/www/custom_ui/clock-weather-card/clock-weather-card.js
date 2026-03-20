@@ -220,13 +220,13 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
             ${this.config.hide_date?"":this.date()}
           </clock-weather-card-today-right-wrap-bottom>
         </clock-weather-card-today-right-wrap>
-      </clock-weather-card-today-right>`}renderForecast(){const e=this.getWeather(),t=Ur(this.getCurrentTemperature()),i=this.config.forecast_rows,r=this.config.hourly_forecast,s=e.attributes.temperature_unit,a=this.mergeForecasts(i,r),n=a.map((e=>e.templow)),o=a.map((e=>e.temperature));null!==t&&(n.push(t),o.push(t));const l=Math.round(Br(n)),c=Math.round(Cr(o)),d=a.map((e=>e.datetime)).map((e=>r?this.time(e):this.localize(`day.${e.weekday}`))),u=d.length?Cr(d.map((e=>e.length))):0;return a.map(((e,i)=>Yr((()=>this.renderForecastItem(e,l,c,t,s,r,d[i],u)))))}renderForecastItem(e,t,i,r,s,a,n,o){const l="pouring"===e.condition?"raindrops":"rainy"===e.condition?"raindrop":e.condition,c=e.datetime.hour,d=c>=18||c<6?"night":"day",u=this.toIcon(l,"fill",!1,"static",d),h=this.getWeather().attributes.temperature_unit,m=a?ml.now().hour===e.datetime.hour:ml.now().day===e.datetime.day,f=Math.round(m&&null!==r?Math.min(r,e.templow):e.templow),p=Math.round(m&&null!==r?Math.max(r,e.temperature):e.temperature);return D`
+      </clock-weather-card-today-right>`}renderForecast(){const e=this.getWeather(),t=Ur(this.getCurrentTemperature()),i=this.config.forecast_rows,r=this.config.hourly_forecast,s=e.attributes.temperature_unit,a=this.mergeForecasts(i,r),n=a.map((e=>e.templow)),o=a.map((e=>e.temperature));null!==t&&(n.push(t),o.push(t));const l=Math.round(Br(n)),c=Math.round(Cr(o)),d=a.map((e=>e.datetime)).map((e=>r?this.time(e):this.localize(`day.${e.weekday}`))),u=d.length?Cr(d.map((e=>e.length))):0;return a.map(((e,i)=>Yr((()=>this.renderForecastItem(e,l,c,t,s,r,d[i],u)))))}renderForecastItem(e,t,i,r,s,a,n,o){var l,c;const d="pouring"===e.condition?"raindrops":"rainy"===e.condition?"raindrop":e.condition;let u="day";if(a){const t=null===(l=this.hass.states["sensor.sun_next_rising"])||void 0===l?void 0:l.state,i=null===(c=this.hass.states["sensor.sun_next_setting"])||void 0===c?void 0:c.state,r=t?ml.fromISO(t).hour:6,s=i?ml.fromISO(i).hour:18,a=e.datetime.hour;(a>=s||a<r)&&(u="night")}const h=this.toIcon(d,"fill",!1,"static",u),m=this.getWeather().attributes.temperature_unit,f=a?ml.now().hour===e.datetime.hour:ml.now().day===e.datetime.day,p=Math.round(f&&null!==r?Math.min(r,e.templow):e.templow),y=Math.round(f&&null!==r?Math.max(r,e.temperature):e.temperature);return D`
       <clock-weather-card-forecast-row style="--col-one-size: ${.5*o}rem;">
         ${this.renderText(n)}
-        ${this.renderIcon(u)}
-        ${this.renderText(this.toConfiguredTempWithUnit(h,f),"right")}
-        ${this.renderForecastTemperatureBar(t,i,f,p,m,r,s)}
-        ${this.renderText(this.toConfiguredTempWithUnit(h,p))}
+        ${this.renderIcon(h)}
+        ${this.renderText(this.toConfiguredTempWithUnit(m,p),"right")}
+        ${this.renderForecastTemperatureBar(t,i,p,y,f,r,s)}
+        ${this.renderText(this.toConfiguredTempWithUnit(m,y))}
       </clock-weather-card-forecast-row>
     `}renderText(e,t="left"){return D`
       <forecast-text style="--text-align: ${t};">
