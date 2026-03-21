@@ -9,10 +9,11 @@ pull_repo "${ROOT_DIR}" "${1}" homeassistant homeassistant-core home-assistant/c
 
 # NOTES: https://github.com/Makin-Things/weather-radar-card/releases
 VERSION=v2.1.1
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "weather-radar-card" "Makin-Things/weather-radar-card" "${VERSION}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "weather-radar-card" "ggear/weather-radar-card" "ggear-patches" "https://github.com/Makin-Things/weather-radar-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/weather-radar-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/weather-radar-card"
 npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card" install
+rm -rf "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card/node_modules/rollup-plugin-typescript2/node_modules/tslib"
 npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card" run build
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card/dist/"* "${ROOT_DIR}/src/main/resources/data/www/custom_ui/weather-radar-card"
 sed -i '' 's/\/local\/community/\/local\/custom_ui/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/weather-radar-card/weather-radar-card.js"
@@ -33,11 +34,11 @@ cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/pirateweather-component/custom
 
 # NOTES: https://github.com/pkissling/clock-weather-card/releases
 VERSION=v2.9.2
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock-weather-card" "master" "https://github.com/pkissling/clock-weather-card.git" "${VERSION}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock-weather-card" "ggear-patches" "https://github.com/pkissling/clock-weather-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
-npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --legacy-peer-deps
-npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" run build
+yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --frozen-lockfile
+yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build
 cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
 
 # NOTES: https://github.com/thomasloven/lovelace-card-mod/releases
