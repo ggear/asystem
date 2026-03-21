@@ -7,6 +7,15 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 pull_repo "${ROOT_DIR}" "${1}" homeassistant homeassistant-core home-assistant/core "${HOMEASSISTANT_VERSION}"
 
+# NOTES: https://github.com/pkissling/clock-weather-card/releases
+VERSION=v2.9.2
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock-weather-card" "ggear-patches" "https://github.com/pkissling/clock-weather-card.git" "${VERSION}"
+rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
+mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
+yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --frozen-lockfile
+yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build
+cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
+
 # NOTES: https://github.com/Makin-Things/weather-radar-card/releases
 VERSION=v2.1.1
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "weather-radar-card" "ggear/weather-radar-card" "ggear-patches" "https://github.com/Makin-Things/weather-radar-card.git" "${VERSION}"
@@ -17,29 +26,6 @@ rm -rf "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card/node_modules
 npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card" run build
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card/dist/"* "${ROOT_DIR}/src/main/resources/data/www/custom_ui/weather-radar-card"
 sed -i '' 's/\/local\/community/\/local\/custom_ui/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/weather-radar-card/weather-radar-card.js"
-
-# NOTES: https://github.com/bremor/bureau_of_meteorology/releases
-VERSION=1.3.6
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bureau_of_meteorology-component" "bremor/bureau_of_meteorology" "${VERSION}"
-rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/bureau_of_meteorology"
-mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
-cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology" "${ROOT_DIR}/src/main/resources/data/custom_components"
-
-# NOTES: https://github.com/Pirate-Weather/pirate-weather-ha/releases
-VERSION=1.8.4
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "pirateweather-component" "pirate-weather/pirate-weather-ha" "${VERSION}"
-rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/pirateweather"
-mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
-cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/pirateweather-component/custom_components/pirateweather" "${ROOT_DIR}/src/main/resources/data/custom_components"
-
-# NOTES: https://github.com/pkissling/clock-weather-card/releases
-VERSION=v2.9.2
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock-weather-card" "ggear-patches" "https://github.com/pkissling/clock-weather-card.git" "${VERSION}"
-rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
-mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
-yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --frozen-lockfile
-yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build
-cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
 
 # NOTES: https://github.com/thomasloven/lovelace-card-mod/releases
 VERSION=v4.2.1
@@ -68,6 +54,13 @@ pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "mini-graph-card" "kalkih/mini-gr
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card"
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js" "https://github.com/kalkih/mini-graph-card/releases/download/${VERSION}/mini-graph-card-bundle.js"
+
+# NOTES: https://github.com/safepay/ha_bom_australia/releases
+VERSION=1.6.2
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "ha_bom_australia-component" "safepay/ha_bom_australia" "${VERSION}"
+rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/ha_bom_australia"
+mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
+cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/ha_bom_australia-component/custom_components/ha_bom_australia" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/pnbruckner/ha-sun2/releases
 VERSION=3.4.3
