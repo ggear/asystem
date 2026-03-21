@@ -121,7 +121,7 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/weather-radar-card/weather-radar-card.js?v=v2.1.1'
       type: 'module'
-    - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-105'
+    - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-106'
       type: 'module'
   dashboards:
     lovelace-generated:

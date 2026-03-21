@@ -254,8 +254,8 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
       <clock-weather-card-forecast-row style="--col-one-size: ${.5*o}rem; --temp-col-size: ${.5*l}rem;">
         ${this.renderText(n)}
         ${this.renderIcon(u)}
-        ${this.renderText(this.toConfiguredTempWithUnit(h,b),"right")}
-        ${this.renderForecastTemperatureBar(t,i,b,g,f,w,a)}
+        ${this.renderText(this.toConfiguredTempWithUnit(h,s?g:b),"right")}
+        ${this.renderForecastTemperatureBar(t,i,s?g:b,g,f,w,a)}
         ${this.renderText(this.toConfiguredTempWithUnit(h,g))}
       </clock-weather-card-forecast-row>
     `}renderText(e,t="left"){return D`
