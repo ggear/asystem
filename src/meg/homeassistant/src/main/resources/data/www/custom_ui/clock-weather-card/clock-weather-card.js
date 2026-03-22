@@ -86,8 +86,8 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
 
   clock-weather-card-today-right-wrap-center {
     display: flex;
-    height: 3rem;
-    font-size: 2.5rem;
+    height: 2.4rem;
+    font-size: 2rem;
     white-space: nowrap;
     align-items: center;
     justify-content: center;
