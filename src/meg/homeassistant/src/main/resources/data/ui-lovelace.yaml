@@ -3,7 +3,7 @@ title: Home
 views:
   #######################################################################################
   - title: Weather
-    path: default_view
+    path: weather
     type: custom:layout-card
     layout_type: custom:vertical-layout
     layout:

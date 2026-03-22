@@ -108,8 +108,6 @@ google_assistant:
 #######################################################################################
 automation: !include automations.yaml
 #######################################################################################
-panel_custom: !include ui-panel-custom.yaml
-#######################################################################################
 lovelace:
   mode: 'yaml'
   resources:
@@ -123,14 +121,6 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-109'
       type: 'module'
-  dashboards:
-    lovelace-generated:
-      mode: 'yaml'
-      filename: 'notexist.yaml'
-      title: 'Generated'
-      icon: 'mdi:tools'
-      show_in_sidebar: true
-      require_admin: true
 #######################################################################################
 logger:
   default: warn # critical/fatal/error/warn/info/debug
