@@ -176,12 +176,12 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
     border-radius: 5px;
   }
 
-  .rain-unit {
+  .value-unit {
     font-size: 0.6em;
     opacity: 0.7;
   }
 
-  .rain-unit-large {
+  .value-unit-large {
     font-size: 0.5em;
     opacity: 0.7;
   }
@@ -249,7 +249,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
             ${this.getTodayDescription(n)}
           </clock-weather-card-today-right-wrap-top>
           <clock-weather-card-today-right-wrap-center style="justify-content: end;">
-            ${null!==o&&o>0?D`${o} <span class="rain-unit-large">mm</span>`:"Nil"}
+            ${null!==o&&o>0?D`${o} <span class="value-unit-large">mm</span>`:"Nil"}
           </clock-weather-card-today-right-wrap-center>
           <clock-weather-card-today-right-wrap-bottom>
             ${this.config.hide_date?"":this.date()}
@@ -291,7 +291,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
         ${this.renderIcon(c)}
         ${this.renderText(d,"right")}
         ${this.renderRainBar(t,e.min,e.max,n,o,e.chance)}
-        <forecast-text>${e.max} <span class="rain-unit">mm</span></forecast-text>
+        <forecast-text>${e.max} <span class="value-unit">mm</span></forecast-text>
       </clock-weather-card-forecast-row>
     `}renderRainBar(e,t,i,r,a,s){const n=s>0&&i>0,{startPercent:o,endPercent:l}=this.calculateBarRangePercents(0,e,t,i),c=0===e?0:t/e,d=this.createRainGradientString(t,i,e),u=null!==a?Math.max(t,Math.min(i,a)):null,h=r&&null!==u;return D`
       <forecast-temperature-bar>
@@ -312,7 +312,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
             ${this.getTodayDescription(l)}
           </clock-weather-card-today-right-wrap-top>
           <clock-weather-card-today-right-wrap-center style="justify-content: end;">
-            ${o}
+            ${o} UV
           </clock-weather-card-today-right-wrap-center>
           <clock-weather-card-today-right-wrap-bottom>
             ${this.config.hide_date?"":this.date()}
@@ -324,7 +324,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
         ${this.renderIcon(n)}
         ${this.renderText(o,"right")}
         ${this.renderUvBar(e.startHour,e.endHour,e.maxIndex)}
-        <forecast-text>${e.maxIndex}</forecast-text>
+        <forecast-text>${e.maxIndex} UV</forecast-text>
       </clock-weather-card-forecast-row>
     `}renderUvBar(e,t,i){const r=i>0&&t>e,a=(e-6)/12*100,s=(t-6)/12*100,n=(e-6)/12,o=this.createUvGradientString(i);return D`
       <forecast-temperature-bar>
