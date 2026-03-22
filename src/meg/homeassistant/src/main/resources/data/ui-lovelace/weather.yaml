@@ -2,7 +2,8 @@
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
   temperature_sensor: sensor.compensation_sensor_roof_temperature
-  forecast_rows: 8
+  today_description_sensor: sensor.bom_darlington_extended_text_0
+  forecast_rows: 7
   forecast_type: temp_daily
   show_forecast: true
   hide_clock: true
@@ -31,8 +32,8 @@
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
   rain_sensor: sensor.roof_daily_rain
-  rain_sensor_prefix: sensor.bom_darlington_rain_
-  forecast_rows: 8
+  rain_sensor_prefix: sensor.bom_darlington_rain
+  forecast_rows: 7
   forecast_type: rain_daily
   show_forecast: true
   hide_clock: true
@@ -60,6 +61,22 @@
   show_radar_coverage: false
   show_radar_location: true
   zoom_level: 6
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: custom:clock-weather-card
+  entity: weather.bom_darlington
+  today_description_sensor: sensor.bom_darlington_uv_forecast_0
+  uv_sensor_prefix: sensor.bom_darlington_uv
+  forecast_rows: 4
+  forecast_type: uv_daily
+  show_forecast: true
+  hide_clock: true
+  hide_date: true
+  show_decimal: true
+  locale: en-AU
+  time_format: 24
+  weather_icon_type: fill
 
 
 
