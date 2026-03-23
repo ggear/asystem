@@ -1,0 +1,4 @@
+sensor:
+  - platform: geo_rss_events
+    name: WA Department of Fire and Emergency Services
+    url: https://www.emergency.wa.gov.au/data/incident_FCAD.rss
