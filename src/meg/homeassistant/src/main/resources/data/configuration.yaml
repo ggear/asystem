@@ -109,7 +109,7 @@ google_assistant:
 automation: !include automations.yaml
 #######################################################################################
 lovelace:
-  mode: 'yaml'
+  resource_mode: yaml
   resources:
     - url: '/local/custom_ui/layout-card/layout-card.js?v=v2.4.7'
       type: 'module'
@@ -121,6 +121,13 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-109'
       type: 'module'
+  dashboards:
+    lovelace:
+      mode: yaml
+      filename: ui-lovelace.yaml
+      title: Overview
+      icon: mdi:view-dashboard
+      show_in_sidebar: true
 #######################################################################################
 logger:
   default: warn # critical/fatal/error/warn/info/debug

@@ -1,5 +1,5 @@
 # NOTES: https://www.videohelp.com/software/Plex/version-history
-FROM linuxserver/plex:1.42.2 AS image_upstream
+FROM linuxserver/plex:1.43.0 AS image_upstream
 USER root
 RUN \
     apt-get update && \
