@@ -34,7 +34,7 @@ const (
 	MetricServiceUsedMemory
 	MetricServiceUsedDiskOps
 	MetricServiceUsedNetwork
-	MetricServiceRunningTime
+	MetricServiceUpTime
 	MetricServiceMaxMemory
 	MetricServiceRestartCount
 	MetricMax

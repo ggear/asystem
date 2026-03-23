@@ -142,9 +142,9 @@ var metricBuildersByID = []builder{
 		id:       MetricServiceUsedNetwork,
 		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/used_network",
 	},
-	MetricServiceRunningTime: {
-		id:       MetricServiceRunningTime,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/running_time",
+	MetricServiceUpTime: {
+		id:       MetricServiceUpTime,
+		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/up_time",
 		skipHist: true,
 	},
 	MetricServiceMaxMemory: {

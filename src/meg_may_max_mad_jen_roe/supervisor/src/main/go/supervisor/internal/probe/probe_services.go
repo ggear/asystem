@@ -53,7 +53,7 @@ type servicesProbe struct {
 func newServicesProbe() *servicesProbe {
 	hostName, _ := os.Hostname()
 	return &servicesProbe{
-		hostName:    hostName,
+		hostName:             hostName,
 		serviceBool:          make(map[string]*stats.BoolStats),
 		backupStatusBool:     make(map[string]*stats.BoolStats),
 		healthStatusBool:     make(map[string]*stats.BoolStats),
@@ -101,7 +101,7 @@ func (p *servicesProbe) metrics() []metric.ID {
 		metric.MetricServiceUsedMemory,
 		metric.MetricServiceUsedDiskOps,
 		metric.MetricServiceUsedNetwork,
-		metric.MetricServiceRunningTime,
+		metric.MetricServiceUpTime,
 		metric.MetricServiceMaxMemory,
 		metric.MetricServiceRestartCount,
 	}
@@ -157,7 +157,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	usedMemoryInts := syncStatsFields(p.usedMemoryInt, polledServiceNames, newInt)
 	usedDiskOpsInts := syncStatsFields(p.usedDiskOpsInt, polledServiceNames, newInt)
 	usedNetworkInts := syncStatsFields(p.usedNetworkInt, polledServiceNames, newInt)
-	runningTimeFloats := syncStatsFields(p.runningTimeFloat, polledServiceNames, newFloat)
+	upTimeFloats := syncStatsFields(p.runningTimeFloat, polledServiceNames, newFloat)
 	maxMemoryFloats := syncStatsFields(p.maxMemoryFloat, polledServiceNames, newFloat)
 	restartCountFloats := syncStatsFields(p.restartCountFloat, polledServiceNames, newFloat)
 
@@ -278,12 +278,12 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 			),
 			newCacheMetricTask(
 				metric.ValueFloat,
-				metric.MetricServiceRunningTime,
+				metric.MetricServiceUpTime,
 				polledService.name(),
-				polledService.runningTime,
-				runningTimeFloats[polledServiceName],
-				func() float64 { return runningTimeFloats[polledServiceName].PulseLast() },
-				func() float64 { return runningTimeFloats[polledServiceName].TrendMax() },
+				polledService.upTime,
+				upTimeFloats[polledServiceName],
+				func() float64 { return upTimeFloats[polledServiceName].PulseLast() },
+				func() float64 { return upTimeFloats[polledServiceName].TrendMax() },
 				func(float64) bool { return healthyAndConfigured },
 				func(float64) bool { return healthyAndConfigured },
 			),
@@ -429,7 +429,7 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 		fetchedInspect, err := p.fetchInspect(ctx, dockerClient, serviceContainer.ID)
 		if err != nil {
 			service.healthStatusErr = err
-			service.runningTimeErr = err
+			service.upTimeErr = err
 			service.restartCountErr = err
 			service.versionErr = err
 		} else {
@@ -439,11 +439,11 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			} else {
 				service.healthStatusValue = healthStatusValue
 			}
-			runningTimeValue, runningTimeErr := p.runningTime(fetchedInspect)
-			if runningTimeErr != nil {
-				service.runningTimeErr = runningTimeErr
+			upTimeValue, upTimeErr := p.upTime(fetchedInspect)
+			if upTimeErr != nil {
+				service.upTimeErr = upTimeErr
 			} else {
-				service.runningTimeValue = runningTimeValue
+				service.upTimeValue = upTimeValue
 			}
 			restartCountValue, restartErr := p.restartCount(fetchedInspect)
 			if restartErr != nil {
@@ -515,8 +515,8 @@ type service struct {
 	usedProcessorErr      error
 	usedMemoryValue       int8
 	usedMemoryErr         error
-	runningTimeValue      float64
-	runningTimeErr        error
+	upTimeValue           float64
+	upTimeErr             error
 	restartCountValue     float64
 	restartCountErr       error
 }
@@ -569,8 +569,8 @@ func (s *service) usedNetwork() (int8, error) {
 	return 0, nil
 }
 
-func (s *service) runningTime() (float64, error) {
-	return s.runningTimeValue, s.runningTimeErr
+func (s *service) upTime() (float64, error) {
+	return s.upTimeValue, s.upTimeErr
 }
 
 func (s *service) maxMemory() (float64, error) {
@@ -722,7 +722,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 	return version, nil
 }
 
-func (p *servicesProbe) runningTime(containerInfo container.InspectResponse) (float64, error) {
+func (p *servicesProbe) upTime(containerInfo container.InspectResponse) (float64, error) {
 	if containerInfo.State == nil || containerInfo.State.StartedAt == "" {
 		return 0, errors.New("started at time not available")
 	}
@@ -730,11 +730,11 @@ func (p *servicesProbe) runningTime(containerInfo container.InspectResponse) (fl
 	if err != nil {
 		return 0, fmt.Errorf("parse start at time [%s] failed: %w", containerInfo.State.StartedAt, err)
 	}
-	runningTime := time.Since(startedAt).Seconds()
-	if runningTime < 0 {
+	upTime := time.Since(startedAt).Seconds()
+	if upTime < 0 {
 		return 0, errors.New("running time not available")
 	}
-	return runningTime, nil
+	return upTime, nil
 }
 
 const (

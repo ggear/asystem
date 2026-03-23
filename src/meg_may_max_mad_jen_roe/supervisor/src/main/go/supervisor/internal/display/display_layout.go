@@ -159,7 +159,7 @@ Used CPU [||] 100%    Fail SVC [||] 100%    Warn TEM [||] 100%    Used SYS [||] 
 Used RAM [| ]  39%    Fail SHR [||] 100%    Revs Fan [||] 100%    Used SHR [| ]  10%   ||
 Aloc RAM [| ]   1%    Fail BCK [| ]   4%    Life SSD [| ]   3%    Used BKP [| ]  10%   ||
 ------------------------------------------------------------------------------------   ||
-SERVICE          VERNUM          CPU            MEM       BKP  HLT  CFG  RST  RUNTME   ||
+SERVICE          VERNUM          CPU            MEM       BKP  HLT  CFG  RST  UPTIME   ||
 ------------------------------------------------------------------------------------   ||
 homeassistant 10.100.10001   [||||] 100%    [||||] 100%    -    -    -    0     156d   ||
 service2      10.100.10001   [||| ]  65%    [|   ]  11%    +    -    -    0      10y   ||
@@ -207,7 +207,7 @@ func relaxedDisplayLayout() [][]box {
 	l_5_5 := box{lblMid: "HLT", lblLhs: "  ", kind: boxLabel}
 	l_5_6 := box{lblMid: "CFG", lblLhs: "  ", kind: boxLabel}
 	l_5_7 := box{lblMid: "RST", lblLhs: "  ", kind: boxLabel}
-	l_5_8 := box{lblMid: "RUNTME", lblLhs: "  ", kind: boxLabel}
+	l_5_8 := box{lblMid: "UPTIME", lblLhs: "  ", kind: boxLabel}
 
 	d_X_0 := box{valLen: 13, lblRhs: " ", valAln: boxLhs, valOpt: true, valKind: valText, metricID: metric.MetricServiceName}
 	d_X_1 := box{valLen: 12, valOpt: true, valKind: valText, metricID: metric.MetricServiceVersion}
@@ -217,7 +217,7 @@ func relaxedDisplayLayout() [][]box {
 	d_X_5 := box{lblLhs: "   ", lblRhs: " ", valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceHealthStatus}
 	d_X_6 := box{lblLhs: "   ", lblRhs: " ", valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceConfiguredStatus}
 	d_X_7 := box{lblLhs: "   ", lblRhs: " ", valLen: 1, valOpt: true, metricID: metric.MetricServiceRestartCount}
-	d_X_8 := box{lblLhs: "   ", valLen: 4, valOpt: true, valKind: valTime, metricID: metric.MetricServiceRunningTime}
+	d_X_8 := box{lblLhs: "   ", valLen: 4, valOpt: true, valKind: valTime, metricID: metric.MetricServiceUpTime}
 
 	s_X_7 := box{lblLhs: " ", kind: boxSpacr}
 
