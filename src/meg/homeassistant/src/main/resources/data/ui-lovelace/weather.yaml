@@ -42,6 +42,12 @@
   locale: en-AU
   time_format: 24
   weather_icon_type: fill
+  tap_action:
+    action: none
+  hold_action:
+    action: none
+  double_tap_action:
+    action: none
 - type: 'custom:weather-radar-card'
   data_source: 'RainViewer-Original'
   map_style: 'light'
@@ -67,6 +73,7 @@
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
   bushfire_sensor_prefix: sensor.bom_darlington_fire_danger
+  bushfire_alerts_sensor: sensor.dfes_incidents_metro_south_east_any
   forecast_rows: 4
   forecast_type: bushfire_daily
   show_forecast: true
@@ -76,12 +83,12 @@
   locale: en-AU
   time_format: 24
   weather_icon_type: fill
-- type: markdown
-  content: |
-    {% if states['sensor.dfes_incidents_metro_south_east_any'] is not none %}{% set attrs = states['sensor.dfes_incidents_metro_south_east_any'].attributes %}{% endif %}| Incident | Details | Distance |
-    |---|---|---|
-    {% if states['sensor.dfes_incidents_metro_south_east_any'] is not none %}{% for key, value in attrs.items() if key not in ['friendly_name', 'icon', 'unit_of_measurement'] %}{% set parts = key.split('(') %}{% set incident = parts[0].strip() %}{% set details = parts[1].rstrip(')').strip() if parts|length > 1 else '' %}| {{ incident }} | {{ details }} | {{ value }} |
-    {% endfor %}{% endif %}
+  tap_action:
+    action: none
+  hold_action:
+    action: none
+  double_tap_action:
+    action: none
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -98,6 +105,12 @@
   locale: en-AU
   time_format: 24
   weather_icon_type: fill
+  tap_action:
+    action: none
+  hold_action:
+    action: none
+  double_tap_action:
+    action: none
 
 #################################################################################
 #- type: custom:mini-graph-card
