@@ -346,7 +346,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
       <clock-weather-card-today-right>
         <clock-weather-card-today-right-wrap style="width: 100%; padding-right: ${e}rem; box-sizing: border-box;">
           <clock-weather-card-today-right-wrap-top>
-            Bush fire risk is ${o} today.<br>${l}
+            Bush fire risk is ${o.toLowerCase()} today.<br>${l}
           </clock-weather-card-today-right-wrap-top>
           <clock-weather-card-today-right-wrap-center style="justify-content: end;">
             ${o}
