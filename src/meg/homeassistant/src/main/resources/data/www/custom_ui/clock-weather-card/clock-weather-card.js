@@ -346,7 +346,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
       <clock-weather-card-today-right>
         <clock-weather-card-today-right-wrap style="width: 100%; padding-right: ${e}rem; box-sizing: border-box;">
           <clock-weather-card-today-right-wrap-top>
-            Bush fire risk is ${o} today,<br>${l}
+            Bush fire risk is ${o} today.<br>${l}
           </clock-weather-card-today-right-wrap-top>
           <clock-weather-card-today-right-wrap-center style="justify-content: end;">
             ${o}
@@ -355,7 +355,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
             ${this.config.hide_date?"":this.date()}
           </clock-weather-card-today-right-wrap-bottom>
         </clock-weather-card-today-right-wrap>
-      </clock-weather-card-today-right>`}getBushfireDescription(e){const t=e.toLowerCase();return"no rating"===t?"nothing to worry about!":"moderate"===t?"plan and prepare":"high"===t?"be ready to act":"extreme"===t?"high vigilance, be ready to act":"catastrophic"===t?"high vigilance, consider leaving home":""}renderBushfireForecast(){var e;const t=this.config.bushfire_sensor_prefix;if(!t)return[];const i=this.config.forecast_rows,r=[];for(let a=0;a<i;a++){const i=null!==(e=this.getStringState(`${t}${a}`))&&void 0!==e?e:"";r.push({rating:i})}const a=this.mergeForecasts(i,!1),s=a.map((e=>e.datetime)).map((e=>this.localize(`day.${e.weekday}`))),n=this.getMaxColOneChars(),{minTemp:o,maxTemp:l}=this.getGlobalTempRange(),c=this.getMaxTempChars(o,l);return r.map(((e,t)=>Yr((()=>{var i;return this.renderBushfireForecastItem(e,a[t],null!==(i=s[t])&&void 0!==i?i:"",n,c)}))))}renderBushfireForecastItem(e,t,i,r,a){const s=t?"pouring"===t.condition?"raindrops":"rainy"===t.condition?"raindrop":t.condition:"sunny",n=this.toIcon(s,"fill","day","static");return D`
+      </clock-weather-card-today-right>`}getBushfireDescription(e){const t=e.toLowerCase();return"no rating"===t?"Nothing to worry about!":"moderate"===t?"Plan and prepare":"high"===t?"Be ready to act":"extreme"===t?"High vigilance, be ready to act":"catastrophic"===t?"High vigilance, consider leaving home":""}renderBushfireForecast(){var e;const t=this.config.bushfire_sensor_prefix;if(!t)return[];const i=this.config.forecast_rows,r=[];for(let a=0;a<i;a++){const i=null!==(e=this.getStringState(`${t}${a}`))&&void 0!==e?e:"";r.push({rating:i})}const a=this.mergeForecasts(i,!1),s=a.map((e=>e.datetime)).map((e=>this.localize(`day.${e.weekday}`))),n=this.getMaxColOneChars(),{minTemp:o,maxTemp:l}=this.getGlobalTempRange(),c=this.getMaxTempChars(o,l);return r.map(((e,t)=>Yr((()=>{var i;return this.renderBushfireForecastItem(e,a[t],null!==(i=s[t])&&void 0!==i?i:"",n,c)}))))}renderBushfireForecastItem(e,t,i,r,a){const s=t?"pouring"===t.condition?"raindrops":"rainy"===t.condition?"raindrop":t.condition:"sunny",n=this.toIcon(s,"fill","day","static");return D`
       <clock-weather-card-forecast-row style="--col-one-size: ${.5*r}rem; --temp-col-size: ${.5*a}rem;">
         ${this.renderText(i)}
         ${this.renderIcon(n)}
