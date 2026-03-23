@@ -379,7 +379,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
         <clock-weather-card-today-right>
           <clock-weather-card-today-right-wrap style="width: 100%; padding-right: ${e}rem; box-sizing: border-box;">
             <clock-weather-card-today-right-wrap-top>
-              <a href="https://www.emergency.wa.gov.au/?view=both" target="_blank" rel="noopener noreferrer" style="color: var(--primary-text-color);" @click=${e=>{e.stopPropagation()}}>DFES Emergency Warnings</a><br>Bushfire within 30km of home
+              <a href="https://www.emergency.wa.gov.au/?view=both" style="color: var(--primary-text-color);" @click=${e=>{e.preventDefault(),e.stopPropagation(),window.open("https://www.emergency.wa.gov.au/?view=both","_blank")}}>DFES Emergency Warnings</a><br>Bushfire within 30km of home
             </clock-weather-card-today-right-wrap-top>
             <clock-weather-card-today-right-wrap-center style="justify-content: end;">
               Bushfire Alert
