@@ -66,6 +66,27 @@
 ################################################################################
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
+  bushfire_sensor_prefix: sensor.bom_darlington_fire_danger
+  forecast_rows: 4
+  forecast_type: bushfire_daily
+  show_forecast: true
+  hide_clock: true
+  hide_date: true
+  show_decimal: true
+  locale: en-AU
+  time_format: 24
+  weather_icon_type: fill
+- type: markdown
+  content: |
+    {% if states['sensor.dfes_incidents_metro_south_east_any'] is not none %}{% set attrs = states['sensor.dfes_incidents_metro_south_east_any'].attributes %}{% endif %}| Incident | Details | Distance |
+    |---|---|---|
+    {% if states['sensor.dfes_incidents_metro_south_east_any'] is not none %}{% for key, value in attrs.items() if key not in ['friendly_name', 'icon', 'unit_of_measurement'] %}{% set parts = key.split('(') %}{% set incident = parts[0].strip() %}{% set details = parts[1].rstrip(')').strip() if parts|length > 1 else '' %}| {{ incident }} | {{ details }} | {{ value }} |
+    {% endfor %}{% endif %}
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: custom:clock-weather-card
+  entity: weather.bom_darlington
   today_description_sensor: sensor.bom_darlington_uv_forecast_0
   uv_sensor_prefix: sensor.bom_darlington_uv
   forecast_rows: 4
@@ -77,8 +98,6 @@
   locale: en-AU
   time_format: 24
   weather_icon_type: fill
-
-
 
 #################################################################################
 #- type: custom:mini-graph-card
