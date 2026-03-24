@@ -92,7 +92,7 @@
 - type: custom:windrose-card
   windspeed_bar_location: right
   data_period:
-    period_back: -200h
+    period_back: -48h
   wind_direction_entity:
     entity: sensor.roof_wind_direction
   windspeed_entities:

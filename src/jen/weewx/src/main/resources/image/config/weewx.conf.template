@@ -536,12 +536,11 @@ version = 5.0.2
 #   This section can adjust data using calibration expressions.
 
 [StdCalibrate]
-
     [[Corrections]]
         # For each type, an arbitrary calibration expression can be given.
         # It should be in the units defined in the StdConvert section.
         # Example:
-        foo = foo + 0.2
+        windDir = (windDir - 90) % 360
 
 ##############################################################################
 
