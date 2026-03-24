@@ -1,0 +1,10 @@
+{
+  "domain": "willywindforecast",
+  "name": "Willy Wind Forecast",
+  "codeowners": [],
+  "dependencies": [],
+  "documentation": "https://github.com/ggear/willywindforecast-hass-component/",
+  "iot_class": "cloud_polling",
+  "requirements": ["requests"],
+  "version": "0.1.0"
+}

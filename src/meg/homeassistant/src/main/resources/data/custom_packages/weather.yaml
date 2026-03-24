@@ -3,3 +3,4 @@ sensor:
     name: DFES Incidents Metro South East
     radius: 30
     url: https://api.emergency.wa.gov.au/v1/rss/incidents?region=METRO%20NORTH%20EAST
+
