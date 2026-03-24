@@ -119,9 +119,9 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/weather-radar-card/weather-radar-card.js?v=v2.1.1'
       type: 'module'
-    - url: '/local/custom_ui/windrose-card/windrose-card.js?v=v2.3.0-CUSTOM-100'
+    - url: '/local/custom_ui/windrose-card/windrose-card.js?v=v2.3.0-CUSTOM-101'
       type: 'module'
-    - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-115'
+    - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-116'
       type: 'module'
   dashboards:
     lovelace:
