@@ -49,7 +49,7 @@
   double_tap_action:
     action: none
 - type: 'custom:weather-radar-card'
-  data_source: 'RainViewer-Original'
+  data_source: 'RainViewer-UniversalBlue'
   map_style: 'light'
   frame_count: 10
   frame_delay: 500
@@ -67,6 +67,57 @@
   show_radar_coverage: false
   show_radar_location: true
   zoom_level: 6
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: custom:clock-weather-card
+  entity: weather.bom_darlington
+  wind_sensor: sensor.roof_wind_gust_speed
+  wind_sensor_prefix: sensor.willy_wind_forecast
+  forecast_rows: 7
+  forecast_type: wind_daily
+  show_forecast: true
+  hide_clock: true
+  hide_date: true
+  show_decimal: true
+  locale: en-AU
+  time_format: 24
+  weather_icon_type: fill
+  tap_action:
+    action: none
+  hold_action:
+    action: none
+  double_tap_action:
+    action: none
+- type: custom:windrose-card
+  windspeed_bar_location: right
+  data_period:
+    period_back: -200h
+  wind_direction_entity:
+    entity: sensor.roof_wind_direction
+  windspeed_entities:
+    - entity: sensor.roof_wind_speed
+      name: Speed
+      windspeed_bar_full: false
+      speed_range_beaufort: false
+      speed_ranges:
+        - from_value: 0
+          color: '#a5d6a7'
+        - from_value: 5
+          color: '#66bb6a'
+        - from_value: 10
+          color: '#43a047'
+        - from_value: 15
+          color: '#2e7d32'
+        - from_value: 20
+          color: '#1b5e20'
+  current_direction:
+    show_arrow: true
+  direction_labels:
+    show_intercardinal_directions: true
+    show_secondary_intercardinal_directions: true
+  matching_strategy:
+    log_measurement_counts: false
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -94,7 +145,6 @@
 ################################################################################
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
-  today_description_sensor: sensor.bom_darlington_uv_forecast_0
   uv_sensor_prefix: sensor.bom_darlington_uv
   forecast_rows: 4
   forecast_type: uv_daily

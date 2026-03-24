@@ -97,10 +97,7 @@ mqtt:
 #    retain: true
 #######################################################################################
 
-willywindforecast:
-  api_key: !env_var HOMEASSISTANT_WILLYWIND_API_KEY
-  forecast_days: 7
-  poll_period_hours: 3
+
 #######################################################################################
 google_assistant:
   project_id: 'home-assistant-31854'
@@ -121,6 +118,8 @@ lovelace:
     - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.13.0'
       type: 'module'
     - url: '/local/custom_ui/weather-radar-card/weather-radar-card.js?v=v2.1.1'
+      type: 'module'
+    - url: '/local/custom_ui/windrose-card/windrose-card.js?v=v2.3.0-CUSTOM-100'
       type: 'module'
     - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-115'
       type: 'module'

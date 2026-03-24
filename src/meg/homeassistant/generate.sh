@@ -27,6 +27,15 @@ npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card" run b
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/weather-radar-card/dist/"* "${ROOT_DIR}/src/main/resources/data/www/custom_ui/weather-radar-card"
 sed -i '' 's/\/local\/community/\/local\/custom_ui/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/weather-radar-card/weather-radar-card.js"
 
+# NOTES: https://github.com/aukedejong/lovelace-windrose-card/releases
+VERSION=v2.3.0
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "windrose-card" "ggear/windrose-card" "ggear-patches" "https://github.com/aukedejong/lovelace-windrose-card.git" "${VERSION}"
+rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card"
+mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card"
+npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" install
+npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" run build
+cp "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card/dist/windrose-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card/windrose-card.js"
+
 # NOTES: https://github.com/thomasloven/lovelace-card-mod/releases
 VERSION=v4.2.1
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-card-mod" "thomasloven/lovelace-card-mod" "${VERSION}"
@@ -63,7 +72,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/ha_bom_australia-component/custom_components/ha_bom_australia" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/ggear/willywindforecast-hass-component.git
-VERSION=0.1.2
+VERSION=0.1.3
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "willywindforecast-hass-component" "ggear/willywindforecast-hass-component" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/willywindforecast"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
