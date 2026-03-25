@@ -82,9 +82,9 @@ def _fetch_forecast(api_key: str, location_id: int, forecast_days: int) -> dict:
     return resp.json()
 
 
-def _compute_dominant_direction(entries: list[dict]) -> tuple[float, str]:
+def _compute_dominant_direction(entries: list[dict]) -> tuple[float, str, str]:
     if not entries:
-        return (0.0, "N")
+        return (0.0, "N", "Northerly")
     sin_sum = 0.0
     cos_sum = 0.0
     for entry in entries:
@@ -101,8 +101,19 @@ def _compute_dominant_direction(entries: list[dict]) -> tuple[float, str]:
         (180, "S"), (202.5, "SSW"), (225, "SW"), (247.5, "WSW"),
         (270, "W"), (292.5, "WNW"), (315, "NW"), (337.5, "NNW"),
     ]
+    abbrev_to_name = {
+        "N": "Northerly", "NNE": "North-North-Easterly",
+        "NE": "North-Easterly", "ENE": "East-North-Easterly",
+        "E": "Easterly", "ESE": "East-South-Easterly",
+        "SE": "South-Easterly", "SSE": "South-South-Easterly",
+        "S": "Southerly", "SSW": "South-South-Westerly",
+        "SW": "South-Westerly", "WSW": "West-South-Westerly",
+        "W": "Westerly", "WNW": "West-North-Westerly",
+        "NW": "North-Westerly", "NNW": "North-North-Westerly",
+    }
     closest = min(directions, key=lambda d: min(abs(d[0] - avg_deg), 360 - abs(d[0] - avg_deg)))
-    return (round(avg_deg, 1), closest[1])
+    abbrev = closest[1]
+    return (round(avg_deg, 1), abbrev, abbrev_to_name[abbrev])
 
 
 def _process_forecast(data: dict) -> list[dict]:
@@ -116,15 +127,17 @@ def _process_forecast(data: dict) -> list[dict]:
                 "speed_min": None,
                 "dominant_direction": None,
                 "dominant_direction_text": None,
+                "dominant_direction_abbreviation": None,
             })
             continue
         speeds = [e["speed"] for e in entries]
-        direction, direction_text = _compute_dominant_direction(entries)
+        direction, direction_abbrev, direction_name = _compute_dominant_direction(entries)
         result.append({
             "speed_max": max(speeds),
             "speed_min": min(speeds),
             "dominant_direction": direction,
-            "dominant_direction_text": direction_text,
+            "dominant_direction_text": direction_name,
+            "dominant_direction_abbreviation": direction_abbrev,
         })
     return result
 

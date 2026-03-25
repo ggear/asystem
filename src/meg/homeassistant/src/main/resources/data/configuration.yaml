@@ -117,11 +117,11 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.13.0'
       type: 'module'
-    - url: '/local/custom_ui/weather-radar-card/weather-radar-card.js?v=v2.1.1-CUSTOM-100'
+    - url: '/local/custom_ui/weather-radar-card/weather-radar-card.js?v=v2.1.1-CUSTOM-102'
       type: 'module'
-    - url: '/local/custom_ui/windrose-card/windrose-card.js?v=v2.3.0-CUSTOM-102'
+    - url: '/local/custom_ui/windrose-card/windrose-card.js?v=v2.3.0-CUSTOM-104'
       type: 'module'
-    - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-117'
+    - url: '/local/custom_ui/clock-weather-card/clock-weather-card.js?v=v2.9.2-CUSTOM-119'
       type: 'module'
   dashboards:
     lovelace:

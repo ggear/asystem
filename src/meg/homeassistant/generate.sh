@@ -72,7 +72,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/ha_bom_australia-component/custom_components/ha_bom_australia" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/ggear/willywindforecast-hass-component/tags
-VERSION=0.1.0
+VERSION=0.1.3
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "willywindforecast-hass-component" "ggear/willywindforecast-hass-component" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/willywindforecast"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
