@@ -2,7 +2,7 @@
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
   temperature_sensor: sensor.compensation_sensor_roof_temperature
-  today_description_sensor: sensor.bom_darlington_extended_text_0
+  today_description_sensor: sensor.bom_darlington_short_text_0
   forecast_rows: 7
   forecast_type: temp_daily
   show_forecast: true
