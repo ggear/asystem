@@ -1,11 +1,12 @@
+#######################################################################################
 willywindforecast:
   api_key: !env_var HOMEASSISTANT_WILLY_WEATHER_KEY
   forecast_days: 7
   poll_period_hours: 3
-
+#######################################################################################
 sensor:
   - platform: geo_rss_events
     name: DFES Incidents Metro South East
     radius: 30
     url: https://api.emergency.wa.gov.au/v1/rss/incidents?region=METRO%20NORTH%20EAST
-
+#######################################################################################

@@ -32,6 +32,7 @@
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
   rain_sensor: sensor.roof_daily_rain
+  rain_rate_sensor: sensor.roof_rain_rate
   rain_sensor_prefix: sensor.bom_darlington_rain
   forecast_rows: 7
   forecast_type: rain_daily
@@ -91,13 +92,15 @@
     action: none
 - type: custom:windrose-card
   windspeed_bar_location: right
+  input_speed_unit: kph
   data_period:
-    period_back: -48h
+    period_back: -24h
   wind_direction_entity:
     entity: sensor.roof_wind_direction
   windspeed_entities:
     - entity: sensor.roof_wind_speed
       name: Speed
+      output_speed_unit: kph
       windspeed_bar_full: false
       speed_range_beaufort: false
       speed_ranges:

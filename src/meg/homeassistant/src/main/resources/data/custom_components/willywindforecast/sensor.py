@@ -24,7 +24,6 @@ def setup_platform(
         entities.append(WillyWindForecastSensor(day_index, "speed_min", "km/h"))
         entities.append(WillyWindForecastSensor(day_index, "dominant_direction", "°"))
         entities.append(WillyWindForecastSensor(day_index, "dominant_direction_text", None))
-        entities.append(WillyWindForecastSensor(day_index, "dominant_direction_abbreviation", None))
     add_entities(entities)
 
 
