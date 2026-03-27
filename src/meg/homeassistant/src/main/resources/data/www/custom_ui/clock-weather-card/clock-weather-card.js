@@ -285,7 +285,7 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
       <forecast-icon>
         <img class="grow-img" src=${e} />
       </forecast-icon>
-    `}renderForecastTemperatureBar(e,t,i,r,a,s,n){const{startPercent:o,endPercent:l}=this.calculateBarRangePercents(e,t,i,r);return D`
+    `}renderForecastTemperatureBar(e,t,i,r,a,s,n){let{startPercent:o,endPercent:l}=this.calculateBarRangePercents(e,t,i,r);if(l-o<10){const e=(o+l)/2;o=Math.max(0,e-5),l=Math.min(100,o+10)}return D`
       <forecast-temperature-bar>
         <forecast-temperature-bar-background> </forecast-temperature-bar-background>
         <forecast-temperature-bar-range
@@ -307,16 +307,16 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
         ${this.renderRainBar(t,e.min,e.max,o,l,e.chance)}
         <forecast-text>${e.max} <span class="value-unit">mm</span></forecast-text>
       </clock-weather-card-forecast-row>
-    `}renderRainBar(e,t,i,r,a,s){const n=s>0&&i>0,{startPercent:o,endPercent:l}=this.calculateBarRangePercents(0,e,t,i),c=0===e?0:t/e,d=this.createRainGradientString(t,i,e),h=null!==a?Math.max(t,Math.min(i,a)):null,u=r&&null!==h;return D`
+    `}renderRainBar(e,t,i,r,a,s){const n=s>0&&i>0;let{startPercent:o,endPercent:l}=this.calculateBarRangePercents(0,e,t,i);if(n&&l-o<10){const e=(o+l)/2;o=Math.max(0,e-5),l=Math.min(100,o+10)}const c=0===e?0:t/e,d=this.createRainGradientString(t,i,e),h=r&&null!==a;return D`
       <forecast-temperature-bar>
         <forecast-temperature-bar-background> </forecast-temperature-bar-background>
         ${n?D`<forecast-temperature-bar-range
               style="--move-right: ${c.toFixed(2)}; --start-percent: ${o.toFixed(2)}%; --end-percent: ${l.toFixed(2)}%; --gradient: ${d};"
             >
-              ${u?this.renderForecastCurrentTemp(t,i,h):""}
-            </forecast-temperature-bar-range>`:D`${u?this.renderForecastCurrentTemp(0,e,h):""}`}
+            </forecast-temperature-bar-range>`:""}
+        ${h?this.renderForecastCurrentTemp(0,e,a):""}
       </forecast-temperature-bar>
-    `}createRainGradientString(e,t,i){const r=new be(174,210,230),a=new be(40,120,180);function s(e){return new be(Math.round(r.r+e*(a.r-r.r)),Math.round(r.g+e*(a.g-r.g)),Math.round(r.b+e*(a.b-r.b)))}if(e===t){const t=s(i>0?e/i:0);return`${t.toRgbString()} 0%, ${t.toRgbString()} 100%`}const n=s(i>0?e/i:0),o=s(i>0?t/i:0);return`${n.toRgbString()} 0%, ${o.toRgbString()} 100%`}getNumericState(e){const t=this.hass.states[e],i=(null==t?void 0:t.state)?parseFloat(t.state):void 0;return void 0===i||isNaN(i)?null:i}getTodayDescription(e){var t,i,r;let a=e;const s=null!==(t=this.config.today_description_sensor)&&void 0!==t?t:"uv_daily"===this.config.forecast_type&&this.config.uv_sensor_prefix?`${this.config.uv_sensor_prefix}forecast_0`:void 0;s&&(a=null!==(r=null!==(i=this.getStringState(s))&&void 0!==i?i:s.endsWith("_0")?this.getStringState(s.replace(/_0$/,"_1")):null)&&void 0!==r?r:e),a=a.trim().replace(/^\.+|\.+$/g,"").trim(),a.length>75&&(a=a.split(",")[0].trim().replace(/^\.+|\.+$/g,"").trim()),a.length>75&&(a=a.substring(0,72).trim().replace(/^\.+|\.+$/g,"").trim().replace(/[^a-zA-Z0-9]+$/,"")+" ..."),a.length<30&&!a.includes("\n")&&(a+="\nLooks good, have fun!");const n=a.split("\n");return n.length>1?D`${n[0]}<br>${n.slice(1).join(" ")}`:D`${a}`}getStringState(e){const t=this.hass.states[e];return(null==t?void 0:t.state)&&"unknown"!==t.state&&"unavailable"!==t.state?t.state:null}renderTodayUv(){var e,t,i;const r=this.getWeather().state,a=this.config.weather_icon_type,s=this.getWeatherStateWithRainOverride(r),n=this.toIcon(s,a,void 0,this.getIconAnimationKind()),o=null!==(e=this.config.uv_sensor_prefix)&&void 0!==e?e:"",l=null!==(i=null!==(t=this.getStringState(`${o}category_0`))&&void 0!==t?t:this.getStringState(`${o}category_1`))&&void 0!==i?i:"n/a",c=this.localize(`weather.${r}`);return D`
+    `}createRainGradientString(e,t,i){const r=new be(174,210,230),a=new be(40,120,180);function s(e){return new be(Math.round(r.r+e*(a.r-r.r)),Math.round(r.g+e*(a.g-r.g)),Math.round(r.b+e*(a.b-r.b)))}if(e===t){const t=s(i>0?e/i:0);return`${t.toRgbString()} 0%, ${t.toRgbString()} 100%`}const n=s(i>0?e/i:0),o=s(i>0?t/i:0);return`${n.toRgbString()} 0%, ${o.toRgbString()} 100%`}getNumericState(e){const t=this.hass.states[e],i=(null==t?void 0:t.state)?parseFloat(t.state):void 0;return void 0===i||isNaN(i)?null:i}getTodayDescription(e){var t,i,r;let a=e;const s=null!==(t=this.config.today_description_sensor)&&void 0!==t?t:"uv_daily"===this.config.forecast_type&&this.config.uv_sensor_prefix?`${this.config.uv_sensor_prefix}forecast_0`:void 0;s&&(a=null!==(r=null!==(i=this.getStringState(s))&&void 0!==i?i:s.endsWith("_0")?this.getStringState(s.replace(/_0$/,"_1")):null)&&void 0!==r?r:e),a=a.trim().replace(/^\.+|\.+$/g,"").trim(),a.length>75&&(a=a.split(",")[0].trim().replace(/^\.+|\.+$/g,"").trim()),a.length>75&&(a=a.substring(0,72).trim().replace(/^\.+|\.+$/g,"").trim().replace(/[^a-zA-Z0-9]+$/,"")+" ..."),a.length<30&&!a.includes("\n")&&("temp_daily"!==this.config.forecast_type&&"temp_hourly"!==this.config.forecast_type||!a.toLowerCase().includes("storm")?"rain_daily"===this.config.forecast_type&&a.toLowerCase().includes("rain")?a+="\nRain, rain, don't go away, we need you!":a+="\nLooks good, have fun!":a+="\nStormy ... snuggle up!");const n=a.split("\n");return n.length>1?D`${n[0]}<br>${n.slice(1).join(" ")}`:D`${a}`}getStringState(e){const t=this.hass.states[e];return(null==t?void 0:t.state)&&"unknown"!==t.state&&"unavailable"!==t.state?t.state:null}renderTodayUv(){var e,t,i;const r=this.getWeather().state,a=this.config.weather_icon_type,s=this.getWeatherStateWithRainOverride(r),n=this.toIcon(s,a,void 0,this.getIconAnimationKind()),o=null!==(e=this.config.uv_sensor_prefix)&&void 0!==e?e:"",l=null!==(i=null!==(t=this.getStringState(`${o}category_0`))&&void 0!==t?t:this.getStringState(`${o}category_1`))&&void 0!==i?i:"n/a",c=this.localize(`weather.${r}`);return D`
       <clock-weather-card-today-left>
         <img class="grow-img" src=${n} />
       </clock-weather-card-today-left>
@@ -406,14 +406,14 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
         ${this.renderWindBar(t,e.min,e.max,o,l)}
         ${this.renderText(e.direction)}
       </clock-weather-card-forecast-row>
-    `}renderWindBar(e,t,i,r,a){const s=i>0,{startPercent:n,endPercent:o}=this.calculateBarRangePercents(0,e,t,i),l=0===e?0:t/e,c=this.createWindGradientString(t,i,e),d=null!==a?Math.max(t,Math.min(i,a)):null,h=r&&null!==d;return D`
+    `}renderWindBar(e,t,i,r,a){const s=i>0;let{startPercent:n,endPercent:o}=this.calculateBarRangePercents(0,e,t,i);if(s&&o-n<10){const e=(n+o)/2;n=Math.max(0,e-5),o=Math.min(100,n+10)}const l=0===e?0:t/e,c=this.createWindGradientString(t,i,e),d=r&&null!==a;return D`
       <forecast-temperature-bar>
         <forecast-temperature-bar-background> </forecast-temperature-bar-background>
         ${s?D`<forecast-temperature-bar-range
               style="--move-right: ${l.toFixed(2)}; --start-percent: ${n.toFixed(2)}%; --end-percent: ${o.toFixed(2)}%; --gradient: ${c};"
             >
-              ${h?this.renderForecastCurrentTemp(t,i,d):""}
-            </forecast-temperature-bar-range>`:D`${h?this.renderForecastCurrentTemp(0,e,d):""}`}
+            </forecast-temperature-bar-range>`:""}
+        ${d?this.renderForecastCurrentTemp(0,e,a):""}
       </forecast-temperature-bar>
     `}createWindGradientString(e,t,i){const r=new be(174,230,190),a=new be(40,140,60);function s(e){return new be(Math.round(r.r+e*(a.r-r.r)),Math.round(r.g+e*(a.g-r.g)),Math.round(r.b+e*(a.b-r.b)))}if(e===t){const t=s(i>0?e/i:0);return`${t.toRgbString()} 0%, ${t.toRgbString()} 100%`}const n=s(i>0?e/i:0),o=s(i>0?t/i:0);return`${n.toRgbString()} 0%, ${o.toRgbString()} 100%`}renderBushfireAlerts(){const e=this.config.bushfire_alerts_sensor;if(!e)return D``;const t=this.hass.states[e];if(!t)return D``;const i=t.attributes,r=[];for(const[e,t]of Object.entries(i)){if(["friendly_name","icon","unit_of_measurement"].includes(e))continue;const i=e.split("("),a=i[0].trim();if("bushfire"!==a.toLowerCase())continue;const s=i.length>1?i[1].replace(/\)$/,"").trim():"",n=s.split(","),o=n.length>2?[n.slice(0,2).join(",").trim(),n.slice(2).join(",").trim()]:[s];r.push({incident:a,detailLines:o,distance:String(t)})}return 0===r.length?D``:D`
       <clock-weather-card-today style="margin-top: 0.5rem;">

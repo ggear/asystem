@@ -73,7 +73,7 @@
 ################################################################################
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
-  wind_sensor: sensor.roof_wind_gust_speed
+  wind_sensor: sensor.roof_wind_speed
   wind_sensor_prefix: sensor.willy_wind_forecast
   forecast_rows: 7
   forecast_type: wind_daily
