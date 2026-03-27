@@ -119,6 +119,8 @@
   direction_labels:
     show_intercardinal_directions: true
     show_secondary_intercardinal_directions: true
+  rose_config:
+    show_circle_legend: false
   matching_strategy:
     log_measurement_counts: false
 ################################################################################
