@@ -16,6 +16,15 @@ yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install
 yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build
 cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
 
+# NOTES: https://github.com/ashtonau/bom-radar-card/releases
+VERSION=v1.0.0
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "ggear/bom-radar-card" "ggear-patches" "https://github.com/ashtonau/bom-radar-card.git" "${VERSION}"
+rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
+mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
+npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" install
+npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" run build
+cp "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/bom-radar-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/bom-radar-card.js"
+
 # NOTES: https://github.com/Makin-Things/weather-radar-card/releases
 VERSION=v2.1.1
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "weather-radar-card" "ggear/weather-radar-card" "ggear-patches" "https://github.com/Makin-Things/weather-radar-card.git" "${VERSION}"

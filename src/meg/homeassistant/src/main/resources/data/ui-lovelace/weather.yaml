@@ -49,25 +49,18 @@
     action: none
   double_tap_action:
     action: none
-- type: 'custom:weather-radar-card'
-  data_source: 'RainViewer-UniversalBlue'
-  map_style: 'light'
-  frame_count: 10
-  frame_delay: 500
+- type: custom:bom-radar-card
+  zoom_level: 8
+  layer: rain_rate
+  map_height: 550
+  radar_opacity: 0.7
+  frame_count: 9
+  frame_delay: 750
   restart_delay: 4000
-  center_latitude: -31.918381
-  center_longitude: 116.079391
-  marker_latitude: -31.918381
-  marker_longitude: 116.079391
   show_marker: true
-  show_range: true
-  show_scale: true
   show_zoom: true
-  show_recenter: true
   show_playback: true
-  show_radar_coverage: false
-  show_radar_location: true
-  zoom_level: 6
+  dark_basemap: false
 ################################################################################
 - type: custom:layout-break
 ################################################################################

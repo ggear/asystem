@@ -117,7 +117,7 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.13.0'
       type: 'module'
-    - url: '/local/custom_ui/weather-radar-card/weather-radar-card.js?v=v2.1.1-CUSTOM-104'
+    - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v1.0.0-CUSTOM-101'
       type: 'module'
     - url: '/local/custom_ui/windrose-card/windrose-card.js?v=v2.3.0-CUSTOM-105'
       type: 'module'
