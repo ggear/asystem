@@ -253,9 +253,9 @@ const ne=(e,t)=>"method"===t.kind&&t.descriptor&&!("value"in t.descriptor)?{...t
             ${this.config.hide_date?"":this.date()}
           </clock-weather-card-today-right-wrap-bottom>
         </clock-weather-card-today-right-wrap>
-      </clock-weather-card-today-right>`}renderTodayRain(){var e,t;const i=this.getWeather().state,r=this.config.weather_icon_type,s=this.getIconState(i),a=this.toIcon(s,r,void 0,this.getIconAnimationKind()),n=this.config.rain_sensor_prefix&&null!==(e=this.getNumericState(`${this.config.rain_sensor_prefix}chance_0`))&&void 0!==e?e:0,o=this.getRainDescription(n),l=this.getCurrentRainValue();return D`
+      </clock-weather-card-today-right>`}renderTodayRain(){var e,t;const i=this.getWeather().state,r=this.config.weather_icon_type,s=this.config.rain_sensor_prefix&&null!==(e=this.getNumericState(`${this.config.rain_sensor_prefix}chance_0`))&&void 0!==e?e:0,a=s>80?"raindrops":s>0?"raindrop":this.getIconState(i),n=this.toIcon(a,r,void 0,this.getIconAnimationKind()),o=this.getRainDescription(s),l=this.getCurrentRainValue();return D`
       <clock-weather-card-today-left>
-        <img class="grow-img" src=${a} />
+        <img class="grow-img" src=${n} />
       </clock-weather-card-today-left>
       <clock-weather-card-today-right>
         <clock-weather-card-today-right-wrap style="width: 100%; padding-right: 0.5rem; box-sizing: border-box;">
