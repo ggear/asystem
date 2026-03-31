@@ -9,7 +9,9 @@ services:
       - Name=JaneAndGraham
       - ListenPort=${OPENRA_API_PORT}
       - Password=${OPENRA_TOKEN}
-      - Mod=d2k
+      - Mod=ra
+      #- Mod=d2k
+      #- Mod=cnc
       - Map=
       - AdvertiseOnline=False
       - RecordReplays=False

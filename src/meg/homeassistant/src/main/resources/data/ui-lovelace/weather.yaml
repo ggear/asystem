@@ -1,6 +1,7 @@
 ################################################################################
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
+  icon_descriptor_sensor: sensor.bom_darlington_icon_descriptor_0
   temperature_sensor: sensor.compensation_sensor_roof_temperature
   today_description_sensor: sensor.bom_darlington_short_text_0
   forecast_rows: 7
@@ -14,6 +15,7 @@
   weather_icon_type: fill
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
+  icon_descriptor_sensor: sensor.bom_darlington_icon_descriptor_0
   forecast_rows: 25
   forecast_type: temp_hourly
   show_forecast: true
@@ -31,6 +33,7 @@
 ################################################################################
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
+  icon_descriptor_sensor: sensor.bom_darlington_icon_descriptor_0
   rain_sensor: sensor.roof_daily_rain
   rain_rate_sensor: sensor.roof_rain_rate
   rain_sensor_prefix: sensor.bom_darlington_rain
@@ -65,6 +68,7 @@
 ################################################################################
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
+  icon_descriptor_sensor: sensor.bom_darlington_icon_descriptor_0
   wind_sensor: sensor.roof_wind_speed
   wind_sensor_prefix: sensor.willy_wind_forecast
   forecast_rows: 7
@@ -120,6 +124,7 @@
 ################################################################################
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
+  icon_descriptor_sensor: sensor.bom_darlington_icon_descriptor_0
   bushfire_sensor_prefix: sensor.bom_darlington_fire_danger
   bushfire_alerts_sensor: sensor.dfes_incidents_metro_south_east_any
   forecast_rows: 4
@@ -142,6 +147,7 @@
 ################################################################################
 - type: custom:clock-weather-card
   entity: weather.bom_darlington
+  icon_descriptor_sensor: sensor.bom_darlington_icon_descriptor_0
   uv_sensor_prefix: sensor.bom_darlington_uv
   forecast_rows: 4
   forecast_type: uv_daily
