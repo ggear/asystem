@@ -6,7 +6,7 @@ echo ''
 if netcat -zw 1 10.0.4.100 80 2>/dev/null; then
 	echo 'Processing config for device [ceiling_water_booster_plug] at [http://10.0.4.100/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.100/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.100 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/ceiling_water_booster_plug.json
+	decode-config.py -s 10.0.4.100 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/ceiling_water_booster_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.100 80 2>/dev/null; do echo 'Waiting for device [ceiling_water_booster_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.100/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.100/cm? --data-urlencode 'cmnd=PowerOnState 0'
@@ -102,7 +102,7 @@ echo ''
 if netcat -zw 1 10.0.4.101 80 2>/dev/null; then
 	echo 'Processing config for device [rack_fans_plug] at [http://10.0.4.101/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.101 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/rack_fans_plug.json
+	decode-config.py -s 10.0.4.101 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/rack_fans_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.101 80 2>/dev/null; do echo 'Waiting for device [rack_fans_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=PowerOnState 0'
@@ -138,7 +138,7 @@ echo ''
 if netcat -zw 1 10.0.4.102 80 2>/dev/null; then
 	echo 'Processing config for device [rack_outlet_plug] at [http://10.0.4.102/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.102 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/rack_outlet_plug.json
+	decode-config.py -s 10.0.4.102 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/rack_outlet_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.102 80 2>/dev/null; do echo 'Waiting for device [rack_outlet_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":1}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [1] with response: ' && curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=PowerOnState 1'
@@ -234,7 +234,7 @@ echo ''
 if netcat -zw 1 10.0.4.103 80 2>/dev/null; then
 	echo 'Processing config for device [kitchen_bench_lights_plug] at [http://10.0.4.103/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.103 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/kitchen_bench_lights_plug.json
+	decode-config.py -s 10.0.4.103 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/kitchen_bench_lights_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.103 80 2>/dev/null; do echo 'Waiting for device [kitchen_bench_lights_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":1}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [1] with response: ' && curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=PowerOnState 1'
@@ -270,7 +270,7 @@ echo ''
 if netcat -zw 1 10.0.4.104 80 2>/dev/null; then
 	echo 'Processing config for device [kitchen_fan_plug] at [http://10.0.4.104/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.104 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/kitchen_fan_plug.json
+	decode-config.py -s 10.0.4.104 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/kitchen_fan_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.104 80 2>/dev/null; do echo 'Waiting for device [kitchen_fan_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=PowerOnState 0'
@@ -366,7 +366,7 @@ echo ''
 if netcat -zw 1 10.0.4.105 80 2>/dev/null; then
 	echo 'Processing config for device [ceiling_network_switch_plug] at [http://10.0.4.105/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.105 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/ceiling_network_switch_plug.json
+	decode-config.py -s 10.0.4.105 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/ceiling_network_switch_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.105 80 2>/dev/null; do echo 'Waiting for device [ceiling_network_switch_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":1}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [1] with response: ' && curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=PowerOnState 1'
@@ -462,7 +462,7 @@ echo ''
 if netcat -zw 1 10.0.4.106 80 2>/dev/null; then
 	echo 'Processing config for device [garden_pool_filter_plug] at [http://10.0.4.106/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.106/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.106 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/garden_pool_filter_plug.json
+	decode-config.py -s 10.0.4.106 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/garden_pool_filter_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.106 80 2>/dev/null; do echo 'Waiting for device [garden_pool_filter_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.106/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.106/cm? --data-urlencode 'cmnd=PowerOnState 0'
@@ -558,7 +558,7 @@ echo ''
 if netcat -zw 1 10.0.4.107 80 2>/dev/null; then
 	echo 'Processing config for device [deck_festoons_plug] at [http://10.0.4.107/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.107 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/deck_festoons_plug.json
+	decode-config.py -s 10.0.4.107 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/deck_festoons_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.107 80 2>/dev/null; do echo 'Waiting for device [deck_festoons_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=PowerOnState 0'
@@ -600,7 +600,7 @@ echo ''
 if netcat -zw 1 10.0.4.108 80 2>/dev/null; then
 	echo 'Processing config for device [landing_festoons_plug] at [http://10.0.4.108/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.108 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/landing_festoons_plug.json
+	decode-config.py -s 10.0.4.108 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/landing_festoons_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.108 80 2>/dev/null; do echo 'Waiting for device [landing_festoons_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=PowerOnState 0'
@@ -642,7 +642,7 @@ echo ''
 if netcat -zw 1 10.0.4.109 80 2>/dev/null; then
 	echo 'Processing config for device [rack_screen_plug] at [http://10.0.4.109/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.109 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/rack_screen_plug.json
+	decode-config.py -s 10.0.4.109 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/rack_screen_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.109 80 2>/dev/null; do echo 'Waiting for device [rack_screen_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=PowerOnState 0'
@@ -678,7 +678,7 @@ echo ''
 if netcat -zw 1 10.0.4.110 80 2>/dev/null; then
 	echo 'Processing config for device [rack_backup_plug] at [http://10.0.4.110/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.110 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/rack_backup_plug.json
+	decode-config.py -s 10.0.4.110 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/rack_backup_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.110 80 2>/dev/null; do echo 'Waiting for device [rack_backup_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=PowerOnState 0'
@@ -714,7 +714,7 @@ echo ''
 if netcat -zw 1 10.0.4.111 80 2>/dev/null; then
 	echo 'Processing config for device [rack_printer_plug] at [http://10.0.4.111/?] ... '
 	echo 'Current firmware ['"$(curl -s -m 5 http://10.0.4.111/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.4.111 -i /Users/graham/Code/asystem/src/roe/tasmota/src/build/resources/devices/rack_printer_plug.json
+	decode-config.py -s 10.0.4.111 -i /Users/graham/Code/asystem/src/rue/tasmota/src/build/resources/devices/rack_printer_plug.json
 	sleep 1 && while ! netcat -zw 1 10.0.4.111 80 2>/dev/null; do echo 'Waiting for device [rack_printer_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s -m 5 http://10.0.4.111/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s -m 5 http://10.0.4.111/cm? --data-urlencode 'cmnd=PowerOnState 0'

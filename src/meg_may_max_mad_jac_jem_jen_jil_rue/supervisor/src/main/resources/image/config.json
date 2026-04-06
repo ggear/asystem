@@ -63,6 +63,12 @@
           "weewx",
           "zigbee2mqtt"
         ]
+      },
+      {
+        "host": "raspbpi-jil",
+        "services": [
+          "supervisor"
+        ]
       }
     ]
   }

@@ -124,6 +124,28 @@ cat <<'EOF' >~/.gitconfig
 EOF
 
 ################################################################################
+# Ghostty
+################################################################################
+cat <<'EOF' >~/.config/ghostty
+background = #000000
+background-opacity = 1.0
+unfocused-split-opacity = 1.0
+split-divider-color = #000000
+
+foreground = #c0caf5
+cursor-color = #c0caf5
+
+font-family = JetBrains Mono
+font-size = 10
+
+window-width = 287
+window-height = 83
+
+window-decoration = false
+confirm-close-surface = false
+EOF
+
+################################################################################
 # Python
 ################################################################################
 PYENV_ROOT="${HOME}/.pyenv"
@@ -157,3 +179,9 @@ GOROOT="${GOENV_ROOT}/versions/${GO_VERSION_LATEST}"
 goenv global "${GO_VERSION_LATEST}"
 goenv versions
 echo "$("${GOROOT}/bin/go" version) installed"
+
+################################################################################
+# Node
+################################################################################
+nvm install --lts
+npm install -g yarn
