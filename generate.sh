@@ -44,7 +44,7 @@ function pull_repo() {
         break
       fi
     done
-    git remote set-url origin https://github.com/$(git remote get-url origin | sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')
+    git remote set-url origin git@github.com:$(git remote get-url origin | sed 's|https://github.com/||;s|git@github.com:||')
     echo "Remote set to [$(git remote get-url origin)]"
     until git pull --all; do
       echo "Git pull failed, sleeping to avoid Github throttling ..."
