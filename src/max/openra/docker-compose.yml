@@ -15,7 +15,7 @@ services:
       - Map=
       - AdvertiseOnline=False
       - RecordReplays=False
-      - RequireAuthentication=True
+      - RequireAuthentication=False
       - ProfileIDBlacklist=
       - ProfileIDWhitelist=
       - EnableSingleplayer=False

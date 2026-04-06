@@ -119,6 +119,7 @@ cat <<'EOF' >~/.gitconfig
 
 [alias]
   sync = "!ssh -O check git@github.com 2>/dev/null || ssh -T git@github.com 2>/dev/null && git fetch"
+  ssh = "!git remote set-url origin git@github.com:$(git remote get-url origin | sed 's|https://github.com/||')"
   undo = reset HEAD~1 --mixed
   unstage = reset HEAD --
 EOF
