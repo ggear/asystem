@@ -22,6 +22,7 @@ brew install \
   git \
   duf \
   nvm \
+  pigz \
   mole \
   grep \
   bash \
