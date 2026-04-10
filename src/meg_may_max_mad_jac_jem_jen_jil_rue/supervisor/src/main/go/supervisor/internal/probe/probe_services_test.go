@@ -328,12 +328,12 @@ func TestProbeServices_Services(t *testing.T) {
 					if usedNetwork < 0 || usedNetwork > 100 {
 						t.Fatalf("usedNetwork out of range [%d]", usedNetwork)
 					}
-					runningTime, err := service.runningTime()
+					upTime, err := service.upTime()
 					if err != nil {
 						t.Fatalf("unexpected runningTime error: %v", err)
 					}
-					if runningTime < 0 {
-						t.Fatalf("runningTime out of range: %v", runningTime)
+					if upTime < 0 {
+						t.Fatalf("upTime out of range: %v", upTime)
 					}
 					maxMemory, err := service.maxMemory()
 					if err != nil {

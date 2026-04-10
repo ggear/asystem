@@ -128,18 +128,14 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	default:
 		return fmt.Errorf("invalid watch format [%s]", opts.format)
 	}
-	var symbols display.Symbols
+	var unicode bool
 	switch strings.ToLower(opts.symbols) {
 	case "auto":
-		if os.Getenv("TERM") == "linux" || os.Getenv("TERM") == "dumb" || os.Getenv("NO_UTF8") != "" {
-			symbols = display.SymbolsASCII
-		} else {
-			symbols = display.SymbolsUnicode
-		}
+		unicode = !(os.Getenv("TERM") == "linux" || os.Getenv("TERM") == "dumb" || os.Getenv("NO_UTF8") != "")
 	case "ascii":
-		symbols = display.SymbolsASCII
+		unicode = false
 	case "unicode":
-		symbols = display.SymbolsUnicode
+		unicode = true
 	default:
 		return fmt.Errorf("invalid watch symbols [%s]", opts.symbols)
 	}
@@ -165,7 +161,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		opts.consoleWidth,
 		opts.consoleHeight,
 		format,
-		symbols,
+		unicode,
 		periods,
 		isRemote,
 		configPath,

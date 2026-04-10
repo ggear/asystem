@@ -160,6 +160,7 @@ func (v *terminalVirtual) string(inColour bool) string {
 
 func colourToAnsi(colour colour) string {
 	switch colour {
+	case colourGray: return "\033[38;5;237m"
 	case colourGreen:
 		return "\033[38;5;34m"
 	case colourYellow:

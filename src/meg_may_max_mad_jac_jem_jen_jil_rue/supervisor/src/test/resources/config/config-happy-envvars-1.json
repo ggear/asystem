@@ -1,0 +1,16 @@
+{
+  "asystem": {
+    "version": "$TEST_CFG_VERSION",
+    "host": "$TEST_CFG_HOST",
+    "mount": "$TEST_CFG_MOUNT",
+    "broker": {
+      "host": "$TEST_CFG_BROKER_HOST",
+      "port": "$TEST_CFG_BROKER_PORT"
+    },
+    "database": {
+      "host": "$TEST_CFG_DATABASE_HOST",
+      "port": "$TEST_CFG_DATABASE_PORT"
+    },
+    "schema": []
+  }
+}

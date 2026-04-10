@@ -83,7 +83,7 @@ Host github.com
   User git
   ControlMaster auto
   ControlPath ~/.ssh/control-%r@%h:%p
-  ControlPersist 600
+  ControlPersist yes
 EOF
 
 ################################################################################
@@ -119,7 +119,7 @@ cat <<'EOF' >~/.gitconfig
 
 [alias]
   sync = "!ssh -O check git@github.com 2>/dev/null || ssh -T git@github.com 2>/dev/null && git fetch"
-  ssh = "!git remote set-url origin git@github.com:$(git remote get-url origin | sed 's|https://github.com/||')"
+  ssh = "!url=$(git remote get-url origin); echo $url | grep -q 'https://github.com' && git remote set-url origin git@github.com:$(echo $url | sed 's|https://github.com/||') || echo 'Already SSH'"
   undo = reset HEAD~1 --mixed
   unstage = reset HEAD --
 EOF
@@ -127,7 +127,7 @@ EOF
 ################################################################################
 # Ghostty
 ################################################################################
-cat <<'EOF' >~/.config/ghostty
+cat <<'EOF' >~/.config/ghostty/config
 background = #000000
 background-opacity = 1.0
 unfocused-split-opacity = 1.0
@@ -136,7 +136,7 @@ split-divider-color = #000000
 foreground = #c0caf5
 cursor-color = #c0caf5
 
-font-family = JetBrains Mono
+font-family = JetBrains Mono NL
 font-size = 10
 
 window-width = 287
@@ -174,6 +174,8 @@ echo "$("${PYTHON_HOME}/bin/python" --version) installed"
 ################################################################################
 GOENV_ROOT="${HOME}/.goenv"
 GO_VERSION_LATEST=$(goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' ')
+GO_VERSION_LATEST=1.25.8
+chmod -R u+w ${GOENV_ROOT}/versions/*
 for env in $(goenv versions --bare); do goenv uninstall -f "$env"; done
 goenv install -sv "${GO_VERSION_LATEST}"
 GOROOT="${GOENV_ROOT}/versions/${GO_VERSION_LATEST}"

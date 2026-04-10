@@ -14,8 +14,10 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-const logDirUser = "/tmp/supervisor"
-const logDirRoot = "/var/log/supervisor"
+const (
+	logDirUser = "/tmp/supervisor"
+	logDirRoot = "/var/log/supervisor"
+)
 
 func EnableStdout(level slog.Level) {
 	scribeLoggerMutex.Lock()
@@ -41,7 +43,7 @@ func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays 
 	scribeLoggerLevel = level
 	scribeLoggerMode = "file"
 	writer := &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}
-	scribeLoggerInstance = slog.New(slog.NewTextHandler(io.MultiWriter(writer), &slog.HandlerOptions{Level: level}))
+	scribeLoggerInstance = slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{Level: level}))
 	slog.SetDefault(scribeLoggerInstance)
 	return nil
 }
@@ -50,8 +52,19 @@ func Disable() {
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()
 	scribeLoggerMode = "disabled"
-	scribeLoggerInstance = slog.New(slog.NewTextHandler(io.Discard, nil))
+	scribeLoggerInstance = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	slog.SetDefault(scribeLoggerInstance)
+}
+
+func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
+	scribeLoggerMutex.Lock()
+	defer scribeLoggerMutex.Unlock()
+	scribeLoggerLevel = level
+	scribeLoggerMode = "buffer"
+	buf := &LogBuffer{lines: make([]LogLine, capacity)}
+	scribeLoggerInstance = slog.New(&bufferHandler{level: level, buffer: buf})
+	slog.SetDefault(scribeLoggerInstance)
+	return buf
 }
 
 func Level() slog.Level {
@@ -64,17 +77,6 @@ func Mode() string {
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()
 	return scribeLoggerMode
-}
-
-func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
-	scribeLoggerMutex.Lock()
-	defer scribeLoggerMutex.Unlock()
-	scribeLoggerLevel = level
-	scribeLoggerMode = "buffer"
-	buf := &LogBuffer{lines: make([]LogLine, capacity)}
-	scribeLoggerInstance = slog.New(&bufferHandler{level: level, buffer: buf})
-	slog.SetDefault(scribeLoggerInstance)
-	return buf
 }
 
 type LogLine struct {
@@ -137,21 +139,11 @@ func (h *bufferHandler) Enabled(_ context.Context, level slog.Level) bool {
 func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
 	var sb strings.Builder
 	sb.WriteString(messagePadder.pad(record.Message))
-	first := true
+	idx := 0
 	record.Attrs(func(a slog.Attr) bool {
 		sb.WriteByte(' ')
-		if first {
-			first = false
-			sb.WriteString(scopePadder.pad(a.Key + "=" + a.Value.String()))
-			return true
-		}
-		val := a.Value.String()
-		if p, ok := padders[a.Key]; ok {
-			val = p.pad(val)
-		}
-		sb.WriteString(a.Key)
-		sb.WriteByte('=')
-		sb.WriteString(val)
+		sb.WriteString(attrPadder(idx).pad(a.Key + "=" + a.Value.String()))
+		idx++
 		return true
 	})
 	h.buffer.Push(LogLine{Time: record.Time, Level: record.Level, Message: sb.String()})
@@ -184,13 +176,19 @@ func (p *padder) pad(s string) string {
 }
 
 var messagePadder = newPadder(9)
-var scopePadder = newPadder(18)
 
-var padders = map[string]*padder{
-	"phase":    newPadder(10),
-	"duration": newPadder(9),
-	"received": newPadder(9),
-	"transmit": newPadder(9),
+var (
+	attrPaddersMu sync.Mutex
+	attrPadders   = []*padder{newPadder(19), newPadder(16), newPadder(14), newPadder(18)}
+)
+
+func attrPadder(idx int) *padder {
+	attrPaddersMu.Lock()
+	defer attrPaddersMu.Unlock()
+	for len(attrPadders) <= idx {
+		attrPadders = append(attrPadders, newPadder(9))
+	}
+	return attrPadders[idx]
 }
 
 var (

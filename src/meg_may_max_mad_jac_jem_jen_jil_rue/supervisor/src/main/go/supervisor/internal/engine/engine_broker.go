@@ -47,7 +47,7 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 			if onConnect != nil {
 				onConnect(client)
 			}
-			slog.Info("state", "engine", "broker", "phase", "connect", "duration", time.Since(connectStart).Truncate(time.Millisecond), "broker", brokerURL)
+			slog.Info("state", "engine", "broker", "phase", "connect", "duration", time.Since(connectStart).Truncate(time.Millisecond))
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
 			slog.Warn("state", "engine", "broker", "phase", "disconnect", "duration", "0s", "broker", brokerURL, "error", err)

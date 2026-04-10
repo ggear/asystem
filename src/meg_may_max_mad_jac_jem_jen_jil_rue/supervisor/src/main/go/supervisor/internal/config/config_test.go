@@ -11,6 +11,7 @@ func TestConfig_Version(t *testing.T) {
 	tests := []struct {
 		name          string
 		configPath    string
+		envVars       map[string]string
 		expected      string
 		expectedError bool
 	}{
@@ -104,10 +105,40 @@ func TestConfig_Version(t *testing.T) {
 			expected:      "10.100.6792",
 			expectedError: false,
 		},
+		{
+			name:          "happy_envvar_set_expands_version",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envVars:       map[string]string{"TEST_CFG_VERSION": "10.100.1234"},
+			expected:      "10.100.1234",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_unset_defaults_version",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			expected:      defaultVersion,
+			expectedError: false,
+		},
+		{
+			name:          "happy_service_version_absolute_used_when_no_config",
+			configPath:    "non-existent-file.json",
+			envVars:       map[string]string{"SERVICE_VERSION_ABSOLUTE": "10.100.5678"},
+			expected:      "10.100.5678",
+			expectedError: false,
+		},
+		{
+			name:          "happy_service_version_absolute_invalid_ignored",
+			configPath:    "non-existent-file.json",
+			envVars:       map[string]string{"SERVICE_VERSION_ABSOLUTE": "notaversion"},
+			expected:      defaultVersion,
+			expectedError: false,
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(Reset)
+			for k, v := range testCase.envVars {
+				t.Setenv(k, v)
+			}
 			config := Load(testCase.configPath)
 			if testCase.expectedError {
 				t.Fatalf("Got no error, expected error for %s", testCase.name)
@@ -129,6 +160,7 @@ func TestConfig_Host(t *testing.T) {
 		name          string
 		configPath    string
 		envHost       string
+		envVars       map[string]string
 		expected      string
 		expectedError bool
 	}{
@@ -175,12 +207,28 @@ func TestConfig_Host(t *testing.T) {
 			expected:      "envhost",
 			expectedError: false,
 		},
+		{
+			name:          "happy_envvar_set_expands_host",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envVars:       map[string]string{"TEST_CFG_HOST": "envexpanded-host"},
+			expected:      "envexpanded-host",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_unset_falls_through_to_hostname",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			expected:      hostname,
+			expectedError: false,
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(Reset)
 			if testCase.envHost != "" {
 				t.Setenv("SUPERVISOR_HOST", testCase.envHost)
+			}
+			for k, v := range testCase.envVars {
+				t.Setenv(k, v)
 			}
 			config := Load(testCase.configPath)
 			host := config.Host()
@@ -195,7 +243,8 @@ func TestConfig_Mount(t *testing.T) {
 	tests := []struct {
 		name          string
 		configPath    string
-		envMount     string
+		envMount      string
+		envVars       map[string]string
 		expected      string
 		expectedError bool
 	}{
@@ -225,10 +274,24 @@ func TestConfig_Mount(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_file_takes_precedence_over_env",
+			name:          "happy_env_takes_precedence_over_file",
 			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
-			envMount:     "/env-host-fs",
-			expected:      "/host-fs",
+			envMount:      "/env-host-fs",
+			expected:      "/env-host-fs",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_set_expands_mount",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envVars:       map[string]string{"TEST_CFG_MOUNT": "/expanded-host-fs"},
+			expected:      "/expanded-host-fs",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_unset_falls_through_to_supervisor_mount",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envMount:      "/fallback-mount",
+			expected:      "/fallback-mount",
 			expectedError: false,
 		},
 	}
@@ -237,6 +300,9 @@ func TestConfig_Mount(t *testing.T) {
 			t.Cleanup(Reset)
 			if testCase.envMount != "" {
 				t.Setenv("SUPERVISOR_MOUNT", testCase.envMount)
+			}
+			for k, v := range testCase.envVars {
+				t.Setenv(k, v)
 			}
 			config := Load(testCase.configPath)
 			mount := config.Mount()
@@ -253,6 +319,7 @@ func TestConfig_Broker(t *testing.T) {
 		configPath    string
 		envHost       string
 		envPort       string
+		envVars       map[string]string
 		expected      string
 		expectedError bool
 	}{
@@ -313,15 +380,33 @@ func TestConfig_Broker(t *testing.T) {
 			expected:      "envbroker.local",
 			expectedError: false,
 		},
+		{
+			name:          "happy_envvar_set_expands_broker_host_and_port",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envVars:       map[string]string{"TEST_CFG_BROKER_HOST": "expandedbroker.local", "TEST_CFG_BROKER_PORT": "9000"},
+			expected:      "expandedbroker.local:9000",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_unset_falls_through_to_vernemq_env",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envHost:       "fallbackbroker.local",
+			envPort:       "8888",
+			expected:      "fallbackbroker.local:8888",
+			expectedError: false,
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(Reset)
 			if testCase.envHost != "" {
-				t.Setenv("VERNEMQ_HOST", testCase.envHost)
+				t.Setenv("VERNEMQ_SERVICE", testCase.envHost)
 			}
 			if testCase.envPort != "" {
 				t.Setenv("VERNEMQ_API_PORT", testCase.envPort)
+			}
+			for k, v := range testCase.envVars {
+				t.Setenv(k, v)
 			}
 			config := Load(testCase.configPath)
 			broker := config.Broker()
@@ -338,6 +423,7 @@ func TestConfig_Database(t *testing.T) {
 		configPath    string
 		envHost       string
 		envPort       string
+		envVars       map[string]string
 		expected      string
 		expectedError bool
 	}{
@@ -398,15 +484,33 @@ func TestConfig_Database(t *testing.T) {
 			expected:      "envdb.local",
 			expectedError: false,
 		},
+		{
+			name:          "happy_envvar_set_expands_database_host_and_port",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envVars:       map[string]string{"TEST_CFG_DATABASE_HOST": "expandeddb.local", "TEST_CFG_DATABASE_PORT": "7777"},
+			expected:      "expandeddb.local:7777",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_unset_falls_through_to_influxdb_env",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envHost:       "fallbackdb.local",
+			envPort:       "6666",
+			expected:      "fallbackdb.local:6666",
+			expectedError: false,
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(Reset)
 			if testCase.envHost != "" {
-				t.Setenv("INFLUXDB_HOST", testCase.envHost)
+				t.Setenv("INFLUXDB_SERVICE", testCase.envHost)
 			}
 			if testCase.envPort != "" {
 				t.Setenv("INFLUXDB_HTTP_PORT", testCase.envPort)
+			}
+			for k, v := range testCase.envVars {
+				t.Setenv(k, v)
 			}
 			config := Load(testCase.configPath)
 			database := config.Database()

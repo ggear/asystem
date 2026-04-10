@@ -6,6 +6,7 @@
 ! which brew && /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew update
 brew install --cask \
+  plex \
   openra \
   ghostty \
   claude \
@@ -19,6 +20,7 @@ brew install \
   jq \
   yq \
   xq \
+  rg \
   git \
   duf \
   nvm \
@@ -55,6 +57,3 @@ brew install \
   hudochenkov/sshpass/sshpass
 brew upgrade
 brew cleanup
-# Optional
-brew install \
-  bluesnooze

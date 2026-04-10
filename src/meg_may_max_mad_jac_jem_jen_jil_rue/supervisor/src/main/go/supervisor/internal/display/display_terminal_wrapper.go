@@ -56,6 +56,8 @@ func (w *terminalWrapper) events() chan tcell.Event {
 
 func colourToTcell(colour colour) tcell.Color {
 	switch colour {
+	case colourGray:
+		return color.XTerm237
 	case colourGreen:
 		return color.XTerm34
 	case colourYellow:

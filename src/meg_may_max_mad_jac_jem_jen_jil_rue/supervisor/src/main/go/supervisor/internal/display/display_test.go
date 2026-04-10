@@ -16,27 +16,33 @@ import (
 )
 
 var (
-	compact      = compactDisplayLayout()
-	compactRows1 = rows(compact, 1)
-	compactRows3 = rows(compact, 3)
-	compactRows6 = rows(compact, 6)
-	compactCols1 = columns(compact, 1)
-	compactCols3 = columns(compact, 3)
-	compactCols6 = columns(compact, 6)
-	compactRszs1 = resizes(compact, 1)
-	compactRszs3 = resizes(compact, 3)
-	compactRszs6 = resizes(compact, 6)
+	compact             = compactDisplayLayout()
+	compactRows1        = rows(compact, 1)
+	compactRows3        = rows(compact, 3)
+	compactRows6        = rows(compact, 6)
+	compactColsASCII1   = columns(compact, false, 1)
+	compactColsASCII3   = columns(compact, false, 3)
+	compactColsASCII6   = columns(compact, false, 6)
+	compactColsUnicode1 = columns(compact, true, 1)
+	compactColsUnicode3 = columns(compact, true, 3)
+	compactColsUnicode6 = columns(compact, true, 6)
+	compactRszs1        = resizes(compact, 1)
+	compactRszs3        = resizes(compact, 3)
+	compactRszs6        = resizes(compact, 6)
 
-	relaxed      = relaxedDisplayLayout()
-	relaxedRows1 = rows(relaxed, 1)
-	relaxedRows3 = rows(relaxed, 3)
-	relaxedRows6 = rows(relaxed, 6)
-	relaxedCols1 = columns(relaxed, 1)
-	relaxedCols3 = columns(relaxed, 3)
-	relaxedCols6 = columns(relaxed, 6)
-	relaxedRszs1 = resizes(relaxed, 1)
-	relaxedRszs3 = resizes(relaxed, 3)
-	relaxedRszs6 = resizes(relaxed, 6)
+	relaxed             = relaxedDisplayLayout()
+	relaxedRows1        = rows(relaxed, 1)
+	relaxedRows3        = rows(relaxed, 3)
+	relaxedRows6        = rows(relaxed, 6)
+	relaxedColsASCII1   = columns(relaxed, false, 1)
+	relaxedColsASCII3   = columns(relaxed, false, 3)
+	relaxedColsASCII6   = columns(relaxed, false, 6)
+	relaxedColsUnicode1 = columns(relaxed, true, 1)
+	relaxedColsUnicode3 = columns(relaxed, true, 3)
+	relaxedColsUnicode6 = columns(relaxed, true, 6)
+	relaxedRszs1        = resizes(relaxed, 1)
+	relaxedRszs3        = resizes(relaxed, 3)
+	relaxedRszs6        = resizes(relaxed, 6)
 
 	hosts = func() []string {
 		result := make([]string, 0, 6)
@@ -52,245 +58,551 @@ func TestDisplay(t *testing.T) {
 		name              string
 		hosts             []string
 		formats           []Format
+		unicode           bool
 		terminalDims      dimensions
 		expectedDimsDelta dimensions
 		expectedFormat    Format
 		expectedError     bool
 	}{
 		{
-			name:              "happy_compact_host1_rows+0_colsx0+0",
+			name:              "happy_compact_host1_rows+0_colsx0+0_ascii",
 			hosts:             hosts[:1],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows1 + 0, compactCols1 + compactRszs1*0 + 0},
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows1 + 0, compactColsASCII1 + compactRszs1*0 + 0},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatCompact,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_compact_host1_rows+1_colsx8+2",
+			name:              "happy_compact_host1_rows+0_colsx0+0_unicode",
 			hosts:             hosts[:1],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows1 + 1, compactCols1 + compactRszs1*8 + 1},
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows1 + 0, compactColsUnicode1 + compactRszs1*0 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host1_rows+1_colsx8+2_ascii",
+			hosts:             hosts[:1],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows1 + 1, compactColsASCII1 + compactRszs1*8 + 1},
 			expectedDimsDelta: dimensions{0, -1},
 			expectedFormat:    FormatCompact,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_compact_host3_rows+0_colsx0+0",
-			hosts:             hosts[:3],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows3, compactCols3 + compactRszs3*0 + 0},
-			expectedDimsDelta: dimensions{0, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_compact_host3_rows+1_colsx0+7",
-			hosts:             hosts[:3],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows3 + 2, compactCols3 + compactRszs3*0 + 7},
-			expectedDimsDelta: dimensions{0, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_compact_host3_rows+0_colsx1+0",
-			hosts:             hosts[:3],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows3 + 0, compactCols3 + compactRszs3*1 + 0},
-			expectedDimsDelta: dimensions{0, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_compact_host3_rows+1_colsx1+0",
-			hosts:             hosts[:3],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows3 + 1, compactCols3 + compactRszs3*1 + 0},
-			expectedDimsDelta: dimensions{-1, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_compact_host6_rows+0_colsx0+0",
-			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows6 + 0, compactCols6 + compactRszs6*0 + 0},
-			expectedDimsDelta: dimensions{0, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_compact_host6_rows+0_colsx0+2",
-			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows6 + 0, compactCols6 + compactRszs6*0 + 2},
-			expectedDimsDelta: dimensions{0, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_compact_host6_rows+0_colsx0+7",
-			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows6 + 0, compactCols6 + compactRszs6*0 + 7},
-			expectedDimsDelta: dimensions{0, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_compact_host6_rows+0_colsx1+0",
-			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows6 + 0, compactCols6 + compactRszs6*1 + 0},
-			expectedDimsDelta: dimensions{0, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_compact_host6_rows+0_colsx10+0",
-			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatCompact},
-			terminalDims:      dimensions{compactRows6 + 7, compactCols6 + compactRszs6*7 + 5},
-			expectedDimsDelta: dimensions{-1, 0},
-			expectedFormat:    FormatCompact,
-			expectedError:     false,
-		},
-		{
-			name:              "happy_relaxed_host1_rows+0_colsx0+0",
+			name:              "happy_compact_host1_rows+1_colsx8+2_unicode",
 			hosts:             hosts[:1],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows1 + 0, relaxedCols1 + relaxedRszs1*0 + 0},
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows1 + 1, compactColsUnicode1 + compactRszs1*8 + 1},
+			expectedDimsDelta: dimensions{0, -1},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host3_rows+0_colsx0+0_ascii",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows3, compactColsASCII3 + compactRszs3*0 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host3_rows+0_colsx0+0_unicode",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows3, compactColsUnicode3 + compactRszs3*0 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host3_rows+1_colsx0+7_ascii",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows3 + 2, compactColsASCII3 + compactRszs3*0 + 7},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host3_rows+1_colsx0+7_unicode",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows3 + 2, compactColsUnicode3 + compactRszs3*0 + 7},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host3_rows+0_colsx1+0_ascii",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows3 + 0, compactColsASCII3 + compactRszs3*1 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host3_rows+0_colsx1+0_unicode",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows3 + 0, compactColsUnicode3 + compactRszs3*1 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host3_rows+1_colsx1+0_ascii",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows3 + 1, compactColsASCII3 + compactRszs3*1 + 0},
+			expectedDimsDelta: dimensions{-1, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host3_rows+1_colsx1+0_unicode",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows3 + 1, compactColsUnicode3 + compactRszs3*1 + 0},
+			expectedDimsDelta: dimensions{-1, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx0+0_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows6 + 0, compactColsASCII6 + compactRszs6*0 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx0+0_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows6 + 0, compactColsUnicode6 + compactRszs6*0 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx0+2_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows6 + 0, compactColsASCII6 + compactRszs6*0 + 2},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx0+2_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows6 + 0, compactColsUnicode6 + compactRszs6*0 + 2},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx0+7_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows6 + 0, compactColsASCII6 + compactRszs6*0 + 7},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx0+7_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows6 + 0, compactColsUnicode6 + compactRszs6*0 + 7},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx1+0_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows6 + 0, compactColsASCII6 + compactRszs6*1 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx1+0_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows6 + 0, compactColsUnicode6 + compactRszs6*1 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx10+0_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows6 + 7, compactColsASCII6 + compactRszs6*7 + 5},
+			expectedDimsDelta: dimensions{-1, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_compact_host6_rows+0_colsx10+0_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows6 + 7, compactColsUnicode6 + compactRszs6*7 + 5},
+			expectedDimsDelta: dimensions{-1, 0},
+			expectedFormat:    FormatCompact,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host1_rows+0_colsx0+0_ascii",
+			hosts:             hosts[:1],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows1 + 0, relaxedColsASCII1 + relaxedRszs1*0 + 0},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host1_rows+1_colsx8+2",
+			name:              "happy_relaxed_host1_rows+0_colsx0+0_unicode",
 			hosts:             hosts[:1],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows1 + 1, relaxedCols1 + relaxedRszs1*8 + 1},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows1 + 0, relaxedColsUnicode1 + relaxedRszs1*0 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host1_rows+1_colsx8+2_ascii",
+			hosts:             hosts[:1],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows1 + 1, relaxedColsASCII1 + relaxedRszs1*8 + 1},
 			expectedDimsDelta: dimensions{0, -1},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host3_rows+0_colsx0+0",
+			name:              "happy_relaxed_host1_rows+1_colsx8+2_unicode",
+			hosts:             hosts[:1],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows1 + 1, relaxedColsUnicode1 + relaxedRszs1*8 + 1},
+			expectedDimsDelta: dimensions{0, -1},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host3_rows+0_colsx0+0_ascii",
 			hosts:             hosts[:3],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows3, relaxedCols3 + relaxedRszs3*0 + 0},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows3, relaxedColsASCII3 + relaxedRszs3*0 + 0},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host3_rows+1_colsx0+7",
+			name:              "happy_relaxed_host3_rows+0_colsx0+0_unicode",
 			hosts:             hosts[:3],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows3 + 2, relaxedCols3 + relaxedRszs3*0 + 7},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows3, relaxedColsUnicode3 + relaxedRszs3*0 + 0},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host3_rows+0_colsx1+0",
+			name:              "happy_relaxed_host3_rows+1_colsx0+7_ascii",
 			hosts:             hosts[:3],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows3 + 0, relaxedCols3 + relaxedRszs3*1 + 0},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows3 + 2, relaxedColsASCII3 + relaxedRszs3*0 + 7},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host3_rows+1_colsx1+0",
+			name:              "happy_relaxed_host3_rows+1_colsx0+7_unicode",
 			hosts:             hosts[:3],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows3 + 1, relaxedCols3 + relaxedRszs3*1 + 0},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows3 + 2, relaxedColsUnicode3 + relaxedRszs3*0 + 7},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host3_rows+0_colsx1+0_ascii",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows3 + 0, relaxedColsASCII3 + relaxedRszs3*1 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host3_rows+0_colsx1+0_unicode",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows3 + 0, relaxedColsUnicode3 + relaxedRszs3*1 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host3_rows+1_colsx1+0_ascii",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows3 + 1, relaxedColsASCII3 + relaxedRszs3*1 + 0},
 			expectedDimsDelta: dimensions{-1, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host6_rows+0_colsx0+0",
+			name:              "happy_relaxed_host3_rows+1_colsx1+0_unicode",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows3 + 1, relaxedColsUnicode3 + relaxedRszs3*1 + 0},
+			expectedDimsDelta: dimensions{-1, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host6_rows+0_colsx0+0_ascii",
 			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows6 + 0, relaxedCols6 + relaxedRszs6*0 + 0},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsASCII6 + relaxedRszs6*0 + 0},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host6_rows+0_colsx0+2",
+			name:              "happy_relaxed_host6_rows+0_colsx0+0_unicode",
 			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows6 + 0, relaxedCols6 + relaxedRszs6*0 + 2},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsUnicode6 + relaxedRszs6*0 + 0},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host6_rows+0_colsx0+7",
+			name:              "happy_relaxed_host6_rows+0_colsx0+2_ascii",
 			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows6 + 0, relaxedCols6 + relaxedRszs6*0 + 7},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsASCII6 + relaxedRszs6*0 + 2},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host6_rows+0_colsx1+0",
+			name:              "happy_relaxed_host6_rows+0_colsx0+2_unicode",
 			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows6 + 0, relaxedCols6 + relaxedRszs6*1 + 0},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsUnicode6 + relaxedRszs6*0 + 2},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host6_rows+0_colsx20+2",
+			name:              "happy_relaxed_host6_rows+0_colsx0+7_ascii",
 			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows6 + 0, relaxedCols6 + relaxedRszs6*20 + 2},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsASCII6 + relaxedRszs6*0 + 7},
 			expectedDimsDelta: dimensions{0, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:              "happy_relaxed_host6_rows+32_colsx20+5",
+			name:              "happy_relaxed_host6_rows+0_colsx0+7_unicode",
 			hosts:             hosts[:6],
-			formats:           []Format{FormatAuto, FormatRelaxed},
-			terminalDims:      dimensions{relaxedRows6 + 32, relaxedCols6 + relaxedRszs6*20 + 5},
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsUnicode6 + relaxedRszs6*0 + 7},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host6_rows+0_colsx1+0_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsASCII6 + relaxedRszs6*1 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host6_rows+0_colsx1+0_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsUnicode6 + relaxedRszs6*1 + 0},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host6_rows+0_colsx20+2_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsASCII6 + relaxedRszs6*20 + 2},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host6_rows+0_colsx20+2_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows6 + 0, relaxedColsUnicode6 + relaxedRszs6*20 + 2},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_relaxed_host6_rows+32_colsx20+5_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{relaxedRows6 + 32, relaxedColsASCII6 + relaxedRszs6*20 + 5},
 			expectedDimsDelta: dimensions{-2, 0},
 			expectedFormat:    FormatRelaxed,
 			expectedError:     false,
 		},
 		{
-			name:          "sad_host1_rows-1_cols-1",
-			hosts:         hosts[:1],
-			formats:       []Format{FormatAuto, FormatRelaxed, FormatCompact},
-			terminalDims:  dimensions{compactRows1 - 1, compactCols1 - 1},
-			expectedError: true,
+			name:              "happy_relaxed_host6_rows+32_colsx20+5_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatRelaxed, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{relaxedRows6 + 32, relaxedColsUnicode6 + relaxedRszs6*20 + 5},
+			expectedDimsDelta: dimensions{-2, 0},
+			expectedFormat:    FormatRelaxed,
+			expectedError:     false,
 		},
 		{
-			name:          "sad_host3_rows-1_cols-1",
-			hosts:         hosts[:3],
-			formats:       []Format{FormatAuto, FormatRelaxed, FormatCompact},
-			terminalDims:  dimensions{compactRows3 - 1, compactCols3 - 1},
-			expectedError: true,
+			name:              "sad_host1_rows-1_cols-1_ascii",
+			hosts:             hosts[:1],
+			formats:           []Format{FormatRelaxed, FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows1 - 1, compactColsASCII1 - 1},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatAuto,
+			expectedError:     true,
 		},
 		{
-			name:          "sad_host6_rows-1_cols-1",
-			hosts:         hosts[:6],
-			formats:       []Format{FormatAuto, FormatRelaxed, FormatCompact},
-			terminalDims:  dimensions{compactRows6 - 1, compactCols6 - 1},
-			expectedError: true,
+			name:              "sad_host1_rows-1_cols-1_unicode",
+			hosts:             hosts[:1],
+			formats:           []Format{FormatRelaxed, FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows1 - 1, compactColsUnicode1 - 1},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatAuto,
+			expectedError:     true,
 		},
 		{
-			name:          "sad_host0",
-			hosts:         nil,
-			formats:       []Format{FormatAuto, FormatRelaxed, FormatCompact},
-			terminalDims:  dimensions{compactRows6, compactCols6},
-			expectedError: true,
+			name:              "sad_host3_rows-1_cols-1_ascii",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatRelaxed, FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows3 - 1, compactColsASCII3 - 1},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatAuto,
+			expectedError:     true,
+		},
+		{
+			name:              "sad_host3_rows-1_cols-1_unicode",
+			hosts:             hosts[:3],
+			formats:           []Format{FormatRelaxed, FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows3 - 1, compactColsUnicode3 - 1},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatAuto,
+			expectedError:     true,
+		},
+		{
+			name:              "sad_host6_rows-1_cols-1_ascii",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatRelaxed, FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows6 - 1, compactColsASCII6 - 1},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatAuto,
+			expectedError:     true,
+		},
+		{
+			name:              "sad_host6_rows-1_cols-1_unicode",
+			hosts:             hosts[:6],
+			formats:           []Format{FormatRelaxed, FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows6 - 1, compactColsUnicode6 - 1},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatAuto,
+			expectedError:     true,
+		},
+		{
+			name:              "sad_host0_ascii",
+			hosts:             nil,
+			formats:           []Format{FormatRelaxed, FormatCompact, FormatAuto},
+			unicode:           false,
+			terminalDims:      dimensions{compactRows6, compactColsASCII6},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatAuto,
+			expectedError:     true,
+		},
+		{
+			name:              "sad_host0_unicode",
+			hosts:             nil,
+			formats:           []Format{FormatRelaxed, FormatCompact, FormatAuto},
+			unicode:           true,
+			terminalDims:      dimensions{compactRows6, compactColsUnicode6},
+			expectedDimsDelta: dimensions{0, 0},
+			expectedFormat:    FormatAuto,
+			expectedError:     true,
 		},
 	}
 	for _, testCase := range tests {
@@ -309,7 +621,7 @@ func TestDisplay(t *testing.T) {
 					0,
 					0,
 					attemptedFormat,
-					SymbolsASCII,
+					testCase.unicode,
 					config.Periods{},
 					true,
 					"",
@@ -618,6 +930,163 @@ func TestDisplay_Repeat(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			rendered := repeat(testCase.base, testCase.prefixCount, testCase.suffixCount, testCase.length)
+			if rendered != testCase.expected {
+				t.Fatalf("Got render = %q, expected %q", rendered, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestDisplay_Extend(t *testing.T) {
+	tests := []struct {
+		name     string
+		base     string
+		fillRune string
+		length   int
+		expected string
+	}{
+		{
+			name:     "happy_extend_ascii",
+			base:     "abc",
+			fillRune: "-",
+			length:   6,
+			expected: "abc---",
+		},
+		{
+			name:     "happy_extend_unicode",
+			base:     "ab",
+			fillRune: "✓",
+			length:   5,
+			expected: "ab✓✓✓",
+		},
+		{
+			name:     "happy_no_extend_equal_length",
+			base:     "abcd",
+			fillRune: "-",
+			length:   4,
+			expected: "abcd",
+		},
+		{
+			name:     "happy_no_extend_smaller_length",
+			base:     "abcd",
+			fillRune: "-",
+			length:   2,
+			expected: "abcd",
+		},
+		{
+			name:     "happy_empty_base",
+			base:     "",
+			fillRune: "-",
+			length:   3,
+			expected: "---",
+		},
+		{
+			name:     "happy_empty_fill_rune",
+			base:     "abc",
+			fillRune: "",
+			length:   6,
+			expected: "abc",
+		},
+		{
+			name:     "happy_multi_rune_fill_uses_first_rune",
+			base:     "abc",
+			fillRune: "-+",
+			length:   5,
+			expected: "abc--",
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			rendered := extend(testCase.base, testCase.fillRune, testCase.length)
+			if rendered != testCase.expected {
+				t.Fatalf("Got render = %q, expected %q", rendered, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestDisplay_Expand(t *testing.T) {
+	tests := []struct {
+		name     string
+		base     string
+		offset   int
+		length   int
+		expected string
+	}{
+		{
+			name:     "happy_offset_zero",
+			base:     "abcd",
+			offset:   0,
+			length:   6,
+			expected: "aaabcd",
+		},
+		{
+			name:     "happy_offset_mid",
+			base:     "abcd",
+			offset:   2,
+			length:   6,
+			expected: "abcccd",
+		},
+		{
+			name:     "happy_offset_last",
+			base:     "abcd",
+			offset:   3,
+			length:   5,
+			expected: "abcdd",
+		},
+		{
+			name:     "happy_offset_clamped_high",
+			base:     "abcd",
+			offset:   99,
+			length:   5,
+			expected: "abcdd",
+		},
+		{
+			name:     "happy_negative_offset",
+			base:     "abcd",
+			offset:   -3,
+			length:   5,
+			expected: "aabcd",
+		},
+		{
+			name:     "happy_unicode_runes",
+			base:     "ab✓",
+			offset:   2,
+			length:   4,
+			expected: "ab✓✓",
+		},
+		{
+			name:     "happy_length_not_expanded",
+			base:     "abcd",
+			offset:   1,
+			length:   3,
+			expected: "abcd",
+		},
+		{
+			name:     "happy_zero_length",
+			base:     "abcd",
+			offset:   1,
+			length:   0,
+			expected: "",
+		},
+		{
+			name:     "happy_empty_base",
+			base:     "",
+			offset:   1,
+			length:   3,
+			expected: "",
+		},
+		{
+			name:     "happy_header",
+			base:     "┌──────╮",
+			offset:   2,
+			length:   25,
+			expected: "┌───────────────────────╮",
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			rendered := expand(testCase.base, testCase.offset, testCase.length)
 			if rendered != testCase.expected {
 				t.Fatalf("Got render = %q, expected %q", rendered, testCase.expected)
 			}

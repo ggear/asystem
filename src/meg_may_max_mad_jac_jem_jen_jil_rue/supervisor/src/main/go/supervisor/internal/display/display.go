@@ -52,7 +52,7 @@ type Display struct {
 	isRemote      bool
 	format        Format
 	formatInit    Format
-	symbols       Symbols
+	unicode       bool
 	dimsInit      dimensions
 	dimsTerminal  dimensions
 	maxServices   int
@@ -80,7 +80,7 @@ func NewDisplay(
 	width, height int,
 	maxWidth, maxHeight int,
 	format Format,
-	symbols Symbols,
+	unicode bool,
 	periods config.Periods,
 	isRemote bool,
 	configPath string,
@@ -91,7 +91,7 @@ func NewDisplay(
 		hosts:         hosts,
 		dimsInit:      dimensions{rows: height, cols: width},
 		dimsTerminal:  dimensions{rows: maxHeight, cols: maxWidth},
-		symbols:       symbols,
+		unicode:       unicode,
 		periods:       periods,
 		configPath:    configPath,
 		isRemote:      isRemote,
@@ -117,7 +117,7 @@ func (d *Display) Compile() (Format, error) {
 		// Assert and resize layout box rows
 		displayRowMin := 0
 		displayRowSkip := 0
-		if len(layout) < 2 || len(layout[0]) < 4 {
+		if len(layout) < 2 || len(layout[0]) < 2 {
 			return nil, fmt.Errorf("cannot compile display: layout is empty")
 		}
 		if hostCount < 1 {
@@ -161,7 +161,7 @@ func (d *Display) Compile() (Format, error) {
 					rowResizeCount := 0
 					for _, layoutBox := range layoutRow {
 						if !displayBoxSkip(hostIndex, layoutBox) {
-							rowCols += layoutBox.length()
+							rowCols += layoutBox.length(d.unicode)
 							rowResizeCount += layoutBox.resizes()
 						}
 					}
@@ -213,12 +213,10 @@ func (d *Display) Compile() (Format, error) {
 						return nil, fmt.Errorf("cannot compile display: "+
 							"row starts with [cline] in zero-indexed row [%d] of layout [%v]", layoutRowIndex, format)
 					}
-					if len(layoutRow) < 3 ||
-						layoutRow[len(layoutRow)-1].kind != boxDivdr ||
-						layoutRow[len(layoutRow)-2].kind != boxDivdr ||
-						layoutRow[len(layoutRow)-3].kind != boxDivdr {
+					if len(layoutRow) < 2 ||
+						layoutRow[len(layoutRow)-1].kind != boxDivdr {
 						return nil, fmt.Errorf("cannot compile display: "+
-							"row is not terminated by [3 x cline] in zero-indexed row [%d] of layout [%v]",
+							"row is not terminated by at least one [cline] in zero-indexed row [%d] of layout [%v]",
 							layoutRowIndex, format)
 					}
 					for hostColIndex := 0; hostColIndex < 2; hostColIndex++ {
@@ -242,9 +240,10 @@ func (d *Display) Compile() (Format, error) {
 							}
 							if b.kind == boxTitle {
 								b.set(
-									b.lblLhs, boxLhs, utf8.RuneCountInString(b.lblLhs),
-									hostName, boxLhs, utf8.RuneCountInString(b.lblMid),
-									b.lblRhs, boxLhs, utf8.RuneCountInString(b.lblRhs),
+									d.unicode,
+									b.lblLhs, boxLhs, utf8.RuneCountInString(b.lblLhs.pick(d.unicode)),
+									text{hostName, hostName}, boxLhs, utf8.RuneCountInString(b.lblMid.pick(d.unicode)),
+									b.lblRhs, boxLhs, utf8.RuneCountInString(b.lblRhs.pick(d.unicode)),
 								)
 							}
 							if b.metricID == metric.MetricServiceName {
@@ -253,8 +252,8 @@ func (d *Display) Compile() (Format, error) {
 							recordGUID := metric.NewServiceSchemaRecordGUID(b.metricID, hostName, hostServiceIndex[hostIndex])
 							b.recordGUID = &recordGUID
 							b.position = &dimensions{layoutRowIndex - displayRowSkip + hostRowIndex*(len(layout)-displayRowSkip), rowColsCount}
-							b.resize(displayResizeIncrement, displayResizeRemainder)
-							rowColsCount += b.length()
+							b.resize(d.unicode, displayResizeIncrement, displayResizeRemainder)
+							rowColsCount += b.length(d.unicode)
 							boxes = append(boxes, *b)
 						}
 					}
@@ -295,7 +294,7 @@ func (d *Display) Compile() (Format, error) {
 				if b.position.cols != expectedCol {
 					return nil, positioningErr
 				}
-				length := b.length()
+				length := b.length(d.unicode)
 				expectedCol += length
 				rowWidth += length
 			}

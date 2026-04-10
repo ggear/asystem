@@ -11,6 +11,7 @@ type colour int
 
 const (
 	colourDefault colour = iota
+	colourGray
 	colourGreen
 	colourYellow
 	colourOrange
