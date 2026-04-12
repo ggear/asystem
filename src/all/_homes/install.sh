@@ -1,29 +1,46 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
-cd ${SERVICE_INSTALL} || exit
+cd "${SERVICE_INSTALL}" || exit 1
 
-################################################################################
-# Users setup
-################################################################################
 user_add() {
-  if [ -d "${3}" ]; then
-    if [ ${4} ]; then
-      [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser --disabled-password --shell /bin/bash --gecos "${1}" "${1}" 2>/dev/null
-      [ -d "${3}${1}" ] && mkdir -p ${3}${1} && chmod 711 ${3} 2>/dev/null
+  local user_name="$1"
+  local group_name="$2"
+  local home_parent="$3"
+  local should_create_user="$4"
+  local home_path="${home_parent}${user_name}"
+  local asystem_home="/home/asystem"
+
+  if [ -d /Users ] || [ "${home_parent}" = "/Users/" ]; then
+    asystem_home="/Users/asystem"
+  fi
+  mkdir -p "${asystem_home}"
+  [ -d /root ] && [ ! -L /root/home ] && ln -s "${asystem_home}" /root/home || true
+  mkdir -p /var/lib/asystem/install
+  [ -d /root ] && [ ! -L /root/install ] && ln -s /var/lib/asystem/install /root/install || true
+
+  if [ -d "${home_parent}" ]; then
+    if [ "${should_create_user}" = "true" ]; then
+      if ! grep -q "^${user_name}:" "/etc/passwd"; then
+        adduser --disabled-password --shell /bin/bash --gecos "${user_name}" "${user_name}" 2>/dev/null || true
+      fi
+      if [ ! -d "${home_path}" ]; then
+        mkdir -p "${home_path}"
+        chmod 711 "${home_parent}" 2>/dev/null || true
+      fi
     fi
-    if [ -d "${3}${1}" ]; then
-      if [ ! -e "${3}${1}/.ssh/authorized_keys" ] || [ $(grep graham "${3}${1}/.ssh/authorized_keys" | wc -l) -eq 0 ]; then
-        mkdir -p ${3}${1}/.ssh
-        chmod 700 ${3}${1}/.ssh
-        cat <<EOF >>${3}${1}/.ssh/authorized_keys
+    if [ -d "${home_path}" ]; then
+      if [ ! -e "${home_path}/.ssh/authorized_keys" ] || ! grep -q "graham" "${home_path}/.ssh/authorized_keys"; then
+        mkdir -p "${home_path}/.ssh"
+        chmod 700 "${home_path}/.ssh"
+        cat <<EOF >>"${home_path}/.ssh/authorized_keys"
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC17bbhX9GtT/YyDrYO98Q9xzfyhn3WtBbftpFJ1yTm0wkssNMrW6YNjW2dVDm2qPgJUg9pKqw+XdyDUcxKWal1mLecPDYNAJgU0mJkFehDAxW91YNzjCH+kY70mVgZCzhi6XAx8pX5TDDHRMNnp76OyblMlge8g21tf3AwrzvJIQuC7UTrJYRWsxAIxTQBKqPW96JfvPLXk9l+vs31xC1y+wbWlKRey8LpYi4v/dePkkpQaac4R2DR4AlJNPRsoSn+W1zYYMi34bw4smpglrH83fA42rWClPkth/X2RzXPrQMyBNPFLalMbDe+xXMq6ExdfTlU6gE4s8dW4Gi3b1J1 graham.gear@gmail.com
 EOF
-        chmod 600 ${3}${1}/.ssh/authorized_keys
+        chmod 600 "${home_path}/.ssh/authorized_keys"
       fi
-      cat <<'EOF' >"${3}${1}/.bashrc"
+      cat <<'EOF' >"${home_path}/.bashrc"
 # .bashrc
 
 export LANG=en_AU.UTF-8
@@ -43,21 +60,33 @@ alias ls='ls ${LS_OPTIONS}'
 PATH=/root/.pyenv/bin:${PATH}
 
 EOF
-      chown ${1} "${3}${1}" 2>/dev/null || true
-      chgrp ${2} "${3}${1}" 2>/dev/null || true
-      chown -R ${1} "${3}${1}/.ssh" 2>/dev/null || true
-      chgrp -R ${2} "${3}${1}/.ssh" 2>/dev/null || true
+      chown "${user_name}" "${home_path}" 2>/dev/null || true
+      chgrp "${group_name}" "${home_path}" 2>/dev/null || true
+      chown -R "${user_name}" "${home_path}/.ssh" 2>/dev/null || true
+      chgrp -R "${group_name}" "${home_path}/.ssh" 2>/dev/null || true
     fi
   fi
 }
 
 key_copy() {
-  if [ -d "${3}${1}" ]; then
-    mkdir -p ${3}${1}/.ssh
-    cp -rvf ${SERVICE_INSTALL}/config/id_rsa.pub ${3}${1}/.ssh
-    cp -rvf ${SERVICE_INSTALL}/config/.id_rsa ${3}${1}/.ssh/id_rsa
-    chown -R ${1} ${3}${1}/.ssh 2>/dev/null || true
-    chgrp -R ${2} ${3}${1}/.ssh 2>/dev/null || true
+  local user_name="$1"
+  local group_name="$2"
+  local home_parent="$3"
+  local home_path="${home_parent}${user_name}"
+  local key_public="${SERVICE_INSTALL}/config/id_rsa.pub"
+  local key_private="${SERVICE_INSTALL}/config/.id_rsa"
+
+  if [ -d "${home_path}" ]; then
+    mkdir -p "${home_path}/.ssh"
+    if [ -f "${key_public}" ]; then
+      cp -vf "${key_public}" "${home_path}/.ssh/id_rsa.pub"
+    fi
+    if [ -f "${key_private}" ]; then
+      cp -vf "${key_private}" "${home_path}/.ssh/id_rsa"
+      chmod 600 "${home_path}/.ssh/id_rsa" 2>/dev/null || true
+    fi
+    chown -R "${user_name}" "${home_path}/.ssh" 2>/dev/null || true
+    chgrp -R "${group_name}" "${home_path}/.ssh" 2>/dev/null || true
   fi
 }
 

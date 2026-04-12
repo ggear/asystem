@@ -862,26 +862,26 @@ def _release(context):
                     else:
                         _run_local(context, "touch target/release/install.sh", module)
                     install = "{}/{}/{}".format(INSTALL_DIR, _get_service(module), _get_versions()[0])
-                    # print("Copying release to {} ... ".format(host))
-                    # _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
-                    #            .format(ssh_pass, host, install, install))
-                    # _run_local(context, "{}scp -qpr target/release/.  root@{}:{}"
-                    #            .format(ssh_pass, host, install), module)
-                    # print("Installing release to {} ... ".format(host))
-                    # _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
-                    #            .format(ssh_pass, host, install, install, install))
-                    # _run_local(context, "{}ssh -q root@{} 'chmod +x {}/install.sh && {}/install.sh'"
-                    #            .format(ssh_pass, host, install, install))
-                    # _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'"
-                    #            .format(ssh_pass, host), hide='err', warn=True)
-                    # _run_local(context, "{}ssh -q root@{} "
-                    #                     "'find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
-                    #                     "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
-                    #                     "xargs rm -rf'"
-                    #            .format(ssh_pass, host, install, install), hide='err', warn=True)
-                    # install_local_path = Path(join(ROOT_MODULE_DIR, module, "install_local.sh"))
-                    # if install_local_path.exists():
-                    #     _run_local(context, install_local_path)
+                    print("Copying release to {} ... ".format(host))
+                    _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
+                               .format(ssh_pass, host, install, install))
+                    _run_local(context, "{}scp -qpr target/release/.  root@{}:{}"
+                               .format(ssh_pass, host, install), module)
+                    print("Installing release to {} ... ".format(host))
+                    _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
+                               .format(ssh_pass, host, install, install, install))
+                    _run_local(context, "{}ssh -q root@{} 'chmod +x {}/install.sh && {}/install.sh'"
+                               .format(ssh_pass, host, install, install))
+                    _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'"
+                               .format(ssh_pass, host), hide='err', warn=True)
+                    _run_local(context, "{}ssh -q root@{} "
+                                        "'find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
+                                        "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
+                                        "xargs rm -rf'"
+                               .format(ssh_pass, host, install, install), hide='err', warn=True)
+                    install_local_path = Path(join(ROOT_MODULE_DIR, module, "install_local.sh"))
+                    if install_local_path.exists():
+                        _run_local(context, install_local_path)
                 else:
                     print("Module ignored")
                 _print_footer(module, "release", host=host)
