@@ -1269,7 +1269,11 @@ def _print_header(module, stage, host=None):
     if host is None:
         label = module
     else:
-        label = module.replace(_get_host_label(host), "[" + _get_host_label(host) + "]")
+
+
+
+
+        label = module.replace( "all" if module.split("/")[0] == "all" else _get_host_label(host), "[" + _get_host_label(host) + "]")
 
 
 
