@@ -1022,9 +1022,14 @@ def _get_host_label(host):
 
 
 def _get_host_labels(module):
+    if not module:
+        return []
     labels = module.split("/")[0].split("_")
     if labels == ["all"]:
-        return [host for host in HOSTS.keys()]
+        labels = sorted(
+            label for label, metadata in HOSTS.items()
+            if metadata[4] != "ignore"
+        )
     return labels
 
 
