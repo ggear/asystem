@@ -27,7 +27,7 @@ user_add() {
         adduser --disabled-password --shell /bin/bash --gecos "${user_name}" "${user_name}" 2>/dev/null || true
       fi
       if [ ! -d "${home_path}" ]; then
-        mkdir -p "${home_path}"
+        mkdir -p "${home_path}" 2>/dev/null || true
         chmod 711 "${home_parent}" 2>/dev/null || true
       fi
     fi
