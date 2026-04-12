@@ -6,6 +6,7 @@
 ! which brew && /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew update
 brew install --cask \
+  vlc \
   plex \
   openra \
   ghostty \
@@ -14,6 +15,7 @@ brew install --cask \
   docker-desktop \
   google-drive \
   mqtt-explorer \
+  google-chrome \
   sublime-text
 brew install \
   pv \

@@ -12,4 +12,4 @@ mad=macmini,arm64,dar,linux,server
 max=macmini,x86_64,dar,linux,server
 may=macmini,x86_64,dar,linux,server
 meg=macmini,x86_64,dar,linux,server
-zzz=nullsvr,x86_64,dar,linux,server
+zzz=nullsvr,x86_64,dar,linux,ignore

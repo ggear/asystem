@@ -1,46 +1,82 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ###############################################################################
 # Generic module install script, to be invoked by the Fabric management script
 ###############################################################################
 
-SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+set -Eeuo pipefail
+IFS=$'\n\t'
 
-cd ${SERVICE_INSTALL} || exit
-[ -f "./install_prep.sh" ] && chmod +x ./install_prep.sh && ./install_prep.sh || true
-cd ${SERVICE_INSTALL} || exit
+log_info() { echo "$*"; }
+log_warn() { echo "WARN: $*" >&2; }
+log_error() { echo "ERROR: $*" >&2 && exit 1; }
+
+run_hook() {
+  local hook_path="$1"
+  if [[ -f "${hook_path}" ]]; then
+    chmod +x "${hook_path}"
+    "${hook_path}" || log_warn "Hook failed but continuing: ${hook_path}"
+  fi
+}
+
+SERVICE_INSTALL="/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
+[[ -d "${SERVICE_INSTALL}" ]] || log_error "Install directory does not exist: ${SERVICE_INSTALL}"
+cd "${SERVICE_INSTALL}"
+
+run_hook "./install_prep.sh"
+cd "${SERVICE_INSTALL}"
 
 touch .env
 chmod 600 .env
 source .env
 
-if [ ${SERVICE_FORM_FACTOR} == "server" ]; then
-  SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
-  SERVICE_HOME_OLD=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1)
-  SERVICE_HOME_OLDEST=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | head -n $(($(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 1)))
-  [ -f "${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz
-  if [ -f "docker-compose.yml" ]; then
-    docker stop "${SERVICE_NAME}" >/dev/null 2>&1
-    docker stop "${SERVICE_NAME}"_bootstrap >/dev/null 2>&1
-    docker wait "${SERVICE_NAME}" >/dev/null 2>&1
-    docker wait "${SERVICE_NAME}"_bootstrap >/dev/null 2>&1
-    docker system prune --volumes -f 2>&1 >/dev/null
+if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
+  SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
+  SERVICE_PARENT="$(dirname "${SERVICE_HOME}")"
+  mapfile -t EXISTING_HOMES < <(find "${SERVICE_PARENT}" -maxdepth 1 -mindepth 1 -type d ! -name latest 2>/dev/null | sort)
+  SERVICE_HOME_OLD=""
+  SERVICE_HOME_OLDEST=()
+  if ((${#EXISTING_HOMES[@]} > 0)); then
+    LAST_HOME_INDEX=$((${#EXISTING_HOMES[@]} - 1))
+    SERVICE_HOME_OLD="${EXISTING_HOMES[${LAST_HOME_INDEX}]}"
+    if ((${#EXISTING_HOMES[@]} > 1)); then
+      SERVICE_HOME_OLDEST=("${EXISTING_HOMES[@]:0:${#EXISTING_HOMES[@]}-1}")
+    fi
   fi
-  if [ ! -d "$SERVICE_HOME" ]; then
+  IMAGE_TAR="${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz"
+  [[ -f "${IMAGE_TAR}" ]] && docker image load -i "${IMAGE_TAR}"
+  if [[ -f "docker-compose.yml" ]]; then
+    docker stop "${SERVICE_NAME}" >/dev/null 2>&1 || true
+    docker stop "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
+    docker wait "${SERVICE_NAME}" >/dev/null 2>&1 || true
+    docker wait "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
+    docker system prune --volumes -f >/dev/null 2>&1 || true
+  fi
+  if [[ ! -d "${SERVICE_HOME}" ]]; then
     mkdir -p "${SERVICE_HOME}"
     chmod 777 "${SERVICE_HOME}"
-    if [ "$(stat -f -c %T ${SERVICE_HOME})" = "btrfs" ]; then chattr +C ${SERVICE_HOME}; fi
-    if [ -d "$SERVICE_HOME_OLD" ]; then
-      echo "Copying old home to new ... "
-      cp -rfpa "$SERVICE_HOME_OLD/." "$SERVICE_HOME"
+    if [[ "$(stat -f -c %T "${SERVICE_HOME}" 2>/dev/null || true)" == "btrfs" ]]; then
+      chattr +C "${SERVICE_HOME}" || true
     fi
-    rm -rf $SERVICE_HOME_OLDEST
+    if [[ -n "${SERVICE_HOME_OLD}" && -d "${SERVICE_HOME_OLD}" ]]; then
+      log_info "Copying old home to new ..."
+      cp -rfpa "${SERVICE_HOME_OLD}/." "${SERVICE_HOME}"
+    fi
+    if ((${#SERVICE_HOME_OLDEST[@]} > 0)); then
+      rm -rf "${SERVICE_HOME_OLDEST[@]}"
+    fi
   fi
-  [ "$(ls -A data | wc -l)" -gt 0 ] && cp -rfpv $(find data -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
-  rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
-  [ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
-  if [ -f "docker-compose.yml" ]; then
+  shopt -s dotglob nullglob
+  DATA_ENTRIES=(data/*)
+  if ((${#DATA_ENTRIES[@]} > 0)); then
+    cp -rfpv "${DATA_ENTRIES[@]}" "${SERVICE_HOME}"
+  fi
+  shopt -u dotglob nullglob
+  rm -f "${SERVICE_PARENT}/latest"
+  ln -sfv "${SERVICE_HOME}" "${SERVICE_PARENT}/latest"
+  run_hook "./install_pre.sh"
+  if [[ -f "docker-compose.yml" ]]; then
     docker compose --compatibility --ansi never up --force-recreate -d
-    if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
+    if docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}_bootstrap"; then
       sleep 1
       docker logs "${SERVICE_NAME}_bootstrap" -f
     fi
@@ -50,27 +86,28 @@ if [ ${SERVICE_FORM_FACTOR} == "server" ]; then
     if find "${SERVICE_INSTALL}" -name checkexecuting.sh | grep -q . && find "${SERVICE_INSTALL}" -name checkhealthy.sh | grep -q .; then
       echo
       while ! docker exec "${SERVICE_NAME}" /asystem/etc/checkexecuting.sh; do
-        echo "Waiting for service to start executing ... " && sleep 1
+        echo "Waiting for service to start executing ..."
+        sleep 1
       done
       echo && echo "Waiting to check service health ... " && echo && sleep 2
       docker exec -i "${SERVICE_NAME}" bash -c 'command -v stdbuf >/dev/null 2>&1 && exec stdbuf -oL /asystem/etc/checkhealthy.sh -v || exec /asystem/etc/checkhealthy.sh -v'
       echo && echo
       sleep 1
     else
-      echo && echo "❌ Service does not have health scripts defined" && echo "" && exit 1
+      log_error "Service does not have health scripts defined"
     fi
     echo "--------------------------------------------------------------------------------"
     docker ps -f name="${SERVICE_NAME}"
     echo "--------------------------------------------------------------------------------"
     docker logs "${SERVICE_NAME}"
     echo "--------------------------------------------------------------------------------"
-    if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
-      echo && echo "❌ Service failed to start" && echo "" && exit 1
+    if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
+      log_error "Service failed to start"
     else
-      docker system prune --volumes -f -a 2>&1 >/dev/null
-      echo "✅ Service started successfully"
+      docker system prune --volumes -f -a >/dev/null 2>&1 || true
+      echo "Service started successfully"
       echo "--------------------------------------------------------------------------------"
     fi
   fi
 fi
-[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh || true
+run_hook "./install_post.sh"

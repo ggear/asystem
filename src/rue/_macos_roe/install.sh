@@ -6,16 +6,17 @@
 mkdir -p ~/Temp ~/Code ~/Backup
 rm -rf .zprofile .zsh_history .zsh_sessions
 rm -rf /Users/graham/.profile
-cat <<'EOF' >/Users/graham/.bash_profile
+defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool TRUE
+
+################################################################################
+# Shell
+################################################################################
+cat <<'EOF' >~/.bash_profile
 # .bash_profile
 
 ulimit -n 65536
 
-printf '\e[?2004l'
-tput rmam
-# tput smam
-
-defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool TRUE
+[[ $- == *i* ]] && { printf '\e[?2004l'; tput rmam; }
 
 export PS1='\u@\h:\w\$ '
 
@@ -31,38 +32,38 @@ export PYTHONDONTWRITEBYTECODE=1
 export HISTSIZE=100000
 export HISTFILESIZE=100000
 export HISTFILE=~/.bash_history
-bash_sync_history() { history -a; history -c; history -r; }
 
-export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007" && bash_sync_history'
-bind '"\e[A":history-search-backward'
-bind '"\e[B":history-search-forward'
+export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"; history -a; history -c; history -r'
 
-alias edit="/Applications/Sublime\ Text.app/Contents/SharedSupport/bin/subl"
+[[ $- == *i* ]] && {
+  bind '"\e[A":history-search-backward'
+  bind '"\e[B":history-search-forward'
+}
+
+alias edit="/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl"
 alias fab="fab -e"
 alias dns-cache-flush="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"
 alias ssh-copy-id="sshcopyid_func"
 
 grep() { /usr/bin/grep --line-buffered "$@"; }
 find() { /opt/homebrew/bin/gfind "$@"; }
-
-function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir -p .ssh; cat >>.ssh/authorized_keys'; }
-
-git() { ssh -O check git@github.com 2>/dev/null || ssh -T git@github.com >/dev/null 2>&1; command git "$@"; }
+function sshcopyid_func() { cat ~/.ssh/id_ed25519.pub | ssh $1 'mkdir -p .ssh; cat >>.ssh/authorized_keys'; }
 
 export PATH="/opt/homebrew/sbin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 export PYENV_ROOT="${HOME}/.pyenv"
-export PYTHON_HOME="${PYENV_ROOT}/versions/$(pyenv version --bare)"
+eval "$(pyenv init -)"
 
 export GOENV_ROOT="${HOME}/.goenv"
-export GOROOT="${GOENV_ROOT}/versions/$(goenv version-name)"
 export GOPATH="${HOME}/.go"
 export GOBIN="${HOME}/.go/bin"
+eval "$(goenv init -)"
 
 export NVM_DIR="${HOME}/.nvm"
-[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"
-
-export PATH="${PYTHON_HOME}/bin:${GOPATH}/bin:${GOROOT}/bin:${PATH}"
+nvm() { unset -f nvm node npm npx; [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"; nvm "$@"; }
+node() { unset -f nvm node npm npx; [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"; node "$@"; }
+npm() { unset -f nvm node npm npx; [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"; npm "$@"; }
+npx() { unset -f nvm node npm npx; [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"; npx "$@"; }
 
 EOF
 

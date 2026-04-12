@@ -250,10 +250,10 @@ def _list(context):
                 group_service_dict[group].add(service)
             for host in ["{} [{}-{}, {}, {}]".format(
                     _host,
-                    HOSTS[_host][0],
+                    _get_host_metadata(_host)[0],
                     _host,
-                    HOSTS[_host][1],
-                    HOSTS[_host][2],
+                    _get_host_metadata(_host)[1],
+                    _get_host_metadata(_host)[2],
             ) for _host in _get_host_labels(module)]:
                 if host not in host_group_service_dict:
                     host_group_service_dict[host] = {}
@@ -535,7 +535,7 @@ docker rm -vf "$CONTAINER_NAME"
                     "\n".join([f'echo "{_cp}"' for _cp in docker_build_copies]),
                     " \\\\\\\\\"\n".join([f'echo "    {_var}' for _var in docker_build_variables]),
                     docker_image,
-                    HOSTS[_get_host(module) if filter_host is None else _get_host_label(filter_host)][1],
+                    _get_host_metadata(_get_host(module) if filter_host is None else _get_host_label(filter_host))[1],
                     " ".join(docker_build_mounts),
                     docker_image,
                     " ".join(docker_build_variables),
@@ -725,7 +725,7 @@ def _unittest(context, filter_module=None):
 def _package(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package", host=filter_host)
-        host_arch = HOSTS[_get_host(module) if filter_host is None else _get_host_label(filter_host)][1]
+        host_arch = _get_host_metadata(_get_host(module) if filter_host is None else _get_host_label(filter_host))[1]
         build_args = ""
         for env_global_key, env_global_value in GLOBAL_ENV.items():
             if env_global_key.endswith("_VERSION"):
@@ -841,10 +841,10 @@ def _release(context):
                     _run_local(context, "mkdir -p target/release/image", module)
                     module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
                     if isdir(module_go_main_path):
-                        target_arch = HOSTS[_get_host_label(host)][1]
+                        target_arch = _get_host_metadata(_get_host_label(host))[1]
                         if target_arch == "x86_64":
                             target_arch = "amd64"
-                        target_os = HOSTS[_get_host_label(host)][3]
+                        target_os = _get_host_metadata(_get_host_label(host))[3]
                         module_go_bin = join(ROOT_MODULE_DIR, module, "target/release/data")
                         _run_local(context, "mkdir -p {}".format(module_go_bin), module)
                         _run_local(context, "GOOS={} GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
@@ -855,32 +855,33 @@ def _release(context):
                             module_go_bin,
                         ), module_go_main_path)
                     Path(join(ROOT_MODULE_DIR, module, "target/release/hosts")) \
-                        .write_text("\n".join(["{}-{}".format(HOSTS[host][0], host) for host in HOSTS]) + "\n")
+                        .write_text(
+                        "\n".join(["{}-{}".format(_get_host_metadata(host)[0], host) for host in HOSTS]) + "\n")
                     if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/install*")):
                         _run_local(context, "cp -rvfp target/package/install* target/release", module)
                     else:
                         _run_local(context, "touch target/release/install.sh", module)
                     install = "{}/{}/{}".format(INSTALL_DIR, _get_service(module), _get_versions()[0])
-                    print("Copying release to {} ... ".format(host))
-                    _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
-                               .format(ssh_pass, host, install, install))
-                    _run_local(context, "{}scp -qpr target/release/.  root@{}:{}"
-                               .format(ssh_pass, host, install), module)
-                    print("Installing release to {} ... ".format(host))
-                    _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
-                               .format(ssh_pass, host, install, install, install))
-                    _run_local(context, "{}ssh -q root@{} 'chmod +x {}/install.sh && {}/install.sh'"
-                               .format(ssh_pass, host, install, install))
-                    _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'"
-                               .format(ssh_pass, host), hide='err', warn=True)
-                    _run_local(context, "{}ssh -q root@{} "
-                                        "'find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
-                                        "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
-                                        "xargs rm -rf'"
-                               .format(ssh_pass, host, install, install), hide='err', warn=True)
-                    install_local_path = Path(join(ROOT_MODULE_DIR, module, "install_local.sh"))
-                    if install_local_path.exists():
-                        _run_local(context, install_local_path)
+                    # print("Copying release to {} ... ".format(host))
+                    # _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
+                    #            .format(ssh_pass, host, install, install))
+                    # _run_local(context, "{}scp -qpr target/release/.  root@{}:{}"
+                    #            .format(ssh_pass, host, install), module)
+                    # print("Installing release to {} ... ".format(host))
+                    # _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
+                    #            .format(ssh_pass, host, install, install, install))
+                    # _run_local(context, "{}ssh -q root@{} 'chmod +x {}/install.sh && {}/install.sh'"
+                    #            .format(ssh_pass, host, install, install))
+                    # _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'"
+                    #            .format(ssh_pass, host), hide='err', warn=True)
+                    # _run_local(context, "{}ssh -q root@{} "
+                    #                     "'find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
+                    #                     "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
+                    #                     "xargs rm -rf'"
+                    #            .format(ssh_pass, host, install, install), hide='err', warn=True)
+                    # install_local_path = Path(join(ROOT_MODULE_DIR, module, "install_local.sh"))
+                    # if install_local_path.exists():
+                    #     _run_local(context, install_local_path)
                 else:
                     print("Module ignored")
                 _print_footer(module, "release", host=host)
@@ -979,7 +980,7 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
     for group in sorted(grouped_modules):
         sorted_modules.extend(grouped_modules[group])
     module_name_locale = [
-        "{}:{}".format(_get_service(module), HOSTS[_get_host(module)][2]) for module in sorted_modules]
+        "{}:{}".format(_get_service(module), _get_host_metadata(_get_host(module))[2]) for module in sorted_modules]
     module_name_locale_duplicates = [
         _module_service for _module_service in set(module_name_locale) if module_name_locale.count(_module_service) > 1]
     if len(module_name_locale_duplicates) > 0:
@@ -1004,12 +1005,16 @@ def _ssh_pass(context, host):
     return ssh_prefix
 
 
+def _get_host_metadata(host):
+    return HOSTS[host]
+
+
 def _get_service(module):
     return module.split("/")[1]
 
 
 def _get_host(module):
-    return module.split("/")[0].split("_")[0]
+    return _get_host_labels(module)[0]
 
 
 def _get_host_label(host):
@@ -1017,11 +1022,14 @@ def _get_host_label(host):
 
 
 def _get_host_labels(module):
-    return module.split("/")[0].split("_")
+    labels = module.split("/")[0].split("_")
+    if labels == ["all"]:
+        return [host for host in HOSTS.keys()]
+    return labels
 
 
 def _get_hosts(module):
-    return [(HOSTS[host][0] + "-" + host) for host in module.split("/")[0].split("_")]
+    return [(_get_host_metadata(host)[0] + "-" + host) for host in _get_host_labels(module)]
 
 
 def _get_dependencies(context, module):
@@ -1061,7 +1069,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                        "{}/{}/target/runtime-system".format(ROOT_MODULE_DIR, module), working_path), module)
     _run_local(context, "echo 'SERVICE_FORM_FACTOR={}' >> {}/.env"
                .format(
-        HOSTS[_get_host_label(filter_host)][4] if (is_release and filter_host is not None) else "server",
+        _get_host_metadata(_get_host_label(filter_host))[4] if (is_release and filter_host is not None) else "server",
         working_path), module)
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
