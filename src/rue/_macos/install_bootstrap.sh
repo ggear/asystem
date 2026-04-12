@@ -42,6 +42,7 @@
 ################################################################################
 # Install WhatsApp from App Store
 # Install from https://www.office.com
+# Install from https://prowritingaid.com/download/everywheremac
 # Install from https://dl.google.com/drive-file-stream/GoogleDrive.dmg
 # Install from https://mirror.aarnet.edu.au/pub/videolan/vlc/3.0.16/macosx/vlc-3.0.16-intel64.dmg
 # Install from https://update-software.sonos.com/software/mac/mdcr/SonosDesktopController1341.dmg

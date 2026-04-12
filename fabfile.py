@@ -185,8 +185,6 @@ def _backup(context):
 
 def _pull(context):
     _print_header("asystem", "pull main")
-    _run_local(context, "git remote set-url origin https://github.com/$(git remote get-url origin | "
-                        "sed 's/https:\\/\\/github.com\\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
     _print_footer("asystem", "pull main")
     _print_header("asystem", "pull dependencies")

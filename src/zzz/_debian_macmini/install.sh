@@ -138,7 +138,7 @@ fi
 cat <<'EOF' >/etc/avahi/avahi-daemon.conf
 [server]
 use-ipv6=no
-allow-interfaces=lan0
+allow-interfaces=eth0
 [publish]
 publish-hinfo=no
 publish-workstation=no
