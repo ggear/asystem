@@ -1264,7 +1264,7 @@ def _print_line(message):
 
 def _print_header(module, stage, host=None):
 
-    print("\n\n\n{} {} {}\n\n\n".format(module, stage, host))
+    print("\n\n\n{} {}\n\n\n".format(module,  host))
 
     label = module if host is None else module.replace(_get_host_label(host), "[" + _get_host_label(host) + "]")
     _print_line(HEADER.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
