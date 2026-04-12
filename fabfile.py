@@ -1279,7 +1279,13 @@ def _print_header(module, stage, host=None):
 
 
 def _print_footer(module, stage, host=None):
-    label = module if host is None else module.replace(_get_host_label(host), "[" + _get_host_label(host) + "]")
+    if host is None:
+        label = module
+    else:
+        label = module.replace(
+            "all" if module.split("/")[0] == "all" else _get_host_label(host),
+            "[" + _get_host_label(host) + "]"
+        )
     _print_line(FOOTER.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
 
 
