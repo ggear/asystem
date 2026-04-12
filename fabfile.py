@@ -996,9 +996,9 @@ def _ssh_pass(context, host):
                                "-o PasswordAuthentication=no "
                                "-o BatchMode=yes "
                                "-o ConnectTimeout=1 "
-                               "root@{} exit"
+                               "root@{}.local exit"
                       .format(host), hide="err", warn=True).exited > 0 else ""
-    if _run_local(context, "{}ssh -q -o ConnectTimeout=1 root@{} 'echo Connected to {}'" \
+    if _run_local(context, "{}ssh -q -o ConnectTimeout=1 root@{}.local 'echo Connected to {}'" \
             .format(ssh_prefix, host, host), hide="err",
                   warn=True).exited > 0:
         raise Exception("Error connecting to server via [{}ssh -q root@{}]".format(ssh_prefix, host))
