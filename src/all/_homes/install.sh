@@ -12,7 +12,6 @@ user_add() {
   local should_create_user="$4"
   local home_path="${home_parent}${user_name}"
   local asystem_home="/home/asystem"
-
   if [ -d /Users ] || [ "${home_parent}" = "/Users/" ]; then
     asystem_home="/Users/asystem"
   fi
@@ -75,7 +74,6 @@ key_copy() {
   local home_path="${home_parent}${user_name}"
   local key_public="${SERVICE_INSTALL}/config/id_rsa.pub"
   local key_private="${SERVICE_INSTALL}/config/.id_rsa"
-
   if [ -d "${home_path}" ]; then
     mkdir -p "${home_path}/.ssh"
     if [ -f "${key_public}" ]; then
