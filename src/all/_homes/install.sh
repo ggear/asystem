@@ -15,11 +15,12 @@ user_add() {
   if [ -d /Users ] || [ "${home_parent}" = "/Users/" ]; then
     asystem_home="/Users/asystem"
   fi
-  mkdir -p "${asystem_home}"
-  [ -d /root ] && [ ! -L /root/home ] && ln -s "${asystem_home}" /root/home || true
-  mkdir -p /var/lib/asystem/install
-  [ -d /root ] && [ ! -L /root/install ] && ln -s /var/lib/asystem/install /root/install || true
-
+  if [ "${user_name}" = "root" ] && [ -d "${home_path}" ]; then
+    mkdir -p "${asystem_home}"
+    [ ! -L "${home_path}/home" ] && ln -s "${asystem_home}" "${home_path}/home" || true
+    mkdir -p /var/lib/asystem/install
+    [ ! -L "${home_path}/install" ] && ln -s /var/lib/asystem/install "${home_path}/install" || true
+  fi
   if [ -d "${home_parent}" ]; then
     if [ "${should_create_user}" = "true" ]; then
       if ! grep -q "^${user_name}:" "/etc/passwd"; then
