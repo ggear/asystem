@@ -189,3 +189,27 @@ echo "$("${GOROOT}/bin/go" version) installed"
 ################################################################################
 nvm install --lts
 npm install -g yarn
+
+################################################################################
+# IntelliJ
+################################################################################
+mkdir -p ~/Library/LaunchAgents
+cat <<'EOF' >~/Library/LaunchAgents/me.graham.goenv.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>me.graham.goenv</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>sh</string>
+    <string>-c</string>
+    <string>launchctl setenv GOPATH /Users/graham/.go &amp;&amp; launchctl setenv GOBIN /Users/graham/.go/bin</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
+EOF
+launchctl load ~/Library/LaunchAgents/me.graham.goenv.plist

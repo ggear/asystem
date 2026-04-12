@@ -40,10 +40,12 @@ def load_env(root_dir=None):
 
 def load_modules(load_disabled=True, load_infrastrcture=True):
     modules = {}
-    host_labels_names = {line.split("=")[0]: line.split("=")[-1].split(",")
-                         for line in
-                         Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts")).read_text().strip().split(
-                             "\n")}
+    hosts_path = Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts"))
+    host_labels_names = {
+        line.split("=")[0]: line.split("=")[-1].split(",")
+        for line in hosts_path.read_text().strip().split("\n")
+        if line.strip() and not line.strip().startswith("#")
+    }
     for module in glob.glob(abspath(join(DIR_ROOT, "../../*/*"))):
         group_path = Path(join(module, ".group"))
         if (load_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and
@@ -51,8 +53,22 @@ def load_modules(load_disabled=True, load_infrastrcture=True):
                 (load_infrastrcture or not basename(module).startswith("_")):
             env = load_env(module)
             name = basename(module)
-            hosts = ["{}-{}".format(host_labels_names[host_label][0], host_label) for host_label in
-                     basename(dirname(module)).split("_")]
+            host_labels = basename(dirname(module)).split("_")
+            if host_labels == ["all"]:
+                host_labels = sorted(
+                    label for label, metadata in host_labels_names.items()
+                    if len(metadata) > 4 and metadata[4] != "ignore"
+                )
+            unknown_labels = [host_label for host_label in host_labels if host_label not in host_labels_names]
+            if unknown_labels:
+                raise KeyError(
+                    "Unknown host label(s) [{}] for module [{}]. Check [{}]".format(
+                        ",".join(unknown_labels),
+                        module,
+                        hosts_path,
+                    )
+                )
+            hosts = ["{}-{}".format(host_labels_names[host_label][0], host_label) for host_label in host_labels]
             modules[name] = [hosts, env]
     return modules
 
