@@ -1264,13 +1264,13 @@ def _print_line(message):
 
 def _print_header(module, stage, host=None):
 
-    print("\n\n\n{} {}\n\n\n".format(module,  host, ))
+    # print("\n\n\n{} {}\n\n\n".format(module,  host, ))
 
     if host is None:
         label = module
     else:
 
-        print("all" if module.split("/")[0] == "all" else _get_host_label(host))
+
 
 
         label = module.replace("all" if module.split("/")[0] == "all" else _get_host_label(host), "[" + _get_host_label(host) + "]")
