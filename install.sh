@@ -9,7 +9,6 @@ IFS=$'\n\t'
 log_info() { echo "$*"; }
 log_warn() { echo "WARN: $*" >&2; }
 log_error() { echo "ERROR: $*" >&2 && exit 1; }
-
 run_hook() {
   local hook_path="$1"
   if [[ -f "${hook_path}" ]]; then
@@ -21,14 +20,11 @@ run_hook() {
 SERVICE_INSTALL="/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
 [[ -d "${SERVICE_INSTALL}" ]] || log_error "Install directory does not exist: ${SERVICE_INSTALL}"
 cd "${SERVICE_INSTALL}"
-
 run_hook "./install_prep.sh"
 cd "${SERVICE_INSTALL}"
-
 touch .env
 chmod 600 .env
 source .env
-
 if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
   SERVICE_PARENT="$(dirname "${SERVICE_HOME}")"
