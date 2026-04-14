@@ -30,7 +30,7 @@ if __name__ == "__main__":
     modules_all = _get_modules_by_hosts("docker-compose.yml")
     modules_server = {}
     for host, services in modules_all.items():
-        if HOSTS[_get_host_label(host)][4] == "server":
+        if HOSTS[_get_host_label(host)][4] == "edge" or HOSTS[_get_host_label(host)][4] == "server":
             modules_server[host] = sorted(modules_all[host])
     metadata_supervisor_path = abspath(join(DIR_ROOT, "src/main/resources/image/config.json"))
     with open(metadata_supervisor_path, 'w') as metadata_supervisor_file:

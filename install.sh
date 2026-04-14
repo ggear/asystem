@@ -25,7 +25,7 @@ cd "${SERVICE_INSTALL}"
 touch .env
 chmod 600 .env
 source .env
-if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
+if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
   SERVICE_PARENT="$(dirname "${SERVICE_HOME}")"
   mapfile -t EXISTING_HOMES < <(find "${SERVICE_PARENT}" -maxdepth 1 -mindepth 1 -type d ! -name latest 2>/dev/null | sort)

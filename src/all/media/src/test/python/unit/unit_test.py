@@ -342,7 +342,7 @@ class InternetTest(unittest.TestCase):
                                     .replace("`", "\\`") \
                                     .replace("\"", "\\\""))
                             print("Running {} ...\n\n".format(script_path), flush=True)
-                            time.sleep(1)
+                            time.sleep(0.1)
                             script_return = subprocess.run([script_path], shell=True).returncode
                             sys.stdout.flush()
                             sys.stderr.flush()

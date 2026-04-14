@@ -12,10 +12,10 @@ requests==2.32.3
 pathlib2==2.3.7.post1
 packaging==24.2
 
-pytz==2025.2
+pytz==2026.1.post1
 datetime==5.5
 python-dateutil==2.9.0.post0
-types-python-dateutil==2.9.0.20251115
+types-python-dateutil==2.9.0.20260408
 
 pandas==2.2.3
 polars==1.29.0
