@@ -60,7 +60,6 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "client" || "${SERVICE_FORM_FACTOR:-}" == "s
   cp -rvf "/var/lib/asystem/install/media/latest/.gspread_pandas" "${HOME}/.config/gspread_pandas"
   chmod +x "/var/lib/asystem/install/media/latest/bin/"*.sh "/var/lib/asystem/install/media/latest/bin/lib/"*.sh
   for SCRIPT in "/var/lib/asystem/install/media/latest/bin/"*.sh; do
-    rm -rf "/usr/local/bin/asystem-$(basename "${SCRIPT}" .sh)"
     rm -rf "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
     ln -vs "${SCRIPT}" "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
   done
