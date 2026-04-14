@@ -1917,7 +1917,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
 
 ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
-. $(asystem-media-home)/.env_media
+. $(media-home)/.env_media
 
 [[ $(hostname) == macmini* ]] && killall -9 ffmpeg >/dev/null 2>/dev/null
 
@@ -1935,10 +1935,10 @@ else
     LOG_DEV=/dev/null
 fi
 if [ $(uname) == "Darwin" ]; then
-    for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
-        HOST_NAME="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
-        HOST_DIRS='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
-        HOST_CMD='. $(asystem-media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
+    for LABEL in $(basename "$(realpath $(media-home)/../../../../..)" | tr "_" "\\n"); do
+        HOST_NAME="$(grep "${LABEL}" "$(media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
+        HOST_DIRS='. $(media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
+        HOST_CMD='. $(media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
         if host "${HOST_NAME}" >/dev/null 2>&1; then
             if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
                 echo "Executing remotely ... "
@@ -1957,11 +1957,11 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")/${2:-/media}"
         """
         script_source_exec_clean = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
-"$(asystem-media-home)/lib/clean.sh" "${SHARE_DIR}"
+"$(media-home)/lib/clean.sh" "${SHARE_DIR}"
         """
         script_source_exec_normalise = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
-"$(asystem-media-home)/lib/normalise.sh" "${SHARE_DIR}"
+"$(media-home)/lib/normalise.sh" "${SHARE_DIR}"
         """
         script_source_exec_summarise = """
 declare -a OP_CODES=({})

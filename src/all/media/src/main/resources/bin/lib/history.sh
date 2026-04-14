@@ -140,7 +140,7 @@ done
 find . -type f ! -path "*/mad/_fedora/src/main/resources/pyenv/*" -exec grep -H 'pyenv' {} +
 
 # Nohup a script
-nohup asystem-media-reformat >/tmp/asystem-media-clean.log 2>&1 &
+nohup media-reformat >/tmp/media-clean.log 2>&1 &
 disown
 
 # Process video

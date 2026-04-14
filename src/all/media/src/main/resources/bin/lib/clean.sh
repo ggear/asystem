@@ -10,7 +10,7 @@ if [ ! -d "${WORKING_DIR}" ]; then
   exit 1
 fi
 
-LOG="/tmp/asystem-media-clean.log"
+LOG="/tmp/media-clean.log"
 
 echo -n "Cleaning '${WORKING_DIR}' ... "
 rm -rf ${LOG}

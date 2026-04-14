@@ -13,7 +13,7 @@ if [ -n "${SHARE_DIR_MEDIA}" ]; then
   fi
 fi
 if [ -n "${MEDIA_FILE_DIR}" ]; then
-  asystem-media-clean
+  media-clean
   "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" --verbose --force "${MEDIA_FILE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}"
 else
   echo "" && echo "Error: Not in media file root directory, not doing anything!" && echo ""

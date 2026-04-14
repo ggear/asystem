@@ -40,7 +40,7 @@ export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"; histor
   bind '"\e[B":history-search-forward'
 }
 
-alias edit="/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl"
+alias edit='/Applications/Sublime\ Text.app/Contents/SharedSupport/bin/subl'
 alias fab="fab -e"
 alias dns-cache-flush="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"
 alias ssh-copy-id="sshcopyid_func"
