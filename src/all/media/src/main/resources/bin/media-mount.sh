@@ -4,7 +4,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 . "${ROOT_DIR}/.env_media"
 
-if [ $(hostname) == "macbook-roe" ]; then
+if [[ $(uname) == "Darwin" ]]; then
   hosts_file=$(realpath "${LIB_ROOT}/../../../../../../../.hosts")
   for fstab_file in $(${FIND_CMD} "${LIB_ROOT}/../../../../../.." ! -path '*/target/*' -name fstab | sort); do
     host_label=$(basename $(realpath "${fstab_file}/../../../../.."))
@@ -20,7 +20,8 @@ if [ $(hostname) == "macbook-roe" ]; then
       fi
     done
   done
-else
+fi
+if [[ $(uname) == "Linux" ]]; then
   IMPORT_MEDIA_DEV="/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
   umount -fq /media/usbdrive 2>&1 >/dev/null
   mount -t exfat ${IMPORT_MEDIA_DEV} /media/usbdrive
