@@ -48,18 +48,20 @@ EOF
 EOF
   done
 fi
-if [ ! -d "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin" ]; then
-  pyenv install "${ASYSTEM_PYTHON_VERSION}"
-  "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
-  "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r "./.reqs.txt"
+if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
+  if [ ! -d "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin" ]; then
+    pyenv install "${ASYSTEM_PYTHON_VERSION}"
+    "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
+    "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r "./.reqs.txt"
+  fi
+  cp -rvf "/var/lib/asystem/install/media/latest/bin/lib/other-transcode.rb" "/usr/local/bin/other-transcode"
+  chmod +x "/usr/local/bin/other-transcode"
+  mkdir -p "${HOME}/.config"
+  cp -rvf "/var/lib/asystem/install/media/latest/.gspread_pandas" "${HOME}/.config/gspread_pandas"
+  chmod +x "/var/lib/asystem/install/media/latest/bin/"*.sh "/var/lib/asystem/install/media/latest/bin/lib/"*.sh
+  for SCRIPT in "/var/lib/asystem/install/media/latest/bin/"*.sh; do
+    rm -rf "/usr/local/bin/asystem-$(basename "${SCRIPT}" .sh)"
+    rm -rf "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
+    ln -vs "${SCRIPT}" "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
+  done
 fi
-cp -rvf "/var/lib/asystem/install/media/latest/bin/lib/other-transcode.rb" "/usr/local/bin/other-transcode"
-chmod +x "/usr/local/bin/other-transcode"
-mkdir -p "${HOME}/.config"
-cp -rvf "/var/lib/asystem/install/media/latest/.gspread_pandas" "${HOME}/.config/gspread_pandas"
-chmod +x "/var/lib/asystem/install/media/latest/bin/"*.sh "/var/lib/asystem/install/media/latest/bin/lib/"*.sh
-for SCRIPT in "/var/lib/asystem/install/media/latest/bin/"*.sh; do
-  rm -rf "/usr/local/bin/asystem-$(basename "${SCRIPT}" .sh)"
-  rm -rf "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
-  ln -vs "${SCRIPT}" "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
-done
