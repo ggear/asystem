@@ -48,7 +48,7 @@ EOF
 EOF
   done
 fi
-if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
+if [[ "${SERVICE_FORM_FACTOR:-}" == "client" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   if [ ! -d "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin" ]; then
     pyenv install "${ASYSTEM_PYTHON_VERSION}"
     "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
