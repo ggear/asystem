@@ -4,17 +4,7 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-mkdir -p "/Users/graham/.config"
-cp -rvf "${ROOT_DIR}/src/main/resources/.gspread_pandas" "/Users/graham/.config/gspread_pandas"
-
-cp -rvf "${ROOT_DIR}/src/main/resources/bin/lib/other-transcode.rb" "/usr/local/bin/other-transcode"
-chmod +x "/usr/local/bin/other-transcode"
-
-chmod +x "${ROOT_DIR}/src/main/resources/bin/"*.sh "${ROOT_DIR}/src/main/resources/bin/lib/"*.sh
-for SCRIPT in "${ROOT_DIR}/src/main/resources/bin/"*.sh; do
-  rm -rf "/usr/local/bin/asystem-""$(basename ${SCRIPT} .sh)"
-  ln -vs "${SCRIPT}" "/usr/local/bin/asystem-""$(basename ${SCRIPT} .sh)"
-done
+cp -rvf "${ROOT_DIR}/../../../.hosts" "${ROOT_DIR}/src/main/resources/.hosts"
 
 cp -rvf "${ROOT_DIR}/src/main/python/.py_deps.txt" "${ROOT_DIR}/src/main/resources/.reqs.txt"
 for FILE in "ingress.py" "analyse.py"; do
