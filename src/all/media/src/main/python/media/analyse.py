@@ -1768,7 +1768,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("fi\n"),
                     pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
                     pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
-                    pl.lit("other-transcode \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" \\\n"),
+                    pl.lit("other-transcode \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | grep -v ': warning:'\\\n"),
                     pl.lit("  ${TRANSCODE_VIDEO} \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Subtitle"), pl.lit("\n"),

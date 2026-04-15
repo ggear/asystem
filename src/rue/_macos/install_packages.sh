@@ -38,6 +38,7 @@ brew install \
   skopeo \
   rename \
   goenv \
+  gotestsum \
   pyenv \
   pyenv-virtualenv \
   netcat \

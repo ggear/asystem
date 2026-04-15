@@ -249,14 +249,19 @@ func relaxedDisplayLayout() [][]box {
 		s := pad(b.lblMid.ascii, boxMid, i+len(b.lblMid.ascii))
 		b.lblMid = text{ascii: s}
 	}
-	resizeDivider := func(b *box, i int) { s := divider(b.lblLhs.ascii, i+len(b.lblLhs.ascii)); b.lblLhs = text{ascii: s} }
+	resizeDivider := func(b *box, i int) {
+		s := divider(b.lblLhs.ascii, i+len(b.lblLhs.ascii))
+		b.lblLhs = text{ascii: s}
+	}
 	resizeHdrRhs1 := func(b *box, i int) { s := b.lblRhs.ascii + expand(b.lblRhs.ascii, 1, i); b.lblRhs = text{ascii: s} }
 	resizeLblLhs1 := func(b *box, i int) { s := b.lblLhs.ascii + repeat(b.lblLhs.ascii, 0, 1, i); b.lblLhs = text{ascii: s} }
 
 	t_0_0 := box{lblLhs: text{
 		ascii:   "── ",
 		unicode: "╭─┐",
-	}, lblMid: text{ascii: "           "}, lblRhs: text{
+	}, lblMid: text{
+		ascii: "           ",
+	}, lblRhs: text{
 		ascii:   " ─────────────────────────────────────────────────────────────────────",
 		unicode: "┌────────────────────────────────────────────────────────────────────╮",
 	}, resizeCnt: 4, kind: boxTitle, resizeInc: resizeHdrRhs1}
