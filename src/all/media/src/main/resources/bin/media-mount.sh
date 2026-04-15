@@ -5,7 +5,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 . "${ROOT_DIR}/.env_media"
 
 shares_file="${LIB_ROOT}/../../shares.csv"
-if [[ ! -f "${shares_file}" ]] || ! grep -q "^${HOSTNAME}," "${shares_file}"; then
+if [[ -f "${shares_file}" ]] && ! grep -q "^${HOSTNAME}," "${shares_file}"; then
   while IFS=',' read -r share_host share_index; do
     if [[ -z "${share_host}" || -z "${share_index}" ]]; then
       continue

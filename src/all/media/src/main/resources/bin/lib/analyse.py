@@ -1953,7 +1953,7 @@ for share_host in "${SHARE_HOSTS[@]}"; do
         break
     fi
 done
-if [ ${HOST_IN_SHARES} -eq 1 ]; then
+if [ ${HOST_IN_SHARES} -eq 0 ]; then
     for HOST_NAME in "${SHARE_HOSTS[@]}"; do
         HOST_DIRS='. $(media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
         HOST_CMD='. $(media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
