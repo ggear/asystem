@@ -62,15 +62,17 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
     if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
       share_ssh=""
       if [ $(mount | grep "${share_dir}" | grep "//" | wc -l) -gt 0 ]; then
-        for share_label in $(basename "$(realpath $(media-home)/../../../../..)" | tr "_" "\\n"); do
-          share_host="$(grep "${share_label}" "$(media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${share_label}"
+        while IFS=',' read -r share_host share_csv_index; do
+          if [[ -z "${share_host}" || -z "${share_csv_index}" || "${share_csv_index}" != "${share_index}" ]]; then
+            continue
+          fi
           share_current_dir_host='. $(media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"${share_index}"' | wc -l'
           if host "${share_host}" >/dev/null 2>&1; then
             if [ $(ssh "root@${share_host}" "${share_current_dir_host}") -gt 0 ]; then
               share_ssh="ssh root@${share_host}"
             fi
           fi
-        done
+        done <"$(media-home)/../shares.csv"
       fi
       if [ $(mount | grep "${share_dir}" | grep "//" | wc -l) -gt 0 ] && [ -z "${share_ssh}" ]; then
         echo "Error: Current directory [${current_dir}] is not directly attached, nor can it be found on any SAMBA share"

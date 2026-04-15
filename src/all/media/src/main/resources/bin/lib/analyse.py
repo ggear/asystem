@@ -1938,9 +1938,23 @@ if sh -c ": >/dev/tty" >/dev/null 2>/dev/null; then
 else
     LOG_DEV=/dev/null
 fi
-if [ $(uname) == "Darwin" ]; then
-    for LABEL in $(basename "$(realpath $(media-home)/../../../../..)" | tr "_" "\\n"); do
-        HOST_NAME="$(grep "${LABEL}" "$(media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
+declare -a SHARE_HOSTS=()
+if [ -f "$(media-home)/../shares.csv" ]; then
+    while IFS= read -r share_host; do
+        if [ -n "${share_host}" ]; then
+            SHARE_HOSTS+=("${share_host}")
+        fi
+    done < <(cut -d "," -f 1 "$(media-home)/../shares.csv" | sort -u)
+fi
+HOST_IN_SHARES=0
+for share_host in "${SHARE_HOSTS[@]}"; do
+    if [ "${HOSTNAME}" == "${share_host}" ]; then
+        HOST_IN_SHARES=1
+        break
+    fi
+done
+if [ ${HOST_IN_SHARES} -eq 1 ]; then
+    for HOST_NAME in "${SHARE_HOSTS[@]}"; do
         HOST_DIRS='. $(media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
         HOST_CMD='. $(media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
         if host "${HOST_NAME}" >/dev/null 2>&1; then

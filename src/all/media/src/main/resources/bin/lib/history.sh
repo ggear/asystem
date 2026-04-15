@@ -149,3 +149,8 @@ ffmpeg -i "input.mov" -vcodec h264_videotoolbox -b:v 500k -n "output.mov"
 ffmpeg -f concat -i files.txt -c copy -aspect 16/9 output.mkv
 ffmpeg -i input.avi -c:v h264_videotoolbox -vf "scale=1920:1080,setdar=16/9" -aspect 16:9 -q:v 100 -c:a aac -b:a 256k output.mkv
 find . -name "*.mkv" -exec echo ffmpeg -i "{}" -c:v copy -ac 6 -ar 48000 -ab 400k -c:a aac "/data/media/movies/{}" \;
+
+# Mount disk
+IMPORT_MEDIA_DEV="/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
+umount -fq /media/usbdrive 2>&1 >/dev/null
+mount -t exfat ${IMPORT_MEDIA_DEV} /media/usbdrive

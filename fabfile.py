@@ -914,7 +914,7 @@ def _get_module_paths(context):
     return module_paths
 
 
-def _get_modules_by_hosts(filter_path=None, filter_module=None):
+def _get_modules_by_hosts(filter_path=None, filter_module=None, filter_host_type=None):
     modules = {}
     for module_path in glob.glob(join(ROOT_MODULE_DIR, "*/*" if filter_module is None else filter_module)):
         group_path = Path(join(module_path, ".group"))
@@ -922,7 +922,7 @@ def _get_modules_by_hosts(filter_path=None, filter_module=None):
                 int(group_path.read_text().strip()) >= 0 and \
                 (filter_path is None or glob.glob("{}/{}*".format(module_path, filter_path))):
             module = module_path.replace(dirname(dirname(module_path)) + "/", "")
-            for host in _get_hosts(module):
+            for host in _get_hosts(module, filter_host_type):
                 if host not in modules:
                     modules[host] = []
                 modules[host].append(_get_service(module))
@@ -1031,8 +1031,13 @@ def _get_host_labels(module):
     return labels
 
 
-def _get_hosts(module):
-    return [(_get_host_metadata(host)[0] + "-" + host) for host in _get_host_labels(module)]
+def _get_hosts(module, filter_host_type=None):
+    hosts = []
+    for host in _get_host_labels(module):
+        metadata = _get_host_metadata(host)
+        if filter_host_type is None or filter_host_type == metadata[4]:
+            hosts.append(metadata[0] + "-" + host)
+    return hosts
 
 
 def _get_dependencies(context, module):
