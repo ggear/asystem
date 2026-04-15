@@ -24,6 +24,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
     )
   fi
   for SHARE_DIR in $(grep -v '^#' "/etc/fstab" | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+    rm -rf "${SHARE_DIR}/tmp/scripts"
     mkdir -p "${SHARE_DIR}/tmp/scripts"
     for SHARE_DIR_SCOPE in "kids" "parents" "docos" "comedy"; do
       for SHARE_DIR_TYPE in "audio" "movies" "series"; do
