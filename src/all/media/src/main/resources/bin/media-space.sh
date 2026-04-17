@@ -26,8 +26,8 @@ if [ $(uname) == "Darwin" ]; then
     total_avail += avail
 }
 END {
-    printf "| TOTAL                          | %5.2fT | %5.2fT | %5.2fT |\n", total_size, total_used, sprintf("%.3f", total_avail)
-    printf "+--------------------------------+--------+--------+--------+\n"
+#    printf "| TOTAL                          | %5.2fT | %5.2fT | %5.2fT |\n", total_size, total_used, sprintf("%.3f", total_avail)
+#    printf "+--------------------------------+--------+--------+--------+\n"
 }'
 else
   ${SHARE_USAGE_CMD}

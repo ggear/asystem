@@ -8,28 +8,12 @@ import (
 	"unicode/utf8"
 )
 
-type text struct {
-	ascii   string
-	unicode string
-}
-
-func (t text) pick(unicode bool) string {
-	switch {
-	case t.ascii == "":
-		return t.unicode
-	case t.unicode == "":
-		return t.ascii
-	case unicode:
-		return t.unicode
-	default:
-		return t.ascii
-	}
-}
-
 var (
 	textBar   = text{ascii: "|", unicode: "■"}
 	textTick  = text{ascii: "+", unicode: "✔"}
 	textCross = text{ascii: "-", unicode: "✖"}
+	textUp    = text{ascii: "^", unicode: "↑"}
+	textDown  = text{ascii: "v", unicode: "↓"}
 )
 
 type boxKind int
@@ -87,72 +71,80 @@ type compiled struct {
 	valOffset int
 }
 
-/*
-── ahosts-one~ ─────────────────────────────────────────── ||
-Used CPU 100%  Fail SVC 100%  Warn TEM 100%  Used SYS 100% ||
-Used RAM  39%  Fail SHR 100%  Revs Fan 100%  Used SHR  10% ||
-Aloc RAM   1%  Fail BCK   4%  Life SSD   3%  Used BKP  10% ||
----------------------------------------------------------- ||
-SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK ||
-homeassis~ 100% 100%  +   -   service2   100% 100%  -   -  ||
-service3    11%  12%  -   -   service4    10% 100%  -   -  ||
-service5    10% 100%  -   +   service6    10% 100%  +   -  ||
-service70~   0%   1%  -   -   ~             ~    ~  ~   ~  ||
+/* Optimised for for >2 host @ 120x33 ASCII
++= ahosts-one~ ===================================== ^1/2 =++= ahosts-two~ ===================================== ^2/2 =+
+|Used CPU 100%  Fail SVC 100%  Warn TEM 100%  Used SYS 100%||Used CPU 100%  Fail SVC 100%  Warn TEM 100%  Used SYS 100%|
+|Used RAM  39%  Fail SHR 100%  Revs Fan 100%  Used SHR  10%||Used RAM  39%  Fail SHR 100%  Revs Fan 100%  Used SHR  10%|
+|Aloc RAM   1%  Fail BCK   4%  Life SSD   3%  Used BKP  10%||Aloc RAM   1%  Fail BCK   4%  Life SSD   3%  Used BKP  10%|
+|----------------------------------------------------------||----------------------------------------------------------|
+|SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK||SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK|
+|homeassis~ 100% 100%  +   -   service2   100% 100%  -   - ||homeassis~ 100% 100%  +   -   service2   100% 100%  -   - |
+|service3    11%  12%  -   -   service4    10% 100%  -   - ||service3    11%  12%  -   -   service4    10% 100%  -   - |
+|service5    10% 100%  -   +   service6    10% 100%  +   - ||service5    10% 100%  -   +   service6    10% 100%  +   - |
+|service70~   0%   1%  -   -   ~             ~    ~  ~   ~ ||service70~   0%   1%  -   -   ~             ~    ~  ~   ~ |
 */
-/* Optimised for for 1 host @ 128x33 ASCII
-+-- ahosts-one~ -----------------------------------------------++-- ahosts-two~ -----------------------------------------------+
+/* Optimised for for >2 host @ 128x33 ASCII
++= ahosts-one~ ========================================= ^1/2 =++= ahosts-two~ ========================================= ^2/2 =+
 |  Used CPU 100%  Fail SVC 100%  Warn TEM 100%  Used SYS 100%  ||  Used CPU 100%  Fail SVC 100%  Warn TEM 100%  Used SYS 100%  |
 |  Used RAM  39%  Fail SHR 100%  Revs Fan 100%  Used SHR  10%  ||  Used RAM  39%  Fail SHR 100%  Revs Fan 100%  Used SHR  10%  |
 |  Aloc RAM   1%  Fail BCK   4%  Life SSD   3%  Used BKP  10%  ||  Aloc RAM   1%  Fail BCK   4%  Life SSD   3%  Used BKP  10%  |
 |--------------------------------------------------------------||--------------------------------------------------------------|
-| SERVICE      CPU  RAM BKP AOK  SERVICE      CPU  RAM BKP AOK || SERVICE      CPU  RAM BKP AOK  SERVICE      CPU  RAM BKP AOK |
-| homeassist~ 100% 100%  +   -   service2    100% 100%  -   -  || homeassist~ 100% 100%  +   -   service2    100% 100%  -   -  |
-| service3     11%  12%  -   -   service4     10% 100%  -   -  || service3     11%  12%  -   -   service4     10% 100%  -   -  |
-| service5     10% 100%  -   +   service6     10% 100%  +   -  || service5     10% 100%  -   +   service6     10% 100%  +   -  |
-| service70)~   0%   1%  -   -   ~              ~    ~  ~   ~  || service70)~   0%   1%  -   -   ~              ~    ~  ~   ~  |
+|  SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK  ||  SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK  |
+|  homeassis~ 100% 100%  +   -   service2   100% 100%  -   -   ||  homeassis~ 100% 100%  +   -   service2   100% 100%  -   -   |
+|  service3    11%  12%  -   -   service4    10% 100%  -   -   ||  service3    11%  12%  -   -   service4    10% 100%  -   -   |
+|  service5    10% 100%  -   +   service6    10% 100%  +   -   ||  service5    10% 100%  -   +   service6    10% 100%  +   -   |
+|  service70~   0%   1%  -   -   ~             ~    ~  ~   ~   ||  service70~   0%   1%  -   -   ~             ~    ~  ~   ~   |
 */
 //noinspection GoSnakeCaseUsage
 func compactDisplayLayout() [][]box {
-	resizeService := func(b *box, i int) { b.valLen += i }
-	resizeDivider := func(b *box, i int) { s := divider(b.lblLhs.ascii, i+len(b.lblLhs.ascii)); b.lblLhs = text{ascii: s} }
-	resizeLblRhs1 := func(b *box, i int) { s := b.lblRhs.ascii + repeat(b.lblRhs.ascii, 0, 1, i); b.lblRhs = text{ascii: s} }
-	resizeLblLhs1 := func(b *box, i int) { s := b.lblLhs.ascii + repeat(b.lblLhs.ascii, 0, 1, i); b.lblLhs = text{ascii: s} }
+	resizeIncService := func(b *box, i int) { b.valLen += i }
+	resizeIncLblRhs1 := func(b *box, i int) {
+		b.lblRhs = b.lblRhs.resize(i, func(value string, length int) string {
+			return value + repeat(value, 0, 1, length-runeCount(value))
+		})
+	}
+	resizeIncLblLhs1 := func(b *box, i int) {
+		b.lblLhs = b.lblLhs.resize(i, func(value string, length int) string {
+			return value + repeat(value, 0, 1, length-runeCount(value))
+		})
+	}
+	resizeRemDivider := func(b *box, r int) { b.lblLhs = b.lblLhs.resize(r, divider) }
 
-	t_0_0 := box{lblLhs: text{ascii: "── "}, lblMid: text{ascii: "           "}, lblRhs: text{ascii: " ───────────────────────────────────────────"}, resizeCnt: 3, kind: boxTitle, resizeInc: resizeLblRhs1}
+	t_0_0 := box{lblLhs: text{ascii: "── "}, lblMid: text{ascii: "           "}, lblRhs: text{ascii: " ───────────────────────────────────────────"}, resizeCnt: 3, kind: boxTitle, resizeInc: resizeIncLblRhs1}
 
 	d_1_0 := box{lblMid: text{ascii: "Used CPU "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedProcessor}
-	d_1_1 := box{lblMid: text{ascii: "Fail LOG "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeLblLhs1}
-	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostWarnTemperatureOfMax, resizeInc: resizeLblLhs1}
-	d_1_3 := box{lblMid: text{ascii: "Used SYS "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeLblLhs1}
+	d_1_1 := box{lblMid: text{ascii: "Fail LOG "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncLblLhs1}
+	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostWarnTemperatureOfMax, resizeInc: resizeIncLblLhs1}
+	d_1_3 := box{lblMid: text{ascii: "Used SYS "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeIncLblLhs1}
 
 	d_2_0 := box{lblMid: text{ascii: "Used RAM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedMemory}
-	d_2_1 := box{lblMid: text{ascii: "Fail SHR "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeLblLhs1}
-	d_2_2 := box{lblMid: text{ascii: "Revs Fan "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostSpinFanSpeedOfMax, resizeInc: resizeLblLhs1}
-	d_2_3 := box{lblMid: text{ascii: "Used SHR "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeLblLhs1}
+	d_2_1 := box{lblMid: text{ascii: "Fail SHR "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncLblLhs1}
+	d_2_2 := box{lblMid: text{ascii: "Revs Fan "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostSpinFanSpeedOfMax, resizeInc: resizeIncLblLhs1}
+	d_2_3 := box{lblMid: text{ascii: "Used SHR "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncLblLhs1}
 
 	d_3_0 := box{lblMid: text{ascii: "Aloc RAM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostAllocatedMemory}
-	d_3_1 := box{lblMid: text{ascii: "Fail BCK "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostFailedBackups, resizeInc: resizeLblLhs1}
-	d_3_2 := box{lblMid: text{ascii: "Life SSD "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostLifeUsedDrives, resizeInc: resizeLblLhs1}
-	d_3_3 := box{lblMid: text{ascii: "Used BKP "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeLblLhs1}
+	d_3_1 := box{lblMid: text{ascii: "Fail BCK "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostFailedBackups, resizeInc: resizeIncLblLhs1}
+	d_3_2 := box{lblMid: text{ascii: "Life SSD "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostLifeUsedDrives, resizeInc: resizeIncLblLhs1}
+	d_3_3 := box{lblMid: text{ascii: "Used BKP "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: "  "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeIncLblLhs1}
 
-	s_4_0 := box{lblLhs: text{ascii: "----------------------------------------------------------"}, resizeCnt: 3, kind: boxSpacr, resizeInc: resizeLblLhs1}
+	s_4_0 := box{lblLhs: text{ascii: "----------------------------------------------------------"}, resizeCnt: 3, kind: boxSpacr, resizeInc: resizeIncLblLhs1}
 
-	l_5_0 := box{lblMid: text{ascii: "SERVICE"}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeInc: resizeLblRhs1}
+	l_5_0 := box{lblMid: text{ascii: "SERVICE"}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeInc: resizeIncLblRhs1}
 	l_5_1 := box{lblMid: text{ascii: "CPU"}, lblLhs: text{ascii: " "}, lblRhs: text{ascii: " "}, kind: boxLabel}
 	l_5_2 := box{lblMid: text{ascii: "RAM"}, lblLhs: text{ascii: " "}, lblRhs: text{ascii: " "}, kind: boxLabel}
 	l_5_3 := box{lblMid: text{ascii: "BKP"}, lblRhs: text{ascii: " "}, kind: boxLabel}
 	l_5_4 := box{lblMid: text{ascii: "AOK"}, kind: boxLabel}
 
-	d_X_0 := box{lblRhs: text{ascii: " "}, valLen: 10, valAln: boxLhs, valOpt: true, metricID: metric.MetricServiceName, resizeInc: resizeService}
+	d_X_0 := box{lblRhs: text{ascii: " "}, valLen: 10, valAln: boxLhs, valOpt: true, metricID: metric.MetricServiceName, resizeInc: resizeIncService}
 	d_X_1 := box{valSfx: "%", lblRhs: text{ascii: " "}, valLen: 3, valOpt: true, metricID: metric.MetricServiceUsedProcessor}
 	d_X_2 := box{valSfx: "%", lblRhs: text{ascii: " "}, valLen: 3, valOpt: true, metricID: metric.MetricServiceUsedMemory}
 	d_X_3 := box{lblLhs: text{ascii: " "}, valLen: 1, lblRhs: text{ascii: "  "}, valOpt: true, valKind: valBool, metricID: metric.MetricServiceBackupStatus}
 	d_X_4 := box{lblLhs: text{ascii: " "}, valLen: 1, lblRhs: text{ascii: " "}, valOpt: true, valKind: valBool, metricID: metric.MetricService}
 
-	s_X_5 := box{lblLhs: text{ascii: "  "}, kind: boxSpacr, resizeInc: resizeLblLhs1}
+	s_X_5 := box{lblLhs: text{ascii: "  "}, kind: boxSpacr, resizeInc: resizeIncLblLhs1}
 
-	v_X_X := box{lblLhs: text{ascii: " "}, kind: boxDivdr, resizeInc: resizeLblLhs1}
-	v_Y_Y := box{lblLhs: text{ascii: "||"}, kind: boxDivdr, resizeRem: resizeDivider}
+	v_X_X := box{lblLhs: text{ascii: " "}, kind: boxDivdr, resizeInc: resizeIncLblLhs1}
+	v_Y_Y := box{lblLhs: text{ascii: "||"}, kind: boxDivdr, resizeRem: resizeRemDivider}
 
 	return compile([][]box{
 		{t_0_0, v_X_X, v_Y_Y, v_X_X},
@@ -169,27 +161,26 @@ func compactDisplayLayout() [][]box {
 	})
 }
 
-/*
-── host-numbe~ ─────────────────────────────────────────────────────────────────────   ||
-Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%    Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%   ||
-Used RAM ■■■■  39%    Fail SHR ■■■■ 100%    Revs Fan ■■■■ 100%    Used SHR ■■■■  10%   ||
-Aloc RAM ■■■■   1%    Fail BCK ■■■■   4%    Life SSD ■■■■   3%    Used BKP ■■■■  10%   ||
-------------------------------------------------------------------------------------   ||
-SERVICE          VERNUM          CPU            MEM       BKP  HLT  CFG  RST  UPTIME   ||
-------------------------------------------------------------------------------------   ||
-homeassistant 10.100.10001   ■■■■■■ 100%    ■■■■■■ 100%    -    -    -    0     156d   ||
-service2      10.100.10001   ■■■■■■  65%    ■■■■■■  11%    +    -    -    0      10y   ||
-service3      10.100.10001   ■■■■■■  11%    ■■■■■■  51%    +    +    -    0       1y   ||
-service4      10.100.10001   ■■■■■■  65%    ■■■■■■  65%    +    -    -    0       2y   ||
-service5      10.100.10001   ■■■■■■  51%    ■■■■■■  11%    -    +    -    0      10d   ||
-service6      10.100.10001   ■■■■■■  51%    ■■■■■■  11%    +    -    -    0       1h   ||
-service7      10.100.10001   ■■■■■■   1%    ■■■■■■  51%    +    -    -    0      34m   ||
-service8      10.100.10001   ■■■■■■  65%    ■■■■■■  11%    +    +    +    0      10y   ||
-service90000~ 10.100.10001   ■■■■■■  11%    ■■■■■■  65%    +    -    -    ~     100d   ||
-~              ~                       ~              ~    ~    ~    ~    ~        ~   ||
+/* Optimised for 1 host @ 79x33 ASCII
++= ahosts-one~ ======================================================== vESC =+
+| Used CPU ■■ 100%    Fail SVC ■■ 100%   Warn TEM ■■ 100%    Used SYS ■■ 100% |
+| Used RAM ■■  39%    Fail SHR ■■ 100%   Revs Fan ■■ 100%    Used SHR ■■  10% |
+| Aloc RAM ■■   1%    Fail BCK ■■   4%   Life SSD ■■   3%    Used BKP ■■  10% |
++-----------------------------------------------------------------------------+
+| SERVICE          VERNUM      CPU       MEM       BKP  HLT  CFG  RST  UPTIME |
++-----------------------------------------------------------------------------+
+| homeassistant 10.100.10001   ■■ 100%   ■■ 100%    -    -    -    0     156d |
+| service2      10.100.10001   ■■  65%   ■■  11%    +    -    -    0      10y |
+| service3      10.100.10001   ■■  11%   ■■  51%    +    +    -    0       1y |
+| service4      10.100.10001   ■■  65%   ■■  65%    +    -    -    0       2y |
+| service5      10.100.10001   ■■  51%   ■■  11%    -    +    -    0      10d |
+| service6      10.100.10001   ■■  51%   ■■  11%    +    -    -    0       1h |
+| service70000~ 10.100.10001   ■■  11%   ■■  65%    +    -    -    ~     100d |
+| ~                        ~         ~         ~    ~    ~    ~    ~        ~ |
++=============================================================================+
 */
-/* Optimised for 1 host @ 88 (scaled 128)x33 ASCII
-+- ahosts-one~ ------------------------------------------------------------------------+
+/* Optimised for 1 host @ 88 (scaled 120/128)x33 ASCII
++= ahosts-one~ ================================================================= vESC =+
 | Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%    Warn TEM ■■■■ 100%    Used SYS ■■■■ 100% |
 | Used RAM ■■■■  39%    Fail SHR ■■■■ 100%    Revs Fan ■■■■ 100%    Used SHR ■■■■  10% |
 | Aloc RAM ■■■■   1%    Fail BCK ■■■■   4%    Life SSD ■■■■   3%    Used BKP ■■■■  10% |
@@ -204,10 +195,10 @@ service90000~ 10.100.10001   ■■■■■■  11%    ■■■■■■  65% 
 | service6      10.100.10001   ■■■■■■  51%    ■■■■■■  11%    +    -    -    0       1h |
 | service70000~ 10.100.10001   ■■■■■■  11%    ■■■■■■  65%    +    -    -    ~     100d |
 | ~                        ~             ~              ~    ~    ~    ~    ~        ~ |
-+--------------------------------------------------------------------------------------+
++======================================================================================+
 */
 /* Optimised for 1 host @ 91(scaled 287)x51 Unicode
-╭─┐ahosts-one~┌───────────────────────────────────────────────────────────────────────────╮
+╭─┐ahosts-one~┌────────────────────────────────────────────────────────────────────┐↓ESC┌─╮
 │  Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%     Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%  │
 │  Used RAM ■■■■  39%    Fail SHR ■■■■ 100%     Revs Fan ■■■■ 100%    Used SHR ■■■■  10%  │
 │  Aloc RAM ■■■■   1%    Fail BCK ■■■■   4%     Life SSD ■■■■   3%    Used BKP ■■■■  10%  │
@@ -225,68 +216,75 @@ service90000~ 10.100.10001   ■■■■■■  11%    ■■■■■■  65% 
 ╰─────────────────────────────────────────────────────────────────────────────────────────╯
 */
 /* Optimised for >2 hosts @ 183(scaled 287)x51 Unicode
-╭─┐ahosts-one~┌──────────────────────────────────────────────────────────────────────────╮   ╭─┐ahosts-two~┌──────────────────────────────────────────────────────────────────────────╮
-│  Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%    Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%  │   │  Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%    Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%  │
-│  Used RAM ■■■■  39%    Fail SHR ■■■■ 100%    Revs Fan ■■■■ 100%    Used SHR ■■■■  10%  │   │  Used RAM ■■■■  39%    Fail SHR ■■■■ 100%    Revs Fan ■■■■ 100%    Used SHR ■■■■  10%  │
-│  Aloc RAM ■■■■   1%    Fail BCK ■■■■   4%    Life SSD ■■■■   3%    Used BKP ■■■■  10%  │   │  Aloc RAM ■■■■   1%    Fail BCK ■■■■   4%    Life SSD ■■■■   3%    Used BKP ■■■■  10%  │
-├────────────────────────────────────────────────────────────────────────────────────────┤   ├────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERNUM          CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │   │  SERVICE          VERNUM          CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
-├────────────────────────────────────────────────────────────────────────────────────────┤   ├────────────────────────────────────────────────────────────────────────────────────────┤
-│  homeassistant 10.100.10001   ■■■■■■ 100%    ■■■■■■ 100%    -    -    -    0     156d  │   │  homeassistant 10.100.10001   ■■■■■■ 100%    ■■■■■■ 100%    -    -    -    0     156d  │
-│  service2      10.100.10001   ■■■■■■  65%    ■■■■■■  11%    +    -    -    0      10y  │   │  service2      10.100.10001   ■■■■■■  65%    ■■■■■■  11%    +    -    -    0      10y  │
-│  service3      10.100.10001   ■■■■■■  11%    ■■■■■■  51%    +    +    -    0       1y  │   │  service3      10.100.10001   ■■■■■■  11%    ■■■■■■  51%    +    +    -    0       1y  │
-│  service4      10.100.10001   ■■■■■■  65%    ■■■■■■  65%    +    -    -    0       2y  │   │  service4      10.100.10001   ■■■■■■  65%    ■■■■■■  65%    +    -    -    0       2y  │
-│  service5      10.100.10001   ■■■■■■  51%    ■■■■■■  11%    -    +    -    0      10d  │   │  service5      10.100.10001   ■■■■■■  51%    ■■■■■■  11%    -    +    -    0      10d  │
-│  service6      10.100.10001   ■■■■■■  51%    ■■■■■■  11%    +    -    -    0       1h  │   │  service6      10.100.10001   ■■■■■■  51%    ■■■■■■  11%    +    -    -    0       1h  │
-│  service70000~ 10.100.10001   ■■■■■■  11%    ■■■■■■  65%    +    -    -    ~     100d  │   │  service70000~ 10.100.10001   ■■■■■■  11%    ■■■■■■  65%    +    -    -    ~     100d  │
-│  ~                        ~             ~              ~    ~    ~    ~    ~        ~  │   │  ~                        ~             ~              ~    ~    ~    ~    ~        ~  │
-╰────────────────────────────────────────────────────────────────────────────────────────╯   ╰────────────────────────────────────────────────────────────────────────────────────────╯
+╭─┐ahosts-one~┌────────────────────────────────────────────────────────────────────┐↑1/2┌─╮ ╭─┐ahosts-two~┌────────────────────────────────────────────────────────────────────┐↑2/2┌─╮
+│  Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%     Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%  │ │  Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%     Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%  │
+│  Used RAM ■■■■  39%    Fail SHR ■■■■ 100%     Revs Fan ■■■■ 100%    Used SHR ■■■■  10%  │ │  Used RAM ■■■■  39%    Fail SHR ■■■■ 100%     Revs Fan ■■■■ 100%    Used SHR ■■■■  10%  │
+│  Aloc RAM ■■■■   1%    Fail BCK ■■■■   4%     Life SSD ■■■■   3%    Used BKP ■■■■  10%  │ │  Aloc RAM ■■■■   1%    Fail BCK ■■■■   4%     Life SSD ■■■■   3%    Used BKP ■■■■  10%  │
+├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
+│  SERVICE          VERNUM          CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERNUM          CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
+├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
+│  homeassistant 10.100.10001   ■■■■■■ 100%     ■■■■■■ 100%    -    -    -    0     156d  │ │  homeassistant 10.100.10001   ■■■■■■ 100%     ■■■■■■ 100%    -    -    -    0     156d  │
+│  service2      10.100.10001   ■■■■■■  65%     ■■■■■■  11%    +    -    -    0      10y  │ │  service2      10.100.10001   ■■■■■■  65%     ■■■■■■  11%    +    -    -    0      10y  │
+│  service3      10.100.10001   ■■■■■■  11%     ■■■■■■  51%    +    +    -    0       1y  │ │  service3      10.100.10001   ■■■■■■  11%     ■■■■■■  51%    +    +    -    0       1y  │
+│  service4      10.100.10001   ■■■■■■  65%     ■■■■■■  65%    +    -    -    0       2y  │ │  service4      10.100.10001   ■■■■■■  65%     ■■■■■■  65%    +    -    -    0       2y  │
+│  service5      10.100.10001   ■■■■■■  51%     ■■■■■■  11%    -    +    -    0      10d  │ │  service5      10.100.10001   ■■■■■■  51%     ■■■■■■  11%    -    +    -    0      10d  │
+│  service6      10.100.10001   ■■■■■■  51%     ■■■■■■  11%    +    -    -    0       1h  │ │  service6      10.100.10001   ■■■■■■  51%     ■■■■■■  11%    +    -    -    0       1h  │
+│  service70000~ 10.100.10001   ■■■■■■  11%     ■■■■■■  65%    +    -    -    ~     100d  │ │  service70000~ 10.100.10001   ■■■■■■  11%     ■■■■■■  65%    +    -    -    ~     100d  │
+│  ~                        ~             ~               ~    ~    ~    ~    ~        ~  │ │  ~                        ~             ~               ~    ~    ~    ~    ~        ~  │
+╰─────────────────────────────────────────────────────────────────────────────────────────╯ ╰─────────────────────────────────────────────────────────────────────────────────────────╯
 */
 //noinspection GoSnakeCaseUsage
 func relaxedDisplayLayout() [][]box {
-	resizeHistVal := func(b *box, i int) { b.valLen += i }
-	resizeHistLbl := func(b *box, i int) {
-		s := pad(b.lblMid.ascii, boxMid, i+len(b.lblMid.ascii))
-		b.lblMid = text{ascii: s}
+	resizeIncHistVal := func(b *box, i int) { b.valLen += i }
+	resizeIncHistLbl := func(b *box, i int) {
+		b.lblMid = b.lblMid.resize(i, func(value string, length int) string {
+			return pad(value, boxMid, length)
+		})
 	}
-	resizeDivider := func(b *box, i int) {
-		s := divider(b.lblLhs.ascii, i+len(b.lblLhs.ascii))
-		b.lblLhs = text{ascii: s}
+	resizeIncHdrRhs1 := func(b *box, i int) {
+		b.lblRhs = b.lblRhs.resize(i, func(value string, length int) string {
+			return extend(value, 1, length)
+		})
 	}
-	resizeHdrRhs1 := func(b *box, i int) { s := b.lblRhs.ascii + expand(b.lblRhs.ascii, 1, i); b.lblRhs = text{ascii: s} }
-	resizeLblLhs1 := func(b *box, i int) { s := b.lblLhs.ascii + repeat(b.lblLhs.ascii, 0, 1, i); b.lblLhs = text{ascii: s} }
+	resizeIncLblLhs1 := func(b *box, i int) {
+		b.lblLhs = b.lblLhs.resize(i, func(value string, length int) string {
+			return value + repeat(value, 0, 1, length-runeCount(value))
+		})
+	}
+	resizeRemDivider := func(b *box, r int) { b.lblLhs = b.lblLhs.resize(r, divider) }
 
 	t_0_0 := box{lblLhs: text{
-		ascii:   "── ",
+		ascii:   "+- ",
 		unicode: "╭─┐",
 	}, lblMid: text{
-		ascii: "           ",
+		ascii:   "           ",
+		unicode: "           ",
 	}, lblRhs: text{
-		ascii:   " ─────────────────────────────────────────────────────────────────────",
+		ascii:   " --------------------------------------------------------------------+",
 		unicode: "┌────────────────────────────────────────────────────────────────────╮",
-	}, resizeCnt: 4, kind: boxTitle, resizeInc: resizeHdrRhs1}
+	}, resizeCnt: 4, kind: boxTitle, resizeInc: resizeIncHdrRhs1}
 
-	d_1_0 := box{lblMid: text{ascii: "Used CPU "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedProcessor, resizeInc: resizeHistVal}
-	d_1_1 := box{lblMid: text{ascii: "Fail LOG "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeHistVal}
-	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostWarnTemperatureOfMax, resizeInc: resizeHistVal}
-	d_1_3 := box{lblMid: text{ascii: "Used SYS "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeHistVal}
+	d_1_0 := box{lblMid: text{ascii: "Used CPU "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedProcessor, resizeInc: resizeIncHistVal}
+	d_1_1 := box{lblMid: text{ascii: "Fail LOG "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncHistVal}
+	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostWarnTemperatureOfMax, resizeInc: resizeIncHistVal}
+	d_1_3 := box{lblMid: text{ascii: "Used SYS "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeIncHistVal}
 
-	d_2_0 := box{lblMid: text{ascii: "Used RAM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedMemory, resizeInc: resizeHistVal}
-	d_2_1 := box{lblMid: text{ascii: "Fail SHR "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeHistVal}
-	d_2_2 := box{lblMid: text{ascii: "Revs Fan "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostSpinFanSpeedOfMax, resizeInc: resizeHistVal}
-	d_2_3 := box{lblMid: text{ascii: "Used SHR "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeHistVal}
+	d_2_0 := box{lblMid: text{ascii: "Used RAM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedMemory, resizeInc: resizeIncHistVal}
+	d_2_1 := box{lblMid: text{ascii: "Fail SHR "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncHistVal}
+	d_2_2 := box{lblMid: text{ascii: "Revs Fan "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostSpinFanSpeedOfMax, resizeInc: resizeIncHistVal}
+	d_2_3 := box{lblMid: text{ascii: "Used SHR "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncHistVal}
 
-	d_3_0 := box{lblMid: text{ascii: "Aloc RAM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostAllocatedMemory, resizeInc: resizeHistVal}
-	d_3_1 := box{lblMid: text{ascii: "Fail BCK "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedBackups, resizeInc: resizeHistVal}
-	d_3_2 := box{lblMid: text{ascii: "Life SSD "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostLifeUsedDrives, resizeInc: resizeHistVal}
-	d_3_3 := box{lblMid: text{ascii: "Used BKP "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeHistVal}
+	d_3_0 := box{lblMid: text{ascii: "Aloc RAM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostAllocatedMemory, resizeInc: resizeIncHistVal}
+	d_3_1 := box{lblMid: text{ascii: "Fail BCK "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedBackups, resizeInc: resizeIncHistVal}
+	d_3_2 := box{lblMid: text{ascii: "Life SSD "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostLifeUsedDrives, resizeInc: resizeIncHistVal}
+	d_3_3 := box{lblMid: text{ascii: "Used BKP "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeIncHistVal}
 
-	s_X_0 := box{lblLhs: text{ascii: "------------------------------------------------------------------------------------"}, kind: boxSpacr, resizeCnt: 4, resizeInc: resizeLblLhs1}
+	s_X_0 := box{lblLhs: text{ascii: "------------------------------------------------------------------------------------"}, kind: boxSpacr, resizeCnt: 4, resizeInc: resizeIncLblLhs1}
 
 	l_5_0 := box{lblMid: text{ascii: "SERVICE"}, lblRhs: text{ascii: "       "}, kind: boxLabel}
 	l_5_1 := box{lblMid: text{ascii: "VERNUM"}, lblLhs: text{ascii: "   "}, lblRhs: text{ascii: "   "}, kind: boxLabel}
-	l_5_2 := box{lblMid: text{ascii: "CPU"}, lblLhs: text{ascii: "       "}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeCnt: 2, resizeInc: resizeHistLbl}
-	l_5_3 := box{lblMid: text{ascii: "MEM"}, lblLhs: text{ascii: "        "}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeCnt: 2, resizeInc: resizeHistLbl}
+	l_5_2 := box{lblMid: text{ascii: "CPU"}, lblLhs: text{ascii: "       "}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeCnt: 2, resizeInc: resizeIncHistLbl}
+	l_5_3 := box{lblMid: text{ascii: "MEM"}, lblLhs: text{ascii: "        "}, lblRhs: text{ascii: "    "}, kind: boxLabel, resizeCnt: 2, resizeInc: resizeIncHistLbl}
 	l_5_4 := box{lblMid: text{ascii: "BKP"}, lblLhs: text{ascii: "   "}, kind: boxLabel}
 	l_5_5 := box{lblMid: text{ascii: "HLT"}, lblLhs: text{ascii: "  "}, kind: boxLabel}
 	l_5_6 := box{lblMid: text{ascii: "CFG"}, lblLhs: text{ascii: "  "}, kind: boxLabel}
@@ -295,8 +293,8 @@ func relaxedDisplayLayout() [][]box {
 
 	d_X_0 := box{valLen: 13, lblRhs: text{ascii: " "}, valAln: boxLhs, valOpt: true, valKind: valText, metricID: metric.MetricServiceName}
 	d_X_1 := box{valLen: 12, valOpt: true, valKind: valText, metricID: metric.MetricServiceVersion}
-	d_X_2 := box{lblLhs: text{ascii: "   "}, valSfx: "%", valLen: 10, valOpt: true, valKind: valHist, metricID: metric.MetricServiceUsedProcessor, resizeCnt: 2, resizeInc: resizeHistVal}
-	d_X_3 := box{lblLhs: text{ascii: "   "}, valSfx: "%", valLen: 10, valOpt: true, valKind: valHist, metricID: metric.MetricServiceUsedMemory, resizeCnt: 2, resizeInc: resizeHistVal}
+	d_X_2 := box{lblLhs: text{ascii: "   "}, valSfx: "%", valLen: 10, valOpt: true, valKind: valHist, metricID: metric.MetricServiceUsedProcessor, resizeCnt: 2, resizeInc: resizeIncHistVal}
+	d_X_3 := box{lblLhs: text{ascii: "   "}, valSfx: "%", valLen: 10, valOpt: true, valKind: valHist, metricID: metric.MetricServiceUsedMemory, resizeCnt: 2, resizeInc: resizeIncHistVal}
 	d_X_4 := box{lblLhs: text{ascii: "   "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceBackupStatus}
 	d_X_5 := box{lblLhs: text{ascii: "   "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceHealthStatus}
 	d_X_6 := box{lblLhs: text{ascii: "   "}, lblRhs: text{ascii: " "}, valLen: 1, valOpt: true, valKind: valBool, metricID: metric.MetricServiceConfiguredStatus}
@@ -306,7 +304,7 @@ func relaxedDisplayLayout() [][]box {
 	s_X_7 := box{lblLhs: text{ascii: " "}, kind: boxSpacr}
 
 	v_X_X := box{lblLhs: text{ascii: "   "}, kind: boxDivdr}
-	v_Y_Y := box{lblLhs: text{ascii: "||"}, kind: boxDivdr, resizeRem: resizeDivider}
+	v_Y_Y := box{lblLhs: text{ascii: "||"}, kind: boxDivdr, resizeRem: resizeRemDivider}
 
 	return compile([][]box{
 		{t_0_0, v_X_X, v_Y_Y, v_X_X},
@@ -327,6 +325,36 @@ func relaxedDisplayLayout() [][]box {
 		{d_X_0, d_X_1, d_X_2, s_X_7, d_X_3, s_X_7, d_X_4, d_X_5, d_X_6, d_X_7, s_X_7, d_X_8, v_X_X, v_Y_Y, v_X_X},
 		{d_X_0, d_X_1, d_X_2, s_X_7, d_X_3, s_X_7, d_X_4, d_X_5, d_X_6, d_X_7, s_X_7, d_X_8, v_X_X, v_Y_Y, v_X_X},
 	})
+}
+
+type text struct {
+	ascii   string
+	unicode string
+}
+
+func (t text) pick(unicode bool) string {
+	switch {
+	case t.ascii == "":
+		return t.unicode
+	case t.unicode == "":
+		return t.ascii
+	case unicode:
+		return t.unicode
+	default:
+		return t.ascii
+	}
+}
+
+func (t text) resize(increment int, resizeFunc func(value string, length int) string) text {
+	ascii := resizeFunc(t.ascii, increment+runeCount(t.ascii))
+	unicode := resizeFunc(t.unicode, increment+runeCount(t.unicode))
+	if t.unicode == "" {
+		unicode = ascii
+	}
+	if t.ascii == "" {
+		ascii = unicode
+	}
+	return text{ascii: ascii, unicode: unicode}
 }
 
 func rows(layout [][]box, hostCount int) int {
@@ -388,10 +416,10 @@ func (b *box) compile(unicode, force bool) {
 	if b.compiled == nil {
 		b.compiled = &compiled{}
 	}
-	b.compiled.lblLhsLen = utf8.RuneCountInString(b.lblLhs.pick(unicode))
-	b.compiled.lblMidLen = utf8.RuneCountInString(b.lblMid.pick(unicode))
-	b.compiled.lblRhsLen = utf8.RuneCountInString(b.lblRhs.pick(unicode))
-	b.compiled.valSfxLen = utf8.RuneCountInString(b.valSfx)
+	b.compiled.lblLhsLen = runeCount(b.lblLhs.pick(unicode))
+	b.compiled.lblMidLen = runeCount(b.lblMid.pick(unicode))
+	b.compiled.lblRhsLen = runeCount(b.lblRhs.pick(unicode))
+	b.compiled.valSfxLen = runeCount(b.valSfx)
 	b.compiled.valOffset = b.compiled.lblLhsLen + b.compiled.lblMidLen
 	b.compiled.length = b.compiled.valOffset + b.valLen + b.compiled.lblRhsLen + b.compiled.valSfxLen
 }
@@ -637,19 +665,7 @@ func pad(base string, align boxAlign, length int) string {
 	return string(baseRunes) + spaces
 }
 
-func extend(base, rune string, length int) string {
-	baseRunes := []int32(base)
-	if len(baseRunes) >= length {
-		return string(baseRunes)
-	}
-	fillRunes := []int32(rune)
-	if len(fillRunes) == 0 {
-		return string(baseRunes)
-	}
-	return string(baseRunes) + strings.Repeat(string(fillRunes[0]), length-len(baseRunes))
-}
-
-func expand(base string, offset, length int) string {
+func extend(base string, offset, length int) string {
 	if length <= 0 || base == "" {
 		return ""
 	}
@@ -717,4 +733,8 @@ func divider(base string, length int) string {
 	center := strings.Repeat(string(baseRune), centerCount)
 	spaces := strings.Repeat(" ", spaceCount)
 	return spaces + center + spaces
+}
+
+func runeCount(value string) int {
+	return utf8.RuneCountInString(value)
 }

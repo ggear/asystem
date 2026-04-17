@@ -10,7 +10,6 @@ import (
 	"supervisor/internal/scribe"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v3"
 )
@@ -241,9 +240,9 @@ func (d *Display) Compile() (Format, error) {
 							if b.kind == boxTitle {
 								b.set(
 									d.unicode,
-									b.lblLhs, boxLhs, utf8.RuneCountInString(b.lblLhs.pick(d.unicode)),
-									text{hostName, hostName}, boxLhs, utf8.RuneCountInString(b.lblMid.pick(d.unicode)),
-									b.lblRhs, boxLhs, utf8.RuneCountInString(b.lblRhs.pick(d.unicode)),
+									b.lblLhs, boxLhs, runeCount(b.lblLhs.pick(d.unicode)),
+									text{hostName, hostName}, boxLhs, runeCount(b.lblMid.pick(d.unicode)),
+									b.lblRhs, boxLhs, runeCount(b.lblRhs.pick(d.unicode)),
 								)
 							}
 							if b.metricID == metric.MetricServiceName {

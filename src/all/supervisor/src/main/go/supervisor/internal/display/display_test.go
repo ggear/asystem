@@ -937,75 +937,7 @@ func TestDisplay_Repeat(t *testing.T) {
 	}
 }
 
-func TestDisplay_Extend(t *testing.T) {
-	tests := []struct {
-		name     string
-		base     string
-		fillRune string
-		length   int
-		expected string
-	}{
-		{
-			name:     "happy_extend_ascii",
-			base:     "abc",
-			fillRune: "-",
-			length:   6,
-			expected: "abc---",
-		},
-		{
-			name:     "happy_extend_unicode",
-			base:     "ab",
-			fillRune: "✓",
-			length:   5,
-			expected: "ab✓✓✓",
-		},
-		{
-			name:     "happy_no_extend_equal_length",
-			base:     "abcd",
-			fillRune: "-",
-			length:   4,
-			expected: "abcd",
-		},
-		{
-			name:     "happy_no_extend_smaller_length",
-			base:     "abcd",
-			fillRune: "-",
-			length:   2,
-			expected: "abcd",
-		},
-		{
-			name:     "happy_empty_base",
-			base:     "",
-			fillRune: "-",
-			length:   3,
-			expected: "---",
-		},
-		{
-			name:     "happy_empty_fill_rune",
-			base:     "abc",
-			fillRune: "",
-			length:   6,
-			expected: "abc",
-		},
-		{
-			name:     "happy_multi_rune_fill_uses_first_rune",
-			base:     "abc",
-			fillRune: "-+",
-			length:   5,
-			expected: "abc--",
-		},
-	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			rendered := extend(testCase.base, testCase.fillRune, testCase.length)
-			if rendered != testCase.expected {
-				t.Fatalf("Got render = %q, expected %q", rendered, testCase.expected)
-			}
-		})
-	}
-}
-
-func TestDisplay_Expand(t *testing.T) {
+func TestDisplay_ExtendInsert(t *testing.T) {
 	tests := []struct {
 		name     string
 		base     string
@@ -1086,7 +1018,7 @@ func TestDisplay_Expand(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			rendered := expand(testCase.base, testCase.offset, testCase.length)
+				rendered := extend(testCase.base, testCase.offset, testCase.length)
 			if rendered != testCase.expected {
 				t.Fatalf("Got render = %q, expected %q", rendered, testCase.expected)
 			}
@@ -1149,6 +1081,82 @@ func TestDisplay_Divider(t *testing.T) {
 			rendered := divider(testCase.base, testCase.length)
 			if rendered != testCase.expected {
 				t.Fatalf("Got render = %q, expected %q", rendered, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestDisplay_TextResizeHelpers(t *testing.T) {
+	tests := []struct {
+		name     string
+		resize   func(value text) text
+		base     text
+		expected text
+	}{
+		{
+			name: "happy_divider_ascii_unicode",
+			resize: func(value text) text {
+				return value.resize(2, divider)
+			},
+			base:     text{ascii: "|", unicode: "│"},
+			expected: text{ascii: " | ", unicode: " │ "},
+		},
+		{
+			name: "happy_expand_ascii_unicode",
+			resize: func(value text) text {
+				return value.resize(2, func(base string, length int) string {
+					return extend(base, 1, length)
+				})
+			},
+			base:     text{ascii: " ---", unicode: "─┐"},
+			expected: text{ascii: " -----", unicode: "─┐┐┐"},
+		},
+		{
+			name: "happy_repeat_suffix_ascii_unicode",
+			resize: func(value text) text {
+				return value.resize(2, func(base string, length int) string {
+					return base + repeat(base, 0, 1, length-runeCount(base))
+				})
+			},
+			base:     text{ascii: "ab", unicode: "xy"},
+			expected: text{ascii: "abbb", unicode: "xyyy"},
+		},
+		{
+			name: "happy_pad_mid_ascii_unicode",
+			resize: func(value text) text {
+				return value.resize(2, func(base string, length int) string {
+					return pad(base, boxMid, length)
+				})
+			},
+			base:     text{ascii: "cpu", unicode: "cpu"},
+			expected: text{ascii: " cpu ", unicode: " cpu "},
+		},
+		{
+			name: "happy_fallback_empty_unicode",
+			resize: func(value text) text {
+				return value.resize(2, func(base string, length int) string {
+					return base + repeat(base, 0, 1, length-runeCount(base))
+				})
+			},
+			base:     text{ascii: "ab"},
+			expected: text{ascii: "abbb", unicode: "abbb"},
+		},
+		{
+			name: "happy_fallback_empty_ascii",
+			resize: func(value text) text {
+				return value.resize(2, func(base string, length int) string {
+					return base + repeat(base, 0, 1, length-runeCount(base))
+				})
+			},
+			base:     text{unicode: "xy"},
+			expected: text{ascii: "xyyy", unicode: "xyyy"},
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			resized := testCase.resize(testCase.base)
+			if resized != testCase.expected {
+				t.Fatalf("Got text = %#v, expected %#v", resized, testCase.expected)
 			}
 		})
 	}
