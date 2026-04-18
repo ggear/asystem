@@ -361,11 +361,7 @@ func rows(layout [][]box, hostCount int) int {
 	if hostCount == 0 || len(layout) == 0 {
 		return 0
 	}
-	count := len(layout)
-	if hostCount == 1 {
-		count--
-	}
-	return count * ((hostCount + 1) / 2)
+	return len(layout) * ((hostCount + 1) / 2)
 }
 
 func columns(layout [][]box, unicode bool, hostCount int) int {

@@ -115,15 +115,11 @@ func (d *Display) Compile() (Format, error) {
 
 		// Assert and resize layout box rows
 		displayRowMin := 0
-		displayRowSkip := 0
 		if len(layout) < 2 || len(layout[0]) < 2 {
 			return nil, fmt.Errorf("cannot compile display: layout is empty")
 		}
 		if hostCount < 1 {
 			return nil, fmt.Errorf("cannot compile display: no hosts")
-		} else if hostCount == 1 {
-			displayRowSkip = 1
-			displayRowMin = len(layout) - 1
 		} else {
 			displayRowMin = len(layout) * ((hostCount + 1) / 2)
 		}
@@ -155,33 +151,31 @@ func (d *Display) Compile() (Format, error) {
 			hostColMin := 0
 			hostResizeCount := 0
 			for layoutRowIndex, layoutRow := range layout {
-				if layoutRowIndex >= displayRowSkip {
-					rowCols := 0
-					rowResizeCount := 0
-					for _, layoutBox := range layoutRow {
-						if !displayBoxSkip(hostIndex, layoutBox) {
-							rowCols += layoutBox.length(d.unicode)
-							rowResizeCount += layoutBox.resizes()
-						}
+				rowCols := 0
+				rowResizeCount := 0
+				for _, layoutBox := range layoutRow {
+					if !displayBoxSkip(hostIndex, layoutBox) {
+						rowCols += layoutBox.length(d.unicode)
+						rowResizeCount += layoutBox.resizes()
 					}
-					if hostColMin == 0 {
-						hostColMin = rowCols
-					} else if rowCols != hostColMin {
-						return nil, fmt.Errorf("cannot compile display: "+
-							"pre-resize row column width must be [%d], but got [%d] in zero-indexed row [%d] of layout [%v]",
-							hostColMin, rowCols, layoutRowIndex, format)
-					}
-					if rowResizeCount < 1 {
-						return nil, fmt.Errorf("cannot compile display: "+
-							"no box resize functions set in zero-indexed row [%d] of layout [%v]", layoutRowIndex, format)
-					}
-					if hostResizeCount == 0 {
-						hostResizeCount = rowResizeCount
-					} else if rowResizeCount != hostResizeCount {
-						return nil, fmt.Errorf("cannot compile display: "+
-							"the number of box resize functions per row must be [%d], but got [%d] in zero-indexed row [%d] of layout [%v]",
-							hostResizeCount, rowResizeCount, layoutRowIndex, format)
-					}
+				}
+				if hostColMin == 0 {
+					hostColMin = rowCols
+				} else if rowCols != hostColMin {
+					return nil, fmt.Errorf("cannot compile display: "+
+						"pre-resize row column width must be [%d], but got [%d] in zero-indexed row [%d] of layout [%v]",
+						hostColMin, rowCols, layoutRowIndex, format)
+				}
+				if rowResizeCount < 1 {
+					return nil, fmt.Errorf("cannot compile display: "+
+						"no box resize functions set in zero-indexed row [%d] of layout [%v]", layoutRowIndex, format)
+				}
+				if hostResizeCount == 0 {
+					hostResizeCount = rowResizeCount
+				} else if rowResizeCount != hostResizeCount {
+					return nil, fmt.Errorf("cannot compile display: "+
+						"the number of box resize functions per row must be [%d], but got [%d] in zero-indexed row [%d] of layout [%v]",
+						hostResizeCount, rowResizeCount, layoutRowIndex, format)
 				}
 			}
 			if hostIndex < 2 {
@@ -205,65 +199,63 @@ func (d *Display) Compile() (Format, error) {
 		}
 		for hostRowIndex := 0; hostRowIndex < (hostCount+1)/2; hostRowIndex++ {
 			for layoutRowIndex, layoutRow := range layout {
-				if layoutRowIndex >= displayRowSkip {
-					rowColsCount := 0
-					if len(layoutRow) < 1 ||
-						layoutRow[0].kind == boxDivdr {
-						return nil, fmt.Errorf("cannot compile display: "+
-							"row starts with [cline] in zero-indexed row [%d] of layout [%v]", layoutRowIndex, format)
+				rowColsCount := 0
+				if len(layoutRow) < 1 ||
+					layoutRow[0].kind == boxDivdr {
+					return nil, fmt.Errorf("cannot compile display: "+
+						"row starts with [cline] in zero-indexed row [%d] of layout [%v]", layoutRowIndex, format)
+				}
+				if len(layoutRow) < 2 ||
+					layoutRow[len(layoutRow)-1].kind != boxDivdr {
+					return nil, fmt.Errorf("cannot compile display: "+
+						"row is not terminated by at least one [cline] in zero-indexed row [%d] of layout [%v]",
+						layoutRowIndex, format)
+				}
+				for hostColIndex := 0; hostColIndex < 2; hostColIndex++ {
+					hostIndex := hostRowIndex*2 + hostColIndex
+					if hostIndex >= hostCount {
+						continue
 					}
-					if len(layoutRow) < 2 ||
-						layoutRow[len(layoutRow)-1].kind != boxDivdr {
-						return nil, fmt.Errorf("cannot compile display: "+
-							"row is not terminated by at least one [cline] in zero-indexed row [%d] of layout [%v]",
-							layoutRowIndex, format)
-					}
-					for hostColIndex := 0; hostColIndex < 2; hostColIndex++ {
-						hostIndex := hostRowIndex*2 + hostColIndex
-						if hostIndex >= hostCount {
+					hostName := d.hosts[hostIndex]
+					for _, layoutBox := range layoutRow {
+						if displayBoxSkip(hostIndex, layoutBox) {
 							continue
 						}
-						hostName := d.hosts[hostIndex]
-						for _, layoutBox := range layoutRow {
-							if displayBoxSkip(hostIndex, layoutBox) {
-								continue
-							}
-							b := layoutBox.clone()
-							if b.kind == boxDatum && (b.metricID < metric.ID(0) || b.metricID >= metric.MetricMax) {
-								return nil, fmt.Errorf("cannot compile display: "+
-									"invalid metricID ID [%v] in zero-indexed row [%d] of layout [%v]", layoutRow, b.metricID, format)
-							}
-							if b.kind == boxDatum && b.valLen < 1 {
-								return nil, fmt.Errorf("cannot compile display: "+
-									"invalid value columns [%d] in zero-indexed row [%d] of layout [%v]", b.valLen, b.metricID, format)
-							}
-							if b.kind == boxTitle {
-								b.set(
-									d.unicode,
-									b.lblLhs, boxLhs, runeCount(b.lblLhs.pick(d.unicode)),
-									text{hostName, hostName}, boxLhs, runeCount(b.lblMid.pick(d.unicode)),
-									b.lblRhs, boxLhs, runeCount(b.lblRhs.pick(d.unicode)),
-								)
-							}
-							if b.metricID == metric.MetricServiceName {
-								hostServiceIndex[hostIndex]++
-							}
-							recordGUID := metric.NewServiceSchemaRecordGUID(b.metricID, hostName, hostServiceIndex[hostIndex])
-							b.recordGUID = &recordGUID
-							b.position = &dimensions{layoutRowIndex - displayRowSkip + hostRowIndex*(len(layout)-displayRowSkip), rowColsCount}
-							b.resize(d.unicode, displayResizeIncrement, displayResizeRemainder)
-							rowColsCount += b.length(d.unicode)
-							boxes = append(boxes, *b)
-						}
-					}
-					if hostCount == 1 || hostRowIndex*2+1 < hostCount {
-						if boxesColsCount == 0 {
-							boxesColsCount = rowColsCount
-						} else if rowColsCount != boxesColsCount {
+						b := layoutBox.clone()
+						if b.kind == boxDatum && (b.metricID < metric.ID(0) || b.metricID >= metric.MetricMax) {
 							return nil, fmt.Errorf("cannot compile display: "+
-								"post-resize, row column width must be [%d], but got [%d] in layout zero-indexed row [%d] and [%v]",
-								boxesColsCount, rowColsCount, layoutRowIndex, format)
+								"invalid metricID ID [%v] in zero-indexed row [%d] of layout [%v]", layoutRow, b.metricID, format)
 						}
+						if b.kind == boxDatum && b.valLen < 1 {
+							return nil, fmt.Errorf("cannot compile display: "+
+								"invalid value columns [%d] in zero-indexed row [%d] of layout [%v]", b.valLen, b.metricID, format)
+						}
+						if b.kind == boxTitle {
+							b.set(
+								d.unicode,
+								b.lblLhs, boxLhs, runeCount(b.lblLhs.pick(d.unicode)),
+								text{hostName, hostName}, boxLhs, runeCount(b.lblMid.pick(d.unicode)),
+								b.lblRhs, boxLhs, runeCount(b.lblRhs.pick(d.unicode)),
+							)
+						}
+						if b.metricID == metric.MetricServiceName {
+							hostServiceIndex[hostIndex]++
+						}
+						recordGUID := metric.NewServiceSchemaRecordGUID(b.metricID, hostName, hostServiceIndex[hostIndex])
+						b.recordGUID = &recordGUID
+						b.position = &dimensions{layoutRowIndex + hostRowIndex*(len(layout)), rowColsCount}
+						b.resize(d.unicode, displayResizeIncrement, displayResizeRemainder)
+						rowColsCount += b.length(d.unicode)
+						boxes = append(boxes, *b)
+					}
+				}
+				if hostCount == 1 || hostRowIndex*2+1 < hostCount {
+					if boxesColsCount == 0 {
+						boxesColsCount = rowColsCount
+					} else if rowColsCount != boxesColsCount {
+						return nil, fmt.Errorf("cannot compile display: "+
+							"post-resize, row column width must be [%d], but got [%d] in layout zero-indexed row [%d] and [%v]",
+							boxesColsCount, rowColsCount, layoutRowIndex, format)
 					}
 				}
 			}
