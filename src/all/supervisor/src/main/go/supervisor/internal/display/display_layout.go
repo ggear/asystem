@@ -161,7 +161,7 @@ func compactDisplayLayout() [][]box {
 	})
 }
 
-/* Optimised for 1 host @ 79x33 ASCII
+/* Optimised for 1 host @ 79x16 ASCII
 += ahosts-one~ ======================================================== vESC =+
 | Used CPU ■■ 100%    Fail SVC ■■ 100%   Warn TEM ■■ 100%    Used SYS ■■ 100% |
 | Used RAM ■■  39%    Fail SHR ■■ 100%   Revs Fan ■■ 100%    Used SHR ■■  10% |
@@ -179,7 +179,7 @@ func compactDisplayLayout() [][]box {
 | ~                        ~         ~         ~    ~    ~    ~    ~        ~ |
 +=============================================================================+
 */
-/* Optimised for 1 host @ 88 (scaled 120/128)x33 ASCII
+/* Optimised for 1 host @ 88 (scaled 120/128)x16 ASCII
 += ahosts-one~ ================================================================= vESC =+
 | Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%    Warn TEM ■■■■ 100%    Used SYS ■■■■ 100% |
 | Used RAM ■■■■  39%    Fail SHR ■■■■ 100%    Revs Fan ■■■■ 100%    Used SHR ■■■■  10% |
@@ -197,7 +197,7 @@ func compactDisplayLayout() [][]box {
 | ~                        ~             ~              ~    ~    ~    ~    ~        ~ |
 +======================================================================================+
 */
-/* Optimised for 1 host @ 91(scaled 287)x51 Unicode
+/* Optimised for 1 host @ 91(scaled 287)x48 Unicode
 ╭─┐ahosts-one~┌────────────────────────────────────────────────────────────────────┐↓ESC┌─╮
 │  Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%     Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%  │
 │  Used RAM ■■■■  39%    Fail SHR ■■■■ 100%     Revs Fan ■■■■ 100%    Used SHR ■■■■  10%  │
@@ -215,7 +215,7 @@ func compactDisplayLayout() [][]box {
 │  ~                        ~             ~               ~    ~    ~    ~    ~        ~  │
 ╰─────────────────────────────────────────────────────────────────────────────────────────╯
 */
-/* Optimised for >2 hosts @ 183(scaled 287)x51 Unicode
+/* Optimised for >2 hosts @ 183(scaled 287)x48 Unicode
 ╭─┐ahosts-one~┌────────────────────────────────────────────────────────────────────┐↑1/2┌─╮ ╭─┐ahosts-two~┌────────────────────────────────────────────────────────────────────┐↑2/2┌─╮
 │  Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%     Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%  │ │  Used CPU ■■■■ 100%    Fail SVC ■■■■ 100%     Warn TEM ■■■■ 100%    Used SYS ■■■■ 100%  │
 │  Used RAM ■■■■  39%    Fail SHR ■■■■ 100%     Revs Fan ■■■■ 100%    Used SHR ■■■■  10%  │ │  Used RAM ■■■■  39%    Fail SHR ■■■■ 100%     Revs Fan ■■■■ 100%    Used SHR ■■■■  10%  │
