@@ -8,7 +8,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 pull_repo "${ROOT_DIR}" "${1}" homeassistant homeassistant-core home-assistant/core "${HOMEASSISTANT_VERSION}"
 
 # NOTES: https://github.com/pkissling/clock-weather-card/releases
-VERSION=v2.9.2
+VERSION=ggear-patches
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock-weather-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
