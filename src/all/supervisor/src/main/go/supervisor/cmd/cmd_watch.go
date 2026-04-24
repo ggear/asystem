@@ -147,9 +147,12 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	var theme display.Theme
 	switch strings.ToLower(opts.theme) {
 	case "auto":
-		if strings.EqualFold(os.Getenv("TERM_PROGRAM"), "Apple_Terminal") {
+		switch {
+		case strings.EqualFold(os.Getenv("TERM_PROGRAM"), "Apple_Terminal"):
 			theme = display.ThemeLight
-		} else {
+		case os.Getenv("SSH_CLIENT") != "" || os.Getenv("SSH_TTY") != "":
+			theme = display.ThemeLight
+		default:
 			theme = display.ThemeDark
 		}
 	case "dark":
