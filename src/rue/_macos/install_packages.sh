@@ -16,7 +16,8 @@ brew install --cask \
   google-drive \
   mqtt-explorer \
   google-chrome \
-  sublime-text
+  sublime-text \
+  keepingyouawake
 brew install \
   pv \
   jq \

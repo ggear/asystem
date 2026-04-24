@@ -7,6 +7,7 @@ import math
 import os
 import re
 import signal
+import subprocess
 import sys
 import time
 from os.path import *
@@ -16,6 +17,7 @@ import packaging.version
 import varsubst
 import varsubst.resolvers
 from fabric import task
+from invoke.exceptions import Exit
 from pathlib2 import Path
 from varsubst.resolvers import BaseResolver
 
@@ -700,23 +702,34 @@ def _unittest(context, filter_module=None):
     for module in _get_modules(context, "src/test/python/unit/unit_test.py", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "set -o pipefail && python unit_test.py", join(module, "src/test/python/unit"))
+        _run_external(
+            context,
+            "set -o pipefail && python unit_test.py",
+            join(module, "src/test/python/unit"),
+        )
         _print_footer(module, "unittest")
     for module in _get_modules(context, "src/main/go", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context,
-                   "GOCACHE={} GOBIN={} echo ""; "
-                   "set -o pipefail && gotestsum --format-hide-empty-pkg --format short-verbose --no-color=false ./... | "
-                   "grep -v 'EMPTY' 2>&1 | cat".format(
-                       join(ROOT_MODULE_DIR, module, "target/go/cache"),
-                       join(ROOT_MODULE_DIR, module, "target/go/bin")),
-                   join(module, "src/main/go/{}".format(_get_service(module))))
+        _run_external(
+            context,
+            "GOCACHE={} GOBIN={} echo \"\"; "
+            "set -o pipefail && gotestsum --format-hide-empty-pkg --format short-verbose --no-color=false ./... | "
+            "grep -v 'EMPTY' 2>&1 | cat".format(
+                join(ROOT_MODULE_DIR, module, "target/go/cache"),
+                join(ROOT_MODULE_DIR, module, "target/go/bin"),
+            ),
+            join(module, "src/main/go/{}".format(_get_service(module))),
+        )
         _print_footer(module, "unittest")
     for module in _get_modules(context, "src/test/rust/unit/unit_test.rs", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "set -o pipefail && cargo test", join(module, "target/package"))
+        _run_external(
+            context,
+            "set -o pipefail && cargo test",
+            join(module, "target/package"),
+        )
         _print_footer(module, "unittest")
 
 
@@ -1225,6 +1238,36 @@ def _down_module(context, module, down_this=True):
 def _run_local(context, command, working=".", **kwargs):
     with context.cd(join("./" if working == "." else ROOT_MODULE_DIR, working)):
         return context.run(". {} && {}".format(GLOBAL_ENV_PATH, command), **kwargs)
+
+
+def _run_external(context, command, working=".", env_overrides=None):
+    del context
+    cwd = ROOT_DIR if working == "." else join(ROOT_MODULE_DIR, working)
+    env = os.environ.copy()
+    env.update(GLOBAL_ENV)
+    env.update({
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "LC_CTYPE": "C.UTF-8",
+        "PYTHONIOENCODING": "UTF-8",
+    })
+    if env_overrides:
+        env.update(env_overrides)
+    command_args = ["/bin/bash", "-lc", ". {} && {}".format(GLOBAL_ENV_PATH, command)]
+    process = subprocess.Popen(
+        command_args,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    assert process.stdout is not None
+    for chunk in iter(lambda: process.stdout.read(8192), b""):
+        sys.stdout.buffer.write(chunk)
+        sys.stdout.buffer.flush()
+    exit_code = process.wait()
+    if exit_code != 0:
+        raise Exit("\nExternal command failed with exit [{}]\n".format(exit_code, ), code=exit_code)
 
 
 def _run_remote(context, command, **kwargs):

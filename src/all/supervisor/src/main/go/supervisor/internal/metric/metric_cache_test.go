@@ -56,7 +56,6 @@ func TestRecordCache_Hosts(t *testing.T) {
 	})
 }
 
-
 func TestRecordCache_ServicesForHost(t *testing.T) {
 	tests := []struct {
 		name     string

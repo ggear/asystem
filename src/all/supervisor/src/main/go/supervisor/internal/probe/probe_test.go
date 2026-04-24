@@ -70,11 +70,11 @@ func TestProbe_RunProbes(t *testing.T) {
 
 func TestProbe_RunOnPulse(t *testing.T) {
 	tests := []struct {
-		name            string
-		periods         config.Periods
-		onPulse         func(*int, *bool) func(bool)
+		name             string
+		periods          config.Periods
+		onPulse          func(*int, *bool) func(bool)
 		expectedMinCalls int
-		expectedError   bool
+		expectedError    bool
 	}{
 		{
 			name:             "happy_nil_on_pulse_not_called",

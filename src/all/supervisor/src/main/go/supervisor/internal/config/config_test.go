@@ -269,7 +269,7 @@ func TestConfig_Mount(t *testing.T) {
 		{
 			name:          "happy_env_supervisor_mount_used",
 			configPath:    "non-existent-file.json",
-			envMount:     "/env-host-fs",
+			envMount:      "/env-host-fs",
 			expected:      "/env-host-fs",
 			expectedError: false,
 		},

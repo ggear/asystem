@@ -57,15 +57,15 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 	}
 	var rxCount atomic.Int64
-	var subscribedMu sync.Mutex
+	var subscribedMutex sync.Mutex
 	subscribed := make(map[string]struct{})
 	subscribe := func(client mqtt.Client, b metric.TopicBinding) {
-		subscribedMu.Lock()
+		subscribedMutex.Lock()
 		_, exists := subscribed[b.Topic]
 		if !exists {
 			subscribed[b.Topic] = struct{}{}
 		}
-		subscribedMu.Unlock()
+		subscribedMutex.Unlock()
 		if exists {
 			return
 		}
@@ -99,9 +99,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		hostStatusMutex.Lock()
 		clear(hostStatus)
 		hostStatusMutex.Unlock()
-		subscribedMu.Lock()
+		subscribedMutex.Lock()
 		clear(subscribed)
-		subscribedMu.Unlock()
+		subscribedMutex.Unlock()
 		for _, b := range cache.Topics() {
 			subscribe(client, b)
 		}
@@ -146,9 +146,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					if b.GUID.Host != hostName {
 						continue
 					}
-					subscribedMu.Lock()
+					subscribedMutex.Lock()
 					delete(subscribed, b.Topic)
-					subscribedMu.Unlock()
+					subscribedMutex.Unlock()
 					client.Unsubscribe(b.Topic)
 					subscribe(client, b)
 				}
@@ -160,13 +160,13 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Evict(hostName, svc)
 				}
 				hostPrefix := "supervisor/" + hostName + "/"
-				subscribedMu.Lock()
+				subscribedMutex.Lock()
 				for topic := range subscribed {
 					if strings.HasPrefix(topic, hostPrefix) {
 						delete(subscribed, topic)
 					}
 				}
-				subscribedMu.Unlock()
+				subscribedMutex.Unlock()
 				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
 					record := metric.NewRecord(metric.NewNilValue())
 					cache.Store(metric.NewRecordGUID(id, hostName), &record)
@@ -186,9 +186,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	cache.SubscribeDeletes(&brokerDeletesListener{
 		client: client,
 		onDelete: func(topic string) {
-			subscribedMu.Lock()
+			subscribedMutex.Lock()
 			delete(subscribed, topic)
-			subscribedMu.Unlock()
+			subscribedMutex.Unlock()
 		},
 	})
 	purgeInterval := time.Duration(max(periods.PulseMillis+1000, 2000)) * time.Millisecond

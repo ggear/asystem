@@ -21,6 +21,7 @@ type watchOptions struct {
 	mode            string
 	format          string
 	symbols         string
+	theme           string
 	pollPeriod      string
 	pulseFactor     string
 	trendPeriod     string
@@ -53,6 +54,7 @@ func newWatchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.mode, "mode", "m", "local", "watch host selection and retrieval method: local, remote or remote[:HOST[,HOST...]]")
 	cmd.Flags().StringVarP(&opts.format, "format", "f", "auto", "output format based on grid cell width: auto, compact or relaxed")
 	cmd.Flags().StringVarP(&opts.symbols, "symbols", "s", "auto", "define output character set: auto, ascii or unicode")
+	cmd.Flags().StringVarP(&opts.theme, "theme", "t", "auto", "colour theme: auto, dark or light")
 	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "P", "1s", "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]. (default: 1s)")
 	cmd.Flags().StringVarP(&opts.pulseFactor, "pulse-factor", "F", "5", "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics (default: 5)")
 	cmd.Flags().StringVarP(&opts.heartbeatFactor, "heartbeat-period", "B", "5m", "period by which metrics are published even if they have not changed, rounded up to nearest pulse boundary, uses unit suffixes [s, m, h] (default: 5m)")
@@ -117,6 +119,9 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		}
 		hosts = []string{hostname}
 	}
+	if len(hosts) > 9 {
+		return fmt.Errorf("maximum of 9 hosts supported [%d] requested", len(hosts))
+	}
 	format := display.FormatAuto
 	switch strings.ToLower(opts.format) {
 	case "auto":
@@ -128,16 +133,31 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	default:
 		return fmt.Errorf("invalid watch format [%s]", opts.format)
 	}
-	var unicode bool
+	var useUnicode bool
 	switch strings.ToLower(opts.symbols) {
 	case "auto":
-		unicode = !(os.Getenv("TERM") == "linux" || os.Getenv("TERM") == "dumb" || os.Getenv("NO_UTF8") != "")
+		useUnicode = !(os.Getenv("TERM") == "linux" || os.Getenv("TERM") == "dumb" || os.Getenv("NO_UTF8") != "")
 	case "ascii":
-		unicode = false
+		useUnicode = false
 	case "unicode":
-		unicode = true
+		useUnicode = true
 	default:
 		return fmt.Errorf("invalid watch symbols [%s]", opts.symbols)
+	}
+	var theme display.Theme
+	switch strings.ToLower(opts.theme) {
+	case "auto":
+		if strings.EqualFold(os.Getenv("TERM_PROGRAM"), "Apple_Terminal") {
+			theme = display.ThemeLight
+		} else {
+			theme = display.ThemeDark
+		}
+	case "dark":
+		theme = display.ThemeDark
+	case "light":
+		theme = display.ThemeLight
+	default:
+		return fmt.Errorf("invalid watch theme [%s]", opts.theme)
 	}
 	periods, err := makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod, opts.heartbeatFactor)
 	if err != nil {
@@ -154,14 +174,14 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	defer cancel()
 	d, err := display.NewDisplay(
 		metric.NewRecordCache(),
-		display.TerminalFactory,
+		display.TerminalFactory(theme),
 		hosts,
 		width,
 		height,
 		opts.consoleWidth,
 		opts.consoleHeight,
 		format,
-		unicode,
+		useUnicode,
 		periods,
 		isRemote,
 		configPath,

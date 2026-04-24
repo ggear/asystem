@@ -469,7 +469,6 @@ func (c *RecordCache) Hosts() map[string]int {
 	return hosts
 }
 
-
 func (c *RecordCache) Services(hostName string) []string {
 	if c == nil {
 		return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/engine"
 	"supervisor/internal/metric"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/mattn/go-runewidth"
 )
 
 type Format int
@@ -44,26 +46,29 @@ func (d dimensions) String() string {
 	return fmt.Sprintf("[%d,%d]", d.rows, d.cols)
 }
 
+
 type Display struct {
-	hosts         []string
-	periods       config.Periods
-	configPath    string
-	isRemote      bool
-	format        Format
-	formatInit    Format
-	unicode       bool
-	dimsInit      dimensions
-	dimsTerminal  dimensions
-	maxServices   int
-	boxes         []box
-	dirty         dirtyBoxes
-	terminal      Terminal
-	factory       terminalFactory
-	cache         *metric.RecordCache
-	logBuffer     *scribe.LogBuffer
-	logOverlay    bool
-	logGeneration uint64
-	refreshPeriod time.Duration
+	hosts           []string
+	periods         config.Periods
+	configPath      string
+	isRemote        bool
+	format          Format
+	formatInit      Format
+	useUnicode      bool
+	dimsInit        dimensions
+	dimsTerminal    dimensions
+	boxes           []box
+	maxServices     int
+	dirty           dirtyBoxes
+	terminal        Terminal
+	factory         terminalFactory
+	cache           *metric.RecordCache
+	singleHostIndex int
+	refreshPeriod   time.Duration
+	logBuffer       *scribe.LogBuffer
+	logOverlay      bool
+	logOverlayAuto  bool
+	logGeneration   uint64
 }
 
 type dirtyBoxes struct {
@@ -79,7 +84,7 @@ func NewDisplay(
 	width, height int,
 	maxWidth, maxHeight int,
 	format Format,
-	unicode bool,
+	useUnicode bool,
 	periods config.Periods,
 	isRemote bool,
 	configPath string,
@@ -87,20 +92,28 @@ func NewDisplay(
 	refreshPeriod time.Duration,
 ) (*Display, error) {
 	return &Display{
-		hosts:         hosts,
-		dimsInit:      dimensions{rows: height, cols: width},
-		dimsTerminal:  dimensions{rows: maxHeight, cols: maxWidth},
-		unicode:       unicode,
-		periods:       periods,
-		configPath:    configPath,
-		isRemote:      isRemote,
-		format:        format,
-		formatInit:    format,
-		factory:       factory,
-		cache:         cache,
-		logBuffer:     logBuffer,
-		refreshPeriod: refreshPeriod,
+		hosts:           hosts,
+		dimsInit:        dimensions{rows: height, cols: width},
+		dimsTerminal:    dimensions{rows: maxHeight, cols: maxWidth},
+		useUnicode:      useUnicode,
+		periods:         periods,
+		configPath:      configPath,
+		isRemote:        isRemote,
+		format:          format,
+		formatInit:      format,
+		factory:         factory,
+		cache:           cache,
+		logBuffer:       logBuffer,
+		refreshPeriod:   refreshPeriod,
+		singleHostIndex: singleHostIndex(hosts),
 	}, nil
+}
+
+func singleHostIndex(hosts []string) int {
+	if len(hosts) == 1 {
+		return 0
+	}
+	return -1
 }
 
 func (d *Display) Close() {
@@ -109,8 +122,16 @@ func (d *Display) Close() {
 	}
 }
 
+func (d *Display) compileHosts() []string {
+	if d.singleHostIndex >= 0 && d.singleHostIndex < len(d.hosts) {
+		return []string{d.hosts[d.singleHostIndex]}
+	}
+	return d.hosts
+}
+
 func (d *Display) Compile() (Format, error) {
-	hostCount := len(d.hosts)
+	compileHosts := d.compileHosts()
+	hostCount := len(compileHosts)
 	compile := func(format Format, layout [][]box) ([]box, error) {
 
 		// Assert and resize layout box rows
@@ -133,21 +154,21 @@ func (d *Display) Compile() (Format, error) {
 				displayRowMin, hostCount, d.dimsInit.rows, format)
 		}
 		addLayoutRowsCount := (d.dimsInit.rows - displayRowMin) / ((hostCount + 1) / 2)
-		lastRow := layout[len(layout)-1]
+		penultimateRow := layout[len(layout)-2]
 		for i := 0; i < addLayoutRowsCount; i++ {
-			newRow := make([]box, len(lastRow))
-			for j := range lastRow {
-				newRow[j] = *lastRow[j].clone()
+			newRow := make([]box, len(penultimateRow))
+			for j := range penultimateRow {
+				newRow[j] = *penultimateRow[j].clone()
 			}
-			layout = append(layout, newRow)
+			lastRow := layout[len(layout)-1]
+			layout = append(layout[:len(layout)-1], newRow, lastRow)
 		}
-		d.maxServices = displayRowMin + addLayoutRowsCount
 
 		// Assert and resize layout box columns
 		displayColMin := 0
 		displayResizeCount := 0
 		displayBoxSkip := func(i int, b box) bool { return (hostCount == 1 || (i+1)%2 == 0) && b.kind == boxDivdr }
-		for hostIndex := range d.hosts {
+		for hostIndex := range compileHosts {
 			hostColMin := 0
 			hostResizeCount := 0
 			for layoutRowIndex, layoutRow := range layout {
@@ -155,7 +176,7 @@ func (d *Display) Compile() (Format, error) {
 				rowResizeCount := 0
 				for _, layoutBox := range layoutRow {
 					if !displayBoxSkip(hostIndex, layoutBox) {
-						rowCols += layoutBox.length(d.unicode)
+						rowCols += layoutBox.length(d.useUnicode)
 						rowResizeCount += layoutBox.resizes()
 					}
 				}
@@ -193,7 +214,7 @@ func (d *Display) Compile() (Format, error) {
 		// Build, resize, assert and compile display boxes
 		boxesColsCount := 0
 		boxes := make([]box, 0, hostCount*50)
-		hostServiceIndex := make([]int, len(d.hosts))
+		hostServiceIndex := make([]int, len(compileHosts))
 		for i := range hostServiceIndex {
 			hostServiceIndex[i] = metric.ServiceIndexUnset
 		}
@@ -216,7 +237,7 @@ func (d *Display) Compile() (Format, error) {
 					if hostIndex >= hostCount {
 						continue
 					}
-					hostName := d.hosts[hostIndex]
+					hostName := compileHosts[hostIndex]
 					for _, layoutBox := range layoutRow {
 						if displayBoxSkip(hostIndex, layoutBox) {
 							continue
@@ -232,10 +253,30 @@ func (d *Display) Compile() (Format, error) {
 						}
 						if b.kind == boxTitle {
 							b.set(
-								d.unicode,
-								b.lblLhs, boxLhs, runeCount(b.lblLhs.pick(d.unicode)),
-								text{hostName, hostName}, boxLhs, runeCount(b.lblMid.pick(d.unicode)),
-								b.lblRhs, boxLhs, runeCount(b.lblRhs.pick(d.unicode)),
+								d.useUnicode,
+								b.lblLhs, boxLhs, runewidth.StringWidth(b.lblLhs.pick(d.useUnicode)),
+								text{hostName, hostName}, boxLhs, runewidth.StringWidth(b.lblMid.pick(d.useUnicode)),
+								b.lblRhs, boxLhs, runewidth.StringWidth(b.lblRhs.pick(d.useUnicode)),
+							)
+						} else if b.kind == boxCtrls {
+							var ctrlText text
+							if d.singleHostIndex >= 0 {
+								ctrlText = text{
+									ascii:   fmt.Sprintf("%sESC", textDown.ascii),
+									unicode: fmt.Sprintf("%sESC", textDown.unicode),
+								}
+							} else {
+								actualHostIndex := hostRowIndex*2 + hostColIndex
+								ctrlText = text{
+									ascii:   fmt.Sprintf("%s%d/%d", textUp.ascii, actualHostIndex+1, len(d.hosts)),
+									unicode: fmt.Sprintf("%s%d/%d", textUp.unicode, actualHostIndex+1, len(d.hosts)),
+								}
+							}
+							b.set(
+								d.useUnicode,
+								b.lblLhs, boxLhs, runewidth.StringWidth(b.lblLhs.pick(d.useUnicode)),
+								ctrlText, boxLhs, runewidth.StringWidth(b.lblMid.pick(d.useUnicode)),
+								b.lblRhs, boxLhs, runewidth.StringWidth(b.lblRhs.pick(d.useUnicode)),
 							)
 						}
 						if b.metricID == metric.MetricServiceName {
@@ -244,8 +285,8 @@ func (d *Display) Compile() (Format, error) {
 						recordGUID := metric.NewServiceSchemaRecordGUID(b.metricID, hostName, hostServiceIndex[hostIndex])
 						b.recordGUID = &recordGUID
 						b.position = &dimensions{layoutRowIndex + hostRowIndex*(len(layout)), rowColsCount}
-						b.resize(d.unicode, displayResizeIncrement, displayResizeRemainder)
-						rowColsCount += b.length(d.unicode)
+						b.resize(d.useUnicode, displayResizeIncrement, displayResizeRemainder, hostCount)
+						rowColsCount += b.length(d.useUnicode)
 						boxes = append(boxes, *b)
 					}
 				}
@@ -285,7 +326,7 @@ func (d *Display) Compile() (Format, error) {
 				if b.position.cols != expectedCol {
 					return nil, positioningErr
 				}
-				length := b.length(d.unicode)
+				length := b.length(d.useUnicode)
 				expectedCol += length
 				rowWidth += length
 			}
@@ -299,16 +340,31 @@ func (d *Display) Compile() (Format, error) {
 		switch d.format {
 		case FormatAuto, FormatRelaxed:
 			attemptedFormat = FormatRelaxed
-			layout = relaxedDisplayLayout()
+			layout = relaxedDisplayLayout(d.useUnicode)
 		case FormatCompact:
 			attemptedFormat = FormatCompact
-			layout = compactDisplayLayout()
+			layout = compactDisplayLayout(d.useUnicode)
 		default:
 			return d.format, fmt.Errorf("cannot compile display: invalid formats [%v]", d.format)
 		}
 		boxes, err := compile(attemptedFormat, layout)
 		if err == nil {
 			d.boxes = boxes
+			serviceSlots := 0
+			if len(compileHosts) > 0 {
+				for _, b := range boxes {
+					if b.metricID == metric.MetricServiceName && b.recordGUID != nil && b.recordGUID.Host == compileHosts[0] {
+						serviceSlots++
+					}
+				}
+			}
+			d.maxServices = serviceSlots
+			lastIdx := serviceSlots - 1
+			for i := range d.boxes {
+				if d.boxes[i].recordGUID != nil && d.boxes[i].recordGUID.ServiceIndex == lastIdx {
+					d.boxes[i].isLast = true
+				}
+			}
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {
@@ -329,7 +385,7 @@ func (d *Display) Load() error {
 		if d.factory == nil {
 			return fmt.Errorf("cannot draw display: terminal factory is nil")
 		}
-		terminal, err := d.factory()
+		terminal, err := d.factory(d.useUnicode)
 		if err != nil {
 			return err
 		}
@@ -355,32 +411,46 @@ func (d *Display) Logging() {
 	if maxLines < 1 {
 		return
 	}
-	lines := d.logBuffer.Tail(maxLines)
+	arrow := " " + textDown.ascii
+	esc := "ESC"
+	suffix := " =+"
+	arrowWidth := runewidth.StringWidth(arrow)
+	escWidth := runewidth.StringWidth(esc)
+	suffixWidth := runewidth.StringWidth(suffix)
+	padLen := d.dimsInit.cols - arrowWidth - escWidth - suffixWidth
+	if padLen < 0 {
+		padLen = 0
+	}
+	d.terminal.draw(0, 0, strings.Repeat("=", padLen), colourChat)
+	d.terminal.draw(padLen, 0, arrow, colourChat)
+	d.terminal.draw(padLen+arrowWidth, 0, esc, colourShout)
+	d.terminal.draw(padLen+arrowWidth+escWidth, 0, suffix, colourChat)
+	lines := d.logBuffer.Tail(maxLines - 1)
 	for row, line := range lines {
+		row++
 		ts := line.Time.Format("15:04:05")
 		lvl := line.Level.String()
 		text := fmt.Sprintf("%s %-5s %s", ts, lvl, line.Message)
-		runes := []rune(text)
-		if len(runes) > d.dimsInit.cols {
+		if runewidth.StringWidth(text) > d.dimsInit.cols {
+			tail := ""
 			if d.dimsInit.cols >= 2 {
-				runes = append(runes[:d.dimsInit.cols-1], '~')
-			} else {
-				runes = runes[:d.dimsInit.cols]
+				tail = "~"
 			}
-			text = string(runes)
+			text = runewidth.Truncate(text, d.dimsInit.cols, tail)
 		}
-		c := colourDefault
+		c := colourChat
 		switch {
 		case line.Level >= slog.LevelError:
-			c = colourRed
+			c = colourAlert
 		case line.Level >= slog.LevelWarn:
-			c = colourBlue
+			c = colourWarn
 		case line.Level >= slog.LevelInfo:
-			c = colourGreen
+			c = colourCheer
 		}
 		d.terminal.draw(0, row, text, c)
 	}
 }
+
 
 func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 	for _, b := range d.boxes {
@@ -433,18 +503,26 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				d.dimsInit = dims
 				d.format = d.formatInit
 				d.boxes = nil
-				if _, err := d.Compile(); err != nil {
-					slog.Error("resize recompile failed", "error", err)
-				} else {
-					d.subscribeUpdates()
-				}
+				_, compileErr := d.Compile()
+				d.subscribeUpdates()
 				d.terminal.sync()
 				d.terminal.clear()
-				if d.logOverlay {
+				if compileErr != nil {
+					slog.Error(compileErr.Error())
+					d.logOverlay = true
+					d.logOverlayAuto = true
 					d.Logging()
 				} else {
-					for _, b := range d.boxes {
-						b.drawLabels(d)
+					if d.logOverlayAuto {
+						d.logOverlay = false
+						d.logOverlayAuto = false
+					}
+					if d.logOverlay {
+						d.Logging()
+					} else {
+						for _, b := range d.boxes {
+							b.drawLabels(d)
+						}
 					}
 				}
 				force = true
@@ -468,18 +546,81 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					force = true
 					slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "boxes", len(d.boxes))
 				}
-				if ev.Key() == tcell.KeyEscape && d.logBuffer != nil {
-					d.logOverlay = !d.logOverlay
-					d.terminal.clear()
-					if d.logOverlay {
-						d.Logging()
-					} else {
-						for _, b := range d.boxes {
-							b.drawLabels(d)
+				if ev.Key() == tcell.KeyEscape {
+					if d.singleHostIndex >= 0 && len(d.hosts) > 1 {
+						d.singleHostIndex = -1
+						d.format = d.formatInit
+						d.boxes = nil
+						_, compileErr := d.Compile()
+						d.subscribeUpdates()
+						d.terminal.clear()
+						if compileErr != nil {
+							slog.Error(compileErr.Error())
+							d.logOverlay = true
+							d.logOverlayAuto = true
+							d.Logging()
+						} else {
+							if d.logOverlayAuto {
+								d.logOverlay = false
+								d.logOverlayAuto = false
+							}
+							for _, b := range d.boxes {
+								b.drawLabels(d)
+							}
 						}
 						force = true
+						d.terminal.show()
+					} else if d.logBuffer != nil {
+						d.logOverlay = !d.logOverlay
+						d.logOverlayAuto = false
+						d.terminal.clear()
+						if d.logOverlay {
+							d.Logging()
+						} else {
+							for _, b := range d.boxes {
+								b.drawLabels(d)
+							}
+							force = true
+						}
+						d.terminal.show()
 					}
-					d.terminal.show()
+				}
+				if !d.logOverlay && len(d.hosts) > 1 && ev.Key() == tcell.KeyRune {
+					hostIndex := -1
+					r := ev.Str()
+					if len(r) == 1 && r[0] >= '1' && r[0] <= '9' {
+						hostIndex = int(r[0] - '1')
+					}
+					if hostIndex >= 0 && hostIndex < len(d.hosts) {
+						if d.singleHostIndex >= 0 {
+							if hostIndex == d.singleHostIndex {
+								d.singleHostIndex = -1
+							}
+						} else {
+							d.singleHostIndex = hostIndex
+						}
+						d.format = d.formatInit
+						d.boxes = nil
+						_, compileErr := d.Compile()
+						d.subscribeUpdates()
+						d.terminal.clear()
+						if compileErr != nil {
+							slog.Error(compileErr.Error())
+							d.logOverlay = true
+							d.logOverlayAuto = true
+							d.Logging()
+						} else {
+							if d.logOverlayAuto {
+								d.logOverlay = false
+								d.logOverlayAuto = false
+							}
+							for _, b := range d.boxes {
+								b.drawLabels(d)
+							}
+						}
+						force = true
+						d.terminal.show()
+					}
 				}
 			}
 		case <-ticker.C:
@@ -509,7 +650,9 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			} else {
 				for _, index := range dirtyIndexes {
-					d.boxes[index].drawValue(d)
+					if index < len(d.boxes) {
+						d.boxes[index].drawValue(d)
+					}
 				}
 			}
 			d.terminal.show()

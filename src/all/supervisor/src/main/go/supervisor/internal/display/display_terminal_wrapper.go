@@ -4,26 +4,29 @@ import (
 	"os"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/gdamore/tcell/v3/color"
+	"github.com/mattn/go-runewidth"
 )
 
 type terminalWrapper struct {
-	screen tcell.Screen
+	screen  tcell.Screen
+	palette *colourPalette
 }
 
-func newTerminalWrapper() (Terminal, error) {
-	if os.Getenv("TERM_PROGRAM") == "" {
-		os.Setenv("TERM_PROGRAM", "Apple_Terminal")
+func newTerminalWrapper(theme Theme) terminalFactory {
+	return func(useUnicode bool) (Terminal, error) {
+		if os.Getenv("TERM_PROGRAM") == "" {
+			os.Setenv("TERM_PROGRAM", "Apple_Terminal")
+		}
+		screen, err := tcell.NewScreen()
+		if err != nil {
+			return nil, err
+		}
+		if err := screen.Init(); err != nil {
+			return nil, err
+		}
+		screen.DisableMouse()
+		return &terminalWrapper{screen: screen, palette: theme.palette(useUnicode)}, nil
 	}
-	screen, err := tcell.NewScreen()
-	if err != nil {
-		return nil, err
-	}
-	if err := screen.Init(); err != nil {
-		return nil, err
-	}
-	screen.DisableMouse()
-	return &terminalWrapper{screen: screen}, nil
 }
 
 func (w *terminalWrapper) close() {
@@ -34,12 +37,22 @@ func (w *terminalWrapper) clear() {
 	w.screen.Clear()
 }
 
-func (w *terminalWrapper) draw(x int, y int, str string, colour colour) {
-	if colour == colourDefault {
-		w.screen.PutStr(x, y, str)
-	} else {
-		w.screen.PutStrStyled(x, y, str, tcell.StyleDefault.Foreground(colourToTcell(colour)))
+func (w *terminalWrapper) draw(x int, y int, str string, c colour) {
+	screenW, screenH := w.screen.Size()
+	if x < 0 || y < 0 || x >= screenW || y >= screenH || str == "" {
+		return
 	}
+	remaining := screenW - x
+	if remaining <= 0 {
+		return
+	}
+	if runewidth.StringWidth(str) > remaining {
+		str = runewidth.Truncate(str, remaining, "")
+		if str == "" {
+			return
+		}
+	}
+	w.screen.PutStrStyled(x, y, str, tcell.StyleDefault.Foreground(w.palette[c].tcell))
 }
 
 func (w *terminalWrapper) show() {
@@ -52,23 +65,4 @@ func (w *terminalWrapper) sync() {
 
 func (w *terminalWrapper) events() chan tcell.Event {
 	return w.screen.EventQ()
-}
-
-func colourToTcell(colour colour) tcell.Color {
-	switch colour {
-	case colourGray:
-		return color.XTerm237
-	case colourGreen:
-		return color.XTerm34
-	case colourYellow:
-		return color.XTerm136
-	case colourOrange:
-		return color.XTerm166
-	case colourBlue:
-		return color.XTerm33
-	case colourRed:
-		return color.XTerm124
-	default:
-		return color.Default
-	}
 }

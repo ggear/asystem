@@ -7,18 +7,6 @@ import (
 // TODO:
 //   - hide tcell namespace completely - tcell.Event
 
-type colour int
-
-const (
-	colourDefault colour = iota
-	colourGray
-	colourGreen
-	colourYellow
-	colourOrange
-	colourBlue
-	colourRed
-)
-
 type Terminal interface {
 	close()
 	clear()
@@ -28,6 +16,8 @@ type Terminal interface {
 	events() chan tcell.Event
 }
 
-var TerminalFactory terminalFactory = newTerminalWrapper
+func TerminalFactory(theme Theme) terminalFactory {
+	return newTerminalWrapper(theme)
+}
 
-type terminalFactory func() (Terminal, error)
+type terminalFactory func(useUnicode bool) (Terminal, error)

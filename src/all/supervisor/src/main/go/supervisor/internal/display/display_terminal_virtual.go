@@ -5,14 +5,16 @@ import (
 	"sync/atomic"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/mattn/go-runewidth"
 )
 
 type terminalVirtual struct {
-	width  int
-	height int
-	cells  []terminalVirtualCell
-	eventQ chan tcell.Event
-	closed atomic.Bool
+	width   int
+	height  int
+	palette *colourPalette
+	cells   []terminalVirtualCell
+	eventQ  chan tcell.Event
+	closed  atomic.Bool
 }
 
 type terminalVirtualCell struct {
@@ -21,12 +23,13 @@ type terminalVirtualCell struct {
 	written bool
 }
 
-func newTerminalVirtual(rows, cols int) *terminalVirtual {
+func newTerminalVirtual(rows, cols int, theme Theme, useUnicode bool) *terminalVirtual {
 	terminal := &terminalVirtual{
-		width:  cols,
-		height: rows,
-		cells:  make([]terminalVirtualCell, rows*cols),
-		eventQ: make(chan tcell.Event, 16),
+		width:   cols,
+		height:  rows,
+		palette: theme.palette(useUnicode),
+		cells:   make([]terminalVirtualCell, rows*cols),
+		eventQ:  make(chan tcell.Event, 16),
 	}
 	terminal.clear()
 	return terminal
@@ -43,7 +46,7 @@ func (v *terminalVirtual) close() {
 
 func (v *terminalVirtual) clear() {
 	for i := range v.cells {
-		v.cells[i] = terminalVirtualCell{char: ' ', colour: colourDefault, written: false}
+		v.cells[i] = terminalVirtualCell{char: ' ', colour: colourChat, written: false}
 	}
 }
 
@@ -51,8 +54,8 @@ func (v *terminalVirtual) draw(x int, y int, str string, colour colour) {
 	if v.width == 0 || v.height == 0 {
 		return
 	}
-	for _, char := range []rune(str) {
-		if char == '\n' {
+	for _, token := range tokens(str) {
+		if token == "\n" {
 			y++
 			x = 0
 			if y >= v.height {
@@ -60,18 +63,34 @@ func (v *terminalVirtual) draw(x int, y int, str string, colour colour) {
 			}
 			continue
 		}
+		tokenWidth := runewidth.StringWidth(token)
+		if tokenWidth <= 0 {
+			continue
+		}
 		if y < 0 || y >= v.height {
 			return
 		}
 		if x < 0 {
-			x++
+			x += tokenWidth
 			continue
 		}
 		if x >= v.width {
 			return
 		}
+		if x+tokenWidth > v.width {
+			return
+		}
+		var char rune
+		for _, r := range token {
+			char = r
+			break
+		}
 		v.cells[y*v.width+x] = terminalVirtualCell{char: char, colour: colour, written: true}
-		x++
+		// Reserve trailing cells for wide glyphs to keep virtual x-positions in sync.
+		for i := 1; i < tokenWidth; i++ {
+			v.cells[y*v.width+x+i] = terminalVirtualCell{char: ' ', colour: colour, written: true}
+		}
+		x += tokenWidth
 	}
 }
 
@@ -87,7 +106,7 @@ func (v *terminalVirtual) events() chan tcell.Event {
 
 func (v *terminalVirtual) cell(x, y int) (rune, colour, bool) {
 	if x < 0 || y < 0 || x >= v.width || y >= v.height {
-		return 0, colourDefault, false
+		return 0, colourChat, false
 	}
 	cell := v.cells[y*v.width+x]
 	return cell.char, cell.colour, true
@@ -134,11 +153,11 @@ func (v *terminalVirtual) string(inColour bool) string {
 			continue
 		}
 		wroteRow = true
-		lastColour = colourDefault
+		lastColour = colourChat
 		for x := 0; x < v.width; x++ {
 			cell := v.cells[rowIndex+x]
 			if inColour && cell.colour != lastColour {
-				builder.WriteString(colourToAnsi(cell.colour))
+				builder.WriteString(v.palette[cell.colour].ansi)
 				lastColour = cell.colour
 			}
 			if cell.char == 0 {
@@ -156,22 +175,4 @@ func (v *terminalVirtual) string(inColour bool) string {
 		builder.WriteString("\033[0m")
 	}
 	return builder.String()
-}
-
-func colourToAnsi(colour colour) string {
-	switch colour {
-	case colourGray: return "\033[38;5;237m"
-	case colourGreen:
-		return "\033[38;5;34m"
-	case colourYellow:
-		return "\033[38;5;136m"
-	case colourOrange:
-		return "\033[38;5;166m"
-	case colourBlue:
-		return "\033[38;5;33m"
-	case colourRed:
-		return "\033[38;5;124m"
-	default:
-		return "\033[39m"
-	}
 }
