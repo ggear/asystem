@@ -5,11 +5,14 @@
     "mount": "$TEST_CFG_MOUNT",
     "broker": {
       "host": "$TEST_CFG_BROKER_HOST",
-      "port": "$TEST_CFG_BROKER_PORT"
+      "port": "$TEST_CFG_BROKER_PORT",
+      "token": "$TEST_CFG_BROKER_TOKEN"
     },
     "database": {
       "host": "$TEST_CFG_DATABASE_HOST",
-      "port": "$TEST_CFG_DATABASE_PORT"
+      "port": "$TEST_CFG_DATABASE_PORT",
+      "name": "$TEST_CFG_DATABASE_NAME",
+      "token": "$TEST_CFG_DATABASE_TOKEN"
     },
     "schema": []
   }

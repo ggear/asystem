@@ -4,11 +4,14 @@
     "host": "ahost",
     "broker": {
       "host": "vernemq.local.janeandgraham.com",
-      "port": "1000"
+      "port": "1000",
+      "token": "noschematoken456"
     },
     "database": {
       "host": "influxdb.local.janeandgraham.com",
-      "port": "2000"
+      "port": "2000",
+      "name": "supervisor",
+      "token": "noschematoken456"
     },
     "schema": [
     ]

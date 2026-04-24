@@ -101,10 +101,13 @@ func load(path string) *Config {
 	result.asystem.Version = resolve("version", "SERVICE_VERSION_ABSOLUTE", result.asystem.Version)
 	result.asystem.Host = resolve("host", "SUPERVISOR_HOST", result.asystem.Host)
 	result.asystem.Mount = resolve("mount", "SUPERVISOR_MOUNT", result.asystem.Mount)
-	result.asystem.Broker.Host = resolve("broker_host", "VERNEMQ_SERVICE", result.asystem.Broker.Host)
-	result.asystem.Broker.Port = resolve("broker_port", "VERNEMQ_API_PORT", result.asystem.Broker.Port)
-	result.asystem.Database.Host = resolve("database_host", "INFLUXDB_SERVICE", result.asystem.Database.Host)
-	result.asystem.Database.Port = resolve("database_port", "INFLUXDB_HTTP_PORT", result.asystem.Database.Port)
+	result.asystem.Broker.Host = resolve("broker_host", "BROKER_HOST", result.asystem.Broker.Host)
+	result.asystem.Broker.Port = resolve("broker_port", "BROKER_PORT", result.asystem.Broker.Port)
+	result.asystem.Broker.Token = resolve("broker_token", "DATABASE_TOKEN", result.asystem.Broker.Token)
+	result.asystem.Database.Host = resolve("database_host", "DATABASE_HOST", result.asystem.Database.Host)
+	result.asystem.Database.Port = resolve("database_port", "DATABASE_PORT", result.asystem.Database.Port)
+	result.asystem.Database.Name = resolve("database_name", "DATABASE_NAME", result.asystem.Database.Name)
+	result.asystem.Database.Token = resolve("database_token", "DATABASE_TOKEN", result.asystem.Database.Token)
 	return result
 }
 
@@ -155,6 +158,27 @@ func (c *Config) Database() string {
 		return c.asystem.Database.Host
 	}
 	return fmt.Sprintf("%s:%s", c.asystem.Database.Host, c.asystem.Database.Port)
+}
+
+func (c *Config) BrokerToken() string {
+	if c == nil {
+		return ""
+	}
+	return c.asystem.Broker.Token
+}
+
+func (c *Config) DatabaseToken() string {
+	if c == nil {
+		return ""
+	}
+	return c.asystem.Database.Token
+}
+
+func (c *Config) DatabaseName() string {
+	if c == nil || c.asystem.Database.Name == "" {
+		return "supervisor"
+	}
+	return c.asystem.Database.Name
 }
 
 func (c *Config) Hosts() []string {
@@ -212,7 +236,7 @@ type configData struct {
 	Host     string
 	Mount    string `json:"mount"`
 	Broker   configEndpoint
-	Database configEndpoint
+	Database configDatabaseEndpoint
 	Schema   []configServices
 }
 
@@ -222,8 +246,16 @@ type configServices struct {
 }
 
 type configEndpoint struct {
-	Host string
-	Port string
+	Host  string
+	Port  string
+	Token string
+}
+
+type configDatabaseEndpoint struct {
+	Host  string
+	Port  string
+	Name  string
+	Token string
 }
 
 var (

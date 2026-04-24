@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -302,13 +303,29 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		client.Disconnect(2500)
 	}()
 	cache.SubscribeDeletes(&brokerPublishDeletesListener{client: client})
-	var lineProtocol strings.Builder
+	var db *databaseClient
+	if config.Load(configPath).Database() != "" {
+		var dbErr error
+		db, dbErr = databaseConnect(configPath)
+		if dbErr != nil {
+			slog.Error("run all probes publish loop: database connect failed", "error", dbErr)
+		} else {
+			defer db.close()
+		}
+	}
+	var lineProtocol bytes.Buffer
+	groups := make(map[lpKey]*strings.Builder)
+	var toDelete []lpKey
+	deleted := make(map[lpKey]bool)
 	err = probe.Run(ctx, func(isHeartbeat bool) {
 		pulseStart := time.Now()
 		txCount := 0
 		lineProtocol.Reset()
-		groups := make(map[lpKey]*strings.Builder)
-		var toDelete []lpKey
+		for _, b := range groups {
+			b.Reset()
+		}
+		toDelete = toDelete[:0]
+		clear(deleted)
 		addToGroup := func(key lpKey, field, suffix string, d *metric.ValueDataDetail) {
 			if d.Kind != metric.ValueInt && d.Kind != metric.ValueFloat {
 				return
@@ -317,7 +334,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			if b == nil {
 				b = new(strings.Builder)
 				groups[key] = b
-			} else {
+			} else if b.Len() > 0 {
 				b.WriteByte(',')
 			}
 			b.WriteString(field)
@@ -376,7 +393,6 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				process(guid, record)
 			}
 		}
-		deleted := make(map[lpKey]bool)
 		for _, k := range toDelete {
 			if !deleted[k] {
 				deleted[k] = true
@@ -385,6 +401,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		}
 		ts := strconv.FormatInt(time.Now().UnixNano(), 10)
 		for key, b := range groups {
+			if b.Len() == 0 {
+				continue
+			}
 			lineProtocol.WriteString("supervisor,host=")
 			lineProtocol.WriteString(key.host)
 			if key.service != "" {
@@ -397,11 +416,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			lineProtocol.WriteString(ts)
 			lineProtocol.WriteByte('\n')
 		}
-
-		// TODO: Publish to database
-		if lineProtocol.Len() > 0 {
+		if lineProtocol.Len() > 0 && db != nil {
+			db.write(ctx, lineProtocol.Bytes())
 		}
-
 		phase := "pulse"
 		if isHeartbeat {
 			phase = "heartbeat"

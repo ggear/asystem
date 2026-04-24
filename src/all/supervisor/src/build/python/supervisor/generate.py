@@ -40,12 +40,15 @@ if __name__ == "__main__":
                 "host": "$SUPERVISOR_HOST",
                 "mount": "$SUPERVISOR_MOUNT",
                 "broker": {
-                    "host": "$VERNEMQ_SERVICE",
-                    "port": "$VERNEMQ_API_PORT"
+                    "host": "$BROKER_HOST",
+                    "port": "$BROKER_PORT",
+                    "token": "$DATABASE_TOKEN"
                 },
                 "database": {
-                    "host": "$INFLUXDB_SERVICE",
-                    "port": "$INFLUXDB_HTTP_PORT"
+                    "host": "$DATABASE_HOST",
+                    "port": "$DATABASE_PORT",
+                    "name": "$DATABASE_NAME",
+                    "token": "$DATABASE_TOKEN"
                 },
                 "schema": [{
                     "host": host,

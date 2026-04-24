@@ -42,6 +42,7 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 		SetCleanSession(true).
 		SetConnectTimeout(5 * time.Second).
 		SetAutoReconnect(true).
+		SetPassword(config.Load(configPath).BrokerToken()).
 		SetOnConnectHandler(func(client mqtt.Client) {
 			connectStart := time.Now()
 			if onConnect != nil {

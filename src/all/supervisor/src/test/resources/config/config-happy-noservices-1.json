@@ -4,11 +4,14 @@
     "host": "macmini-mad",
     "broker": {
       "host": "vernemq.local.janeandgraham.com",
-      "port": "1000"
+      "port": "1000",
+      "token": "noservicestoken789"
     },
     "database": {
       "host": "influxdb.local.janeandgraham.com",
-      "port": "2000"
+      "port": "2000",
+      "name": "supervisor",
+      "token": "noservicestoken789"
     },
     "schema": [
       {

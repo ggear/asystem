@@ -388,7 +388,7 @@ func TestConfig_Broker(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_envvar_unset_falls_through_to_vernemq_env",
+			name:          "happy_envvar_unset_falls_through_to_broker_env",
 			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
 			envHost:       "fallbackbroker.local",
 			envPort:       "8888",
@@ -400,10 +400,10 @@ func TestConfig_Broker(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(Reset)
 			if testCase.envHost != "" {
-				t.Setenv("VERNEMQ_SERVICE", testCase.envHost)
+				t.Setenv("BROKER_HOST", testCase.envHost)
 			}
 			if testCase.envPort != "" {
-				t.Setenv("VERNEMQ_API_PORT", testCase.envPort)
+				t.Setenv("BROKER_PORT", testCase.envPort)
 			}
 			for k, v := range testCase.envVars {
 				t.Setenv(k, v)
@@ -492,7 +492,7 @@ func TestConfig_Database(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_envvar_unset_falls_through_to_influxdb_env",
+			name:          "happy_envvar_unset_falls_through_to_database_env",
 			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
 			envHost:       "fallbackdb.local",
 			envPort:       "6666",
@@ -504,10 +504,10 @@ func TestConfig_Database(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(Reset)
 			if testCase.envHost != "" {
-				t.Setenv("INFLUXDB_SERVICE", testCase.envHost)
+				t.Setenv("DATABASE_HOST", testCase.envHost)
 			}
 			if testCase.envPort != "" {
-				t.Setenv("INFLUXDB_HTTP_PORT", testCase.envPort)
+				t.Setenv("DATABASE_PORT", testCase.envPort)
 			}
 			for k, v := range testCase.envVars {
 				t.Setenv(k, v)
@@ -516,6 +516,258 @@ func TestConfig_Database(t *testing.T) {
 			database := config.Database()
 			if database != testCase.expected {
 				t.Fatalf("Got database = %q, expected %q", database, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestConfig_BrokerToken(t *testing.T) {
+	tests := []struct {
+		name          string
+		configPath    string
+		envToken      string
+		envVars       map[string]string
+		expected      string
+		expectedError bool
+	}{
+		{
+			name:          "happy_production_like_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			expected:      "prodtoken123",
+			expectedError: false,
+		},
+		{
+			name:          "happy_noschema_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-noschema-1.json", "config"),
+			expected:      "noschematoken456",
+			expectedError: false,
+		},
+		{
+			name:          "happy_no_field_in_file_empty",
+			configPath:    testutil.FindTestFile(t, "config-sad-no-broker-1.json", "config"),
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_missing_file_empty",
+			configPath:    "non-existent-file.json",
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_corrupt_file_empty",
+			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_database_token_used",
+			configPath:    "non-existent-file.json",
+			envToken:      "envbrokertoken",
+			expected:      "envbrokertoken",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_overrides_file_token",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			envToken:      "envoverride",
+			expected:      "envoverride",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_set_expands_token",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envVars:       map[string]string{"TEST_CFG_BROKER_TOKEN": "expandedbrokertoken"},
+			expected:      "expandedbrokertoken",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_unset_falls_through_to_database_token_env",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envToken:      "fallbackbrokertoken",
+			expected:      "fallbackbrokertoken",
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(Reset)
+			if testCase.envToken != "" {
+				t.Setenv("DATABASE_TOKEN", testCase.envToken)
+			}
+			for k, v := range testCase.envVars {
+				t.Setenv(k, v)
+			}
+			config := Load(testCase.configPath)
+			token := config.BrokerToken()
+			if token != testCase.expected {
+				t.Fatalf("Got broker token = %q, expected %q", token, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestConfig_DatabaseToken(t *testing.T) {
+	tests := []struct {
+		name          string
+		configPath    string
+		envToken      string
+		envVars       map[string]string
+		expected      string
+		expectedError bool
+	}{
+		{
+			name:          "happy_production_like_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			expected:      "prodtoken123",
+			expectedError: false,
+		},
+		{
+			name:          "happy_noschema_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-noschema-1.json", "config"),
+			expected:      "noschematoken456",
+			expectedError: false,
+		},
+		{
+			name:          "happy_no_field_in_file_empty",
+			configPath:    testutil.FindTestFile(t, "config-sad-no-database-port-1.json", "config"),
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_missing_file_empty",
+			configPath:    "non-existent-file.json",
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_corrupt_file_empty",
+			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
+			expected:      "",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_database_token_used",
+			configPath:    "non-existent-file.json",
+			envToken:      "envtoken",
+			expected:      "envtoken",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_overrides_file_token",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			envToken:      "envoverride",
+			expected:      "envoverride",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_set_expands_token",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envVars:       map[string]string{"TEST_CFG_DATABASE_TOKEN": "expandedtoken"},
+			expected:      "expandedtoken",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_unset_falls_through_to_database_token_env",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envToken:      "fallbacktoken",
+			expected:      "fallbacktoken",
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(Reset)
+			if testCase.envToken != "" {
+				t.Setenv("DATABASE_TOKEN", testCase.envToken)
+			}
+			for k, v := range testCase.envVars {
+				t.Setenv(k, v)
+			}
+			config := Load(testCase.configPath)
+			token := config.DatabaseToken()
+			if token != testCase.expected {
+				t.Fatalf("Got token = %q, expected %q", token, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestConfig_DatabaseName(t *testing.T) {
+	tests := []struct {
+		name          string
+		configPath    string
+		envName       string
+		envVars       map[string]string
+		expected      string
+		expectedError bool
+	}{
+		{
+			name:          "happy_production_like_1",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			expected:      "supervisor",
+			expectedError: false,
+		},
+		{
+			name:          "happy_no_field_in_file_defaults_supervisor",
+			configPath:    testutil.FindTestFile(t, "config-sad-no-database-port-1.json", "config"),
+			expected:      "supervisor",
+			expectedError: false,
+		},
+		{
+			name:          "happy_missing_file_defaults_supervisor",
+			configPath:    "non-existent-file.json",
+			expected:      "supervisor",
+			expectedError: false,
+		},
+		{
+			name:          "happy_corrupt_file_defaults_supervisor",
+			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
+			expected:      "supervisor",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_database_name_used",
+			configPath:    "non-existent-file.json",
+			envName:       "envdbname",
+			expected:      "envdbname",
+			expectedError: false,
+		},
+		{
+			name:          "happy_env_overrides_file_name",
+			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			envName:       "envdboverride",
+			expected:      "envdboverride",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_set_expands_name",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envVars:       map[string]string{"TEST_CFG_DATABASE_NAME": "expandeddbname"},
+			expected:      "expandeddbname",
+			expectedError: false,
+		},
+		{
+			name:          "happy_envvar_unset_falls_through_to_database_name_env",
+			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
+			envName:       "fallbackdbname",
+			expected:      "fallbackdbname",
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(Reset)
+			if testCase.envName != "" {
+				t.Setenv("DATABASE_NAME", testCase.envName)
+			}
+			for k, v := range testCase.envVars {
+				t.Setenv(k, v)
+			}
+			config := Load(testCase.configPath)
+			dbName := config.DatabaseName()
+			if dbName != testCase.expected {
+				t.Fatalf("Got database name = %q, expected %q", dbName, testCase.expected)
 			}
 		})
 	}

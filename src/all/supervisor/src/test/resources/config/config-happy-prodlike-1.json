@@ -5,11 +5,14 @@
     "mount": "/host-fs",
     "broker": {
       "host": "vernemq.local.janeandgraham.com",
-      "port": "1000"
+      "port": "1000",
+      "token": "prodtoken123"
     },
     "database": {
       "host": "influxdb.local.janeandgraham.com",
-      "port": "2000"
+      "port": "2000",
+      "name": "supervisor",
+      "token": "prodtoken123"
     },
     "schema": [
       {

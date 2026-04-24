@@ -4,10 +4,12 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - SUPERVISOR_HOST
-    - VERNEMQ_SERVICE
-    - VERNEMQ_API_PORT
-    - INFLUXDB_SERVICE
-    - INFLUXDB_HTTP_PORT
+    - BROKER_HOST
+    - BROKER_PORT
+    - DATABASE_HOST
+    - DATABASE_PORT
+    - DATABASE_NAME
+    - DATABASE_TOKEN
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
     - /:/${SUPERVISOR_HOST_MOUNT}:ro
