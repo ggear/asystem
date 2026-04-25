@@ -684,13 +684,25 @@ func (p *servicesProbe) restartCount(containerInfo container.InspectResponse) (f
 	return float64(containerInfo.RestartCount), nil
 }
 
+func hasKey(args []any, key string) bool {
+	for i := 0; i+1 < len(args); i += 2 {
+		if args[i] == key {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *servicesProbe) version(containerInfo container.InspectResponse) (string, error) {
 	version := ""
+	var candidateErrs [][]any
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
 		tokens := strings.Split(containerInfo.Config.Image, ":")
-		if len(tokens) > 1 {
+		if len(tokens) > 1 && tokens[1] != "" {
 			if config.VersionPattern.MatchString(tokens[1]) {
 				version = tokens[1]
+			} else {
+				candidateErrs = append(candidateErrs, []any{"image", containerInfo.Config.Image, "version", tokens[1]})
 			}
 		}
 		if version == "" {
@@ -703,28 +715,38 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				name = tokens[0]
 			}
 			if name == "" {
-				slog.Error("version not available", "name", name, "image", containerInfo.Config.Image)
+				candidateErrs = append(candidateErrs, []any{"image", containerInfo.Config.Image})
 			} else {
 				mount := config.Load(p.configPath).Mount()
-				type missedCandidate struct{ mountVal, installVal string }
-				var missed []missedCandidate
-				for _, installBase := range []string{mount, ""} {
-					data, err := os.ReadFile(installBase + "/var/lib/asystem/install/" + name + "/latest/.env")
+				candidates := []string{""}
+				if mount != "" {
+					candidates = []string{mount, ""}
+				}
+				for _, installBase := range candidates {
+					installDir := installBase + "/var/lib/asystem/install/"
+					installPath := installDir + name + "/latest/.env"
+					data, err := os.ReadFile(installPath)
 					if err != nil {
-						missed = append(missed, missedCandidate{installBase, installBase + "/var/lib/asystem/install/"})
+						candidateErrs = append(candidateErrs, []any{"install", installPath})
 						continue
 					}
+					found := false
 					for _, line := range strings.Split(string(data), "\n") {
 						if v, ok := strings.CutPrefix(line, "SERVICE_VERSION_ABSOLUTE="); ok {
-							version = v
+							found = true
+							if config.VersionPattern.MatchString(v) {
+								version = v
+							} else {
+								candidateErrs = append(candidateErrs, []any{"install", installPath, "version", v})
+							}
 							break
 						}
 					}
-					break
-				}
-				if version == "" {
-					for _, m := range missed {
-						slog.Error("version not available", "name", name, "mount", m.mountVal, "install", m.installVal)
+					if !found {
+						candidateErrs = append(candidateErrs, []any{"install", installPath})
+					}
+					if version != "" {
+						break
 					}
 				}
 			}
@@ -735,11 +757,17 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 		if containerInfo.Config != nil {
 			image = containerInfo.Config.Image
 		}
-		name := ""
-		if containerInfo.ContainerJSONBase != nil {
-			name = containerInfo.Name
+		for _, args := range candidateErrs {
+			switch {
+			case hasKey(args, "version"):
+				slog.Error("version could not be parsed", args...)
+			case hasKey(args, "install"):
+				slog.Error("version not available from install dir", args...)
+			default:
+				slog.Error("version not available from docker", args...)
+			}
 		}
-		slog.Error("version not available", "name", name, "image", image)
+		slog.Error("version not available from docker", "image", image)
 		return "-", nil
 	}
 	return version, nil
