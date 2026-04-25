@@ -510,16 +510,16 @@ func TestProbe_Version(t *testing.T) {
 		expectedError bool
 	}{
 		// TODO: Fix, breaks in fab test for some reason? 
-		//{
-		//	name: "happy_env_file_absolute_symlink_version",
-		//	containerInfo: container.InspectResponse{
-		//		ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
-		//		Config:            &container.Config{Image: "myimage:latest"},
-		//	},
-		//	mountSubDir:   "happy-3",
-		//	expected:      "10.100.5678",
-		//	expectedError: false,
-		//},
+		{
+			name: "happy_env_file_absolute_symlink_version",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:latest"},
+			},
+			mountSubDir:   "happy-3",
+			expected:      "10.100.5678",
+			expectedError: false,
+		},
 		{
 			name: "sad_env_file_broken_absolute_symlink_returns_dash",
 			containerInfo: container.InspectResponse{
