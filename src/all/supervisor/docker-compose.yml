@@ -4,6 +4,7 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - SUPERVISOR_HOST
+    - SUPERVISOR_MOUNT
     - BROKER_HOST
     - BROKER_PORT
     - DATABASE_HOST
@@ -12,7 +13,7 @@ x-common: &common
     - DATABASE_TOKEN
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
-    - /:/${SUPERVISOR_HOST_MOUNT}:ro
+    - /:/${SUPERVISOR_MOUNT}:ro
     - /var/run/docker.sock:/var/run/docker.sock
   logging:
     driver: "json-file"

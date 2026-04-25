@@ -703,7 +703,12 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				name = tokens[0]
 			}
 			if name != "" {
-				if data, err := os.ReadFile(config.Load(p.configPath).Mount() + "/root/install/" + name + "/latest/.env"); err == nil {
+				envFile := name + "/latest/.env"
+				data, err := os.ReadFile(config.Load(p.configPath).Mount() + "/var/lib/asystem/install/" + envFile)
+				if err != nil {
+					data, err = os.ReadFile("/var/lib/asystem/install/" + envFile)
+				}
+				if err == nil {
 					for _, line := range strings.Split(string(data), "\n") {
 						if v, ok := strings.CutPrefix(line, "SERVICE_VERSION_ABSOLUTE="); ok {
 							version = v
