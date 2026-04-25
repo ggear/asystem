@@ -48,6 +48,27 @@ func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays 
 	return nil
 }
 
+func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays int) error {
+	file := fmt.Sprintf("%s-pid-%d.log", cmd, os.Getpid())
+	dir := logDirUser
+	if os.Geteuid() == 0 {
+		dir = logDirRoot
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	path := filepath.Join(dir, file)
+	scribeLoggerMutex.Lock()
+	defer scribeLoggerMutex.Unlock()
+	scribeLoggerLevel = level
+	scribeLoggerMode = "stdout+file"
+	writer := &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}
+	multi := io.MultiWriter(os.Stdout, writer)
+	scribeLoggerInstance = slog.New(slog.NewTextHandler(multi, &slog.HandlerOptions{Level: level}))
+	slog.SetDefault(scribeLoggerInstance)
+	return nil
+}
+
 func Disable() {
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()

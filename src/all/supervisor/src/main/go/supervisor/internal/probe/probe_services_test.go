@@ -501,6 +501,210 @@ func TestProbeServices_Run(t *testing.T) {
 	}
 }
 
+func TestProbe_Version(t *testing.T) {
+	tests := []struct {
+		name          string
+		containerInfo container.InspectResponse
+		mountSubDir   string
+		expected      string
+		expectedError bool
+	}{
+		{
+			name: "happy_image_tag_version",
+			containerInfo: container.InspectResponse{
+				Config: &container.Config{Image: "myimage:10.100.1234"},
+			},
+			expected:      "10.100.1234",
+			expectedError: false,
+		},
+		{
+			name: "happy_image_tag_snapshot_version",
+			containerInfo: container.InspectResponse{
+				Config: &container.Config{Image: "myimage:10.100.1000-SNAPSHOT"},
+			},
+			expected:      "10.100.1000-SNAPSHOT",
+			expectedError: false,
+		},
+		{
+			name: "happy_env_file_version",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:latest"},
+			},
+			mountSubDir:   "happy-1",
+			expected:      "10.100.5678",
+			expectedError: false,
+		},
+		{
+			name: "happy_env_file_snapshot_version",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:latest"},
+			},
+			mountSubDir:   "happy-2",
+			expected:      "10.100.9999-SNAPSHOT",
+			expectedError: false,
+		},
+		{
+			name: "happy_no_env_file_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:latest"},
+			},
+			mountSubDir:   "sad-1",
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "happy_env_file_no_version_line_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:latest"},
+			},
+			mountSubDir:   "sad-2",
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "happy_nil_config_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "happy_empty_image_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: ""},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_version_invalid",
+			containerInfo: container.InspectResponse{
+				Config:            &container.Config{Image: "myimage:10.100.1234p"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_no_tag_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_empty_tag_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_v_prefix_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:v10.100.1234"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_missing_patch_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:10.100"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_too_few_patch_digits_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:10.100.123"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_too_many_patch_digits_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:10.100.12345"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_too_few_minor_digits_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:10.10.1234"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_too_few_major_digits_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:1.100.1234"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_invalid_suffix_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:10.100.1234-RC1"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_image_tag_latest_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:latest"},
+			},
+			expected:      "-",
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(config.Reset)
+			if tt.mountSubDir != "" {
+				t.Setenv("SUPERVISOR_MOUNT", testutil.FindDir(t, "src", "test", "resources", "mount", tt.mountSubDir))
+			}
+			p := newServicesProbe()
+			got, err := p.version(tt.containerInfo)
+			if tt.expectedError {
+				if err == nil {
+					t.Fatalf("Got no error, expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Got error = %v, expected nil", err)
+			}
+			if got != tt.expected {
+				t.Fatalf("Got version = %q, expected %q", got, tt.expected)
+			}
+		})
+	}
+}
+
 func makeStatsMock(containerCount int) func(context.Context, *client.Client, string) (container.StatsResponseReader, error) {
 	call := 0
 	return func(_ context.Context, _ *client.Client, _ string) (container.StatsResponseReader, error) {

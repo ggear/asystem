@@ -207,7 +207,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if secs := int64(purgeInterval.Seconds()); secs > 0 {
 				rate = rx / secs
 			}
-			slog.Debug("profiling", "engine", "subscribe", "phase", "purge", "duration", time.Since(purgeStart).Truncate(time.Millisecond), "received", fmt.Sprintf("%dmsg", rx), "rate", fmt.Sprintf("%dmsg/s", rate))
+			slog.Debug("profiling", "engine", "subscribe", "phase", "purge", "duration", time.Since(purgeStart).Truncate(time.Millisecond), "received", fmt.Sprintf("%dmsgs", rx), "rate", fmt.Sprintf("%dmsg/s", rate))
 		}
 	}
 }
@@ -320,6 +320,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	err = probe.Run(ctx, func(isHeartbeat bool) {
 		pulseStart := time.Now()
 		txCount := 0
+		txBytes := 0
 		lineProtocol.Reset()
 		for _, b := range groups {
 			b.Reset()
@@ -351,6 +352,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
 						client.Publish(record.Topic, 0, true, payload)
 						txCount++
+						txBytes += len(payload)
 					} else {
 						slog.Warn("publish marshal failed", "topic", record.Topic, "error", jsonErr)
 					}
@@ -358,6 +360,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
 						client.Publish(record.Topic, 0, true, payload)
 						txCount++
+						txBytes += len(payload)
 					}
 					client.Publish(record.Topic, 0, true, "")
 					txCount++
@@ -377,9 +380,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				addToGroup(key, field, "_trend", record.Value.Trend)
 			}
 		}
+		brokerStart := time.Now()
 		if isHeartbeat {
 			client.Publish(statusTopic, 1, true, hostStatusOnline)
 			txCount++
+			txBytes += len(hostStatusOnline)
 			cache.Records(func(guid metric.RecordGUID, record *metric.Record) {
 				process(guid, record)
 			})
@@ -399,6 +404,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				cache.Delete(k.host, k.service)
 			}
 		}
+		brokerDuration := time.Since(brokerStart)
 		ts := strconv.FormatInt(time.Now().UnixNano(), 10)
 		for key, b := range groups {
 			if b.Len() == 0 {
@@ -416,14 +422,19 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			lineProtocol.WriteString(ts)
 			lineProtocol.WriteByte('\n')
 		}
+		lineBytes := lineProtocol.Len()
+		dbStart := time.Now()
 		if lineProtocol.Len() > 0 && db != nil {
 			db.write(ctx, lineProtocol.Bytes())
 		}
+		dbDuration := time.Since(dbStart)
 		phase := "pulse"
 		if isHeartbeat {
 			phase = "heartbeat"
 		}
-		slog.Debug("profiling", "engine", "publish", "phase", phase, "duration", time.Since(pulseStart).Truncate(time.Millisecond), "transmit", fmt.Sprintf("%dmsg", txCount))
+		slog.Debug("profiling", "engine", "broker", "phase", phase, "duration", brokerDuration.Truncate(time.Millisecond), "transmit", fmt.Sprintf("%dmsgs", txCount))
+		slog.Debug("profiling", "engine", "database", "phase", phase, "duration", dbDuration.Truncate(time.Millisecond), "transmit", fmt.Sprintf("%dbytes", lineBytes))
+		slog.Debug("profiling", "engine", "publish", "phase", phase, "duration", time.Since(pulseStart).Truncate(time.Millisecond), "transmit", fmt.Sprintf("%dbytes", txBytes))
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Error("run all probes publish loop: run failed", "error", err)

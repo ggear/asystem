@@ -49,7 +49,9 @@ func newServeCmd() *cobra.Command {
 }
 
 func executeServe(configPath string, opts *serveOptions) error {
-	scribe.EnableStdout(slog.LevelDebug)
+	if err := scribe.EnableStdoutAndFile(slog.LevelDebug, "serve", 10, 3, 7); err != nil {
+		return fmt.Errorf("enable file logging: %w", err)
+	}
 	periods, err := makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod, opts.heartbeatFactor)
 	if err != nil {
 		return err

@@ -4,7 +4,7 @@
 *.pem
 ~$*.*
 .go
-.env
+src/*/*/.env
 .env_all_key
 .py_deps_dev.txt
 .py_deps_prod.txt

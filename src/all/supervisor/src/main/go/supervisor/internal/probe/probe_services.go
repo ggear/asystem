@@ -655,7 +655,7 @@ func (p *servicesProbe) memoryUsed(response container.StatsResponse) (int8, erro
 }
 
 func (p *servicesProbe) healthStatus(containerInfo container.InspectResponse) (bool, error) {
-	if containerInfo.State == nil || containerInfo.State.Health == nil {
+	if containerInfo.ContainerJSONBase == nil || containerInfo.State == nil || containerInfo.State.Health == nil {
 		return false, nil
 	}
 	switch containerInfo.State.Health.Status {
@@ -694,7 +694,10 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 			}
 		}
 		if version == "" {
-			name := strings.TrimPrefix(containerInfo.Name, "/")
+			name := ""
+			if containerInfo.ContainerJSONBase != nil {
+				name = strings.TrimPrefix(containerInfo.Name, "/")
+			}
 			if name == "" {
 				tokens = strings.Split(tokens[0], "/")
 				name = tokens[0]
@@ -716,14 +719,18 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 		if containerInfo.Config != nil {
 			image = containerInfo.Config.Image
 		}
-		slog.Debug("version not available", "name", containerInfo.Name, "image", image)
+		name := ""
+		if containerInfo.ContainerJSONBase != nil {
+			name = containerInfo.Name
+		}
+		slog.Debug("version not available", "name", name, "image", image)
 		return "-", nil
 	}
 	return version, nil
 }
 
 func (p *servicesProbe) upTime(containerInfo container.InspectResponse) (float64, error) {
-	if containerInfo.State == nil || containerInfo.State.StartedAt == "" {
+	if containerInfo.ContainerJSONBase == nil || containerInfo.State == nil || containerInfo.State.StartedAt == "" {
 		return 0, errors.New("started at time not available")
 	}
 	startedAt, err := time.Parse(time.RFC3339Nano, containerInfo.State.StartedAt)
