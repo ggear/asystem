@@ -477,10 +477,14 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			existingService.configuredStatusValue = true
 			services[configuredServiceName] = existingService
 		} else {
+			ghostVersion, _ := p.version(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + configuredServiceName},
+				Config:            &container.Config{Image: configuredServiceName},
+			})
 			services[configuredServiceName] = service{
 				nameValue:             configuredServiceName,
 				configuredStatusValue: true,
-				versionValue:          "-",
+				versionValue:          ghostVersion,
 			}
 		}
 	}

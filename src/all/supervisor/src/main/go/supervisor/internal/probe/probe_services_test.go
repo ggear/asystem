@@ -510,6 +510,16 @@ func TestProbe_Version(t *testing.T) {
 		expectedError bool
 	}{
 		{
+			name: "happy_ghost_service_env_file_version",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myservice"},
+			},
+			mountSubDir:   "happy-1",
+			expected:      "10.100.5678",
+			expectedError: false,
+		},
+		{
 			name: "happy_image_tag_version",
 			containerInfo: container.InspectResponse{
 				Config: &container.Config{Image: "myimage:10.100.1234"},
