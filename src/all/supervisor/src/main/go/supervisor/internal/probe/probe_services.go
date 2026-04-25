@@ -703,17 +703,26 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				name = tokens[0]
 			}
 			if name != "" {
-				envFile := name + "/latest/.env"
-				data, err := os.ReadFile(config.Load(p.configPath).Mount() + "/var/lib/asystem/install/" + envFile)
-				if err != nil {
-					data, err = os.ReadFile("/var/lib/asystem/install/" + envFile)
-				}
-				if err == nil {
+				mount := config.Load(p.configPath).Mount()
+				type missedCandidate struct{ mountVal, installVal string }
+				var missed []missedCandidate
+				for _, installBase := range []string{mount, ""} {
+					data, err := os.ReadFile(installBase + "/var/lib/asystem/install/" + name + "/latest/.env")
+					if err != nil {
+						missed = append(missed, missedCandidate{installBase, installBase + "/var/lib/asystem/install/"})
+						continue
+					}
 					for _, line := range strings.Split(string(data), "\n") {
 						if v, ok := strings.CutPrefix(line, "SERVICE_VERSION_ABSOLUTE="); ok {
 							version = v
 							break
 						}
+					}
+					break
+				}
+				if version == "" {
+					for _, m := range missed {
+						slog.Info("version", "name", name, "mount", m.mountVal, "install", m.installVal, "status", "not_found")
 					}
 				}
 			}
@@ -728,7 +737,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 		if containerInfo.ContainerJSONBase != nil {
 			name = containerInfo.Name
 		}
-		slog.Debug("version not available", "name", name, "image", image)
+		slog.Error("version not available", "name", name, "image", image)
 		return "-", nil
 	}
 	return version, nil
