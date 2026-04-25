@@ -702,7 +702,9 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				tokens = strings.Split(tokens[0], "/")
 				name = tokens[0]
 			}
-			if name != "" {
+			if name == "" {
+				slog.Error("version not available", "name", name, "image", containerInfo.Config.Image)
+			} else {
 				mount := config.Load(p.configPath).Mount()
 				type missedCandidate struct{ mountVal, installVal string }
 				var missed []missedCandidate
@@ -722,7 +724,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				}
 				if version == "" {
 					for _, m := range missed {
-						slog.Info("version", "name", name, "mount", m.mountVal, "install", m.installVal, "status", "not_found")
+						slog.Error("version not available", "name", name, "mount", m.mountVal, "install", m.installVal)
 					}
 				}
 			}
