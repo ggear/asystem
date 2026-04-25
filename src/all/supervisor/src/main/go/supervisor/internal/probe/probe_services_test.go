@@ -509,6 +509,7 @@ func TestProbe_Version(t *testing.T) {
 		expected      string
 		expectedError bool
 	}{
+		// TODO: Fix, breaks in fab test for some reason? 
 		//{
 		//	name: "happy_env_file_absolute_symlink_version",
 		//	containerInfo: container.InspectResponse{
