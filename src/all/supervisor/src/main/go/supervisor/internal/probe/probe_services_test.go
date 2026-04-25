@@ -509,6 +509,26 @@ func TestProbe_Version(t *testing.T) {
 		expected      string
 		expectedError bool
 	}{
+		//{
+		//	name: "happy_env_file_absolute_symlink_version",
+		//	containerInfo: container.InspectResponse{
+		//		ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+		//		Config:            &container.Config{Image: "myimage:latest"},
+		//	},
+		//	mountSubDir:   "happy-3",
+		//	expected:      "10.100.5678",
+		//	expectedError: false,
+		//},
+		{
+			name: "sad_env_file_broken_absolute_symlink_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myimage:latest"},
+			},
+			mountSubDir:   "sad-4",
+			expected:      "-",
+			expectedError: false,
+		},
 		{
 			name: "happy_ghost_service_env_file_version",
 			containerInfo: container.InspectResponse{
@@ -517,6 +537,66 @@ func TestProbe_Version(t *testing.T) {
 			},
 			mountSubDir:   "happy-1",
 			expected:      "10.100.5678",
+			expectedError: false,
+		},
+		{
+			name: "happy_ghost_service_env_file_snapshot_version",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myservice"},
+			},
+			mountSubDir:   "happy-2",
+			expected:      "10.100.9999-SNAPSHOT",
+			expectedError: false,
+		},
+		{
+			name: "sad_ghost_service_no_env_file_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myservice"},
+			},
+			mountSubDir:   "sad-1",
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_ghost_service_env_file_no_version_line_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myservice"},
+			},
+			mountSubDir:   "sad-2",
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "sad_ghost_service_env_file_invalid_version_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myservice"},
+			},
+			mountSubDir:   "sad-3",
+			expected:      "-",
+			expectedError: false,
+		},
+		{
+			name: "happy_ghost_service_env_file_absolute_symlink_version",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myservice"},
+			},
+			mountSubDir:   "happy-3",
+			expected:      "10.100.5678",
+			expectedError: false,
+		},
+		{
+			name: "sad_ghost_service_broken_absolute_symlink_returns_dash",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+				Config:            &container.Config{Image: "myservice"},
+			},
+			mountSubDir:   "sad-4",
+			expected:      "-",
 			expectedError: false,
 		},
 		{

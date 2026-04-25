@@ -728,7 +728,13 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				}
 				for _, installBase := range candidates {
 					installDir := installBase + "/var/lib/asystem/install/"
-					installPath := installDir + name + "/latest/.env"
+					latestDir := installDir + name + "/latest"
+					if installBase != "" {
+						if target, linkErr := os.Readlink(latestDir); linkErr == nil && strings.HasPrefix(target, "/") {
+							latestDir = installBase + target
+						}
+					}
+					installPath := latestDir + "/.env"
 					data, err := os.ReadFile(installPath)
 					if err != nil {
 						candidateErrs = append(candidateErrs, []any{"install", installPath})
