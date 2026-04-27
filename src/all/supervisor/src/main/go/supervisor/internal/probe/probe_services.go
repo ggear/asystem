@@ -709,6 +709,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				candidateErrs = append(candidateErrs, []any{"image", containerInfo.Config.Image, "version", tokens[1]})
 			}
 		}
+		// TODO: Cache this at least for each pulse, if not for longer eg cmd.cache-period
 		if version == "" {
 			name := ""
 			if containerInfo.ContainerJSONBase != nil {
