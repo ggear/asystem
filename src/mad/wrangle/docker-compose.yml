@@ -21,7 +21,7 @@ services:
       - PYTHONPATH=/asystem
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/runtime
-      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+#      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     logging:
       driver: "json-file"
       options:

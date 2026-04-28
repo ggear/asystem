@@ -35,7 +35,7 @@ npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" run build
 cp "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card/dist/windrose-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card/windrose-card.js"
 
 # NOTES: https://github.com/thomasloven/lovelace-card-mod/releases
-VERSION=v4.2.1
+VERSION=v4.2.1-202604
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-card-mod" "thomasloven/lovelace-card-mod" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
@@ -98,7 +98,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/bramstroker/homeassistant-powercalc/releases
-VERSION=v1.20.9
+VERSION=v1.20.14
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "ggear-powercalc" "https://github.com/bramstroker/homeassistant-powercalc.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/powercalc"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"

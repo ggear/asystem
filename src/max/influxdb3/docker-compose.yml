@@ -28,7 +28,7 @@ x-common: &common
     - INFLUXDB3_ENTERPRISE_LICENSE_EMAIL=${INFLUXDB3_EMAIL}
     - INFLUXDB3_PERMISSION_TOKENS_FILE=/asystem/mnt/cluster_1/init.json
     - INFLUXDB3_TELEMETRY_DISABLE_UPLOAD=true
-    - LOG_FILTER=info
+    - INFLUXDB3_LOG_FILTER=info
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
   logging:

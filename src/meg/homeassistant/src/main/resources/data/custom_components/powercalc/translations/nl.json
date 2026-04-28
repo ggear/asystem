@@ -262,6 +262,15 @@
         "description": "{source}\n\nFabrikant \"{manufacturer}\" en model \"{model}\" zijn automatisch gedecteerd voor het apparaat.{remarks}",
         "title": "Bibliotheek"
       },
+      "library_custom_fields": {
+        "title": "Profile configuration",
+        "data": {
+          "power_factor": "Power Factor"
+        },
+        "data_description": {
+          "power_factor": "Ratio of real power to apparent power. Use 0.6 for computers/electronics, 0.7 for mixed loads, 1.0 for resistive loads like heaters."
+        }
+      },
       "library_multi_profile": {
         "data": {
           "model": "Selecteer model"
@@ -702,8 +711,7 @@
           "create_energy_sensor": "Laat Powercalc een kWh meter maken",
           "create_utility_meters": "Laat powercalc utiliteit meters maken. Deze resetten dagelijks, uurlijks etc."
         },
-        "description": "Maak een groepssensor aan voor alle bijgehouden en niet bijgehouden energie",
-        "title": "Maak een bijgehouden vermogensensor"
+        "title": "Bijgehouden/niet bijgehouden groep opties"
       },
       "group_tracked_untracked_manual": {
         "data": {

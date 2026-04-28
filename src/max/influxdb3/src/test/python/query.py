@@ -14,37 +14,37 @@ options = FlightCallOptions(
 print("\nExecuting queries:\n")
 for query in [
     "SHOW TABLES",
-    "SHOW COLUMNS FROM cpu",
+    "SHOW COLUMNS FROM supervisor",
     """
     SELECT DISTINCT host
-    FROM cpu
+    FROM supervisor
     """,
     """
-    SELECT COUNT(usage_system)
-    FROM cpu""",
+    SELECT COUNT(used_processor)
+    FROM supervisor""",
     """
     SELECT DISTINCT
-    ON (host) host, time, usage_user
-    FROM cpu
+    ON (host) host, time, used_processor_trend
+    FROM supervisor
     ORDER BY host, time DESC""",
     """
     SELECT DISTINCT
-    ON (host) host, time + INTERVAL '8 hours' AS time, usage_system, usage_user
-    FROM cpu
+    ON (host) host, time + INTERVAL '8 hours' AS time, used_processor, used_processor_trend
+    FROM supervisor
     ORDER BY host, time DESC
     """,
     """
-    SELECT time + INTERVAL '8 hours' AS time, host, usage_system, usage_user
-    FROM cpu
+    SELECT time + INTERVAL '8 hours' AS time, host, used_processor, used_processor_trend
+    FROM supervisor
     WHERE time >= CURRENT_TIMESTAMP - INTERVAL '10 seconds'
     ORDER BY time DESC
     """,
     """
     SELECT DATE_TRUNC('day', time + INTERVAL '8 hours') AS bin,
            host                                         AS host,
-           AVG(usage_system)                            AS usage_system,
-           AVG(usage_user)                              AS usage_user
-    FROM cpu
+           AVG(used_processor)                            AS used_processor,
+           AVG(used_processor_trend)                              AS used_processor_trend
+    FROM supervisor
     GROUP BY bin, host
     ORDER BY bin DESC
     """

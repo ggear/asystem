@@ -22,6 +22,7 @@ from collections import OrderedDict
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 from ftplib import FTP
 from io import StringIO
 from os.path import *
@@ -52,8 +53,6 @@ WRANGLE_DISABLE_DATA_DELTA = 'WRANGLE_DISABLE_DATA_DELTA'
 WRANGLE_ENABLE_DATA_SUBSET = 'WRANGLE_ENABLE_DATA_SUBSET'
 WRANGLE_DISABLE_FILE_UPLOAD = 'WRANGLE_DISABLE_FILE_UPLOAD'
 WRANGLE_DISABLE_FILE_DOWNLOAD = 'WRANGLE_DISABLE_FILE_DOWNLOAD'
-
-WRANGLE_ENABLE_DATA_CACHE = 'WRANGLE_ENABLE_DATA_CACHE'  # TODO: Remove
 
 PL_PRINT_ROWS = 6
 
@@ -196,8 +195,7 @@ class Library(object, metaclass=ABCMeta):
         self.print_log("Execution Summary:")
         for source in self.counters:
             for action in self.counters[source]:
-                self.print_log("     {} {:8}".format("{} {} ".format(source, action)
-                                                     .ljust(CTR_LBL_WIDTH, CTR_LBL_PAD), self.counters[source][action]))
+                self.print_log("     {} {:8}".format("{} {} ".format(source, action).ljust(CTR_LBL_WIDTH, CTR_LBL_PAD), self.counters[source][action]))
 
     def add_counter(self, source, action, count=1):
         self.counters[source][action] += count
@@ -267,7 +265,7 @@ class Library(object, metaclass=ABCMeta):
             def get_modified(headers):
                 if headers["Last-Modified"]:
                     return int((datetime.strptime(headers["Last-Modified"], '%a, %d %b %Y %H:%M:%S GMT') -
-                                datetime.utcfromtimestamp(0)).total_seconds())
+                                datetime(1970, 1, 1)).total_seconds())
                 return None
 
             if not force and check and isfile(local_path):
@@ -323,7 +321,7 @@ class Library(object, metaclass=ABCMeta):
                 client = FTP(url_server)
                 client.login()
                 modified_timestamp = int((parser.parse(client.voidcmd("MDTM {}".format(url_path))[4:].strip()) -
-                                          datetime.utcfromtimestamp(0)).total_seconds())
+                                          datetime(1970, 1, 1)).total_seconds())
                 if not force and check and isfile(local_path):
                     modified_timestamp_cached = int(getmtime(local_path))
                     if modified_timestamp_cached == modified_timestamp:
@@ -411,11 +409,23 @@ class Library(object, metaclass=ABCMeta):
                     if not exists(dirname(local_path)):
                         os.makedirs(dirname(local_path))
                     data_df.insert(loc=0, column='Date', value=data_df.index.strftime('%Y-%m-%d'))
+                    if len(data_df) > 0 and isfile(local_path):
+                        prior_df = self.csv_read(local_path)
+                        if len(prior_df) == len(data_df):
+                            prior_last = prior_df.row(-1)[0]
+                            prior_last = datetime.strptime(prior_last, '%Y-%m-%d').date() \
+                                if isinstance(prior_last, str) else prior_last
+                            new_last = datetime.strptime(data_df['Date'].iloc[-1], '%Y-%m-%d').date()
+                            if prior_last == new_last:
+                                self.print_log("File [{}] cached at [{}]"
+                                               .format(label, local_path), started=started_time)
+                                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                                return True, False
                     self.csv_write(pl.from_pandas(data_df), local_path, print_verb="downloaded", started=started_time)
                     if len(data_df) > 0:
                         modified = datetime.strptime(str(data_df.values[-1][0]), '%Y-%m-%d').date()
                         modified_timestamp = int(
-                            (modified + timedelta(hours=8) - datetime.utcfromtimestamp(0).date()).total_seconds())
+                            (modified + timedelta(hours=8) - datetime(1970, 1, 1).date()).total_seconds())
                         try:
                             os.utime(local_path, (modified_timestamp, modified_timestamp))
                         except Exception as exception:
@@ -466,6 +476,7 @@ class Library(object, metaclass=ABCMeta):
                                    .format(label, response.status_code, response.text.strip()))
                     if not ignore:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
+                    return False, False
                 else:
                     table = response.text.strip().split("\n")
                     if len(table) > 0:
@@ -475,13 +486,14 @@ class Library(object, metaclass=ABCMeta):
                             if len(cols) > 4:
                                 rows.append(cols[3:])
                     data_df = self.dataframe_new(data=rows, orient="row", print_label=label, print_rows=-1)
-                data_df.columns = columns
-                data_df = data_df.with_columns(pl.first().str.to_datetime())
-                if len(data_df) == 0:
+                if len(rows) == 0:
                     if ignore:
                         self.print_log("File [{}] query returned no data".format(label))
+                        return True, True
                     else:
                         raise Exception("File [{}] query returned no data".format(label))
+                data_df.columns = columns
+                data_df = data_df.with_columns(pl.first().str.to_datetime())
                 self.csv_write(data_df, local_path, print_verb="queried", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return True, True
@@ -688,7 +700,7 @@ class Library(object, metaclass=ABCMeta):
                 dropbox_files[dropbox_file.name] = {
                     "id": dropbox_file.id,
                     "hash": dropbox_file.content_hash,
-                    "modified": int((dropbox_file.client_modified - datetime.utcfromtimestamp(0)).total_seconds()),
+                    "modified": int((dropbox_file.client_modified - datetime(1970, 1, 1)).total_seconds()),
                 }
             if response.has_more:
                 cursor = response.cursor
@@ -766,7 +778,7 @@ class Library(object, metaclass=ABCMeta):
                     "id": drive_file["id"],
                     "hash": drive_file["md5Checksum"],
                     "modified": int((datetime.strptime(drive_file["modifiedTime"], '%Y-%m-%dT%H:%M:%S.%fZ') -
-                                     datetime.utcfromtimestamp(0)).total_seconds()),
+                                     datetime(1970, 1, 1)).total_seconds()),
                 }
             token = response.get('nextPageToken')
             if not token:
@@ -824,8 +836,8 @@ class Library(object, metaclass=ABCMeta):
                         try:
                             data = MediaFileUpload(local_file)
                             drive_id = drive_files[local_file]["id"] if local_file in drive_files else None
-                            metadata = {'modifiedTime': datetime.utcfromtimestamp(local_files[local_file]["modified"]) \
-                                .strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
+                            metadata = {'modifiedTime': datetime.fromtimestamp(
+                                local_files[local_file]["modified"], timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
                             if not test(WRANGLE_DISABLE_FILE_UPLOAD):
                                 if drive_id is None:
                                     metadata['name'] = basename(local_file)
@@ -918,15 +930,18 @@ class Library(object, metaclass=ABCMeta):
         else:
             data_df_update = self.dataframe_new(schema={"Date": pl.Date},
                                                 print_label="{}_Update".format(self.name.title()))
-        data_df_current = self.csv_read(file_current) \
-            if isfile(file_current) else self.dataframe_new(schema=data_df_update.schema,
-                                                            print_label="{}_Current".format(self.name.title()))
         if test(WRANGLE_DISABLE_FILE_DOWNLOAD):
+            data_df_current = self.csv_read(file_current) \
+                if isfile(file_current) else self.dataframe_new(schema={"Date": pl.Date},
+                                                                print_label="{}_Current".format(self.name.title()))
             self.print_log("DataFrame [State_Caches] created ignoring updates", started=started_time)
             data_df_current = data_df_current.sort("Date")
             return self.dataframe_new(schema=data_df_current.schema), data_df_current, data_df_current
         data_df_update = data_df_update.filter(pl.col("Date").is_not_null())
         data_df_update = aggregate_function_wrapped(data_df_update)
+        data_df_current = self.csv_read(file_current) \
+            if isfile(file_current) else self.dataframe_new(schema=data_df_update.schema,
+                                                            print_label="{}_Current".format(self.name.title()))
         data_schema_update_column_count = len(data_df_update.columns)
         data_schema = OrderedDict()
         for (data_column, data_type) in zip(data_df_update.columns, data_df_update.dtypes):
@@ -942,6 +957,9 @@ class Library(object, metaclass=ABCMeta):
             if data_column not in data_df_current:
                 data_df_current = data_df_current.with_columns(
                     pl.lit(None).cast(data_schema[data_column]).alias(data_column))
+            elif data_df_current[data_column].dtype != data_schema[data_column]:
+                data_df_current = data_df_current.with_columns(
+                    pl.col(data_column).cast(data_schema[data_column], strict=False))
         data_df_current = data_df_current.select(data_schema.keys()).with_columns(pl.col("Date").cast(pl.Date)).sort(
             "Date")
         self.csv_write(data_df_update, file_update)
@@ -964,6 +982,10 @@ class Library(object, metaclass=ABCMeta):
         data_df_current = pl.concat([data_df_current, data_df_update]) \
             .select(data_schema.keys()).unique(subset=["Date"], keep="last").sort("Date")
         data_df_current = aggregate_function_wrapped(data_df_current)
+        for data_column, data_type in zip(data_df_current.columns, data_df_current.dtypes):
+            if data_column in data_df_previous.columns and data_df_previous[data_column].dtype != data_type:
+                data_df_previous = data_df_previous.with_columns(
+                    pl.col(data_column).cast(data_type, strict=False))
         data_df_current = data_df_current.select(data_schema.keys())
         self.csv_write(data_df_current, file_current)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns) - 1)
@@ -1020,7 +1042,7 @@ class Library(object, metaclass=ABCMeta):
 
     def csv_read(self, local_path, schema={}, print_label=None, print_verb="loaded", print_rows=PL_PRINT_ROWS):
         started_time = time.time()
-        data_df = pl.read_csv(local_path, dtypes=schema if len(schema) > 0 else None,
+        data_df = pl.read_csv(local_path, schema_overrides=schema if len(schema) > 0 else None,
                               try_parse_dates=True, raise_if_empty=False, infer_schema_length=None)
         return self.dataframe_print(data_df,
                                     print_label=basename(local_path).split(".")[0].removeprefix("__").removeprefix("_") \

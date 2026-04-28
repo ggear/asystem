@@ -20,7 +20,8 @@
         "services": [
           "plex",
           "sabnzbd",
-          "supervisor"
+          "supervisor",
+          "wrangle"
         ]
       },
       {
@@ -43,8 +44,7 @@
           "letsencrypt",
           "sonarr",
           "supervisor",
-          "unpoller",
-          "wrangle"
+          "unpoller"
         ]
       },
       {

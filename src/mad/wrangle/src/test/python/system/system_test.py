@@ -3,13 +3,8 @@ import sys
 sys.path.append('../../../main/python')
 
 import os
-import glob
-import shutil
 import pytest
 from wrangle.plugin import library
-from requests import post
-import time
-from tabulate import tabulate
 from os.path import *
 
 TIMEOUT_WARMUP = 30
@@ -19,8 +14,10 @@ for key, value in list(library.load_profile(library.get_file(".env")).items()):
     os.environ[key] = value
 
 
-# def test_warmup():
-#     print("")
+def test_warmup():
+    print("")
+
+
 #     dir_test = join(DIR_ROOT, "src/test/resources/data")
 #     dir_runtime = join(DIR_ROOT, "target/runtime-system/data")
 #     shutil.rmtree(dir_runtime, ignore_errors=True)

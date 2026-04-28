@@ -704,7 +704,7 @@ def _unittest(context, filter_module=None):
         _print_line("Running unit tests ...")
         _run_external(
             context,
-            "set -o pipefail && python unit_test.py",
+            "python -u unit_test.py 2>&1",
             join(module, "src/test/python/unit"),
         )
         _print_footer(module, "unittest")

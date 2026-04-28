@@ -9,30 +9,30 @@ influxdb3 query \
 influxdb3 query \
   --language influxql \
   --database host_private \
-  "SHOW TAG KEYS FROM cpu"
+  "SHOW TAG KEYS FROM supervisor"
 
 influxdb3 query \
   --language influxql \
   --database host_private \
-  "SHOW FIELD KEYS FROM cpu"
+  "SHOW FIELD KEYS FROM supervisor"
 
 influxdb3 query \
   --language influxql \
   --database host_private \
-  "SHOW TAG VALUES FROM cpu WITH KEY = host"
+  "SHOW TAG VALUES FROM supervisor WITH KEY = host"
 
 influxdb3 query \
   --language influxql \
   --format json \
   --database host_private \
-  "SELECT COUNT(usage_system) FROM cpu" | jq -r '.[0].count'
+  "SELECT COUNT(used_processor) FROM supervisor" | jq -r '.[0].count'
 
 influxdb3 query \
   --language influxql \
   --database host_private "
     SELECT
-      time, host, usage_system, usage_user
-    FROM cpu
+      time, host, used_processor, used_processor_trend
+    FROM supervisor
     GROUP BY host
     ORDER BY time DESC
     LIMIT 1
@@ -42,8 +42,8 @@ influxdb3 query \
   --language influxql \
   --database host_private "
     SELECT
-      time, host, usage_system, usage_user
-    FROM cpu
+      time, host, used_processor, used_processor_trend
+    FROM supervisor
     WHERE
       time >= now() - 10s
     ORDER by time DESC
@@ -52,10 +52,10 @@ influxdb3 query \
 influxdb3 query \
   --language influxql \
   --database host_private "
-    SELECT MEAN(usage_system) AS max_usage_system,
-           MEAN(usage_user) AS max_usage_user
-    FROM cpu
-    WHERE usage_system != 0 AND usage_user != 0
+    SELECT MEAN(used_processor) AS mean_used_processor,
+           MEAN(used_processor_trend) AS mean_used_processor_trend
+    FROM supervisor
+    WHERE used_processor != 0 AND used_processor_trend != 0
     GROUP BY time(24h, 8h), host
     ORDER BY time DESC
 "
