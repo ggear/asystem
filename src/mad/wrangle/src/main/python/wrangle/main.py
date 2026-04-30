@@ -73,10 +73,10 @@ def configure(args):
 def run_once():
     module_count = 0
     module_errored_count = 0
-    for module_path in glob.glob("{}/plugin/*/*.py".format(dirname(realpath(__file__)))):
+    for module_path in glob.glob(f"{dirname(realpath(__file__))}/plugin/*/*.py"):
         if not module_path.endswith("__init__.py"):
             module_name = basename(dirname(module_path))
-            module = getattr(importlib.import_module("wrangle.plugin.{}".format(module_name)), module_name.title())()
+            module = getattr(importlib.import_module(f"wrangle.plugin.{module_name}"), module_name.title())()
             module_count += 1
             module_errored = False
             try:

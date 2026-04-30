@@ -17,7 +17,7 @@ PERIODS = OrderedDict([
     ('1 Month Delta', 30),
     ('1 Year Delta', 365),
 ])
-COLUMNS = ["{} {}".format(pair, period).strip() for pair in PAIRS for period in ([""] + list(PERIODS.keys()))]
+COLUMNS = [f"{pair} {period}".strip() for pair in PAIRS for period in ([""] + list(PERIODS.keys()))]
 
 RBA_YEARS = [
     "1983-1986",
@@ -48,8 +48,8 @@ class Currency(library.Library):
             new_data = False
             started_time = time.time()
             for years in RBA_YEARS:
-                years_file = join(self.input, "RBA_FX_{}.xls".format(years))
-                file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)
+                years_file = join(self.input, f"RBA_FX_{years}.xls")
+                file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check='current' in years)
                 if file_status.status != library.DownloadStatus.FAILED:
                     if library.config.clean or file_status.status == library.DownloadStatus.DOWNLOADED:
                         new_data = True
@@ -63,7 +63,7 @@ class Currency(library.Library):
                             self.dataframe_print(rba_df, print_label="RBA_FX", print_verb="concatenated")
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
-                            self.print_log("Unexpected error processing file [{}]".format(years_file),
+                            self.print_log(f"Unexpected error processing file [{years_file}]",
                                            exception=exception)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     else:
@@ -100,7 +100,7 @@ class Currency(library.Library):
                 for _pair in PAIRS:
                     _columns.append(_pair)
                     for _period in PERIODS:
-                        _column = '{} {}'.format(_pair, _period)
+                        _column = f'{_pair} {_period}'
                         _columns.append(_column)
                         _data_df = _data_df.with_columns((pl.col(_pair).pct_change() * 100).alias(_column))
                 return _data_df.select(_columns).with_columns(cs.float().round(4)).fill_nan(0).fill_null(0)
@@ -119,13 +119,13 @@ class Currency(library.Library):
                 }, print_label="Currency_1_Day_Snapshot")
                 for fx_period in PERIODS:
                     rba_pctchnage_df = rba_current_df \
-                        .select(['Date'] + ["{} {}".format(fx_pair, fx_period).strip() for fx_pair in PAIRS])
+                        .select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
                     rba_pctchnage_df.columns = ['Date'] + PAIRS
                     self.database_upload(rba_pctchnage_df.drop_nulls(), tags={
                         "type": "delta",
-                        "period": "{:0.0f}d".format(PERIODS[fx_period]),
+                        "period": f"{PERIODS[fx_period]:0.0f}d",
                         "unit": "%"
-                    }, print_label="Currency_{}".format(fx_period).replace(" ", "_"))
+                    }, print_label=f"Currency_{fx_period}".replace(" ", "_"))
                 self.print_log("LineProtocol [Currency] serialised", started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing currency data", exception=exception)

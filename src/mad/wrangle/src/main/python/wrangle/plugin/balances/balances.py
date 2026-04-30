@@ -51,7 +51,7 @@ class Balances(library.Library):
         if not library.config.disable_downloads:
             today_datetime = datetime.today()
             today = today_datetime.date()
-            monthly_file = abspath("{}/Redbark_Balances_{}_{:02d}.csv".format(self.input, today.year, today.month))
+            monthly_file = abspath(f"{self.input}/Redbark_Balances_{today.year}_{today.month:02d}.csv")
 
             existing_df = None
             if isfile(monthly_file):
@@ -87,7 +87,7 @@ class Balances(library.Library):
                             except (ValueError, TypeError):
                                 balance = None
                             account_number = account.get("accountNumber", account.get("number", ""))
-                            balance_id = str(uuid.uuid5(uuid.NAMESPACE_OID, "{}|{}|{}".format(account_id, today, time_str)))
+                            balance_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"{account_id}|{today}|{time_str}"))
                             rows.append({
                                 "Date": today,
                                 "Time": time_str,
@@ -120,34 +120,34 @@ class Balances(library.Library):
                         if balances_changed:
                             combined_df = (pl.concat([existing_df, today_df], how="diagonal") if existing_df is not None else today_df).sort(["Date", "Time", "Account Name"])
                             self.csv_write(combined_df, monthly_file)
-                            balance_files[monthly_file] = (True, True)
+                            balance_files[monthly_file] = library.DownloadResult(library.DownloadStatus.DOWNLOADED, monthly_file)
                         else:
-                            balance_files[monthly_file] = (True, False)
+                            balance_files[monthly_file] = library.DownloadResult(library.DownloadStatus.CACHED, monthly_file)
                     except Exception as exception:
                         self.print_log("Unexpected error processing balances dataframe", exception=exception)
                 else:
                     pass
             else:
-                balance_files[monthly_file] = (True, False)
+                balance_files[monthly_file] = library.DownloadResult(library.DownloadStatus.CACHED, monthly_file)
 
             for file_name in self.file_list(self.input, "Redbark_Balances"):
                 if file_name not in balance_files:
-                    balance_files[file_name] = (True, False)
-            new_data = library.config.clean or (all(s[0] for s in balance_files.values()) and any(s[1] for s in balance_files.values()))
+                    balance_files[file_name] = library.DownloadResult(library.DownloadStatus.CACHED, file_name)
+            new_data = library.config.clean or (all(s.status != library.DownloadStatus.FAILED for s in balance_files.values()) and any(s.status == library.DownloadStatus.DOWNLOADED for s in balance_files.values()))
         if library.config.clean:
-            balance_files = {f: (True, True) for f in self.file_list(self.input, "Redbark_Balances")}
+            balance_files = {f: library.DownloadResult(library.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.input, "Redbark_Balances")}
             new_data = len(balance_files) > 0
-        self.print_log("Files [Balances] downloaded or cached [{}] balance files".format(len(balance_files)), started=started_time)
+        self.print_log(f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files", started=started_time)
 
         started_time = time.time()
         for file_name in sorted(balance_files):
-            if balance_files[file_name][0]:
-                if library.config.clean or balance_files[file_name][1]:
+            if balance_files[file_name].status != library.DownloadStatus.FAILED:
+                if library.config.clean or balance_files[file_name].status == library.DownloadStatus.DOWNLOADED:
                     try:
                         monthly_df = self.csv_read(file_name, schema=BALANCES_SCHEMA)
                         balances_df = pl.concat([balances_df, monthly_df], how="diagonal")
                     except Exception as exception:
-                        self.print_log("Unexpected error reading [{}]".format(file_name), exception=exception)
+                        self.print_log(f"Unexpected error reading [{file_name}]", exception=exception)
         if len(balances_df) > 0:
             balances_df = balances_df.sort(["Date", "Time", "Account Name"])
         self.dataframe_print(balances_df, print_label="Balances", print_verb="collected", started=started_time)
