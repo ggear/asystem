@@ -10,7 +10,6 @@ import os
 import os.path
 import shutil
 import ssl
-import sys
 import time
 import traceback
 import urllib.error
@@ -19,13 +18,16 @@ import urllib.request
 import uuid
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from dataclasses import dataclass
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from enum import Enum, auto
 from ftplib import FTP
 from io import StringIO
 from os.path import *
+from typing import NamedTuple
 
 import dropbox
 import google
@@ -33,7 +35,6 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import polars.selectors as cs
-import requests
 import yfinance as yf
 from dateutil import parser
 from googleapiclient.discovery import build
@@ -44,15 +45,34 @@ from pandas.api.extensions import no_default
 from pandas.tseries.offsets import BDay
 from polars.datatypes import DataTypeClass
 from polars.exceptions import SchemaError
-from requests import post
 from tabulate import tabulate
 
-WRANGLE_ENABLE_LOG = 'WRANGLE_ENABLE_LOG'
-WRANGLE_ENABLE_DATA_TRUNC = 'WRANGLE_ENABLE_DATA_TRUNC'
-WRANGLE_DISABLE_DATA_DELTA = 'WRANGLE_DISABLE_DATA_DELTA'
-WRANGLE_ENABLE_DATA_SUBSET = 'WRANGLE_ENABLE_DATA_SUBSET'
-WRANGLE_DISABLE_FILE_UPLOAD = 'WRANGLE_DISABLE_FILE_UPLOAD'
-WRANGLE_DISABLE_FILE_DOWNLOAD = 'WRANGLE_DISABLE_FILE_DOWNLOAD'
+
+class DownloadStatus(Enum):
+    CACHED = auto()
+    DOWNLOADED = auto()
+    FAILED = auto()
+
+
+class DownloadResult(NamedTuple):
+    status: DownloadStatus
+    file_path: str | None
+
+
+@dataclass
+class Config:
+    log_level: str = "info"
+    clean: bool = False
+    disable_uploads: bool = False
+    disable_downloads: bool = False
+
+
+config = Config()
+
+database = None
+
+DATABASE_ENV_VARS = ("WRANGLE_DATABASE_HOST", "WRANGLE_DATABASE_PORT",
+                     "WRANGLE_DATABASE_NAME", "WRANGLE_DATABASE_TOKEN")
 
 PL_PRINT_ROWS = 6
 
@@ -91,23 +111,67 @@ CTR_ACT_UPLOADED = "Uploaded"
 logging.getLogger('yfinance').setLevel(logging.ERROR)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
-
-def test(variable, default=False):
-    return os.getenv(variable, "{}".format(default).lower()).lower() == "true"
+LOG_LEVELS = {"debug": 10, "info": 20, "warning": 30, "error": 40, "fatal": 50}
 
 
-def print_log(process, messages, exception=None, level="debug"):
-    if test(WRANGLE_ENABLE_LOG):
-        prefix = "{} [{}] [{}]: " \
-            .format(level.upper() if exception is None else 'ERROR', process,
-                    datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-        if type(messages) is not list:
-            messages = [messages]
-        for line in messages:
-            if len(line) > 0:
-                print("{}{}".format(prefix, line))
-        if exception is not None:
-            print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc().splitlines())))
+def log_enabled(level):
+    return LOG_LEVELS.get(level, 20) >= LOG_LEVELS.get(config.log_level, 20)
+
+
+def print_log(process, messages, exception=None, level="info"):
+    effective_level = "error" if exception is not None else level
+    if not log_enabled(effective_level):
+        return
+    prefix = "{} [{}] [{}]: " \
+        .format(effective_level.upper(), process,
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+    if type(messages) is not list:
+        messages = [messages]
+    for line in messages:
+        if len(line) > 0:
+            print("{}{}".format(prefix, line))
+    if exception is not None:
+        print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc().splitlines())))
+
+
+def database_open():
+    global database
+    if database is not None:
+        database_close()
+    if config.disable_uploads and config.disable_downloads:
+        return
+    missing = [name for name in DATABASE_ENV_VARS if not os.environ.get(name)]
+    if missing:
+        print_log("wrangle",
+                  "Database disabled: missing environment variable(s) [{}]".format(", ".join(missing)),
+                  level="warning")
+        return
+    try:
+        from influxdb_client_3 import InfluxDBClient3
+        database = InfluxDBClient3(
+            host="http://{}:{}".format(os.environ["WRANGLE_DATABASE_HOST"],
+                                       os.environ["WRANGLE_DATABASE_PORT"]),
+            token=os.environ["WRANGLE_DATABASE_TOKEN"],
+            database=os.environ["WRANGLE_DATABASE_NAME"],
+        )
+        print_log("wrangle", "Database connection opened to [{}:{}/{}]".format(
+            os.environ["WRANGLE_DATABASE_HOST"], os.environ["WRANGLE_DATABASE_PORT"],
+            os.environ["WRANGLE_DATABASE_NAME"]), level="debug")
+    except Exception as exception:
+        database = None
+        print_log("wrangle", "Database disabled: connection failed", exception=exception, level="warning")
+
+
+def database_close():
+    global database
+    if database is None:
+        return
+    try:
+        database.close()
+        print_log("wrangle", "Database connection closed", level="debug")
+    except Exception as exception:
+        print_log("wrangle", "Database close failed", exception=exception)
+    database = None
 
 
 def get_file(file_name):
@@ -163,33 +227,32 @@ class Library(object, metaclass=ABCMeta):
     def _run(self):
         pass
 
-    def _truncate(self):
-        if test(WRANGLE_DISABLE_DATA_DELTA) and test(WRANGLE_ENABLE_DATA_TRUNC):
-            self.database_truncate()
-
     def run(self):
         started_time = time.time()
         self.print_log("Starting ...")
-        self._truncate()
         self._run()
-        if not test(WRANGLE_DISABLE_FILE_UPLOAD):
+        if not config.disable_uploads:
             self.drive_synchronise(self.input_drive, self.input, check=True, download=False, upload=True)
+        for csv_path, csv_df in self._db_cache_dfs.items():
+            self.csv_write(csv_df, csv_path)
         self.print_counters()
         self.print_log("Finished", started=started_time)
 
-    def print_log(self, messages, data=None, started=None, exception=None):
-        if test(WRANGLE_ENABLE_LOG):
-            if type(messages) is not list:
-                messages = [messages]
-            if started is not None:
-                messages[-1] = messages[-1] + " in [{:.3f}] sec".format(time.time() - started)
-            if data is not None:
-                messages[-1] = messages[-1] + ": "
-                if type(data) is list:
-                    messages.extend(data)
-                else:
-                    messages[-1] = messages[-1] + data
-            print_log(self.name, messages, exception)
+    def print_log(self, messages, data=None, started=None, exception=None, level="info"):
+        effective_level = "error" if exception is not None else level
+        if not log_enabled(effective_level):
+            return
+        if type(messages) is not list:
+            messages = [messages]
+        if started is not None:
+            messages[-1] = messages[-1] + " in [{:.3f}] sec".format(time.time() - started)
+        if data is not None:
+            messages[-1] = messages[-1] + ": "
+            if type(data) is list:
+                messages.extend(data)
+            else:
+                messages[-1] = messages[-1] + data
+        print_log(self.name, messages, exception, level=level)
 
     def print_counters(self):
         self.print_log("Execution Summary:")
@@ -208,6 +271,7 @@ class Library(object, metaclass=ABCMeta):
 
     # noinspection PyAttributeOutsideInit
     def reset_counters(self):
+        self._db_cache_dfs = {}
         self.counters = OrderedDict([
             (CTR_SRC_SOURCES, OrderedDict([
                 (CTR_ACT_DOWNLOADED, 0),
@@ -251,7 +315,7 @@ class Library(object, metaclass=ABCMeta):
         if not force and not check and isfile(local_path):
             self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-            return True, False
+            return DownloadResult(DownloadStatus.CACHED, local_path)
         else:
             client = {
                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
@@ -279,7 +343,7 @@ class Library(object, metaclass=ABCMeta):
                         if modified_timestamp_cached == modified_timestamp:
                             self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                            return True, False
+                            return DownloadResult(DownloadStatus.CACHED, local_path)
                 except (Exception,):
                     pass
             try:
@@ -298,12 +362,12 @@ class Library(object, metaclass=ABCMeta):
                                    .format(label, local_path, modified_timestamp), exception=exception)
                 self.print_log("File [{}] downloaded to [{}]".format(label, local_path), started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                return True, True
+                return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
             except Exception as exception:
                 if not ignore:
                     self.print_log("File [{}] not available at [{}]".format(label, url_file), exception=exception)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
-        return False, False
+        return DownloadResult(DownloadStatus.FAILED, None)
 
     def ftp_download(self, url_file, local_path, check=True, force=False, ignore=False):
         started_time = time.time()
@@ -312,7 +376,7 @@ class Library(object, metaclass=ABCMeta):
         if not force and not check and isfile(local_path):
             self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-            return True, False
+            return DownloadResult(DownloadStatus.CACHED, local_path)
         else:
             url_server = url_file.replace("ftp://", "").split("/")[0]
             url_path = url_file.split(url_server)[-1]
@@ -328,7 +392,7 @@ class Library(object, metaclass=ABCMeta):
                         self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                         client.quit()
-                        return True, False
+                        return DownloadResult(DownloadStatus.CACHED, local_path)
                 if not exists(dirname(local_path)):
                     os.makedirs(dirname(local_path))
                 client.retrbinary("RETR {}".format(url_path), open(local_path, 'wb').write)
@@ -340,14 +404,14 @@ class Library(object, metaclass=ABCMeta):
                 self.print_log("File [{}] downloaded to [{}]".format(label, local_path), started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 client.quit()
-                return True, True
+                return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
             except Exception as exception:
                 if client is not None:
                     client.quit()
                 self.print_log("File [{}] not available at [{}]".format(label, url_file), exception=exception)
                 if not ignore:
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
-        return False, False
+        return DownloadResult(DownloadStatus.FAILED, None)
 
     def stock_download(self, local_path, ticker, start, end, end_of_day='17:00', check=True, force=False, ignore=True):
         started_time = time.time()
@@ -359,7 +423,7 @@ class Library(object, metaclass=ABCMeta):
             if not force and not check and isfile(local_path):
                 self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                return True, False
+                return DownloadResult(DownloadStatus.CACHED, local_path)
             else:
                 try:
                     if not force and check and isfile(local_path):
@@ -380,12 +444,12 @@ class Library(object, metaclass=ABCMeta):
                                     self.print_log("File [{}] cached at [{}]"
                                                    .format(label, local_path), started=started_time)
                                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                                    return True, False
+                                    return DownloadResult(DownloadStatus.CACHED, local_path)
                             else:
                                 self.print_log("File [{}] cached (but empty) at [{}]"
                                                .format(label, local_path), started=started_time)
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                                return True, False
+                                return DownloadResult(DownloadStatus.CACHED, local_path)
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive)
 
                     # NOTE: Adapt to yfinance-0.1.70 format, removing Timezones and Capital Gains
@@ -420,7 +484,7 @@ class Library(object, metaclass=ABCMeta):
                                 self.print_log("File [{}] cached at [{}]"
                                                .format(label, local_path), started=started_time)
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                                return True, False
+                                return DownloadResult(DownloadStatus.CACHED, local_path)
                     self.csv_write(pl.from_pandas(data_df), local_path, print_verb="downloaded", started=started_time)
                     if len(data_df) > 0:
                         modified = datetime.strptime(str(data_df.values[-1][0]), '%Y-%m-%d').date()
@@ -432,205 +496,243 @@ class Library(object, metaclass=ABCMeta):
                             self.print_log("File [{}] stock query file [{}] modified timestamp set failed [{}]"
                                            .format(label, local_path, modified_timestamp), exception=exception)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                    return True, True
+                    return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
                 except Exception as exception:
                     self.print_log("File [{}] stock query failed for ticker [{}] between [{}] and [{}]"
                                    .format(label, ticker, start, end_exclusive), exception=exception)
                     if not ignore:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
-        return False, False
+        return DownloadResult(DownloadStatus.FAILED, None)
 
-    def database_download(self, local_path, query, start=None, end=None, check=True, force=False, ignore=True):
+    def database_download(self, query_name, query_string, start=None, end=None, check=True, force=False, ignore=True):
         started_time = time.time()
-        data_df = None
-        label = basename(local_path).split(".")[0]
+        local_path = abspath("{}/_{}_Database_Download.csv".format(self.input, query_name))
+        if config.disable_downloads or database is None:
+            if isfile(local_path):
+                self.print_log("File [{}] cached at [{}]".format(query_name, local_path), started=started_time)
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                return DownloadResult(DownloadStatus.CACHED, local_path)
+            self.print_log("File [{}] query skipped: downloads disabled and no cache available".format(query_name))
+            if not ignore:
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
+            return DownloadResult(DownloadStatus.FAILED, None)
         if not force and not check and isfile(local_path):
-            self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
+            self.print_log("File [{}] cached at [{}]".format(query_name, local_path), started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-            return True, False
-        else:
-            if not force and check and isfile(local_path):
-                data_df = self.csv_read(local_path, print_rows=-1)
-                if len(data_df) > 0:
-                    data_start = data_df.head(1).rows()[0][0]
-                    data_end = data_df.tail(1).rows()[0][0]
-                    if (start is None or start >= data_start) and (end is None or end <= data_end):
-                        self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
-                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                        return True, False
-            rows = []
-            columns = []
-            query_url = "http://{}:{}/api/v2/query?org={}".format(
-                os.environ["INFLUXDB_SERVICE_PROD"],
-                os.environ["INFLUXDB_HTTP_PORT"],
-                os.environ["INFLUXDB_ORG"],
-            )
-            try:
-                response = requests.post(url=query_url, headers={
-                    'Accept': 'application/csv',
-                    'Content-type': 'application/vnd.flux',
-                    'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
-                }, data=query.replace("\n", "").replace(" ", ""))
-                if not response.ok:
-                    self.print_log("File [{}] query failed with HTTP code [{}] and response [{}]"
-                                   .format(label, response.status_code, response.text.strip()))
-                    if not ignore:
-                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
-                    return False, False
-                else:
-                    table = response.text.strip().split("\n")
-                    if len(table) > 0:
-                        columns = table[0].strip().split(",")[3:]
-                        for row in table[1:]:
-                            cols = row.strip().split(",")
-                            if len(cols) > 4:
-                                rows.append(cols[3:])
-                    data_df = self.dataframe_new(data=rows, orient="row", print_label=label, print_rows=-1)
-                if len(rows) == 0:
-                    if ignore:
-                        self.print_log("File [{}] query returned no data".format(label))
-                        return True, True
-                    else:
-                        raise Exception("File [{}] query returned no data".format(label))
-                data_df.columns = columns
-                data_df = data_df.with_columns(pl.first().str.to_datetime())
-                self.csv_write(data_df, local_path, print_verb="queried", started=started_time)
+            return DownloadResult(DownloadStatus.CACHED, local_path)
+        if not force and check and isfile(local_path):
+            data_df = self.csv_read(local_path, print_rows=-1)
+            if len(data_df) > 0:
+                data_start = data_df.head(1).rows()[0][0]
+                data_end = data_df.tail(1).rows()[0][0]
+                if (start is None or start >= data_start) and (end is None or end <= data_end):
+                    self.print_log("File [{}] cached at [{}]".format(query_name, local_path), started=started_time)
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                    return DownloadResult(DownloadStatus.CACHED, local_path)
+        try:
+            arrow_table = database.query(query=query_string, language="sql")
+            data_df = pl.from_arrow(arrow_table)
+            if isinstance(data_df, pl.Series):
+                data_df = data_df.to_frame()
+            if data_df is None or len(data_df) == 0:
+                if ignore:
+                    self.print_log("File [{}] query returned no data".format(query_name))
+                    return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
+                raise Exception("File [{}] query returned no data".format(query_name))
+            self.csv_write(data_df, local_path, print_verb="queried", started=started_time)
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
+            return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
+        except Exception as exception:
+            self.print_log("File [{}] query failed".format(query_name), exception=exception, started=started_time)
+            if not ignore:
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
+        return DownloadResult(DownloadStatus.FAILED, None)
+
+    def bank_download(self, file_cache, data="accounts", check=True, force=False):
+        started_time = time.time()
+        file_path = abspath("{}/_Redbark_{}_Download.csv".format(self.input, file_cache))
+        if not force and not check and isfile(file_path):
+            self.print_log("File [{}] cached at [{}]".format(file_cache, file_path), started=started_time)
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+            return DownloadResult(DownloadStatus.CACHED, file_path)
+        if config.disable_downloads:
+            if isfile(file_path):
+                self.print_log("File [{}] cached at [{}]".format(file_cache, file_path), started=started_time)
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                return DownloadResult(DownloadStatus.CACHED, file_path)
+            self.print_log("File [{}] query skipped: downloads disabled and no cache available".format(file_cache))
+            return DownloadResult(DownloadStatus.FAILED, None)
+        token = os.environ.get("REDBARK_TOKEN", "")
+        base_url = "https://api.redbark.co"
+        req_headers = {"Authorization": "Bearer {}".format(token), "Content-Type": "application/json"}
+
+        def _request(path):
+            req = urllib.request.Request("{}{}".format(base_url, path), headers=req_headers)
+            response = urllib.request.urlopen(req, context=ssl._create_unverified_context())
+            return json.loads(response.read().decode())
+
+        def _has_more(result):
+            pagination = result.get("pagination", result)
+            return bool(pagination.get("hasMore", pagination.get("has_more", False)))
+
+        def _all_accounts():
+            rows, offset = [], 0
+            while True:
+                result = _request("/v1/accounts?limit=200&offset={}".format(offset))
+                rows.extend(result.get("data", []))
+                if not _has_more(result):
+                    break
+                offset += len(result.get("data", []))
+            return rows
+
+        try:
+            if data == "accounts":
+                rows = _all_accounts()
+                data_df = pl.DataFrame(rows) if rows else self.dataframe_new()
+            elif data == "balances":
+                account_ids = [a["id"] for a in _all_accounts()]
+                rows = []
+                for i in range(0, len(account_ids), 100):
+                    result = _request("/v1/balances?accountIds={}".format(",".join(account_ids[i:i + 100])))
+                    rows.extend(result.get("data", []))
+                data_df = pl.DataFrame(rows) if rows else self.dataframe_new()
+            elif data == "transactions":
+                accounts = _all_accounts()
+                connection_ids = list(dict.fromkeys(a["connectionId"] for a in accounts if "connectionId" in a))
+                rows = []
+                for connection_id in connection_ids:
+                    tx_offset = 0
+                    while True:
+                        result = _request("/v1/transactions?connectionId={}&limit=500&offset={}".format(connection_id, tx_offset))
+                        rows.extend(result.get("data", []))
+                        if not _has_more(result):
+                            break
+                        tx_offset += len(result.get("data", []))
+                data_df = pl.DataFrame(rows) if rows else self.dataframe_new()
+            elif data == "categories":
+                result = _request("/v1/categories")
+                rows = result.get("categories", [])
+                data_df = pl.DataFrame(rows) if rows else self.dataframe_new()
+            else:
+                raise ValueError("Unknown bank data type [{}]".format(data))
+            if len(data_df) > 0:
+                new_csv = data_df.sort(data_df.columns[0]).write_csv()
+                new_hash = hashlib.md5(new_csv.encode()).hexdigest()
+                if not force and check and isfile(file_path):
+                    with open(file_path, 'r') as f:
+                        if hashlib.md5(f.read().encode()).hexdigest() == new_hash:
+                            self.print_log("File [{}] cached at [{}]".format(file_cache, file_path), started=started_time)
+                            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                            return DownloadResult(DownloadStatus.CACHED, file_path)
+                if not exists(dirname(file_path)):
+                    os.makedirs(dirname(file_path))
+                with open(file_path, 'w') as f:
+                    f.write(new_csv)
+                self.print_log("File [{}] downloaded to [{}]".format(file_cache, file_path), started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                return True, True
-            except Exception as exception:
-                self.print_log("File [{}] query failed at [{}]".format(label, query_url), exception=exception,
-                               started=started_time)
-                if not ignore:
-                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
-        return False, False
+                return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
+            return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
+        except Exception as exception:
+            self.print_log("File [{}] download failed".format(file_cache), exception=exception)
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
+            return DownloadResult(DownloadStatus.FAILED, None)
 
-    def database_truncate(self):
+    def sheet_download(self, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_load_secs=10, sheet_retry_max=5,
+                       read_cache=True, write_cache=False, print_rows=PL_PRINT_ROWS):
         started_time = time.time()
-        for bucket in [os.environ["INFLUXDB_BUCKET_DATA_PUBLIC"], os.environ["INFLUXDB_BUCKET_DATA_PRIVATE"]]:
-            trunc_url = "http://{}:{}/api/v2/delete?org={}&bucket={}".format(
-                os.environ["INFLUXDB_SERVICE"],
-                os.environ["INFLUXDB_HTTP_PORT"],
-                os.environ["INFLUXDB_ORG"],
-                bucket,
-            )
-            trunc_query = json.dumps({
-                "start": "1900-01-01T00:00:00Z",
-                "stop": (date.today() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "predicate": "_measurement=\"" + self.name.lower() + "\""
-            })
-            try:
-                self.print_log("Measurement [{}] truncate pending at [{}]".format(self.name.lower(), trunc_url))
-                response = post(url=trunc_url, headers={
-                    'Accept': 'application/csv',
-                    'Content-type': 'application/vnd.flux',
-                    'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
-                }, data=trunc_query, timeout=10 * 60)
-                if not response.ok:
-                    self.print_log("Measurement [{}] could not be truncated with query [{}] and HTTP code [{}] at [{}]"
-                                   .format(self.name.lower(), trunc_query, response.status_code, trunc_url))
-                else:
-                    self.print_log("Measurement [{}] truncate executed at [{}]"
-                                   .format(self.name.lower(), trunc_url), started=started_time)
-            except Exception as exception:
-                self.print_log("Measurement [{}] could not be truncated at [{}]"
-                               .format(self.name.lower(), trunc_url), exception=exception)
-
-    def sheet_download(self, file_cache, drive_key, sheet_name=None, sheet_start_row=1, sheet_load_secs=10,
-                       sheet_retry_max=5,
-                       schema={}, read_cache=True, write_cache=False, print_rows=PL_PRINT_ROWS):
-        started_time = time.time()
-        data_df = None
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
-        file_path = abspath("{}/_{}.csv".format(self.input, file_cache))
-        if read_cache and not write_cache and isfile(file_path):
-            data_df = self.csv_read(file_path, schema, print_label=file_cache, print_rows=print_rows)
-        if data_df is None:
-            retries = 0
-            caught_exception = None
+        drive_version = None
+        try:
+            drive_version = build('drive', 'v3', credentials=Spread(drive_url).client.auth, cache_discovery=False) \
+                .files().get(fileId=drive_key, fields='version').execute().get('version')
+        except Exception as exception:
+            self.print_log("Failed to get Drive version of sheet [{}]".format(drive_url), exception=exception, level="error")
+        if drive_version is not None:
+            file_path = abspath("{}/_{}_Sheet_Download_v{}.csv".format(self.input, workbook_name, drive_version))
+            if isfile(file_path):
+                self.print_log("File [{}] cached at [{}] version [{}]".format(workbook_name, file_path, drive_version), started=started_time)
+                return DownloadResult(DownloadStatus.CACHED, file_path)
+        else:
+            file_path = abspath("{}/_{}_Sheet_Download.csv".format(self.input, workbook_name))
+            if read_cache and not write_cache and isfile(file_path):
+                self.print_log("File [{}] cached at [{}]".format(workbook_name, file_path), started=started_time)
+                return DownloadResult(DownloadStatus.CACHED, file_path)
+        retries = 0
+        caught_exception = None
 
-            class SheetStillLoadingError(Exception):
-                pass
+        class SheetStillLoadingError(Exception):
+            pass
 
-            try:
-                while retries < sheet_retry_max:
-                    try:
-                        retries += 1
-                        spread = Spread(drive_url, sheet=0 if sheet_name is None else sheet_name)
-                        spread_sheet_cells = spread._fix_merge_values(spread.sheet.get_all_values())[
-                            sheet_start_row - 1:]
-                        data_df = self.dataframe_new(
-                            data=spread_sheet_cells[1:],
-                            orient="row",
-                            print_label=file_cache,
-                            print_rows=-1
-                        )
-                        if len(spread_sheet_cells) > 0:
-                            columns = []
-                            for (default, named) in zip(data_df.columns, spread_sheet_cells[:1][0]):
-                                columns.append(named if named != "" else default)
-                            data_df.columns = columns
-                        data_df = data_df \
-                            .with_columns([pl.when(pl.col(pl.Utf8) == "#N/A").then(None) \
-                                          .otherwise(pl.col(pl.Utf8)).name.keep()]) \
-                            .with_columns([pl.when(pl.col(pl.Utf8).str.starts_with("$"))
-                                          .then(pl.col(pl.Utf8).str.replace_all(r"(?i)\$|,", "")) \
-                                          .otherwise(pl.col(pl.Utf8)).name.keep()]) \
-                            .with_columns([pl.when(pl.col(pl.Utf8).str.starts_with("£")) \
-                                          .then(pl.col(pl.Utf8).str.replace_all(r"(?i)£|,", "")) \
-                                          .otherwise(pl.col(pl.Utf8)).name.keep()]) \
-                            .with_columns([pl.when(pl.col(pl.Utf8).str.len_chars() == 0).then(None) \
-                                          .otherwise(pl.col(pl.Utf8)).name.keep()])
-                        data_df = data_df.select(
-                            [column.name for column in data_df if not (column.null_count() == data_df.height)])
-                        for column in data_df.columns:
-                            if len(data_df.filter(pl.col(column) == "Loading...")) > 0:
-                                data_df = None
-                                raise SheetStillLoadingError(
-                                    "DataFrame [{}] loaded from sheet that is yet to finish rendering column [{}]" \
-                                        .format(file_cache, column))
-                        if len(data_df.columns) == 0:
-                            data_df = self.dataframe_new(schema=schema)
-                        else:
-                            for column in schema:
-                                data_df = data_df.with_columns(pl.col(column).cast(schema[column]))
-                        if write_cache:
-                            self.csv_write(data_df, file_path, print_label=file_cache, print_rows=-1)
-                            data_df = self.csv_read(file_path, schema, print_label=file_cache, print_rows=-1)
-                        else:
-                            data_df = pl.read_csv(StringIO(data_df.write_csv()), try_parse_dates=True,
-                                                  raise_if_empty=False)
-                        self.dataframe_print(data_df, print_label=file_cache, print_verb="downloaded", print_suffix= \
-                            "from [{}]{}".format(drive_url, "" if sheet_name is None else "[{}]".format(sheet_name)),
-                                             print_rows=print_rows, started=started_time)
-                        caught_exception = None
-                        break
-                    except SheetStillLoadingError as exception:
-                        time.sleep(sheet_load_secs)
-                        caught_exception = exception
-                if caught_exception is not None:
-                    raise caught_exception
-            except Exception as exception:
-                self.print_log("DataFrame [{}] unavailable at [{}]{}"
-                               .format(file_cache, drive_url, "" if retries < sheet_retry_max else \
-                    " after retrying [{}] times over [{}] seconds".format(sheet_retry_max,
-                                                                          sheet_retry_max * sheet_load_secs)),
-                               exception=exception)
-        if data_df is None:
-            data_df = self.dataframe_new(schema=schema)
-        return data_df
+        try:
+            while retries < sheet_retry_max:
+                try:
+                    retries += 1
+                    spread = Spread(drive_url, sheet=0 if sheet_name is None else sheet_name)
+                    spread_sheet_cells = spread._fix_merge_values(spread.sheet.get_all_values())[sheet_start_row - 1:]
+                    data_df = self.dataframe_new(
+                        data=spread_sheet_cells[1:],
+                        orient="row",
+                        print_label=workbook_name,
+                        print_rows=-1
+                    )
+                    if len(spread_sheet_cells) > 0:
+                        columns = []
+                        for (default, named) in zip(data_df.columns, spread_sheet_cells[:1][0]):
+                            columns.append(named if named != "" else default)
+                        data_df.columns = columns
+                    data_df = data_df \
+                        .with_columns([pl.when(pl.col(pl.Utf8) == "#N/A").then(None) \
+                                      .otherwise(pl.col(pl.Utf8)).name.keep()]) \
+                        .with_columns([pl.when(pl.col(pl.Utf8).str.starts_with("$"))
+                                      .then(pl.col(pl.Utf8).str.replace_all(r"(?i)\$|,", "")) \
+                                      .otherwise(pl.col(pl.Utf8)).name.keep()]) \
+                        .with_columns([pl.when(pl.col(pl.Utf8).str.starts_with("£")) \
+                                      .then(pl.col(pl.Utf8).str.replace_all(r"(?i)£|,", "")) \
+                                      .otherwise(pl.col(pl.Utf8)).name.keep()]) \
+                        .with_columns([pl.when(pl.col(pl.Utf8).str.len_chars() == 0).then(None) \
+                                      .otherwise(pl.col(pl.Utf8)).name.keep()])
+                    data_df = data_df.select(
+                        [column.name for column in data_df if not (column.null_count() == data_df.height)])
+                    for column in data_df.columns:
+                        if len(data_df.filter(pl.col(column) == "Loading...")) > 0:
+                            data_df = None
+                            raise SheetStillLoadingError(
+                                "DataFrame [{}] loaded from sheet that is yet to finish rendering column [{}]" \
+                                    .format(workbook_name, column))
+                    self.csv_write(data_df, file_path, print_label=workbook_name, print_rows=-1)
+                    self.dataframe_print(data_df, print_label=workbook_name, print_verb="downloaded", print_suffix= \
+                        "from [{}][{}{}]".format(drive_url, workbook_name, "" if sheet_name is None else ":{}".format(sheet_name)),
+                                         print_rows=print_rows, started=started_time)
+                    caught_exception = None
+                    break
+                except SheetStillLoadingError as exception:
+                    time.sleep(sheet_load_secs)
+                    caught_exception = exception
+            if caught_exception is not None:
+                raise caught_exception
+        except Exception as exception:
+            self.print_log("DataFrame [{}] unavailable at [{}]{}".format(workbook_name, drive_url, "" if retries < sheet_retry_max else \
+                " after retrying [{}] times over [{}] seconds".format(sheet_retry_max, sheet_retry_max * sheet_load_secs)), exception=exception)
+            return DownloadResult(DownloadStatus.FAILED, None)
+        return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
 
-    def sheet_upload(self, data_df, drive_key, sheet_name=None, sheet_start_row=1, sheet_start_column="A",
+    def sheet_upload(self, data_df, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_start_column="A",
                      print_label=None, print_rows=PL_PRINT_ROWS):
         started_time = time.time()
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
         try:
             data_df_pd = data_df.to_pandas()
-            if not test(WRANGLE_DISABLE_FILE_UPLOAD):
-                Spread(drive_url).df_to_sheet(data_df_pd, index=False, sheet=sheet_name,
-                                              start="{}{}".format(sheet_start_column, sheet_start_row), replace=True)
+            if not config.disable_uploads:
+                Spread(drive_url).df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start="{}{}".format(sheet_start_column, sheet_start_row), replace=True)
+            else:
+                csv_name = "_{}{}_Sheet_Upload.csv".format(workbook_name, "" if sheet_name is None else "_{}".format(sheet_name))
+                self.csv_write(data_df, abspath("{}/{}".format(self.input, csv_name)))
             self.dataframe_print(data_df, print_label=print_label, print_verb="uploaded",
-                                 print_suffix="to [{}]{}".format(
-                                     drive_url, "" if sheet_name is None else "[{}]".format(sheet_name),
+                                 print_suffix="to [{}][{}{}]".format(
+                                     drive_url,
+                                     workbook_name,
+                                     "" if sheet_name is None else ":{}".format(sheet_name),
+                                     started_time=started_time,
                                      print_rows=print_rows))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
@@ -694,8 +796,7 @@ class Library(object, metaclass=ABCMeta):
         service = dropbox.Dropbox(os.getenv('DROPBOX_TOKEN'))
         cursor = None
         while True:
-            response = service.files_list_folder(dropbox_dir) if cursor is None else service.files_list_folder_continue(
-                cursor)
+            response = service.files_list_folder(dropbox_dir) if cursor is None else service.files_list_folder_continue(cursor)
             for dropbox_file in response.entries:
                 dropbox_files[dropbox_file.name] = {
                     "id": dropbox_file.id,
@@ -706,8 +807,7 @@ class Library(object, metaclass=ABCMeta):
                 cursor = response.cursor
             else:
                 break
-        self.print_log("Directory [{}] listed [{}] files from [https://www.dropbox.com/home/{}]"
-                       .format(basename(local_dir), len(dropbox_files), dropbox_dir), started=started_time)
+        self.print_log("Directory [{}] listed [{}] files from [https://www.dropbox.com/home/{}]".format(basename(local_dir), len(dropbox_files), dropbox_dir), started=started_time)
         started_time = time.time()
         actioned_files = {}
         for dropbox_file in dropbox_files:
@@ -838,7 +938,7 @@ class Library(object, metaclass=ABCMeta):
                             drive_id = drive_files[local_file]["id"] if local_file in drive_files else None
                             metadata = {'modifiedTime': datetime.fromtimestamp(
                                 local_files[local_file]["modified"], timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
-                            if not test(WRANGLE_DISABLE_FILE_UPLOAD):
+                            if not config.disable_uploads:
                                 if drive_id is None:
                                     metadata['name'] = basename(local_file)
                                     metadata['parents'] = [drive_dir]
@@ -864,7 +964,7 @@ class Library(object, metaclass=ABCMeta):
                        .format(basename(local_dir).title(), len(actioned_files), drive_dir), started=started_time)
         return collections.OrderedDict(sorted(actioned_files.items()))
 
-    def state_cache(self, data_df_update, aggregate_function=None):
+    def state_cache(self, data_df_update, aggregate_function=None, key_columns=None):
         """Maintain an incremental time-series cache across runs.
 
         Merges ``data_df_update`` into the persisted current state, producing four CSV files
@@ -892,10 +992,10 @@ class Library(object, metaclass=ABCMeta):
         the fully merged current.  It must accept and return a Polars DataFrame and must
         preserve the ``Date`` column as the first column.
 
-        Environment flags:
-        * ``WRANGLE_DISABLE_FILE_DOWNLOAD=true`` — skip all processing; return an empty delta
+        Configuration flags (``library.config``):
+        * ``disable_downloads=True`` — skip all processing; return an empty delta
           and the cached current as-is (no files are written).
-        * ``WRANGLE_DISABLE_DATA_DELTA=true`` — delete the current file before processing,
+        * ``clean=True`` — delete the current file before processing,
           forcing a full rebuild (previous will be empty after this run).
 
         Args:
@@ -909,6 +1009,7 @@ class Library(object, metaclass=ABCMeta):
             Tuple of ``(delta, current, previous)`` Polars DataFrames, all sorted by Date.
         """
         started_time = time.time()
+        key_columns = key_columns if key_columns is not None else ["Date"]
         aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_function is None \
             else (lambda _data_df: aggregate_function(_data_df) if len(_data_df) > 0 else _data_df)
         file_delta = abspath("{}/__{}_Delta.csv".format(self.input, self.name.title()))
@@ -917,12 +1018,11 @@ class Library(object, metaclass=ABCMeta):
         file_previous = abspath("{}/__{}_Previous.csv".format(self.input, self.name.title()))
         if not isdir(self.input):
             os.makedirs(self.input)
-        if not test(WRANGLE_DISABLE_FILE_DOWNLOAD) and test(WRANGLE_DISABLE_DATA_DELTA):
+        if not config.disable_downloads and config.clean:
             if isfile(file_current):
                 os.remove(file_current)
         if len(data_df_update) > 0:
-            if len(data_df_update.columns) == 0 or data_df_update.columns[0] != "Date" or data_df_update.dtypes[
-                0] != pl.Date:
+            if len(data_df_update.columns) == 0 or data_df_update.columns[0] != "Date" or data_df_update.dtypes[0] != pl.Date:
                 raise SchemaError("DataFrame requires first column of parameter [data_df_update] "
                                   "to be named [Date], found [{}] and of type [date], found [{}]"
                                   .format(data_df_update.columns[0],
@@ -930,12 +1030,12 @@ class Library(object, metaclass=ABCMeta):
         else:
             data_df_update = self.dataframe_new(schema={"Date": pl.Date},
                                                 print_label="{}_Update".format(self.name.title()))
-        if test(WRANGLE_DISABLE_FILE_DOWNLOAD):
+        if config.disable_downloads:
             data_df_current = self.csv_read(file_current) \
                 if isfile(file_current) else self.dataframe_new(schema={"Date": pl.Date},
                                                                 print_label="{}_Current".format(self.name.title()))
             self.print_log("DataFrame [State_Caches] created ignoring updates", started=started_time)
-            data_df_current = data_df_current.sort("Date")
+            data_df_current = data_df_current.sort(key_columns)
             return self.dataframe_new(schema=data_df_current.schema), data_df_current, data_df_current
         data_df_update = data_df_update.filter(pl.col("Date").is_not_null())
         data_df_update = aggregate_function_wrapped(data_df_update)
@@ -952,7 +1052,7 @@ class Library(object, metaclass=ABCMeta):
                 data_df_update = data_df_update.with_columns(
                     pl.lit(None).cast(data_schema[data_column]).alias(data_column))
         data_df_update = data_df_update.select(data_schema.keys()).with_columns(pl.col("Date").cast(pl.Date)).sort(
-            "Date")
+            key_columns)
         for data_column in data_schema:
             if data_column not in data_df_current:
                 data_df_current = data_df_current.with_columns(
@@ -961,9 +1061,9 @@ class Library(object, metaclass=ABCMeta):
                 data_df_current = data_df_current.with_columns(
                     pl.col(data_column).cast(data_schema[data_column], strict=False))
         data_df_current = data_df_current.select(data_schema.keys()).with_columns(pl.col("Date").cast(pl.Date)).sort(
-            "Date")
+            key_columns)
         self.csv_write(data_df_update, file_update)
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, data_schema_update_column_count - 1)
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, data_schema_update_column_count - len(key_columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_ROWS, len(data_df_update))
         if isfile(file_current):
             shutil.move(file_current, file_previous)
@@ -977,10 +1077,10 @@ class Library(object, metaclass=ABCMeta):
                 data_df_previous = data_df_previous.with_columns(
                     pl.lit(None).cast(data_schema[data_column]).alias(data_column))
         data_df_previous = data_df_previous.select(data_schema.keys())
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns) - 1)
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns) - len(key_columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous))
         data_df_current = pl.concat([data_df_current, data_df_update]) \
-            .select(data_schema.keys()).unique(subset=["Date"], keep="last").sort("Date")
+            .select(data_schema.keys()).unique(subset=key_columns, keep="last").sort(key_columns)
         data_df_current = aggregate_function_wrapped(data_df_current)
         for data_column, data_type in zip(data_df_current.columns, data_df_current.dtypes):
             if data_column in data_df_previous.columns and data_df_previous[data_column].dtype != data_type:
@@ -988,17 +1088,17 @@ class Library(object, metaclass=ABCMeta):
                     pl.col(data_column).cast(data_type, strict=False))
         data_df_current = data_df_current.select(data_schema.keys())
         self.csv_write(data_df_current, file_current)
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns) - 1)
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns) - len(key_columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
         data_df_delta = pl.concat([data_df_previous, data_df_current]).select(data_schema.keys())
-        data_df_delta = data_df_delta.filter(data_df_delta.is_duplicated().not_()).unique(subset=["Date"],
-                                                                                          keep="last").sort("Date")
+        data_df_delta = data_df_delta.filter(data_df_delta.is_duplicated().not_()).unique(subset=key_columns,
+                                                                                          keep="last").sort(key_columns)
         self.csv_write(data_df_delta, file_delta)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_COLUMNS,
-                         len(data_schema) - 1 if data_schema_update_column_count > 1 else 0)
+                         len(data_schema) - len(key_columns) if data_schema_update_column_count > len(key_columns) else 0)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_ROWS, len(data_df_delta))
         self.print_log("DataFrame [State_Caches] created", started=started_time)
-        return data_df_delta.sort("Date"), data_df_current.sort("Date"), data_df_previous.sort("Date")
+        return data_df_delta.sort(key_columns), data_df_current.sort(key_columns), data_df_previous.sort(key_columns)
 
     def excel_read(self, local_path, schema={}, sheet_name=0, header_rows=0, skip_rows=0, na_values=[],
                    drop_na_cols=True,
@@ -1029,17 +1129,6 @@ class Library(object, metaclass=ABCMeta):
                                     print_suffix="to [{}]".format(local_path), print_rows=print_rows,
                                     started=started_time)
 
-    def csv_write_pd(self, data_df, local_path, write_index=True, print_label=None, print_head=PD_PRINT_ROWS,
-                     print_tail=PD_PRINT_ROWS):
-        started_time = time.time()
-        data_df.to_csv(local_path, index=write_index, encoding='utf-8')
-        return self.dataframe_print_pd(data_df,
-                                       print_label=basename(local_path).split(".")[0].removeprefix("__").removeprefix(
-                                           "_") \
-                                           if print_label is None else print_label, print_verb="written",
-                                       print_suffix="to [{}]".format(local_path),
-                                       print_head=print_head, print_tail=print_tail, started=started_time)
-
     def csv_read(self, local_path, schema={}, print_label=None, print_verb="loaded", print_rows=PL_PRINT_ROWS):
         started_time = time.time()
         data_df = pl.read_csv(local_path, schema_overrides=schema if len(schema) > 0 else None,
@@ -1049,22 +1138,6 @@ class Library(object, metaclass=ABCMeta):
                                         if print_label is None else print_label, print_verb=print_verb,
                                     print_suffix="from [{}]".format(local_path), print_rows=print_rows,
                                     started=started_time)
-
-    def csv_read_pd(self, local_path, column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
-                    print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS,
-                    engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT, **kwargs):
-        started_time = time.time()
-        data_df = pd.read_csv(local_path, dtype="str", keep_default_na=False, engine=engine,
-                              dtype_backend=dtype_backend, **kwargs)
-        data_df = self.dataframe_convert_types_pd(data_df, column_types=column_types,
-                                                  dropna_columns=dropna_columns, fillna_str=fillna_str,
-                                                  dtype_backend=dtype_backend)
-        return self.dataframe_print_pd(data_df,
-                                       print_label=basename(local_path).split(".")[0].removeprefix("__").removeprefix(
-                                           "_") \
-                                           if print_label is None else print_label,
-                                       print_suffix="from [{}]".format(local_path), print_head=print_head,
-                                       print_tail=print_tail, started=started_time)
 
     def dataframe_new(self, data=[], schema={}, orient=None,
                       print_label=None, print_suffix=None, print_compact=False, print_rows=PL_PRINT_ROWS, started=None):
@@ -1081,118 +1154,73 @@ class Library(object, metaclass=ABCMeta):
                                  started=started_time)
         return data_df
 
-    def dataframe_new_pd(self, data=[], columns=[], column_types={}, dropna_columns=False, fillna_str=False,
-                         print_label=None,
-                         print_suffix=None, print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS,
-                         dtype_backend=no_default, started=None):
-        started_time = time.time() if started is None else started
-        column_names = OrderedDict()
-        if len(data) == 0 or isinstance(data[0], list):
-            if len(columns) == 0 and len(column_types) > 0:
-                columns = list(column_types)
-            if len(data) > 0 and len(data[0]) > 0:
-                if len(columns) > len(data[0]):
-                    columns = columns.copy()[:len(data[0])]
-                elif len(columns) < len(data[0]):
-                    columns = columns.copy()
-                    columns.extend(["" for _ in range(0, len(data[0]) - len(columns))])
-            for _column_index, _column_name in enumerate(columns):
-                if _column_name == "":
-                    column_names["Column {}".format(_column_index + 1)] = _column_name
-                elif _column_name in column_names:
-                    column_names["{} {}".format(_column_name, _column_index + 1)] = _column_name
-                else:
-                    column_names[_column_name] = _column_name
-        column_type = None
-        if len(data) == 0:
-            if len(column_names) > 0:
-                data = {}
-                for column_name in column_names:
-                    data[column_name] = pd.Series(
-                        dtype=column_types[column_name] if column_name in column_types else None)
-        elif len(data[0]) > 0 and len(data[0]) == len(column_types) and len(set(column_types.values())) == 1:
-            column_type = next(iter(column_types.values()))
-        data_df = None
-        for column_type_attempt in [column_type, None]:
-            try:
-                data_df = pd.DataFrame(
-                    data=None if len(data) == 0 else data,
-                    columns=None if len(column_names) == 0 else column_names.keys(),
-                    dtype=column_type_attempt)
-            except Exception as exception:
-                self.print_log("DataFrame{} could not be cast as type [{}], leaving as default inferred types"
-                               .format("" if print_label is None else " [{}]".format(print_label), column_type_attempt))
-            if data_df is not None or column_type is None:
-                break
-        data_df = self.dataframe_convert_types_pd(data_df, column_types=column_types, dropna_columns=dropna_columns,
-                                                  fillna_str=fillna_str, dtype_backend=dtype_backend)
-        if len(data) > 0 or len(column_names) > 0:
-            self.dataframe_print_pd(data_df, compact=(len(data) == 0), print_label=print_label,
-                                    print_suffix=print_suffix,
-                                    print_head=print_head, print_tail=print_tail, started=started_time)
-        return data_df
-
-    def dataframe_convert_types_pd(self, data_df, column_types={}, dropna_columns=False, fillna_str=False,
-                                   dtype_backend=no_default):
-        if len(data_df) > 0:
-            data_df = data_df.apply(pd.to_numeric, errors='ignore')
-            for column in data_df.select_dtypes(include=["object"]):
-                data_df[column] = data_df[column].replace({pd.NA: np.nan, "": np.nan, "<NA>": np.nan})
-            if dropna_columns:
-                data_df = data_df.dropna(axis=1, how="all")
-            if fillna_str:
-                for column in data_df.select_dtypes(include=["object"]):
-                    data_df[column] = data_df[column].fillna("")
-            for data_column in column_types:
-                if data_column in data_df:
-                    try:
-                        data_df[data_column] = data_df[data_column].astype(column_types[data_column])
-                    except Exception as exception:
-                        self.print_log(
-                            "DataFrame column [{}] could not be cast as type [{}], leaving as existing type [{}]"
-                            .format(data_column, column_types[data_column], data_df[data_column].dtype))
-            if dtype_backend != no_default:
-                data_df = data_df.convert_dtypes(dtype_backend=dtype_backend)
-        return data_df
-
-    def dataframe_to_lineprotocol(self, data_df, tags=None, print_label=None):
+    def dataframe_to_lineprotocol(self, data_df, tags=None, print_label=None, chunk_rows=5000):
         started_time = time.time()
-        lines = []
         if tags is None:
             tags = {}
         tags["source"] = "wrangle"
+        if len(data_df.columns) <= 1 or len(data_df) == 0:
+            return
+        if data_df.select(pl.sum_horizontal(pl.all().is_null().sum())).rows()[0][0] > 0:
+            raise Exception(
+                "Dataframe contains null values which should be purged before line protocol serialisation")
+        renamed_columns = ["timestamp"] + [column.strip().replace(' ', '-').lower() for column in
+                                           data_df.columns[1:]]
+        data_df = data_df.rename(dict(zip(data_df.columns, renamed_columns))) \
+            .with_columns(pl.col("timestamp").cast(pl.Datetime).dt.epoch() * 1000)
+        prefix = self.name.lower() + "," + \
+                 ",".join(["{}={}".format(tag, tags[tag]) for tag in tags]) + " "
+        line_expressions = [pl.lit(prefix)]
+        for column in data_df.columns[1:]:
+            if len(line_expressions) > 1:
+                line_expressions.append(pl.lit(","))
+            line_expressions.extend([pl.lit("{}=".format(column)), pl.col(column)])
+        line_expressions.extend([pl.lit(" "), pl.col("timestamp")])
+        total_rows = len(data_df)
+        emitted = 0
+        for offset in range(0, total_rows, chunk_rows):
+            chunk = data_df.slice(offset, chunk_rows)
+            series = chunk.lazy().select(pl.concat_str(line_expressions)).collect().to_series()
+            for line in series:
+                yield line
+                emitted += 1
+        self.dataframe_print(data_df, print_label=print_label, print_verb="serialised", print_suffix="to [{:,}] lines".format(emitted), started=started_time)
+        self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
+        self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, total_rows)
+
+    def database_upload(self, data_df, tags=None, print_label=None, chunk_rows=5000):
+        if len(data_df.columns) <= 1 or len(data_df) == 0:
+            return
+        if config.disable_uploads or database is None:
+            for _ in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
+                pass
+            if config.disable_uploads:
+                tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
+                tag_suffix = " [{}]".format(",".join("{}={}".format(k, v) for k, v in tags_used.items())) if tags_used else ""
+                csv_path = abspath("{}/_{}_Database_Upload.csv".format(self.input, self.name))
+                date_col = data_df.columns[0]
+                fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
+                csv_df = data_df \
+                    .rename({col: "{}{}".format(col, tag_suffix) for col in data_df.columns[1:]}) \
+                    .with_columns(pl.col(date_col).cast(pl.Datetime).dt.strftime(fmt).alias(date_col))
+                if csv_path in self._db_cache_dfs:
+                    csv_df = self._db_cache_dfs[csv_path].join(csv_df, on=date_col, how="full", coalesce=True).sort(date_col)
+                self._db_cache_dfs[csv_path] = csv_df
+            return
         try:
-            if len(data_df.columns) > 1:
-                if data_df.select(pl.sum_horizontal(pl.all().is_null().sum())).rows()[0][0] > 0:
-                    raise Exception(
-                        "Dataframe contains null values which should be purged before line protocol serialisation")
-                if test(WRANGLE_ENABLE_DATA_SUBSET) and len(data_df) > 0:
-                    data_df = data_df.sample(3)
-                else:
-                    data_df = data_df.clone()
-                data_df.columns = ["timestamp"] + [column.strip().replace(' ', '-').lower() for column in
-                                                   data_df.columns[1:]]
-                data_df = data_df.with_columns(pl.col("timestamp").cast(pl.Datetime).dt.epoch() * 1000)
-                line_expressions = []
-                for column in data_df.columns[1:]:
-                    if len(line_expressions) > 0:
-                        line_expressions.append(pl.lit(","))
-                    line_expressions.extend([pl.lit("{}=".format(column)), pl.col(column)])
-                line_expressions.extend([pl.lit(" "), pl.col("timestamp")])
-                line_expressions.insert(0, pl.lit(self.name.lower() + "," +
-                                                  ",".join(["{}={}".format(tag, tags[tag]) for tag in tags]) + " "))
-                lines = [row[0] for row in data_df.lazy().select(pl.concat_str(line_expressions)).collect().rows()]
-                self.dataframe_print(data_df, print_label=print_label, print_verb="serialised",
-                                     print_suffix="to [{:,}] lines".format(len(lines)), started=started_time)
-                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
-                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
+            buffer = []
+            for line in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
+                buffer.append(line)
+                if len(buffer) >= chunk_rows:
+                    database.write(record=buffer, write_precision="ms")
+                    buffer = []
+            if buffer:
+                database.write(record=buffer, write_precision="ms")
         except Exception as exception:
-            self.print_log("DataFrame {} serialisation failed"
+            self.print_log("DataFrame{} write failed"
                            .format("" if print_label is None else " [{}]".format(print_label)),
-                           data=self.dataframe_to_str(data_df, compact=False),
                            exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
-        return lines
 
     def dataframe_type_to_str(self, dtype):
         return DataTypeClass._string_repr(dtype)
@@ -1217,69 +1245,22 @@ class Library(object, metaclass=ABCMeta):
                 data_lines = str(data_df).split('\n')
                 return data_lines
 
-    def dataframe_to_str_pd(self, data_df, compact=True, print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS):
-
-        def _column(_compact, _name, _type):
-            return "{}{}({})".format(_name, "" if _compact else " ", _type)
-
-        data_dict = OrderedDict()
-        data_dict[_column(compact, "Index" if data_df.index.name is None else data_df.index.name,
-                          data_df.index.dtype)] = data_df.index
-        for column in data_df.columns:
-            data_dict[_column(compact, column, data_df[column].dtype)] = data_df[column]
-        if compact:
-            return "[" + ",".join(data_dict.keys()) + "]"
-        else:
-            data_rows_truncated = False
-            data_rows_index_head = []
-            data_rows_index_tail = []
-            if len(data_df) > 0:
-                if (print_head + print_tail) >= len(data_df):
-                    data_rows_index_head.extend([*range(0, len(data_df))])
-                else:
-                    data_rows_truncated = True
-                    data_rows_index_head.extend([*range(0, print_head)])
-                    data_rows_index_tail.extend([*range(len(data_df) - print_tail, len(data_df))])
-            data_rows = [data_dict.keys()]
-            data_df = data_df.copy(deep=False)
-            data_df.insert(0, column=str(uuid.uuid4()), value=data_df.index)
-            data_rows.extend(data_df.take(data_rows_index_head).astype(str).values.tolist())
-            if data_rows_truncated:
-                data_rows.extend([["..." for i in range(0, len(data_df.columns))]])
-            data_rows.extend(data_df.take(data_rows_index_tail).astype(str).values.tolist())
-            return tabulate(data_rows, tablefmt="outline").split('\n')
-
     def dataframe_print(self, data_df, messages=None, compact=False, print_prefix="DataFrame", print_label=None,
                         print_verb="created", print_suffix=None, print_rows=PL_PRINT_ROWS, started=None):
-        if test(WRANGLE_ENABLE_LOG):
-            if print_rows >= 0:
-                if messages is None:
-                    messages = "{}{} {} with [{:,}] columns and [{:,}] rows{}".format(
-                        print_prefix,
-                        "" if print_label is None else " [{}]".format(print_label),
-                        print_verb,
-                        len(data_df.columns),
-                        len(data_df),
-                        "" if print_suffix is None else " {}".format(print_suffix),
-                    )
-                self.print_log(messages,
-                               None if print_rows == 0 else self.dataframe_to_str(data_df, compact, print_rows),
-                               started=started)
-        return data_df
-
-    def dataframe_print_pd(self, data_df, messages=None, compact=False, print_label=None, print_verb="created",
-                           print_suffix=None,
-                           print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS, started=None):
-        if test(WRANGLE_ENABLE_LOG):
+        if not log_enabled("info"):
+            return data_df
+        if print_rows >= 0:
             if messages is None:
-                messages = "DataFrame{} {} with [{:,}] columns and [{:,}] rows{}".format(
+                messages = "{}{} {} with [{:,}] columns and [{:,}] rows{}".format(
+                    print_prefix,
                     "" if print_label is None else " [{}]".format(print_label),
                     print_verb,
                     len(data_df.columns),
                     len(data_df),
                     "" if print_suffix is None else " {}".format(print_suffix),
                 )
-            self.print_log(messages, self.dataframe_to_str_pd(data_df, compact, print_head, print_tail),
+            self.print_log(messages,
+                           None if print_rows == 0 else self.dataframe_to_str(data_df, compact, print_rows),
                            started=started)
         return data_df
 
@@ -1292,25 +1273,21 @@ class Library(object, metaclass=ABCMeta):
                 self.print_log("File [{}] found at [{}]".format(file_name, file_path))
         return files
 
-    # noinspection PyMethodMayBeStatic
-    def stdout_write(self, line=None):
-        if line is not None:
-            if isinstance(line, list):
-                for line in line:
-                    print(line)
-            else:
-                print(line)
-        sys.stdout.flush()
-
     def counter_write(self):
+        if config.disable_uploads or database is None:
+            return
         values = []
-        timestamp = time.time() * 10 ** 9
+        timestamp_ms = int(time.time() * 1000)
         for source in self.counters:
             for action in self.counters[source]:
-                values.append("{}={}".format("{}_{}".format(source, action).lower().replace(" ", "_"),
-                                             self.counters[source][action]))
-        self.stdout_write("{},type=metadata,period=30m,unit=scalar,source=wrangle {} {:.0f}"
-                          .format(self.name.lower(), ",".join(values), timestamp))
+                values.append("{}={}i".format("{}_{}".format(source, action).lower().replace(" ", "_"),
+                                              self.counters[source][action]))
+        line = "{},type=metadata,period=30m,unit=scalar,source=wrangle {} {}" \
+            .format(self.name.lower(), ",".join(values), timestamp_ms)
+        try:
+            database.write(record=line, write_precision="ms")
+        except Exception as exception:
+            self.print_log("Counter write failed", exception=exception)
 
     def __init__(self, name, input_drive):
         self.name = name
