@@ -122,16 +122,14 @@ def print_log(process, messages, exception=None, level="info"):
     effective_level = "error" if exception is not None else level
     if not log_enabled(effective_level):
         return
-    prefix = "{} [{}] [{}]: " \
-        .format(effective_level.upper(), process,
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+    prefix = f"{effective_level.upper()} [{process}] [{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}]: "
     if type(messages) is not list:
         messages = [messages]
     for line in messages:
         if len(line) > 0:
-            print("{}{}".format(prefix, line))
+            print(f"{prefix}{line}")
     if exception is not None:
-        print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc().splitlines())))
+        print(f"{prefix}{(chr(10) + prefix).join(traceback.format_exc().splitlines())}")
 
 
 def database_open():
@@ -143,20 +141,17 @@ def database_open():
     missing = [name for name in DATABASE_ENV_VARS if not os.environ.get(name)]
     if missing:
         print_log("wrangle",
-                  "Database disabled: missing environment variable(s) [{}]".format(", ".join(missing)),
+                  f"Database disabled: missing environment variable(s) [{', '.join(missing)}]",
                   level="warning")
         return
     try:
         from influxdb_client_3 import InfluxDBClient3
         database = InfluxDBClient3(
-            host="http://{}:{}".format(os.environ["WRANGLE_DATABASE_HOST"],
-                                       os.environ["WRANGLE_DATABASE_PORT"]),
+            host=f"http://{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}",
             token=os.environ["WRANGLE_DATABASE_TOKEN"],
             database=os.environ["WRANGLE_DATABASE_NAME"],
         )
-        print_log("wrangle", "Database connection opened to [{}:{}/{}]".format(
-            os.environ["WRANGLE_DATABASE_HOST"], os.environ["WRANGLE_DATABASE_PORT"],
-            os.environ["WRANGLE_DATABASE_NAME"]), level="debug")
+        print_log("wrangle", f"Database connection opened to [{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}/{os.environ['WRANGLE_DATABASE_NAME']}]", level="debug")
     except Exception as exception:
         database = None
         print_log("wrangle", "Database disabled: connection failed", exception=exception, level="warning")
@@ -180,31 +175,31 @@ def get_file(file_name):
     file_name = basename(file_name)
     working = dirname(__file__)
     paths = [
-        "/root/{}".format(file_name),
-        "/etc/telegraf/{}".format(file_name),
-        "{}/../../../resources/{}".format(working, file_name),
-        "{}/../../../resources/config/{}".format(working, file_name),
-        "{}/../../../../../{}".format(working, file_name),
+        f"/root/{file_name}",
+        f"/etc/telegraf/{file_name}",
+        f"{working}/../../../resources/{file_name}",
+        f"{working}/../../../resources/config/{file_name}",
+        f"{working}/../../../../../{file_name}",
     ]
     for path in paths:
         if isfile(path):
             return path
-    raise IOError("Could not find file [{}] in the usual places {}".format(file_name, paths))
+    raise IOError(f"Could not find file [{file_name}] in the usual places {paths}")
 
 
 def get_dir(dir_name):
     working = dirname(__file__)
     parent_paths = [
         "/asystem/runtime",
-        "{}/../../../../../target".format(working),
+        f"{working}/../../../../../target",
     ]
     for parent_path in parent_paths:
         if isdir(parent_path):
-            path = abspath("{}/{}".format(parent_path, dir_name))
+            path = abspath(f"{parent_path}/{dir_name}")
             if not isdir(path):
                 os.makedirs(path)
             return path
-    raise IOError("Could not find path in the usual places {}".format(parent_paths))
+    raise IOError(f"Could not find path in the usual places {parent_paths}")
 
 
 def load_profile(profile_path):
@@ -245,7 +240,7 @@ class Library(object, metaclass=ABCMeta):
         if type(messages) is not list:
             messages = [messages]
         if started is not None:
-            messages[-1] = messages[-1] + " in [{:.3f}] sec".format(time.time() - started)
+            messages[-1] = messages[-1] + f" in [{time.time() - started:.3f}] sec"
         if data is not None:
             messages[-1] = messages[-1] + ": "
             if type(data) is list:
@@ -258,7 +253,7 @@ class Library(object, metaclass=ABCMeta):
         self.print_log("Execution Summary:")
         for source in self.counters:
             for action in self.counters[source]:
-                self.print_log("     {} {:8}".format("{} {} ".format(source, action).ljust(CTR_LBL_WIDTH, CTR_LBL_PAD), self.counters[source][action]))
+                self.print_log(f"     {f'{source} {action} '.ljust(CTR_LBL_WIDTH, CTR_LBL_PAD)} {self.counters[source][action]:8}")
 
     def add_counter(self, source, action, count=1):
         self.counters[source][action] += count
@@ -313,7 +308,7 @@ class Library(object, metaclass=ABCMeta):
         local_path = abspath(local_path)
         label = basename(local_path).split(".")[0]
         if not force and not check and isfile(local_path):
-            self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
+            self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         else:
@@ -341,7 +336,7 @@ class Library(object, metaclass=ABCMeta):
                     modified_timestamp = get_modified(response.headers)
                     if modified_timestamp is not None:
                         if modified_timestamp_cached == modified_timestamp:
-                            self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
+                            self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return DownloadResult(DownloadStatus.CACHED, local_path)
                 except (Exception,):
@@ -358,14 +353,13 @@ class Library(object, metaclass=ABCMeta):
                     if modified_timestamp is not None:
                         os.utime(local_path, (modified_timestamp, modified_timestamp))
                 except Exception as exception:
-                    self.print_log("File [{}] HTTP downloaded file [{}] modified timestamp set failed [{}]"
-                                   .format(label, local_path, modified_timestamp), exception=exception)
-                self.print_log("File [{}] downloaded to [{}]".format(label, local_path), started=started_time)
+                    self.print_log(f"File [{label}] HTTP downloaded file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
+                self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
             except Exception as exception:
                 if not ignore:
-                    self.print_log("File [{}] not available at [{}]".format(label, url_file), exception=exception)
+                    self.print_log(f"File [{label}] not available at [{url_file}]", exception=exception)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
@@ -374,7 +368,7 @@ class Library(object, metaclass=ABCMeta):
         local_path = abspath(local_path)
         label = basename(local_path).split(".")[0]
         if not force and not check and isfile(local_path):
-            self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
+            self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         else:
@@ -384,31 +378,30 @@ class Library(object, metaclass=ABCMeta):
             try:
                 client = FTP(url_server)
                 client.login()
-                modified_timestamp = int((parser.parse(client.voidcmd("MDTM {}".format(url_path))[4:].strip()) -
+                modified_timestamp = int((parser.parse(client.voidcmd(f"MDTM {url_path}")[4:].strip()) -
                                           datetime(1970, 1, 1)).total_seconds())
                 if not force and check and isfile(local_path):
                     modified_timestamp_cached = int(getmtime(local_path))
                     if modified_timestamp_cached == modified_timestamp:
-                        self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
+                        self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                         client.quit()
                         return DownloadResult(DownloadStatus.CACHED, local_path)
                 if not exists(dirname(local_path)):
                     os.makedirs(dirname(local_path))
-                client.retrbinary("RETR {}".format(url_path), open(local_path, 'wb').write)
+                client.retrbinary(f"RETR {url_path}", open(local_path, 'wb').write)
                 try:
                     os.utime(local_path, (modified_timestamp, modified_timestamp))
                 except Exception as exception:
-                    self.print_log("File [{}] FTP downloaded file [{}] modified timestamp set failed [{}]"
-                                   .format(label, local_path, modified_timestamp), exception=exception)
-                self.print_log("File [{}] downloaded to [{}]".format(label, local_path), started=started_time)
+                    self.print_log(f"File [{label}] FTP downloaded file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
+                self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 client.quit()
                 return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
             except Exception as exception:
                 if client is not None:
                     client.quit()
-                self.print_log("File [{}] not available at [{}]".format(label, url_file), exception=exception)
+                self.print_log(f"File [{label}] not available at [{url_file}]", exception=exception)
                 if not ignore:
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
@@ -421,7 +414,7 @@ class Library(object, metaclass=ABCMeta):
         end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
         if start != end_exclusive:
             if not force and not check and isfile(local_path):
-                self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time)
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             else:
@@ -441,13 +434,11 @@ class Library(object, metaclass=ABCMeta):
                                     else:
                                         end_expected = end_expected - timedelta(days=2 if now.weekday() == 5 else 1)
                                 if end_data == end_expected:
-                                    self.print_log("File [{}] cached at [{}]"
-                                                   .format(label, local_path), started=started_time)
+                                    self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                     return DownloadResult(DownloadStatus.CACHED, local_path)
                             else:
-                                self.print_log("File [{}] cached (but empty) at [{}]"
-                                               .format(label, local_path), started=started_time)
+                                self.print_log(f"File [{label}] cached (but empty) at [{local_path}]", started=started_time)
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return DownloadResult(DownloadStatus.CACHED, local_path)
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive)
@@ -463,13 +454,9 @@ class Library(object, metaclass=ABCMeta):
                         data_df = data_df[:-1]
                     if len(data_df) == 0:
                         if ignore:
-                            self.print_log(
-                                "File [{}] stock query returned no data for ticker [{}] between [{}] and [{}]"
-                                .format(label, ticker, start, end_exclusive))
+                            self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
                         else:
-                            raise Exception(
-                                "File [{}] stock query returned no data for ticker [{}] between [{}] and [{}]"
-                                .format(label, ticker, start, end_exclusive))
+                            raise Exception(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
                     if not exists(dirname(local_path)):
                         os.makedirs(dirname(local_path))
                     data_df.insert(loc=0, column='Date', value=data_df.index.strftime('%Y-%m-%d'))
@@ -481,8 +468,7 @@ class Library(object, metaclass=ABCMeta):
                                 if isinstance(prior_last, str) else prior_last
                             new_last = datetime.strptime(data_df['Date'].iloc[-1], '%Y-%m-%d').date()
                             if prior_last == new_last:
-                                self.print_log("File [{}] cached at [{}]"
-                                               .format(label, local_path), started=started_time)
+                                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return DownloadResult(DownloadStatus.CACHED, local_path)
                     self.csv_write(pl.from_pandas(data_df), local_path, print_verb="downloaded", started=started_time)
@@ -493,31 +479,29 @@ class Library(object, metaclass=ABCMeta):
                         try:
                             os.utime(local_path, (modified_timestamp, modified_timestamp))
                         except Exception as exception:
-                            self.print_log("File [{}] stock query file [{}] modified timestamp set failed [{}]"
-                                           .format(label, local_path, modified_timestamp), exception=exception)
+                            self.print_log(f"File [{label}] stock query file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
                 except Exception as exception:
-                    self.print_log("File [{}] stock query failed for ticker [{}] between [{}] and [{}]"
-                                   .format(label, ticker, start, end_exclusive), exception=exception)
+                    self.print_log(f"File [{label}] stock query failed for ticker [{ticker}] between [{start}] and [{end_exclusive}]", exception=exception)
                     if not ignore:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
     def database_download(self, query_name, query_string, start=None, end=None, check=True, force=False, ignore=True):
         started_time = time.time()
-        local_path = abspath("{}/_{}_Database_Download.csv".format(self.input, query_name))
+        local_path = abspath(f"{self.input}/_Database_{query_name}.csv")
         if config.disable_downloads or database is None:
             if isfile(local_path):
-                self.print_log("File [{}] cached at [{}]".format(query_name, local_path), started=started_time)
+                self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
-            self.print_log("File [{}] query skipped: downloads disabled and no cache available".format(query_name))
+            self.print_log(f"File [{query_name}] query skipped: downloads disabled and no cache available")
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not force and not check and isfile(local_path):
-            self.print_log("File [{}] cached at [{}]".format(query_name, local_path), started=started_time)
+            self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         if not force and check and isfile(local_path):
@@ -526,7 +510,7 @@ class Library(object, metaclass=ABCMeta):
                 data_start = data_df.head(1).rows()[0][0]
                 data_end = data_df.tail(1).rows()[0][0]
                 if (start is None or start >= data_start) and (end is None or end <= data_end):
-                    self.print_log("File [{}] cached at [{}]".format(query_name, local_path), started=started_time)
+                    self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     return DownloadResult(DownloadStatus.CACHED, local_path)
         try:
@@ -536,38 +520,38 @@ class Library(object, metaclass=ABCMeta):
                 data_df = data_df.to_frame()
             if data_df is None or len(data_df) == 0:
                 if ignore:
-                    self.print_log("File [{}] query returned no data".format(query_name))
+                    self.print_log(f"File [{query_name}] query returned no data")
                     return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
-                raise Exception("File [{}] query returned no data".format(query_name))
+                raise Exception(f"File [{query_name}] query returned no data")
             self.csv_write(data_df, local_path, print_verb="queried", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
             return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
         except Exception as exception:
-            self.print_log("File [{}] query failed".format(query_name), exception=exception, started=started_time)
+            self.print_log(f"File [{query_name}] query failed", exception=exception, started=started_time)
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
     def bank_download(self, file_cache, data="accounts", check=True, force=False):
         started_time = time.time()
-        file_path = abspath("{}/_Redbark_{}_Download.csv".format(self.input, file_cache))
+        file_path = abspath(f"{self.input}/_Bank_{file_cache}.csv")
         if not force and not check and isfile(file_path):
-            self.print_log("File [{}] cached at [{}]".format(file_cache, file_path), started=started_time)
+            self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, file_path)
         if config.disable_downloads:
             if isfile(file_path):
-                self.print_log("File [{}] cached at [{}]".format(file_cache, file_path), started=started_time)
+                self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
-            self.print_log("File [{}] query skipped: downloads disabled and no cache available".format(file_cache))
+            self.print_log(f"File [{file_cache}] query skipped: downloads disabled and no cache available")
             return DownloadResult(DownloadStatus.FAILED, None)
         token = os.environ.get("REDBARK_TOKEN", "")
         base_url = "https://api.redbark.co"
-        req_headers = {"Authorization": "Bearer {}".format(token), "Content-Type": "application/json"}
+        req_headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
         def _request(path):
-            req = urllib.request.Request("{}{}".format(base_url, path), headers=req_headers)
+            req = urllib.request.Request(f"{base_url}{path}", headers=req_headers)
             response = urllib.request.urlopen(req, context=ssl._create_unverified_context())
             return json.loads(response.read().decode())
 
@@ -578,7 +562,7 @@ class Library(object, metaclass=ABCMeta):
         def _all_accounts():
             rows, offset = [], 0
             while True:
-                result = _request("/v1/accounts?limit=200&offset={}".format(offset))
+                result = _request(f"/v1/accounts?limit=200&offset={offset}")
                 rows.extend(result.get("data", []))
                 if not _has_more(result):
                     break
@@ -593,7 +577,7 @@ class Library(object, metaclass=ABCMeta):
                 account_ids = [a["id"] for a in _all_accounts()]
                 rows = []
                 for i in range(0, len(account_ids), 100):
-                    result = _request("/v1/balances?accountIds={}".format(",".join(account_ids[i:i + 100])))
+                    result = _request(f"/v1/balances?accountIds={','.join(account_ids[i:i + 100])}")
                     rows.extend(result.get("data", []))
                 data_df = pl.DataFrame(rows) if rows else self.dataframe_new()
             elif data == "transactions":
@@ -603,7 +587,7 @@ class Library(object, metaclass=ABCMeta):
                 for connection_id in connection_ids:
                     tx_offset = 0
                     while True:
-                        result = _request("/v1/transactions?connectionId={}&limit=500&offset={}".format(connection_id, tx_offset))
+                        result = _request(f"/v1/transactions?connectionId={connection_id}&limit=500&offset={tx_offset}")
                         rows.extend(result.get("data", []))
                         if not _has_more(result):
                             break
@@ -614,28 +598,38 @@ class Library(object, metaclass=ABCMeta):
                 rows = result.get("categories", [])
                 data_df = pl.DataFrame(rows) if rows else self.dataframe_new()
             else:
-                raise ValueError("Unknown bank data type [{}]".format(data))
+                raise ValueError(f"Unknown bank data type [{data}]")
             if len(data_df) > 0:
                 new_csv = data_df.sort(data_df.columns[0]).write_csv()
                 new_hash = hashlib.md5(new_csv.encode()).hexdigest()
                 if not force and check and isfile(file_path):
                     with open(file_path, 'r') as f:
                         if hashlib.md5(f.read().encode()).hexdigest() == new_hash:
-                            self.print_log("File [{}] cached at [{}]".format(file_cache, file_path), started=started_time)
+                            self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return DownloadResult(DownloadStatus.CACHED, file_path)
                 if not exists(dirname(file_path)):
                     os.makedirs(dirname(file_path))
                 with open(file_path, 'w') as f:
                     f.write(new_csv)
-                self.print_log("File [{}] downloaded to [{}]".format(file_cache, file_path), started=started_time)
+                self.print_log(f"File [{file_cache}] downloaded to [{file_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
             return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
         except Exception as exception:
-            self.print_log("File [{}] download failed".format(file_cache), exception=exception)
+            self.print_log(f"File [{file_cache}] download failed", exception=exception)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
             return DownloadResult(DownloadStatus.FAILED, None)
+
+    def _sheet_cache_cleanup(self, name, current_version):
+        pattern = abspath(f"{self.input}/_Sheet_{name}_v*.csv")
+        for file_path in glob.glob(pattern):
+            filename = basename(file_path)
+            prefix = f"_Sheet_{name}_v"
+            version_str = filename[len(prefix):-len(".csv")]
+            if version_str.isdigit() and int(version_str) <= current_version - 2:
+                os.remove(file_path)
+                self.print_log(f"File [{name}] deleted old cached version [{file_path}]")
 
     def sheet_download(self, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_load_secs=10, sheet_retry_max=5,
                        read_cache=True, write_cache=False, print_rows=PL_PRINT_ROWS):
@@ -646,17 +640,31 @@ class Library(object, metaclass=ABCMeta):
             drive_version = build('drive', 'v3', credentials=Spread(drive_url).client.auth, cache_discovery=False) \
                 .files().get(fileId=drive_key, fields='version').execute().get('version')
         except Exception as exception:
-            self.print_log("Failed to get Drive version of sheet [{}]".format(drive_url), exception=exception, level="error")
+            self.print_log(f"Failed to get Drive version of sheet [{drive_url}]", exception=exception, level="error")
+        name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
         if drive_version is not None:
-            file_path = abspath("{}/_{}_Sheet_Download_v{}.csv".format(self.input, workbook_name, drive_version))
+            file_path = abspath(f"{self.input}/_Sheet_{name}_v{drive_version}.csv")
+            self._sheet_cache_cleanup(name, int(drive_version))
             if isfile(file_path):
-                self.print_log("File [{}] cached at [{}] version [{}]".format(workbook_name, file_path, drive_version), started=started_time)
+                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         else:
-            file_path = abspath("{}/_{}_Sheet_Download.csv".format(self.input, workbook_name))
-            if read_cache and not write_cache and isfile(file_path):
-                self.print_log("File [{}] cached at [{}]".format(workbook_name, file_path), started=started_time)
+            prefix = f"_Sheet_{name}_v"
+            versioned_files = sorted(
+                [(int(basename(p)[len(prefix):-len(".csv")]), p)
+                 for p in glob.glob(abspath(f"{self.input}/{prefix}*.csv"))
+                 if basename(p)[len(prefix):-len(".csv")].isdigit()],
+                reverse=True
+            )
+            if versioned_files:
+                _, file_path = versioned_files[0]
+                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
+            file_path = abspath(f"{self.input}/_Sheet_{name}.csv")
+            if read_cache and not write_cache and isfile(file_path):
+                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
+                return DownloadResult(DownloadStatus.CACHED, file_path)
+        file_path = abspath(f"{self.input}/_Sheet_{name}.csv") if drive_version is None else abspath(f"{self.input}/_Sheet_{name}_v{drive_version}.csv")
         retries = 0
         caught_exception = None
 
@@ -697,11 +705,10 @@ class Library(object, metaclass=ABCMeta):
                         if len(data_df.filter(pl.col(column) == "Loading...")) > 0:
                             data_df = None
                             raise SheetStillLoadingError(
-                                "DataFrame [{}] loaded from sheet that is yet to finish rendering column [{}]" \
-                                    .format(workbook_name, column))
+                                f"DataFrame [{workbook_name}] loaded from sheet that is yet to finish rendering column [{column}]")
                     self.csv_write(data_df, file_path, print_label=workbook_name, print_rows=-1)
-                    self.dataframe_print(data_df, print_label=workbook_name, print_verb="downloaded", print_suffix= \
-                        "from [{}][{}{}]".format(drive_url, workbook_name, "" if sheet_name is None else ":{}".format(sheet_name)),
+                    self.dataframe_print(data_df, print_label=workbook_name, print_verb="downloaded",
+                                         print_suffix=f"from [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
                                          print_rows=print_rows, started=started_time)
                     caught_exception = None
                     break
@@ -711,8 +718,10 @@ class Library(object, metaclass=ABCMeta):
             if caught_exception is not None:
                 raise caught_exception
         except Exception as exception:
-            self.print_log("DataFrame [{}] unavailable at [{}]{}".format(workbook_name, drive_url, "" if retries < sheet_retry_max else \
-                " after retrying [{}] times over [{}] seconds".format(sheet_retry_max, sheet_retry_max * sheet_load_secs)), exception=exception)
+            self.print_log(f"DataFrame [{workbook_name}] unavailable at [{drive_url}]"
+                           + ("" if retries < sheet_retry_max
+                              else f" after retrying [{sheet_retry_max}] times over [{sheet_retry_max * sheet_load_secs}] seconds"),
+                           exception=exception)
             return DownloadResult(DownloadStatus.FAILED, None)
         return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
 
@@ -720,24 +729,30 @@ class Library(object, metaclass=ABCMeta):
                      print_label=None, print_rows=PL_PRINT_ROWS):
         started_time = time.time()
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
+        name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
         try:
             data_df_pd = data_df.to_pandas()
+            drive_version = None
             if not config.disable_uploads:
-                Spread(drive_url).df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start="{}{}".format(sheet_start_column, sheet_start_row), replace=True)
-            else:
-                csv_name = "_{}{}_Sheet_Upload.csv".format(workbook_name, "" if sheet_name is None else "_{}".format(sheet_name))
-                self.csv_write(data_df, abspath("{}/{}".format(self.input, csv_name)))
+                spread = Spread(drive_url)
+                spread.df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start=f"{sheet_start_column}{sheet_start_row}", replace=True)
+                try:
+                    drive_version = build('drive', 'v3', credentials=spread.client.auth, cache_discovery=False) \
+                        .files().get(fileId=drive_key, fields='version').execute().get('version')
+                except Exception as exception:
+                    self.print_log(f"Failed to get Drive version after upload of [{drive_url}]", exception=exception, level="error")
+            suffix = f"_v{drive_version}" if drive_version is not None else ""
+            file_path = abspath(f"{self.input}/_Sheet_{name}{suffix}.csv")
+            self.csv_write(data_df, file_path)
+            if drive_version is not None:
+                self._sheet_cache_cleanup(name, int(drive_version))
             self.dataframe_print(data_df, print_label=print_label, print_verb="uploaded",
-                                 print_suffix="to [{}][{}{}]".format(
-                                     drive_url,
-                                     workbook_name,
-                                     "" if sheet_name is None else ":{}".format(sheet_name),
-                                     started_time=started_time,
-                                     print_rows=print_rows))
+                                 print_suffix=f"to [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
+                                 started=started_time, print_rows=print_rows)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
         except Exception as exception:
-            self.print_log("DataFrame failed to upload to [{}]".format(drive_url), exception=exception)
+            self.print_log(f"DataFrame failed to upload to [{drive_url}]", exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def dropbox_download(self, dropbox_dir, local_dir, check=True):
@@ -787,7 +802,7 @@ class Library(object, metaclass=ABCMeta):
             return hasher.hexdigest()
 
         local_files = {}
-        for local_file in glob.glob("{}/*".format(local_dir)):
+        for local_file in glob.glob(f"{local_dir}/*"):
             local_files[basename(local_file)] = {
                 "hash": file_hash(local_file) if check else None,
                 "modified": int(getmtime(local_file)) if check else None
@@ -807,13 +822,13 @@ class Library(object, metaclass=ABCMeta):
                 cursor = response.cursor
             else:
                 break
-        self.print_log("Directory [{}] listed [{}] files from [https://www.dropbox.com/home/{}]".format(basename(local_dir), len(dropbox_files), dropbox_dir), started=started_time)
+        self.print_log(f"Directory [{basename(local_dir)}] listed [{len(dropbox_files)}] files from [https://www.dropbox.com/home/{dropbox_dir}]", started=started_time)
         started_time = time.time()
         actioned_files = {}
         for dropbox_file in dropbox_files:
             started_time_file = time.time()
             file_actioned = False
-            local_path = abspath("{}/{}".format(local_dir, dropbox_file))
+            local_path = abspath(f"{local_dir}/{dropbox_file}")
             label = basename(local_path).split(".")[0]
             if dropbox_file not in local_files or (check and (
                     dropbox_files[dropbox_file]["modified"] != local_files[dropbox_file]["modified"] or
@@ -822,28 +837,25 @@ class Library(object, metaclass=ABCMeta):
                 if not exists(dirname(local_path)):
                     os.makedirs(dirname(local_path))
                 with open(local_path, "wb") as local_file:
-                    metadata, response = service.files_download(path="{}/{}".format(dropbox_dir, dropbox_file))
+                    metadata, response = service.files_download(path=f"{dropbox_dir}/{dropbox_file}")
                     local_file.write(response.content)
                 try:
                     os.utime(local_path,
                              (dropbox_files[dropbox_file]["modified"], dropbox_files[dropbox_file]["modified"]))
                 except Exception as exception:
-                    self.print_log("File [{}] downloaded file [{}] modified timestamp set failed [{}]"
-                                   .format(label, local_path, dropbox_files[dropbox_file]["modified"]),
-                                   exception=exception)
+                    self.print_log(f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{dropbox_files[dropbox_file]['modified']}]", exception=exception)
                 local_files[dropbox_file] = {
                     "hash": dropbox_files[dropbox_file]["hash"],
                     "modified": dropbox_files[dropbox_file]["modified"]
                 }
                 file_actioned = True
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                self.print_log("File [{}] downloaded to [{}]".format(label, local_path), started=started_time_file)
+                self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time_file)
             else:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time_file)
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file)
             actioned_files[local_path] = True, file_actioned
-        self.print_log("Directory [{}] downloaded [{}] files from [https://www.dropbox.com/home/{}]"
-                       .format(basename(local_dir).title(), len(actioned_files), dropbox_dir), started=started_time)
+        self.print_log(f"Directory [{basename(local_dir).title()}] downloaded [{len(actioned_files)}] files from [https://www.dropbox.com/home/{dropbox_dir}]", started=started_time)
         return collections.OrderedDict(sorted(actioned_files.items()))
 
     def drive_synchronise(self, drive_dir, local_dir, check=True, download=True, upload=False):
@@ -858,7 +870,7 @@ class Library(object, metaclass=ABCMeta):
 
         actioned_files = {}
         local_files = {}
-        for local_file in glob.glob("{}/*".format(local_dir)):
+        for local_file in glob.glob(f"{local_dir}/*"):
             local_files[basename(local_file)] = {
                 "hash": file_hash(local_file) if check else None,
                 "modified": int(getmtime(local_file)) if check else None
@@ -870,7 +882,7 @@ class Library(object, metaclass=ABCMeta):
         token = None
         while True:
             response = (service.files()
-                        .list(q="'{}' in parents".format(drive_dir), spaces='drive',
+                        .list(q=f"'{drive_dir}' in parents", spaces='drive',
                               fields='nextPageToken, files(id, name, modifiedTime, md5Checksum)',
                               pageToken=token).execute())
             for drive_file in response.get('files', []):
@@ -883,13 +895,12 @@ class Library(object, metaclass=ABCMeta):
             token = response.get('nextPageToken')
             if not token:
                 break
-        self.print_log("Directory [{}] listed [{}] files from [https://drive.google.com/drive/folders/{}]"
-                       .format(basename(local_dir), len(drive_files), drive_dir), started=started_time)
+        self.print_log(f"Directory [{basename(local_dir)}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
         started_time = time.time()
         for drive_file in drive_files:
             started_time_file = time.time()
             file_actioned = False
-            local_path = abspath("{}/{}".format(local_dir, drive_file))
+            local_path = abspath(f"{local_dir}/{drive_file}")
             label = basename(local_path).split(".")[0]
             if drive_file not in local_files or (check and (
                     drive_files[drive_file]["modified"] > local_files[drive_file]["modified"]
@@ -908,26 +919,24 @@ class Library(object, metaclass=ABCMeta):
                     try:
                         os.utime(local_path, (drive_files[drive_file]["modified"], drive_files[drive_file]["modified"]))
                     except Exception as exception:
-                        self.print_log("File [{}] downloaded file [{}] modified timestamp set failed [{}]"
-                                       .format(label, local_path, drive_files[drive_file]["modified"]),
-                                       exception=exception)
+                        self.print_log(f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]", exception=exception)
                     local_files[drive_file] = {
                         "hash": drive_files[drive_file]["hash"],
                         "modified": drive_files[drive_file]["modified"]
                     }
                     file_actioned = True
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                    self.print_log("File [{}] downloaded to [{}]".format(label, local_path), started=started_time_file)
+                    self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time_file)
             else:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                self.print_log("File [{}] cached at [{}]".format(label, local_path), started=started_time_file)
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file)
             actioned_files[local_path] = True, file_actioned
         if upload:
             for local_file in local_files:
                 if not local_file.startswith("_"):
                     started_time_file = time.time()
                     file_actioned = False
-                    local_path = abspath("{}/{}".format(local_dir, local_file))
+                    local_path = abspath(f"{local_dir}/{local_file}")
                     label = basename(local_path).split(".")[0]
                     if local_file not in drive_files or (check and (
                             drive_files[local_file]["modified"] != local_files[local_file]["modified"] or
@@ -948,20 +957,15 @@ class Library(object, metaclass=ABCMeta):
                                                                      media_body=data).execute()
                             file_actioned = True
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)
-                            self.print_log("File [{}] uploaded to [https://drive.google.com/file/d/{}]"
-                                           .format(label, request.get('id') if drive_id is None else drive_id),
-                                           started=started_time_file)
+                            self.print_log(f"File [{label}] uploaded to [https://drive.google.com/file/d/{request.get('id') if drive_id is None else drive_id}]", started=started_time_file)
                         except Exception as exception:
-                            self.print_log("File [{}] failed to upload to [https://drive.google.com/drive/folders/{}]"
-                                           .format(label, drive_dir), exception=exception)
+                            self.print_log(f"File [{label}] failed to upload to [https://drive.google.com/drive/folders/{drive_dir}]", exception=exception)
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
                     else:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_PERSISTED)
-                        self.print_log("File [{}] verified at [https://drive.google.com/file/d/{}]"
-                                       .format(label, drive_files[local_file]["id"]), started=started_time_file)
+                        self.print_log(f"File [{label}] verified at [https://drive.google.com/file/d/{drive_files[local_file]['id']}]", started=started_time_file)
                     actioned_files[local_path] = True, file_actioned
-        self.print_log("Directory [{}] synchronised [{}] files from [https://drive.google.com/drive/folders/{}]"
-                       .format(basename(local_dir).title(), len(actioned_files), drive_dir), started=started_time)
+        self.print_log(f"Directory [{basename(local_dir).title()}] synchronised [{len(actioned_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
         return collections.OrderedDict(sorted(actioned_files.items()))
 
     def state_cache(self, data_df_update, aggregate_function=None, key_columns=None):
@@ -1012,10 +1016,10 @@ class Library(object, metaclass=ABCMeta):
         key_columns = key_columns if key_columns is not None else ["Date"]
         aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_function is None \
             else (lambda _data_df: aggregate_function(_data_df) if len(_data_df) > 0 else _data_df)
-        file_delta = abspath("{}/__{}_Delta.csv".format(self.input, self.name.title()))
-        file_update = abspath("{}/__{}_Update.csv".format(self.input, self.name.title()))
-        file_current = abspath("{}/__{}_Current.csv".format(self.input, self.name.title()))
-        file_previous = abspath("{}/__{}_Previous.csv".format(self.input, self.name.title()))
+        file_delta = abspath(f"{self.input}/__{self.name.title()}_Delta.csv")
+        file_update = abspath(f"{self.input}/__{self.name.title()}_Update.csv")
+        file_current = abspath(f"{self.input}/__{self.name.title()}_Current.csv")
+        file_previous = abspath(f"{self.input}/__{self.name.title()}_Previous.csv")
         if not isdir(self.input):
             os.makedirs(self.input)
         if not config.disable_downloads and config.clean:
@@ -1023,17 +1027,15 @@ class Library(object, metaclass=ABCMeta):
                 os.remove(file_current)
         if len(data_df_update) > 0:
             if len(data_df_update.columns) == 0 or data_df_update.columns[0] != "Date" or data_df_update.dtypes[0] != pl.Date:
-                raise SchemaError("DataFrame requires first column of parameter [data_df_update] "
-                                  "to be named [Date], found [{}] and of type [date], found [{}]"
-                                  .format(data_df_update.columns[0],
-                                          self.dataframe_type_to_str(data_df_update.dtypes[0])))
+                raise SchemaError(f"DataFrame requires first column of parameter [data_df_update] "
+                                  f"to be named [Date], found [{data_df_update.columns[0]}] and of type [date], found [{self.dataframe_type_to_str(data_df_update.dtypes[0])}]")
         else:
             data_df_update = self.dataframe_new(schema={"Date": pl.Date},
-                                                print_label="{}_Update".format(self.name.title()))
+                                                print_label=f"{self.name.title()}_Update")
         if config.disable_downloads:
             data_df_current = self.csv_read(file_current) \
                 if isfile(file_current) else self.dataframe_new(schema={"Date": pl.Date},
-                                                                print_label="{}_Current".format(self.name.title()))
+                                                                print_label=f"{self.name.title()}_Current")
             self.print_log("DataFrame [State_Caches] created ignoring updates", started=started_time)
             data_df_current = data_df_current.sort(key_columns)
             return self.dataframe_new(schema=data_df_current.schema), data_df_current, data_df_current
@@ -1041,7 +1043,7 @@ class Library(object, metaclass=ABCMeta):
         data_df_update = aggregate_function_wrapped(data_df_update)
         data_df_current = self.csv_read(file_current) \
             if isfile(file_current) else self.dataframe_new(schema=data_df_update.schema,
-                                                            print_label="{}_Current".format(self.name.title()))
+                                                            print_label=f"{self.name.title()}_Current")
         data_schema_update_column_count = len(data_df_update.columns)
         data_schema = OrderedDict()
         for (data_column, data_type) in zip(data_df_update.columns, data_df_update.dtypes):
@@ -1071,7 +1073,7 @@ class Library(object, metaclass=ABCMeta):
             os.remove(file_previous)
         data_df_previous = self.csv_read(file_previous) \
             if isfile(file_previous) else self.dataframe_new(schema=data_schema,
-                                                             print_label="{}_Previous".format(self.name.title()))
+                                                             print_label=f"{self.name.title()}_Previous")
         for data_column in data_schema:
             if data_column not in data_df_previous:
                 data_df_previous = data_df_previous.with_columns(
@@ -1115,7 +1117,7 @@ class Library(object, metaclass=ABCMeta):
         return self.dataframe_print(data_df,
                                     print_label=basename(local_path).split(".")[0].removeprefix("__").removeprefix("_") \
                                         if print_label is None else print_label,
-                                    print_suffix="from [{}]".format(local_path), print_rows=print_rows,
+                                    print_suffix=f"from [{local_path}]", print_rows=print_rows,
                                     started=started_time)
 
     def csv_write(self, data_df, local_path, print_prefix="File", print_label=None, print_verb="written",
@@ -1126,7 +1128,7 @@ class Library(object, metaclass=ABCMeta):
                                     print_label=basename(local_path).split(".")[0].removeprefix("__").removeprefix("_") \
                                         if print_label is None else print_label, print_prefix=print_prefix,
                                     print_verb=print_verb,
-                                    print_suffix="to [{}]".format(local_path), print_rows=print_rows,
+                                    print_suffix=f"to [{local_path}]", print_rows=print_rows,
                                     started=started_time)
 
     def csv_read(self, local_path, schema={}, print_label=None, print_verb="loaded", print_rows=PL_PRINT_ROWS):
@@ -1136,7 +1138,7 @@ class Library(object, metaclass=ABCMeta):
         return self.dataframe_print(data_df,
                                     print_label=basename(local_path).split(".")[0].removeprefix("__").removeprefix("_") \
                                         if print_label is None else print_label, print_verb=print_verb,
-                                    print_suffix="from [{}]".format(local_path), print_rows=print_rows,
+                                    print_suffix=f"from [{local_path}]", print_rows=print_rows,
                                     started=started_time)
 
     def dataframe_new(self, data=[], schema={}, orient=None,
@@ -1168,13 +1170,12 @@ class Library(object, metaclass=ABCMeta):
                                            data_df.columns[1:]]
         data_df = data_df.rename(dict(zip(data_df.columns, renamed_columns))) \
             .with_columns(pl.col("timestamp").cast(pl.Datetime).dt.epoch() * 1000)
-        prefix = self.name.lower() + "," + \
-                 ",".join(["{}={}".format(tag, tags[tag]) for tag in tags]) + " "
+        prefix = self.name.lower() + "," + ",".join([f"{tag}={tags[tag]}" for tag in tags]) + " "
         line_expressions = [pl.lit(prefix)]
         for column in data_df.columns[1:]:
             if len(line_expressions) > 1:
                 line_expressions.append(pl.lit(","))
-            line_expressions.extend([pl.lit("{}=".format(column)), pl.col(column)])
+            line_expressions.extend([pl.lit(f"{column}="), pl.col(column)])
         line_expressions.extend([pl.lit(" "), pl.col("timestamp")])
         total_rows = len(data_df)
         emitted = 0
@@ -1184,7 +1185,7 @@ class Library(object, metaclass=ABCMeta):
             for line in series:
                 yield line
                 emitted += 1
-        self.dataframe_print(data_df, print_label=print_label, print_verb="serialised", print_suffix="to [{:,}] lines".format(emitted), started=started_time)
+        self.dataframe_print(data_df, print_label=print_label, print_verb="serialised", print_suffix=f"to [{emitted:,}] lines", started=started_time)
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, total_rows)
 
@@ -1196,12 +1197,12 @@ class Library(object, metaclass=ABCMeta):
                 pass
             if config.disable_uploads:
                 tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
-                tag_suffix = " [{}]".format(",".join("{}={}".format(k, v) for k, v in tags_used.items())) if tags_used else ""
-                csv_path = abspath("{}/_{}_Database_Upload.csv".format(self.input, self.name))
+                tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
+                csv_path = abspath(f"{self.input}/_Database_{self.name}.csv")
                 date_col = data_df.columns[0]
                 fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
                 csv_df = data_df \
-                    .rename({col: "{}{}".format(col, tag_suffix) for col in data_df.columns[1:]}) \
+                    .rename({col: f"{col}{tag_suffix}" for col in data_df.columns[1:]}) \
                     .with_columns(pl.col(date_col).cast(pl.Datetime).dt.strftime(fmt).alias(date_col))
                 if csv_path in self._db_cache_dfs:
                     csv_df = self._db_cache_dfs[csv_path].join(csv_df, on=date_col, how="full", coalesce=True).sort(date_col)
@@ -1217,9 +1218,7 @@ class Library(object, metaclass=ABCMeta):
             if buffer:
                 database.write(record=buffer, write_precision="ms")
         except Exception as exception:
-            self.print_log("DataFrame{} write failed"
-                           .format("" if print_label is None else " [{}]".format(print_label)),
-                           exception=exception)
+            self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed", exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def dataframe_type_to_str(self, dtype):
@@ -1229,7 +1228,7 @@ class Library(object, metaclass=ABCMeta):
         if compact:
             schema = []
             for column in data_df.schema:
-                schema.append("{}({})".format(column, self.dataframe_type_to_str(data_df.schema[column])))
+                schema.append(f"{column}({self.dataframe_type_to_str(data_df.schema[column])})")
             return "[" + ", ".join(schema) + "]"
         else:
             with pl.Config(
@@ -1251,14 +1250,9 @@ class Library(object, metaclass=ABCMeta):
             return data_df
         if print_rows >= 0:
             if messages is None:
-                messages = "{}{} {} with [{:,}] columns and [{:,}] rows{}".format(
-                    print_prefix,
-                    "" if print_label is None else " [{}]".format(print_label),
-                    print_verb,
-                    len(data_df.columns),
-                    len(data_df),
-                    "" if print_suffix is None else " {}".format(print_suffix),
-                )
+                messages = (f"{print_prefix}{'' if print_label is None else f' [{print_label}]'}"
+                            f" {print_verb} with [{len(data_df.columns):,}] columns and [{len(data_df):,}] rows"
+                            f"{'' if print_suffix is None else f' {print_suffix}'}")
             self.print_log(messages,
                            None if print_rows == 0 else self.dataframe_to_str(data_df, compact, print_rows),
                            started=started)
@@ -1270,7 +1264,7 @@ class Library(object, metaclass=ABCMeta):
             if file_name.startswith(file_prefix):
                 file_path = join(file_dir, file_name)
                 files[file_path] = True, True
-                self.print_log("File [{}] found at [{}]".format(file_name, file_path))
+                self.print_log(f"File [{file_name}] found at [{file_path}]")
         return files
 
     def counter_write(self):
@@ -1280,10 +1274,8 @@ class Library(object, metaclass=ABCMeta):
         timestamp_ms = int(time.time() * 1000)
         for source in self.counters:
             for action in self.counters[source]:
-                values.append("{}={}i".format("{}_{}".format(source, action).lower().replace(" ", "_"),
-                                              self.counters[source][action]))
-        line = "{},type=metadata,period=30m,unit=scalar,source=wrangle {} {}" \
-            .format(self.name.lower(), ",".join(values), timestamp_ms)
+                values.append(f"{f'{source}_{action}'.lower().replace(' ', '_')}={self.counters[source][action]}i")
+        line = f"{self.name.lower()},type=metadata,period=30m,unit=scalar,source=wrangle {','.join(values)} {timestamp_ms}"
         try:
             database.write(record=line, write_precision="ms")
         except Exception as exception:
@@ -1293,4 +1285,4 @@ class Library(object, metaclass=ABCMeta):
         self.name = name
         self.reset_counters()
         self.input_drive = input_drive
-        self.input = abspath(get_dir("data/{}".format(name.lower())))
+        self.input = abspath(get_dir(f"data/{name.lower()}"))

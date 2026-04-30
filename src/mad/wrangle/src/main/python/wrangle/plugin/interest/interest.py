@@ -16,7 +16,7 @@ PERIODS = OrderedDict([
     ('20 Year Mean', 20 * 12),
     ('30 Year Mean', 30 * 12),
 ])
-COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
+COLUMNS = [f"{label} {period}".strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
 
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
@@ -44,7 +44,7 @@ class Interest(library.Library):
                         retail_df = retail_df.with_columns((pl.col("Date").dt.strftime('%Y-%m-01').str.to_date()).alias("Date"))
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     except Exception as exception:
-                        self.print_log("Unexpected error processing file [{}]".format(retail_file), exception=exception)
+                        self.print_log(f"Unexpected error processing file [{retail_file}]", exception=exception)
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -65,7 +65,7 @@ class Interest(library.Library):
                         inflation_df = inflation_df.with_columns((pl.col("Date").dt.strftime('%Y-%m-01').str.to_date()).alias("Date"))
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     except Exception as exception:
-                        self.print_log("Unexpected error processing file [{}]".format(inflation_file), exception=exception)
+                        self.print_log(f"Unexpected error processing file [{inflation_file}]", exception=exception)
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -96,7 +96,7 @@ class Interest(library.Library):
                 for rate in LABELS:
                     _columns.append(rate)
                     for _period in PERIODS:
-                        _column = '{} {}'.format(rate, _period)
+                        _column = f'{rate} {_period}'
                         _columns.append(_column)
                         _data_df = _data_df.with_columns(
                             (pl.col(rate).rolling_mean(window_size=PERIODS[_period])).alias(_column))
@@ -116,13 +116,13 @@ class Interest(library.Library):
                 }, print_label="Interest_1_Month_Mean")
                 for int_period in PERIODS:
                     interest_periodly_df = interest_current_df \
-                        .select(["Date"] + ["{} {}".format(int_rate, int_period).strip() for int_rate in LABELS])
+                        .select(["Date"] + [f"{int_rate} {int_period}".strip() for int_rate in LABELS])
                     interest_periodly_df.columns = ["Date"] + LABELS
                     self.database_upload(interest_periodly_df.drop_nulls(), tags={
                         "type": "mean",
-                        "period": "{:0.0f}y".format(PERIODS[int_period] / 12),
+                        "period": f"{PERIODS[int_period] / 12:0.0f}y",
                         "unit": "%"
-                    }, print_label="Interest_{}".format(int_period).replace(" ", "_"))
+                    }, print_label=f"Interest_{int_period}".replace(" ", "_"))
                 self.print_log("LineProtocol [Interest] serialised", started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing interest data", exception=exception)

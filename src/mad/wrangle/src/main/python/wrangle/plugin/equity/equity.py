@@ -31,8 +31,8 @@ DIMENSIONS_PRICE = [
     "Price Close",
 ]
 DIMENSIONS_CHANGE = [
-    "Price Close {}{}d-Change {}".format(price_type, change_period, change_type).strip()
-    for price_type in [""] + ["{} ".format(dimension) for dimension in DIMENSIONS_PRICE_TYPES]
+    f"Price Close {price_type}{change_period}d-Change {change_type}".strip()
+    for price_type in [""] + [f"{dimension} " for dimension in DIMENSIONS_PRICE_TYPES]
     for change_period in DIMENSIONS_CHANGE_PERIODS
     for change_type in ["Absolute", "Percentage"]
 ]
@@ -51,12 +51,12 @@ DIMENSIONS_AUX_TYPES = [
 ]
 DIMENSIONS_PRICE_AUX = DIMENSIONS_PRICE + DIMENSIONS_AUX
 DIMENSIONS_PRICE_AUX_TYPES = (
-        ["{} {}".format(price, price_type).strip()
+        [f"{price} {price_type}".strip()
          for price in DIMENSIONS_PRICE for price_type in [""] + DIMENSIONS_PRICE_TYPES]
         + DIMENSIONS_AUX + DIMENSIONS_AUX_TYPES
 )
 DIMENSIONS_ALL = (
-        ["{} {}".format(price, price_type).strip()
+        [f"{price} {price_type}".strip()
          for price in DIMENSIONS_PRICE if price != "Price Close" for price_type in [""] + DIMENSIONS_PRICE_TYPES]
         + sorted(["Price Close", "Price Close Base", "Price Close Spot"] + DIMENSIONS_CHANGE)
         + DIMENSIONS_VOLUME + DIMENSIONS_AUX + DIMENSIONS_AUX_TYPES
@@ -64,7 +64,7 @@ DIMENSIONS_ALL = (
 
 DIMENSIONS_STATE = (
         ["Market Volume Spot", "Price Close", "Price Close Base", "Price Close Spot", "Currency Rate Base"]
-        + ["Price Close {}{}d-Change Percentage".format(pt, period)
+        + [f"Price Close {pt}{period}d-Change Percentage"
            for period in DIMENSIONS_CHANGE_PERIODS for pt in ["", "Base ", "Spot "]]
 )
 
@@ -119,24 +119,21 @@ class Equity(library.Library):
                     if year == today.year:
                         for month in range(1, today.month + 1):
                             if year != stock_start.year or month >= stock_start.month:
-                                file_name = "{}/Yahoo_{}_{}-{:02}.csv".format(self.input, ticker, year, month)
+                                file_name = f"{self.input}/Yahoo_{ticker}_{year}-{month:02}.csv"
                                 stock_files[file_name] = self.stock_download(
                                     file_name,
-                                    "{}{}{}{}".format(STOCK[stock]["prefix"], ticker, '.' if STOCK[stock]["exchange"] != "" else '', STOCK[stock]["exchange"]),
-                                    "{}-{:02}-01".format(year, month),
-                                    "{}-{:02}-{:02}".format(
-                                        year,
-                                        month,
-                                        calendar.monthrange(year, month)[1]),
+                                    f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
+                                    f"{year}-{month:02}-01",
+                                    f"{year}-{month:02}-{calendar.monthrange(year, month)[1]:02}",
                                     STOCK[stock]["end of day"], check=year == today.year and month == today.month)
                     else:
                         start_month = stock_start.month if year == stock_start.year else 1
-                        file_name = "{}/Yahoo_{}_{}.csv".format(self.input, ticker, year)
+                        file_name = f"{self.input}/Yahoo_{ticker}_{year}.csv"
                         stock_files[file_name] = self.stock_download(
                             file_name,
-                            "{}{}{}{}".format(STOCK[stock]["prefix"], ticker, '.' if STOCK[stock]["exchange"] != "" else '', STOCK[stock]["exchange"]),
-                            "{}-{:02}-01".format(year, start_month),
-                            "{}-{:02}-{:02}".format(year, 12, 31),
+                            f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
+                            f"{year}-{start_month:02}-01",
+                            f"{year}-12-31",
                             STOCK[stock]["end of day"], check=False)
 
             # Sync stock and fund files from Drive
@@ -159,7 +156,7 @@ class Equity(library.Library):
             stock_files = {f: library.DownloadResult(library.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.input, "Yahoo")}
             statement_files = self.file_list(self.input, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
-        self.print_log("Files [Equity] downloaded or cached [{}] stock and [{}] fund files".format(len(stock_files), len(statement_files)), started=started_time)
+        self.print_log(f"Files [Equity] downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files", started=started_time)
 
         # Collect stock file data
         started_time = time.time()
@@ -182,7 +179,7 @@ class Equity(library.Library):
                             "Stock Splits": pl.Float64,
                         })
                         stock_df = stock_df.with_columns([pl.lit("AUD").alias("Base"), pl.lit(1.0).alias("Rate")])
-                        stock_new_names = ["Date"] + ["{} {}".format(stock_ticker, column) for column in DIMENSIONS_PRICE_AUX]
+                        stock_new_names = ["Date"] + [f"{stock_ticker} {column}" for column in DIMENSIONS_PRICE_AUX]
                         stock_df = stock_df.rename(dict(zip(stock_df.columns, stock_new_names)))
                         if stock_ticker in stocks_df:
                             stocks_df[stock_ticker] = pl.concat([stocks_df[stock_ticker], stock_df])
@@ -190,7 +187,7 @@ class Equity(library.Library):
                             stocks_df[stock_ticker] = stock_df
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     except Exception as exception:
-                        self.print_log("Unexpected error processing file [{}]".format(stock_file_name), exception=exception)
+                        self.print_log(f"Unexpected error processing file [{stock_file_name}]", exception=exception)
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -198,8 +195,7 @@ class Equity(library.Library):
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
         for stock_ticker in stocks_df:
             self.dataframe_print(stocks_df[stock_ticker], print_label=stock_ticker, print_verb="collected")
-        self.print_log("DataFrame [Stocks] collected with [{}] stocks across [{}] files"
-                       .format(len(stocks_df), stocks_files_count), started=started_time)
+        self.print_log(f"DataFrame [Stocks] collected with [{len(stocks_df)}] stocks across [{stocks_files_count}] files", started=started_time)
 
         # Parse fund file data
         started_time = time.time()
@@ -237,9 +233,8 @@ class Equity(library.Library):
                                 while line_index < len(statement_lines):
                                     statement_line = statement_lines[line_index].strip()
                                     statement_tokens = statement_line.split()
-                                    parse_line = "File [{}]: Page [{:02d}]: Line [{:02d}]:  ".format(
-                                        basename(statement_file_name), page_index, line_index)
-                                    parse_line += " ".join("{:02d}:{}".format(i, t) for i, t in enumerate(statement_tokens))
+                                    parse_line = f"File [{basename(statement_file_name)}]: Page [{page_index:02d}]: Line [{line_index:02d}]:  "
+                                    parse_line += " ".join(f"{i:02d}:{t}" for i, t in enumerate(statement_tokens))
                                     parse_lines.append(parse_line)
                                     if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
                                         if page_index == 0:
@@ -253,8 +248,7 @@ class Equity(library.Library):
                                                 else:
                                                     statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                                                     statement_data[statement_file_name]["Errors"] \
-                                                        .append("Could not determine statement type or owner from line [{}]"
-                                                                .format(statement_line))
+                                                        .append(f"Could not determine statement type or owner from line [{statement_line}]")
                                             if statement_line.startswith("Statement date"):
                                                 statement_date_str = statement_tokens[2]
                                                 if len(statement_date_str) == 9:
@@ -262,7 +256,7 @@ class Equity(library.Library):
                                                 elif len(statement_date_str) == 11:
                                                     statement_date = datetime.strptime(statement_tokens[2], '%d-%b-%Y')
                                                 else:
-                                                    raise Exception("Could not parse date [{}]".format(statement_date_str))
+                                                    raise Exception(f"Could not parse date [{statement_date_str}]")
                                             if statement_type:
                                                 for currency in CURRENCIES:
                                                     if statement_line.startswith(currency):
@@ -314,33 +308,29 @@ class Equity(library.Library):
                                                                     [str(statement_type + currency)] = statement_position
                                                             except (KeyError, IndexError, ValueError, AttributeError) as parse_exception:
                                                                 statement_data[statement_file_name]["Errors"].append(
-                                                                    "Position parse skipped at page [{}] line [{}] for currency [{}]: {}: {}".format(
-                                                                        page_index, line_index, currency,
-                                                                        type(parse_exception).__name__, parse_exception))
+                                                                    f"Position parse skipped at page [{page_index}] line [{line_index}] for currency [{currency}]: {type(parse_exception).__name__}: {parse_exception}")
                                     line_index += 1
                                 page_index += 1
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                             statement_data[statement_file_name]["Errors"].append(
-                                "Statement parse failed with exception [{}: {}]".format(type(exception).__name__, exception))
+                                f"Statement parse failed with exception [{type(exception).__name__}: {exception}]")
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
                         statement_positions = statement_data[statement_file_name]["Positions"]
                         if len(statement_positions) == 0:
                             statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                             statement_data[statement_file_name]["Errors"] \
-                                .append("Statement parse failed to resolve all keys {} in {}"
-                                        .format(STATEMENT_ATTRIBUTES, {}))
+                                .append(f"Statement parse failed to resolve all keys {STATEMENT_ATTRIBUTES} in {{}}")
                         for statement_position in list(statement_positions.values()):
                             if not all(key in statement_position for key in STATEMENT_ATTRIBUTES):
                                 statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                                 statement_data[statement_file_name]["Errors"] \
-                                    .append("Statement parse failed to resolve all keys {} in {}"
-                                            .format(STATEMENT_ATTRIBUTES, statement_position))
+                                    .append(f"Statement parse failed to resolve all keys {STATEMENT_ATTRIBUTES} in {statement_position}")
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
-        self.print_log("File [Funds] parsed [{}] statements".format(len(statement_data)), started=started_time)
+        self.print_log(f"File [Funds] parsed [{len(statement_data)}] statements", started=started_time)
 
         def _equity_tickers(_equity_df):
             return sorted([column.replace(" Price Close", "") \
@@ -352,7 +342,7 @@ class Equity(library.Library):
         def _equity_clean(_equity_df):
             _tickers = _equity_tickers(_equity_df)
             _mask_exprs = [
-                pl.when(pl.col("{} Price Close".format(_ticker)).is_null()).then(None) \
+                pl.when(pl.col(f"{_ticker} Price Close").is_null()).then(None) \
                     .otherwise(pl.col(_equity_columns(_equity_df, _ticker))).name.keep()
                 for _ticker in _tickers
             ]
@@ -375,10 +365,10 @@ class Equity(library.Library):
             if len(_equity_df) > 0:
                 for _ticker in _equity_tickers(_equity_df):
                     _ticker_df = _equity_df.select(["Date"] + \
-                                                   ["{} {}".format(_ticker, _dimension) for _dimension in _dimensions
-                                                    if "{} {}".format(_ticker, _dimension) in _equity_df.columns]) \
+                                                   [f"{_ticker} {_dimension}" for _dimension in _dimensions
+                                                    if f"{_ticker} {_dimension}" in _equity_df.columns]) \
                         .fill_nan(None).filter(~pl.all_horizontal(pl.all().exclude("Date").is_null()))
-                    self.dataframe_print(_ticker_df, print_label="{}_{}".format(print_label, _ticker), print_verb=print_verb, print_rows=print_rows)
+                    self.dataframe_print(_ticker_df, print_label=f"{print_label}_{_ticker}", print_verb=print_verb, print_rows=print_rows)
 
         # Process equity data
         fx_rates = {}
@@ -393,18 +383,18 @@ class Equity(library.Library):
                     if statement_data[file_name]['Status'] == STATUS_SUCCESS:
                         statement_position = statement_data[file_name]["Positions"]
                         statements_positions.extend(list(statement_position.values()))
-                        self.print_log("File [{}] processed as [{}] with positions {}".format(basename(file_name), STATUS_SUCCESS, list(statement_position.keys())))
+                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SUCCESS}] with positions {list(statement_position.keys())}")
                     elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
-                        self.print_log("File [{}] processed as [{}]".format(basename(file_name), STATUS_SKIPPED))
+                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SKIPPED}]")
                     else:
-                        self.print_log("File [{}] processed as [{}] at parsing point:".format(basename(file_name), STATUS_FAILURE))
+                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] at parsing point:")
                         self.print_log(statement_data[file_name]["Parse"])
-                        self.print_log("File [{}] processed as [{}] with errors:".format(basename(file_name), STATUS_FAILURE))
+                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] with errors:")
                         if not statement_data[file_name]["Errors"]:
                             statement_data[file_name]["Errors"] = ["<NONE>"]
                         error_index = 0
                         while error_index < len(statement_data[file_name]["Errors"]):
-                            self.print_log(" {:2d}: {}".format(error_index, statement_data[file_name]["Errors"][error_index]))
+                            self.print_log(f" {error_index:2d}: {statement_data[file_name]['Errors'][error_index]}")
                             error_index += 1
                 if len(statements_positions) == 0:
                     statement_df = self.dataframe_new(schema={"Date": pl.Date}, print_label="Funds", started=started_time)
@@ -422,27 +412,27 @@ class Equity(library.Library):
                     rename_map = {}
                     for statement_column in statement_df.columns:
                         if statement_column.startswith("Price_"):
-                            rename_map[statement_column] = "{} Price Close".format(statement_column.replace("Price_", "", 1))
+                            rename_map[statement_column] = f"{statement_column.replace('Price_', '', 1)} Price Close"
                         elif statement_column.startswith("Rate_"):
-                            rename_map[statement_column] = "{} Currency Rate Base".format(statement_column.replace("Rate_", "", 1))
+                            rename_map[statement_column] = f"{statement_column.replace('Rate_', '', 1)} Currency Rate Base"
                         elif statement_column.startswith("Currency_"):
-                            rename_map[statement_column] = "{} Currency Base".format(statement_column.replace("Currency_", "", 1))
+                            rename_map[statement_column] = f"{statement_column.replace('Currency_', '', 1)} Currency Base"
                     statement_df = statement_df.rename(rename_map)
                     self.dataframe_print(statement_df, print_label="Funds", print_verb="renamed", started=started_time)
                     started_time = time.time()
                     statement_exprs = []
                     for ticker in tickers:
                         statement_exprs.extend([
-                            pl.col("{} Price Close".format(ticker)).alias("{} Price Open".format(ticker)),
-                            pl.col("{} Price Close".format(ticker)).alias("{} Price High".format(ticker)),
-                            pl.col("{} Price Close".format(ticker)).alias("{} Price Low".format(ticker)),
-                            pl.lit(0, pl.Int64).alias("{} Market Volume".format(ticker)),
-                            pl.lit(0.0, pl.Float64).alias("{} Paid Dividends".format(ticker)),
-                            pl.lit(0.0, pl.Float64).alias("{} Stock Splits".format(ticker)),
+                            pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Open"),
+                            pl.col(f"{ticker} Price Close").alias(f"{ticker} Price High"),
+                            pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Low"),
+                            pl.lit(0, pl.Int64).alias(f"{ticker} Market Volume"),
+                            pl.lit(0.0, pl.Float64).alias(f"{ticker} Paid Dividends"),
+                            pl.lit(0.0, pl.Float64).alias(f"{ticker} Stock Splits"),
                         ])
                     if statement_exprs:
                         statement_df = statement_df.with_columns(statement_exprs)
-                    statement_df = statement_df.select(["Date"] + ["{} {}".format(ticker, dimension) for ticker in tickers for dimension in DIMENSIONS_PRICE_AUX])
+                    statement_df = statement_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in DIMENSIONS_PRICE_AUX])
                     statement_df = _equity_upsample(statement_df)
                     statement_df = _equity_clean(statement_df)
                 _equity_print(statement_df, print_label="Funds", print_verb="collected", started=started_time)
@@ -470,13 +460,13 @@ class Equity(library.Library):
                 manual_exprs = []
                 for ticker in tickers_manual:
                     manual_exprs.extend([
-                        pl.col("{} Price Close".format(ticker)).alias("{} Price Open".format(ticker)),
-                        pl.col("{} Price Close".format(ticker)).alias("{} Price High".format(ticker)),
-                        pl.col("{} Price Close".format(ticker)).alias("{} Price Low".format(ticker)),
-                        pl.lit(0, pl.Int64).alias("{} Market Volume".format(ticker)),
-                        pl.lit(0.0, pl.Float64).alias("{} Paid Dividends".format(ticker)),
-                        pl.lit(0.0, pl.Float64).alias("{} Stock Splits".format(ticker)),
-                        pl.lit("AUD").alias("{} Currency Base".format(ticker)),
+                        pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Open"),
+                        pl.col(f"{ticker} Price Close").alias(f"{ticker} Price High"),
+                        pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Low"),
+                        pl.lit(0, pl.Int64).alias(f"{ticker} Market Volume"),
+                        pl.lit(0.0, pl.Float64).alias(f"{ticker} Paid Dividends"),
+                        pl.lit(0.0, pl.Float64).alias(f"{ticker} Stock Splits"),
+                        pl.lit("AUD").alias(f"{ticker} Currency Base"),
                     ])
                 if manual_exprs:
                     equity_df_manual = equity_df_manual.with_columns(manual_exprs)
@@ -497,7 +487,7 @@ class Equity(library.Library):
                 equity_df = _equity_upsample(equity_df)
                 tickers = _equity_tickers(equity_df)
                 equity_df = equity_df.select(
-                    ["Date"] + ["{} {}".format(ticker, dimension) for ticker in tickers for dimension in DIMENSIONS_PRICE_AUX])
+                    ["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in DIMENSIONS_PRICE_AUX])
                 equity_df = _equity_clean(equity_df)
                 _equity_print(equity_df, print_label="Equity", print_verb="added manual stock prices", started=started_time)
 
@@ -508,11 +498,11 @@ class Equity(library.Library):
                 existing_cols = set(equity_df.columns)
                 for ticker in tickers:
                     for dimension_diff in DIMENSIONS_PRICE_AUX:
-                        column = "{} {}".format(ticker, dimension_diff)
+                        column = f"{ticker} {dimension_diff}"
                         columns.append(column)
                         if column not in existing_cols:
                             if "Price" in dimension_diff:
-                                missing_exprs.append(pl.col("{} Price Close".format(ticker)).alias(column))
+                                missing_exprs.append(pl.col(f"{ticker} Price Close").alias(column))
                             elif dimension_diff == "Market Volume":
                                 missing_exprs.append(pl.lit(0, pl.Int64).alias(column))
                             elif dimension_diff in ["Paid Dividends", "Stock Splits"]:
@@ -533,19 +523,19 @@ class Equity(library.Library):
                 if len(equity_df) > 0:
                     started_fx = pytz.UTC.localize(datetime.combine(equity_df.head(1).rows()[0][0], datetime.min.time())).isoformat()
                     for fx_pair in CURRENCIES:
-                        fx_cache = "RBA_{}_Rates".format(fx_pair)
-                        fx_query = """
+                        fx_cache = f"RBA_{fx_pair}_Rates"
+                        fx_query = f"""
 from(bucket: "data_public")
-    |> range(start: {}, stop: now())
+    |> range(start: {started_fx}, stop: now())
     |> filter(fn: (r) => r["_measurement"] == "currency")
     |> filter(fn: (r) => r["period"] == "1d")
     |> filter(fn: (r) => r["type"] == "snapshot")
-    |> filter(fn: (r) => r["_field"] == "aud/{}")
+    |> filter(fn: (r) => r["_field"] == "aud/{fx_pair.lower()}")
     |> keep(columns: ["_time", "_value"])
     |> sort(columns: ["_time"])
     |> unique(column: "_time")
     |> rename(columns: {{_time: "Date", _value: "Rate"}})
-                        """.format(started_fx, fx_pair.lower())
+                        """
                         fx_query_result = self.database_download(fx_cache, fx_query)
                         fx_rates[fx_pair] = self.csv_read(fx_query_result.file_path, schema={"Date": pl.Date}) \
                             if fx_query_result.status != library.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
@@ -553,28 +543,28 @@ from(bucket: "data_public")
                     aud_rate_exprs = []
                     spot_exprs = []
                     for ticker in tickers:
-                        base_rows = equity_df.select("{} Currency Base".format(ticker)).drop_nulls().head(1).rows()
+                        base_rows = equity_df.select(f"{ticker} Currency Base").drop_nulls().head(1).rows()
                         base_currency = base_rows[0][0] if base_rows else "AUD"
                         if base_currency == "AUD":
                             aud_rate_exprs.append(
-                                pl.when(pl.col("{} Price Close".format(ticker)).is_null()).then(None) \
-                                    .otherwise(pl.lit(1.0)).alias("{} Currency Rate Spot".format(ticker)))
+                                pl.when(pl.col(f"{ticker} Price Close").is_null()).then(None) \
+                                    .otherwise(pl.lit(1.0)).alias(f"{ticker} Currency Rate Spot"))
                         else:
                             equity_df = equity_df.join(fx_rates[base_currency], on="Date", how="full", coalesce=True) \
-                                .with_columns(pl.col("Rate").alias("{} Currency Rate Spot".format(ticker))).drop("Rate")
+                                .with_columns(pl.col("Rate").alias(f"{ticker} Currency Rate Spot")).drop("Rate")
                         for column_price in DIMENSIONS_PRICE:
                             for column_price_type in DIMENSIONS_PRICE_TYPES:
                                 spot_exprs.append(
-                                    (pl.col("{} {}".format(ticker, column_price)) *
-                                     pl.col("{} Currency Rate {}".format(ticker, column_price_type))) \
-                                        .alias("{} {} {}".format(ticker, column_price, column_price_type)))
+                                    (pl.col(f"{ticker} {column_price}") *
+                                     pl.col(f"{ticker} Currency Rate {column_price_type}")) \
+                                        .alias(f"{ticker} {column_price} {column_price_type}"))
                     if aud_rate_exprs:
                         equity_df = equity_df.with_columns(aud_rate_exprs)
                     if spot_exprs:
                         equity_df = equity_df.with_columns(spot_exprs)
-                    equity_df = equity_df.select(["Date"] + ["{} {}".format(ticker, column) for ticker in sorted(tickers) for column in DIMENSIONS_PRICE_AUX_TYPES])
+                    equity_df = equity_df.select(["Date"] + [f"{ticker} {column}" for ticker in sorted(tickers) for column in DIMENSIONS_PRICE_AUX_TYPES])
                     rate_mask_exprs = [
-                        pl.when(pl.col("{} Price Close".format(ticker)).is_null()).then(None).otherwise(pl.col("{} Currency Rate Spot".format(ticker))).name.keep()
+                        pl.when(pl.col(f"{ticker} Price Close").is_null()).then(None).otherwise(pl.col(f"{ticker} Currency Rate Spot")).name.keep()
                         for ticker in tickers
                     ]
                     if rate_mask_exprs:
@@ -587,7 +577,7 @@ from(bucket: "data_public")
                 started_time = time.time()
                 indexes = sorted([column.removesuffix(" Quantity") for column in index_weights.columns if column.endswith(" Quantity")])
                 index_weights = index_weights \
-                    .select(["Exchange Symbol"] + ["{} Quantity".format(index) for index in indexes]).drop_nulls()
+                    .select(["Exchange Symbol"] + [f"{index} Quantity" for index in indexes]).drop_nulls()
                 index_weights = index_weights.rename(
                     dict(zip(index_weights.columns, ["Ticker"] + indexes)))
                 index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
@@ -601,7 +591,7 @@ from(bucket: "data_public")
                         weight_rows = index_weights.filter((pl.col("Ticker") == ticker)).select([index]).head(1).rows()
                         weight_exprs.append(
                             pl.lit(weight_rows[0][0] if len(weight_rows) > 0 else 0.0) \
-                                .alias("{} Index {} Weight".format(ticker, index_title)))
+                                .alias(f"{ticker} Index {index_title} Weight"))
                 if weight_exprs:
                     equity_df = equity_df.with_columns(weight_exprs)
                 for ticker in tickers:
@@ -609,22 +599,22 @@ from(bucket: "data_public")
                         index_title = index.title()
                         for column_price in DIMENSIONS_PRICE:
                             spot_exprs.append(
-                                (pl.col("{} {} Spot".format(ticker, column_price)) *
-                                 pl.col("{} Index {} Weight".format(ticker, index_title))) \
-                                    .alias("{} Index {} {} Spot".format(ticker, index_title, column_price)))
+                                (pl.col(f"{ticker} {column_price} Spot") *
+                                 pl.col(f"{ticker} Index {index_title} Weight")) \
+                                    .alias(f"{ticker} Index {index_title} {column_price} Spot"))
                 if spot_exprs:
                     equity_df = equity_df.with_columns(spot_exprs)
                 index_dimensions = []
                 for index in indexes:
                     index_title = index.title()
-                    index_dimensions.append("Index {} Weight".format(index_title))
+                    index_dimensions.append(f"Index {index_title} Weight")
                     for column_price in DIMENSIONS_PRICE:
-                        index_dimensions.append("Index {} {} Spot".format(index_title, column_price))
+                        index_dimensions.append(f"Index {index_title} {column_price} Spot")
                 if indexes:
                     last_index_title = indexes[-1].title()
                     mask_exprs = [
-                        pl.when(pl.col("{} Index {} Price Close Spot".format(ticker, last_index_title)).is_null()).then(None) \
-                            .otherwise(pl.col(["{} {}".format(ticker, dimension)
+                        pl.when(pl.col(f"{ticker} Index {last_index_title} Price Close Spot").is_null()).then(None) \
+                            .otherwise(pl.col([f"{ticker} {dimension}"
                                                for dimension in index_dimensions])).name.keep()
                         for ticker in tickers
                     ]
@@ -635,9 +625,9 @@ from(bucket: "data_public")
                 # Add market volumes
                 started_time = time.time()
                 volume_exprs = [
-                    (pl.col("{} Market Volume".format(ticker)) *
-                     pl.col("{} Price Close Spot".format(ticker))) \
-                        .alias("{} Market Volume Spot".format(ticker))
+                    (pl.col(f"{ticker} Market Volume") *
+                     pl.col(f"{ticker} Price Close Spot")) \
+                        .alias(f"{ticker} Market Volume Spot")
                     for ticker in tickers
                 ]
                 if volume_exprs:
@@ -664,10 +654,10 @@ from(bucket: "data_public")
                     for _index in _indexes:
                         _index_title = _index.title()
                         for _column_price in DIMENSIONS_PRICE:
-                            _column = "{} {}".format(_index, _column_price)
-                            _index_cols = ["{} Index {} {} Spot".format(_t, _index_title, _column_price)
+                            _column = f"{_index} {_column_price}"
+                            _index_cols = [f"{_t} Index {_index_title} {_column_price} Spot"
                                            for _t in _tickers
-                                           if "{} Index {} {} Spot".format(_t, _index_title, _column_price) in _data_df.columns]
+                                           if f"{_t} Index {_index_title} {_column_price} Spot" in _data_df.columns]
                             if len(_index_cols) > 0:
                                 if _column not in _data_df.columns:
                                     _data_df = _data_df.with_columns(pl.lit(None).cast(pl.Float64).alias(_column))
@@ -678,7 +668,7 @@ from(bucket: "data_public")
                                     .otherwise(pl.col(_column))
                                     .alias(_column))
                                 for _column_price_type in DIMENSIONS_PRICE_TYPES:
-                                    _col_typed = "{} {}".format(_column, _column_price_type)
+                                    _col_typed = f"{_column} {_column_price_type}"
                                     if _col_typed not in _data_df.columns:
                                         _data_df = _data_df.with_columns(pl.lit(None).cast(pl.Float64).alias(_col_typed))
                                     _data_df = _data_df.with_columns(
@@ -686,19 +676,19 @@ from(bucket: "data_public")
                                         .then(pl.col(_column))
                                         .otherwise(pl.col(_col_typed))
                                         .alias(_col_typed))
-                        _column_close = "{} Price Close".format(_index)
+                        _column_close = f"{_index} Price Close"
                         if _column_close in _data_df.columns:
                             _meta_float = [
-                                ("{} Market Volume".format(_index), pl.lit(0.0)),
-                                ("{} Paid Dividends".format(_index), pl.lit(0.0)),
-                                ("{} Stock Splits".format(_index), pl.lit(0.0)),
-                                ("{} Currency Rate Base".format(_index), pl.lit(1.0)),
-                                ("{} Currency Rate Spot".format(_index), pl.lit(1.0)),
+                                (f"{_index} Market Volume", pl.lit(0.0)),
+                                (f"{_index} Paid Dividends", pl.lit(0.0)),
+                                (f"{_index} Stock Splits", pl.lit(0.0)),
+                                (f"{_index} Currency Rate Base", pl.lit(1.0)),
+                                (f"{_index} Currency Rate Spot", pl.lit(1.0)),
                             ]
                             for _meta_col, _ in _meta_float:
                                 if _meta_col not in _data_df.columns:
                                     _data_df = _data_df.with_columns(pl.lit(None).cast(pl.Float64).alias(_meta_col))
-                            _cb_col = "{} Currency Base".format(_index)
+                            _cb_col = f"{_index} Currency Base"
                             if _cb_col not in _data_df.columns:
                                 _data_df = _data_df.with_columns(pl.lit(None).cast(pl.Utf8).alias(_cb_col))
                             _data_df = _data_df.with_columns(
@@ -710,9 +700,9 @@ from(bucket: "data_public")
 
                     # Market volume spot for indexes
                     for _index in _indexes:
-                        _mvs_col = "{} Market Volume Spot".format(_index)
-                        _mv_col = "{} Market Volume".format(_index)
-                        _pcs_col = "{} Price Close Spot".format(_index)
+                        _mvs_col = f"{_index} Market Volume Spot"
+                        _mv_col = f"{_index} Market Volume"
+                        _pcs_col = f"{_index} Price Close Spot"
                         if _mv_col in _data_df.columns and _pcs_col in _data_df.columns:
                             if _mvs_col not in _data_df.columns:
                                 _data_df = _data_df.with_columns(pl.lit(None).cast(pl.Float64).alias(_mvs_col))
@@ -726,20 +716,20 @@ from(bucket: "data_public")
                     _create_exprs = []
                     _mask_specs = []
                     for _ticker in _equity_tickers(_data_df):
-                        for _price_type in [""] + ["{} ".format(_dimension) for _dimension in DIMENSIONS_PRICE_TYPES]:
+                        for _price_type in [""] + [f"{_dimension} " for _dimension in DIMENSIONS_PRICE_TYPES]:
                             for _change_period in DIMENSIONS_CHANGE_PERIODS:
-                                _dimension_price = "Price Close {}".format(_price_type).strip()
-                                _dimension_diff = "Price Close {}{}d-Change Absolute".format(_price_type, _change_period)
-                                _dimension_percentage = "Price Close {}{}d-Change Percentage".format(_price_type, _change_period)
-                                _price_col = "{} {}".format(_ticker, _dimension_price)
+                                _dimension_price = f"Price Close {_price_type}".strip()
+                                _dimension_diff = f"Price Close {_price_type}{_change_period}d-Change Absolute"
+                                _dimension_percentage = f"Price Close {_price_type}{_change_period}d-Change Percentage"
+                                _price_col = f"{_ticker} {_dimension_price}"
                                 if _price_col in _data_df.columns:
-                                    _diff_col = "{} {}".format(_ticker, _dimension_diff)
-                                    _pct_col = "{} {}".format(_ticker, _dimension_percentage)
+                                    _diff_col = f"{_ticker} {_dimension_diff}"
+                                    _pct_col = f"{_ticker} {_dimension_percentage}"
                                     _create_exprs.extend([
-                                        pl.when(pl.col("{} Price Close".format(_ticker)).is_null()).then(None) \
+                                        pl.when(pl.col(f"{_ticker} Price Close").is_null()).then(None) \
                                             .otherwise(pl.col(_price_col).diff(_change_period).fill_nan(None)) \
                                             .alias(_diff_col),
-                                        pl.when(pl.col("{} Price Close".format(_ticker)).is_null()).then(None) \
+                                        pl.when(pl.col(f"{_ticker} Price Close").is_null()).then(None) \
                                             .otherwise(pl.col(_price_col).pct_change(_change_period).fill_nan(None) * 100) \
                                             .alias(_pct_col),
                                     ])
@@ -749,7 +739,7 @@ from(bucket: "data_public")
                         _data_df = _data_df.with_columns(_create_exprs)
                     if _mask_specs:
                         _data_df = _data_df.with_columns([
-                            pl.when(pl.col("{} Price Close".format(_t)).is_not_null() & \
+                            pl.when(pl.col(f"{_t} Price Close").is_not_null() & \
                                     pl.col(_c).is_null()).then(pl.lit(0.0)) \
                                 .otherwise(pl.col(_c)).name.keep()
                             for _t, _c in _mask_specs
@@ -760,7 +750,7 @@ from(bucket: "data_public")
                     _columns = []
                     for _t in sorted(_all_tickers):
                         for _d in DIMENSIONS_STATE:
-                            _col = "{} {}".format(_t, _d)
+                            _col = f"{_t} {_d}"
                             if _col in _data_df.columns:
                                 _columns.append(_col)
                     return _data_df.select(["Date"] + _columns).with_columns(cs.float().round(4))
@@ -776,7 +766,7 @@ from(bucket: "data_public")
                 started_time = time.time()
                 dimensions_sheet = ["Price Close", "Currency Rate Base"]
                 tickers = _equity_tickers(equity_current_df)
-                equity_sheet_df = equity_current_df.select(["Date"] + ["{} {}".format(ticker, dimension) for ticker in tickers for dimension in dimensions_sheet])
+                equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])
                 equity_sheet_df = equity_sheet_df.filter(pl.col("Date") > pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
                 _equity_print(equity_sheet_df, _dimensions=dimensions_sheet, print_label="Sheet", print_verb="filtered", started=started_time)
                 self.sheet_upload(equity_sheet_df, DRIVE_KEY_PRICES, workbook_name="Prices", sheet_name='History')
@@ -794,18 +784,18 @@ from(bucket: "data_public")
                 for change_period in DIMENSIONS_CHANGE_PERIODS:
                     dimensions_metadata.append((
                         [
-                            "Price Close {}d-Change Percentage".format(change_period),
-                            "Price Close Base {}d-Change Percentage".format(change_period),
-                            "Price Close Spot {}d-Change Percentage".format(change_period),
-                        ], "%", "{}d".format(change_period)))
+                            f"Price Close {change_period}d-Change Percentage",
+                            f"Price Close Base {change_period}d-Change Percentage",
+                            f"Price Close Spot {change_period}d-Change Percentage",
+                        ], "%", f"{change_period}d"))
                 for dimension_metadata in dimensions_metadata:
                     dimensions.extend(dimension_metadata[0])
                 tickers = _equity_tickers(equity_delta_df)
                 equity_output_df = _equity_clean(equity_delta_df)
                 equity_output_df = equity_output_df \
-                    .select(["Date"] + ["{} {}".format(ticker, dimension) \
+                    .select(["Date"] + [f"{ticker} {dimension}" \
                                         for ticker in tickers for dimension in dimensions
-                                        if "{} {}".format(ticker, dimension) in equity_output_df.columns])
+                                        if f"{ticker} {dimension}" in equity_output_df.columns])
                 _equity_print(equity_output_df, _dimensions=dimensions, print_label="Equity", print_verb="cleaned up", started=started_time)
                 started_time = time.time()
                 for dimension_metadata in dimensions_metadata:
@@ -813,14 +803,14 @@ from(bucket: "data_public")
                         for ticker in tickers:
                             self.database_upload(
                                 equity_output_df.select(
-                                    ["Date"] + ["{} {}".format(ticker, dimension) \
+                                    ["Date"] + [f"{ticker} {dimension}" \
                                                 for dimension in dimensions
-                                                if "{} {}".format(ticker, dimension) in equity_output_df.columns]).drop_nulls(),
+                                                if f"{ticker} {dimension}" in equity_output_df.columns]).drop_nulls(),
                                 tags={
                                     "type": column.replace(" ", "-").lower(),
                                     "period": dimension_metadata[2],
                                     "unit": dimension_metadata[1]
-                                }, print_label="Equity_{}".format(column.replace(" ", "_").replace("-", "_")))
+                                }, print_label=f"Equity_{column.replace(' ', '_').replace('-', '_')}")
                 self.print_log("LineProtocol [Equity] serialised", started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing equity data", exception=exception)
