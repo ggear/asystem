@@ -1,17 +1,14 @@
-import contextlib
 import copy
 import importlib
 import os
 import shutil
 import sys
 import unittest
-from datetime import datetime, timedelta
 from os.path import *
 
 import polars as pl
 import pytest
-import pytz
-from mock import patch
+from unittest.mock import patch, MagicMock
 
 ########################################################################################################################
 # NOTES:
@@ -21,7 +18,7 @@ from mock import patch
 sys.path.append('../../../main/python')
 
 from wrangle.plugin import library
-from wrangle.plugin.library import Library
+from wrangle.plugin.library import Library, DownloadResult, DownloadStatus
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
@@ -29,16 +26,23 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
     os.environ[key] = value
 
 
+def reset_config(log="warning"):
+    library.config.log_level = log
+    library.config.clean = False
+    library.config.disable_uploads = True
+    library.config.disable_downloads = False
+    library.database = None
+
+
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
         self.run_module("interest", {"success_typical": ASSERT_RUN},
-                        disable_data_delta=False,
-                        enable_data_subset=True,
-                        disable_file_download=False,
-                        disable_write_stdout=False,
+                        clean=False,
+                        disable_downloads=False,
+                        disable_uploads=True,
                         enable_rerun=False,
-                        enable_log=True,
+                        log="info",
                         )
 
     def test_currency_typical(self):
@@ -113,260 +117,177 @@ class WrangleTest(unittest.TestCase):
             },
         })})
 
-    # TODO: Disable slow tests while refactoring
-    # def test_library_sheet(self):
-    #     test = Test("Test", "SOME_NON_EXISTANT_GUID")
-    #
-    #     missing_name = "missing"
-    #     missing_key = "!"
-    #     missing_str = "[]"
-    #     os.environ[library.WRANGLE_ENABLE_LOG] = "false"
-    #     for data_df in [
-    #         test.sheet_download(missing_name, missing_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-    #         test.sheet_download(missing_name, missing_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-    #         test.sheet_download(missing_name, missing_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-    #         test.sheet_download(missing_name, missing_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True,
-    #                             read_cache=False),
-    #     ]:
-    #         self.assertEqual(missing_str, test.dataframe_to_str(data_df))
-    #         self.assertEqual(0, len(data_df))
-    #
-    #     loading_name = "loading"
-    #     loading_key = "1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs"
-    #     loading_str = "[]"
-    #     os.environ[library.WRANGLE_ENABLE_LOG] = "false"
-    #     for data_df in [
-    #         test.sheet_download(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-    #         test.sheet_download(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-    #         test.sheet_download(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-    #         test.sheet_download(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True,
-    #                             read_cache=False),
-    #     ]:
-    #         self.assertEqual(loading_str, test.dataframe_to_str(data_df))
-    #         self.assertEqual(0, len(data_df))
-    #
-    #     empty_name = "empty"
-    #     empty_key = "1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4"
-    #     test_column = {
-    #         "My Column": pl.Utf8,
-    #     }
-    #     empty_str = "[]"
-    #     empty_str_column = "[My Column(str)]"
-    #     os.environ[library.WRANGLE_ENABLE_LOG] = "true"
-    #     for data_df in [
-    #         test.sheet_download(empty_name, empty_key, write_cache=True),
-    #         test.sheet_download(empty_name, empty_key, write_cache=False),
-    #         test.sheet_download(empty_name, empty_key, write_cache=True),
-    #         test.sheet_download(empty_name, empty_key, write_cache=False, read_cache=False),
-    #     ]:
-    #         self.assertEqual(empty_str, test.dataframe_to_str(data_df))
-    #         self.assertEqual(0, len(data_df))
-    #     for data_df in [
-    #         test.sheet_download(empty_name, empty_key, schema=test_column, write_cache=True),
-    #         test.sheet_download(empty_name, empty_key, schema=test_column, write_cache=False),
-    #         test.sheet_download(empty_name, empty_key, schema=test_column, write_cache=True),
-    #         test.sheet_download(empty_name, empty_key, schema=test_column, write_cache=True, read_cache=False),
-    #     ]:
-    #         self.assertEqual(empty_str_column, test.dataframe_to_str(data_df))
-    #         self.assertEqual(0, len(data_df))
-    #
-    #     test_name = "test"
-    #     test_key = "18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY"
-    #     test_type_utf = {
-    #         "Integer": pl.Utf8,
-    #         "Integer with NULL": pl.Utf8,
-    #         "Float": pl.Utf8,
-    #         "Float with NULL": pl.Utf8,
-    #         "String": pl.Utf8,
-    #         "String with NULL": pl.Utf8,
-    #     }
-    #     test_type_number = {
-    #         "Integer": pl.Int64,
-    #         "Integer with NULL": pl.Int64,
-    #         "Float": pl.Float64,
-    #         "Float with NULL": pl.Float64,
-    #         "String": pl.Utf8,
-    #         "String with NULL": pl.Utf8,
-    #     }
-    #     test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
-    #     test_str_utf = ["str" for _ in range(0, len(test_type_number))]
-    #     test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
-    #     os.environ[library.WRANGLE_ENABLE_LOG] = "true"
-    #     for data_df in [
-    #         test.sheet_download(test_name + "-1", test_key, sheet_start_row=3, write_cache=True),
-    #         test.sheet_download(test_name + "-1", test_key, sheet_start_row=3, write_cache=False),
-    #         test.sheet_download(test_name + "-1", test_key, sheet_start_row=3, write_cache=True),
-    #         test.sheet_download(test_name + "-1", test_key, sheet_start_row=3, write_cache=True, read_cache=False),
-    #         test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_number,
-    #                             write_cache=True),
-    #         test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_number,
-    #                             write_cache=False),
-    #         test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_number,
-    #                             write_cache=True),
-    #         test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_number,
-    #                             write_cache=True, read_cache=False),
-    #     ]:
-    #         self.assertEqual(test_str.format(*test_str_numeric), test.dataframe_to_str(data_df))
-    #         self.assertEqual(4, len(data_df))
-    #     for data_df in [
-    #         test.sheet_download(test_name + "-3", test_key, sheet_start_row=3, schema=test_type_utf, write_cache=True),
-    #         test.sheet_download(test_name + "-3", test_key, sheet_start_row=3, schema=test_type_utf, write_cache=False),
-    #         test.sheet_download(test_name + "-3", test_key, sheet_start_row=3, schema=test_type_utf, write_cache=True),
-    #         test.sheet_download(test_name + "-3", test_key, sheet_start_row=3, schema=test_type_utf, write_cache=True,
-    #                             read_cache=False),
-    #     ]:
-    #         self.assertEqual(test_str.format(*test_str_utf), test.dataframe_to_str(data_df))
-    #         self.assertEqual(4, len(data_df))
-    #
-    #     data_name = "Index_weights"
-    #     data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
-    #     data_type = {
-    #         "Holdings Quantity": pl.Utf8,
-    #     }
-    #     data_str = "[Exchange Symbol(str), Holdings Quantity({}), Unit Price(f64), Watch Value(str), Watch Quantity(str), Baseline Quantity(f64)]"
-    #     data_str_type = [test.dataframe_type_to_str(data_type[column]) for column in data_type]
-    #     for data_df in [
-    #         test.sheet_download(data_name + "-1", data_key, "Indexes", 2, write_cache=True),
-    #         test.sheet_download(data_name + "-1", data_key, "Indexes", 2, write_cache=False),
-    #         test.sheet_download(data_name + "-1", data_key, "Indexes", 2, write_cache=True),
-    #         test.sheet_download(data_name + "-1", data_key, "Indexes", 2, write_cache=True, read_cache=False),
-    #     ]:
-    #         self.assertEqual(data_str.format("f64"), test.dataframe_to_str(data_df))
-    #         self.assertEqual(26, len(data_df))
-    #     for data_df in [
-    #         test.sheet_download(data_name + "-1", data_key, "Indexes", 2, schema=data_type, write_cache=True),
-    #         test.sheet_download(data_name + "-1", data_key, "Indexes", 2, schema=data_type, write_cache=False),
-    #         test.sheet_download(data_name + "-1", data_key, "Indexes", 2, schema=data_type, write_cache=True),
-    #         test.sheet_download(data_name + "-1", data_key, "Indexes", 2, schema=data_type, write_cache=True,
-    #                             read_cache=False),
-    #     ]:
-    #         self.assertEqual(data_str.format(*data_str_type), test.dataframe_to_str(data_df))
-    #         self.assertEqual(26, len(data_df))
+    def test_balances_typical(self):
+        self.run_module("balances", {"success_typical": merge_asserts(ASSERT_RUN, {
+            # "counter_equals": {
+            #     library.CTR_SRC_FILES: {
+            #         library.CTR_ACT_PROCESSED: 0,
+            #     },
+            # },
+            # "counter_greater": {
+            #     library.CTR_SRC_DATA: {
+            #         library.CTR_ACT_DELTA_COLUMNS: 1,
+            #         library.CTR_ACT_CURRENT_COLUMNS: 1,
+            #         library.CTR_ACT_UPDATE_COLUMNS: 1,
+            #     },
+            # },
+        })})
+
+    def test_library_sheet(self):
+        test = Test("Test", "SOME_NON_EXISTANT_GUID")
+
+        def _sheet_read(result, schema={}):
+            if result.status == DownloadStatus.FAILED:
+                return test.dataframe_new()
+            return test.csv_read(result.file_path, schema=schema)
+
+        missing_name = "missing"
+        missing_key = "!"
+        missing_str = "[]"
+        library.config.log_level = "fatal"
+        for result in [
+            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result)
+            self.assertEqual(missing_str, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+
+        loading_name = "loading"
+        loading_key = "1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs"
+        loading_str = "[]"
+        library.config.log_level = "fatal"
+        for result in [
+            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result)
+            self.assertEqual(loading_str, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+
+        empty_name = "empty"
+        empty_key = "1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4"
+        test_column = {
+            "My Column": pl.Utf8,
+        }
+        empty_str = "[]"
+        empty_str_column = "[]"
+        library.config.log_level = "info"
+        for result in [
+            test.sheet_download(empty_key, empty_name, write_cache=True),
+            test.sheet_download(empty_key, empty_name, write_cache=False),
+            test.sheet_download(empty_key, empty_name, write_cache=True),
+            test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=False),
+        ]:
+            data_df = _sheet_read(result)
+            self.assertEqual(empty_str, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+        for result in [
+            test.sheet_download(empty_key, empty_name, write_cache=True),
+            test.sheet_download(empty_key, empty_name, write_cache=False),
+            test.sheet_download(empty_key, empty_name, write_cache=True),
+            test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result, schema=test_column)
+            self.assertEqual(empty_str_column, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+
+        test_name = "test"
+        test_key = "18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY"
+        test_type_utf = {
+            "Integer": pl.Utf8,
+            "Integer with NULL": pl.Utf8,
+            "Float": pl.Utf8,
+            "Float with NULL": pl.Utf8,
+            "String": pl.Utf8,
+            "String with NULL": pl.Utf8,
+        }
+        test_type_number = {
+            "Integer": pl.Int64,
+            "Integer with NULL": pl.Int64,
+            "Float": pl.Float64,
+            "Float with NULL": pl.Float64,
+            "String": pl.Utf8,
+            "String with NULL": pl.Utf8,
+        }
+        test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
+        test_str_utf = ["str" for _ in range(0, len(test_type_number))]
+        test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
+        library.config.log_level = "info"
+        for result in [
+            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=False),
+            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, read_cache=False, write_cache=True),
+            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=False),
+            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result, schema=test_type_number)
+            self.assertEqual(test_str.format(*test_str_numeric), test.dataframe_to_str(data_df))
+            self.assertEqual(4, len(data_df))
+        for result in [
+            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=False),
+            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result, schema=test_type_utf)
+            self.assertEqual(test_str.format(*test_str_utf), test.dataframe_to_str(data_df))
+            self.assertEqual(4, len(data_df))
+
+        data_name = "Index_weights"
+        data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
+        data_type = {
+            "Holdings Quantity": pl.Utf8,
+        }
+        data_str = "[Exchange Symbol(str), Holdings Quantity({}), Unit Price(f64), Watch Value(f64), Watch Quantity(i64), Baseline Quantity(f64)]"
+        data_str_type = [test.dataframe_type_to_str(data_type[column]) for column in data_type]
+        for result in [
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result)
+            self.assertEqual(data_str.format("f64"), test.dataframe_to_str(data_df))
+            self.assertEqual(26, len(data_df))
+        for result in [
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result, schema=data_type)
+            self.assertEqual(data_str.format(*data_str_type), test.dataframe_to_str(data_df))
+            self.assertEqual(26, len(data_df))
 
     def test_library_database(self):
-        import warnings as _warnings
+        """With library.database=None and no cache file, database_download returns
+        (False, False) and never writes a file; with a cache file, it returns (True, False)."""
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
-        os.environ[library.WRANGLE_ENABLE_LOG] = "false"
-
-        # Bad query: connection or parse error — always (False, False), no file written
-        invalid_name = join(DIR_ROOT, "target", "runtime-unit", "invalid.csv")
+        reset_config()
+        invalid_cache = "Invalid"
+        invalid_path = abspath("{}/_{}_Database_Download.csv".format(test.input, invalid_cache))
         for result in [
-            test.database_download(invalid_name, "!", force=True),
-            test.database_download(invalid_name, "!", force=False),
-            test.database_download(invalid_name, "!", force=True, check=False),
+            test.database_download(invalid_cache, "SELECT 1", force=True),
+            test.database_download(invalid_cache, "SELECT 1", force=False),
+            test.database_download(invalid_cache, "SELECT 1", check=False, force=True),
         ]:
-            self.assertEqual((False, False), result)
-        self.assertFalse(isfile(invalid_name))
-
-        # Empty-result query: DB may succeed with zero rows (True, True) or be unreachable (False, False)
-        os.environ[library.WRANGLE_ENABLE_LOG] = "true"
-        empty_name = join(DIR_ROOT, "target", "runtime-unit", "empty.csv")
-        empty_query = """
-from(bucket: "data_public")
-  |> range(start: -10ms, stop: now())
-  |> filter(fn: (r) => r._measurement == "a_non_existent_metric")
-        """
-        for result in [
-            test.database_download(empty_name, empty_query, force=True),
-            test.database_download(empty_name, empty_query, force=False),
-            test.database_download(empty_name, empty_query, force=True, check=False),
-        ]:
-            self.assertIn(result, [(True, True), (False, False)])
-        # Empty queries never write a file (no rows → cache is preserved)
-        self.assertFalse(isfile(empty_name))
-
-        def _db_or_cache(name, query, schema, label, min_rows):
-            """Attempt DB query; if it returns no data, fall back to existing cache with a warning."""
-            test.database_download(name, query, force=True)
-            df = test.csv_read(name, schema=schema) if isfile(name) else None
-            if df is None or len(df) == 0:
-                pytest.skip("Database empty and no {} cache available".format(label))
-            if len(df) < min_rows:
-                _warnings.warn("Database returned {} rows for {}; expected >{}. Using cached data.".format(
-                    len(df), label, min_rows))
-            return df
-
-        # FX rates
-        fx_name = join(DIR_ROOT, "target", "runtime-unit", "RBA_FX_GBP_rates.csv")
-        fx_query = """
-from(bucket: "data_public")
-    |> range(start: 1985-01-02T00:00:00+00:00, stop: now())
-    |> filter(fn: (r) => r["_measurement"] == "currency")
-    |> filter(fn: (r) => r["period"] == "1d")
-    |> filter(fn: (r) => r["type"] == "snapshot")
-    |> filter(fn: (r) => r["_field"] == "aud/gbp")
-    |> keep(columns: ["_time", "_value"])
-    |> sort(columns: ["_time"])
-    |> unique(column: "_time")
-    |> rename(columns: {_time: "Date", _value: "Rate"})
-        """
-        fx_df = _db_or_cache(fx_name, fx_query, {"Date": pl.Date, "Rate": pl.Float64}, "FX", 6000)
-        self.assertEqual("[Date(date), Rate(f64)]", test.dataframe_to_str(fx_df))
-        self.assertGreater(len(fx_df), 0)
-        self.assertEqual((True, False), test.database_download(fx_name, fx_query, force=False))
-        self.assertEqual((True, False), test.database_download(fx_name, fx_query, force=False, check=False))
-
-        # Interest rates
-        interest_name = join(DIR_ROOT, "target", "runtime-unit", "Bank_Interest_Rates.csv")
-        interest_start = pytz.UTC.localize(datetime(1993, 1, 1))
-        interest_end = pytz.UTC.localize(datetime(2023, 6, 1))
-        interest_query = """
-from(bucket: "data_public")
-    |> range(start: {}, stop: {})
-    |> filter(fn: (r) => r["_measurement"] == "interest")
-    |> filter(fn: (r) => r["_field"] == "bank")
-    |> filter(fn: (r) => r["period"] == "1mo")
-    |> keep(columns: ["_time", "_value"])
-    |> sort(columns: ["_time"])
-    |> unique(column: "_time")
-    |> rename(columns: {{_time: "Timestamp", _value: "Rate"}})
-        """.format(interest_start.isoformat(), (interest_end + timedelta(1)).isoformat())
-        _db_or_cache(interest_name, interest_query, {}, "interest", 360)
-        self.assertEqual((True, False), test.database_download(interest_name, interest_query, end=interest_end))
-        self.assertEqual((True, False),
-                         test.database_download(interest_name, interest_query, end=interest_end, force=False))
-        self.assertEqual((True, False),
-                         test.database_download(interest_name, interest_query, end=interest_end + timedelta(1),
-                                                check=False))
-
-    def test_library_stock(self):
-        import pandas as pd
-        test = Test("Test", "SOME_NON_EXISTANT_GUID")
-        stock_name = join(DIR_ROOT, "target", "runtime-unit", "Yahoo_FAKE_2026-01.csv")
-
-        def _fake_history(n):
-            dates = pd.date_range("2026-01-02", periods=n, freq="B")
-            return pd.DataFrame({
-                "Open": [10.0] * n, "High": [11.0] * n, "Low": [9.0] * n,
-                "Close": [10.5] * n, "Volume": [1000] * n,
-                "Dividends": [0.0] * n, "Stock Splits": [0.0] * n,
-            }, index=dates)
-
-        with patch("wrangle.plugin.library.yf") as mock_yf:
-            mock_yf.Ticker.return_value.history.side_effect = lambda *a, **kw: _fake_history(5)
-
-            # First download: no file exists → (True, True)
-            self.assertEqual((True, True), test.stock_download(
-                stock_name, "FAKE", "2026-01-01", "2026-01-31", check=False, force=True))
-            self.assertEqual(1, test.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_DOWNLOADED))
-            self.assertEqual(0, test.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED))
-
-            test.reset_counters()
-
-            # Same data re-downloaded: identical row count and last date → (True, False)
-            self.assertEqual((True, False), test.stock_download(
-                stock_name, "FAKE", "2026-01-01", "2026-01-31", check=False, force=True))
-            self.assertEqual(0, test.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_DOWNLOADED))
-            self.assertEqual(1, test.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED))
-
-            test.reset_counters()
-            mock_yf.Ticker.return_value.history.side_effect = lambda *a, **kw: _fake_history(6)
-
-            # New row added: different row count → (True, True)
-            self.assertEqual((True, True), test.stock_download(
-                stock_name, "FAKE", "2026-01-01", "2026-01-31", check=False, force=True))
-            self.assertEqual(1, test.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_DOWNLOADED))
-            self.assertEqual(0, test.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED))
+            self.assertEqual(DownloadResult(DownloadStatus.FAILED, None), result)
+        self.assertFalse(isfile(invalid_path))
+        cache_cache = "Cache"
+        cache_path = abspath("{}/_{}_Database_Download.csv".format(test.input, cache_cache))
+        with open(cache_path, "w") as fh:
+            fh.write("Date,Rate\n2020-01-01,1.0\n")
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
+        library.config.disable_downloads = True
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
 
     def test_library_dataframe(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
@@ -492,10 +413,10 @@ from(bucket: "data_public")
         self.assertEqual([20.0, 40.0, 60.0], current.sort("Date")["Double"].to_list())
         self.assertEqual(3, len(delta))
 
-    def test_state_cache_disable_download(self):
-        """WRANGLE_DISABLE_FILE_DOWNLOAD=true skips all update processing; delta is empty."""
+    def test_state_cache_disable_downloads(self):
+        """config.disable_downloads=True skips all update processing; delta is empty."""
         t = self._setup_state_test("test-5")
-        os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = "true"
+        library.config.disable_downloads = True
         update = self._df([("2020-04-01", 4.0)])
         delta, current, _ = t.state_cache(update)
         self.assertEqual(0, len(delta))
@@ -532,9 +453,9 @@ from(bucket: "data_public")
         self.assertIsNone(delta.sort("Date")["Extra"][0])
 
     def test_state_cache_force_reload(self):
-        """WRANGLE_DISABLE_DATA_DELTA=true deletes current before processing: full rebuild from update, previous becomes empty."""
+        """config.clean=True deletes current before processing: full rebuild from update, previous becomes empty."""
         t = self._setup_state_test("test-2")
-        os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = "true"
+        library.config.clean = True
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)])
         delta, current, previous = t.state_cache(update)
         self.assertEqual(3, len(delta))
@@ -702,15 +623,15 @@ from(bucket: "data_public")
         # update adds Third → union = 3 data columns → counter = 3, not 2
         self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_PREVIOUS_COLUMNS))
 
-    def test_state_cache_disable_download_returns_current_as_previous(self):
-        """WRANGLE_DISABLE_FILE_DOWNLOAD=true returns the same cached current DataFrame for both
+    def test_state_cache_disable_downloads_returns_current_as_previous(self):
+        """config.disable_downloads=True returns the same cached current DataFrame for both
         current and previous, so callers must not rely on previous reflecting a distinct prior run.
 
         Bug: equity and other callers that diff current vs previous to detect changes see zero
         differences on the download-disabled path, because both references point to identical data.
         """
         t = self._setup_state_test("test-5")
-        os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = "true"
+        library.config.disable_downloads = True
         update = self._df([("2020-04-01", 4.0)])
         delta, current, previous = t.state_cache(update)
         self.assertEqual(0, len(delta))
@@ -718,8 +639,8 @@ from(bucket: "data_public")
         self.assertEqual(current["Date"].to_list(), previous["Date"].to_list())
         self.assertEqual(current["Value"].to_list(), previous["Value"].to_list())
 
-    def test_state_cache_disable_download_aggregate_not_applied(self):
-        """WRANGLE_DISABLE_FILE_DOWNLOAD=true returns the cached CSV current without re-applying
+    def test_state_cache_disable_downloads_aggregate_not_applied(self):
+        """config.disable_downloads=True returns the cached CSV current without re-applying
         the aggregate function.  The CSV reflects the aggregate from the *previous* run, so
         aggregate-added columns are present but their values may be stale if the aggregate
         formula changed between runs.
@@ -733,7 +654,7 @@ from(bucket: "data_public")
         t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)]),
                       lambda df: df.with_columns((pl.col("Value") * 2).alias("Double")))
         t.reset_counters()
-        os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = "true"
+        library.config.disable_downloads = True
         _, current, _ = t.state_cache(
             self._df([("2020-04-01", 4.0)]),
             lambda df: df.with_columns((pl.col("Value") * 100).alias("Double"))
@@ -917,6 +838,271 @@ from(bucket: "data_public")
         self.assertEqual(1, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_DELTA_ROWS))
         self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_PREVIOUS_ROWS))
 
+    def test_state_cache_aggregate_with_guard(self):
+        """Null-fill aggregator: add column if absent then fill only null rows; existing values preserved.
+
+        Mirrors equity.py's pattern after the null-fill refactor: ensure the derived column
+        exists (adding a null column if needed), then fill rows where it is null while leaving
+        non-null rows untouched.  Proves both that new rows are filled and that previously
+        computed non-null values survive the CSV round-trip unchanged.
+        """
+
+        def null_fill_agg(df):
+            str_cols = [c for c, t in zip(df.columns, df.dtypes)
+                        if str(t) in ('String', 'Utf8', 'Null') and c != 'Date']
+            if str_cols:
+                df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
+            if "AAPL Price Close" in df.columns:
+                if "AAPL Derived" not in df.columns:
+                    df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Derived"))
+                df = df.with_columns(
+                    pl.when(pl.col("AAPL Derived").is_null())
+                    .then(pl.col("AAPL Price Close") * 10.0)
+                    .otherwise(pl.col("AAPL Derived"))
+                    .alias("AAPL Derived"))
+            out_cols = [c for c in ["Date", "AAPL Price Close", "AAPL Derived"] if c in df.columns]
+            return df.select(out_cols)
+
+        t = self._setup_state_test("agg-8")
+        _, current1, _ = t.state_cache(
+            self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]), null_fill_agg)
+        self.assertEqual([10.0, 20.0], current1.sort("Date")["AAPL Derived"].to_list())
+
+        t.reset_counters()
+        delta, current2, _ = t.state_cache(
+            self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)]),
+            null_fill_agg,
+        )
+        self.assertEqual(1, len(delta))
+        sorted2 = current2.sort("Date")
+        # Jan/Feb: existing non-null values preserved through CSV round-trip
+        self.assertEqual(10.0, sorted2["AAPL Derived"][0])
+        self.assertEqual(20.0, sorted2["AAPL Derived"][1])
+        # Mar: new row filled by null-fill
+        self.assertEqual(30.0, sorted2["AAPL Derived"][2])
+
+    def test_state_cache_aggregate_nullfill_backfills_historical_rows(self):
+        """Null-fill backfills CSV rows whose derived column was null when new source data arrives.
+
+        Scenario: run 1 seeds the CSV with null Derived values (simulating an old run that
+        lacked the null-fill).  Run 2 submits only the new Mar row; Jan/Feb come only from
+        the CSV.  The null-fill aggregator, called on the merged current, fills Jan/Feb in-place
+        from their Price Close.  A presence-guard would leave them null.
+        """
+
+        def null_fill_agg(df):
+            str_cols = [c for c, t in zip(df.columns, df.dtypes)
+                        if str(t) in ('String', 'Utf8', 'Null') and c != 'Date']
+            if str_cols:
+                df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
+            if "AAPL Price Close" in df.columns:
+                if "AAPL Derived" not in df.columns:
+                    df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Derived"))
+                df = df.with_columns(
+                    pl.when(pl.col("AAPL Derived").is_null())
+                    .then(pl.col("AAPL Price Close") * 10.0)
+                    .otherwise(pl.col("AAPL Derived"))
+                    .alias("AAPL Derived"))
+            out_cols = [c for c in ["Date", "AAPL Price Close", "AAPL Derived"] if c in df.columns]
+            return df.select(out_cols)
+
+        def seed_agg(df):
+            """Seeds CSV with explicit null Derived to simulate a prior presence-guard run."""
+            if "AAPL Price Close" in df.columns:
+                df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Derived"))
+            out_cols = [c for c in ["Date", "AAPL Price Close", "AAPL Derived"] if c in df.columns]
+            return df.select(out_cols)
+
+        t = self._setup_state_test("agg-9")
+        t.state_cache(self._price_df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]), seed_agg)
+        t.reset_counters()
+
+        # Update contains only Mar; Jan/Feb arrive via CSV with null Derived
+        delta, current2, _ = t.state_cache(self._price_df([("2020-03-01", 3.0)]), null_fill_agg)
+        self.assertEqual(3, len(current2))
+        sorted2 = current2.sort("Date")
+        # Jan/Feb backfilled on merged-current agg call; a presence-guard would leave these null
+        self.assertEqual(10.0, sorted2["AAPL Derived"][0])
+        self.assertEqual(20.0, sorted2["AAPL Derived"][1])
+        # Mar computed from update-slice agg call
+        self.assertEqual(30.0, sorted2["AAPL Derived"][2])
+        # All three rows changed (Jan/Feb: null→value, Mar: new)
+        self.assertEqual(3, len(delta))
+
+    def _mk_df(self, rows):
+        """Build a (Date, Account ID, Balance) DataFrame for multi-key state_cache tests."""
+        return pl.DataFrame({
+            "Date": [r[0] for r in rows],
+            "Account ID": [r[1] for r in rows],
+            "Balance": [float(r[2]) for r in rows],
+        }).with_columns(pl.col("Date").str.to_date())
+
+    def test_state_cache_multi_key_first_run(self):
+        """First run with two key columns: all rows appear in delta and current; previous is empty."""
+        t = self._setup_state_test("mk-1")
+        delta, current, previous = t.state_cache(
+            self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+            key_columns=["Date", "Account ID"])
+        self.assertEqual(2, len(delta))
+        self.assertEqual(2, len(current))
+        self.assertEqual(0, len(previous))
+
+    def test_state_cache_multi_key_no_change(self):
+        """Re-submitting identical (Date, Account ID) rows produces no delta on second call."""
+        t = self._setup_state_test("mk-2")
+        data = self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)])
+        t.state_cache(data, key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        delta, current, _ = t.state_cache(data, key_columns=["Date", "Account ID"])
+        self.assertEqual(0, len(delta))
+        self.assertEqual(2, len(current))
+
+    def test_state_cache_multi_key_value_change(self):
+        """Changed Balance for one (Date, Account ID) pair: delta contains only that row."""
+        t = self._setup_state_test("mk-3")
+        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+                      key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        delta, current, _ = t.state_cache(
+            self._mk_df([("2026-01-01", "acc-1", 150.0), ("2026-01-01", "acc-2", 200.0)]),
+            key_columns=["Date", "Account ID"])
+        self.assertEqual(1, len(delta))
+        self.assertEqual(150.0, delta.filter(pl.col("Account ID") == "acc-1")["Balance"][0])
+        self.assertEqual(2, len(current))
+
+    def test_state_cache_multi_key_new_account(self):
+        """New Account ID on an existing date: only that new row appears in delta."""
+        t = self._setup_state_test("mk-4")
+        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0)]),
+                      key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        delta, current, _ = t.state_cache(
+            self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+            key_columns=["Date", "Account ID"])
+        self.assertEqual(1, len(delta))
+        self.assertEqual("acc-2", delta["Account ID"][0])
+        self.assertEqual(2, len(current))
+
+    def test_state_cache_multi_key_new_date(self):
+        """New date rows added for all accounts: only the new-date rows appear in delta."""
+        t = self._setup_state_test("mk-5")
+        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+                      key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        delta, current, _ = t.state_cache(
+            self._mk_df([("2026-01-02", "acc-1", 110.0), ("2026-01-02", "acc-2", 210.0)]),
+            key_columns=["Date", "Account ID"])
+        self.assertEqual(2, len(delta))
+        self.assertEqual(4, len(current))
+        self.assertTrue(all(str(d) == "2026-01-02" for d in delta["Date"].to_list()))
+
+    def test_state_cache_multi_key_partial_update(self):
+        """Mixed update: one changed, one new date/account, one unchanged — delta contains only changed+new."""
+        t = self._setup_state_test("mk-6")
+        t.state_cache(self._mk_df([
+            ("2026-01-01", "acc-1", 100.0),
+            ("2026-01-01", "acc-2", 200.0),
+        ]), key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        delta, current, _ = t.state_cache(self._mk_df([
+            ("2026-01-01", "acc-1", 150.0),
+            ("2026-01-01", "acc-2", 200.0),
+            ("2026-01-02", "acc-1", 155.0),
+        ]), key_columns=["Date", "Account ID"])
+        self.assertEqual(2, len(delta))
+        delta_sorted = delta.sort(["Date", "Account ID"])
+        self.assertEqual("2026-01-01", str(delta_sorted["Date"][0]))
+        self.assertEqual("acc-1", delta_sorted["Account ID"][0])
+        self.assertEqual("2026-01-02", str(delta_sorted["Date"][1]))
+
+    def test_state_cache_multi_key_duplicate_keys_in_update(self):
+        """Duplicate (Date, Account ID) pairs in a single update: last occurrence wins."""
+        t = self._setup_state_test("mk-7")
+        delta, current, _ = t.state_cache(self._mk_df([
+            ("2026-01-01", "acc-1", 100.0),
+            ("2026-01-01", "acc-1", 999.0),
+        ]), key_columns=["Date", "Account ID"])
+        self.assertEqual(1, len(current))
+        self.assertEqual(999.0, current["Balance"][0])
+        self.assertEqual(1, len(delta))
+
+    def test_state_cache_multi_key_update_supersedes_current(self):
+        """Update value for an existing (Date, Account ID) supersedes the stored current value."""
+        t = self._setup_state_test("mk-8")
+        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0)]),
+                      key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        delta, current, previous = t.state_cache(
+            self._mk_df([("2026-01-01", "acc-1", 999.0)]),
+            key_columns=["Date", "Account ID"])
+        self.assertEqual(1, len(delta))
+        self.assertEqual(999.0, current["Balance"][0])
+        self.assertEqual(100.0, previous["Balance"][0])
+
+    def test_state_cache_multi_key_counters(self):
+        """Column counters subtract len(key_columns)=2, not 1, from the schema width."""
+        t = self._setup_state_test("mk-9")
+        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0)]),
+                      key_columns=["Date", "Account ID"])
+        self.assertEqual(1, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_UPDATE_COLUMNS))
+        self.assertEqual(1, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_CURRENT_COLUMNS))
+        self.assertEqual(1, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_DELTA_COLUMNS))
+
+    def test_state_cache_multi_key_clean(self):
+        """config.clean=True with multi-key: deletes current and rebuilds from update; previous is empty."""
+        t = self._setup_state_test("mk-10")
+        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+                      key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        library.config.clean = True
+        delta, current, previous = t.state_cache(
+            self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+            key_columns=["Date", "Account ID"])
+        self.assertEqual(2, len(delta))
+        self.assertEqual(2, len(current))
+        self.assertEqual(0, len(previous))
+
+    def test_state_cache_multi_key_disable_downloads(self):
+        """config.disable_downloads=True with multi-key: returns empty delta and cached current."""
+        t = self._setup_state_test("mk-11")
+        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+                      key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        library.config.disable_downloads = True
+        delta, current, _ = t.state_cache(
+            self._mk_df([("2026-01-01", "acc-1", 999.0)]),
+            key_columns=["Date", "Account ID"])
+        self.assertEqual(0, len(delta))
+        self.assertEqual(2, len(current))
+
+    def test_state_cache_multi_key_with_aggregate(self):
+        """Aggregate function applies correctly to multi-key DataFrames."""
+        t = self._setup_state_test("mk-12")
+
+        def _agg(df):
+            if "Balance" in df.columns:
+                df = df.with_columns((pl.col("Balance") * 2).alias("Balance Double"))
+            return df
+
+        delta, current, _ = t.state_cache(
+            self._mk_df([("2026-01-01", "acc-1", 50.0), ("2026-01-01", "acc-2", 100.0)]),
+            aggregate_function=_agg, key_columns=["Date", "Account ID"])
+        self.assertIn("Balance Double", current.columns)
+        doubles = current.sort(["Date", "Account ID"])["Balance Double"].to_list()
+        self.assertEqual([100.0, 200.0], doubles)
+
+    def test_state_cache_multi_key_null_date_dropped(self):
+        """Null Date rows are silently dropped even with multi-key columns."""
+        t = self._setup_state_test("mk-13")
+        data = pl.DataFrame({
+            "Date": [None, "2026-01-01"],
+            "Account ID": ["acc-x", "acc-1"],
+            "Balance": [999.0, 100.0],
+        }).with_columns(pl.col("Date").str.to_date(strict=False))
+        delta, current, _ = t.state_cache(data, key_columns=["Date", "Account ID"])
+        self.assertEqual(1, len(current))
+        self.assertEqual("acc-1", current["Account ID"][0])
+
     def _setup_state_test(self, fixture):
         """Create a Test instance with an isolated input dir, pre-seeded from resources/state/{fixture}."""
         t = Test("Test", "SOME_NON_EXISTANT_GUID")
@@ -927,8 +1113,8 @@ from(bucket: "data_public")
         if isdir(src):
             for fname in os.listdir(src):
                 shutil.copy(join(src, fname), join(t.input, fname))
-        os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = "false"
-        os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = "false"
+        library.config.clean = False
+        library.config.disable_downloads = False
         return t
 
     def _df(self, date_value_pairs):
@@ -938,14 +1124,13 @@ from(bucket: "data_public")
             "Value": [float(p[1]) for p in date_value_pairs],
         }).with_columns(pl.col("Date").str.to_date())
 
-    def run_module(self, module_name, tests_asserts, enable_log=True, prepare_only=False, enable_rerun=True,
-                   enable_data_subset=False, disable_write_stdout=True,
-                   disable_data_delta=False, disable_file_upload=True, disable_file_download=False):
-        os.environ[library.WRANGLE_ENABLE_LOG] = str(enable_log)
-        os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = str(enable_data_subset)
-        os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = str(disable_data_delta)
-        os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = str(disable_file_upload)
-        os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = str(disable_file_download)
+    def run_module(self, module_name, tests_asserts, log="info", prepare_only=False, enable_rerun=True,
+                   clean=False, disable_uploads=True, disable_downloads=False):
+        library.config.log_level = log
+        library.config.clean = clean
+        library.config.disable_uploads = disable_uploads
+        library.config.disable_downloads = disable_downloads
+        library.database = None
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
             os.makedirs(dir_target)
@@ -993,24 +1178,23 @@ from(bucket: "data_public")
             load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.input)
             counters = {}
             if not prepare_only:
-                with patch.object(library.Library, "stdout_write") if disable_write_stdout else no_op():
-                    print("STARTING (run)     [{}]   [{}]".format(module_name.title(), test))
+                print("STARTING (run)     [{}]   [{}]".format(module_name.title(), test))
+                module.run()
+                print("FINISHED (run)     [{}]   [{}]\n".format(module_name.title(), test))
+                assert_counters(module.get_counters(), tests_asserts[test])
+                if enable_rerun:
+                    module.reset_counters()
+                    print("STARTING (no-op)   [{}]   [{}]".format(module_name.title(), test))
                     module.run()
-                    print("FINISHED (run)     [{}]   [{}]\n".format(module_name.title(), test))
-                    assert_counters(module.get_counters(), tests_asserts[test])
-                    if enable_rerun:
-                        module.reset_counters()
-                        print("STARTING (no-op)   [{}]   [{}]".format(module_name.title(), test))
-                        module.run()
-                        print("FINISHED (no-op)   [{}]   [{}]\n\n".format(module_name.title(), test))
-                        assert_counters(module.get_counters(), ASSERT_NOOP)
-                        module.reset_counters()
-                        print("STARTING (reload)   [{}]   [{}]".format(module_name.title(), test))
-                        os.environ['WRANGLE_DISABLE_DATA_DELTA'] = 'true'
-                        module.run()
-                        os.environ['WRANGLE_DISABLE_DATA_DELTA'] = 'false'
-                        print("FINISHED (reload)   [{}]   [{}]\n\n".format(module_name.title(), test))
-                        assert_counters(module.get_counters(), ASSERT_RELOAD)
+                    print("FINISHED (no-op)   [{}]   [{}]\n\n".format(module_name.title(), test))
+                    assert_counters(module.get_counters(), ASSERT_NOOP)
+                    module.reset_counters()
+                    print("STARTING (reload)   [{}]   [{}]".format(module_name.title(), test))
+                    library.config.clean = True
+                    module.run()
+                    library.config.clean = clean
+                    print("FINISHED (reload)   [{}]   [{}]\n\n".format(module_name.title(), test))
+                    assert_counters(module.get_counters(), ASSERT_RELOAD)
         return counters
 
     def setUp(self):
@@ -1019,15 +1203,10 @@ from(bucket: "data_public")
         os.makedirs(join(DIR_ROOT, "target", "data"))
         shutil.rmtree(join(DIR_ROOT, "target", "runtime-unit"), ignore_errors=True)
         os.makedirs(join(DIR_ROOT, "target", "runtime-unit"))
-        os.environ[library.WRANGLE_ENABLE_LOG] = "true"
-        os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = "false"
-        os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = "false"
-        os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = "true"
-        os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = "true"
-        os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = "false"
+        reset_config(log="info")
 
     def tearDown(self):
-        pass
+        reset_config()
 
 
 def merge_asserts(base, addition):
@@ -1143,11 +1322,6 @@ ASSERT_RELOAD = {
         },
     },
 }
-
-
-@contextlib.contextmanager
-def no_op():
-    yield None
 
 
 class Test(Library):

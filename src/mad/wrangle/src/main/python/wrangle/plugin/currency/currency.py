@@ -44,14 +44,14 @@ class Currency(library.Library):
     def _run(self):
         rba_df = self.dataframe_new()
         rba_delta_df = self.dataframe_new()
-        if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD):
+        if not library.config.disable_downloads:
             new_data = False
             started_time = time.time()
             for years in RBA_YEARS:
                 years_file = join(self.input, "RBA_FX_{}.xls".format(years))
                 file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)
-                if file_status[0]:
-                    if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
+                if file_status.status != library.DownloadStatus.FAILED:
+                    if library.config.clean or file_status.status == library.DownloadStatus.DOWNLOADED:
                         new_data = True
                         try:
                             rba_itr_df = self.excel_read(years_file, schema={"Series ID": pl.Date},
@@ -109,25 +109,23 @@ class Currency(library.Library):
             if len(rba_delta_df):
                 rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(
                     pl.col('Date') > pl.lit(datetime(2006, 1, 1)))
-                self.sheet_upload(rba_sheet_df, DRIVE_KEY, 'Currency')
+                self.sheet_upload(rba_sheet_df, DRIVE_KEY, workbook_name="Rates", sheet_name='Currency')
                 started_time = time.time()
                 rba_pairs_df = rba_current_df.select(['Date'] + PAIRS)
-                self.stdout_write(
-                    self.dataframe_to_lineprotocol(rba_pairs_df.drop_nulls(), tags={
-                        "type": "snapshot",
-                        "period": "1d",
-                        "unit": "$"
-                    }, print_label="Currency_1_Day_Snapshot"))
+                self.database_upload(rba_pairs_df.drop_nulls(), tags={
+                    "type": "snapshot",
+                    "period": "1d",
+                    "unit": "$"
+                }, print_label="Currency_1_Day_Snapshot")
                 for fx_period in PERIODS:
                     rba_pctchnage_df = rba_current_df \
                         .select(['Date'] + ["{} {}".format(fx_pair, fx_period).strip() for fx_pair in PAIRS])
                     rba_pctchnage_df.columns = ['Date'] + PAIRS
-                    self.stdout_write(
-                        self.dataframe_to_lineprotocol(rba_pctchnage_df.drop_nulls(), tags={
-                            "type": "delta",
-                            "period": "{:0.0f}d".format(PERIODS[fx_period]),
-                            "unit": "%"
-                        }, print_label="Currency_{}".format(fx_period).replace(" ", "_")))
+                    self.database_upload(rba_pctchnage_df.drop_nulls(), tags={
+                        "type": "delta",
+                        "period": "{:0.0f}d".format(PERIODS[fx_period]),
+                        "unit": "%"
+                    }, print_label="Currency_{}".format(fx_period).replace(" ", "_"))
                 self.print_log("LineProtocol [Currency] serialised", started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing currency data", exception=exception)

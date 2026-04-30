@@ -29,14 +29,14 @@ class Interest(library.Library):
     def _run(self):
         interest_df = self.dataframe_new()
         interest_delta_df = self.dataframe_new()
-        if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD):
+        if not library.config.disable_downloads:
             new_data = False
             started_time = time.time()
             retail_df = self.dataframe_new()
             retail_file = join(self.input, "Retail.xlsx")
             file_status = self.http_download(RETAIL_URL, retail_file)
-            if file_status[0]:
-                if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
+            if file_status.status != library.DownloadStatus.FAILED:
+                if library.config.clean or file_status.status == library.DownloadStatus.DOWNLOADED:
                     try:
                         new_data = True
                         retail_df = self.excel_read(retail_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
@@ -56,8 +56,8 @@ class Interest(library.Library):
             inflation_df = self.dataframe_new()
             inflation_file = join(self.input, "Inflation.xlsx")
             file_status = self.http_download(INFLATION_URL, inflation_file)
-            if file_status[0]:
-                if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
+            if file_status.status != library.DownloadStatus.FAILED:
+                if library.config.clean or file_status.status == library.DownloadStatus.DOWNLOADED:
                     try:
                         new_data = True
                         inflation_df = self.excel_read(inflation_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
@@ -76,7 +76,7 @@ class Interest(library.Library):
             try:
                 if new_data:
                     started_time = time.time()
-                    interest_df = retail_df.join(inflation_df, on="Date", how="outer").sort("Date").set_sorted("Date")
+                    interest_df = retail_df.join(inflation_df, on="Date", how="full").sort("Date").set_sorted("Date")
                     self.dataframe_print(interest_df, print_label="Interest", print_verb="post unique", started=started_time)
                     started_time = time.time()
                     interest_df = interest_df.upsample(time_column="Date", every="1mo").fill_nan(pl.lit(None)).sort("Date")
@@ -106,25 +106,23 @@ class Interest(library.Library):
             if len(interest_delta_df):
                 interest_sheet_df = interest_current_df \
                     .filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(interest_sheet_df, DRIVE_KEY, 'Interest')
+                self.sheet_upload(interest_sheet_df, DRIVE_KEY, workbook_name="Rates", sheet_name='Interest')
                 started_time = time.time()
                 interest_monthly_df = interest_current_df.select(["Date"] + LABELS)
-                self.stdout_write(
-                    self.dataframe_to_lineprotocol(interest_monthly_df.drop_nulls(), tags={
-                        "type": "mean",
-                        "period": "1mo",
-                        "unit": "%"
-                    }, print_label="Interest_1_Month_Mean"))
+                self.database_upload(interest_monthly_df.drop_nulls(), tags={
+                    "type": "mean",
+                    "period": "1mo",
+                    "unit": "%"
+                }, print_label="Interest_1_Month_Mean")
                 for int_period in PERIODS:
                     interest_periodly_df = interest_current_df \
                         .select(["Date"] + ["{} {}".format(int_rate, int_period).strip() for int_rate in LABELS])
                     interest_periodly_df.columns = ["Date"] + LABELS
-                    self.stdout_write(
-                        self.dataframe_to_lineprotocol(interest_periodly_df.drop_nulls(), tags={
-                            "type": "mean",
-                            "period": "{:0.0f}y".format(PERIODS[int_period] / 12),
-                            "unit": "%"
-                        }, print_label="Interest_{}".format(int_period).replace(" ", "_")))
+                    self.database_upload(interest_periodly_df.drop_nulls(), tags={
+                        "type": "mean",
+                        "period": "{:0.0f}y".format(PERIODS[int_period] / 12),
+                        "unit": "%"
+                    }, print_label="Interest_{}".format(int_period).replace(" ", "_"))
                 self.print_log("LineProtocol [Interest] serialised", started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing interest data", exception=exception)
