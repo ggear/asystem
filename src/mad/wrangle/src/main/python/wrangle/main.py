@@ -17,6 +17,13 @@ def parse_args(argv=None):
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
+        "-o", "--once",
+        action="store_true",
+        help=(
+            "force-reprocessing, log-debug, and run all plugins once and exit"
+        ),
+    )
+    parser.add_argument(
         "-p", "--poll-period",
         type=int,
         default=30,
@@ -26,18 +33,14 @@ def parse_args(argv=None):
         ),
     )
     parser.add_argument(
-        "-o", "--once",
+        "--force-reprocessing",
         action="store_true",
-        help=(
-            "clean and run all plugins once and exit"
-        ),
+        help="flush each plugin's cached state and reprocess all files",
     )
     parser.add_argument(
-        "-c", "--clean",
+        "--force-downloads",
         action="store_true",
-        help=(
-            "wipe each plugin's local cached state forcing a full rebuild from upstream sources"
-        ),
+        help="force all files to be re-downloaded even if cached",
     )
     parser.add_argument(
         "--disable-uploads",
@@ -50,22 +53,30 @@ def parse_args(argv=None):
         help="skip remote system downloads and read from local cache only",
     )
     parser.add_argument(
+        "--drive-scope",
+        choices=["production", "staging", "testing"],
+        default="production",
+        help="scope remote uploads and downloads (default: production)",
+    )
+    parser.add_argument(
         "-l", "--log",
-        choices=["debug", "info", "warning", "error"],
+        choices=["debug", "info", "warning", "error", "fatal"],
         default=None,
         help="logging verbosity (default: info; debug when --once is set)",
     )
     args = parser.parse_args(argv)
+    if args.once:
+        args.force_reprocessing = True
     if args.log is None:
         args.log = "debug" if args.once else "info"
-    if args.once:
-        args.clean = True
     return args
 
 
 def configure(args):
     library.config.log_level = args.log
-    library.config.clean = args.clean
+    library.config.drive_scope = library.DriveScope(args.drive_scope)
+    library.config.force_reprocessing = args.force_reprocessing
+    library.config.force_downloads = args.force_downloads
     library.config.disable_uploads = args.disable_uploads
     library.config.disable_downloads = args.disable_downloads
 
@@ -102,7 +113,7 @@ def main(argv=None):
         library.database_open()
         while True:
             success = run_once()
-            library.config.clean = False
+            library.config.force_reprocessing = False
             if args.once or not args.poll_period:
                 break
             time.sleep(args.poll_period * 60)

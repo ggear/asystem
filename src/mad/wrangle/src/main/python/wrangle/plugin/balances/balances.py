@@ -33,10 +33,17 @@ ACCOUNT_METADATA = {
 
 BALANCE_MAX_AGE_HOURS = 4
 
-DRIVE_KEY_BALANCES = "1m-NUkd3_uCiM5of6m1M57bvgkHXOL9NtgAXTDDDxgt8"
-
-
 class Balances(library.Library):
+    _drives = library.DriveScopes(
+        staging={
+            "drive_folder": "PLACEHOLDER",
+            "sheet_balances": "PLACEHOLDER",
+        },
+        production={
+            "drive_folder": "1VAwVLV6OykFFLqapwFnJUXB6msQOlAsZ",
+            "sheet_balances": "1m-NUkd3_uCiM5of6m1M57bvgkHXOL9NtgAXTDDDxgt8",
+        },
+    )
 
     def _run(self):
         new_data = False
@@ -129,8 +136,8 @@ class Balances(library.Library):
             for file_name in self.file_list(self.input, "Redbark_Balances"):
                 if file_name not in balance_files:
                     balance_files[file_name] = library.DownloadResult(library.DownloadStatus.CACHED, file_name)
-            new_data = library.config.clean or (all(s.status != library.DownloadStatus.FAILED for s in balance_files.values()) and any(s.status == library.DownloadStatus.DOWNLOADED for s in balance_files.values()))
-        if library.config.clean:
+            new_data = library.config.force_reprocessing or (all(s.status != library.DownloadStatus.FAILED for s in balance_files.values()) and any(s.status == library.DownloadStatus.DOWNLOADED for s in balance_files.values()))
+        if library.config.force_reprocessing:
             balance_files = {f: library.DownloadResult(library.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.input, "Redbark_Balances")}
             new_data = len(balance_files) > 0
         self.print_log(f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files", started=started_time)
@@ -138,7 +145,7 @@ class Balances(library.Library):
         started_time = time.time()
         for file_name in sorted(balance_files):
             if balance_files[file_name].status != library.DownloadStatus.FAILED:
-                if library.config.clean or balance_files[file_name].status == library.DownloadStatus.DOWNLOADED:
+                if library.config.force_reprocessing or balance_files[file_name].status == library.DownloadStatus.DOWNLOADED:
                     try:
                         monthly_df = self.csv_read(file_name, schema=BALANCES_SCHEMA)
                         balances_df = pl.concat([balances_df, monthly_df], how="diagonal")
@@ -158,11 +165,11 @@ class Balances(library.Library):
                 if len(balances_delta_df):
 
                     # TODO
-                    self.sheet_download(DRIVE_KEY_BALANCES, "Bank", sheet_name="Balances")
+                    self.sheet_download(self.drives.sheet_balances, "Bank", sheet_name="Balances")
 
                     # TODO
                     balances_current_df = balances_current_df.sort(["Date", "Time", "Account Name"], descending=True).with_columns(pl.col("Date").cast(pl.Utf8))
-                    self.sheet_upload(balances_current_df, DRIVE_KEY_BALANCES, workbook_name="Bank", sheet_name="Balances", add_filter=True)
+                    self.sheet_upload(balances_current_df, self.drives.sheet_balances, workbook_name="Bank", sheet_name="Balances", add_filter=True)
 
             except Exception as exception:
                 self.print_log("Unexpected error processing balances data", exception=exception)
@@ -171,4 +178,4 @@ class Balances(library.Library):
         self.counter_write()
 
     def __init__(self):
-        super(Balances, self).__init__("Balances", "1VAwVLV6OykFFLqapwFnJUXB6msQOlAsZ")
+        super().__init__("Balances", Balances._drives)

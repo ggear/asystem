@@ -36,10 +36,17 @@ RBA_YEARS = [
 
 RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
-DRIVE_KEY = "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
-
-
 class Currency(library.Library):
+    _drives = library.DriveScopes(
+        staging={
+            "drive_folder": "PLACEHOLDER",
+            "sheet_rates": "PLACEHOLDER",
+        },
+        production={
+            "drive_folder": "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE",
+            "sheet_rates": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
+        },
+    )
 
     def _run(self):
         rba_df = self.dataframe_new()
@@ -51,7 +58,7 @@ class Currency(library.Library):
                 years_file = join(self.input, f"RBA_FX_{years}.xls")
                 file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check='current' in years)
                 if file_status.status != library.DownloadStatus.FAILED:
-                    if library.config.clean or file_status.status == library.DownloadStatus.DOWNLOADED:
+                    if library.config.force_reprocessing or file_status.status == library.DownloadStatus.DOWNLOADED:
                         new_data = True
                         try:
                             rba_itr_df = self.excel_read(years_file, schema={"Series ID": pl.Date},
@@ -109,7 +116,7 @@ class Currency(library.Library):
             if len(rba_delta_df):
                 rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(
                     pl.col('Date') > pl.lit(datetime(2006, 1, 1)))
-                self.sheet_upload(rba_sheet_df, DRIVE_KEY, workbook_name="Rates", sheet_name='Currency')
+                self.sheet_upload(rba_sheet_df, self.drives.sheet_rates, workbook_name="Rates", sheet_name='Currency')
                 started_time = time.time()
                 rba_pairs_df = rba_current_df.select(['Date'] + PAIRS)
                 self.database_upload(rba_pairs_df.drop_nulls(), tags={
@@ -138,4 +145,4 @@ class Currency(library.Library):
         self.counter_write()
 
     def __init__(self):
-        super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE")
+        super().__init__("Currency", Currency._drives)
