@@ -11,17 +11,14 @@ from .. import library
 BALANCES_SCHEMA = {
     "Date": pl.Date,
     "Time": pl.Utf8,
-    "Month": pl.Date,
-    "Week": pl.Date,
     "Account Name": pl.Utf8,
     "Account Number": pl.Utf8,
-    "Account ID": pl.Utf8,
-    "Balance ID": pl.Utf8,
     "Institution": pl.Utf8,
     "Balance": pl.Float64,
+    "Balance ID": pl.Utf8,
 }
 
-ACCOUNT_NICKNAMES = {
+ACCOUNT_METADATA = {
     "xxxx1000": "AMEX Graham",
     "xxxx1009": "AMEX Jane",
     "xxxx1842": "BWST Current",
@@ -45,7 +42,6 @@ class Balances(library.Library):
         new_data = False
         balance_files = {}
         balances_df = self.dataframe_new(schema=BALANCES_SCHEMA, print_rows=-1)
-        balances_delta_df = self.dataframe_new(schema={"Date": pl.Date}, print_rows=-1)
 
         started_time = time.time()
         if not library.config.disable_downloads:
@@ -67,17 +63,19 @@ class Balances(library.Library):
                     needs_download = False
 
             if needs_download:
-                accounts_result = self.bank_download("Accounts", data="accounts")
-                balances_result = self.bank_download("Balances", data="balances")
+
+                accounts_result = self.bank_download("Accounts", data="accounts", check=False)
+                balances_result = self.bank_download("Balances", data="balances", check=False)
+                # accounts_result = self.bank_download("Accounts", data="accounts")
+                # balances_result = self.bank_download("Balances", data="balances")
+
                 if accounts_result.status != library.DownloadStatus.FAILED and balances_result.status != library.DownloadStatus.FAILED:
                     try:
+                        rows = []
                         accounts_df = self.csv_read(accounts_result.file_path)
                         balances_raw_df = self.csv_read(balances_result.file_path)
                         time_str = today_datetime.strftime("%H:%M:%S")
-                        month = today.replace(day=1)
-                        week = today - timedelta(days=today.weekday())
                         account_lookup = {row.get("id", ""): row for row in accounts_df.rows(named=True)}
-                        rows = []
                         for balance_row in balances_raw_df.rows(named=True):
                             account_id = balance_row.get("accountId", "")
                             account = account_lookup.get(account_id, {})
@@ -91,9 +89,7 @@ class Balances(library.Library):
                             rows.append({
                                 "Date": today,
                                 "Time": time_str,
-                                "Month": month,
-                                "Week": week,
-                                "Account Name": ACCOUNT_NICKNAMES.get(account_number, account.get("name", "")),
+                                "Account Name": ACCOUNT_METADATA.get(account_number, account.get("name", "")),
                                 "Account Number": account_number,
                                 "Account ID": account_id,
                                 "Balance ID": balance_id,
@@ -160,17 +156,19 @@ class Balances(library.Library):
 
                 balances_delta_df, balances_current_df, _ = self.state_cache(balances_df, _aggregate_function, key_columns=["Date", "Time", "Account Name"])
                 if len(balances_delta_df):
+
+                    # TODO
                     self.sheet_download(DRIVE_KEY_BALANCES, "Bank", sheet_name="Balances")
-                    if "Account Name" in balances_current_df.columns:
-                        balances_sheet_df = balances_current_df.pivot(values="Balance", index="Date", on="Account Name", aggregate_function="last").sort("Date")
-                    else:
-                        balances_sheet_df = balances_current_df
-                    self.sheet_upload(balances_sheet_df, DRIVE_KEY_BALANCES, workbook_name="Bank", sheet_name="Balances")
+
+                    # TODO
+                    balances_current_df = balances_current_df.sort(["Date", "Time", "Account Name"], descending=True).with_columns(pl.col("Date").cast(pl.Utf8))
+                    self.sheet_upload(balances_current_df, DRIVE_KEY_BALANCES, workbook_name="Bank", sheet_name="Balances", add_filter=True)
+
             except Exception as exception:
                 self.print_log("Unexpected error processing balances data", exception=exception)
-        if not len(balances_delta_df):
+        else:
             self.print_log("No new data found")
         self.counter_write()
 
     def __init__(self):
-        super(Balances, self).__init__("Balances", "SOME_DRIVE_KEY_PLACEHOLDER")
+        super(Balances, self).__init__("Balances", "1VAwVLV6OykFFLqapwFnJUXB6msQOlAsZ")
