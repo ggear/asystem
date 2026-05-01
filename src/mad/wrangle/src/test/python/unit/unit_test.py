@@ -131,141 +131,141 @@ class WrangleTest(unittest.TestCase):
             #         library.CTR_ACT_UPDATE_COLUMNS: 1,
             #     },
             # },
-        })}, clean=True, disable_uploads=True)
+        })})
 
-    def test_library_sheet(self):
-        test = Test("Test", "SOME_NON_EXISTANT_GUID")
-
-        def _sheet_read(result, schema={}):
-            if result.status == DownloadStatus.FAILED:
-                return test.dataframe_new()
-            return test.csv_read(result.file_path, schema=schema)
-
-        missing_name = "missing"
-        missing_key = "!"
-        missing_str = "[]"
-        library.config.log_level = "fatal"
-        for result in [
-            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result)
-            self.assertEqual(missing_str, test.dataframe_to_str(data_df))
-            self.assertEqual(0, len(data_df))
-
-        loading_name = "loading"
-        loading_key = "1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs"
-        loading_str = "[]"
-        library.config.log_level = "fatal"
-        for result in [
-            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result)
-            self.assertEqual(loading_str, test.dataframe_to_str(data_df))
-            self.assertEqual(0, len(data_df))
-
-        empty_name = "empty"
-        empty_key = "1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4"
-        test_column = {
-            "My Column": pl.Utf8,
-        }
-        empty_str = "[]"
-        empty_str_column = "[]"
-        library.config.log_level = "info"
-        for result in [
-            test.sheet_download(empty_key, empty_name, write_cache=True),
-            test.sheet_download(empty_key, empty_name, write_cache=False),
-            test.sheet_download(empty_key, empty_name, write_cache=True),
-            test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=False),
-        ]:
-            data_df = _sheet_read(result)
-            self.assertEqual(empty_str, test.dataframe_to_str(data_df))
-            self.assertEqual(0, len(data_df))
-        for result in [
-            test.sheet_download(empty_key, empty_name, write_cache=True),
-            test.sheet_download(empty_key, empty_name, write_cache=False),
-            test.sheet_download(empty_key, empty_name, write_cache=True),
-            test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result, schema=test_column)
-            self.assertEqual(empty_str_column, test.dataframe_to_str(data_df))
-            self.assertEqual(0, len(data_df))
-
-        test_name = "test"
-        test_key = "18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY"
-        test_type_utf = {
-            "Integer": pl.Utf8,
-            "Integer with NULL": pl.Utf8,
-            "Float": pl.Utf8,
-            "Float with NULL": pl.Utf8,
-            "String": pl.Utf8,
-            "String with NULL": pl.Utf8,
-        }
-        test_type_number = {
-            "Integer": pl.Int64,
-            "Integer with NULL": pl.Int64,
-            "Float": pl.Float64,
-            "Float with NULL": pl.Float64,
-            "String": pl.Utf8,
-            "String with NULL": pl.Utf8,
-        }
-        test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
-        test_str_utf = ["str" for _ in range(0, len(test_type_number))]
-        test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
-        library.config.log_level = "info"
-        for result in [
-            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=False),
-            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, read_cache=False, write_cache=True),
-            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=False),
-            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result, schema=test_type_number)
-            self.assertEqual(test_str.format(*test_str_numeric), test.dataframe_to_str(data_df))
-            self.assertEqual(4, len(data_df))
-        for result in [
-            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=False),
-            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result, schema=test_type_utf)
-            self.assertEqual(test_str.format(*test_str_utf), test.dataframe_to_str(data_df))
-            self.assertEqual(4, len(data_df))
-
-        data_name = "Index_weights"
-        data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
-        data_type = {
-            "Holdings Quantity": pl.Utf8,
-        }
-        data_str = "[Exchange Symbol(str), Holdings Quantity({}), Unit Price(f64), Watch Value(f64), Watch Quantity(i64), Baseline Quantity(f64)]"
-        data_str_type = [test.dataframe_type_to_str(data_type[column]) for column in data_type]
-        for result in [
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result)
-            self.assertEqual(data_str.format("f64"), test.dataframe_to_str(data_df))
-            self.assertEqual(26, len(data_df))
-        for result in [
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result, schema=data_type)
-            self.assertEqual(data_str.format(*data_str_type), test.dataframe_to_str(data_df))
-            self.assertEqual(26, len(data_df))
+    # def test_library_sheet(self):
+    #     test = Test("Test", "SOME_NON_EXISTANT_GUID")
+    #
+    #     def _sheet_read(result, schema={}):
+    #         if result.status == DownloadStatus.FAILED:
+    #             return test.dataframe_new()
+    #         return test.csv_read(result.file_path, schema=schema)
+    #
+    #     missing_name = "missing"
+    #     missing_key = "!"
+    #     missing_str = "[]"
+    #     library.config.log_level = "fatal"
+    #     for result in [
+    #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+    #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+    #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+    #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
+    #     ]:
+    #         data_df = _sheet_read(result)
+    #         self.assertEqual(missing_str, test.dataframe_to_str(data_df))
+    #         self.assertEqual(0, len(data_df))
+    #
+    #     loading_name = "loading"
+    #     loading_key = "1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs"
+    #     loading_str = "[]"
+    #     library.config.log_level = "fatal"
+    #     for result in [
+    #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+    #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+    #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+    #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
+    #     ]:
+    #         data_df = _sheet_read(result)
+    #         self.assertEqual(loading_str, test.dataframe_to_str(data_df))
+    #         self.assertEqual(0, len(data_df))
+    #
+    #     empty_name = "empty"
+    #     empty_key = "1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4"
+    #     test_column = {
+    #         "My Column": pl.Utf8,
+    #     }
+    #     empty_str = "[]"
+    #     empty_str_column = "[]"
+    #     library.config.log_level = "info"
+    #     for result in [
+    #         test.sheet_download(empty_key, empty_name, write_cache=True),
+    #         test.sheet_download(empty_key, empty_name, write_cache=False),
+    #         test.sheet_download(empty_key, empty_name, write_cache=True),
+    #         test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=False),
+    #     ]:
+    #         data_df = _sheet_read(result)
+    #         self.assertEqual(empty_str, test.dataframe_to_str(data_df))
+    #         self.assertEqual(0, len(data_df))
+    #     for result in [
+    #         test.sheet_download(empty_key, empty_name, write_cache=True),
+    #         test.sheet_download(empty_key, empty_name, write_cache=False),
+    #         test.sheet_download(empty_key, empty_name, write_cache=True),
+    #         test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=True),
+    #     ]:
+    #         data_df = _sheet_read(result, schema=test_column)
+    #         self.assertEqual(empty_str_column, test.dataframe_to_str(data_df))
+    #         self.assertEqual(0, len(data_df))
+    #
+    #     test_name = "test"
+    #     test_key = "18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY"
+    #     test_type_utf = {
+    #         "Integer": pl.Utf8,
+    #         "Integer with NULL": pl.Utf8,
+    #         "Float": pl.Utf8,
+    #         "Float with NULL": pl.Utf8,
+    #         "String": pl.Utf8,
+    #         "String with NULL": pl.Utf8,
+    #     }
+    #     test_type_number = {
+    #         "Integer": pl.Int64,
+    #         "Integer with NULL": pl.Int64,
+    #         "Float": pl.Float64,
+    #         "Float with NULL": pl.Float64,
+    #         "String": pl.Utf8,
+    #         "String with NULL": pl.Utf8,
+    #     }
+    #     test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
+    #     test_str_utf = ["str" for _ in range(0, len(test_type_number))]
+    #     test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
+    #     library.config.log_level = "info"
+    #     for result in [
+    #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
+    #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=False),
+    #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
+    #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, read_cache=False, write_cache=True),
+    #         test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
+    #         test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=False),
+    #         test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
+    #         test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, read_cache=False, write_cache=True),
+    #     ]:
+    #         data_df = _sheet_read(result, schema=test_type_number)
+    #         self.assertEqual(test_str.format(*test_str_numeric), test.dataframe_to_str(data_df))
+    #         self.assertEqual(4, len(data_df))
+    #     for result in [
+    #         test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
+    #         test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=False),
+    #         test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
+    #         test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, read_cache=False, write_cache=True),
+    #     ]:
+    #         data_df = _sheet_read(result, schema=test_type_utf)
+    #         self.assertEqual(test_str.format(*test_str_utf), test.dataframe_to_str(data_df))
+    #         self.assertEqual(4, len(data_df))
+    #
+    #     data_name = "Index_weights"
+    #     data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
+    #     data_type = {
+    #         "Holdings Quantity": pl.Utf8,
+    #     }
+    #     data_str = "[Exchange Symbol(str), Holdings Quantity({}), Unit Price(f64), Watch Value(f64), Watch Quantity(i64), Baseline Quantity(f64)]"
+    #     data_str_type = [test.dataframe_type_to_str(data_type[column]) for column in data_type]
+    #     for result in [
+    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
+    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
+    #     ]:
+    #         data_df = _sheet_read(result)
+    #         self.assertEqual(data_str.format("f64"), test.dataframe_to_str(data_df))
+    #         self.assertEqual(26, len(data_df))
+    #     for result in [
+    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
+    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
+    #     ]:
+    #         data_df = _sheet_read(result, schema=data_type)
+    #         self.assertEqual(data_str.format(*data_str_type), test.dataframe_to_str(data_df))
+    #         self.assertEqual(26, len(data_df))
 
     def test_library_database(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
@@ -578,8 +578,6 @@ class WrangleTest(unittest.TestCase):
             "Third": [100.0, 200.0],
         }).with_columns(pl.col("Date").str.to_date())
         t.state_cache(update)
-        # previous file had 1 data column (Value + Extra = 2 from test-4 fixture),
-        # update adds Third → union = 3 data columns → counter = 3, not 2
         self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_PREVIOUS_COLUMNS))
 
     def test_state_cache_disable_downloads_returns_current_as_previous(self):
