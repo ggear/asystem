@@ -93,11 +93,19 @@ STOCK = {
     'URNM': {"start": "2022-07", "end of day": "16:00", "prefix": "", "exchange": "AX", },
 }
 
-DRIVE_KEY_PRICES = "1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
-DRIVE_KEY_PORTFOLIO = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
-
-
 class Equity(library.Library):
+    _drives = library.DriveScopes(
+        staging={
+            "drive_folder": "PLACEHOLDER",
+            "sheet_prices": "PLACEHOLDER",
+            "sheet_portfolio": "PLACEHOLDER",
+        },
+        production={
+            "drive_folder": "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-",
+            "sheet_prices": "1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM",
+            "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
+        },
+    )
 
     # noinspection PyTypeChecker,PyUnresolvedReferences
     def _run(self):
@@ -139,20 +147,20 @@ class Equity(library.Library):
             # Sync stock and fund files from Drive
             files_cached = self.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED)
             files_downloaded = self.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_DOWNLOADED)
-            files = self.drive_synchronise(self.input_drive, self.input, download=True)
+            files = self.drive_synchronise(self.drives.drive_folder, self.input, download=True)
             self.add_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
             for file_name in files:
                 if basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
                 elif basename(file_name).startswith("Yahoo"):
-                    if files[file_name][0] and (library.config.clean or files[file_name][1]):
+                    if files[file_name][0] and (library.config.force_reprocessing or files[file_name][1]):
                         stock_files[file_name] = library.DownloadResult(library.DownloadStatus.DOWNLOADED if files[file_name][1] else library.DownloadStatus.CACHED, file_name)
-            new_data = library.config.clean or \
+            new_data = library.config.force_reprocessing or \
                        (all([s.status != library.DownloadStatus.FAILED for s in stock_files.values()]) and any([s.status == library.DownloadStatus.DOWNLOADED for s in stock_files.values()])) or \
                        (all([s[0] for s in statement_files.values()]) and any([s[1] for s in statement_files.values()]))
 
         # If clean, flag all files for processing
-        if library.config.clean:
+        if library.config.force_reprocessing:
             stock_files = {f: library.DownloadResult(library.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.input, "Yahoo")}
             statement_files = self.file_list(self.input, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
@@ -164,7 +172,7 @@ class Equity(library.Library):
         stocks_files_count = 0
         for stock_file_name in stock_files:
             if stock_files[stock_file_name].status != library.DownloadStatus.FAILED:
-                if library.config.clean or stock_files[stock_file_name].status == library.DownloadStatus.DOWNLOADED:
+                if library.config.force_reprocessing or stock_files[stock_file_name].status == library.DownloadStatus.DOWNLOADED:
                     try:
                         stocks_files_count += 1
                         stock_ticker = basename(stock_file_name).split('_')[1]
@@ -202,7 +210,7 @@ class Equity(library.Library):
         statement_data = {}
         for statement_file_name in statement_files:
             if statement_files[statement_file_name][0]:
-                if library.config.clean or statement_files[statement_file_name][1]:
+                if library.config.force_reprocessing or statement_files[statement_file_name][1]:
                     with open(statement_file_name, "rb") as statement_file:
                         statement_data[statement_file_name] = {}
                         try:
@@ -452,7 +460,7 @@ class Equity(library.Library):
 
                 # Add manual stocks
                 started_time = time.time()
-                prices_manual_result = self.sheet_download(DRIVE_KEY_PRICES, "Prices", sheet_name="Manual")
+                prices_manual_result = self.sheet_download(self.drives.sheet_prices, "Prices", sheet_name="Manual")
                 equity_df_manual = self.csv_read(prices_manual_result.file_path, schema={"Date": pl.Date}) \
                     if prices_manual_result.status != library.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
                 equity_df_manual = _equity_upsample(equity_df_manual)
@@ -572,7 +580,7 @@ from(bucket: "data_public")
                 _equity_print(equity_df, _dimensions=DIMENSIONS_PRICE_AUX_TYPES, print_label="Equity", print_verb="added FX rates", started=started_time)
 
                 # Get index weights and add index definitions
-                portfolio_indexes_result = self.sheet_download(DRIVE_KEY_PORTFOLIO, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
+                portfolio_indexes_result = self.sheet_download(self.drives.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
                 index_weights = self.csv_read(portfolio_indexes_result.file_path) if portfolio_indexes_result.status != library.DownloadStatus.FAILED else self.dataframe_new()
                 started_time = time.time()
                 indexes = sorted([column.removesuffix(" Quantity") for column in index_weights.columns if column.endswith(" Quantity")])
@@ -769,7 +777,7 @@ from(bucket: "data_public")
                 equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])
                 equity_sheet_df = equity_sheet_df.filter(pl.col("Date") > pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
                 _equity_print(equity_sheet_df, _dimensions=dimensions_sheet, print_label="Sheet", print_verb="filtered", started=started_time)
-                self.sheet_upload(equity_sheet_df, DRIVE_KEY_PRICES, workbook_name="Prices", sheet_name='History')
+                self.sheet_upload(equity_sheet_df, self.drives.sheet_prices, workbook_name="Prices", sheet_name='History')
 
                 # Database upload
                 started_time = time.time()
@@ -824,4 +832,4 @@ from(bucket: "data_public")
         self.counter_write()
 
     def __init__(self):
-        super(Equity, self).__init__("Equity", "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-")
+        super().__init__("Equity", Equity._drives)

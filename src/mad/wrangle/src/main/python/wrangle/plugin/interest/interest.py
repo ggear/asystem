@@ -21,10 +21,17 @@ COLUMNS = [f"{label} {period}".strip() for label in LABELS for period in ([""] +
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
-DRIVE_KEY = "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
-
-
 class Interest(library.Library):
+    _drives = library.DriveScopes(
+        staging={
+            "drive_folder": "PLACEHOLDER",
+            "sheet_rates": "PLACEHOLDER",
+        },
+        production={
+            "drive_folder": "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ",
+            "sheet_rates": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
+        },
+    )
 
     def _run(self):
         interest_df = self.dataframe_new()
@@ -36,7 +43,7 @@ class Interest(library.Library):
             retail_file = join(self.input, "Retail.xlsx")
             file_status = self.http_download(RETAIL_URL, retail_file)
             if file_status.status != library.DownloadStatus.FAILED:
-                if library.config.clean or file_status.status == library.DownloadStatus.DOWNLOADED:
+                if library.config.force_reprocessing or file_status.status == library.DownloadStatus.DOWNLOADED:
                     try:
                         new_data = True
                         retail_df = self.excel_read(retail_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
@@ -57,7 +64,7 @@ class Interest(library.Library):
             inflation_file = join(self.input, "Inflation.xlsx")
             file_status = self.http_download(INFLATION_URL, inflation_file)
             if file_status.status != library.DownloadStatus.FAILED:
-                if library.config.clean or file_status.status == library.DownloadStatus.DOWNLOADED:
+                if library.config.force_reprocessing or file_status.status == library.DownloadStatus.DOWNLOADED:
                     try:
                         new_data = True
                         inflation_df = self.excel_read(inflation_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
@@ -106,7 +113,7 @@ class Interest(library.Library):
             if len(interest_delta_df):
                 interest_sheet_df = interest_current_df \
                     .filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(interest_sheet_df, DRIVE_KEY, workbook_name="Rates", sheet_name='Interest')
+                self.sheet_upload(interest_sheet_df, self.drives.sheet_rates, workbook_name="Rates", sheet_name='Interest')
                 started_time = time.time()
                 interest_monthly_df = interest_current_df.select(["Date"] + LABELS)
                 self.database_upload(interest_monthly_df.drop_nulls(), tags={
@@ -135,4 +142,4 @@ class Interest(library.Library):
         self.counter_write()
 
     def __init__(self):
-        super(Interest, self).__init__("Interest", "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ")
+        super().__init__("Interest", Interest._drives)

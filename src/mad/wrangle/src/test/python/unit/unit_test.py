@@ -28,7 +28,9 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
 
 def reset_config(log="warning"):
     library.config.log_level = log
-    library.config.clean = False
+    library.config.drive_scope = library.DriveScope.PRODUCTION
+    library.config.force_reprocessing = False
+    library.config.force_downloads = False
     library.config.disable_uploads = True
     library.config.disable_downloads = False
     library.database = None
@@ -38,7 +40,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
         self.run_module("interest", {"success_typical": ASSERT_RUN},
-                        clean=False,
+                        force_reprocessing=False,
                         disable_downloads=False,
                         disable_uploads=True,
                         enable_rerun=False,
@@ -441,7 +443,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_force_reload(self):
         t = self._setup_state_test("test-2")
-        library.config.clean = True
+        library.config.force_reprocessing = True
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)])
         delta, current, previous = t.state_cache(update)
         self.assertEqual(3, len(delta))
@@ -939,7 +941,7 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
-        library.config.clean = True
+        library.config.force_reprocessing = True
         delta, current, previous = t.state_cache(
             self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
             key_columns=["Date", "Account ID"])
@@ -994,7 +996,7 @@ class WrangleTest(unittest.TestCase):
         if isdir(src):
             for fname in os.listdir(src):
                 shutil.copy(join(src, fname), join(t.input, fname))
-        library.config.clean = False
+        library.config.force_reprocessing = False
         library.config.disable_downloads = False
         return t
 
@@ -1005,9 +1007,12 @@ class WrangleTest(unittest.TestCase):
         }).with_columns(pl.col("Date").str.to_date())
 
     def run_module(self, module_name, tests_asserts, log="info",
-                   prepare_only=False, enable_rerun=True, clean=False, disable_uploads=True, disable_downloads=False):
+                   prepare_only=False, enable_rerun=True, force_reprocessing=False, force_downloads=False,
+                   disable_uploads=True, disable_downloads=False, drive_scope=library.DriveScope.PRODUCTION):
         library.config.log_level = log
-        library.config.clean = clean
+        library.config.drive_scope = drive_scope
+        library.config.force_reprocessing = force_reprocessing
+        library.config.force_downloads = force_downloads
         library.config.disable_uploads = disable_uploads
         library.config.disable_downloads = disable_downloads
         library.database = None
@@ -1061,9 +1066,9 @@ class WrangleTest(unittest.TestCase):
                     assert_counters(module.get_counters(), ASSERT_NOOP)
                     module.reset_counters()
                     print(f"STARTING (reload)   [{module_name.title()}]   [{test}]")
-                    library.config.clean = True
+                    library.config.force_reprocessing = True
                     module.run()
-                    library.config.clean = clean
+                    library.config.force_reprocessing = force_reprocessing
                     print(f"FINISHED (reload)   [{module_name.title()}]   [{test}]\n\n")
                     assert_counters(module.get_counters(), ASSERT_RELOAD)
         return counters
@@ -1198,6 +1203,12 @@ ASSERT_RELOAD = {
 class Test(Library):
     def _run(self):
         pass
+
+    def __init__(self, name, drive_folder):
+        super().__init__(name, library.DriveScopes(
+            staging={"drive_folder": "PLACEHOLDER"},
+            production={"drive_folder": drive_folder},
+        ))
 
 
 if __name__ == '__main__':
