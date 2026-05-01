@@ -140,9 +140,7 @@ def database_open():
         return
     missing = [name for name in DATABASE_ENV_VARS if not os.environ.get(name)]
     if missing:
-        print_log("wrangle",
-                  f"Database disabled: missing environment variable(s) [{', '.join(missing)}]",
-                  level="warning")
+        print_log("wrangle", f"Database disabled: missing environment variable(s) [{', '.join(missing)}]", level="warning")
         return
     try:
         from influxdb_client_3 import InfluxDBClient3
@@ -580,6 +578,9 @@ class Library(object, metaclass=ABCMeta):
                     result = _request(f"/v1/balances?accountIds={','.join(account_ids[i:i + 100])}")
                     rows.extend(result.get("data", []))
                 data_df = pl.DataFrame(rows) if rows else self.dataframe_new()
+
+
+
             elif data == "transactions":
                 accounts = _all_accounts()
                 connection_ids = list(dict.fromkeys(a["connectionId"] for a in accounts if "connectionId" in a))
@@ -629,7 +630,7 @@ class Library(object, metaclass=ABCMeta):
             version_str = filename[len(prefix):-len(".csv")]
             if version_str.isdigit() and int(version_str) <= current_version - 2:
                 os.remove(file_path)
-                self.print_log(f"File [{name}] deleted old cached version [{file_path}]")
+                self.print_log(f"File [{name}] deleted old version [{file_path}]")
 
     def sheet_download(self, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_load_secs=10, sheet_retry_max=5,
                        read_cache=True, write_cache=False, print_rows=PL_PRINT_ROWS):
@@ -726,7 +727,7 @@ class Library(object, metaclass=ABCMeta):
         return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
 
     def sheet_upload(self, data_df, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_start_column="A",
-                     print_label=None, print_rows=PL_PRINT_ROWS):
+                     add_filter=False, print_label=None, print_rows=PL_PRINT_ROWS):
         started_time = time.time()
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
         name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
@@ -735,7 +736,7 @@ class Library(object, metaclass=ABCMeta):
             drive_version = None
             if not config.disable_uploads:
                 spread = Spread(drive_url)
-                spread.df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start=f"{sheet_start_column}{sheet_start_row}", replace=True)
+                spread.df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start=f"{sheet_start_column}{sheet_start_row}", add_filter=add_filter, replace=True)
                 try:
                     drive_version = build('drive', 'v3', credentials=spread.client.auth, cache_discovery=False) \
                         .files().get(fileId=drive_key, fields='version').execute().get('version')
@@ -1253,18 +1254,17 @@ class Library(object, metaclass=ABCMeta):
                 messages = (f"{print_prefix}{'' if print_label is None else f' [{print_label}]'}"
                             f" {print_verb} with [{len(data_df.columns):,}] columns and [{len(data_df):,}] rows"
                             f"{'' if print_suffix is None else f' {print_suffix}'}")
-            self.print_log(messages,
-                           None if print_rows == 0 else self.dataframe_to_str(data_df, compact, print_rows),
-                           started=started)
+            self.print_log(messages, None if print_rows == 0 else self.dataframe_to_str(data_df, compact, print_rows), started=started, level="debug")
         return data_df
 
-    def file_list(self, file_dir, file_prefix):
+    def file_list(self, file_dir, file_prefix, quiet=True):
         files = {}
         for file_name in os.listdir(file_dir):
             if file_name.startswith(file_prefix):
                 file_path = join(file_dir, file_name)
-                files[file_path] = True, True
-                self.print_log(f"File [{file_name}] found at [{file_path}]")
+                files[file_path] = DownloadResult(DownloadStatus.CACHED, file_path)
+                if not quiet:
+                    self.print_log(f"File [{file_name}] found at [{file_path}]")
         return files
 
     def counter_write(self):

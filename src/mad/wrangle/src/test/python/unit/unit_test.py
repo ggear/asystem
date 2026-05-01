@@ -131,7 +131,7 @@ class WrangleTest(unittest.TestCase):
             #         library.CTR_ACT_UPDATE_COLUMNS: 1,
             #     },
             # },
-        })})
+        })}, clean=True, disable_uploads=True)
 
     def test_library_sheet(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
@@ -1006,8 +1006,8 @@ class WrangleTest(unittest.TestCase):
             "Value": [float(p[1]) for p in date_value_pairs],
         }).with_columns(pl.col("Date").str.to_date())
 
-    def run_module(self, module_name, tests_asserts, log="info", prepare_only=False, enable_rerun=True,
-                   clean=False, disable_uploads=True, disable_downloads=False):
+    def run_module(self, module_name, tests_asserts, log="info",
+                   prepare_only=False, enable_rerun=True, clean=False, disable_uploads=True, disable_downloads=False):
         library.config.log_level = log
         library.config.clean = clean
         library.config.disable_uploads = disable_uploads
