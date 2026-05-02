@@ -105,7 +105,12 @@ class Balances(plugin.Plugin):
                                 "Balance": balance,
                             })
                         today_df = pl.DataFrame(rows, schema=BALANCES_SCHEMA) if rows else self.dataframe_new(schema=BALANCES_SCHEMA)
-                        self.dataframe_print(today_df, print_label="Balances", print_verb="transformed", started=started_time)
+                        self.dataframe_print(
+                            today_df,
+                            print_label="Balances",
+                            print_verb="transformed",
+                            started=started_time,
+                        )
                         started_time = time.time()
 
                         balances_changed = (existing_df is None or existing_df.filter(pl.col("Date") == pl.lit(today).cast(pl.Date)).height == 0)
@@ -128,7 +133,10 @@ class Balances(plugin.Plugin):
                         else:
                             balance_files[monthly_file] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, monthly_file)
                     except Exception as exception:
-                        self.print_log("Unexpected error processing balances dataframe", exception=exception)
+                        self.print_log(
+                            "Unexpected error processing balances dataframe",
+                            exception=exception,
+                        )
                 else:
                     pass
             else:
@@ -142,7 +150,10 @@ class Balances(plugin.Plugin):
         if plugin.config.force_reprocessing:
             balance_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_data_dir, "Redbark_Balances")}
             new_data = len(balance_files) > 0
-        self.print_log(f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files", started=started_time)
+        self.print_log(
+            f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files",
+            started=started_time,
+        )
 
         started_time = time.time()
         for file_name in sorted(balance_files):
@@ -152,10 +163,18 @@ class Balances(plugin.Plugin):
                         monthly_df = self.csv_read(file_name, schema=BALANCES_SCHEMA)
                         balances_df = pl.concat([balances_df, monthly_df], how="diagonal")
                     except Exception as exception:
-                        self.print_log(f"Unexpected error reading [{file_name}]", exception=exception)
+                        self.print_log(
+                            f"Unexpected error reading [{file_name}]",
+                            exception=exception,
+                        )
         if len(balances_df) > 0:
             balances_df = balances_df.sort(["Date", "Time", "Account Name"])
-        self.dataframe_print(balances_df, print_label="Balances", print_verb="collected", started=started_time)
+        self.dataframe_print(
+            balances_df,
+            print_label="Balances",
+            print_verb="collected",
+            started=started_time,
+        )
 
         if new_data:
             try:
@@ -173,9 +192,14 @@ class Balances(plugin.Plugin):
                     self.sheet_upload(balances_current_df, self.remote_data_repos.sheet_balances, workbook_name="Bank", sheet_name="Balances", add_filter=True)
 
             except Exception as exception:
-                self.print_log("Unexpected error processing balances data", exception=exception)
+                self.print_log(
+                    "Unexpected error processing balances data",
+                    exception=exception,
+                )
         else:
-            self.print_log("No new data found")
+            self.print_log(
+                "No new data found",
+            )
         self.counter_write()
 
     def __init__(self):
