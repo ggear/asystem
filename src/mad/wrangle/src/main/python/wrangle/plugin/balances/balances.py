@@ -1,12 +1,12 @@
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from os.path import *
 
 import polars as pl
 import polars.selectors as cs
 
-from .. import library
+from wrangle import plugin
 
 BALANCES_SCHEMA = {
     "Date": pl.Date,
@@ -33,8 +33,9 @@ ACCOUNT_METADATA = {
 
 BALANCE_MAX_AGE_HOURS = 4
 
-class Balances(library.Library):
-    _drives = library.DriveScopes(
+
+class Balances(plugin.Plugin):
+    _data_repos = plugin.DataRepos(
         staging={
             "drive_folder": "PLACEHOLDER",
             "sheet_balances": "PLACEHOLDER",
@@ -51,10 +52,10 @@ class Balances(library.Library):
         balances_df = self.dataframe_new(schema=BALANCES_SCHEMA, print_rows=-1)
 
         started_time = time.time()
-        if not library.config.disable_downloads:
+        if not plugin.config.disable_downloads:
             today_datetime = datetime.today()
             today = today_datetime.date()
-            monthly_file = abspath(f"{self.input}/Redbark_Balances_{today.year}_{today.month:02d}.csv")
+            monthly_file = abspath(f"{self.local_data_dir}/Redbark_Balances_{today.year}_{today.month:02d}.csv")
 
             existing_df = None
             if isfile(monthly_file):
@@ -76,7 +77,7 @@ class Balances(library.Library):
                 # accounts_result = self.bank_download("Accounts", data="accounts")
                 # balances_result = self.bank_download("Balances", data="balances")
 
-                if accounts_result.status != library.DownloadStatus.FAILED and balances_result.status != library.DownloadStatus.FAILED:
+                if accounts_result.status != plugin.DownloadStatus.FAILED and balances_result.status != plugin.DownloadStatus.FAILED:
                     try:
                         rows = []
                         accounts_df = self.csv_read(accounts_result.file_path)
@@ -123,29 +124,30 @@ class Balances(library.Library):
                         if balances_changed:
                             combined_df = (pl.concat([existing_df, today_df], how="diagonal") if existing_df is not None else today_df).sort(["Date", "Time", "Account Name"])
                             self.csv_write(combined_df, monthly_file)
-                            balance_files[monthly_file] = library.DownloadResult(library.DownloadStatus.DOWNLOADED, monthly_file)
+                            balance_files[monthly_file] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, monthly_file)
                         else:
-                            balance_files[monthly_file] = library.DownloadResult(library.DownloadStatus.CACHED, monthly_file)
+                            balance_files[monthly_file] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, monthly_file)
                     except Exception as exception:
                         self.print_log("Unexpected error processing balances dataframe", exception=exception)
                 else:
                     pass
             else:
-                balance_files[monthly_file] = library.DownloadResult(library.DownloadStatus.CACHED, monthly_file)
+                balance_files[monthly_file] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, monthly_file)
 
-            for file_name in self.file_list(self.input, "Redbark_Balances"):
+            for file_name in self.file_list(self.local_data_dir, "Redbark_Balances"):
                 if file_name not in balance_files:
-                    balance_files[file_name] = library.DownloadResult(library.DownloadStatus.CACHED, file_name)
-            new_data = library.config.force_reprocessing or (all(s.status != library.DownloadStatus.FAILED for s in balance_files.values()) and any(s.status == library.DownloadStatus.DOWNLOADED for s in balance_files.values()))
-        if library.config.force_reprocessing:
-            balance_files = {f: library.DownloadResult(library.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.input, "Redbark_Balances")}
+                    balance_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, file_name)
+            new_data = plugin.config.force_reprocessing or (
+                    all(s.status != plugin.DownloadStatus.FAILED for s in balance_files.values()) and any(s.status == plugin.DownloadStatus.DOWNLOADED for s in balance_files.values()))
+        if plugin.config.force_reprocessing:
+            balance_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_data_dir, "Redbark_Balances")}
             new_data = len(balance_files) > 0
         self.print_log(f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files", started=started_time)
 
         started_time = time.time()
         for file_name in sorted(balance_files):
-            if balance_files[file_name].status != library.DownloadStatus.FAILED:
-                if library.config.force_reprocessing or balance_files[file_name].status == library.DownloadStatus.DOWNLOADED:
+            if balance_files[file_name].status != plugin.DownloadStatus.FAILED:
+                if plugin.config.force_reprocessing or balance_files[file_name].status == plugin.DownloadStatus.DOWNLOADED:
                     try:
                         monthly_df = self.csv_read(file_name, schema=BALANCES_SCHEMA)
                         balances_df = pl.concat([balances_df, monthly_df], how="diagonal")
@@ -163,13 +165,12 @@ class Balances(library.Library):
 
                 balances_delta_df, balances_current_df, _ = self.state_cache(balances_df, _aggregate_function, key_columns=["Date", "Time", "Account Name"])
                 if len(balances_delta_df):
-
                     # TODO
-                    self.sheet_download(self.drives.sheet_balances, "Bank", sheet_name="Balances")
+                    self.sheet_download(self.remote_data_repos.sheet_balances, "Bank", sheet_name="Balances")
 
                     # TODO
                     balances_current_df = balances_current_df.sort(["Date", "Time", "Account Name"], descending=True).with_columns(pl.col("Date").cast(pl.Utf8))
-                    self.sheet_upload(balances_current_df, self.drives.sheet_balances, workbook_name="Bank", sheet_name="Balances", add_filter=True)
+                    self.sheet_upload(balances_current_df, self.remote_data_repos.sheet_balances, workbook_name="Bank", sheet_name="Balances", add_filter=True)
 
             except Exception as exception:
                 self.print_log("Unexpected error processing balances data", exception=exception)
@@ -178,4 +179,4 @@ class Balances(library.Library):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Balances", Balances._drives)
+        super().__init__("Balances", Balances._data_repos)

@@ -4,13 +4,13 @@ sys.path.append('../../../main/python')
 
 import os
 import pytest
-from wrangle.plugin import library
+from wrangle import plugin
 from os.path import *
 
 TIMEOUT_WARMUP = 30
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
-for key, value in list(library.load_profile(library.get_file(".env")).items()):
+for key, value in list(plugin.load_profile(plugin.get_file(".env")).items()):
     os.environ[key] = value
 
 
@@ -108,5 +108,4 @@ def test_warmup():
 
 
 if __name__ == '__main__':
-    sys.argv.extend([__file__, "-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache"])
-    sys.exit(pytest.main())
+    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))

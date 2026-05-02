@@ -21,4 +21,4 @@ def print_log(process, messages, exception=None, level="info"):
         if len(line) > 0:
             print(f"{prefix}{line}")
     if exception is not None:
-        print(f"{prefix}{(chr(10) + prefix).join(traceback.format_exc().splitlines())}")
+        print(f"{prefix}{(chr(10) + prefix).join(traceback.format_exc().splitlines())}", flush=True)

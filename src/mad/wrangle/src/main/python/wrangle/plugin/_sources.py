@@ -4,7 +4,6 @@ import hashlib
 import io
 import json
 import logging
-import os
 import ssl
 import time
 import urllib.error
@@ -12,10 +11,10 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
 from ftplib import FTP
-from os.path import abspath, basename, dirname, exists, getmtime, isfile
+from os.path import exists, getmtime
 
 import dropbox
-import google.oauth2.service_account
+import google
 import yfinance as yf
 from dateutil import parser
 from googleapiclient.discovery import build
@@ -24,12 +23,7 @@ from gspread_pandas import Spread
 from pandas.tseries.offsets import BDay
 
 from . import _database
-from ._config import (config, DownloadResult, DownloadStatus, get_file,
-                      CTR_SRC_SOURCES, CTR_SRC_EGRESS,
-                      CTR_ACT_CACHED, CTR_ACT_DOWNLOADED, CTR_ACT_ERRORED,
-                      CTR_ACT_UPLOADED, CTR_ACT_PERSISTED,
-                      CTR_ACT_SHEET_COLUMNS, CTR_ACT_SHEET_ROWS,
-                      PL_PRINT_ROWS)
+from ._config import *
 
 logging.getLogger('yfinance').setLevel(logging.ERROR)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
@@ -244,9 +238,9 @@ class SourcesMixin:
 
     def database_download(self, query_name, query_string, start=None, end=None, check=True, force=False, ignore=True):
         started_time = time.time()
-        local_path = abspath(f"{self.input}/_Database_{query_name}.csv")
+        local_path = abspath(f"{self.local_data_dir}/_Database_{query_name}.csv")
         effective_force = force or config.force_downloads
-        if config.disable_downloads or _database.database is None:
+        if config.disable_downloads or _database._database_client is None:
             if isfile(local_path):
                 self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -270,7 +264,7 @@ class SourcesMixin:
                     return DownloadResult(DownloadStatus.CACHED, local_path)
         try:
             import polars as pl
-            arrow_table = _database.database.query(query=query_string, language="sql")
+            arrow_table = _database._database_client.query(query=query_string, language="sql")
             data_df = pl.from_arrow(arrow_table)
             if isinstance(data_df, pl.Series):
                 data_df = data_df.to_frame()
@@ -290,7 +284,7 @@ class SourcesMixin:
 
     def bank_download(self, file_cache, data="accounts", check=True, force=False):
         started_time = time.time()
-        file_path = abspath(f"{self.input}/_Bank_{file_cache}.csv")
+        file_path = abspath(f"{self.local_data_dir}/_Bank_{file_cache}.csv")
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(file_path):
@@ -380,7 +374,7 @@ class SourcesMixin:
             return DownloadResult(DownloadStatus.FAILED, None)
 
     def _sheet_cache_cleanup(self, name, current_version):
-        pattern = abspath(f"{self.input}/_Sheet_{name}_v*.csv")
+        pattern = abspath(f"{self.local_data_dir}/_Sheet_{name}_v*.csv")
         for file_path in glob.glob(pattern):
             filename = basename(file_path)
             prefix = f"_Sheet_{name}_v"
@@ -403,7 +397,7 @@ class SourcesMixin:
             self.print_log(f"Failed to get Drive version of sheet [{drive_url}]", exception=exception, level="error")
         name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
         if drive_version is not None:
-            file_path = abspath(f"{self.input}/_Sheet_{name}_v{drive_version}.csv")
+            file_path = abspath(f"{self.local_data_dir}/_Sheet_{name}_v{drive_version}.csv")
             self._sheet_cache_cleanup(name, int(drive_version))
             if isfile(file_path):
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
@@ -412,7 +406,7 @@ class SourcesMixin:
             prefix = f"_Sheet_{name}_v"
             versioned_files = sorted(
                 [(int(basename(p)[len(prefix):-len(".csv")]), p)
-                 for p in glob.glob(abspath(f"{self.input}/{prefix}*.csv"))
+                 for p in glob.glob(abspath(f"{self.local_data_dir}/{prefix}*.csv"))
                  if basename(p)[len(prefix):-len(".csv")].isdigit()],
                 reverse=True
             )
@@ -420,11 +414,11 @@ class SourcesMixin:
                 _, file_path = versioned_files[0]
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
-            file_path = abspath(f"{self.input}/_Sheet_{name}.csv")
+            file_path = abspath(f"{self.local_data_dir}/_Sheet_{name}.csv")
             if read_cache and not write_cache and isfile(file_path):
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
-        file_path = abspath(f"{self.input}/_Sheet_{name}.csv") if drive_version is None else abspath(f"{self.input}/_Sheet_{name}_v{drive_version}.csv")
+        file_path = abspath(f"{self.local_data_dir}/_Sheet_{name}.csv") if drive_version is None else abspath(f"{self.local_data_dir}/_Sheet_{name}_v{drive_version}.csv")
         retries = 0
         caught_exception = None
 
@@ -505,7 +499,7 @@ class SourcesMixin:
                 except Exception as exception:
                     self.print_log(f"Failed to get Drive version after upload of [{drive_url}]", exception=exception, level="error")
             suffix = f"_v{drive_version}" if drive_version is not None else ""
-            file_path = abspath(f"{self.input}/_Sheet_{name}{suffix}.csv")
+            file_path = abspath(f"{self.local_data_dir}/_Sheet_{name}{suffix}.csv")
             self.csv_write(data_df, file_path)
             if drive_version is not None:
                 self._sheet_cache_cleanup(name, int(drive_version))
