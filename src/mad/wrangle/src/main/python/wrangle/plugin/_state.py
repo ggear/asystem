@@ -1,18 +1,11 @@
-import os
 import shutil
 import time
 from collections import OrderedDict
-from os.path import abspath, isdir, isfile
 
 import polars as pl
 from polars.exceptions import SchemaError
 
-from ._config import (config,
-                      CTR_SRC_DATA,
-                      CTR_ACT_UPDATE_COLUMNS, CTR_ACT_UPDATE_ROWS,
-                      CTR_ACT_CURRENT_COLUMNS, CTR_ACT_CURRENT_ROWS,
-                      CTR_ACT_PREVIOUS_COLUMNS, CTR_ACT_PREVIOUS_ROWS,
-                      CTR_ACT_DELTA_COLUMNS, CTR_ACT_DELTA_ROWS)
+from ._config import *
 
 
 class StateMixin:
@@ -22,12 +15,12 @@ class StateMixin:
         key_columns = key_columns if key_columns is not None else ["Date"]
         aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_function is None \
             else (lambda _data_df: aggregate_function(_data_df) if len(_data_df) > 0 else _data_df)
-        file_delta = abspath(f"{self.input}/__{self.name.title()}_Delta.csv")
-        file_update = abspath(f"{self.input}/__{self.name.title()}_Update.csv")
-        file_current = abspath(f"{self.input}/__{self.name.title()}_Current.csv")
-        file_previous = abspath(f"{self.input}/__{self.name.title()}_Previous.csv")
-        if not isdir(self.input):
-            os.makedirs(self.input)
+        file_delta = abspath(f"{self.local_data_dir}/__{self.name.title()}_Delta.csv")
+        file_update = abspath(f"{self.local_data_dir}/__{self.name.title()}_Update.csv")
+        file_current = abspath(f"{self.local_data_dir}/__{self.name.title()}_Current.csv")
+        file_previous = abspath(f"{self.local_data_dir}/__{self.name.title()}_Previous.csv")
+        if not isdir(self.local_data_dir):
+            os.makedirs(self.local_data_dir)
         if not config.disable_downloads and config.force_reprocessing:
             if isfile(file_current):
                 os.remove(file_current)

@@ -1,5 +1,4 @@
 import time
-from os.path import abspath, basename
 
 import pandas as pd
 import polars as pl
@@ -7,11 +6,7 @@ import polars.selectors as cs
 from polars.datatypes import DataTypeClass
 
 from . import _database
-from ._config import (config,
-                      CTR_SRC_EGRESS,
-                      CTR_ACT_DATABASE_COLUMNS, CTR_ACT_DATABASE_ROWS,
-                      CTR_ACT_ERRORED,
-                      PL_PRINT_ROWS)
+from ._config import *
 from ._logging import log_enabled
 
 
@@ -106,13 +101,13 @@ class DataFramesMixin:
     def database_upload(self, data_df, tags=None, print_label=None, chunk_rows=5000):
         if len(data_df.columns) <= 1 or len(data_df) == 0:
             return
-        if config.disable_uploads or _database.database is None:
+        if config.disable_uploads or _database._database_client is None:
             for _ in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
                 pass
             if config.disable_uploads:
                 tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
                 tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
-                csv_path = abspath(f"{self.input}/_Database_{self.name}.csv")
+                csv_path = abspath(f"{self.local_data_dir}/_Database_{self.name}.csv")
                 date_col = data_df.columns[0]
                 fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
                 csv_df = data_df \
@@ -127,10 +122,10 @@ class DataFramesMixin:
             for line in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
                 buffer.append(line)
                 if len(buffer) >= chunk_rows:
-                    _database.database.write(record=buffer, write_precision="ms")
+                    _database._database_client.write(record=buffer, write_precision="ms")
                     buffer = []
             if buffer:
-                _database.database.write(record=buffer, write_precision="ms")
+                _database._database_client.write(record=buffer, write_precision="ms")
         except Exception as exception:
             self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed", exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)

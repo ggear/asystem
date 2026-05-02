@@ -8,7 +8,6 @@ from os.path import *
 
 import polars as pl
 import pytest
-from unittest.mock import patch, MagicMock
 
 ########################################################################################################################
 # NOTES:
@@ -17,23 +16,23 @@ from unittest.mock import patch, MagicMock
 
 sys.path.append('../../../main/python')
 
-from wrangle.plugin import library
-from wrangle.plugin.library import Library, DownloadResult, DownloadStatus
+from wrangle import plugin
+from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
-for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
+for key, value in list(plugin.load_profile(join(DIR_ROOT, ".env")).items()):
     os.environ[key] = value
 
 
 def reset_config(log="warning"):
-    library.config.log_level = log
-    library.config.drive_scope = library.DriveScope.PRODUCTION
-    library.config.force_reprocessing = False
-    library.config.force_downloads = False
-    library.config.disable_uploads = True
-    library.config.disable_downloads = False
-    library.database = None
+    plugin.config.log_level = log
+    plugin.config.drive_scope = plugin.DataRepoScope.PRODUCTION
+    plugin.config.force_reprocessing = False
+    plugin.config.force_downloads = False
+    plugin.config.disable_uploads = True
+    plugin.config.disable_downloads = False
+    plugin.database_close()
 
 
 class WrangleTest(unittest.TestCase):
@@ -50,11 +49,11 @@ class WrangleTest(unittest.TestCase):
     def test_currency_typical(self):
         self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
-                library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                    library.CTR_ACT_CURRENT_COLUMNS: 15,
-                    library.CTR_ACT_UPDATE_COLUMNS: 15,
-                    library.CTR_ACT_DELTA_COLUMNS: 15,
+                plugin.CTR_SRC_DATA: {
+                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                    plugin.CTR_ACT_UPDATE_COLUMNS: 15,
+                    plugin.CTR_ACT_DELTA_COLUMNS: 15,
                 },
             },
         })})
@@ -62,11 +61,11 @@ class WrangleTest(unittest.TestCase):
     def test_currency_partial(self):
         self.run_module("currency", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
-                library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                    library.CTR_ACT_CURRENT_COLUMNS: 15,
-                    library.CTR_ACT_UPDATE_COLUMNS: 15,
-                    library.CTR_ACT_DELTA_COLUMNS: 15,
+                plugin.CTR_SRC_DATA: {
+                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                    plugin.CTR_ACT_UPDATE_COLUMNS: 15,
+                    plugin.CTR_ACT_DELTA_COLUMNS: 15,
                 },
             },
         })})
@@ -74,11 +73,11 @@ class WrangleTest(unittest.TestCase):
     def test_equity_typical(self):
         self.run_module("equity", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_greater": {
-                library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 200,
-                    library.CTR_ACT_CURRENT_COLUMNS: 144,
-                    library.CTR_ACT_UPDATE_COLUMNS: 108,
-                    library.CTR_ACT_DELTA_COLUMNS: 144,
+                plugin.CTR_SRC_DATA: {
+                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 200,
+                    plugin.CTR_ACT_CURRENT_COLUMNS: 144,
+                    plugin.CTR_ACT_UPDATE_COLUMNS: 108,
+                    plugin.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
         })})
@@ -86,11 +85,11 @@ class WrangleTest(unittest.TestCase):
     def test_equity_partial(self):
         self.run_module("equity", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_greater": {
-                library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 200,
-                    library.CTR_ACT_CURRENT_COLUMNS: 144,
-                    library.CTR_ACT_UPDATE_COLUMNS: 126,
-                    library.CTR_ACT_DELTA_COLUMNS: 144,
+                plugin.CTR_SRC_DATA: {
+                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 200,
+                    plugin.CTR_ACT_CURRENT_COLUMNS: 144,
+                    plugin.CTR_ACT_UPDATE_COLUMNS: 126,
+                    plugin.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
         })})
@@ -98,11 +97,11 @@ class WrangleTest(unittest.TestCase):
     def test_interest_typical(self):
         self.run_module("interest", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
-                library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 18,
-                    library.CTR_ACT_CURRENT_COLUMNS: 18,
-                    library.CTR_ACT_UPDATE_COLUMNS: 18,
-                    library.CTR_ACT_DELTA_COLUMNS: 18,
+                plugin.CTR_SRC_DATA: {
+                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
+                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
+                    plugin.CTR_ACT_UPDATE_COLUMNS: 18,
+                    plugin.CTR_ACT_DELTA_COLUMNS: 18,
                 },
             },
         })})
@@ -110,11 +109,11 @@ class WrangleTest(unittest.TestCase):
     def test_interest_partial(self):
         self.run_module("interest", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
-                library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 18,
-                    library.CTR_ACT_CURRENT_COLUMNS: 18,
-                    library.CTR_ACT_UPDATE_COLUMNS: 18,
-                    library.CTR_ACT_DELTA_COLUMNS: 18,
+                plugin.CTR_SRC_DATA: {
+                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
+                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
+                    plugin.CTR_ACT_UPDATE_COLUMNS: 18,
+                    plugin.CTR_ACT_DELTA_COLUMNS: 18,
                 },
             },
         })})
@@ -122,15 +121,15 @@ class WrangleTest(unittest.TestCase):
     def test_balances_typical(self):
         self.run_module("balances", {"success_typical": merge_asserts(ASSERT_RUN, {
             # "counter_equals": {
-            #     library.CTR_SRC_FILES: {
-            #         library.CTR_ACT_PROCESSED: 0,
+            #     plugin.CTR_SRC_FILES: {
+            #         plugin.CTR_ACT_PROCESSED: 0,
             #     },
             # },
             # "counter_greater": {
-            #     library.CTR_SRC_DATA: {
-            #         library.CTR_ACT_DELTA_COLUMNS: 1,
-            #         library.CTR_ACT_CURRENT_COLUMNS: 1,
-            #         library.CTR_ACT_UPDATE_COLUMNS: 1,
+            #     plugin.CTR_SRC_DATA: {
+            #         plugin.CTR_ACT_DELTA_COLUMNS: 1,
+            #         plugin.CTR_ACT_CURRENT_COLUMNS: 1,
+            #         plugin.CTR_ACT_UPDATE_COLUMNS: 1,
             #     },
             # },
         })})
@@ -146,7 +145,7 @@ class WrangleTest(unittest.TestCase):
     #     missing_name = "missing"
     #     missing_key = "!"
     #     missing_str = "[]"
-    #     library.config.log_level = "fatal"
+    #     plugin.config.log_level = "fatal"
     #     for result in [
     #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
     #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
@@ -160,7 +159,7 @@ class WrangleTest(unittest.TestCase):
     #     loading_name = "loading"
     #     loading_key = "1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs"
     #     loading_str = "[]"
-    #     library.config.log_level = "fatal"
+    #     plugin.config.log_level = "fatal"
     #     for result in [
     #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
     #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
@@ -178,7 +177,7 @@ class WrangleTest(unittest.TestCase):
     #     }
     #     empty_str = "[]"
     #     empty_str_column = "[]"
-    #     library.config.log_level = "info"
+    #     plugin.config.log_level = "info"
     #     for result in [
     #         test.sheet_download(empty_key, empty_name, write_cache=True),
     #         test.sheet_download(empty_key, empty_name, write_cache=False),
@@ -219,7 +218,7 @@ class WrangleTest(unittest.TestCase):
     #     test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
     #     test_str_utf = ["str" for _ in range(0, len(test_type_number))]
     #     test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
-    #     library.config.log_level = "info"
+    #     plugin.config.log_level = "info"
     #     for result in [
     #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
     #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=False),
@@ -273,7 +272,7 @@ class WrangleTest(unittest.TestCase):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
         reset_config()
         invalid_cache = "Invalid"
-        invalid_path = abspath(f"{test.input}/_Database_{invalid_cache}.csv")
+        invalid_path = abspath(f"{test.local_data_dir}/_Database_{invalid_cache}.csv")
         for result in [
             test.database_download(invalid_cache, "SELECT 1", force=True),
             test.database_download(invalid_cache, "SELECT 1", force=False),
@@ -282,11 +281,11 @@ class WrangleTest(unittest.TestCase):
             self.assertEqual(DownloadResult(DownloadStatus.FAILED, None), result)
         self.assertFalse(isfile(invalid_path))
         cache_cache = "Cache"
-        cache_path = abspath(f"{test.input}/_Database_{cache_cache}.csv")
+        cache_path = abspath(f"{test.local_data_dir}/_Database_{cache_cache}.csv")
         with open(cache_path, "w") as fh:
             fh.write("Date,Rate\n2020-01-01,1.0\n")
         self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
-        library.config.disable_downloads = True
+        plugin.config.disable_downloads = True
         self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
 
     def test_library_dataframe(self):
@@ -408,7 +407,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_disable_downloads(self):
         t = self._setup_state_test("test-5")
-        library.config.disable_downloads = True
+        plugin.config.disable_downloads = True
         update = self._df([("2020-04-01", 4.0)])
         delta, current, _ = t.state_cache(update)
         self.assertEqual(0, len(delta))
@@ -443,7 +442,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_force_reload(self):
         t = self._setup_state_test("test-2")
-        library.config.force_reprocessing = True
+        plugin.config.force_reprocessing = True
         update = self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)])
         delta, current, previous = t.state_cache(update)
         self.assertEqual(3, len(delta))
@@ -542,7 +541,7 @@ class WrangleTest(unittest.TestCase):
     def test_state_cache_counter_delta_columns(self):
         t = self._setup_state_test("test-6")
         t.state_cache(self._df([("2020-01-01", 9.0), ("2020-02-01", 9.0)]))
-        self.assertEqual(2, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_DELTA_COLUMNS))
+        self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_COLUMNS))
 
     def test_state_cache_aggregate_called_twice(self):
         t = self._setup_state_test("test-2")
@@ -580,11 +579,11 @@ class WrangleTest(unittest.TestCase):
             "Third": [100.0, 200.0],
         }).with_columns(pl.col("Date").str.to_date())
         t.state_cache(update)
-        self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_PREVIOUS_COLUMNS))
+        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
 
     def test_state_cache_disable_downloads_returns_current_as_previous(self):
         t = self._setup_state_test("test-5")
-        library.config.disable_downloads = True
+        plugin.config.disable_downloads = True
         update = self._df([("2020-04-01", 4.0)])
         delta, current, previous = t.state_cache(update)
         self.assertEqual(0, len(delta))
@@ -597,7 +596,7 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)]),
                       lambda df: df.with_columns((pl.col("Value") * 2).alias("Double")))
         t.reset_counters()
-        library.config.disable_downloads = True
+        plugin.config.disable_downloads = True
         _, current, _ = t.state_cache(
             self._df([("2020-04-01", 4.0)]),
             lambda df: df.with_columns((pl.col("Value") * 100).alias("Double"))
@@ -664,8 +663,8 @@ class WrangleTest(unittest.TestCase):
         delta, current, _ = t.state_cache(data, self._price_change_agg())
         self.assertEqual(0, len(delta))
         self.assertEqual(3, len(current))
-        self.assertEqual(0, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_DELTA_ROWS))
-        self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_CURRENT_ROWS))
+        self.assertEqual(0, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
+        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
 
     def test_state_cache_aggregate_cross_boundary(self):
         t = self._setup_state_test("agg-3")
@@ -725,40 +724,40 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(self._price_df([
             ("2020-01-01", 100.0), ("2020-02-01", 200.0),
         ]), self._price_change_agg())
-        self.assertTrue(isfile(join(t.input, "__Test_Current.csv")))
-        self.assertTrue(isfile(join(t.input, "__Test_Update.csv")))
-        self.assertTrue(isfile(join(t.input, "__Test_Delta.csv")))
-        self.assertFalse(isfile(join(t.input, "__Test_Previous.csv")))
+        self.assertTrue(isfile(join(t.local_data_dir, "__Test_Current.csv")))
+        self.assertTrue(isfile(join(t.local_data_dir, "__Test_Update.csv")))
+        self.assertTrue(isfile(join(t.local_data_dir, "__Test_Delta.csv")))
+        self.assertFalse(isfile(join(t.local_data_dir, "__Test_Previous.csv")))
         t.reset_counters()
         t.state_cache(self._price_df([
             ("2020-01-01", 100.0), ("2020-02-01", 200.0),
             ("2020-03-01", 300.0), ("2020-04-01", 400.0),
         ]), self._price_change_agg())
-        self.assertTrue(isfile(join(t.input, "__Test_Previous.csv")))
-        self.assertEqual(4, len(t.csv_read(join(t.input, "__Test_Current.csv"))))
-        self.assertEqual(2, len(t.csv_read(join(t.input, "__Test_Previous.csv"))))
-        self.assertEqual(4, len(t.csv_read(join(t.input, "__Test_Update.csv"))))
-        self.assertEqual(2, len(t.csv_read(join(t.input, "__Test_Delta.csv"))))
+        self.assertTrue(isfile(join(t.local_data_dir, "__Test_Previous.csv")))
+        self.assertEqual(4, len(t.csv_read(join(t.local_data_dir, "__Test_Current.csv"))))
+        self.assertEqual(2, len(t.csv_read(join(t.local_data_dir, "__Test_Previous.csv"))))
+        self.assertEqual(4, len(t.csv_read(join(t.local_data_dir, "__Test_Update.csv"))))
+        self.assertEqual(2, len(t.csv_read(join(t.local_data_dir, "__Test_Delta.csv"))))
 
     def test_state_cache_row_and_column_counters(self):
         t = self._setup_state_test("agg-7")
         t.state_cache(self._price_df([
             ("2020-01-01", 100.0), ("2020-02-01", 200.0), ("2020-03-01", 300.0),
         ]), self._price_change_agg())
-        self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_CURRENT_ROWS))
-        self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_UPDATE_ROWS))
-        self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_DELTA_ROWS))
-        self.assertEqual(0, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_PREVIOUS_ROWS))
-        self.assertEqual(2, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_CURRENT_COLUMNS))
+        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
+        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_ROWS))
+        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
+        self.assertEqual(0, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_ROWS))
+        self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
         t.reset_counters()
         t.state_cache(self._price_df([
             ("2020-01-01", 100.0), ("2020-02-01", 200.0), ("2020-03-01", 300.0),
             ("2020-04-01", 400.0),
         ]), self._price_change_agg())
-        self.assertEqual(4, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_CURRENT_ROWS))
-        self.assertEqual(4, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_UPDATE_ROWS))
-        self.assertEqual(1, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_DELTA_ROWS))
-        self.assertEqual(3, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_PREVIOUS_ROWS))
+        self.assertEqual(4, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_ROWS))
+        self.assertEqual(4, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_ROWS))
+        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_ROWS))
+        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_ROWS))
 
     def test_state_cache_aggregate_with_guard(self):
         def null_fill_agg(df):
@@ -932,16 +931,16 @@ class WrangleTest(unittest.TestCase):
         t = self._setup_state_test("mk-9")
         t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0)]),
                       key_columns=["Date", "Account ID"])
-        self.assertEqual(1, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_UPDATE_COLUMNS))
-        self.assertEqual(1, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_CURRENT_COLUMNS))
-        self.assertEqual(1, t.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_DELTA_COLUMNS))
+        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
+        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
+        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_DELTA_COLUMNS))
 
     def test_state_cache_multi_key_clean(self):
         t = self._setup_state_test("mk-10")
         t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
-        library.config.force_reprocessing = True
+        plugin.config.force_reprocessing = True
         delta, current, previous = t.state_cache(
             self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
             key_columns=["Date", "Account ID"])
@@ -954,7 +953,7 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
-        library.config.disable_downloads = True
+        plugin.config.disable_downloads = True
         delta, current, _ = t.state_cache(
             self._mk_df([("2026-01-01", "acc-1", 999.0)]),
             key_columns=["Date", "Account ID"])
@@ -989,15 +988,15 @@ class WrangleTest(unittest.TestCase):
 
     def _setup_state_test(self, fixture):
         t = Test("Test", "SOME_NON_EXISTANT_GUID")
-        t.input = abspath(join(DIR_ROOT, "target", "data", f"state-{fixture}"))
-        shutil.rmtree(t.input, ignore_errors=True)
-        os.makedirs(t.input)
+        t.local_data_dir = abspath(join(DIR_ROOT, "target", "data", f"state-{fixture}"))
+        shutil.rmtree(t.local_data_dir, ignore_errors=True)
+        os.makedirs(t.local_data_dir)
         src = join(DIR_ROOT, "src/test/resources/state", fixture)
         if isdir(src):
             for fname in os.listdir(src):
-                shutil.copy(join(src, fname), join(t.input, fname))
-        library.config.force_reprocessing = False
-        library.config.disable_downloads = False
+                shutil.copy(join(src, fname), join(t.local_data_dir, fname))
+        plugin.config.force_reprocessing = False
+        plugin.config.disable_downloads = False
         return t
 
     def _df(self, date_value_pairs):
@@ -1008,14 +1007,14 @@ class WrangleTest(unittest.TestCase):
 
     def run_module(self, module_name, tests_asserts, log="info",
                    prepare_only=False, enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                   disable_uploads=True, disable_downloads=False, drive_scope=library.DriveScope.PRODUCTION):
-        library.config.log_level = log
-        library.config.drive_scope = drive_scope
-        library.config.force_reprocessing = force_reprocessing
-        library.config.force_downloads = force_downloads
-        library.config.disable_uploads = disable_uploads
-        library.config.disable_downloads = disable_downloads
-        library.database = None
+                   disable_uploads=True, disable_downloads=False, drive_scope=plugin.DataRepoScope.PRODUCTION):
+        plugin.config.log_level = log
+        plugin.config.drive_scope = drive_scope
+        plugin.config.force_reprocessing = force_reprocessing
+        plugin.config.force_downloads = force_downloads
+        plugin.config.disable_uploads = disable_uploads
+        plugin.config.disable_downloads = disable_downloads
+        plugin.database_close()
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
             os.makedirs(dir_target)
@@ -1051,7 +1050,7 @@ class WrangleTest(unittest.TestCase):
 
         print("")
         for test in tests_asserts:
-            load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.input)
+            load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.local_data_dir)
             counters = {}
             if not prepare_only:
                 print(f"STARTING (run)     [{module_name.title()}]   [{test}]")
@@ -1066,9 +1065,9 @@ class WrangleTest(unittest.TestCase):
                     assert_counters(module.get_counters(), ASSERT_NOOP)
                     module.reset_counters()
                     print(f"STARTING (reload)   [{module_name.title()}]   [{test}]")
-                    library.config.force_reprocessing = True
+                    plugin.config.force_reprocessing = True
                     module.run()
-                    library.config.force_reprocessing = force_reprocessing
+                    plugin.config.force_reprocessing = force_reprocessing
                     print(f"FINISHED (reload)   [{module_name.title()}]   [{test}]\n\n")
                     assert_counters(module.get_counters(), ASSERT_RELOAD)
         return counters
@@ -1103,114 +1102,113 @@ ASSERT_NONE = {}
 
 ASSERT_RUN = {
     "counter_equals": {
-        library.CTR_SRC_SOURCES: {
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_SOURCES: {
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_FILES: {
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_FILES: {
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_DATA: {
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_DATA: {
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_EGRESS: {
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_EGRESS: {
+            plugin.CTR_ACT_ERRORED: 0,
         },
     },
     "counter_greater": {
-        library.CTR_SRC_SOURCES: {
-            library.CTR_ACT_DOWNLOADED: 0,
+        plugin.CTR_SRC_SOURCES: {
+            plugin.CTR_ACT_DOWNLOADED: 0,
         },
-        library.CTR_SRC_FILES: {
-            library.CTR_ACT_PROCESSED: 0,
+        plugin.CTR_SRC_FILES: {
+            plugin.CTR_ACT_PROCESSED: 0,
         },
-        library.CTR_SRC_DATA: {
-            library.CTR_ACT_CURRENT_ROWS: 0,
-            library.CTR_ACT_UPDATE_ROWS: 0,
-            library.CTR_ACT_DELTA_ROWS: 0,
+        plugin.CTR_SRC_DATA: {
+            plugin.CTR_ACT_CURRENT_ROWS: 0,
+            plugin.CTR_ACT_UPDATE_ROWS: 0,
+            plugin.CTR_ACT_DELTA_ROWS: 0,
         },
     },
 }
 
 ASSERT_NOOP = {
     "counter_equals": {
-        library.CTR_SRC_SOURCES: {
-            library.CTR_ACT_DOWNLOADED: 0,
-            library.CTR_ACT_UPLOADED: 0,
-            library.CTR_ACT_PERSISTED: 0,
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_SOURCES: {
+            plugin.CTR_ACT_DOWNLOADED: 0,
+            plugin.CTR_ACT_UPLOADED: 0,
+            plugin.CTR_ACT_PERSISTED: 0,
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_FILES: {
-            library.CTR_ACT_PROCESSED: 0,
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_FILES: {
+            plugin.CTR_ACT_PROCESSED: 0,
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_DATA: {
-            library.CTR_ACT_UPDATE_COLUMNS: 0,
-            library.CTR_ACT_UPDATE_ROWS: 0,
-            library.CTR_ACT_DELTA_COLUMNS: 0,
-            library.CTR_ACT_DELTA_ROWS: 0,
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_DATA: {
+            plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+            plugin.CTR_ACT_UPDATE_ROWS: 0,
+            plugin.CTR_ACT_DELTA_COLUMNS: 0,
+            plugin.CTR_ACT_DELTA_ROWS: 0,
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_EGRESS: {
-            library.CTR_ACT_QUEUE_COLUMNS: 0,
-            library.CTR_ACT_QUEUE_ROWS: 0,
-            library.CTR_ACT_SHEET_COLUMNS: 0,
-            library.CTR_ACT_SHEET_ROWS: 0,
-            library.CTR_ACT_DATABASE_COLUMNS: 0,
-            library.CTR_ACT_DATABASE_ROWS: 0,
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_EGRESS: {
+            plugin.CTR_ACT_QUEUE_COLUMNS: 0,
+            plugin.CTR_ACT_QUEUE_ROWS: 0,
+            plugin.CTR_ACT_SHEET_COLUMNS: 0,
+            plugin.CTR_ACT_SHEET_ROWS: 0,
+            plugin.CTR_ACT_DATABASE_COLUMNS: 0,
+            plugin.CTR_ACT_DATABASE_ROWS: 0,
+            plugin.CTR_ACT_ERRORED: 0,
         },
     },
     "counter_greater": {
-        library.CTR_SRC_SOURCES: {
-            library.CTR_ACT_CACHED: 0,
+        plugin.CTR_SRC_SOURCES: {
+            plugin.CTR_ACT_CACHED: 0,
         },
-        library.CTR_SRC_FILES: {
-            library.CTR_ACT_SKIPPED: 0,
+        plugin.CTR_SRC_FILES: {
+            plugin.CTR_ACT_SKIPPED: 0,
         },
     },
 }
 
 ASSERT_RELOAD = {
     "counter_equals": {
-        library.CTR_SRC_SOURCES: {
-            library.CTR_ACT_DOWNLOADED: 0,
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_SOURCES: {
+            plugin.CTR_ACT_DOWNLOADED: 0,
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_FILES: {
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_FILES: {
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_DATA: {
-            library.CTR_ACT_PREVIOUS_ROWS: 0,
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_DATA: {
+            plugin.CTR_ACT_PREVIOUS_ROWS: 0,
+            plugin.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_EGRESS: {
-            library.CTR_ACT_ERRORED: 0,
+        plugin.CTR_SRC_EGRESS: {
+            plugin.CTR_ACT_ERRORED: 0,
         },
     },
     "counter_greater": {
-        library.CTR_SRC_FILES: {
-            library.CTR_ACT_PROCESSED: 0,
+        plugin.CTR_SRC_FILES: {
+            plugin.CTR_ACT_PROCESSED: 0,
         },
-        library.CTR_SRC_DATA: {
-            library.CTR_ACT_CURRENT_ROWS: 0,
-            library.CTR_ACT_UPDATE_ROWS: 0,
-            library.CTR_ACT_DELTA_ROWS: 0,
+        plugin.CTR_SRC_DATA: {
+            plugin.CTR_ACT_CURRENT_ROWS: 0,
+            plugin.CTR_ACT_UPDATE_ROWS: 0,
+            plugin.CTR_ACT_DELTA_ROWS: 0,
         },
     },
 }
 
 
-class Test(Library):
+class Test(Plugin):
     def _run(self):
         pass
 
     def __init__(self, name, drive_folder):
-        super().__init__(name, library.DriveScopes(
+        super().__init__(name, plugin.DataRepos(
             staging={"drive_folder": "PLACEHOLDER"},
             production={"drive_folder": drive_folder},
         ))
 
 
-if __name__ == '__main__':
-    sys.argv.extend([__file__, "-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache"])
-    sys.exit(pytest.main())
+if __name__ == "__main__":
+    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))

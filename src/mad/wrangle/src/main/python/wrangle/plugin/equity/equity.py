@@ -8,8 +8,8 @@ import polars as pl
 import polars.selectors as cs
 import pytz
 
-from .. import library
-from ..library import PL_PRINT_ROWS
+from wrangle import plugin
+from wrangle.plugin import PL_PRINT_ROWS
 
 STATUS_FAILURE = "failure"
 STATUS_SKIPPED = "skipped"
@@ -93,8 +93,9 @@ STOCK = {
     'URNM': {"start": "2022-07", "end of day": "16:00", "prefix": "", "exchange": "AX", },
 }
 
-class Equity(library.Library):
-    _drives = library.DriveScopes(
+
+class Equity(plugin.Plugin):
+    _data_repos = plugin.DataRepos(
         staging={
             "drive_folder": "PLACEHOLDER",
             "sheet_prices": "PLACEHOLDER",
@@ -116,7 +117,7 @@ class Equity(library.Library):
         stock_files = {}
         statement_files = {}
 
-        if not library.config.disable_downloads:
+        if not plugin.config.disable_downloads:
 
             # Download stock files
             for stock in STOCK:
@@ -127,7 +128,7 @@ class Equity(library.Library):
                     if year == today.year:
                         for month in range(1, today.month + 1):
                             if year != stock_start.year or month >= stock_start.month:
-                                file_name = f"{self.input}/Yahoo_{ticker}_{year}-{month:02}.csv"
+                                file_name = f"{self.local_data_dir}/Yahoo_{ticker}_{year}-{month:02}.csv"
                                 stock_files[file_name] = self.stock_download(
                                     file_name,
                                     f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
@@ -136,7 +137,7 @@ class Equity(library.Library):
                                     STOCK[stock]["end of day"], check=year == today.year and month == today.month)
                     else:
                         start_month = stock_start.month if year == stock_start.year else 1
-                        file_name = f"{self.input}/Yahoo_{ticker}_{year}.csv"
+                        file_name = f"{self.local_data_dir}/Yahoo_{ticker}_{year}.csv"
                         stock_files[file_name] = self.stock_download(
                             file_name,
                             f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
@@ -145,24 +146,24 @@ class Equity(library.Library):
                             STOCK[stock]["end of day"], check=False)
 
             # Sync stock and fund files from Drive
-            files_cached = self.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED)
-            files_downloaded = self.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_DOWNLOADED)
-            files = self.drive_synchronise(self.drives.drive_folder, self.input, download=True)
-            self.add_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
+            files_cached = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED)
+            files_downloaded = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_DOWNLOADED)
+            files = self.drive_synchronise(self.remote_data_repos.drive_folder, self.local_data_dir, download=True)
+            self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
             for file_name in files:
                 if basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
                 elif basename(file_name).startswith("Yahoo"):
-                    if files[file_name][0] and (library.config.force_reprocessing or files[file_name][1]):
-                        stock_files[file_name] = library.DownloadResult(library.DownloadStatus.DOWNLOADED if files[file_name][1] else library.DownloadStatus.CACHED, file_name)
-            new_data = library.config.force_reprocessing or \
-                       (all([s.status != library.DownloadStatus.FAILED for s in stock_files.values()]) and any([s.status == library.DownloadStatus.DOWNLOADED for s in stock_files.values()])) or \
+                    if files[file_name][0] and (plugin.config.force_reprocessing or files[file_name][1]):
+                        stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, file_name)
+            new_data = plugin.config.force_reprocessing or \
+                       (all([s.status != plugin.DownloadStatus.FAILED for s in stock_files.values()]) and any([s.status == plugin.DownloadStatus.DOWNLOADED for s in stock_files.values()])) or \
                        (all([s[0] for s in statement_files.values()]) and any([s[1] for s in statement_files.values()]))
 
         # If clean, flag all files for processing
-        if library.config.force_reprocessing:
-            stock_files = {f: library.DownloadResult(library.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.input, "Yahoo")}
-            statement_files = self.file_list(self.input, "58861")
+        if plugin.config.force_reprocessing:
+            stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_data_dir, "Yahoo")}
+            statement_files = self.file_list(self.local_data_dir, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
         self.print_log(f"Files [Equity] downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files", started=started_time)
 
@@ -171,8 +172,8 @@ class Equity(library.Library):
         stocks_df = {}
         stocks_files_count = 0
         for stock_file_name in stock_files:
-            if stock_files[stock_file_name].status != library.DownloadStatus.FAILED:
-                if library.config.force_reprocessing or stock_files[stock_file_name].status == library.DownloadStatus.DOWNLOADED:
+            if stock_files[stock_file_name].status != plugin.DownloadStatus.FAILED:
+                if plugin.config.force_reprocessing or stock_files[stock_file_name].status == plugin.DownloadStatus.DOWNLOADED:
                     try:
                         stocks_files_count += 1
                         stock_ticker = basename(stock_file_name).split('_')[1]
@@ -193,14 +194,14 @@ class Equity(library.Library):
                             stocks_df[stock_ticker] = pl.concat([stocks_df[stock_ticker], stock_df])
                         else:
                             stocks_df[stock_ticker] = stock_df
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
+                        self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                     except Exception as exception:
                         self.print_log(f"Unexpected error processing file [{stock_file_name}]", exception=exception)
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+                        self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                 else:
-                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
+                    self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
-                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+                self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
         for stock_ticker in stocks_df:
             self.dataframe_print(stocks_df[stock_ticker], print_label=stock_ticker, print_verb="collected")
         self.print_log(f"DataFrame [Stocks] collected with [{len(stocks_df)}] stocks across [{stocks_files_count}] files", started=started_time)
@@ -210,7 +211,7 @@ class Equity(library.Library):
         statement_data = {}
         for statement_file_name in statement_files:
             if statement_files[statement_file_name][0]:
-                if library.config.force_reprocessing or statement_files[statement_file_name][1]:
+                if plugin.config.force_reprocessing or statement_files[statement_file_name][1]:
                     with open(statement_file_name, "rb") as statement_file:
                         statement_data[statement_file_name] = {}
                         try:
@@ -319,12 +320,12 @@ class Equity(library.Library):
                                                                     f"Position parse skipped at page [{page_index}] line [{line_index}] for currency [{currency}]: {type(parse_exception).__name__}: {parse_exception}")
                                     line_index += 1
                                 page_index += 1
-                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
+                            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                             statement_data[statement_file_name]["Errors"].append(
                                 f"Statement parse failed with exception [{type(exception).__name__}: {exception}]")
-                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+                            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                     if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
                         statement_positions = statement_data[statement_file_name]["Positions"]
                         if len(statement_positions) == 0:
@@ -337,7 +338,7 @@ class Equity(library.Library):
                                 statement_data[statement_file_name]["Errors"] \
                                     .append(f"Statement parse failed to resolve all keys {STATEMENT_ATTRIBUTES} in {statement_position}")
                 else:
-                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
+                    self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
         self.print_log(f"File [Funds] parsed [{len(statement_data)}] statements", started=started_time)
 
         def _equity_tickers(_equity_df):
@@ -460,9 +461,9 @@ class Equity(library.Library):
 
                 # Add manual stocks
                 started_time = time.time()
-                prices_manual_result = self.sheet_download(self.drives.sheet_prices, "Prices", sheet_name="Manual")
+                prices_manual_result = self.sheet_download(self.remote_data_repos.sheet_prices, "Prices", sheet_name="Manual")
                 equity_df_manual = self.csv_read(prices_manual_result.file_path, schema={"Date": pl.Date}) \
-                    if prices_manual_result.status != library.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
+                    if prices_manual_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
                 equity_df_manual = _equity_upsample(equity_df_manual)
                 tickers_manual = _equity_tickers(equity_df_manual)
                 manual_exprs = []
@@ -546,7 +547,7 @@ from(bucket: "data_public")
                         """
                         fx_query_result = self.database_download(fx_cache, fx_query)
                         fx_rates[fx_pair] = self.csv_read(fx_query_result.file_path, schema={"Date": pl.Date}) \
-                            if fx_query_result.status != library.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
+                            if fx_query_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
                         fx_rates[fx_pair] = _equity_upsample(fx_rates[fx_pair])
                     aud_rate_exprs = []
                     spot_exprs = []
@@ -580,8 +581,8 @@ from(bucket: "data_public")
                 _equity_print(equity_df, _dimensions=DIMENSIONS_PRICE_AUX_TYPES, print_label="Equity", print_verb="added FX rates", started=started_time)
 
                 # Get index weights and add index definitions
-                portfolio_indexes_result = self.sheet_download(self.drives.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
-                index_weights = self.csv_read(portfolio_indexes_result.file_path) if portfolio_indexes_result.status != library.DownloadStatus.FAILED else self.dataframe_new()
+                portfolio_indexes_result = self.sheet_download(self.remote_data_repos.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
+                index_weights = self.csv_read(portfolio_indexes_result.file_path) if portfolio_indexes_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new()
                 started_time = time.time()
                 indexes = sorted([column.removesuffix(" Quantity") for column in index_weights.columns if column.endswith(" Quantity")])
                 index_weights = index_weights \
@@ -644,11 +645,11 @@ from(bucket: "data_public")
 
         except Exception as exception:
             self.print_log("Unexpected error processing equity dataframe", exception=exception)
-            processed = self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
-            skipped = self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED, -processed)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, -skipped)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, processed + skipped)
+            processed = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
+            skipped = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
+            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED, -processed)
+            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED, -skipped)
+            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, processed + skipped)
 
         try:
             def _make_aggregate(_indexes):
@@ -777,7 +778,7 @@ from(bucket: "data_public")
                 equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])
                 equity_sheet_df = equity_sheet_df.filter(pl.col("Date") > pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
                 _equity_print(equity_sheet_df, _dimensions=dimensions_sheet, print_label="Sheet", print_verb="filtered", started=started_time)
-                self.sheet_upload(equity_sheet_df, self.drives.sheet_prices, workbook_name="Prices", sheet_name='History')
+                self.sheet_upload(equity_sheet_df, self.remote_data_repos.sheet_prices, workbook_name="Prices", sheet_name='History')
 
                 # Database upload
                 started_time = time.time()
@@ -822,14 +823,14 @@ from(bucket: "data_public")
                 self.print_log("LineProtocol [Equity] serialised", started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing equity data", exception=exception)
-            processed = self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
-            skipped = self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED, -processed)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, -skipped)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, processed + skipped)
+            processed = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
+            skipped = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
+            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED, -processed)
+            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED, -skipped)
+            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, processed + skipped)
         if not len(equity_delta_df):
             self.print_log("No new data found")
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Equity", Equity._drives)
+        super().__init__("Equity", Equity._data_repos)

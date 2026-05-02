@@ -6,7 +6,7 @@ from os.path import *
 import polars as pl
 import polars.selectors as cs
 
-from .. import library
+from wrangle import plugin
 
 LABELS = ['Bank', 'Inflation', 'Net']
 PERIODS = OrderedDict([
@@ -21,8 +21,9 @@ COLUMNS = [f"{label} {period}".strip() for label in LABELS for period in ([""] +
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
-class Interest(library.Library):
-    _drives = library.DriveScopes(
+
+class Interest(plugin.Plugin):
+    _data_repos = plugin.DataRepos(
         staging={
             "drive_folder": "PLACEHOLDER",
             "sheet_rates": "PLACEHOLDER",
@@ -36,48 +37,48 @@ class Interest(library.Library):
     def _run(self):
         interest_df = self.dataframe_new()
         interest_delta_df = self.dataframe_new()
-        if not library.config.disable_downloads:
+        if not plugin.config.disable_downloads:
             new_data = False
             started_time = time.time()
             retail_df = self.dataframe_new()
-            retail_file = join(self.input, "Retail.xlsx")
+            retail_file = join(self.local_data_dir, "Retail.xlsx")
             file_status = self.http_download(RETAIL_URL, retail_file)
-            if file_status.status != library.DownloadStatus.FAILED:
-                if library.config.force_reprocessing or file_status.status == library.DownloadStatus.DOWNLOADED:
+            if file_status.status != plugin.DownloadStatus.FAILED:
+                if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
                     try:
                         new_data = True
                         retail_df = self.excel_read(retail_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
                         retail_df = retail_df.select([pl.col("Series ID").alias("Date"), pl.col("FRDIRBTD10K3Y").alias("Bank")])
                         retail_df = retail_df.with_columns((pl.col("Date").dt.strftime('%Y-%m-01').str.to_date()).alias("Date"))
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
+                        self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                     except Exception as exception:
                         self.print_log(f"Unexpected error processing file [{retail_file}]", exception=exception)
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+                        self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                 else:
-                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
+                    self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
-                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+                self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
             retail_df = retail_df if len(retail_df) == 0 else retail_df.fill_nan(pl.lit(None)).drop_nulls()
             self.dataframe_print(retail_df, print_label="Retail", print_verb="collected", started=started_time)
             started_time = time.time()
             inflation_df = self.dataframe_new()
-            inflation_file = join(self.input, "Inflation.xlsx")
+            inflation_file = join(self.local_data_dir, "Inflation.xlsx")
             file_status = self.http_download(INFLATION_URL, inflation_file)
-            if file_status.status != library.DownloadStatus.FAILED:
-                if library.config.force_reprocessing or file_status.status == library.DownloadStatus.DOWNLOADED:
+            if file_status.status != plugin.DownloadStatus.FAILED:
+                if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
                     try:
                         new_data = True
                         inflation_df = self.excel_read(inflation_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
                         inflation_df = inflation_df.select([pl.col("Series ID").alias("Date"), pl.col("GCPIXVIYP").alias("Inflation")])
                         inflation_df = inflation_df.with_columns((pl.col("Date").dt.strftime('%Y-%m-01').str.to_date()).alias("Date"))
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
+                        self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                     except Exception as exception:
                         self.print_log(f"Unexpected error processing file [{inflation_file}]", exception=exception)
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+                        self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                 else:
-                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
+                    self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
-                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+                self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
             inflation_df = inflation_df if len(inflation_df) == 0 else inflation_df.fill_nan(pl.lit(None)).drop_nulls()
             self.dataframe_print(inflation_df, print_label="Inflation", print_verb="collected", started=started_time)
             try:
@@ -93,10 +94,10 @@ class Interest(library.Library):
                     self.dataframe_print(interest_df, print_label="Interest", print_verb="post up-sample", started=started_time)
             except Exception as exception:
                 self.print_log("Unexpected error processing interest dataframe", exception=exception)
-                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
-                                 self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
-                                 self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
-                                 self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
+                self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
+                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) +
+                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
+                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
         try:
             def _aggregate_function(_data_df):
                 _columns = ["Date"]
@@ -113,7 +114,7 @@ class Interest(library.Library):
             if len(interest_delta_df):
                 interest_sheet_df = interest_current_df \
                     .filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(interest_sheet_df, self.drives.sheet_rates, workbook_name="Rates", sheet_name='Interest')
+                self.sheet_upload(interest_sheet_df, self.remote_data_repos.sheet_rates, workbook_name="Rates", sheet_name='Interest')
                 started_time = time.time()
                 interest_monthly_df = interest_current_df.select(["Date"] + LABELS)
                 self.database_upload(interest_monthly_df.drop_nulls(), tags={
@@ -133,13 +134,13 @@ class Interest(library.Library):
                 self.print_log("LineProtocol [Interest] serialised", started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing interest data", exception=exception)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
-                             self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
-                             self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
-                             self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
+            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
+                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) +
+                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
+                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
         if not len(interest_delta_df):
             self.print_log("No new data found")
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Interest", Interest._drives)
+        super().__init__("Interest", Interest._data_repos)

@@ -37,7 +37,7 @@ CTR_ACT_PERSISTED = "Persisted"
 CTR_ACT_UPLOADED = "Uploaded"
 
 
-class DriveScope(Enum):
+class DataRepoScope(Enum):
     TESTING = "testing"
     STAGING = "staging"
     PRODUCTION = "production"
@@ -57,7 +57,7 @@ class DownloadResult(NamedTuple):
 @dataclass
 class Config:
     log_level: str = "info"
-    drive_scope: DriveScope = DriveScope.PRODUCTION
+    drive_scope: DataRepoScope = DataRepoScope.PRODUCTION
     force_reprocessing: bool = False
     force_downloads: bool = False
     disable_uploads: bool = False
@@ -67,30 +67,30 @@ class Config:
 config = Config()
 
 
-class DriveScopes:
+class DataRepos:
     def __init__(self, **scopes):
-        valid = {s.value for s in DriveScope}
+        valid = {s.value for s in DataRepoScope}
         for name in scopes:
             if name not in valid:
-                raise ValueError(f"DriveScopes unknown scope '{name}'; valid: {sorted(valid)}")
-        required = {s.value for s in DriveScope if s != DriveScope.TESTING}
+                raise ValueError(f"DataRepoScope unknown scope '{name}'; valid: {sorted(valid)}")
+        required = {s.value for s in DataRepoScope if s != DataRepoScope.TESTING}
         missing_scopes = required - set(scopes)
         if missing_scopes:
-            raise ValueError(f"DriveScopes missing required scopes: {sorted(missing_scopes)}")
+            raise ValueError(f"DataRepoScope missing required scopes: {sorted(missing_scopes)}")
         all_keys = set().union(*(set(v) for v in scopes.values()))
         for scope_name, keys in scopes.items():
             missing_keys = all_keys - set(keys)
             if missing_keys:
-                raise ValueError(f"DriveScopes scope '{scope_name}' missing keys: {sorted(missing_keys)}")
+                raise ValueError(f"DataRepoScope scope '{scope_name}' missing keys: {sorted(missing_keys)}")
         object.__setattr__(self, '_scopes', scopes)
 
     def __getattr__(self, name):
         scope = config.drive_scope
-        if scope == DriveScope.TESTING:
+        if scope == DataRepoScope.TESTING:
             return None
         keys = object.__getattribute__(self, '_scopes')[scope.value]
         if name not in keys:
-            raise AttributeError(f"DriveScopes has no key '{name}' for scope '{scope.value}'")
+            raise AttributeError(f"DataRepoScope has no key '{name}' for scope '{scope.value}'")
         return keys[name]
 
 
@@ -102,9 +102,9 @@ def get_file(file_name):
     paths = [
         f"/root/{file_name}",
         f"/etc/telegraf/{file_name}",
-        f"{working}/../../../../resources/{file_name}",
-        f"{working}/../../../../resources/config/{file_name}",
-        f"{working}/../../../../../../{file_name}",
+        f"{working}/../../../resources/{file_name}",
+        f"{working}/../../../resources/config/{file_name}",
+        f"{working}/../../../../../{file_name}",
     ]
     for path in paths:
         if isfile(path):
@@ -116,7 +116,7 @@ def get_dir(dir_name):
     working = dirname(abspath(__file__))
     parent_paths = [
         "/asystem/runtime",
-        f"{working}/../../../../../../target",
+        f"{working}/../../../../../target",
     ]
     for parent_path in parent_paths:
         if isdir(parent_path):

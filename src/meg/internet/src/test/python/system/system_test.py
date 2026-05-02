@@ -85,5 +85,4 @@ def query(flux):
 
 
 if __name__ == '__main__':
-    sys.argv.extend([__file__, "-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache"])
-    sys.exit(pytest.main())
+    sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))
