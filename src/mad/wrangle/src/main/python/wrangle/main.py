@@ -104,9 +104,16 @@ def run_once():
                         module_errored = True
         except Exception as exception:
             if module is not None:
-                module.print_log("Module threw unexpected exception", exception=exception)
+                module.print_log(
+                    "Module threw unexpected exception",
+                    exception=exception,
+                )
             else:
-                plugin.print_log(module_name, "Module failed to load or initialize", exception=exception)
+                plugin.print_log(
+                    module_name,
+                    "Module failed to load or initialize",
+                    exception=exception,
+                )
             module_errored = True
         if module_errored:
             module_errored_count += 1
@@ -124,7 +131,10 @@ def main(argv=None):
                 return success
             time.sleep(args.poll_period * 60)
     except KeyboardInterrupt:
-        plugin.print_log("wrangle", "Interrupted, exiting")
+        plugin.print_log(
+            "wrangle",
+            "Interrupted, exiting",
+        )
         return True
     finally:
         plugin.database_close()

@@ -4,13 +4,13 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from os.path import join
 
-from . import _database
-from ._config import *
-from ._config import DownloadResult, DownloadStatus
+from . import database
 from ._dataframes import DataFramesMixin
-from ._logging import log_enabled, print_log as _print_log
 from ._sources import SourcesMixin
 from ._state import StateMixin
+from .config import *
+from .config import DownloadResult, DownloadStatus
+from .logger import log_enabled, print_log as _print_log
 
 
 class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
@@ -21,14 +21,19 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
 
     def run(self):
         started_time = time.time()
-        self.print_log("Starting ...")
+        self.print_log(
+            "Starting ...",
+        )
         self._run()
-        if not config.disable_uploads:
-            self.drive_synchronise(self.remote_data_repos.drive_folder, self.local_data_dir, check=True, download=False, upload=True)
         for csv_path, csv_df in self._db_cache_dfs.items():
             self.csv_write(csv_df, csv_path)
+        if not config.disable_uploads:
+            self.drive_synchronise(self.remote_data_repos.drive_folder, self.local_data_dir, check=True, download=False, upload=True)
         self.print_counters()
-        self.print_log("Finished", started=started_time)
+        self.print_log(
+            "Finished",
+            started=started_time,
+        )
 
     def print_log(self, messages, data=None, started=None, exception=None, level="info"):
         effective_level = "error" if exception is not None else level
@@ -43,14 +48,17 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
             if type(data) is list:
                 messages.extend(data)
             else:
-                messages[-1] = messages[-1] + data
+                messages[-1] = messages[-1] + str(data)
         _print_log(self.name, messages, exception, level=level)
 
     def print_counters(self):
         self.print_log("Execution Summary:")
         for source in self._counters:
             for action in self._counters[source]:
-                self.print_log(f"     {f'{source} {action} '.ljust(CTR_LBL_WIDTH, CTR_LBL_PAD)} {self._counters[source][action]:8}")
+                self.print_log(
+                    f"     {' '.join((source, action)).ljust(CTR_LBL_WIDTH, CTR_LBL_PAD)} "
+                    f"{self._counters[source][action]:8}"
+                )
 
     def add_counter(self, source, action, count=1):
         self._counters[source][action] += count
@@ -99,7 +107,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
         ])
 
     def counter_write(self):
-        if config.disable_uploads or _database._database_client is None:
+        if config.disable_uploads or database.database_client is None:
             return
         values = []
         timestamp_ms = int(time.time() * 1000)
@@ -108,7 +116,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
                 values.append(f"{f'{source}_{action}'.lower().replace(' ', '_')}={self._counters[source][action]}i")
         line = f"{self.name.lower()},type=metadata,period=30m,unit=scalar,source=wrangle {','.join(values)} {timestamp_ms}"
         try:
-            _database._database_client.write(record=line, write_precision="ms")
+            database.database_client.write(record=line, write_precision="ms")
         except Exception as exception:
             self.print_log("Counter write failed", exception=exception)
 
@@ -116,16 +124,16 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
         files = {}
         for file_name in os.listdir(file_dir):
             if file_name.startswith(file_prefix):
-                file_path = join(file_dir, file_name)
+                file_path = str(join(file_dir, file_name))
                 files[file_path] = DownloadResult(DownloadStatus.CACHED, file_path)
                 if not quiet:
                     self.print_log(f"File [{file_name}] found at [{file_path}]")
         return files
 
     def __init__(self, name, data_repos):
+        self._counters = {}
+        self._db_cache_dfs = {}
+        self.reset_counters()
         self.name = name
         self.remote_data_repos = data_repos
         self.local_data_dir = abspath(get_dir(f"data/{name.lower()}"))
-        self._counters = None
-        self._db_cache_dfs = None
-        self.reset_counters()

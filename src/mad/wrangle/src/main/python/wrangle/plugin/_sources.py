@@ -10,11 +10,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
+from datetime import timezone
 from ftplib import FTP
 from os.path import exists, getmtime
 
 import dropbox
 import google
+import polars as pl
 import yfinance as yf
 from dateutil import parser
 from googleapiclient.discovery import build
@@ -22,28 +24,42 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from gspread_pandas import Spread
 from pandas.tseries.offsets import BDay
 
-from . import _database
-from ._config import *
+from . import database as _database
+from ._contract import ContractMixin
+from .config import *
 
 logging.getLogger('yfinance').setLevel(logging.ERROR)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
 
-class SourcesMixin:
+class SourcesMixin(ContractMixin):
 
-    def http_download(self, url_file, local_path, check=True, force=False, ignore=False):
+    def http_download(
+            self,
+            url_file: str,
+            local_path: str,
+            check: bool = True,
+            force: bool = False,
+            ignore: bool = False,
+    ) -> DownloadResult:
         started_time = time.time()
         local_path = abspath(local_path)
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(local_path):
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+                self.print_log(
+                    f"File [{label}] cached at [{local_path}]",
+                    started=started_time,
+                )
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(local_path):
-            self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+            self.print_log(
+                f"File [{label}] cached at [{local_path}]",
+                started=started_time,
+            )
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         client = {
@@ -56,8 +72,9 @@ class SourcesMixin:
         }
 
         def get_modified(headers):
-            if headers["Last-Modified"]:
-                return int((datetime.strptime(headers["Last-Modified"], '%a, %d %b %Y %H:%M:%S GMT') -
+            modified_header = headers.get("Last-Modified")
+            if modified_header:
+                return int((datetime.strptime(modified_header, '%a, %d %b %Y %H:%M:%S GMT') -
                             datetime(1970, 1, 1)).total_seconds())
             return None
 
@@ -70,14 +87,16 @@ class SourcesMixin:
                 modified_timestamp = get_modified(response.headers)
                 if modified_timestamp is not None:
                     if modified_timestamp_cached == modified_timestamp:
-                        self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+                        self.print_log(
+                            f"File [{label}] cached at [{local_path}]",
+                            started=started_time,
+                        )
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                         return DownloadResult(DownloadStatus.CACHED, local_path)
             except (Exception,):
                 pass
         try:
-            response = urllib.request.urlopen(urllib.request.Request(url_file, headers=client),
-                                              context=ssl._create_unverified_context())
+            response = urllib.request.urlopen(urllib.request.Request(url_file, headers=client), context=ssl._create_unverified_context())
             if not exists(dirname(local_path)):
                 os.makedirs(dirname(local_path))
             with open(local_path, 'wb') as local_file:
@@ -87,29 +106,51 @@ class SourcesMixin:
                 if modified_timestamp is not None:
                     os.utime(local_path, (modified_timestamp, modified_timestamp))
             except Exception as exception:
-                self.print_log(f"File [{label}] HTTP downloaded file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
-            self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time)
+                self.print_log(
+                    f"File [{label}] HTTP downloaded file [{local_path}] modified timestamp set failed [{modified_timestamp}]",
+                    exception=exception,
+                )
+            self.print_log(
+                f"File [{label}] downloaded to [{local_path}]",
+                started=started_time,
+            )
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
             return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
         except Exception as exception:
             if not ignore:
-                self.print_log(f"File [{label}] not available at [{url_file}]", exception=exception)
+                self.print_log(
+                    f"File [{label}] not available at [{url_file}]",
+                    exception=exception,
+                )
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
-    def ftp_download(self, url_file, local_path, check=True, force=False, ignore=False):
+    def ftp_download(
+            self,
+            url_file: str,
+            local_path: str,
+            check: bool = True,
+            force: bool = False,
+            ignore: bool = False,
+    ) -> DownloadResult:
         started_time = time.time()
         local_path = abspath(local_path)
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(local_path):
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+                self.print_log(
+                    f"File [{label}] cached at [{local_path}]",
+                    started=started_time,
+                )
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(local_path):
-            self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+            self.print_log(
+                f"File [{label}] cached at [{local_path}]",
+                started=started_time,
+            )
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         url_server = url_file.replace("ftp://", "").split("/")[0]
@@ -118,42 +159,67 @@ class SourcesMixin:
         try:
             client = FTP(url_server)
             client.login()
-            modified_timestamp = int((parser.parse(client.voidcmd(f"MDTM {url_path}")[4:].strip()) -
-                                      datetime(1970, 1, 1)).total_seconds())
+            modified_timestamp = int((parser.parse(client.voidcmd(f"MDTM {url_path}")[4:].strip()) - datetime(1970, 1, 1)).total_seconds())
             if not effective_force and check and isfile(local_path):
                 modified_timestamp_cached = int(getmtime(local_path))
                 if modified_timestamp_cached == modified_timestamp:
-                    self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+                    self.print_log(
+                        f"File [{label}] cached at [{local_path}]",
+                        started=started_time,
+                    )
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     client.quit()
                     return DownloadResult(DownloadStatus.CACHED, local_path)
             if not exists(dirname(local_path)):
                 os.makedirs(dirname(local_path))
-            client.retrbinary(f"RETR {url_path}", open(local_path, 'wb').write)
+            with open(local_path, 'wb') as local_file:
+                client.retrbinary(f"RETR {url_path}", local_file.write)
             try:
                 os.utime(local_path, (modified_timestamp, modified_timestamp))
             except Exception as exception:
-                self.print_log(f"File [{label}] FTP downloaded file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
-            self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time)
+                self.print_log(
+                    f"File [{label}] FTP downloaded file [{local_path}] modified timestamp set failed [{modified_timestamp}]",
+                    exception=exception,
+                )
+            self.print_log(
+                f"File [{label}] downloaded to [{local_path}]",
+                started=started_time,
+            )
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
             client.quit()
             return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
         except Exception as exception:
             if client is not None:
                 client.quit()
-            self.print_log(f"File [{label}] not available at [{url_file}]", exception=exception)
+            self.print_log(
+                f"File [{label}] not available at [{url_file}]",
+                exception=exception,
+            )
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
-    def stock_download(self, local_path, ticker, start, end, end_of_day='17:00', check=True, force=False, ignore=True):
+    def stock_download(
+            self,
+            local_path: str,
+            ticker: str,
+            start: str,
+            end: str,
+            end_of_day: str = '17:00',
+            check: bool = True,
+            force: bool = False,
+            ignore: bool = True,
+    ) -> DownloadResult:
         started_time = time.time()
         local_path = abspath(local_path)
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(local_path):
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+                self.print_log(
+                    f"File [{label}] cached at [{local_path}]",
+                    started=started_time,
+                )
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             return DownloadResult(DownloadStatus.FAILED, None)
@@ -161,7 +227,10 @@ class SourcesMixin:
         end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
         if start != end_exclusive:
             if not effective_force and not check and isfile(local_path):
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+                self.print_log(
+                    f"File [{label}] cached at [{local_path}]",
+                    started=started_time,
+                )
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             else:
@@ -181,27 +250,32 @@ class SourcesMixin:
                                     else:
                                         end_expected = end_expected - timedelta(days=2 if now.weekday() == 5 else 1)
                                 if end_data == end_expected:
-                                    self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+                                    self.print_log(
+                                        f"File [{label}] cached at [{local_path}]",
+                                        started=started_time,
+                                    )
                                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                     return DownloadResult(DownloadStatus.CACHED, local_path)
                             else:
-                                self.print_log(f"File [{label}] cached (but empty) at [{local_path}]", started=started_time)
+                                self.print_log(
+                                    f"File [{label}] cached (but empty) at [{local_path}]",
+                                    started=started_time,
+                                )
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return DownloadResult(DownloadStatus.CACHED, local_path)
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive)
-
-                    # NOTE: Adapt to yfinance-0.1.70 format, removing Timezones and Capital Gains
                     data_df.index = data_df.index.tz_localize(None)
-                    if "Capital Gains" in data_df:
+                    if "Capital Gains" in data_df.columns:
                         data_df = data_df.drop(columns=["Capital Gains"])
-                    # NOTE: End
-
                     if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) \
-                            and data_df.index[-1].date() == now.date() and now.strftime('%H:%M') < end_of_day:
+                            and len(data_df) > 0 and data_df.index[-1].date() == now.date() \
+                            and now.strftime('%H:%M') < end_of_day:
                         data_df = data_df[:-1]
                     if len(data_df) == 0:
                         if ignore:
-                            self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
+                            self.print_log(
+                                f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]",
+                            )
                         else:
                             raise Exception(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
                     if not exists(dirname(local_path)):
@@ -215,10 +289,12 @@ class SourcesMixin:
                                 if isinstance(prior_last, str) else prior_last
                             new_last = datetime.strptime(data_df['Date'].iloc[-1], '%Y-%m-%d').date()
                             if prior_last == new_last:
-                                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
+                                self.print_log(
+                                    f"File [{label}] cached at [{local_path}]",
+                                    started=started_time,
+                                )
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return DownloadResult(DownloadStatus.CACHED, local_path)
-                    import polars as pl
                     self.csv_write(pl.from_pandas(data_df), local_path, print_verb="downloaded", started=started_time)
                     if len(data_df) > 0:
                         modified = datetime.strptime(str(data_df.values[-1][0]), '%Y-%m-%d').date()
@@ -227,11 +303,17 @@ class SourcesMixin:
                         try:
                             os.utime(local_path, (modified_timestamp, modified_timestamp))
                         except Exception as exception:
-                            self.print_log(f"File [{label}] stock query file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
+                            self.print_log(
+                                f"File [{label}] stock query file [{local_path}] modified timestamp set failed [{modified_timestamp}]",
+                                exception=exception,
+                            )
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
                 except Exception as exception:
-                    self.print_log(f"File [{label}] stock query failed for ticker [{ticker}] between [{start}] and [{end_exclusive}]", exception=exception)
+                    self.print_log(
+                        f"File [{label}] stock query failed for ticker [{ticker}] between [{start}] and [{end_exclusive}]",
+                        exception=exception,
+                    )
                     if not ignore:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
@@ -240,17 +322,25 @@ class SourcesMixin:
         started_time = time.time()
         local_path = abspath(f"{self.local_data_dir}/_Database_{query_name}.csv")
         effective_force = force or config.force_downloads
-        if config.disable_downloads or _database._database_client is None:
+        if config.disable_downloads or _database.database_client is None:
             if isfile(local_path):
-                self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
+                self.print_log(
+                    f"File [{query_name}] cached at [{local_path}]",
+                    started=started_time,
+                )
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
-            self.print_log(f"File [{query_name}] query skipped: downloads disabled and no cache available")
+            self.print_log(
+                f"File [{query_name}] query skipped: downloads disabled and no cache available",
+            )
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(local_path):
-            self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
+            self.print_log(
+                f"File [{query_name}] cached at [{local_path}]",
+                started=started_time,
+            )
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         if not effective_force and check and isfile(local_path):
@@ -259,25 +349,33 @@ class SourcesMixin:
                 data_start = data_df.head(1).rows()[0][0]
                 data_end = data_df.tail(1).rows()[0][0]
                 if (start is None or start >= data_start) and (end is None or end <= data_end):
-                    self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
+                    self.print_log(
+                        f"File [{query_name}] cached at [{local_path}]",
+                        started=started_time,
+                    )
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     return DownloadResult(DownloadStatus.CACHED, local_path)
         try:
-            import polars as pl
-            arrow_table = _database._database_client.query(query=query_string, language="sql")
+            arrow_table = _database.database_client.query(query=query_string, language="sql")
             data_df = pl.from_arrow(arrow_table)
             if isinstance(data_df, pl.Series):
                 data_df = data_df.to_frame()
             if data_df is None or len(data_df) == 0:
                 if ignore:
-                    self.print_log(f"File [{query_name}] query returned no data")
+                    self.print_log(
+                        f"File [{query_name}] query returned no data",
+                    )
                     return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
                 raise Exception(f"File [{query_name}] query returned no data")
             self.csv_write(data_df, local_path, print_verb="queried", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
             return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
         except Exception as exception:
-            self.print_log(f"File [{query_name}] query failed", exception=exception, started=started_time)
+            self.print_log(
+                f"File [{query_name}] query failed",
+                exception=exception,
+                started=started_time,
+            )
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
@@ -288,13 +386,21 @@ class SourcesMixin:
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(file_path):
-                self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
+                self.print_log(
+                    f"File [{file_cache}] cached at [{file_path}]",
+                    started=started_time,
+                )
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
-            self.print_log(f"File [{file_cache}] query skipped: downloads disabled and no cache available")
+            self.print_log(
+                f"File [{file_cache}] query skipped: downloads disabled and no cache available",
+            )
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(file_path):
-            self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
+            self.print_log(
+                f"File [{file_cache}] cached at [{file_path}]",
+                started=started_time,
+            )
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, file_path)
         token = os.environ.get("REDBARK_TOKEN", "")
@@ -306,22 +412,21 @@ class SourcesMixin:
             response = urllib.request.urlopen(req, context=ssl._create_unverified_context())
             return json.loads(response.read().decode())
 
-        def _has_more(result):
-            pagination = result.get("pagination", result)
+        def _has_more(_result):
+            pagination = _result.get("pagination", _result)
             return bool(pagination.get("hasMore", pagination.get("has_more", False)))
 
         def _all_accounts():
-            rows, offset = [], 0
+            _rows, offset = [], 0
             while True:
-                result = _request(f"/v1/accounts?limit=200&offset={offset}")
-                rows.extend(result.get("data", []))
-                if not _has_more(result):
+                _result = _request(f"/v1/accounts?limit=200&offset={offset}")
+                _rows.extend(_result.get("data", []))
+                if not _has_more(_result):
                     break
-                offset += len(result.get("data", []))
-            return rows
+                offset += len(_result.get("data", []))
+            return _rows
 
         try:
-            import polars as pl
             if data == "accounts":
                 rows = _all_accounts()
                 data_df = pl.DataFrame(rows) if rows else self.dataframe_new()
@@ -357,19 +462,28 @@ class SourcesMixin:
                 if not effective_force and check and isfile(file_path):
                     with open(file_path, 'r') as f:
                         if hashlib.md5(f.read().encode()).hexdigest() == new_hash:
-                            self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
+                            self.print_log(
+                                f"File [{file_cache}] cached at [{file_path}]",
+                                started=started_time,
+                            )
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return DownloadResult(DownloadStatus.CACHED, file_path)
                 if not exists(dirname(file_path)):
                     os.makedirs(dirname(file_path))
                 with open(file_path, 'w') as f:
                     f.write(new_csv)
-                self.print_log(f"File [{file_cache}] downloaded to [{file_path}]", started=started_time)
+                self.print_log(
+                    f"File [{file_cache}] downloaded to [{file_path}]",
+                    started=started_time,
+                )
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
             return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
         except Exception as exception:
-            self.print_log(f"File [{file_cache}] download failed", exception=exception)
+            self.print_log(
+                f"File [{file_cache}] download failed",
+                exception=exception,
+            )
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
             return DownloadResult(DownloadStatus.FAILED, None)
 
@@ -381,7 +495,9 @@ class SourcesMixin:
             version_str = filename[len(prefix):-len(".csv")]
             if version_str.isdigit() and int(version_str) <= current_version - 2:
                 os.remove(file_path)
-                self.print_log(f"File [{name}] deleted old version [{file_path}]")
+                self.print_log(
+                    f"File [{name}] deleted old version [{file_path}]",
+                )
 
     def sheet_download(self, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_load_secs=10, sheet_retry_max=5,
                        read_cache=True, write_cache=False, print_rows=PL_PRINT_ROWS):
@@ -389,18 +505,28 @@ class SourcesMixin:
             return DownloadResult(DownloadStatus.FAILED, None)
         started_time = time.time()
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
-        drive_version = None
+        drive_version: str | None = None
         try:
-            drive_version = build('drive', 'v3', credentials=Spread(drive_url).client.auth, cache_discovery=False) \
+            raw_version = build('drive', 'v3', credentials=Spread(drive_url).client.auth, cache_discovery=False) \
                 .files().get(fileId=drive_key, fields='version').execute().get('version')
+            if raw_version is not None:
+                drive_version = str(raw_version)
         except Exception as exception:
-            self.print_log(f"Failed to get Drive version of sheet [{drive_url}]", exception=exception, level="error")
+            self.print_log(
+                f"Failed to get Drive version of sheet [{drive_url}]",
+                exception=exception,
+                level="error",
+            )
         name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
         if drive_version is not None:
             file_path = abspath(f"{self.local_data_dir}/_Sheet_{name}_v{drive_version}.csv")
-            self._sheet_cache_cleanup(name, int(drive_version))
-            if isfile(file_path):
-                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
+            drive_version_int = int(drive_version)
+            self._sheet_cache_cleanup(name, drive_version_int)
+            if read_cache and not write_cache and isfile(file_path):
+                self.print_log(
+                    f"File [{workbook_name}] cached at [{file_path}]",
+                    started=started_time,
+                )
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         else:
             prefix = f"_Sheet_{name}_v"
@@ -410,13 +536,19 @@ class SourcesMixin:
                  if basename(p)[len(prefix):-len(".csv")].isdigit()],
                 reverse=True
             )
-            if versioned_files:
+            if read_cache and not write_cache and versioned_files:
                 _, file_path = versioned_files[0]
-                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
+                self.print_log(
+                    f"File [{workbook_name}] cached at [{file_path}]",
+                    started=started_time,
+                )
                 return DownloadResult(DownloadStatus.CACHED, file_path)
             file_path = abspath(f"{self.local_data_dir}/_Sheet_{name}.csv")
             if read_cache and not write_cache and isfile(file_path):
-                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
+                self.print_log(
+                    f"File [{workbook_name}] cached at [{file_path}]",
+                    started=started_time,
+                )
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         file_path = abspath(f"{self.local_data_dir}/_Sheet_{name}.csv") if drive_version is None else abspath(f"{self.local_data_dir}/_Sheet_{name}_v{drive_version}.csv")
         retries = 0
@@ -426,11 +558,11 @@ class SourcesMixin:
             pass
 
         try:
-            import polars as pl
             while retries < sheet_retry_max:
                 try:
                     retries += 1
                     spread = Spread(drive_url, sheet=0 if sheet_name is None else sheet_name)
+                    # noinspection PyProtectedMember
                     spread_sheet_cells = spread._fix_merge_values(spread.sheet.get_all_values())[sheet_start_row - 1:]
                     data_df = self.dataframe_new(
                         data=spread_sheet_cells[1:],
@@ -458,13 +590,17 @@ class SourcesMixin:
                         [column.name for column in data_df if not (column.null_count() == data_df.height)])
                     for column in data_df.columns:
                         if len(data_df.filter(pl.col(column) == "Loading...")) > 0:
-                            data_df = None
                             raise SheetStillLoadingError(
                                 f"DataFrame [{workbook_name}] loaded from sheet that is yet to finish rendering column [{column}]")
                     self.csv_write(data_df, file_path, print_label=workbook_name, print_rows=-1)
-                    self.dataframe_print(data_df, print_label=workbook_name, print_verb="downloaded",
-                                         print_suffix=f"from [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
-                                         print_rows=print_rows, started=started_time)
+                    self.dataframe_print(
+                        data_df,
+                        print_label=workbook_name,
+                        print_verb="downloaded",
+                        print_suffix=f"from [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
+                        print_rows=print_rows,
+                        started=started_time
+                    )
                     caught_exception = None
                     break
                 except SheetStillLoadingError as exception:
@@ -473,10 +609,12 @@ class SourcesMixin:
             if caught_exception is not None:
                 raise caught_exception
         except Exception as exception:
-            self.print_log(f"DataFrame [{workbook_name}] unavailable at [{drive_url}]"
-                           + ("" if retries < sheet_retry_max
-                              else f" after retrying [{sheet_retry_max}] times over [{sheet_retry_max * sheet_load_secs}] seconds"),
-                           exception=exception)
+            self.print_log(
+                f"DataFrame [{workbook_name}] unavailable at [{drive_url}]"
+                + ("" if retries < sheet_retry_max
+                   else f" after retrying [{sheet_retry_max}] times over [{sheet_retry_max * sheet_load_secs}] seconds"),
+                exception=exception,
+            )
             return DownloadResult(DownloadStatus.FAILED, None)
         return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
 
@@ -489,30 +627,48 @@ class SourcesMixin:
         name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
         try:
             data_df_pd = data_df.to_pandas()
-            drive_version = None
+            drive_version: str | None = None
             if not config.disable_uploads:
                 spread = Spread(drive_url)
                 spread.df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start=f"{sheet_start_column}{sheet_start_row}", add_filter=add_filter, replace=True)
                 try:
-                    drive_version = build('drive', 'v3', credentials=spread.client.auth, cache_discovery=False) \
+                    raw_version = build('drive', 'v3', credentials=spread.client.auth, cache_discovery=False) \
                         .files().get(fileId=drive_key, fields='version').execute().get('version')
+                    if raw_version is not None:
+                        drive_version = str(raw_version)
                 except Exception as exception:
-                    self.print_log(f"Failed to get Drive version after upload of [{drive_url}]", exception=exception, level="error")
+                    self.print_log(
+                        f"Failed to get Drive version after upload of [{drive_url}]",
+                        exception=exception,
+                        level="error",
+                    )
             suffix = f"_v{drive_version}" if drive_version is not None else ""
             file_path = abspath(f"{self.local_data_dir}/_Sheet_{name}{suffix}.csv")
             self.csv_write(data_df, file_path)
             if drive_version is not None:
-                self._sheet_cache_cleanup(name, int(drive_version))
-            self.dataframe_print(data_df, print_label=print_label, print_verb="uploaded",
-                                 print_suffix=f"to [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
-                                 started=started_time, print_rows=print_rows)
+                drive_version_str: str = drive_version
+                drive_version_int = int(drive_version_str)
+                self._sheet_cache_cleanup(name, drive_version_int)
+            self.dataframe_print(
+                data_df,
+                print_label=print_label,
+                print_verb="uploaded",
+                print_suffix=f"to [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
+                started=started_time,
+                print_rows=print_rows,
+            )
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
         except Exception as exception:
-            self.print_log(f"DataFrame failed to upload to [{drive_url}]", exception=exception)
+            self.print_log(
+                f"DataFrame failed to upload to [{drive_url}]",
+                exception=exception,
+            )
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
-    def dropbox_download(self, dropbox_dir, local_dir, check=True):
+    def dropbox_download(self, dropbox_dir: str | None, local_dir: str, check: bool = True):
+        if dropbox_dir is None:
+            return collections.OrderedDict()
         started_time = time.time()
 
         class DropboxContentHasher(object):
@@ -565,10 +721,13 @@ class SourcesMixin:
                 "modified": int(getmtime(local_file)) if check else None
             }
         dropbox_files = {}
-        service = dropbox.Dropbox(os.getenv('DROPBOX_TOKEN'))
-        cursor = None
+        service = dropbox.Dropbox(os.getenv('DROPBOX_TOKEN', ''))
+        cursor: str | None = None
         while True:
-            response = service.files_list_folder(dropbox_dir) if cursor is None else service.files_list_folder_continue(cursor)
+            if cursor is None:
+                response = service.files_list_folder(dropbox_dir)
+            else:
+                response = service.files_list_folder_continue(cursor)
             for dropbox_file in response.entries:
                 dropbox_files[dropbox_file.name] = {
                     "id": dropbox_file.id,
@@ -579,7 +738,10 @@ class SourcesMixin:
                 cursor = response.cursor
             else:
                 break
-        self.print_log(f"Directory [{basename(local_dir)}] listed [{len(dropbox_files)}] files from [https://www.dropbox.com/home/{dropbox_dir}]", started=started_time)
+        self.print_log(
+            f"Directory [{basename(local_dir)}] listed [{len(dropbox_files)}] files from [https://www.dropbox.com/home/{dropbox_dir}]",
+            started=started_time,
+        )
         started_time = time.time()
         actioned_files = {}
         for dropbox_file in dropbox_files:
@@ -600,19 +762,31 @@ class SourcesMixin:
                     os.utime(local_path,
                              (dropbox_files[dropbox_file]["modified"], dropbox_files[dropbox_file]["modified"]))
                 except Exception as exception:
-                    self.print_log(f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{dropbox_files[dropbox_file]['modified']}]", exception=exception)
+                    self.print_log(
+                        f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{dropbox_files[dropbox_file]['modified']}]",
+                        exception=exception,
+                    )
                 local_files[dropbox_file] = {
                     "hash": dropbox_files[dropbox_file]["hash"],
                     "modified": dropbox_files[dropbox_file]["modified"]
                 }
                 file_actioned = True
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time_file)
+                self.print_log(
+                    f"File [{label}] downloaded to [{local_path}]",
+                    started=started_time_file,
+                )
             else:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file)
+                self.print_log(
+                    f"File [{label}] cached at [{local_path}]",
+                    started=started_time_file,
+                )
             actioned_files[local_path] = True, file_actioned
-        self.print_log(f"Directory [{basename(local_dir).title()}] downloaded [{len(actioned_files)}] files from [https://www.dropbox.com/home/{dropbox_dir}]", started=started_time)
+        self.print_log(
+            f"Directory [{basename(local_dir).title()}] downloaded [{len(actioned_files)}] files from [https://www.dropbox.com/home/{dropbox_dir}]",
+            started=started_time,
+        )
         return collections.OrderedDict(sorted(actioned_files.items()))
 
     def drive_synchronise(self, drive_dir, local_dir, check=True, download=True, upload=False):
@@ -627,7 +801,6 @@ class SourcesMixin:
                     hash_md5.update(block)
             return hash_md5.hexdigest()
 
-        from datetime import timezone
         actioned_files = {}
         local_files = {}
         for local_file in glob.glob(f"{local_dir}/*"):
@@ -641,21 +814,25 @@ class SourcesMixin:
         service = build('drive', 'v3', credentials=credentials, cache_discovery=False)
         token = None
         while True:
-            response = (service.files()
-                        .list(q=f"'{drive_dir}' in parents", spaces='drive',
-                              fields='nextPageToken, files(id, name, modifiedTime, md5Checksum)',
-                              pageToken=token).execute())
+            response = service.files().list(
+                q=f"'{drive_dir}' in parents",
+                spaces='drive',
+                fields='nextPageToken, files(id, name, modifiedTime, md5Checksum)',
+                pageToken=token
+            ).execute()
             for drive_file in response.get('files', []):
                 drive_files[drive_file["name"]] = {
                     "id": drive_file["id"],
                     "hash": drive_file["md5Checksum"],
-                    "modified": int((datetime.strptime(drive_file["modifiedTime"], '%Y-%m-%dT%H:%M:%S.%fZ') -
-                                     datetime(1970, 1, 1)).total_seconds()),
+                    "modified": int((datetime.strptime(drive_file["modifiedTime"], '%Y-%m-%dT%H:%M:%S.%fZ') - datetime(1970, 1, 1)).total_seconds()),
                 }
             token = response.get('nextPageToken')
             if not token:
                 break
-        self.print_log(f"Directory [{basename(local_dir)}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
+        self.print_log(
+            f"Directory [{basename(local_dir)}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]",
+            started=started_time,
+        )
         started_time = time.time()
         force_download = config.force_downloads and not config.disable_downloads
         force_upload = config.force_downloads and not config.disable_uploads
@@ -664,8 +841,7 @@ class SourcesMixin:
             file_actioned = False
             local_path = abspath(f"{local_dir}/{drive_file}")
             label = basename(local_path).split(".")[0]
-            needs_download = drive_file not in local_files or (check and not force_download and
-                                                               drive_files[drive_file]["modified"] > local_files[drive_file]["modified"])
+            needs_download = drive_file not in local_files or (check and not force_download and drive_files[drive_file]["modified"] > local_files[drive_file]["modified"])
             if download and not config.disable_downloads and (force_download or needs_download):
                 request = service.files().get_media(fileId=drive_files[drive_file]["id"])
                 buffer_file = io.BytesIO()
@@ -680,17 +856,26 @@ class SourcesMixin:
                 try:
                     os.utime(local_path, (drive_files[drive_file]["modified"], drive_files[drive_file]["modified"]))
                 except Exception as exception:
-                    self.print_log(f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]", exception=exception)
+                    self.print_log(
+                        f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]",
+                        exception=exception,
+                    )
                 local_files[drive_file] = {
                     "hash": drive_files[drive_file]["hash"],
                     "modified": drive_files[drive_file]["modified"]
                 }
                 file_actioned = True
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time_file)
+                self.print_log(
+                    f"File [{label}] downloaded to [{local_path}]",
+                    started=started_time_file,
+                )
             else:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file)
+                self.print_log(
+                    f"File [{label}] cached at [{local_path}]",
+                    started=started_time_file,
+                )
             actioned_files[local_path] = True, file_actioned
         if upload:
             for local_file in local_files:
@@ -705,26 +890,37 @@ class SourcesMixin:
                     ))
                     if (force_upload or needs_upload) and not config.disable_uploads:
                         try:
-                            data = MediaFileUpload(local_file)
+                            data = MediaFileUpload(local_path)
                             drive_id = drive_files[local_file]["id"] if local_file in drive_files else None
-                            metadata = {'modifiedTime': datetime.fromtimestamp(
+                            metadata: dict[str, object] = {'modifiedTime': datetime.fromtimestamp(
                                 local_files[local_file]["modified"], timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
                             if drive_id is None:
                                 metadata['name'] = basename(local_file)
                                 metadata['parents'] = [drive_dir]
                                 request = service.files().create(body=metadata, media_body=data).execute()
                             else:
-                                request = service.files().update(fileId=drive_id, body=metadata,
-                                                                 media_body=data).execute()
+                                request = service.files().update(fileId=drive_id, body=metadata, media_body=data).execute()
                             file_actioned = True
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)
-                            self.print_log(f"File [{label}] uploaded to [https://drive.google.com/file/d/{request.get('id') if drive_id is None else drive_id}]", started=started_time_file)
+                            self.print_log(
+                                f"File [{label}] uploaded to [https://drive.google.com/file/d/{request.get('id') if drive_id is None else drive_id}]",
+                                started=started_time_file,
+                            )
                         except Exception as exception:
-                            self.print_log(f"File [{label}] failed to upload to [https://drive.google.com/drive/folders/{drive_dir}]", exception=exception)
+                            self.print_log(
+                                f"File [{label}] failed to upload to [https://drive.google.com/drive/folders/{drive_dir}]",
+                                exception=exception,
+                            )
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
                     else:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_PERSISTED)
-                        self.print_log(f"File [{label}] verified at [https://drive.google.com/file/d/{drive_files[local_file]['id']}]", started=started_time_file)
+                        self.print_log(
+                            f"File [{label}] verified at [https://drive.google.com/file/d/{drive_files[local_file]['id']}]",
+                            started=started_time_file,
+                        )
                     actioned_files[local_path] = True, file_actioned
-        self.print_log(f"Directory [{basename(local_dir).title()}] synchronised [{len(actioned_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
+        self.print_log(
+            f"Directory [{basename(local_dir).title()}] synchronised [{len(actioned_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]",
+            started=started_time,
+        )
         return collections.OrderedDict(sorted(actioned_files.items()))

@@ -247,7 +247,7 @@ class WrangleTest(unittest.TestCase):
     #     data_type = {
     #         "Holdings Quantity": pl.Utf8,
     #     }
-    #     data_str = "[Exchange Symbol(str), Holdings Quantity({}), Unit Price(f64), Watch Value(f64), Watch Quantity(i64), Baseline Quantity(f64)]"
+    #     data_str = "[Exchange Symbol(str), Holdings Quantity({}), Unit Price(Float64), Watch Value(Float64), Watch Quantity(Int64), Baseline Quantity(Float64)]"
     #     data_str_type = [test.dataframe_type_to_str(data_type[column]) for column in data_type]
     #     for result in [
     #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
@@ -256,7 +256,7 @@ class WrangleTest(unittest.TestCase):
     #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
     #     ]:
     #         data_df = _sheet_read(result)
-    #         self.assertEqual(data_str.format("f64"), test.dataframe_to_str(data_df))
+    #         self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
     #         self.assertEqual(26, len(data_df))
     #     for result in [
     #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
@@ -296,17 +296,17 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new()))
         self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new([])))
         self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new([], {})))
-        self.assertEqual(df_empty_str.format("C1(i16)"), test.dataframe_to_str(test.dataframe_new([], df_empty_type)))
+        self.assertEqual(df_empty_str.format("C1(Int16)"), test.dataframe_to_str(test.dataframe_new([], df_empty_type)))
 
         df_data_str = "[C1({}), C2({}), C3({})]"
         df_data_type = {"C1": pl.Int64, "C2": pl.Utf8, "C3": pl.Utf8}
         df_data = [{"C1": 1, "C2": 1.1, "C3": "1"}, {"C1": 2, "C2": 2.2, "C3": "2"},
                    {"C1": None, "C2": None, "C3": None}]
-        self.assertEqual(df_data_str.format("i64", "f64", "str"),
+        self.assertEqual(df_data_str.format("Int64", "Float64", "String"),
                          test.dataframe_to_str(test.dataframe_new(df_data)))
-        self.assertEqual(df_data_str.format("i64", "f64", "str"),
+        self.assertEqual(df_data_str.format("Int64", "Float64", "String"),
                          test.dataframe_to_str(test.dataframe_new(df_data, {})))
-        self.assertEqual(df_data_str.format("i64", "str", "str"),
+        self.assertEqual(df_data_str.format("Int64", "String", "String"),
                          test.dataframe_to_str(test.dataframe_new(df_data, df_data_type)))
         self.assertEqual(3,
                          len((test.dataframe_new(df_data, schema={column: pl.Utf8 for column in df_data[0]}))))
@@ -455,6 +455,8 @@ class WrangleTest(unittest.TestCase):
             t.state_cache(pl.DataFrame({"NotDate": ["x"], "Value": [1.0]}))
         with self.assertRaises(pl.exceptions.SchemaError):
             t.state_cache(pl.DataFrame({"Date": ["2020-01-01"], "Value": [1.0]}))
+        with self.assertRaises(pl.exceptions.SchemaError):
+            t.state_cache(pl.DataFrame())
 
     def test_state_cache_orphaned_previous(self):
         t = self._setup_state_test("test-7")

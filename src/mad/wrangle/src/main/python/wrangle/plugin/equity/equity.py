@@ -165,7 +165,10 @@ class Equity(plugin.Plugin):
             stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_data_dir, "Yahoo")}
             statement_files = self.file_list(self.local_data_dir, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
-        self.print_log(f"Files [Equity] downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files", started=started_time)
+        self.print_log(
+            f"Files [Equity] downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files",
+            started=started_time,
+        )
 
         # Collect stock file data
         started_time = time.time()
@@ -196,15 +199,25 @@ class Equity(plugin.Plugin):
                             stocks_df[stock_ticker] = stock_df
                         self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                     except Exception as exception:
-                        self.print_log(f"Unexpected error processing file [{stock_file_name}]", exception=exception)
+                        self.print_log(
+                            f"Unexpected error processing file [{stock_file_name}]",
+                            exception=exception,
+                        )
                         self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
         for stock_ticker in stocks_df:
-            self.dataframe_print(stocks_df[stock_ticker], print_label=stock_ticker, print_verb="collected")
-        self.print_log(f"DataFrame [Stocks] collected with [{len(stocks_df)}] stocks across [{stocks_files_count}] files", started=started_time)
+            self.dataframe_print(
+                stocks_df[stock_ticker],
+                print_label=stock_ticker,
+                print_verb="collected",
+            )
+        self.print_log(
+            f"DataFrame [Stocks] collected with [{len(stocks_df)}] stocks across [{stocks_files_count}] files",
+            started=started_time,
+        )
 
         # Parse fund file data
         started_time = time.time()
@@ -339,7 +352,10 @@ class Equity(plugin.Plugin):
                                     .append(f"Statement parse failed to resolve all keys {STATEMENT_ATTRIBUTES} in {statement_position}")
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
-        self.print_log(f"File [Funds] parsed [{len(statement_data)}] statements", started=started_time)
+        self.print_log(
+            f"File [Funds] parsed [{len(statement_data)}] statements",
+            started=started_time,
+        )
 
         def _equity_tickers(_equity_df):
             return sorted([column.replace(" Price Close", "") \
@@ -370,14 +386,26 @@ class Equity(plugin.Plugin):
                 .with_columns(cs.string().forward_fill())
 
         def _equity_print(_equity_df, _dimensions=DIMENSIONS_PRICE_AUX, print_label=None, print_verb=None, print_rows=PL_PRINT_ROWS, started=None):
-            self.dataframe_print(_equity_df, print_label=print_label, print_verb=print_verb, print_suffix="(data to follow)", print_rows=0, started=started)
+            self.dataframe_print(
+                _equity_df,
+                print_label=print_label,
+                print_verb=print_verb,
+                print_suffix="(data to follow)",
+                print_rows=0,
+                started=started,
+            )
             if len(_equity_df) > 0:
                 for _ticker in _equity_tickers(_equity_df):
                     _ticker_df = _equity_df.select(["Date"] + \
                                                    [f"{_ticker} {_dimension}" for _dimension in _dimensions
                                                     if f"{_ticker} {_dimension}" in _equity_df.columns]) \
                         .fill_nan(None).filter(~pl.all_horizontal(pl.all().exclude("Date").is_null()))
-                    self.dataframe_print(_ticker_df, print_label=f"{print_label}_{_ticker}", print_verb=print_verb, print_rows=print_rows)
+                    self.dataframe_print(
+                        _ticker_df,
+                        print_label=f"{print_label}_{_ticker}",
+                        print_verb=print_verb,
+                        print_rows=print_rows,
+                    )
 
         # Process equity data
         fx_rates = {}
@@ -392,18 +420,30 @@ class Equity(plugin.Plugin):
                     if statement_data[file_name]['Status'] == STATUS_SUCCESS:
                         statement_position = statement_data[file_name]["Positions"]
                         statements_positions.extend(list(statement_position.values()))
-                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SUCCESS}] with positions {list(statement_position.keys())}")
+                        self.print_log(
+                            f"File [{basename(file_name)}] processed as [{STATUS_SUCCESS}] with positions {list(statement_position.keys())}",
+                        )
                     elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
-                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SKIPPED}]")
+                        self.print_log(
+                            f"File [{basename(file_name)}] processed as [{STATUS_SKIPPED}]",
+                        )
                     else:
-                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] at parsing point:")
-                        self.print_log(statement_data[file_name]["Parse"])
-                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] with errors:")
+                        self.print_log(
+                            f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] at parsing point:",
+                        )
+                        self.print_log(
+                            statement_data[file_name]["Parse"],
+                        )
+                        self.print_log(
+                            f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] with errors:",
+                        )
                         if not statement_data[file_name]["Errors"]:
                             statement_data[file_name]["Errors"] = ["<NONE>"]
                         error_index = 0
                         while error_index < len(statement_data[file_name]["Errors"]):
-                            self.print_log(f" {error_index:2d}: {statement_data[file_name]['Errors'][error_index]}")
+                            self.print_log(
+                                f" {error_index:2d}: {statement_data[file_name]['Errors'][error_index]}",
+                            )
                             error_index += 1
                 if len(statements_positions) == 0:
                     statement_df = self.dataframe_new(schema={"Date": pl.Date}, print_label="Funds", started=started_time)
@@ -416,7 +456,12 @@ class Equity(plugin.Plugin):
                         (pl.col("Value") / pl.col("Units")).alias("Price"),
                         (1.0 / pl.col("Rate")).alias("Rate"),
                     ).pivot(values=["Price", "Rate", "Currency"], index="Date", on="Ticker").sort("Date")
-                    self.dataframe_print(statement_df, print_label="Funds", print_verb="pivoted", started=started_time)
+                    self.dataframe_print(
+                        statement_df,
+                        print_label="Funds",
+                        print_verb="pivoted",
+                        started=started_time,
+                    )
                     started_time = time.time()
                     rename_map = {}
                     for statement_column in statement_df.columns:
@@ -427,7 +472,12 @@ class Equity(plugin.Plugin):
                         elif statement_column.startswith("Currency_"):
                             rename_map[statement_column] = f"{statement_column.replace('Currency_', '', 1)} Currency Base"
                     statement_df = statement_df.rename(rename_map)
-                    self.dataframe_print(statement_df, print_label="Funds", print_verb="renamed", started=started_time)
+                    self.dataframe_print(
+                        statement_df,
+                        print_label="Funds",
+                        print_verb="renamed",
+                        started=started_time,
+                    )
                     started_time = time.time()
                     statement_exprs = []
                     for ticker in tickers:
@@ -590,7 +640,13 @@ from(bucket: "data_public")
                 index_weights = index_weights.rename(
                     dict(zip(index_weights.columns, ["Ticker"] + indexes)))
                 index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
-                self.dataframe_print(index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000, started=started_time)
+                self.dataframe_print(
+                    index_weights,
+                    print_label="Index_Weights_Sheet",
+                    print_verb="processed",
+                    print_rows=1000,
+                    started=started_time,
+                )
                 started_time = time.time()
                 weight_exprs = []
                 spot_exprs = []
@@ -644,7 +700,10 @@ from(bucket: "data_public")
                 _equity_print(equity_df, _dimensions=["Price Close Spot", "Market Volume", "Market Volume Spot"], print_label="Equity_Volumes", print_verb="added market volumes", started=started_time)
 
         except Exception as exception:
-            self.print_log("Unexpected error processing equity dataframe", exception=exception)
+            self.print_log(
+                "Unexpected error processing equity dataframe",
+                exception=exception,
+            )
             processed = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
             skipped = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED, -processed)
@@ -820,16 +879,24 @@ from(bucket: "data_public")
                                     "period": dimension_metadata[2],
                                     "unit": dimension_metadata[1]
                                 }, print_label=f"Equity_{column.replace(' ', '_').replace('-', '_')}")
-                self.print_log("LineProtocol [Equity] serialised", started=started_time)
+                self.print_log(
+                    "LineProtocol [Equity] serialised",
+                    started=started_time,
+                )
         except Exception as exception:
-            self.print_log("Unexpected error processing equity data", exception=exception)
+            self.print_log(
+                "Unexpected error processing equity data",
+                exception=exception,
+            )
             processed = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
             skipped = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED, -processed)
             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED, -skipped)
             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, processed + skipped)
         if not len(equity_delta_df):
-            self.print_log("No new data found")
+            self.print_log(
+                "No new data found",
+            )
         self.counter_write()
 
     def __init__(self):
