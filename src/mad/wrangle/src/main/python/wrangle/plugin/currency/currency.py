@@ -36,7 +36,7 @@ RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
 
 class Currency(plugin.Plugin):
-    _data_repos = plugin.DataRepos(
+    _repos = plugin.Repos(
         staging={
             "drive_folder": "PLACEHOLDER",
             "sheet_rates": "PLACEHOLDER",
@@ -56,7 +56,7 @@ class Currency(plugin.Plugin):
             new_data = False
             started_time = time.time()
             for years in RBA_YEARS:
-                years_file = join(self.local_data_dir, f"RBA_FX_{years}.xls")
+                years_file = join(self.local_cache, f"RBA_FX_{years}.xls")
                 file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check='current' in years)
                 if file_status.status != plugin.DownloadStatus.FAILED:
                     if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
@@ -129,7 +129,7 @@ class Currency(plugin.Plugin):
                 # Sheet upload
                 rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(
                     pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1)))
-                self.sheet_upload(rba_sheet_df, self.remote_data_repos.sheet_rates, workbook_name="Rates", sheet_name='Currency')
+                self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_rates, workbook_name="Rates", sheet_name='Currency')
                 started_time = time.time()
                 rba_pairs_df = rba_current_df.select(['Date'] + PAIRS)
                 self.database_upload(rba_pairs_df.drop_nulls(), tags={
@@ -161,4 +161,4 @@ class Currency(plugin.Plugin):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Currency", Currency._data_repos)
+        super().__init__("Currency", Currency._repos)

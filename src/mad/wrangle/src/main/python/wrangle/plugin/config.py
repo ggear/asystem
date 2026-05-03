@@ -37,10 +37,58 @@ CTR_ACT_PERSISTED = "Persisted"
 CTR_ACT_UPLOADED = "Uploaded"
 
 
-class DataRepoScope(str, Enum):
-    TESTING = "testing"
+class RepoScope(str, Enum):
+    CACHE = "cache"
     STAGING = "staging"
     PRODUCTION = "production"
+
+
+@dataclass
+class Repos:
+    _scopes: dict[str, dict[str, str]]
+
+    def __init__(self, **scopes: dict[str, str]):
+        valid: set[str] = {scope.name.lower() for scope in RepoScope}
+        for name in scopes:
+            if name not in valid:
+                raise ValueError(f"unknown scope '{name}'; valid: {sorted(valid)}")
+        required: set[str] = {
+            scope.name.lower() for scope in RepoScope if scope != RepoScope.CACHE
+        }
+        missing_scopes = required - set(scopes)
+        if missing_scopes:
+            raise ValueError(f"missing required scopes: {sorted(missing_scopes)}")
+        all_keys: set[str] = set()
+        for keys in scopes.values():
+            all_keys.update(keys.keys())
+        for scope_name, keys in scopes.items():
+            missing_keys = all_keys - set(keys.keys())
+            if missing_keys:
+                raise ValueError(f"scope '{scope_name}' missing keys: {sorted(missing_keys)}")
+        self._scopes = scopes
+
+    def __getattr__(self, name: str) -> str | None:
+        scope = config.repo_scope
+        if scope == RepoScope.CACHE:
+            return None
+        scope: RepoScope = config.repo_scope
+        scope_name = scope.value
+        keys = self._scopes[scope_name]
+        if name not in keys:
+            raise AttributeError(f"RepoScope has no key '{name}' for scope '{scope_name}'")
+        return keys[name]
+
+
+class Config:
+    log_level: str = "info"
+    repo_scope: RepoScope = RepoScope.PRODUCTION
+    force_reprocessing: bool = False
+    force_downloads: bool = False
+    disable_uploads: bool = False
+    disable_downloads: bool = False
+
+
+config = Config()
 
 
 class DownloadStatus(Enum):
@@ -52,54 +100,6 @@ class DownloadStatus(Enum):
 class DownloadResult(NamedTuple):
     status: DownloadStatus
     file_path: str | None
-
-
-@dataclass
-class Config:
-    log_level: str = "info"
-    drive_scope: DataRepoScope = DataRepoScope.PRODUCTION
-    force_reprocessing: bool = False
-    force_downloads: bool = False
-    disable_uploads: bool = False
-    disable_downloads: bool = False
-
-
-config = Config()
-
-
-class DataRepos:
-    _scopes: dict[str, dict[str, str]]
-
-    def __init__(self, **scopes: dict[str, str]):
-        valid: set[str] = {scope.name.lower() for scope in DataRepoScope}
-        for name in scopes:
-            if name not in valid:
-                raise ValueError(f"DataRepoScope unknown scope '{name}'; valid: {sorted(valid)}")
-        required: set[str] = {
-            scope.name.lower() for scope in DataRepoScope if scope != DataRepoScope.TESTING
-        }
-        missing_scopes = required - set(scopes)
-        if missing_scopes:
-            raise ValueError(f"DataRepoScope missing required scopes: {sorted(missing_scopes)}")
-        all_keys: set[str] = set()
-        for keys in scopes.values():
-            all_keys.update(keys.keys())
-        for scope_name, keys in scopes.items():
-            missing_keys = all_keys - set(keys.keys())
-            if missing_keys:
-                raise ValueError(f"DataRepoScope scope '{scope_name}' missing keys: {sorted(missing_keys)}")
-        self._scopes = scopes
-
-    def __getattr__(self, name: str) -> str | None:
-        scope = config.drive_scope
-        if scope == DataRepoScope.TESTING:
-            return None
-        scope: DataRepoScope = config.drive_scope
-        scope_name = scope.value
-        keys = self._scopes[scope_name]
-        if name not in keys:
-            raise AttributeError(f"DataRepoScope has no key '{name}' for scope '{scope_name}'")
-        return keys[name]
 
 
 def get_file(file_name):

@@ -53,8 +53,8 @@ def configure(argv=None):
         help="skip remote system downloads and read from local cache only",
     )
     parser.add_argument(
-        "--drive-scope",
-        choices=["production", "staging", "testing"],
+        "--repo-scope",
+        choices=["production", "staging", "cache"],
         default="production",
         help="scope remote uploads and downloads (default: production)",
     )
@@ -72,7 +72,7 @@ def configure(argv=None):
     if args.log is None:
         args.log = "debug" if args.once else "info"
     plugin.config.log_level = args.log
-    plugin.config.drive_scope = plugin.DataRepoScope(args.drive_scope)
+    plugin.config.repo_scope = plugin.RepoScope(args.repo_scope)
     plugin.config.force_reprocessing = args.force_reprocessing
     plugin.config.force_downloads = args.force_downloads
     plugin.config.disable_uploads = args.disable_uploads

@@ -28,7 +28,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
         for csv_path, csv_df in self._db_cache_dfs.items():
             self.csv_write(csv_df, csv_path)
         if not config.disable_uploads:
-            self.drive_synchronise(self.remote_data_repos.drive_folder, self.local_data_dir, check=True, download=False, upload=True)
+            self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, check=True, download=False, upload=True)
         self.print_counters()
         self.print_log(
             "Finished",
@@ -130,10 +130,10 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
                     self.print_log(f"File [{file_name}] found at [{file_path}]")
         return files
 
-    def __init__(self, name, data_repos):
+    def __init__(self, name, repos):
         self._counters = {}
         self._db_cache_dfs = {}
         self.reset_counters()
         self.name = name
-        self.remote_data_repos = data_repos
-        self.local_data_dir = abspath(get_dir(f"data/{name.lower()}"))
+        self.remote_repos = repos
+        self.local_cache = abspath(get_dir(f"data/{name.lower()}"))

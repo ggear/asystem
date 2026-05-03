@@ -21,32 +21,10 @@ from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
-for key, value in list(plugin.load_profile(join(DIR_ROOT, ".env")).items()):
-    os.environ[key] = value
-
-
-def reset_config(log="warning"):
-    plugin.config.log_level = log
-    plugin.config.drive_scope = plugin.DataRepoScope.PRODUCTION
-    plugin.config.force_reprocessing = False
-    plugin.config.force_downloads = False
-    plugin.config.disable_uploads = True
-    plugin.config.disable_downloads = False
-    plugin.database_close()
-
 
 class WrangleTest(unittest.TestCase):
 
-    def test_adhoc(self):
-        self.run_module("interest", {"success_typical": ASSERT_RUN},
-                        force_reprocessing=False,
-                        disable_downloads=False,
-                        disable_uploads=True,
-                        enable_rerun=False,
-                        log="info",
-                        )
-
-    def test_balances_typical(self):
+    def test_balances_cache(self):
         self.run_module("balances", {"success_typical": merge_asserts(ASSERT_RUN, {
             # "counter_equals": {
             #     plugin.CTR_SRC_FILES: {
@@ -60,7 +38,7 @@ class WrangleTest(unittest.TestCase):
             #         plugin.CTR_ACT_UPDATE_COLUMNS: 1,
             #     },
             # },
-        })})
+        })}, disable_downloads=True, disable_uploads=True, repo_scope=plugin.RepoScope.CACHE)
 
     def test_currency_typical(self):
         self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
@@ -272,7 +250,7 @@ class WrangleTest(unittest.TestCase):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
         reset_config()
         invalid_cache = "Invalid"
-        invalid_path = abspath(f"{test.local_data_dir}/_Database_{invalid_cache}.csv")
+        invalid_path = abspath(f"{test.local_cache}/_Database_{invalid_cache}.csv")
         for result in [
             test.database_download(invalid_cache, "SELECT 1", force=True),
             test.database_download(invalid_cache, "SELECT 1", force=False),
@@ -281,7 +259,7 @@ class WrangleTest(unittest.TestCase):
             self.assertEqual(DownloadResult(DownloadStatus.FAILED, None), result)
         self.assertFalse(isfile(invalid_path))
         cache_cache = "Cache"
-        cache_path = abspath(f"{test.local_data_dir}/_Database_{cache_cache}.csv")
+        cache_path = abspath(f"{test.local_cache}/_Database_{cache_cache}.csv")
         with open(cache_path, "w") as fh:
             fh.write("Date,Rate\n2020-01-01,1.0\n")
         self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
@@ -726,20 +704,20 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(self._price_df([
             ("2020-01-01", 100.0), ("2020-02-01", 200.0),
         ]), self._price_change_agg())
-        self.assertTrue(isfile(join(t.local_data_dir, "__Test_Current.csv")))
-        self.assertTrue(isfile(join(t.local_data_dir, "__Test_Update.csv")))
-        self.assertTrue(isfile(join(t.local_data_dir, "__Test_Delta.csv")))
-        self.assertFalse(isfile(join(t.local_data_dir, "__Test_Previous.csv")))
+        self.assertTrue(isfile(join(t.local_cache, "__Test_Current.csv")))
+        self.assertTrue(isfile(join(t.local_cache, "__Test_Update.csv")))
+        self.assertTrue(isfile(join(t.local_cache, "__Test_Delta.csv")))
+        self.assertFalse(isfile(join(t.local_cache, "__Test_Previous.csv")))
         t.reset_counters()
         t.state_cache(self._price_df([
             ("2020-01-01", 100.0), ("2020-02-01", 200.0),
             ("2020-03-01", 300.0), ("2020-04-01", 400.0),
         ]), self._price_change_agg())
-        self.assertTrue(isfile(join(t.local_data_dir, "__Test_Previous.csv")))
-        self.assertEqual(4, len(t.csv_read(join(t.local_data_dir, "__Test_Current.csv"))))
-        self.assertEqual(2, len(t.csv_read(join(t.local_data_dir, "__Test_Previous.csv"))))
-        self.assertEqual(4, len(t.csv_read(join(t.local_data_dir, "__Test_Update.csv"))))
-        self.assertEqual(2, len(t.csv_read(join(t.local_data_dir, "__Test_Delta.csv"))))
+        self.assertTrue(isfile(join(t.local_cache, "__Test_Previous.csv")))
+        self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__Test_Current.csv"))))
+        self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__Test_Previous.csv"))))
+        self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__Test_Update.csv"))))
+        self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__Test_Delta.csv"))))
 
     def test_state_cache_row_and_column_counters(self):
         t = self._setup_state_test("agg-7")
@@ -990,13 +968,13 @@ class WrangleTest(unittest.TestCase):
 
     def _setup_state_test(self, fixture):
         t = Test("Test", "SOME_NON_EXISTANT_GUID")
-        t.local_data_dir = abspath(join(DIR_ROOT, "target", "data", f"state-{fixture}"))
-        shutil.rmtree(t.local_data_dir, ignore_errors=True)
-        os.makedirs(t.local_data_dir)
+        t.local_cache = abspath(join(DIR_ROOT, "target", "data", f"state-{fixture}"))
+        shutil.rmtree(t.local_cache, ignore_errors=True)
+        os.makedirs(t.local_cache)
         src = join(DIR_ROOT, "src/test/resources/state", fixture)
         if isdir(src):
             for fname in os.listdir(src):
-                shutil.copy(join(src, fname), join(t.local_data_dir, fname))
+                shutil.copy(join(src, fname), join(t.local_cache, fname))
         plugin.config.force_reprocessing = False
         plugin.config.disable_downloads = False
         return t
@@ -1009,9 +987,9 @@ class WrangleTest(unittest.TestCase):
 
     def run_module(self, module_name, tests_asserts, log="info",
                    prepare_only=False, enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                   disable_uploads=True, disable_downloads=False, drive_scope=plugin.DataRepoScope.PRODUCTION):
+                   disable_uploads=True, disable_downloads=False, repo_scope=plugin.RepoScope.CACHE):
         plugin.config.log_level = log
-        plugin.config.drive_scope = drive_scope
+        plugin.config.repo_scope = repo_scope
         plugin.config.force_reprocessing = force_reprocessing
         plugin.config.force_downloads = force_downloads
         plugin.config.disable_uploads = disable_uploads
@@ -1052,7 +1030,7 @@ class WrangleTest(unittest.TestCase):
 
         print("")
         for test in tests_asserts:
-            load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.local_data_dir)
+            load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.local_cache)
             counters = {}
             if not prepare_only:
                 print(f"STARTING (run)     [{module_name.title()}]   [{test}]")
@@ -1200,13 +1178,26 @@ ASSERT_RELOAD = {
     },
 }
 
+for key, value in list(plugin.load_profile(join(DIR_ROOT, ".env")).items()):
+    os.environ[key] = value
+
+
+def reset_config(log="warning"):
+    plugin.config.log_level = log
+    plugin.config.repo_scope = plugin.RepoScope.PRODUCTION
+    plugin.config.force_reprocessing = False
+    plugin.config.force_downloads = False
+    plugin.config.disable_uploads = True
+    plugin.config.disable_downloads = False
+    plugin.database_close()
+
 
 class Test(Plugin):
     def _run(self):
         pass
 
     def __init__(self, name, drive_folder):
-        super().__init__(name, plugin.DataRepos(
+        super().__init__(name, plugin.Repos(
             staging={"drive_folder": "PLACEHOLDER"},
             production={"drive_folder": drive_folder},
         ))

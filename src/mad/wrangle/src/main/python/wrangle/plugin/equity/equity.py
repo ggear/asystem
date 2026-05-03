@@ -95,7 +95,7 @@ STOCK = {
 
 
 class Equity(plugin.Plugin):
-    _data_repos = plugin.DataRepos(
+    _repos = plugin.Repos(
         staging={
             "drive_folder": "PLACEHOLDER",
             "sheet_prices": "PLACEHOLDER",
@@ -128,7 +128,7 @@ class Equity(plugin.Plugin):
                     if year == today.year:
                         for month in range(1, today.month + 1):
                             if year != stock_start.year or month >= stock_start.month:
-                                file_name = f"{self.local_data_dir}/Yahoo_{ticker}_{year}-{month:02}.csv"
+                                file_name = f"{self.local_cache}/Yahoo_{ticker}_{year}-{month:02}.csv"
                                 stock_files[file_name] = self.stock_download(
                                     file_name,
                                     f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
@@ -137,7 +137,7 @@ class Equity(plugin.Plugin):
                                     STOCK[stock]["end of day"], check=year == today.year and month == today.month)
                     else:
                         start_month = stock_start.month if year == stock_start.year else 1
-                        file_name = f"{self.local_data_dir}/Yahoo_{ticker}_{year}.csv"
+                        file_name = f"{self.local_cache}/Yahoo_{ticker}_{year}.csv"
                         stock_files[file_name] = self.stock_download(
                             file_name,
                             f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
@@ -148,7 +148,7 @@ class Equity(plugin.Plugin):
             # Sync stock and fund files from Drive
             files_cached = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED)
             files_downloaded = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_DOWNLOADED)
-            files = self.drive_synchronise(self.remote_data_repos.drive_folder, self.local_data_dir, download=True)
+            files = self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, download=True)
             self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
             for file_name in files:
                 if basename(file_name).startswith("58861"):
@@ -162,8 +162,8 @@ class Equity(plugin.Plugin):
 
         # If clean, flag all files for processing
         if plugin.config.force_reprocessing:
-            stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_data_dir, "Yahoo")}
-            statement_files = self.file_list(self.local_data_dir, "58861")
+            stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "Yahoo")}
+            statement_files = self.file_list(self.local_cache, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
         self.print_log(f"Files [Equity] downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files", started=started_time)
 
@@ -351,6 +351,9 @@ class Equity(plugin.Plugin):
             return _equity_df
 
         def _equity_upsample(_equity_df):
+            _equity_df = _equity_df.filter(pl.col("Date").is_not_null())
+            if len(_equity_df) == 0:
+                return _equity_df
             return _equity_df \
                 .unique(subset=["Date"], keep="first").sort("Date").set_sorted("Date") \
                 .upsample(time_column="Date", every="1d").fill_nan(pl.lit(None)) \
@@ -371,8 +374,8 @@ class Equity(plugin.Plugin):
                      print_label=f"{print_label}_{_ticker}", print_verb=print_verb, print_rows=print_rows)
 
         # Process equity data
-        fx_rates = {}
         indexes = []
+        fx_rates = {}
         try:
             if new_data:
 
@@ -452,7 +455,7 @@ class Equity(plugin.Plugin):
 
                 # Add manual stocks
                 started_time = time.time()
-                prices_manual_result = self.sheet_download(self.remote_data_repos.sheet_prices, "Prices", sheet_name="Manual")
+                prices_manual_result = self.sheet_download(self.remote_repos.sheet_prices, "Prices", sheet_name="Manual")
                 equity_df_manual = self.csv_read(prices_manual_result.file_path, schema={"Date": pl.Date}) \
                     if prices_manual_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
                 equity_df_manual = _equity_upsample(equity_df_manual)
@@ -570,13 +573,18 @@ from(bucket: "data_public")
                 _equity_print(equity_df, _dimensions=DIMENSIONS_PRICE_AUX_TYPES, print_label="Equity", print_verb="added FX rates", started=started_time)
 
                 # Get index weights and add index definitions
-                portfolio_indexes_result = self.sheet_download(self.remote_data_repos.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
+                portfolio_indexes_result = self.sheet_download(self.remote_repos.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
                 index_weights = self.csv_read(portfolio_indexes_result.file_path) if portfolio_indexes_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new()
                 started_time = time.time()
-                indexes = sorted([column.removesuffix(" Quantity") for column in index_weights.columns if column.endswith(" Quantity")])
-                index_weights = index_weights.select(["Exchange Symbol"] + [f"{index} Quantity" for index in indexes]).drop_nulls()
-                index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes)))
-                index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
+                quantity_columns = sorted([column for column in index_weights.columns if column.endswith(" Quantity")])
+                indexes = [column.removesuffix(" Quantity") for column in quantity_columns]
+                if "Exchange Symbol" in index_weights.columns:
+                    index_weights = index_weights.select(["Exchange Symbol"] + quantity_columns).drop_nulls()
+                    index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes)))
+                    index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
+                else:
+                    self.print_log("Index weights sheet missing required column [Exchange Symbol]; using empty index weights")
+                    index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **{index: pl.Float64 for index in indexes}}, print_rows=-1)
                 self.dataframe_print(index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000, started=started_time)
                 started_time = time.time()
                 weight_exprs = []
@@ -751,7 +759,7 @@ from(bucket: "data_public")
                 equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])
                 equity_sheet_df = equity_sheet_df.filter(pl.col("Date") > pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
                 _equity_print(equity_sheet_df, _dimensions=dimensions_sheet, print_label="Sheet", print_verb="filtered", started=started_time)
-                self.sheet_upload(equity_sheet_df, self.remote_data_repos.sheet_prices, workbook_name="Prices", sheet_name='History')
+                self.sheet_upload(equity_sheet_df, self.remote_repos.sheet_prices, workbook_name="Prices", sheet_name='History')
 
                 # Database upload
                 started_time = time.time()
@@ -806,4 +814,4 @@ from(bucket: "data_public")
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Equity", Equity._data_repos)
+        super().__init__("Equity", Equity._repos)
