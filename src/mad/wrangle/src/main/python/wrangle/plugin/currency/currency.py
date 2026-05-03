@@ -1,7 +1,6 @@
 import datetime
 import time
 from collections import OrderedDict
-from datetime import datetime
 from os.path import *
 
 import polars as pl
@@ -29,7 +28,6 @@ RBA_YEARS = [
     "2007-2009",
     "2010-2013",
     "2014-2017",
-    "2014-2017",
     "2018-2022",
     "2023-current"
 ]
@@ -53,6 +51,8 @@ class Currency(plugin.Plugin):
         rba_df = self.dataframe_new(schema={"Date": pl.Date, **{pair: pl.Float64 for pair in PAIRS}, "Source": pl.Utf8})
         rba_delta_df = self.dataframe_new()
         if not plugin.config.disable_downloads:
+
+            # Download currency data
             new_data = False
             started_time = time.time()
             for years in RBA_YEARS:
@@ -62,71 +62,48 @@ class Currency(plugin.Plugin):
                     if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
                         new_data = True
                         try:
-                            rba_itr_df = self.excel_read(years_file, schema={"Series ID": pl.Date},
-                                                         skip_rows=10, na_values=["CLOSED", "Closed", " --"])
+                            rba_itr_df = self.excel_read(years_file, schema={"Series ID": pl.Date}, skip_rows=10, na_values=["CLOSED", "Closed", " --"])
                             rba_itr_df = rba_itr_df.select(["Series ID", "FXRUSD", "FXRUKPS", "FXRSD"])
                             rba_itr_df.columns = ['Date'] + PAIRS
                             rba_itr_df = rba_itr_df.with_columns(pl.lit("RBA").alias("Source"))
                             rba_df = pl.concat([rba_df, rba_itr_df])
-                            self.dataframe_print(
-                                rba_df,
-                                print_label="RBA_FX",
-                                print_verb="concatenated",
-                            )
+                            self.dataframe_print(rba_df, print_label="RBA_FX", print_verb="concatenated")
                             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                         except Exception as exception:
-                            self.print_log(
-                                f"Unexpected error processing file [{years_file}]",
-                                exception=exception,
-                            )
+                            self.print_log(f"Unexpected error processing file [{years_file}]", exception=exception)
                             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                     else:
                         self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
-            if datetime.now().year > 2027:
-                self.print_log(
-                    "Error processing RBA data, need to increment RBA_YEARS for new current file",
-                )
+            if datetime.datetime.now().year > 2027:
+                error_message = "RBA_YEARS needs to be incremented for a new current file"
+                self.print_log(error_message)
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, 1)
-                return
+                raise RuntimeError(error_message)
             rba_df = rba_df if len(rba_df) == 0 else rba_df.drop_nulls()
-            self.dataframe_print(
-                rba_df,
-                print_label="Currency",
-                print_verb="collected",
-                started=started_time,
-            )
+            self.dataframe_print(rba_df, print_label="Currency", print_verb="collected", started=started_time)
+
+            # Process the currency data
             try:
                 if new_data:
-                    started_time = time.time()
+                    started_time_inner = time.time()
                     rba_df = rba_df.unique(subset=['Date'], keep="first")
                     rba_df = rba_df.drop_nulls().sort('Date').set_sorted('Date')
-                    self.dataframe_print(
-                        rba_df,
-                        print_label="Currency",
-                        print_verb="post unique",
-                        started=started_time,
-                    )
-                    started_time = time.time()
+                    self.dataframe_print(rba_df, print_label="Currency", print_verb="post unique", started=started_time_inner)
+                    started_time_inner = time.time()
                     rba_df = rba_df.upsample(time_column='Date', every="1d").fill_nan(pl.lit(None)).sort('Date')
                     rba_df = rba_df.with_columns(pl.all().forward_fill()).drop_nulls()
                     rba_df = rba_df.with_columns(cs.float().round(4))
-                    self.dataframe_print(
-                        rba_df,
-                        print_label="Currency",
-                        print_verb="post up-sample",
-                        started=started_time,
-                    )
+                    self.dataframe_print(rba_df, print_label="Currency", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
-                self.print_log(
-                    "Unexpected error processing currency dataframe",
-                    exception=exception,
-                )
+                self.print_log("Unexpected error processing currency dataframe", exception=exception)
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
                                  self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) +
                                  self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
                                  self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
+
+        # State checkpoint boundary
         try:
             def _aggregate_function(_data_df):
                 _columns = ['Date']
@@ -142,10 +119,16 @@ class Currency(plugin.Plugin):
                 rba_df = self.dataframe_new(schema={"Date": pl.Date})
             elif "Source" in rba_df.columns:
                 rba_df = rba_df.drop("Source")
+
+            # Checkpoint the data
             rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, _aggregate_function)
+
+            # Upload the data
             if len(rba_delta_df):
+
+                # Sheet upload
                 rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(
-                    pl.col('Date') > pl.lit(datetime(2006, 1, 1)))
+                    pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1)))
                 self.sheet_upload(rba_sheet_df, self.remote_data_repos.sheet_rates, workbook_name="Rates", sheet_name='Currency')
                 started_time = time.time()
                 rba_pairs_df = rba_current_df.select(['Date'] + PAIRS)
@@ -154,32 +137,27 @@ class Currency(plugin.Plugin):
                     "period": "1d",
                     "unit": "$"
                 }, print_label="Currency_1_Day_Snapshot")
+
+                # Database upload
                 for fx_period in PERIODS:
-                    rba_pctchnage_df = rba_current_df \
-                        .select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
+                    rba_pctchnage_df = rba_current_df.select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
                     rba_pctchnage_df.columns = ['Date'] + PAIRS
                     self.database_upload(rba_pctchnage_df.drop_nulls(), tags={
                         "type": "delta",
                         "period": f"{PERIODS[fx_period]:0.0f}d",
                         "unit": "%"
                     }, print_label=f"Currency_{fx_period}".replace(" ", "_"))
-                self.print_log(
-                    "LineProtocol [Currency] serialised",
-                    started=started_time,
-                )
+                self.print_log("LineProtocol [Currency] serialised", started=started_time)
+
         except Exception as exception:
-            self.print_log(
-                "Unexpected error processing currency data",
-                exception=exception,
-            )
+            self.print_log("Unexpected error processing currency data", exception=exception)
             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
                              self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) +
                              self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
                              self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
+
         if not len(rba_delta_df):
-            self.print_log(
-                "No new data found",
-            )
+            self.print_log("No new data found")
         self.counter_write()
 
     def __init__(self):
