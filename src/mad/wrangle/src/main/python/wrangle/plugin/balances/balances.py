@@ -2,6 +2,7 @@ import time
 import uuid
 from datetime import datetime
 from os.path import *
+from typing import Any
 
 import polars as pl
 import polars.selectors as cs
@@ -47,85 +48,78 @@ class Balances(plugin.Plugin):
     )
 
     def _run(self):
+        started_time = time.time()
         new_data = False
         balance_files = {}
         balances_df = self.dataframe_new(schema=BALANCES_SCHEMA, print_rows=-1)
-
-        started_time = time.time()
         if not plugin.config.disable_downloads:
+
+            # Download and join account/balance data
+            started_time_inner = time.time()
             today_datetime = datetime.today()
             today = today_datetime.date()
             monthly_file = abspath(f"{self.local_data_dir}/Redbark_Balances_{today.year}_{today.month:02d}.csv")
-
             existing_df = None
             if isfile(monthly_file):
                 existing_df = self.csv_read(monthly_file, schema=BALANCES_SCHEMA)
                 if len(existing_df) == 0:
                     existing_df = None
-
             needs_download = True
             if existing_df is not None:
                 latest_row = existing_df.sort(["Date", "Time"]).tail(1)
                 latest_datetime = datetime.combine(latest_row["Date"][0], datetime.strptime(latest_row["Time"][0].zfill(8), "%H:%M:%S").time())
                 if (today_datetime - latest_datetime).total_seconds() / 3600 <= BALANCE_MAX_AGE_HOURS:
                     needs_download = False
-
             if needs_download:
-
-                accounts_result = self.bank_download("Accounts", data="accounts", check=False)
-                balances_result = self.bank_download("Balances", data="balances", check=False)
-                # accounts_result = self.bank_download("Accounts", data="accounts")
-                # balances_result = self.bank_download("Balances", data="balances")
-
+                accounts_result = self.bank_download("Accounts", data="accounts")
+                balances_result = self.bank_download("Balances", data="balances")
                 if accounts_result.status != plugin.DownloadStatus.FAILED and balances_result.status != plugin.DownloadStatus.FAILED:
                     try:
                         rows = []
-                        accounts_df = self.csv_read(accounts_result.file_path)
-                        balances_raw_df = self.csv_read(balances_result.file_path)
+                        accounts_df = self.csv_read(accounts_result.file_path).with_columns(
+                            pl.col("id").cast(pl.Utf8, strict=False).fill_null("")
+                        )
+                        balances_raw_df = self.csv_read(balances_result.file_path).with_columns(
+                            pl.col("accountId").cast(pl.Utf8, strict=False).fill_null("")
+                        )
                         time_str = today_datetime.strftime("%H:%M:%S")
-                        account_lookup = {row.get("id", ""): row for row in accounts_df.rows(named=True)}
+                        account_lookup: dict[str, dict[str, Any]] = {
+                            str(row["id"]): row for row in accounts_df.rows(named=True)
+                        }
                         for balance_row in balances_raw_df.rows(named=True):
-                            account_id = balance_row.get("accountId", "")
+                            account_id = str(balance_row["accountId"])
                             account = account_lookup.get(account_id, {})
                             balance = balance_row.get("currentBalance")
-                            try:
-                                balance = float(balance) if balance is not None else None
-                            except (ValueError, TypeError):
-                                balance = None
-                            account_number = account.get("accountNumber", account.get("number", ""))
-                            balance_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"{account_id}|{today}|{time_str}"))
+                            account_number = str(account.get("accountNumber") or "")
+                            account_name = str(account.get("name") or "")
+                            institution = str(account.get("institutionName") or "")
+                            balance_id = uuid.uuid5(uuid.NAMESPACE_OID, f"{account_id}|{today}|{time_str}").hex
                             rows.append({
                                 "Date": today,
                                 "Time": time_str,
-                                "Account Name": ACCOUNT_METADATA.get(account_number, account.get("name", "")),
+                                "Account Name": account_name,
                                 "Account Number": account_number,
-                                "Account ID": account_id,
                                 "Balance ID": balance_id,
-                                "Institution": account.get("institution", account.get("institutionName", account.get("institutionId", ""))),
+                                "Institution": institution,
                                 "Balance": balance,
                             })
                         today_df = pl.DataFrame(rows, schema=BALANCES_SCHEMA) if rows else self.dataframe_new(schema=BALANCES_SCHEMA)
-                        self.dataframe_print(
-                            today_df,
-                            print_label="Balances",
-                            print_verb="transformed",
-                            started=started_time,
-                        )
-                        started_time = time.time()
+                        self.dataframe_print(today_df, print_label="Balances", print_verb="transformed", started=started_time_inner)
 
+                        # Detect new balance data
                         balances_changed = (existing_df is None or existing_df.filter(pl.col("Date") == pl.lit(today).cast(pl.Date)).height == 0)
-                        if not balances_changed:
+                        if existing_df is not None and not balances_changed:
+                            account_key_columns = ["Institution", "Account Number", "Account Name"]
                             latest_per_account = (
                                 existing_df.sort(["Date", "Time"])
-                                .unique(subset=["Account ID"], keep="last")
-                                .select(["Account ID", "Balance"])
+                                .unique(subset=account_key_columns, keep="last")
+                                .select([*account_key_columns, "Balance"])
                                 .rename({"Balance": "Previous Balance"})
                             )
-                            check_df = today_df.select(["Account ID", "Balance"]).join(latest_per_account, on="Account ID", how="left")
+                            check_df = today_df.select([*account_key_columns, "Balance"]).join(latest_per_account, on=account_key_columns, how="left")
                             balances_changed = check_df.filter(
                                 pl.col("Previous Balance").is_null() | (pl.col("Balance") != pl.col("Previous Balance"))
                             ).height > 0
-
                         if balances_changed:
                             combined_df = (pl.concat([existing_df, today_df], how="diagonal") if existing_df is not None else today_df).sort(["Date", "Time", "Account Name"])
                             self.csv_write(combined_df, monthly_file)
@@ -133,15 +127,11 @@ class Balances(plugin.Plugin):
                         else:
                             balance_files[monthly_file] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, monthly_file)
                     except Exception as exception:
-                        self.print_log(
-                            "Unexpected error processing balances dataframe",
-                            exception=exception,
-                        )
+                        self.print_log("Unexpected error processing balances dataframe", exception=exception)
                 else:
                     pass
             else:
                 balance_files[monthly_file] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, monthly_file)
-
             for file_name in self.file_list(self.local_data_dir, "Redbark_Balances"):
                 if file_name not in balance_files:
                     balance_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, file_name)
@@ -150,11 +140,9 @@ class Balances(plugin.Plugin):
         if plugin.config.force_reprocessing:
             balance_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_data_dir, "Redbark_Balances")}
             new_data = len(balance_files) > 0
-        self.print_log(
-            f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files",
-            started=started_time,
-        )
+        self.print_log(f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files", started=started_time)
 
+        # Process balance data
         started_time = time.time()
         for file_name in sorted(balance_files):
             if balance_files[file_name].status != plugin.DownloadStatus.FAILED:
@@ -163,26 +151,22 @@ class Balances(plugin.Plugin):
                         monthly_df = self.csv_read(file_name, schema=BALANCES_SCHEMA)
                         balances_df = pl.concat([balances_df, monthly_df], how="diagonal")
                     except Exception as exception:
-                        self.print_log(
-                            f"Unexpected error reading [{file_name}]",
-                            exception=exception,
-                        )
+                        self.print_log(f"Unexpected error reading [{file_name}]", exception=exception)
         if len(balances_df) > 0:
             balances_df = balances_df.sort(["Date", "Time", "Account Name"])
-        self.dataframe_print(
-            balances_df,
-            print_label="Balances",
-            print_verb="collected",
-            started=started_time,
-        )
+        self.dataframe_print(balances_df, print_label="Balances", print_verb="collected", started=started_time)
 
+        # State checkpoint boundary
         if new_data:
             try:
                 def _aggregate_function(_data_df):
                     keep_cols = [c for c in BALANCES_SCHEMA.keys() if c in _data_df.columns]
                     return _data_df.select(keep_cols).with_columns(cs.float().round(2))
 
+                # Checkpoint the data
                 balances_delta_df, balances_current_df, _ = self.state_cache(balances_df, _aggregate_function, key_columns=["Date", "Time", "Account Name"])
+
+                # Sheet upload
                 if len(balances_delta_df):
                     # TODO
                     self.sheet_download(self.remote_data_repos.sheet_balances, "Bank", sheet_name="Balances")
@@ -192,14 +176,9 @@ class Balances(plugin.Plugin):
                     self.sheet_upload(balances_current_df, self.remote_data_repos.sheet_balances, workbook_name="Bank", sheet_name="Balances", add_filter=True)
 
             except Exception as exception:
-                self.print_log(
-                    "Unexpected error processing balances data",
-                    exception=exception,
-                )
+                self.print_log("Unexpected error processing balances data", exception=exception)
         else:
-            self.print_log(
-                "No new data found",
-            )
+            self.print_log("No new data found")
         self.counter_write()
 
     def __init__(self):

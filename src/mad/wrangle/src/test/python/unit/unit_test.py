@@ -46,6 +46,22 @@ class WrangleTest(unittest.TestCase):
                         log="info",
                         )
 
+    def test_balances_typical(self):
+        self.run_module("balances", {"success_typical": merge_asserts(ASSERT_RUN, {
+            # "counter_equals": {
+            #     plugin.CTR_SRC_FILES: {
+            #         plugin.CTR_ACT_PROCESSED: 0,
+            #     },
+            # },
+            # "counter_greater": {
+            #     plugin.CTR_SRC_DATA: {
+            #         plugin.CTR_ACT_DELTA_COLUMNS: 1,
+            #         plugin.CTR_ACT_CURRENT_COLUMNS: 1,
+            #         plugin.CTR_ACT_UPDATE_COLUMNS: 1,
+            #     },
+            # },
+        })})
+
     def test_currency_typical(self):
         self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
@@ -116,22 +132,6 @@ class WrangleTest(unittest.TestCase):
                     plugin.CTR_ACT_DELTA_COLUMNS: 18,
                 },
             },
-        })})
-
-    def test_balances_typical(self):
-        self.run_module("balances", {"success_typical": merge_asserts(ASSERT_RUN, {
-            # "counter_equals": {
-            #     plugin.CTR_SRC_FILES: {
-            #         plugin.CTR_ACT_PROCESSED: 0,
-            #     },
-            # },
-            # "counter_greater": {
-            #     plugin.CTR_SRC_DATA: {
-            #         plugin.CTR_ACT_DELTA_COLUMNS: 1,
-            #         plugin.CTR_ACT_CURRENT_COLUMNS: 1,
-            #         plugin.CTR_ACT_UPDATE_COLUMNS: 1,
-            #     },
-            # },
         })})
 
     # def test_library_sheet(self):
