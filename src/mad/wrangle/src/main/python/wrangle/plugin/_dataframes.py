@@ -135,7 +135,7 @@ class DataFramesMixin(ContractMixin):
             if config.disable_uploads:
                 tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
                 tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
-                csv_path = abspath(f"{self.local_data_dir}/_Database_{self.name}.csv")
+                csv_path = abspath(f"{self.local_cache}/_Database_{self.name}.csv")
                 date_col = data_df.columns[0]
                 fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
                 csv_df = data_df \

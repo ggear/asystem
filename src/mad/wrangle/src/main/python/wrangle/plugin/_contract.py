@@ -3,7 +3,7 @@ import polars as pl
 
 class ContractMixin:
     name: str
-    local_data_dir: str
+    local_cache: str
     _db_cache_dfs: dict[str, pl.DataFrame]
 
     def print_log(self, *args, **kwargs):

@@ -36,7 +36,7 @@ BALANCE_MAX_AGE_HOURS = 4
 
 
 class Balances(plugin.Plugin):
-    _data_repos = plugin.DataRepos(
+    _repos = plugin.Repos(
         staging={
             "drive_folder": "PLACEHOLDER",
             "sheet_balances": "PLACEHOLDER",
@@ -58,7 +58,7 @@ class Balances(plugin.Plugin):
             started_time_inner = time.time()
             today_datetime = datetime.today()
             today = today_datetime.date()
-            monthly_file = abspath(f"{self.local_data_dir}/Redbark_Balances_{today.year}_{today.month:02d}.csv")
+            monthly_file = abspath(f"{self.local_cache}/Redbark_Balances_{today.year}_{today.month:02d}.csv")
             existing_df = None
             if isfile(monthly_file):
                 existing_df = self.csv_read(monthly_file, schema=BALANCES_SCHEMA)
@@ -132,13 +132,13 @@ class Balances(plugin.Plugin):
                     pass
             else:
                 balance_files[monthly_file] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, monthly_file)
-            for file_name in self.file_list(self.local_data_dir, "Redbark_Balances"):
+            for file_name in self.file_list(self.local_cache, "Redbark_Balances"):
                 if file_name not in balance_files:
                     balance_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.CACHED, file_name)
             new_data = plugin.config.force_reprocessing or (
                     all(s.status != plugin.DownloadStatus.FAILED for s in balance_files.values()) and any(s.status == plugin.DownloadStatus.DOWNLOADED for s in balance_files.values()))
         if plugin.config.force_reprocessing:
-            balance_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_data_dir, "Redbark_Balances")}
+            balance_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "Redbark_Balances")}
             new_data = len(balance_files) > 0
         self.print_log(f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files", started=started_time)
 
@@ -169,11 +169,11 @@ class Balances(plugin.Plugin):
                 # Sheet upload
                 if len(balances_delta_df):
                     # TODO
-                    self.sheet_download(self.remote_data_repos.sheet_balances, "Bank", sheet_name="Balances")
+                    self.sheet_download(self.remote_repos.sheet_balances, "Bank", sheet_name="Balances")
 
                     # TODO
                     balances_current_df = balances_current_df.sort(["Date", "Time", "Account Name"], descending=True).with_columns(pl.col("Date").cast(pl.Utf8))
-                    self.sheet_upload(balances_current_df, self.remote_data_repos.sheet_balances, workbook_name="Bank", sheet_name="Balances", add_filter=True)
+                    self.sheet_upload(balances_current_df, self.remote_repos.sheet_balances, workbook_name="Bank", sheet_name="Balances", add_filter=True)
 
             except Exception as exception:
                 self.print_log("Unexpected error processing balances data", exception=exception)
@@ -182,4 +182,4 @@ class Balances(plugin.Plugin):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Balances", Balances._data_repos)
+        super().__init__("Balances", Balances._repos)

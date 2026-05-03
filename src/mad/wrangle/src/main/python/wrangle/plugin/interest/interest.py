@@ -23,7 +23,7 @@ INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
 
 class Interest(plugin.Plugin):
-    _data_repos = plugin.DataRepos(
+    _repos = plugin.Repos(
         staging={
             "drive_folder": "PLACEHOLDER",
             "sheet_rates": "PLACEHOLDER",
@@ -44,7 +44,7 @@ class Interest(plugin.Plugin):
             started_time_retail = time.time()
             retail_should_read = False
             retail_df = self.dataframe_new(schema={"Date": pl.Date, "Bank": pl.Float64})
-            retail_file = join(self.local_data_dir, "Retail.xlsx")
+            retail_file = join(self.local_cache, "Retail.xlsx")
             file_status = self.http_download(RETAIL_URL, retail_file)
             if file_status.status != plugin.DownloadStatus.FAILED:
                 retail_should_read = True
@@ -59,7 +59,7 @@ class Interest(plugin.Plugin):
             started_time_inflation = time.time()
             inflation_should_read = False
             inflation_df = self.dataframe_new(schema={"Date": pl.Date, "Inflation": pl.Float64})
-            inflation_file = join(self.local_data_dir, "Inflation.xlsx")
+            inflation_file = join(self.local_cache, "Inflation.xlsx")
             file_status = self.http_download(INFLATION_URL, inflation_file)
             if file_status.status != plugin.DownloadStatus.FAILED:
                 inflation_should_read = True
@@ -134,7 +134,7 @@ class Interest(plugin.Plugin):
 
                 # Sheet upload
                 interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(interest_sheet_df, self.remote_data_repos.sheet_rates, workbook_name="Rates", sheet_name='Interest')
+                self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_rates, workbook_name="Rates", sheet_name='Interest')
 
                 # Database upload
                 started_time = time.time()
@@ -166,4 +166,4 @@ class Interest(plugin.Plugin):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Interest", Interest._data_repos)
+        super().__init__("Interest", Interest._repos)
