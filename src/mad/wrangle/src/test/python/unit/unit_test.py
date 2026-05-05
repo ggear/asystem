@@ -1,6 +1,7 @@
 import copy
 import importlib
 import os
+import re
 import shutil
 import sys
 import unittest
@@ -47,9 +48,9 @@ class WrangleTest(unittest.TestCase):
                 },
             },
         })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info", verifications={
-            "__Currency_Current.csv": [verify_non_empty, verify_non_sparse, make_verify_contiguous_dates()],
-            "_Sheet_Rates_Currency.csv": [verify_non_empty, verify_non_sparse, make_verify_contiguous_dates(), make_verify_max_zeroes_per_row(0)],
-            "_Database_Currency.csv": [verify_non_empty, verify_non_sparse, make_verify_contiguous_dates()],
+            "__Currency_Current.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_col(exclude=".*Delta.*")],
+            "_Sheet_Rates_Currency.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_row(0)],
+            "_Database_Currency.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_col(exclude=".*type=delta.*")],
         })
 
     @pytest.mark.skip(reason="requires update")
@@ -76,7 +77,11 @@ class WrangleTest(unittest.TestCase):
                     plugin.CTR_ACT_DELTA_COLUMNS: 18,
                 },
             },
-        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info")
+        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info", verifications={
+            "__Interest_Current.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates()],
+            "_Sheet_Rates_Interest.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_row(0)],
+            "_Database_Interest.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates()],
+        })
 
     @pytest.mark.skip(reason="very slow")
     def test_library_sheet(self):
@@ -1040,24 +1045,63 @@ def _leading_zero_rows(csv_df, numeric_cols):
     return count
 
 
-def verify_non_empty(csv_df):
-    if csv_df.is_empty():
-        dataframe_print("Verify", csv_df, "verify_non_empty: no rows", level="error")
-        return False
-    return True
-
-
-def verify_non_sparse(csv_df):
-    fail_rows = csv_df.filter(pl.any_horizontal(pl.all().is_null()))
-    if not fail_rows.is_empty():
-        dataframe_print("Verify", fail_rows, "verify_non_sparse: rows with nulls", level="error")
-        return False
-    return True
-
-
-def make_verify_max_zeroes_per_row(max_zeroes, after_first_rows=False):
+def verify_non_empty(min_rows=1):
     def _verify(csv_df):
-        numeric_cols = [col for col in csv_df.columns if csv_df[col].dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)]
+        if len(csv_df) < min_rows:
+            dataframe_print("Verify", csv_df, f"{label}: expected >={min_rows} rows, got {len(csv_df)}", level="error")
+            return False
+        return True
+
+    label = f"verify_non_empty_{min_rows}_rows"
+    _verify.__name__ = label
+    return _verify
+
+
+def _filter_cols(csv_df, include=None, exclude=None):
+    cols = csv_df.columns
+    if include is not None:
+        cols = [c for c in cols if re.search(include, c)]
+    if exclude is not None:
+        cols = [c for c in cols if not re.search(exclude, c)]
+    return cols
+
+
+def verify_max_nones_per_row(max_nones=0, include=None, exclude=None):
+    def _verify(csv_df):
+        cols = _filter_cols(csv_df, include, exclude)
+        if not cols:
+            return True
+        fail_rows = csv_df.filter(pl.sum_horizontal(pl.col(c).is_null().cast(pl.Int32) for c in cols) > max_nones)
+        if not fail_rows.is_empty():
+            dataframe_print("Verify", fail_rows, f"{label}: rows with >{max_nones} nones", level="error")
+            return False
+        return True
+
+    label = f"verify_max_{max_nones}_nones_per_row"
+    _verify.__name__ = label
+    return _verify
+
+
+def verify_max_nones_per_col(max_nones=0, include=None, exclude=None):
+    def _verify(csv_df):
+        cols = _filter_cols(csv_df, include, exclude)
+        failed = [c for c in cols if csv_df[c].null_count() > max_nones]
+        if failed:
+            dataframe_print("Verify", csv_df.select(failed), f"{label}: columns with >{max_nones} nones: {failed}", level="error")
+            return False
+        return True
+
+    label = f"verify_max_{max_nones}_nones_per_col"
+    _verify.__name__ = label
+    return _verify
+
+
+def verify_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=None, exclude=None):
+    def _verify(csv_df):
+        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if
+                        csv_df[col].dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)]
+        if not numeric_cols:
+            return True
         data_df = csv_df.slice(_leading_zero_rows(csv_df, numeric_cols)) if after_first_rows else csv_df
         zero_count = pl.sum_horizontal((pl.col(c) == 0).cast(pl.Int32) for c in numeric_cols)
         fail_rows = data_df.filter(zero_count > max_zeroes)
@@ -1071,7 +1115,22 @@ def make_verify_max_zeroes_per_row(max_zeroes, after_first_rows=False):
     return _verify
 
 
-def make_verify_contiguous_dates(start_date=None, end_date=None, max_gap_days=1):
+def verify_max_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
+    def _verify(csv_df):
+        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if
+                        csv_df[col].dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)]
+        failed = [c for c in numeric_cols if (csv_df[c] == 0).sum() > max_zeroes]
+        if failed:
+            dataframe_print("Verify", csv_df.select(failed), f"{label}: columns with >{max_zeroes} zeros: {failed}", level="error")
+            return False
+        return True
+
+    label = f"verify_max_{max_zeroes}_zeroes_per_col"
+    _verify.__name__ = label
+    return _verify
+
+
+def verify_contiguous_dates(start_date=None, end_date=None, max_gap_days=1):
     def _verify(csv_df):
         if "Date" not in csv_df.columns:
             dataframe_print("Verify", csv_df, "verify_contiguous_dates: no Date column", level="error")
