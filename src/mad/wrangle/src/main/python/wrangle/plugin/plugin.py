@@ -21,19 +21,14 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
 
     def run(self):
         started_time = time.time()
-        self.print_log(
-            "Starting ...",
-        )
+        self.print_log("Starting ...")
         self._run()
         for csv_path, csv_df in self._db_cache_dfs.items():
             self.csv_write(csv_df, csv_path)
         if not config.disable_uploads:
             self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, check=True, download=False, upload=True)
         self.print_counters()
-        self.print_log(
-            "Finished",
-            started=started_time,
-        )
+        self.print_log("Finished", started=started_time)
 
     def print_log(self, messages, data=None, started=None, exception=None, level="info"):
         effective_level = "error" if exception is not None else level

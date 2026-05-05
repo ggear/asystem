@@ -7,6 +7,7 @@ import polars.selectors as cs
 from . import database as _database
 from ._contract import ContractMixin
 from .config import *
+from .logger import dataframe_print as _dataframe_print
 
 
 class DataFramesMixin(ContractMixin):
@@ -26,7 +27,7 @@ class DataFramesMixin(ContractMixin):
         if drop_na_rows:
             data_df_pd = data_df_pd.dropna(axis=0, how="all")
         data_df = pl.from_pandas(data_df_pd, schema_overrides=schema if len(schema) > 0 else None).with_columns(cs.float().round(float_round_places))
-        return self.dataframe_print(
+        return _dataframe_print(self.name,
             data_df,
             print_label=print_label or splitext(basename(local_path))[0].removeprefix("__").removeprefix("_"),
             print_suffix=f"from [{local_path}]",
@@ -39,7 +40,7 @@ class DataFramesMixin(ContractMixin):
                   print_rows=PL_PRINT_ROWS, started=None):
         started_time = time.time() if started is None else started
         data_df.write_csv(local_path)
-        return self.dataframe_print(
+        return _dataframe_print(self.name,
             data_df,
             print_label=print_label or basename(local_path).split(".")[0].removeprefix("__").removeprefix("_"),
             print_prefix=print_prefix,
@@ -56,7 +57,7 @@ class DataFramesMixin(ContractMixin):
             schema = {}
         data_df = pl.read_csv(local_path, schema_overrides=schema if len(schema) > 0 else None,
                               try_parse_dates=True, raise_if_empty=False, infer_schema_length=None)
-        return self.dataframe_print(
+        return _dataframe_print(self.name,
             data_df,
             print_label=print_label or splitext(basename(local_path))[0].removeprefix("__").removeprefix("_"),
             print_verb=print_verb,
@@ -79,7 +80,7 @@ class DataFramesMixin(ContractMixin):
             nan_to_null=True,
         )
         if len(data) > 0 or len(schema) > 0:
-            self.dataframe_print(
+            _dataframe_print(self.name,
                 data_df,
                 compact=print_compact,
                 print_label=print_label,
@@ -115,7 +116,7 @@ class DataFramesMixin(ContractMixin):
             for line in series:
                 yield line
                 emitted += 1
-        self.dataframe_print(
+        _dataframe_print(self.name,
             data_df,
             print_label=print_label,
             print_verb="serialised",
@@ -155,10 +156,7 @@ class DataFramesMixin(ContractMixin):
             if buffer:
                 _database.database_client.write(record=buffer, write_precision="ms")
         except Exception as exception:
-            self.print_log(
-                f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed",
-                exception=exception,
-            )
+            self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed", exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     # noinspection PyMethodMayBeStatic
@@ -187,22 +185,3 @@ class DataFramesMixin(ContractMixin):
                 data_lines = str(data_df).split('\n')
                 return data_lines
 
-    def dataframe_print(self, data_df, messages=None, compact=False,
-                        print_prefix="DataFrame", print_label=None, print_verb="created", print_suffix=None, print_rows=PL_PRINT_ROWS, started=None):
-        if print_rows < 0:
-            return data_df
-        if messages is None:
-            label = f" [{print_label}]" if print_label else ""
-            suffix = f" {print_suffix}" if print_suffix else ""
-            messages = (
-                f"{print_prefix}{label} {print_verb} "
-                f"with [{len(data_df.columns):,}] columns "
-                f"and [{len(data_df):,}] rows{suffix}"
-            )
-        self.print_log(
-            messages,
-            None if print_rows == 0 else self.dataframe_to_str(data_df, compact, print_rows),
-            started=started,
-            level="debug",
-        )
-        return data_df
