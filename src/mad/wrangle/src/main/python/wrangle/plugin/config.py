@@ -37,9 +37,9 @@ CTR_ACT_UPLOADED = "Uploaded"
 
 
 class RepoScope(str, Enum):
-    CACHE = "cache"
-    STAGING = "staging"
-    PRODUCTION = "production"
+    LOCAL = "local"
+    PREVIEW = "preview"
+    RELEASE = "release"
 
 
 @dataclass
@@ -52,7 +52,7 @@ class Repos:
             if name not in valid:
                 raise ValueError(f"unknown scope '{name}'; valid: {sorted(valid)}")
         required: set[str] = {
-            scope.name.lower() for scope in RepoScope if scope != RepoScope.CACHE
+            scope.name.lower() for scope in RepoScope if scope != RepoScope.LOCAL
         }
         missing_scopes = required - set(scopes)
         if missing_scopes:
@@ -68,7 +68,7 @@ class Repos:
 
     def __getattr__(self, name: str) -> str | None:
         scope = config.repo_scope
-        if scope == RepoScope.CACHE:
+        if scope == RepoScope.LOCAL:
             return None
         scope: RepoScope = config.repo_scope
         scope_name = scope.value
@@ -80,7 +80,7 @@ class Repos:
 
 class Config:
     log_level: str = "info"
-    repo_scope: RepoScope = RepoScope.PRODUCTION
+    repo_scope: RepoScope = RepoScope.RELEASE
     force_reprocessing: bool = False
     force_downloads: bool = False
     disable_uploads: bool = False

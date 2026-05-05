@@ -24,10 +24,10 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from gspread_pandas import Spread
 from pandas.tseries.offsets import BDay
 
-from . import database as _database
+from . import database
 from ._contract import ContractMixin
 from .config import *
-from .logger import dataframe_print as _dataframe_print
+from .logger import dataframe_print
 
 logging.getLogger('yfinance').setLevel(logging.ERROR)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
@@ -268,7 +268,7 @@ class SourcesMixin(ContractMixin):
         started_time = time.time()
         local_path = abspath(f"{self.local_cache}/_Database_{query_name}.csv")
         effective_force = force or config.force_downloads
-        if config.disable_downloads or _database.database_client is None:
+        if config.disable_downloads or database.database_client is None:
             if isfile(local_path):
                 self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -291,7 +291,7 @@ class SourcesMixin(ContractMixin):
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     return DownloadResult(DownloadStatus.CACHED, local_path)
         try:
-            arrow_table = _database.database_client.query(query=query_string, language="sql")
+            arrow_table = database.database_client.query(query=query_string, language="sql")
             data_df = pl.from_arrow(arrow_table)
             if isinstance(data_df, pl.Series):
                 data_df = data_df.to_frame()
@@ -490,14 +490,14 @@ class SourcesMixin(ContractMixin):
                             raise SheetStillLoadingError(
                                 f"DataFrame [{workbook_name}] loaded from sheet that is yet to finish rendering column [{column}]")
                     self.csv_write(data_df, file_path, print_label=workbook_name, print_rows=-1)
-                    _dataframe_print(self.name,
-                        data_df,
-                        print_label=workbook_name,
-                        print_verb="downloaded",
-                        print_suffix=f"from [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
-                        print_rows=print_rows,
-                        started=started_time
-                    )
+                    dataframe_print(self.name,
+                                     data_df,
+                                     print_label=workbook_name,
+                                     print_verb="downloaded",
+                                     print_suffix=f"from [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
+                                     print_rows=print_rows,
+                                     started=started_time
+                                     )
                     caught_exception = None
                     break
                 except SheetStillLoadingError as exception:
@@ -538,14 +538,14 @@ class SourcesMixin(ContractMixin):
                 drive_version_str: str = drive_version
                 drive_version_int = int(drive_version_str)
                 self._sheet_cache_cleanup(name, drive_version_int)
-            _dataframe_print(self.name,
-                data_df,
-                print_label=print_label,
-                print_verb="uploaded",
-                print_suffix=f"to [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
-                started=started_time,
-                print_rows=print_rows,
-            )
+            dataframe_print(self.name,
+                             data_df,
+                             print_label=print_label,
+                             print_verb="uploaded",
+                             print_suffix=f"to [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
+                             started=started_time,
+                             print_rows=print_rows,
+                             )
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
         except Exception as exception:

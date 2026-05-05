@@ -7,7 +7,7 @@ import polars as pl
 import polars.selectors as cs
 
 from wrangle import plugin
-from wrangle.plugin.logger import dataframe_print as _dataframe_print
+from wrangle.plugin.logger import dataframe_print
 
 PAIRS = ['AUD/USD', 'AUD/GBP', 'AUD/SGD']
 
@@ -38,11 +38,11 @@ RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
 class Currency(plugin.Plugin):
     _repos = plugin.Repos(
-        staging={
+        preview={
             "drive_folder": "PLACEHOLDER",
             "sheet_rates": "PLACEHOLDER",
         },
-        production={
+        release={
             "drive_folder": "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE",
             "sheet_rates": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
         },
@@ -70,7 +70,7 @@ class Currency(plugin.Plugin):
                             rba_itr_df.columns = ['Date'] + PAIRS
                             rba_itr_df = rba_itr_df.with_columns(pl.lit("RBA").alias("Source"))
                             rba_df = pl.concat([rba_df, rba_itr_df])
-                            _dataframe_print(self.name,rba_df, print_label="RBA_FX", print_verb="concatenated")
+                            dataframe_print(self.name, rba_df, print_label="RBA_FX", print_verb="concatenated")
                             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             self.print_log(f"Unexpected error processing file [{years_file}]", exception=exception)
@@ -86,7 +86,7 @@ class Currency(plugin.Plugin):
                 raise RuntimeError(error_message)
             rba_df = rba_df if len(rba_df) == 0 else rba_df.drop_nulls()
             self.print_log(f"Files downloaded or cached [{rba_files_count}] files", started=started_time)
-            _dataframe_print(self.name,rba_df, print_label="Currency", print_verb="collected")
+            dataframe_print(self.name, rba_df, print_label="Currency", print_verb="collected")
 
             # Process the currency data
             try:
@@ -94,14 +94,14 @@ class Currency(plugin.Plugin):
                     started_time_inner = time.time()
                     rba_df = rba_df.unique(subset=['Date'], keep="first")
                     rba_df = rba_df.drop_nulls().sort('Date').set_sorted('Date')
-                    _dataframe_print(self.name,rba_df, print_label="Currency", print_verb="post unique", started=started_time_inner)
+                    dataframe_print(self.name, rba_df, print_label="Currency", print_verb="post unique", started=started_time_inner)
                     started_time_inner = time.time()
                     rba_trading_dates = rba_df.select("Date")
                     rba_df = rba_df.upsample(time_column='Date', every="1d").fill_nan(pl.lit(None)).sort('Date')
                     rba_df = rba_df.with_columns(pl.all().forward_fill()).drop_nulls()
                     rba_df = rba_df.join(rba_trading_dates, on="Date", how="inner")
                     rba_df = rba_df.with_columns(cs.float().round(4))
-                    _dataframe_print(self.name,rba_df, print_label="Currency", print_verb="post up-sample", started=started_time_inner)
+                    dataframe_print(self.name, rba_df, print_label="Currency", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
                 self.print_log("Unexpected error processing currency dataframe", exception=exception)
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,

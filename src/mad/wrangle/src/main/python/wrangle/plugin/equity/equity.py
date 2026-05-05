@@ -9,8 +9,8 @@ import polars.selectors as cs
 import pytz
 
 from wrangle import plugin
-from wrangle.plugin.logger import dataframe_print as _dataframe_print
 from wrangle.plugin import PL_PRINT_ROWS
+from wrangle.plugin.logger import dataframe_print
 
 STATUS_FAILURE = "failure"
 STATUS_SKIPPED = "skipped"
@@ -97,12 +97,12 @@ STOCK = {
 
 class Equity(plugin.Plugin):
     _repos = plugin.Repos(
-        staging={
+        preview={
             "drive_folder": "PLACEHOLDER",
             "sheet_prices": "PLACEHOLDER",
             "sheet_portfolio": "PLACEHOLDER",
         },
-        production={
+        release={
             "drive_folder": "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-",
             "sheet_prices": "1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM",
             "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
@@ -204,7 +204,7 @@ class Equity(plugin.Plugin):
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
         for stock_ticker in stocks_df:
-            _dataframe_print(self.name,stocks_df[stock_ticker], print_label=stock_ticker, print_verb="collected")
+            dataframe_print(self.name, stocks_df[stock_ticker], print_label=stock_ticker, print_verb="collected")
         self.print_log(f"DataFrame [Stocks] collected with [{len(stocks_df)}] stocks across [{stocks_files_count}] files", started=started_time)
 
         # Parse fund file data
@@ -364,15 +364,15 @@ class Equity(plugin.Plugin):
         def _equity_print(_equity_df, _dimensions=None, print_label=None, print_verb=None, print_rows=PL_PRINT_ROWS, started=None):
             if _dimensions is None:
                 _dimensions = DIMENSIONS_PRICE_AUX
-            _dataframe_print(self.name,_equity_df, print_label=print_label, print_verb=print_verb, print_suffix="(data to follow)", print_rows=0, started=started)
+            dataframe_print(self.name, _equity_df, print_label=print_label, print_verb=print_verb, print_suffix="(data to follow)", print_rows=0, started=started)
             if len(_equity_df):
                 for _ticker in _equity_tickers(_equity_df):
-                    _dataframe_print(self.name,(_equity_df.select(["Date", *(
+                    dataframe_print(self.name, (_equity_df.select(["Date", *(
                         f"{_ticker} {dimension}"
                         for dimension in _dimensions
                         if f"{_ticker} {dimension}" in _equity_df.columns
                     )]).fill_nan(None).filter(~pl.all_horizontal(pl.exclude("Date").is_null()))),
-                     print_label=f"{print_label}_{_ticker}", print_verb=print_verb, print_rows=print_rows)
+                                     print_label=f"{print_label}_{_ticker}", print_verb=print_verb, print_rows=print_rows)
 
         # Process equity data
         indexes = []
@@ -411,7 +411,7 @@ class Equity(plugin.Plugin):
                         (pl.col("Value") / pl.col("Units")).alias("Price"),
                         (1.0 / pl.col("Rate")).alias("Rate"),
                     ).pivot(values=["Price", "Rate", "Currency"], index="Date", on="Ticker").sort("Date")
-                    _dataframe_print(self.name,statement_df, print_label="Funds", print_verb="pivoted", started=started_time)
+                    dataframe_print(self.name, statement_df, print_label="Funds", print_verb="pivoted", started=started_time)
                     started_time = time.time()
                     rename_map = {}
                     for statement_column in statement_df.columns:
@@ -422,7 +422,7 @@ class Equity(plugin.Plugin):
                         elif statement_column.startswith("Currency_"):
                             rename_map[statement_column] = f"{statement_column.replace('Currency_', '', 1)} Currency Base"
                     statement_df = statement_df.rename(rename_map)
-                    _dataframe_print(self.name,statement_df, print_label="Funds", print_verb="renamed", started=started_time)
+                    dataframe_print(self.name, statement_df, print_label="Funds", print_verb="renamed", started=started_time)
                     started_time = time.time()
                     statement_exprs = []
                     for ticker in tickers:
@@ -586,7 +586,7 @@ from(bucket: "data_public")
                 else:
                     self.print_log("Index weights sheet missing required column [Exchange Symbol]; using empty index weights")
                     index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **{index: pl.Float64 for index in indexes}}, print_rows=-1)
-                _dataframe_print(self.name,index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000, started=started_time)
+                dataframe_print(self.name, index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000, started=started_time)
                 started_time = time.time()
                 weight_exprs = []
                 spot_exprs = []

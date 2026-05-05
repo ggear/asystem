@@ -33,9 +33,6 @@ class StateMixin(ContractMixin):
         if not isdir(self.local_cache):
             os.makedirs(self.local_cache)
 
-
-
-
         # TODO: Remove?
         # if not config.disable_downloads and config.force_reprocessing:
         #     if isfile(file_current):
@@ -44,18 +41,12 @@ class StateMixin(ContractMixin):
             if isfile(file_current):
                 os.remove(file_current)
 
-
-
-
         if len(data_df_update.columns) == 0 or data_df_update.columns[0] != "Date" or data_df_update.dtypes[0] != pl.Date:
             data_update_col_0 = data_df_update.columns[0] if len(data_df_update.columns) > 0 else None
             data_update_dtype_0 = self.dataframe_type_to_str(data_df_update.dtypes[0]) \
                 if len(data_df_update.dtypes) > 0 else None
             raise SchemaError(f"DataFrame requires first column of parameter [data_df_update] to be named [Date] and of type [date], "
                               f"found [{data_update_col_0}] with type found [{data_update_dtype_0}]")
-
-
-
 
         # TODO: Remove?
         # if config.disable_downloads:
@@ -65,11 +56,6 @@ class StateMixin(ContractMixin):
         #     state_key_columns = _resolve_key_columns(data_df_current.columns)
         #     data_df_current = data_df_current.sort(state_key_columns)
         #     return self.dataframe_new(schema=data_df_current.schema), data_df_current, data_df_current
-
-
-
-
-
 
         data_df_update = data_df_update.filter(pl.col("Date").is_not_null())
         data_df_update = aggregate_function_wrapped(data_df_update)
