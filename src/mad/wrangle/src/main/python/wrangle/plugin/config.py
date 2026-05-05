@@ -5,8 +5,7 @@ from enum import Enum, auto
 from os.path import abspath, basename, dirname, isdir, isfile
 from typing import NamedTuple
 
-PL_PRINT_ROWS = 6
-PD_PRINT_ROWS = 3
+PL_PRINT_ROWS = 20
 
 CTR_LBL_PAD = '.'
 CTR_LBL_WIDTH = 26

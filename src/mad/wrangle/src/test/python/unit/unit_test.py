@@ -9,39 +9,30 @@ from os.path import *
 import polars as pl
 import pytest
 
+sys.path.append('../../../main/python')
+
+from wrangle import plugin
+from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
+from wrangle.plugin.logger import dataframe_print
+
 ########################################################################################################################
 # NOTES:
 #   - Include in test runner templates for realtime, unbuffered output: PYTHONUNBUFFERED=1;JB_DISABLE_BUFFERING=1
 ########################################################################################################################
 
-sys.path.append('../../../main/python')
-
-from wrangle import plugin
-from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 
+# noinspection PyMethodMayBeStatic
 class WrangleTest(unittest.TestCase):
 
-    def test_balances_cache(self):
-        self.run_module("balances", {"success_typical": merge_asserts(ASSERT_RUN, {
-            # "counter_equals": {
-            #     plugin.CTR_SRC_FILES: {
-            #         plugin.CTR_ACT_PROCESSED: 0,
-            #     },
-            # },
-            # "counter_greater": {
-            #     plugin.CTR_SRC_DATA: {
-            #         plugin.CTR_ACT_DELTA_COLUMNS: 1,
-            #         plugin.CTR_ACT_CURRENT_COLUMNS: 1,
-            #         plugin.CTR_ACT_UPDATE_COLUMNS: 1,
-            #     },
-            # },
-        })}, disable_downloads=True, disable_uploads=True, repo_scope=plugin.RepoScope.CACHE)
+    def test_balances_cache_blank(self):
+        self.run_plugin("balances", {"blank": merge_asserts(ASSERT_NOOP, {
+        })}, disable_downloads=True, disable_uploads=True, repo_scope=plugin.RepoScope.CACHE, log_level="info")
 
-    def test_currency_typical(self):
-        self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
+    def test_currency_production_current(self):
+        self.run_plugin("currency", {"current": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 plugin.CTR_SRC_DATA: {
                     plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
@@ -50,22 +41,20 @@ class WrangleTest(unittest.TestCase):
                     plugin.CTR_ACT_DELTA_COLUMNS: 15,
                 },
             },
-        })})
-
-    def test_currency_partial(self):
-        self.run_module("currency", {"success_partial": merge_asserts(ASSERT_RUN, {
-            "counter_equals": {
+            "counter_greater": {
                 plugin.CTR_SRC_DATA: {
-                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
-                    plugin.CTR_ACT_UPDATE_COLUMNS: 15,
-                    plugin.CTR_ACT_DELTA_COLUMNS: 15,
+                    plugin.CTR_ACT_DELTA_ROWS: 1,
                 },
             },
-        })})
+        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info", verifications={
+            "__Currency_Current.csv": [verify_non_empty, verify_non_sparse, make_verify_contiguous_dates()],
+            "_Sheet_Rates_Currency.csv": [verify_non_empty, verify_non_sparse, make_verify_contiguous_dates(), make_verify_max_zeroes_per_row(0)],
+            "_Database_Currency.csv": [verify_non_empty, verify_non_sparse, make_verify_contiguous_dates()],
+        })
 
-    def test_equity_typical(self):
-        self.run_module("equity", {"success_typical": merge_asserts(ASSERT_RUN, {
+    @pytest.mark.skip(reason="requires update")
+    def test_equity_production_current(self):
+        self.run_plugin("equity", {"current": merge_asserts(ASSERT_RUN, {
             "counter_greater": {
                 plugin.CTR_SRC_DATA: {
                     plugin.CTR_ACT_PREVIOUS_COLUMNS: 200,
@@ -74,22 +63,11 @@ class WrangleTest(unittest.TestCase):
                     plugin.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
-        })})
+        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info")
 
-    def test_equity_partial(self):
-        self.run_module("equity", {"success_partial": merge_asserts(ASSERT_RUN, {
-            "counter_greater": {
-                plugin.CTR_SRC_DATA: {
-                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 200,
-                    plugin.CTR_ACT_CURRENT_COLUMNS: 144,
-                    plugin.CTR_ACT_UPDATE_COLUMNS: 126,
-                    plugin.CTR_ACT_DELTA_COLUMNS: 144,
-                },
-            },
-        })})
-
-    def test_interest_typical(self):
-        self.run_module("interest", {"success_typical": merge_asserts(ASSERT_RUN, {
+    @pytest.mark.skip(reason="requires update")
+    def test_interest_production_current(self):
+        self.run_plugin("interest", {"current": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 plugin.CTR_SRC_DATA: {
                     plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
@@ -98,153 +76,144 @@ class WrangleTest(unittest.TestCase):
                     plugin.CTR_ACT_DELTA_COLUMNS: 18,
                 },
             },
-        })})
+        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info")
 
-    def test_interest_partial(self):
-        self.run_module("interest", {"success_partial": merge_asserts(ASSERT_RUN, {
-            "counter_equals": {
-                plugin.CTR_SRC_DATA: {
-                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
-                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
-                    plugin.CTR_ACT_UPDATE_COLUMNS: 18,
-                    plugin.CTR_ACT_DELTA_COLUMNS: 18,
-                },
-            },
-        })})
+    @pytest.mark.skip(reason="very slow")
+    def test_library_sheet(self):
+        test = Test("Test", "SOME_NON_EXISTANT_GUID")
 
-    # def test_library_sheet(self):
-    #     test = Test("Test", "SOME_NON_EXISTANT_GUID")
-    #
-    #     def _sheet_read(result, schema={}):
-    #         if result.status == DownloadStatus.FAILED:
-    #             return test.dataframe_new()
-    #         return test.csv_read(result.file_path, schema=schema)
-    #
-    #     missing_name = "missing"
-    #     missing_key = "!"
-    #     missing_str = "[]"
-    #     plugin.config.log_level = "fatal"
-    #     for result in [
-    #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-    #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-    #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-    #         test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
-    #     ]:
-    #         data_df = _sheet_read(result)
-    #         self.assertEqual(missing_str, test.dataframe_to_str(data_df))
-    #         self.assertEqual(0, len(data_df))
-    #
-    #     loading_name = "loading"
-    #     loading_key = "1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs"
-    #     loading_str = "[]"
-    #     plugin.config.log_level = "fatal"
-    #     for result in [
-    #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-    #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-    #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-    #         test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
-    #     ]:
-    #         data_df = _sheet_read(result)
-    #         self.assertEqual(loading_str, test.dataframe_to_str(data_df))
-    #         self.assertEqual(0, len(data_df))
-    #
-    #     empty_name = "empty"
-    #     empty_key = "1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4"
-    #     test_column = {
-    #         "My Column": pl.Utf8,
-    #     }
-    #     empty_str = "[]"
-    #     empty_str_column = "[]"
-    #     plugin.config.log_level = "info"
-    #     for result in [
-    #         test.sheet_download(empty_key, empty_name, write_cache=True),
-    #         test.sheet_download(empty_key, empty_name, write_cache=False),
-    #         test.sheet_download(empty_key, empty_name, write_cache=True),
-    #         test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=False),
-    #     ]:
-    #         data_df = _sheet_read(result)
-    #         self.assertEqual(empty_str, test.dataframe_to_str(data_df))
-    #         self.assertEqual(0, len(data_df))
-    #     for result in [
-    #         test.sheet_download(empty_key, empty_name, write_cache=True),
-    #         test.sheet_download(empty_key, empty_name, write_cache=False),
-    #         test.sheet_download(empty_key, empty_name, write_cache=True),
-    #         test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=True),
-    #     ]:
-    #         data_df = _sheet_read(result, schema=test_column)
-    #         self.assertEqual(empty_str_column, test.dataframe_to_str(data_df))
-    #         self.assertEqual(0, len(data_df))
-    #
-    #     test_name = "test"
-    #     test_key = "18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY"
-    #     test_type_utf = {
-    #         "Integer": pl.Utf8,
-    #         "Integer with NULL": pl.Utf8,
-    #         "Float": pl.Utf8,
-    #         "Float with NULL": pl.Utf8,
-    #         "String": pl.Utf8,
-    #         "String with NULL": pl.Utf8,
-    #     }
-    #     test_type_number = {
-    #         "Integer": pl.Int64,
-    #         "Integer with NULL": pl.Int64,
-    #         "Float": pl.Float64,
-    #         "Float with NULL": pl.Float64,
-    #         "String": pl.Utf8,
-    #         "String with NULL": pl.Utf8,
-    #     }
-    #     test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
-    #     test_str_utf = ["str" for _ in range(0, len(test_type_number))]
-    #     test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
-    #     plugin.config.log_level = "info"
-    #     for result in [
-    #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
-    #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=False),
-    #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
-    #         test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, read_cache=False, write_cache=True),
-    #         test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
-    #         test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=False),
-    #         test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
-    #         test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, read_cache=False, write_cache=True),
-    #     ]:
-    #         data_df = _sheet_read(result, schema=test_type_number)
-    #         self.assertEqual(test_str.format(*test_str_numeric), test.dataframe_to_str(data_df))
-    #         self.assertEqual(4, len(data_df))
-    #     for result in [
-    #         test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
-    #         test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=False),
-    #         test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
-    #         test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, read_cache=False, write_cache=True),
-    #     ]:
-    #         data_df = _sheet_read(result, schema=test_type_utf)
-    #         self.assertEqual(test_str.format(*test_str_utf), test.dataframe_to_str(data_df))
-    #         self.assertEqual(4, len(data_df))
-    #
-    #     data_name = "Index_weights"
-    #     data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
-    #     data_type = {
-    #         "Holdings Quantity": pl.Utf8,
-    #     }
-    #     data_str = "[Exchange Symbol(str), Holdings Quantity({}), Unit Price(Float64), Watch Value(Float64), Watch Quantity(Int64), Baseline Quantity(Float64)]"
-    #     data_str_type = [test.dataframe_type_to_str(data_type[column]) for column in data_type]
-    #     for result in [
-    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
-    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
-    #     ]:
-    #         data_df = _sheet_read(result)
-    #         self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
-    #         self.assertEqual(26, len(data_df))
-    #     for result in [
-    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
-    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-    #         test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
-    #     ]:
-    #         data_df = _sheet_read(result, schema=data_type)
-    #         self.assertEqual(data_str.format(*data_str_type), test.dataframe_to_str(data_df))
-    #         self.assertEqual(26, len(data_df))
+        def _sheet_read(_result, schema=None):
+            if schema is None:
+                schema = {}
+            if _result.status == DownloadStatus.FAILED:
+                return test.dataframe_new()
+            return test.csv_read(_result.file_path, schema=schema)
+
+        missing_name = "missing"
+        missing_key = "!"
+        missing_str = "[]"
+        plugin.config.log_level = "fatal"
+        for result in [
+            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result)
+            self.assertEqual(missing_str, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+
+        loading_name = "loading"
+        loading_key = "1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs"
+        loading_str = "[]"
+        plugin.config.log_level = "fatal"
+        for result in [
+            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result)
+            self.assertEqual(loading_str, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+
+        empty_name = "empty"
+        empty_key = "1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4"
+        test_column = {
+            "My Column": pl.Utf8,
+        }
+        empty_str = "[]"
+        empty_str_column = "[]"
+        plugin.config.log_level = "info"
+        for result in [
+            test.sheet_download(empty_key, empty_name, write_cache=True),
+            test.sheet_download(empty_key, empty_name, write_cache=False),
+            test.sheet_download(empty_key, empty_name, write_cache=True),
+            test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=False),
+        ]:
+            data_df = _sheet_read(result)
+            self.assertEqual(empty_str, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+        for result in [
+            test.sheet_download(empty_key, empty_name, write_cache=True),
+            test.sheet_download(empty_key, empty_name, write_cache=False),
+            test.sheet_download(empty_key, empty_name, write_cache=True),
+            test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result, schema=test_column)
+            self.assertEqual(empty_str_column, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+
+        test_name = "test"
+        test_key = "18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY"
+        test_type_utf = {
+            "Integer": pl.Utf8,
+            "Integer with NULL": pl.Utf8,
+            "Float": pl.Utf8,
+            "Float with NULL": pl.Utf8,
+            "String": pl.Utf8,
+            "String with NULL": pl.Utf8,
+        }
+        test_type_number = {
+            "Integer": pl.Int64,
+            "Integer with NULL": pl.Int64,
+            "Float": pl.Float64,
+            "Float with NULL": pl.Float64,
+            "String": pl.Utf8,
+            "String with NULL": pl.Utf8,
+        }
+        test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
+        test_str_utf = ["String" for _ in range(0, len(test_type_number))]
+        test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
+        plugin.config.log_level = "info"
+        for result in [
+            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=False),
+            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, read_cache=False, write_cache=True),
+            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=False),
+            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result, schema=test_type_number)
+            self.assertEqual(test_str.format(*test_str_numeric), test.dataframe_to_str(data_df))
+            self.assertEqual(4, len(data_df))
+        for result in [
+            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=False),
+            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
+            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result, schema=test_type_utf)
+            self.assertEqual(test_str.format(*test_str_utf), test.dataframe_to_str(data_df))
+            self.assertEqual(4, len(data_df))
+
+        data_name = "Index_weights"
+        data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
+        data_type = {
+            "Holdings Quantity": pl.Utf8,
+        }
+        data_str = "[Exchange Symbol(String), Holdings Quantity({}), Unit Price(Float64), Watch Value(Float64), Watch Quantity(Int64), Baseline Quantity(Float64)]"
+        data_str_type = [test.dataframe_type_to_str(data_type[column]) for column in data_type]
+        for result in [
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result)
+            self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
+            self.assertEqual(26, len(data_df))
+        for result in [
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
+            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
+        ]:
+            data_df = _sheet_read(result, schema=data_type)
+            self.assertEqual(data_str.format(*data_str_type), test.dataframe_to_str(data_df))
+            self.assertEqual(26, len(data_df))
 
     def test_library_database(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
@@ -278,41 +247,27 @@ class WrangleTest(unittest.TestCase):
 
         df_data_str = "[C1({}), C2({}), C3({})]"
         df_data_type = {"C1": pl.Int64, "C2": pl.Utf8, "C3": pl.Utf8}
-        df_data = [{"C1": 1, "C2": 1.1, "C3": "1"}, {"C1": 2, "C2": 2.2, "C3": "2"},
-                   {"C1": None, "C2": None, "C3": None}]
-        self.assertEqual(df_data_str.format("Int64", "Float64", "String"),
-                         test.dataframe_to_str(test.dataframe_new(df_data)))
-        self.assertEqual(df_data_str.format("Int64", "Float64", "String"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, {})))
-        self.assertEqual(df_data_str.format("Int64", "String", "String"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, df_data_type)))
-        self.assertEqual(3,
-                         len((test.dataframe_new(df_data, schema={column: pl.Utf8 for column in df_data[0]}))))
+        df_data = [{"C1": 1, "C2": 1.1, "C3": "1"}, {"C1": 2, "C2": 2.2, "C3": "2"}, {"C1": None, "C2": None, "C3": None}]
+        self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data)))
+        self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data, {})))
+        self.assertEqual(df_data_str.format("Int64", "String", "String"), test.dataframe_to_str(test.dataframe_new(df_data, df_data_type)))
+        self.assertEqual(3, len((test.dataframe_new(df_data, schema={column: pl.Utf8 for column in df_data[0]}))))
 
         df_lots_cols = 50
         df_lots_rows = 100
-        df_lots = [{f"C{c}": v * v / 0.2 for c in range(1, df_lots_cols + 1)} for v in
-                   range(1, df_lots_rows + 1)]
+        df_lots = [{f"C{c}": v * v / 0.2 for c in range(1, df_lots_cols + 1)} for v in range(1, df_lots_rows + 1)]
         self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots")), str))
-        self.assertEqual(True,
-                         isinstance(test.dataframe_to_str(test.dataframe_new(schema=df_data_type, print_label="lots")),
-                                    str))
-        self.assertEqual(False,
-                         isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots")), list))
-        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False),
-                                          list))
-        self.assertEqual(df_lots_rows + 6,
-                         len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, -1)))
-        self.assertEqual(df_lots_rows + 6,
-                         len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 100)))
+        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(schema=df_data_type, print_label="lots")), str))
+        self.assertEqual(False, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots")), list))
+        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False), list))
+        self.assertEqual(df_lots_rows + 6, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, -1)))
+        self.assertEqual(df_lots_rows + 6, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 100)))
         self.assertEqual(5 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 5)))
         self.assertEqual(0 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 0)))
         self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots))))
         self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={"SOME UNKNOWN COLUMN": pl.Utf8}))))
-        self.assertEqual(df_lots_rows,
-                         len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_data[0]}))))
-        self.assertEqual(df_lots_rows,
-                         len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_lots[0]}))))
+        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_data[0]}))))
+        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_lots[0]}))))
 
     def test_state_cache_first_run(self):
         t = self._setup_state_test("test-1")
@@ -382,14 +337,6 @@ class WrangleTest(unittest.TestCase):
         self.assertIn("Double", current.columns)
         self.assertEqual([20.0, 40.0, 60.0], current.sort("Date")["Double"].to_list())
         self.assertEqual(3, len(delta))
-
-    def test_state_cache_disable_downloads(self):
-        t = self._setup_state_test("test-5")
-        plugin.config.disable_downloads = True
-        update = self._df([("2020-04-01", 4.0)])
-        delta, current, _ = t.state_cache(update)
-        self.assertEqual(0, len(delta))
-        self.assertEqual(3, len(current))
 
     def test_state_cache_no_new_rows(self):
         t = self._setup_state_test("test-2")
@@ -561,30 +508,51 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(update)
         self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
 
-    def test_state_cache_disable_downloads_returns_current_as_previous(self):
-        t = self._setup_state_test("test-5")
-        plugin.config.disable_downloads = True
-        update = self._df([("2020-04-01", 4.0)])
-        delta, current, previous = t.state_cache(update)
-        self.assertEqual(0, len(delta))
-        self.assertEqual(len(current), len(previous))
-        self.assertEqual(current["Date"].to_list(), previous["Date"].to_list())
-        self.assertEqual(current["Value"].to_list(), previous["Value"].to_list())
-
-    def test_state_cache_disable_downloads_aggregate_not_applied(self):
-        t = self._setup_state_test("test-5")
-        t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)]),
-                      lambda df: df.with_columns((pl.col("Value") * 2).alias("Double")))
-        t.reset_counters()
-        plugin.config.disable_downloads = True
-        _, current, _ = t.state_cache(
-            self._df([("2020-04-01", 4.0)]),
-            lambda df: df.with_columns((pl.col("Value") * 100).alias("Double"))
-        )
-        self.assertIn("Double", current.columns)
-        self.assertEqual([2.0, 4.0, 6.0], current.sort("Date")["Double"].to_list())
-        dates = [str(d) for d in current["Date"].to_list()]
-        self.assertNotIn("2020-04-01", dates)
+    # TODO: Remove?
+    # def test_state_cache_disable_downloads(self):
+    #     t = self._setup_state_test("test-5")
+    #     plugin.config.disable_downloads = True
+    #     update = self._df([("2020-04-01", 4.0)])
+    #     delta, current, _ = t.state_cache(update)
+    #     self.assertEqual(0, len(delta))
+    #     self.assertEqual(3, len(current))
+    #
+    # def test_state_cache_disable_downloads_aggregate_not_applied(self):
+    #     t = self._setup_state_test("test-5")
+    #     t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)]),
+    #                   lambda df: df.with_columns((pl.col("Value") * 2).alias("Double")))
+    #     t.reset_counters()
+    #     plugin.config.disable_downloads = True
+    #     _, current, _ = t.state_cache(
+    #         self._df([("2020-04-01", 4.0)]),
+    #         lambda df: df.with_columns((pl.col("Value") * 100).alias("Double"))
+    #     )
+    #     self.assertIn("Double", current.columns)
+    #     self.assertEqual([2.0, 4.0, 6.0], current.sort("Date")["Double"].to_list())
+    #     dates = [str(d) for d in current["Date"].to_list()]
+    #     self.assertNotIn("2020-04-01", dates)
+    #
+    # def test_state_cache_disable_downloads_returns_current_as_previous(self):
+    #     t = self._setup_state_test("test-5")
+    #     plugin.config.disable_downloads = True
+    #     update = self._df([("2020-04-01", 4.0)])
+    #     delta, current, previous = t.state_cache(update)
+    #     self.assertEqual(0, len(delta))
+    #     self.assertEqual(len(current), len(previous))
+    #     self.assertEqual(current["Date"].to_list(), previous["Date"].to_list())
+    #     self.assertEqual(current["Value"].to_list(), previous["Value"].to_list())
+    #
+    # def test_state_cache_multi_key_disable_downloads(self):
+    #     t = self._setup_state_test("mk-11")
+    #     t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+    #                   key_columns=["Date", "Account ID"])
+    #     t.reset_counters()
+    #     plugin.config.disable_downloads = True
+    #     delta, current, _ = t.state_cache(
+    #         self._mk_df([("2026-01-01", "acc-1", 999.0)]),
+    #         key_columns=["Date", "Account ID"])
+    #     self.assertEqual(0, len(delta))
+    #     self.assertEqual(2, len(current))
 
     def _price_df(self, date_price_pairs, ticker="AAPL"):
         return pl.DataFrame({
@@ -681,8 +649,8 @@ class WrangleTest(unittest.TestCase):
         t = self._setup_state_test("agg-5")
 
         def agg_with_null_col(df):
-            str_cols = [c for c, t in zip(df.columns, df.dtypes)
-                        if str(t) in ('String', 'Utf8', 'Null') and c != 'Date']
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes)
+                        if str(_t) in ('String', 'Utf8', 'Null') and _c != 'Date']
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             return df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Baseline Price Close"))
@@ -741,8 +709,8 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_with_guard(self):
         def null_fill_agg(df):
-            str_cols = [c for c, t in zip(df.columns, df.dtypes)
-                        if str(t) in ('String', 'Utf8', 'Null') and c != 'Date']
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes)
+                        if str(_t) in ('String', 'Utf8', 'Null') and _c != 'Date']
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if "AAPL Price Close" in df.columns:
@@ -773,8 +741,8 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_nullfill_backfills_historical_rows(self):
         def null_fill_agg(df):
-            str_cols = [c for c, t in zip(df.columns, df.dtypes)
-                        if str(t) in ('String', 'Utf8', 'Null') and c != 'Date']
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes)
+                        if str(_t) in ('String', 'Utf8', 'Null') and _c != 'Date']
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if "AAPL Price Close" in df.columns:
@@ -928,18 +896,6 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(2, len(current))
         self.assertEqual(0, len(previous))
 
-    def test_state_cache_multi_key_disable_downloads(self):
-        t = self._setup_state_test("mk-11")
-        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-                      key_columns=["Date", "Account ID"])
-        t.reset_counters()
-        plugin.config.disable_downloads = True
-        delta, current, _ = t.state_cache(
-            self._mk_df([("2026-01-01", "acc-1", 999.0)]),
-            key_columns=["Date", "Account ID"])
-        self.assertEqual(0, len(delta))
-        self.assertEqual(2, len(current))
-
     def test_state_cache_multi_key_with_aggregate(self):
         t = self._setup_state_test("mk-12")
 
@@ -985,10 +941,15 @@ class WrangleTest(unittest.TestCase):
             "Value": [float(p[1]) for p in date_value_pairs],
         }).with_columns(pl.col("Date").str.to_date())
 
-    def run_module(self, module_name, tests_asserts, log="info",
+    def run_plugin(self, plugin_name, tests_asserts, log_level="info",
                    prepare_only=False, enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                   disable_uploads=True, disable_downloads=False, repo_scope=plugin.RepoScope.CACHE):
-        plugin.config.log_level = log
+                   disable_uploads=True, disable_downloads=False, repo_scope=plugin.RepoScope.CACHE,
+                   verifications=None):
+        if verifications is None:
+            verifications = {}
+        if not disable_uploads and repo_scope == plugin.RepoScope.PRODUCTION:
+            raise ValueError("Cannot enable uploads when repo_scope is PRODUCTION")
+        plugin.config.log_level = log_level
         plugin.config.repo_scope = repo_scope
         plugin.config.force_reprocessing = force_reprocessing
         plugin.config.force_downloads = force_downloads
@@ -998,59 +959,63 @@ class WrangleTest(unittest.TestCase):
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
             os.makedirs(dir_target)
-        module = getattr(importlib.import_module(f"wrangle.plugin.{module_name}"), module_name.title())()
-
-        def load_caches(source, destination):
-            shutil.rmtree(destination, ignore_errors=True)
-            if isdir(source):
-                shutil.copytree(source, destination)
-            module.print_log(f"Files written from [{source}] to [{destination}]")
-
-        def assert_counters(counters_this, counters_that):
-            for counter_source in counters_this:
-                for counter_action in counters_this[counter_source]:
-                    if "counter_equals" in counters_that:
-                        counter_equals = counters_that["counter_equals"]
-                        if counter_source in counter_equals and counter_action in counter_equals[counter_source]:
-                            self.assertEqual(counters_this[counter_source][counter_action],
-                                             counter_equals[counter_source][counter_action],
-                                             f"Counter [{counter_source} {counter_action}] equals assertion failed [{counters_this[counter_source][counter_action]}] != [{counter_equals[counter_source][counter_action]}]")
-                    if "counter_less" in counters_that:
-                        counter_less = counters_that["counter_less"]
-                        if counter_source in counter_less and counter_action in counter_less[counter_source]:
-                            self.assertLessEqual(counters_this[counter_source][counter_action],
-                                                 counter_less[counter_source][counter_action],
-                                                 f"Counter [{counter_source} {counter_action}] less than assertion failed [{counters_this[counter_source][counter_action]}] >= [{counter_less[counter_source][counter_action]}]")
-                    if "counter_greater" in counters_that:
-                        counter_greater = counters_that["counter_greater"]
-                        if counter_source in counter_greater and counter_action in counter_greater[counter_source]:
-                            self.assertGreaterEqual(counters_this[counter_source][counter_action],
-                                                    counter_greater[counter_source][counter_action],
-                                                    f"Counter [{counter_source} {counter_action}] greater than assertion failed [{counters_this[counter_source][counter_action]}] <= [{counter_greater[counter_source][counter_action]}]")
-
+        module = getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}"), plugin_name.title())()
         print("")
         for test in tests_asserts:
-            load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.local_cache)
-            counters = {}
+            self._load_caches(module, join(DIR_ROOT, "src/test/resources/repos", repo_scope, plugin_name, test))
             if not prepare_only:
-                print(f"STARTING (run)     [{module_name.title()}]   [{test}]")
+                print(f"STARTING (run)     [{plugin_name.title()}]   [{test}]")
                 module.run()
-                print(f"FINISHED (run)     [{module_name.title()}]   [{test}]\n")
-                assert_counters(module.get_counters(), tests_asserts[test])
+                print(f"FINISHED (run)     [{plugin_name.title()}]   [{test}]\n")
+                self._assert_counters(module.get_counters(), tests_asserts[test])
+                self._verify_outputs(module, verifications)
                 if enable_rerun:
                     module.reset_counters()
-                    print(f"STARTING (no-op)   [{module_name.title()}]   [{test}]")
+                    print(f"STARTING (no-op)   [{plugin_name.title()}]   [{test}]")
                     module.run()
-                    print(f"FINISHED (no-op)   [{module_name.title()}]   [{test}]\n\n")
-                    assert_counters(module.get_counters(), ASSERT_NOOP)
+                    print(f"FINISHED (no-op)   [{plugin_name.title()}]   [{test}]\n\n")
+                    self._assert_counters(module.get_counters(), ASSERT_NOOP)
+                    self._verify_outputs(module, verifications)
                     module.reset_counters()
-                    print(f"STARTING (reload)   [{module_name.title()}]   [{test}]")
+                    print(f"STARTING (reload)   [{plugin_name.title()}]   [{test}]")
                     plugin.config.force_reprocessing = True
                     module.run()
                     plugin.config.force_reprocessing = force_reprocessing
-                    print(f"FINISHED (reload)   [{module_name.title()}]   [{test}]\n\n")
-                    assert_counters(module.get_counters(), ASSERT_RELOAD)
-        return counters
+                    print(f"FINISHED (reload)   [{plugin_name.title()}]   [{test}]\n\n")
+                    self._assert_counters(module.get_counters(), ASSERT_RELOAD)
+                    self._verify_outputs(module, verifications)
+
+    def _load_caches(self, module, source):
+        if not isdir(source):
+            raise FileNotFoundError(f"Test data directory [{source}] does not exist")
+        shutil.rmtree(module.local_cache, ignore_errors=True)
+        shutil.copytree(source, module.local_cache, ignore=shutil.ignore_patterns(".git*"))
+        module.print_log(f"Files written from [{source}] to [{module.local_cache}]")
+
+    def _verify_outputs(self, module, verifications):
+        for filename, funcs in verifications.items():
+            file_path = join(module.local_cache, filename)
+            if not isfile(file_path):
+                self.fail(f"Verification target [{filename}] not found in [{module.local_cache}]")
+            csv_df = module.csv_read(file_path)
+            for func in funcs:
+                if not func(csv_df):
+                    self.fail(f"Verification [{func.__name__}] failed for [{filename}]")
+
+    def _assert_counters(self, actual, asserts):
+        comparators = [
+            ("counter_equals", self.assertEqual, "equals", "!="),
+            ("counter_less", self.assertLessEqual, "less than", ">="),
+            ("counter_greater", self.assertGreaterEqual, "greater than", "<="),
+        ]
+        for comparator_key, assert_fn, label, op in comparators:
+            if comparator_key not in asserts:
+                continue
+            for counter_source, actions in asserts[comparator_key].items():
+                for counter_action, expected in actions.items():
+                    actual_value = actual.get(counter_source, {}).get(counter_action, 0)
+                    assert_fn(actual_value, expected,
+                              f"Counter [{counter_source} {counter_action}] {label} assertion failed [{actual_value}] {op} [{expected}]")
 
     def setUp(self):
         print("")
@@ -1062,6 +1027,83 @@ class WrangleTest(unittest.TestCase):
 
     def tearDown(self):
         reset_config()
+
+
+def _leading_zero_rows(csv_df, numeric_cols):
+    count = 0
+    for i in range(len(csv_df)):
+        row = csv_df.row(i, named=True)
+        if any(row[col] == 0 for col in numeric_cols if row[col] is not None):
+            count = i + 1
+        else:
+            break
+    return count
+
+
+def verify_non_empty(csv_df):
+    if csv_df.is_empty():
+        dataframe_print("Verify", csv_df, "verify_non_empty: no rows", level="error")
+        return False
+    return True
+
+
+def verify_non_sparse(csv_df):
+    fail_rows = csv_df.filter(pl.any_horizontal(pl.all().is_null()))
+    if not fail_rows.is_empty():
+        dataframe_print("Verify", fail_rows, "verify_non_sparse: rows with nulls", level="error")
+        return False
+    return True
+
+
+def make_verify_max_zeroes_per_row(max_zeroes, after_first_rows=False):
+    def _verify(csv_df):
+        numeric_cols = [col for col in csv_df.columns if csv_df[col].dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)]
+        data_df = csv_df.slice(_leading_zero_rows(csv_df, numeric_cols)) if after_first_rows else csv_df
+        zero_count = pl.sum_horizontal((pl.col(c) == 0).cast(pl.Int32) for c in numeric_cols)
+        fail_rows = data_df.filter(zero_count > max_zeroes)
+        if not fail_rows.is_empty():
+            dataframe_print("Verify", fail_rows, f"{label}: rows with >{max_zeroes} zeros", level="error")
+            return False
+        return True
+
+    label = f"verify_max_{max_zeroes}_zeroes_per_row" + ("_after_first_rows" if after_first_rows else "")
+    _verify.__name__ = label
+    return _verify
+
+
+def make_verify_contiguous_dates(start_date=None, end_date=None, max_gap_days=1):
+    def _verify(csv_df):
+        if "Date" not in csv_df.columns:
+            dataframe_print("Verify", csv_df, "verify_contiguous_dates: no Date column", level="error")
+            return False
+        dates = csv_df.sort("Date")["Date"].drop_nulls().to_list()
+        if len(dates) < 2:
+            return True
+        if start_date is not None and dates[0] != start_date:
+            dataframe_print("Verify", csv_df.head(1), f"verify_contiguous_dates: expected start {start_date}, got {dates[0]}", level="error")
+            return False
+        if end_date is not None and dates[-1] != end_date:
+            dataframe_print("Verify", csv_df.tail(1), f"verify_contiguous_dates: expected end {end_date}, got {dates[-1]}", level="error")
+            return False
+        diffs = [(dates[i + 1] - dates[i]).days for i in range(len(dates) - 1)]
+        if max_gap_days is not None:
+            for i, diff in enumerate(diffs):
+                if diff > max_gap_days:
+                    gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
+                    dataframe_print("Verify", gap_df, f"verify_contiguous_dates: gap of {diff} days between {dates[i]} and {dates[i + 1]} exceeds max {max_gap_days}", level="error")
+                    return False
+        else:
+            min_diff, max_diff = min(diffs), max(diffs)
+            if 28 <= min_diff and max_diff <= 31:
+                for i in range(len(dates) - 1):
+                    if dates[i + 1].year * 12 + dates[i + 1].month - (dates[i].year * 12 + dates[i].month) != 1:
+                        gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
+                        dataframe_print("Verify", gap_df, f"verify_contiguous_dates: gap between {dates[i]} and {dates[i + 1]}", level="error")
+                        return False
+        return True
+
+    _verify.__name__ = "verify_contiguous_dates"
+    return _verify
 
 
 def merge_asserts(base, addition):

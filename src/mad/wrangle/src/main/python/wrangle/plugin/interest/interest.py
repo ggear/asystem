@@ -7,6 +7,7 @@ import polars as pl
 import polars.selectors as cs
 
 from wrangle import plugin
+from wrangle.plugin.logger import dataframe_print as _dataframe_print
 
 LABELS = ['Bank', 'Inflation', 'Net']
 PERIODS = OrderedDict([
@@ -41,6 +42,7 @@ class Interest(plugin.Plugin):
 
             # Download interest data
             new_data = False
+            started_time = time.time()
             started_time_retail = time.time()
             retail_should_read = False
             retail_df = self.dataframe_new(schema={"Date": pl.Date, "Bank": pl.Float64})
@@ -70,6 +72,8 @@ class Interest(plugin.Plugin):
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
+            interest_files_count = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) + self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
+            self.print_log(f"Files downloaded or cached [{interest_files_count}] files", started=started_time)
             if new_data:
                 try:
                     if retail_should_read:
@@ -88,16 +92,16 @@ class Interest(plugin.Plugin):
                     inflation_df = self.dataframe_new(schema={"Date": pl.Date, "Inflation": pl.Float64})
 
             retail_df = retail_df if len(retail_df) == 0 else retail_df.fill_nan(pl.lit(None)).drop_nulls()
-            self.dataframe_print(retail_df, print_label="Retail", print_verb="collected", started=started_time_retail)
+            _dataframe_print(self.name,retail_df, print_label="Retail", print_verb="collected", started=started_time_retail)
             inflation_df = inflation_df if len(inflation_df) == 0 else inflation_df.fill_nan(pl.lit(None)).drop_nulls()
-            self.dataframe_print(inflation_df, print_label="Inflation", print_verb="collected", started=started_time_inflation)
+            _dataframe_print(self.name,inflation_df, print_label="Inflation", print_verb="collected", started=started_time_inflation)
 
             # Process the interest data
             try:
                 if new_data:
                     started_time_inner = time.time()
                     interest_df = retail_df.join(inflation_df, on="Date", how="full", coalesce=True).sort("Date").set_sorted("Date")
-                    self.dataframe_print(interest_df, print_label="Interest", print_verb="post unique", started=started_time_inner)
+                    _dataframe_print(self.name,interest_df, print_label="Interest", print_verb="post unique", started=started_time_inner)
                     started_time_inner = time.time()
                     interest_df = interest_df.upsample(time_column="Date", every="1mo").fill_nan(pl.lit(None)).sort("Date")
                     interest_df = interest_df.with_columns(pl.all().forward_fill()).drop_nulls()
@@ -105,7 +109,7 @@ class Interest(plugin.Plugin):
                     interest_df = interest_df.with_columns(cs.float().round(2))
                     if "Date_right" in interest_df.columns:
                         interest_df = interest_df.drop("Date_right")
-                    self.dataframe_print(interest_df, print_label="Interest", print_verb="post up-sample", started=started_time_inner)
+                    _dataframe_print(self.name,interest_df, print_label="Interest", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
                 self.print_log("Unexpected error processing interest dataframe", exception=exception)
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
@@ -130,6 +134,7 @@ class Interest(plugin.Plugin):
             interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, _aggregate_function)
 
             # Upload the data
+            started_time = time.time()
             if len(interest_delta_df):
 
                 # Sheet upload
@@ -137,7 +142,6 @@ class Interest(plugin.Plugin):
                 self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_rates, workbook_name="Rates", sheet_name='Interest')
 
                 # Database upload
-                started_time = time.time()
                 interest_monthly_df = interest_current_df.select(["Date"] + LABELS)
                 self.database_upload(interest_monthly_df.drop_nulls(), tags={
                     "type": "mean",
@@ -152,7 +156,8 @@ class Interest(plugin.Plugin):
                         "period": f"{PERIODS[int_period] / 12:0.0f}y",
                         "unit": "%"
                     }, print_label=f"Interest_{int_period}".replace(" ", "_"))
-                self.print_log("LineProtocol [Interest] serialised", started=started_time)
+
+            self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:
             self.print_log("Unexpected error processing interest data", exception=exception)

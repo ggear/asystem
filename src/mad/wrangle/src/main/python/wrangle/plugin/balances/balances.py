@@ -8,6 +8,7 @@ import polars as pl
 import polars.selectors as cs
 
 from wrangle import plugin
+from wrangle.plugin.logger import dataframe_print as _dataframe_print
 
 BALANCES_SCHEMA = {
     "Date": pl.Date,
@@ -104,7 +105,7 @@ class Balances(plugin.Plugin):
                                 "Balance": balance,
                             })
                         today_df = pl.DataFrame(rows, schema=BALANCES_SCHEMA) if rows else self.dataframe_new(schema=BALANCES_SCHEMA)
-                        self.dataframe_print(today_df, print_label="Balances", print_verb="transformed", started=started_time_inner)
+                        _dataframe_print(self.name,today_df, print_label="Balances", print_verb="transformed", started=started_time_inner)
 
                         # Detect new balance data
                         balances_changed = (existing_df is None or existing_df.filter(pl.col("Date") == pl.lit(today).cast(pl.Date)).height == 0)
@@ -140,7 +141,7 @@ class Balances(plugin.Plugin):
         if plugin.config.force_reprocessing:
             balance_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "Redbark_Balances")}
             new_data = len(balance_files) > 0
-        self.print_log(f"Files [Balances] downloaded or cached [{len(balance_files)}] balance files", started=started_time)
+        self.print_log(f"Files downloaded or cached [{len(balance_files)}] files", started=started_time)
 
         # Process balance data
         started_time = time.time()
@@ -154,7 +155,7 @@ class Balances(plugin.Plugin):
                         self.print_log(f"Unexpected error reading [{file_name}]", exception=exception)
         if len(balances_df) > 0:
             balances_df = balances_df.sort(["Date", "Time", "Account Name"])
-        self.dataframe_print(balances_df, print_label="Balances", print_verb="collected", started=started_time)
+        _dataframe_print(self.name,balances_df, print_label="Balances", print_verb="collected", started=started_time)
 
         # State checkpoint boundary
         if new_data:
@@ -167,6 +168,7 @@ class Balances(plugin.Plugin):
                 balances_delta_df, balances_current_df, _ = self.state_cache(balances_df, _aggregate_function, key_columns=["Date", "Time", "Account Name"])
 
                 # Sheet upload
+                started_time = time.time()
                 if len(balances_delta_df):
                     # TODO
                     self.sheet_download(self.remote_repos.sheet_balances, "Bank", sheet_name="Balances")
@@ -174,6 +176,9 @@ class Balances(plugin.Plugin):
                     # TODO
                     balances_current_df = balances_current_df.sort(["Date", "Time", "Account Name"], descending=True).with_columns(pl.col("Date").cast(pl.Utf8))
                     self.sheet_upload(balances_current_df, self.remote_repos.sheet_balances, workbook_name="Bank", sheet_name="Balances", add_filter=True)
+
+                self.print_log("Upload complete", started=started_time)
+
 
             except Exception as exception:
                 self.print_log("Unexpected error processing balances data", exception=exception)

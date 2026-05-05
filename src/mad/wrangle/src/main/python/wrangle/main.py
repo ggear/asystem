@@ -59,6 +59,14 @@ def configure(argv=None):
         help="scope remote uploads and downloads (default: production)",
     )
     parser.add_argument(
+        "--filter-plugins",
+        default=None,
+        metavar="CSV",
+        help=(
+            "run only plugins listed in CSV (example: balances,equity)"
+        ),
+    )
+    parser.add_argument(
         "-l", "--log",
         choices=["debug", "info", "warning", "error", "fatal"],
         default=None,
@@ -67,6 +75,17 @@ def configure(argv=None):
     args = parser.parse_args(argv)
     if args.poll_period < 0:
         parser.error("argument -p/--poll-period: MINUTES must be >= 0")
+    filter_plugins = None
+    if args.filter_plugins is not None:
+        filter_plugins = []
+        for plugin_name in (name.strip() for name in args.filter_plugins.split(",")):
+            if plugin_name and plugin_name not in filter_plugins:
+                filter_plugins.append(plugin_name)
+        available_plugins = set(_get_plugins())
+        missing_plugins = [plugin_name for plugin_name in filter_plugins if plugin_name not in available_plugins]
+        if missing_plugins:
+            parser.error("\n".join(f"argument --filter-plugins: plugin '{plugin_name}' does not exist" for plugin_name in missing_plugins))
+    args.filter_plugins = filter_plugins
     if args.once:
         args.force_reprocessing = True
     if args.log is None:
@@ -80,44 +99,44 @@ def configure(argv=None):
     return args
 
 
-def run_once():
-    module_count = 0
-    module_errored_count = 0
-    plugin_dir = join(dirname(realpath(__file__)), "plugin")
-    module_names = sorted(
-        basename(module_path)
-        for module_path in glob.glob(join(plugin_dir, "*"))
-        if isdir(module_path) and not basename(module_path).startswith("_")
-    )
-    for module_name in module_names:
-        module_count += 1
-        module_errored = False
-        module = None
+def run_once(filter_plugins=None):
+    plugin_count = 0
+    plugin_errored_count = 0
+    plugin_names = _get_plugins()
+    if filter_plugins is not None:
+        filter_plugin_set = set(filter_plugins)
+        plugin_names = [plugin_name for plugin_name in plugin_names if plugin_name in filter_plugin_set]
+    for plugin_name in plugin_names:
+        plugin_count += 1
+        plugin_errored = False
+        plugin_instance = None
         try:
-            module_class = "".join(part.capitalize() for part in module_name.split("_"))
-            module = getattr(importlib.import_module(f"wrangle.plugin.{module_name}"), module_class)()
-            module.run()
-            counters = module.get_counters()
+            plugin_class = "".join(part.capitalize() for part in plugin_name.split("_"))
+            plugin_instance = getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}"), plugin_class)()
+            plugin_instance.run()
+            counters = plugin_instance.get_counters()
             for source in counters:
                 for action in counters[source]:
                     if action == plugin.CTR_ACT_ERRORED and counters[source][action] > 0:
-                        module_errored = True
+                        plugin_errored = True
         except Exception as exception:
-            if module is not None:
-                module.print_log(
-                    "Module threw unexpected exception",
-                    exception=exception,
-                )
+            if plugin_instance is not None:
+                plugin_instance.print_log("Plugin threw unexpected exception", exception=exception)
             else:
-                plugin.print_log(
-                    module_name,
-                    "Module failed to load or initialize",
-                    exception=exception,
-                )
-            module_errored = True
-        if module_errored:
-            module_errored_count += 1
-    return module_count != 0 and module_count > module_errored_count
+                plugin.print_log(plugin_name, "Plugin failed to load or initialise", exception=exception)
+            plugin_errored = True
+        if plugin_errored:
+            plugin_errored_count += 1
+    return plugin_count != 0 and plugin_count > plugin_errored_count
+
+
+def _get_plugins():
+    plugin_dir = join(dirname(realpath(__file__)), "plugin")
+    return sorted(
+        basename(plugin_path)
+        for plugin_path in glob.glob(join(plugin_dir, "*"))
+        if isdir(plugin_path) and not basename(plugin_path).startswith("_")
+    )
 
 
 def main(argv=None):
@@ -125,16 +144,13 @@ def main(argv=None):
     try:
         plugin.database_open()
         while True:
-            success = run_once()
+            success = run_once(filter_plugins=args.filter_plugins)
             plugin.config.force_reprocessing = False
             if args.once or not args.poll_period:
                 return success
             time.sleep(args.poll_period * 60)
     except KeyboardInterrupt:
-        plugin.print_log(
-            "wrangle",
-            "Interrupted, exiting",
-        )
+        plugin.print_log("wrangle", "Interrupted, exiting")
         return True
     finally:
         plugin.database_close()

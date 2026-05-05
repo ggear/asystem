@@ -27,6 +27,7 @@ from pandas.tseries.offsets import BDay
 from . import database as _database
 from ._contract import ContractMixin
 from .config import *
+from .logger import dataframe_print as _dataframe_print
 
 logging.getLogger('yfinance').setLevel(logging.ERROR)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
@@ -34,32 +35,20 @@ logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
 class SourcesMixin(ContractMixin):
 
-    def http_download(
-            self,
-            url_file: str,
-            local_path: str,
-            check: bool = True,
-            force: bool = False,
-            ignore: bool = False,
-    ) -> DownloadResult:
+    def http_download(self, url_file: str, local_path: str,
+                      check: bool = True, force: bool = False, ignore: bool = False) -> DownloadResult:
         started_time = time.time()
         local_path = abspath(local_path)
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(local_path):
-                self.print_log(
-                    f"File [{label}] cached at [{local_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(local_path):
-            self.print_log(
-                f"File [{label}] cached at [{local_path}]",
-                started=started_time,
-            )
+            self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         client = {
@@ -87,10 +76,7 @@ class SourcesMixin(ContractMixin):
                 modified_timestamp = get_modified(response.headers)
                 if modified_timestamp is not None:
                     if modified_timestamp_cached == modified_timestamp:
-                        self.print_log(
-                            f"File [{label}] cached at [{local_path}]",
-                            started=started_time,
-                        )
+                        self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                         return DownloadResult(DownloadStatus.CACHED, local_path)
             except (Exception,):
@@ -110,18 +96,12 @@ class SourcesMixin(ContractMixin):
                     f"File [{label}] HTTP downloaded file [{local_path}] modified timestamp set failed [{modified_timestamp}]",
                     exception=exception,
                 )
-            self.print_log(
-                f"File [{label}] downloaded to [{local_path}]",
-                started=started_time,
-            )
+            self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
             return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
         except Exception as exception:
             if not ignore:
-                self.print_log(
-                    f"File [{label}] not available at [{url_file}]",
-                    exception=exception,
-                )
+                self.print_log(f"File [{label}] not available at [{url_file}]", exception=exception)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
@@ -139,18 +119,12 @@ class SourcesMixin(ContractMixin):
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(local_path):
-                self.print_log(
-                    f"File [{label}] cached at [{local_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(local_path):
-            self.print_log(
-                f"File [{label}] cached at [{local_path}]",
-                started=started_time,
-            )
+            self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         url_server = url_file.replace("ftp://", "").split("/")[0]
@@ -163,10 +137,7 @@ class SourcesMixin(ContractMixin):
             if not effective_force and check and isfile(local_path):
                 modified_timestamp_cached = int(getmtime(local_path))
                 if modified_timestamp_cached == modified_timestamp:
-                    self.print_log(
-                        f"File [{label}] cached at [{local_path}]",
-                        started=started_time,
-                    )
+                    self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     client.quit()
                     return DownloadResult(DownloadStatus.CACHED, local_path)
@@ -181,20 +152,14 @@ class SourcesMixin(ContractMixin):
                     f"File [{label}] FTP downloaded file [{local_path}] modified timestamp set failed [{modified_timestamp}]",
                     exception=exception,
                 )
-            self.print_log(
-                f"File [{label}] downloaded to [{local_path}]",
-                started=started_time,
-            )
+            self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
             client.quit()
             return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
         except Exception as exception:
             if client is not None:
                 client.quit()
-            self.print_log(
-                f"File [{label}] not available at [{url_file}]",
-                exception=exception,
-            )
+            self.print_log(f"File [{label}] not available at [{url_file}]", exception=exception)
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
@@ -216,10 +181,7 @@ class SourcesMixin(ContractMixin):
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(local_path):
-                self.print_log(
-                    f"File [{label}] cached at [{local_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             return DownloadResult(DownloadStatus.FAILED, None)
@@ -227,10 +189,7 @@ class SourcesMixin(ContractMixin):
         end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
         if start != end_exclusive:
             if not effective_force and not check and isfile(local_path):
-                self.print_log(
-                    f"File [{label}] cached at [{local_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
             else:
@@ -250,17 +209,11 @@ class SourcesMixin(ContractMixin):
                                     else:
                                         end_expected = end_expected - timedelta(days=2 if now.weekday() == 5 else 1)
                                 if end_data == end_expected:
-                                    self.print_log(
-                                        f"File [{label}] cached at [{local_path}]",
-                                        started=started_time,
-                                    )
+                                    self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                     return DownloadResult(DownloadStatus.CACHED, local_path)
                             else:
-                                self.print_log(
-                                    f"File [{label}] cached (but empty) at [{local_path}]",
-                                    started=started_time,
-                                )
+                                self.print_log(f"File [{label}] cached (but empty) at [{local_path}]", started=started_time)
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return DownloadResult(DownloadStatus.CACHED, local_path)
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive)
@@ -273,9 +226,7 @@ class SourcesMixin(ContractMixin):
                         data_df = data_df[:-1]
                     if len(data_df) == 0:
                         if ignore:
-                            self.print_log(
-                                f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]",
-                            )
+                            self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
                         else:
                             raise Exception(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
                     if not exists(dirname(local_path)):
@@ -289,10 +240,7 @@ class SourcesMixin(ContractMixin):
                                 if isinstance(prior_last, str) else prior_last
                             new_last = datetime.strptime(data_df['Date'].iloc[-1], '%Y-%m-%d').date()
                             if prior_last == new_last:
-                                self.print_log(
-                                    f"File [{label}] cached at [{local_path}]",
-                                    started=started_time,
-                                )
+                                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return DownloadResult(DownloadStatus.CACHED, local_path)
                     self.csv_write(pl.from_pandas(data_df), local_path, print_verb="downloaded", started=started_time)
@@ -303,10 +251,7 @@ class SourcesMixin(ContractMixin):
                         try:
                             os.utime(local_path, (modified_timestamp, modified_timestamp))
                         except Exception as exception:
-                            self.print_log(
-                                f"File [{label}] stock query file [{local_path}] modified timestamp set failed [{modified_timestamp}]",
-                                exception=exception,
-                            )
+                            self.print_log(f"File [{label}] stock query file [{local_path}] modified timestamp set failed [{modified_timestamp}]", exception=exception)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
                 except Exception as exception:
@@ -318,29 +263,22 @@ class SourcesMixin(ContractMixin):
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
-    def database_download(self, query_name, query_string, start=None, end=None, check=True, force=False, ignore=True):
+    def database_download(self, query_name, query_string, start=None, end=None,
+                          check=True, force=False, ignore=True):
         started_time = time.time()
         local_path = abspath(f"{self.local_cache}/_Database_{query_name}.csv")
         effective_force = force or config.force_downloads
         if config.disable_downloads or _database.database_client is None:
             if isfile(local_path):
-                self.print_log(
-                    f"File [{query_name}] cached at [{local_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
-            self.print_log(
-                f"File [{query_name}] query skipped: downloads disabled and no cache available",
-            )
+            self.print_log(f"File [{query_name}] query skipped: downloads disabled and no cache available")
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(local_path):
-            self.print_log(
-                f"File [{query_name}] cached at [{local_path}]",
-                started=started_time,
-            )
+            self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, local_path)
         if not effective_force and check and isfile(local_path):
@@ -349,10 +287,7 @@ class SourcesMixin(ContractMixin):
                 data_start = data_df.head(1).rows()[0][0]
                 data_end = data_df.tail(1).rows()[0][0]
                 if (start is None or start >= data_start) and (end is None or end <= data_end):
-                    self.print_log(
-                        f"File [{query_name}] cached at [{local_path}]",
-                        started=started_time,
-                    )
+                    self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     return DownloadResult(DownloadStatus.CACHED, local_path)
         try:
@@ -362,45 +297,31 @@ class SourcesMixin(ContractMixin):
                 data_df = data_df.to_frame()
             if data_df is None or len(data_df) == 0:
                 if ignore:
-                    self.print_log(
-                        f"File [{query_name}] query returned no data",
-                    )
+                    self.print_log(f"File [{query_name}] query returned no data")
                     return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
                 raise Exception(f"File [{query_name}] query returned no data")
             self.csv_write(data_df, local_path, print_verb="queried", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
             return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
         except Exception as exception:
-            self.print_log(
-                f"File [{query_name}] query failed",
-                exception=exception,
-                started=started_time,
-            )
+            self.print_log(f"File [{query_name}] query failed", exception=exception, started=started_time)
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
     def bank_download(self, file_cache, data="accounts", check=True, force=False):
         started_time = time.time()
-        file_path = abspath(f"{self.local_cache}/_Bank_{file_cache}.csv")
+        file_path = abspath(f"{self.local_cache}/_Redbark_{file_cache}.csv")
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(file_path):
-                self.print_log(
-                    f"File [{file_cache}] cached at [{file_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
-            self.print_log(
-                f"File [{file_cache}] query skipped: downloads disabled and no cache available",
-            )
+            self.print_log(f"File [{file_cache}] query skipped: downloads disabled and no cache available")
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(file_path):
-            self.print_log(
-                f"File [{file_cache}] cached at [{file_path}]",
-                started=started_time,
-            )
+            self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return DownloadResult(DownloadStatus.CACHED, file_path)
         token = os.environ.get("REDBARK_TOKEN", "")
@@ -462,28 +383,19 @@ class SourcesMixin(ContractMixin):
                 if not effective_force and check and isfile(file_path):
                     with open(file_path, 'r') as f:
                         if hashlib.md5(f.read().encode()).hexdigest() == new_hash:
-                            self.print_log(
-                                f"File [{file_cache}] cached at [{file_path}]",
-                                started=started_time,
-                            )
+                            self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time)
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return DownloadResult(DownloadStatus.CACHED, file_path)
                 if not exists(dirname(file_path)):
                     os.makedirs(dirname(file_path))
                 with open(file_path, 'w') as f:
                     f.write(new_csv)
-                self.print_log(
-                    f"File [{file_cache}] downloaded to [{file_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{file_cache}] downloaded to [{file_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
             return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
         except Exception as exception:
-            self.print_log(
-                f"File [{file_cache}] download failed",
-                exception=exception,
-            )
+            self.print_log(f"File [{file_cache}] download failed", exception=exception)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
             return DownloadResult(DownloadStatus.FAILED, None)
 
@@ -495,9 +407,7 @@ class SourcesMixin(ContractMixin):
             version_str = filename[len(prefix):-len(".csv")]
             if version_str.isdigit() and int(version_str) <= current_version - 2:
                 os.remove(file_path)
-                self.print_log(
-                    f"File [{name}] deleted old version [{file_path}]",
-                )
+                self.print_log(f"File [{name}] deleted old version [{file_path}]")
 
     def sheet_download(self, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_load_secs=10, sheet_retry_max=5,
                        read_cache=True, write_cache=False, print_rows=PL_PRINT_ROWS):
@@ -512,21 +422,14 @@ class SourcesMixin(ContractMixin):
             if raw_version is not None:
                 drive_version = str(raw_version)
         except Exception as exception:
-            self.print_log(
-                f"Failed to get Drive version of sheet [{drive_url}]",
-                exception=exception,
-                level="error",
-            )
+            self.print_log(f"Failed to get Drive version of sheet [{drive_url}]", exception=exception, level="error")
         name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
         if drive_version is not None:
             file_path = abspath(f"{self.local_cache}/_Sheet_{name}_v{drive_version}.csv")
             drive_version_int = int(drive_version)
             self._sheet_cache_cleanup(name, drive_version_int)
             if read_cache and not write_cache and isfile(file_path):
-                self.print_log(
-                    f"File [{workbook_name}] cached at [{file_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         else:
             prefix = f"_Sheet_{name}_v"
@@ -538,17 +441,11 @@ class SourcesMixin(ContractMixin):
             )
             if read_cache and not write_cache and versioned_files:
                 _, file_path = versioned_files[0]
-                self.print_log(
-                    f"File [{workbook_name}] cached at [{file_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
             file_path = abspath(f"{self.local_cache}/_Sheet_{name}.csv")
             if read_cache and not write_cache and isfile(file_path):
-                self.print_log(
-                    f"File [{workbook_name}] cached at [{file_path}]",
-                    started=started_time,
-                )
+                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         file_path = abspath(f"{self.local_cache}/_Sheet_{name}.csv") if drive_version is None else abspath(f"{self.local_cache}/_Sheet_{name}_v{drive_version}.csv")
         retries = 0
@@ -593,7 +490,7 @@ class SourcesMixin(ContractMixin):
                             raise SheetStillLoadingError(
                                 f"DataFrame [{workbook_name}] loaded from sheet that is yet to finish rendering column [{column}]")
                     self.csv_write(data_df, file_path, print_label=workbook_name, print_rows=-1)
-                    self.dataframe_print(
+                    _dataframe_print(self.name,
                         data_df,
                         print_label=workbook_name,
                         print_verb="downloaded",
@@ -609,12 +506,8 @@ class SourcesMixin(ContractMixin):
             if caught_exception is not None:
                 raise caught_exception
         except Exception as exception:
-            self.print_log(
-                f"DataFrame [{workbook_name}] unavailable at [{drive_url}]"
-                + ("" if retries < sheet_retry_max
-                   else f" after retrying [{sheet_retry_max}] times over [{sheet_retry_max * sheet_load_secs}] seconds"),
-                exception=exception,
-            )
+            self.print_log(f"DataFrame [{workbook_name}] unavailable at [{drive_url}]" +
+                           ("" if retries < sheet_retry_max else f" after retrying [{sheet_retry_max}] times over [{sheet_retry_max * sheet_load_secs}] seconds"), exception=exception)
             return DownloadResult(DownloadStatus.FAILED, None)
         return DownloadResult(DownloadStatus.DOWNLOADED, file_path)
 
@@ -637,11 +530,7 @@ class SourcesMixin(ContractMixin):
                     if raw_version is not None:
                         drive_version = str(raw_version)
                 except Exception as exception:
-                    self.print_log(
-                        f"Failed to get Drive version after upload of [{drive_url}]",
-                        exception=exception,
-                        level="error",
-                    )
+                    self.print_log(f"Failed to get Drive version after upload of [{drive_url}]", exception=exception, level="error")
             suffix = f"_v{drive_version}" if drive_version is not None else ""
             file_path = abspath(f"{self.local_cache}/_Sheet_{name}{suffix}.csv")
             self.csv_write(data_df, file_path)
@@ -649,7 +538,7 @@ class SourcesMixin(ContractMixin):
                 drive_version_str: str = drive_version
                 drive_version_int = int(drive_version_str)
                 self._sheet_cache_cleanup(name, drive_version_int)
-            self.dataframe_print(
+            _dataframe_print(self.name,
                 data_df,
                 print_label=print_label,
                 print_verb="uploaded",
@@ -660,10 +549,7 @@ class SourcesMixin(ContractMixin):
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
         except Exception as exception:
-            self.print_log(
-                f"DataFrame failed to upload to [{drive_url}]",
-                exception=exception,
-            )
+            self.print_log(f"DataFrame failed to upload to [{drive_url}]", exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def dropbox_download(self, dropbox_dir: str | None, local_dir: str, check: bool = True):
@@ -772,16 +658,10 @@ class SourcesMixin(ContractMixin):
                 }
                 file_actioned = True
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                self.print_log(
-                    f"File [{label}] downloaded to [{local_path}]",
-                    started=started_time_file,
-                )
+                self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time_file)
             else:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                self.print_log(
-                    f"File [{label}] cached at [{local_path}]",
-                    started=started_time_file,
-                )
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file)
             actioned_files[local_path] = True, file_actioned
         self.print_log(
             f"Directory [{basename(local_dir).title()}] downloaded [{len(actioned_files)}] files from [https://www.dropbox.com/home/{dropbox_dir}]",
@@ -866,16 +746,10 @@ class SourcesMixin(ContractMixin):
                 }
                 file_actioned = True
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                self.print_log(
-                    f"File [{label}] downloaded to [{local_path}]",
-                    started=started_time_file,
-                )
+                self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time_file)
             else:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                self.print_log(
-                    f"File [{label}] cached at [{local_path}]",
-                    started=started_time_file,
-                )
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file)
             actioned_files[local_path] = True, file_actioned
         if upload:
             for local_file in local_files:

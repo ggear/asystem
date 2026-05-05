@@ -7,6 +7,7 @@ import polars as pl
 import polars.selectors as cs
 
 from wrangle import plugin
+from wrangle.plugin.logger import dataframe_print as _dataframe_print
 
 PAIRS = ['AUD/USD', 'AUD/GBP', 'AUD/SGD']
 
@@ -55,10 +56,12 @@ class Currency(plugin.Plugin):
             # Download currency data
             new_data = False
             started_time = time.time()
+            rba_files_count = 0
             for years in RBA_YEARS:
                 years_file = join(self.local_cache, f"RBA_FX_{years}.xls")
                 file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check='current' in years)
                 if file_status.status != plugin.DownloadStatus.FAILED:
+                    rba_files_count += 1
                     if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
                         new_data = True
                         try:
@@ -67,7 +70,7 @@ class Currency(plugin.Plugin):
                             rba_itr_df.columns = ['Date'] + PAIRS
                             rba_itr_df = rba_itr_df.with_columns(pl.lit("RBA").alias("Source"))
                             rba_df = pl.concat([rba_df, rba_itr_df])
-                            self.dataframe_print(rba_df, print_label="RBA_FX", print_verb="concatenated")
+                            _dataframe_print(self.name,rba_df, print_label="RBA_FX", print_verb="concatenated")
                             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             self.print_log(f"Unexpected error processing file [{years_file}]", exception=exception)
@@ -82,7 +85,8 @@ class Currency(plugin.Plugin):
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, 1)
                 raise RuntimeError(error_message)
             rba_df = rba_df if len(rba_df) == 0 else rba_df.drop_nulls()
-            self.dataframe_print(rba_df, print_label="Currency", print_verb="collected", started=started_time)
+            self.print_log(f"Files downloaded or cached [{rba_files_count}] files", started=started_time)
+            _dataframe_print(self.name,rba_df, print_label="Currency", print_verb="collected")
 
             # Process the currency data
             try:
@@ -90,12 +94,14 @@ class Currency(plugin.Plugin):
                     started_time_inner = time.time()
                     rba_df = rba_df.unique(subset=['Date'], keep="first")
                     rba_df = rba_df.drop_nulls().sort('Date').set_sorted('Date')
-                    self.dataframe_print(rba_df, print_label="Currency", print_verb="post unique", started=started_time_inner)
+                    _dataframe_print(self.name,rba_df, print_label="Currency", print_verb="post unique", started=started_time_inner)
                     started_time_inner = time.time()
+                    rba_trading_dates = rba_df.select("Date")
                     rba_df = rba_df.upsample(time_column='Date', every="1d").fill_nan(pl.lit(None)).sort('Date')
                     rba_df = rba_df.with_columns(pl.all().forward_fill()).drop_nulls()
+                    rba_df = rba_df.join(rba_trading_dates, on="Date", how="inner")
                     rba_df = rba_df.with_columns(cs.float().round(4))
-                    self.dataframe_print(rba_df, print_label="Currency", print_verb="post up-sample", started=started_time_inner)
+                    _dataframe_print(self.name,rba_df, print_label="Currency", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
                 self.print_log("Unexpected error processing currency dataframe", exception=exception)
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
@@ -107,38 +113,47 @@ class Currency(plugin.Plugin):
         try:
             def _aggregate_function(_data_df):
                 _columns = ['Date']
+                _prior_df = _data_df.select(["Date"] + PAIRS).sort("Date")
                 for _pair in PAIRS:
                     _columns.append(_pair)
-                    for _period in PERIODS:
+                    for _period, _days in PERIODS.items():
                         _column = f'{_pair} {_period}'
                         _columns.append(_column)
-                        _data_df = _data_df.with_columns((pl.col(_pair).pct_change() * 100).alias(_column))
+                        _data_df = _data_df.with_columns(
+                            (pl.col("Date") - pl.duration(days=_days)).alias("__lookup_date")
+                        ).sort("__lookup_date").join_asof(
+                            _prior_df.select(["Date", _pair]).rename({_pair: "__prior"}),
+                            left_on="__lookup_date", right_on="Date", strategy="backward"
+                        ).with_columns(
+                            ((pl.col(_pair) - pl.col("__prior")) / pl.col("__prior") * 100).alias(_column)
+                        ).drop("__lookup_date", "__prior", "Date_right").sort("Date")
                 return _data_df.select(_columns).with_columns(cs.float().round(4)).fill_nan(0).fill_null(0)
 
             if len(rba_df) == 0:
                 rba_df = self.dataframe_new(schema={"Date": pl.Date})
-            elif "Source" in rba_df.columns:
-                rba_df = rba_df.drop("Source")
+            else:
+                if "Source" in rba_df.columns:
+                    rba_df = rba_df.drop("Source")
+                rba_df = rba_df.upsample(time_column='Date', every="1d").with_columns(pl.all().forward_fill()).drop_nulls()
 
             # Checkpoint the data
             rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, _aggregate_function)
 
             # Upload the data
+            started_time = time.time()
             if len(rba_delta_df):
 
                 # Sheet upload
-                rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(
-                    pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1)))
+                rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1)))
                 self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_rates, workbook_name="Rates", sheet_name='Currency')
-                started_time = time.time()
+
+                # Database upload
                 rba_pairs_df = rba_current_df.select(['Date'] + PAIRS)
                 self.database_upload(rba_pairs_df.drop_nulls(), tags={
                     "type": "snapshot",
                     "period": "1d",
                     "unit": "$"
                 }, print_label="Currency_1_Day_Snapshot")
-
-                # Database upload
                 for fx_period in PERIODS:
                     rba_pctchnage_df = rba_current_df.select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
                     rba_pctchnage_df.columns = ['Date'] + PAIRS
@@ -147,7 +162,8 @@ class Currency(plugin.Plugin):
                         "period": f"{PERIODS[fx_period]:0.0f}d",
                         "unit": "%"
                     }, print_label=f"Currency_{fx_period}".replace(" ", "_"))
-                self.print_log("LineProtocol [Currency] serialised", started=started_time)
+
+            self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:
             self.print_log("Unexpected error processing currency data", exception=exception)

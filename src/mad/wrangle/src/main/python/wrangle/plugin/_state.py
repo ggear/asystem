@@ -19,7 +19,7 @@ class StateMixin(ContractMixin):
                 resolved = ["Date"]
             missing = [column for column in key_columns if column not in available_columns]
             if len(missing) > 0:
-                self.print_log(f"State cache key columns unavailable and ignored: [{', '.join(missing)}]", level="debug", )
+                self.print_log(f"State cache key columns unavailable and ignored: [{', '.join(missing)}]", level="debug")
             return resolved
 
         started_time = time.time()
@@ -32,22 +32,45 @@ class StateMixin(ContractMixin):
         file_previous = abspath(f"{self.local_cache}/__{self.name.title()}_Previous.csv")
         if not isdir(self.local_cache):
             os.makedirs(self.local_cache)
-        if not config.disable_downloads and config.force_reprocessing:
+
+
+
+
+        # TODO: Remove?
+        # if not config.disable_downloads and config.force_reprocessing:
+        #     if isfile(file_current):
+        #         os.remove(file_current)
+        if config.force_reprocessing:
             if isfile(file_current):
                 os.remove(file_current)
+
+
+
+
         if len(data_df_update.columns) == 0 or data_df_update.columns[0] != "Date" or data_df_update.dtypes[0] != pl.Date:
             data_update_col_0 = data_df_update.columns[0] if len(data_df_update.columns) > 0 else None
             data_update_dtype_0 = self.dataframe_type_to_str(data_df_update.dtypes[0]) \
                 if len(data_df_update.dtypes) > 0 else None
             raise SchemaError(f"DataFrame requires first column of parameter [data_df_update] to be named [Date] and of type [date], "
                               f"found [{data_update_col_0}] with type found [{data_update_dtype_0}]")
-        if config.disable_downloads:
-            data_df_current = self.csv_read(file_current) \
-                if isfile(file_current) else self.dataframe_new(schema={"Date": pl.Date}, print_label=f"{self.name.title()}_Current")
-            self.print_log("DataFrame [State_Caches] created ignoring updates", started=started_time)
-            state_key_columns = _resolve_key_columns(data_df_current.columns)
-            data_df_current = data_df_current.sort(state_key_columns)
-            return self.dataframe_new(schema=data_df_current.schema), data_df_current, data_df_current
+
+
+
+
+        # TODO: Remove?
+        # if config.disable_downloads:
+        #     data_df_current = self.csv_read(file_current) \
+        #         if isfile(file_current) else self.dataframe_new(schema={"Date": pl.Date}, print_label=f"{self.name.title()}_Current")
+        #     self.print_log("DataFrame [State_Caches] created ignoring updates", started=started_time)
+        #     state_key_columns = _resolve_key_columns(data_df_current.columns)
+        #     data_df_current = data_df_current.sort(state_key_columns)
+        #     return self.dataframe_new(schema=data_df_current.schema), data_df_current, data_df_current
+
+
+
+
+
+
         data_df_update = data_df_update.filter(pl.col("Date").is_not_null())
         data_df_update = aggregate_function_wrapped(data_df_update)
         data_df_current = self.csv_read(file_current) \

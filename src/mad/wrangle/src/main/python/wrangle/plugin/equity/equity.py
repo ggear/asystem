@@ -9,6 +9,7 @@ import polars.selectors as cs
 import pytz
 
 from wrangle import plugin
+from wrangle.plugin.logger import dataframe_print as _dataframe_print
 from wrangle.plugin import PL_PRINT_ROWS
 
 STATUS_FAILURE = "failure"
@@ -165,7 +166,7 @@ class Equity(plugin.Plugin):
             stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "Yahoo")}
             statement_files = self.file_list(self.local_cache, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
-        self.print_log(f"Files [Equity] downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files", started=started_time)
+        self.print_log(f"Files downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files", started=started_time)
 
         # Collect stock file data
         started_time = time.time()
@@ -203,7 +204,7 @@ class Equity(plugin.Plugin):
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
         for stock_ticker in stocks_df:
-            self.dataframe_print(stocks_df[stock_ticker], print_label=stock_ticker, print_verb="collected")
+            _dataframe_print(self.name,stocks_df[stock_ticker], print_label=stock_ticker, print_verb="collected")
         self.print_log(f"DataFrame [Stocks] collected with [{len(stocks_df)}] stocks across [{stocks_files_count}] files", started=started_time)
 
         # Parse fund file data
@@ -363,10 +364,10 @@ class Equity(plugin.Plugin):
         def _equity_print(_equity_df, _dimensions=None, print_label=None, print_verb=None, print_rows=PL_PRINT_ROWS, started=None):
             if _dimensions is None:
                 _dimensions = DIMENSIONS_PRICE_AUX
-            self.dataframe_print(_equity_df, print_label=print_label, print_verb=print_verb, print_suffix="(data to follow)", print_rows=0, started=started)
+            _dataframe_print(self.name,_equity_df, print_label=print_label, print_verb=print_verb, print_suffix="(data to follow)", print_rows=0, started=started)
             if len(_equity_df):
                 for _ticker in _equity_tickers(_equity_df):
-                    self.dataframe_print((_equity_df.select(["Date", *(
+                    _dataframe_print(self.name,(_equity_df.select(["Date", *(
                         f"{_ticker} {dimension}"
                         for dimension in _dimensions
                         if f"{_ticker} {dimension}" in _equity_df.columns
@@ -410,7 +411,7 @@ class Equity(plugin.Plugin):
                         (pl.col("Value") / pl.col("Units")).alias("Price"),
                         (1.0 / pl.col("Rate")).alias("Rate"),
                     ).pivot(values=["Price", "Rate", "Currency"], index="Date", on="Ticker").sort("Date")
-                    self.dataframe_print(statement_df, print_label="Funds", print_verb="pivoted", started=started_time)
+                    _dataframe_print(self.name,statement_df, print_label="Funds", print_verb="pivoted", started=started_time)
                     started_time = time.time()
                     rename_map = {}
                     for statement_column in statement_df.columns:
@@ -421,7 +422,7 @@ class Equity(plugin.Plugin):
                         elif statement_column.startswith("Currency_"):
                             rename_map[statement_column] = f"{statement_column.replace('Currency_', '', 1)} Currency Base"
                     statement_df = statement_df.rename(rename_map)
-                    self.dataframe_print(statement_df, print_label="Funds", print_verb="renamed", started=started_time)
+                    _dataframe_print(self.name,statement_df, print_label="Funds", print_verb="renamed", started=started_time)
                     started_time = time.time()
                     statement_exprs = []
                     for ticker in tickers:
@@ -585,7 +586,7 @@ from(bucket: "data_public")
                 else:
                     self.print_log("Index weights sheet missing required column [Exchange Symbol]; using empty index weights")
                     index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **{index: pl.Float64 for index in indexes}}, print_rows=-1)
-                self.dataframe_print(index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000, started=started_time)
+                _dataframe_print(self.name,index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000, started=started_time)
                 started_time = time.time()
                 weight_exprs = []
                 spot_exprs = []
@@ -750,19 +751,17 @@ from(bucket: "data_public")
             equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, _make_aggregate(indexes))
 
             # Upload the data
+            started_time = time.time()
             if len(equity_delta_df):
 
                 # Sheet upload
-                started_time = time.time()
                 dimensions_sheet = ["Price Close", "Currency Rate Base"]
                 tickers = _equity_tickers(equity_current_df)
                 equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])
                 equity_sheet_df = equity_sheet_df.filter(pl.col("Date") > pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
-                _equity_print(equity_sheet_df, _dimensions=dimensions_sheet, print_label="Sheet", print_verb="filtered", started=started_time)
                 self.sheet_upload(equity_sheet_df, self.remote_repos.sheet_prices, workbook_name="Prices", sheet_name='History')
 
                 # Database upload
-                started_time = time.time()
                 dimensions = []
                 dimensions_metadata = [(
                     [
@@ -785,8 +784,6 @@ from(bucket: "data_public")
                 equity_output_df = equity_output_df.select(["Date", *[
                     column for ticker in tickers for dimension in dimensions if (column := f"{ticker} {dimension}") in equity_output_df.columns
                 ]])
-                _equity_print(equity_output_df, _dimensions=dimensions, print_label="Equity", print_verb="cleaned up", started=started_time)
-                started_time = time.time()
                 for dimension_metadata in dimensions_metadata:
                     for column in dimension_metadata[0]:
                         for ticker in tickers:
@@ -799,7 +796,8 @@ from(bucket: "data_public")
                                         "period": dimension_metadata[2],
                                         "unit": dimension_metadata[1]
                                     }, print_label=f"Equity_{ticker}_{column.replace(' ', '_').replace('-', '_')}")
-                self.print_log("LineProtocol [Equity] serialised", started=started_time)
+
+            self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:
             self.print_log("Unexpected error processing equity data", exception=exception)
