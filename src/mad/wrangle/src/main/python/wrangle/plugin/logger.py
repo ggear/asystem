@@ -66,4 +66,3 @@ def dataframe_print(process, data_df, messages=None, compact=False,
                 messages.extend(str(data_df).split('\n'))
     print_log(process, messages, level=level)
     return data_df
-

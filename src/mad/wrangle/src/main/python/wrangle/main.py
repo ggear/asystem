@@ -3,9 +3,10 @@ import glob
 import importlib
 import sys
 import time
-from os.path import *
+from os.path import basename, dirname, isdir, join, realpath
 
 from wrangle import plugin
+from wrangle.plugin import print_log
 
 
 def configure(argv=None):
@@ -54,9 +55,9 @@ def configure(argv=None):
     )
     parser.add_argument(
         "--repo-scope",
-        choices=["production", "staging", "cache"],
-        default="production",
-        help="scope remote uploads and downloads (default: production)",
+        choices=["release", "preview", "local"],
+        default="release",
+        help="scope uploads and downloads (default: release)",
     )
     parser.add_argument(
         "--filter-plugins",
@@ -77,8 +78,9 @@ def configure(argv=None):
         parser.error("argument -p/--poll-period: MINUTES must be >= 0")
     filter_plugins = None
     if args.filter_plugins is not None:
+        filter_plugins_csv: str = args.filter_plugins
         filter_plugins = []
-        for plugin_name in (name.strip() for name in args.filter_plugins.split(",")):
+        for plugin_name in (name.strip() for name in filter_plugins_csv.split(",")):
             if plugin_name and plugin_name not in filter_plugins:
                 filter_plugins.append(plugin_name)
         available_plugins = set(_get_plugins())
@@ -123,7 +125,7 @@ def run_once(filter_plugins=None):
             if plugin_instance is not None:
                 plugin_instance.print_log("Plugin threw unexpected exception", exception=exception)
             else:
-                plugin.print_log(plugin_name, "Plugin failed to load or initialise", exception=exception)
+                print_log(plugin_name, "Plugin failed to load or initialise", exception=exception)
             plugin_errored = True
         if plugin_errored:
             plugin_errored_count += 1
@@ -150,7 +152,7 @@ def main(argv=None):
                 return success
             time.sleep(args.poll_period * 60)
     except KeyboardInterrupt:
-        plugin.print_log("wrangle", "Interrupted, exiting")
+        print_log("wrangle", "Interrupted, exiting")
         return True
     finally:
         plugin.database_close()

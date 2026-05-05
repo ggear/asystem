@@ -28,11 +28,23 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 # noinspection PyMethodMayBeStatic
 class WrangleTest(unittest.TestCase):
 
-    def test_balances_cache_blank(self):
+    def test_balances_local_blank(self):
         self.run_plugin("balances", {"blank": merge_asserts(ASSERT_NOOP, {
-        })}, disable_downloads=True, disable_uploads=True, repo_scope=plugin.RepoScope.CACHE, log_level="info")
+        })}, verifications={
+            "__Balances_Current.csv": [
+                verify_does_not_exist(),
+            ],
+        }, disable_downloads=True, disable_uploads=True, repo_scope=plugin.RepoScope.LOCAL, log_level="info")
 
-    def test_currency_production_current(self):
+    def test_currency_local_blank(self):
+        self.run_plugin("currency", {"blank": merge_asserts(ASSERT_NOOP, {
+        })}, verifications={
+            "__Currency__Current.csv": [
+                verify_does_not_exist(),
+            ],
+        }, disable_downloads=True, disable_uploads=True, repo_scope=plugin.RepoScope.LOCAL, log_level="info")
+
+    def test_currency_release_current(self):
         self.run_plugin("currency", {"current": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 plugin.CTR_SRC_DATA: {
@@ -47,14 +59,29 @@ class WrangleTest(unittest.TestCase):
                     plugin.CTR_ACT_DELTA_ROWS: 1,
                 },
             },
-        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info", verifications={
-            "__Currency_Current.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_col(exclude=".*Delta.*")],
-            "_Sheet_Rates_Currency.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_row(0)],
-            "_Database_Currency.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_col(exclude=".*type=delta.*")],
-        })
+        })}, verifications={
+            "__Currency_Current.csv": [
+                verify_size(),
+                verify_contiguous_dates(),
+                verify_nones_per_row(),
+                verify_zeroes_per_col(exclude=".*Delta.*")
+            ],
+            "_Sheet_Rates_Currency.csv": [
+                verify_size(),
+                verify_contiguous_dates(),
+                verify_nones_per_row(),
+                verify_max_zeroes_per_row()
+            ],
+            "_Database_Currency.csv": [
+                verify_size(),
+                verify_contiguous_dates(),
+                verify_nones_per_row(),
+                verify_zeroes_per_col(exclude=".*type=delta.*")
+            ],
+        }, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.RELEASE, log_level="info")
 
     @pytest.mark.skip(reason="requires update")
-    def test_equity_production_current(self):
+    def test_equity_release_current(self):
         self.run_plugin("equity", {"current": merge_asserts(ASSERT_RUN, {
             "counter_greater": {
                 plugin.CTR_SRC_DATA: {
@@ -64,10 +91,10 @@ class WrangleTest(unittest.TestCase):
                     plugin.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
-        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info")
+        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.RELEASE, log_level="info")
 
     @pytest.mark.skip(reason="requires update")
-    def test_interest_production_current(self):
+    def test_interest_release_current(self):
         self.run_plugin("interest", {"current": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 plugin.CTR_SRC_DATA: {
@@ -77,10 +104,10 @@ class WrangleTest(unittest.TestCase):
                     plugin.CTR_ACT_DELTA_COLUMNS: 18,
                 },
             },
-        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.PRODUCTION, log_level="info", verifications={
-            "__Interest_Current.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates()],
-            "_Sheet_Rates_Interest.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_row(0)],
-            "_Database_Interest.csv": [verify_non_empty(), verify_max_nones_per_row(), verify_contiguous_dates()],
+        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.RELEASE, log_level="info", verifications={
+            "__Interest_Current.csv": [verify_size(), verify_nones_per_row(), verify_contiguous_dates()],
+            "_Sheet_Rates_Interest.csv": [verify_size(), verify_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_row(0)],
+            "_Database_Interest.csv": [verify_size(), verify_nones_per_row(), verify_contiguous_dates()],
         })
 
     @pytest.mark.skip(reason="very slow")
@@ -946,14 +973,14 @@ class WrangleTest(unittest.TestCase):
             "Value": [float(p[1]) for p in date_value_pairs],
         }).with_columns(pl.col("Date").str.to_date())
 
-    def run_plugin(self, plugin_name, tests_asserts, log_level="info",
+    def run_plugin(self, name, tests_asserts, log_level="info",
                    prepare_only=False, enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                   disable_uploads=True, disable_downloads=False, repo_scope=plugin.RepoScope.CACHE,
+                   disable_uploads=True, disable_downloads=False, repo_scope=plugin.RepoScope.LOCAL,
                    verifications=None):
         if verifications is None:
             verifications = {}
-        if not disable_uploads and repo_scope == plugin.RepoScope.PRODUCTION:
-            raise ValueError("Cannot enable uploads when repo_scope is PRODUCTION")
+        if not disable_uploads and repo_scope == plugin.RepoScope.RELEASE:
+            raise ValueError("Cannot enable uploads when repo_scope is RELEASE")
         plugin.config.log_level = log_level
         plugin.config.repo_scope = repo_scope
         plugin.config.force_reprocessing = force_reprocessing
@@ -964,47 +991,44 @@ class WrangleTest(unittest.TestCase):
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
             os.makedirs(dir_target)
-        module = getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}"), plugin_name.title())()
+        plugin_name = getattr(importlib.import_module(f"wrangle.plugin.{name}"), name.title())()
         print("")
         for test in tests_asserts:
-            self._load_caches(module, join(DIR_ROOT, "src/test/resources/repos", repo_scope, plugin_name, test))
+            self._load_caches(plugin_name, join(DIR_ROOT, "src/test/resources/repos", repo_scope, name, test))
             if not prepare_only:
-                print(f"STARTING (run)     [{plugin_name.title()}]   [{test}]")
-                module.run()
-                print(f"FINISHED (run)     [{plugin_name.title()}]   [{test}]\n")
-                self._assert_counters(module.get_counters(), tests_asserts[test])
-                self._verify_outputs(module, verifications)
+                print(f"STARTING (run)     [{name.title()}]   [{test}]")
+                plugin_name.run()
+                print(f"FINISHED (run)     [{name.title()}]   [{test}]\n")
+                self._assert_counters(plugin_name.get_counters(), tests_asserts[test])
+                self._verify_outputs(plugin_name, verifications)
                 if enable_rerun:
-                    module.reset_counters()
-                    print(f"STARTING (no-op)   [{plugin_name.title()}]   [{test}]")
-                    module.run()
-                    print(f"FINISHED (no-op)   [{plugin_name.title()}]   [{test}]\n\n")
-                    self._assert_counters(module.get_counters(), ASSERT_NOOP)
-                    self._verify_outputs(module, verifications)
-                    module.reset_counters()
-                    print(f"STARTING (reload)   [{plugin_name.title()}]   [{test}]")
+                    plugin_name.reset_counters()
+                    print(f"STARTING (no-op)   [{name.title()}]   [{test}]")
+                    plugin_name.run()
+                    print(f"FINISHED (no-op)   [{name.title()}]   [{test}]\n\n")
+                    self._assert_counters(plugin_name.get_counters(), ASSERT_NOOP)
+                    self._verify_outputs(plugin_name, verifications)
+                    plugin_name.reset_counters()
+                    print(f"STARTING (reload)   [{name.title()}]   [{test}]")
                     plugin.config.force_reprocessing = True
-                    module.run()
+                    plugin_name.run()
                     plugin.config.force_reprocessing = force_reprocessing
-                    print(f"FINISHED (reload)   [{plugin_name.title()}]   [{test}]\n\n")
-                    self._assert_counters(module.get_counters(), ASSERT_RELOAD)
-                    self._verify_outputs(module, verifications)
+                    print(f"FINISHED (reload)   [{name.title()}]   [{test}]\n\n")
+                    self._assert_counters(plugin_name.get_counters(), ASSERT_RELOAD)
+                    self._verify_outputs(plugin_name, verifications)
 
-    def _load_caches(self, module, source):
+    def _load_caches(self, plugin_name, source):
         if not isdir(source):
             raise FileNotFoundError(f"Test data directory [{source}] does not exist")
-        shutil.rmtree(module.local_cache, ignore_errors=True)
-        shutil.copytree(source, module.local_cache, ignore=shutil.ignore_patterns(".git*"))
-        module.print_log(f"Files written from [{source}] to [{module.local_cache}]")
+        shutil.rmtree(plugin_name.local_cache, ignore_errors=True)
+        shutil.copytree(source, plugin_name.local_cache, ignore=shutil.ignore_patterns(".git*"))
+        plugin_name.print_log(f"Files written from [{source}] to [{plugin_name.local_cache}]")
 
-    def _verify_outputs(self, module, verifications):
+    def _verify_outputs(self, plugin_name, verifications):
         for filename, funcs in verifications.items():
-            file_path = join(module.local_cache, filename)
-            if not isfile(file_path):
-                self.fail(f"Verification target [{filename}] not found in [{module.local_cache}]")
-            csv_df = module.csv_read(file_path)
+            file_path = join(plugin_name.local_cache, filename)
             for func in funcs:
-                if not func(csv_df):
+                if not func(file_path):
                     self.fail(f"Verification [{func.__name__}] failed for [{filename}]")
 
     def _assert_counters(self, actual, asserts):
@@ -1045,16 +1069,8 @@ def _leading_zero_rows(csv_df, numeric_cols):
     return count
 
 
-def verify_non_empty(min_rows=1):
-    def _verify(csv_df):
-        if len(csv_df) < min_rows:
-            dataframe_print("Verify", csv_df, f"{label}: expected >={min_rows} rows, got {len(csv_df)}", level="error")
-            return False
-        return True
-
-    label = f"verify_non_empty_{min_rows}_rows"
-    _verify.__name__ = label
-    return _verify
+def _load_csv(file_path):
+    return pl.read_csv(file_path, try_parse_dates=True)
 
 
 def _filter_cols(csv_df, include=None, exclude=None):
@@ -1066,8 +1082,37 @@ def _filter_cols(csv_df, include=None, exclude=None):
     return cols
 
 
-def verify_max_nones_per_row(max_nones=0, include=None, exclude=None):
-    def _verify(csv_df):
+def verify_does_not_exist():
+    def _verify(file_path):
+        if isfile(file_path):
+            dataframe_print("Verify", pl.DataFrame(), f"verify_does_not_exist: [{file_path}] exists", level="error")
+            return False
+        return True
+
+    _verify.__name__ = "verify_does_not_exist"
+    return _verify
+
+
+def verify_size(min_rows=1, max_rows=None):
+    def _verify(file_path):
+        csv_df = _load_csv(file_path)
+        count = len(csv_df)
+        if count < min_rows:
+            dataframe_print("Verify", csv_df, f"{label}: expected >={min_rows} rows, got {count}", level="error")
+            return False
+        if max_rows is not None and count > max_rows:
+            dataframe_print("Verify", csv_df, f"{label}: expected <={max_rows} rows, got {count}", level="error")
+            return False
+        return True
+
+    label = f"verify_size_{min_rows}_{max_rows}_rows"
+    _verify.__name__ = label
+    return _verify
+
+
+def verify_nones_per_row(max_nones=0, include=None, exclude=None):
+    def _verify(file_path):
+        csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         if not cols:
             return True
@@ -1083,7 +1128,8 @@ def verify_max_nones_per_row(max_nones=0, include=None, exclude=None):
 
 
 def verify_max_nones_per_col(max_nones=0, include=None, exclude=None):
-    def _verify(csv_df):
+    def _verify(file_path):
+        csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         failed = [c for c in cols if csv_df[c].null_count() > max_nones]
         if failed:
@@ -1097,7 +1143,8 @@ def verify_max_nones_per_col(max_nones=0, include=None, exclude=None):
 
 
 def verify_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=None, exclude=None):
-    def _verify(csv_df):
+    def _verify(file_path):
+        csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if
                         csv_df[col].dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)]
         if not numeric_cols:
@@ -1115,8 +1162,9 @@ def verify_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=None
     return _verify
 
 
-def verify_max_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
-    def _verify(csv_df):
+def verify_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
+    def _verify(file_path):
+        csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if
                         csv_df[col].dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)]
         failed = [c for c in numeric_cols if (csv_df[c] == 0).sum() > max_zeroes]
@@ -1131,7 +1179,8 @@ def verify_max_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
 
 
 def verify_contiguous_dates(start_date=None, end_date=None, max_gap_days=1):
-    def _verify(csv_df):
+    def _verify(file_path):
+        csv_df = _load_csv(file_path)
         if "Date" not in csv_df.columns:
             dataframe_print("Verify", csv_df, "verify_contiguous_dates: no Date column", level="error")
             return False
@@ -1285,7 +1334,7 @@ for key, value in list(plugin.load_profile(join(DIR_ROOT, ".env")).items()):
 
 def reset_config(log="warning"):
     plugin.config.log_level = log
-    plugin.config.repo_scope = plugin.RepoScope.PRODUCTION
+    plugin.config.repo_scope = plugin.RepoScope.RELEASE
     plugin.config.force_reprocessing = False
     plugin.config.force_downloads = False
     plugin.config.disable_uploads = True
@@ -1299,8 +1348,8 @@ class Test(Plugin):
 
     def __init__(self, name, drive_folder):
         super().__init__(name, plugin.Repos(
-            staging={"drive_folder": "PLACEHOLDER"},
-            production={"drive_folder": drive_folder},
+            preview={"drive_folder": "PLACEHOLDER"},
+            release={"drive_folder": drive_folder},
         ))
 
 

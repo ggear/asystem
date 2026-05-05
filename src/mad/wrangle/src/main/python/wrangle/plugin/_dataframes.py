@@ -4,10 +4,10 @@ from os.path import splitext
 import polars as pl
 import polars.selectors as cs
 
-from . import database as _database
+from . import database
 from ._contract import ContractMixin
 from .config import *
-from .logger import dataframe_print as _dataframe_print
+from .logger import dataframe_print
 
 
 class DataFramesMixin(ContractMixin):
@@ -27,7 +27,8 @@ class DataFramesMixin(ContractMixin):
         if drop_na_rows:
             data_df_pd = data_df_pd.dropna(axis=0, how="all")
         data_df = pl.from_pandas(data_df_pd, schema_overrides=schema if len(schema) > 0 else None).with_columns(cs.float().round(float_round_places))
-        return _dataframe_print(self.name,
+        return dataframe_print(
+            self.name,
             data_df,
             print_label=print_label or splitext(basename(local_path))[0].removeprefix("__").removeprefix("_"),
             print_suffix=f"from [{local_path}]",
@@ -40,7 +41,8 @@ class DataFramesMixin(ContractMixin):
                   print_rows=PL_PRINT_ROWS, started=None):
         started_time = time.time() if started is None else started
         data_df.write_csv(local_path)
-        return _dataframe_print(self.name,
+        return dataframe_print(
+            self.name,
             data_df,
             print_label=print_label or basename(local_path).split(".")[0].removeprefix("__").removeprefix("_"),
             print_prefix=print_prefix,
@@ -57,7 +59,8 @@ class DataFramesMixin(ContractMixin):
             schema = {}
         data_df = pl.read_csv(local_path, schema_overrides=schema if len(schema) > 0 else None,
                               try_parse_dates=True, raise_if_empty=False, infer_schema_length=None)
-        return _dataframe_print(self.name,
+        return dataframe_print(
+            self.name,
             data_df,
             print_label=print_label or splitext(basename(local_path))[0].removeprefix("__").removeprefix("_"),
             print_verb=print_verb,
@@ -80,14 +83,14 @@ class DataFramesMixin(ContractMixin):
             nan_to_null=True,
         )
         if len(data) > 0 or len(schema) > 0:
-            _dataframe_print(self.name,
-                data_df,
-                compact=print_compact,
-                print_label=print_label,
-                print_suffix=print_suffix,
-                print_rows=print_rows,
-                started=started_time
-            )
+            dataframe_print(self.name,
+                             data_df,
+                             compact=print_compact,
+                             print_label=print_label,
+                             print_suffix=print_suffix,
+                             print_rows=print_rows,
+                             started=started_time
+                             )
         return data_df
 
     def dataframe_to_lineprotocol(self, data_df, tags=None,
@@ -116,13 +119,13 @@ class DataFramesMixin(ContractMixin):
             for line in series:
                 yield line
                 emitted += 1
-        _dataframe_print(self.name,
-            data_df,
-            print_label=print_label,
-            print_verb="serialised",
-            print_suffix=f"to [{emitted:,}] lines",
-            started=started_time,
-        )
+        dataframe_print(self.name,
+                         data_df,
+                         print_label=print_label,
+                         print_verb="serialised",
+                         print_suffix=f"to [{emitted:,}] lines",
+                         started=started_time,
+                         )
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, total_rows)
 
@@ -130,7 +133,7 @@ class DataFramesMixin(ContractMixin):
                         print_label=None, chunk_rows=5000):
         if len(data_df.columns) <= 1 or len(data_df) == 0:
             return
-        if config.disable_uploads or _database.database_client is None:
+        if config.disable_uploads or database.database_client is None:
             for _ in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
                 pass
             if config.disable_uploads:
@@ -151,10 +154,10 @@ class DataFramesMixin(ContractMixin):
             for line in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
                 buffer.append(line)
                 if len(buffer) >= chunk_rows:
-                    _database.database_client.write(record=buffer, write_precision="ms")
+                    database.database_client.write(record=buffer, write_precision="ms")
                     buffer = []
             if buffer:
-                _database.database_client.write(record=buffer, write_precision="ms")
+                database.database_client.write(record=buffer, write_precision="ms")
         except Exception as exception:
             self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed", exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
@@ -184,4 +187,3 @@ class DataFramesMixin(ContractMixin):
             ):
                 data_lines = str(data_df).split('\n')
                 return data_lines
-

@@ -8,7 +8,7 @@ import polars as pl
 import polars.selectors as cs
 
 from wrangle import plugin
-from wrangle.plugin.logger import dataframe_print as _dataframe_print
+from wrangle.plugin.logger import dataframe_print
 
 BALANCES_SCHEMA = {
     "Date": pl.Date,
@@ -38,11 +38,11 @@ BALANCE_MAX_AGE_HOURS = 4
 
 class Balances(plugin.Plugin):
     _repos = plugin.Repos(
-        staging={
+        preview={
             "drive_folder": "PLACEHOLDER",
             "sheet_balances": "PLACEHOLDER",
         },
-        production={
+        release={
             "drive_folder": "1VAwVLV6OykFFLqapwFnJUXB6msQOlAsZ",
             "sheet_balances": "1m-NUkd3_uCiM5of6m1M57bvgkHXOL9NtgAXTDDDxgt8",
         },
@@ -105,7 +105,7 @@ class Balances(plugin.Plugin):
                                 "Balance": balance,
                             })
                         today_df = pl.DataFrame(rows, schema=BALANCES_SCHEMA) if rows else self.dataframe_new(schema=BALANCES_SCHEMA)
-                        _dataframe_print(self.name,today_df, print_label="Balances", print_verb="transformed", started=started_time_inner)
+                        dataframe_print(self.name, today_df, print_label="Balances", print_verb="transformed", started=started_time_inner)
 
                         # Detect new balance data
                         balances_changed = (existing_df is None or existing_df.filter(pl.col("Date") == pl.lit(today).cast(pl.Date)).height == 0)
@@ -155,7 +155,7 @@ class Balances(plugin.Plugin):
                         self.print_log(f"Unexpected error reading [{file_name}]", exception=exception)
         if len(balances_df) > 0:
             balances_df = balances_df.sort(["Date", "Time", "Account Name"])
-        _dataframe_print(self.name,balances_df, print_label="Balances", print_verb="collected", started=started_time)
+        dataframe_print(self.name, balances_df, print_label="Balances", print_verb="collected", started=started_time)
 
         # State checkpoint boundary
         if new_data:

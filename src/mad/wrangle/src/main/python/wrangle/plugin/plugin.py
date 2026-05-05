@@ -10,7 +10,7 @@ from ._sources import SourcesMixin
 from ._state import StateMixin
 from .config import *
 from .config import DownloadResult, DownloadStatus
-from .logger import log_enabled, print_log as _print_log
+from .logger import log_enabled, print_log
 
 
 class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
@@ -44,7 +44,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
                 messages.extend(data)
             else:
                 messages[-1] = messages[-1] + str(data)
-        _print_log(self.name, messages, exception, level=level)
+        print_log(self.name, messages, exception, level=level)
 
     def print_counters(self):
         self.print_log("Execution Summary:")

@@ -7,7 +7,7 @@ import polars as pl
 import polars.selectors as cs
 
 from wrangle import plugin
-from wrangle.plugin.logger import dataframe_print as _dataframe_print
+from wrangle.plugin.logger import dataframe_print
 
 LABELS = ['Bank', 'Inflation', 'Net']
 PERIODS = OrderedDict([
@@ -25,11 +25,11 @@ INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
 class Interest(plugin.Plugin):
     _repos = plugin.Repos(
-        staging={
+        preview={
             "drive_folder": "PLACEHOLDER",
             "sheet_rates": "PLACEHOLDER",
         },
-        production={
+        release={
             "drive_folder": "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ",
             "sheet_rates": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
         },
@@ -92,16 +92,16 @@ class Interest(plugin.Plugin):
                     inflation_df = self.dataframe_new(schema={"Date": pl.Date, "Inflation": pl.Float64})
 
             retail_df = retail_df if len(retail_df) == 0 else retail_df.fill_nan(pl.lit(None)).drop_nulls()
-            _dataframe_print(self.name,retail_df, print_label="Retail", print_verb="collected", started=started_time_retail)
+            dataframe_print(self.name, retail_df, print_label="Retail", print_verb="collected", started=started_time_retail)
             inflation_df = inflation_df if len(inflation_df) == 0 else inflation_df.fill_nan(pl.lit(None)).drop_nulls()
-            _dataframe_print(self.name,inflation_df, print_label="Inflation", print_verb="collected", started=started_time_inflation)
+            dataframe_print(self.name, inflation_df, print_label="Inflation", print_verb="collected", started=started_time_inflation)
 
             # Process the interest data
             try:
                 if new_data:
                     started_time_inner = time.time()
                     interest_df = retail_df.join(inflation_df, on="Date", how="full", coalesce=True).sort("Date").set_sorted("Date")
-                    _dataframe_print(self.name,interest_df, print_label="Interest", print_verb="post unique", started=started_time_inner)
+                    dataframe_print(self.name, interest_df, print_label="Interest", print_verb="post unique", started=started_time_inner)
                     started_time_inner = time.time()
                     interest_df = interest_df.upsample(time_column="Date", every="1mo").fill_nan(pl.lit(None)).sort("Date")
                     interest_df = interest_df.with_columns(pl.all().forward_fill()).drop_nulls()
@@ -109,7 +109,7 @@ class Interest(plugin.Plugin):
                     interest_df = interest_df.with_columns(cs.float().round(2))
                     if "Date_right" in interest_df.columns:
                         interest_df = interest_df.drop("Date_right")
-                    _dataframe_print(self.name,interest_df, print_label="Interest", print_verb="post up-sample", started=started_time_inner)
+                    dataframe_print(self.name, interest_df, print_label="Interest", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
                 self.print_log("Unexpected error processing interest dataframe", exception=exception)
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
