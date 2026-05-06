@@ -182,7 +182,7 @@ class SourcesMixin(ContractMixin):
             ignore: bool = True,
     ) -> DownloadResult:
         started_time = time.time()
-        local_path = abspath(local_path)
+        local_path = abspath(local_path).lower()
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
         if config.disable_downloads:
@@ -275,7 +275,7 @@ class SourcesMixin(ContractMixin):
     def database_download(self, query_name, query_string, start=None, end=None,
                           check=True, force=False, ignore=True):
         started_time = time.time()
-        local_path = abspath(f"{self.local_cache}/_Database_{query_name}.csv")
+        local_path = abspath(f"{self.local_cache}/_database_{query_name.lower()}.csv")
         effective_force = force or config.force_downloads
         if config.disable_downloads or database.database_client is None:
             if isfile(local_path):
@@ -320,7 +320,7 @@ class SourcesMixin(ContractMixin):
 
     def bank_download(self, file_cache, data="accounts", check=True, force=False):
         started_time = time.time()
-        file_path = abspath(f"{self.local_cache}/_Redbark_{file_cache}.csv")
+        file_path = abspath(f"{self.local_cache}/_redbark_{file_cache.lower()}.csv")
         effective_force = force or config.force_downloads
         if config.disable_downloads:
             if isfile(file_path):
@@ -409,10 +409,11 @@ class SourcesMixin(ContractMixin):
             return DownloadResult(DownloadStatus.FAILED, None)
 
     def _sheet_cache_cleanup(self, name, current_version):
-        pattern = abspath(f"{self.local_cache}/_Sheet_{name}_v*.csv")
+        name = name.lower()
+        pattern = abspath(f"{self.local_cache}/_sheet_{name}_v*.csv")
         for file_path in glob.glob(pattern):
             filename = basename(file_path)
-            prefix = f"_Sheet_{name}_v"
+            prefix = f"_sheet_{name}_v"
             version_str = filename[len(prefix):-len(".csv")]
             if version_str.isdigit() and int(version_str) <= current_version - 2:
                 os.remove(file_path)
@@ -432,16 +433,16 @@ class SourcesMixin(ContractMixin):
                 drive_version = str(raw_version)
         except Exception as exception:
             self.print_log(f"Failed to get Drive version of sheet [{drive_url}]", exception=exception, level="error")
-        name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
+        name = (workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}").lower()
         if drive_version is not None:
-            file_path = abspath(f"{self.local_cache}/_Sheet_{name}_v{drive_version}.csv")
+            file_path = abspath(f"{self.local_cache}/_sheet_{name}_v{drive_version}.csv")
             drive_version_int = int(drive_version)
             self._sheet_cache_cleanup(name, drive_version_int)
             if read_cache and not write_cache and isfile(file_path):
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         else:
-            prefix = f"_Sheet_{name}_v"
+            prefix = f"_sheet_{name}_v"
             versioned_files = sorted(
                 [(int(basename(p)[len(prefix):-len(".csv")]), p)
                  for p in glob.glob(abspath(f"{self.local_cache}/{prefix}*.csv"))
@@ -452,11 +453,11 @@ class SourcesMixin(ContractMixin):
                 _, file_path = versioned_files[0]
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
-            file_path = abspath(f"{self.local_cache}/_Sheet_{name}.csv")
+            file_path = abspath(f"{self.local_cache}/_sheet_{name}.csv")
             if read_cache and not write_cache and isfile(file_path):
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
-        file_path = abspath(f"{self.local_cache}/_Sheet_{name}.csv") if drive_version is None else abspath(f"{self.local_cache}/_Sheet_{name}_v{drive_version}.csv")
+        file_path = abspath(f"{self.local_cache}/_sheet_{name}.csv") if drive_version is None else abspath(f"{self.local_cache}/_sheet_{name}_v{drive_version}.csv")
         retries = 0
         caught_exception = None
 
@@ -523,7 +524,7 @@ class SourcesMixin(ContractMixin):
     def sheet_upload(self, data_df, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_start_column="A",
                      add_filter=False, print_label=None, print_rows=PL_PRINT_ROWS):
         started_time = time.time()
-        name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
+        name = (workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}").lower()
         try:
             data_df_pd = data_df.to_pandas()
             drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key if drive_key is not None else None
@@ -539,7 +540,7 @@ class SourcesMixin(ContractMixin):
                 except Exception as exception:
                     self.print_log(f"Failed to get Drive version after upload of [{drive_url}]", exception=exception, level="error")
             suffix = f"_v{drive_version}" if drive_version is not None else ""
-            file_path = abspath(f"{self.local_cache}/_Sheet_{name}{suffix}.csv")
+            file_path = abspath(f"{self.local_cache}/_sheet_{name}{suffix}.csv")
             self.csv_write(data_df, file_path)
             if drive_version is not None:
                 drive_version_str: str = drive_version
@@ -609,7 +610,7 @@ class SourcesMixin(ContractMixin):
 
         local_files = {}
         for local_file in glob.glob(f"{local_dir}/*"):
-            local_files[basename(local_file)] = {
+            local_files[basename(local_file).lower()] = {
                 "hash": file_hash(local_file) if check else None,
                 "modified": int(getmtime(local_file)) if check else None
             }
@@ -640,11 +641,12 @@ class SourcesMixin(ContractMixin):
         for dropbox_file in dropbox_files:
             started_time_file = time.time()
             file_actioned = False
-            local_path = abspath(f"{local_dir}/{dropbox_file}")
+            local_path = abspath(f"{local_dir}/{dropbox_file}").lower()
             label = basename(local_path).split(".")[0]
-            if dropbox_file not in local_files or (check and (
-                    dropbox_files[dropbox_file]["modified"] != local_files[dropbox_file]["modified"] or
-                    dropbox_files[dropbox_file]["hash"] != local_files[dropbox_file]["hash"]
+            dropbox_file_lower = dropbox_file.lower()
+            if dropbox_file_lower not in local_files or (check and (
+                    dropbox_files[dropbox_file]["modified"] != local_files[dropbox_file_lower]["modified"] or
+                    dropbox_files[dropbox_file]["hash"] != local_files[dropbox_file_lower]["hash"]
             )):
                 if not exists(dirname(local_path)):
                     os.makedirs(dirname(local_path))
@@ -659,7 +661,7 @@ class SourcesMixin(ContractMixin):
                         f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{dropbox_files[dropbox_file]['modified']}]",
                         exception=exception,
                     )
-                local_files[dropbox_file] = {
+                local_files[dropbox_file_lower] = {
                     "hash": dropbox_files[dropbox_file]["hash"],
                     "modified": dropbox_files[dropbox_file]["modified"]
                 }
@@ -691,7 +693,7 @@ class SourcesMixin(ContractMixin):
         actioned_files = {}
         local_files = {}
         for local_file in glob.glob(f"{local_dir}/*"):
-            local_files[basename(local_file)] = {
+            local_files[basename(local_file).lower()] = {
                 "hash": file_hash(local_file) if check else None,
                 "modified": int(getmtime(local_file)) if check else None
             }
@@ -726,9 +728,10 @@ class SourcesMixin(ContractMixin):
         for drive_file in drive_files:
             started_time_file = time.time()
             file_actioned = False
-            local_path = abspath(f"{local_dir}/{drive_file}")
+            local_path = abspath(f"{local_dir}/{drive_file}").lower()
             label = basename(local_path).split(".")[0]
-            needs_download = drive_file not in local_files or (check and not force_download and drive_files[drive_file]["modified"] > local_files[drive_file]["modified"])
+            drive_file_lower = drive_file.lower()
+            needs_download = drive_file_lower not in local_files or (check and not force_download and drive_files[drive_file]["modified"] > local_files[drive_file_lower]["modified"])
             if download and not config.disable_downloads and (force_download or needs_download):
                 request = service.files().get_media(fileId=drive_files[drive_file]["id"])
                 buffer_file = io.BytesIO()
@@ -747,7 +750,7 @@ class SourcesMixin(ContractMixin):
                         f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]",
                         exception=exception,
                     )
-                local_files[drive_file] = {
+                local_files[drive_file_lower] = {
                     "hash": drive_files[drive_file]["hash"],
                     "modified": drive_files[drive_file]["modified"]
                 }
@@ -763,16 +766,17 @@ class SourcesMixin(ContractMixin):
                 if not local_file.startswith("_"):
                     started_time_file = time.time()
                     file_actioned = False
-                    local_path = abspath(f"{local_dir}/{local_file}")
+                    local_path = abspath(f"{local_dir}/{local_file}").lower()
                     label = basename(local_path).split(".")[0]
-                    needs_upload = local_file not in drive_files or (check and not force_upload and (
-                            drive_files[local_file]["modified"] != local_files[local_file]["modified"] or
-                            drive_files[local_file]["hash"] != local_files[local_file]["hash"]
+                    drive_match = next((k for k in drive_files if k.lower() == local_file), None)
+                    needs_upload = drive_match is None or (check and not force_upload and (
+                            drive_files[drive_match]["modified"] != local_files[local_file]["modified"] or
+                            drive_files[drive_match]["hash"] != local_files[local_file]["hash"]
                     ))
                     if (force_upload or needs_upload) and not config.disable_uploads:
                         try:
                             data = MediaFileUpload(local_path)
-                            drive_id = drive_files[local_file]["id"] if local_file in drive_files else None
+                            drive_id = drive_files[drive_match]["id"] if drive_match is not None else None
                             metadata: dict[str, object] = {'modifiedTime': datetime.fromtimestamp(
                                 local_files[local_file]["modified"], timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
                             if drive_id is None:
@@ -796,7 +800,7 @@ class SourcesMixin(ContractMixin):
                     else:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_PERSISTED)
                         self.print_log(
-                            f"File [{label}] verified at [https://drive.google.com/file/d/{drive_files[local_file]['id']}]",
+                            f"File [{label}] verified at [https://drive.google.com/file/d/{drive_files[drive_match]['id']}]",
                             started=started_time_file,
                         )
                     actioned_files[local_path] = True, file_actioned

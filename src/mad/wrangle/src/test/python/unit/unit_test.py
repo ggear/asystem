@@ -36,12 +36,7 @@ class WrangleTest(unittest.TestCase):
     def test_currency_local_blank(self):
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank", log_level="info", disable_uploads=True, disable_downloads=True,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
-                        }),
-                        file_asserts={
-                            "__Currency__Current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
+                        }))
 
     def test_currency_local_replete(self):
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "replete", log_level="info", disable_uploads=True, disable_downloads=True,
@@ -60,19 +55,19 @@ class WrangleTest(unittest.TestCase):
                             assert_custom_rows_delta(equals=14)
                         ],
                         file_asserts={
-                            "__Currency_Current.csv": [
+                            "__currency_current.csv": [
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*Delta.*")
                             ],
-                            "_Sheet_Rates_Currency.csv": [
+                            "_sheet_rates_currency.csv": [
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
                                 assert_file_max_zeroes_per_row()
                             ],
-                            "_Database_Currency.csv": [
+                            "_database_currency.csv": [
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
@@ -101,19 +96,19 @@ class WrangleTest(unittest.TestCase):
                             assert_custom_rows_delta(greater_than=0)
                         ],
                         file_asserts={
-                            "__Currency_Current.csv": [
+                            "__currency_current.csv": [
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*Delta.*")
                             ],
-                            "_Sheet_Rates_Currency.csv": [
+                            "_sheet_rates_currency.csv": [
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
                                 assert_file_max_zeroes_per_row()
                             ],
-                            "_Database_Currency.csv": [
+                            "_database_currency.csv": [
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
@@ -149,9 +144,9 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         file_asserts={
-                            "__Interest_Current.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates()],
-                            "_Sheet_Rates_Interest.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates(), assert_file_max_zeroes_per_row(0)],
-                            "_Database_Interest.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates()],
+                            "__interest_current.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates()],
+                            "_sheet_rates_interest.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates(), assert_file_max_zeroes_per_row(0)],
+                            "_database_interest.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates()],
                         })
 
     @pytest.mark.skip(reason="very slow")
@@ -295,7 +290,7 @@ class WrangleTest(unittest.TestCase):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
         reset_config()
         invalid_cache = "Invalid"
-        invalid_path = abspath(f"{test.local_cache}/_Database_{invalid_cache}.csv")
+        invalid_path = abspath(f"{test.local_cache}/_database_{invalid_cache.lower()}.csv")
         for result in [
             test.database_download(invalid_cache, "SELECT 1", force=True),
             test.database_download(invalid_cache, "SELECT 1", force=False),
@@ -304,7 +299,7 @@ class WrangleTest(unittest.TestCase):
             self.assertEqual(DownloadResult(DownloadStatus.FAILED, None), result)
         self.assertFalse(isfile(invalid_path))
         cache_cache = "Cache"
-        cache_path = abspath(f"{test.local_cache}/_Database_{cache_cache}.csv")
+        cache_path = abspath(f"{test.local_cache}/_database_{cache_cache.lower()}.csv")
         with open(cache_path, "w") as fh:
             fh.write("Date,Rate\n2020-01-01,1.0\n")
         self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
@@ -748,20 +743,20 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(self._price_df([
             ("2020-01-01", 100.0), ("2020-02-01", 200.0),
         ]), self._price_change_agg())
-        self.assertTrue(isfile(join(t.local_cache, "__Test_Current.csv")))
-        self.assertTrue(isfile(join(t.local_cache, "__Test_Update.csv")))
-        self.assertTrue(isfile(join(t.local_cache, "__Test_Delta.csv")))
-        self.assertFalse(isfile(join(t.local_cache, "__Test_Previous.csv")))
+        self.assertTrue(isfile(join(t.local_cache, "__test_current.csv")))
+        self.assertTrue(isfile(join(t.local_cache, "__test_update.csv")))
+        self.assertTrue(isfile(join(t.local_cache, "__test_delta.csv")))
+        self.assertFalse(isfile(join(t.local_cache, "__test_previous.csv")))
         t.reset_counters()
         t.state_cache(self._price_df([
             ("2020-01-01", 100.0), ("2020-02-01", 200.0),
             ("2020-03-01", 300.0), ("2020-04-01", 400.0),
         ]), self._price_change_agg())
-        self.assertTrue(isfile(join(t.local_cache, "__Test_Previous.csv")))
-        self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__Test_Current.csv"))))
-        self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__Test_Previous.csv"))))
-        self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__Test_Update.csv"))))
-        self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__Test_Delta.csv"))))
+        self.assertTrue(isfile(join(t.local_cache, "__test_previous.csv")))
+        self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__test_current.csv"))))
+        self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__test_previous.csv"))))
+        self.assertEqual(4, len(t.csv_read(join(t.local_cache, "__test_update.csv"))))
+        self.assertEqual(2, len(t.csv_read(join(t.local_cache, "__test_delta.csv"))))
 
     def test_state_cache_row_and_column_counters(self):
         t = self._setup_state_test("agg-7")

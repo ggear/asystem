@@ -46,7 +46,7 @@ class Interest(plugin.Plugin):
             started_time_retail = time.time()
             retail_should_read = False
             retail_df = self.dataframe_new(schema={"Date": pl.Date, "Bank": pl.Float64})
-            retail_file = join(self.local_cache, "Retail.xlsx")
+            retail_file = join(self.local_cache, "retail.xlsx")
             file_status = self.http_download(RETAIL_URL, retail_file)
             if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                 retail_should_read = True
@@ -63,7 +63,7 @@ class Interest(plugin.Plugin):
             started_time_inflation = time.time()
             inflation_should_read = False
             inflation_df = self.dataframe_new(schema={"Date": pl.Date, "Inflation": pl.Float64})
-            inflation_file = join(self.local_cache, "Inflation.xlsx")
+            inflation_file = join(self.local_cache, "inflation.xlsx")
             file_status = self.http_download(INFLATION_URL, inflation_file)
             if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                 inflation_should_read = True

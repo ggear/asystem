@@ -17,6 +17,7 @@ class DataFramesMixin(ContractMixin):
                    print_label=None, print_rows=PL_PRINT_ROWS):
         import pandas as pd
         started_time = time.time()
+        local_path = str(local_path).lower()
         if schema is None:
             schema = {}
         if na_values is None:
@@ -40,6 +41,7 @@ class DataFramesMixin(ContractMixin):
                   print_prefix="File", print_label=None, print_verb="written",
                   print_rows=PL_PRINT_ROWS, started=None):
         started_time = time.time() if started is None else started
+        local_path = str(local_path).lower()
         data_df.write_csv(local_path)
         return dataframe_print(
             self.name,
@@ -55,6 +57,7 @@ class DataFramesMixin(ContractMixin):
     def csv_read(self, local_path, schema=None,
                  print_label=None, print_verb="loaded", print_rows=PL_PRINT_ROWS):
         started_time = time.time()
+        local_path = str(local_path).lower()
         if schema is None:
             schema = {}
         data_df = pl.read_csv(local_path, schema_overrides=schema if len(schema) > 0 else None,
@@ -139,7 +142,7 @@ class DataFramesMixin(ContractMixin):
             if config.disable_uploads:
                 tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
                 tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
-                csv_path = abspath(f"{self.local_cache}/_Database_{self.name}.csv")
+                csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
                 date_col = data_df.columns[0]
                 fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
                 csv_df = data_df \

@@ -58,7 +58,7 @@ class Currency(plugin.Plugin):
             started_time = time.time()
             rba_files_count = 0
             for years in RBA_YEARS:
-                years_file = join(self.local_cache, f"RBA_FX_{years}.xls")
+                years_file = join(self.local_cache, f"rba_fx_{years}.xls")
                 file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check='current' in years)
                 if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                     rba_files_count += 1

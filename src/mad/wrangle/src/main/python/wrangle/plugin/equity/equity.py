@@ -129,7 +129,7 @@ class Equity(plugin.Plugin):
                     if year == today.year:
                         for month in range(1, today.month + 1):
                             if year != stock_start.year or month >= stock_start.month:
-                                file_name = f"{self.local_cache}/Yahoo_{ticker}_{year}-{month:02}.csv"
+                                file_name = f"{self.local_cache}/yahoo_{ticker.lower()}_{year}-{month:02}.csv"
                                 stock_files[file_name] = self.stock_download(
                                     file_name,
                                     f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
@@ -138,7 +138,7 @@ class Equity(plugin.Plugin):
                                     STOCK[stock]["end of day"], check=year == today.year and month == today.month)
                     else:
                         start_month = stock_start.month if year == stock_start.year else 1
-                        file_name = f"{self.local_cache}/Yahoo_{ticker}_{year}.csv"
+                        file_name = f"{self.local_cache}/yahoo_{ticker.lower()}_{year}.csv"
                         stock_files[file_name] = self.stock_download(
                             file_name,
                             f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
@@ -154,7 +154,7 @@ class Equity(plugin.Plugin):
             for file_name in files:
                 if basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
-                elif basename(file_name).startswith("Yahoo"):
+                elif basename(file_name).startswith("yahoo"):
                     if files[file_name][0] and (plugin.config.force_reprocessing or files[file_name][1]):
                         stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, file_name)
             new_data = plugin.config.force_reprocessing or \
@@ -163,7 +163,7 @@ class Equity(plugin.Plugin):
 
         # If clean, flag all files for processing
         if plugin.config.force_reprocessing:
-            stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "Yahoo")}
+            stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "yahoo")}
             statement_files = self.file_list(self.local_cache, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
         self.print_log(f"Files downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files", started=started_time)

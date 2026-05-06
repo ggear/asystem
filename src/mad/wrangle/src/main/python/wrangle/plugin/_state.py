@@ -26,10 +26,10 @@ class StateMixin(ContractMixin):
         key_columns = key_columns if key_columns is not None else ["Date"]
         aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_function is None \
             else (lambda _data_df: aggregate_function(_data_df) if len(_data_df) > 0 else _data_df)
-        file_delta = abspath(f"{self.local_cache}/__{self.name.title()}_Delta.csv")
-        file_update = abspath(f"{self.local_cache}/__{self.name.title()}_Update.csv")
-        file_current = abspath(f"{self.local_cache}/__{self.name.title()}_Current.csv")
-        file_previous = abspath(f"{self.local_cache}/__{self.name.title()}_Previous.csv")
+        file_delta = abspath(f"{self.local_cache}/__{self.name.lower()}_delta.csv")
+        file_update = abspath(f"{self.local_cache}/__{self.name.lower()}_update.csv")
+        file_current = abspath(f"{self.local_cache}/__{self.name.lower()}_current.csv")
+        file_previous = abspath(f"{self.local_cache}/__{self.name.lower()}_previous.csv")
         if not isdir(self.local_cache):
             os.makedirs(self.local_cache)
 
