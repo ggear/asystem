@@ -30,19 +30,50 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_balances_local_blank_1(self):
-        self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_downloads=True, disable_uploads=True,
+        self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
-                        }))
+                        }),
+                        file_asserts={
+                            "__balances_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
 
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_blank_1(self):
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_downloads=True, disable_uploads=True,
+        self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
-                        }))
+                        }),
+                        file_asserts={
+                            "__currency_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
 
-    # Lots of current data, a little new data, no remote source data downloads, no remote data repo downloads or uploads
-    def test_currency_local_replete_1(self):
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "replete_1", log_level="info", disable_downloads=True, disable_uploads=True,
+    # No current data, a little new data, no remote source data downloads, no remote data repo downloads or uploads
+    def test_currency_local_corrupt_1(self):
+        self.run_plugin("currency", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: 1,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__currency_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # Lots of current data, a little new data, no remote source data downloads, downloads and uploads from and to preview scope data repo
+    @pytest.mark.skip(reason="requires update")
+    def test_currency_preview_replete_1(self):
+        self.run_plugin("currency", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
+        disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=False,enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -62,29 +93,30 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*Delta.*")
+                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_state_equal(),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
-                                assert_file_contiguous_dates(),
+                                assert_file_contiguous_dates(descending=True),
                                 assert_file_nones_per_row(),
-                                assert_file_max_zeroes_per_row()
+                                assert_file_max_zeroes_per_row(),
                             ],
                             "_database_currency.csv": [
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*type=delta.*")
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
-                        })
-
-    # Lots of current data, a little new data, no remote source data downloads, downloads and uploads from and to preview scope data repo
-    def test_currency_preview_replete_1(self):
-        None
+                        },
+                        sheet_asserts=[],
+                        database_asserts=[],
+                        )
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release scope data repo, no remote data repo uploads
     def test_currency_release_replete_1(self):
-            self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
+        self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
+                        disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -108,25 +140,27 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*Delta.*")
+                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_state_equal(),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
-                                assert_file_contiguous_dates(),
+                                assert_file_contiguous_dates(descending=True),
                                 assert_file_nones_per_row(),
-                                assert_file_max_zeroes_per_row()
+                                assert_file_max_zeroes_per_row(),
                             ],
                             "_database_currency.csv": [
                                 assert_file_size(),
                                 assert_file_contiguous_dates(),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*type=delta.*")
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
                         })
 
     @pytest.mark.skip(reason="requires update")
     def test_equity_release_replete_1(self):
-        self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
+        self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
+                        disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_greater": {
                                 plugin.CTR_SRC_DATA: {
@@ -140,7 +174,8 @@ class WrangleTest(unittest.TestCase):
 
     @pytest.mark.skip(reason="requires update")
     def test_interest_release_replete_1(self):
-        self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
+        self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
+                        disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -1097,20 +1132,21 @@ class WrangleTest(unittest.TestCase):
     def run_plugin(self, plugin_name, repo_scope=plugin.RepoScope.LOCAL, test_name="replete_1",
                    log_level="info", prepare_only=False, enable_rerun=True,
                    force_reprocessing=False, force_downloads=False,
-                   disable_downloads=False, disable_uploads=True,
+                   disable_downloads=False, disable_repo_downloads=True, disable_repo_uploads=True,
                    counter_asserts=None, custom_asserts=None, file_asserts=None):
         if file_asserts is None:
             file_asserts = {}
         if custom_asserts is None:
             custom_asserts = []
-        if not disable_uploads and repo_scope == plugin.RepoScope.RELEASE:
+        if not disable_repo_uploads and repo_scope == plugin.RepoScope.RELEASE:
             raise ValueError("Cannot enable uploads when repo_scope is RELEASE")
         plugin.config.log_level = log_level
         plugin.config.repo_scope = repo_scope
         plugin.config.force_reprocessing = force_reprocessing
         plugin.config.force_downloads = force_downloads
-        plugin.config.disable_uploads = disable_uploads
         plugin.config.disable_downloads = disable_downloads
+        plugin.config.disable_repo_downloads = disable_repo_downloads
+        plugin.config.disable_repo_uploads = disable_repo_uploads
         plugin.database_close()
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
@@ -1122,6 +1158,7 @@ class WrangleTest(unittest.TestCase):
             print(f"STARTING (run)     [{plugin_name.title()}]   [{test_name}]")
             plugin_module.run()
             print(f"FINISHED (run)     [{plugin_name.title()}]   [{test_name}]\n")
+            self._save_pass_snapshot(plugin_module, 1)
             run_counters = plugin_module.get_counters()
             self._assert_counters(run_counters, counter_asserts)
             if not enable_rerun:
@@ -1132,6 +1169,7 @@ class WrangleTest(unittest.TestCase):
                 print(f"STARTING (no-op)   [{plugin_name.title()}]   [{test_name}]")
                 plugin_module.run()
                 print(f"FINISHED (no-op)   [{plugin_name.title()}]   [{test_name}]\n\n")
+                self._save_pass_snapshot(plugin_module, 2)
                 noop_counters = plugin_module.get_counters()
                 self._assert_counters(noop_counters, ASSERT_NOOP)
                 second_counters = copy.deepcopy(noop_counters)
@@ -1141,6 +1179,7 @@ class WrangleTest(unittest.TestCase):
                 plugin_module.run()
                 plugin.config.force_reprocessing = force_reprocessing
                 print(f"FINISHED (reload)   [{plugin_name.title()}]   [{test_name}]\n\n")
+                self._save_pass_snapshot(plugin_module, 3)
                 reload_counters = plugin_module.get_counters()
                 self._assert_counters(reload_counters, ASSERT_RELOAD)
                 self._assert_outputs(plugin_module, file_asserts)
@@ -1148,6 +1187,13 @@ class WrangleTest(unittest.TestCase):
                     result = custom_assert(first_counters, second_counters, reload_counters)
                     if result is not None:
                         self.fail(f"Custom assert [{custom_assert.__name__}] failed. {result}")
+
+    def _save_pass_snapshot(self, plugin_module, pass_number):
+        for filename in os.listdir(plugin_module.local_cache):
+            if re.match(r"__.*_current\.csv$", filename):
+                source_path = join(plugin_module.local_cache, filename)
+                dest_path = join(plugin_module.local_cache, f"{filename[:-4]}_pass_{pass_number}.csv")
+                shutil.copy(str(source_path), str(dest_path))
 
     def _load_caches(self, plugin_module, source):
         if not isdir(source):
@@ -1159,8 +1205,12 @@ class WrangleTest(unittest.TestCase):
     def _assert_outputs(self, plugin_module, verifications):
         for filename, funcs in verifications.items():
             file_path = join(plugin_module.local_cache, filename)
+            stem = filename[:-4] if filename.endswith(".csv") else filename
+            pass_1_path = join(plugin_module.local_cache, f"{stem}_pass_1.csv")
+            pass_2_path = join(plugin_module.local_cache, f"{stem}_pass_2.csv")
+            pass_3_path = join(plugin_module.local_cache, f"{stem}_pass_3.csv")
             for func in funcs:
-                result = func(file_path)
+                result = func(file_path, pass_1_path, pass_2_path, pass_3_path)
                 if result is not None:
                     self.fail(f"Assertion [{func.__name__}] failed for [{filename}]. {result}")
 
@@ -1218,8 +1268,22 @@ def _filter_cols(csv_df, include=None, exclude=None):
     return cols
 
 
+def assert_file_does_exist():
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+        if not isfile(file_path):
+            msg = f"assert_file_does_exist: [{file_path}] does not exist"
+            dataframe_print("Assert", pl.DataFrame(), msg, level="error")
+            return msg
+        return None
+
+    _assert.__name__ = "assert_file_does_exist"
+    return _assert
+
+
 def assert_file_does_not_exist():
-    def _assert(file_path):
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
         if isfile(file_path):
             msg = f"assert_file_does_not_exist: [{file_path}] exists"
             dataframe_print("Assert", pl.DataFrame(), msg, level="error")
@@ -1231,7 +1295,8 @@ def assert_file_does_not_exist():
 
 
 def assert_file_size(min_rows=1, max_rows=None):
-    def _assert(file_path):
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
         csv_df = _load_csv(file_path)
         count = len(csv_df)
         if count < min_rows:
@@ -1250,7 +1315,8 @@ def assert_file_size(min_rows=1, max_rows=None):
 
 
 def assert_file_nones_per_row(max_nones=0, include=None, exclude=None):
-    def _assert(file_path):
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         if not cols:
@@ -1268,7 +1334,8 @@ def assert_file_nones_per_row(max_nones=0, include=None, exclude=None):
 
 
 def assert_file_max_nones_per_col(max_nones=0, include=None, exclude=None):
-    def _assert(file_path):
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         failed = [c for c in cols if csv_df[c].null_count() > max_nones]
@@ -1284,10 +1351,10 @@ def assert_file_max_nones_per_col(max_nones=0, include=None, exclude=None):
 
 
 def assert_file_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=None, exclude=None):
-    def _assert(file_path):
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
         csv_df = _load_csv(file_path)
-        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if
-                        csv_df[col].dtype in _NUMERIC_DTYPES]
+        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
         if not numeric_cols:
             return None
         data_df = csv_df.slice(_leading_zero_rows(csv_df, numeric_cols)) if after_first_rows else csv_df
@@ -1305,10 +1372,10 @@ def assert_file_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include
 
 
 def assert_file_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
-    def _assert(file_path):
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
         csv_df = _load_csv(file_path)
-        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if
-                        csv_df[col].dtype in _NUMERIC_DTYPES]
+        numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
         failed = [c for c in numeric_cols if (csv_df[c] == 0).sum() > max_zeroes]
         if failed:
             msg = f"{label}: columns with >{max_zeroes} zeros: {failed}"
@@ -1321,16 +1388,28 @@ def assert_file_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
     return _assert
 
 
-def assert_file_contiguous_dates(start_date=None, end_date=None, max_gap_days=1):
-    def _assert(file_path):
+def assert_file_contiguous_dates(start_date=None, end_date=None, max_gap_days=1, descending=None):
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
         csv_df = _load_csv(file_path)
         if "Date" not in csv_df.columns:
             msg = "assert_file_contiguous_dates: no Date column"
             dataframe_print("Assert", csv_df, msg, level="error")
             return msg
-        dates = csv_df.sort("Date")["Date"].drop_nulls().to_list()
-        if len(dates) < 2:
+        raw_dates = csv_df["Date"].drop_nulls().to_list()
+        if len(raw_dates) < 2:
             return None
+        if descending is False:
+            if raw_dates != sorted(raw_dates):
+                msg = f"assert_file_contiguous_dates: dates not in ascending order, got {raw_dates[0]} .. {raw_dates[-1]}"
+                dataframe_print("Assert", csv_df.head(3), msg, level="error")
+                return msg
+        elif descending is True:
+            if raw_dates != sorted(raw_dates, reverse=True):
+                msg = f"assert_file_contiguous_dates: dates not in descending order, got {raw_dates[0]} .. {raw_dates[-1]}"
+                dataframe_print("Assert", csv_df.head(3), msg, level="error")
+                return msg
+        dates = sorted(raw_dates)
         if start_date is not None and dates[0] != start_date:
             msg = f"assert_file_contiguous_dates: expected start {start_date}, got {dates[0]}"
             dataframe_print("Assert", csv_df.head(1), msg, level="error")
@@ -1362,7 +1441,30 @@ def assert_file_contiguous_dates(start_date=None, end_date=None, max_gap_days=1)
     return _assert
 
 
+def assert_file_state_equal():
+    # noinspection PyUnusedLocal
+    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+        if pass_1_path is None or pass_3_path is None:
+            return None
+        if not isfile(pass_1_path):
+            return f"assert_file_state_equal: pass_1 file does not exist [{pass_1_path}]"
+        if not isfile(pass_3_path):
+            return f"assert_file_state_equal: pass_3 file does not exist [{pass_3_path}]"
+        df1 = _load_csv(pass_1_path)
+        df3 = _load_csv(pass_3_path)
+        if not df1.equals(df3):
+            msg = "assert_file_state_equal: pass_1 and pass_3 differ"
+            dataframe_print("Assert", df1, msg, level="error")
+            dataframe_print("Assert", df3, msg, level="error")
+            return msg
+        return None
+
+    _assert.__name__ = "assert_file_state_equal"
+    return _assert
+
+
 def assert_custom_rows_delta(equals=None, greater_than=None, less_than=None):
+    # noinspection PyUnusedLocal
     def _assert(first, second, third):
         current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
         previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
@@ -1505,7 +1607,7 @@ def reset_config(log="warning"):
     plugin.config.repo_scope = plugin.RepoScope.RELEASE
     plugin.config.force_reprocessing = False
     plugin.config.force_downloads = False
-    plugin.config.disable_uploads = True
+    plugin.config.disable_repo_uploads = True
     plugin.config.disable_downloads = False
     plugin.database_close()
 

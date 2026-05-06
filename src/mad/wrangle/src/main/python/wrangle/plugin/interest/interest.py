@@ -27,11 +27,13 @@ class Interest(plugin.Plugin):
     _repos = plugin.Repos(
         preview={
             "drive_folder": "PLACEHOLDER",
-            "sheet_rates": "PLACEHOLDER",
+            "sheet_key": "PLACEHOLDER",
+            "database_table": "interest_preview",
         },
         release={
             "drive_folder": "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ",
-            "sheet_rates": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
+            "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
+            "database_table": "interest",
         },
     )
 
@@ -143,7 +145,7 @@ class Interest(plugin.Plugin):
 
                 # Sheet upload
                 interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_rates, workbook_name="Rates", sheet_name='Interest')
+                self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Interest')
 
                 # Database upload
                 interest_monthly_df = interest_current_df.select(["Date"] + LABELS)

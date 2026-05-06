@@ -83,7 +83,8 @@ class Config:
     repo_scope: RepoScope = RepoScope.RELEASE
     force_reprocessing: bool = False
     force_downloads: bool = False
-    disable_uploads: bool = False
+    disable_repo_uploads: bool = False
+    disable_repo_downloads: bool = False
     disable_downloads: bool = False
 
 

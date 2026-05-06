@@ -40,11 +40,13 @@ class Currency(plugin.Plugin):
     _repos = plugin.Repos(
         preview={
             "drive_folder": "PLACEHOLDER",
-            "sheet_rates": "PLACEHOLDER",
+            "sheet_key": "PLACEHOLDER",
+            "database_table": "currency_preview",
         },
         release={
             "drive_folder": "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE",
-            "sheet_rates": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
+            "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
+            "database_table": "currency",
         },
     )
 
@@ -106,10 +108,6 @@ class Currency(plugin.Plugin):
                     dataframe_print(self.name, rba_df, print_label="Currency", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
                 self.print_log("Unexpected error processing currency dataframe", exception=exception)
-                self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
-                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) +
-                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
-                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
 
         # State checkpoint boundary
         try:
@@ -129,6 +127,7 @@ class Currency(plugin.Plugin):
                         ).with_columns(
                             ((pl.col(_pair) - pl.col("__prior")) / pl.col("__prior") * 100).alias(_column)
                         ).drop("__lookup_date", "__prior", "Date_right").sort("Date")
+
                 return _data_df.select(_columns).with_columns(cs.float().round(4)).fill_nan(0).fill_null(0)
 
             if len(rba_df) == 0:
@@ -146,8 +145,8 @@ class Currency(plugin.Plugin):
             if len(rba_delta_df):
 
                 # Sheet upload
-                rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1)))
-                self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_rates, workbook_name="Rates", sheet_name='Currency')
+                rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1))).sort("Date", descending=True)
+                self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Currency')
 
                 # Database upload
                 rba_pairs_df = rba_current_df.select(['Date'] + PAIRS)

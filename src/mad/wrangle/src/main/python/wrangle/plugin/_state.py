@@ -58,6 +58,10 @@ class StateMixin(ContractMixin):
         #     return self.dataframe_new(schema=data_df_current.schema), data_df_current, data_df_current
 
         data_df_update = data_df_update.filter(pl.col("Date").is_not_null())
+        if len(data_df_update) == 0 and not isfile(file_current):
+            data_df_update = aggregate_function_wrapped(data_df_update)
+            self.print_log("DataFrame [State_Caches] skipped (no update and no current)", started=started_time)
+            return data_df_update, data_df_update, data_df_update
         data_df_update = aggregate_function_wrapped(data_df_update)
         data_df_current = self.csv_read(file_current) \
             if isfile(file_current) else self.dataframe_new(schema=data_df_update.schema, print_label=f"{self.name.title()}_Current")

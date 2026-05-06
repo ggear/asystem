@@ -277,7 +277,7 @@ class SourcesMixin(ContractMixin):
         started_time = time.time()
         local_path = abspath(f"{self.local_cache}/_database_{query_name.lower()}.csv")
         effective_force = force or config.force_downloads
-        if config.disable_downloads or database.database_client is None:
+        if config.disable_repo_downloads or database.database_client is None:
             if isfile(local_path):
                 self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -317,6 +317,39 @@ class SourcesMixin(ContractMixin):
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
+
+    def database_upload(self, data_df, tags=None,
+                        print_label=None, chunk_rows=5000):
+        if len(data_df.columns) <= 1 or len(data_df) == 0:
+            return
+        if config.disable_repo_uploads or database.database_client is None:
+            for _ in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
+                pass
+            if config.disable_repo_uploads:
+                tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
+                tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
+                csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
+                date_col = data_df.columns[0]
+                fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
+                csv_df = data_df \
+                    .rename({col: f"{col}{tag_suffix}" for col in data_df.columns[1:]}) \
+                    .with_columns(pl.col(date_col).cast(pl.Datetime).dt.strftime(fmt).alias(date_col))
+                if csv_path in self._db_cache_dfs:
+                    csv_df = self._db_cache_dfs[csv_path].join(csv_df, on=date_col, how="full", coalesce=True).sort(date_col)
+                self._db_cache_dfs[csv_path] = csv_df
+            return
+        try:
+            buffer = []
+            for line in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
+                buffer.append(line)
+                if len(buffer) >= chunk_rows:
+                    database.database_client.write(record=buffer, write_precision="ms")
+                    buffer = []
+            if buffer:
+                database.database_client.write(record=buffer, write_precision="ms")
+        except Exception as exception:
+            self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed", exception=exception)
+            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def bank_download(self, file_cache, data="accounts", check=True, force=False):
         started_time = time.time()
@@ -501,13 +534,13 @@ class SourcesMixin(ContractMixin):
                                 f"DataFrame [{workbook_name}] loaded from sheet that is yet to finish rendering column [{column}]")
                     self.csv_write(data_df, file_path, print_label=workbook_name, print_rows=-1)
                     dataframe_print(self.name,
-                                     data_df,
-                                     print_label=workbook_name,
-                                     print_verb="downloaded",
-                                     print_suffix=f"from [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
-                                     print_rows=print_rows,
-                                     started=started_time
-                                     )
+                                    data_df,
+                                    print_label=workbook_name,
+                                    print_verb="downloaded",
+                                    print_suffix=f"from [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
+                                    print_rows=print_rows,
+                                    started=started_time
+                                    )
                     caught_exception = None
                     break
                 except SheetStillLoadingError as exception:
@@ -529,7 +562,7 @@ class SourcesMixin(ContractMixin):
             data_df_pd = data_df.to_pandas()
             drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key if drive_key is not None else None
             drive_version: str | None = None
-            if drive_url is not None and not config.disable_uploads:
+            if drive_url is not None and not config.disable_repo_uploads:
                 spread = Spread(drive_url)
                 spread.df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start=f"{sheet_start_column}{sheet_start_row}", add_filter=add_filter, replace=True)
                 try:
@@ -547,13 +580,13 @@ class SourcesMixin(ContractMixin):
                 drive_version_int = int(drive_version_str)
                 self._sheet_cache_cleanup(name, drive_version_int)
             dataframe_print(self.name,
-                             data_df,
-                             print_label=print_label,
-                             print_verb="uploaded",
-                             print_suffix=f"to [{drive_url or 'local'}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
-                             started=started_time,
-                             print_rows=print_rows,
-                             )
+                            data_df,
+                            print_label=print_label,
+                            print_verb="uploaded",
+                            print_suffix=f"to [{drive_url or 'local'}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
+                            started=started_time,
+                            print_rows=print_rows,
+                            )
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
         except Exception as exception:
@@ -723,8 +756,8 @@ class SourcesMixin(ContractMixin):
             started=started_time,
         )
         started_time = time.time()
-        force_download = config.force_downloads and not config.disable_downloads
-        force_upload = config.force_downloads and not config.disable_uploads
+        force_download = config.force_downloads and not config.disable_repo_downloads
+        force_upload = config.force_downloads and not config.disable_repo_uploads
         for drive_file in drive_files:
             started_time_file = time.time()
             file_actioned = False
@@ -732,7 +765,7 @@ class SourcesMixin(ContractMixin):
             label = basename(local_path).split(".")[0]
             drive_file_lower = drive_file.lower()
             needs_download = drive_file_lower not in local_files or (check and not force_download and drive_files[drive_file]["modified"] > local_files[drive_file_lower]["modified"])
-            if download and not config.disable_downloads and (force_download or needs_download):
+            if download and not config.disable_repo_downloads and (force_download or needs_download):
                 request = service.files().get_media(fileId=drive_files[drive_file]["id"])
                 buffer_file = io.BytesIO()
                 downloader = MediaIoBaseDownload(buffer_file, request)
@@ -773,7 +806,7 @@ class SourcesMixin(ContractMixin):
                             drive_files[drive_match]["modified"] != local_files[local_file]["modified"] or
                             drive_files[drive_match]["hash"] != local_files[local_file]["hash"]
                     ))
-                    if (force_upload or needs_upload) and not config.disable_uploads:
+                    if (force_upload or needs_upload) and not config.disable_repo_uploads:
                         try:
                             data = MediaFileUpload(local_path)
                             drive_id = drive_files[drive_match]["id"] if drive_match is not None else None

@@ -101,11 +101,13 @@ class Equity(plugin.Plugin):
             "drive_folder": "PLACEHOLDER",
             "sheet_prices": "PLACEHOLDER",
             "sheet_portfolio": "PLACEHOLDER",
+            "database_table": "equity_preview",
         },
         release={
             "drive_folder": "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-",
             "sheet_prices": "1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM",
             "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
+            "database_table": "equity",
         },
     )
 
@@ -372,7 +374,7 @@ class Equity(plugin.Plugin):
                         for dimension in _dimensions
                         if f"{_ticker} {dimension}" in _equity_df.columns
                     )]).fill_nan(None).filter(~pl.all_horizontal(pl.exclude("Date").is_null()))),
-                                     print_label=f"{print_label}_{_ticker}", print_verb=print_verb, print_rows=print_rows)
+                                    print_label=f"{print_label}_{_ticker}", print_verb=print_verb, print_rows=print_rows)
 
         # Process equity data
         indexes = []

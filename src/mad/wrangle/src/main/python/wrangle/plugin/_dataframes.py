@@ -4,7 +4,6 @@ from os.path import splitext
 import polars as pl
 import polars.selectors as cs
 
-from . import database
 from ._contract import ContractMixin
 from .config import *
 from .logger import dataframe_print
@@ -87,13 +86,13 @@ class DataFramesMixin(ContractMixin):
         )
         if len(data) > 0 or len(schema) > 0:
             dataframe_print(self.name,
-                             data_df,
-                             compact=print_compact,
-                             print_label=print_label,
-                             print_suffix=print_suffix,
-                             print_rows=print_rows,
-                             started=started_time
-                             )
+                            data_df,
+                            compact=print_compact,
+                            print_label=print_label,
+                            print_suffix=print_suffix,
+                            print_rows=print_rows,
+                            started=started_time
+                            )
         return data_df
 
     def dataframe_to_lineprotocol(self, data_df, tags=None,
@@ -108,7 +107,8 @@ class DataFramesMixin(ContractMixin):
                 "Dataframe contains null values which should be purged before line protocol serialisation")
         renamed_columns = ["timestamp"] + [column.strip().replace(' ', '-').lower() for column in data_df.columns[1:]]
         data_df = data_df.rename(dict(zip(data_df.columns, renamed_columns))).with_columns(pl.col("timestamp").cast(pl.Datetime).dt.epoch() * 1000)
-        line_expressions = [pl.lit(self.name.lower() + "," + ",".join([f"{tag}={tags[tag]}" for tag in tags]) + " ")]
+        database_table = self.remote_repos.database_table or self.name.lower()
+        line_expressions = [pl.lit(database_table + "," + ",".join([f"{tag}={tags[tag]}" for tag in tags]) + " ")]
         for column in data_df.columns[1:]:
             if len(line_expressions) > 1:
                 line_expressions.append(pl.lit(","))
@@ -123,47 +123,14 @@ class DataFramesMixin(ContractMixin):
                 yield line
                 emitted += 1
         dataframe_print(self.name,
-                         data_df,
-                         print_label=print_label,
-                         print_verb="serialised",
-                         print_suffix=f"to [{emitted:,}] lines",
-                         started=started_time,
-                         )
+                        data_df,
+                        print_label=print_label,
+                        print_verb="serialised",
+                        print_suffix=f"to [{emitted:,}] lines",
+                        started=started_time,
+                        )
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, total_rows)
-
-    def database_upload(self, data_df, tags=None,
-                        print_label=None, chunk_rows=5000):
-        if len(data_df.columns) <= 1 or len(data_df) == 0:
-            return
-        if config.disable_uploads or database.database_client is None:
-            for _ in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
-                pass
-            if config.disable_uploads:
-                tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
-                tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
-                csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
-                date_col = data_df.columns[0]
-                fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
-                csv_df = data_df \
-                    .rename({col: f"{col}{tag_suffix}" for col in data_df.columns[1:]}) \
-                    .with_columns(pl.col(date_col).cast(pl.Datetime).dt.strftime(fmt).alias(date_col))
-                if csv_path in self._db_cache_dfs:
-                    csv_df = self._db_cache_dfs[csv_path].join(csv_df, on=date_col, how="full", coalesce=True).sort(date_col)
-                self._db_cache_dfs[csv_path] = csv_df
-            return
-        try:
-            buffer = []
-            for line in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
-                buffer.append(line)
-                if len(buffer) >= chunk_rows:
-                    database.database_client.write(record=buffer, write_precision="ms")
-                    buffer = []
-            if buffer:
-                database.database_client.write(record=buffer, write_precision="ms")
-        except Exception as exception:
-            self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed", exception=exception)
-            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     # noinspection PyMethodMayBeStatic
     def dataframe_type_to_str(self, data_type):

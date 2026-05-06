@@ -44,9 +44,14 @@ def configure(argv=None):
         help="force all files to be re-downloaded even if cached",
     )
     parser.add_argument(
-        "--disable-uploads",
+        "--disable-repo-uploads",
         action="store_true",
         help="skip remote data repository uploads and write to local cache only",
+    )
+    parser.add_argument(
+        "--disable-repo-downloads",
+        action="store_true",
+        help="skip remote data repository downloads and read from local cache only",
     )
     parser.add_argument(
         "--disable-downloads",
@@ -96,7 +101,8 @@ def configure(argv=None):
     plugin.config.repo_scope = plugin.RepoScope(args.repo_scope)
     plugin.config.force_reprocessing = args.force_reprocessing
     plugin.config.force_downloads = args.force_downloads
-    plugin.config.disable_uploads = args.disable_uploads
+    plugin.config.disable_repo_uploads = args.disable_repo_uploads
+    plugin.config.disable_repo_downloads = args.disable_repo_downloads
     plugin.config.disable_downloads = args.disable_downloads
     return args
 

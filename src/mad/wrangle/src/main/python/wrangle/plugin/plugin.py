@@ -25,7 +25,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
         self._run()
         for csv_path, csv_df in self._db_cache_dfs.items():
             self.csv_write(csv_df, csv_path)
-        if not config.disable_uploads:
+        if not config.disable_repo_uploads:
             self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, check=True, download=False, upload=True)
         self.print_counters()
         self.print_log("Finished", started=started_time)
@@ -103,7 +103,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
         ])
 
     def counter_write(self):
-        if config.disable_uploads or database.database_client is None:
+        if config.disable_repo_uploads or database.database_client is None:
             return
         values = []
         timestamp_ms = int(time.time() * 1000)

@@ -19,7 +19,7 @@ def database_open():
     global database_client
     if database_client is not None:
         database_close()
-    if config.disable_uploads and config.disable_downloads:
+    if config.disable_repo_uploads and config.disable_downloads:
         return
     missing = [name for name in DATABASE_ENV_VARS if not os.environ.get(name)]
     if missing:
