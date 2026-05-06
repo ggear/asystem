@@ -38,7 +38,7 @@ class SourcesMixin(ContractMixin):
     def http_download(self, url_file: str, local_path: str,
                       check: bool = True, force: bool = False, ignore: bool = False) -> DownloadResult:
         started_time = time.time()
-        local_path = abspath(local_path)
+        local_path = abspath(local_path).lower()
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
         if config.disable_downloads:
@@ -117,7 +117,7 @@ class SourcesMixin(ContractMixin):
             ignore: bool = False,
     ) -> DownloadResult:
         started_time = time.time()
-        local_path = abspath(local_path)
+        local_path = abspath(local_path).lower()
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
         if config.disable_downloads:
