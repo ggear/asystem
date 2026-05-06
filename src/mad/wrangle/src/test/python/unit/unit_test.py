@@ -28,21 +28,21 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 # noinspection PyMethodMayBeStatic
 class WrangleTest(unittest.TestCase):
 
-    # No data
+    # No current data, no new data, no downloads, no uploads
     def test_balances_local_blank_1(self):
-        self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_uploads=True, disable_downloads=True,
+        self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_downloads=True, disable_uploads=True,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
                         }))
 
-    # No data
+    # No current data, no new data, no downloads or uploads
     def test_currency_local_blank_1(self):
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_uploads=True, disable_downloads=True,
+        self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_downloads=True, disable_uploads=True,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
                         }))
 
-    # Lots of data
+    # Lots of current data, a little new data, no downloads or uploads
     def test_currency_local_replete_1(self):
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "replete_1", log_level="info", disable_uploads=True, disable_downloads=True,
+        self.run_plugin("currency", plugin.RepoScope.LOCAL, "replete_1", log_level="info", disable_downloads=True, disable_uploads=True,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -78,6 +78,11 @@ class WrangleTest(unittest.TestCase):
                             ],
                         })
 
+    # Lots of current data, a little new data, downloads and uploads to and from preview scopes
+    def test_currency_preview_replete_1(self):
+        None
+
+    # Lots of current data, a lot of live new data, downloads from release scope, no uploads
     def test_currency_release_replete_1(self):
         self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
@@ -91,12 +96,12 @@ class WrangleTest(unittest.TestCase):
                             },
                             "counter_greater": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: 1,
+                                    plugin.CTR_ACT_DELTA_ROWS: 14,
                                 },
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(greater_than=0)
+                            assert_custom_rows_delta(greater_than=14)
                         ],
                         file_asserts={
                             "__currency_current.csv": [
@@ -1092,7 +1097,7 @@ class WrangleTest(unittest.TestCase):
     def run_plugin(self, plugin_name, repo_scope=plugin.RepoScope.LOCAL, test_name="replete_1",
                    log_level="info", prepare_only=False, enable_rerun=True,
                    force_reprocessing=False, force_downloads=False,
-                   disable_uploads=True, disable_downloads=False,
+                   disable_downloads=False, disable_uploads=True,
                    counter_asserts=None, custom_asserts=None, file_asserts=None):
         if file_asserts is None:
             file_asserts = {}
