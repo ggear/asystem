@@ -28,18 +28,21 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 # noinspection PyMethodMayBeStatic
 class WrangleTest(unittest.TestCase):
 
-    def test_balances_local_blank(self):
-        self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank", log_level="info", disable_uploads=True, disable_downloads=True,
+    # No data
+    def test_balances_local_blank_1(self):
+        self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_uploads=True, disable_downloads=True,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
                         }))
 
-    def test_currency_local_blank(self):
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank", log_level="info", disable_uploads=True, disable_downloads=True,
+    # No data
+    def test_currency_local_blank_1(self):
+        self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_uploads=True, disable_downloads=True,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
                         }))
 
-    def test_currency_local_replete(self):
-        self.run_plugin("currency", plugin.RepoScope.LOCAL, "replete", log_level="info", disable_uploads=True, disable_downloads=True,
+    # Lots of data
+    def test_currency_local_replete_1(self):
+        self.run_plugin("currency", plugin.RepoScope.LOCAL, "replete_1", log_level="info", disable_uploads=True, disable_downloads=True,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -75,8 +78,8 @@ class WrangleTest(unittest.TestCase):
                             ],
                         })
 
-    def test_currency_release_current(self):
-        self.run_plugin("currency", plugin.RepoScope.RELEASE, "current", log_level="info", disable_uploads=True, disable_downloads=False,
+    def test_currency_release_replete_1(self):
+        self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -117,8 +120,8 @@ class WrangleTest(unittest.TestCase):
                         })
 
     @pytest.mark.skip(reason="requires update")
-    def test_equity_release_current(self):
-        self.run_plugin("equity", plugin.RepoScope.RELEASE, "current", log_level="info", disable_uploads=True, disable_downloads=False,
+    def test_equity_release_replete_1(self):
+        self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_greater": {
                                 plugin.CTR_SRC_DATA: {
@@ -131,8 +134,8 @@ class WrangleTest(unittest.TestCase):
                         }))
 
     @pytest.mark.skip(reason="requires update")
-    def test_interest_release_current(self):
-        self.run_plugin("interest", plugin.RepoScope.RELEASE, "current", log_level="info", disable_uploads=True, disable_downloads=False,
+    def test_interest_release_replete_1(self):
+        self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -993,6 +996,80 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(1, len(current))
         self.assertEqual("acc-1", current["Account ID"][0])
 
+    def test_state_cache_removed_column_counter(self):
+        t = self._setup_state_test("test-6")
+        t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
+        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
+        self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
+        self.assertEqual(2, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
+
+    def test_state_cache_multiple_new_columns(self):
+        t = self._setup_state_test("test-2")
+        update = pl.DataFrame({
+            "Date": ["2020-01-01", "2020-02-01"],
+            "Value": [1.0, 2.0],
+            "ColA": [10.0, 20.0],
+            "ColB": [100.0, 200.0],
+        }).with_columns(pl.col("Date").str.to_date())
+        delta, current, previous = t.state_cache(update)
+        self.assertIn("ColA", current.columns)
+        self.assertIn("ColB", current.columns)
+        self.assertIsNone(previous.sort("Date")["ColA"][0])
+        self.assertIsNone(previous.sort("Date")["ColB"][0])
+        self.assertEqual([10.0, 20.0], current.sort("Date")["ColA"].to_list())
+        self.assertEqual([100.0, 200.0], current.sort("Date")["ColB"].to_list())
+        self.assertEqual(2, len(delta))
+
+    def test_state_cache_multiple_removed_columns(self):
+        t = self._setup_state_test("test-8")
+        delta, current, previous = t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0)]))
+        self.assertIn("Extra1", current.columns)
+        self.assertIn("Extra2", current.columns)
+        self.assertIsNone(current.sort("Date")["Extra1"][0])
+        self.assertIsNone(current.sort("Date")["Extra2"][0])
+        self.assertEqual(10.0, previous.sort("Date")["Extra1"][0])
+        self.assertEqual(100.0, previous.sort("Date")["Extra2"][0])
+        self.assertEqual(2, len(delta))
+        self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
+        self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
+
+    def test_state_cache_multi_key_new_column(self):
+        t = self._setup_state_test("mk-14")
+        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+                      key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        update = pl.DataFrame({
+            "Date": ["2026-01-01", "2026-01-01"],
+            "Account ID": ["acc-1", "acc-2"],
+            "Balance": [100.0, 200.0],
+            "Notes": ["note-a", "note-b"],
+        }).with_columns(pl.col("Date").str.to_date())
+        delta, current, previous = t.state_cache(update, key_columns=["Date", "Account ID"])
+        self.assertIn("Notes", current.columns)
+        self.assertIn("Notes", previous.columns)
+        self.assertIsNone(previous.sort(["Date", "Account ID"])["Notes"][0])
+        self.assertEqual(["note-a", "note-b"], current.sort(["Date", "Account ID"])["Notes"].to_list())
+        self.assertEqual(2, len(delta))
+
+    def test_state_cache_multi_key_removed_column(self):
+        t = self._setup_state_test("mk-15")
+        initial = pl.DataFrame({
+            "Date": ["2026-01-01", "2026-01-01"],
+            "Account ID": ["acc-1", "acc-2"],
+            "Balance": [100.0, 200.0],
+            "Notes": ["note-a", "note-b"],
+        }).with_columns(pl.col("Date").str.to_date())
+        t.state_cache(initial, key_columns=["Date", "Account ID"])
+        t.reset_counters()
+        delta, current, previous = t.state_cache(
+            self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+            key_columns=["Date", "Account ID"])
+        self.assertIn("Notes", current.columns)
+        self.assertIsNone(current.sort(["Date", "Account ID"])["Notes"][0])
+        self.assertEqual("note-a", previous.sort(["Date", "Account ID"])["Notes"][0])
+        self.assertEqual(2, len(delta))
+        self.assertIsNone(delta.sort(["Date", "Account ID"])["Notes"][0])
+
     def _setup_state_test(self, fixture):
         t = Test("Test", "SOME_NON_EXISTANT_GUID")
         t.local_cache = abspath(join(DIR_ROOT, "target", "data", f"state-{fixture}"))
@@ -1012,7 +1089,7 @@ class WrangleTest(unittest.TestCase):
             "Value": [float(p[1]) for p in date_value_pairs],
         }).with_columns(pl.col("Date").str.to_date())
 
-    def run_plugin(self, plugin_name, repo_scope=plugin.RepoScope.LOCAL, test_name="current",
+    def run_plugin(self, plugin_name, repo_scope=plugin.RepoScope.LOCAL, test_name="replete_1",
                    log_level="info", prepare_only=False, enable_rerun=True,
                    force_reprocessing=False, force_downloads=False,
                    disable_uploads=True, disable_downloads=False,
