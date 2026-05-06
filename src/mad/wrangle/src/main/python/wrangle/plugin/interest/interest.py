@@ -48,13 +48,15 @@ class Interest(plugin.Plugin):
             retail_df = self.dataframe_new(schema={"Date": pl.Date, "Bank": pl.Float64})
             retail_file = join(self.local_cache, "Retail.xlsx")
             file_status = self.http_download(RETAIL_URL, retail_file)
-            if file_status.status != plugin.DownloadStatus.FAILED:
+            if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                 retail_should_read = True
                 if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
                     new_data = True
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
+            elif file_status.status == plugin.DownloadStatus.SKIPPED:
+                self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
 
@@ -63,13 +65,15 @@ class Interest(plugin.Plugin):
             inflation_df = self.dataframe_new(schema={"Date": pl.Date, "Inflation": pl.Float64})
             inflation_file = join(self.local_cache, "Inflation.xlsx")
             file_status = self.http_download(INFLATION_URL, inflation_file)
-            if file_status.status != plugin.DownloadStatus.FAILED:
+            if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                 inflation_should_read = True
                 if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
                     new_data = True
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
+            elif file_status.status == plugin.DownloadStatus.SKIPPED:
+                self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
             interest_files_count = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) + self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)

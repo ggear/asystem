@@ -70,6 +70,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
             (CTR_SRC_SOURCES, OrderedDict([
                 (CTR_ACT_DOWNLOADED, 0),
                 (CTR_ACT_CACHED, 0),
+                (CTR_ACT_SKIPPED, 0),
                 (CTR_ACT_UPLOADED, 0),
                 (CTR_ACT_PERSISTED, 0),
                 (CTR_ACT_ERRORED, 0),

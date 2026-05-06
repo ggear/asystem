@@ -46,6 +46,9 @@ class SourcesMixin(ContractMixin):
                 self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
+            if config.force_reprocessing:
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
+                return DownloadResult(DownloadStatus.SKIPPED, None)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(local_path):
             self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
@@ -122,6 +125,9 @@ class SourcesMixin(ContractMixin):
                 self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
+            if config.force_reprocessing:
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
+                return DownloadResult(DownloadStatus.SKIPPED, None)
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(local_path):
             self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
@@ -184,6 +190,9 @@ class SourcesMixin(ContractMixin):
                 self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
+            if config.force_reprocessing:
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
+                return DownloadResult(DownloadStatus.SKIPPED, None)
             return DownloadResult(DownloadStatus.FAILED, None)
         now = datetime.now()
         end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
@@ -513,15 +522,13 @@ class SourcesMixin(ContractMixin):
 
     def sheet_upload(self, data_df, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_start_column="A",
                      add_filter=False, print_label=None, print_rows=PL_PRINT_ROWS):
-        if drive_key is None:
-            return
         started_time = time.time()
-        drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
         name = workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}"
         try:
             data_df_pd = data_df.to_pandas()
+            drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key if drive_key is not None else None
             drive_version: str | None = None
-            if not config.disable_uploads:
+            if drive_url is not None and not config.disable_uploads:
                 spread = Spread(drive_url)
                 spread.df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start=f"{sheet_start_column}{sheet_start_row}", add_filter=add_filter, replace=True)
                 try:
@@ -542,14 +549,14 @@ class SourcesMixin(ContractMixin):
                              data_df,
                              print_label=print_label,
                              print_verb="uploaded",
-                             print_suffix=f"to [{drive_url}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
+                             print_suffix=f"to [{drive_url or 'local'}][{workbook_name}{'' if sheet_name is None else f':{sheet_name}'}]",
                              started=started_time,
                              print_rows=print_rows,
                              )
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
         except Exception as exception:
-            self.print_log(f"DataFrame failed to upload to [{drive_url}]", exception=exception)
+            self.print_log(f"DataFrame failed to upload to sheet [{name}]", exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def dropbox_download(self, dropbox_dir: str | None, local_dir: str, check: bool = True):

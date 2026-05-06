@@ -93,6 +93,7 @@ config = Config()
 class DownloadStatus(Enum):
     CACHED = auto()
     DOWNLOADED = auto()
+    SKIPPED = auto()
     FAILED = auto()
 
 

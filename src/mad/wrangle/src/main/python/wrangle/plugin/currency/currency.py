@@ -51,7 +51,7 @@ class Currency(plugin.Plugin):
     def _run(self):
         rba_df = self.dataframe_new(schema={"Date": pl.Date, **{pair: pl.Float64 for pair in PAIRS}, "Source": pl.Utf8})
         rba_delta_df = self.dataframe_new()
-        if not plugin.config.disable_downloads:
+        if not plugin.config.disable_downloads or plugin.config.force_reprocessing:
 
             # Download currency data
             new_data = False
@@ -60,7 +60,7 @@ class Currency(plugin.Plugin):
             for years in RBA_YEARS:
                 years_file = join(self.local_cache, f"RBA_FX_{years}.xls")
                 file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check='current' in years)
-                if file_status.status != plugin.DownloadStatus.FAILED:
+                if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
                     rba_files_count += 1
                     if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
                         new_data = True
@@ -77,6 +77,8 @@ class Currency(plugin.Plugin):
                             self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                     else:
                         self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
+                elif file_status.status == plugin.DownloadStatus.SKIPPED:
+                    self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
             if datetime.datetime.now().year > 2027:

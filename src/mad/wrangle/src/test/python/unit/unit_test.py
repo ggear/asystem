@@ -29,86 +29,130 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 class WrangleTest(unittest.TestCase):
 
     def test_balances_local_blank(self):
-        self.run_plugin("balances", {"blank": merge_asserts(ASSERT_NOOP, {
-        })}, verifications={
-            "__Balances_Current.csv": [
-                verify_does_not_exist(),
-            ],
-        }, disable_downloads=True, disable_uploads=True, repo_scope=plugin.RepoScope.LOCAL, log_level="info")
+        self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank", log_level="info", disable_uploads=True, disable_downloads=True,
+                        counter_asserts=merge_asserts(ASSERT_NOOP, {
+                        }))
 
     def test_currency_local_blank(self):
-        self.run_plugin("currency", {"blank": merge_asserts(ASSERT_NOOP, {
-        })}, verifications={
-            "__Currency__Current.csv": [
-                verify_does_not_exist(),
-            ],
-        }, disable_downloads=True, disable_uploads=True, repo_scope=plugin.RepoScope.LOCAL, log_level="info")
+        self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank", log_level="info", disable_uploads=True, disable_downloads=True,
+                        counter_asserts=merge_asserts(ASSERT_NOOP, {
+                        }),
+                        file_asserts={
+                            "__Currency__Current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    def test_currency_local_replete(self):
+        self.run_plugin("currency", plugin.RepoScope.LOCAL, "replete", log_level="info", disable_uploads=True, disable_downloads=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_ROWS: 0,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(equals=14)
+                        ],
+                        file_asserts={
+                            "__Currency_Current.csv": [
+                                assert_file_size(),
+                                assert_file_contiguous_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*Delta.*")
+                            ],
+                            "_Sheet_Rates_Currency.csv": [
+                                assert_file_size(),
+                                assert_file_contiguous_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_max_zeroes_per_row()
+                            ],
+                            "_Database_Currency.csv": [
+                                assert_file_size(),
+                                assert_file_contiguous_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*")
+                            ],
+                        })
 
     def test_currency_release_current(self):
-        self.run_plugin("currency", {"current": merge_asserts(ASSERT_RUN, {
-            "counter_equals": {
-                plugin.CTR_SRC_DATA: {
-                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
-                    plugin.CTR_ACT_UPDATE_COLUMNS: 15,
-                    plugin.CTR_ACT_DELTA_COLUMNS: 15,
-                },
-            },
-            "counter_greater": {
-                plugin.CTR_SRC_DATA: {
-                    plugin.CTR_ACT_DELTA_ROWS: 1,
-                },
-            },
-        })}, verifications={
-            "__Currency_Current.csv": [
-                verify_size(),
-                verify_contiguous_dates(),
-                verify_nones_per_row(),
-                verify_zeroes_per_col(exclude=".*Delta.*")
-            ],
-            "_Sheet_Rates_Currency.csv": [
-                verify_size(),
-                verify_contiguous_dates(),
-                verify_nones_per_row(),
-                verify_max_zeroes_per_row()
-            ],
-            "_Database_Currency.csv": [
-                verify_size(),
-                verify_contiguous_dates(),
-                verify_nones_per_row(),
-                verify_zeroes_per_col(exclude=".*type=delta.*")
-            ],
-        }, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.RELEASE, log_level="info")
+        self.run_plugin("currency", plugin.RepoScope.RELEASE, "current", log_level="info", disable_uploads=True, disable_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 15,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 15,
+                                },
+                            },
+                            "counter_greater": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_DELTA_ROWS: 1,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(greater_than=0)
+                        ],
+                        file_asserts={
+                            "__Currency_Current.csv": [
+                                assert_file_size(),
+                                assert_file_contiguous_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*Delta.*")
+                            ],
+                            "_Sheet_Rates_Currency.csv": [
+                                assert_file_size(),
+                                assert_file_contiguous_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_max_zeroes_per_row()
+                            ],
+                            "_Database_Currency.csv": [
+                                assert_file_size(),
+                                assert_file_contiguous_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*")
+                            ],
+                        })
 
     @pytest.mark.skip(reason="requires update")
     def test_equity_release_current(self):
-        self.run_plugin("equity", {"current": merge_asserts(ASSERT_RUN, {
-            "counter_greater": {
-                plugin.CTR_SRC_DATA: {
-                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 200,
-                    plugin.CTR_ACT_CURRENT_COLUMNS: 144,
-                    plugin.CTR_ACT_UPDATE_COLUMNS: 108,
-                    plugin.CTR_ACT_DELTA_COLUMNS: 144,
-                },
-            },
-        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.RELEASE, log_level="info")
+        self.run_plugin("equity", plugin.RepoScope.RELEASE, "current", log_level="info", disable_uploads=True, disable_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_greater": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 200,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 144,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 108,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 144,
+                                },
+                            },
+                        }))
 
     @pytest.mark.skip(reason="requires update")
     def test_interest_release_current(self):
-        self.run_plugin("interest", {"current": merge_asserts(ASSERT_RUN, {
-            "counter_equals": {
-                plugin.CTR_SRC_DATA: {
-                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
-                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
-                    plugin.CTR_ACT_UPDATE_COLUMNS: 18,
-                    plugin.CTR_ACT_DELTA_COLUMNS: 18,
-                },
-            },
-        })}, disable_downloads=False, disable_uploads=True, repo_scope=plugin.RepoScope.RELEASE, log_level="info", verifications={
-            "__Interest_Current.csv": [verify_size(), verify_nones_per_row(), verify_contiguous_dates()],
-            "_Sheet_Rates_Interest.csv": [verify_size(), verify_nones_per_row(), verify_contiguous_dates(), verify_max_zeroes_per_row(0)],
-            "_Database_Interest.csv": [verify_size(), verify_nones_per_row(), verify_contiguous_dates()],
-        })
+        self.run_plugin("interest", plugin.RepoScope.RELEASE, "current", log_level="info", disable_uploads=True, disable_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 18,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 18,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__Interest_Current.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates()],
+                            "_Sheet_Rates_Interest.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates(), assert_file_max_zeroes_per_row(0)],
+                            "_Database_Interest.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_contiguous_dates()],
+                        })
 
     @pytest.mark.skip(reason="very slow")
     def test_library_sheet(self):
@@ -973,12 +1017,15 @@ class WrangleTest(unittest.TestCase):
             "Value": [float(p[1]) for p in date_value_pairs],
         }).with_columns(pl.col("Date").str.to_date())
 
-    def run_plugin(self, name, tests_asserts, log_level="info",
-                   prepare_only=False, enable_rerun=True, force_reprocessing=False, force_downloads=False,
-                   disable_uploads=True, disable_downloads=False, repo_scope=plugin.RepoScope.LOCAL,
-                   verifications=None):
-        if verifications is None:
-            verifications = {}
+    def run_plugin(self, plugin_name, repo_scope=plugin.RepoScope.LOCAL, test_name="current",
+                   log_level="info", prepare_only=False, enable_rerun=True,
+                   force_reprocessing=False, force_downloads=False,
+                   disable_uploads=True, disable_downloads=False,
+                   counter_asserts=None, custom_asserts=None, file_asserts=None):
+        if file_asserts is None:
+            file_asserts = {}
+        if custom_asserts is None:
+            custom_asserts = []
         if not disable_uploads and repo_scope == plugin.RepoScope.RELEASE:
             raise ValueError("Cannot enable uploads when repo_scope is RELEASE")
         plugin.config.log_level = log_level
@@ -991,45 +1038,54 @@ class WrangleTest(unittest.TestCase):
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
             os.makedirs(dir_target)
-        plugin_name = getattr(importlib.import_module(f"wrangle.plugin.{name}"), name.title())()
+        plugin_module = getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}"), plugin_name.title())()
         print("")
-        for test in tests_asserts:
-            self._load_caches(plugin_name, join(DIR_ROOT, "src/test/resources/repos", repo_scope, name, test))
-            if not prepare_only:
-                print(f"STARTING (run)     [{name.title()}]   [{test}]")
-                plugin_name.run()
-                print(f"FINISHED (run)     [{name.title()}]   [{test}]\n")
-                self._assert_counters(plugin_name.get_counters(), tests_asserts[test])
-                self._verify_outputs(plugin_name, verifications)
-                if enable_rerun:
-                    plugin_name.reset_counters()
-                    print(f"STARTING (no-op)   [{name.title()}]   [{test}]")
-                    plugin_name.run()
-                    print(f"FINISHED (no-op)   [{name.title()}]   [{test}]\n\n")
-                    self._assert_counters(plugin_name.get_counters(), ASSERT_NOOP)
-                    self._verify_outputs(plugin_name, verifications)
-                    plugin_name.reset_counters()
-                    print(f"STARTING (reload)   [{name.title()}]   [{test}]")
-                    plugin.config.force_reprocessing = True
-                    plugin_name.run()
-                    plugin.config.force_reprocessing = force_reprocessing
-                    print(f"FINISHED (reload)   [{name.title()}]   [{test}]\n\n")
-                    self._assert_counters(plugin_name.get_counters(), ASSERT_RELOAD)
-                    self._verify_outputs(plugin_name, verifications)
+        self._load_caches(plugin_module, join(DIR_ROOT, "src/test/resources/repos", repo_scope, plugin_name, test_name))
+        if not prepare_only:
+            print(f"STARTING (run)     [{plugin_name.title()}]   [{test_name}]")
+            plugin_module.run()
+            print(f"FINISHED (run)     [{plugin_name.title()}]   [{test_name}]\n")
+            run_counters = plugin_module.get_counters()
+            self._assert_counters(run_counters, counter_asserts)
+            if not enable_rerun:
+                self._assert_outputs(plugin_module, file_asserts)
+            else:
+                first_counters = copy.deepcopy(run_counters)
+                plugin_module.reset_counters()
+                print(f"STARTING (no-op)   [{plugin_name.title()}]   [{test_name}]")
+                plugin_module.run()
+                print(f"FINISHED (no-op)   [{plugin_name.title()}]   [{test_name}]\n\n")
+                noop_counters = plugin_module.get_counters()
+                self._assert_counters(noop_counters, ASSERT_NOOP)
+                second_counters = copy.deepcopy(noop_counters)
+                plugin_module.reset_counters()
+                print(f"STARTING (reload)   [{plugin_name.title()}]   [{test_name}]")
+                plugin.config.force_reprocessing = True
+                plugin_module.run()
+                plugin.config.force_reprocessing = force_reprocessing
+                print(f"FINISHED (reload)   [{plugin_name.title()}]   [{test_name}]\n\n")
+                reload_counters = plugin_module.get_counters()
+                self._assert_counters(reload_counters, ASSERT_RELOAD)
+                self._assert_outputs(plugin_module, file_asserts)
+                for custom_assert in custom_asserts:
+                    result = custom_assert(first_counters, second_counters, reload_counters)
+                    if result is not None:
+                        self.fail(f"Custom assert [{custom_assert.__name__}] failed. {result}")
 
-    def _load_caches(self, plugin_name, source):
+    def _load_caches(self, plugin_module, source):
         if not isdir(source):
             raise FileNotFoundError(f"Test data directory [{source}] does not exist")
-        shutil.rmtree(plugin_name.local_cache, ignore_errors=True)
-        shutil.copytree(source, plugin_name.local_cache, ignore=shutil.ignore_patterns(".git*"))
-        plugin_name.print_log(f"Files written from [{source}] to [{plugin_name.local_cache}]")
+        shutil.rmtree(plugin_module.local_cache, ignore_errors=True)
+        shutil.copytree(source, plugin_module.local_cache, ignore=shutil.ignore_patterns(".git*"))
+        plugin_module.print_log(f"Files written from [{source}] to [{plugin_module.local_cache}]")
 
-    def _verify_outputs(self, plugin_name, verifications):
+    def _assert_outputs(self, plugin_module, verifications):
         for filename, funcs in verifications.items():
-            file_path = join(plugin_name.local_cache, filename)
+            file_path = join(plugin_module.local_cache, filename)
             for func in funcs:
-                if not func(file_path):
-                    self.fail(f"Verification [{func.__name__}] failed for [{filename}]")
+                result = func(file_path)
+                if result is not None:
+                    self.fail(f"Assertion [{func.__name__}] failed for [{filename}]. {result}")
 
     def _assert_counters(self, actual, asserts):
         comparators = [
@@ -1058,6 +1114,9 @@ class WrangleTest(unittest.TestCase):
         reset_config()
 
 
+_NUMERIC_DTYPES = (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)
+
+
 def _leading_zero_rows(csv_df, numeric_cols):
     count = 0
     for i in range(len(csv_df)):
@@ -1082,136 +1141,168 @@ def _filter_cols(csv_df, include=None, exclude=None):
     return cols
 
 
-def verify_does_not_exist():
-    def _verify(file_path):
+def assert_file_does_not_exist():
+    def _assert(file_path):
         if isfile(file_path):
-            dataframe_print("Verify", pl.DataFrame(), f"verify_does_not_exist: [{file_path}] exists", level="error")
-            return False
-        return True
+            msg = f"assert_file_does_not_exist: [{file_path}] exists"
+            dataframe_print("Assert", pl.DataFrame(), msg, level="error")
+            return msg
+        return None
 
-    _verify.__name__ = "verify_does_not_exist"
-    return _verify
+    _assert.__name__ = "assert_file_does_not_exist"
+    return _assert
 
 
-def verify_size(min_rows=1, max_rows=None):
-    def _verify(file_path):
+def assert_file_size(min_rows=1, max_rows=None):
+    def _assert(file_path):
         csv_df = _load_csv(file_path)
         count = len(csv_df)
         if count < min_rows:
-            dataframe_print("Verify", csv_df, f"{label}: expected >={min_rows} rows, got {count}", level="error")
-            return False
+            msg = f"{label}: expected >={min_rows} rows, got {count}"
+            dataframe_print("Assert", csv_df, msg, level="error")
+            return msg
         if max_rows is not None and count > max_rows:
-            dataframe_print("Verify", csv_df, f"{label}: expected <={max_rows} rows, got {count}", level="error")
-            return False
-        return True
+            msg = f"{label}: expected <={max_rows} rows, got {count}"
+            dataframe_print("Assert", csv_df, msg, level="error")
+            return msg
+        return None
 
-    label = f"verify_size_{min_rows}_{max_rows}_rows"
-    _verify.__name__ = label
-    return _verify
+    label = f"assert_file_size_{min_rows}_{max_rows}_rows"
+    _assert.__name__ = label
+    return _assert
 
 
-def verify_nones_per_row(max_nones=0, include=None, exclude=None):
-    def _verify(file_path):
+def assert_file_nones_per_row(max_nones=0, include=None, exclude=None):
+    def _assert(file_path):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         if not cols:
-            return True
+            return None
         fail_rows = csv_df.filter(pl.sum_horizontal(pl.col(c).is_null().cast(pl.Int32) for c in cols) > max_nones)
         if not fail_rows.is_empty():
-            dataframe_print("Verify", fail_rows, f"{label}: rows with >{max_nones} nones", level="error")
-            return False
-        return True
+            msg = f"{label}: rows with >{max_nones} nones"
+            dataframe_print("Assert", fail_rows, msg, level="error")
+            return msg
+        return None
 
-    label = f"verify_max_{max_nones}_nones_per_row"
-    _verify.__name__ = label
-    return _verify
+    label = f"assert_file_max_{max_nones}_nones_per_row"
+    _assert.__name__ = label
+    return _assert
 
 
-def verify_max_nones_per_col(max_nones=0, include=None, exclude=None):
-    def _verify(file_path):
+def assert_file_max_nones_per_col(max_nones=0, include=None, exclude=None):
+    def _assert(file_path):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         failed = [c for c in cols if csv_df[c].null_count() > max_nones]
         if failed:
-            dataframe_print("Verify", csv_df.select(failed), f"{label}: columns with >{max_nones} nones: {failed}", level="error")
-            return False
-        return True
+            msg = f"{label}: columns with >{max_nones} nones: {failed}"
+            dataframe_print("Assert", csv_df.select(failed), msg, level="error")
+            return msg
+        return None
 
-    label = f"verify_max_{max_nones}_nones_per_col"
-    _verify.__name__ = label
-    return _verify
+    label = f"assert_file_max_{max_nones}_nones_per_col"
+    _assert.__name__ = label
+    return _assert
 
 
-def verify_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=None, exclude=None):
-    def _verify(file_path):
+def assert_file_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=None, exclude=None):
+    def _assert(file_path):
         csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if
-                        csv_df[col].dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)]
+                        csv_df[col].dtype in _NUMERIC_DTYPES]
         if not numeric_cols:
-            return True
+            return None
         data_df = csv_df.slice(_leading_zero_rows(csv_df, numeric_cols)) if after_first_rows else csv_df
         zero_count = pl.sum_horizontal((pl.col(c) == 0).cast(pl.Int32) for c in numeric_cols)
         fail_rows = data_df.filter(zero_count > max_zeroes)
         if not fail_rows.is_empty():
-            dataframe_print("Verify", fail_rows, f"{label}: rows with >{max_zeroes} zeros", level="error")
-            return False
-        return True
+            msg = f"{label}: rows with >{max_zeroes} zeros"
+            dataframe_print("Assert", fail_rows, msg, level="error")
+            return msg
+        return None
 
-    label = f"verify_max_{max_zeroes}_zeroes_per_row" + ("_after_first_rows" if after_first_rows else "")
-    _verify.__name__ = label
-    return _verify
+    label = f"assert_file_max_{max_zeroes}_zeroes_per_row" + ("_after_first_rows" if after_first_rows else "")
+    _assert.__name__ = label
+    return _assert
 
 
-def verify_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
-    def _verify(file_path):
+def assert_file_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
+    def _assert(file_path):
         csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if
-                        csv_df[col].dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)]
+                        csv_df[col].dtype in _NUMERIC_DTYPES]
         failed = [c for c in numeric_cols if (csv_df[c] == 0).sum() > max_zeroes]
         if failed:
-            dataframe_print("Verify", csv_df.select(failed), f"{label}: columns with >{max_zeroes} zeros: {failed}", level="error")
-            return False
-        return True
+            msg = f"{label}: columns with >{max_zeroes} zeros: {failed}"
+            dataframe_print("Assert", csv_df.select(failed), msg, level="error")
+            return msg
+        return None
 
-    label = f"verify_max_{max_zeroes}_zeroes_per_col"
-    _verify.__name__ = label
-    return _verify
+    label = f"assert_file_max_{max_zeroes}_zeroes_per_col"
+    _assert.__name__ = label
+    return _assert
 
 
-def verify_contiguous_dates(start_date=None, end_date=None, max_gap_days=1):
-    def _verify(file_path):
+def assert_file_contiguous_dates(start_date=None, end_date=None, max_gap_days=1):
+    def _assert(file_path):
         csv_df = _load_csv(file_path)
         if "Date" not in csv_df.columns:
-            dataframe_print("Verify", csv_df, "verify_contiguous_dates: no Date column", level="error")
-            return False
+            msg = "assert_file_contiguous_dates: no Date column"
+            dataframe_print("Assert", csv_df, msg, level="error")
+            return msg
         dates = csv_df.sort("Date")["Date"].drop_nulls().to_list()
         if len(dates) < 2:
-            return True
+            return None
         if start_date is not None and dates[0] != start_date:
-            dataframe_print("Verify", csv_df.head(1), f"verify_contiguous_dates: expected start {start_date}, got {dates[0]}", level="error")
-            return False
+            msg = f"assert_file_contiguous_dates: expected start {start_date}, got {dates[0]}"
+            dataframe_print("Assert", csv_df.head(1), msg, level="error")
+            return msg
         if end_date is not None and dates[-1] != end_date:
-            dataframe_print("Verify", csv_df.tail(1), f"verify_contiguous_dates: expected end {end_date}, got {dates[-1]}", level="error")
-            return False
+            msg = f"assert_file_contiguous_dates: expected end {end_date}, got {dates[-1]}"
+            dataframe_print("Assert", csv_df.tail(1), msg, level="error")
+            return msg
         diffs = [(dates[i + 1] - dates[i]).days for i in range(len(dates) - 1)]
         if max_gap_days is not None:
             for i, diff in enumerate(diffs):
                 if diff > max_gap_days:
+                    msg = f"assert_file_contiguous_dates: gap of {diff} days between {dates[i]} and {dates[i + 1]} exceeds max {max_gap_days}"
                     gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
-                    dataframe_print("Verify", gap_df, f"verify_contiguous_dates: gap of {diff} days between {dates[i]} and {dates[i + 1]} exceeds max {max_gap_days}", level="error")
-                    return False
+                    dataframe_print("Assert", gap_df, msg, level="error")
+                    return msg
         else:
             min_diff, max_diff = min(diffs), max(diffs)
             if 28 <= min_diff and max_diff <= 31:
                 for i in range(len(dates) - 1):
                     if dates[i + 1].year * 12 + dates[i + 1].month - (dates[i].year * 12 + dates[i].month) != 1:
+                        msg = f"assert_file_contiguous_dates: gap between {dates[i]} and {dates[i + 1]}"
                         gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
-                        dataframe_print("Verify", gap_df, f"verify_contiguous_dates: gap between {dates[i]} and {dates[i + 1]}", level="error")
-                        return False
-        return True
+                        dataframe_print("Assert", gap_df, msg, level="error")
+                        return msg
+        return None
 
-    _verify.__name__ = "verify_contiguous_dates"
-    return _verify
+    _assert.__name__ = "assert_file_contiguous_dates"
+    return _assert
+
+
+def assert_custom_rows_delta(equals=None, greater_than=None, less_than=None):
+    def _assert(first, second, third):
+        current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
+        previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
+        delta = current_rows - previous_rows
+        if equals is not None and delta != equals:
+            return f"assert_rows_delta: expected delta == {equals}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
+        if greater_than is not None and delta <= greater_than:
+            return f"assert_rows_delta: expected delta > {greater_than}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
+        if less_than is not None and delta >= less_than:
+            return f"assert_rows_delta: expected delta < {less_than}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
+        return None
+
+    parts = [f"eq{equals}" if equals is not None else None,
+             f"gt{greater_than}" if greater_than is not None else None,
+             f"lt{less_than}" if less_than is not None else None]
+    _assert.__name__ = "assert_rows_delta_" + "_".join(p for p in parts if p is not None)
+    return _assert
 
 
 def merge_asserts(base, addition):
