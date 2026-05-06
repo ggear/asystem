@@ -46,18 +46,18 @@ def configure(argv=None):
     parser.add_argument(
         "--disable-uploads",
         action="store_true",
-        help="skip remote system uploads and write to local cache only",
+        help="skip remote data repository uploads and write to local cache only",
     )
     parser.add_argument(
         "--disable-downloads",
         action="store_true",
-        help="skip remote system downloads and read from local cache only",
+        help="skip remote source data downloads and read from local cache only",
     )
     parser.add_argument(
         "--repo-scope",
         choices=["release", "preview", "local"],
         default="release",
-        help="scope uploads and downloads (default: release)",
+        help="scope data repository uploads and downloads (default: release)",
     )
     parser.add_argument(
         "--filter-plugins",

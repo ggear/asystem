@@ -28,19 +28,19 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 # noinspection PyMethodMayBeStatic
 class WrangleTest(unittest.TestCase):
 
-    # No current data, no new data, no downloads, no uploads
+    # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_balances_local_blank_1(self):
         self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_downloads=True, disable_uploads=True,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
                         }))
 
-    # No current data, no new data, no downloads or uploads
+    # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_blank_1(self):
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info", disable_downloads=True, disable_uploads=True,
                         counter_asserts=merge_asserts(ASSERT_NOOP, {
                         }))
 
-    # Lots of current data, a little new data, no downloads or uploads
+    # Lots of current data, a little new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_replete_1(self):
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "replete_1", log_level="info", disable_downloads=True, disable_uploads=True,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
@@ -78,13 +78,13 @@ class WrangleTest(unittest.TestCase):
                             ],
                         })
 
-    # Lots of current data, a little new data, downloads and uploads to and from preview scopes
+    # Lots of current data, a little new data, no remote source data downloads, downloads and uploads from and to preview scope data repo
     def test_currency_preview_replete_1(self):
         None
 
-    # Lots of current data, a lot of live new data, downloads from release scope, no uploads
+    # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release scope data repo, no remote data repo uploads
     def test_currency_release_replete_1(self):
-        self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
+            self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info", disable_uploads=True, disable_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
