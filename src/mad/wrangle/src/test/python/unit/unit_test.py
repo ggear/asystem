@@ -5,7 +5,7 @@ import re
 import shutil
 import sys
 import unittest
-from os.path import *
+from os.path import abspath, dirname, isdir, isfile, join, realpath
 
 import polars as pl
 import pytest
@@ -31,9 +31,8 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_balances_local_blank_1(self):
         self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
-                        counter_asserts=merge_asserts(ASSERT_NOOP, {
-                        }),
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=False,
+                        counter_asserts=ASSERT_NONE,
                         file_asserts={
                             "__balances_current.csv": [
                                 assert_file_does_not_exist(),
@@ -43,9 +42,8 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_blank_1(self):
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
-                        counter_asserts=merge_asserts(ASSERT_NOOP, {
-                        }),
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=False,
+                        counter_asserts=ASSERT_NONE,
                         file_asserts={
                             "__currency_current.csv": [
                                 assert_file_does_not_exist(),
@@ -73,7 +71,7 @@ class WrangleTest(unittest.TestCase):
     @pytest.mark.skip(reason="requires update")
     def test_currency_preview_replete_1(self):
         self.run_plugin("currency", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-        disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=False,enable_rerun=True, force_reprocessing=False,
+                        disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -108,10 +106,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
-                        },
-                        sheet_asserts=[],
-                        database_asserts=[],
-                        )
+                        })
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release scope data repo, no remote data repo uploads
     def test_currency_release_replete_1(self):
@@ -126,7 +121,7 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_DELTA_COLUMNS: 15,
                                 },
                             },
-                            "counter_greater": {
+                            "counter_at_least": {
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_DELTA_ROWS: 14,
                                 },
@@ -162,7 +157,7 @@ class WrangleTest(unittest.TestCase):
         self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
                         disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_greater": {
+                            "counter_at_least": {
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_PREVIOUS_COLUMNS: 200,
                                     plugin.CTR_ACT_CURRENT_COLUMNS: 144,
@@ -586,14 +581,15 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_called_twice(self):
         t = self._setup_state_test("test-2")
-        calls = [0]
+        calls = 0
 
         def counting(df):
-            calls[0] += 1
+            nonlocal calls
+            calls += 1
             return df
 
         t.state_cache(self._df([("2020-03-01", 3.0)]), counting)
-        self.assertEqual(2, calls[0])
+        self.assertEqual(2, calls)
 
     def test_state_cache_null_date_in_update(self):
         t = self._setup_state_test("test-1")
@@ -622,52 +618,6 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(update)
         self.assertEqual(3, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_PREVIOUS_COLUMNS))
 
-    # TODO: Remove?
-    # def test_state_cache_disable_downloads(self):
-    #     t = self._setup_state_test("test-5")
-    #     plugin.config.disable_downloads = True
-    #     update = self._df([("2020-04-01", 4.0)])
-    #     delta, current, _ = t.state_cache(update)
-    #     self.assertEqual(0, len(delta))
-    #     self.assertEqual(3, len(current))
-    #
-    # def test_state_cache_disable_downloads_aggregate_not_applied(self):
-    #     t = self._setup_state_test("test-5")
-    #     t.state_cache(self._df([("2020-01-01", 1.0), ("2020-02-01", 2.0), ("2020-03-01", 3.0)]),
-    #                   lambda df: df.with_columns((pl.col("Value") * 2).alias("Double")))
-    #     t.reset_counters()
-    #     plugin.config.disable_downloads = True
-    #     _, current, _ = t.state_cache(
-    #         self._df([("2020-04-01", 4.0)]),
-    #         lambda df: df.with_columns((pl.col("Value") * 100).alias("Double"))
-    #     )
-    #     self.assertIn("Double", current.columns)
-    #     self.assertEqual([2.0, 4.0, 6.0], current.sort("Date")["Double"].to_list())
-    #     dates = [str(d) for d in current["Date"].to_list()]
-    #     self.assertNotIn("2020-04-01", dates)
-    #
-    # def test_state_cache_disable_downloads_returns_current_as_previous(self):
-    #     t = self._setup_state_test("test-5")
-    #     plugin.config.disable_downloads = True
-    #     update = self._df([("2020-04-01", 4.0)])
-    #     delta, current, previous = t.state_cache(update)
-    #     self.assertEqual(0, len(delta))
-    #     self.assertEqual(len(current), len(previous))
-    #     self.assertEqual(current["Date"].to_list(), previous["Date"].to_list())
-    #     self.assertEqual(current["Value"].to_list(), previous["Value"].to_list())
-    #
-    # def test_state_cache_multi_key_disable_downloads(self):
-    #     t = self._setup_state_test("mk-11")
-    #     t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
-    #                   key_columns=["Date", "Account ID"])
-    #     t.reset_counters()
-    #     plugin.config.disable_downloads = True
-    #     delta, current, _ = t.state_cache(
-    #         self._mk_df([("2026-01-01", "acc-1", 999.0)]),
-    #         key_columns=["Date", "Account ID"])
-    #     self.assertEqual(0, len(delta))
-    #     self.assertEqual(2, len(current))
-
     def _price_df(self, date_price_pairs, ticker="AAPL"):
         return pl.DataFrame({
             "Date": [p[0] for p in date_price_pairs],
@@ -679,8 +629,7 @@ class WrangleTest(unittest.TestCase):
         change_col = f"{ticker} Price Close 1d-Change Percentage"
 
         def _agg(df):
-            str_cols = [c for c, t in zip(df.columns, df.dtypes)
-                        if str(t) in ('String', 'Utf8', 'Null') and c != 'Date']
+            str_cols = [c for c, t in zip(df.columns, df.dtypes) if _is_string_col(c, t)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if price_col in df.columns:
@@ -763,8 +712,7 @@ class WrangleTest(unittest.TestCase):
         t = self._setup_state_test("agg-5")
 
         def agg_with_null_col(df):
-            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes)
-                        if str(_t) in ('String', 'Utf8', 'Null') and _c != 'Date']
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes) if _is_string_col(_c, _t)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             return df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Baseline Price Close"))
@@ -823,8 +771,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_with_guard(self):
         def null_fill_agg(df):
-            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes)
-                        if str(_t) in ('String', 'Utf8', 'Null') and _c != 'Date']
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes) if _is_string_col(_c, _t)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if "AAPL Price Close" in df.columns:
@@ -855,8 +802,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_nullfill_backfills_historical_rows(self):
         def null_fill_agg(df):
-            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes)
-                        if str(_t) in ('String', 'Utf8', 'Null') and _c != 'Date']
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes) if _is_string_col(_c, _t)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if "AAPL Price Close" in df.columns:
@@ -1215,10 +1161,12 @@ class WrangleTest(unittest.TestCase):
                     self.fail(f"Assertion [{func.__name__}] failed for [{filename}]. {result}")
 
     def _assert_counters(self, actual, asserts):
+        if not asserts:
+            return
         comparators = [
             ("counter_equals", self.assertEqual, "equals", "!="),
             ("counter_less", self.assertLessEqual, "less than", ">="),
-            ("counter_greater", self.assertGreaterEqual, "greater than", "<="),
+            ("counter_at_least", self.assertGreaterEqual, "at least", "<"),
         ]
         for comparator_key, assert_fn, label, op in comparators:
             if comparator_key not in asserts:
@@ -1242,9 +1190,14 @@ class WrangleTest(unittest.TestCase):
 
 
 _NUMERIC_DTYPES = (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)
+_STR_DTYPES = (pl.String, pl.Utf8, pl.Null)
 
 
-def _leading_zero_rows(csv_df, numeric_cols):
+def _is_string_col(name, dtype):
+    return name != 'Date' and dtype in _STR_DTYPES
+
+
+def _count_leading_zero_rows(csv_df, numeric_cols):
     count = 0
     for i in range(len(csv_df)):
         row = csv_df.row(i, named=True)
@@ -1269,8 +1222,7 @@ def _filter_cols(csv_df, include=None, exclude=None):
 
 
 def assert_file_does_exist():
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(file_path, *_):
         if not isfile(file_path):
             msg = f"assert_file_does_exist: [{file_path}] does not exist"
             dataframe_print("Assert", pl.DataFrame(), msg, level="error")
@@ -1282,8 +1234,7 @@ def assert_file_does_exist():
 
 
 def assert_file_does_not_exist():
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(file_path, *_):
         if isfile(file_path):
             msg = f"assert_file_does_not_exist: [{file_path}] exists"
             dataframe_print("Assert", pl.DataFrame(), msg, level="error")
@@ -1295,8 +1246,7 @@ def assert_file_does_not_exist():
 
 
 def assert_file_size(min_rows=1, max_rows=None):
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         count = len(csv_df)
         if count < min_rows:
@@ -1315,8 +1265,7 @@ def assert_file_size(min_rows=1, max_rows=None):
 
 
 def assert_file_nones_per_row(max_nones=0, include=None, exclude=None):
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         if not cols:
@@ -1334,8 +1283,7 @@ def assert_file_nones_per_row(max_nones=0, include=None, exclude=None):
 
 
 def assert_file_max_nones_per_col(max_nones=0, include=None, exclude=None):
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         failed = [c for c in cols if csv_df[c].null_count() > max_nones]
@@ -1351,13 +1299,12 @@ def assert_file_max_nones_per_col(max_nones=0, include=None, exclude=None):
 
 
 def assert_file_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=None, exclude=None):
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
         if not numeric_cols:
             return None
-        data_df = csv_df.slice(_leading_zero_rows(csv_df, numeric_cols)) if after_first_rows else csv_df
+        data_df = csv_df.slice(_count_leading_zero_rows(csv_df, numeric_cols)) if after_first_rows else csv_df
         zero_count = pl.sum_horizontal((pl.col(c) == 0).cast(pl.Int32) for c in numeric_cols)
         fail_rows = data_df.filter(zero_count > max_zeroes)
         if not fail_rows.is_empty():
@@ -1372,8 +1319,7 @@ def assert_file_max_zeroes_per_row(max_zeroes=0, after_first_rows=False, include
 
 
 def assert_file_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
         failed = [c for c in numeric_cols if (csv_df[c] == 0).sum() > max_zeroes]
@@ -1389,8 +1335,7 @@ def assert_file_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
 
 
 def assert_file_contiguous_dates(start_date=None, end_date=None, max_gap_days=1, descending=None):
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         if "Date" not in csv_df.columns:
             msg = "assert_file_contiguous_dates: no Date column"
@@ -1442,8 +1387,7 @@ def assert_file_contiguous_dates(start_date=None, end_date=None, max_gap_days=1,
 
 
 def assert_file_state_equal():
-    # noinspection PyUnusedLocal
-    def _assert(file_path, pass_1_path=None, pass_2_path=None, pass_3_path=None):
+    def _assert(_file_path, pass_1_path=None, _pass_2_path=None, pass_3_path=None):
         if pass_1_path is None or pass_3_path is None:
             return None
         if not isfile(pass_1_path):
@@ -1464,8 +1408,7 @@ def assert_file_state_equal():
 
 
 def assert_custom_rows_delta(equals=None, greater_than=None, less_than=None):
-    # noinspection PyUnusedLocal
-    def _assert(first, second, third):
+    def _assert(first, _second, third):
         current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
         previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
         delta = current_rows - previous_rows
@@ -1515,7 +1458,7 @@ ASSERT_RUN = {
             plugin.CTR_ACT_ERRORED: 0,
         },
     },
-    "counter_greater": {
+    "counter_at_least": {
         plugin.CTR_SRC_SOURCES: {
             plugin.CTR_ACT_DOWNLOADED: 0,
         },
@@ -1559,7 +1502,7 @@ ASSERT_NOOP = {
             plugin.CTR_ACT_ERRORED: 0,
         },
     },
-    "counter_greater": {
+    "counter_at_least": {
         plugin.CTR_SRC_SOURCES: {
             plugin.CTR_ACT_CACHED: 0,
         },
@@ -1586,7 +1529,7 @@ ASSERT_RELOAD = {
             plugin.CTR_ACT_ERRORED: 0,
         },
     },
-    "counter_greater": {
+    "counter_at_least": {
         plugin.CTR_SRC_FILES: {
             plugin.CTR_ACT_PROCESSED: 0,
         },
