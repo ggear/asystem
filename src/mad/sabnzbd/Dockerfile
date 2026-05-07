@@ -2,11 +2,12 @@
 FROM linuxserver/sabnzbd:5.0.1 AS image_upstream
 USER root
 RUN apk update && \
-    apk add --upgrade --no-cache bash=5.2.37-r0 && \
-    apk add --upgrade --no-cache less=679-r0 && \
-    apk add --upgrade --no-cache curl=8.14.1-r2 && \
-    apk add --upgrade --no-cache vim=9.1.1566-r0 && \
-    apk add --upgrade --no-cache jq=1.8.0-r0 && \
+    apk add --upgrade --no-cache bash=5.3.3-r1 && \
+    apk add --upgrade --no-cache coreutils=9.8-r1 && \
+    apk add --upgrade --no-cache less=685-r0 && \
+    apk add --upgrade --no-cache curl=8.17.0-r1 && \
+    apk add --upgrade --no-cache vim=9.2.0437-r0 && \
+    apk add --upgrade --no-cache jq=1.8.1-r0 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
