@@ -34,6 +34,7 @@ CTR_ACT_DOWNLOADED = "Downloaded"
 CTR_ACT_CACHED = "Cached"
 CTR_ACT_PERSISTED = "Persisted"
 CTR_ACT_UPLOADED = "Uploaded"
+CTR_ACT_DELETED = "Deleted"
 
 
 class RepoScope(str, Enum):

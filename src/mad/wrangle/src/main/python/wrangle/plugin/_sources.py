@@ -325,18 +325,17 @@ class SourcesMixin(ContractMixin):
         if config.disable_repo_uploads or database.database_client is None:
             for _ in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
                 pass
-            if config.disable_repo_uploads:
-                tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
-                tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
-                csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
-                date_col = data_df.columns[0]
-                fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
-                csv_df = data_df \
-                    .rename({col: f"{col}{tag_suffix}" for col in data_df.columns[1:]}) \
-                    .with_columns(pl.col(date_col).cast(pl.Datetime).dt.strftime(fmt).alias(date_col))
-                if csv_path in self._db_cache_dfs:
-                    csv_df = self._db_cache_dfs[csv_path].join(csv_df, on=date_col, how="full", coalesce=True).sort(date_col)
-                self._db_cache_dfs[csv_path] = csv_df
+            tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
+            tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
+            csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
+            date_col = data_df.columns[0]
+            fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
+            csv_df = data_df \
+                .rename({col: f"{col}{tag_suffix}" for col in data_df.columns[1:]}) \
+                .with_columns(pl.col(date_col).cast(pl.Datetime).dt.strftime(fmt).alias(date_col))
+            if csv_path in self._db_cache_dfs:
+                csv_df = self._db_cache_dfs[csv_path].join(csv_df, on=date_col, how="full", coalesce=True).sort(date_col)
+            self._db_cache_dfs[csv_path] = csv_df
             return
         try:
             buffer = []
@@ -751,10 +750,7 @@ class SourcesMixin(ContractMixin):
             token = response.get('nextPageToken')
             if not token:
                 break
-        self.print_log(
-            f"Directory [{basename(local_dir)}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]",
-            started=started_time,
-        )
+        self.print_log(f"Directory [{basename(local_dir)}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time, level="debug")
         started_time = time.time()
         force_download = config.force_downloads and not config.disable_repo_downloads
         force_upload = config.force_downloads and not config.disable_repo_uploads
@@ -779,10 +775,7 @@ class SourcesMixin(ContractMixin):
                 try:
                     os.utime(local_path, (drive_files[drive_file]["modified"], drive_files[drive_file]["modified"]))
                 except Exception as exception:
-                    self.print_log(
-                        f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]",
-                        exception=exception,
-                    )
+                    self.print_log(f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]", exception=exception)
                 local_files[drive_file_lower] = {
                     "hash": drive_files[drive_file]["hash"],
                     "modified": drive_files[drive_file]["modified"]
@@ -792,7 +785,7 @@ class SourcesMixin(ContractMixin):
                 self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time_file)
             else:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file)
+                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file, level="debug")
             actioned_files[local_path] = True, file_actioned
         if upload:
             for local_file in local_files:
@@ -820,25 +813,13 @@ class SourcesMixin(ContractMixin):
                                 request = service.files().update(fileId=drive_id, body=metadata, media_body=data).execute()
                             file_actioned = True
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)
-                            self.print_log(
-                                f"File [{label}] uploaded to [https://drive.google.com/file/d/{request.get('id') if drive_id is None else drive_id}]",
-                                started=started_time_file,
-                            )
+                            self.print_log(f"File [{label}] uploaded to [https://drive.google.com/file/d/{request.get('id') if drive_id is None else drive_id}]", started=started_time_file)
                         except Exception as exception:
-                            self.print_log(
-                                f"File [{label}] failed to upload to [https://drive.google.com/drive/folders/{drive_dir}]",
-                                exception=exception,
-                            )
+                            self.print_log(f"File [{label}] failed to upload to [https://drive.google.com/drive/folders/{drive_dir}]", exception=exception)
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
                     else:
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_PERSISTED)
-                        self.print_log(
-                            f"File [{label}] verified at [https://drive.google.com/file/d/{drive_files[drive_match]['id']}]",
-                            started=started_time_file,
-                        )
+                        self.print_log(f"File [{label}] verified at [https://drive.google.com/file/d/{drive_files[drive_match]['id']}]", started=started_time_file, level="debug")
                     actioned_files[local_path] = True, file_actioned
-        self.print_log(
-            f"Directory [{basename(local_dir).title()}] synchronised [{len(actioned_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]",
-            started=started_time,
-        )
+        self.print_log(f"Directory [{basename(local_dir).title()}] synchronised [{len(actioned_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
         return collections.OrderedDict(sorted(actioned_files.items()))

@@ -23,19 +23,21 @@ RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
 
+REPOS_INTEREST = plugin.Repos(
+    preview={
+        "drive_folder": "PLACEHOLDER",
+        "sheet_key": "PLACEHOLDER",
+        "database_table": "interest_preview",
+    },
+    release={
+        "drive_folder": "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ",
+        "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
+        "database_table": "interest",
+    },
+)
+
+
 class Interest(plugin.Plugin):
-    _repos = plugin.Repos(
-        preview={
-            "drive_folder": "PLACEHOLDER",
-            "sheet_key": "PLACEHOLDER",
-            "database_table": "interest_preview",
-        },
-        release={
-            "drive_folder": "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ",
-            "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
-            "database_table": "interest",
-        },
-    )
 
     def _run(self):
         interest_df = self.dataframe_new(schema={"Date": pl.Date})
@@ -177,4 +179,4 @@ class Interest(plugin.Plugin):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Interest", Interest._repos)
+        super().__init__("Interest", REPOS_INTEREST)

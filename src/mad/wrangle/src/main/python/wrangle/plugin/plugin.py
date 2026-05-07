@@ -73,6 +73,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
                 (CTR_ACT_SKIPPED, 0),
                 (CTR_ACT_UPLOADED, 0),
                 (CTR_ACT_PERSISTED, 0),
+                (CTR_ACT_DELETED, 0),
                 (CTR_ACT_ERRORED, 0),
             ])),
             (CTR_SRC_FILES, OrderedDict([

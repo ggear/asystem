@@ -95,21 +95,23 @@ STOCK = {
 }
 
 
+REPOS_EQUITY = plugin.Repos(
+    preview={
+        "drive_folder": "PLACEHOLDER",
+        "sheet_prices": "PLACEHOLDER",
+        "sheet_portfolio": "PLACEHOLDER",
+        "database_table": "equity_preview",
+    },
+    release={
+        "drive_folder": "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-",
+        "sheet_prices": "1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM",
+        "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
+        "database_table": "equity",
+    },
+)
+
+
 class Equity(plugin.Plugin):
-    _repos = plugin.Repos(
-        preview={
-            "drive_folder": "PLACEHOLDER",
-            "sheet_prices": "PLACEHOLDER",
-            "sheet_portfolio": "PLACEHOLDER",
-            "database_table": "equity_preview",
-        },
-        release={
-            "drive_folder": "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-",
-            "sheet_prices": "1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM",
-            "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
-            "database_table": "equity",
-        },
-    )
 
     # noinspection PyTypeChecker,PyUnresolvedReferences
     def _run(self):
@@ -814,4 +816,4 @@ from(bucket: "data_public")
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Equity", Equity._repos)
+        super().__init__("Equity", REPOS_EQUITY)

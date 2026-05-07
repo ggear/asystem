@@ -36,19 +36,21 @@ RBA_YEARS = [
 RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
 
+REPOS_CURRENCY = plugin.Repos(
+    preview={
+        "drive_folder": "14TBFRwHLx0kRr_LwAjBL9jcnJJ9SXQNY",
+        "sheet_key": "1AgJXUPCTjWV9KY_E60tzNTqltuXwJc65LNcza-7haCU",
+        "database_table": "currency_preview",
+    },
+    release={
+        "drive_folder": "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE",
+        "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
+        "database_table": "currency",
+    },
+)
+
+
 class Currency(plugin.Plugin):
-    _repos = plugin.Repos(
-        preview={
-            "drive_folder": "PLACEHOLDER",
-            "sheet_key": "PLACEHOLDER",
-            "database_table": "currency_preview",
-        },
-        release={
-            "drive_folder": "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE",
-            "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
-            "database_table": "currency",
-        },
-    )
 
     def _run(self):
         rba_df = self.dataframe_new(schema={"Date": pl.Date, **{pair: pl.Float64 for pair in PAIRS}, "Source": pl.Utf8})
@@ -178,4 +180,4 @@ class Currency(plugin.Plugin):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Currency", Currency._repos)
+        super().__init__("Currency", REPOS_CURRENCY)
