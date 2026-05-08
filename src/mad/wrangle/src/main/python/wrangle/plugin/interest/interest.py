@@ -22,7 +22,6 @@ COLUMNS = [f"{label} {period}".strip() for label in LABELS for period in ([""] +
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
-
 REPOS_INTEREST = plugin.Repos(
     preview={
         "drive_folder": "1fj4B5JAaDixzcXpjn3R7bGfDQc4DlqHD",

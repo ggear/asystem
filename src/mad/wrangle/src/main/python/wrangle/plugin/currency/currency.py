@@ -35,7 +35,6 @@ RBA_YEARS = [
 
 RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
-
 REPOS_CURRENCY = plugin.Repos(
     preview={
         "drive_folder": "14TBFRwHLx0kRr_LwAjBL9jcnJJ9SXQNY",

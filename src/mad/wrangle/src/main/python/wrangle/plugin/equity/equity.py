@@ -94,7 +94,6 @@ STOCK = {
     'URNM': {"start": "2022-07", "end of day": "16:00", "prefix": "", "exchange": "AX", },
 }
 
-
 REPOS_EQUITY = plugin.Repos(
     preview={
         "drive_folder": "PLACEHOLDER",

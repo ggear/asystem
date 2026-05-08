@@ -1604,11 +1604,15 @@ def _is_string_col(name, dtype):
 
 
 def _count_leading_zero_rows(csv_df, numeric_cols):
+    if not numeric_cols:
+        return 0
+    has_zero = csv_df.select(
+        pl.any_horizontal((pl.col(c) == 0) & pl.col(c).is_not_null() for c in numeric_cols).alias("z")
+    )["z"].to_list()
     count = 0
-    for i in range(len(csv_df)):
-        row = csv_df.row(i, named=True)
-        if any(row[col] == 0 for col in numeric_cols if row[col] is not None):
-            count = i + 1
+    for v in has_zero:
+        if v:
+            count += 1
         else:
             break
     return count
@@ -1741,12 +1745,12 @@ def assert_file_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
 
 
 def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending=None, contiguous=None):
-    def _parse_date(value):
-        if value is None:
+    def _parse_date(_value):
+        if _value is None:
             return None
-        if isinstance(value, str):
-            return datetime.date.fromisoformat(value)
-        return value
+        if isinstance(_value, str):
+            return datetime.date.fromisoformat(_value)
+        return _value
 
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
@@ -1807,7 +1811,7 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
 def assert_file_state_equal(file_key=None):
     def _assert(file_path, pass_1_path=None, pass_3_path=None):
         if file_key is not None:
-            cache_dir = os.path.dirname(file_path)
+            cache_dir = str(os.path.dirname(file_path))
             pass_1_path = join(cache_dir, f"{file_key}_pass_1.csv")
             pass_3_path = join(cache_dir, f"{file_key}_pass_3.csv")
         if pass_1_path is None or pass_3_path is None:
@@ -1830,7 +1834,7 @@ def assert_file_state_equal(file_key=None):
 
 
 def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
-    def _assert(first, _second, third):
+    def _assert(first, _, third):
         current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
         previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
         delta = current_rows - previous_rows
@@ -1972,6 +1976,7 @@ def reset_config(log="warning"):
     plugin.config.force_reprocessing = False
     plugin.config.force_downloads = False
     plugin.config.disable_repo_uploads = True
+    plugin.config.disable_repo_downloads = True
     plugin.config.disable_downloads = False
     plugin.database_close()
 
