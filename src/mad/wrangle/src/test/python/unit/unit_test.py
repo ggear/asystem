@@ -33,6 +33,10 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 # noinspection PyMethodMayBeStatic
 class WrangleTest(unittest.TestCase):
 
+    ########################################################################################################################
+    # Balances
+    ########################################################################################################################
+
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_balances_local_blank_1(self):
         self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
@@ -43,6 +47,136 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_does_not_exist(),
                             ],
                         })
+
+    # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
+    @pytest.mark.skip(reason="requires update")
+    def test_balances_local_corrupt_1(self):
+        self.run_plugin("balances", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: 1,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__balances_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
+    @pytest.mark.skip(reason="requires update")
+    def test_balances_local_corrupt_2(self):
+        self.run_plugin("balances", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: 1,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__balances_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
+    @pytest.mark.skip(reason="requires update")
+    def test_balances_preview_replete_1(self):
+        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
+        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
+        self.run_plugin("balances", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_UPLOADED: 2,
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_ROWS: 0,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(equals=14)
+                        ],
+                        file_asserts={
+                            "__balances_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                            ],
+                            "_sheet_rates_balances.csv": [
+                                assert_file_size(),
+                                assert_file_dates(descending=True),
+                                assert_file_nones_per_row(),
+                                assert_file_max_zeroes_per_row(),
+                            ],
+                            "_database_balances.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                            ],
+                        })
+
+    # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
+    @pytest.mark.skip(reason="requires update")
+    def test_balances_release_replete_1(self):
+        self.run_plugin("balances", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
+                        disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 18,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 18,
+                                },
+                            },
+                            "counter_at_least": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_DELTA_ROWS: 14,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(greater_than=14)
+                        ],
+                        file_asserts={
+                            "__balances_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_state_equal(),
+                            ],
+                            "_sheet_rates_balances.csv": [
+                                assert_file_size(),
+                                assert_file_dates(descending=True),
+                                assert_file_nones_per_row(),
+                                assert_file_max_zeroes_per_row(),
+                            ],
+                            "_database_balances.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                            ],
+                        })
+
+    ########################################################################################################################
+    # Currency
+    ########################################################################################################################
 
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_blank_1(self):
@@ -177,12 +311,109 @@ class WrangleTest(unittest.TestCase):
                             ],
                         })
 
+    ########################################################################################################################
+    # Equity
+    ########################################################################################################################
+
+    # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
+    def test_equity_local_blank_1(self):
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=False,
+                        counter_asserts=ASSERT_NONE,
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
+    @pytest.mark.skip(reason="requires update")
+    def test_equity_local_corrupt_1(self):
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: 1,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
+    @pytest.mark.skip(reason="requires update")
+    def test_equity_local_corrupt_2(self):
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: 1,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
+    @pytest.mark.skip(reason="requires update")
+    def test_equity_preview_replete_1(self):
+        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
+        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
+        self.run_plugin("equity", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_UPLOADED: 2,
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_ROWS: 0,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(equals=14)
+                        ],
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                            ],
+                            "_sheet_rates_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(descending=True),
+                                assert_file_nones_per_row(),
+                                assert_file_max_zeroes_per_row(),
+                            ],
+                            "_database_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                            ],
+                        })
+
+    # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     @pytest.mark.skip(reason="requires update")
     def test_equity_release_replete_1(self):
         self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
                         disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_at_least": {
+                            "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_PREVIOUS_COLUMNS: 200,
                                     plugin.CTR_ACT_CURRENT_COLUMNS: 144,
@@ -190,8 +421,134 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_DELTA_COLUMNS: 144,
                                 },
                             },
-                        }))
+                            "counter_at_least": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_DELTA_ROWS: 14,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(greater_than=14)
+                        ],
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_state_equal(),
+                            ],
+                            "_sheet_rates_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(descending=True),
+                                assert_file_nones_per_row(),
+                                assert_file_max_zeroes_per_row(),
+                            ],
+                            "_database_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                            ],
+                        })
 
+    ########################################################################################################################
+    # Interest
+    ########################################################################################################################
+
+    # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
+    def test_interest_local_blank_1(self):
+        self.run_plugin("interest", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=False,
+                        counter_asserts=ASSERT_NONE,
+                        file_asserts={
+                            "__interest_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
+    @pytest.mark.skip(reason="requires update")
+    def test_interest_local_corrupt_1(self):
+        self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: 1,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__interest_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
+    @pytest.mark.skip(reason="requires update")
+    def test_interest_local_corrupt_2(self):
+        self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: 1,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__interest_current.csv": [
+                                assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
+    @pytest.mark.skip(reason="requires update")
+    def test_interest_preview_replete_1(self):
+        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
+        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
+        self.run_plugin("interest", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_UPLOADED: 2,
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_ROWS: 0,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(equals=14)
+                        ],
+                        file_asserts={
+                            "__interest_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                            ],
+                            "_sheet_rates_interest.csv": [
+                                assert_file_size(),
+                                assert_file_dates(descending=True),
+                                assert_file_nones_per_row(),
+                                assert_file_max_zeroes_per_row(),
+                            ],
+                            "_database_interest.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                            ],
+                        })
+
+    # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     @pytest.mark.skip(reason="requires update")
     def test_interest_release_replete_1(self):
         self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
@@ -205,12 +562,40 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_DELTA_COLUMNS: 18,
                                 },
                             },
+                            "counter_at_least": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_DELTA_ROWS: 14,
+                                },
+                            },
                         }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(greater_than=14)
+                        ],
                         file_asserts={
-                            "__interest_current.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_dates()],
-                            "_sheet_rates_interest.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_dates(), assert_file_max_zeroes_per_row(0)],
-                            "_database_interest.csv": [assert_file_size(), assert_file_nones_per_row(), assert_file_dates()],
+                            "__interest_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_state_equal(),
+                            ],
+                            "_sheet_rates_interest.csv": [
+                                assert_file_size(),
+                                assert_file_dates(descending=True),
+                                assert_file_nones_per_row(),
+                                assert_file_max_zeroes_per_row(),
+                            ],
+                            "_database_interest.csv": [
+                                assert_file_size(),
+                                assert_file_dates(),
+                                assert_file_nones_per_row(),
+                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                            ],
                         })
+
+    ########################################################################################################################
+    # Sources
+    ########################################################################################################################
 
     @pytest.mark.skip(reason="very slow")
     def test_library_sheet(self):
@@ -402,6 +787,10 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={"SOME UNKNOWN COLUMN": pl.Utf8}))))
         self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_data[0]}))))
         self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_lots[0]}))))
+
+    ########################################################################################################################
+    # State
+    ########################################################################################################################
 
     def test_state_cache_first_run(self):
         t = self._setup_state_test("test-1")
