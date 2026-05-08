@@ -1,11 +1,14 @@
 import argparse
+import datetime
 import glob
 import importlib
+import os
 import sys
 import time
 from os.path import basename, dirname, isdir, join, realpath
 
 from wrangle import plugin
+from wrangle import server as web_server
 from wrangle.plugin import print_log
 
 
@@ -78,6 +81,13 @@ def configure(argv=None):
         default=None,
         help="logging verbosity (default: info; debug when --once is set)",
     )
+    parser.add_argument(
+        "--history-size",
+        type=int,
+        default=25,
+        metavar="N",
+        help="number of runs to retain in the history memory store (default: 25)",
+    )
     args = parser.parse_args(argv)
     if args.poll_period < 0:
         parser.error("argument -p/--poll-period: MINUTES must be >= 0")
@@ -110,6 +120,7 @@ def configure(argv=None):
 def run_once(filter_plugins=None):
     plugin_count = 0
     plugin_errored_count = 0
+    plugin_counters = {}
     plugin_names = _get_plugins()
     if filter_plugins is not None:
         filter_plugin_set = set(filter_plugins)
@@ -123,6 +134,7 @@ def run_once(filter_plugins=None):
             plugin_instance = getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}"), plugin_class)()
             plugin_instance.run()
             counters = plugin_instance.get_counters()
+            plugin_counters[plugin_name] = counters
             for source in counters:
                 for action in counters[source]:
                     if action == plugin.CTR_ACT_ERRORED and counters[source][action] > 0:
@@ -135,7 +147,7 @@ def run_once(filter_plugins=None):
             plugin_errored = True
         if plugin_errored:
             plugin_errored_count += 1
-    return plugin_count != 0 and plugin_count > plugin_errored_count
+    return (plugin_count != 0 and plugin_count > plugin_errored_count, plugin_counters)
 
 
 def _get_plugins():
@@ -149,10 +161,29 @@ def _get_plugins():
 
 def main(argv=None):
     args = configure(argv)
+    history = None
+    if not args.once:
+        http_port_str = os.environ.get("WRANGLE_HTTP_PORT")
+        if http_port_str:
+            try:
+                http_port = int(http_port_str)
+            except ValueError:
+                print_log("wrangle", f"WRANGLE_HTTP_PORT '{http_port_str}' is not a valid port number, HTTP server disabled", level="warning")
+                http_port = None
+            if http_port is not None:
+                history = web_server.RunHistory(max_runs=args.history_size)
+                web_server.start_server(http_port, history)
+                print_log("wrangle", f"HTTP server listening on port {http_port}")
     try:
         plugin.database_open()
         while True:
-            success = run_once(filter_plugins=args.filter_plugins)
+            success, plugin_counters = run_once(filter_plugins=args.filter_plugins)
+            if history is not None:
+                history.add_run(
+                    timestamp=datetime.datetime.now(),
+                    plugins=plugin_counters,
+                    errored=not success,
+                )
             plugin.config.force_reprocessing = False
             if args.once or not args.poll_period:
                 return success
