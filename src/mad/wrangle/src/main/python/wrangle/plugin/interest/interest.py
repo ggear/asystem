@@ -25,8 +25,8 @@ INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
 REPOS_INTEREST = plugin.Repos(
     preview={
-        "drive_folder": "PLACEHOLDER",
-        "sheet_key": "PLACEHOLDER",
+        "drive_folder": "1fj4B5JAaDixzcXpjn3R7bGfDQc4DlqHD",
+        "sheet_key": "1v3vGZU1x2UGj_-4CIoFIyTXQehFhhlEyyqBI5f-7dDk",
         "database_table": "interest_preview",
     },
     release={
@@ -42,7 +42,7 @@ class Interest(plugin.Plugin):
     def _run(self):
         interest_df = self.dataframe_new(schema={"Date": pl.Date})
         interest_delta_df = self.dataframe_new()
-        if not plugin.config.disable_downloads:
+        if not plugin.config.disable_downloads or plugin.config.force_reprocessing:
 
             # Download interest data
             new_data = False

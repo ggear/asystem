@@ -558,7 +558,7 @@ class SourcesMixin(ContractMixin):
         started_time = time.time()
         name = (workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}").lower()
         try:
-            data_df_pd = data_df.to_pandas()
+            data_df_pd = data_df.with_columns([pl.col(c).dt.strftime('%Y-%m-%d') for c in data_df.columns if data_df[c].dtype == pl.Date]).to_pandas()
             drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key if drive_key is not None else None
             drive_version: str | None = None
             if drive_url is not None and not config.disable_repo_uploads:
@@ -722,9 +722,12 @@ class SourcesMixin(ContractMixin):
                     hash_md5.update(block)
             return hash_md5.hexdigest()
 
-        actioned_files = {}
         local_files = {}
+        actioned_files = {}
+        ignore_prefixes = ("_", "~$")
         for local_file in glob.glob(f"{local_dir}/*"):
+            if basename(local_file).startswith(ignore_prefixes):
+                continue
             local_files[basename(local_file).lower()] = {
                 "hash": file_hash(local_file) if check else None,
                 "modified": int(getmtime(local_file)) if check else None
@@ -742,6 +745,8 @@ class SourcesMixin(ContractMixin):
                 pageToken=token
             ).execute()
             for drive_file in response.get('files', []):
+                if drive_file["name"].startswith(ignore_prefixes):
+                    continue
                 drive_files[drive_file["name"]] = {
                     "id": drive_file["id"],
                     "hash": drive_file["md5Checksum"],
@@ -789,7 +794,7 @@ class SourcesMixin(ContractMixin):
             actioned_files[local_path] = True, file_actioned
         if upload:
             for local_file in local_files:
-                if not local_file.startswith("_"):
+                if not local_file.startswith(ignore_prefixes):
                     started_time_file = time.time()
                     file_actioned = False
                     local_path = abspath(f"{local_dir}/{local_file}").lower()

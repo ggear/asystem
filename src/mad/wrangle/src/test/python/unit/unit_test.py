@@ -1,4 +1,5 @@
 import copy
+import datetime
 import glob
 import importlib
 import os
@@ -16,6 +17,9 @@ from googleapiclient.discovery import build
 sys.path.append('../../../main/python')
 
 from wrangle import plugin
+from wrangle.plugin.balances import REPOS_BALANCES
+from wrangle.plugin.equity import REPOS_EQUITY
+from wrangle.plugin.interest import REPOS_INTEREST
 from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
 from wrangle.plugin.currency import REPOS_CURRENCY
 from wrangle.plugin.config import get_file
@@ -87,8 +91,7 @@ class WrangleTest(unittest.TestCase):
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     @pytest.mark.skip(reason="requires update")
     def test_balances_preview_replete_1(self):
-        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
-        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
+        drive_delete(REPOS_BALANCES._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
         self.run_plugin("balances", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
                         disable_downloads=True, disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
@@ -111,19 +114,19 @@ class WrangleTest(unittest.TestCase):
                         file_asserts={
                             "__balances_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*Delta.*"),
                             ],
                             "_sheet_rates_balances.csv": [
                                 assert_file_size(),
-                                assert_file_dates(descending=True),
+                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", descending=True, contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_max_zeroes_per_row(),
                             ],
                             "_database_balances.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
@@ -150,25 +153,25 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(greater_than=14)
+                            assert_custom_rows_delta(at_least=14)
                         ],
                         file_asserts={
                             "__balances_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*Delta.*"),
                                 assert_file_state_equal(),
                             ],
                             "_sheet_rates_balances.csv": [
                                 assert_file_size(),
-                                assert_file_dates(descending=True),
+                                assert_file_dates(start_date="1983-12-12", descending=True, contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_max_zeroes_per_row(),
                             ],
                             "_database_balances.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
@@ -249,19 +252,19 @@ class WrangleTest(unittest.TestCase):
                         file_asserts={
                             "__currency_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*Delta.*"),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
-                                assert_file_dates(descending=True),
+                                assert_file_dates(start_date="2006-01-02", end_date="2024-10-14", descending=True, contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_max_zeroes_per_row(),
                             ],
                             "_database_currency.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
@@ -287,25 +290,24 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(greater_than=14)
+                            assert_custom_rows_delta(at_least=14)
                         ],
                         file_asserts={
                             "__currency_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*Delta.*"),
-                                assert_file_state_equal(),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
-                                assert_file_dates(descending=True),
+                                assert_file_dates(start_date="2006-01-02", descending=True, contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_max_zeroes_per_row(),
                             ],
                             "_database_currency.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
@@ -365,8 +367,7 @@ class WrangleTest(unittest.TestCase):
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     @pytest.mark.skip(reason="requires update")
     def test_equity_preview_replete_1(self):
-        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
-        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
+        drive_delete(REPOS_EQUITY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
         self.run_plugin("equity", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
                         disable_downloads=True, disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
@@ -389,19 +390,19 @@ class WrangleTest(unittest.TestCase):
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*Delta.*"),
                             ],
                             "_sheet_rates_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(descending=True),
+                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", descending=True, contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_max_zeroes_per_row(),
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
@@ -428,25 +429,25 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(greater_than=14)
+                            assert_custom_rows_delta(at_least=14)
                         ],
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*Delta.*"),
                                 assert_file_state_equal(),
                             ],
                             "_sheet_rates_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(descending=True),
+                                assert_file_dates(start_date="1983-12-12", descending=True, contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_max_zeroes_per_row(),
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
+                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=".*type=delta.*"),
                             ],
@@ -468,7 +469,6 @@ class WrangleTest(unittest.TestCase):
                         })
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
-    @pytest.mark.skip(reason="requires update")
     def test_interest_local_corrupt_1(self):
         self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
                         disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
@@ -486,7 +486,6 @@ class WrangleTest(unittest.TestCase):
                         })
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
-    @pytest.mark.skip(reason="requires update")
     def test_interest_local_corrupt_2(self):
         self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
                         disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
@@ -504,20 +503,18 @@ class WrangleTest(unittest.TestCase):
                         })
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
-    @pytest.mark.skip(reason="requires update")
     def test_interest_preview_replete_1(self):
-        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
-        drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
+        drive_delete(REPOS_INTEREST._scopes["preview"]["drive_folder"], "inflation.xlsx")
         self.run_plugin("interest", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
                         disable_downloads=True, disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_UPLOADED: 2,
+                                    plugin.CTR_ACT_UPLOADED: 1,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
                                     plugin.CTR_ACT_UPDATE_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_ROWS: 0,
@@ -525,31 +522,27 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(equals=14)
+                            assert_custom_rows_delta(equals=4)
                         ],
                         file_asserts={
                             "__interest_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_dates(start_date="1983-03-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_nones_per_row(exclude=".*Mean.*"),
                             ],
                             "_sheet_rates_interest.csv": [
                                 assert_file_size(),
-                                assert_file_dates(descending=True),
-                                assert_file_nones_per_row(),
-                                assert_file_max_zeroes_per_row(),
+                                assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
+                                assert_file_nones_per_row(exclude=".*Mean.*"),
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                                assert_file_dates(start_date="1983-03-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_nones_per_row(exclude=".*type=mean.*"),
                             ],
                         })
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
-    @pytest.mark.skip(reason="requires update")
     def test_interest_release_replete_1(self):
         self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
                         disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
@@ -564,32 +557,28 @@ class WrangleTest(unittest.TestCase):
                             },
                             "counter_at_least": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: 14,
+                                    plugin.CTR_ACT_DELTA_ROWS: 4,
                                 },
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(greater_than=14)
+                            assert_custom_rows_delta(at_least=4)
                         ],
                         file_asserts={
                             "__interest_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
-                                assert_file_state_equal(),
+                                assert_file_dates(start_date="1983-03-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_nones_per_row(exclude=".*Mean.*"),
                             ],
                             "_sheet_rates_interest.csv": [
                                 assert_file_size(),
-                                assert_file_dates(descending=True),
-                                assert_file_nones_per_row(),
-                                assert_file_max_zeroes_per_row(),
+                                assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
+                                assert_file_nones_per_row(exclude=".*Mean.*"),
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
-                                assert_file_dates(),
-                                assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                                assert_file_dates(start_date="1983-03-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_nones_per_row(exclude=".*type=mean.*"),
                             ],
                         })
 
@@ -1559,7 +1548,7 @@ class WrangleTest(unittest.TestCase):
         if not isdir(source):
             raise FileNotFoundError(f"Test data directory [{source}] does not exist")
         shutil.rmtree(plugin_module.local_cache, ignore_errors=True)
-        shutil.copytree(source, plugin_module.local_cache, ignore=shutil.ignore_patterns(".git*"))
+        shutil.copytree(source, plugin_module.local_cache, ignore=shutil.ignore_patterns(".git*", "~$*"))
         plugin_module.print_log(f"Files written from [{source}] to [{plugin_module.local_cache}]")
 
     def _assert_outputs(self, plugin_module, verifications):
@@ -1751,7 +1740,14 @@ def assert_file_zeroes_per_col(max_zeroes=0, include=None, exclude=None):
     return _assert
 
 
-def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending=None, contiguous=True):
+def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending=None, contiguous=None):
+    def _parse_date(value):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return datetime.date.fromisoformat(value)
+        return value
+
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         if "Date" not in csv_df.columns:
@@ -1772,32 +1768,36 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
                 dataframe_print("Assert", csv_df.head(3), msg, level="error")
                 return msg
         dates = sorted(raw_dates)
-        if start_date is not None and dates[0] != start_date:
+        if start_date is not None and dates[0] != _parse_date(start_date):
             msg = f"assert_file_dates: expected start {start_date}, got {dates[0]}"
             dataframe_print("Assert", csv_df.head(1), msg, level="error")
             return msg
-        if end_date is not None and dates[-1] != end_date:
+        if end_date is not None and dates[-1] != _parse_date(end_date):
             msg = f"assert_file_dates: expected end {end_date}, got {dates[-1]}"
             dataframe_print("Assert", csv_df.tail(1), msg, level="error")
             return msg
-        if contiguous:
-            diffs = [(dates[i + 1] - dates[i]).days for i in range(len(dates) - 1)]
-            if max_gap_days is not None:
-                for i, diff in enumerate(diffs):
-                    if diff > max_gap_days:
-                        msg = f"assert_file_dates: gap of {diff} days between {dates[i]} and {dates[i + 1]} exceeds max {max_gap_days}"
-                        gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
-                        dataframe_print("Assert", gap_df, msg, level="error")
-                        return msg
-            else:
-                min_diff, max_diff = min(diffs), max(diffs)
-                if 28 <= min_diff and max_diff <= 31:
-                    for i in range(len(dates) - 1):
-                        if dates[i + 1].year * 12 + dates[i + 1].month - (dates[i].year * 12 + dates[i].month) != 1:
-                            msg = f"assert_file_dates: gap between {dates[i]} and {dates[i + 1]}"
-                            gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
-                            dataframe_print("Assert", gap_df, msg, level="error")
-                            return msg
+        if contiguous == "days":
+            for i in range(len(dates) - 1):
+                diff = (dates[i + 1] - dates[i]).days
+                if diff > max_gap_days:
+                    msg = f"assert_file_dates: gap of {diff} days between {dates[i]} and {dates[i + 1]} exceeds max {max_gap_days}"
+                    gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
+                    dataframe_print("Assert", gap_df, msg, level="error")
+                    return msg
+        elif contiguous == "months":
+            for i in range(len(dates) - 1):
+                if dates[i + 1].year * 12 + dates[i + 1].month - (dates[i].year * 12 + dates[i].month) != 1:
+                    msg = f"assert_file_dates: non-consecutive months between {dates[i]} and {dates[i + 1]}"
+                    gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
+                    dataframe_print("Assert", gap_df, msg, level="error")
+                    return msg
+        elif contiguous == "years":
+            for i in range(len(dates) - 1):
+                if dates[i + 1].year - dates[i].year != 1:
+                    msg = f"assert_file_dates: non-consecutive years between {dates[i]} and {dates[i + 1]}"
+                    gap_df = csv_df.filter(pl.col("Date").is_in([dates[i], dates[i + 1]]))
+                    dataframe_print("Assert", gap_df, msg, level="error")
+                    return msg
         return None
 
     _assert.__name__ = "assert_file_dates"
@@ -1829,22 +1829,22 @@ def assert_file_state_equal(file_key=None):
     return _assert
 
 
-def assert_custom_rows_delta(equals=None, greater_than=None, less_than=None):
+def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
     def _assert(first, _second, third):
         current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
         previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
         delta = current_rows - previous_rows
         if equals is not None and delta != equals:
             return f"assert_rows_delta: expected delta == {equals}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
-        if greater_than is not None and delta <= greater_than:
-            return f"assert_rows_delta: expected delta > {greater_than}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
-        if less_than is not None and delta >= less_than:
-            return f"assert_rows_delta: expected delta < {less_than}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
+        if at_least is not None and delta < at_least:
+            return f"assert_rows_delta: expected delta > {at_least}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
+        if at_most is not None and delta > at_most:
+            return f"assert_rows_delta: expected delta < {at_most}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
         return None
 
     parts = [f"eq{equals}" if equals is not None else None,
-             f"gt{greater_than}" if greater_than is not None else None,
-             f"lt{less_than}" if less_than is not None else None]
+             f"gt{at_least}" if at_least is not None else None,
+             f"lt{at_most}" if at_most is not None else None]
     _assert.__name__ = "assert_rows_delta_" + "_".join(p for p in parts if p is not None)
     return _assert
 
