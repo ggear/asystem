@@ -18,25 +18,23 @@ datetime==5.5
 python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.0.20260408
 
-xlrd==2.0.2
-pandas==2.2.3
-polars==1.40.1
 numpy==2.2.6
 scipy==1.15.3
 pyyaml==6.0.3
 aenum==3.1.17
+pandas==2.2.3
+polars==1.40.1
+pyarrow==19.0.1
 gspread==5.12.4
 notebook==7.4.3
 tabulate==0.10.0
-xlsx2csv==0.8.6
-pyarrow==19.0.1
-openpyxl==3.1.5
 pdftotext==2.2.2
+jupyterlab==4.4.3
 matplotlib==3.10.3
 jproperties==2.1.2
-jupyterlab==4.4.3
 scikit-learn==1.6.1
 gspread-pandas==3.2.3
+python-calamine==0.6.2
 sortedcontainers==2.4.0
 
 docker==7.1.0

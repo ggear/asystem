@@ -9,10 +9,9 @@ paho-mqtt
 dropbox
 yfinance
 pdftotext
-xlsx2csv
 gspread
-gspread-pandas
 influxdb
 influxdb3-python
+python-calamine
 google-api-python-client
 google-auth

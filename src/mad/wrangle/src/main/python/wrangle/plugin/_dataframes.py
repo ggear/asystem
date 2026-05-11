@@ -8,25 +8,40 @@ from ._contract import ContractMixin
 from .config import *
 from .logger import dataframe_print
 
+_EXCEL_NA = frozenset(['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan', '1.#IND', '1.#QNAN', '<NA>', 'N/A', 'NA', 'NULL', 'NaN', 'None', 'n/a', 'nan', 'null'])
+
 
 class DataFramesMixin(ContractMixin):
 
-    def excel_read(self, local_path, schema=None, sheet_name=0, header_rows=0, skip_rows=0,
+    def excel_read(self, local_path, schema=None, sheet_name: int | str = 0, header_rows=0, skip_rows=0,
                    na_values=None, drop_na_cols=True, drop_na_rows=True, float_round_places=6,
                    print_label=None, print_rows=PL_PRINT_ROWS):
-        import pandas as pd
         started_time = time.time()
         local_path = str(local_path).lower()
         if schema is None:
             schema = {}
         if na_values is None:
             na_values = []
-        data_df_pd = pd.read_excel(local_path, sheet_name=sheet_name, header=header_rows, skiprows=skip_rows, na_values=na_values)
+        from python_calamine import CalamineWorkbook
+        effective_na = _EXCEL_NA | set(na_values)
+        wb = CalamineWorkbook.from_path(local_path)
+        ws = wb.get_sheet_by_index(sheet_name) if isinstance(sheet_name, int) else wb.get_sheet_by_name(sheet_name)
+        raw_rows = list(ws.iter_rows())[skip_rows:]
+        rows = [[None if (isinstance(v, str) and v in effective_na) else v for v in row] for row in raw_rows]
+        if header_rows is not None and len(rows) > header_rows:
+            headers = [v if isinstance(v, str) else f'column_{i}' for i, v in enumerate(rows[header_rows])]
+            rows = rows[header_rows + 1:]
+        else:
+            headers = [f'column_{i}' for i in range(len(rows[0]) if rows else 0)]
+        col_data = {headers[i]: [row[i] if i < len(row) else None for row in rows] for i in range(len(headers))} if rows else {h: [] for h in headers}
+        data_df = pl.DataFrame(col_data, nan_to_null=True)
+        if schema:
+            data_df = data_df.with_columns([pl.col(c).cast(t) for c, t in schema.items() if c in data_df.columns])
         if drop_na_cols:
-            data_df_pd = data_df_pd.dropna(axis=1, how="all")
+            data_df = data_df.select([col for col in data_df.columns if data_df[col].null_count() < len(data_df)])
         if drop_na_rows:
-            data_df_pd = data_df_pd.dropna(axis=0, how="all")
-        data_df = pl.from_pandas(data_df_pd, schema_overrides=schema if len(schema) > 0 else None).with_columns(cs.float().round(float_round_places))
+            data_df = data_df.filter(~pl.all_horizontal(pl.all().is_null()))
+        data_df = data_df.with_columns(cs.float().round(float_round_places))
         return dataframe_print(
             self.name,
             data_df,
@@ -107,6 +122,7 @@ class DataFramesMixin(ContractMixin):
                 "Dataframe contains null values which should be purged before line protocol serialisation")
         renamed_columns = ["timestamp"] + [column.strip().replace(' ', '-').lower() for column in data_df.columns[1:]]
         data_df = data_df.rename(dict(zip(data_df.columns, renamed_columns))).with_columns(pl.col("timestamp").cast(pl.Datetime).dt.epoch() * 1000)
+        # noinspection PyUnresolvedReferences
         database_table = self.remote_repos.database_table or self.name.lower()
         line_expressions = [pl.lit(database_table + "," + ",".join([f"{tag}={tags[tag]}" for tag in tags]) + " ")]
         for column in data_df.columns[1:]:

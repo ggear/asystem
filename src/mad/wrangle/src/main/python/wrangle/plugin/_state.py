@@ -99,8 +99,10 @@ class StateMixin(ContractMixin):
                 data_df_previous = data_df_previous.with_columns(
                     pl.lit(None).cast(data_schema[data_column]).alias(data_column))
         data_df_previous = data_df_previous.select(data_schema.keys())
+        data_df_previous_value_columns = [c for c in data_df_previous.columns if c not in state_key_columns]
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns) - len(state_key_columns))
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous))
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous.filter(
+            pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_previous_value_columns])) if data_df_previous_value_columns else data_df_previous))
         data_df_current = pl.concat([data_df_current, data_df_update]) \
             .select(data_schema.keys()).unique(subset=state_key_columns, keep="last").sort(state_key_columns)
         data_df_current = aggregate_function_wrapped(data_df_current)
@@ -110,8 +112,10 @@ class StateMixin(ContractMixin):
                     pl.col(data_column).cast(data_type, strict=False))
         data_df_current = data_df_current.select(data_schema.keys())
         self.csv_write(data_df_current, file_current)
+        data_df_current_value_columns = [c for c in data_df_current.columns if c not in state_key_columns]
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns) - len(state_key_columns))
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current.filter(
+            pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_current_value_columns])) if data_df_current_value_columns else data_df_current))
         data_df_delta = pl.concat([data_df_previous, data_df_current]).select(data_schema.keys())
         data_df_delta = data_df_delta.filter(data_df_delta.is_duplicated().not_()).unique(subset=state_key_columns, keep="last").sort(state_key_columns)
         self.csv_write(data_df_delta, file_delta)

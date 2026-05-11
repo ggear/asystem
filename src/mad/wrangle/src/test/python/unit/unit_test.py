@@ -522,12 +522,12 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(equals=4)
+                            assert_custom_rows_delta(equals=16)
                         ],
                         file_asserts={
                             "__interest_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-03-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
                                 assert_file_nones_per_row(exclude=".*Mean.*"),
                             ],
                             "_sheet_rates_interest.csv": [
@@ -537,7 +537,7 @@ class WrangleTest(unittest.TestCase):
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-03-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
                                 assert_file_nones_per_row(exclude=".*type=mean.*"),
                             ],
                         })
@@ -557,17 +557,17 @@ class WrangleTest(unittest.TestCase):
                             },
                             "counter_at_least": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: 4,
+                                    plugin.CTR_ACT_DELTA_ROWS: 16,
                                 },
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(at_least=4)
+                            assert_custom_rows_delta(at_least=16)
                         ],
                         file_asserts={
                             "__interest_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-03-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
                                 assert_file_nones_per_row(exclude=".*Mean.*"),
                             ],
                             "_sheet_rates_interest.csv": [
@@ -577,7 +577,7 @@ class WrangleTest(unittest.TestCase):
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-03-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
                                 assert_file_nones_per_row(exclude=".*type=mean.*"),
                             ],
                         })
@@ -586,7 +586,7 @@ class WrangleTest(unittest.TestCase):
     # Sources
     ########################################################################################################################
 
-    @pytest.mark.skip(reason="very slow")
+    # @pytest.mark.skip(reason="very slow")
     def test_library_sheet(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
 

@@ -16,13 +16,15 @@ from os.path import exists, getmtime
 
 import dropbox
 import google
+import google.auth.transport.requests
+import google.oauth2.credentials
 import polars as pl
 import yfinance as yf
 from dateutil import parser
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
-from gspread_pandas import Spread
-from pandas.tseries.offsets import BDay
+import gspread
+import gspread.exceptions
 
 from . import database
 from ._contract import ContractMixin
@@ -82,7 +84,7 @@ class SourcesMixin(ContractMixin):
                         self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time)
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                         return DownloadResult(DownloadStatus.CACHED, local_path)
-            except (Exception,):
+            except (urllib.error.URLError, OSError):
                 pass
         try:
             response = urllib.request.urlopen(urllib.request.Request(url_file, headers=client), context=ssl._create_unverified_context())
@@ -210,7 +212,7 @@ class SourcesMixin(ContractMixin):
                                 end_data = data_df.row(-1)[0]
                                 end_data = datetime.strptime(end_data, '%Y-%m-%d').date() \
                                     if isinstance(end_data, str) else end_data
-                                end_expected = BDay().rollback(now).date()
+                                end_expected = (now - timedelta(days=max(0, now.weekday() - 4))).date()
                                 if now.date() == end_expected:
                                     if -1 < now.weekday() < 5:
                                         if now.strftime('%H:%M') < end_of_day:
@@ -440,6 +442,21 @@ class SourcesMixin(ContractMixin):
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
             return DownloadResult(DownloadStatus.FAILED, None)
 
+    @staticmethod
+    def _sheets_credentials():
+        cred_path = os.path.expanduser("~/.config/gspread_pandas/creds/default")
+        with open(cred_path) as cred_file:
+            cred_data = json.load(cred_file)
+        creds = google.oauth2.credentials.Credentials(
+            token=None,
+            refresh_token=cred_data['refresh_token'],
+            token_uri=cred_data['token_uri'],
+            client_id=cred_data['client_id'],
+            client_secret=cred_data['client_secret'],
+            scopes=cred_data.get('scopes'))
+        creds.refresh(google.auth.transport.requests.Request())
+        return creds
+
     def _sheet_cache_cleanup(self, name, current_version):
         name = name.lower()
         pattern = abspath(f"{self.local_cache}/_sheet_{name}_v*.csv")
@@ -458,8 +475,9 @@ class SourcesMixin(ContractMixin):
         started_time = time.time()
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
         drive_version: str | None = None
+        credentials = self._sheets_credentials()
         try:
-            raw_version = build('drive', 'v3', credentials=Spread(drive_url).client.auth, cache_discovery=False) \
+            raw_version = build('drive', 'v3', credentials=credentials, cache_discovery=False) \
                 .files().get(fileId=drive_key, fields='version').execute().get('version')
             if raw_version is not None:
                 drive_version = str(raw_version)
@@ -490,6 +508,7 @@ class SourcesMixin(ContractMixin):
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         file_path = abspath(f"{self.local_cache}/_sheet_{name}.csv") if drive_version is None else abspath(f"{self.local_cache}/_sheet_{name}_v{drive_version}.csv")
+        gc = gspread.Client(auth=credentials)
         retries = 0
         caught_exception = None
 
@@ -497,12 +516,12 @@ class SourcesMixin(ContractMixin):
             pass
 
         try:
+            spreadsheet = gc.open_by_key(drive_key)
+            worksheet = spreadsheet.get_worksheet(0) if sheet_name is None else spreadsheet.worksheet(sheet_name)
             while retries < sheet_retry_max:
                 try:
                     retries += 1
-                    spread = Spread(drive_url, sheet=0 if sheet_name is None else sheet_name)
-                    # noinspection PyProtectedMember
-                    spread_sheet_cells = spread._fix_merge_values(spread.sheet.get_all_values())[sheet_start_row - 1:]
+                    spread_sheet_cells = worksheet.get_all_values()[sheet_start_row - 1:]
                     data_df = self.dataframe_new(
                         data=spread_sheet_cells[1:],
                         orient="row",
@@ -555,17 +574,49 @@ class SourcesMixin(ContractMixin):
 
     def sheet_upload(self, data_df, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_start_column="A",
                      add_filter=False, print_label=None, print_rows=PL_PRINT_ROWS):
+        sheet_chunk_rows = 500
         started_time = time.time()
         name = (workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}").lower()
         try:
-            data_df_pd = data_df.with_columns([pl.col(c).dt.strftime('%Y-%m-%d') for c in data_df.columns if data_df[c].dtype == pl.Date]).to_pandas()
-            drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key if drive_key is not None else None
+            date_cols = [c for c in data_df.columns if data_df[c].dtype == pl.Date]
+            values_df = data_df.with_columns([pl.col(c).dt.strftime('%Y-%m-%d') for c in date_cols])
+            all_values = [values_df.columns] + [['' if v is None else str(v) for v in row] for row in values_df.iter_rows()]
+            drive_url = f"https://docs.google.com/spreadsheets/d/{drive_key}" if drive_key is not None else None
             drive_version: str | None = None
-            if drive_url is not None and not config.disable_repo_uploads:
-                spread = Spread(drive_url)
-                spread.df_to_sheet(data_df_pd, index=False, sheet=sheet_name, start=f"{sheet_start_column}{sheet_start_row}", add_filter=add_filter, replace=True)
+            if drive_key is not None and not config.disable_repo_uploads:
+                credentials = self._sheets_credentials()
+                gc = gspread.Client(auth=credentials)
+                spreadsheet = gc.open_by_key(drive_key)
                 try:
-                    raw_version = build('drive', 'v3', credentials=spread.client.auth, cache_discovery=False) \
+                    worksheet = spreadsheet.worksheet(sheet_name) if sheet_name is not None else spreadsheet.get_worksheet(0)
+                except gspread.exceptions.WorksheetNotFound:
+                    worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=max(len(all_values) + 10, 100), cols=max(len(data_df.columns) + 5, 26))
+                worksheet.clear()
+                sheets_service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
+                for chunk_start in range(0, len(all_values), sheet_chunk_rows):
+                    chunk = all_values[chunk_start:chunk_start + sheet_chunk_rows]
+                    chunk_row = sheet_start_row + chunk_start
+                    chunk_range = f"'{sheet_name}'!{sheet_start_column}{chunk_row}" if sheet_name is not None else f"{sheet_start_column}{chunk_row}"
+                    sheets_service.spreadsheets().values().update(
+                        spreadsheetId=drive_key,
+                        range=chunk_range,
+                        valueInputOption='USER_ENTERED',
+                        body={'values': chunk}
+                    ).execute()
+                if add_filter:
+                    start_col_index = ord(sheet_start_column.upper()) - ord('A')
+                    sheets_service.spreadsheets().batchUpdate(
+                        spreadsheetId=drive_key,
+                        body={'requests': [{'setBasicFilter': {'filter': {'range': {
+                            'sheetId': worksheet.id,
+                            'startRowIndex': sheet_start_row - 1,
+                            'endRowIndex': sheet_start_row - 1 + len(all_values),
+                            'startColumnIndex': start_col_index,
+                            'endColumnIndex': start_col_index + len(data_df.columns),
+                        }}}}]}
+                    ).execute()
+                try:
+                    raw_version = build('drive', 'v3', credentials=credentials, cache_discovery=False) \
                         .files().get(fileId=drive_key, fields='version').execute().get('version')
                     if raw_version is not None:
                         drive_version = str(raw_version)
@@ -575,9 +626,7 @@ class SourcesMixin(ContractMixin):
             file_path = abspath(f"{self.local_cache}/_sheet_{name}{suffix}.csv")
             self.csv_write(data_df, file_path)
             if drive_version is not None:
-                drive_version_str: str = drive_version
-                drive_version_int = int(drive_version_str)
-                self._sheet_cache_cleanup(name, drive_version_int)
+                self._sheet_cache_cleanup(name, int(drive_version))
             dataframe_print(self.name,
                             data_df,
                             print_label=print_label,
@@ -597,48 +646,15 @@ class SourcesMixin(ContractMixin):
             return collections.OrderedDict()
         started_time = time.time()
 
-        class DropboxContentHasher(object):
-            BLOCK_SIZE = 4 * 1024 * 1024
-
-            def __init__(self):
-                self._overall_hasher = hashlib.sha256()
-                self._block_hasher = hashlib.sha256()
-                self._block_pos = 0
-                self.digest_size = self._overall_hasher.digest_size
-
-            def update(self, new_data):
-                new_data_pos = 0
-                while new_data_pos < len(new_data):
-                    if self._block_pos == self.BLOCK_SIZE:
-                        self._overall_hasher.update(self._block_hasher.digest())
-                        self._block_hasher = hashlib.sha256()
-                        self._block_pos = 0
-                    space_in_block = self.BLOCK_SIZE - self._block_pos
-                    part = new_data[new_data_pos:(new_data_pos + space_in_block)]
-                    self._block_hasher.update(part)
-                    self._block_pos += len(part)
-                    new_data_pos += len(part)
-
-            def _finish(self):
-                if self._block_pos > 0:
-                    self._overall_hasher.update(self._block_hasher.digest())
-                    self._block_hasher = None
-                h = self._overall_hasher
-                self._overall_hasher = None
-                return h
-
-            def hexdigest(self):
-                return self._finish().hexdigest()
-
-        def file_hash(file_name):
-            hasher = DropboxContentHasher()
+        def file_hash(file_name) -> str:
+            block_digests: list[bytes] = []
             with open(file_name, 'rb') as f:
                 while True:
-                    chunk = f.read(1024)
-                    if len(chunk) == 0:
+                    block = f.read(4 * 1024 * 1024)
+                    if not block:
                         break
-                    hasher.update(chunk)
-            return hasher.hexdigest()
+                    block_digests.append(hashlib.sha256(block).digest())
+            return hashlib.sha256(b''.join(block_digests)).hexdigest()
 
         local_files = {}
         for local_file in glob.glob(f"{local_dir}/*"):
@@ -715,12 +731,12 @@ class SourcesMixin(ContractMixin):
             return collections.OrderedDict()
         started_time = time.time()
 
-        def file_hash(file_name):
-            hash_md5 = hashlib.md5()
+        def file_hash(file_name) -> str:
+            hasher = hashlib.new("md5")
             with open(file_name, "rb") as f:
                 for block in iter(lambda: f.read(8 * 1024), b""):
-                    hash_md5.update(block)
-            return hash_md5.hexdigest()
+                    hasher.update(block)
+            return hasher.hexdigest()
 
         local_files = {}
         actioned_files = {}

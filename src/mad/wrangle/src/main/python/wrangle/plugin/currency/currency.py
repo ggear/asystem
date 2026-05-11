@@ -157,9 +157,9 @@ class Currency(plugin.Plugin):
                     "unit": "$"
                 }, print_label="Currency_1_Day_Snapshot")
                 for fx_period in PERIODS:
-                    rba_pctchnage_df = rba_current_df.select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
-                    rba_pctchnage_df.columns = ['Date'] + PAIRS
-                    self.database_upload(rba_pctchnage_df.drop_nulls(), tags={
+                    rba_pctchange_df = rba_current_df.select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
+                    rba_pctchange_df.columns = ['Date'] + PAIRS
+                    self.database_upload(rba_pctchange_df.drop_nulls(), tags={
                         "type": "delta",
                         "period": f"{PERIODS[fx_period]:0.0f}d",
                         "unit": "%"

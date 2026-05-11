@@ -15,7 +15,7 @@ PERIODS = OrderedDict([
     ('5 Year Mean', 5 * 12),
     ('10 Year Mean', 10 * 12),
     ('20 Year Mean', 20 * 12),
-    ('30 Year Mean', 30 * 12),
+    ('40 Year Mean', 40 * 12),
 ])
 COLUMNS = [f"{label} {period}".strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
 
@@ -85,11 +85,17 @@ class Interest(plugin.Plugin):
                 try:
                     if retail_should_read:
                         retail_df = self.excel_read(retail_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
+
+                        # NOTE: Select Term Deposit >$10k deposit, 3-year term
                         retail_df = retail_df.select([pl.col("Series ID").alias("Date"), pl.col("FRDIRBTD10K3Y").alias("Bank")])
+
                         retail_df = retail_df.with_columns((pl.col("Date").dt.strftime('%Y-%m-01').str.to_date()).alias("Date"))
                     if inflation_should_read:
                         inflation_df = self.excel_read(inflation_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
-                        inflation_df = inflation_df.select([pl.col("Series ID").alias("Date"), pl.col("GCPIXVIYP").alias("Inflation")])
+
+                        # NOTE: Select Annual Consumer Price Index
+                        inflation_df = inflation_df.select([pl.col("Series ID").alias("Date"), pl.col("GCPIAGYP").alias("Inflation")])
+
                         inflation_df = inflation_df.with_columns((pl.col("Date").dt.strftime('%Y-%m-01').str.to_date()).alias("Date"))
                 except Exception as exception:
                     self.print_log("Unexpected error processing interest source files", exception=exception)
