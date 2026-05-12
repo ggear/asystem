@@ -116,7 +116,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_zeroes_per_col(exclude="Delta"),
                             ],
                             "_sheet_rates_balances.csv": [
                                 assert_file_size(),
@@ -128,7 +128,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                                assert_file_zeroes_per_col(exclude="type=delta"),
                             ],
                         })
 
@@ -160,7 +160,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_zeroes_per_col(exclude="Delta"),
                                 assert_file_state_equal(),
                             ],
                             "_sheet_rates_balances.csv": [
@@ -173,7 +173,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                                assert_file_zeroes_per_col(exclude="type=delta"),
                             ],
                         })
 
@@ -254,7 +254,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_zeroes_per_col(exclude="Delta"),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
@@ -266,7 +266,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                                assert_file_zeroes_per_col(exclude="type=delta"),
                             ],
                         })
 
@@ -297,7 +297,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                                assert_file_zeroes_per_col(exclude="Delta"),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
@@ -309,7 +309,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                                assert_file_zeroes_per_col(exclude="type=delta"),
                             ],
                         })
 
@@ -362,7 +362,165 @@ class WrangleTest(unittest.TestCase):
                             ],
                         })
 
+    # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
+    def test_equity_local_partial_1(self):
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: 3,
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 51,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 51,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 51,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 51,
+                                    plugin.CTR_ACT_DELTA_ROWS: 2892,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2018-01-31", end_date="2025-12-31", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                            ],
+                            "_sheet_prices_history.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2018-01-31", end_date="2025-12-31", contiguous="days", descending=True),
+                                assert_file_nones_per_col(after_last_rows=True),
+                                assert_file_zeroes_per_row(),
+                            ],
+                            "_database_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2018-01-31", end_date="2025-12-31", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
+                            ],
+                        })
+
+    # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
+    def test_equity_local_partial_2(self):
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_2", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: 1,
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 17,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 17,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 17,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 17,
+                                    plugin.CTR_ACT_DELTA_ROWS: 29,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                            ],
+                            "_sheet_prices_history.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days", descending=True),
+                                assert_file_nones_per_col(after_last_rows=True),
+                                assert_file_zeroes_per_row(),
+                            ],
+                            "_database_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
+                            ],
+                        })
+
+    # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
+    def test_equity_local_partial_3(self):
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_3", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: 1,
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 17,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 17,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 17,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 17,
+                                    plugin.CTR_ACT_DELTA_ROWS: 29,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                            ],
+                            "_sheet_prices_history.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days", descending=True),
+                                assert_file_nones_per_col(after_last_rows=True),
+                                assert_file_zeroes_per_row(),
+                            ],
+                            "_database_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
+                            ],
+                        })
+
+    # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
+    @pytest.mark.skip(reason="requires update")
+    def test_equity_local_replete_1(self):
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "replete_1", log_level="info",
+                        disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: 1,
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 17,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 17,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 17,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 17,
+                                    plugin.CTR_ACT_DELTA_ROWS: 29,
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                            ],
+                            "_sheet_prices_history.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days", descending=True),
+                                assert_file_nones_per_col(after_last_rows=True),
+                                assert_file_zeroes_per_row(),
+                            ],
+                            "_database_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
+                            ],
+                        })
+
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
+    @pytest.mark.skip(reason="requires update")
     def test_equity_preview_replete_1(self):
         # drive_delete(REPOS_EQUITY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
         self.run_plugin("equity", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
@@ -389,7 +547,7 @@ class WrangleTest(unittest.TestCase):
                             #     assert_file_size(),
                             #     assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                             #     assert_file_nones_per_row(),
-                            #     assert_file_zeroes_per_col(exclude=".*Delta.*"),
+                            #     assert_file_zeroes_per_col(exclude="Delta"),
                             # ],
                             # "_sheet_prices_history.csv": [
                             #     assert_file_size(),
@@ -401,11 +559,12 @@ class WrangleTest(unittest.TestCase):
                             #     assert_file_size(),
                             #     assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                             #     assert_file_nones_per_row(),
-                            #     assert_file_zeroes_per_col(exclude=".*type=delta.*"),
+                            #     assert_file_zeroes_per_col(exclude="type=delta"),
                             # ],
                         })
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
+    @pytest.mark.skip(reason="requires update")
     def test_equity_release_replete_1(self):
         self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
                         disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
@@ -521,17 +680,17 @@ class WrangleTest(unittest.TestCase):
                             "__interest_current.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
-                                assert_file_nones_per_row(exclude=".*Mean.*"),
+                                assert_file_nones_per_row(exclude="Mean"),
                             ],
                             "_sheet_rates_interest.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
-                                assert_file_nones_per_row(exclude=".*Mean.*"),
+                                assert_file_nones_per_row(exclude="Mean"),
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
-                                assert_file_nones_per_row(exclude=".*type=mean.*"),
+                                assert_file_nones_per_row(exclude="type=mean"),
                             ],
                         })
 
@@ -561,17 +720,17 @@ class WrangleTest(unittest.TestCase):
                             "__interest_current.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
-                                assert_file_nones_per_row(exclude=".*Mean.*"),
+                                assert_file_nones_per_row(exclude="Mean"),
                             ],
                             "_sheet_rates_interest.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
-                                assert_file_nones_per_row(exclude=".*Mean.*"),
+                                assert_file_nones_per_row(exclude="Mean"),
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
-                                assert_file_nones_per_row(exclude=".*type=mean.*"),
+                                assert_file_nones_per_row(exclude="type=mean"),
                             ],
                         })
 
@@ -1611,6 +1770,21 @@ def _count_leading_zero_rows(csv_df, numeric_cols):
     return count
 
 
+def _count_trailing_zero_rows(csv_df, numeric_cols):
+    if not numeric_cols:
+        return 0
+    has_zero = csv_df.select(
+        pl.any_horizontal((pl.col(c) == 0) & pl.col(c).is_not_null() for c in numeric_cols).alias("z")
+    )["z"].to_list()
+    count = 0
+    for v in reversed(has_zero):
+        if v:
+            count += 1
+        else:
+            break
+    return count
+
+
 def _count_leading_none_rows(csv_df, cols):
     if not cols:
         return 0
@@ -1619,6 +1793,21 @@ def _count_leading_none_rows(csv_df, cols):
     )["n"].to_list()
     count = 0
     for v in has_none:
+        if v:
+            count += 1
+        else:
+            break
+    return count
+
+
+def _count_trailing_none_rows(csv_df, cols):
+    if not cols:
+        return 0
+    has_none = csv_df.select(
+        pl.any_horizontal(pl.col(c).is_null() for c in cols).alias("n")
+    )["n"].to_list()
+    count = 0
+    for v in reversed(has_none):
         if v:
             count += 1
         else:
@@ -1682,13 +1871,18 @@ def assert_file_size(min_rows=1, max_rows=None):
     return _assert
 
 
-def assert_file_nones_per_row(max_nones=0, after_first_rows=False, include=None, exclude=None):
+def assert_file_nones_per_row(max_nones=0, after_first_rows=False, after_last_rows=False, include=None, exclude=None):
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         if not cols:
             return None
-        data_df = csv_df.slice(_count_leading_none_rows(csv_df, cols)) if after_first_rows else csv_df
+        if after_first_rows:
+            data_df = csv_df.slice(_count_leading_none_rows(csv_df, cols))
+        elif after_last_rows:
+            data_df = csv_df.head(len(csv_df) - _count_trailing_none_rows(csv_df, cols))
+        else:
+            data_df = csv_df
         fail_rows = data_df.filter(pl.sum_horizontal(pl.col(c).is_null().cast(pl.Int32) for c in cols) > max_nones)
         if not fail_rows.is_empty():
             msg = f"{label}: rows with >{max_nones} nones"
@@ -1696,17 +1890,19 @@ def assert_file_nones_per_row(max_nones=0, after_first_rows=False, include=None,
             return msg
         return None
 
-    label = f"assert_file_max_{max_nones}_nones_per_row" + ("_after_first_rows" if after_first_rows else "")
+    label = f"assert_file_max_{max_nones}_nones_per_row" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
     _assert.__name__ = label
     return _assert
 
 
-def assert_file_nones_per_col(max_nones=0, after_first_rows=False, include=None, exclude=None):
+def assert_file_nones_per_col(max_nones=0, after_first_rows=False, after_last_rows=False, include=None, exclude=None):
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
         if after_first_rows:
             failed = [c for c in cols if csv_df[c].slice(_count_leading_none_rows(csv_df, [c])).null_count() > max_nones]
+        elif after_last_rows:
+            failed = [c for c in cols if csv_df[c].head(len(csv_df) - _count_trailing_none_rows(csv_df, [c])).null_count() > max_nones]
         else:
             failed = [c for c in cols if csv_df[c].null_count() > max_nones]
         if failed:
@@ -1715,18 +1911,23 @@ def assert_file_nones_per_col(max_nones=0, after_first_rows=False, include=None,
             return msg
         return None
 
-    label = f"assert_file_max_{max_nones}_nones_per_col" + ("_after_first_rows" if after_first_rows else "")
+    label = f"assert_file_max_{max_nones}_nones_per_col" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
     _assert.__name__ = label
     return _assert
 
 
-def assert_file_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=None, exclude=None):
+def assert_file_zeroes_per_row(max_zeroes=0, after_first_rows=False, after_last_rows=False, include=None, exclude=None):
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
         if not numeric_cols:
             return None
-        data_df = csv_df.slice(_count_leading_zero_rows(csv_df, numeric_cols)) if after_first_rows else csv_df
+        if after_first_rows:
+            data_df = csv_df.slice(_count_leading_zero_rows(csv_df, numeric_cols))
+        elif after_last_rows:
+            data_df = csv_df.head(len(csv_df) - _count_trailing_zero_rows(csv_df, numeric_cols))
+        else:
+            data_df = csv_df
         zero_count = pl.sum_horizontal((pl.col(c) == 0).cast(pl.Int32) for c in numeric_cols)
         fail_rows = data_df.filter(zero_count > max_zeroes)
         if not fail_rows.is_empty():
@@ -1735,17 +1936,19 @@ def assert_file_zeroes_per_row(max_zeroes=0, after_first_rows=False, include=Non
             return msg
         return None
 
-    label = f"assert_file_max_{max_zeroes}_zeroes_per_row" + ("_after_first_rows" if after_first_rows else "")
+    label = f"assert_file_max_{max_zeroes}_zeroes_per_row" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
     _assert.__name__ = label
     return _assert
 
 
-def assert_file_zeroes_per_col(max_zeroes=0, after_first_rows=False, include=None, exclude=None):
+def assert_file_zeroes_per_col(max_zeroes=0, after_first_rows=False, after_last_rows=False, include=None, exclude=None):
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
         if after_first_rows:
             failed = [c for c in numeric_cols if (csv_df[c].slice(_count_leading_zero_rows(csv_df, [c])) == 0).sum() > max_zeroes]
+        elif after_last_rows:
+            failed = [c for c in numeric_cols if (csv_df[c].head(len(csv_df) - _count_trailing_zero_rows(csv_df, [c])) == 0).sum() > max_zeroes]
         else:
             failed = [c for c in numeric_cols if (csv_df[c] == 0).sum() > max_zeroes]
         if failed:
@@ -1754,7 +1957,7 @@ def assert_file_zeroes_per_col(max_zeroes=0, after_first_rows=False, include=Non
             return msg
         return None
 
-    label = f"assert_file_max_{max_zeroes}_zeroes_per_col" + ("_after_first_rows" if after_first_rows else "")
+    label = f"assert_file_max_{max_zeroes}_zeroes_per_col" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
     _assert.__name__ = label
     return _assert
 

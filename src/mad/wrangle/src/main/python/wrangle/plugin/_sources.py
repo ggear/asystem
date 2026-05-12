@@ -237,12 +237,19 @@ class SourcesMixin(ContractMixin):
                         data_df = data_df[:-1]
                     if len(data_df) == 0:
                         if ignore:
-                            self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
+                            self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warn")
                         else:
                             raise Exception(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
+                    elif len(data_df.columns) == 0:
+                        self.print_log(f"File [{label}] stock query returned only dates (no price columns) for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warn")
                     if not exists(dirname(local_path)):
                         os.makedirs(dirname(local_path))
                     data_df.insert(loc=0, column='Date', value=data_df.index.strftime('%Y-%m-%d'))
+                    if len(data_df) > 0:
+                        last_date = datetime.strptime(data_df['Date'].iloc[-1], '%Y-%m-%d').date()
+                        end_date = datetime.strptime(end, '%Y-%m-%d').date()
+                        if (end_date - last_date).days > 1:
+                            self.print_log(f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{(end_date - last_date).days}] days before requested end [{end_date}]", level="error")
                     if len(data_df) > 0 and isfile(local_path):
                         prior_df = self.csv_read(local_path)
                         if len(prior_df) == len(data_df):
@@ -284,7 +291,7 @@ class SourcesMixin(ContractMixin):
                 self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, local_path)
-            self.print_log(f"File [{query_name}] query skipped: downloads disabled and no cache available")
+            self.print_log(f"File [{query_name}] query skipped, downloads disabled and no cache available")
             if not ignore:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
             return DownloadResult(DownloadStatus.FAILED, None)
@@ -361,7 +368,7 @@ class SourcesMixin(ContractMixin):
                 self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
-            self.print_log(f"File [{file_cache}] query skipped: downloads disabled and no cache available")
+            self.print_log(f"File [{file_cache}] query skipped, downloads disabled and no cache available")
             return DownloadResult(DownloadStatus.FAILED, None)
         if not effective_force and not check and isfile(file_path):
             self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time, level="debug")
@@ -591,6 +598,7 @@ class SourcesMixin(ContractMixin):
                     worksheet = spreadsheet.worksheet(sheet_name) if sheet_name is not None else spreadsheet.get_worksheet(0)
                 except gspread.exceptions.WorksheetNotFound:
                     worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=max(len(all_values) + 10, 100), cols=max(len(data_df.columns) + 5, 26))
+                worksheet.resize(rows=max(len(all_values) + 10, 100), cols=max(len(data_df.columns) + 5, 26))
                 worksheet.clear()
                 sheets_service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
                 for chunk_start in range(0, len(all_values), sheet_chunk_rows):

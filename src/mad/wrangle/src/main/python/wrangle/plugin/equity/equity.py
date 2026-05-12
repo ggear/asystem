@@ -158,7 +158,8 @@ class Equity(plugin.Plugin):
                         if result.status == plugin.DownloadStatus.DOWNLOADED:
                             stock_downloaded_count += 1
 
-            # Sync stock and fund files from Drive
+        # Sync stock and fund files from Drive
+        if not plugin.config.disable_repo_downloads:
             files_cached = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED)
             files_downloaded = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_DOWNLOADED)
             files = self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, download=True)
@@ -170,9 +171,15 @@ class Equity(plugin.Plugin):
                     file_base = basename(file_name)
                     name_parts = file_base.removesuffix('.csv').split('_')
                     if len(name_parts) >= 3 and '-' in name_parts[-1] and int(name_parts[-1].split('-')[0]) < datetime.today().year:
-                        self.print_log(f"Stale monthly file [{file_base}] found in repo, benign issue, but can delete", level="warn")
+                        year = name_parts[-1].split('-')[0]
+                        yearly_base = '_'.join(name_parts[:-1]) + f'_{year}.csv'
+                        if any(basename(f) == yearly_base for f in files):
+                            self.print_log(f"Stale monthly file [{file_base}] found in repo, skipping for now but should delete", level="warn")
+                            continue
                     if files[file_name][0] and (plugin.config.force_reprocessing or files[file_name][1]):
                         stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, file_name)
+
+        if not plugin.config.disable_downloads or not plugin.config.disable_repo_downloads:
             new_data = plugin.config.force_reprocessing or \
                        (all([s.status != plugin.DownloadStatus.FAILED for s in stock_files.values()]) and any([s.status == plugin.DownloadStatus.DOWNLOADED for s in stock_files.values()])) or \
                        (all([s[0] for s in statement_files.values()]) and any([s[1] for s in statement_files.values()]))
@@ -180,10 +187,24 @@ class Equity(plugin.Plugin):
         # If clean, flag all files for processing
         if plugin.config.force_reprocessing:
             stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "yahoo")}
+            stock_file_bases = {basename(f) for f in stock_files}
+            stale_files = []
+            for file_name in stock_files:
+                file_base = basename(file_name)
+                name_parts = file_base.removesuffix('.csv').split('_')
+                if len(name_parts) >= 3 and '-' in name_parts[-1] and int(name_parts[-1].split('-')[0]) < datetime.today().year:
+                    year = name_parts[-1].split('-')[0]
+                    yearly_base = '_'.join(name_parts[:-1]) + f'_{year}.csv'
+                    if yearly_base in stock_file_bases:
+                        self.print_log(f"Stale monthly file [{file_base}] found in repo, benign issue, but can delete", level="warn")
+                        stale_files.append(file_name)
+            for file_name in stale_files:
+                del stock_files[file_name]
             statement_files = self.file_list(self.local_cache, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
         stock_processable_count = sum(1 for s in stock_files.values() if s.status != plugin.DownloadStatus.FAILED)
-        self.print_log(f"Files downloaded [{stock_downloaded_count}] and cached [{stock_processable_count - stock_downloaded_count}]", started=started_time)
+        statement_processable_count = sum(1 for s in statement_files.values() if s[0])
+        self.print_log(f"Files downloaded [{stock_downloaded_count}] and cached [{stock_processable_count + statement_processable_count - stock_downloaded_count}]", started=started_time)
 
         # Collect stock file data
         started_time = time.time()
@@ -811,6 +832,9 @@ from(bucket: "data_public")
                 return _aggregate_function
 
             # Checkpoint the data
+            _non_date_cols = [c for c in equity_df.columns if c != "Date"]
+            if _non_date_cols:
+                equity_df = equity_df.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in _non_date_cols]))
             equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, _make_aggregate(indexes))
 
             # Upload the data
