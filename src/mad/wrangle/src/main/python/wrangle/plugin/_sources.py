@@ -248,7 +248,16 @@ class SourcesMixin(ContractMixin):
                     if len(data_df) > 0:
                         last_date = datetime.strptime(data_df['Date'].iloc[-1], '%Y-%m-%d').date()
                         end_date = datetime.strptime(end, '%Y-%m-%d').date()
-                        if (end_date - last_date).days > 1:
+                        if now.year == end_date.year and now.month == end_date.month:
+                            threshold = now.date()
+                            count = 0
+                            while count < 2:
+                                threshold -= timedelta(days=1)
+                                if threshold.weekday() < 5:
+                                    count += 1
+                            if last_date < threshold:
+                                self.print_log(f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{(now.date() - last_date).days}] days before requested end [{now.date()}]", level="error")
+                        elif (end_date - last_date).days > 1:
                             self.print_log(f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{(end_date - last_date).days}] days before requested end [{end_date}]", level="error")
                     if len(data_df) > 0 and isfile(local_path):
                         prior_df = self.csv_read(local_path)

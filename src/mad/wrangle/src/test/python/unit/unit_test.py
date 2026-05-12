@@ -17,8 +17,8 @@ from googleapiclient.discovery import build
 sys.path.append('../../../main/python')
 
 from wrangle import plugin
-from wrangle.plugin.balances import REPOS_BALANCES
 from wrangle.plugin.equity import REPOS_EQUITY
+from wrangle.plugin.balances import REPOS_BALANCES
 from wrangle.plugin.interest import REPOS_INTEREST
 from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
 from wrangle.plugin.currency import REPOS_CURRENCY
@@ -116,7 +116,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude="Delta"),
+                                assert_file_zeroes_per_col(exclude=r"Delta"),
                             ],
                             "_sheet_rates_balances.csv": [
                                 assert_file_size(),
@@ -128,7 +128,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude="type=delta"),
+                                assert_file_zeroes_per_col(exclude=r"type=delta"),
                             ],
                         })
 
@@ -160,7 +160,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude="Delta"),
+                                assert_file_zeroes_per_col(exclude=r"Delta"),
                                 assert_file_state_equal(),
                             ],
                             "_sheet_rates_balances.csv": [
@@ -173,7 +173,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude="type=delta"),
+                                assert_file_zeroes_per_col(exclude=r"type=delta"),
                             ],
                         })
 
@@ -254,7 +254,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude="Delta"),
+                                assert_file_zeroes_per_col(exclude=r"Delta"),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
@@ -266,7 +266,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude="type=delta"),
+                                assert_file_zeroes_per_col(exclude=r"type=delta"),
                             ],
                         })
 
@@ -297,7 +297,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude="Delta"),
+                                assert_file_zeroes_per_col(exclude=r"Delta"),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
@@ -309,7 +309,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude="type=delta"),
+                                assert_file_zeroes_per_col(exclude=r"type=delta"),
                             ],
                         })
 
@@ -480,129 +480,128 @@ class WrangleTest(unittest.TestCase):
                         })
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
-    @pytest.mark.skip(reason="requires update")
     def test_equity_local_replete_1(self):
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "replete_1", log_level="info",
                         disable_downloads=True, disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: 1,
+                                    plugin.CTR_ACT_PROCESSED: 480,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 17,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 17,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 17,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 17,
-                                    plugin.CTR_ACT_DELTA_ROWS: 29,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 425,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 425,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 425,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 425,
+                                    plugin.CTR_ACT_DELTA_ROWS: 15094,
                                 },
                             },
                         }),
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                             ],
                             "_sheet_prices_history.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2007-01-01", end_date="2026-04-30", contiguous="days", descending=True),
                                 assert_file_nones_per_col(after_last_rows=True),
                                 assert_file_zeroes_per_row(),
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
                             ],
                         })
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
-    @pytest.mark.skip(reason="requires update")
     def test_equity_preview_replete_1(self):
-        # drive_delete(REPOS_EQUITY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
+        drive_delete(REPOS_EQUITY._scopes["preview"]["drive_folder"], "yahoo_acdc_2018.csv")
         self.run_plugin("equity", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
                         disable_downloads=True, disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
-                        # counter_asserts=merge_asserts(ASSERT_RUN, {
-                        #     "counter_equals": {
-                        #         plugin.CTR_SRC_SOURCES: {
-                        #             plugin.CTR_ACT_UPLOADED: 2,
-                        #         },
-                        #         plugin.CTR_SRC_DATA: {
-                        #             plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                        #             plugin.CTR_ACT_CURRENT_COLUMNS: 15,
-                        #             plugin.CTR_ACT_UPDATE_COLUMNS: 0,
-                        #             plugin.CTR_ACT_DELTA_COLUMNS: 0,
-                        #             plugin.CTR_ACT_DELTA_ROWS: 0,
-                        #         },
-                        #     },
-                        # }),
-                        # custom_asserts=[
-                        #     assert_custom_rows_delta(equals=14)
-                        # ],
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_UPLOADED: 1,
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 476,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 476,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 0,
+                                    plugin.CTR_ACT_DELTA_ROWS: 0,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(equals=1)
+                        ],
                         file_asserts={
-                            # "__equity_current.csv": [
-                            #     assert_file_size(),
-                            #     assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
-                            #     assert_file_nones_per_row(),
-                            #     assert_file_zeroes_per_col(exclude="Delta"),
-                            # ],
-                            # "_sheet_prices_history.csv": [
-                            #     assert_file_size(),
-                            #     assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days", descending=True),
-                            #     assert_file_nones_per_row(),
-                            #     assert_file_zeroes_per_row(),
-                            # ],
-                            # "_database_equity.csv": [
-                            #     assert_file_size(),
-                            #     assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
-                            #     assert_file_nones_per_row(),
-                            #     assert_file_zeroes_per_col(exclude="type=delta"),
-                            # ],
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                            ],
+                            "_sheet_prices_history.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2007-01-01", end_date="2026-04-30", contiguous="days", descending=True),
+                                assert_file_nones_per_col(after_last_rows=True),
+                                assert_file_zeroes_per_row(),
+                            ],
+                            "_database_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
+                            ],
                         })
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
-    @pytest.mark.skip(reason="requires update")
     def test_equity_release_replete_1(self):
         self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
                         disable_downloads=False, disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
-                        # counter_asserts=merge_asserts(ASSERT_RUN, {
-                        #     "counter_equals": {
-                        #         plugin.CTR_SRC_DATA: {
-                        #             plugin.CTR_ACT_PREVIOUS_COLUMNS: 442,
-                        #             plugin.CTR_ACT_CURRENT_COLUMNS: 442,
-                        #             plugin.CTR_ACT_UPDATE_COLUMNS: 408,
-                        #             plugin.CTR_ACT_DELTA_COLUMNS: 442,
-                        #         },
-                        #     },
-                        #     "counter_at_least": {
-                        #         plugin.CTR_SRC_DATA: {
-                        #             plugin.CTR_ACT_DELTA_ROWS: 1,
-                        #         },
-                        #     },
-                        # }),
-                        # custom_asserts=[
-                        #     assert_custom_rows_delta(at_least=1)
-                        # ],
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 476,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 476,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 442,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 476,
+                                },
+                            },
+                            "counter_at_least": {
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_DELTA_ROWS: 1,
+                                },
+                            },
+                        }),
+                        custom_asserts=[
+                            assert_custom_rows_delta(at_least=1)
+                        ],
                         file_asserts={
-                            # "__equity_current.csv": [
-                            #     assert_file_size(),
-                            #     assert_file_dates(start_date="1985-01-02", contiguous="days"),
-                            #     assert_file_nones_per_col(after_first_rows=True),
-                            #     # assert_file_state_equal(),
-                            # ],
-                            # "_sheet_prices_history.csv": [
-                            #     assert_file_size(),
-                            #     assert_file_dates(start_date="2007-01-01", contiguous="days", descending=True),
-                            #     assert_file_nones_per_col(after_first_rows=True),
-                            # ],
-                            # "_database_equity.csv": [
-                            #     assert_file_size(),
-                            #     assert_file_dates(start_date="1985-01-02", contiguous="days"),
-                            #     assert_file_nones_per_col(after_first_rows=True),
-                            # ],
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="1985-01-02", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                            ],
+                            "_sheet_prices_history.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2007-01-01", contiguous="days", descending=True),
+                                assert_file_nones_per_col(after_last_rows=True),
+                                assert_file_zeroes_per_row(),
+                            ],
+                            "_database_equity.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="1985-01-02", contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
+                            ],
                         })
 
     ########################################################################################################################
@@ -680,17 +679,17 @@ class WrangleTest(unittest.TestCase):
                             "__interest_current.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
-                                assert_file_nones_per_row(exclude="Mean"),
+                                assert_file_nones_per_row(exclude=r"Mean"),
                             ],
                             "_sheet_rates_interest.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
-                                assert_file_nones_per_row(exclude="Mean"),
+                                assert_file_nones_per_row(exclude=r"Mean"),
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
-                                assert_file_nones_per_row(exclude="type=mean"),
+                                assert_file_nones_per_row(exclude=r"type=mean"),
                             ],
                         })
 
@@ -720,17 +719,17 @@ class WrangleTest(unittest.TestCase):
                             "__interest_current.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
-                                assert_file_nones_per_row(exclude="Mean"),
+                                assert_file_nones_per_row(exclude=r"Mean"),
                             ],
                             "_sheet_rates_interest.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
-                                assert_file_nones_per_row(exclude="Mean"),
+                                assert_file_nones_per_row(exclude=r"Mean"),
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
-                                assert_file_nones_per_row(exclude="type=mean"),
+                                assert_file_nones_per_row(exclude=r"type=mean"),
                             ],
                         })
 
@@ -738,7 +737,7 @@ class WrangleTest(unittest.TestCase):
     # Sources
     ########################################################################################################################
 
-    # @pytest.mark.skip(reason="very slow")
+    @pytest.mark.skip(reason="very slow")
     def test_library_sheet(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
 

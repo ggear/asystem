@@ -174,7 +174,6 @@ class Equity(plugin.Plugin):
                         year = name_parts[-1].split('-')[0]
                         yearly_base = '_'.join(name_parts[:-1]) + f'_{year}.csv'
                         if any(basename(f) == yearly_base for f in files):
-                            self.print_log(f"Stale monthly file [{file_base}] found in repo, skipping for now but should delete", level="warn")
                             continue
                     if files[file_name][0] and (plugin.config.force_reprocessing or files[file_name][1]):
                         stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, file_name)
@@ -184,7 +183,7 @@ class Equity(plugin.Plugin):
                        (all([s.status != plugin.DownloadStatus.FAILED for s in stock_files.values()]) and any([s.status == plugin.DownloadStatus.DOWNLOADED for s in stock_files.values()])) or \
                        (all([s[0] for s in statement_files.values()]) and any([s[1] for s in statement_files.values()]))
 
-        # If clean, flag all files for processing
+        # Reprocess all files
         if plugin.config.force_reprocessing:
             stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "yahoo")}
             stock_file_bases = {basename(f) for f in stock_files}
@@ -661,7 +660,7 @@ from(bucket: "data_public")
                     index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes)))
                     index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
                 else:
-                    self.print_log("Index weights sheet missing required column [Exchange Symbol]; using empty index weights")
+                    self.print_log("Index weights sheet missing required column [Exchange Symbol], using empty index weights")
                     index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **{index: pl.Float64 for index in indexes}}, print_rows=-1)
                 dataframe_print(self.name, index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000, started=started_time)
                 started_time = time.time()
