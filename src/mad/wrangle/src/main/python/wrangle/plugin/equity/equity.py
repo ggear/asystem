@@ -72,33 +72,35 @@ DIMENSIONS_STATE = (
 STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 
 STOCK = {
-    'AORD': {"start": "1985-01", "end of day": "16:00", "prefix": "^", "exchange": "", },
-    'SIG ': {"start": "2006-01", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'WDS ': {"start": "2009-01", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'GOLD': {"start": "2008-01", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'VAS ': {"start": "2010-01", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'VHY ': {"start": "2011-01", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'MVW ': {"start": "2014-06", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'VGS ': {"start": "2014-12", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'VGE ': {"start": "2014-01", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'NDQ ': {"start": "2015-06", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'VAE ': {"start": "2016-01", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'VDHG': {"start": "2018-01", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'IAF ': {"start": "2012-04", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'EMKT': {"start": "2018-03", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'ACDC': {"start": "2018-09", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'CLNE': {"start": "2021-04", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'ERTH': {"start": "2021-04", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'QSML': {"start": "2021-05", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'GAME': {"start": "2022-05", "end of day": "16:00", "prefix": "", "exchange": "AX", },
-    'URNM': {"start": "2022-07", "end of day": "16:00", "prefix": "", "exchange": "AX", },
+    'AORD': {"start": "1985-01", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
+    'AXJO': {"start": "1992-01", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
+    'SIG ': {"start": "2006-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'WDS ': {"start": "2009-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'GOLD': {"start": "2008-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'VAS ': {"start": "2010-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'VHY ': {"start": "2011-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'ATOI': {"start": "2013-02", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
+    'MVW ': {"start": "2014-06", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'VGS ': {"start": "2014-12", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'VGE ': {"start": "2014-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'NDQ ': {"start": "2015-06", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'VAE ': {"start": "2016-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'VDHG': {"start": "2018-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'IAF ': {"start": "2012-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'EMKT': {"start": "2018-03", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'ACDC': {"start": "2018-09", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'CLNE': {"start": "2021-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'ERTH': {"start": "2021-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'QSML': {"start": "2021-05", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'GAME': {"start": "2022-05", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'URNM': {"start": "2022-07", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
 }
 
 REPOS_EQUITY = plugin.Repos(
     preview={
-        "drive_folder": "PLACEHOLDER",
-        "sheet_prices": "PLACEHOLDER",
-        "sheet_portfolio": "PLACEHOLDER",
+        "drive_folder": "1KJAS96r1I2js4TNCwns9LViEjuiCaZuR",
+        "sheet_prices": "1tEWCNIb8UNFWCXKaUJ8eWBOR4Qw-VLb0rRFPQT5F9vM",
+        "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
         "database_table": "equity_preview",
     },
     release={
@@ -121,6 +123,7 @@ class Equity(plugin.Plugin):
         stock_files = {}
         statement_files = {}
 
+        stock_downloaded_count = 0
         if not plugin.config.disable_downloads:
 
             # Download stock files
@@ -133,21 +136,27 @@ class Equity(plugin.Plugin):
                         for month in range(1, today.month + 1):
                             if year != stock_start.year or month >= stock_start.month:
                                 file_name = f"{self.local_cache}/yahoo_{ticker.lower()}_{year}-{month:02}.csv"
-                                stock_files[file_name] = self.stock_download(
+                                result = self.stock_download(
                                     file_name,
-                                    f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
+                                    f"{STOCK[stock]['prefix'].strip()}{ticker}{'.' if STOCK[stock]['exchange'].strip() != '' else ''}{STOCK[stock]['exchange'].strip()}",
                                     f"{year}-{month:02}-01",
                                     f"{year}-{month:02}-{calendar.monthrange(year, month)[1]:02}",
                                     STOCK[stock]["end of day"], check=year == today.year and month == today.month)
+                                stock_files[file_name] = result
+                                if result.status == plugin.DownloadStatus.DOWNLOADED:
+                                    stock_downloaded_count += 1
                     else:
                         start_month = stock_start.month if year == stock_start.year else 1
                         file_name = f"{self.local_cache}/yahoo_{ticker.lower()}_{year}.csv"
-                        stock_files[file_name] = self.stock_download(
+                        result = self.stock_download(
                             file_name,
-                            f"{STOCK[stock]['prefix']}{ticker}{'.' if STOCK[stock]['exchange'] != '' else ''}{STOCK[stock]['exchange']}",
+                            f"{STOCK[stock]['prefix'].strip()}{ticker}{'.' if STOCK[stock]['exchange'].strip() != '' else ''}{STOCK[stock]['exchange'].strip()}",
                             f"{year}-{start_month:02}-01",
                             f"{year}-12-31",
                             STOCK[stock]["end of day"], check=False)
+                        stock_files[file_name] = result
+                        if result.status == plugin.DownloadStatus.DOWNLOADED:
+                            stock_downloaded_count += 1
 
             # Sync stock and fund files from Drive
             files_cached = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED)
@@ -158,6 +167,10 @@ class Equity(plugin.Plugin):
                 if basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
                 elif basename(file_name).startswith("yahoo"):
+                    file_base = basename(file_name)
+                    name_parts = file_base.removesuffix('.csv').split('_')
+                    if len(name_parts) >= 3 and '-' in name_parts[-1] and int(name_parts[-1].split('-')[0]) < datetime.today().year:
+                        self.print_log(f"Stale monthly file [{file_base}] found in repo, benign issue, but can delete", level="warn")
                     if files[file_name][0] and (plugin.config.force_reprocessing or files[file_name][1]):
                         stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, file_name)
             new_data = plugin.config.force_reprocessing or \
@@ -169,7 +182,8 @@ class Equity(plugin.Plugin):
             stock_files = {f: plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, f) for f in self.file_list(self.local_cache, "yahoo")}
             statement_files = self.file_list(self.local_cache, "58861")
             new_data = len(stock_files) > 0 or len(statement_files) > 0
-        self.print_log(f"Files downloaded or cached [{len(stock_files)}] stock and [{len(statement_files)}] fund files", started=started_time)
+        stock_processable_count = sum(1 for s in stock_files.values() if s.status != plugin.DownloadStatus.FAILED)
+        self.print_log(f"Files downloaded [{stock_downloaded_count}] and cached [{stock_processable_count - stock_downloaded_count}]", started=started_time)
 
         # Collect stock file data
         started_time = time.time()
@@ -180,7 +194,8 @@ class Equity(plugin.Plugin):
                 if plugin.config.force_reprocessing or stock_files[stock_file_name].status == plugin.DownloadStatus.DOWNLOADED:
                     try:
                         stocks_files_count += 1
-                        stock_ticker = basename(stock_file_name).split('_')[1]
+                        stock_ticker = basename(stock_file_name).split('_')[1].upper()
+                        required_columns = {"Date", "Open", "High", "Low", "Close", "Volume", "Dividends", "Stock Splits"}
                         stock_df = self.csv_read(stock_file_name, schema={
                             "Date": pl.Date,
                             "Open": pl.Float64,
@@ -191,6 +206,9 @@ class Equity(plugin.Plugin):
                             "Dividends": pl.Float64,
                             "Stock Splits": pl.Float64,
                         })
+                        missing = required_columns - set(stock_df.columns)
+                        if missing:
+                            raise Exception(f"File [{stock_file_name}] missing required columns {sorted(missing)}")
                         stock_df = stock_df.with_columns([pl.lit("AUD").alias("Base"), pl.lit(1.0).alias("Rate")])
                         stock_new_names = ["Date"] + [f"{stock_ticker} {column}" for column in DIMENSIONS_PRICE_AUX]
                         stock_df = stock_df.rename(dict(zip(stock_df.columns, stock_new_names)))
@@ -354,14 +372,18 @@ class Equity(plugin.Plugin):
             _equity_df = _equity_df.filter(pl.col("Date").is_not_null()).filter(~pl.all_horizontal(pl.all().exclude("Date").is_null())).sort("Date").set_sorted("Date")
             return _equity_df
 
-        def _equity_upsample(_equity_df):
+        def _equity_upsample(_equity_df, numeric_fill="interpolate"):
             _equity_df = _equity_df.filter(pl.col("Date").is_not_null())
             if len(_equity_df) == 0:
                 return _equity_df
-            return _equity_df \
+            _equity_df = _equity_df \
                 .unique(subset=["Date"], keep="first").sort("Date").set_sorted("Date") \
-                .upsample(time_column="Date", every="1d").fill_nan(pl.lit(None)) \
-                .with_columns(cs.numeric().interpolate()) \
+                .upsample(time_column="Date", every="1d").fill_nan(pl.lit(None))
+            if numeric_fill == "forward_fill":
+                _equity_df = _equity_df.with_columns(cs.numeric().forward_fill())
+            else:
+                _equity_df = _equity_df.with_columns(cs.numeric().interpolate())
+            return _equity_df \
                 .with_columns(cs.string().forward_fill())
 
         def _equity_print(_equity_df, _dimensions=None, print_label=None, print_verb=None, print_rows=PL_PRINT_ROWS, started=None):
@@ -375,11 +397,29 @@ class Equity(plugin.Plugin):
                         for dimension in _dimensions
                         if f"{_ticker} {dimension}" in _equity_df.columns
                     )]).fill_nan(None).filter(~pl.all_horizontal(pl.exclude("Date").is_null()))),
-                                    print_label=f"{print_label}_{_ticker}", print_verb=print_verb, print_rows=print_rows)
+                                    print_label=f"{print_label}_{_ticker.upper()}", print_verb=print_verb, print_rows=print_rows)
+
+        def _equity_forward_fill(_equity_df, _dimensions, _tickers=None):
+            _fill_exprs = []
+            _target_tickers = _equity_tickers(_equity_df) if _tickers is None else _tickers
+            for _ticker in _target_tickers:
+                _anchor = f"{_ticker} Price Close"
+                if _anchor in _equity_df.columns:
+                    _has_history = pl.col(_anchor).is_not_null().cum_max()
+                    for _dimension in _dimensions:
+                        _column = f"{_ticker} {_dimension}"
+                        if _column in _equity_df.columns:
+                            _fill_exprs.append(
+                                pl.when(_has_history).then(pl.col(_column).forward_fill()).otherwise(None).alias(_column)
+                            )
+            if _fill_exprs:
+                _equity_df = _equity_df.with_columns(_fill_exprs)
+            return _equity_df
 
         # Process equity data
         indexes = []
         fx_rates = {}
+        statement_tickers = []
         try:
             if new_data:
 
@@ -390,18 +430,18 @@ class Equity(plugin.Plugin):
                     if statement_data[file_name]['Status'] == STATUS_SUCCESS:
                         statement_position = statement_data[file_name]["Positions"]
                         statements_positions.extend(list(statement_position.values()))
-                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SUCCESS}] with positions {list(statement_position.keys())}")
+                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SUCCESS}] with positions {list(statement_position.keys())}", level="debug")
                     elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
-                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SKIPPED}]")
+                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_SKIPPED}]", level="debug")
                     else:
-                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] at parsing point:")
-                        self.print_log(statement_data[file_name]["Parse"])
-                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] with errors:")
+                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] at parsing point:", level="debug")
+                        self.print_log(statement_data[file_name]["Parse"], level="debug")
+                        self.print_log(f"File [{basename(file_name)}] processed as [{STATUS_FAILURE}] with errors:", level="error")
                         if not statement_data[file_name]["Errors"]:
                             statement_data[file_name]["Errors"] = ["<NONE>"]
                         error_index = 0
                         while error_index < len(statement_data[file_name]["Errors"]):
-                            self.print_log(f" {error_index:2d}: {statement_data[file_name]['Errors'][error_index]}")
+                            self.print_log(f" {error_index:2d}: {statement_data[file_name]['Errors'][error_index]}", level="error")
                             error_index += 1
                 if len(statements_positions) == 0:
                     statement_df = self.dataframe_new(schema={"Date": pl.Date}, print_label="Funds", started=started_time)
@@ -409,6 +449,7 @@ class Equity(plugin.Plugin):
                     statement_df = self.dataframe_new(statements_positions, print_label="Funds", started=started_time)
                     started_time = time.time()
                     tickers = [row[0] for row in statement_df.select("Ticker").unique().rows()]
+                    statement_tickers = sorted(tickers)
                     statement_df = statement_df.with_columns(
                         pl.col("Date").str.strptime(pl.Date),
                         (pl.col("Value") / pl.col("Units")).alias("Price"),
@@ -446,15 +487,16 @@ class Equity(plugin.Plugin):
 
                 # Process stock and fund data
                 started_time = time.time()
-                for stock in STOCK:
-                    ticker = stock.strip()
-                    if ticker in stocks_df:
+                for ticker in stocks_df:
+                    if ticker.upper().strip() in {key.strip().upper() for key in STOCK}:
                         equity_df = equity_df.join(stocks_df[ticker], on="Date", how="full", coalesce=True)
                 equity_df = _equity_upsample(equity_df)
                 _equity_print(equity_df, print_label="Stocks", print_verb="concatenated", started=started_time)
                 started_time = time.time()
                 equity_df = equity_df.join(statement_df, on="Date", how="full", coalesce=True)
                 equity_df = equity_df.unique(subset=["Date"], keep="first").sort("Date").set_sorted("Date")
+                if statement_tickers:
+                    equity_df = _equity_forward_fill(equity_df, DIMENSIONS_PRICE_AUX, _tickers=statement_tickers)
                 _equity_print(equity_df, print_label="Equity", print_verb="concatenated", started=started_time)
 
                 # Add manual stocks
@@ -462,10 +504,8 @@ class Equity(plugin.Plugin):
                 prices_manual_result = self.sheet_download(self.remote_repos.sheet_prices, "Prices", sheet_name="Manual")
                 equity_df_manual = self.csv_read(prices_manual_result.file_path, schema={"Date": pl.Date}) \
                     if prices_manual_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
-                equity_df_manual = _equity_upsample(equity_df_manual)
-                tickers_manual = _equity_tickers(equity_df_manual)
                 manual_exprs = []
-                for ticker in tickers_manual:
+                for ticker in _equity_tickers(equity_df_manual):
                     manual_exprs.extend([
                         pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Open"),
                         pl.col(f"{ticker} Price Close").alias(f"{ticker} Price High"),
@@ -478,17 +518,26 @@ class Equity(plugin.Plugin):
                 if manual_exprs:
                     equity_df_manual = equity_df_manual.with_columns(manual_exprs)
                 equity_df_manual = _equity_clean(equity_df_manual)
+                equity_df_manual = _equity_upsample(equity_df_manual, numeric_fill="forward_fill")
                 _equity_print(equity_df_manual, print_label="Equity_Manual_Stock_Prices", print_verb="processed", started=started_time)
                 started_time = time.time()
                 tickers = _equity_tickers(equity_df)
                 new_ticker_dfs = []
-                for ticker in tickers_manual:
-                    ticker_cols = ["Date"] + [c for c in equity_df_manual.columns if c.startswith(ticker + " ")]
+                manual_ticker_columns = {}
+                for column in equity_df_manual.columns:
+                    if column != "Date" and " " in column:
+                        ticker = column.split(" ", 1)[0]
+                        if ticker not in manual_ticker_columns:
+                            manual_ticker_columns[ticker] = []
+                        manual_ticker_columns[ticker].append(column)
+                for ticker in manual_ticker_columns:
+                    ticker_cols = ["Date"] + manual_ticker_columns[ticker]
                     ticker_df = equity_df_manual.select(ticker_cols)
                     if ticker in tickers:
                         equity_df = equity_df.update(ticker_df, on="Date", how="full")
                     else:
                         new_ticker_dfs.append(ticker_df)
+                manual_tickers = sorted(manual_ticker_columns.keys())
                 if new_ticker_dfs:
                     equity_df = pl.concat([equity_df] + new_ticker_dfs, how="align")
                 equity_df = _equity_upsample(equity_df)
@@ -574,6 +623,10 @@ from(bucket: "data_public")
                     ]
                     if rate_mask_exprs:
                         equity_df = equity_df.with_columns(rate_mask_exprs)
+                    equity_df = _equity_forward_fill(
+                        equity_df,
+                        [f"{column_price} Spot" for column_price in DIMENSIONS_PRICE] + ["Currency Rate Spot"]
+                    )
                 _equity_print(equity_df, _dimensions=DIMENSIONS_PRICE_AUX_TYPES, print_label="Equity", print_verb="added FX rates", started=started_time)
 
                 # Get index weights and add index definitions
@@ -631,6 +684,13 @@ from(bucket: "data_public")
                 volume_exprs = [(pl.col(f"{ticker} Market Volume") * pl.col(f"{ticker} Price Close Spot")).alias(f"{ticker} Market Volume Spot") for ticker in tickers]
                 if volume_exprs:
                     equity_df = equity_df.with_columns(volume_exprs)
+                equity_df = _equity_forward_fill(equity_df, ["Market Volume Spot"])
+                manual_fill_cols = [
+                    column for column in equity_df.columns
+                    if column != "Date" and " " in column and column.split(" ", 1)[0] in manual_tickers
+                ]
+                if manual_fill_cols:
+                    equity_df = equity_df.with_columns([pl.col(col).forward_fill().alias(col) for col in manual_fill_cols])
                 _equity_print(equity_df, _dimensions=["Price Close Spot", "Market Volume", "Market Volume Spot"], print_label="Equity_Volumes", print_verb="added market volumes", started=started_time)
 
         except Exception as exception:
@@ -761,7 +821,7 @@ from(bucket: "data_public")
                 dimensions_sheet = ["Price Close", "Currency Rate Base"]
                 tickers = _equity_tickers(equity_current_df)
                 equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])
-                equity_sheet_df = equity_sheet_df.filter(pl.col("Date") > pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
+                equity_sheet_df = equity_sheet_df.filter(pl.col("Date") >= pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(equity_sheet_df, self.remote_repos.sheet_prices, workbook_name="Prices", sheet_name='History')
 
                 # Database upload

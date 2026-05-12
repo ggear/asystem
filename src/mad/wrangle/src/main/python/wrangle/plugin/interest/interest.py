@@ -79,8 +79,9 @@ class Interest(plugin.Plugin):
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
-            interest_files_count = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) + self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
-            self.print_log(f"Files downloaded or cached [{interest_files_count}] files", started=started_time)
+            interest_downloaded = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
+            interest_cached = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
+            self.print_log(f"Files downloaded [{interest_downloaded}] and cached [{interest_cached}]", started=started_time)
             if new_data:
                 try:
                     if retail_should_read:

@@ -11,7 +11,29 @@ from .config import *
 
 class StateMixin(ContractMixin):
 
-    def state_cache(self, data_df_update, aggregate_function=None, key_columns=None):
+    def state_cache(self, data_df_update, aggregate_func=None, key_columns=None):
+        """
+        Merge incoming data against a persisted snapshot and return the change set.
+
+        Loads the previous run's `current` snapshot from disk, merges `data_df_update` into it
+        (deduplicating by key columns, keeping the latest value), then computes which rows changed.
+
+        Parameters:
+            data_df_update:     Incoming rows to merge. First column must be named "Date" (pl.Date).
+            aggregate_func: Optional transform applied to data after merging (e.g. resampling).
+            key_columns:        Columns used to identify unique rows; defaults to ["Date"].
+
+        Returns (delta, current, previous):
+            delta:    Rows whose values changed between previous and current (new or modified rows).
+            current:  Full dataset after merging update into the prior snapshot; persisted to disk.
+            previous: Full dataset from the prior run before this update was applied.
+
+        Files written to disk (local_cache):
+            _update:   Filtered and aggregated form of data_df_update; the rows applied this run.
+            _current:  Updated current snapshot (becomes _previous on the next run).
+            _previous: Current snapshot from the prior run, moved here before _current is rewritten.
+            _delta:    Rows from _current that differ from _previous.
+        """
 
         def _resolve_key_columns(available_columns):
             resolved = [column for column in key_columns if column in available_columns]
@@ -24,8 +46,8 @@ class StateMixin(ContractMixin):
 
         started_time = time.time()
         key_columns = key_columns if key_columns is not None else ["Date"]
-        aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_function is None \
-            else (lambda _data_df: aggregate_function(_data_df) if len(_data_df) > 0 else _data_df)
+        aggregate_function_wrapped = (lambda _data_df: _data_df) if aggregate_func is None \
+            else (lambda _data_df: aggregate_func(_data_df) if len(_data_df) > 0 else _data_df)
         file_delta = abspath(f"{self.local_cache}/__{self.name.lower()}_delta.csv")
         file_update = abspath(f"{self.local_cache}/__{self.name.lower()}_update.csv")
         file_current = abspath(f"{self.local_cache}/__{self.name.lower()}_current.csv")
@@ -110,6 +132,10 @@ class StateMixin(ContractMixin):
             if data_column in data_df_previous.columns and data_df_previous.schema[data_column] != data_type:
                 data_df_previous = data_df_previous.with_columns(
                     pl.col(data_column).cast(data_type, strict=False))
+        for data_column, data_type in data_schema.items():
+            if data_column not in data_df_current.columns:
+                data_df_current = data_df_current.with_columns(
+                    pl.lit(None).cast(data_type).alias(data_column))
         data_df_current = data_df_current.select(data_schema.keys())
         self.csv_write(data_df_current, file_current)
         data_df_current_value_columns = [c for c in data_df_current.columns if c not in state_key_columns]

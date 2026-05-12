@@ -59,12 +59,16 @@ class Currency(plugin.Plugin):
             # Download currency data
             new_data = False
             started_time = time.time()
-            rba_files_count = 0
+            rba_files_downloaded_count = 0
+            rba_files_cached_count = 0
             for years in RBA_YEARS:
                 years_file = join(self.local_cache, f"rba_fx_{years}.xls")
                 file_status = self.http_download(f"https://www.rba.gov.au/statistics/tables/xls-hist/{years}.xls", years_file, check='current' in years)
                 if file_status.status in (plugin.DownloadStatus.CACHED, plugin.DownloadStatus.DOWNLOADED):
-                    rba_files_count += 1
+                    if file_status.status == plugin.DownloadStatus.DOWNLOADED:
+                        rba_files_downloaded_count += 1
+                    else:
+                        rba_files_cached_count += 1
                     if plugin.config.force_reprocessing or file_status.status == plugin.DownloadStatus.DOWNLOADED:
                         new_data = True
                         try:
@@ -90,7 +94,7 @@ class Currency(plugin.Plugin):
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, 1)
                 raise RuntimeError(error_message)
             rba_df = rba_df if len(rba_df) == 0 else rba_df.drop_nulls()
-            self.print_log(f"Files downloaded or cached [{rba_files_count}] files", started=started_time)
+            self.print_log(f"Files downloaded [{rba_files_downloaded_count}] and cached [{rba_files_cached_count}]", started=started_time)
             dataframe_print(self.name, rba_df, print_label="Currency", print_verb="collected")
 
             # Process the currency data
