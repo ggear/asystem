@@ -1,4 +1,5 @@
 import calendar
+import re
 import time
 from datetime import datetime
 from os.path import *
@@ -792,6 +793,11 @@ from(bucket: "data_public")
                                 .otherwise(pl.col(_mvs_col))
                                 .alias(_mvs_col))
 
+                    _stock_tickers_stripped = {k.strip() for k in STOCK.keys()}
+                    _statement_tickers_in_data = [t for t in _equity_tickers(_data_df) if t.strip() not in _stock_tickers_stripped]
+                    if _statement_tickers_in_data:
+                        _data_df = _equity_forward_fill(_data_df, DIMENSIONS_PRICE_AUX_TYPES + DIMENSIONS_VOLUME, _tickers=_statement_tickers_in_data)
+
                     # Price changes for all tickers and indexes in two passes, create, then mask
                     _create_exprs = []
                     _mask_specs = []
@@ -830,11 +836,54 @@ from(bucket: "data_public")
 
                 return _aggregate_function
 
+            # Remove null rows
+            if len(equity_df):
+                equity_df = equity_df.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in [c for c in equity_df.columns if c != "Date"]]))
+
+            # Add null columns for any tickers in the existing state not covered by this run so state_cache coalesces them
+            existing_current_file = abspath(f"{self.local_cache}/__equity_current.csv")
+            if not plugin.config.force_reprocessing and isfile(existing_current_file) and len(equity_df) > 0:
+                existing_schema = pl.read_csv(existing_current_file, n_rows=0).schema
+                missing_exprs = [pl.lit(None).cast(existing_schema[col]).alias(col)
+                                 for col in existing_schema if col != "Date" and col not in equity_df.columns]
+                if missing_exprs:
+                    equity_df = equity_df.with_columns(missing_exprs)
+
             # Checkpoint the data
-            _non_date_cols = [c for c in equity_df.columns if c != "Date"]
-            if _non_date_cols:
-                equity_df = equity_df.filter(pl.any_horizontal([pl.col(c).is_not_null() for c in _non_date_cols]))
             equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, _make_aggregate(indexes))
+
+            # Verify data
+            if not equity_current_df.is_empty():
+                non_date_cols = [c for c in equity_current_df.columns if c != "Date"]
+                equity_current_df = equity_current_df.filter(
+                    pl.any_horizontal([pl.col(c).is_not_null() for c in non_date_cols])
+                )
+                none_violations = {}
+                for col in non_date_cols:
+                    first_non_null = equity_current_df[col].is_not_null().arg_true().first()
+                    if first_non_null is not None:
+                        tail_null_count = equity_current_df[col].slice(int(first_non_null)).null_count()
+                        if tail_null_count > 0:
+                            none_violations[col] = tail_null_count
+                if none_violations:
+                    none_count = len(none_violations)
+                    self.print_log(f"Data integrity violation, [{none_count}] columns with unexpected nones after first rows:", level="error")
+                    for col, count in none_violations.items():
+                        self.print_log(f"  {col}: {count}", level="error")
+                    self.add_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_ERRORED, none_count)
+                zero_check_cols = [
+                    c for c in equity_current_df.columns
+                    if equity_current_df.schema[c] in pl.NUMERIC_DTYPES
+                       and not re.search(r"Market Volume|Change|Paid Dividends|Stock Splits", c)
+                ]
+                if zero_check_cols:
+                    zero_violations = {c: int((equity_current_df[c] == 0).sum()) for c in zero_check_cols if (equity_current_df[c] == 0).any()}
+                    if zero_violations:
+                        zero_count = sum(zero_violations.values())
+                        self.print_log(f"Data integrity violation, [{zero_count}] rows with unexpected zeros:", level="error")
+                        for col, count in zero_violations.items():
+                            self.print_log(f"  {col}: {count}", level="error")
+                        self.add_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_ERRORED, zero_count)
 
             # Upload the data
             started_time = time.time()

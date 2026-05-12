@@ -570,7 +570,7 @@ class WrangleTest(unittest.TestCase):
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_PREVIOUS_COLUMNS: 476,
                                     plugin.CTR_ACT_CURRENT_COLUMNS: 476,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 442,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 476,
                                     plugin.CTR_ACT_DELTA_COLUMNS: 476,
                                 },
                             },
@@ -1609,6 +1609,26 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual("note-a", previous.sort(["Date", "Account ID"])["Notes"][0])
         self.assertEqual(2, len(delta))
         self.assertIsNone(delta.sort(["Date", "Account ID"])["Notes"][0])
+
+    def test_state_cache_coalesce_preserves_current_when_update_null(self):
+        t = self._setup_state_test("sc-1")
+        first = pl.DataFrame({
+            "Date": ["2024-01-01", "2024-01-02"],
+            "Value": [1.0, 2.0],
+            "Extra": [10.0, 20.0],
+        }).with_columns(pl.col("Date").str.to_date())
+        t.state_cache(first)
+        t.reset_counters()
+        update = pl.DataFrame({
+            "Date": ["2024-01-02", "2024-01-03"],
+            "Value": [None, 3.0],
+            "Extra": [None, 30.0],
+        }).with_columns(pl.col("Date").str.to_date())
+        _, current, _ = t.state_cache(update)
+        by_date = {row[0].isoformat(): (row[1], row[2]) for row in current.select(["Date", "Value", "Extra"]).rows()}
+        self.assertEqual((1.0, 10.0), by_date["2024-01-01"])
+        self.assertEqual((2.0, 20.0), by_date["2024-01-02"])
+        self.assertEqual((3.0, 30.0), by_date["2024-01-03"])
 
     def _setup_state_test(self, fixture):
         t = Test("Test", "SOME_NON_EXISTANT_GUID")

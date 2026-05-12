@@ -88,6 +88,7 @@ class StateMixin(ContractMixin):
         data_df_current = self.csv_read(file_current) \
             if isfile(file_current) else self.dataframe_new(schema=data_df_update.schema, print_label=f"{self.name.title()}_Current")
         data_schema_update_column_count = len(data_df_update.columns)
+        update_original_columns = set(data_df_update.columns)
         data_schema = OrderedDict()
         for (data_column, data_type) in zip(data_df_update.columns, data_df_update.dtypes):
             data_schema[data_column] = data_type
@@ -97,8 +98,8 @@ class StateMixin(ContractMixin):
                 data_df_update = data_df_update.with_columns(
                     pl.lit(None).cast(data_schema[data_column]).alias(data_column))
         state_key_columns = _resolve_key_columns(data_schema.keys())
-        data_df_update = data_df_update.select(data_schema.keys()).with_columns(pl.col("Date").cast(pl.Date)).sort(
-            state_key_columns)
+        data_df_update = data_df_update.select(data_schema.keys()).with_columns(pl.col("Date").cast(pl.Date)).unique(
+            subset=state_key_columns, keep="last").sort(state_key_columns).with_columns(pl.lit(True).alias("__in_update"))
         for data_column in data_schema:
             if data_column not in data_df_current:
                 data_df_current = data_df_current.with_columns(
@@ -125,8 +126,15 @@ class StateMixin(ContractMixin):
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns) - len(state_key_columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous.filter(
             pl.any_horizontal([pl.col(c).is_not_null() for c in data_df_previous_value_columns])) if data_df_previous_value_columns else data_df_previous))
-        data_df_current = pl.concat([data_df_current, data_df_update]) \
-            .select(data_schema.keys()).unique(subset=state_key_columns, keep="last").sort(state_key_columns)
+        value_columns = [c for c in data_schema.keys() if c not in state_key_columns]
+        coalesce_cols = [c for c in value_columns if c in update_original_columns]
+        overwrite_cols = [c for c in value_columns if c not in update_original_columns]
+        merge_exprs = [pl.coalesce([f"{c}_upd", c]).alias(c) for c in coalesce_cols] + \
+                      [pl.when(pl.col("__in_update").is_not_null()).then(pl.col(f"{c}_upd")).otherwise(pl.col(c)).alias(c) for c in overwrite_cols]
+        data_df_current = data_df_current.join(data_df_update, on=state_key_columns, how="full", coalesce=True, suffix="_upd")
+        if merge_exprs:
+            data_df_current = data_df_current.with_columns(merge_exprs)
+        data_df_current = data_df_current.select(data_schema.keys()).sort(state_key_columns)
         data_df_current = aggregate_function_wrapped(data_df_current)
         for data_column, data_type in zip(data_df_current.columns, data_df_current.dtypes):
             if data_column in data_df_previous.columns and data_df_previous.schema[data_column] != data_type:
