@@ -43,12 +43,22 @@ _ASSERT_FILE_EQUAL_SEEN = set()
 
 def _print_assert_pass(name, *values):
     col = _ASSERT_PASS_COL if _ASSERT_PASS_COL is not None else len(f"PASS [{name}]") + 3
-    details = " ".join(f"[{value}]" for value in values)
+    details = " ".join(f"[{_value}]" for _value in values)
     print(f"{'PASS [' + name + ']':<{col}}{details}", flush=True)
 
 
 def _format_assert_elapsed(seconds):
     return f"{f'{seconds:.3f}'.rstrip('0').rstrip('.')}s"
+
+
+def _first_true_index(mask_series):
+    if isinstance(mask_series, bool):
+        return 0 if mask_series else None
+    values = mask_series.to_list() if hasattr(mask_series, "to_list") else list(mask_series)
+    for idx, _value in enumerate(values):
+        if _value:
+            return idx
+    return None
 
 
 # noinspection PyMethodMayBeStatic
@@ -1704,6 +1714,7 @@ class WrangleTest(unittest.TestCase):
                    disable_source_downloads=False, disable_sheet_downloads=False, disable_database_downloads=False,
                    disable_repo_downloads=True, disable_repo_uploads=True,
                    counter_asserts=None, custom_asserts=None, file_asserts=None):
+        global _ASSERT_PASS_COL
         if file_asserts is None:
             file_asserts = {}
         if custom_asserts is None:
@@ -1729,48 +1740,69 @@ class WrangleTest(unittest.TestCase):
         label = f"{{:<22}} {f'[{plugin_name.title()}]':<15}   {f'[{repo_scope.name}]':<10}   {f'[{test_name}]'}"
         _print = lambda stage: print(("\n" if stage.startswith("STARTING") else "") + label.format(stage) + ("\n" if stage.startswith("FINISHED") else ""), flush=True)
         if not prepare_only:
-            _print("STARTING (run)")
-            plugin_module.run()
-            _print("FINISHED (run)")
-            self._save_pass_snapshot(plugin_module, 1)
-            run_counters = plugin_module.get_counters()
-            self._assert_counters(run_counters, counter_asserts)
-            if not enable_rerun:
+            self._set_assert_pass_col(file_asserts, counter_asserts, custom_asserts)
+            try:
+                _print("STARTING (run)")
+                plugin_module.run()
+                _print("FINISHED (run)")
+                self._save_pass_snapshot(plugin_module, 1)
+                run_counters = plugin_module.get_counters()
                 _print("STARTING (assert)")
                 assert_started = time.time()
                 print_log("Assert", "Starting ...")
-                self._assert_outputs(plugin_module, file_asserts, enable_rerun=False)
+                self._assert_counters(run_counters, counter_asserts)
                 print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
                 _print("FINISHED (assert)")
-            else:
-                first_counters = copy.deepcopy(run_counters)
-                plugin_module.reset_counters()
-                _print("STARTING (rerun)")
-                plugin_module.run()
-                _print("FINISHED (rerun)")
-                self._save_pass_snapshot(plugin_module, 2)
-                noop_counters = plugin_module.get_counters()
-                self._assert_counters(noop_counters, ASSERT_NOOP)
-                second_counters = copy.deepcopy(noop_counters)
-                plugin_module.reset_counters()
-                _print("STARTING (reprocess)")
-                plugin.config.force_reprocessing = True
-                plugin_module.run()
-                plugin.config.force_reprocessing = force_reprocessing
-                _print("FINISHED (reprocess)")
-                self._save_pass_snapshot(plugin_module, 3)
-                reload_counters = plugin_module.get_counters()
-                self._assert_counters(reload_counters, ASSERT_RELOAD)
-                _print("STARTING (assert)")
-                assert_started = time.time()
-                print_log("Assert", "Starting ...")
-                self._assert_outputs(plugin_module, file_asserts, enable_rerun=True)
-                print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
-                _print("FINISHED (assert)")
-                for custom_assert in custom_asserts:
-                    result = custom_assert(first_counters, second_counters, reload_counters)
-                    if result is not None:
-                        self.fail(f"Custom assert [{custom_assert.__name__}] failed. {result}")
+                if not enable_rerun:
+                    _print("STARTING (assert)")
+                    assert_started = time.time()
+                    print_log("Assert", "Starting ...")
+                    self._assert_outputs(plugin_module, file_asserts, enable_rerun=False)
+                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                    _print("FINISHED (assert)")
+                else:
+                    first_counters = copy.deepcopy(run_counters)
+                    plugin_module.reset_counters()
+                    _print("STARTING (rerun)")
+                    plugin_module.run()
+                    _print("FINISHED (rerun)")
+                    self._save_pass_snapshot(plugin_module, 2)
+                    noop_counters = plugin_module.get_counters()
+                    _print("STARTING (assert)")
+                    assert_started = time.time()
+                    print_log("Assert", "Starting ...")
+                    self._assert_counters(noop_counters, ASSERT_NOOP)
+                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                    _print("FINISHED (assert)")
+                    second_counters = copy.deepcopy(noop_counters)
+                    plugin_module.reset_counters()
+                    _print("STARTING (reprocess)")
+                    plugin.config.force_reprocessing = True
+                    plugin_module.run()
+                    plugin.config.force_reprocessing = force_reprocessing
+                    _print("FINISHED (reprocess)")
+                    self._save_pass_snapshot(plugin_module, 3)
+                    reload_counters = plugin_module.get_counters()
+                    _print("STARTING (assert)")
+                    assert_started = time.time()
+                    print_log("Assert", "Starting ...")
+                    self._assert_counters(reload_counters, ASSERT_RELOAD)
+                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                    _print("FINISHED (assert)")
+                    _print("STARTING (assert)")
+                    assert_started = time.time()
+                    print_log("Assert", "Starting ...")
+                    self._assert_outputs(plugin_module, file_asserts, enable_rerun=True)
+                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                    _print("FINISHED (assert)")
+                    _print("STARTING (assert)")
+                    assert_started = time.time()
+                    print_log("Assert", "Starting ...")
+                    self._assert_customs(custom_asserts, first_counters, second_counters, reload_counters)
+                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                    _print("FINISHED (assert)")
+            finally:
+                _ASSERT_PASS_COL = None
 
     def _save_pass_snapshot(self, plugin_module, pass_number):
         suffix_map = {1: "_1_run", 2: "_2_rerun", 3: "_3_reprocess"}
@@ -1788,14 +1820,7 @@ class WrangleTest(unittest.TestCase):
         plugin_module.print_log(f"Files written from [{source}] to [{plugin_module.local_cache}]")
 
     def _assert_outputs(self, plugin_module, verifications, enable_rerun=False):
-        global _ASSERT_PASS_COL, _ASSERT_FILE_EQUAL_SEEN
-        pass_names = [f"{func.__name__}(000.000s)" for funcs in verifications.values() for func in funcs]
-        pass_names.extend([
-            "assert_file_equal_compare_binary(000.000s)",
-            "assert_file_equal_compare_dataframe(000.000s)",
-            "assert_file_equal_compare_dataframe_exclude[(.*)](000.000s)",
-        ])
-        _ASSERT_PASS_COL = max((len(f"PASS [{name}]") for name in pass_names), default=0) + 3
+        global _ASSERT_FILE_EQUAL_SEEN
         _ASSERT_FILE_EQUAL_SEEN.clear()
         try:
             for filename, funcs in verifications.items():
@@ -1827,7 +1852,6 @@ class WrangleTest(unittest.TestCase):
                                 continue
                             _print_assert_pass(f"{func.__name__}({_format_assert_elapsed(elapsed)})", expanded_filename)
         finally:
-            _ASSERT_PASS_COL = None
             _ASSERT_FILE_EQUAL_SEEN.clear()
 
     def _assert_counters(self, actual, asserts):
@@ -1843,9 +1867,42 @@ class WrangleTest(unittest.TestCase):
                 continue
             for counter_source, actions in asserts[comparator_key].items():
                 for counter_action, expected in actions.items():
+                    started = time.time()
                     actual_value = actual.get(counter_source, {}).get(counter_action, 0)
                     assert_fn(actual_value, expected,
                               f"Counter [{counter_source} {counter_action}] {label} assertion failed [{actual_value}] {op} [{expected}]")
+                    _print_assert_pass(f"assert_{comparator_key}({_format_assert_elapsed(time.time() - started)})",
+                                       f"{counter_source} {counter_action}", actual_value, expected)
+
+    def _assert_customs(self, assertions, first, second, third):
+        for custom_assert in assertions:
+            started = time.time()
+            result = custom_assert(first, second, third)
+            elapsed = time.time() - started
+            if result is not None:
+                self.fail(f"Custom assert [{custom_assert.__name__}] failed. {result}")
+            values = []
+            values_fn = getattr(custom_assert, "_pass_values", None)
+            if callable(values_fn):
+                values = values_fn()
+            _print_assert_pass(f"{custom_assert.__name__}({_format_assert_elapsed(elapsed)})", *values)
+
+    def _set_assert_pass_col(self, file_asserts, counter_asserts, custom_asserts):
+        global _ASSERT_PASS_COL
+        file_names = [f"{func.__name__}(000.000s)" for funcs in file_asserts.values() for func in funcs]
+        file_names.extend([
+            "assert_file_equal_compare_binary(000.000s)",
+            "assert_file_equal_compare_dataframe(000.000s)",
+            "assert_file_equal_compare_dataframe_exclude[(.*)](000.000s)",
+        ])
+        counter_names = [
+            "assert_counter_equals(000.000s)",
+            "assert_counter_less(000.000s)",
+            "assert_counter_at_least(000.000s)",
+        ]
+        custom_names = [f"{custom_assert.__name__}(000.000s)" for custom_assert in custom_asserts]
+        pass_names = file_names + counter_names + custom_names
+        _ASSERT_PASS_COL = max((len(f"PASS [{name}]") for name in pass_names), default=0) + 3
 
     def setUp(self):
         print("", flush=True)
@@ -1874,7 +1931,7 @@ def _count_leading_zero_rows(csv_df, numeric_cols):
     mask = csv_df.select(
         pl.any_horizontal((pl.col(c) == 0) & pl.col(c).is_not_null() for c in numeric_cols).alias("z")
     )["z"]
-    first_false = (~mask).arg_true().first()
+    first_false = _first_true_index(~mask)
     return len(mask) if first_false is None else int(first_false)
 
 
@@ -1884,7 +1941,7 @@ def _count_trailing_zero_rows(csv_df, numeric_cols):
     mask = csv_df.select(
         pl.any_horizontal((pl.col(c) == 0) & pl.col(c).is_not_null() for c in numeric_cols).alias("z")
     )["z"]
-    first_false_from_end = (~mask.reverse()).arg_true().first()
+    first_false_from_end = _first_true_index(~mask.reverse())
     return len(mask) if first_false_from_end is None else int(first_false_from_end)
 
 
@@ -1894,7 +1951,7 @@ def _count_leading_none_rows(csv_df, cols):
     mask = csv_df.select(
         pl.any_horizontal(pl.col(c).is_null() for c in cols).alias("n")
     )["n"]
-    first_false = (~mask).arg_true().first()
+    first_false = _first_true_index(~mask)
     return len(mask) if first_false is None else int(first_false)
 
 
@@ -1904,7 +1961,7 @@ def _count_trailing_none_rows(csv_df, cols):
     mask = csv_df.select(
         pl.any_horizontal(pl.col(c).is_null() for c in cols).alias("n")
     )["n"]
-    first_false_from_end = (~mask.reverse()).arg_true().first()
+    first_false_from_end = _first_true_index(~mask.reverse())
     return len(mask) if first_false_from_end is None else int(first_false_from_end)
 
 
@@ -2103,9 +2160,8 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
         if contiguous == "days":
             date_series = pl.Series(dates)
             diffs = date_series.diff().dt.total_days().slice(1)
-            violation_indices = (diffs > max_gap_days).arg_true()
-            if len(violation_indices) > 0:
-                idx = int(violation_indices[0])
+            idx = _first_true_index(diffs > max_gap_days)
+            if idx is not None:
                 msg = f"assert_file_dates: [{basename(file_path)}] gap of {int(diffs[idx])} days between {dates[idx]} and {dates[idx + 1]} exceeds max {max_gap_days}"
                 gap_df = csv_df.filter(pl.col("Date").is_in([dates[idx], dates[idx + 1]]))
                 dataframe_print("Assert", gap_df, msg, level="error")
@@ -2113,9 +2169,8 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
         elif contiguous == "months":
             date_series = pl.Series(dates)
             month_diffs = (date_series.dt.year() * 12 + date_series.dt.month()).diff().slice(1)
-            violation_indices = (month_diffs != 1).arg_true()
-            if len(violation_indices) > 0:
-                idx = int(violation_indices[0])
+            idx = _first_true_index(month_diffs != 1)
+            if idx is not None:
                 msg = f"assert_file_dates: [{basename(file_path)}] non-consecutive months between {dates[idx]} and {dates[idx + 1]}"
                 gap_df = csv_df.filter(pl.col("Date").is_in([dates[idx], dates[idx + 1]]))
                 dataframe_print("Assert", gap_df, msg, level="error")
@@ -2123,9 +2178,8 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
         elif contiguous == "years":
             date_series = pl.Series(dates)
             year_diffs = date_series.dt.year().diff().slice(1)
-            violation_indices = (year_diffs != 1).arg_true()
-            if len(violation_indices) > 0:
-                idx = int(violation_indices[0])
+            idx = _first_true_index(year_diffs != 1)
+            if idx is not None:
                 msg = f"assert_file_dates: [{basename(file_path)}] non-consecutive years between {dates[idx]} and {dates[idx + 1]}"
                 gap_df = csv_df.filter(pl.col("Date").is_in([dates[idx], dates[idx + 1]]))
                 dataframe_print("Assert", gap_df, msg, level="error")
@@ -2177,10 +2231,14 @@ def assert_file_equal(exclude=None):
 
 
 def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
+    if equals is None and at_least is None and at_most is None:
+        raise ValueError("assert_custom_rows_delta requires one of equals, at_least, or at_most")
+
     def _assert(first, _, third):
         current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
         previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
         delta = current_rows - previous_rows
+        _assert._last_delta = delta
         if equals is not None and delta != equals:
             return f"assert_rows_delta: expected delta == {equals}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
         if at_least is not None and delta < at_least:
@@ -2192,7 +2250,11 @@ def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
     parts = [f"eq{equals}" if equals is not None else None,
              f"gt{at_least}" if at_least is not None else None,
              f"lt{at_most}" if at_most is not None else None]
-    _assert.__name__ = "assert_rows_delta_" + "_".join(p for p in parts if p is not None)
+    suffix = "_".join(p for p in parts if p is not None)
+    _assert._last_delta = None
+    _assert._assert_value = equals if equals is not None else at_least if at_least is not None else at_most
+    _assert._pass_values = lambda: [_assert._last_delta, _assert._assert_value]
+    _assert.__name__ = f"assert_custom_rows_delta_{suffix}" if suffix else "assert_custom_rows_delta"
     return _assert
 
 

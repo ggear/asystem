@@ -19,13 +19,13 @@ class StateMixin(ContractMixin):
         (deduplicating by key columns, keeping the latest value), then computes which rows changed.
 
         Parameters:
-            data_df_update:     Incoming rows to merge. First column must be named "Date" (pl.Date).
+            data_df_update:     Incoming rows to merge. The first column must be named "Date" (pl.Date).
             aggregate_func: Optional transform applied to data after merging (e.g. resampling).
             key_columns:        Columns used to identify unique rows; defaults to ["Date"].
 
         Returns (delta, current, previous):
             delta:    Rows whose values changed between previous and current (new or modified rows).
-            current:  Full dataset after merging update into the prior snapshot; persisted to disk.
+            current:  Full dataset after merging the update into the prior snapshot, persisted to disk.
             previous: Full dataset from the prior run before this update was applied.
 
         Files written to disk (local_cache):

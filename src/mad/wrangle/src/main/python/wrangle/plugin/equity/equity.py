@@ -781,7 +781,7 @@ from(bucket: "data_public")
                 if _spot_exprs:
                     _df = _df.with_columns(_spot_exprs)
 
-                # Indexes: sum weighted tickers to index prices
+                # Indexes: sum-weighted tickers to index prices
                 for _index in _indexes:
                     _index_title = _index.title()
                     for _column_price in DIMENSIONS_PRICE:
