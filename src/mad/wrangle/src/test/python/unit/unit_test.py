@@ -8,7 +8,9 @@ import importlib
 import os
 import re
 import shutil
+import subprocess
 import sys
+import time
 import unittest
 from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
 
@@ -26,7 +28,7 @@ from wrangle.plugin.interest import REPOS_INTEREST
 from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
 from wrangle.plugin.currency import REPOS_CURRENCY
 from wrangle.plugin.config import get_file
-from wrangle.plugin.logger import dataframe_print
+from wrangle.plugin.logger import dataframe_print, print_log
 
 ########################################################################################################################
 # NOTES:
@@ -35,6 +37,18 @@ from wrangle.plugin.logger import dataframe_print
 
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+_ASSERT_PASS_COL = None
+_ASSERT_FILE_EQUAL_SEEN = set()
+
+
+def _print_assert_pass(name, *values):
+    col = _ASSERT_PASS_COL if _ASSERT_PASS_COL is not None else len(f"PASS [{name}]") + 3
+    details = " ".join(f"[{value}]" for value in values)
+    print(f"{'PASS [' + name + ']':<{col}}{details}", flush=True)
+
+
+def _format_assert_elapsed(seconds):
+    return f"{f'{seconds:.3f}'.rstrip('0').rstrip('.')}s"
 
 
 # noinspection PyMethodMayBeStatic
@@ -623,6 +637,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_dates(start_date="2007-01-01", contiguous="days", descending=True),
                                 assert_file_nones_per_col(after_last_rows=True),
                                 assert_file_zeroes_per_row(),
+                                assert_file_equal(),
                             ],
                             "_database_equity*.csv": [
                                 assert_file_size(),
@@ -1722,7 +1737,10 @@ class WrangleTest(unittest.TestCase):
             self._assert_counters(run_counters, counter_asserts)
             if not enable_rerun:
                 _print("STARTING (assert)")
+                assert_started = time.time()
+                print_log("Assert", "Starting ...")
                 self._assert_outputs(plugin_module, file_asserts, enable_rerun=False)
+                print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
                 _print("FINISHED (assert)")
             else:
                 first_counters = copy.deepcopy(run_counters)
@@ -1744,7 +1762,10 @@ class WrangleTest(unittest.TestCase):
                 reload_counters = plugin_module.get_counters()
                 self._assert_counters(reload_counters, ASSERT_RELOAD)
                 _print("STARTING (assert)")
+                assert_started = time.time()
+                print_log("Assert", "Starting ...")
                 self._assert_outputs(plugin_module, file_asserts, enable_rerun=True)
+                print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
                 _print("FINISHED (assert)")
                 for custom_assert in custom_asserts:
                     result = custom_assert(first_counters, second_counters, reload_counters)
@@ -1767,35 +1788,47 @@ class WrangleTest(unittest.TestCase):
         plugin_module.print_log(f"Files written from [{source}] to [{plugin_module.local_cache}]")
 
     def _assert_outputs(self, plugin_module, verifications, enable_rerun=False):
-        passes = []
-        for filename, funcs in verifications.items():
-            if filename.endswith("*.csv"):
-                stem = filename[:-5]
-                expanded = [f"{stem}_1_run.csv", f"{stem}_3_reprocess.csv"] if enable_rerun else [f"{stem}.csv"]
-            else:
-                expanded = [filename]
-            for expanded_filename in expanded:
-                file_path = join(plugin_module.local_cache, expanded_filename)
-                if not isfile(file_path) and expanded_filename.endswith(".csv"):
-                    pass_match = re.search(r"(_\d_(run|rerun|reprocess))\.csv$", expanded_filename)
-                    if pass_match:
-                        pass_suffix = pass_match.group(1)
-                        base_stem = expanded_filename[:-4][: -len(pass_suffix)]
-                        versioned = sorted(glob.glob(join(plugin_module.local_cache, f"{base_stem}_v*{pass_suffix}.csv")))
-                    else:
-                        versioned = sorted(glob.glob(join(plugin_module.local_cache, f"{expanded_filename[:-4]}_v*.csv")))
-                    if versioned:
-                        file_path = versioned[-1]
-                for func in funcs:
-                    result = func(file_path)
-                    if result is not None:
-                        self.fail(f"Assertion [{func.__name__}] failed for [{expanded_filename}]. {result}")
-                    else:
-                        passes.append((func.__name__, expanded_filename))
-        if passes:
-            col = max(len(f"PASS [{name}]") for name, _ in passes) + 3
-            for name, expanded_filename in passes:
-                print(f"{'PASS [' + name + ']':<{col}}[{expanded_filename}]", flush=True)
+        global _ASSERT_PASS_COL, _ASSERT_FILE_EQUAL_SEEN
+        pass_names = [f"{func.__name__}(000.000s)" for funcs in verifications.values() for func in funcs]
+        pass_names.extend([
+            "assert_file_equal_compare_binary(000.000s)",
+            "assert_file_equal_compare_dataframe(000.000s)",
+            "assert_file_equal_compare_dataframe_exclude[(.*)](000.000s)",
+        ])
+        _ASSERT_PASS_COL = max((len(f"PASS [{name}]") for name in pass_names), default=0) + 3
+        _ASSERT_FILE_EQUAL_SEEN.clear()
+        try:
+            for filename, funcs in verifications.items():
+                if filename.endswith("*.csv"):
+                    stem = filename[:-5]
+                    expanded = [f"{stem}_1_run.csv"] if enable_rerun else [f"{stem}.csv"]
+                else:
+                    expanded = [filename]
+                for expanded_filename in expanded:
+                    file_path = join(plugin_module.local_cache, expanded_filename)
+                    if not isfile(file_path) and expanded_filename.endswith(".csv"):
+                        pass_match = re.search(r"(_\d_(run|rerun|reprocess))\.csv$", expanded_filename)
+                        if pass_match:
+                            pass_suffix = pass_match.group(1)
+                            base_stem = expanded_filename[:-4][: -len(pass_suffix)]
+                            versioned = sorted(glob.glob(join(plugin_module.local_cache, f"{base_stem}_v*{pass_suffix}.csv")))
+                        else:
+                            versioned = sorted(glob.glob(join(plugin_module.local_cache, f"{expanded_filename[:-4]}_v*.csv")))
+                        if versioned:
+                            file_path = versioned[-1]
+                    for func in funcs:
+                        started = time.time()
+                        result = func(file_path)
+                        elapsed = time.time() - started
+                        if result is not None:
+                            self.fail(f"Assertion [{func.__name__}] failed for [{expanded_filename}]. {result}")
+                        else:
+                            if func.__name__ == "assert_file_equal":
+                                continue
+                            _print_assert_pass(f"{func.__name__}({_format_assert_elapsed(elapsed)})", expanded_filename)
+        finally:
+            _ASSERT_PASS_COL = None
+            _ASSERT_FILE_EQUAL_SEEN.clear()
 
     def _assert_counters(self, actual, asserts):
         if not asserts:
@@ -1887,6 +1920,14 @@ def _filter_cols(csv_df, include=None, exclude=None):
     if exclude is not None:
         cols = [c for c in cols if not re.search(exclude, c)]
     return cols
+
+
+def _files_equal_binary(path_1, path_2):
+    try:
+        result = subprocess.run(["cmp", "-s", path_1, path_2], check=False)
+        return result.returncode == 0
+    except (FileNotFoundError, OSError):
+        return filecmp.cmp(path_1, path_2, shallow=False)
 
 
 def assert_file_does_exist():
@@ -2097,6 +2138,7 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
 
 def assert_file_equal(exclude=None):
     def _assert(file_path, *_):
+        global _ASSERT_FILE_EQUAL_SEEN
         stem = file_path[:-4]
         if stem.endswith("_1_run"):
             compare_path = stem.removesuffix("_1_run") + "_3_reprocess.csv"
@@ -2106,17 +2148,28 @@ def assert_file_equal(exclude=None):
             return None
         if not isfile(compare_path):
             return f"assert_file_equal: [{basename(file_path)}] comparison file does not exist [{basename(compare_path)}]"
-        if exclude is None and filecmp.cmp(file_path, compare_path, shallow=False):
+        compare_key = tuple(sorted((abspath(file_path), abspath(compare_path))))
+        if compare_key in _ASSERT_FILE_EQUAL_SEEN:
+            return None
+        _ASSERT_FILE_EQUAL_SEEN.add(compare_key)
+        compare_started = time.time()
+        if exclude is None and _files_equal_binary(file_path, compare_path):
+            _print_assert_pass(f"assert_file_equal_compare_binary({_format_assert_elapsed(time.time() - compare_started)})",
+                               basename(file_path), basename(compare_path))
             return None
         df1 = _load_csv(file_path)
         df2 = _load_csv(compare_path)
+        compare_type = "dataframe"
         if exclude is not None:
             df1 = df1.drop([c for c in df1.columns if re.search(exclude, c)])
             df2 = df2.drop([c for c in df2.columns if re.search(exclude, c)])
+            compare_type = f"dataframe_exclude[{exclude}]"
         if not df1.equals(df2):
             msg = f"assert_file_equal: [{basename(file_path)}] vs [{basename(compare_path)}] run and reprocess differ"
             csv_diff.diff_print(file_path, compare_path, exclude)
             return msg
+        _print_assert_pass(f"assert_file_equal_compare_{compare_type}({_format_assert_elapsed(time.time() - compare_started)})",
+                           basename(file_path), basename(compare_path))
         return None
 
     _assert.__name__ = "assert_file_equal"
