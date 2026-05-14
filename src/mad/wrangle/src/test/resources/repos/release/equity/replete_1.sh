@@ -8,8 +8,11 @@ if [ ! -f "${REPO_RUN_DIR}/__equity_current.csv" ]; then
   exit 1
 fi
 
-# Copy all data files
+# Clean current test files
+# TODO: Remove all once database/sheets provisioned
 find "${REPO_TEST_DIR}" -maxdepth 1 -type f -name '[!_]*' -exec rm -f {} \;
+
+# Copy all data files
 find "${REPO_RUN_DIR}" -maxdepth 1 -type f -name '[!_]*' -exec cp -vfp {} "${REPO_TEST_DIR}"/ \;
 
 # Remove current month files and any previous year month files
@@ -23,6 +26,6 @@ cp -vf "${REPO_RUN_DIR}/__equity_current.csv" "${REPO_TEST_DIR}"
 DATE_CURRENT_MONTH=$(date +%Y-%m)
 CURRENT_MONTH_FIRST_LINE=$(grep -n "^${DATE_CURRENT_MONTH}" "${REPO_TEST_DIR}/__equity_current.csv" | head -1 | cut -d: -f1)
 if [ -n "$CURRENT_MONTH_FIRST_LINE" ]; then
-  head -n "$((CURRENT_MONTH_FIRST_LINE - 1))" "${REPO_TEST_DIR}/__equity_current.csv" | tr -d '\r' > "${REPO_TEST_DIR}/__equity_current.csv.tmp" \
-    && mv "${REPO_TEST_DIR}/__equity_current.csv.tmp" "${REPO_TEST_DIR}/__equity_current.csv"
+  head -n "$((CURRENT_MONTH_FIRST_LINE - 1))" "${REPO_TEST_DIR}/__equity_current.csv" | tr -d '\r' >"${REPO_TEST_DIR}/__equity_current.csv.tmp" &&
+    mv "${REPO_TEST_DIR}/__equity_current.csv.tmp" "${REPO_TEST_DIR}/__equity_current.csv"
 fi

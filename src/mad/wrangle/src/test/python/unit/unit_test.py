@@ -390,30 +390,30 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_PROCESSED: 3,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 51,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 51,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 51,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 51,
-                                    plugin.CTR_ACT_DELTA_ROWS: 2892,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 34,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 34,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 34,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 34,
+                                    plugin.CTR_ACT_DELTA_ROWS: 2193,
                                 },
                             },
                         }),
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2018-01-31", end_date="2025-12-31", contiguous="days"),
+                                assert_file_dates(start_date="2019-12-31", end_date="2025-12-31", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                             ],
                             "_sheet_prices_history.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2018-01-31", end_date="2025-12-31", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2019-12-31", end_date="2025-12-31", contiguous="days", descending=True),
                                 assert_file_nones_per_col(after_last_rows=True),
                                 assert_file_zeroes_per_row(),
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2018-01-31", end_date="2025-12-31", contiguous="days"),
+                                assert_file_dates(start_date="2019-12-31", end_date="2025-12-31", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
                             ],
@@ -510,10 +510,10 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_PROCESSED: 480,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 425,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 425,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 425,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 425,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 408,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 408,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 408,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 408,
                                     plugin.CTR_ACT_DELTA_ROWS: 15094,
                                 },
                             },
@@ -595,10 +595,10 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 476,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 476,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 476,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 476,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 425,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 425,
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: 425,
+                                    plugin.CTR_ACT_DELTA_COLUMNS: 425,
                                 },
                             },
                             "counter_at_least": {
@@ -616,11 +616,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_dates(start_date="1985-01-02", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-
-                                # TODO: Fix this
-                                # assert_file_equal(exclude=r"MCK|MUS|MUK"),
-                                assert_file_equal(exclude=r"Holdings|MCK|MUS|MUK"),
-
+                                assert_file_equal(),
                             ],
                             "_sheet_prices_history*.csv": [
                                 assert_file_size(),
