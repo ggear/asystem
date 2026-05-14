@@ -54,31 +54,15 @@ class StateMixin(ContractMixin):
         file_previous = abspath(f"{self.local_cache}/__{self.name.lower()}_previous.csv")
         if not isdir(self.local_cache):
             os.makedirs(self.local_cache)
-
-        # TODO: Remove?
-        # if not config.disable_downloads and config.force_reprocessing:
-        #     if isfile(file_current):
-        #         os.remove(file_current)
         if config.force_reprocessing:
             if isfile(file_current):
                 os.remove(file_current)
-
         if len(data_df_update.columns) == 0 or data_df_update.columns[0] != "Date" or data_df_update.dtypes[0] != pl.Date:
             data_update_col_0 = data_df_update.columns[0] if len(data_df_update.columns) > 0 else None
             data_update_dtype_0 = self.dataframe_type_to_str(data_df_update.dtypes[0]) \
                 if len(data_df_update.dtypes) > 0 else None
             raise SchemaError(f"DataFrame requires first column of parameter [data_df_update] to be named [Date] and of type [date], "
                               f"found [{data_update_col_0}] with type found [{data_update_dtype_0}]")
-
-        # TODO: Remove?
-        # if config.disable_downloads:
-        #     data_df_current = self.csv_read(file_current) \
-        #         if isfile(file_current) else self.dataframe_new(schema={"Date": pl.Date}, print_label=f"{self.name.title()}_Current")
-        #     self.print_log("DataFrame [State_Caches] created ignoring updates", started=started_time)
-        #     state_key_columns = _resolve_key_columns(data_df_current.columns)
-        #     data_df_current = data_df_current.sort(state_key_columns)
-        #     return self.dataframe_new(schema=data_df_current.schema), data_df_current, data_df_current
-
         data_df_update = data_df_update.filter(pl.col("Date").is_not_null())
         if len(data_df_update) == 0 and not isfile(file_current):
             data_df_update = aggregate_function_wrapped(data_df_update)
@@ -108,7 +92,7 @@ class StateMixin(ContractMixin):
                 data_df_current = data_df_current.with_columns(
                     pl.col(data_column).cast(data_schema[data_column], strict=False))
         data_df_current = data_df_current.select(data_schema.keys()).with_columns(pl.col("Date").cast(pl.Date)).sort(state_key_columns)
-        self.csv_write(data_df_update, file_update)
+        self.csv_write(data_df_update.drop("__in_update"), file_update)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, data_schema_update_column_count - len(state_key_columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_ROWS, len(data_df_update))
         if isfile(file_current):
@@ -131,10 +115,14 @@ class StateMixin(ContractMixin):
         overwrite_cols = [c for c in value_columns if c not in update_original_columns]
         merge_exprs = [pl.coalesce([f"{c}_upd", c]).alias(c) for c in coalesce_cols] + \
                       [pl.when(pl.col("__in_update").is_not_null()).then(pl.col(f"{c}_upd")).otherwise(pl.col(c)).alias(c) for c in overwrite_cols]
-        data_df_current = data_df_current.join(data_df_update, on=state_key_columns, how="full", coalesce=True, suffix="_upd")
-        if merge_exprs:
-            data_df_current = data_df_current.with_columns(merge_exprs)
-        data_df_current = data_df_current.select(data_schema.keys()).sort(state_key_columns)
+        data_df_current = (
+            data_df_current.lazy()
+            .join(data_df_update.lazy(), on=state_key_columns, how="full", coalesce=True, suffix="_upd")
+            .with_columns(merge_exprs)
+            .select(list(data_schema.keys()))
+            .sort(state_key_columns)
+            .collect()
+        )
         data_df_current = aggregate_function_wrapped(data_df_current)
         for data_column, data_type in zip(data_df_current.columns, data_df_current.dtypes):
             if data_column in data_df_previous.columns and data_df_previous.schema[data_column] != data_type:

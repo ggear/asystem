@@ -57,9 +57,19 @@ def configure(argv=None):
         help="skip remote data repository downloads and read from local cache only",
     )
     parser.add_argument(
-        "--disable-downloads",
+        "--disable-source-downloads",
         action="store_true",
         help="skip remote source data downloads and read from local cache only",
+    )
+    parser.add_argument(
+        "--disable-database-downloads",
+        action="store_true",
+        help="skip database downloads and read from local cache only",
+    )
+    parser.add_argument(
+        "--disable-sheet-downloads",
+        action="store_true",
+        help="skip sheet downloads and read from local cache only",
     )
     parser.add_argument(
         "--repo-scope",
@@ -113,7 +123,9 @@ def configure(argv=None):
     plugin.config.force_downloads = args.force_downloads
     plugin.config.disable_repo_uploads = args.disable_repo_uploads
     plugin.config.disable_repo_downloads = args.disable_repo_downloads
-    plugin.config.disable_downloads = args.disable_downloads
+    plugin.config.disable_source_downloads = args.disable_source_downloads
+    plugin.config.disable_database_downloads = args.disable_database_downloads
+    plugin.config.disable_sheet_downloads = args.disable_sheet_downloads
     return args
 
 

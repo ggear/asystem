@@ -86,7 +86,9 @@ class Config:
     force_downloads: bool = False
     disable_repo_uploads: bool = False
     disable_repo_downloads: bool = False
-    disable_downloads: bool = False
+    disable_source_downloads: bool = False
+    disable_database_downloads: bool = False
+    disable_sheet_downloads: bool = False
 
 
 config = Config()

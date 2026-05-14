@@ -43,7 +43,7 @@ class SourcesMixin(ContractMixin):
         local_path = abspath(local_path).lower()
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
-        if config.disable_downloads:
+        if config.disable_source_downloads:
             if isfile(local_path):
                 self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -122,7 +122,7 @@ class SourcesMixin(ContractMixin):
         local_path = abspath(local_path).lower()
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
-        if config.disable_downloads:
+        if config.disable_source_downloads:
             if isfile(local_path):
                 self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -187,7 +187,7 @@ class SourcesMixin(ContractMixin):
         local_path = abspath(local_path).lower()
         label = basename(local_path).split(".")[0]
         effective_force = force or config.force_downloads
-        if config.disable_downloads:
+        if config.disable_source_downloads:
             if isfile(local_path):
                 self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -372,7 +372,7 @@ class SourcesMixin(ContractMixin):
         started_time = time.time()
         file_path = abspath(f"{self.local_cache}/_redbark_{file_cache.lower()}.csv")
         effective_force = force or config.force_downloads
-        if config.disable_downloads:
+        if config.disable_source_downloads:
             if isfile(file_path):
                 self.print_log(f"File [{file_cache}] cached at [{file_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -437,7 +437,7 @@ class SourcesMixin(ContractMixin):
             else:
                 raise ValueError(f"Unknown bank data type [{data}]")
             if len(data_df) > 0:
-                new_csv = data_df.sort(data_df.columns[0]).write_csv()
+                new_csv = data_df.sort(data_df.columns[0]).write_csv(line_terminator="\n")
                 new_hash = hashlib.md5(new_csv.encode()).hexdigest()
                 if not effective_force and check and isfile(file_path):
                     with open(file_path, 'r') as f:
@@ -489,6 +489,28 @@ class SourcesMixin(ContractMixin):
         if drive_key is None:
             return DownloadResult(DownloadStatus.FAILED, None)
         started_time = time.time()
+        name = (workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}").lower()
+        if config.disable_sheet_downloads:
+            prefix = f"_sheet_{name}_v"
+            versioned_files = sorted(
+                [(int(basename(p)[len(prefix):-len(".csv")]), p)
+                 for p in glob.glob(abspath(f"{self.local_cache}/{prefix}*.csv"))
+                 if basename(p)[len(prefix):-len(".csv")].isdigit()],
+                reverse=True
+            )
+            if versioned_files:
+                _, file_path = versioned_files[0]
+                self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time, level="debug")
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                return DownloadResult(DownloadStatus.CACHED, file_path)
+            unversioned_path = abspath(f"{self.local_cache}/_sheet_{name}.csv")
+            if isfile(unversioned_path):
+                self.print_log(f"File [{workbook_name}] cached at [{unversioned_path}]", started=started_time, level="debug")
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                return DownloadResult(DownloadStatus.CACHED, unversioned_path)
+            self.print_log(f"File [{workbook_name}] sheet download skipped, downloads disabled and no cache available")
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
+            return DownloadResult(DownloadStatus.FAILED, None)
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
         drive_version: str | None = None
         credentials = self._sheets_credentials()
@@ -499,7 +521,6 @@ class SourcesMixin(ContractMixin):
                 drive_version = str(raw_version)
         except Exception as exception:
             self.print_log(f"Failed to get Drive version of sheet [{drive_url}]", exception=exception, level="error")
-        name = (workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}").lower()
         if drive_version is not None:
             file_path = abspath(f"{self.local_cache}/_sheet_{name}_v{drive_version}.csv")
             drive_version_int = int(drive_version)

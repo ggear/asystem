@@ -54,7 +54,7 @@ class Currency(plugin.Plugin):
     def _run(self):
         rba_df = self.dataframe_new(schema={"Date": pl.Date, **{pair: pl.Float64 for pair in PAIRS}, "Source": pl.Utf8})
         rba_delta_df = self.dataframe_new()
-        if not plugin.config.disable_downloads or plugin.config.force_reprocessing:
+        if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
 
             # Download currency data
             new_data = False

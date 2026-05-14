@@ -56,7 +56,7 @@ class DataFramesMixin(ContractMixin):
                   print_rows=PL_PRINT_ROWS, started=None):
         started_time = time.time() if started is None else started
         local_path = str(local_path).lower()
-        data_df.write_csv(local_path)
+        data_df.write_csv(local_path, line_terminator="\n")
         return dataframe_print(
             self.name,
             data_df,

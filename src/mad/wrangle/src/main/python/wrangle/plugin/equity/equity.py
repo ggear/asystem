@@ -125,7 +125,7 @@ class Equity(plugin.Plugin):
         statement_files = {}
 
         stock_downloaded_count = 0
-        if not plugin.config.disable_downloads:
+        if not plugin.config.disable_source_downloads:
 
             # Download stock files
             for stock in STOCK:
@@ -179,7 +179,7 @@ class Equity(plugin.Plugin):
                     if files[file_name][0] and (plugin.config.force_reprocessing or files[file_name][1]):
                         stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, file_name)
 
-        if not plugin.config.disable_downloads or not plugin.config.disable_repo_downloads:
+        if not plugin.config.disable_source_downloads or not plugin.config.disable_repo_downloads:
             new_data = plugin.config.force_reprocessing or \
                        (all([s.status != plugin.DownloadStatus.FAILED for s in stock_files.values()]) and any([s.status == plugin.DownloadStatus.DOWNLOADED for s in stock_files.values()])) or \
                        (all([s[0] for s in statement_files.values()]) and any([s[1] for s in statement_files.values()]))
@@ -726,6 +726,7 @@ from(bucket: "data_public")
         try:
             def _make_aggregate(_indexes):
                 def _aggregate_function(_data_df):
+                    _data_df = _equity_upsample(_data_df, numeric_fill="forward_fill")
                     _str_cols = [c for c, t in zip(_data_df.columns, _data_df.dtypes)
                                  if str(t) in ('String', 'Utf8', 'Null') and c != 'Date']
                     if _str_cols:
@@ -797,6 +798,16 @@ from(bucket: "data_public")
                     _statement_tickers_in_data = [t for t in _equity_tickers(_data_df) if t.strip() not in _stock_tickers_stripped]
                     if _statement_tickers_in_data:
                         _data_df = _equity_forward_fill(_data_df, DIMENSIONS_PRICE_AUX_TYPES + DIMENSIONS_VOLUME, _tickers=_statement_tickers_in_data)
+
+                    # Round prices
+                    _price_round_exprs = []
+                    for _price_ticker in _equity_tickers(_data_df):
+                        for _price_dim in ["Price Close"] + [f"Price Close {_pt}" for _pt in DIMENSIONS_PRICE_TYPES]:
+                            _price_col = f"{_price_ticker} {_price_dim}"
+                            if _price_col in _data_df.columns:
+                                _price_round_exprs.append(pl.col(_price_col).round(4).name.keep())
+                    if _price_round_exprs:
+                        _data_df = _data_df.with_columns(_price_round_exprs)
 
                     # Price changes for all tickers and indexes in two passes, create, then mask
                     _create_exprs = []
@@ -872,9 +883,8 @@ from(bucket: "data_public")
                         self.print_log(f"  {col}: {count}", level="error")
                     self.add_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_ERRORED, none_count)
                 zero_check_cols = [
-                    c for c in equity_current_df.columns
-                    if equity_current_df.schema[c] in pl.NUMERIC_DTYPES
-                       and not re.search(r"Market Volume|Change|Paid Dividends|Stock Splits", c)
+                    c for c in cs.expand_selector(equity_current_df, cs.numeric())
+                    if not re.search(r"Market Volume|Change|Paid Dividends|Stock Splits", c)
                 ]
                 if zero_check_cols:
                     zero_violations = {c: int((equity_current_df[c] == 0).sum()) for c in zero_check_cols if (equity_current_df[c] == 0).any()}
@@ -914,8 +924,8 @@ from(bucket: "data_public")
                         ], "%", f"{change_period}d"))
                 for dimension_metadata in dimensions_metadata:
                     dimensions.extend(dimension_metadata[0])
-                tickers = _equity_tickers(equity_delta_df)
-                equity_output_df = _equity_clean(equity_delta_df)
+                tickers = _equity_tickers(equity_current_df)
+                equity_output_df = _equity_clean(equity_current_df)
                 equity_output_df = equity_output_df.select(["Date", *[
                     column for ticker in tickers for dimension in dimensions if (column := f"{ticker} {dimension}") in equity_output_df.columns
                 ]])

@@ -41,7 +41,7 @@ class Interest(plugin.Plugin):
     def _run(self):
         interest_df = self.dataframe_new(schema={"Date": pl.Date})
         interest_delta_df = self.dataframe_new()
-        if not plugin.config.disable_downloads or plugin.config.force_reprocessing:
+        if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
 
             # Download interest data
             new_data = False
