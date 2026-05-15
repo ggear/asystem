@@ -116,7 +116,7 @@ class DataFramesMixin(ContractMixin):
 
     # noinspection PyMethodMayBeStatic
     def dataframe_to_str(self, data_df, compact=True,
-                         print_rows=PL_PRINT_ROWS):
+                         print_rows=PL_PRINT_ROWS) -> str | list[str]:
         if compact:
             schema = []
             for column in data_df.schema:

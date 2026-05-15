@@ -30,8 +30,9 @@ RBA_YEARS = [
     "2010-2013",
     "2014-2017",
     "2018-2022",
-    "2023-current"
+    "2023-current",  # covers through RBA_YEARS_CURRENT_EXPIRY; update list when RBA publishes the next multi-year file
 ]
+RBA_YEARS_CURRENT_EXPIRY = 2027
 
 RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
@@ -88,7 +89,7 @@ class Currency(plugin.Plugin):
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
                 else:
                     self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
-            if datetime.datetime.now().year > 2027:
+            if datetime.datetime.now().year > RBA_YEARS_CURRENT_EXPIRY:
                 error_message = "RBA_YEARS needs to be incremented for a new current file"
                 self.print_log(error_message)
                 self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, 1)
@@ -164,10 +165,7 @@ class Currency(plugin.Plugin):
 
         except Exception as exception:
             self.print_log("Unexpected error processing currency data", exception=exception)
-            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
-                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) +
-                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
-                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
+            self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         if not len(rba_delta_df):
             self.print_log("No new data found")

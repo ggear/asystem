@@ -220,8 +220,8 @@ class SourcesMixin(ContractMixin):
         except Exception as exception:
             if client is not None:
                 client.quit()
-            self.print_log(f"File [{label}] not available at [{url_file}]", exception=exception)
             if not ignore:
+                self.print_log(f"File [{label}] not available at [{url_file}]", exception=exception)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
@@ -251,7 +251,12 @@ class SourcesMixin(ContractMixin):
             return DownloadResult(DownloadStatus.FAILED, None)
         now = datetime.now()
         end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
-        if start != end_exclusive:
+        start_date = datetime.strptime(start, '%Y-%m-%d').date()
+        if start_date >= end_exclusive:
+            self.print_log(f"File [{label}] stock query skipped, empty date range [{start}] to [{end}]", level="debug")
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
+            return DownloadResult(DownloadStatus.SKIPPED, None)
+        if start_date < end_exclusive:
             if not effective_force and not check and isfile(local_path):
                 self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -906,8 +911,7 @@ class SourcesMixin(ContractMixin):
             file_started = time.time()
             label = basename(local_path).split(".")[0]
             try:
-                svc = build('drive', 'v3', credentials=credentials, cache_discovery=False)
-                request = svc.files().get_media(fileId=drive_files[drive_file_name]["id"])
+                request = service.files().get_media(fileId=drive_files[drive_file_name]["id"])
                 buf = io.BytesIO()
                 downloader = MediaIoBaseDownload(buf, request)
                 done = False

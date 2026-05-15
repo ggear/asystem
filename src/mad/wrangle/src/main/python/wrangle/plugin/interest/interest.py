@@ -128,10 +128,7 @@ class Interest(plugin.Plugin):
                     dataframe_print(self.name, interest_df, print_label="Interest", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
                 self.print_log("Unexpected error processing interest dataframe", exception=exception)
-                self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
-                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) +
-                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
-                                 self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
+                self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         try:
             def _aggregate_function(_data_df):
@@ -167,10 +164,7 @@ class Interest(plugin.Plugin):
 
         except Exception as exception:
             self.print_log("Unexpected error processing interest data", exception=exception)
-            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED,
-                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED) +
-                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
-                             self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
+            self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         if not len(interest_delta_df):
             self.print_log("No new data found")

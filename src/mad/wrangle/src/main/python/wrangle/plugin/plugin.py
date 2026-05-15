@@ -64,6 +64,12 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
     def get_counters(self):
         return copy.deepcopy(self._counters)
 
+    def counters_set_all_errored(self, source):
+        self.add_counter(source, CTR_ACT_ERRORED,
+                         self.get_counter(source, CTR_ACT_PROCESSED) +
+                         self.get_counter(source, CTR_ACT_SKIPPED) -
+                         self.get_counter(source, CTR_ACT_ERRORED))
+
     def reset_counters(self):
         self._db_cache_dfs = {}
         self._counters = OrderedDict([
