@@ -104,18 +104,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
         ])
 
     def counter_write(self):
-        if config.disable_repo_uploads or database.database_client is None:
-            return
-        values = []
-        timestamp_ms = int(time.time() * 1000)
-        for source in self._counters:
-            for action in self._counters[source]:
-                values.append(f"{f'{source}_{action}'.lower().replace(' ', '_')}={self._counters[source][action]}i")
-        line = f"{self.name.lower()},type=metadata,period=30m,unit=scalar,source=wrangle {','.join(values)} {timestamp_ms}"
-        try:
-            database.database_client.write(record=line, write_precision="ms")
-        except Exception as exception:
-            self.print_log("Counter write failed", exception=exception)
+        pass
 
     def file_list(self, file_dir, file_prefix, quiet=True):
         files = {}

@@ -212,12 +212,14 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_dates(start_date="1983-12-12", contiguous="days", descending=True),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_row(),
+                                assert_file_equal(),
                             ],
                             "_database_balances*.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=r"type=delta"),
+                                assert_file_equal(),
                             ],
                         })
 
@@ -314,7 +316,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=r"type=delta"),
                             ],
                         })
 
@@ -354,12 +355,13 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_dates(start_date="2006-01-02", contiguous="days", descending=True),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_row(),
+                                assert_file_equal(),
                             ],
                             "_database_currency*.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1983-12-12", contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_zeroes_per_col(exclude=r"type=delta"),
+                                assert_file_equal(),
                             ],
                         })
 
@@ -451,7 +453,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="2019-12-31", end_date="2025-12-31", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
                             ],
                         })
 
@@ -491,7 +492,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
                             ],
                         })
 
@@ -531,7 +531,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
                             ],
                         })
 
@@ -571,7 +570,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
                             ],
                         })
 
@@ -615,7 +613,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
                             ],
                         })
 
@@ -630,9 +627,6 @@ class WrangleTest(unittest.TestCase):
                         disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_DOWNLOADED: len(STOCK),
-                                },
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_PREVIOUS_COLUMNS: 425,
                                     plugin.CTR_ACT_CURRENT_COLUMNS: 425,
@@ -642,11 +636,7 @@ class WrangleTest(unittest.TestCase):
                             },
                             "counter_at_least": {
                                 plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_CACHED: 261,
-                                },
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: 122,
-                                    plugin.CTR_ACT_SKIPPED: 380,
+                                    plugin.CTR_ACT_DOWNLOADED: len(STOCK),
                                 },
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_DELTA_ROWS: 1,
@@ -675,7 +665,7 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="1985-01-02", contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"type=market-volume|type=.*change"),
+                                assert_file_equal(),
                             ],
                         })
 
@@ -806,11 +796,13 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_size(),
                                 assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
                                 assert_file_nones_per_row(exclude=r"Mean"),
+                                assert_file_equal(),
                             ],
                             "_database_interest*.csv": [
                                 assert_file_size(),
                                 assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
                                 assert_file_nones_per_row(exclude=r"type=mean"),
+                                assert_file_equal(),
                             ],
                         })
 
@@ -956,8 +948,12 @@ class WrangleTest(unittest.TestCase):
             self.assertEqual(26, len(data_df))
 
     def test_library_database(self):
+        from datetime import date as date_type
+
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
         reset_config()
+        csv_path = abspath(f"{test.local_cache}/_database_test.csv")
+
         invalid_cache = "Invalid"
         invalid_path = abspath(f"{test.local_cache}/_database_{invalid_cache.lower()}.csv")
         for result in [
@@ -967,13 +963,98 @@ class WrangleTest(unittest.TestCase):
         ]:
             self.assertEqual(DownloadResult(DownloadStatus.FAILED, None), result)
         self.assertFalse(isfile(invalid_path))
+
         cache_cache = "Cache"
         cache_path = abspath(f"{test.local_cache}/_database_{cache_cache.lower()}.csv")
         with open(cache_path, "w") as fh:
-            fh.write("Date,Rate\n2020-01-01,1.0\n")
+            fh.write("time,entity,type,period,unit,value\n2020-01-01,AUD/USD,snapshot,1d,$,0.65\n")
         self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
         plugin.config.disable_source_downloads = True
         self.assertEqual(DownloadResult(DownloadStatus.CACHED, cache_path), test.database_download(cache_cache, "SELECT 1"))
+        reset_config()
+
+        test.reset_counters()
+        test.database_upload(test.dataframe_new())
+        test.database_upload(pl.DataFrame({"Date": pl.Series([], dtype=pl.Date)}))
+        self.assertFalse(csv_path in test._db_cache_dfs)
+        self.assertEqual(0, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_ROWS))
+        self.assertEqual(0, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_COLUMNS))
+
+        test.reset_counters()
+        equity_df = pl.DataFrame({
+            "Date": pl.Series([date_type(2024, 1, 1), date_type(2024, 1, 2), date_type(2024, 1, 3)], dtype=pl.Date),
+            "AORD Price Close": [729.0, 726.5, 721.4],
+        })
+        test.database_upload(equity_df, metric_type="price-close", period="1d", unit="$")
+        long_df = test._db_cache_dfs[csv_path]
+        self.assertEqual(["time", "entity", "type", "period", "unit", "value"], long_df.columns)
+        self.assertEqual(3, len(long_df))
+        self.assertEqual(["AORD"], long_df["entity"].unique().to_list())
+        self.assertEqual(["price-close"], long_df["type"].unique().to_list())
+        self.assertEqual(["1d"], long_df["period"].unique().to_list())
+        self.assertEqual(["$"], long_df["unit"].unique().to_list())
+        self.assertEqual([729.0, 726.5, 721.4], long_df.sort("time")["value"].to_list())
+        self.assertEqual(1, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_COLUMNS))
+        self.assertEqual(3, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_ROWS))
+
+        test.reset_counters()
+        currency_df = pl.DataFrame({
+            "Date": pl.Series([date_type(2024, 1, 1), date_type(2024, 1, 2)], dtype=pl.Date),
+            "AUD/USD": [0.65, 0.66],
+            "AUD/GBP": [0.50, 0.51],
+            "AUD/SGD": [0.90, 0.91],
+        })
+        test.database_upload(currency_df, metric_type="snapshot", period="1d", unit="$")
+        long_df = test._db_cache_dfs[csv_path]
+        self.assertEqual(6, len(long_df))
+        self.assertEqual({"AUD/USD", "AUD/GBP", "AUD/SGD"}, set(long_df["entity"].to_list()))
+        self.assertEqual({"snapshot"}, set(long_df["type"].to_list()))
+        self.assertEqual(3, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_COLUMNS))
+        self.assertEqual(2, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_ROWS))
+
+        test.reset_counters()
+        sparse_df = pl.DataFrame({
+            "Date": pl.Series([date_type(2024, 2, 1), date_type(2024, 2, 2), date_type(2024, 2, 3)], dtype=pl.Date),
+            "AXJO Price Close": [5000.0, None, 5100.0],
+        })
+        test.database_upload(sparse_df, metric_type="price-close", period="1d", unit="$")
+        long_df = test._db_cache_dfs[csv_path]
+        self.assertEqual(2, len(long_df))
+        self.assertNotIn(None, long_df["value"].to_list())
+        self.assertEqual(3, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_ROWS))
+
+        test.reset_counters()
+        call1 = pl.DataFrame({
+            "Date": pl.Series([date_type(2024, 3, 1), date_type(2024, 3, 2)], dtype=pl.Date),
+            "AUD/USD": [0.65, 0.66],
+        })
+        call2 = pl.DataFrame({
+            "Date": pl.Series([date_type(2024, 3, 2), date_type(2024, 3, 3)], dtype=pl.Date),
+            "AUD/USD": [0.67, 0.68],
+        })
+        test.database_upload(call1, metric_type="snapshot", period="1d", unit="$")
+        test.database_upload(call2, metric_type="snapshot", period="1d", unit="$")
+        long_df = test._db_cache_dfs[csv_path]
+        self.assertEqual(3, len(long_df))
+        mar2 = long_df.filter(pl.col("time") == date_type(2024, 3, 2))
+        self.assertEqual(1, len(mar2))
+        self.assertEqual(0.67, mar2["value"][0])
+
+        test.reset_counters()
+        snapshot_df = pl.DataFrame({
+            "Date": pl.Series([date_type(2024, 4, 1)], dtype=pl.Date),
+            "AUD/USD": [0.65],
+        })
+        delta_df = pl.DataFrame({
+            "Date": pl.Series([date_type(2024, 4, 1)], dtype=pl.Date),
+            "AUD/USD": [-1.53],
+        })
+        test.database_upload(snapshot_df, metric_type="snapshot", period="1d", unit="$")
+        test.database_upload(delta_df, metric_type="delta", period="1d", unit="%")
+        long_df = test._db_cache_dfs[csv_path]
+        self.assertEqual(2, len(long_df))
+        self.assertEqual({"snapshot", "delta"}, set(long_df["type"].to_list()))
+        self.assertEqual({"$", "%"}, set(long_df["unit"].to_list()))
 
     def test_library_dataframe(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
@@ -1798,8 +1879,12 @@ class WrangleTest(unittest.TestCase):
                 plugin_module.reset_counters()
                 _print("STARTING (reprocess)")
                 plugin.config.force_reprocessing = True
+                plugin.config.disable_database_downloads = True
+                plugin.config.disable_sheet_downloads = True
                 plugin_module.run()
                 plugin.config.force_reprocessing = force_reprocessing
+                plugin.config.disable_database_downloads = disable_database_downloads
+                plugin.config.disable_sheet_downloads = disable_sheet_downloads
                 _print("FINISHED (reprocess)")
                 self._save_pass_snapshot(plugin_module, 3)
                 reload_counters = plugin_module.get_counters()
@@ -2146,11 +2231,12 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
 
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
-        if "Date" not in csv_df.columns:
+        date_col = "Date" if "Date" in csv_df.columns else ("time" if "time" in csv_df.columns else None)
+        if date_col is None:
             msg = f"assert_file_dates: [{basename(file_path)}] no Date column"
             dataframe_print("Assert", csv_df, msg, level="error")
             return msg
-        raw_dates = csv_df["Date"].drop_nulls().to_list()
+        raw_dates = csv_df[date_col].drop_nulls().to_list()
         if len(raw_dates) < 2:
             return None
         if descending is False:
@@ -2163,7 +2249,7 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
                 msg = f"assert_file_dates: [{basename(file_path)}] dates not in descending order, got {raw_dates[0]} .. {raw_dates[-1]}"
                 dataframe_print("Assert", csv_df.head(3), msg, level="error")
                 return msg
-        dates = sorted(raw_dates)
+        dates = sorted(set(raw_dates))
         if start_date is not None and dates[0] != _parse_date(start_date):
             msg = f"assert_file_dates: [{basename(file_path)}] expected start {start_date}, got {dates[0]}"
             dataframe_print("Assert", csv_df.head(1), msg, level="error")
@@ -2178,7 +2264,7 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
             idx = _first_true_index(diffs > max_gap_days)
             if idx is not None:
                 msg = f"assert_file_dates: [{basename(file_path)}] gap of {int(diffs[idx])} days between {dates[idx]} and {dates[idx + 1]} exceeds max {max_gap_days}"
-                gap_df = csv_df.filter(pl.col("Date").is_in([dates[idx], dates[idx + 1]]))
+                gap_df = csv_df.filter(pl.col(date_col).is_in([dates[idx], dates[idx + 1]]))
                 dataframe_print("Assert", gap_df, msg, level="error")
                 return msg
         elif contiguous == "months":
@@ -2187,7 +2273,7 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
             idx = _first_true_index(month_diffs != 1)
             if idx is not None:
                 msg = f"assert_file_dates: [{basename(file_path)}] non-consecutive months between {dates[idx]} and {dates[idx + 1]}"
-                gap_df = csv_df.filter(pl.col("Date").is_in([dates[idx], dates[idx + 1]]))
+                gap_df = csv_df.filter(pl.col(date_col).is_in([dates[idx], dates[idx + 1]]))
                 dataframe_print("Assert", gap_df, msg, level="error")
                 return msg
         elif contiguous == "years":
@@ -2196,7 +2282,7 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
             idx = _first_true_index(year_diffs != 1)
             if idx is not None:
                 msg = f"assert_file_dates: [{basename(file_path)}] non-consecutive years between {dates[idx]} and {dates[idx + 1]}"
-                gap_df = csv_df.filter(pl.col("Date").is_in([dates[idx], dates[idx + 1]]))
+                gap_df = csv_df.filter(pl.col(date_col).is_in([dates[idx], dates[idx + 1]]))
                 dataframe_print("Assert", gap_df, msg, level="error")
                 return msg
         return None

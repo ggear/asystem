@@ -21,8 +21,5 @@ class ContractMixin:
     def dataframe_new(self, *args, **kwargs) -> pl.DataFrame:
         raise NotImplementedError
 
-    def dataframe_to_lineprotocol(self, *args, **kwargs):
-        raise NotImplementedError
-
     def dataframe_type_to_str(self, *args, **kwargs) -> str:
         raise NotImplementedError

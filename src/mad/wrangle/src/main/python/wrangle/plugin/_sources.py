@@ -1,4 +1,5 @@
 import collections
+import concurrent.futures
 import glob
 import hashlib
 import io
@@ -33,6 +34,58 @@ from .logger import dataframe_print
 
 logging.getLogger('yfinance').setLevel(logging.ERROR)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
+
+
+def _database_ensure_table(table_name, conn):
+    with conn.cursor() as cur:
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                time   DATE  NOT NULL,
+                entity TEXT  NOT NULL,
+                type   TEXT  NOT NULL,
+                period TEXT  NOT NULL,
+                unit   TEXT  NOT NULL,
+                value  FLOAT8 NOT NULL,
+                PRIMARY KEY (time, entity, type, period, unit)
+            )
+        """)
+        cur.execute(f"SELECT create_hypertable('{table_name}', 'time', if_not_exists => TRUE)")
+        cur.execute(
+            f"CREATE INDEX IF NOT EXISTS {table_name}_entity_time ON {table_name} (entity, time DESC)"
+        )
+        conn.commit()
+
+
+def _database_upsert(long_df, table_name, conn, dsn):
+    stage = f"{table_name}_stage"
+    with conn.cursor() as cur:
+        cur.execute(f"DROP TABLE IF EXISTS {stage}")
+        cur.execute(f"""
+            CREATE UNLOGGED TABLE {stage} (
+                time   DATE  NOT NULL,
+                entity TEXT  NOT NULL,
+                type   TEXT  NOT NULL,
+                period TEXT  NOT NULL,
+                unit   TEXT  NOT NULL,
+                value  FLOAT8 NOT NULL
+            )
+        """)
+        conn.commit()
+    try:
+        long_df.write_database(stage, connection=dsn, if_table_exists="append", engine="adbc")
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                INSERT INTO {table_name} (time, entity, type, period, unit, value)
+                SELECT time, entity, type, period, unit, value FROM {stage}
+                ON CONFLICT (time, entity, type, period, unit)
+                DO UPDATE SET value = EXCLUDED.value
+                WHERE {table_name}.value IS DISTINCT FROM EXCLUDED.value
+            """)
+            conn.commit()
+    finally:
+        with conn.cursor() as cur:
+            cur.execute(f"DROP TABLE IF EXISTS {stage}")
+            conn.commit()
 
 
 class SourcesMixin(ContractMixin):
@@ -295,7 +348,7 @@ class SourcesMixin(ContractMixin):
         started_time = time.time()
         local_path = abspath(f"{self.local_cache}/_database_{query_name.lower()}.csv")
         effective_force = force or config.force_downloads
-        if config.disable_repo_downloads or database.database_client is None:
+        if config.disable_repo_downloads or database.database_conn is None:
             if isfile(local_path):
                 self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -318,10 +371,7 @@ class SourcesMixin(ContractMixin):
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     return DownloadResult(DownloadStatus.CACHED, local_path)
         try:
-            arrow_table = database.database_client.query(query=query_string, language="sql")
-            data_df = pl.from_arrow(arrow_table)
-            if isinstance(data_df, pl.Series):
-                data_df = data_df.to_frame()
+            data_df = pl.read_database(query=query_string, connection=database.DSN, engine="adbc")
             if data_df is None or len(data_df) == 0:
                 if ignore:
                     self.print_log(f"File [{query_name}] query returned no data")
@@ -336,36 +386,46 @@ class SourcesMixin(ContractMixin):
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
-    def database_upload(self, data_df, tags=None,
-                        print_label=None, chunk_rows=5000):
+    def database_upload(self, data_df, metric_type="", period="", unit="", print_label=None):
+        started_time = time.time()
         if len(data_df.columns) <= 1 or len(data_df) == 0:
             return
-        if config.disable_repo_uploads or database.database_client is None:
-            for _ in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
-                pass
-            tags_used = {k: v for k, v in (tags or {}).items() if k != "source"}
-            tag_suffix = f" [{','.join(f'{k}={v}' for k, v in tags_used.items())}]" if tags_used else ""
-            csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
-            date_col = data_df.columns[0]
-            fmt = '%Y-%m-%d' if data_df.dtypes[0] == pl.Date else '%Y-%m-%d %H:%M:%S'
-            csv_df = data_df \
-                .rename({col: f"{col}{tag_suffix}" for col in data_df.columns[1:]}) \
-                .with_columns(pl.col(date_col).cast(pl.Datetime).dt.strftime(fmt).alias(date_col))
+        date_col = data_df.columns[0]
+        remote_table = getattr(self.remote_repos, "database_table", None)
+        table_name = remote_table or self.name.lower()
+        csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
+        long_df = (data_df
+                   .rename({date_col: "time"})
+                   .unpivot(index="time", variable_name="_col", value_name="value")
+                   .filter(pl.col("value").is_not_null())
+                   .with_columns(
+                       pl.col("_col").str.split(" ").list.first().alias("entity"),
+                       pl.lit(metric_type).alias("type"),
+                       pl.lit(period).alias("period"),
+                       pl.lit(unit).alias("unit"),
+                   )
+                   .select(["time", "entity", "type", "period", "unit", "value"]))
+        if long_df.is_empty():
+            return
+        self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns) - 1)
+        self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
+        if config.disable_repo_uploads or database.database_conn is None:
+            pk = ["time", "entity", "type", "period", "unit"]
             if csv_path in self._db_cache_dfs:
-                csv_df = self._db_cache_dfs[csv_path].join(csv_df, on=date_col, how="full", coalesce=True).sort(date_col)
-            self._db_cache_dfs[csv_path] = csv_df
+                kept = self._db_cache_dfs[csv_path].join(long_df.select(pk), on=pk, how="anti")
+                long_df = pl.concat([kept, long_df]).sort("time")
+            self._db_cache_dfs[csv_path] = long_df
+            dataframe_print(self.name, long_df, print_label=print_label, print_verb="cached",
+                            print_suffix=f"to [{csv_path}]", started=started_time)
             return
         try:
-            buffer = []
-            for line in self.dataframe_to_lineprotocol(data_df, tags=tags, print_label=print_label, chunk_rows=chunk_rows):
-                buffer.append(line)
-                if len(buffer) >= chunk_rows:
-                    database.database_client.write(record=buffer, write_precision="ms")
-                    buffer = []
-            if buffer:
-                database.database_client.write(record=buffer, write_precision="ms")
+            _database_ensure_table(table_name, database.database_conn)
+            _database_upsert(long_df, table_name, database.database_conn, database.DSN)
+            dataframe_print(self.name, long_df, print_label=print_label, print_verb="uploaded",
+                            print_suffix=f"to [{table_name}]", started=started_time)
         except Exception as exception:
-            self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed", exception=exception)
+            self.print_log(f"DataFrame{'' if print_label is None else f' [{print_label}]'} write failed",
+                           exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def bank_download(self, file_cache, data="accounts", check=True, force=False):
@@ -628,9 +688,24 @@ class SourcesMixin(ContractMixin):
                     worksheet = spreadsheet.worksheet(sheet_name) if sheet_name is not None else spreadsheet.get_worksheet(0)
                 except gspread.exceptions.WorksheetNotFound:
                     worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=max(len(all_values) + 10, 100), cols=max(len(data_df.columns) + 5, 26))
-                worksheet.resize(rows=max(len(all_values) + 10, 100), cols=max(len(data_df.columns) + 5, 26))
-                worksheet.clear()
                 sheets_service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
+                sheets_service.spreadsheets().batchUpdate(
+                    spreadsheetId=drive_key,
+                    body={'requests': [
+                        {'updateSheetProperties': {
+                            'properties': {'sheetId': worksheet.id, 'gridProperties': {
+                                'rowCount': max(len(all_values) + 10, 100),
+                                'columnCount': max(len(data_df.columns) + 5, 26),
+                            }},
+                            'fields': 'gridProperties.rowCount,gridProperties.columnCount',
+                        }},
+                        {'repeatCell': {
+                            'range': {'sheetId': worksheet.id},
+                            'cell': {},
+                            'fields': 'userEnteredValue',
+                        }},
+                    ]}
+                ).execute()
                 for chunk_start in range(0, len(all_values), sheet_chunk_rows):
                     chunk = all_values[chunk_start:chunk_start + sheet_chunk_rows]
                     chunk_row = sheet_start_row + chunk_start
@@ -783,7 +858,8 @@ class SourcesMixin(ContractMixin):
             if basename(local_file).startswith(ignore_prefixes):
                 continue
             local_files[basename(local_file).lower()] = {
-                "hash": file_hash(local_file) if check else None,
+                "path": local_file,
+                "hash": None,
                 "modified": int(getmtime(local_file)) if check else None
             }
         drive_files = {}
@@ -796,6 +872,7 @@ class SourcesMixin(ContractMixin):
                 q=f"'{drive_dir}' in parents",
                 spaces='drive',
                 fields='nextPageToken, files(id, name, modifiedTime, md5Checksum)',
+                pageSize=1000,
                 pageToken=token
             ).execute()
             for drive_file in response.get('files', []):
@@ -809,43 +886,60 @@ class SourcesMixin(ContractMixin):
             token = response.get('nextPageToken')
             if not token:
                 break
-        self.print_log(f"Directory [{basename(local_dir)}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time, level="debug")
+        self.print_log(f"Directory [{basename(local_dir).title()}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
         started_time = time.time()
         force_download = config.force_downloads and not config.disable_repo_downloads
         force_upload = config.force_downloads and not config.disable_repo_uploads
+        to_download = []
         for drive_file in drive_files:
-            started_time_file = time.time()
-            file_actioned = False
             local_path = abspath(f"{local_dir}/{drive_file}").lower()
-            label = basename(local_path).split(".")[0]
             drive_file_lower = drive_file.lower()
             needs_download = drive_file_lower not in local_files or (check and not force_download and drive_files[drive_file]["modified"] > local_files[drive_file_lower]["modified"])
             if download and not config.disable_repo_downloads and (force_download or needs_download):
-                request = service.files().get_media(fileId=drive_files[drive_file]["id"])
-                buffer_file = io.BytesIO()
-                downloader = MediaIoBaseDownload(buffer_file, request)
+                to_download.append((drive_file, local_path))
+            else:
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                self.print_log(f"File [{basename(local_path).split('.')[0]}] cached at [{local_path}]", level="debug")
+                actioned_files[local_path] = True, False
+
+        def _download_one(drive_file_name, local_path):
+            file_started = time.time()
+            label = basename(local_path).split(".")[0]
+            try:
+                svc = build('drive', 'v3', credentials=credentials, cache_discovery=False)
+                request = svc.files().get_media(fileId=drive_files[drive_file_name]["id"])
+                buf = io.BytesIO()
+                downloader = MediaIoBaseDownload(buf, request)
                 done = False
                 while not done:
                     _, done = downloader.next_chunk()
                 if not exists(dirname(local_path)):
                     os.makedirs(dirname(local_path))
-                with open(local_path, 'wb') as local_file:
-                    local_file.write(buffer_file.getvalue())
+                with open(local_path, 'wb') as f:
+                    f.write(buf.getvalue())
+                utime_error = None
                 try:
-                    os.utime(local_path, (drive_files[drive_file]["modified"], drive_files[drive_file]["modified"]))
-                except Exception as exception:
-                    self.print_log(f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]", exception=exception)
-                local_files[drive_file_lower] = {
-                    "hash": drive_files[drive_file]["hash"],
-                    "modified": drive_files[drive_file]["modified"]
-                }
-                file_actioned = True
-                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
-                self.print_log(f"File [{label}] downloaded to [{local_path}]", started=started_time_file)
-            else:
-                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
-                self.print_log(f"File [{label}] cached at [{local_path}]", started=started_time_file, level="debug")
-            actioned_files[local_path] = True, file_actioned
+                    os.utime(local_path, (drive_files[drive_file_name]["modified"], drive_files[drive_file_name]["modified"]))
+                except Exception as e:
+                    utime_error = e
+                return drive_file_name, local_path, label, file_started, None, utime_error
+            except Exception as e:
+                return drive_file_name, local_path, label, file_started, e, None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(_download_one, df, lp): (df, lp) for df, lp in to_download}
+            for future in concurrent.futures.as_completed(futures):
+                drive_file, local_path, label, file_started, download_error, utime_error = future.result()
+                if download_error is None:
+                    local_files[drive_file.lower()] = {"hash": drive_files[drive_file]["hash"], "modified": drive_files[drive_file]["modified"]}
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
+                    self.print_log(f"File [{label}] downloaded to [{local_path}]", started=file_started)
+                    if utime_error is not None:
+                        self.print_log(f"File [{label}] downloaded file [{local_path}] modified timestamp set failed [{drive_files[drive_file]['modified']}]", exception=utime_error)
+                else:
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
+                    self.print_log(f"File [{label}] failed to download to [{local_path}]", exception=download_error)
+                actioned_files[local_path] = True, download_error is None
         if upload:
             for local_file in local_files:
                 if not local_file.startswith(ignore_prefixes):
@@ -854,10 +948,14 @@ class SourcesMixin(ContractMixin):
                     local_path = abspath(f"{local_dir}/{local_file}").lower()
                     label = basename(local_path).split(".")[0]
                     drive_match = next((k for k in drive_files if k.lower() == local_file), None)
-                    needs_upload = drive_match is None or (check and not force_upload and (
-                            drive_files[drive_match]["modified"] != local_files[local_file]["modified"] or
-                            drive_files[drive_match]["hash"] != local_files[local_file]["hash"]
-                    ))
+                    needs_upload = drive_match is None
+                    if not needs_upload and check and not force_upload:
+                        if drive_files[drive_match]["modified"] != local_files[local_file]["modified"]:
+                            needs_upload = True
+                        else:
+                            if local_files[local_file]["hash"] is None:
+                                local_files[local_file]["hash"] = file_hash(local_files[local_file]["path"])
+                            needs_upload = drive_files[drive_match]["hash"] != local_files[local_file]["hash"]
                     if (force_upload or needs_upload) and not config.disable_repo_uploads:
                         try:
                             data = MediaFileUpload(local_path)

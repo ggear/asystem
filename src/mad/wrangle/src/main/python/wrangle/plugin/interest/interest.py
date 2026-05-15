@@ -153,20 +153,15 @@ class Interest(plugin.Plugin):
             if len(interest_delta_df):
                 interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Interest')
-                interest_monthly_df = interest_current_df.select(["Date"] + LABELS)
-                self.database_upload(interest_monthly_df.drop_nulls(), tags={
-                    "type": "mean",
-                    "period": "1mo",
-                    "unit": "%"
-                }, print_label="Interest_1_Month_Mean")
+                self.database_upload(interest_current_df.select(["Date"] + LABELS),
+                                     metric_type="mean", period="1mo", unit="%",
+                                     print_label="Interest_1_Month_Mean")
                 for int_period in PERIODS:
                     interest_periodly_df = interest_current_df.select(["Date"] + [f"{int_rate} {int_period}".strip() for int_rate in LABELS])
                     interest_periodly_df.columns = ["Date"] + LABELS
-                    self.database_upload(interest_periodly_df.drop_nulls(), tags={
-                        "type": "mean",
-                        "period": f"{PERIODS[int_period] / 12:0.0f}y",
-                        "unit": "%"
-                    }, print_label=f"Interest_{int_period}".replace(" ", "_"))
+                    self.database_upload(interest_periodly_df,
+                                         metric_type="mean", period=f"{PERIODS[int_period] / 12:0.0f}y", unit="%",
+                                         print_label=f"Interest_{int_period}".replace(" ", "_"))
 
             self.print_log("Upload complete", started=started_time)
 

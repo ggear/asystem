@@ -15,3 +15,5 @@ influxdb3-python==0.19.0
 python-calamine==0.6.2
 google-api-python-client==2.194.0
 google-auth==2.49.1
+psycopg[binary]==3.3.4
+adbc-driver-postgresql==1.11.0

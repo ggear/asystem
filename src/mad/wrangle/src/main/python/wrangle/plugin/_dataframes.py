@@ -110,44 +110,6 @@ class DataFramesMixin(ContractMixin):
                             )
         return data_df
 
-    def dataframe_to_lineprotocol(self, data_df, tags=None,
-                                  print_label=None, chunk_rows=5000):
-        started_time = time.time()
-        tags = dict(tags or {})
-        tags["source"] = "wrangle"
-        if len(data_df.columns) <= 1 or len(data_df) == 0:
-            return
-        if data_df.select(pl.sum_horizontal(pl.all().is_null().sum())).rows()[0][0] > 0:
-            raise Exception(
-                "Dataframe contains null values which should be purged before line protocol serialisation")
-        renamed_columns = ["timestamp"] + [column.strip().replace(' ', '-').lower() for column in data_df.columns[1:]]
-        data_df = data_df.rename(dict(zip(data_df.columns, renamed_columns))).with_columns(pl.col("timestamp").cast(pl.Datetime).dt.epoch() * 1000)
-        # noinspection PyUnresolvedReferences
-        database_table = self.remote_repos.database_table or self.name.lower()
-        line_expressions = [pl.lit(database_table + "," + ",".join([f"{tag}={tags[tag]}" for tag in tags]) + " ")]
-        for column in data_df.columns[1:]:
-            if len(line_expressions) > 1:
-                line_expressions.append(pl.lit(","))
-            line_expressions.extend([pl.lit(f"{column}="), pl.col(column)])
-        line_expressions.extend([pl.lit(" "), pl.col("timestamp")])
-        total_rows = len(data_df)
-        emitted = 0
-        for offset in range(0, total_rows, chunk_rows):
-            chunk = data_df.slice(offset, chunk_rows)
-            series = chunk.lazy().select(pl.concat_str(line_expressions)).collect().to_series()
-            for line in series:
-                yield line
-                emitted += 1
-        dataframe_print(self.name,
-                        data_df,
-                        print_label=print_label,
-                        print_verb="serialised",
-                        print_suffix=f"to [{emitted:,}] lines",
-                        started=started_time,
-                        )
-        self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
-        self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, total_rows)
-
     # noinspection PyMethodMayBeStatic
     def dataframe_type_to_str(self, data_type):
         return str(data_type)

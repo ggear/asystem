@@ -7,7 +7,6 @@ from os.path import *
 import pdftotext
 import polars as pl
 import polars.selectors as cs
-import pytz
 
 from wrangle import plugin
 from wrangle.plugin import PL_PRINT_ROWS
@@ -119,12 +118,15 @@ class Equity(plugin.Plugin):
         stock_files = {}
         statement_files = {}
 
+        # Get Data
         def _equity_tickers(_equity_df):
             return sorted([column.replace(" Price Close", "") for column in _equity_df.columns if column.endswith("Price Close")])
 
+        # Get MetaData
         def _equity_columns(_equity_df, _ticker):
             return [_column for _column in _equity_df.columns if _column.startswith(_ticker)]
 
+        # Clean Data
         def _equity_clean(_equity_df):
             _tickers = _equity_tickers(_equity_df)
             _mask_exprs = [
@@ -136,6 +138,7 @@ class Equity(plugin.Plugin):
             _equity_df = _equity_df.filter(pl.col("Date").is_not_null()).filter(~pl.all_horizontal(pl.all().exclude("Date").is_null())).sort("Date").set_sorted("Date")
             return _equity_df
 
+        # Upsample Data
         def _equity_upsample(_equity_df, numeric_fill="interpolate"):
             _equity_df = _equity_df.filter(pl.col("Date").is_not_null())
             if len(_equity_df) == 0:
@@ -150,6 +153,7 @@ class Equity(plugin.Plugin):
             return _equity_df \
                 .with_columns(cs.string().forward_fill())
 
+        # Print Data
         def _equity_print(_equity_df, _dimensions=None, print_label=None, print_verb=None, print_rows=PL_PRINT_ROWS, started=None):
             if _dimensions is None:
                 _dimensions = DIMENSIONS_PRICE_AUX
@@ -163,6 +167,7 @@ class Equity(plugin.Plugin):
                     )]).fill_nan(None).filter(~pl.all_horizontal(pl.exclude("Date").is_null()))),
                                     print_label=f"{print_label}_{_ticker.upper()}", print_verb=print_verb, print_rows=print_rows)
 
+        # Fill Data
         def _equity_forward_fill(_equity_df, _dimensions, _tickers=None):
             _fill_exprs = []
             _target_tickers = _equity_tickers(_equity_df) if _tickers is None else _tickers
@@ -595,20 +600,17 @@ class Equity(plugin.Plugin):
                 equity_df = _equity_clean(equity_df)
                 tickers = _equity_tickers(equity_df)
                 if len(equity_df) > 0:
-                    started_fx = pytz.UTC.localize(datetime.combine(equity_df.head(1).rows()[0][0], datetime.min.time())).isoformat()
+                    started_fx_date = equity_df.head(1).rows()[0][0]
                     for fx_pair in CURRENCIES:
                         fx_cache = f"RBA_{fx_pair}_Rates"
                         fx_query = f"""
-from(bucket: "data_public")
-    |> range(start: {started_fx}, stop: now())
-    |> filter(fn: (r) => r["_measurement"] == "currency")
-    |> filter(fn: (r) => r["period"] == "1d")
-    |> filter(fn: (r) => r["type"] == "snapshot")
-    |> filter(fn: (r) => r["_field"] == "aud/{fx_pair.lower()}")
-    |> keep(columns: ["_time", "_value"])
-    |> sort(columns: ["_time"])
-    |> unique(column: "_time")
-    |> rename(columns: {{_time: "Date", _value: "Rate"}})
+SELECT time AS "Date", value AS "Rate"
+FROM currency
+WHERE entity = 'AUD/{fx_pair}'
+  AND type = 'snapshot'
+  AND period = '1d'
+  AND time >= '{started_fx_date}'
+ORDER BY time
                         """
                         fx_query_result = self.database_download(fx_cache, fx_query)
                         fx_rates[fx_pair] = self.csv_read(fx_query_result.file_path, schema={"Date": pl.Date}) \
@@ -685,6 +687,7 @@ from(bucket: "data_public")
                 index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **{index: pl.Float64 for index in indexes}}, print_rows=-1)
             dataframe_print(self.name, index_weights, print_label="Index_Weights_Sheet", print_verb="processed", print_rows=1000)
 
+            # Update Data
             def _apply_change_metrics(_df, _tickers):
                 _create_exprs = []
                 for _ticker in _tickers:
@@ -703,23 +706,21 @@ from(bucket: "data_public")
                     _df = _df.with_columns(_create_exprs)
                 return _df
 
+            # Select Data
             def _select_state(_df):
                 _all_tickers = _equity_tickers(_df)
                 _columns = [f"{_t} {_d}" for _t in sorted(_all_tickers) for _d in DIMENSIONS_STATE if f"{_t} {_d}" in _df.columns]
                 return _df.select(["Date"] + _columns).with_columns(cs.float().round(4))
 
+            # Aggregate Data
             def _aggregate_function(_data_df):
                 _data_df = _equity_upsample(_data_df, numeric_fill="forward_fill")
                 _data_df = _data_df.with_columns(cs.string().exclude("Date").cast(pl.Float64, strict=False))
                 _tickers = _equity_tickers(_data_df)
-
-                # Process Fund Data
                 _stock_tickers_stripped = {k.strip() for k in STOCK.keys()}
                 _statement_tickers_in_data = [t for t in _tickers if t.strip() not in _stock_tickers_stripped]
                 if _statement_tickers_in_data:
                     _data_df = _equity_forward_fill(_data_df, DIMENSIONS_PRICE_AUX_TYPES + DIMENSIONS_VOLUME, _tickers=_statement_tickers_in_data)
-
-                # Normalise Data
                 _price_round_exprs = []
                 for _price_ticker in _tickers:
                     for _price_dim in ["Price Close"] + [f"Price Close {_pt}" for _pt in DIMENSIONS_PRICE_TYPES]:
@@ -728,8 +729,6 @@ from(bucket: "data_public")
                             _price_round_exprs.append(pl.col(_price_col).round(4).name.keep())
                 if _price_round_exprs:
                     _data_df = _data_df.with_columns(_price_round_exprs)
-
-                # Derive Data
                 return _select_state(_apply_change_metrics(_data_df, _tickers))
 
             # Normalise Data
@@ -873,16 +872,14 @@ from(bucket: "data_public")
                 ]])
                 for dimension_metadata in dimensions_metadata:
                     for column in dimension_metadata[0]:
-                        for ticker in tickers:
-                            metric_column = f"{ticker} {column}"
-                            if metric_column in equity_output_df.columns:
-                                self.database_upload(
-                                    equity_output_df.select(["Date", metric_column]).drop_nulls(subset=[metric_column]),
-                                    tags={
-                                        "type": column.replace(" ", "-").lower(),
-                                        "period": dimension_metadata[2],
-                                        "unit": dimension_metadata[1]
-                                    }, print_label=f"Equity_{ticker}_{column.replace(' ', '_').replace('-', '_')}")
+                        metric_cols = [f"{ticker} {column}" for ticker in tickers if f"{ticker} {column}" in equity_output_df.columns]
+                        if metric_cols:
+                            self.database_upload(
+                                equity_output_df.select(["Date", *metric_cols]),
+                                metric_type=column.replace(" ", "-").lower(),
+                                period=dimension_metadata[2],
+                                unit=dimension_metadata[1],
+                                print_label=f"Equity_{column.replace(' ', '_').replace('-', '_')}")
             self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:

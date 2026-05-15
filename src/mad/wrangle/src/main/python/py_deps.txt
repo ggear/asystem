@@ -10,8 +10,8 @@ dropbox
 yfinance
 pdftotext
 gspread
-influxdb
-influxdb3-python
 python-calamine
 google-api-python-client
 google-auth
+psycopg[binary]
+adbc-driver-postgresql
