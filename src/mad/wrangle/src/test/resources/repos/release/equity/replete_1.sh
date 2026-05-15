@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 REPO_RUN_DIR="${HOME}/Code/asystem/src/mad/wrangle/target/data/equity"
-
 REPO_TEST_DIR="$(cd "$(dirname "$0")" && pwd)/$(basename "$0" .sh)"
+
+# Check test have been run to prime tes data
 if [ ! -f "${REPO_RUN_DIR}/__equity_current.csv" ]; then
-  echo "Error: ${REPO_RUN_DIR}/__equity_current.csv does not exist, test needs to be run to prime data" >&2
+  echo "Error: ${REPO_RUN_DIR}/__equity_current.csv does not exist, the release/download test needs to be run first" >&2
   exit 1
 fi
 

@@ -56,7 +56,7 @@ class Currency(plugin.Plugin):
         rba_delta_df = self.dataframe_new()
         if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
 
-            # Download currency data
+            # Download Rate Data
             new_data = False
             started_time = time.time()
             rba_files_downloaded_count = 0
@@ -97,7 +97,7 @@ class Currency(plugin.Plugin):
             self.print_log(f"Files downloaded [{rba_files_downloaded_count}] and cached [{rba_files_cached_count}]", started=started_time)
             dataframe_print(self.name, rba_df, print_label="Currency", print_verb="collected")
 
-            # Process the currency data
+            # Process Rate Data
             try:
                 if new_data:
                     started_time_inner = time.time()
@@ -114,7 +114,6 @@ class Currency(plugin.Plugin):
             except Exception as exception:
                 self.print_log("Unexpected error processing currency dataframe", exception=exception)
 
-        # State checkpoint boundary
         try:
             def _aggregate_function(_data_df):
                 _columns = ['Date']
@@ -135,6 +134,7 @@ class Currency(plugin.Plugin):
 
                 return _data_df.select(_columns).with_columns(cs.float().round(4)).fill_nan(0).fill_null(0)
 
+            # Normalise Data
             if len(rba_df) == 0:
                 rba_df = self.dataframe_new(schema={"Date": pl.Date})
             else:
@@ -142,18 +142,14 @@ class Currency(plugin.Plugin):
                     rba_df = rba_df.drop("Source")
                 rba_df = rba_df.upsample(time_column='Date', every="1d").with_columns(pl.all().forward_fill()).drop_nulls()
 
-            # Checkpoint the data
+            # Commit Rate Data: source-complete daily rates → committed state with derived period-change percentages (delta for egress)
             rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, _aggregate_function)
 
-            # Upload the data
+            # Upload Data
             started_time = time.time()
             if len(rba_delta_df):
-
-                # Sheet upload
                 rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Currency')
-
-                # Database upload
                 rba_pairs_df = rba_current_df.select(['Date'] + PAIRS)
                 self.database_upload(rba_pairs_df.drop_nulls(), tags={
                     "type": "snapshot",

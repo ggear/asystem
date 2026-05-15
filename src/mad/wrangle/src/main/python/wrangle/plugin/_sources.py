@@ -611,7 +611,7 @@ class SourcesMixin(ContractMixin):
 
     def sheet_upload(self, data_df, drive_key, workbook_name, sheet_name=None, sheet_start_row=1, sheet_start_column="A",
                      add_filter=False, print_label=None, print_rows=PL_PRINT_ROWS):
-        sheet_chunk_rows = 500
+        sheet_chunk_rows = 10000
         started_time = time.time()
         name = (workbook_name if sheet_name is None else f"{workbook_name}_{sheet_name}").lower()
         try:

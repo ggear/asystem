@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Compare two CSV files and show differences nicely."""
 
 import csv
 import re
@@ -117,10 +116,11 @@ def diff_print(file_a, file_b, exclude=None):
     print()
 
     print(f"{BOLD}Sample differences (first 10 differing rows):{RESET}")
+    key_w = max(14, len(key_col))
     col_a_w = max(15, len(name_a))
     col_b_w = max(15, len(name_b))
-    print(f"  {key_col:<14}  {'Column':<50}  {name_a:>{col_a_w}}  {name_b:>{col_b_w}}  {'Delta':>12}")
-    print(f"  {'─' * 14}  {'─' * 50}  {'─' * col_a_w}  {'─' * col_b_w}  {'─' * 12}")
+    print(f"  {key_col:<{key_w}}  {'Column':<50}  {name_a:>{col_a_w}}  {name_b:>{col_b_w}}  {'Delta':>12}")
+    print(f"  {'─' * key_w}  {'─' * 50}  {'─' * col_a_w}  {'─' * col_b_w}  {'─' * 12}")
 
     shown = 0
     for key in sorted(diffs_by_row):
@@ -131,7 +131,7 @@ def diff_print(file_a, file_b, exclude=None):
                 delta_str = f"{float(vb) - float(va):+.4f}"
             except (ValueError, TypeError):
                 delta_str = "n/a"
-            print(f"  {key:<14}  {col:<50}  {_fmt_val(va):>{col_a_w}}  {_fmt_val(vb):>{col_b_w}}  {RED}{delta_str:>12}{RESET}")
+            print(f"  {key:<{key_w}}  {col:<50}  {_fmt_val(va):>{col_a_w}}  {_fmt_val(vb):>{col_b_w}}  {RED}{delta_str:>12}{RESET}")
         shown += 1
     print()
 

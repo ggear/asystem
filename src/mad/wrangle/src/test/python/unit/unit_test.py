@@ -1,3 +1,8 @@
+import sys
+from os.path import dirname
+
+sys.path.insert(0, dirname(__file__))
+
 import copy
 import csv_diff
 import filecmp
@@ -22,7 +27,7 @@ from googleapiclient.discovery import build
 sys.path.append('../../../main/python')
 
 from wrangle import plugin
-from wrangle.plugin.equity import REPOS_EQUITY
+from wrangle.plugin.equity import REPOS_EQUITY, STOCK
 from wrangle.plugin.balances import REPOS_BALANCES
 from wrangle.plugin.interest import REPOS_INTEREST
 from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
@@ -37,14 +42,26 @@ from wrangle.plugin.logger import dataframe_print, print_log
 
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-_ASSERT_PASS_COL = None
 _ASSERT_FILE_EQUAL_SEEN = set()
+_COUNTER_COMPARATOR_VERBS = {
+    "counter_equals": "is",
+    "counter_less": "less_than",
+    "counter_at_least": "at_least",
+}
+_ASSERT_PASS_COL = 60
+
+
+def _to_slug(text):
+    return text.lower().replace(" ", "_")
 
 
 def _print_assert_pass(name, *values):
-    col = _ASSERT_PASS_COL if _ASSERT_PASS_COL is not None else len(f"PASS [{name}]") + 3
-    details = " ".join(f"[{_value}]" for _value in values)
-    print(f"{'PASS [' + name + ']':<{col}}{details}", flush=True)
+    actuals = [str(v)[7:] for v in values if str(v).startswith("actual=")]
+    line = f"PASS [{name}]"
+    if actuals:
+        print(f"{line:<{_ASSERT_PASS_COL}}{'    ' + ' '.join(f'[{a}]' for a in actuals)}", flush=True)
+    else:
+        print(line, flush=True)
 
 
 def _format_assert_elapsed(seconds):
@@ -52,13 +69,8 @@ def _format_assert_elapsed(seconds):
 
 
 def _first_true_index(mask_series):
-    if isinstance(mask_series, bool):
-        return 0 if mask_series else None
-    values = mask_series.to_list() if hasattr(mask_series, "to_list") else list(mask_series)
-    for idx, _value in enumerate(values):
-        if _value:
-            return idx
-    return None
+    indices = mask_series.arg_true()
+    return None if len(indices) == 0 else int(indices[0])
 
 
 # noinspection PyMethodMayBeStatic
@@ -618,6 +630,9 @@ class WrangleTest(unittest.TestCase):
                         disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_DOWNLOADED: len(STOCK),
+                                },
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_PREVIOUS_COLUMNS: 425,
                                     plugin.CTR_ACT_CURRENT_COLUMNS: 425,
@@ -626,6 +641,13 @@ class WrangleTest(unittest.TestCase):
                                 },
                             },
                             "counter_at_least": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_CACHED: 261,
+                                },
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: 122,
+                                    plugin.CTR_ACT_SKIPPED: 380,
+                                },
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_DELTA_ROWS: 1,
                                 },
@@ -1447,7 +1469,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(30.0, sorted2["AAPL Derived"][2])
         self.assertEqual(3, len(delta))
 
-    def _mk_df(self, rows):
+    def _multi_key_dataframe(self, rows):
         return pl.DataFrame({
             "Date": [r[0] for r in rows],
             "Account ID": [r[1] for r in rows],
@@ -1457,7 +1479,7 @@ class WrangleTest(unittest.TestCase):
     def test_state_cache_multi_key_first_run(self):
         t = self._setup_state_test("mk-1")
         delta, current, previous = t.state_cache(
-            self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+            self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
             key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(2, len(current))
@@ -1465,7 +1487,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_no_change(self):
         t = self._setup_state_test("mk-2")
-        data = self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)])
+        data = self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)])
         t.state_cache(data, key_columns=["Date", "Account ID"])
         t.reset_counters()
         delta, current, _ = t.state_cache(data, key_columns=["Date", "Account ID"])
@@ -1474,11 +1496,11 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_value_change(self):
         t = self._setup_state_test("mk-3")
-        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
         delta, current, _ = t.state_cache(
-            self._mk_df([("2026-01-01", "acc-1", 150.0), ("2026-01-01", "acc-2", 200.0)]),
+            self._multi_key_dataframe([("2026-01-01", "acc-1", 150.0), ("2026-01-01", "acc-2", 200.0)]),
             key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual(150.0, delta.filter(pl.col("Account ID") == "acc-1")["Balance"][0])
@@ -1486,11 +1508,11 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_new_account(self):
         t = self._setup_state_test("mk-4")
-        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0)]),
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
         delta, current, _ = t.state_cache(
-            self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+            self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
             key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual("acc-2", delta["Account ID"][0])
@@ -1498,11 +1520,11 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_new_date(self):
         t = self._setup_state_test("mk-5")
-        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
         delta, current, _ = t.state_cache(
-            self._mk_df([("2026-01-02", "acc-1", 110.0), ("2026-01-02", "acc-2", 210.0)]),
+            self._multi_key_dataframe([("2026-01-02", "acc-1", 110.0), ("2026-01-02", "acc-2", 210.0)]),
             key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(4, len(current))
@@ -1510,12 +1532,12 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_partial_update(self):
         t = self._setup_state_test("mk-6")
-        t.state_cache(self._mk_df([
+        t.state_cache(self._multi_key_dataframe([
             ("2026-01-01", "acc-1", 100.0),
             ("2026-01-01", "acc-2", 200.0),
         ]), key_columns=["Date", "Account ID"])
         t.reset_counters()
-        delta, current, _ = t.state_cache(self._mk_df([
+        delta, current, _ = t.state_cache(self._multi_key_dataframe([
             ("2026-01-01", "acc-1", 150.0),
             ("2026-01-01", "acc-2", 200.0),
             ("2026-01-02", "acc-1", 155.0),
@@ -1528,7 +1550,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_duplicate_keys_in_update(self):
         t = self._setup_state_test("mk-7")
-        delta, current, _ = t.state_cache(self._mk_df([
+        delta, current, _ = t.state_cache(self._multi_key_dataframe([
             ("2026-01-01", "acc-1", 100.0),
             ("2026-01-01", "acc-1", 999.0),
         ]), key_columns=["Date", "Account ID"])
@@ -1538,11 +1560,11 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_update_supersedes_current(self):
         t = self._setup_state_test("mk-8")
-        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0)]),
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
         delta, current, previous = t.state_cache(
-            self._mk_df([("2026-01-01", "acc-1", 999.0)]),
+            self._multi_key_dataframe([("2026-01-01", "acc-1", 999.0)]),
             key_columns=["Date", "Account ID"])
         self.assertEqual(1, len(delta))
         self.assertEqual(999.0, current["Balance"][0])
@@ -1550,7 +1572,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_counters(self):
         t = self._setup_state_test("mk-9")
-        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0)]),
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0)]),
                       key_columns=["Date", "Account ID"])
         self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_UPDATE_COLUMNS))
         self.assertEqual(1, t.get_counter(plugin.CTR_SRC_DATA, plugin.CTR_ACT_CURRENT_COLUMNS))
@@ -1558,12 +1580,12 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_clean(self):
         t = self._setup_state_test("mk-10")
-        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
         plugin.config.force_reprocessing = True
         delta, current, previous = t.state_cache(
-            self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+            self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
             key_columns=["Date", "Account ID"])
         self.assertEqual(2, len(delta))
         self.assertEqual(2, len(current))
@@ -1578,7 +1600,7 @@ class WrangleTest(unittest.TestCase):
             return df
 
         delta, current, _ = t.state_cache(
-            self._mk_df([("2026-01-01", "acc-1", 50.0), ("2026-01-01", "acc-2", 100.0)]),
+            self._multi_key_dataframe([("2026-01-01", "acc-1", 50.0), ("2026-01-01", "acc-2", 100.0)]),
             aggregate_func=_agg, key_columns=["Date", "Account ID"])
         self.assertIn("Balance Double", current.columns)
         doubles = current.sort(["Date", "Account ID"])["Balance Double"].to_list()
@@ -1634,7 +1656,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_multi_key_new_column(self):
         t = self._setup_state_test("mk-14")
-        t.state_cache(self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+        t.state_cache(self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
                       key_columns=["Date", "Account ID"])
         t.reset_counters()
         update = pl.DataFrame({
@@ -1661,7 +1683,7 @@ class WrangleTest(unittest.TestCase):
         t.state_cache(initial, key_columns=["Date", "Account ID"])
         t.reset_counters()
         delta, current, previous = t.state_cache(
-            self._mk_df([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
+            self._multi_key_dataframe([("2026-01-01", "acc-1", 100.0), ("2026-01-01", "acc-2", 200.0)]),
             key_columns=["Date", "Account ID"])
         self.assertIn("Notes", current.columns)
         self.assertIsNone(current.sort(["Date", "Account ID"])["Notes"][0])
@@ -1740,70 +1762,65 @@ class WrangleTest(unittest.TestCase):
         label = f"{{:<22}} {f'[{plugin_name.title()}]':<15}   {f'[{repo_scope.name}]':<10}   {f'[{test_name}]'}"
         _print = lambda stage: print(("\n" if stage.startswith("STARTING") else "") + label.format(stage) + ("\n" if stage.startswith("FINISHED") else ""), flush=True)
         if not prepare_only:
-            self._set_assert_pass_col(file_asserts, counter_asserts, custom_asserts)
-            try:
-                _print("STARTING (run)")
-                plugin_module.run()
-                _print("FINISHED (run)")
-                self._save_pass_snapshot(plugin_module, 1)
-                run_counters = plugin_module.get_counters()
+            _print("STARTING (run)")
+            plugin_module.run()
+            _print("FINISHED (run)")
+            self._save_pass_snapshot(plugin_module, 1)
+            run_counters = plugin_module.get_counters()
+            _print("STARTING (assert)")
+            assert_started = time.time()
+            print_log("Assert", "Starting ...")
+            self._assert_counters(run_counters, counter_asserts)
+            print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+            _print("FINISHED (assert)")
+            if not enable_rerun:
                 _print("STARTING (assert)")
                 assert_started = time.time()
                 print_log("Assert", "Starting ...")
-                self._assert_counters(run_counters, counter_asserts)
+                self._assert_outputs(plugin_module, file_asserts, enable_rerun=False)
                 print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
                 _print("FINISHED (assert)")
-                if not enable_rerun:
-                    _print("STARTING (assert)")
-                    assert_started = time.time()
-                    print_log("Assert", "Starting ...")
-                    self._assert_outputs(plugin_module, file_asserts, enable_rerun=False)
-                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
-                    _print("FINISHED (assert)")
-                else:
-                    first_counters = copy.deepcopy(run_counters)
-                    plugin_module.reset_counters()
-                    _print("STARTING (rerun)")
-                    plugin_module.run()
-                    _print("FINISHED (rerun)")
-                    self._save_pass_snapshot(plugin_module, 2)
-                    noop_counters = plugin_module.get_counters()
-                    _print("STARTING (assert)")
-                    assert_started = time.time()
-                    print_log("Assert", "Starting ...")
-                    self._assert_counters(noop_counters, ASSERT_NOOP)
-                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
-                    _print("FINISHED (assert)")
-                    second_counters = copy.deepcopy(noop_counters)
-                    plugin_module.reset_counters()
-                    _print("STARTING (reprocess)")
-                    plugin.config.force_reprocessing = True
-                    plugin_module.run()
-                    plugin.config.force_reprocessing = force_reprocessing
-                    _print("FINISHED (reprocess)")
-                    self._save_pass_snapshot(plugin_module, 3)
-                    reload_counters = plugin_module.get_counters()
-                    _print("STARTING (assert)")
-                    assert_started = time.time()
-                    print_log("Assert", "Starting ...")
-                    self._assert_counters(reload_counters, ASSERT_RELOAD)
-                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
-                    _print("FINISHED (assert)")
-                    _print("STARTING (assert)")
-                    assert_started = time.time()
-                    print_log("Assert", "Starting ...")
-                    self._assert_outputs(plugin_module, file_asserts, enable_rerun=True)
-                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
-                    _print("FINISHED (assert)")
-                    _print("STARTING (assert)")
-                    assert_started = time.time()
-                    print_log("Assert", "Starting ...")
-                    self._assert_customs(custom_asserts, first_counters, second_counters, reload_counters)
-                    print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
-                    _print("FINISHED (assert)")
-            finally:
-                _ASSERT_PASS_COL = None
-
+            else:
+                first_counters = copy.deepcopy(run_counters)
+                plugin_module.reset_counters()
+                _print("STARTING (rerun)")
+                plugin_module.run()
+                _print("FINISHED (rerun)")
+                self._save_pass_snapshot(plugin_module, 2)
+                noop_counters = plugin_module.get_counters()
+                _print("STARTING (assert)")
+                assert_started = time.time()
+                print_log("Assert", "Starting ...")
+                self._assert_counters(noop_counters, ASSERT_NOOP)
+                print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                _print("FINISHED (assert)")
+                second_counters = copy.deepcopy(noop_counters)
+                plugin_module.reset_counters()
+                _print("STARTING (reprocess)")
+                plugin.config.force_reprocessing = True
+                plugin_module.run()
+                plugin.config.force_reprocessing = force_reprocessing
+                _print("FINISHED (reprocess)")
+                self._save_pass_snapshot(plugin_module, 3)
+                reload_counters = plugin_module.get_counters()
+                _print("STARTING (assert)")
+                assert_started = time.time()
+                print_log("Assert", "Starting ...")
+                self._assert_counters(reload_counters, ASSERT_RELOAD)
+                print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                _print("FINISHED (assert)")
+                _print("STARTING (assert)")
+                assert_started = time.time()
+                print_log("Assert", "Starting ...")
+                self._assert_outputs(plugin_module, file_asserts, enable_rerun=True)
+                print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                _print("FINISHED (assert)")
+                _print("STARTING (assert)")
+                assert_started = time.time()
+                print_log("Assert", "Starting ...")
+                self._assert_customs(custom_asserts, first_counters, second_counters, reload_counters)
+                print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
+                _print("FINISHED (assert)")
     def _save_pass_snapshot(self, plugin_module, pass_number):
         suffix_map = {1: "_1_run", 2: "_2_rerun", 3: "_3_reprocess"}
         for filename in os.listdir(plugin_module.local_cache):
@@ -1843,14 +1860,14 @@ class WrangleTest(unittest.TestCase):
                             file_path = versioned[-1]
                     for func in funcs:
                         started = time.time()
-                        result = func(file_path)
+                        result = func(file_path, filename)
                         elapsed = time.time() - started
                         if result is not None:
                             self.fail(f"Assertion [{func.__name__}] failed for [{expanded_filename}]. {result}")
                         else:
                             if func.__name__ == "assert_file_equal":
                                 continue
-                            _print_assert_pass(f"{func.__name__}({_format_assert_elapsed(elapsed)})", expanded_filename)
+                            _print_assert_pass(f"{func.__name__}:{filename} ({_format_assert_elapsed(elapsed)})")
         finally:
             _ASSERT_FILE_EQUAL_SEEN.clear()
 
@@ -1871,8 +1888,9 @@ class WrangleTest(unittest.TestCase):
                     actual_value = actual.get(counter_source, {}).get(counter_action, 0)
                     assert_fn(actual_value, expected,
                               f"Counter [{counter_source} {counter_action}] {label} assertion failed [{actual_value}] {op} [{expected}]")
-                    _print_assert_pass(f"assert_{comparator_key}({_format_assert_elapsed(time.time() - started)})",
-                                       f"{counter_source} {counter_action}", actual_value, expected)
+                    verb = _COUNTER_COMPARATOR_VERBS.get(comparator_key, comparator_key)
+                    name = f"assert_counter_{_to_slug(counter_source)}_{_to_slug(counter_action)}_{verb}_{expected}"
+                    _print_assert_pass(f"{name} ({_format_assert_elapsed(time.time() - started)})", f"actual={actual_value}")
 
     def _assert_customs(self, assertions, first, second, third):
         for custom_assert in assertions:
@@ -1881,28 +1899,10 @@ class WrangleTest(unittest.TestCase):
             elapsed = time.time() - started
             if result is not None:
                 self.fail(f"Custom assert [{custom_assert.__name__}] failed. {result}")
-            values = []
             values_fn = getattr(custom_assert, "_pass_values", None)
-            if callable(values_fn):
-                values = values_fn()
-            _print_assert_pass(f"{custom_assert.__name__}({_format_assert_elapsed(elapsed)})", *values)
-
-    def _set_assert_pass_col(self, file_asserts, counter_asserts, custom_asserts):
-        global _ASSERT_PASS_COL
-        file_names = [f"{func.__name__}(000.000s)" for funcs in file_asserts.values() for func in funcs]
-        file_names.extend([
-            "assert_file_equal_compare_binary(000.000s)",
-            "assert_file_equal_compare_dataframe(000.000s)",
-            "assert_file_equal_compare_dataframe_exclude[(.*)](000.000s)",
-        ])
-        counter_names = [
-            "assert_counter_equals(000.000s)",
-            "assert_counter_less(000.000s)",
-            "assert_counter_at_least(000.000s)",
-        ]
-        custom_names = [f"{custom_assert.__name__}(000.000s)" for custom_assert in custom_asserts]
-        pass_names = file_names + counter_names + custom_names
-        _ASSERT_PASS_COL = max((len(f"PASS [{name}]") for name in pass_names), default=0) + 3
+            values = values_fn() if callable(values_fn) else []
+            actuals = [v for v in values if v.startswith("actual=")]
+            _print_assert_pass(f"{custom_assert.__name__} ({_format_assert_elapsed(elapsed)})", *actuals)
 
     def setUp(self):
         print("", flush=True)
@@ -2016,17 +2016,16 @@ def assert_file_size(min_rows=1, max_rows=None):
         csv_df = _load_csv(file_path)
         count = len(csv_df)
         if count < min_rows:
-            msg = f"{label}: [{basename(file_path)}] expected >={min_rows} rows, got {count}"
+            msg = f"{_assert.__name__}: [{basename(file_path)}] expected >={min_rows} rows, got {count}"
             dataframe_print("Assert", csv_df, msg, level="error")
             return msg
         if max_rows is not None and count > max_rows:
-            msg = f"{label}: [{basename(file_path)}] expected <={max_rows} rows, got {count}"
+            msg = f"{_assert.__name__}: [{basename(file_path)}] expected <={max_rows} rows, got {count}"
             dataframe_print("Assert", csv_df, msg, level="error")
             return msg
         return None
 
-    label = f"assert_file_size_{min_rows}_{max_rows}_rows"
-    _assert.__name__ = label
+    _assert.__name__ = f"assert_file_size_{min_rows}_{max_rows}_rows"
     return _assert
 
 
@@ -2044,13 +2043,12 @@ def assert_file_nones_per_row(max_nones=0, after_first_rows=False, after_last_ro
             data_df = csv_df
         fail_rows = data_df.filter(pl.sum_horizontal(pl.col(c).is_null().cast(pl.Int32) for c in cols) > max_nones)
         if not fail_rows.is_empty():
-            msg = f"{label}: [{basename(file_path)}] rows with >{max_nones} nones"
+            msg = f"{_assert.__name__}: [{basename(file_path)}] rows with >{max_nones} nones"
             dataframe_print("Assert", fail_rows, msg, level="error")
             return msg
         return None
 
-    label = f"assert_file_max_{max_nones}_nones_per_row" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
-    _assert.__name__ = label
+    _assert.__name__ = f"assert_file_max_{max_nones}_nones_per_row" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
     return _assert
 
 
@@ -2058,20 +2056,28 @@ def assert_file_nones_per_col(max_nones=0, after_first_rows=False, after_last_ro
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         cols = _filter_cols(csv_df, include, exclude)
+        if not cols:
+            return None
         if after_first_rows:
-            failed = [c for c in cols if csv_df[c].slice(_count_leading_none_rows(csv_df, [c])).null_count() > max_nones]
+            violations = csv_df.select([
+                (pl.col(c).is_null() & pl.col(c).is_not_null().cast(pl.UInt32).cum_sum().gt(0)).sum().alias(c)
+                for c in cols
+            ])
         elif after_last_rows:
-            failed = [c for c in cols if csv_df[c].head(len(csv_df) - _count_trailing_none_rows(csv_df, [c])).null_count() > max_nones]
+            violations = csv_df.select([
+                (pl.col(c).is_null() & pl.col(c).is_not_null().reverse().cast(pl.UInt32).cum_sum().reverse().gt(0)).sum().alias(c)
+                for c in cols
+            ])
         else:
-            failed = [c for c in cols if csv_df[c].null_count() > max_nones]
+            violations = csv_df.select([pl.col(c).null_count().alias(c) for c in cols])
+        failed = [c for c in cols if violations[c][0] > max_nones]
         if failed:
-            msg = f"{label}: [{basename(file_path)}] columns with >{max_nones} nones: {failed}"
+            msg = f"{_assert.__name__}: [{basename(file_path)}] columns with >{max_nones} nones: {failed}"
             dataframe_print("Assert", csv_df.select(failed), msg, level="error")
             return msg
         return None
 
-    label = f"assert_file_max_{max_nones}_nones_per_col" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
-    _assert.__name__ = label
+    _assert.__name__ = f"assert_file_max_{max_nones}_nones_per_col" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
     return _assert
 
 
@@ -2090,13 +2096,12 @@ def assert_file_zeroes_per_row(max_zeroes=0, after_first_rows=False, after_last_
         zero_count = pl.sum_horizontal((pl.col(c) == 0).cast(pl.Int32) for c in numeric_cols)
         fail_rows = data_df.filter(zero_count > max_zeroes)
         if not fail_rows.is_empty():
-            msg = f"{label}: [{basename(file_path)}] rows with >{max_zeroes} zeros"
+            msg = f"{_assert.__name__}: [{basename(file_path)}] rows with >{max_zeroes} zeros"
             dataframe_print("Assert", fail_rows, msg, level="error")
             return msg
         return None
 
-    label = f"assert_file_max_{max_zeroes}_zeroes_per_row" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
-    _assert.__name__ = label
+    _assert.__name__ = f"assert_file_max_{max_zeroes}_zeroes_per_row" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
     return _assert
 
 
@@ -2104,20 +2109,30 @@ def assert_file_zeroes_per_col(max_zeroes=0, after_first_rows=False, after_last_
     def _assert(file_path, *_):
         csv_df = _load_csv(file_path)
         numeric_cols = [col for col in _filter_cols(csv_df, include, exclude) if csv_df.schema[col] in _NUMERIC_DTYPES]
+        if not numeric_cols:
+            return None
         if after_first_rows:
-            failed = [c for c in numeric_cols if (csv_df[c].slice(_count_leading_zero_rows(csv_df, [c])) == 0).sum() > max_zeroes]
+            violations = csv_df.select([
+                ((pl.col(c).eq(0) & pl.col(c).is_not_null()) &
+                 (pl.col(c).ne(0) | pl.col(c).is_null()).cast(pl.UInt32).cum_sum().gt(0)).sum().alias(c)
+                for c in numeric_cols
+            ])
         elif after_last_rows:
-            failed = [c for c in numeric_cols if (csv_df[c].head(len(csv_df) - _count_trailing_zero_rows(csv_df, [c])) == 0).sum() > max_zeroes]
+            violations = csv_df.select([
+                ((pl.col(c).eq(0) & pl.col(c).is_not_null()) &
+                 (pl.col(c).ne(0) | pl.col(c).is_null()).reverse().cast(pl.UInt32).cum_sum().reverse().gt(0)).sum().alias(c)
+                for c in numeric_cols
+            ])
         else:
-            failed = [c for c in numeric_cols if (csv_df[c] == 0).sum() > max_zeroes]
+            violations = csv_df.select([(pl.col(c).eq(0) & pl.col(c).is_not_null()).sum().alias(c) for c in numeric_cols])
+        failed = [c for c in numeric_cols if violations[c][0] > max_zeroes]
         if failed:
-            msg = f"{label}: [{basename(file_path)}] columns with >{max_zeroes} zeros: {failed}"
+            msg = f"{_assert.__name__}: [{basename(file_path)}] columns with >{max_zeroes} zeros: {failed}"
             dataframe_print("Assert", csv_df.select(failed), msg, level="error")
             return msg
         return None
 
-    label = f"assert_file_max_{max_zeroes}_zeroes_per_col" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
-    _assert.__name__ = label
+    _assert.__name__ = f"assert_file_max_{max_zeroes}_zeroes_per_col" + ("_after_first_rows" if after_first_rows else "") + ("_after_last_rows" if after_last_rows else "")
     return _assert
 
 
@@ -2191,7 +2206,7 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
 
 
 def assert_file_equal(exclude=None):
-    def _assert(file_path, *_):
+    def _assert(file_path, key_filename="", *_):
         global _ASSERT_FILE_EQUAL_SEEN
         stem = file_path[:-4]
         if stem.endswith("_1_run"):
@@ -2208,8 +2223,7 @@ def assert_file_equal(exclude=None):
         _ASSERT_FILE_EQUAL_SEEN.add(compare_key)
         compare_started = time.time()
         if exclude is None and _files_equal_binary(file_path, compare_path):
-            _print_assert_pass(f"assert_file_equal_compare_binary({_format_assert_elapsed(time.time() - compare_started)})",
-                               basename(file_path), basename(compare_path))
+            _print_assert_pass(f"assert_file_equal_compare_binary:{key_filename} ({_format_assert_elapsed(time.time() - compare_started)})")
             return None
         df1 = _load_csv(file_path)
         df2 = _load_csv(compare_path)
@@ -2222,8 +2236,7 @@ def assert_file_equal(exclude=None):
             msg = f"assert_file_equal: [{basename(file_path)}] vs [{basename(compare_path)}] run and reprocess differ"
             csv_diff.diff_print(file_path, compare_path, exclude)
             return msg
-        _print_assert_pass(f"assert_file_equal_compare_{compare_type}({_format_assert_elapsed(time.time() - compare_started)})",
-                           basename(file_path), basename(compare_path))
+        _print_assert_pass(f"assert_file_equal_compare_{compare_type}:{key_filename} ({_format_assert_elapsed(time.time() - compare_started)})")
         return None
 
     _assert.__name__ = "assert_file_equal"
@@ -2247,13 +2260,12 @@ def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
             return f"assert_rows_delta: expected delta < {at_most}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
         return None
 
-    parts = [f"eq{equals}" if equals is not None else None,
-             f"gt{at_least}" if at_least is not None else None,
-             f"lt{at_most}" if at_most is not None else None]
+    parts = [f"is_{equals}" if equals is not None else None,
+             f"at_least_{at_least}" if at_least is not None else None,
+             f"at_most_{at_most}" if at_most is not None else None]
     suffix = "_".join(p for p in parts if p is not None)
     _assert._last_delta = None
-    _assert._assert_value = equals if equals is not None else at_least if at_least is not None else at_most
-    _assert._pass_values = lambda: [_assert._last_delta, _assert._assert_value]
+    _assert._pass_values = lambda: [f"actual={_assert._last_delta}"]
     _assert.__name__ = f"assert_custom_rows_delta_{suffix}" if suffix else "assert_custom_rows_delta"
     return _assert
 

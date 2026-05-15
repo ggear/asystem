@@ -43,7 +43,7 @@ class Interest(plugin.Plugin):
         interest_delta_df = self.dataframe_new()
         if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
 
-            # Download interest data
+            # Download Rate Data
             new_data = False
             started_time = time.time()
             started_time_retail = time.time()
@@ -84,6 +84,8 @@ class Interest(plugin.Plugin):
             self.print_log(f"Files downloaded [{interest_downloaded}] and cached [{interest_cached}]", started=started_time)
             if new_data:
                 try:
+
+                    # Collect Rate Data
                     if retail_should_read:
                         retail_df = self.excel_read(retail_file, schema={"Series ID": pl.Date}, skip_rows=10, print_rows=12)
 
@@ -110,7 +112,7 @@ class Interest(plugin.Plugin):
             inflation_df = inflation_df if len(inflation_df) == 0 else inflation_df.fill_nan(pl.lit(None)).drop_nulls()
             dataframe_print(self.name, inflation_df, print_label="Inflation", print_verb="collected", started=started_time_inflation)
 
-            # Process the interest data
+            # Process Rate Data
             try:
                 if new_data:
                     started_time_inner = time.time()
@@ -131,7 +133,6 @@ class Interest(plugin.Plugin):
                                  self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED) -
                                  self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED))
 
-        # State checkpoint boundary
         try:
             def _aggregate_function(_data_df):
                 _columns = ["Date"]
@@ -144,18 +145,14 @@ class Interest(plugin.Plugin):
                             (pl.col(rate).rolling_mean(window_size=PERIODS[_period])).alias(_column))
                 return _data_df.select(_columns).with_columns(cs.float().round(2))
 
-            # Checkpoint the data
+            # Commit Rate Data: source-complete monthly Bank/Inflation/Net rates → committed state with derived rolling means (delta for egress)
             interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, _aggregate_function)
 
-            # Upload the data
+            # Upload Data
             started_time = time.time()
             if len(interest_delta_df):
-
-                # Sheet upload
                 interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Interest')
-
-                # Database upload
                 interest_monthly_df = interest_current_df.select(["Date"] + LABELS)
                 self.database_upload(interest_monthly_df.drop_nulls(), tags={
                     "type": "mean",
