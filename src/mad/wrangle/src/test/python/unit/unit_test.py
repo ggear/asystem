@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 import unittest
+from collections.abc import Iterable
 from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
 
 import google.oauth2.service_account
@@ -68,7 +69,9 @@ def _format_assert_elapsed(seconds):
     return f"{f'{seconds:.3f}'.rstrip('0').rstrip('.')}s"
 
 
-def _first_true_index(mask_series):
+def _first_true_index(mask_series: pl.Series | bool):
+    if isinstance(mask_series, bool):
+        return 0 if mask_series else None
     indices = mask_series.arg_true()
     return None if len(indices) == 0 else int(indices[0])
 
@@ -585,8 +588,8 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_UPLOADED: 1,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 476,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 476,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 425,
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: 425,
                                     plugin.CTR_ACT_UPDATE_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_ROWS: 0,
@@ -1986,7 +1989,9 @@ class WrangleTest(unittest.TestCase):
                 self.fail(f"Custom assert [{custom_assert.__name__}] failed. {result}")
             values_fn = getattr(custom_assert, "_pass_values", None)
             values = values_fn() if callable(values_fn) else []
-            actuals = [v for v in values if v.startswith("actual=")]
+            if isinstance(values, str) or not isinstance(values, Iterable):
+                values = []
+            actuals = [v for v in values if isinstance(v, str) and v.startswith("actual=")]
             _print_assert_pass(f"{custom_assert.__name__} ({_format_assert_elapsed(elapsed)})", *actuals)
 
     def setUp(self):
@@ -2350,8 +2355,8 @@ def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
              f"at_least_{at_least}" if at_least is not None else None,
              f"at_most_{at_most}" if at_most is not None else None]
     suffix = "_".join(p for p in parts if p is not None)
-    _assert._last_delta = None
-    _assert._pass_values = lambda: [f"actual={_assert._last_delta}"]
+    _assert.last_delta = None
+    _assert._pass_values = lambda: [f"actual={_assert.last_delta}"]
     _assert.__name__ = f"assert_custom_rows_delta_{suffix}" if suffix else "assert_custom_rows_delta"
     return _assert
 

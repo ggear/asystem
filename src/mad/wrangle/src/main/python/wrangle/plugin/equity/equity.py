@@ -84,11 +84,11 @@ STOCK = {
     'IAF ': {"start": "2012-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'EMKT': {"start": "2018-03", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'ACDC': {"start": "2018-09", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'URNM': {"start": "2020-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'CLNE': {"start": "2021-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'ERTH': {"start": "2021-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'QSML': {"start": "2021-05", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'GAME': {"start": "2022-05", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'URNM': {"start": "2022-07", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'GAME': {"start": "2022-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
 }
 
 REPOS_EQUITY = plugin.Repos(
@@ -545,6 +545,8 @@ class Equity(plugin.Plugin):
                 _equity_print(equity_df_manual, print_label="Equity_Manual_Stock_Prices", print_verb="processed", started=started_time)
                 started_time = time.time()
                 tickers = _equity_tickers(equity_df)
+                equity_max_date = equity_df.select(pl.col("Date").max()).item()
+                equity_df_manual = equity_df_manual.filter(pl.col("Date") <= equity_max_date)
                 new_ticker_dfs = []
                 manual_ticker_columns = {}
                 for column in equity_df_manual.columns:
@@ -601,6 +603,7 @@ class Equity(plugin.Plugin):
                 tickers = _equity_tickers(equity_df)
                 if len(equity_df) > 0:
                     started_fx_date = equity_df.head(1).rows()[0][0]
+                    ended_fx_date = equity_df.select(pl.col("Date").max()).item()
                     for fx_pair in CURRENCIES:
                         fx_cache = f"RBA_{fx_pair}_Rates"
                         fx_query = f"""
@@ -615,7 +618,7 @@ ORDER BY time
                         fx_query_result = self.database_download(fx_cache, fx_query)
                         fx_rates[fx_pair] = self.csv_read(fx_query_result.file_path, schema={"Date": pl.Date}) \
                             if fx_query_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
-                        fx_rates[fx_pair] = _equity_upsample(fx_rates[fx_pair])
+                        fx_rates[fx_pair] = _equity_upsample(fx_rates[fx_pair]).filter(pl.col("Date") <= ended_fx_date)
                     aud_rate_exprs = []
                     spot_exprs = []
                     for ticker in tickers:
