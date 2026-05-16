@@ -24,6 +24,7 @@ brew install \
   yq \
   xq \
   rg \
+  gh \
   git \
   duf \
   nvm \

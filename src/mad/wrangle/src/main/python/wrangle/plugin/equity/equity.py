@@ -84,11 +84,11 @@ STOCK = {
     'IAF ': {"start": "2012-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'EMKT': {"start": "2018-03", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'ACDC': {"start": "2018-09", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'URNM': {"start": "2020-01", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'CLNE': {"start": "2021-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'ERTH': {"start": "2021-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
     'QSML': {"start": "2021-05", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
-    'GAME': {"start": "2022-04", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'GAME': {"start": "2022-05", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
+    'URNM': {"start": "2022-07", "end of day": "16:00", "prefix": " ", "exchange": "AX", },
 }
 
 REPOS_EQUITY = plugin.Repos(
