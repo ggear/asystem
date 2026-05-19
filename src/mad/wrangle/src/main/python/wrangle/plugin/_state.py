@@ -13,29 +13,33 @@ class StateMixin(ContractMixin):
 
     def state_cache(self, data_df_update, aggregate_func=None, key_columns=None):
         """
-        Merge incoming data against a persisted snapshot and return the change set.
-
-        Loads the previous run's `current` snapshot from disk, merges `data_df_update` into it
-        (deduplicating by key columns, keeping the latest value), then computes which rows changed.
+        Checkpoint for sources that either accumulate new dated rows over runs (equity: positions grow daily)
+        or revise existing values in place (interest: RBA republishes historical rates). Merges `data_df_update` into the
+        persisted snapshot (deduplicating on key columns, keeping the latest), applies `aggregate_func` to convert raw
+        source data into committed form (forward-fill, change metrics, rounding), and returns (delta, current, previous).
 
         Parameters:
-            data_df_update:     Incoming rows to merge. The first column must be named "Date" (pl.Date).
-            aggregate_func: Optional transform applied to data both before the merge (on the incoming update)
-                            and after (on the merged result). Typically used to forward-fill sparse time-series
-                            rows, derive change metrics (e.g. N-day price changes), and round values into
-                            committed form ready for downstream consumers.
-            key_columns:        Columns used to identify unique rows; defaults to ["Date"].
+            data_df_update:               Incoming rows to merge. The first column must be named "Date" (pl.Date).
+            aggregate_func:               Optional transform applied to data both before the merge (on the incoming update)
+                                          and after (on the merged result). Typically used to forward-fill sparse time-series
+                                          rows, derive change metrics (e.g. N-day price changes), and round values into
+                                          committed form ready for downstream consumers.
+            key_columns:                  Columns used to identify unique rows; defaults to ["Date"].
 
-        Returns (delta, current, previous):
-            delta:    Rows whose values changed between previous and current (new or modified rows).
-            current:  Full dataset after merging the update into the prior snapshot, persisted to disk.
-            previous: Full dataset from the prior run before this update was applied.
+        Returns:
+            delta:                        Rows whose values changed between previous and current (new or modified rows).
+            current:                      Full dataset after merging the update into the prior snapshot, persisted to disk.
+            previous:                     Full dataset from the prior run before this update was applied.
 
-        Files written to disk (local_cache):
-            _update:   Filtered and aggregated form of data_df_update; the rows applied this run.
-            _current:  Updated current snapshot (becomes _previous on the next run).
-            _previous: Current snapshot from the prior run, moved here before _current is rewritten.
-            _delta:    Rows from _current that differ from _previous.
+        Files:
+            _update:                      Filtered and aggregated form of data_df_update; the rows applied this run.
+            _current:                     Updated current snapshot (becomes _previous on the next run).
+            _previous:                    Current snapshot from the prior run, moved here before _current is rewritten.
+            _delta:                       Rows from _current that differ from _previous.
+
+        Config:
+            config.force_reprocessing:    When True, deletes the existing _current snapshot before merging,
+                                          so the entire dataset is rebuilt from data_df_update with no prior state.
         """
 
         def _resolve_key_columns(available_columns):

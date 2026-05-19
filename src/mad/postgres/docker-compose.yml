@@ -18,6 +18,7 @@ x-common: &common
     - PGUSER=${POSTGRES_USER}
     - PGPASSWORD=${POSTGRES_KEY}
     - PGDATA=/var/lib/postgresql/data/pgdata
+    - TIMESCALEDB_TELEMETRY=off
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
     - ${SERVICE_DATA_DIR}:/var/lib/postgresql/data

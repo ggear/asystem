@@ -4,7 +4,6 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from os.path import join
 
-from . import database
 from ._dataframes import DataFramesMixin
 from ._sources import SourcesMixin
 from ._state import StateMixin

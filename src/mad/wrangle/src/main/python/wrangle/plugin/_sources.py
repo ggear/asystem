@@ -376,7 +376,10 @@ class SourcesMixin(ContractMixin):
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     return DownloadResult(DownloadStatus.CACHED, local_path)
         try:
-            data_df = pl.read_database(query=query_string, connection=database.DSN, engine="adbc")
+            dsn = database.DSN
+            if dsn is None:
+                raise Exception("Database DSN is unavailable")
+            data_df = pl.read_database(query=query_string, connection=dsn)
             if data_df is None or len(data_df) == 0:
                 if ignore:
                     self.print_log(f"File [{query_name}] query returned no data")
@@ -688,7 +691,17 @@ class SourcesMixin(ContractMixin):
             if drive_key is not None and not config.disable_repo_uploads:
                 credentials = self._sheets_credentials()
                 gc = gspread.Client(auth=credentials)
-                spreadsheet = gc.open_by_key(drive_key)
+                for sheet_upload_attempt in range(3):
+                    try:
+                        spreadsheet = gc.open_by_key(drive_key)
+                        break
+                    except gspread.exceptions.APIError as api_exception:
+                        if sheet_upload_attempt < 2 and api_exception.response.status_code >= 500:
+                            time.sleep(10 * (sheet_upload_attempt + 1))
+                            credentials = self._sheets_credentials()
+                            gc = gspread.Client(auth=credentials)
+                        else:
+                            raise
                 try:
                     worksheet = spreadsheet.worksheet(sheet_name) if sheet_name is not None else spreadsheet.get_worksheet(0)
                 except gspread.exceptions.WorksheetNotFound:
@@ -907,28 +920,28 @@ class SourcesMixin(ContractMixin):
                 self.print_log(f"File [{basename(local_path).split('.')[0]}] cached at [{local_path}]", level="debug")
                 actioned_files[local_path] = True, False
 
-        def _download_one(drive_file_name, local_path):
-            file_started = time.time()
-            label = basename(local_path).split(".")[0]
+        def _download_one(_drive_file_name, _local_path):
+            _file_started = time.time()
+            _label = basename(_local_path).split(".")[0]
             try:
-                request = service.files().get_media(fileId=drive_files[drive_file_name]["id"])
+                _request = service.files().get_media(fileId=drive_files[_drive_file_name]["id"])
                 buf = io.BytesIO()
-                downloader = MediaIoBaseDownload(buf, request)
+                downloader = MediaIoBaseDownload(buf, _request)
                 done = False
                 while not done:
                     _, done = downloader.next_chunk()
-                if not exists(dirname(local_path)):
-                    os.makedirs(dirname(local_path))
-                with open(local_path, 'wb') as f:
+                if not exists(dirname(_local_path)):
+                    os.makedirs(dirname(_local_path))
+                with open(_local_path, 'wb') as f:
                     f.write(buf.getvalue())
-                utime_error = None
+                _utime_error = None
                 try:
-                    os.utime(local_path, (drive_files[drive_file_name]["modified"], drive_files[drive_file_name]["modified"]))
+                    os.utime(_local_path, (drive_files[_drive_file_name]["modified"], drive_files[_drive_file_name]["modified"]))
                 except Exception as e:
-                    utime_error = e
-                return drive_file_name, local_path, label, file_started, None, utime_error
+                    _utime_error = e
+                return _drive_file_name, _local_path, _label, _file_started, None, _utime_error
             except Exception as e:
-                return drive_file_name, local_path, label, file_started, e, None
+                return _drive_file_name, _local_path, _label, _file_started, e, None
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = {executor.submit(_download_one, df, lp): (df, lp) for df, lp in to_download}

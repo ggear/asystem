@@ -3,6 +3,9 @@
 # Installed into development environment with no transitive dependencies.
 ###############################################################################
 
+# Home Assistant
 hassapi==0.3.0
-mlserver==$MLSERVER_VERSION
 homeassistant==$HOMEASSISTANT_VERSION
+
+# ML Server
+mlserver==$MLSERVER_VERSION

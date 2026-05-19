@@ -1,7 +1,5 @@
 mock
 datetime
-numpy
-pyarrow
 pandas
 polars
 tabulate
@@ -9,9 +7,9 @@ paho-mqtt
 dropbox
 yfinance
 pdftotext
-gspread
 python-calamine
-google-api-python-client
-google-auth
 psycopg[binary]
 adbc-driver-postgresql
+gspread
+google-auth
+google-api-python-client

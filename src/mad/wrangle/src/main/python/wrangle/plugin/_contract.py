@@ -1,9 +1,12 @@
 import polars as pl
 
+from .config import Repos
+
 
 class ContractMixin:
     name: str
     local_cache: str
+    remote_repos: Repos
     _db_cache_dfs: dict[str, pl.DataFrame]
 
     def print_log(self, *args, **kwargs):
