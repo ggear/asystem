@@ -1,12 +1,38 @@
 init_user_database() {
-  if [ $(psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "SELECT usename FROM pg_user WHERE usename = '"$1"'" | grep $1 | wc -l) -eq 0 ]; then
-    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "CREATE USER $1"
-    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "ALTER USER $1 WITH PASSWORD '"$2"'"
+  local user="$1"
+  local password="$2"
+  local database="$3"
+
+  if [ -z "${user}" ] || [ -z "${database}" ]; then
+    echo "Skipping bootstrap entry because user or database is empty (user='${user}', database='${database}')"
+    return
   fi
-  if [ $(psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "SELECT datname FROM pg_database WHERE datname = '"$3"'" | grep $3 | wc -l) -eq 0 ]; then
-    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "CREATE DATABASE $3"
+
+  local user_quoted database_quoted user_lit database_lit password_lit
+  user_quoted=$(printf '%s' "${user}" | sed 's/"/""/g')
+  database_quoted=$(printf '%s' "${database}" | sed 's/"/""/g')
+  user_lit=$(printf '%s' "${user}" | sed "s/'/''/g")
+  database_lit=$(printf '%s' "${database}" | sed "s/'/''/g")
+  password_lit=$(printf '%s' "${password}" | sed "s/'/''/g")
+
+  local role_exists db_exists
+  role_exists=$(psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres -w -tA -c "SELECT 1 FROM pg_roles WHERE rolname = '${user_lit}' LIMIT 1")
+  if [ "${role_exists}" != "1" ]; then
+    if [ -n "${password}" ]; then
+      psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres -w -t -c "CREATE USER \"${user_quoted}\" WITH PASSWORD '${password_lit}'"
+    else
+      psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres -w -t -c "CREATE USER \"${user_quoted}\""
+    fi
+  elif [ -n "${password}" ]; then
+    psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres -w -t -c "ALTER USER \"${user_quoted}\" WITH PASSWORD '${password_lit}'"
   fi
-  psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "ALTER DATABASE $3 OWNER $1"
+
+  db_exists=$(psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres -w -tA -c "SELECT 1 FROM pg_database WHERE datname = '${database_lit}' LIMIT 1")
+  if [ "${db_exists}" != "1" ]; then
+    psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres -w -t -c "CREATE DATABASE \"${database_quoted}\""
+  fi
+
+  psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres -w -t -c "ALTER DATABASE \"${database_quoted}\" OWNER TO \"${user_quoted}\""
 }
 
 init_user_database "${POSTGRES_USER_HASS}" "${POSTGRES_KEY_HASS}" "${POSTGRES_DATABASE_HASS}"
