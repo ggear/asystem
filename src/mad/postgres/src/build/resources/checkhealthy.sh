@@ -5,4 +5,4 @@ PGPASSWORD="${POSTGRES_KEY_MLFLOW}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES
 PGPASSWORD="${POSTGRES_KEY_WRANGLE}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER_WRANGLE}" -d "${POSTGRES_DATABASE_WRANGLE}" -c "SELECT 1;" >/dev/null 2>&1 &&
 exit 0;
 sleep "${ASYSTEM_HEALTHCHECK_INTERVAL_SECONDS:-1}";
-done' _ "${POSITIONAL_ARGS[@]}" || ( echo "Health check timed out after ${ASYSTEM_HEALTHCHECK_TIMEOUT_SECONDS:-30}s" >&2; false )
+done' _ "${POSITIONAL_ARGS[@]}" || ( echo "Health check timed out after ${ASYSTEM_HEALTHCHECK_TIMEOUT_SECONDS:-5}s" >&2; false )
