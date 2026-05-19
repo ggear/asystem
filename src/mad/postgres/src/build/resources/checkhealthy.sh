@@ -1,4 +1,4 @@
-timeout "${ASYSTEM_HEALTHCHECK_TIMEOUT_SECONDS:-30}" bash -c 'while true; do
+timeout "${ASYSTEM_HEALTHCHECK_TIMEOUT_SECONDS:-5}" bash -c 'while true; do
 /asystem/etc/checkexecuting.sh "$@" &&
 PGPASSWORD="${POSTGRES_KEY_HASS}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER_HASS}" -d "${POSTGRES_DATABASE_HASS}" -c "SELECT 1;" >/dev/null 2>&1 &&
 PGPASSWORD="${POSTGRES_KEY_MLFLOW}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER_MLFLOW}" -d "${POSTGRES_DATABASE_MLFLOW}" -c "SELECT 1;" >/dev/null 2>&1 &&
