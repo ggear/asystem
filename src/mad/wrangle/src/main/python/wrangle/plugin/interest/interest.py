@@ -26,12 +26,10 @@ REPOS_INTEREST = plugin.Repos(
     preview={
         "drive_folder": "1fj4B5JAaDixzcXpjn3R7bGfDQc4DlqHD",
         "sheet_key": "1v3vGZU1x2UGj_-4CIoFIyTXQehFhhlEyyqBI5f-7dDk",
-        "database_table": "interest_preview",
     },
     release={
         "drive_folder": "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ",
         "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
-        "database_table": "interest",
     },
 )
 
@@ -123,8 +121,6 @@ class Interest(plugin.Plugin):
                     interest_df = interest_df.with_columns(pl.all().forward_fill()).drop_nulls()
                     interest_df = interest_df.with_columns((pl.col("Bank") - pl.col("Inflation")).alias("Net"))
                     interest_df = interest_df.with_columns(cs.float().round(2))
-                    if "Date_right" in interest_df.columns:
-                        interest_df = interest_df.drop("Date_right")
                     dataframe_print(self.name, interest_df, print_label="Interest", print_verb="post up-sample", started=started_time_inner)
             except Exception as exception:
                 self.print_log("Unexpected error processing interest dataframe", exception=exception)

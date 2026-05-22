@@ -1,4 +1,8 @@
+import glob
+import shutil
+import subprocess
 import sys
+import time
 
 sys.path.append('../../../main/python')
 
@@ -13,11 +17,10 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 for key, value in list(plugin.load_profile(plugin.get_file(".env")).items()):
     os.environ[key] = value
 
-
 def test_warmup():
-    print("")
-
-
+    None
+    
+# def test_warmup():
 #     dir_test = join(DIR_ROOT, "src/test/resources/data")
 #     dir_runtime = join(DIR_ROOT, "target/runtime-system/data")
 #     shutil.rmtree(dir_runtime, ignore_errors=True)
@@ -40,7 +43,7 @@ def test_warmup():
 #     assert success is True
 #
 #
-# def test_typical():
+# def test_run():
 #     data_public_len = bucket_length("data_public")
 #     data_private_len = bucket_length("data_private")
 #     process = subprocess.Popen("docker exec wrangle telegraf --debug --once",
@@ -51,7 +54,7 @@ def test_warmup():
 #     assert bucket_length("data_private") > data_private_len
 #
 #
-# def test_noop():
+# def test_rerun():
 #     data_public_len = bucket_length("data_public")
 #     data_private_len = bucket_length("data_private")
 #     process = subprocess.Popen("docker exec wrangle telegraf --debug --once",
@@ -62,7 +65,7 @@ def test_warmup():
 #     assert bucket_length("data_private") >= data_private_len
 #
 #
-# def test_reload():
+# def test_reprocess():
 #     data_public_len = bucket_length("data_public")
 #     data_private_len = bucket_length("data_private")
 #     process = subprocess.Popen("docker exec -e WRANGLE_DISABLE_DATA_DELTA=true wrangle telegraf --debug --once",

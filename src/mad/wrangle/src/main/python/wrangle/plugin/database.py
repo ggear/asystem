@@ -21,7 +21,7 @@ def database_open():
     global database_conn, DSN
     if database_conn is not None:
         database_close()
-    if config.disable_repo_uploads and config.disable_repo_downloads:
+    if config.disable_database_uploads and config.disable_database_downloads:
         return
     missing = [name for name in DATABASE_ENV_VARS if not os.environ.get(name)]
     if missing:

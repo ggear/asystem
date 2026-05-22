@@ -96,13 +96,11 @@ REPOS_EQUITY = plugin.Repos(
         "drive_folder": "1KJAS96r1I2js4TNCwns9LViEjuiCaZuR",
         "sheet_prices": "1tEWCNIb8UNFWCXKaUJ8eWBOR4Qw-VLb0rRFPQT5F9vM",
         "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
-        "database_table": "equity_preview",
     },
     release={
         "drive_folder": "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-",
         "sheet_prices": "1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM",
         "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
-        "database_table": "equity",
     },
 )
 
@@ -221,11 +219,10 @@ class Equity(plugin.Plugin):
                             stock_downloaded_count += 1
 
         # Download Stock and Fund Data
-        if not plugin.config.disable_repo_downloads:
+        if not plugin.config.disable_drive_downloads:
             files_cached = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED)
-            files_downloaded = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_DOWNLOADED)
             files = self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, download=True)
-            self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
+            self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED, -files_cached)
             for file_name in files:
                 if basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
@@ -240,7 +237,7 @@ class Equity(plugin.Plugin):
                     if files[file_name][0] and (plugin.config.force_reprocessing or files[file_name][1]):
                         stock_files[file_name] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED if files[file_name][1] else plugin.DownloadStatus.CACHED, file_name)
 
-        if not plugin.config.disable_source_downloads or not plugin.config.disable_repo_downloads:
+        if not plugin.config.disable_source_downloads or not plugin.config.disable_drive_downloads:
             new_data = plugin.config.force_reprocessing or \
                        (all([s.status != plugin.DownloadStatus.FAILED for s in stock_files.values()]) and any([s.status == plugin.DownloadStatus.DOWNLOADED for s in stock_files.values()])) or \
                        (all([s[0] for s in statement_files.values()]) and any([s[1] for s in statement_files.values()]))

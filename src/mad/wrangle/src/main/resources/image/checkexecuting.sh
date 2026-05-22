@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  true # TODO: Provide implementation
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && curl "http://localhost:${WRANGLE_HTTP_PORT}/online" | grep -q "online"
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [wrangle] is executing :)" >&2

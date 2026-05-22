@@ -238,6 +238,8 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/health", "/health/"):
             self._serve_health()
+        elif self.path in ("/online", "/online/"):
+            self._serve_online()
         elif self.path in ("/", "/history", "/history/"):
             self._serve_history()
         else:
@@ -245,13 +247,16 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _serve_health(self):
         healthy = self._history.is_healthy()
-        if healthy is None:
-            body, code = b"no data\n", 200
-        elif healthy:
-            body, code = b"healthy\n", 200
-        else:
-            body, code = b"unhealthy\n", 503
+        body, code = (b"healthy\n", 200) if healthy else (b"unhealthy\n", 503)
         self.send_response(code)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _serve_online(self):
+        body = b"online\n"
+        self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()

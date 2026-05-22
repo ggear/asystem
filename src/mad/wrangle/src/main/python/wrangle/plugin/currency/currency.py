@@ -40,12 +40,10 @@ REPOS_CURRENCY = plugin.Repos(
     preview={
         "drive_folder": "14TBFRwHLx0kRr_LwAjBL9jcnJJ9SXQNY",
         "sheet_key": "1AgJXUPCTjWV9KY_E60tzNTqltuXwJc65LNcza-7haCU",
-        "database_table": "currency_preview",
     },
     release={
         "drive_folder": "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE",
         "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
-        "database_table": "currency",
     },
 )
 

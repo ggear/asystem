@@ -86,8 +86,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_balances_local_blank_1(self):
         self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=False, force_downloads=False,
                         counter_asserts=ASSERT_NONE,
                         file_asserts={
                             "__balances_current.csv": [
@@ -99,8 +100,9 @@ class WrangleTest(unittest.TestCase):
     @pytest.mark.skip(reason="requires update")
     def test_balances_local_corrupt_1(self):
         self.run_plugin("balances", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -118,8 +120,9 @@ class WrangleTest(unittest.TestCase):
     @pytest.mark.skip(reason="requires update")
     def test_balances_local_corrupt_2(self):
         self.run_plugin("balances", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -138,8 +141,9 @@ class WrangleTest(unittest.TestCase):
     def test_balances_preview_replete_1(self):
         drive_delete(REPOS_BALANCES._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
         self.run_plugin("balances", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
+                        disable_sheet_uploads=False, disable_database_uploads=True, disable_drive_uploads=False,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_SOURCES: {
@@ -182,8 +186,9 @@ class WrangleTest(unittest.TestCase):
     @pytest.mark.skip(reason="requires update")
     def test_balances_release_replete_1(self):
         self.run_plugin("balances", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
-                        disable_source_downloads=False, disable_sheet_downloads=False, disable_database_downloads=False,
-                        disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
+                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -233,8 +238,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_blank_1(self):
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=False, force_downloads=False,
                         counter_asserts=ASSERT_NONE,
                         file_asserts={
                             "__currency_current.csv": [
@@ -245,8 +251,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_corrupt_1(self):
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -263,8 +270,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_corrupt_2(self):
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -283,8 +291,9 @@ class WrangleTest(unittest.TestCase):
         drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
         drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
         self.run_plugin("currency", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
+                        disable_sheet_uploads=False, disable_database_uploads=True, disable_drive_uploads=False,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_SOURCES: {
@@ -325,8 +334,9 @@ class WrangleTest(unittest.TestCase):
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     def test_currency_release_replete_1(self):
         self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
-                        disable_source_downloads=False, disable_sheet_downloads=False, disable_database_downloads=False,
-                        disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
+                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -375,8 +385,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_blank_1(self):
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=False, force_downloads=False,
                         counter_asserts=ASSERT_NONE,
                         file_asserts={
                             "__equity_current.csv": [
@@ -387,8 +398,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_corrupt_1(self):
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -405,8 +417,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_corrupt_2(self):
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_2", log_level="debug",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -423,8 +436,9 @@ class WrangleTest(unittest.TestCase):
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_partial_1(self):
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -462,8 +476,9 @@ class WrangleTest(unittest.TestCase):
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_partial_2(self):
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_2", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -501,8 +516,9 @@ class WrangleTest(unittest.TestCase):
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_partial_3(self):
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_3", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -540,8 +556,9 @@ class WrangleTest(unittest.TestCase):
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_replete_1(self):
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "replete_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -580,8 +597,9 @@ class WrangleTest(unittest.TestCase):
     def test_equity_preview_replete_1(self):
         drive_delete(REPOS_EQUITY._scopes["preview"]["drive_folder"], "yahoo_acdc_2018.csv")
         self.run_plugin("equity", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
+                        disable_sheet_uploads=False, disable_database_uploads=True, disable_drive_uploads=False,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_SOURCES: {
@@ -624,10 +642,10 @@ class WrangleTest(unittest.TestCase):
         self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
 
                         # TODO: Restore once database/sheets provisioned
-                        disable_source_downloads=False, disable_sheet_downloads=True, disable_database_downloads=True,
-                        # disable_source_downloads=False, disable_sheet_downloads=False, disable_database_downloads=False,
-
-                        disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=False,
+                        # disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -679,8 +697,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_blank_1(self):
         self.run_plugin("interest", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=False, force_downloads=False,
                         counter_asserts=ASSERT_NONE,
                         file_asserts={
                             "__interest_current.csv": [
@@ -691,8 +710,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_corrupt_1(self):
         self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -709,8 +729,9 @@ class WrangleTest(unittest.TestCase):
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_corrupt_2(self):
         self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=True, disable_repo_uploads=True, enable_rerun=False, force_reprocessing=True,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
@@ -728,8 +749,9 @@ class WrangleTest(unittest.TestCase):
     def test_interest_preview_replete_1(self):
         drive_delete(REPOS_INTEREST._scopes["preview"]["drive_folder"], "inflation.xlsx")
         self.run_plugin("interest", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
-                        disable_source_downloads=True, disable_sheet_downloads=True, disable_database_downloads=True,
-                        disable_repo_downloads=False, disable_repo_uploads=False, enable_rerun=True, force_reprocessing=False,
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
+                        disable_sheet_uploads=False, disable_database_uploads=True, disable_drive_uploads=False,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_SOURCES: {
@@ -768,8 +790,9 @@ class WrangleTest(unittest.TestCase):
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     def test_interest_release_replete_1(self):
         self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
-                        disable_source_downloads=False, disable_sheet_downloads=False, disable_database_downloads=False,
-                        disable_repo_downloads=False, disable_repo_uploads=True, enable_rerun=True, force_reprocessing=False,
+                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
@@ -1814,19 +1837,22 @@ class WrangleTest(unittest.TestCase):
             "Value": [float(p[1]) for p in date_value_pairs],
         }).with_columns(pl.col("Date").str.to_date())
 
-    def run_plugin(self, plugin_name, repo_scope=plugin.RepoScope.LOCAL, test_name="replete_1",
-                   log_level="info", prepare_only=False, enable_rerun=True,
-                   force_reprocessing=False, force_downloads=False,
-                   disable_source_downloads=False, disable_sheet_downloads=False, disable_database_downloads=False,
-                   disable_repo_downloads=True, disable_repo_uploads=True,
+    def run_plugin(self, plugin_name, repo_scope=plugin.RepoScope.LOCAL, test_name="replete_1", prepare_only=False, log_level="info",
+                   disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
+                   disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                   enable_rerun=True, force_reprocessing=False, force_downloads=False,
                    counter_asserts=None, custom_asserts=None, file_asserts=None):
         global _ASSERT_PASS_COL
         if file_asserts is None:
             file_asserts = {}
         if custom_asserts is None:
             custom_asserts = []
-        if not disable_repo_uploads and repo_scope == plugin.RepoScope.RELEASE:
-            raise ValueError("Cannot enable uploads when repo_scope is RELEASE")
+        if not disable_database_uploads:
+            raise ValueError("disable_database_uploads must be True")
+        if not disable_sheet_uploads and repo_scope == plugin.RepoScope.RELEASE:
+            raise ValueError("disable_sheet_uploads must be True when repo_scope is RELEASE")
+        if not disable_drive_uploads and repo_scope == plugin.RepoScope.RELEASE:
+            raise ValueError("disable_drive_uploads must be True when repo_scope is RELEASE")
         plugin.config.log_level = log_level
         plugin.config.repo_scope = repo_scope
         plugin.config.force_reprocessing = force_reprocessing
@@ -1834,8 +1860,10 @@ class WrangleTest(unittest.TestCase):
         plugin.config.disable_source_downloads = disable_source_downloads
         plugin.config.disable_sheet_downloads = disable_sheet_downloads
         plugin.config.disable_database_downloads = disable_database_downloads
-        plugin.config.disable_repo_downloads = disable_repo_downloads
-        plugin.config.disable_repo_uploads = disable_repo_uploads
+        plugin.config.disable_drive_downloads = disable_drive_downloads
+        plugin.config.disable_drive_uploads = disable_drive_uploads
+        plugin.config.disable_sheet_uploads = disable_sheet_uploads
+        plugin.config.disable_database_uploads = disable_database_uploads
         plugin.database_close()
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
@@ -1909,6 +1937,7 @@ class WrangleTest(unittest.TestCase):
                 self._assert_customs(custom_asserts, first_counters, second_counters, reload_counters)
                 print_log("Assert", f"Finished in [{time.time() - assert_started:.3f}] sec")
                 _print("FINISHED (assert)")
+
     def _save_pass_snapshot(self, plugin_module, pass_number):
         suffix_map = {1: "_1_run", 2: "_2_rerun", 3: "_3_reprocess"}
         for filename in os.listdir(plugin_module.local_cache):
@@ -2483,8 +2512,10 @@ def reset_config(log="warning"):
     plugin.config.repo_scope = plugin.RepoScope.RELEASE
     plugin.config.force_reprocessing = False
     plugin.config.force_downloads = False
-    plugin.config.disable_repo_uploads = True
-    plugin.config.disable_repo_downloads = True
+    plugin.config.disable_drive_uploads = True
+    plugin.config.disable_sheet_uploads = True
+    plugin.config.disable_database_uploads = True
+    plugin.config.disable_drive_downloads = True
     plugin.config.disable_source_downloads = False
     plugin.database_close()
 

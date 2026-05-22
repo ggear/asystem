@@ -1,1 +1,1 @@
-true # TODO: Provide implementation
+pgrep -f "/usr/local/bin/wrangle" >/dev/null

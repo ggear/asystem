@@ -1078,6 +1078,10 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                .format(service, working_path), module)
     _run_local(context, "echo 'SERVICE_VERSION_ABSOLUTE={}' >> {}/.env"
                .format(_get_versions()[0], working_path), module)
+    _run_local(context, "echo 'SERVICE_VERSION_PEP440={}' >> {}/.env"
+               .format(_get_versions()[0].replace("-SNAPSHOT", ".dev1"), working_path), module)
+    _run_local(context, "echo 'SERVICE_VERSION_SEMANTIC={}' >> {}/.env"
+               .format(_get_versions()[0].replace("-SNAPSHOT", "-dev.1"), working_path), module)
     _run_local(context, "echo 'SERVICE_VERSION_NUMERIC={}' >> {}/.env"
                .format(_get_versions()[1], working_path), module)
     _run_local(context, "echo 'SERVICE_VERSION_COMPACT={}' >> {}/.env"

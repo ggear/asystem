@@ -27,12 +27,10 @@ REPOS_BALANCES = plugin.Repos(
     preview={
         "drive_folder": "PLACEHOLDER",
         "sheet_key": "PLACEHOLDER",
-        "database_table": "balances_preview",
     },
     release={
         "drive_folder": "1VAwVLV6OykFFLqapwFnJUXB6msQOlAsZ",
         "sheet_key": "1m-NUkd3_uCiM5of6m1M57bvgkHXOL9NtgAXTDDDxgt8",
-        "database_table": "balances",
     },
 )
 

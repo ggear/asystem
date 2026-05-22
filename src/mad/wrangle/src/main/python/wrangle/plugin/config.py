@@ -84,11 +84,13 @@ class Config:
     repo_scope: RepoScope = RepoScope.RELEASE
     force_reprocessing: bool = False
     force_downloads: bool = False
-    disable_repo_uploads: bool = False
-    disable_repo_downloads: bool = False
-    disable_source_downloads: bool = False
-    disable_database_downloads: bool = False
+    disable_drive_uploads: bool = False
+    disable_sheet_uploads: bool = False
+    disable_database_uploads: bool = False
+    disable_drive_downloads: bool = False
     disable_sheet_downloads: bool = False
+    disable_database_downloads: bool = False
+    disable_source_downloads: bool = False
 
 
 config = Config()
@@ -113,9 +115,8 @@ def get_file(file_name):
     working = dirname(abspath(__file__))
     paths = [
         f"/root/{file_name}",
-        f"/etc/telegraf/{file_name}",
         f"{working}/../../../resources/{file_name}",
-        f"{working}/../../../resources/config/{file_name}",
+        f"{working}/../../../resources/image/{file_name}",
         f"{working}/../../../../../{file_name}",
     ]
     for path in paths:

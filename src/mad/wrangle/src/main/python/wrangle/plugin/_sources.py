@@ -353,7 +353,7 @@ class SourcesMixin(ContractMixin):
         started_time = time.time()
         local_path = abspath(f"{self.local_cache}/_database_{query_name.lower()}.csv")
         effective_force = force or config.force_downloads
-        if config.disable_repo_downloads or database.database_conn is None:
+        if config.disable_database_downloads or database.database_conn is None:
             if isfile(local_path):
                 self.print_log(f"File [{query_name}] cached at [{local_path}]", started=started_time, level="debug")
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -383,7 +383,7 @@ class SourcesMixin(ContractMixin):
             if data_df is None or len(data_df) == 0:
                 if ignore:
                     self.print_log(f"File [{query_name}] query returned no data")
-                    return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
+                    return DownloadResult(DownloadStatus.FAILED, None)
                 raise Exception(f"File [{query_name}] query returned no data")
             self.csv_write(data_df, local_path, print_verb="queried", started=started_time)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
@@ -394,13 +394,12 @@ class SourcesMixin(ContractMixin):
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return DownloadResult(DownloadStatus.FAILED, None)
 
-    def database_upload(self, data_df, metric_type="", period="", unit="", print_label=None):
+    def database_upload(self, data_df, table_name=None, metric_type="", period="", unit="", print_label=None):
         started_time = time.time()
         if len(data_df.columns) <= 1 or len(data_df) == 0:
             return
         date_col = data_df.columns[0]
-        remote_table = getattr(self.remote_repos, "database_table", None)
-        table_name = remote_table or self.name.lower()
+        table_name = table_name or self.name.lower()
         csv_path = abspath(f"{self.local_cache}/_database_{self.name.lower()}.csv")
         long_df = (data_df
                    .rename({date_col: "time"})
@@ -417,7 +416,7 @@ class SourcesMixin(ContractMixin):
             return
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns) - 1)
         self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
-        if config.disable_repo_uploads or database.database_conn is None:
+        if config.disable_database_uploads or database.database_conn is None:
             pk = ["time", "entity", "type", "period", "unit"]
             if csv_path in self._db_cache_dfs:
                 kept = self._db_cache_dfs[csv_path].join(long_df.select(pk), on=pk, how="anti")
@@ -595,6 +594,7 @@ class SourcesMixin(ContractMixin):
             self._sheet_cache_cleanup(name, drive_version_int)
             if read_cache and not write_cache and isfile(file_path):
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time, level="debug")
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         else:
             prefix = f"_sheet_{name}_v"
@@ -607,10 +607,12 @@ class SourcesMixin(ContractMixin):
             if read_cache and not write_cache and versioned_files:
                 _, file_path = versioned_files[0]
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time, level="debug")
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
             file_path = abspath(f"{self.local_cache}/_sheet_{name}.csv")
             if read_cache and not write_cache and isfile(file_path):
                 self.print_log(f"File [{workbook_name}] cached at [{file_path}]", started=started_time, level="debug")
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         file_path = abspath(f"{self.local_cache}/_sheet_{name}.csv") if drive_version is None else abspath(f"{self.local_cache}/_sheet_{name}_v{drive_version}.csv")
         gc = gspread.Client(auth=credentials)
@@ -688,7 +690,7 @@ class SourcesMixin(ContractMixin):
             all_values = [values_df.columns] + [['' if v is None else str(v) for v in row] for row in values_df.iter_rows()]
             drive_url = f"https://docs.google.com/spreadsheets/d/{drive_key}" if drive_key is not None else None
             drive_version: str | None = None
-            if drive_key is not None and not config.disable_repo_uploads:
+            if drive_key is not None and not config.disable_sheet_uploads:
                 credentials = self._sheets_credentials()
                 gc = gspread.Client(auth=credentials)
                 for sheet_upload_attempt in range(3):
@@ -906,14 +908,14 @@ class SourcesMixin(ContractMixin):
                 break
         self.print_log(f"Directory [{basename(local_dir).title()}] listed [{len(drive_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
         started_time = time.time()
-        force_download = config.force_downloads and not config.disable_repo_downloads
-        force_upload = config.force_downloads and not config.disable_repo_uploads
+        force_download = config.force_downloads and not config.disable_drive_downloads
+        force_upload = config.force_downloads and not config.disable_drive_uploads
         to_download = []
         for drive_file in drive_files:
             local_path = abspath(f"{local_dir}/{drive_file}").lower()
             drive_file_lower = drive_file.lower()
             needs_download = drive_file_lower not in local_files or (check and not force_download and drive_files[drive_file]["modified"] > local_files[drive_file_lower]["modified"])
-            if download and not config.disable_repo_downloads and (force_download or needs_download):
+            if download and not config.disable_drive_downloads and (force_download or needs_download):
                 to_download.append((drive_file, local_path))
             else:
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
@@ -973,7 +975,7 @@ class SourcesMixin(ContractMixin):
                             if local_files[local_file]["hash"] is None:
                                 local_files[local_file]["hash"] = file_hash(local_files[local_file]["path"])
                             needs_upload = drive_files[drive_match]["hash"] != local_files[local_file]["hash"]
-                    if (force_upload or needs_upload) and not config.disable_repo_uploads:
+                    if (force_upload or needs_upload) and not config.disable_drive_uploads:
                         try:
                             data = MediaFileUpload(local_path)
                             drive_id = drive_files[drive_match]["id"] if drive_match is not None else None

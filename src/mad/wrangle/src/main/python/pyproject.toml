@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wrangle"
+version = "$SERVICE_VERSION_PEP440"
+
+[project.scripts]
+wrangle = "wrangle.main:main"

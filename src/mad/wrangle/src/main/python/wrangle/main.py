@@ -47,14 +47,24 @@ def configure(argv=None):
         help="force all files to be re-downloaded even if cached",
     )
     parser.add_argument(
-        "--disable-repo-uploads",
+        "--enable-drive-uploads",
         action="store_true",
-        help="skip remote data repository uploads and write to local cache only",
+        help="enable Google Drive uploads",
     )
     parser.add_argument(
-        "--disable-repo-downloads",
+        "--enable-sheet-uploads",
         action="store_true",
-        help="skip remote data repository downloads and read from local cache only",
+        help="enable Google Sheets uploads",
+    )
+    parser.add_argument(
+        "--enable-database-uploads",
+        action="store_true",
+        help="enable database uploads",
+    )
+    parser.add_argument(
+        "--disable-drive-downloads",
+        action="store_true",
+        help="skip Google Drive downloads and read from local cache only",
     )
     parser.add_argument(
         "--disable-source-downloads",
@@ -121,11 +131,13 @@ def configure(argv=None):
     plugin.config.repo_scope = plugin.RepoScope(args.repo_scope)
     plugin.config.force_reprocessing = args.force_reprocessing
     plugin.config.force_downloads = args.force_downloads
-    plugin.config.disable_repo_uploads = args.disable_repo_uploads
-    plugin.config.disable_repo_downloads = args.disable_repo_downloads
-    plugin.config.disable_source_downloads = args.disable_source_downloads
-    plugin.config.disable_database_downloads = args.disable_database_downloads
+    plugin.config.disable_drive_uploads = not args.enable_drive_uploads
+    plugin.config.disable_sheet_uploads = not args.enable_sheet_uploads
+    plugin.config.disable_database_uploads = not args.enable_database_uploads
+    plugin.config.disable_drive_downloads = args.disable_drive_downloads
     plugin.config.disable_sheet_downloads = args.disable_sheet_downloads
+    plugin.config.disable_database_downloads = args.disable_database_downloads
+    plugin.config.disable_source_downloads = args.disable_source_downloads
     return args
 
 

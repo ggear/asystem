@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  true # TODO: Provide implementation
+  pgrep -f "/usr/local/bin/wrangle" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [wrangle] is alive :)" >&2
