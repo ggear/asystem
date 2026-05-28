@@ -5,6 +5,7 @@ sonarr
 sabnzbd
 grafana
 vernemq
+wrangle
 influxdb
 mlserver
 unpoller
