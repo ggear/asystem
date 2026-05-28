@@ -128,7 +128,7 @@ def get_file(file_name):
 def get_dir(dir_name):
     working = dirname(abspath(__file__))
     parent_paths = [
-        "/asystem/runtime",
+        "/asystem/mnt",
         f"{working}/../../../../../target",
     ]
     for parent_path in parent_paths:

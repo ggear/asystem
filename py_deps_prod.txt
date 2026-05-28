@@ -18,7 +18,7 @@ pathlib2==2.3.7.post1
 datetime==5.5
 pytz==2026.2
 python-dateutil==2.9.0.post0
-types-python-dateutil==2.9.0.20260508
+types-python-dateutil==2.9.0.20260518
 
 # Numeric/scientific
 numpy==2.4.5

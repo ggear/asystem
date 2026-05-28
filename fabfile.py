@@ -789,7 +789,7 @@ def _execute(context):
         if isfile(run_dev_path):
             _run_local(context, "run_dev.sh", module)
         else:
-            _run_local(context, "docker compose --ansi never up --force-recreate --remove-orphans", module)
+            _run_local(context, "docker compose --ansi never up --force-recreate --remove-orphans -rm", module)
         _print_footer(module, "execute")
         break
 

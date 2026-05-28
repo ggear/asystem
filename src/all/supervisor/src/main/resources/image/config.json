@@ -19,6 +19,7 @@
         "host": "macmini-mad",
         "services": [
           "plex",
+          "postgres",
           "sabnzbd",
           "supervisor",
           "wrangle"
@@ -54,7 +55,6 @@
           "internet",
           "mariadb",
           "nginx",
-          "postgres",
           "supervisor",
           "vernemq"
         ]
