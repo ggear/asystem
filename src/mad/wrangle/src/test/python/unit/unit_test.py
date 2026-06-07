@@ -814,19 +814,19 @@ class WrangleTest(unittest.TestCase):
                         file_asserts={
                             "__interest_current*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", contiguous="months"),
                                 assert_file_nones_per_row(exclude=r"Mean"),
                                 assert_file_equal(),
                             ],
                             "_sheet_rates_interest*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
+                                assert_file_dates(start_date="2015-02-01", contiguous="months", descending=True),
                                 assert_file_nones_per_row(exclude=r"Mean"),
                                 assert_file_equal(),
                             ],
                             "_database_interest*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", contiguous="months"),
                                 assert_file_nones_per_row(exclude=r"type=mean"),
                                 assert_file_equal(),
                             ],

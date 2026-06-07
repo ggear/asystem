@@ -140,7 +140,7 @@ def _setup(context):
                   ' && echo true || echo false',
                   hide='out').stdout.strip() != 'true':
         raise Exception("Could not install python")
-    _run_local(context, 'goenv install -s "${GO_VERSION}";'
+    _run_local(context, 'goenv install -s "${GO_VERSION}" > /dev/null;'
                         'go install gotest.tools/gotestsum@latest;'
                         'echo "Installed go-${GO_VERSION} at [${GOROOT}]"')
     if _run_local(context,

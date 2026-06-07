@@ -643,10 +643,23 @@ ORDER BY time
                     ]
                     if rate_mask_exprs:
                         equity_df = equity_df.with_columns(rate_mask_exprs)
-                    equity_df = _equity_forward_fill(
-                        equity_df,
-                        [f"{column_price} Spot" for column_price in DIMENSIONS_PRICE] + ["Currency Rate Spot"]
-                    )
+                    equity_df = equity_df.sort("Date").set_sorted("Date")
+                    input_fill_exprs = [
+                        pl.col(f"{ticker} {dimension}").forward_fill().alias(f"{ticker} {dimension}")
+                        for ticker in tickers
+                        for dimension in DIMENSIONS_PRICE + ["Currency Rate Spot"]
+                        if f"{ticker} {dimension}" in equity_df.columns
+                    ]
+                    if input_fill_exprs:
+                        equity_df = equity_df.with_columns(input_fill_exprs)
+                    spot_recompute_exprs = [
+                        (pl.col(f"{ticker} {column_price}") * pl.col(f"{ticker} Currency Rate Spot")).alias(f"{ticker} {column_price} Spot")
+                        for ticker in tickers
+                        for column_price in DIMENSIONS_PRICE
+                        if f"{ticker} {column_price} Spot" in equity_df.columns
+                    ]
+                    if spot_recompute_exprs:
+                        equity_df = equity_df.with_columns(spot_recompute_exprs)
                 _equity_print(equity_df, _dimensions=DIMENSIONS_PRICE_AUX_TYPES, print_label="Equity", print_verb="added FX rates", started=started_time)
 
                 # Derive Data

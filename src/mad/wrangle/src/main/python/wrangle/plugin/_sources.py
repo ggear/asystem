@@ -307,16 +307,27 @@ class SourcesMixin(ContractMixin):
                         last_date = datetime.strptime(data_df['Date'].iloc[-1], '%Y-%m-%d').date()
                         end_date = datetime.strptime(end, '%Y-%m-%d').date()
                         if now.year == end_date.year and now.month == end_date.month:
-                            threshold = now.date()
-                            count = 0
-                            while count < 2:
-                                threshold -= timedelta(days=1)
-                                if threshold.weekday() < 5:
-                                    count += 1
-                            if last_date < threshold:
-                                self.print_log(f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{(now.date() - last_date).days}] days before requested end [{now.date()}]", level="error")
-                        elif (end_date - last_date).days > 1:
-                            self.print_log(f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{(end_date - last_date).days}] days before requested end [{end_date}]", level="error")
+                            reference_date = (now - timedelta(days=1)).date() if now.strftime('%H:%M') < end_of_day else now.date()
+                        else:
+                            reference_date = end_date
+                        expected_date = reference_date
+                        while expected_date.weekday() >= 5:
+                            expected_date -= timedelta(days=1)
+                        missing_weekdays = []
+                        check_day = last_date + timedelta(days=1)
+                        while check_day <= expected_date:
+                            if check_day.weekday() < 5:
+                                missing_weekdays.append(check_day)
+                            check_day += timedelta(days=1)
+                        weekday_gap = len(missing_weekdays)
+                        warn_threshold = 2 if ticker.startswith('^') else 1
+                        error_threshold = 3 if ticker.startswith('^') else 2
+                        dec_25_26 = (weekday_gap == 2 and {(d.month, d.day) for d in missing_weekdays} == {(12, 25), (12, 26)} and missing_weekdays[0].year == missing_weekdays[1].year)
+                        day_word = "trading day" if weekday_gap == 1 else "trading days"
+                        if weekday_gap >= error_threshold and not dec_25_26:
+                            self.print_log(f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{weekday_gap}] {day_word} before expected [{expected_date}]", level="error")
+                        elif weekday_gap >= warn_threshold and not dec_25_26:
+                            self.print_log(f"File [{label}] stock query for ticker [{ticker}] missing data: last date [{last_date}] is [{weekday_gap}] {day_word} before expected [{expected_date}]", level="warn")
                     if len(data_df) > 0 and isfile(local_path):
                         prior_df = self.csv_read(local_path)
                         if len(prior_df) == len(data_df):

@@ -113,7 +113,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
 
     def file_list(self, file_dir, file_prefix, quiet=True):
         files = {}
-        for file_name in os.listdir(file_dir):
+        for file_name in sorted(os.listdir(file_dir)):
             if file_name.startswith(file_prefix):
                 file_path = str(join(file_dir, file_name))
                 files[file_path] = DownloadResult(DownloadStatus.CACHED, file_path)
