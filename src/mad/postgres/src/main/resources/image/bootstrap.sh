@@ -61,14 +61,10 @@ init_user_database() {
     local pgpass_file="${HOME}/.pgpass"
     touch "${pgpass_file}"
     chmod 600 "${pgpass_file}"
-    sed -i "/^${POSTGRES_SERVICE}:${POSTGRES_API_PORT}:[^:]*:${user}:/d" "${pgpass_file}"
-    echo "${POSTGRES_SERVICE}:${POSTGRES_API_PORT}:*:${user}:${password}" >> "${pgpass_file}"
+    grep -v "^${POSTGRES_SERVICE}:${POSTGRES_API_PORT}:[^:]*:${user}:" "${pgpass_file}" >"${pgpass_file}.tmp" && mv "${pgpass_file}.tmp" "${pgpass_file}"
+    echo "${POSTGRES_SERVICE}:${POSTGRES_API_PORT}:*:${user}:${password}" >>"${pgpass_file}"
   fi
 }
-
-init_user_database "${POSTGRES_USER_HASS}"    "${POSTGRES_KEY_HASS}"    "${POSTGRES_DATABASE_HASS}"
-init_user_database "${POSTGRES_USER_MLFLOW}"  "${POSTGRES_KEY_MLFLOW}"  "${POSTGRES_DATABASE_MLFLOW}"
-init_user_database "${POSTGRES_USER_WRANGLE}" "${POSTGRES_KEY_WRANGLE}" "${POSTGRES_DATABASE_WRANGLE}"
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
