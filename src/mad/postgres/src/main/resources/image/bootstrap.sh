@@ -66,6 +66,10 @@ init_user_database() {
   fi
 }
 
+init_user_database "${POSTGRES_USER_HASS}" "${POSTGRES_KEY_HASS}" "${POSTGRES_DATABASE_HASS}"
+init_user_database "${POSTGRES_USER_MLFLOW}" "${POSTGRES_KEY_MLFLOW}" "${POSTGRES_DATABASE_MLFLOW}"
+init_user_database "${POSTGRES_USER_WRANGLE}" "${POSTGRES_KEY_WRANGLE}" "${POSTGRES_DATABASE_WRANGLE}"
+
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
 echo "--------------------------------------------------------------------------------"

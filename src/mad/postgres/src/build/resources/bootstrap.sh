@@ -44,3 +44,7 @@ init_user_database() {
     echo "${POSTGRES_SERVICE}:${POSTGRES_API_PORT}:*:${user}:${password}" >>"${pgpass_file}"
   fi
 }
+
+init_user_database "${POSTGRES_USER_HASS}" "${POSTGRES_KEY_HASS}" "${POSTGRES_DATABASE_HASS}"
+init_user_database "${POSTGRES_USER_MLFLOW}" "${POSTGRES_KEY_MLFLOW}" "${POSTGRES_DATABASE_MLFLOW}"
+init_user_database "${POSTGRES_USER_WRANGLE}" "${POSTGRES_KEY_WRANGLE}" "${POSTGRES_DATABASE_WRANGLE}"
