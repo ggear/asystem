@@ -5,6 +5,12 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
+if [ -x /opt/homebrew/bin/brew ]; then
+	eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+	eval "$(/usr/local/bin/brew shellenv)"
+fi
+
 pull_repo "${ROOT_DIR}" "${1}" homeassistant homeassistant-core home-assistant/core "${HOMEASSISTANT_VERSION}"
 
 # NOTES: https://github.com/pkissling/clock-weather-card/releases
@@ -12,8 +18,9 @@ VERSION=ggear-patches
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock-weather-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
-yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --frozen-lockfile || corepack yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --frozen-lockfile || { echo "ERROR: yarn is required but was not found. Node (with corepack) should be installed. Try 'corepack enable'." >&2; exit 127; }
-yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build || corepack yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build || { echo "ERROR: yarn is required but was not found. Node (with corepack) should be installed. Try 'corepack enable'." >&2; exit 127; }
+if command -v yarn >/dev/null 2>&1; then YARN_CMD=(yarn); elif command -v corepack >/dev/null 2>&1; then YARN_CMD=(corepack yarn); elif [ -x /opt/homebrew/bin/yarn ]; then YARN_CMD=(/opt/homebrew/bin/yarn); elif [ -x /opt/homebrew/bin/corepack ]; then YARN_CMD=(/opt/homebrew/bin/corepack yarn); elif [ -x /opt/homebrew/bin/npx ]; then YARN_CMD=(/opt/homebrew/bin/npx -y yarn@1.22.22); else exit 127; fi
+"${YARN_CMD[@]}" --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install &&
+"${YARN_CMD[@]}" --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build || exit $?
 cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
 
 # NOTES: https://github.com/ashtonau/bom-radar-card/releases
