@@ -19,6 +19,27 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
+bash#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+echo "--------------------------------------------------------------------------------"
+echo "Service is starting ..."
+echo "--------------------------------------------------------------------------------"
+
+ASYSTEM_HOME=${ASYSTEM_HOME:-"/asystem/etc"}
+
+MESSAGE="Waiting for service to come alive ... "
+echo "${MESSAGE}"
+while ! "${ASYSTEM_HOME}/checkalive.sh"; do
+  echo "${MESSAGE}" && sleep 1
+done
+
+echo "--------------------------------------------------------------------------------"
+echo "Bootstrap starting ..."
+echo "--------------------------------------------------------------------------------"
+
 psql_su() {
   PGPASSWORD="${PGPASSWORD}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres "$@"
 }
@@ -58,21 +79,11 @@ init_user_database() {
   fi
 
   psql_su -t -c "ALTER DATABASE \"${database_quoted}\" OWNER TO \"${user_quoted}\""
-
-  if [ -n "${password}" ]; then
-    local pgpass_file="${HOME}/.pgpass"
-    touch "${pgpass_file}"
-    chmod 600 "${pgpass_file}"
-    grep -v "^${POSTGRES_SERVICE}:${POSTGRES_API_PORT}:[^:]*:${user}:" "${pgpass_file}" >"${pgpass_file}.tmp" && mv "${pgpass_file}.tmp" "${pgpass_file}"
-    echo "${POSTGRES_SERVICE}:${POSTGRES_API_PORT}:*:${user}:${password}" >>"${pgpass_file}"
-  fi
 }
 
 init_user_database "${POSTGRES_USER_HASS}" "${POSTGRES_KEY_HASS}" "${POSTGRES_DATABASE_HASS}"
 init_user_database "${POSTGRES_USER_MLFLOW}" "${POSTGRES_KEY_MLFLOW}" "${POSTGRES_DATABASE_MLFLOW}"
 init_user_database "${POSTGRES_USER_WRANGLE}" "${POSTGRES_KEY_WRANGLE}" "${POSTGRES_DATABASE_WRANGLE}"
-
-unset PGPASSWORD
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
