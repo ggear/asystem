@@ -1,3 +1,7 @@
+psql_su() {
+  PGPASSWORD="${PGPASSWORD}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d postgres "$@"
+}
+
 init_user_database() {
   local user="$1"
   local password="$2"
@@ -15,26 +19,24 @@ init_user_database() {
   database_lit=$(printf '%s' "${database}" | sed "s/'/''/g")
   password_lit=$(printf '%s' "${password}" | sed "s/'/''/g")
 
-  local psql_su="psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w"
-
   local role_exists db_exists
-  role_exists=$(${psql_su} -tA -c "SELECT 1 FROM pg_roles WHERE rolname = '${user_lit}' LIMIT 1")
+  role_exists=$(psql_su -tA -c "SELECT 1 FROM pg_roles WHERE rolname = '${user_lit}' LIMIT 1")
   if [ "${role_exists}" != "1" ]; then
     if [ -n "${password}" ]; then
-      ${psql_su} -t -c "CREATE USER \"${user_quoted}\" WITH PASSWORD '${password_lit}'"
+      psql_su -t -c "CREATE USER \"${user_quoted}\" WITH PASSWORD '${password_lit}'"
     else
-      ${psql_su} -t -c "CREATE USER \"${user_quoted}\""
+      psql_su -t -c "CREATE USER \"${user_quoted}\""
     fi
   elif [ -n "${password}" ]; then
-    ${psql_su} -t -c "ALTER USER \"${user_quoted}\" WITH PASSWORD '${password_lit}'"
+    psql_su -t -c "ALTER USER \"${user_quoted}\" WITH PASSWORD '${password_lit}'"
   fi
 
-  db_exists=$(${psql_su} -tA -c "SELECT 1 FROM pg_database WHERE datname = '${database_lit}' LIMIT 1")
+  db_exists=$(psql_su -tA -c "SELECT 1 FROM pg_database WHERE datname = '${database_lit}' LIMIT 1")
   if [ "${db_exists}" != "1" ]; then
-    ${psql_su} -t -c "CREATE DATABASE \"${database_quoted}\""
+    psql_su -t -c "CREATE DATABASE \"${database_quoted}\""
   fi
 
-  ${psql_su} -t -c "ALTER DATABASE \"${database_quoted}\" OWNER TO \"${user_quoted}\""
+  psql_su -t -c "ALTER DATABASE \"${database_quoted}\" OWNER TO \"${user_quoted}\""
 
   if [ -n "${password}" ]; then
     local pgpass_file="${HOME}/.pgpass"
@@ -48,3 +50,5 @@ init_user_database() {
 init_user_database "${POSTGRES_USER_HASS}" "${POSTGRES_KEY_HASS}" "${POSTGRES_DATABASE_HASS}"
 init_user_database "${POSTGRES_USER_MLFLOW}" "${POSTGRES_KEY_MLFLOW}" "${POSTGRES_DATABASE_MLFLOW}"
 init_user_database "${POSTGRES_USER_WRANGLE}" "${POSTGRES_KEY_WRANGLE}" "${POSTGRES_DATABASE_WRANGLE}"
+
+unset PGPASSWORD
