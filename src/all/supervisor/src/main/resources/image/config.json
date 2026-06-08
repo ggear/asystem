@@ -32,7 +32,6 @@
           "mlflow",
           "mlserver",
           "openra",
-          "rhasspy",
           "supervisor"
         ]
       },
