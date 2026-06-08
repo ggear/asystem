@@ -12,8 +12,8 @@ VERSION=ggear-patches
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock-weather-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
-yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --frozen-lockfile
-yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build
+yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --frozen-lockfile || corepack yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install --frozen-lockfile || { echo "ERROR: yarn is required but was not found. Install yarn or enable corepack (e.g. 'corepack enable')." >&2; exit 127; }
+yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build || corepack yarn --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build || { echo "ERROR: yarn is required but was not found. Install yarn or enable corepack (e.g. 'corepack enable')." >&2; exit 127; }
 cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
 
 # NOTES: https://github.com/ashtonau/bom-radar-card/releases
