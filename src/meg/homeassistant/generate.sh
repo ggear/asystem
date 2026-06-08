@@ -37,7 +37,8 @@ VERSION=v2.3.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "windrose-card" "ggear/windrose-card" "ggear-patches" "https://github.com/aukedejong/lovelace-windrose-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card"
-npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" install
+npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" ci --no-audit --no-fund
+echo "[windrose-card] running rollup build (it can pause briefly around circular dependency warnings)"
 npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" run build
 cp "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card/dist/windrose-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card/windrose-card.js"
 
@@ -46,14 +47,14 @@ VERSION=v4.2.1-202604
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-card-mod" "thomasloven/lovelace-card-mod" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
-cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/lovelace-card-mod/card-mod.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
+cp -f "${ROOT_DIR}/../../../.deps/homeassistant/lovelace-card-mod/card-mod.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/card-mod"
 
 # NOTES: https://github.com/thomasloven/lovelace-layout-card/releases
 VERSION=v2.4.7
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
-cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/lovelace-layout-card/layout-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
+cp -f "${ROOT_DIR}/../../../.deps/homeassistant/lovelace-layout-card/layout-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
 
 # NOTES: https://github.com/RomRider/apexcharts-card/releases
 VERSION=v2.2.3
