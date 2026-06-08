@@ -1,12 +1,12 @@
 # NOTES: https://docs.influxdata.com/influxdb3/enterprise/release-notes
-FROM influxdb:3.9.1-enterprise AS image_upstream
+FROM influxdb:3.9.3-enterprise AS image_upstream
 USER root
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.21-2ubuntu4 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install coreutils=9.4-3ubuntu6.2 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install less=590-2ubuntu2.1 && \
-    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install curl=8.5.0-2ubuntu10.8 && \
-    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.1.0016-1ubuntu7.11 && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install curl=8.5.0-2ubuntu10.9 && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.1.0016-1ubuntu7.14 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install jq=1.7.1-3ubuntu0.24.04.2 && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
