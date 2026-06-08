@@ -28,6 +28,7 @@ brew install \
   git \
   duf \
   nvm \
+  node \
   just \
   pigz \
   mole \
