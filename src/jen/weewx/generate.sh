@@ -5,8 +5,10 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
+
 pull_repo "${ROOT_DIR}" "${1}" weewx weewx-core weewx/weewx v${WEEWX_VERSION}
-[ $(ls ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*${WEEWX_VERSION}*.whl 2>/dev/null | wc -l) -eq 0 ] && cd ${ROOT_DIR}/../../../.deps/weewx/weewx-core && rm -rf dist && make clean pypi-package
+if command -v poetry >/dev/null 2>&1; then POETRY_DIR="$(dirname "$(command -v poetry)")"; elif [ -x /opt/homebrew/bin/poetry ]; then POETRY_DIR="/opt/homebrew/bin"; elif [ -x /usr/local/bin/poetry ]; then POETRY_DIR="/usr/local/bin"; elif [ -x /opt/homebrew/bin/brew ]; then /opt/homebrew/bin/brew install poetry && POETRY_DIR="/opt/homebrew/bin" || exit $?; elif [ -x /usr/local/bin/brew ]; then /usr/local/bin/brew install poetry && POETRY_DIR="/usr/local/bin" || exit $?; else exit 127; fi
+[ $(ls ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*${WEEWX_VERSION}*.whl 2>/dev/null | wc -l) -eq 0 ] && cd ${ROOT_DIR}/../../../.deps/weewx/weewx-core && rm -rf dist && PATH="${POETRY_DIR}:${PATH}" make clean pypi-package
 mkdir -p ${ROOT_DIR}/src/main/resources/image/install
 find ${ROOT_DIR}/src/main/resources/image/install -type f ! -name "weewx*${WEEWX_VERSION}*whl" -exec rm {} \;
 cp -nv ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*${WEEWX_VERSION}*.whl ${ROOT_DIR}/src/main/resources/image/install
