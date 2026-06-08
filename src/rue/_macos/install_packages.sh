@@ -8,57 +8,57 @@ brew update
 brew install --cask \
   vlc \
   plex \
+  claude \
   openra \
   ghostty \
-  claude \
   claude-code \
-  docker-desktop \
   google-drive \
-  mqtt-explorer \
-  google-chrome \
   sublime-text \
+  google-chrome \
+  mqtt-explorer \
+  docker-desktop \
   keepingyouawake
 brew install \
-  pv \
-  jq \
-  yq \
-  xq \
-  rg \
   gh \
-  git \
+  jq \
+  pv \
+  rg \
+  xq \
+  yq \
   duf \
+  git \
+  mpv \
   nvm \
-  node \
-  just \
-  pigz \
-  mole \
-  grep \
   bash \
   btop \
+  grep \
   htop \
+  just \
+  mole \
+  node \
+  pigz \
   wget \
+  goenv \
+  pyenv \
   shfmt \
   watch \
-  skopeo \
-  rename \
-  goenv \
-  gotestsum \
-  pyenv \
-  pyenv-virtualenv \
+  ffmpeg \
   netcat \
+  poetry \
+  rename \
   rustup \
-  exiftool \
-  poppler \
+  skopeo \
   telnet \
   poppler \
-  regclient \
-  mosquitto \
+  poppler \
+  exiftool \
+  gotestsum \
   coreutils \
   findutils \
-  mpv \
-  ffmpeg \
   mediainfo \
   mkvtoolnix \
+  mosquitto \
+  regclient \
   pkg-config \
   docker-slim \
   hudochenkov/sshpass/sshpass
