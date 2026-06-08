@@ -11,4 +11,4 @@ python-calamine==0.6.2
 adbc-driver-postgresql==1.11.0
 gspread==5.12.4
 google-auth==2.53.0
-google-api-python-client==2.196.0
+google-api-python-client==2.197.0

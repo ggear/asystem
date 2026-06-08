@@ -237,8 +237,8 @@ def _pull(context):
 
 def _list(context):
     _print_header("asystem", "list modules")
-    group_service_dict = {}
-    host_group_service_dict = {}
+    group_service_dict: Dict[str, set[str]] = {}
+    host_group_service_dict: Dict[str, Dict[str, Dict[str, str]]] = {}
     for module in _get_modules(context, ".group", filter_changes=False):
         group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
         group = group_path.read_text().strip()
@@ -316,16 +316,18 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                     if config_match is not None:
                         docker_image_metadata_dict = {"namespace": "library", "skipped": False} \
                                                      | config_match.groupdict()
+                        version_current = str(docker_image_metadata_dict.get("version_current", ""))
                         docker_image_metadata_dict["version_current"] = varsubst.varsubst(
-                            docker_image_metadata_dict["version_current"],
+                            version_current,
                             resolver=RetainNotDefinedDictResolver(config_env))
-                        if not docker_image_metadata_dict["skipped"]:
+                        if not bool(docker_image_metadata_dict["skipped"]):
+                            version_current = str(docker_image_metadata_dict["version_current"])
                             docker_image_metadata_version_tokens = \
-                                docker_image_metadata_dict["version_current"].split('-', 1)
+                                version_current.split('-', 1)
                             docker_image_metadata_version_suffix = "$" \
                                 if len(docker_image_metadata_version_tokens) == 1 else \
                                 (".*-" + docker_image_metadata_version_tokens[-1] + "$")
-                            if docker_image_metadata_dict["version_current"] == "latest":
+                            if version_current == "latest":
                                 docker_image_metadata_dict["version_regex"] = "latest"
                             else:
                                 for config_version_regex in [
@@ -334,13 +336,13 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                     r"^([0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
                                     r"^([0-9]*)" + docker_image_metadata_version_suffix,
                                 ]:
-                                    if re.match(config_version_regex, docker_image_metadata_dict["version_current"]):
+                                    if re.match(config_version_regex, version_current):
                                         docker_image_metadata_dict["version_regex"] = config_version_regex
                                         break
                         return docker_image_metadata_dict
             return docker_image_metadata_dict
 
-    version_messages = {type: [] for type in version_types}
+    version_messages = {_type: [] for _type in version_types}
     module_generate_stdout = {}
     for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
         _print_header(module, "generate env", host=filter_host)
@@ -424,6 +426,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                     docker_build_variables.append("-e ASYSTEM_{}={}" \
                                                   .format(env_global_key, env_global_value))
             with open(docker_deps_script_path, "w+") as docker_deps_script_file:
+                # noinspection HttpUrlsUsage
                 docker_deps_script_file.write("""
 #!/bin/bash
 #######################################################################################
@@ -566,23 +569,27 @@ docker rm -vf "$CONTAINER_NAME"
                     and not docker_image_metadata["skipped"]:
                 docker_image_tags_command = "regctl -v error tag ls {}/{}" \
                     .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
-                docker_image_tags = _run_local(context, docker_image_tags_command, hide='out').stdout.splitlines()
-                if docker_image_tags is None or len(docker_image_tags) == 0:
+                docker_image_tags_stdout = _run_local(context, docker_image_tags_command, hide='out').stdout
+                docker_image_tags = str(docker_image_tags_stdout).splitlines() if docker_image_tags_stdout else []
+                if len(docker_image_tags) == 0:
                     version_messages["errors"].append(version_formats[2].format(
                         module, "Could not determine versions from Github repository command [{}]" \
                             .format(docker_image_tags_command)))
                 docker_image_metadata["version_upstream"] = docker_image_metadata["version_current"]
                 if docker_image_metadata["version_upstream"] != "latest":
+                    version_regex = str(docker_image_metadata["version_regex"])
                     for docker_image_version in docker_image_tags:
                         if not any(_ignored.lower() in docker_image_version.lower() \
                                    for _ignored in docker_image_version_ignores):
                             docker_image_version_match = \
-                                re.match(docker_image_metadata["version_regex"], docker_image_version)
+                                re.match(version_regex, docker_image_version)
+                            version_upstream_match = re.match(
+                                version_regex, str(docker_image_metadata["version_upstream"])
+                            )
                             if docker_image_version_match is not None and \
+                                    version_upstream_match is not None and \
                                     packaging.version.parse(docker_image_version_match.groups()[0]) >= \
-                                    packaging.version.parse(re.match(docker_image_metadata["version_regex"],
-                                                                     docker_image_metadata[
-                                                                         "version_upstream"]).groups()[0]):
+                                    packaging.version.parse(version_upstream_match.groups()[0]):
                                 docker_image_metadata["version_upstream"] = docker_image_version
                 if "version_upstream" in docker_image_metadata:
                     version_type = 0 \
@@ -603,8 +610,10 @@ docker rm -vf "$CONTAINER_NAME"
             elif exists(docker_file_path) or exists(docker_compose_path):
                 if docker_image_metadata is None or \
                         "skipped" not in docker_image_metadata or not docker_image_metadata["skipped"]:
+                    repository = str(docker_image_metadata.get("repository", "unknown")) \
+                        if isinstance(docker_image_metadata, dict) else "unknown"
                     version_messages["errors"].append(version_formats[2].format(
-                        module + ":" + docker_image_metadata["repository"],
+                        module + ":" + repository,
                         "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
         for lang, version in {
             "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' '",
@@ -612,7 +621,7 @@ docker rm -vf "$CONTAINER_NAME"
             # "rust": r"curl -s https://api.github.com/repos/rust-lang/rust/releases | jq -r '.[] | "\(.published_at) \(.tag_name)"' | grep -E '^202[0-9]' | sort -r | awk '{print $2}'",
         }.items():
             lang_version_installed = GLOBAL_ENV["{}_VERSION".format(lang.upper())]
-            lang_version_upstream = _run_local(context, version, module, hide='out').stdout.strip()
+            lang_version_upstream = _run_local(context, version, hide='out').stdout.strip()
             if lang_version_upstream != lang_version_installed:
                 version_messages["to update"].append(version_formats[1].format(
                     "*/{}".format(lang), lang_version_installed,
@@ -628,11 +637,11 @@ docker rm -vf "$CONTAINER_NAME"
                     version_messages["pinned"].append(message)
         for message in version_messages["pinned"]:
             version_messages["to update"].remove(message)
-        for type in version_types:
-            _print_header("asystem", "pull versions {}".format(type), host=filter_host)
-            for message in sorted(version_messages[type]):
+        for version_type in version_types:
+            _print_header("asystem", "pull versions {}".format(version_type), host=filter_host)
+            for message in sorted(version_messages[version_type]):
                 print(message)
-            _print_footer("asystem", "pull versions {}".format(type), host=filter_host)
+            _print_footer("asystem", "pull versions {}".format(version_type), host=filter_host)
 
 
 def _clean(context, filter_module=None, filter_host=None):
@@ -662,7 +671,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "src", filter_module=filter_module):
         _print_header(module, "build compile", host=filter_host)
 
-        # TODO: Re-enable once I have cleaned up python codebases
+        # TODO: Re-enable once I have cleaned up Python codebases
         # if isdir(join(ROOT_MODULE_DIR, module, "src/main/python")):
         # _print_line("Linting sources ...")
         # _run_local(context, "pylint --disable=all src/main/python/*", module)
@@ -733,6 +742,7 @@ def _unittest(context, filter_module=None):
         _print_footer(module, "unittest")
 
 
+# noinspection PyUnusedLocal
 def _package(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package", host=filter_host)
@@ -803,12 +813,12 @@ def _deploy(context):
 
 def _release(context):
     modules = _get_modules(context)
-    for module in modules:
+    for release_module in modules:
         if FAB_SKIP_TESTS not in os.environ:
-            _generate(context, filter_module=module)
-            _build(context, filter_module=module)
-            _unittest(context, filter_module=module)
-            _systest(context, filter_module=module)
+            _generate(context, filter_module=release_module)
+            _build(context, filter_module=release_module)
+            _unittest(context, filter_module=release_module)
+            _systest(context, filter_module=release_module)
     _get_versions_next_release()
     if FAB_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
@@ -818,66 +828,68 @@ def _release(context):
             _get_versions()[0],
             _get_versions()[0]
         ), env={"HOME": os.environ["HOME"]})
-    for module in modules:
-        for host in _get_hosts(module):
+    for release_module in modules:
+        for host in _get_hosts(release_module):
             if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == _get_host_label(host):
-                _clean(context, filter_module=module, filter_host=host)
-                _generate(context, filter_module=module, filter_host=host, is_release=True)
-                _build(context, filter_module=module, filter_host=host, is_release=True)
-                _package(context, filter_module=module, filter_host=host, is_release=True)
-                _print_header(module, "release", host=host)
+                _clean(context, filter_module=release_module, filter_host=host)
+                _generate(context, filter_module=release_module, filter_host=host, is_release=True)
+                _build(context, filter_module=release_module, filter_host=host, is_release=True)
+                _package(context, filter_module=release_module, filter_host=host, is_release=True)
+                _print_header(release_module, "release", host=host)
                 host_up = True
+                ssh_pass: Optional[str] = None
+                # noinspection PyBroadException
                 try:
                     ssh_pass = _ssh_pass(context, host)
                 except:
                     host_up = False
-                group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
+                group_path = Path(join(ROOT_MODULE_DIR, release_module, ".group"))
                 if group_path.exists() and group_path.read_text().strip().isnumeric() and \
-                        int(group_path.read_text().strip()) >= 0 and host_up:
-                    _run_local(context, "mkdir -p target/release", module)
+                        int(group_path.read_text().strip()) >= 0 and host_up and ssh_pass is not None:
+                    _run_local(context, "mkdir -p target/release", release_module)
                     _run_local(context,
-                               "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
-                    if isfile(join(ROOT_MODULE_DIR, module, "Dockerfile")):
-                        file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
+                               "cp -rvfp docker-compose.yml target/release", release_module, hide='err', warn=True)
+                    if isfile(join(ROOT_MODULE_DIR, release_module, "Dockerfile")):
+                        file_image = "{}-{}.tar.gz".format(_name(release_module), _get_versions()[0])
                         print("docker -> target/release/{}".format(file_image))
                         _run_local(context, "docker image save {}:{} | pigz -9 > {}"
                                    .format(
-                            _name(module),
+                            _name(release_module),
                             _get_versions()[0],
                             file_image
-                        ), join(module, "target/release"))
-                    if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):
-                        _run_local(context, "cp -rvfp target/package/main/resources/. target/release", module)
-                    _run_local(context, "mkdir -p target/release/data", module)
-                    _run_local(context, "mkdir -p target/release/image", module)
-                    module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
+                        ), join(release_module, "target/release"))
+                    if glob.glob(join(ROOT_MODULE_DIR, release_module, "target/package/main/resources/*")):
+                        _run_local(context, "cp -rvfp target/package/main/resources/. target/release", release_module)
+                    _run_local(context, "mkdir -p target/release/data", release_module)
+                    _run_local(context, "mkdir -p target/release/image", release_module)
+                    module_go_main_path = join(ROOT_MODULE_DIR, release_module, "src/main/go", _get_service(release_module))
                     if isdir(module_go_main_path):
                         target_arch = _get_host_metadata(_get_host_label(host))[1]
                         if target_arch == "x86_64":
                             target_arch = "amd64"
                         target_os = _get_host_metadata(_get_host_label(host))[3]
-                        module_go_bin = join(ROOT_MODULE_DIR, module, "target/release/data")
-                        _run_local(context, "mkdir -p {}".format(module_go_bin), module)
+                        module_go_bin = join(ROOT_MODULE_DIR, release_module, "target/release/data")
+                        _run_local(context, "mkdir -p {}".format(module_go_bin), release_module)
                         _run_local(context, "GOOS={} GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
                             target_os,
                             target_arch,
-                            join(ROOT_MODULE_DIR, module, "target/go/cache"),
+                            join(ROOT_MODULE_DIR, release_module, "target/go/cache"),
                             module_go_bin,
                             module_go_bin,
                         ), module_go_main_path)
-                    Path(join(ROOT_MODULE_DIR, module, "target/release/hosts")) \
+                    Path(join(ROOT_MODULE_DIR, release_module, "target/release/hosts")) \
                         .write_text(
                         "\n".join(["{}-{}".format(_get_host_metadata(host)[0], host) for host in HOSTS]) + "\n")
-                    if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/install*")):
-                        _run_local(context, "cp -rvfp target/package/install* target/release", module)
+                    if glob.glob(join(ROOT_MODULE_DIR, release_module, "target/package/install*")):
+                        _run_local(context, "cp -rvfp target/package/install* target/release", release_module)
                     else:
-                        _run_local(context, "touch target/release/install.sh", module)
-                    install = "{}/{}/{}".format(INSTALL_DIR, _get_service(module), _get_versions()[0])
+                        _run_local(context, "touch target/release/install.sh", release_module)
+                    install = "{}/{}/{}".format(INSTALL_DIR, _get_service(release_module), _get_versions()[0])
                     print("Copying release to {} ... ".format(host))
                     _run_local(context, "{}ssh -q root@{}.local 'rm -rf {} && mkdir -p {}'"
                                .format(ssh_pass, host, install, install))
                     _run_local(context, "{}scp -qpr target/release/.  root@{}.local:{}"
-                               .format(ssh_pass, host, install), module)
+                               .format(ssh_pass, host, install), release_module)
                     print("Installing release to {} ... ".format(host))
                     _run_local(context, "{}ssh -q root@{}.local 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
                                .format(ssh_pass, host, install, install, install))
@@ -890,12 +902,12 @@ def _release(context):
                                         "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
                                         "xargs rm -rf'"
                                .format(ssh_pass, host, install, install), hide='err', warn=True)
-                    install_local_path = Path(join(ROOT_MODULE_DIR, module, "install_local.sh"))
+                    install_local_path = Path(join(ROOT_MODULE_DIR, release_module, "install_local.sh"))
                     if install_local_path.exists():
                         _run_local(context, install_local_path)
                 else:
                     print("Module ignored")
-                _print_footer(module, "release", host=host)
+                _print_footer(release_module, "release", host=host)
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
@@ -1155,6 +1167,7 @@ def _get_env(env_path):
     return env
 
 
+# noinspection PyUnusedLocal
 def _substitute_env(context, env_path, source_path, destination_path, header=None):
     env = _get_env(env_path)
     env.update(GLOBAL_ENV)
@@ -1244,6 +1257,7 @@ def _run_local(context, command, working=".", **kwargs):
         return context.run(". {} && {}".format(GLOBAL_ENV_PATH, command), **kwargs)
 
 
+# noinspection PyUnusedLocal
 def _run_external(context, command, working=".", env_overrides=None):
     del context
     cwd = ROOT_DIR if working == "." else join(ROOT_MODULE_DIR, working)
@@ -1266,7 +1280,8 @@ def _run_external(context, command, working=".", env_overrides=None):
         stderr=subprocess.STDOUT,
     )
     assert process.stdout is not None
-    for chunk in iter(lambda: process.stdout.read(8192), b""):
+    process_stdout = process.stdout
+    for chunk in iter(lambda: process_stdout.read(8192), b""):
         sys.stdout.buffer.write(chunk)
         sys.stdout.buffer.flush()
     exit_code = process.wait()
@@ -1361,8 +1376,8 @@ FOOTER = \
 
 
 class RetainNotDefinedDictResolver(BaseResolver):
-    def __init__(self, dict: Dict[str, Any]) -> None:
-        self.dict = dict
+    def __init__(self, _dict: Dict[str, Any]) -> None:
+        self.dict = _dict
 
     def resolve(self, key: str) -> Optional[Any]:
         if key in self.dict:
