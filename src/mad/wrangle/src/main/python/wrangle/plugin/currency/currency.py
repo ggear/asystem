@@ -1,7 +1,7 @@
 import datetime
 import time
 from collections import OrderedDict
-from os.path import *
+from os.path import join
 
 import polars as pl
 import polars.selectors as cs
@@ -148,7 +148,7 @@ class Currency(plugin.Plugin):
             started_time = time.time()
             if len(rba_delta_df):
                 rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Currency')
+                self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Currency', add_filter=True)
                 self.database_upload(rba_current_df.select(['Date'] + PAIRS),
                                      metric_type="snapshot", period="1d", unit="$",
                                      print_label="Currency_1_Day_Snapshot")
@@ -170,4 +170,4 @@ class Currency(plugin.Plugin):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Currency", REPOS_CURRENCY)
+        super().__init__("Currency", order=10, repos=REPOS_CURRENCY, database=True)

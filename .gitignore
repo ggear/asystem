@@ -16,7 +16,6 @@ src/*/*/.env
 .settings
 .classpath
 .idea
-CLAUDE.md
 .deps
 *.iml
 .id_rsa
@@ -44,6 +43,7 @@ CLAUDE.md
 *.pipeout
 .pytest_cache
 .claude
+CLAUDE.md
 license
 nohup.out
 Cargo.lock

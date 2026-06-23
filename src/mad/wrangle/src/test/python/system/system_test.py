@@ -1,113 +1,220 @@
+import contextlib
+import functools
 import glob
-import shutil
+import importlib
+import inspect
+import json
+import os
+import re
 import subprocess
 import sys
+import threading
 import time
+import urllib.request
+from os.path import abspath, dirname, join, realpath
+
+import psycopg  # type: ignore[import-untyped]
+import pytest
+from psycopg import sql as psycopg_sql  # type: ignore[import-untyped]
 
 sys.path.append('../../../main/python')
 
-import os
-import pytest
 from wrangle import plugin
-from os.path import *
+from wrangle.plugin import database
 
-TIMEOUT_WARMUP = 30
+TIMEOUT_SECONDS = 10
+TIMEOUT_QUERY_SECONDS = 5
+TIMEOUT_WRANGLE_RUN_SECONDS = 120
+
+HTTP_PORT = int(os.environ.get("WRANGLE_HTTP_PORT", "32410"))
+
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+
+_db_counts_after_run: dict[str, int] = {}
 
 for key, value in list(plugin.load_profile(plugin.get_file(".env")).items()):
     os.environ[key] = value
 
+
 def test_warmup():
-    None
-    
-# def test_warmup():
-#     dir_test = join(DIR_ROOT, "src/test/resources/data")
-#     dir_runtime = join(DIR_ROOT, "target/runtime-system/data")
-#     shutil.rmtree(dir_runtime, ignore_errors=True)
-#     os.makedirs(dir_runtime)
-#     for dir_typical in glob.glob("{}/*/success_typical".format(dir_test)):
-#         shutil.copytree(dir_typical, join(dir_runtime, basename(dirname(dir_typical))))
-#     success = False
-#     time_start_warmup = time.time()
-#     while not success and (time.time() - time_start_warmup) < TIMEOUT_WARMUP:
-#         try:
-#             success = query("""
-# from(bucket: "data_public")
-#   |> range(start: -10ms, stop: now())
-#   |> filter(fn: (r) => r._measurement == "a_non_existent_metric")
-# """) is not None
-#         except Exception as exception:
-#             print(exception)
-#             print("Waiting for influxdb server to come up ...")
-#             time.sleep(1)
-#     assert success is True
-#
-#
-# def test_run():
-#     data_public_len = bucket_length("data_public")
-#     data_private_len = bucket_length("data_private")
-#     process = subprocess.Popen("docker exec wrangle telegraf --debug --once",
-#                                shell=True, stdout=subprocess.PIPE)
-#     process.wait()
-#     assert process.returncode == 0
-#     assert bucket_length("data_public") > data_public_len
-#     assert bucket_length("data_private") > data_private_len
-#
-#
-# def test_rerun():
-#     data_public_len = bucket_length("data_public")
-#     data_private_len = bucket_length("data_private")
-#     process = subprocess.Popen("docker exec wrangle telegraf --debug --once",
-#                                shell=True, stdout=subprocess.PIPE)
-#     process.wait()
-#     assert process.returncode == 0
-#     assert bucket_length("data_public") >= data_public_len
-#     assert bucket_length("data_private") >= data_private_len
-#
-#
-# def test_reprocess():
-#     data_public_len = bucket_length("data_public")
-#     data_private_len = bucket_length("data_private")
-#     process = subprocess.Popen("docker exec -e WRANGLE_DISABLE_DATA_DELTA=true wrangle telegraf --debug --once",
-#                                shell=True, stdout=subprocess.PIPE)
-#     process.wait()
-#     assert process.returncode == 0
-#     assert bucket_length("data_public") > data_public_len
-#     assert bucket_length("data_private") > data_private_len
-#
-#
-# def bucket_length(bucket):
-#     rows = query("""
-# from(bucket: "{}")
-#   |> range(start: -20y, stop: now())
-#   |> group()
-#   |> count()
-# """.format(bucket))
-#     length = 0
-#     if rows is not None and len(rows) > 0 and len(rows[0]) > 0:
-#         length = int(rows[0][0])
-#     print("Bucket [{}] length [{}]".format(bucket, length))
-#     return length
-#
-#
-# def query(flux):
-#     target = "http://{}:{}/api/v2/query?org={}".format(
-#         os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_HTTP_PORT"], os.environ["INFLUXDB_ORG"])
-#     response = post(url=target, headers={
-#         'Accept': 'application/csv',
-#         'Content-type': 'application/vnd.flux',
-#         'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
-#     }, data=flux)
-#     if response.status_code != 200:
-#         raise Exception("Query failed:{}with server [{}] and error code [{}]".format(flux, target, response.status_code))
-#     rows = []
-#     for row in response.text.strip().split("\n")[1:]:
-#         cols = row.strip().split(",")
-#         if len(cols) > 5:
-#             rows.append(cols[5:])
-#     print("Executed query:{}with server [{}], status code [{}] and response:\n{}"
-#           .format(flux, target, response.status_code, tabulate(rows, tablefmt="grid")))
-#     return rows
+    warmup_succeeded = False
+    warmup_started_time = time.time()
+    while not warmup_succeeded and (time.time() - warmup_started_time) < TIMEOUT_SECONDS:
+        try:
+            with connect() as database_connection, database_connection.cursor() as database_cursor:
+                # noinspection PyUnresolvedReferences
+                database_cursor.execute("SELECT 1")
+                query_row: tuple = database_cursor.fetchone() or (None,)
+                warmup_succeeded = query_row[0] == 1
+        except Exception as exception:
+            print(exception)
+            print("Waiting for postgres server to come up ...")
+            time.sleep(1)
+    assert warmup_succeeded is True
+
+
+def test_run():
+    counters = run_wrangle_once()
+    assert counters["Data"]["Delta Rows"] > 0
+    assert counters["Data"]["Current Rows"] > 0
+    assert counters["Data"]["Current Rows"] > counters["Data"]["Previous Rows"]
+    assert counters["Sources"]["Downloaded"] > 0
+    assert counters["Sources"]["Errored"] == 0
+    assert counters["Data"]["Errored"] == 0
+    assert counters["Egress"]["Errored"] == 0
+    assert counters["Egress"]["Database Rows"] > 0
+    _db_counts_after_run.update({table: query_table_count(table) for table in _database_plugin_tables()})
+    assert all(count > 0 for count in _db_counts_after_run.values())
+
+
+def test_rerun():
+    counters = run_wrangle_once()
+    assert counters["Data"]["Delta Rows"] == 0
+    assert counters["Data"]["Current Rows"] > 0
+    assert counters["Data"]["Current Rows"] == counters["Data"]["Previous Rows"]
+    assert counters["Sources"]["Downloaded"] == 0
+    assert counters["Sources"]["Errored"] == 0
+    assert counters["Data"]["Errored"] == 0
+    assert counters["Egress"]["Errored"] == 0
+    assert counters["Egress"]["Database Rows"] == 0
+    for table, count in _db_counts_after_run.items():
+        assert query_table_count(table) == count
+
+
+def test_reprocess():
+    counters = run_wrangle_once(force_reprocessing=True)
+    assert counters["Data"]["Delta Rows"] > 0
+    assert counters["Data"]["Current Rows"] > 0
+    assert counters["Data"]["Previous Rows"] == 0
+    assert counters["Sources"]["Downloaded"] == 0
+    assert counters["Sources"]["Errored"] == 0
+    assert counters["Data"]["Errored"] == 0
+    assert counters["Egress"]["Errored"] == 0
+    assert counters["Egress"]["Database Rows"] > 0
+    for table, count in _db_counts_after_run.items():
+        assert query_table_count(table) == count
+
+
+_DOCKER_LOG_SKIP = (": Starting ...", ": Environment:", "]:   WRANGLE_")
+
+
+def _stream_docker_logs(log_process: subprocess.Popen) -> None:  # type: ignore[type-arg]
+    for line in log_process.stdout:  # type: ignore[union-attr]
+        if not any(skip in line for skip in _DOCKER_LOG_SKIP):
+            sys.stdout.write(line)
+            sys.stdout.flush()
+
+
+def run_wrangle_once(force_reprocessing=False):
+    caller = inspect.stack()[1].function
+    separator = "#" * 80
+    print(f"\n{separator}\n")
+    print(f"system_test.py::{caller}")
+    print(f"\n{separator}\n")
+    sys.stdout.flush()
+    body = json.dumps({"force_reprocessing": force_reprocessing}).encode()
+    request = urllib.request.Request(
+        f"http://localhost:{HTTP_PORT}/api/v1/run",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    log_process = subprocess.Popen(["docker", "logs", "-f", "wrangle"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    log_thread = threading.Thread(target=_stream_docker_logs, args=(log_process,), daemon=True)
+    log_thread.start()
+    try:
+        response = urllib.request.urlopen(request, timeout=TIMEOUT_WRANGLE_RUN_SECONDS + TIMEOUT_SECONDS)
+        return json.loads(response.read())["counters"]["summary"]
+    finally:
+        log_process.kill()
+        log_process.wait()
+        log_thread.join(timeout=2)
+        print()
+        _exec_dump_database_queries()
+
+
+_SQL_KEYWORDS = ["FROM", "WHERE", "GROUP BY", "ORDER BY", "LIMIT", "HAVING"]
+
+
+def _format_cell(cell: object) -> object:
+    if hasattr(cell, "isoformat"):
+        return cell.isoformat()  # type: ignore[union-attr]
+    if isinstance(cell, float):
+        return round(cell, 2)
+    return cell
+
+
+def _format_sql(query: str) -> str:
+    result = query
+    for keyword in _SQL_KEYWORDS:
+        result = result.replace(f" {keyword} ", f"\n   {keyword} ")
+    return result
+
+
+def _exec_dump_database_queries() -> str:
+    result = subprocess.run(
+        ["docker", "exec", "wrangle", "wrangle", "--dump-database-queries"],
+        capture_output=True, text=True, timeout=TIMEOUT_SECONDS,
+    )
+    assert result.returncode == 0, f"wrangle --dump-database-queries failed:\n{result.stderr}"
+    output = result.stdout
+    assert "psql" in output
+    queries = re.findall(r'--command="(.+?);"', output)
+    assert len(queries) > 0, "no queries found in dump output"
+    separator = "#" * 80
+    print(f"{separator}\n")
+    with connect() as conn:
+        for query in queries:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                description = cur.description
+                col_names = [desc[0] for desc in description] if description is not None else []
+                print(f"-- {_format_sql(query)}")
+                print(f"   {col_names}")
+                for row in rows:
+                    print(f"   {[_format_cell(v) for v in row]}")
+                if not rows:
+                    print("   (no rows)")
+                print()
+    sys.stdout.flush()
+    return output
+
+
+def connect():
+    missing = [name for name in database.DATABASE_ENV_VARS if not os.environ.get(name)]
+    if missing:
+        pytest.fail(f"missing required database environment variable(s): {', '.join(missing)}")
+    return psycopg.connect((
+        f"postgresql://{os.environ['WRANGLE_DATABASE_USER']}:{os.environ['WRANGLE_DATABASE_PASSWORD']}"
+        f"@{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}"
+        f"/{os.environ['WRANGLE_DATABASE_USER']}"
+    ), connect_timeout=TIMEOUT_SECONDS, autocommit=True, options=f"-c statement_timeout={TIMEOUT_QUERY_SECONDS * 1000}")
+
+
+def query_table_count(table_name: str) -> int:
+    with connect() as database_connection, database_connection.cursor() as database_cursor:
+        # noinspection SqlNoDataSourceInspection, SqlDialectInspection
+        database_cursor.execute(psycopg_sql.SQL("SELECT COUNT(*) FROM {}").format(psycopg_sql.Identifier(table_name)))
+        row: tuple = database_cursor.fetchone() or (0,)
+        return row[0]
+
+
+@functools.lru_cache
+def _database_plugin_tables() -> list[str]:
+    plugin_dir = abspath(join(dirname(realpath(__file__)), "../../../main/python/wrangle/plugin"))
+    tables = []
+    for plugin_path in sorted(glob.glob(join(plugin_dir, "*"))):
+        plugin_name = os.path.basename(plugin_path)
+        if not os.path.isdir(plugin_path) or plugin_name.startswith("_"):
+            continue
+        plugin_class_name = "".join(part.capitalize() for part in plugin_name.split("_"))
+        with contextlib.suppress(Exception):
+            module = importlib.import_module(f"wrangle.plugin.{plugin_name}")
+            instance = getattr(module, plugin_class_name)()
+            if instance.database:
+                tables.append(plugin_name)
+    return tables
 
 
 if __name__ == '__main__':

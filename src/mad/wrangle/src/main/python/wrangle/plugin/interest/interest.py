@@ -1,7 +1,7 @@
 import time
 from collections import OrderedDict
 from datetime import datetime
-from os.path import *
+from os.path import join
 
 import polars as pl
 import polars.selectors as cs
@@ -32,6 +32,7 @@ REPOS_INTEREST = plugin.Repos(
         "sheet_key": "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8",
     },
 )
+
 
 
 class Interest(plugin.Plugin):
@@ -145,7 +146,7 @@ class Interest(plugin.Plugin):
             started_time = time.time()
             if len(interest_delta_df):
                 interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Interest')
+                self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Interest', add_filter=True)
                 self.database_upload(interest_current_df.select(["Date"] + LABELS),
                                      metric_type="mean", period="1mo", unit="%",
                                      print_label="Interest_1_Month_Mean")
@@ -167,4 +168,4 @@ class Interest(plugin.Plugin):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Interest", REPOS_INTEREST)
+        super().__init__("Interest", order=20, repos=REPOS_INTEREST, database=True)

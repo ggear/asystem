@@ -1,0 +1,5 @@
+files_processed = 1
+rows_delta = 29
+end_date = "2025-01-30"
+expected_errors = 0
+cols_data = 17

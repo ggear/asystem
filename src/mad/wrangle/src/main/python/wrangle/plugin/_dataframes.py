@@ -3,6 +3,7 @@ from os.path import splitext
 
 import polars as pl
 import polars.selectors as cs
+from python_calamine import CalamineWorkbook
 
 from ._contract import ContractMixin
 from .config import *
@@ -22,7 +23,6 @@ class DataFramesMixin(ContractMixin):
             schema = {}
         if na_values is None:
             na_values = []
-        from python_calamine import CalamineWorkbook
         effective_na = _EXCEL_NA | set(na_values)
         wb = CalamineWorkbook.from_path(local_path)
         ws = wb.get_sheet_by_index(sheet_name) if isinstance(sheet_name, int) else wb.get_sheet_by_name(sheet_name)

@@ -1,7 +1,7 @@
 aenum==3.1.17
 pyyaml==6.0.3
 pandas==2.3.3
-polars==1.40.1
+polars==1.41.2
 pyarrow==21.0.0
 plexapi==4.17.0
 gspread==5.12.4

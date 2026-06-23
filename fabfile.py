@@ -93,6 +93,21 @@ def test(context):
     _unittest(context)
     _systest(context)
 
+@task(aliases=["ut"] + ["unittest"[0:i] for i in range(2, len("unittest"))])
+def unittest(context):
+    _setup(context)
+    _clean(context)
+    _generate(context)
+    _build(context)
+    _unittest(context)
+
+@task(aliases=["st"] + ["systest"[0:i] for i in range(2, len("systest"))])
+def systest(context):
+    _setup(context)
+    _clean(context)
+    _generate(context)
+    _build(context)
+    _systest(context)
 
 @task(aliases=["pkg"] + ["package"[0:i] for i in range(1, len("package"))])
 def package(context):
@@ -176,6 +191,7 @@ def _backup(context):
                         "-not -path './.deps*' "
                         "-not -path './.idea*' "
                         "-not -path './.pyenv*' "
+                        "-not -path '*/target/*' "
                         "-type f -print0 | "
                         "git check-ignore --stdin -z | tr '\\0' '\\n' "
                         "> /Users/graham/Backup/asystem/.gitexternal", ROOT_DIR)
@@ -282,7 +298,7 @@ def _list(context):
     _print_footer("asystem", "list modules")
 
 
-def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False):
+def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False, is_test=False):
     version_types = [
         "up to date",
         "to update",
@@ -348,7 +364,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         _print_header(module, "generate env", host=filter_host)
         _write_env(context, module, join(ROOT_MODULE_DIR, module, "target/release") \
             if is_release else join(ROOT_MODULE_DIR, module),
-                   filter_host=filter_host, is_release=is_release)
+                   filter_host=filter_host, is_release=is_release, is_test=is_test)
         _print_footer(module, "generate env", host=filter_host)
     generate_pythonpath = [dirname(abspath(__file__))]
     for module in _get_modules(context, "src/build/python/*/generate.py", "*/*", filter_groups=False):
@@ -670,12 +686,14 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
         _print_footer(module, "build process", host=filter_host)
     for module in _get_modules(context, "src", filter_module=filter_module):
         _print_header(module, "build compile", host=filter_host)
-
-        # TODO: Re-enable once I have cleaned up Python codebases
-        # if isdir(join(ROOT_MODULE_DIR, module, "src/main/python")):
-        # _print_line("Linting sources ...")
-        # _run_local(context, "pylint --disable=all src/main/python/*", module)
-
+        module_python_dir = join(ROOT_MODULE_DIR, module, "src/main/python")
+        python_paths = "src/main/python/" + (" src/test/python/" if isdir(join(ROOT_MODULE_DIR, module, "src/test/python")) else "")
+        if isfile(join(module_python_dir, "pyproject.toml")):
+            _print_line("Linting sources ...")
+            _run_local(context, f"ruff check --fix --config src/main/python/pyproject.toml {python_paths}", module)
+        if isfile(join(module_python_dir, "pyrightconfig.json")):
+            _print_line("Type checking sources ...")
+            _run_local(context, f"pyright --project src/main/python {python_paths}", module)
         if isfile(join(ROOT_MODULE_DIR, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
@@ -771,12 +789,14 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
 
 def _systest(context, filter_module=None):
     for module in _get_modules(context, "src/test/*/system", filter_module=filter_module):
-        _up_module(context, module)
+        _up_module(context, module, is_test=True)
         _print_header(module, "systest")
+        install_local_path = join(ROOT_MODULE_DIR, module, "install_local.sh")
+        if isfile(install_local_path):
+            _run_local(context, "./install_local.sh", module)
         test_exit_code = 1
         if isfile(join(ROOT_MODULE_DIR, module, "src/test/python/system/system_test.py")):
-            test_exit_code = _run_local(context, "python system_test.py",
-                                        join(module, "src/test/python/system"), warn=True).exited
+            test_exit_code = _run_local(context, "python system_test.py", join(module, "src/test/python/system"), warn=True).exited
         else:
             print("Could not find test to run")
         _down_module(context, module)
@@ -795,11 +815,11 @@ def _execute(context):
             _down_module(context, module)
 
         signal.signal(signal.SIGINT, _server_stop)
-        run_dev_path = join(ROOT_MODULE_DIR, module, "run_dev.sh")
-        if isfile(run_dev_path):
-            _run_local(context, "run_dev.sh", module)
-        else:
-            _run_local(context, "docker compose --ansi never up --force-recreate --remove-orphans -rm", module)
+        install_local_path = join(ROOT_MODULE_DIR, module, "install_local.sh")
+        if isfile(install_local_path):
+            _run_local(context, "./install_local.sh", module)
+        _run_local(context, "echo && echo 'Connect to docker container: docker exec -it {} bash' && echo".format(_get_service(module)), module)
+        _run_local(context, "docker compose --ansi never -p {} up --force-recreate --remove-orphans".format(_get_service(module)), module)
         _print_footer(module, "execute")
         break
 
@@ -1078,7 +1098,7 @@ def _get_dependencies(context, module):
     return run_deps + [module]
 
 
-def _write_env(context, module, working_path=".", filter_host=None, is_release=False):
+def _write_env(context, module, working_path=".", filter_host=None, is_release=False, is_test=False):
     service = _get_service(module)
     _run_local(context, "mkdir -p {} && rm -rf {}/.env".format(working_path, working_path), module)
     for env_global_key, env_global_value in GLOBAL_ENV.items():
@@ -1148,7 +1168,9 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
         _run_local(context, "echo '{}_SERVICE_PROD={}' >> {}/.env"
                    .format(dependency_service,
                            dependency_domain, working_path), module)
-        for dependency_env_file in [".env_all", ".env_prod" if is_release else ".env_dev", ".env_all_key"]:
+        dev_env_file = next((f for f in [".env_dev", ".env_test" if is_test else ".env_exec"]
+                             if isfile(join(ROOT_MODULE_DIR, dependency, f))), ".env_exec")
+        for dependency_env_file in [".env_all", ".env_prod" if is_release else dev_env_file, ".env_all_key"]:
             dependency_env_dev = "{}/{}/{}".format(ROOT_MODULE_DIR, dependency, dependency_env_file)
             if isfile(dependency_env_dev):
                 _run_local(context, "cat {} >> {}/.env".format(dependency_env_dev, working_path), module)
@@ -1220,12 +1242,12 @@ def _process_target(context, module, is_release=False):
                             ), join(module, "target/package"))
 
 
-def _up_module(context, module, up_this=True):
+def _up_module(context, module, up_this=True, is_test=False):
     if isfile(join(ROOT_MODULE_DIR, module, "docker-compose.yml")):
         for run_dep in _get_dependencies(context, module):
             if isfile(join(ROOT_MODULE_DIR, run_dep, "docker-compose.yml")):
                 _clean(context, filter_module=run_dep)
-                _generate(context, filter_module=run_dep)
+                _generate(context, filter_module=run_dep, is_test=is_test)
                 _build(context, filter_module=run_dep)
                 _package(context, filter_module=run_dep)
                 _print_header(run_dep, "run prepare")
@@ -1249,7 +1271,7 @@ def _down_module(context, module, down_this=True):
         _print_line("Stopping servers ...")
         for run_dep in reversed(_get_dependencies(context, module)):
             if run_dep != module or down_this:
-                _run_local(context, "docker compose --ansi never down -v", run_dep)
+                _run_local(context, "docker compose --ansi never down --volumes --rmi all --remove-orphans", run_dep)
 
 
 def _run_local(context, command, working=".", **kwargs):

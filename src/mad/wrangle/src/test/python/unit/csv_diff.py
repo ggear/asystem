@@ -132,7 +132,7 @@ def diff_print(file_a, file_b, exclude=None):
             except (ValueError, TypeError):
                 delta_str = "n/a"
             print(f"  {key:<{key_w}}  {col:<50}  {_fmt_val(va):>{col_a_w}}  {_fmt_val(vb):>{col_b_w}}  {RED}{delta_str:>12}{RESET}")
-        shown += 1
+        shown += 1  # noqa: SIM113
     print()
 
     remaining = total_diff_rows - 10
@@ -145,9 +145,9 @@ def diff_print(file_a, file_b, exclude=None):
 def main():
     if len(sys.argv) < 3:
         print(f"{RED}Usage: {sys.argv[0]} FILE_A FILE_B [EXCLUDE_PATTERN]{RESET}")
-        print(f"  FILE_A: Path to first CSV file")
-        print(f"  FILE_B: Path to second CSV file")
-        print(f"  EXCLUDE_PATTERN: Optional regex pattern to exclude columns")
+        print("  FILE_A: Path to first CSV file")
+        print("  FILE_B: Path to second CSV file")
+        print("  EXCLUDE_PATTERN: Optional regex pattern to exclude columns")
         sys.exit(1)
     diff_print(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
 

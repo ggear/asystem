@@ -1,18 +1,17 @@
-import copy
 import time
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
-from os.path import join
+from os.path import isdir, join
 
 from ._dataframes import DataFramesMixin
 from ._sources import SourcesMixin
 from ._state import StateMixin
 from .config import *
 from .config import DownloadResult, DownloadStatus
+from .counters import *  # noqa: F401,F403
 from .logger import log_enabled, print_log
 
 
-class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
+class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
 
     @abstractmethod
     def _run(self):
@@ -20,12 +19,19 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
 
     def run(self):
         started_time = time.time()
+        total_start = time.perf_counter()
         self.print_log("Starting ...")
         self._run()
         for csv_path, csv_df in self._db_cache_dfs.items():
             self.csv_write(csv_df, csv_path)
         if not config.disable_drive_uploads:
             self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, check=True, download=False, upload=True)
+        total_elapsed_ms = int((time.perf_counter() - total_start) * 1000)
+        marshall_ms = self.get_counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS)
+        egress_ms = self.get_counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS)
+        process_ms = max(0, total_elapsed_ms - marshall_ms - egress_ms)
+        self.add_counter(CTR_SRC_TIMING, CTR_ACT_PROCESS_MILLIS, process_ms)
+        self.add_counter(CTR_SRC_TIMING, CTR_ACT_TOTAL_MILLIS, total_elapsed_ms)
         self.print_counters()
         self.print_log("Finished", started=started_time)
 
@@ -36,7 +42,7 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
         if type(messages) is not list:
             messages = [messages]
         if started is not None:
-            messages[-1] = messages[-1] + f" in [{time.time() - started:.3f}] sec"
+            messages[-1] = messages[-1] + f" in [{time.time() - started:.3f}s]"
         if data is not None:
             messages[-1] = messages[-1] + ": "
             if type(data) is list:
@@ -45,86 +51,28 @@ class Plugin(SourcesMixin, DataFramesMixin, StateMixin, metaclass=ABCMeta):
                 messages[-1] = messages[-1] + str(data)
         print_log(self.name, messages, exception, level=level)
 
-    def print_counters(self):
-        self.print_log("Execution Summary:")
-        for source in self._counters:
-            for action in self._counters[source]:
-                self.print_log(
-                    f"     {' '.join((source, action)).ljust(CTR_LBL_WIDTH, CTR_LBL_PAD)} "
-                    f"{self._counters[source][action]:8}"
-                )
-
-    def add_counter(self, source, action, count=1):
-        self._counters[source][action] += count
-
-    def get_counter(self, source, action):
-        return self._counters[source][action]
-
-    def get_counters(self):
-        return copy.deepcopy(self._counters)
-
-    def counters_set_all_errored(self, source):
-        self.add_counter(source, CTR_ACT_ERRORED,
-                         self.get_counter(source, CTR_ACT_PROCESSED) +
-                         self.get_counter(source, CTR_ACT_SKIPPED) -
-                         self.get_counter(source, CTR_ACT_ERRORED))
-
-    def reset_counters(self):
-        self._db_cache_dfs = {}
-        self._counters = OrderedDict([
-            (CTR_SRC_SOURCES, OrderedDict([
-                (CTR_ACT_DOWNLOADED, 0),
-                (CTR_ACT_CACHED, 0),
-                (CTR_ACT_SKIPPED, 0),
-                (CTR_ACT_UPLOADED, 0),
-                (CTR_ACT_PERSISTED, 0),
-                (CTR_ACT_DELETED, 0),
-                (CTR_ACT_ERRORED, 0),
-            ])),
-            (CTR_SRC_FILES, OrderedDict([
-                (CTR_ACT_PROCESSED, 0),
-                (CTR_ACT_SKIPPED, 0),
-                (CTR_ACT_ERRORED, 0),
-            ])),
-            (CTR_SRC_DATA, OrderedDict([
-                (CTR_ACT_PREVIOUS_COLUMNS, 0),
-                (CTR_ACT_PREVIOUS_ROWS, 0),
-                (CTR_ACT_CURRENT_COLUMNS, 0),
-                (CTR_ACT_CURRENT_ROWS, 0),
-                (CTR_ACT_UPDATE_COLUMNS, 0),
-                (CTR_ACT_UPDATE_ROWS, 0),
-                (CTR_ACT_DELTA_COLUMNS, 0),
-                (CTR_ACT_DELTA_ROWS, 0),
-                (CTR_ACT_ERRORED, 0),
-            ])),
-            (CTR_SRC_EGRESS, OrderedDict([
-                (CTR_ACT_QUEUE_COLUMNS, 0),
-                (CTR_ACT_QUEUE_ROWS, 0),
-                (CTR_ACT_SHEET_COLUMNS, 0),
-                (CTR_ACT_SHEET_ROWS, 0),
-                (CTR_ACT_DATABASE_COLUMNS, 0),
-                (CTR_ACT_DATABASE_ROWS, 0),
-                (CTR_ACT_ERRORED, 0),
-            ])),
-        ])
-
     def counter_write(self):
         pass
 
-    def file_list(self, file_dir, file_prefix, quiet=True):
-        files = {}
+    def file_list(self, file_dir: str, file_prefix: str, quiet: bool = True) -> dict[str, DownloadResult]:
+        files: dict[str, DownloadResult] = {}
         for file_name in sorted(os.listdir(file_dir)):
             if file_name.startswith(file_prefix):
-                file_path = str(join(file_dir, file_name))
+                file_path = join(file_dir, file_name)
                 files[file_path] = DownloadResult(DownloadStatus.CACHED, file_path)
                 if not quiet:
                     self.print_log(f"File [{file_name}] found at [{file_path}]")
         return files
 
-    def __init__(self, name, repos):
+    def __init__(self, name, order=999, repos: "Repos | None" = None, disabled=False, database=False):
         self._counters = {}
         self._db_cache_dfs = {}
         self.reset_counters()
         self.name = name
-        self.remote_repos = repos
-        self.local_cache = abspath(get_dir(f"data/{name.lower()}"))
+        self.order = order
+        self.disabled = disabled
+        self.database = database
+        self.remote_repos = repos  # type: ignore[assignment]
+        self.local_cache = abspath(f"{config.cache_dir}/{name.lower()}")
+        if not isdir(self.local_cache):
+            os.makedirs(self.local_cache)

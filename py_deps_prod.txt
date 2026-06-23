@@ -6,10 +6,12 @@
 # Build/test
 mock==5.2.0
 fabric==3.2.3
-pytest==9.0.3
+ruff==0.15.18
+pytest==9.1.1
 dotenv==0.9.9
 varsubst==2.0.0
 packaging==24.2
+pyright==1.1.410
 requests==2.34.2
 setuptools==82.0.1
 pathlib2==2.3.7.post1
@@ -29,17 +31,19 @@ sortedcontainers==2.4.0
 
 # Data serialisation
 pyyaml==6.0.3
+jinja2==3.1.6
 pandas==2.3.3
-polars==1.40.1
+polars==1.41.2
+orjson==3.11.9
 pyarrow==21.0.0
 tabulate==0.10.0
 jproperties==2.1.2
-python-calamine==0.6.2
+python-calamine==0.7.0
 
 # Machine learning/visualisation
 notebook==7.5.6
 pdftotext==2.2.2
-jupyterlab==4.5.7
+jupyterlab==4.5.9
 matplotlib==3.10.9
 matplotlib-inline==0.2.2
 mlflow==$MLFLOW_VERSION
@@ -50,13 +54,13 @@ gspread==5.12.4
 gspread-pandas==3.3.0
 psycopg[binary]==3.3.4
 influxdb==5.3.2
-influxdb3-python==0.19.0
+influxdb3-python==0.20.0
 adbc-driver-postgresql==1.11.0
 
 # External services
 docker==7.1.0
 plexapi==4.17.0
-yfinance==1.3.0
+yfinance==1.4.1
 dnspython==2.8.0
 paho-mqtt==1.6.1
 pydigitemp==1.4.1
@@ -66,7 +70,7 @@ speedtest-cli==2.1.3
 ffmpeg-python==0.2.0
 subtitle-filter==1.5.0
 decode-config==13.3.0.0
-google-auth==2.53.0
+google-auth==2.55.0
 google-auth-httplib2==0.4.0
 google-auth-oauthlib==1.4.0
 google-api-python-client==2.197.0

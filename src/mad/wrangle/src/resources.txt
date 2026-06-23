@@ -1,4 +1,3 @@
 ../install.sh
-../install_dev.sh
 ../install_post.sh
 main/python/pyproject.toml

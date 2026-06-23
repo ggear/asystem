@@ -3,38 +3,52 @@ from os.path import dirname
 
 sys.path.insert(0, dirname(__file__))
 
+import contextlib
 import copy
-import csv_diff
+import dataclasses
+import datetime
 import filecmp
 import functools
-import datetime
 import glob
 import importlib
+import io
+import json
 import os
+import random
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from collections.abc import Iterable
+from datetime import date as date_type
 from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
 
+import csv_diff  # type: ignore
 import google.oauth2.service_account
 import polars as pl
 import pytest
+import tomllib
 from googleapiclient.discovery import build
 
 sys.path.append('../../../main/python')
 
+from wrangle import main as wrangle_main
 from wrangle import plugin
-from wrangle.plugin.equity import REPOS_EQUITY, STOCK
+from wrangle.plugin import DownloadResult, DownloadStatus, Plugin, database
 from wrangle.plugin.balances import REPOS_BALANCES
-from wrangle.plugin.interest import REPOS_INTEREST
-from wrangle.plugin import Plugin, DownloadResult, DownloadStatus
-from wrangle.plugin.currency import REPOS_CURRENCY
 from wrangle.plugin.config import get_file
+from wrangle.plugin.counters import *
+from wrangle.plugin.counters import CTR_TZ
+from wrangle.plugin.currency import COLUMNS as CURRENCY_COLUMNS
+from wrangle.plugin.currency import REPOS_CURRENCY
+from wrangle.plugin.equity import DIMENSIONS_STATE, PORTFOLIO_TICKERS_ACTIVE, PORTFOLIO_TICKERS_MCK, REPOS_EQUITY, STOCK
+from wrangle.plugin.interest import COLUMNS as INTEREST_COLUMNS
+from wrangle.plugin.interest import REPOS_INTEREST
 from wrangle.plugin.logger import dataframe_print, print_log
+from wrangle.server.server import CHART_SPEC, TEMPLATE, THEMES, WEB_ROOT_DIR
 
 ########################################################################################################################
 # NOTES:
@@ -42,38 +56,9 @@ from wrangle.plugin.logger import dataframe_print, print_log
 ########################################################################################################################
 
 
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:multiprocessing")
+
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-_ASSERT_FILE_EQUAL_SEEN = set()
-_COUNTER_COMPARATOR_VERBS = {
-    "counter_equals": "is",
-    "counter_less": "less_than",
-    "counter_at_least": "at_least",
-}
-_ASSERT_PASS_COL = 60
-
-
-def _to_slug(text):
-    return text.lower().replace(" ", "_")
-
-
-def _print_assert_pass(name, *values):
-    actuals = [str(v)[7:] for v in values if str(v).startswith("actual=")]
-    line = f"PASS [{name}]"
-    if actuals:
-        print(f"{line:<{_ASSERT_PASS_COL}}{'    ' + ' '.join(f'[{a}]' for a in actuals)}", flush=True)
-    else:
-        print(line, flush=True)
-
-
-def _format_assert_elapsed(seconds):
-    return f"{f'{seconds:.3f}'.rstrip('0').rstrip('.')}s"
-
-
-def _first_true_index(mask_series: pl.Series | bool):
-    if isinstance(mask_series, bool):
-        return 0 if mask_series else None
-    indices = mask_series.arg_true()
-    return None if len(indices) == 0 else int(indices[0])
 
 
 # noinspection PyMethodMayBeStatic
@@ -85,28 +70,15 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_balances_local_blank_1(self):
+        fixture = _load_fixture("local", "balances", "blank_1")
         self.run_plugin("balances", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
                         enable_rerun=False, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=ASSERT_NONE,
-                        file_asserts={
-                            "__balances_current.csv": [
-                                assert_file_does_not_exist(),
-                            ],
-                        })
-
-    # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
-    @pytest.mark.skip(reason="requires update")
-    def test_balances_local_corrupt_1(self):
-        self.run_plugin("balances", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: 1,
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
                                 },
                             },
                         }),
@@ -118,15 +90,16 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     @pytest.mark.skip(reason="requires update")
-    def test_balances_local_corrupt_2(self):
-        self.run_plugin("balances", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
+    def test_balances_local_corrupt_1(self):
+        fixture = _load_fixture("local", "balances", "corrupt_1")
+        self.run_plugin("balances", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
                         enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: 1,
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
                                 },
                             },
                         }),
@@ -150,8 +123,8 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_UPLOADED: 2,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(CURRENCY_COLUMNS),
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(CURRENCY_COLUMNS),
                                     plugin.CTR_ACT_UPDATE_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_ROWS: 0,
@@ -237,11 +210,18 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_blank_1(self):
+        fixture = _load_fixture("local", "currency", "blank_1")
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
                         enable_rerun=False, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=ASSERT_NONE,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                                },
+                            },
+                        }),
                         file_asserts={
                             "__currency_current.csv": [
                                 assert_file_does_not_exist(),
@@ -250,6 +230,7 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_corrupt_1(self):
+        fixture = _load_fixture("local", "currency", "corrupt_1")
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -257,7 +238,7 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: 1,
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
                                 },
                             },
                         }),
@@ -269,6 +250,7 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_currency_local_corrupt_2(self):
+        fixture = _load_fixture("local", "currency", "corrupt_2")
         self.run_plugin("currency", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -276,7 +258,7 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: 1,
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
                                 },
                             },
                         }),
@@ -288,6 +270,7 @@ class WrangleTest(unittest.TestCase):
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     def test_currency_preview_replete_1(self):
+        fixture = _load_fixture("preview", "currency", "replete_1")
         drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_1987-1990.xls")
         drive_delete(REPOS_CURRENCY._scopes["preview"]["drive_folder"], "rba_fx_2023-current.xls")
         self.run_plugin("currency", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
@@ -300,8 +283,8 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_UPLOADED: 2,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(CURRENCY_COLUMNS),
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(CURRENCY_COLUMNS),
                                     plugin.CTR_ACT_UPDATE_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_ROWS: 0,
@@ -309,30 +292,31 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(equals=14)
+                            assert_custom_rows_delta(equals=int(fixture["rows_delta"]))
                         ],
                         file_asserts={
                             "__currency_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
+                                assert_file_dates(start_date="1983-12-12", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=r"Delta"),
                             ],
                             "_sheet_rates_currency.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2006-01-02", end_date="2024-10-14", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2006-01-02", end_date=fixture["end_date"], contiguous="days", descending=True),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_row(),
                             ],
                             "_database_currency.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date="2024-10-14", contiguous="days"),
+                                assert_file_dates(start_date="1983-12-12", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_row(),
                             ],
                         })
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     def test_currency_release_replete_1(self):
+        fixture = _load_fixture("release", "currency", "replete_1")
         self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
                         disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -340,43 +324,58 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 15,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 15,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 15,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(CURRENCY_COLUMNS),
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(CURRENCY_COLUMNS),
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: len(CURRENCY_COLUMNS),
+                                    plugin.CTR_ACT_DELTA_COLUMNS: len(CURRENCY_COLUMNS),
                                 },
                             },
                             "counter_at_least": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: 14,
+                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
                                 },
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(at_least=14)
+                            assert_custom_rows_delta(at_least=fixture["rows_delta"])
                         ],
                         file_asserts={
                             "__currency_current*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
+                                assert_file_dates(start_date="1983-12-12", end_date_at_least=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_col(exclude=r"Delta"),
                                 assert_file_equal(),
                             ],
                             "_sheet_rates_currency*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2006-01-02", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2006-01-02", end_date_at_least=fixture["end_date"], contiguous="days", descending=True),
                                 assert_file_nones_per_row(),
                                 assert_file_zeroes_per_row(),
                                 assert_file_equal(),
                             ],
                             "_database_currency*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", contiguous="days"),
+                                assert_file_dates(start_date="1983-12-12", end_date_at_least=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_row(),
                                 assert_file_equal(),
                             ],
                         })
+
+    # Create a clean data cache for repopulating tests
+    def test_currency_release_replete_1_download(self):
+        self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="debug",
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=False,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_at_least": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: 1,
+                                },
+                            },
+                        }),
+                        )
 
     ########################################################################################################################
     # Equity
@@ -384,11 +383,18 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_blank_1(self):
+        fixture = _load_fixture("local", "equity", "blank_1")
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
                         enable_rerun=False, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=ASSERT_NONE,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                                },
+                            },
+                        }),
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_does_not_exist(),
@@ -397,6 +403,7 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_corrupt_1(self):
+        fixture = _load_fixture("local", "equity", "corrupt_1")
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -404,7 +411,7 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: 1,
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
                                 },
                             },
                         }),
@@ -416,6 +423,7 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_corrupt_2(self):
+        fixture = _load_fixture("local", "equity", "corrupt_2")
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_2", log_level="debug",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -423,7 +431,7 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: 1,
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
                                 },
                             },
                         }),
@@ -435,6 +443,7 @@ class WrangleTest(unittest.TestCase):
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_partial_1(self):
+        fixture = _load_fixture("local", "equity", "partial_1")
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -442,39 +451,15 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: 3,
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 34,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 34,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 34,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 34,
-                                    plugin.CTR_ACT_DELTA_ROWS: 2193,
+                                    plugin.CTR_ACT_PROCESSED: int(fixture["files_processed"]),
                                 },
                             },
                         }),
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2019-12-31", end_date="2025-12-31", contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-                            ],
-                            "_sheet_prices_history.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2019-12-31", end_date="2025-12-31", contiguous="days", descending=True),
-                                assert_file_nones_per_col(after_last_rows=True),
-                                assert_file_zeroes_per_row(),
-                            ],
-                            "_database_equity.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2019-12-31", end_date="2025-12-31", contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                            ],
-                        })
+                        )
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_partial_2(self):
+        fixture = _load_fixture("local", "equity", "partial_2")
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_2", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -482,39 +467,40 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: 1,
+                                    plugin.CTR_ACT_PROCESSED: int(fixture["files_processed"]),
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 17,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 17,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 17,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 17,
-                                    plugin.CTR_ACT_DELTA_ROWS: 29,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_ROWS: int(fixture["rows_delta"]),
                                 },
                             },
                         }),
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                             ],
                             "_sheet_prices_history.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days", descending=True),
                                 assert_file_nones_per_col(after_last_rows=True),
                                 assert_file_zeroes_per_row(),
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                             ],
                         })
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_partial_3(self):
+        fixture = _load_fixture("local", "equity", "partial_3")
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_3", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -522,39 +508,40 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: 1,
+                                    plugin.CTR_ACT_PROCESSED: int(fixture["files_processed"]),
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 17,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 17,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 17,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 17,
-                                    plugin.CTR_ACT_DELTA_ROWS: 29,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_ROWS: int(fixture["rows_delta"]),
                                 },
                             },
                         }),
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                             ],
                             "_sheet_prices_history.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days", descending=True),
                                 assert_file_nones_per_col(after_last_rows=True),
                                 assert_file_zeroes_per_row(),
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date="2025-01-30", contiguous="days"),
+                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                             ],
                         })
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_replete_1(self):
+        fixture = _load_fixture("local", "equity", "replete_1", cols_modifier=len(PORTFOLIO_TICKERS_MCK))
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "replete_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -562,39 +549,40 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: 480,
+                                    plugin.CTR_ACT_PROCESSED: int(fixture["files_processed"]),
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 408,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 408,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 408,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 408,
-                                    plugin.CTR_ACT_DELTA_ROWS: 15094,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_ROWS: int(fixture["rows_delta"]),
                                 },
                             },
                         }),
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
+                                assert_file_dates(start_date="1985-01-02", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                             ],
                             "_sheet_prices_history.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2007-01-01", end_date="2026-04-30", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2007-01-01", end_date=fixture["end_date"], contiguous="days", descending=True),
                                 assert_file_nones_per_col(after_last_rows=True),
                                 assert_file_zeroes_per_row(),
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
+                                assert_file_dates(start_date="1985-01-02", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                             ],
                         })
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     def test_equity_preview_replete_1(self):
+        fixture = _load_fixture("preview", "equity", "replete_1")
         drive_delete(REPOS_EQUITY._scopes["preview"]["drive_folder"], "yahoo_acdc_2018.csv")
         self.run_plugin("equity", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
@@ -606,8 +594,8 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_UPLOADED: 1,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 425,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 425,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
                                     plugin.CTR_ACT_UPDATE_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_ROWS: 0,
@@ -615,44 +603,46 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(equals=1)
+                            assert_custom_rows_delta(equals=int(fixture["rows_delta"]))
                         ],
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
+                                assert_file_dates(start_date="1985-01-02", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                             ],
                             "_sheet_prices_history.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2007-01-01", end_date="2026-04-30", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2007-01-01", end_date=fixture["end_date"], contiguous="days", descending=True),
                                 assert_file_nones_per_col(after_last_rows=True),
                                 assert_file_zeroes_per_row(),
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date="2026-04-30", contiguous="days"),
+                                assert_file_dates(start_date="1985-01-02", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                             ],
                         })
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     def test_equity_release_replete_1(self):
+        fixture = _load_fixture("release", "equity", "replete_1")
         self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
 
-                        # TODO: Restore once database/sheets provisioned
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=False,
+                        # TODO: Restore once database/sheets provisioned, update other caches
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=False,
                         # disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
+
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
                         enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 425,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 425,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 425,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 425,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
+                                    plugin.CTR_ACT_DELTA_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
                                 },
                             },
                             "counter_at_least": {
@@ -660,35 +650,54 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_DOWNLOADED: len(STOCK),
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: 1,
+                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
                                 },
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(at_least=1)
+                            assert_custom_rows_delta(at_least=fixture["rows_delta"])
                         ],
                         file_asserts={
                             "__equity_current*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", contiguous="days"),
+                                assert_file_dates(start_date="1985-01-02", end_date_at_least=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                                 assert_file_equal(),
                             ],
                             "_sheet_prices_history*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2007-01-01", contiguous="days", descending=True),
+                                assert_file_dates(start_date="2007-01-01", end_date_at_least=fixture["end_date"], contiguous="days", descending=True),
                                 assert_file_nones_per_col(after_last_rows=True),
                                 assert_file_zeroes_per_row(),
                                 assert_file_equal(),
                             ],
                             "_database_equity*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", contiguous="days"),
+                                assert_file_dates(start_date="1985-01-02", end_date_at_least=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_equal(),
                             ],
                         })
+
+    # Create a clean data cache for repopulating tests
+    def test_equity_release_replete_1_download(self):
+        self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="debug",
+
+                        # TODO: Restore once database/sheets provisioned, update other caches
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=False,
+                        # disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
+
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_at_least": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_DOWNLOADED: 1,
+                                },
+                            },
+                        }),
+                        )
 
     ########################################################################################################################
     # Interest
@@ -696,11 +705,18 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, no new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_blank_1(self):
+        fixture = _load_fixture("local", "interest", "blank_1")
         self.run_plugin("interest", plugin.RepoScope.LOCAL, "blank_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
                         enable_rerun=False, force_reprocessing=False, force_downloads=False,
-                        counter_asserts=ASSERT_NONE,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                                },
+                            },
+                        }),
                         file_asserts={
                             "__interest_current.csv": [
                                 assert_file_does_not_exist(),
@@ -709,6 +725,7 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_corrupt_1(self):
+        fixture = _load_fixture("local", "interest", "corrupt_1")
         self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_1", log_level="fatal",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -716,7 +733,7 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: 1,
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
                                 },
                             },
                         }),
@@ -728,6 +745,7 @@ class WrangleTest(unittest.TestCase):
 
     # No current data, corrupt data, no remote source data downloads, no remote data repo downloads or uploads
     def test_interest_local_corrupt_2(self):
+        fixture = _load_fixture("local", "interest", "corrupt_2")
         self.run_plugin("interest", plugin.RepoScope.LOCAL, "corrupt_2", log_level="fatal",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -735,7 +753,7 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_ERRORED: 1,
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
                                 },
                             },
                         }),
@@ -747,6 +765,7 @@ class WrangleTest(unittest.TestCase):
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, downloads and uploads from and to preview data repo
     def test_interest_preview_replete_1(self):
+        fixture = _load_fixture("preview", "interest", "replete_1")
         drive_delete(REPOS_INTEREST._scopes["preview"]["drive_folder"], "inflation.xlsx")
         self.run_plugin("interest", plugin.RepoScope.PREVIEW, "replete_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=True,
@@ -758,8 +777,8 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_UPLOADED: 1,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(INTEREST_COLUMNS),
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(INTEREST_COLUMNS),
                                     plugin.CTR_ACT_UPDATE_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_ROWS: 0,
@@ -767,28 +786,29 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(equals=16)
+                            assert_custom_rows_delta(equals=int(fixture["rows_delta"]))
                         ],
                         file_asserts={
                             "__interest_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="months"),
                                 assert_file_nones_per_row(exclude=r"Mean"),
                             ],
                             "_sheet_rates_interest.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2015-02-01", end_date="2026-04-01", contiguous="months", descending=True),
+                                assert_file_dates(start_date="2015-02-01", end_date=fixture["end_date"], contiguous="months", descending=True),
                                 assert_file_nones_per_row(exclude=r"Mean"),
                             ],
                             "_database_interest.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date="2026-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="months"),
                                 assert_file_nones_per_row(exclude=r"type=mean"),
                             ],
                         })
 
     # Lots of current data, a lot of live new data, downloads from remote sources, downloads from release data repo, no remote data repo uploads
     def test_interest_release_replete_1(self):
+        fixture = _load_fixture("release", "interest", "replete_1")
         self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
                         disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -796,41 +816,204 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: 18,
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: 18,
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: 18,
-                                    plugin.CTR_ACT_DELTA_COLUMNS: 18,
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: len(INTEREST_COLUMNS),
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: len(INTEREST_COLUMNS),
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: len(INTEREST_COLUMNS),
+                                    plugin.CTR_ACT_DELTA_COLUMNS: len(INTEREST_COLUMNS),
                                 },
                             },
                             "counter_at_least": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_DELTA_ROWS: 16,
+                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
                                 },
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(at_least=16)
+                            assert_custom_rows_delta(at_least=fixture["rows_delta"])
                         ],
                         file_asserts={
                             "__interest_current*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="months"),
                                 assert_file_nones_per_row(exclude=r"Mean"),
                                 assert_file_equal(),
                             ],
                             "_sheet_rates_interest*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="2015-02-01", contiguous="months", descending=True),
+                                assert_file_dates(start_date="2015-02-01", end_date_at_least=fixture["end_date"], contiguous="months", descending=True),
                                 assert_file_nones_per_row(exclude=r"Mean"),
                                 assert_file_equal(),
                             ],
                             "_database_interest*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", contiguous="months"),
+                                assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="months"),
                                 assert_file_nones_per_row(exclude=r"type=mean"),
                                 assert_file_equal(),
                             ],
                         })
+
+    # Create a clean data cache for repopulating tests
+    def test_interest_release_replete_1_download(self):
+        self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="debug",
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=False,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_at_least": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: 1,
+                                },
+                            },
+                        }),
+                        )
+
+    ########################################################################################################################
+    # Dashboard
+    ########################################################################################################################
+    def test_dashboard_preview(self):
+        def _synthetic_counter_value(action, counter, rand):
+            if counter.format == "duration_ms":
+                return rand.randint(500, 10000)
+            if "Rows" in action:
+                return rand.randint(100, 50000)
+            if "Columns" in action:
+                return rand.randint(5, 30)
+            if counter.error:
+                return rand.choices([0, 1], weights=[10, 1])[0]
+            return rand.randint(0, 50)
+
+        def _synthetic_raw_entry(run_ts, plugin_names, rand):
+            run_plugins = {}
+            for plugin_key in plugin_names:
+                plugin_counters = {}
+                for (source_key, action_key), counter in COUNTERS.items():
+                    if source_key not in plugin_counters:
+                        plugin_counters[source_key] = {}
+                    plugin_counters[source_key][action_key] = _synthetic_counter_value(action_key, counter, rand)
+                run_plugins[plugin_key] = plugin_counters
+            errored = {plugin_id: any(run_plugins[plugin_id].get(source_id, {}).get(action_id, 0) > 0 for (source_id, action_id), c in COUNTERS.items() if c.error) for plugin_id in plugin_names}
+            return {"ts": run_ts.isoformat(), "plugins": run_plugins, "errored": errored}
+
+        def _synthetic_day_entry(date, plugin_names, rand):
+            buckets = {}
+            errored_runs = {plugin_id: rand.choices([0, 1], weights=[10, 1])[0] for plugin_id in plugin_names}
+            for plugin_key in plugin_names:
+                buckets[plugin_key] = {}
+                for (source_key, action_key), counter in COUNTERS.items():
+                    if source_key not in buckets[plugin_key]:
+                        buckets[plugin_key][source_key] = {}
+                    count = rand.randint(40, 48)
+                    tmp_value = _synthetic_counter_value(action_key, counter, rand)
+                    buckets[plugin_key][source_key][action_key] = {"sum": tmp_value * count, "min": max(0, tmp_value - 3), "max": tmp_value + 3, "count": count}
+            return {"date": date.isoformat(), "errored_runs": errored_runs, "buckets": buckets}
+
+        plugins = ["balances", "currency", "equity", "interest"]
+        all_plugin_names = ["summary"] + sorted(plugins)
+        output_dir = abspath(join(DIR_ROOT, "target", "runtime-dashboard"))
+        os.makedirs(output_dir, exist_ok=True)
+        static_copy = join(output_dir, "static")
+        if os.path.islink(static_copy) or os.path.isfile(static_copy):
+            os.unlink(static_copy)
+        elif os.path.isdir(static_copy):
+            shutil.rmtree(static_copy)
+        os.makedirs(static_copy, exist_ok=True)
+        for file_name in os.listdir(WEB_ROOT_DIR):
+            if os.path.splitext(str(file_name))[1] in {".css", ".js", ".mp3"}:
+                shutil.copy2(join(WEB_ROOT_DIR, str(file_name)), join(static_copy, str(file_name)))
+        rng = random.Random(42)
+        with tempfile.TemporaryDirectory() as tmp:
+            history = RunHistory(plugins=plugins, cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            now = datetime.datetime.now(tz=CTR_TZ)
+            today = now.date()
+            for day_offset in range(HISTORY_AGG_DAY_LENGTH):
+                days_ago = HISTORY_AGG_DAY_LENGTH - 1 - day_offset
+                if days_ago >= 50 and rng.random() < 0.04:
+                    continue
+                history._day.append(_synthetic_day_entry(today - datetime.timedelta(days=days_ago), all_plugin_names, rng))
+            for run_offset in range(HISTORY_RAW_RUN_LENGTH):
+                ts = now - datetime.timedelta(minutes=30 * (HISTORY_RAW_RUN_LENGTH - 1 - run_offset))
+                history._raw.append(_synthetic_raw_entry(ts, all_plugin_names, rng))
+            snapshot = history.snapshot()
+            plugin_sections = [{"id": "summary", "title": "Summary", "theme": "ghost-gray"}] + [
+                {"id": plugin_name, "title": plugin_name.capitalize(), "theme": THEMES[index % len(THEMES)]}
+                for index, plugin_name in enumerate(p for p in snapshot.plugins if p != "summary")
+            ]
+            snapshot_json = json.dumps(dataclasses.asdict(snapshot))
+            adhoc_ts = now + datetime.timedelta(minutes=1)
+            adhoc_plugins = {}
+            for plugin_name in all_plugin_names:
+                pcs = {}
+                for (src, act), ctr in COUNTERS.items():
+                    if src not in pcs:
+                        pcs[src] = {}
+                    pcs[src][act] = _synthetic_counter_value(act, ctr, rng)
+                adhoc_plugins[plugin_name] = pcs
+            adhoc_errored = {name: any(adhoc_plugins[name].get(src, {}).get(act, 0) > 0 for (src, act), c in COUNTERS.items() if c.error) for name in all_plugin_names}
+            latest_run_json = json.dumps({"ts": adhoc_ts.isoformat(), "plugins": adhoc_plugins, "errored": adhoc_errored})
+            html = TEMPLATE.render(
+                snapshot_json=snapshot_json,
+                latest_run_json=latest_run_json,
+                run_timeout_ms=10000,
+                views=[{"name": v.name, "label": v.label} for v in snapshot.views],
+                chart_spec=CHART_SPEC,
+                plugin_sections=plugin_sections,
+            )
+        output_path = join(output_dir, "dashboard.html")
+        with open(output_path, "w", encoding="utf-8") as handle:
+            handle.write(html)
+        print(f"\nDashboard preview written to [file://{output_path}]")
+        self.assertTrue(isfile(output_path))
+
+    def test_dashboard_history_ignores_different_plugin_scope(self):
+        counters = {
+            plugin.CTR_SRC_FILES: {
+                plugin.CTR_ACT_PROCESSED: 1,
+                plugin.CTR_ACT_ERRORED: 0,
+            },
+            plugin.CTR_SRC_TIMING: {
+                plugin.CTR_ACT_PROCESS_MILLIS: 10,
+                plugin.CTR_ACT_TOTAL_MILLIS: 10,
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            history = RunHistory(plugins=["balances"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"balances": counters})
+
+            filtered_history = RunHistory(plugins=["currency"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            filtered_history.load()
+
+            self.assertEqual(0, len(filtered_history._raw))
+            self.assertEqual(0, len(filtered_history._day))
+
+    def test_dashboard_history_malformed_entries_start_fresh(self):
+        counters = {
+            plugin.CTR_SRC_FILES: {
+                plugin.CTR_ACT_PROCESSED: 1,
+                plugin.CTR_ACT_ERRORED: 0,
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            history = RunHistory(plugins=["balances"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"balances": counters})
+
+            raw_path = join(tmp, "history_raw.json")
+            daily_path = join(tmp, "history_daily.json")
+            with open(raw_path, encoding="utf-8") as handle:
+                raw_state = json.load(handle)
+            raw_state["raw"] = [{"plugins": {}}]
+            with open(raw_path, "w", encoding="utf-8") as handle:
+                json.dump(raw_state, handle)
+            with open(daily_path, encoding="utf-8") as handle:
+                daily_state = json.load(handle)
+            daily_state["day"] = [{}]
+            with open(daily_path, "w", encoding="utf-8") as handle:
+                json.dump(daily_state, handle)
+
+            loaded = RunHistory(plugins=["balances"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            loaded.load()
+
+            self.assertEqual(0, len(loaded._raw))
+            self.assertEqual(0, len(loaded._day))
 
     ########################################################################################################################
     # Sources
@@ -974,8 +1157,6 @@ class WrangleTest(unittest.TestCase):
             self.assertEqual(26, len(data_df))
 
     def test_library_database(self):
-        from datetime import date as date_type
-
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
         reset_config()
         csv_path = abspath(f"{test.local_cache}/_database_test.csv")
@@ -1024,6 +1205,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(3, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_ROWS))
 
         test.reset_counters()
+        test._db_cache_dfs.clear()
         currency_df = pl.DataFrame({
             "Date": pl.Series([date_type(2024, 1, 1), date_type(2024, 1, 2)], dtype=pl.Date),
             "AUD/USD": [0.65, 0.66],
@@ -1039,6 +1221,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(2, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_ROWS))
 
         test.reset_counters()
+        test._db_cache_dfs.clear()
         sparse_df = pl.DataFrame({
             "Date": pl.Series([date_type(2024, 2, 1), date_type(2024, 2, 2), date_type(2024, 2, 3)], dtype=pl.Date),
             "AXJO Price Close": [5000.0, None, 5100.0],
@@ -1050,6 +1233,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(3, test.get_counter(plugin.CTR_SRC_EGRESS, plugin.CTR_ACT_DATABASE_ROWS))
 
         test.reset_counters()
+        test._db_cache_dfs.clear()
         call1 = pl.DataFrame({
             "Date": pl.Series([date_type(2024, 3, 1), date_type(2024, 3, 2)], dtype=pl.Date),
             "AUD/USD": [0.65, 0.66],
@@ -1067,6 +1251,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(0.67, mar2["value"][0])
 
         test.reset_counters()
+        test._db_cache_dfs.clear()
         snapshot_df = pl.DataFrame({
             "Date": pl.Series([date_type(2024, 4, 1)], dtype=pl.Date),
             "AUD/USD": [0.65],
@@ -1081,6 +1266,27 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(2, len(long_df))
         self.assertEqual({"snapshot", "delta"}, set(long_df["type"].to_list()))
         self.assertEqual({"$", "%"}, set(long_df["unit"].to_list()))
+
+    def test_dump_database_queries(self):
+        reset_config()
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            wrangle_main._dump_database_queries()
+        text = output.getvalue()
+        print(text)
+        psql_prefix = "PGPASSWORD=$WRANGLE_DATABASE_PASSWORD psql --host=$WRANGLE_DATABASE_HOST --username=$WRANGLE_DATABASE_USER --dbname=$WRANGLE_DATABASE_USER"
+        for plugin_name in wrangle_main._get_plugins():
+            instance = wrangle_main._instantiate_plugin(plugin_name)
+            if instance.database:
+                self.assertIn(f"# {plugin_name}", text)
+                for template in database.DATABASE_QUERY_TEMPLATES:
+                    self.assertIn(f'{psql_prefix} --command="{template.format(table=plugin_name)};"', text)
+            else:
+                self.assertNotIn(f"# {plugin_name}\n", text)
+        self.assertIn(
+            f'{psql_prefix} --command="SELECT time_bucket(\'1 week\', time) AS bucket, type, AVG(value) FROM interest GROUP BY bucket, type ORDER BY bucket DESC LIMIT 20;"',
+            text,
+        )
 
     def test_library_dataframe(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
@@ -1098,7 +1304,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data)))
         self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data, {})))
         self.assertEqual(df_data_str.format("Int64", "String", "String"), test.dataframe_to_str(test.dataframe_new(df_data, df_data_type)))
-        self.assertEqual(3, len((test.dataframe_new(df_data, schema={column: pl.Utf8 for column in df_data[0]}))))
+        self.assertEqual(3, len(test.dataframe_new(df_data, schema={column: pl.Utf8 for column in df_data[0]})))
 
         df_lots_cols = 50
         df_lots_rows = 100
@@ -1111,10 +1317,10 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(df_lots_rows + 6, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 100)))
         self.assertEqual(5 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 5)))
         self.assertEqual(0 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 0)))
-        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots))))
-        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={"SOME UNKNOWN COLUMN": pl.Utf8}))))
-        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_data[0]}))))
-        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_lots[0]}))))
+        self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots)))
+        self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={"SOME UNKNOWN COLUMN": pl.Utf8})))
+        self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_data[0]})))
+        self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_lots[0]})))
 
     ########################################################################################################################
     # State
@@ -1371,7 +1577,7 @@ class WrangleTest(unittest.TestCase):
         change_col = f"{ticker} Price Close 1d-Change Percentage"
 
         def _agg(df):
-            str_cols = [c for c, t in zip(df.columns, df.dtypes) if _is_string_col(c, t)]
+            str_cols = [c for c, t in zip(df.columns, df.dtypes, strict=False) if _is_string_col(c, t)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if price_col in df.columns:
@@ -1454,7 +1660,7 @@ class WrangleTest(unittest.TestCase):
         t = self._setup_state_test("agg-5")
 
         def agg_with_null_col(df):
-            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes) if _is_string_col(_c, _t)]
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes, strict=False) if _is_string_col(_c, _t)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             return df.with_columns(pl.lit(None).cast(pl.Float64).alias("AAPL Baseline Price Close"))
@@ -1513,7 +1719,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_with_guard(self):
         def null_fill_agg(df):
-            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes) if _is_string_col(_c, _t)]
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes, strict=False) if _is_string_col(_c, _t)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if "AAPL Price Close" in df.columns:
@@ -1544,7 +1750,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_state_cache_aggregate_nullfill_backfills_historical_rows(self):
         def null_fill_agg(df):
-            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes) if _is_string_col(_c, _t)]
+            str_cols = [_c for _c, _t in zip(df.columns, df.dtypes, strict=False) if _is_string_col(_c, _t)]
             if str_cols:
                 df = df.with_columns([pl.col(c).cast(pl.Float64, strict=False) for c in str_cols])
             if "AAPL Price Close" in df.columns:
@@ -1823,7 +2029,7 @@ class WrangleTest(unittest.TestCase):
         t.local_cache = abspath(join(DIR_ROOT, "target", "data", f"state-{fixture}"))
         shutil.rmtree(t.local_cache, ignore_errors=True)
         os.makedirs(t.local_cache)
-        src = join(DIR_ROOT, "src/test/resources/state", fixture)
+        src = join(DIR_ROOT, "src/test/resources/state", fixture, "data")
         if isdir(src):
             for fname in os.listdir(src):
                 shutil.copy(join(src, fname), join(t.local_cache, fname))
@@ -1870,9 +2076,12 @@ class WrangleTest(unittest.TestCase):
             os.makedirs(dir_target)
         plugin_module = getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}"), plugin_name.title())()
         print("", flush=True)
-        self._load_caches(plugin_module, join(DIR_ROOT, "src/test/resources/repos", repo_scope, plugin_name, test_name))
+        self._load_caches(plugin_module, join(DIR_ROOT, "src/test/resources/repos", repo_scope, plugin_name, test_name, "data"))
         label = f"{{:<22}} {f'[{plugin_name.title()}]':<15}   {f'[{repo_scope.name}]':<10}   {f'[{test_name}]'}"
-        _print = lambda stage: print(("\n" if stage.startswith("STARTING") else "") + label.format(stage) + ("\n" if stage.startswith("FINISHED") else ""), flush=True)
+
+        def _print(stage):
+            print(("\n" if stage.startswith("STARTING") else "") + label.format(stage) + ("\n" if stage.startswith("FINISHED") else ""), flush=True)
+
         if not prepare_only:
             _print("STARTING (run)")
             plugin_module.run()
@@ -2006,8 +2215,22 @@ class WrangleTest(unittest.TestCase):
                     assert_fn(actual_value, expected,
                               f"Counter [{counter_source} {counter_action}] {label} assertion failed [{actual_value}] {op} [{expected}]")
                     verb = _COUNTER_COMPARATOR_VERBS.get(comparator_key, comparator_key)
-                    name = f"assert_counter_{_to_slug(counter_source)}_{_to_slug(counter_action)}_{verb}_{expected}"
+                    source_slug = counter_source.lower().replace(" ", "_")
+                    action_slug = counter_action.lower().replace(" ", "_")
+                    name = f"assert_counter_{source_slug}_{action_slug}_{verb}_{expected}"
                     _print_assert_pass(f"{name} ({_format_assert_elapsed(time.time() - started)})", f"actual={actual_value}")
+        explicit_errored = {source for source, actions in asserts.get("counter_equals", {}).items() if plugin.CTR_ACT_ERRORED in actions}
+        for counter_source, actions in actual.items():
+            if counter_source in explicit_errored:
+                continue
+            actual_value = actions.get(plugin.CTR_ACT_ERRORED, 0)
+            if actual_value == 0:
+                continue
+            started = time.time()
+            self.assertEqual(0, actual_value, f"Counter [{counter_source} {plugin.CTR_ACT_ERRORED}] equals assertion failed [{actual_value}] != [0]")
+            source_slug = counter_source.lower().replace(" ", "_")
+            action_slug = plugin.CTR_ACT_ERRORED.lower().replace(" ", "_")
+            _print_assert_pass(f"assert_counter_{source_slug}_{action_slug}_equals_0 ({_format_assert_elapsed(time.time() - started)})", f"actual={actual_value}")
 
     def _assert_customs(self, assertions, first, second, third):
         for custom_assert in assertions:
@@ -2036,12 +2259,32 @@ class WrangleTest(unittest.TestCase):
         reset_config()
 
 
+def _print_assert_pass(name, *values):
+    actuals = [str(v)[7:] for v in values if str(v).startswith("actual=")]
+    line = f"PASS [{name}]"
+    if actuals:
+        print(f"{line:<{_ASSERT_PASS_COL}}{'    ' + ' '.join(f'[{a}]' for a in actuals)}", flush=True)
+    else:
+        print(line, flush=True)
+
+
+def _format_assert_elapsed(seconds):
+    return f"{f'{seconds:.3f}'.rstrip('0').rstrip('.')}s"
+
+
 _NUMERIC_DTYPES = (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)
 _STR_DTYPES = (pl.String, pl.Utf8, pl.Null)
 
 
 def _is_string_col(name, dtype):
     return name != 'Date' and dtype in _STR_DTYPES
+
+
+def _first_true_index(mask_series: pl.Series | bool):
+    if isinstance(mask_series, bool):
+        return 0 if mask_series else None
+    indices = mask_series.arg_true()
+    return None if len(indices) == 0 else int(indices[0])
 
 
 def _count_leading_zero_rows(csv_df, numeric_cols):
@@ -2084,7 +2327,7 @@ def _count_trailing_none_rows(csv_df, cols):
     return len(mask) if first_false_from_end is None else int(first_false_from_end)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _load_csv(file_path):
     return pl.read_csv(file_path, try_parse_dates=True)
 
@@ -2255,7 +2498,7 @@ def assert_file_zeroes_per_col(max_zeroes=0, after_first_rows=False, after_last_
     return _assert
 
 
-def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending=None, contiguous=None):
+def assert_file_dates(start_date=None, end_date=None, end_date_at_least=None, max_gap_days=1, descending=None, contiguous=None):
     def _parse_date(_value):
         if _value is None:
             return None
@@ -2278,7 +2521,7 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
                 msg = f"assert_file_dates: [{basename(file_path)}] dates not in ascending order, got {raw_dates[0]} .. {raw_dates[-1]}"
                 dataframe_print("Assert", csv_df.head(3), msg, level="error")
                 return msg
-        elif descending is True:
+        elif descending is True:  # noqa: SIM102
             if raw_dates != sorted(raw_dates, reverse=True):
                 msg = f"assert_file_dates: [{basename(file_path)}] dates not in descending order, got {raw_dates[0]} .. {raw_dates[-1]}"
                 dataframe_print("Assert", csv_df.head(3), msg, level="error")
@@ -2290,6 +2533,10 @@ def assert_file_dates(start_date=None, end_date=None, max_gap_days=1, descending
             return msg
         if end_date is not None and dates[-1] != _parse_date(end_date):
             msg = f"assert_file_dates: [{basename(file_path)}] expected end {end_date}, got {dates[-1]}"
+            dataframe_print("Assert", csv_df.tail(1), msg, level="error")
+            return msg
+        if end_date_at_least is not None and dates[-1] < _parse_date(end_date_at_least):
+            msg = f"assert_file_dates: [{basename(file_path)}] expected end at least {end_date_at_least}, got {dates[-1]}"
             dataframe_print("Assert", csv_df.tail(1), msg, level="error")
             return msg
         if contiguous == "days":
@@ -2371,7 +2618,7 @@ def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
         current_rows = third.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_CURRENT_ROWS, 0)
         previous_rows = first.get(plugin.CTR_SRC_DATA, {}).get(plugin.CTR_ACT_PREVIOUS_ROWS, 0)
         delta = current_rows - previous_rows
-        _assert._last_delta = delta
+        _assert._last_delta = delta  # type: ignore
         if equals is not None and delta != equals:
             return f"assert_rows_delta: expected delta == {equals}, got {delta} (current_rows={current_rows}, previous_rows={previous_rows})"
         if at_least is not None and delta < at_least:
@@ -2384,8 +2631,8 @@ def assert_custom_rows_delta(equals=None, at_least=None, at_most=None):
              f"at_least_{at_least}" if at_least is not None else None,
              f"at_most_{at_most}" if at_most is not None else None]
     suffix = "_".join(p for p in parts if p is not None)
-    _assert.last_delta = None
-    _assert._pass_values = lambda: [f"actual={_assert.last_delta}"]
+    _assert.last_delta = None  # type: ignore
+    _assert._pass_values = lambda: [f"actual={_assert.last_delta}"]  # type: ignore
     _assert.__name__ = f"assert_custom_rows_delta_{suffix}" if suffix else "assert_custom_rows_delta"
     return _assert
 
@@ -2407,20 +2654,6 @@ def merge_asserts(base, addition):
 ASSERT_NONE = {}
 
 ASSERT_RUN = {
-    "counter_equals": {
-        plugin.CTR_SRC_SOURCES: {
-            plugin.CTR_ACT_ERRORED: 0,
-        },
-        plugin.CTR_SRC_FILES: {
-            plugin.CTR_ACT_ERRORED: 0,
-        },
-        plugin.CTR_SRC_DATA: {
-            plugin.CTR_ACT_ERRORED: 0,
-        },
-        plugin.CTR_SRC_EGRESS: {
-            plugin.CTR_ACT_ERRORED: 0,
-        },
-    },
     "counter_at_least": {
         plugin.CTR_SRC_SOURCES: {
             plugin.CTR_ACT_DOWNLOADED: 0,
@@ -2441,27 +2674,21 @@ ASSERT_NOOP = {
         plugin.CTR_SRC_SOURCES: {
             plugin.CTR_ACT_DOWNLOADED: 0,
             plugin.CTR_ACT_UPLOADED: 0,
-            plugin.CTR_ACT_ERRORED: 0,
         },
         plugin.CTR_SRC_FILES: {
             plugin.CTR_ACT_PROCESSED: 0,
-            plugin.CTR_ACT_ERRORED: 0,
         },
         plugin.CTR_SRC_DATA: {
             plugin.CTR_ACT_UPDATE_COLUMNS: 0,
             plugin.CTR_ACT_UPDATE_ROWS: 0,
             plugin.CTR_ACT_DELTA_COLUMNS: 0,
             plugin.CTR_ACT_DELTA_ROWS: 0,
-            plugin.CTR_ACT_ERRORED: 0,
         },
         plugin.CTR_SRC_EGRESS: {
-            plugin.CTR_ACT_QUEUE_COLUMNS: 0,
-            plugin.CTR_ACT_QUEUE_ROWS: 0,
             plugin.CTR_ACT_SHEET_COLUMNS: 0,
             plugin.CTR_ACT_SHEET_ROWS: 0,
             plugin.CTR_ACT_DATABASE_COLUMNS: 0,
             plugin.CTR_ACT_DATABASE_ROWS: 0,
-            plugin.CTR_ACT_ERRORED: 0,
         },
     },
     "counter_at_least": {
@@ -2478,17 +2705,9 @@ ASSERT_RELOAD = {
     "counter_equals": {
         plugin.CTR_SRC_SOURCES: {
             plugin.CTR_ACT_DOWNLOADED: 0,
-            plugin.CTR_ACT_ERRORED: 0,
-        },
-        plugin.CTR_SRC_FILES: {
-            plugin.CTR_ACT_ERRORED: 0,
         },
         plugin.CTR_SRC_DATA: {
             plugin.CTR_ACT_PREVIOUS_ROWS: 0,
-            plugin.CTR_ACT_ERRORED: 0,
-        },
-        plugin.CTR_SRC_EGRESS: {
-            plugin.CTR_ACT_ERRORED: 0,
         },
     },
     "counter_at_least": {
@@ -2510,6 +2729,7 @@ for key, value in list(plugin.load_profile(join(DIR_ROOT, ".env")).items()):
 def reset_config(log="warning"):
     plugin.config.log_level = log
     plugin.config.repo_scope = plugin.RepoScope.RELEASE
+    plugin.config.cache_dir = abspath(join(DIR_ROOT, "target", "data"))
     plugin.config.force_reprocessing = False
     plugin.config.force_downloads = False
     plugin.config.disable_drive_uploads = True
@@ -2550,11 +2770,39 @@ class PluginStub(Plugin):
         pass
 
     def __init__(self, name, drive_folder):
-        super().__init__(name, plugin.Repos(
+        super().__init__(name, repos=plugin.Repos(
             preview={"drive_folder": "PLACEHOLDER"},
             release={"drive_folder": drive_folder},
         ))
 
+
+# Total data column count produced by each plugin at full schema width, used to resolve a cols_data sentinel of -1.
+# cols_modifier subtracts that many tickers before applying the per-ticker width (equity local omits the inactive MCK tickers).
+_COLS_FULL = {
+    "balances": lambda cols_modifier: len(CURRENCY_COLUMNS),
+    "currency": lambda cols_modifier: len(CURRENCY_COLUMNS),
+    "interest": lambda cols_modifier: len(INTEREST_COLUMNS),
+    "equity": lambda cols_modifier: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE) - cols_modifier) * len(DIMENSIONS_STATE),
+}
+
+
+def _load_fixture(scope: str, plugin_name: str, test_name: str, cols_modifier: int = 0) -> dict:
+    path = join(DIR_ROOT, "src/test/resources/repos", scope, plugin_name, test_name, "fixture.toml")
+    assert isfile(path), f"Fixture [{path}] not found, run [src/test/resources/repos/refresh.sh] to generate it"
+    with open(path, "rb") as toml_file:
+        fixture = tomllib.load(toml_file)
+    if int(fixture.get("cols_data", -1)) < 0 and plugin_name in _COLS_FULL:
+        fixture["cols_data"] = _COLS_FULL[plugin_name](cols_modifier)
+    return fixture
+
+
+_ASSERT_FILE_EQUAL_SEEN = set()
+_COUNTER_COMPARATOR_VERBS = {
+    "counter_equals": "is",
+    "counter_less": "less_than",
+    "counter_at_least": "at_least",
+}
+_ASSERT_PASS_COL = 60
 
 if __name__ == "__main__":
     sys.exit(pytest.main(["-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache", __file__, ]))

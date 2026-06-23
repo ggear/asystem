@@ -8,3 +8,13 @@ version = "$SERVICE_VERSION_PEP440"
 
 [project.scripts]
 wrangle = "wrangle.main:main"
+
+[tool.setuptools.package-data]
+"wrangle.server" = ["*.html", "*.css", "*.js", "*.mp3"]
+
+[tool.ruff]
+line-length = 200
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "SIM", "UP", "I"]
+ignore = ["F403", "F405"]

@@ -1,8 +1,11 @@
 import calendar
+import multiprocessing
 import re
 import time
+from collections.abc import Iterable
 from datetime import datetime
-from os.path import *
+from os.path import abspath, basename, isfile
+from typing import cast
 
 import pdftotext
 import polars as pl
@@ -66,6 +69,15 @@ DIMENSIONS_STATE = (
 
 STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 
+PORTFOLIO_TICKER_MAP = {
+    ('Jane', 'USD'): 'MCK',
+    ('Joint', 'USD'): 'MUS',
+    ('Joint', 'GBP'): 'MUK',
+    ('Joint', 'SGD'): 'MSG',
+}
+PORTFOLIO_TICKERS_MCK = {'MCK'}
+PORTFOLIO_TICKERS_ACTIVE = {ticker for ticker in PORTFOLIO_TICKER_MAP.values() if ticker not in PORTFOLIO_TICKERS_MCK}
+
 STOCK = {
     'AORD': {"start": "1985-01", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
     'AXJO': {"start": "1992-01", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
@@ -95,7 +107,7 @@ REPOS_EQUITY = plugin.Repos(
     preview={
         "drive_folder": "1KJAS96r1I2js4TNCwns9LViEjuiCaZuR",
         "sheet_prices": "1tEWCNIb8UNFWCXKaUJ8eWBOR4Qw-VLb0rRFPQT5F9vM",
-        "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
+        "sheet_portfolio": "173Tm2ST72ATg4cD0pbNpL8H7DLTV851woFlsZdkLACE",
     },
     release={
         "drive_folder": "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-",
@@ -103,6 +115,32 @@ REPOS_EQUITY = plugin.Repos(
         "sheet_portfolio": "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk",
     },
 )
+
+
+def _pdf_worker(pdf_path, queue):
+    try:
+        with open(pdf_path, "rb") as f:
+            queue.put(list(cast(Iterable[str], cast(object, pdftotext.PDF(f, physical=True)))))
+    except Exception as exc:
+        queue.put(exc)
+
+
+def _safe_pdf_parse(pdf_path, timeout=60):
+    ctx = multiprocessing.get_context("fork")
+    queue = ctx.Queue()
+    proc = ctx.Process(target=_pdf_worker, args=(pdf_path, queue))
+    proc.start()
+    proc.join(timeout)
+    if proc.is_alive():
+        proc.kill()
+        proc.join()
+        raise Exception(f"PDF parse timed out after [{timeout}s]")
+    if proc.exitcode != 0:
+        raise Exception(f"PDF parse crashed with exit code [{proc.exitcode}]")
+    result = queue.get()
+    if isinstance(result, Exception):
+        raise result
+    return result
 
 
 class Equity(plugin.Plugin):
@@ -144,10 +182,7 @@ class Equity(plugin.Plugin):
             _equity_df = _equity_df \
                 .unique(subset=["Date"], keep="first").sort("Date").set_sorted("Date") \
                 .upsample(time_column="Date", every="1d").fill_nan(pl.lit(None))
-            if numeric_fill == "forward_fill":
-                _equity_df = _equity_df.with_columns(cs.numeric().forward_fill())
-            else:
-                _equity_df = _equity_df.with_columns(cs.numeric().interpolate())
+            _equity_df = _equity_df.with_columns(cs.numeric().forward_fill()) if numeric_fill == "forward_fill" else _equity_df.with_columns(cs.numeric().interpolate())
             return _equity_df \
                 .with_columns(cs.string().forward_fill())
 
@@ -220,9 +255,7 @@ class Equity(plugin.Plugin):
 
         # Download Stock and Fund Data
         if not plugin.config.disable_drive_downloads:
-            files_cached = self.get_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED)
             files = self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, download=True)
-            self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED, -files_cached)
             for file_name in files:
                 if basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
@@ -292,7 +325,7 @@ class Equity(plugin.Plugin):
                             raise Exception(f"File [{stock_file_name}] missing required columns {sorted(missing)}")
                         stock_df = stock_df.with_columns([pl.lit("AUD").alias("Base"), pl.lit(1.0).alias("Rate")])
                         stock_new_names = ["Date"] + [f"{stock_ticker} {column}" for column in DIMENSIONS_PRICE_AUX]
-                        stock_df = stock_df.rename(dict(zip(stock_df.columns, stock_new_names)))
+                        stock_df = stock_df.rename(dict(zip(stock_df.columns, stock_new_names, strict=False)))
                         if stock_ticker in stocks_df:
                             stocks_df[stock_ticker] = pl.concat([stocks_df[stock_ticker], stock_df])
                         else:
@@ -315,114 +348,108 @@ class Equity(plugin.Plugin):
         for statement_file_name in statement_files:
             if statement_files[statement_file_name][0]:
                 if plugin.config.force_reprocessing or statement_files[statement_file_name][1]:
-                    with open(statement_file_name, "rb") as statement_file:
-                        statement_data[statement_file_name] = {}
-                        try:
-                            statement_date = None
-                            statement_type = None
-                            statement_owner = None
-                            statement_rates = {}
-                            statement_data[statement_file_name]['Status'] = STATUS_FAILURE
-                            statement_data[statement_file_name]["Errors"] = []
-                            statement_data[statement_file_name]["Positions"] = {}
-                            statement_data[statement_file_name]['Parse'] = []
-                            parse_lines = statement_data[statement_file_name]['Parse']
-                            statement_pages = pdftotext.PDF(statement_file, physical=True)
-                            page_index = 0
-                            while page_index < len(statement_pages):
-                                line_index = 0
-                                statement_lines = statement_pages[page_index].split("\n")
-                                if page_index == 0:
-                                    if len(statement_lines) > 1 and (
-                                            statement_lines[0].strip().startswith("Consolidated Statement") or
-                                            statement_lines[0].strip().startswith("Statement of")
-                                    ):
-                                        statement_data[statement_file_name]['Status'] = STATUS_SUCCESS
-                                    elif len(statement_lines) > 1 and "Administration Services" in statement_lines[0]:
-                                        statement_data[statement_file_name]['Status'] = STATUS_SKIPPED
-                                    else:
-                                        statement_data[statement_file_name]["Errors"].append("File missing required heading")
-                                while line_index < len(statement_lines):
-                                    statement_line = statement_lines[line_index].strip()
-                                    statement_tokens = statement_line.split()
-                                    parse_line = f"File [{basename(statement_file_name)}]: Page [{page_index:02d}]: Line [{line_index:02d}]:  "
-                                    parse_line += " ".join(f"{i:02d}:{t}" for i, t in enumerate(statement_tokens))
-                                    parse_lines.append(parse_line)
-                                    if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
-                                        if page_index == 0:
-                                            if statement_line.strip().startswith("Account name"):
-                                                if "Jane" in statement_line and "Gear" in statement_line:
-                                                    statement_type = "Fund "
-                                                    statement_owner = "Joint"
-                                                elif "Jane" in statement_line and "Gear" not in statement_line:
-                                                    statement_type = "Equity "
-                                                    statement_owner = "Jane"
-                                                else:
-                                                    statement_data[statement_file_name]['Status'] = STATUS_FAILURE
-                                                    statement_data[statement_file_name]["Errors"].append(f"Could not determine statement type or owner from line [{statement_line}]")
-                                            if statement_line.startswith("Statement date"):
-                                                statement_date_str = statement_tokens[2]
-                                                if len(statement_date_str) == 9:
-                                                    statement_date = datetime.strptime(statement_tokens[2], '%d-%b-%y')
-                                                elif len(statement_date_str) == 11:
-                                                    statement_date = datetime.strptime(statement_tokens[2], '%d-%b-%Y')
-                                                else:
-                                                    raise Exception(f"Could not parse date [{statement_date_str}]")
-                                            if statement_type:
-                                                for currency in CURRENCIES:
-                                                    if statement_line.startswith(currency):
-                                                        statement_rates[currency] = float(statement_tokens[4].replace(',', ''))
+                    statement_data[statement_file_name] = {}
+                    try:
+                        statement_date = None
+                        statement_type = None
+                        statement_owner = None
+                        statement_rates = {}
+                        statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                        statement_data[statement_file_name]["Errors"] = []
+                        statement_data[statement_file_name]["Positions"] = {}
+                        statement_data[statement_file_name]['Parse'] = []
+                        parse_lines = statement_data[statement_file_name]['Parse']
+                        statement_pages = _safe_pdf_parse(statement_file_name)
+                        page_index = 0
+                        while page_index < len(statement_pages):
+                            line_index = 0
+                            statement_lines = statement_pages[page_index].split("\n")
+                            if page_index == 0:
+                                if len(statement_lines) > 1 and (
+                                        statement_lines[0].strip().startswith("Consolidated Statement") or
+                                        statement_lines[0].strip().startswith("Statement of")
+                                ):
+                                    statement_data[statement_file_name]['Status'] = STATUS_SUCCESS
+                                elif len(statement_lines) > 1 and "Administration Services" in statement_lines[0]:
+                                    statement_data[statement_file_name]['Status'] = STATUS_SKIPPED
+                                else:
+                                    statement_data[statement_file_name]["Errors"].append("File missing required heading")
+                            while line_index < len(statement_lines):
+                                statement_line = statement_lines[line_index].strip()
+                                statement_tokens = statement_line.split()
+                                parse_line = f"File [{basename(statement_file_name)}]: Page [{page_index:02d}]: Line [{line_index:02d}]:  "
+                                parse_line += " ".join(f"{i:02d}:{t}" for i, t in enumerate(statement_tokens))
+                                parse_lines.append(parse_line)
+                                if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
+                                    if page_index == 0:
+                                        if statement_line.strip().startswith("Account name"):
+                                            if "Jane" in statement_line and "Gear" in statement_line:
+                                                statement_type = "Fund "
+                                                statement_owner = "Joint"
+                                            elif "Jane" in statement_line and "Gear" not in statement_line:
+                                                statement_type = "Equity "
+                                                statement_owner = "Jane"
+                                            else:
+                                                statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                                                statement_data[statement_file_name]["Errors"].append(f"Could not determine statement type or owner from line [{statement_line}]")
+                                        if statement_line.startswith("Statement date"):
+                                            statement_date_str = statement_tokens[2]
+                                            if len(statement_date_str) == 9:
+                                                statement_date = datetime.strptime(statement_tokens[2], '%d-%b-%y')
+                                            elif len(statement_date_str) == 11:
+                                                statement_date = datetime.strptime(statement_tokens[2], '%d-%b-%Y')
+                                            else:
+                                                raise Exception(f"Could not parse date [{statement_date_str}]")
                                         if statement_type:
-                                            for index_spec in [
-                                                (2, "Situations", CURRENCIES, 5, 10, 2, 6),
-                                                (2, "Situations", CURRENCIES, 8, 13, 2, 6),
-                                                (2, "Situations", CURRENCIES, 7, 12, 1, 6),
-                                                (2, "Situations", CURRENCIES, 7, 12, 1, 6),
-                                                (3, "Situations", CURRENCIES, 5, 9, 2, 6),
-                                                (2, "Shares", ["USD"], 2, 7),
-                                                (3, "Shares", ["USD"], 2, 6),
-                                            ]:
-                                                if page_index == index_spec[0] and index_spec[1] in statement_line:
-                                                    for currency in index_spec[2]:
-                                                        if index_spec[1] == "Shares" or currency in statement_line:
-                                                            try:
-                                                                parsed_currency = currency
-                                                                if index_spec[1] == "Situations":
-                                                                    if line_index < (len(statement_lines) - 1) and statement_lines[line_index + 1].strip().startswith("PCC"):
-                                                                        parsed_currency = statement_lines[line_index + 1].strip().split()[index_spec[5]]
-                                                                    else:
-                                                                        parsed_currency = statement_tokens[index_spec[6]]
-                                                                ticker_map = {
-                                                                    ('Jane', 'USD'): 'MCK',
-                                                                    ('Joint', 'USD'): 'MUS',
-                                                                    ('Joint', 'GBP'): 'MUK',
-                                                                    ('Joint', 'SGD'): 'MSG',
-                                                                }
-                                                                statement_position = {
-                                                                    "Date": statement_date.strftime('%Y-%m-%d'),
-                                                                    "Type": statement_type.strip(),
-                                                                    "Owner": statement_owner,
-                                                                    "Currency": parsed_currency,
-                                                                    "Rate": statement_rates[parsed_currency],
-                                                                    "Units": float(statement_tokens[index_spec[3]].replace(',', '')),
-                                                                    "Value": float(statement_tokens[index_spec[4]].replace(',', '')),
-                                                                    "Ticker": ticker_map.get(
-                                                                        (statement_owner, parsed_currency),
-                                                                        'UNKNOWN',
-                                                                    ),
-                                                                }
-                                                                statement_data[statement_file_name]["Positions"][str(statement_type + parsed_currency)] = statement_position
-                                                            except (KeyError, IndexError, ValueError, AttributeError) as parse_exception:
-                                                                statement_data[statement_file_name]["Errors"].append(
-                                                                    f"Position parse skipped at page [{page_index}] line [{line_index}] for currency [{parsed_currency}]: {type(parse_exception).__name__}: {parse_exception}")
-                                    line_index += 1
-                                page_index += 1
-                            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
-                        except Exception as exception:
-                            statement_data[statement_file_name]['Status'] = STATUS_FAILURE
-                            statement_data[statement_file_name]["Errors"].append(
-                                f"Statement parse failed with exception [{type(exception).__name__}: {exception}]")
-                            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
+                                            for currency in CURRENCIES:
+                                                if statement_line.startswith(currency):
+                                                    statement_rates[currency] = float(statement_tokens[4].replace(',', ''))
+                                    if statement_type:
+                                        for index_spec in [
+                                            (2, "Situations", CURRENCIES, 5, 10, 2, 6),
+                                            (2, "Situations", CURRENCIES, 8, 13, 2, 6),
+                                            (2, "Situations", CURRENCIES, 7, 12, 1, 6),
+                                            (2, "Situations", CURRENCIES, 7, 12, 1, 6),
+                                            (3, "Situations", CURRENCIES, 5, 9, 2, 6),
+                                            (2, "Shares", ["USD"], 2, 7),
+                                            (3, "Shares", ["USD"], 2, 6),
+                                        ]:
+                                            if page_index == index_spec[0] and index_spec[1] in statement_line:
+                                                for currency in index_spec[2]:
+                                                    if index_spec[1] == "Shares" or currency in statement_line:
+                                                        parsed_currency = currency
+                                                        try:
+                                                            if index_spec[1] == "Situations":
+                                                                if line_index < (len(statement_lines) - 1) and statement_lines[line_index + 1].strip().startswith("PCC"):
+                                                                    parsed_currency = statement_lines[line_index + 1].strip().split()[index_spec[5]]
+                                                                else:
+                                                                    parsed_currency = statement_tokens[index_spec[6]]
+                                                            statement_position = {
+                                                                "Date": statement_date.strftime('%Y-%m-%d'),  # type: ignore[union-attr]
+                                                                "Type": statement_type.strip(),
+                                                                "Owner": statement_owner,
+                                                                "Currency": parsed_currency,
+                                                                "Rate": statement_rates[parsed_currency],
+                                                                "Units": float(statement_tokens[index_spec[3]].replace(',', '')),
+                                                                "Value": float(statement_tokens[index_spec[4]].replace(',', '')),
+                                                                "Ticker": PORTFOLIO_TICKER_MAP.get(
+                                                                    (statement_owner, parsed_currency),  # type: ignore[arg-type]
+                                                                    'UNKNOWN',
+                                                                ),
+                                                            }
+                                                            statement_data[statement_file_name]["Positions"][str(statement_type + parsed_currency)] = statement_position
+                                                        except (KeyError, IndexError, ValueError, AttributeError) as parse_exception:
+                                                            statement_data[statement_file_name]["Errors"].append(
+                                                                f"Position parse skipped at page [{page_index}] line [{line_index}] for currency [{parsed_currency}]: "
+                                                                f"{type(parse_exception).__name__}: {parse_exception}")
+                                line_index += 1
+                            page_index += 1
+                        self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
+                    except Exception as exception:
+                        statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                        statement_data[statement_file_name]["Errors"].append(
+                            f"Statement parse failed with exception [{type(exception).__name__}: {exception}]")
+                        self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED)
                     if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
                         statement_positions = statement_data[statement_file_name]["Positions"]
                         if len(statement_positions) == 0:
@@ -498,8 +525,8 @@ class Equity(plugin.Plugin):
                         ])
                     if statement_exprs:
                         statement_df = statement_df.with_columns(statement_exprs)
-                    tickers = [t for t in tickers if t != "MCK"]
-                    statement_tickers = [t for t in statement_tickers if t != "MCK"]
+                    tickers = [t for t in tickers if t not in PORTFOLIO_TICKERS_MCK]
+                    statement_tickers = [t for t in statement_tickers if t not in PORTFOLIO_TICKERS_MCK]
                     statement_df = statement_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in DIMENSIONS_PRICE_AUX])
                     statement_df = _equity_upsample(statement_df)
                     statement_df = _equity_clean(statement_df)
@@ -543,7 +570,8 @@ class Equity(plugin.Plugin):
                 started_time = time.time()
                 tickers = _equity_tickers(equity_df)
                 equity_max_date = equity_df.select(pl.col("Date").max()).item()
-                equity_df_manual = equity_df_manual.filter(pl.col("Date") <= equity_max_date)
+                if equity_max_date is not None:
+                    equity_df_manual = equity_df_manual.filter(pl.col("Date") <= equity_max_date)
                 new_ticker_dfs = []
                 manual_ticker_columns = {}
                 for column in equity_df_manual.columns:
@@ -612,9 +640,9 @@ WHERE entity = 'AUD/{fx_pair}'
   AND time >= '{started_fx_date}'
 ORDER BY time
                         """
-                        fx_query_result = self.database_download(fx_cache, fx_query)
+                        fx_query_result = self.database_download(fx_cache, fx_query, start=started_fx_date, end=ended_fx_date)
                         fx_rates[fx_pair] = self.csv_read(fx_query_result.file_path, schema={"Date": pl.Date}) \
-                            if fx_query_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
+                            if fx_query_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date, "Rate": pl.Float64})
                         fx_rates[fx_pair] = _equity_upsample(fx_rates[fx_pair]).filter(pl.col("Date") <= ended_fx_date)
                     aud_rate_exprs = []
                     spot_exprs = []
@@ -693,7 +721,7 @@ ORDER BY time
             indexes = [column.removesuffix(" Quantity") for column in quantity_columns]
             if "Exchange Symbol" in index_weights.columns:
                 index_weights = index_weights.select(["Exchange Symbol"] + quantity_columns).drop_nulls()
-                index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes)))
+                index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes, strict=False)))
                 index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
             else:
                 self.print_log("Index weights sheet missing required column [Exchange Symbol], using empty index weights")
@@ -730,7 +758,7 @@ ORDER BY time
                 _data_df = _equity_upsample(_data_df, numeric_fill="forward_fill")
                 _data_df = _data_df.with_columns(cs.string().exclude("Date").cast(pl.Float64, strict=False))
                 _tickers = _equity_tickers(_data_df)
-                _stock_tickers_stripped = {k.strip() for k in STOCK.keys()}
+                _stock_tickers_stripped = {k.strip() for k in STOCK}
                 _statement_tickers_in_data = [t for t in _tickers if t.strip() not in _stock_tickers_stripped]
                 if _statement_tickers_in_data:
                     _data_df = _equity_forward_fill(_data_df, DIMENSIONS_PRICE_AUX_TYPES + DIMENSIONS_VOLUME, _tickers=_statement_tickers_in_data)
@@ -860,7 +888,7 @@ ORDER BY time
                 tickers = _equity_tickers(equity_current_df)
                 equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])
                 equity_sheet_df = equity_sheet_df.filter(pl.col("Date") >= pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
-                self.sheet_upload(equity_sheet_df, self.remote_repos.sheet_prices, workbook_name="Prices", sheet_name='History')
+                self.sheet_upload(equity_sheet_df, self.remote_repos.sheet_prices, workbook_name="Prices", sheet_name='History', add_filter=True)
                 dimensions = []
                 dimensions_metadata = [(
                     [
@@ -908,4 +936,4 @@ ORDER BY time
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Equity", REPOS_EQUITY)
+        super().__init__("Equity", order=40, repos=REPOS_EQUITY)

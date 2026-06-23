@@ -1,40 +1,14 @@
 import os
-import os.path
+import socket
 from dataclasses import dataclass
 from enum import Enum, auto
-from os.path import abspath, basename, dirname, isdir, isfile
+from os.path import abspath, basename, dirname, isfile
 from typing import NamedTuple
 
 PL_PRINT_ROWS = 20
 
-CTR_LBL_PAD = '.'
-CTR_LBL_WIDTH = 26
-CTR_SRC_DATA = "Data"
-CTR_SRC_FILES = "Files"
-CTR_SRC_EGRESS = "Egress"
-CTR_SRC_SOURCES = "Sources"
-CTR_ACT_PREVIOUS_ROWS = "Previous Rows"
-CTR_ACT_PREVIOUS_COLUMNS = "Previous Columns"
-CTR_ACT_CURRENT_ROWS = "Current Rows"
-CTR_ACT_CURRENT_COLUMNS = "Current Columns"
-CTR_ACT_UPDATE_ROWS = "Update Rows"
-CTR_ACT_UPDATE_COLUMNS = "Update Columns"
-CTR_ACT_DELTA_ROWS = "Delta Rows"
-CTR_ACT_DELTA_COLUMNS = "Delta Columns"
-CTR_ACT_SHEET_ROWS = "Sheet Rows"
-CTR_ACT_SHEET_COLUMNS = "Sheet Columns"
-CTR_ACT_DATABASE_ROWS = "Database Rows"
-CTR_ACT_DATABASE_COLUMNS = "Database Columns"
-CTR_ACT_QUEUE_ROWS = "Queue Rows"
-CTR_ACT_QUEUE_COLUMNS = "Queue Columns"
-CTR_ACT_ERRORED = "Errored"
-CTR_ACT_PROCESSED = "Processed"
-CTR_ACT_SKIPPED = "Skipped"
-CTR_ACT_DOWNLOADED = "Downloaded"
-CTR_ACT_CACHED = "Cached"
-CTR_ACT_PERSISTED = "Persisted"
-CTR_ACT_UPLOADED = "Uploaded"
-CTR_ACT_DELETED = "Deleted"
+NETWORK_TIMEOUT_SECONDS = float(os.environ.get("WRANGLE_NETWORK_TIMEOUT_SECONDS", "20"))
+socket.setdefaulttimeout(NETWORK_TIMEOUT_SECONDS)
 
 
 class RepoScope(str, Enum):
@@ -81,7 +55,9 @@ class Repos:
 
 class Config:
     log_level: str = "info"
+    poll_period: int = 0
     repo_scope: RepoScope = RepoScope.RELEASE
+    cache_dir: str = "/asystem/mnt/data"
     force_reprocessing: bool = False
     force_downloads: bool = False
     disable_drive_uploads: bool = False
@@ -122,27 +98,12 @@ def get_file(file_name):
     for path in paths:
         if isfile(path):
             return path
-    raise IOError(f"Could not find file [{file_name}] in the usual places {paths}")
-
-
-def get_dir(dir_name):
-    working = dirname(abspath(__file__))
-    parent_paths = [
-        "/asystem/mnt",
-        f"{working}/../../../../../target",
-    ]
-    for parent_path in parent_paths:
-        if isdir(parent_path):
-            path = abspath(f"{parent_path}/{dir_name}")
-            if not isdir(path):
-                os.makedirs(path)
-            return path
-    raise IOError(f"Could not find path in the usual places {parent_paths}")
+    raise OSError(f"Could not find file [{file_name}] in the usual places {paths}")
 
 
 def load_profile(profile_path):
     profile = {}
-    with open(get_file(profile_path), 'r') as profile_file:
+    with open(get_file(profile_path)) as profile_file:
         for profile_line in profile_file:
             profile_line = profile_line.replace("export ", "").rstrip()
             if "=" not in profile_line:

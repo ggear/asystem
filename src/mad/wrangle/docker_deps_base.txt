@@ -7,6 +7,8 @@ less
 curl
 vim
 jq
+procps
+iputils-ping
 build-essential
 poppler-utils
 libc6-dev

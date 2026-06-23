@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Wrangle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="format-detection" content="date=no">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="static/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+<section class="wrap-standard" id="column-3">
+    <div class="wrap">
+        <div class="left-frame-top">
+            <div class="panel-1">
+                <a href="#" onclick="event.preventDefault();window.reloadWithSound()">01-LAST RUN</a>
+            </div>
+            <a href="#" onclick="event.preventDefault();window.scrollTo({top:0,behavior:'smooth'})" class="panel-2"></a>
+        </div>
+        <div class="right-frame-top">
+            <div class="banner">WRANGLE &#149; <span id="lcars-stardate"></span></div>
+            <div class="data-cascade-button-group">
+                <div class="data-cascade-wrapper" id="frozen">
+                    <div class="data-column">
+                        <div class="dc-row-1"><span class="dc-label">TIMESTAMP</span><span id="stat-last-run">—</span></div>
+                        <div class="dc-row-1"><span class="dc-label">PROCESS TIME</span><span id="stat-process-time">—</span></div>
+                        <div class="dc-row-1"><span class="dc-label">MARSHALL TIME</span><span id="stat-marshall-time">—</span></div>
+                        <div class="dc-row-1"><span class="dc-label">EGRESS TIME</span><span id="stat-egress-time">—</span></div>
+                        <div class="dc-row-1"><span class="dc-label">TOTAL TIME</span><span id="stat-total-time">—</span></div>
+                    </div>
+                    <div class="data-column">
+                        <div class="dc-row-3"><span class="dc-label">DATA DELTA ROWS</span><span id="stat-data-delta-rows">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label">DATA UPDATE ROWS</span><span id="stat-data-update-rows">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label">DATA CURRENT ROWS</span><span id="stat-data-current-rows">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label">DATA PREVIOUS ROWS</span><span id="stat-data-previous-rows">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label" id="stat-data-errored-label">DATA ERRORED</span><span id="stat-data-errored">—</span></div>
+                    </div>
+                    <div class="data-column">
+                        <div class="dc-row-3"><span class="dc-label">SOURCES CACHED</span><span id="stat-sources-cached">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label">SOURCES SKIPPED</span><span id="stat-sources-skipped">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label">SOURCES DOWNLOADED</span><span id="stat-sources-downloaded">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label">SOURCES UPLOADED</span><span id="stat-sources-uploaded">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label" id="stat-sources-errored-label">SOURCES ERRORED</span><span id="stat-sources-errored">—</span></div>
+                    </div>
+                </div>
+                <nav>
+                    <a href="#" id="btn-auto-refresh" onclick="event.preventDefault();window.toggleAutoRefresh()">REFRESH ON</a>
+                    <a href="#" id="btn-health" onclick="event.preventDefault();document.getElementById('summary').scrollIntoView({behavior:'smooth',block:'start'})">HEALTH</a>
+                    <a href="#" class="btn-action" data-run="run" onclick="event.preventDefault();window.triggerRun(false, this)">RUN</a>
+                    <a href="#" class="btn-action" data-run="reprocess" onclick="event.preventDefault();window.triggerRun(true, this)">REPROCESS</a>
+                </nav>
+            </div>
+            <div class="bar-panel first-bar-panel">
+                <div class="bar-1"></div>
+                <div class="bar-2"></div>
+                <div class="bar-3"></div>
+                <div class="bar-4"></div>
+                <div class="bar-5"></div>
+            </div>
+        </div>
+    </div>
+    <div class="wrap" id="gap">
+        <div class="left-frame">
+            <div class="left-nav-spacer"></div>
+            <div>
+                <div class="panel-3"></div>
+                <div class="panel-nav-gap"></div>
+                {%- for section in plugin_sections %}
+                <a href="#{{ section.id }}" class="nav-panel theme-{{ section.theme }}"
+                   onclick="event.preventDefault();document.getElementById('{{ section.id }}').scrollIntoView({behavior:'smooth',block:'start'})">{{
+                    '%02d' % (loop.index + 1) }}<span class="hop">-{{ section.title|upper }}</span></a>
+                {%- endfor %}
+                <button onclick="window.scrollTo({top:0,behavior:'smooth'});window.reloadWithSound()" id="topBtn">{{
+                    '%02d' % (plugin_sections | length + 2) }}<span class="hop">-TOP</span></button>
+            </div>
+        </div>
+        <div class="right-frame">
+            <div class="bar-panel">
+                <div class="bar-6"></div>
+                <div class="bar-7"></div>
+                <div class="bar-8"></div>
+                <div class="bar-9"></div>
+                <div class="bar-10"></div>
+            </div>
+            <main>
+
+                {%- for section in plugin_sections %}
+
+                <div class="lcars-text-bar theme-{{ section.theme }}" id="{{ section.id }}">
+                    <h2>{{ '%02d' % (loop.index + 1) }}-{{ section.title }}</h2>
+                    <span class="range-toggle" data-section="{{ section.id }}">
+                        {%- for view in views %}{{ ' | ' if not loop.first else '' }}<a href="#" data-view="{{ view.name }}" onclick="event.preventDefault();window.setView('{{ section.id }}','{{ view.name }}');window.beepView()">{{ view.label }}</a>{%- endfor %}
+                    </span>
+                </div>
+                <div class="chart-grid">
+                    {%- for row in chart_spec %}
+                    {%- set ri = loop.index0 %}
+                    {%- for cell in row %}
+                    {%- set ci = loop.index0 %}
+                    <div class="chart-wrap">
+                        <div class="chart-title" style="color:{{ cell.color }}">{{ cell.source }} {{ cell.action | replace(' Millis', '') }}</div>
+                        <div id="c-{{ section.id }}-{{ ri }}-{{ ci }}"></div>
+                    </div>
+                    {%- endfor %}
+                    {%- endfor %}
+                </div>
+                {%- endfor %}
+
+            </main>
+            <footer></footer>
+        </div>
+    </div>
+</section>
+<script>
+    window.WRANGLE_DATA = {{ snapshot_json | safe }};
+    window.WRANGLE_LATEST_RUN = {{ latest_run_json | safe }};
+    window.WRANGLE_RUN_TIMEOUT_MS = {{ run_timeout_ms }};
+
+    function formatDuration(ms) {
+        if (ms == null || isNaN(ms)) return '0';
+        var n = Number(ms);
+        if (n < 1000) return n + ' ms';
+        if (n < 60000) return (n / 1000).toFixed(n < 10000 ? 2 : 1) + ' s';
+        if (n < 3600000) {
+            var totalSec = Math.round(n / 1000);
+            var mins = Math.floor(totalSec / 60);
+            var secs = totalSec % 60;
+            return mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
+        }
+        var totalMin = Math.round(n / 60000);
+        var hours = Math.floor(totalMin / 60);
+        var minsLeft = totalMin % 60;
+        return hours + 'h ' + (minsLeft < 10 ? '0' : '') + minsLeft + 'm';
+    }
+
+    var CHART_HEIGHT = 100;
+    var VIEWS = window.WRANGLE_DATA.views;
+    var _ACTIVE_VIEW = VIEWS[0].name;
+    var CHARTS = [];
+
+    function getActiveView() {
+        return VIEWS.find(function (v) { return v.name === _ACTIVE_VIEW; }) || VIEWS[0];
+    }
+
+    function seriesFor(sectionId, cell) {
+        var view = getActiveView();
+        var pluginSeries = view.series[sectionId];
+        if (!pluginSeries) return new Array(view.bins).fill(null);
+        var srcSeries = pluginSeries[cell.source];
+        if (!srcSeries) return new Array(view.bins).fill(null);
+        var vals = srcSeries[cell.action];
+        if (!vals) return new Array(view.bins).fill(null);
+        return vals.slice();
+    }
+
+    function toChartData(vals) {
+        return vals.map(function (v) { return v == null ? 0 : v; });
+    }
+
+    function timestampsFor() {
+        return getActiveView().timestamps;
+    }
+
+    var base = {
+        chart: {
+            type: 'bar', background: 'transparent',
+            fontFamily: "'Antonio','Arial Narrow',sans-serif",
+            toolbar: {show: false}, animations: {enabled: false},
+            height: CHART_HEIGHT, parentHeightOffset: 0,
+            sparkline: {enabled: true}
+        },
+        theme: {mode: 'dark'},
+        plotOptions: {bar: {borderRadius: 3, columnWidth: '62%'}},
+        dataLabels: {enabled: false},
+        xaxis: {categories: []},
+        yaxis: {min: 0},
+        grid: {padding: {top: 0, right: 0, bottom: 0, left: 0}},
+        tooltip: {enabled: false},
+        legend: {show: false},
+        states: {
+            hover: {filter: {type: 'none'}},
+            active: {filter: {type: 'none'}}
+        }
+    };
+
+    function merge(a, b) {
+        return Object.assign({}, a, b, {
+            chart: Object.assign({}, a.chart, b.chart),
+            xaxis: Object.assign({}, a.xaxis, b.xaxis),
+            yaxis: Object.assign({}, a.yaxis, b.yaxis)
+        });
+    }
+
+    var sectionIds = {{ plugin_sections | map(attribute='id') | list | tojson }};
+
+    sectionIds.forEach(function (sectionId) {
+        {{ chart_spec | tojson }}.forEach(function (row, ri) {
+            row.forEach(function (cell, ci) {
+                var chartId = 'c-' + sectionId + '-' + ri + '-' + ci;
+                var data = seriesFor(sectionId, cell);
+                var ts = timestampsFor();
+                var apexChart = new ApexCharts(document.getElementById(chartId), merge(base, {
+                    colors: [cell.color],
+                    series: [{name: cell.source + ' ' + cell.action, data: toChartData(data)}],
+                    xaxis: {categories: ts}
+                }));
+                apexChart.render();
+                CHARTS.push({
+                    id: chartId,
+                    sectionId: sectionId,
+                    cell: cell,
+                    color: cell.color,
+                    col: cell.col,
+                    data: data,
+                    apex: apexChart,
+                    isTime: cell.source === 'Timings'
+                });
+            });
+        });
+    });
+
+    window.setView = function (sectionId, viewName) {
+        _ACTIVE_VIEW = viewName;
+        var view = getActiveView();
+        CHARTS.forEach(function (c) {
+            var newData = seriesFor(c.sectionId, c.cell);
+            c.data = newData;
+            c.svgRect = null;
+            c.apex.updateSeries([{name: c.cell.source + ' ' + c.cell.action, data: toChartData(newData)}], false);
+        });
+        document.querySelectorAll('.range-toggle a').forEach(function (link) {
+            link.classList.toggle('active', link.getAttribute('data-view') === viewName);
+        });
+    };
+
+    (function () {
+        document.querySelectorAll('.range-toggle a').forEach(function (link) {
+            link.classList.toggle('active', link.getAttribute('data-view') === _ACTIVE_VIEW);
+        });
+    })();
+
+    (function () {
+        var CHART_BARS = VIEWS[0] ? VIEWS[0].bins : 50;
+
+        CHARTS.forEach(function (c) {
+            var tt = document.createElement('div');
+            tt.style.cssText = 'position:fixed;display:none;z-index:9999;background:#0a0a1a;border:1px solid '
+                + c.color + ';padding:.2rem .5rem;font-family:Antonio,"Arial Narrow",sans-serif;font-size:.9rem;'
+                + 'pointer-events:none;white-space:nowrap;';
+            document.body.appendChild(tt);
+            c.tt = tt;
+        });
+
+        function ensureSvgRect(c) {
+            if (c.svgRect && c.svgRect.ownerSVGElement) return;
+            c.svgRect = null;
+            var el = document.getElementById(c.id);
+            var svg = el && el.querySelector('svg');
+            if (!svg) return;
+            var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('pointer-events', 'none');
+            rect.setAttribute('y', '0');
+            rect.setAttribute('width', '0');
+            rect.setAttribute('height', '100%');
+            rect.setAttribute('fill', 'rgba(255,255,255,0.35)');
+            rect.style.display = 'none';
+            svg.appendChild(rect);
+            c.svgRect = rect;
+        }
+
+        function formatTimestamp(ts, binSeconds) {
+            if (!ts) return '';
+            if (binSeconds >= 604800) return 'W/C ' + ts;
+            if (binSeconds >= 86400) return ts;
+            return ts.slice(0, 10) + ' ' + ts.slice(11, 16);
+        }
+
+        function show(idx, srcEl, mouseY, hoveredSectionId) {
+            var currentView = getActiveView();
+            var currentTs = currentView.timestamps;
+            var currentBins = currentView.bins;
+            if (!currentTs[idx]) {
+                hide();
+                return;
+            }
+            var sectionHasData = CHARTS.some(function (c) {
+                return c.sectionId === hoveredSectionId && c.data[idx] != null;
+            });
+            if (!sectionHasData) {
+                hide();
+                return;
+            }
+            var srcR = srcEl.getBoundingClientRect();
+            var clampedY = Math.max(srcR.top, Math.min(srcR.bottom - 1, mouseY));
+            var relY = (clampedY - srcR.top) / srcR.height;
+            var tsLabel = formatTimestamp(currentTs[idx], currentView.bin_seconds);
+            CHARTS.forEach(function (c) {
+                var r = document.getElementById(c.id).getBoundingClientRect();
+                var barX = r.left + (idx + 0.5) / currentBins * r.width;
+                var absY = r.top + relY * r.height;
+                var displayValue = c.isTime ? formatDuration(c.data[idx]) : c.data[idx];
+                c.tt.innerHTML = '<span style="color:' + c.color + ';opacity:.65">' + tsLabel
+                    + '</span>&nbsp;<span style="color:' + c.color + ';font-weight:bold">' + displayValue + '</span>';
+                c.tt.style.left = barX + 'px';
+                c.tt.style.top = absY + 'px';
+                if (c.col === 'left') {
+                    c.tt.style.transform = 'translateX(0%) translateY(calc(-100% - 12px))';
+                } else if (c.col === 'right') {
+                    c.tt.style.transform = 'translateX(-100%) translateY(calc(-100% - 12px))';
+                } else {
+                    c.tt.style.transform = 'translateX(-50%) translateY(calc(-100% - 12px))';
+                }
+                c.tt.style.display = 'block';
+                ensureSvgRect(c);
+                if (c.svgRect) {
+                    var svgW = c.svgRect.ownerSVGElement.getBoundingClientRect().width;
+                    var slotW = svgW / currentBins;
+                    c.svgRect.setAttribute('x', String(idx * slotW));
+                    c.svgRect.setAttribute('width', String(slotW));
+                    c.svgRect.style.display = '';
+                }
+            });
+        }
+
+        function hide() {
+            CHARTS.forEach(function (c) {
+                c.tt.style.display = 'none';
+                if (c.svgRect) c.svgRect.style.display = 'none';
+            });
+        }
+
+        var _hideTimer = null;
+
+        function scheduleHide() {
+            if (_hideTimer) clearTimeout(_hideTimer);
+            _hideTimer = setTimeout(hide, 150);
+        }
+
+        document.querySelectorAll('.chart-wrap').forEach(function (wrap) {
+            var chartEl = wrap.querySelector('div[id^="c-"]');
+            if (!chartEl) return;
+            var idParts = chartEl.id.split('-');
+            var sectionId = idParts.slice(1, idParts.length - 2).join('-');
+            wrap.addEventListener('mousemove', function (e) {
+                if (_hideTimer) {
+                    clearTimeout(_hideTimer);
+                    _hideTimer = null;
+                }
+                var currentBins = getActiveView().bins;
+                var cr = chartEl.getBoundingClientRect();
+                var idx = Math.max(0, Math.min(currentBins - 1, Math.floor((e.clientX - cr.left) / cr.width * currentBins)));
+                show(idx, chartEl, e.clientY, sectionId);
+            });
+            wrap.addEventListener('mouseleave', scheduleHide);
+        });
+    })();
+
+    (function () {
+        var spacer = document.querySelector('.left-nav-spacer');
+        var nav = spacer && spacer.nextElementSibling;
+        var frame = spacer && spacer.parentElement;
+        if (spacer && nav && frame) {
+            var baseboard = document.querySelector('.baseboard');
+            var gapTop = 0, maxRadius = 0, available = 0, slideMax = 1;
+
+            function readMaxRadius() {
+                var saved = frame.style.borderTopLeftRadius;
+                frame.style.borderTopLeftRadius = '';
+                maxRadius = parseFloat(getComputedStyle(frame).borderTopLeftRadius) || 0;
+                if (saved) frame.style.borderTopLeftRadius = saved;
+            }
+
+            function slideNav() {
+                var stuck = window.scrollY >= gapTop;
+                var past = stuck ? window.scrollY - gapTop : 0;
+                var progress = Math.min(1, past / slideMax);
+                spacer.style.height = (available * progress) + 'px';
+                frame.style.borderTopLeftRadius = Math.max(0, maxRadius - past) + 'px';
+            }
+
+            function recalc() {
+                readMaxRadius();
+                var baseboardHeight = baseboard ? baseboard.offsetHeight : 0;
+                var maxScroll = Math.max(0, (document.documentElement.scrollHeight || 0) - (window.innerHeight || 0));
+                gapTop = frame.parentElement.getBoundingClientRect().top + window.scrollY;
+                available = Math.max(0, frame.clientHeight - nav.offsetHeight - baseboardHeight);
+                slideMax = Math.max(1, maxScroll - gapTop);
+                slideNav();
+            }
+
+            window.addEventListener('scroll', slideNav, {passive: true});
+            window.addEventListener('resize', recalc, {passive: true});
+            if (window.ResizeObserver) {
+                new ResizeObserver(recalc).observe(document.body);
+            }
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(recalc);
+            }
+            recalc();
+        }
+    })();
+
+    (function () {
+        var rawView = VIEWS[0];
+        var lastSlot = -1;
+        for (var i = rawView.bins - 1; i >= 0; i--) {
+            if (rawView.timestamps[i]) { lastSlot = i; break; }
+        }
+        var latestRun = window.WRANGLE_LATEST_RUN;
+        var rawLatestTs = lastSlot >= 0 ? rawView.timestamps[lastSlot] : null;
+        var headerSource = null;
+        var headerTs = null;
+        if (latestRun && latestRun.ts && (!rawLatestTs || latestRun.ts >= rawLatestTs)) {
+            headerSource = (latestRun.plugins && latestRun.plugins.summary) || null;
+            headerTs = latestRun.ts;
+        } else if (lastSlot >= 0) {
+            headerSource = 'rawSeries';
+            headerTs = rawLatestTs;
+        }
+
+        function statVal(source, action) {
+            if (headerSource === null) return null;
+            if (headerSource === 'rawSeries') {
+                var pluginSeries = rawView.series['summary'];
+                if (!pluginSeries) return null;
+                var srcSeries = pluginSeries[source];
+                if (!srcSeries) return null;
+                var vals = srcSeries[action];
+                if (!vals) return null;
+                return vals[lastSlot];
+            }
+            var src = headerSource[source];
+            if (!src) return null;
+            var v = src[action];
+            return v == null ? null : v;
+        }
+
+        function setStat(id, value, isTime) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (value == null) { el.textContent = '—'; return; }
+            el.textContent = isTime ? (Math.round(value / 1000) + 's') : value;
+        }
+
+        function setStatErrored(id, value) {
+            var el = document.getElementById(id);
+            var labelEl = document.getElementById(id + '-label');
+            if (el) {
+                el.textContent = value == null ? '—' : value;
+                el.style.color = '#ff5555';
+            }
+            if (labelEl) { labelEl.style.color = '#ff5555'; }
+        }
+
+        var tsEl = document.getElementById('stat-last-run');
+        if (tsEl) tsEl.textContent = headerTs ? (headerTs.slice(0, 10) + ' ' + headerTs.slice(11, 16)) : '—';
+
+        setStat('stat-total-time', statVal('Timings', 'Total Millis'), true);
+        setStat('stat-process-time', statVal('Timings', 'Process Millis'), true);
+        setStat('stat-marshall-time', statVal('Timings', 'Marshall Millis'), true);
+        setStat('stat-egress-time', statVal('Timings', 'Egress Millis'), true);
+        ['stat-total-time', 'stat-process-time', 'stat-marshall-time', 'stat-egress-time'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.style.color = '#ff9900';
+            var wrap = el && el.parentElement;
+            var labelEl = wrap && wrap.querySelector('.dc-label');
+            if (labelEl) labelEl.style.color = '#ff9900';
+        });
+
+        setStat('stat-sources-cached', statVal('Sources', 'Cached'), false);
+        setStat('stat-sources-skipped', statVal('Sources', 'Skipped'), false);
+        setStat('stat-sources-downloaded', statVal('Sources', 'Downloaded'), false);
+        setStat('stat-sources-uploaded', statVal('Sources', 'Uploaded'), false);
+        (function () {
+            var el = document.getElementById('stat-sources-downloaded');
+            if (el) el.style.color = '#8899ff';
+            var wrap = el && el.parentElement;
+            var labelEl = wrap && wrap.querySelector('.dc-label');
+            if (labelEl) labelEl.style.color = '#8899ff';
+        })();
+        (function () {
+            var el = document.getElementById('stat-sources-uploaded');
+            if (el) el.style.color = '#cc99ff';
+            var wrap = el && el.parentElement;
+            var labelEl = wrap && wrap.querySelector('.dc-label');
+            if (labelEl) labelEl.style.color = '#cc99ff';
+        })();
+        setStatErrored('stat-sources-errored', statVal('Sources', 'Errored'));
+
+        setStat('stat-data-delta-rows', statVal('Data', 'Delta Rows'), false);
+        setStat('stat-data-update-rows', statVal('Data', 'Update Rows'), false);
+        setStat('stat-data-current-rows', statVal('Data', 'Current Rows'), false);
+        setStat('stat-data-previous-rows', statVal('Data', 'Previous Rows'), false);
+        ['stat-data-delta-rows', 'stat-data-update-rows', 'stat-data-current-rows', 'stat-data-previous-rows'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.style.color = '#ffcc99';
+            var wrap = el && el.parentElement;
+            var labelEl = wrap && wrap.querySelector('.dc-label');
+            if (labelEl) labelEl.style.color = '#ffcc99';
+        });
+        setStatErrored('stat-data-errored', statVal('Data', 'Errored'));
+    })();
+
+    (function () {
+        var MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+        function updateStardate() {
+            var now = new Date();
+            var d = ('0' + now.getDate()).slice(-2);
+            var h = ('0' + now.getHours()).slice(-2);
+            var m = ('0' + now.getMinutes()).slice(-2);
+            var el = document.getElementById('lcars-stardate');
+            if (el) el.textContent = d + " " + MONTHS[now.getMonth()] + " " + now.getFullYear() + " " + h + ":" + m;
+        }
+
+        updateStardate();
+        setInterval(updateStardate, 60000);
+    })();
+
+    (function () {
+        var snd1 = new Audio('static/dashboard_beep1.mp3');
+        var snd2 = new Audio('static/dashboard_beep2.mp3');
+        var snd3 = new Audio('static/dashboard_beep3.mp3');
+        var snd4 = new Audio('static/dashboard_beep4.mp3');
+
+        function beep1() {
+            snd1.currentTime = 0;
+            snd1.play().catch(function () {
+            });
+        }
+
+        function beep2() {
+            snd2.currentTime = 0;
+            snd2.play().catch(function () {
+            });
+        }
+
+        function beep3() {
+            snd3.currentTime = 0;
+            snd3.play().catch(function () {
+            });
+        }
+
+        function beep4() {
+            snd4.currentTime = 0;
+            snd4.play().catch(function () {
+            });
+        }
+
+        window.playRunSound = beep4;
+
+        function onEl(sel, fn) {
+            document.querySelectorAll(sel).forEach(function (el) {
+                el.addEventListener('click', fn);
+            });
+        }
+
+        onEl('nav:not(.range-toggle) a:not(.btn-action)', beep2);
+        onEl('.panel-2', beep2);
+        onEl('.nav-panel', beep2);
+
+        window.beepNav = function () {
+            beep2();
+        };
+
+        window.beepView = function () {
+            beep3();
+        };
+
+        window.reloadWithSound = function () {
+            function doReload() {
+                snd4.removeEventListener('ended', doReload);
+                history.scrollRestoration = 'manual';
+                window.scrollTo(0, 0);
+                history.replaceState(null, '', location.pathname + location.search);
+                location.reload();
+            }
+
+            snd4.addEventListener('ended', doReload);
+            snd4.currentTime = 0;
+            snd4.play().catch(doReload);
+        };
+    })();
+    (function () {
+        var rawView = VIEWS[0];
+        var lastSlot = -1;
+        for (var i = rawView.bins - 1; i >= 0; i--) {
+            if (rawView.timestamps[i]) { lastSlot = i; break; }
+        }
+        var latestRun = window.WRANGLE_LATEST_RUN;
+        var rawLatestTs = lastSlot >= 0 ? rawView.timestamps[lastSlot] : null;
+        var errored = null;
+        if (latestRun && latestRun.ts && (!rawLatestTs || latestRun.ts >= rawLatestTs)) {
+            errored = !!(latestRun.errored && latestRun.errored.summary);
+        } else if (lastSlot >= 0 && rawView.errored['summary']) {
+            errored = !!rawView.errored['summary'][lastSlot];
+        }
+        var healthBtn = document.getElementById('btn-health');
+        if (healthBtn && errored !== null) {
+            healthBtn.textContent = errored ? 'UNHEALTHY' : 'HEALTHY';
+            healthBtn.style.backgroundColor = errored ? '#ff5555' : '#5566ff';
+        }
+
+        var _autoRefreshTimer = null;
+        var _autoRefreshOn = true;
+        var _autoRefreshInterval = 15 * 60 * 1000;
+
+        function scheduleAutoRefresh() {
+            if (_autoRefreshTimer) clearTimeout(_autoRefreshTimer);
+            _autoRefreshTimer = setTimeout(function () { window.reloadWithSound(); }, _autoRefreshInterval);
+        }
+
+        function clearAutoRefresh() {
+            if (_autoRefreshTimer) { clearTimeout(_autoRefreshTimer); _autoRefreshTimer = null; }
+        }
+
+        function setAutoRefreshLabel() {
+            var btn = document.getElementById('btn-auto-refresh');
+            if (!btn) return;
+            btn.textContent = _autoRefreshOn ? 'REFRESH ON' : 'REFRESH OFF';
+            btn.classList.toggle('auto-off', !_autoRefreshOn);
+        }
+
+        scheduleAutoRefresh();
+        setAutoRefreshLabel();
+
+        window.toggleAutoRefresh = function () {
+            if (_runInFlightButton) return;
+            _autoRefreshOn = !_autoRefreshOn;
+            setAutoRefreshLabel();
+            if (_autoRefreshOn) scheduleAutoRefresh(); else clearAutoRefresh();
+        };
+
+        function setAutoRefreshDisabled(disabled) {
+            var btn = document.getElementById('btn-auto-refresh');
+            if (btn) btn.classList.toggle('disabled', disabled);
+        }
+
+        var _runInFlightButton = null;
+        var _runWasAutoRefreshOn = false;
+
+        function clearRunState(button) {
+            button.classList.remove('pulsing');
+            button.classList.remove('failed');
+            button.style.backgroundColor = '';
+        }
+
+        function restoreAutoRefresh() {
+            _autoRefreshOn = _runWasAutoRefreshOn;
+            setAutoRefreshLabel();
+            if (_autoRefreshOn) scheduleAutoRefresh();
+        }
+
+        var _runIdleLabels = {run: 'RUN', reprocess: 'REPROCESS'};
+        var _runActiveLabels = {run: 'RUNNING', reprocess: 'REPROCESSING'};
+
+        function restoreLabel(button) {
+            var key = button.getAttribute('data-run');
+            button.textContent = _runIdleLabels[key] || button.textContent;
+        }
+
+        function markFailed(button) {
+            button.classList.remove('pulsing');
+            button.classList.add('failed');
+            button.style.backgroundColor = '#ff5555';
+            restoreLabel(button);
+            _runInFlightButton = null;
+            setAutoRefreshDisabled(false);
+            window.playRunSound();
+            restoreAutoRefresh();
+        }
+
+        window.triggerRun = function (forceReprocessing, sourceButton) {
+            if (_runInFlightButton) return;
+            var button = sourceButton || (forceReprocessing
+                ? document.querySelector('.btn-action[data-run="reprocess"]')
+                : document.querySelector('.btn-action[data-run="run"]'));
+            if (!button) return;
+            clearRunState(button);
+            var key = button.getAttribute('data-run');
+            button.textContent = _runActiveLabels[key] || button.textContent;
+            _runInFlightButton = button;
+            _runWasAutoRefreshOn = _autoRefreshOn;
+            if (_autoRefreshOn) {
+                _autoRefreshOn = false;
+                setAutoRefreshLabel();
+                clearAutoRefresh();
+            }
+            button.classList.add('pulsing');
+            setAutoRefreshDisabled(true);
+            window.playRunSound();
+            if (location.protocol === 'file:') {
+                setTimeout(function () { markFailed(button); }, window.WRANGLE_RUN_TIMEOUT_MS);
+                return;
+            }
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function () { controller.abort(); }, window.WRANGLE_RUN_TIMEOUT_MS);
+            fetch('/api/v1/run', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({force_reprocessing: forceReprocessing}),
+                signal: controller.signal
+            }).then(function (response) {
+                clearTimeout(timeoutId);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                button.classList.remove('pulsing');
+                restoreLabel(button);
+                _runInFlightButton = null;
+                window.playRunSound();
+                setTimeout(function () { window.reloadWithSound(); }, 350);
+            }).catch(function () {
+                clearTimeout(timeoutId);
+                markFailed(button);
+            });
+        };
+    })();
+</script>
+<div class="headtrim"></div>
+<div class="baseboard"></div>
+</body>
+</html>

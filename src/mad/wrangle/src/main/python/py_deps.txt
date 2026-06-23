@@ -1,6 +1,8 @@
 mock
 pandas
 polars
+jinja2
+orjson
 tabulate
 datetime
 

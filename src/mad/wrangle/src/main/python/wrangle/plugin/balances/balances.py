@@ -2,7 +2,7 @@ import json
 import time
 import uuid
 from datetime import datetime
-from os.path import *
+from os.path import abspath, isfile
 from typing import Any
 
 import polars as pl
@@ -141,7 +141,7 @@ class Balances(plugin.Plugin):
         # Collect Balance Data
         started_time = time.time()
         for file_name in sorted(balance_files):
-            if balance_files[file_name].status != plugin.DownloadStatus.FAILED:
+            if balance_files[file_name].status != plugin.DownloadStatus.FAILED:  # noqa: SIM102
                 if plugin.config.force_reprocessing or balance_files[file_name].status == plugin.DownloadStatus.DOWNLOADED:
                     try:
                         monthly_df = self.csv_read(file_name, schema=BALANCES_SCHEMA)
@@ -155,7 +155,7 @@ class Balances(plugin.Plugin):
         if new_data:
             try:
                 def _aggregate_function(_data_df):
-                    keep_cols = [c for c in BALANCES_SCHEMA.keys() if c in _data_df.columns]
+                    keep_cols = [c for c in BALANCES_SCHEMA if c in _data_df.columns]
                     return _data_df.select(keep_cols).with_columns(cs.float().round(2))
 
                 # Commit Balance Data: source-complete Balance records → committed state with schema-selected columns (delta for egress)
@@ -181,4 +181,4 @@ class Balances(plugin.Plugin):
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Balances", REPOS_BALANCES)
+        super().__init__("Balances", order=30, repos=REPOS_BALANCES, disabled=True)
