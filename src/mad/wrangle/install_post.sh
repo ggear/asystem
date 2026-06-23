@@ -8,5 +8,4 @@ cd ${SERVICE_INSTALL} || exit
 mkdir -p ${SERVICE_HOME}/data
 chmod -R 777 ${SERVICE_HOME}/data
 
-# TODO: Provide implementation
-docker exec -e wrangle --once
+docker exec -e wrangle --force-reprocessing --enable-uploads

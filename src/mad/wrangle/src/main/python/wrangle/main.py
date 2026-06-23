@@ -131,7 +131,7 @@ def configure(argv=None):
         default=None,
         help="logging verbosity (default: info; debug when running once)",
     )
-    
+
     args = parser.parse_args(argv)
     if args.poll_period != 0 and args.poll_period not in HISTORY_RAW_LABELS:
         parser.error(f"argument -p/--poll-period: MINUTES must be 0 or one of {sorted(HISTORY_RAW_LABELS)}")

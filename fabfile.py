@@ -922,9 +922,6 @@ def _release(context):
                                         "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
                                         "xargs rm -rf'"
                                .format(ssh_pass, host, install, install), hide='err', warn=True)
-                    install_local_path = Path(join(ROOT_MODULE_DIR, release_module, "install_local.sh"))
-                    if install_local_path.exists():
-                        _run_local(context, install_local_path)
                 else:
                     print("Module ignored")
                 _print_footer(release_module, "release", host=host)
