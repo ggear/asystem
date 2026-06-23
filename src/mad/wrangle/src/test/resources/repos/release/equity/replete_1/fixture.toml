@@ -1,5 +1,5 @@
-files_processed = 503
-rows_delta = 22
+files_processed = 550
+rows_delta = 23
 end_date = "2026-05-29"
 expected_errors = 0
 cols_data = -1

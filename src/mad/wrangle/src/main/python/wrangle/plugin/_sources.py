@@ -687,11 +687,8 @@ class SourcesMixin(ContractMixin):
                     data_df = data_df \
                         .with_columns([pl.when(pl.col(pl.Utf8) == "#N/A").then(None) \
                                       .otherwise(pl.col(pl.Utf8)).name.keep()]) \
-                        .with_columns([pl.when(pl.col(pl.Utf8).str.starts_with("$"))
-                                      .then(pl.col(pl.Utf8).str.replace_all(r"(?i)\$|,", "")) \
-                                      .otherwise(pl.col(pl.Utf8)).name.keep()]) \
-                        .with_columns([pl.when(pl.col(pl.Utf8).str.starts_with("£")) \
-                                      .then(pl.col(pl.Utf8).str.replace_all(r"(?i)£|,", "")) \
+                        .with_columns([pl.when(pl.col(pl.Utf8).str.contains(r"^\s*[-+]?[$£]?[\d,]*\.?\d+\s*$")) \
+                                      .then(pl.col(pl.Utf8).str.replace_all(r"[$£,\s]", "")) \
                                       .otherwise(pl.col(pl.Utf8)).name.keep()]) \
                         .with_columns([pl.when(pl.col(pl.Utf8).str.len_chars() == 0).then(None) \
                                       .otherwise(pl.col(pl.Utf8)).name.keep()])

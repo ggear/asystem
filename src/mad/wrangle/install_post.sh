@@ -8,4 +8,5 @@ cd ${SERVICE_INSTALL} || exit
 mkdir -p ${SERVICE_HOME}/data
 chmod -R 777 ${SERVICE_HOME}/data
 
-docker exec -e wrangle --force-reprocessing --enable-uploads
+# TODO: RE-enable once distruted lock implemented
+#docker exec wrangle bash -c 'wrangle --force-reprocessing --enable-uploads'
