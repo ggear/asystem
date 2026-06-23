@@ -37,14 +37,14 @@
                         <div class="dc-row-3"><span class="dc-label">DATA UPDATE ROWS</span><span id="stat-data-update-rows">—</span></div>
                         <div class="dc-row-3"><span class="dc-label">DATA CURRENT ROWS</span><span id="stat-data-current-rows">—</span></div>
                         <div class="dc-row-3"><span class="dc-label">DATA PREVIOUS ROWS</span><span id="stat-data-previous-rows">—</span></div>
-                        <div class="dc-row-3"><span class="dc-label" id="stat-data-errored-label">DATA ERRORED</span><span id="stat-data-errored">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label" id="stat-data-errored-label">DATA/FILE ERRORED</span><span id="stat-data-errored">—</span></div>
                     </div>
                     <div class="data-column">
                         <div class="dc-row-3"><span class="dc-label">SOURCES CACHED</span><span id="stat-sources-cached">—</span></div>
                         <div class="dc-row-3"><span class="dc-label">SOURCES SKIPPED</span><span id="stat-sources-skipped">—</span></div>
                         <div class="dc-row-3"><span class="dc-label">SOURCES DOWNLOADED</span><span id="stat-sources-downloaded">—</span></div>
                         <div class="dc-row-3"><span class="dc-label">SOURCES UPLOADED</span><span id="stat-sources-uploaded">—</span></div>
-                        <div class="dc-row-3"><span class="dc-label" id="stat-sources-errored-label">SOURCES ERRORED</span><span id="stat-sources-errored">—</span></div>
+                        <div class="dc-row-3"><span class="dc-label" id="stat-sources-errored-label">SOURCES/EGRESS ERRORED</span><span id="stat-sources-errored">—</span></div>
                     </div>
                 </div>
                 <nav>
@@ -489,7 +489,7 @@
             var labelEl = wrap && wrap.querySelector('.dc-label');
             if (labelEl) labelEl.style.color = '#cc99ff';
         })();
-        setStatErrored('stat-sources-errored', statVal('Sources', 'Errored'));
+        (function () { var a = statVal('Sources', 'Errored'), b = statVal('Egress', 'Errored'); setStatErrored('stat-sources-errored', (a == null && b == null) ? null : (a || 0) + (b || 0)); })();
 
         setStat('stat-data-delta-rows', statVal('Data', 'Delta Rows'), false);
         setStat('stat-data-update-rows', statVal('Data', 'Update Rows'), false);
@@ -502,7 +502,7 @@
             var labelEl = wrap && wrap.querySelector('.dc-label');
             if (labelEl) labelEl.style.color = '#ffcc99';
         });
-        setStatErrored('stat-data-errored', statVal('Data', 'Errored'));
+        (function () { var a = statVal('Data', 'Errored'), b = statVal('Files', 'Errored'); setStatErrored('stat-data-errored', (a == null && b == null) ? null : (a || 0) + (b || 0)); })();
     })();
 
     (function () {

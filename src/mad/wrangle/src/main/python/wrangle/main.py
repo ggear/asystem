@@ -24,24 +24,10 @@ def configure(argv=None):
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+
+    # Common switches
     parser.add_argument(
-        "--poll-period",
-        type=int,
-        default=0,
-        metavar="MINUTES",
-        help=(
-            "run continuously on a fixed cadence; 0 runs once and exits with debug logging (default: 0); "
-            f"if greater than 0 must be one of {sorted(HISTORY_RAW_LABELS)}"
-        ),
-    )
-    parser.add_argument(
-        "--cache-dir",
-        default="/asystem/mnt/data",
-        metavar="DIR",
-        help="base directory for plugin data caches (default: /asystem/mnt/data)",
-    )
-    parser.add_argument(
-        "--filter-plugins",
+        "-p", "--filter-plugins",
         default=None,
         metavar="CSV",
         help=(
@@ -49,20 +35,22 @@ def configure(argv=None):
         ),
     )
     parser.add_argument(
-        "--force-reprocessing",
+        "-r", "--force-reprocessing",
         action="store_true",
         help="flush each plugin's cached state and reprocess all files",
     )
     parser.add_argument(
-        "--force-downloads",
+        "-d", "--force-downloads",
         action="store_true",
         help="force all files to be re-downloaded even if cached",
     )
     parser.add_argument(
-        "--enable-uploads",
+        "-u", "--enable-uploads",
         action="store_true",
         help="enable all upload targets",
     )
+
+    # Uncommon switches
     parser.add_argument(
         "--enable-drive-uploads",
         action="store_true",
@@ -103,6 +91,24 @@ def configure(argv=None):
         action="store_true",
         help="skip sheet downloads and read from local cache only",
     )
+
+    # System switches
+    parser.add_argument(
+        "--poll-period",
+        type=int,
+        default=0,
+        metavar="MINUTES",
+        help=(
+            "run continuously on a fixed cadence; 0 runs once and exits with debug logging (default: 0); "
+            f"if greater than 0 must be one of {sorted(HISTORY_RAW_LABELS)}"
+        ),
+    )
+    parser.add_argument(
+        "--cache-dir",
+        default="/asystem/mnt/data",
+        metavar="DIR",
+        help="base directory for plugin data caches (default: /asystem/mnt/data)",
+    )
     parser.add_argument(
         "--repo-scope",
         choices=["release", "preview", "local"],
@@ -125,6 +131,7 @@ def configure(argv=None):
         default=None,
         help="logging verbosity (default: info; debug when running once)",
     )
+    
     args = parser.parse_args(argv)
     if args.poll_period != 0 and args.poll_period not in HISTORY_RAW_LABELS:
         parser.error(f"argument -p/--poll-period: MINUTES must be 0 or one of {sorted(HISTORY_RAW_LABELS)}")

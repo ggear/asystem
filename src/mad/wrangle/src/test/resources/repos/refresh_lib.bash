@@ -123,5 +123,5 @@ refresh_query_equity() {
 refresh_write_fixture() {
   printf 'files_processed = %s\nrows_delta = %s\nend_date = "%s"\nexpected_errors = %s\ncols_data = %s\n' \
     "$1" "$2" "$3" "$4" "$5" >"${REPO_TEST_FIXTURE_FILE}"
-  printf 'Wrote fixture [%s]\n' "${REPO_TEST_FIXTURE_FILE}"
+  printf '==> %s\n' "${REPO_TEST_FIXTURE_FILE}"
 }

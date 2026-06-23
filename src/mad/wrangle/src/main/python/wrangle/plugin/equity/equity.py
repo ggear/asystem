@@ -642,7 +642,7 @@ WHERE entity = 'AUD/{fx_pair}'
 ORDER BY time
                         """
                         fx_query_result = self.database_download(fx_cache, fx_query, start=started_fx_date, end=ended_fx_date)
-                        fx_rates[fx_pair] = self.csv_read(fx_query_result.file_path, schema={"Date": pl.Date}) \
+                        fx_rates[fx_pair] = self.csv_read(fx_query_result.file_path, schema={"Date": pl.Date, "Rate": pl.Float64}) \
                             if fx_query_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date, "Rate": pl.Float64})
                         fx_rates[fx_pair] = _equity_upsample(fx_rates[fx_pair]).filter(pl.col("Date") <= ended_fx_date)
                     aud_rate_exprs = []
@@ -724,6 +724,8 @@ ORDER BY time
                 index_weights = index_weights.select(["Exchange Symbol"] + quantity_columns).drop_nulls()
                 index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes, strict=False)))
                 index_weights = index_weights.unique(subset=["Ticker"], keep="first").sort("Ticker").set_sorted("Ticker")
+                if indexes:
+                    index_weights = index_weights.with_columns([pl.col(index).cast(pl.Float64, strict=False) for index in indexes])
             else:
                 self.print_log("Index weights sheet missing required column [Exchange Symbol], using empty index weights")
                 index_weights = self.dataframe_new(schema={"Ticker": pl.Utf8, **{index: pl.Float64 for index in indexes}}, print_rows=-1)

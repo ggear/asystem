@@ -629,11 +629,7 @@ class WrangleTest(unittest.TestCase):
     def test_equity_release_replete_1(self):
         fixture = _load_fixture("release", "equity", "replete_1")
         self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="info",
-
-                        # TODO: Restore once database/sheets provisioned, update other caches
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=False,
-                        # disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
-
+                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
                         enable_rerun=True, force_reprocessing=False, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
@@ -683,11 +679,7 @@ class WrangleTest(unittest.TestCase):
     # Create a clean data cache for repopulating tests
     def test_equity_release_replete_1_download(self):
         self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="debug",
-
-                        # TODO: Restore once database/sheets provisioned, update other caches
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=False,
-                        # disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
-
+                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
                         enable_rerun=False, force_reprocessing=True, force_downloads=False,
                         counter_asserts=merge_asserts(ASSERT_RUN, {
@@ -2071,6 +2063,8 @@ class WrangleTest(unittest.TestCase):
         plugin.config.disable_sheet_uploads = disable_sheet_uploads
         plugin.config.disable_database_uploads = disable_database_uploads
         plugin.database_close()
+        os.environ['WRANGLE_DATABASE_HOST'] = os.environ['POSTGRES_IP_PROD']
+        plugin.database_open()
         dir_target = join(DIR_ROOT, "target")
         if not isdir(dir_target):
             os.makedirs(dir_target)

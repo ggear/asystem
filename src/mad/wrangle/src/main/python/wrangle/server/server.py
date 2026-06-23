@@ -223,8 +223,7 @@ class _Handler(BaseHTTPRequestHandler):
 
         overall = status_for("summary")
         plugins_status = {name: status_for(name) for name in snapshot.plugins}
-        code = 503 if overall == "unhealthy" else 200
-        self._send_json({"status": overall, "plugins": plugins_status}, code)
+        self._send_json({"status": overall, "plugins": plugins_status}, 200)
 
     def _serve_history(self):
         snapshot = self._history.snapshot()

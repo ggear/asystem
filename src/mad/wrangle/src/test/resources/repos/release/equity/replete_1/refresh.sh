@@ -9,11 +9,8 @@ if [ "$(date +%m)" != "$(date -v+1d +%m)" ]; then
   refresh_log_error "cannot replete ${REPO_TEST_NAME} release on the last day of the month"
   exit 1
 fi
-
-# TODO: Once database/sheet deployed to release repo, we can delete entire test data dir, for the time being we need to preserve the caches
-#rm -rf "${REPO_TEST_DIR}"/*
+rm -rf "${REPO_TEST_DIR}"/*
 refresh_repopulate
-# TODO: End
 
 # Remove last month files
 rm -v "${REPO_TEST_DIR}/yahoo_"*"_$(date +%Y)-$(date +%m).csv"

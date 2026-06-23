@@ -7,7 +7,7 @@ from typing import NamedTuple
 
 PL_PRINT_ROWS = 20
 
-NETWORK_TIMEOUT_SECONDS = float(os.environ.get("WRANGLE_NETWORK_TIMEOUT_SECONDS", "20"))
+NETWORK_TIMEOUT_SECONDS = float(os.environ.get("WRANGLE_NETWORK_TIMEOUT_SECONDS", "60"))
 socket.setdefaulttimeout(NETWORK_TIMEOUT_SECONDS)
 
 

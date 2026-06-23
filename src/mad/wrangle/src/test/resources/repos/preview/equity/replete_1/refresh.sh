@@ -12,9 +12,8 @@ find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -type f -name '[!_]*' -exec cp -vpf {} "
 rsync -avci "${REPO_TEST_DIR}"/ "${REPO_TEST_DRIVE_DIR}"/
 
 # Add cache files
-cp -vpf "${REPO_TEST_RUN_DIR}/_sheet_prices_manual.csv" "${REPO_TEST_DIR}"
-cp -vpf "${REPO_TEST_RUN_DIR}/_sheet_portfolio_indexes.csv" "${REPO_TEST_DIR}"
-cp -vpf "${REPO_TEST_RUN_DIR}/_database_rba_"*_"rates.csv" "${REPO_TEST_DIR}"
+find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -name '_database_*.csv' ! -name '*_run.csv' ! -name '_database_equity.csv' -exec cp -vpf {} "${REPO_TEST_DIR}" \;
+find "${REPO_TEST_RUN_DIR}" -maxdepth 1 -name '_sheet_*.csv' ! -name '*_run.csv' ! -name '_sheet_prices_history.csv' -exec cp -vpf {} "${REPO_TEST_DIR}" \;
 
 # Add current state, trim last line so rows_delta=1 (ie 1 day's row in source files to add)
 cp -vpf "${REPO_TEST_RUN_DIR}/__${REPO_TEST_NAME}_current.csv" "${REPO_TEST_DIR}"
