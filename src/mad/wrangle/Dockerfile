@@ -11,6 +11,8 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2+deb12u2 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install jq=1.6-2.1+deb12u1 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install procps=2:4.0.2-3 && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install iputils-ping=3:20221126-1+deb12u1 && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install postgresql-client=15+248+deb12u1 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install build-essential=12.9 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install poppler-utils=22.12.0-2+deb12u2 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libc6-dev=2.36-9+deb12u14 && \

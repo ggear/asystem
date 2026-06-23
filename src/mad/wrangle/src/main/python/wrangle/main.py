@@ -179,15 +179,20 @@ _SECRET_ENV_SUFFIXES = ("PASSWORD", "KEY", "TOKEN", "SECRET")
 
 def _dump_database_queries():
     psql_prefix = (
-        "PGPASSWORD=$WRANGLE_DATABASE_PASSWORD "
-        "psql --host=$WRANGLE_DATABASE_HOST --username=$WRANGLE_DATABASE_USER --dbname=$WRANGLE_DATABASE_USER"
+        "PGPASSWORD=$WRANGLE_DATABASE_PASSWORD \\\n"
+        "  psql \\\n"
+        "    --host=$WRANGLE_DATABASE_HOST \\\n"
+        "    --port=$WRANGLE_DATABASE_PORT \\\n"
+        "    --username=$WRANGLE_DATABASE_USER \\\n"
+        "    --dbname=$WRANGLE_DATABASE_USER"
     )
     for plugin_name in _get_plugins():
         instance = _instantiate_plugin(plugin_name)
         if instance.database:
             print(f"# {plugin_name}")
             for template in database.DATABASE_QUERY_TEMPLATES:
-                print(f"{psql_prefix} --command=\"{template.format(table=plugin_name)};\"")
+                print(f"{psql_prefix} \\\n    --command=\"\n{template.format(table=plugin_name)};\n\"")
+                print()
             print()
 
 

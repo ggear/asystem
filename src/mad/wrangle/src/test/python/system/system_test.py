@@ -133,22 +133,12 @@ def run_wrangle_once(force_reprocessing=False):
         _exec_dump_database_queries()
 
 
-_SQL_KEYWORDS = ["FROM", "WHERE", "GROUP BY", "ORDER BY", "LIMIT", "HAVING"]
-
-
 def _format_cell(cell: object) -> object:
     if hasattr(cell, "isoformat"):
         return cell.isoformat()  # type: ignore[union-attr]
     if isinstance(cell, float):
         return round(cell, 2)
     return cell
-
-
-def _format_sql(query: str) -> str:
-    result = query
-    for keyword in _SQL_KEYWORDS:
-        result = result.replace(f" {keyword} ", f"\n   {keyword} ")
-    return result
 
 
 def _exec_dump_database_queries() -> str:
@@ -159,7 +149,7 @@ def _exec_dump_database_queries() -> str:
     assert result.returncode == 0, f"wrangle --dump-database-queries failed:\n{result.stderr}"
     output = result.stdout
     assert "psql" in output
-    queries = re.findall(r'--command="(.+?);"', output)
+    queries = [q.strip() for q in re.findall(r'--command="\n(.+?);\n"', output, re.DOTALL)]
     assert len(queries) > 0, "no queries found in dump output"
     separator = "#" * 80
     print(f"{separator}\n")
@@ -170,7 +160,7 @@ def _exec_dump_database_queries() -> str:
                 rows = cur.fetchall()
                 description = cur.description
                 col_names = [desc[0] for desc in description] if description is not None else []
-                print(f"-- {_format_sql(query)}")
+                print(f"-- {query}")
                 print(f"   {col_names}")
                 for row in rows:
                     print(f"   {[_format_cell(v) for v in row]}")

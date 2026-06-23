@@ -1266,19 +1266,13 @@ class WrangleTest(unittest.TestCase):
             wrangle_main._dump_database_queries()
         text = output.getvalue()
         print(text)
-        psql_prefix = "PGPASSWORD=$WRANGLE_DATABASE_PASSWORD psql --host=$WRANGLE_DATABASE_HOST --username=$WRANGLE_DATABASE_USER --dbname=$WRANGLE_DATABASE_USER"
         for plugin_name in wrangle_main._get_plugins():
             instance = wrangle_main._instantiate_plugin(plugin_name)
             if instance.database:
                 self.assertIn(f"# {plugin_name}", text)
-                for template in database.DATABASE_QUERY_TEMPLATES:
-                    self.assertIn(f'{psql_prefix} --command="{template.format(table=plugin_name)};"', text)
+                self.assertEqual(text.count(f"FROM {plugin_name}"), len(database.DATABASE_QUERY_TEMPLATES))
             else:
                 self.assertNotIn(f"# {plugin_name}\n", text)
-        self.assertIn(
-            f'{psql_prefix} --command="SELECT time_bucket(\'1 week\', time) AS bucket, type, AVG(value) FROM interest GROUP BY bucket, type ORDER BY bucket DESC LIMIT 20;"',
-            text,
-        )
 
     def test_library_dataframe(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")

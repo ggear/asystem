@@ -13,16 +13,91 @@ DATABASE_ENV_VARS = (
 )
 
 DATABASE_QUERY_TEMPLATES = [
-    "SELECT COUNT(*), MIN(time) AS oldest, MAX(time) AS newest FROM {table}",
-    "SELECT COUNT(*), type, period, unit, MIN(time) AS oldest, MAX(time) AS newest FROM {table} GROUP BY type, period, unit ORDER BY type, period, unit",
-    "SELECT * FROM {table} WHERE time >= CURRENT_DATE ORDER BY time DESC",
-    "SELECT * FROM {table} WHERE time >= CURRENT_DATE - INTERVAL '2 days' ORDER BY time DESC",
-    "SELECT * FROM {table} WHERE time >= date_trunc('year', CURRENT_DATE) ORDER BY time DESC LIMIT 10",
-    "SELECT * FROM {table} ORDER BY time DESC LIMIT 10",
-    "SELECT time_bucket('1 week', time) AS bucket, type, AVG(value) FROM {table} GROUP BY bucket, type ORDER BY bucket DESC LIMIT 20",
-    "SELECT time_bucket('1 month', time) AS bucket, type, MAX(value) FROM {table} GROUP BY bucket, type ORDER BY bucket DESC LIMIT 20",
-    "SELECT time_bucket('1 month', time) AS bucket, entity, type, AVG(value) AS mean, MAX(value) AS high, MIN(value) AS low, MAX(value) - MIN(value) AS range "
-    "FROM {table} WHERE time >= date_trunc('year', CURRENT_DATE) GROUP BY bucket, entity, type ORDER BY bucket DESC, entity LIMIT 10",
+    (
+        "SELECT\n"
+        "   COUNT(*),\n"
+        "   MIN(time) AS oldest,\n"
+        "   MAX(time) AS newest\n"
+        "FROM {table}"
+    ),
+    (
+        "SELECT\n"
+        "   COUNT(*),\n"
+        "   type,\n"
+        "   period,\n"
+        "   unit,\n"
+        "   MIN(time) AS oldest,\n"
+        "   MAX(time) AS newest\n"
+        "FROM {table}\n"
+        "GROUP BY type, period, unit\n"
+        "ORDER BY type, period, unit"
+    ),
+    (
+        "SELECT DISTINCT ON (type, period, unit)\n"
+        "   *\n"
+        "FROM {table}\n"
+        "WHERE\n"
+        "   time >= CURRENT_DATE\n"
+        "ORDER BY type, period, unit, time DESC"
+    ),
+    (
+        "SELECT DISTINCT ON (type, period, unit)\n"
+        "   *\n"
+        "FROM {table}\n"
+        "WHERE\n"
+        "   time >= CURRENT_DATE - INTERVAL '2 days'\n"
+        "ORDER BY type, period, unit, time DESC"
+    ),
+    (
+        "SELECT *\n"
+        "FROM {table}\n"
+        "WHERE\n"
+        "   time >= date_trunc('year', CURRENT_DATE)\n"
+        "ORDER BY time DESC\n"
+        "LIMIT 10"
+    ),
+    (
+        "SELECT *\n"
+        "FROM {table}\n"
+        "ORDER BY time DESC\n"
+        "LIMIT 10"
+    ),
+    (
+        "SELECT\n"
+        "   time_bucket('1 week', time) AS bucket,\n"
+        "   type,\n"
+        "   AVG(value)\n"
+        "FROM {table}\n"
+        "GROUP BY bucket, type\n"
+        "ORDER BY bucket DESC\n"
+        "LIMIT 20"
+    ),
+    (
+        "SELECT\n"
+        "   time_bucket('1 month', time) AS bucket,\n"
+        "   type,\n"
+        "   MAX(value)\n"
+        "FROM {table}\n"
+        "GROUP BY bucket, type\n"
+        "ORDER BY bucket DESC\n"
+        "LIMIT 20"
+    ),
+    (
+        "SELECT\n"
+        "   time_bucket('1 month', time) AS bucket,\n"
+        "   entity,\n"
+        "   type,\n"
+        "   AVG(value) AS mean,\n"
+        "   MAX(value) AS high,\n"
+        "   MIN(value) AS low,\n"
+        "   MAX(value) - MIN(value) AS range\n"
+        "FROM {table}\n"
+        "WHERE\n"
+        "   time >= date_trunc('year', CURRENT_DATE)\n"
+        "GROUP BY bucket, entity, type\n"
+        "ORDER BY bucket DESC, entity\n"
+        "LIMIT 10"
+    ),
 ]
 
 database_conn: psycopg.Connection | None = None

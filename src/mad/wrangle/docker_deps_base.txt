@@ -9,6 +9,7 @@ vim
 jq
 procps
 iputils-ping
+postgresql-client
 build-essential
 poppler-utils
 libc6-dev

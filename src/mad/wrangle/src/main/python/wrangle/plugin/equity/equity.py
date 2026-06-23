@@ -939,4 +939,4 @@ ORDER BY time
         self.counter_write()
 
     def __init__(self):
-        super().__init__("Equity", order=40, repos=REPOS_EQUITY)
+        super().__init__("Equity", order=40, repos=REPOS_EQUITY, database=True)
