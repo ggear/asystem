@@ -554,9 +554,10 @@ class Equity(plugin.Plugin):
                 manual_exprs = []
                 for ticker in _equity_tickers(equity_df_manual):
                     manual_exprs.extend([
-                        pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Open"),
-                        pl.col(f"{ticker} Price Close").alias(f"{ticker} Price High"),
-                        pl.col(f"{ticker} Price Close").alias(f"{ticker} Price Low"),
+                        pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False),
+                        pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price Open"),
+                        pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price High"),
+                        pl.col(f"{ticker} Price Close").cast(pl.Float64, strict=False).alias(f"{ticker} Price Low"),
                         pl.lit(0, pl.Int64).alias(f"{ticker} Market Volume"),
                         pl.lit(0.0, pl.Float64).alias(f"{ticker} Paid Dividends"),
                         pl.lit(0.0, pl.Float64).alias(f"{ticker} Stock Splits"),

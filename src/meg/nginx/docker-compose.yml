@@ -1,7 +1,7 @@
 services:
   nginx:
     # NOTES: https://nginx.org/en/CHANGES
-    image: nginx:1.31.1-trixie
+    image: nginx:1.31.2-trixie
     container_name: nginx
     init: true
     restart: ${SERVICE_RESTART}
