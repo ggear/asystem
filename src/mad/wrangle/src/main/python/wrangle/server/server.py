@@ -155,10 +155,35 @@ class _Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_error_json(400, "invalid_body", "request body must be JSON")
             return
-        self.connection.settimeout(TIMEOUT_RUN_SECONDS)
-        callback_result = self._run_callback(force_reprocessing=bool(params.get("force_reprocessing", False)))
-        plugin_counters = callback_result["counters"]
-        self._send_json({"ts": callback_result["ts"], "counters": {"summary": aggregate_summary(plugin_counters), **plugin_counters}})
+        run_result: list[dict | None] = [None]
+        run_error: list[BaseException | None] = [None]
+        completed = threading.Event()
+
+        def _run() -> None:
+            try:
+                run_result[0] = self._run_callback(force_reprocessing=bool(params.get("force_reprocessing", False)))
+            except BaseException as exc:
+                run_error[0] = exc
+            finally:
+                completed.set()
+
+        threading.Thread(target=_run, daemon=True).start()
+        self._response_started = True
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("X-API-Version", "v1")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Transfer-Encoding", "chunked")
+        self.end_headers()
+        while not completed.wait(timeout=30):
+            self.wfile.write(b"1\r\n \r\n")
+        if run_error[0] is not None:
+            self.wfile.write(b"0\r\n\r\n")
+            return
+        callback_result = run_result[0]
+        plugin_counters = callback_result["counters"]  # type: ignore[index]
+        response_body = json.dumps({"ts": callback_result["ts"], "counters": {"summary": aggregate_summary(plugin_counters), **plugin_counters}}).encode("utf-8")  # type: ignore[index]
+        self.wfile.write(f"{len(response_body):x}\r\n".encode() + response_body + b"\r\n0\r\n\r\n")
 
     def _send_text(self, body: bytes, code: int = 200):
         self._response_started = True
