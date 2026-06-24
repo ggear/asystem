@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl -s "http://localhost:${WRANGLE_HTTP_PORT}/health" | jq -r '.status')" = "healthy" ]
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl "http://localhost:${WRANGLE_HTTP_PORT}/health" | jq -er '.status')" = "healthy" ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [wrangle] is healthy :)" >&2

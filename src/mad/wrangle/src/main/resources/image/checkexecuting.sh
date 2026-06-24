@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${WRANGLE_HTTP_PORT}/health")" = "200" ]
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl -o /dev/null -w "%{http_code}" "http://localhost:${WRANGLE_HTTP_PORT}/health")" = "200" ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [wrangle] is executing :)" >&2
