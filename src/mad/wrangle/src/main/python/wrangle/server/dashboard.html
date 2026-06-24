@@ -610,6 +610,42 @@
         };
     })();
     (function () {
+        var _trackedWidth = window.innerWidth;
+        var _debounceTimer = null;
+        var _reloading = false;
+        var _settled = false;
+
+        setTimeout(function () { _trackedWidth = window.innerWidth; _settled = true; }, 500);
+
+        function doResizeReload() {
+            if (_reloading) return;
+            _reloading = true;
+            document.documentElement.style.transition = 'opacity 0.15s ease';
+            document.documentElement.style.opacity = '0';
+            setTimeout(function () { location.reload(); }, 160);
+        }
+
+        window.addEventListener('resize', function () {
+            if (!_settled || _reloading) return;
+            var w = window.innerWidth;
+            if (w === _trackedWidth) return;
+            _trackedWidth = w;
+            if (_debounceTimer) clearTimeout(_debounceTimer);
+            _debounceTimer = setTimeout(function () { _debounceTimer = null; doResizeReload(); }, 150);
+        }, {passive: true});
+
+        var _orientationTarget = (screen.orientation && screen.orientation.addEventListener) ? screen.orientation : window;
+        _orientationTarget.addEventListener(_orientationTarget === window ? 'orientationchange' : 'change', function () {
+            if (_reloading) return;
+            if (_debounceTimer) clearTimeout(_debounceTimer);
+            _debounceTimer = setTimeout(function () {
+                _debounceTimer = null;
+                _trackedWidth = window.innerWidth;
+                doResizeReload();
+            }, 150);
+        }, {passive: true});
+    })();
+    (function () {
         var rawView = VIEWS[0];
         var lastSlot = -1;
         for (var i = rawView.bins - 1; i >= 0; i--) {
