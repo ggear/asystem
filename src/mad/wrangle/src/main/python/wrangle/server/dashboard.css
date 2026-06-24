@@ -200,6 +200,7 @@ button {
     outline: none;
     color: black;
     transition: width 1s;
+    touch-action: manipulation;
 }
 
 button:hover {
@@ -447,6 +448,7 @@ nav a {
     justify-content: flex-end;
     align-items: flex-end;
     width: var(--nav-width);
+    touch-action: manipulation;
     height: calc(var(--nav-width) / 2.8);
     padding-inline: 1.5rem;
     padding-bottom: .7rem;
@@ -907,6 +909,7 @@ h4 {
     width: 100%;
     flex-shrink: 0;
     overflow: hidden;
+    touch-action: pan-y;
     background-image: repeating-linear-gradient(
             to bottom,
             transparent,

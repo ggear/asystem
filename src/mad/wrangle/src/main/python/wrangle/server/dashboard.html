@@ -247,6 +247,10 @@
         });
     });
 
+    window.addEventListener('load', function () {
+        CHARTS.forEach(function (c) { c.apex.updateOptions({}, false, false, false); });
+    });
+
     window.setView = function (sectionId, viewName) {
         _ACTIVE_VIEW = viewName;
         var view = getActiveView();
