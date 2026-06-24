@@ -923,6 +923,7 @@ h4 {
     text-transform: uppercase;
     line-height: 1.2;
     padding-bottom: 0.25rem;
+    opacity: 0.55;
 }
 
 @media (max-width: 900px) {
