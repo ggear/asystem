@@ -631,18 +631,13 @@
             if (w === _trackedWidth) return;
             _trackedWidth = w;
             if (_debounceTimer) clearTimeout(_debounceTimer);
-            _debounceTimer = setTimeout(function () { _debounceTimer = null; doResizeReload(); }, 150);
+            _debounceTimer = setTimeout(doResizeReload, 150);
         }, {passive: true});
 
         var _orientationTarget = (screen.orientation && screen.orientation.addEventListener) ? screen.orientation : window;
         _orientationTarget.addEventListener(_orientationTarget === window ? 'orientationchange' : 'change', function () {
-            if (_reloading) return;
-            if (_debounceTimer) clearTimeout(_debounceTimer);
-            _debounceTimer = setTimeout(function () {
-                _debounceTimer = null;
-                _trackedWidth = window.innerWidth;
-                doResizeReload();
-            }, 150);
+            if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
+            doResizeReload();
         }, {passive: true});
     })();
     (function () {
