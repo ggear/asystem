@@ -763,8 +763,10 @@
                 body: JSON.stringify({force_reprocessing: forceReprocessing}),
                 signal: controller.signal
             }).then(function (response) {
-                clearTimeout(timeoutId);
                 if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.text();
+            }).then(function () {
+                clearTimeout(timeoutId);
                 button.classList.remove('pulsing');
                 restoreLabel(button);
                 _runInFlightButton = null;
