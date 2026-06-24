@@ -427,7 +427,7 @@
         var rawLatestTs = lastSlot >= 0 ? rawView.timestamps[lastSlot] : null;
         var headerSource = null;
         var headerTs = null;
-        if (latestRun && latestRun.ts && (!rawLatestTs || latestRun.ts >= rawLatestTs)) {
+        if (latestRun && latestRun.ts) {
             headerSource = (latestRun.plugins && latestRun.plugins.summary) || null;
             headerTs = latestRun.ts;
         } else if (lastSlot >= 0) {
@@ -605,9 +605,8 @@
             if (rawView.timestamps[i]) { lastSlot = i; break; }
         }
         var latestRun = window.WRANGLE_LATEST_RUN;
-        var rawLatestTs = lastSlot >= 0 ? rawView.timestamps[lastSlot] : null;
         var errored = null;
-        if (latestRun && latestRun.ts && (!rawLatestTs || latestRun.ts >= rawLatestTs)) {
+        if (latestRun && latestRun.ts) {
             errored = !!(latestRun.errored && latestRun.errored.summary);
         } else if (lastSlot >= 0 && rawView.errored['summary']) {
             errored = !!rawView.errored['summary'][lastSlot];
