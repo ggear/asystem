@@ -725,7 +725,7 @@
             button.classList.remove('pulsing');
             button.classList.add('failed');
             button.style.backgroundColor = '#ff5555';
-            restoreLabel(button);
+            button.textContent = 'TIMED OUT';
             _runInFlightButton = null;
             setAutoRefreshDisabled(false);
             window.playRunSound();
