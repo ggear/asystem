@@ -33,8 +33,8 @@ CHART_SPEC = [
         {"source": "Egress", "action": "Database Rows", "color": "#cc99ff", "col": "right"},
     ],
     [
-        {"source": "Timings", "action": "Process Millis", "color": "#ff9900", "col": "left"},
-        {"source": "Timings", "action": "Marshall Millis", "color": "#ff9900", "col": "middle"},
+        {"source": "Timings", "action": "Marshall Millis", "color": "#ff9900", "col": "left"},
+        {"source": "Timings", "action": "Process Millis", "color": "#ff9900", "col": "middle"},
         {"source": "Timings", "action": "Egress Millis", "color": "#ff9900", "col": "right"},
     ],
 ]

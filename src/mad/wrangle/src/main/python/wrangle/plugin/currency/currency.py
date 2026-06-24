@@ -158,7 +158,6 @@ class Currency(plugin.Plugin):
                     self.database_upload(rba_pctchange_df,
                                          metric_type="delta", period=f"{PERIODS[fx_period]:0.0f}d", unit="%",
                                          print_label=f"Currency_{fx_period}".replace(" ", "_"))
-
             self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:

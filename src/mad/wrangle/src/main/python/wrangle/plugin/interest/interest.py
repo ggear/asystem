@@ -156,7 +156,6 @@ class Interest(plugin.Plugin):
                     self.database_upload(interest_periodly_df,
                                          metric_type="mean", period=f"{PERIODS[int_period] / 12:0.0f}y", unit="%",
                                          print_label=f"Interest_{int_period}".replace(" ", "_"))
-
             self.print_log("Upload complete", started=started_time)
 
         except Exception as exception:

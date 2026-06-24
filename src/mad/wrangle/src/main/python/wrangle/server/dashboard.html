@@ -27,8 +27,8 @@
                 <div class="data-cascade-wrapper" id="frozen">
                     <div class="data-column">
                         <div class="dc-row-1"><span class="dc-label">TIMESTAMP</span><span id="stat-last-run">—</span></div>
-                        <div class="dc-row-1"><span class="dc-label">PROCESS TIME</span><span id="stat-process-time">—</span></div>
                         <div class="dc-row-1"><span class="dc-label">MARSHALL TIME</span><span id="stat-marshall-time">—</span></div>
+                        <div class="dc-row-1"><span class="dc-label">PROCESS TIME</span><span id="stat-process-time">—</span></div>
                         <div class="dc-row-1"><span class="dc-label">EGRESS TIME</span><span id="stat-egress-time">—</span></div>
                         <div class="dc-row-1"><span class="dc-label">TOTAL TIME</span><span id="stat-total-time">—</span></div>
                     </div>
@@ -473,8 +473,8 @@
         if (tsEl) tsEl.textContent = headerTs ? (headerTs.slice(0, 10) + ' ' + headerTs.slice(11, 16)) : '—';
 
         setStat('stat-total-time', statVal('Timings', 'Total Millis'), true);
-        setStat('stat-process-time', statVal('Timings', 'Process Millis'), true);
         setStat('stat-marshall-time', statVal('Timings', 'Marshall Millis'), true);
+        setStat('stat-process-time', statVal('Timings', 'Process Millis'), true);
         setStat('stat-egress-time', statVal('Timings', 'Egress Millis'), true);
         ['stat-total-time', 'stat-process-time', 'stat-marshall-time', 'stat-egress-time'].forEach(function (id) {
             var el = document.getElementById(id);
