@@ -155,10 +155,10 @@ COUNTERS: dict[tuple[str, str], Counter] = {(c.source, c.action): c for c in [
     Counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, "Egress Database Columns", AGG_MAX, "count"),
     Counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, "Egress Database Rows", AGG_SUM, "count"),
     Counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED, "Egress Errored", AGG_SUM, "count", error=True),
-    Counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS, "Marshall Millis", AGG_SUM, "duration_ms"),
-    Counter(CTR_SRC_TIMING, CTR_ACT_PROCESS_MILLIS, "Process Millis", AGG_SUM, "duration_ms"),
-    Counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS, "Egress Millis", AGG_SUM, "duration_ms"),
-    Counter(CTR_SRC_TIMING, CTR_ACT_TOTAL_MILLIS, "Total Millis", AGG_SUM, "duration_ms"),
+    Counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS, "Marshall Millis", AGG_MAX, "duration_ms"),
+    Counter(CTR_SRC_TIMING, CTR_ACT_PROCESS_MILLIS, "Process Millis", AGG_MAX, "duration_ms"),
+    Counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS, "Egress Millis", AGG_MAX, "duration_ms"),
+    Counter(CTR_SRC_TIMING, CTR_ACT_TOTAL_MILLIS, "Total Millis", AGG_MAX, "duration_ms"),
 ]}
 
 _EXPECTED_COUNTER_ACTIONS = {
