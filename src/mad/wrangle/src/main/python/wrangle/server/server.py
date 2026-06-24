@@ -155,6 +155,7 @@ class _Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_error_json(400, "invalid_body", "request body must be JSON")
             return
+        self.connection.settimeout(TIMEOUT_RUN_SECONDS)
         callback_result = self._run_callback(force_reprocessing=bool(params.get("force_reprocessing", False)))
         plugin_counters = callback_result["counters"]
         self._send_json({"ts": callback_result["ts"], "counters": {"summary": aggregate_summary(plugin_counters), **plugin_counters}})
