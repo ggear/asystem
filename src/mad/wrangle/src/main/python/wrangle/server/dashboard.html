@@ -102,7 +102,7 @@
                     {%- for cell in row %}
                     {%- set ci = loop.index0 %}
                     <div class="chart-wrap">
-                        <div class="chart-title" style="color:{{ cell.color }}">{{ cell.source }} {{ cell.action | replace(' Millis', '') }}</div>
+                        <div class="chart-title" style="color:{{ cell.color }}">{{ cell.label if cell.label is defined else cell.source + ' ' + (cell.action | replace(' Millis', '')) }}</div>
                         <div id="c-{{ section.id }}-{{ ri }}-{{ ci }}"></div>
                     </div>
                     {%- endfor %}
@@ -154,6 +154,17 @@
         if (!srcSeries) return new Array(view.bins).fill(null);
         var vals = srcSeries[cell.action];
         if (!vals) return new Array(view.bins).fill(null);
+        if (cell.source2 && cell.action2) {
+            var srcSeries2 = pluginSeries[cell.source2];
+            var vals2 = srcSeries2 && srcSeries2[cell.action2];
+            if (vals2) {
+                return vals.map(function (v, i) {
+                    var v2 = vals2[i];
+                    if (v == null && v2 == null) return null;
+                    return (v || 0) + (v2 || 0);
+                });
+            }
+        }
         return vals.slice();
     }
 

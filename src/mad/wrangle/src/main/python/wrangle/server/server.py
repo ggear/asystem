@@ -18,7 +18,7 @@ THEMES = ["creme", "butter", "gold", "orange", "pumpkin", "rich", "ember", "cinn
 
 CHART_SPEC = [
     [
-        {"source": "Data", "action": "Errored", "color": "#ff5555", "col": "left"},
+        {"source": "Data", "action": "Errored", "label": "Data/File Errored", "source2": "Files", "action2": "Errored", "color": "#ff5555", "col": "left"},
         {"source": "Data", "action": "Delta Rows", "color": "#ffcc99", "col": "middle"},
         {"source": "Data", "action": "Current Rows", "color": "#ffcc99", "col": "right"},
     ],
