@@ -58,11 +58,6 @@ append_bool_arg WRANGLE_DISABLE_SOURCE_DOWNLOADS --disable-source-downloads
 append_bool_arg WRANGLE_DISABLE_DATABASE_DOWNLOADS --disable-database-downloads
 append_bool_arg WRANGLE_DISABLE_SHEET_DOWNLOADS --disable-sheet-downloads
 
-# env-only vars, not CLI flags
-: "${WRANGLE_RUN_TIMEOUT_SECONDS:=}"
-: "${WRANGLE_NETWORK_TIMEOUT_SECONDS:=}"
-: "${WRANGLE_STACK_DUMP_FILE:=}"
-
 if [[ $# -eq 0 ]]; then
   exec wrangle "${wrangle_args[@]}"
 elif [[ "$1" == -* ]]; then

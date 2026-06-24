@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import logging
+import os
 import ssl
 import threading
 import time
@@ -74,7 +75,7 @@ class SourcesMixin(ContractMixin):
     @staticmethod
     def _requests_session_with_timeout():
         session = requests.Session()
-        adapter = DefaultTimeoutHTTPAdapter(NETWORK_TIMEOUT_SECONDS)
+        adapter = DefaultTimeoutHTTPAdapter(TIMEOUT_NETWORK_SECONDS)
         session.mount("https://", adapter)
         session.mount("http://", adapter)
         return session
@@ -83,7 +84,7 @@ class SourcesMixin(ContractMixin):
     def _google_authorized_http(credentials):
         return google_auth_httplib2.AuthorizedHttp(
             credentials,
-            http=httplib2.Http(timeout=NETWORK_TIMEOUT_SECONDS),
+            http=httplib2.Http(timeout=TIMEOUT_NETWORK_SECONDS),
         )
 
     @_timed(CTR_ACT_MARSHALL_MILLIS)
@@ -129,7 +130,7 @@ class SourcesMixin(ContractMixin):
                 request.get_method = lambda: 'HEAD'
                 response = urllib.request.urlopen(
                     request,
-                    timeout=NETWORK_TIMEOUT_SECONDS,
+                    timeout=TIMEOUT_NETWORK_SECONDS,
                     context=ssl._create_unverified_context(),
                 )
                 modified_timestamp = get_modified(response.headers)
@@ -142,7 +143,7 @@ class SourcesMixin(ContractMixin):
         try:
             response = urllib.request.urlopen(
                 urllib.request.Request(url_file, headers=client),
-                timeout=NETWORK_TIMEOUT_SECONDS,
+                timeout=TIMEOUT_NETWORK_SECONDS,
                 context=ssl._create_unverified_context(),
             )
             if not exists(dirname(local_path)):
@@ -197,7 +198,7 @@ class SourcesMixin(ContractMixin):
         url_path = url_file.split(url_server)[-1]
         client = None
         try:
-            client = FTP(url_server, timeout=NETWORK_TIMEOUT_SECONDS)
+            client = FTP(url_server, timeout=TIMEOUT_NETWORK_SECONDS)
             client.login()
             modified_timestamp = int((parser.parse(client.voidcmd(f"MDTM {url_path}")[4:].strip()) - datetime(1970, 1, 1)).total_seconds())
             if not effective_force and check and isfile(local_path):
@@ -291,7 +292,7 @@ class SourcesMixin(ContractMixin):
                                 self.print_log(f"File [{label}] cached (but empty) at [{local_path}]", started=started_time)
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return DownloadResult(DownloadStatus.CACHED, local_path)
-                    data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, timeout=NETWORK_TIMEOUT_SECONDS)
+                    data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, timeout=TIMEOUT_NETWORK_SECONDS)
                     if hasattr(data_df.index, 'tz_localize'):
                         data_df.index = data_df.index.tz_localize(None)  # type: ignore[union-attr]
                     if "Capital Gains" in data_df.columns:
@@ -483,7 +484,7 @@ class SourcesMixin(ContractMixin):
             try:
                 response = urllib.request.urlopen(
                     req,
-                    timeout=NETWORK_TIMEOUT_SECONDS,
+                    timeout=TIMEOUT_NETWORK_SECONDS,
                     context=ssl._create_unverified_context(),
                 )
             except Exception as request_error:
@@ -659,7 +660,7 @@ class SourcesMixin(ContractMixin):
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         file_path = abspath(f"{self.local_cache}/_sheet_{name}.csv") if drive_version is None else abspath(f"{self.local_cache}/_sheet_{name}_v{drive_version}.csv")
         gc = gspread.Client(auth=credentials)
-        gc.timeout = NETWORK_TIMEOUT_SECONDS
+        gc.timeout = TIMEOUT_NETWORK_SECONDS
         retries = 0
         caught_exception = None
 
@@ -736,7 +737,7 @@ class SourcesMixin(ContractMixin):
             if drive_key is not None and not config.disable_sheet_uploads:
                 credentials = self._sheets_credentials()
                 gc = gspread.Client(auth=credentials)
-                gc.timeout = NETWORK_TIMEOUT_SECONDS
+                gc.timeout = TIMEOUT_NETWORK_SECONDS
                 for sheet_upload_attempt in range(3):
                     try:
                         spreadsheet = gc.open_by_key(drive_key)
@@ -746,7 +747,7 @@ class SourcesMixin(ContractMixin):
                             time.sleep(10 * (sheet_upload_attempt + 1))
                             credentials = self._sheets_credentials()
                             gc = gspread.Client(auth=credentials)
-                            gc.timeout = NETWORK_TIMEOUT_SECONDS
+                            gc.timeout = TIMEOUT_NETWORK_SECONDS
                         else:
                             raise
                 try:
@@ -849,7 +850,7 @@ class SourcesMixin(ContractMixin):
                 "modified": int(getmtime(local_file)) if check else None
             }
         dropbox_files = {}
-        service = dropbox.Dropbox(os.getenv('DROPBOX_TOKEN', ''), timeout=int(NETWORK_TIMEOUT_SECONDS))
+        service = dropbox.Dropbox(os.getenv('DROPBOX_TOKEN', ''), timeout=int(TIMEOUT_NETWORK_SECONDS))
         cursor: str | None = None
         while True:
             response = service.files_list_folder(dropbox_dir) if cursor is None else service.files_list_folder_continue(cursor)

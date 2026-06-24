@@ -9,23 +9,8 @@ from urllib.parse import parse_qs, urlparse
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from wrangle.plugin.config import TIMEOUT_RUN_SECONDS
 from wrangle.plugin.counters import COUNTERS, aggregate_summary
-
-DEFAULT_RUN_TIMEOUT_SECONDS = 5 * 60
-
-
-def _run_timeout() -> int:
-    raw = os.environ.get("WRANGLE_RUN_TIMEOUT_SECONDS")
-    if not raw:
-        return DEFAULT_RUN_TIMEOUT_SECONDS
-    try:
-        parsed = int(raw)
-        if parsed <= 0:
-            return DEFAULT_RUN_TIMEOUT_SECONDS
-        return parsed
-    except ValueError:
-        return DEFAULT_RUN_TIMEOUT_SECONDS
-
 
 WEB_ROOT_DIR: str = os.path.dirname(os.path.realpath(__file__))
 
@@ -237,7 +222,7 @@ class _Handler(BaseHTTPRequestHandler):
         body = TEMPLATE.render(
             snapshot_json=snapshot_json,
             latest_run_json=latest_run_json,
-            run_timeout_ms=_run_timeout() * 1000,
+            run_timeout_ms=TIMEOUT_RUN_SECONDS * 1000,
             views=[{"name": v.name, "label": v.label} for v in snapshot.views],
             chart_spec=CHART_SPEC,
             plugin_sections=plugin_sections,

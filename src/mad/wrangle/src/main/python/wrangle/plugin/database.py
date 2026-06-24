@@ -2,7 +2,7 @@ import os
 
 import psycopg
 
-from .config import NETWORK_TIMEOUT_SECONDS, config
+from .config import TIMEOUT_NETWORK_SECONDS, config
 from .logger import print_log
 
 DATABASE_ENV_VARS = (
@@ -119,8 +119,8 @@ def database_open():
         )
         return
     try:
-        connect_timeout = max(1, int(NETWORK_TIMEOUT_SECONDS))
-        statement_timeout_ms = max(1, int(NETWORK_TIMEOUT_SECONDS * 1000))
+        connect_timeout = max(1, int(TIMEOUT_NETWORK_SECONDS))
+        statement_timeout_ms = max(1, int(TIMEOUT_NETWORK_SECONDS * 1000))
         DSN = (
             f"postgresql://{os.environ['WRANGLE_DATABASE_USER']}:{os.environ['WRANGLE_DATABASE_PASSWORD']}"
             f"@{os.environ['WRANGLE_DATABASE_HOST']}:{os.environ['WRANGLE_DATABASE_PORT']}"

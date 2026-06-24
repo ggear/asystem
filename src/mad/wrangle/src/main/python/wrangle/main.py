@@ -13,6 +13,7 @@ from os.path import basename, dirname, isdir, join, realpath
 from wrangle import plugin
 from wrangle import server as web_server
 from wrangle.plugin import database, print_log
+from wrangle.plugin.config import STACK_DUMP_FILE
 from wrangle.plugin.counters import *
 
 
@@ -210,9 +211,8 @@ def main(argv=None):
     ]
     if wrangle_env_lines:
         print_log("Wrangle", ["Environment:"] + wrangle_env_lines)
-    stack_dump_file_path = os.environ.get("WRANGLE_STACK_DUMP_FILE", "/tmp/wrangle-stack.log")
     stack_dump_file = None
-    stack_dump_file = open(stack_dump_file_path, "a", buffering=1)  # noqa: SIM115
+    stack_dump_file = open(STACK_DUMP_FILE, "a", buffering=1)  # noqa: SIM115
     faulthandler.enable(file=stack_dump_file, all_threads=True)
     faulthandler.register(signal.SIGINT, file=stack_dump_file, all_threads=True, chain=True)
     faulthandler.register(signal.SIGUSR1, file=stack_dump_file, all_threads=True, chain=False)
@@ -249,7 +249,16 @@ def main(argv=None):
                         )
                         return {"ts": datetime.datetime.now(tz=CTR_TZ).isoformat(), "counters": callback_counters}
 
-                    return bound_history.execute_adhoc(_do_run)
+                    try:
+                        return bound_history.execute_adhoc(_do_run)
+                    except TimeoutError as exception:
+                        print_log("wrangle", "Timed out acquiring run lock, recording errored run", exception=exception, level="error")
+                        failed_results = _failed_run_results(active_plugins)
+                        callback_counters, _ = _record_plugin_run(
+                            failed_results, len(failed_results), len(failed_results), time.perf_counter(), "adhoc",
+                            lambda counters, overhead: bound_history.add_adhoc_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, overhead_ms=overhead),
+                        )
+                        return {"ts": datetime.datetime.now(tz=CTR_TZ).isoformat(), "counters": callback_counters}
 
                 web_server.start_server(http_port, history, run_callback)
                 print_log("Wrangle", f"HTTP server listening on port [{http_port}]")
@@ -270,17 +279,27 @@ def main(argv=None):
         prev_add_run_ms = 0
         while True:
             cycle_start = time.perf_counter()
-            lock_cm = history.acquire_run_lock() if history is not None else contextlib.nullcontext()
-            with lock_cm:
-                success, plugin_results, plugin_count, plugin_errored_count = _run_plugins(filter_plugins=args.filter_plugins)
-                plugin.config.force_reprocessing = False
+            try:
+                lock_cm = history.acquire_run_lock() if history is not None else contextlib.nullcontext()
+                with lock_cm:
+                    success, plugin_results, plugin_count, plugin_errored_count = _run_plugins(filter_plugins=args.filter_plugins)
+                    plugin.config.force_reprocessing = False
+                    if history is not None and args.poll_period > 0:
+                        _, prev_add_run_ms = _record_plugin_run(
+                            plugin_results, plugin_count, plugin_errored_count, cycle_start, "loop",
+                            lambda counters, overhead, h=history: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead),
+                            extra_overhead_ms=prev_add_run_ms,
+                        )
+                        success = not history.is_errored()
+            except TimeoutError as exception:
+                print_log("wrangle", "Timed out acquiring run lock, recording errored run", exception=exception, level="error")
+                success, plugin_results, plugin_count, plugin_errored_count = False, _failed_run_results(active_plugins), len(active_plugins), len(active_plugins)
                 if history is not None and args.poll_period > 0:
                     _, prev_add_run_ms = _record_plugin_run(
                         plugin_results, plugin_count, plugin_errored_count, cycle_start, "loop",
                         lambda counters, overhead, h=history: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead),
                         extra_overhead_ms=prev_add_run_ms,
                     )
-                    success = not history.is_errored()
             if not args.poll_period:
                 if history is not None:
                     _record_plugin_run(
@@ -358,6 +377,17 @@ def _get_plugins():
 def _instantiate_plugin(plugin_name):
     plugin_class = "".join(part.capitalize() for part in plugin_name.split("_"))
     return getattr(importlib.import_module(f"wrangle.plugin.{plugin_name}"), plugin_class)()
+
+
+def _failed_run_results(plugin_names):
+    plugin_results = {}
+    for plugin_name in plugin_names:
+        counters = {}
+        for (source, action) in COUNTERS:
+            counters.setdefault(source, {})[action] = 0
+        counters[CTR_SRC_SOURCES][CTR_ACT_ERRORED] = 1
+        plugin_results[plugin_name] = {"counters": counters, "runtime_sec": 0.0, "errored": True}
+    return plugin_results
 
 
 def _record_plugin_run(plugin_results, plugin_count, plugin_errored_count, run_start, run_label, record_fn, extra_overhead_ms=0):

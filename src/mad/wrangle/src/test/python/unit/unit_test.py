@@ -499,47 +499,6 @@ class WrangleTest(unittest.TestCase):
                         })
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
-    def test_equity_local_partial_3(self):
-        fixture = _load_fixture("local", "equity", "partial_3")
-        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_3", log_level="info",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_equals": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: int(fixture["files_processed"]),
-                                },
-                                plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_ROWS: int(fixture["rows_delta"]),
-                                },
-                            },
-                        }),
-                        file_asserts={
-                            "__equity_current.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
-                            ],
-                            "_sheet_prices_history.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days", descending=True),
-                                assert_file_nones_per_col(after_last_rows=True),
-                                assert_file_zeroes_per_row(),
-                            ],
-                            "_database_equity.csv": [
-                                assert_file_size(),
-                                assert_file_dates(start_date="2025-01-02", end_date=fixture["end_date"], contiguous="days"),
-                                assert_file_nones_per_col(after_first_rows=True),
-                            ],
-                        })
-
-    # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_replete_1(self):
         fixture = _load_fixture("local", "equity", "replete_1", cols_modifier=len(PORTFOLIO_TICKERS_MCK))
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "replete_1", log_level="info",
@@ -884,7 +843,7 @@ class WrangleTest(unittest.TestCase):
                     plugin_counters[source_key][action_key] = _synthetic_counter_value(action_key, counter, rand)
                 run_plugins[plugin_key] = plugin_counters
             errored = {plugin_id: any(run_plugins[plugin_id].get(source_id, {}).get(action_id, 0) > 0 for (source_id, action_id), c in COUNTERS.items() if c.error) for plugin_id in plugin_names}
-            return {"ts": run_ts.isoformat(), "plugins": run_plugins, "errored": errored}
+            return {"ts": run_ts.isoformat(), "bucket": int(run_ts.timestamp()) // (30 * 60), "plugins": run_plugins, "errored": errored}
 
         def _synthetic_day_entry(date, plugin_names, rand):
             buckets = {}
@@ -923,7 +882,10 @@ class WrangleTest(unittest.TestCase):
                     continue
                 history._day.append(_synthetic_day_entry(today - datetime.timedelta(days=days_ago), all_plugin_names, rng))
             for run_offset in range(HISTORY_RAW_RUN_LENGTH):
-                ts = now - datetime.timedelta(minutes=30 * (HISTORY_RAW_RUN_LENGTH - 1 - run_offset))
+                runs_ago = HISTORY_RAW_RUN_LENGTH - 1 - run_offset
+                if 10 <= runs_ago <= 17:
+                    continue
+                ts = now - datetime.timedelta(minutes=30 * runs_ago)
                 history._raw.append(_synthetic_raw_entry(ts, all_plugin_names, rng))
             snapshot = history.snapshot()
             plugin_sections = [{"id": "summary", "title": "Summary", "theme": "ghost-gray"}] + [

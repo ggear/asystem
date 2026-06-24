@@ -1,4 +1,3 @@
-import os
 import socket
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -7,8 +6,12 @@ from typing import NamedTuple
 
 PL_PRINT_ROWS = 20
 
-NETWORK_TIMEOUT_SECONDS = float(os.environ.get("WRANGLE_NETWORK_TIMEOUT_SECONDS", "60"))
-socket.setdefaulttimeout(NETWORK_TIMEOUT_SECONDS)
+TIMEOUT_NETWORK_SECONDS = 60
+TIMEOUT_RUN_SECONDS = 10 * 60
+
+STACK_DUMP_FILE = "/tmp/wrangle-stack.log"
+
+socket.setdefaulttimeout(TIMEOUT_NETWORK_SECONDS)
 
 
 class RepoScope(str, Enum):

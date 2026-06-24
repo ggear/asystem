@@ -2,6 +2,7 @@ import collections
 import contextlib
 import copy
 import datetime
+import fcntl
 import hashlib
 import json
 import os
@@ -14,6 +15,7 @@ from typing import Any
 
 import orjson
 
+from .config import TIMEOUT_RUN_SECONDS
 from .logger import print_log
 
 HISTORY_RAW_RUN_LENGTH = 50
@@ -233,6 +235,7 @@ class CountersMixin:
 _RAW_FILENAME = "history_raw.json"
 _DAILY_FILENAME = "history_daily.json"
 _ADHOC_FILENAME = "history_adhoc.json"
+_RUN_LOCK_FILENAME = "wrangle-run.lock"
 
 _SRC_ENC = {
     CTR_SRC_SOURCES: "sr",
@@ -274,12 +277,18 @@ _CELL_ENC = {"sum": "s", "min": "n", "max": "x", "count": "c"}
 _CELL_DEC = {v: k for k, v in _CELL_ENC.items()}
 
 _SCHEMA = {
-    "raw_entry": ["ts", "plugins", "errored"],
+    "raw_entry": ["ts", "bucket", "plugins", "errored"],
     "day_entry": ["date", "errored_runs", "buckets"],
     "bucket_cell": ["s", "n", "x", "c"],
     "key_encoding": "v2_short",
 }
 _SCHEMA_FINGERPRINT = hashlib.sha256(json.dumps(_SCHEMA, sort_keys=True).encode()).hexdigest()[:8]
+
+
+def _period_bucket(ts: datetime.datetime, poll_period_minutes: int) -> int | None:
+    if poll_period_minutes <= 0:
+        return None
+    return int(ts.timestamp()) // (poll_period_minutes * 60)
 
 
 def _encode_raw_entry(entry: dict) -> dict:
@@ -289,7 +298,7 @@ def _encode_raw_entry(entry: dict) -> dict:
         for source, actions in sources.items():
             encoded_sources[_SRC_ENC.get(source, source)] = {_ACT_ENC.get(action, action): value for action, value in actions.items()}
         encoded_plugins[plugin_name] = encoded_sources
-    return {"ts": entry["ts"], "plugins": encoded_plugins, "errored": entry["errored"]}
+    return {"ts": entry["ts"], "bucket": entry.get("bucket"), "plugins": encoded_plugins, "errored": entry["errored"]}
 
 
 def _decode_raw_entry(entry: dict) -> dict:
@@ -299,7 +308,7 @@ def _decode_raw_entry(entry: dict) -> dict:
         for src_key, actions in sources.items():
             decoded_sources[_SRC_DEC.get(src_key, src_key)] = {_ACT_DEC.get(act_key, act_key): value for act_key, value in actions.items()}
         decoded_plugins[plugin_name] = decoded_sources
-    return {"ts": entry["ts"], "plugins": decoded_plugins, "errored": entry["errored"]}
+    return {"ts": entry["ts"], "bucket": entry.get("bucket"), "plugins": decoded_plugins, "errored": entry["errored"]}
 
 
 def _encode_day_entry(entry: dict) -> dict:
@@ -405,6 +414,14 @@ def _merge_cells(accumulated: dict | None, cell: dict) -> dict:
     }
 
 
+def _acquire_file_lock(lock_fd: int) -> bool:
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except OSError:
+        return False
+
+
 @dataclass
 class _AdhocRun:
     done: threading.Event
@@ -425,6 +442,7 @@ class RunHistory:
         self._raw_path = os.path.join(cache_dir, _RAW_FILENAME)
         self._daily_path = os.path.join(cache_dir, _DAILY_FILENAME)
         self._adhoc_path = os.path.join(cache_dir, _ADHOC_FILENAME)
+        self._run_lock_path = os.path.join(cache_dir, _RUN_LOCK_FILENAME)
         self._run_lock = threading.Lock()
         self._adhoc_coord = threading.Lock()
         self._adhoc_current: _AdhocRun | None = None
@@ -438,8 +456,11 @@ class RunHistory:
             all_counters = {"summary": summary, **plugin_counters}
             errored_map = {name: _plugin_is_errored(counters) for name, counters in all_counters.items()}
             ts_str = ts.isoformat()
-            raw_entry = {"ts": ts_str, "plugins": all_counters, "errored": errored_map}
-            self._raw.append(raw_entry)
+            raw_entry = {"ts": ts_str, "bucket": _period_bucket(ts, self._poll_period_minutes), "plugins": all_counters, "errored": errored_map}
+            if self._raw and raw_entry["bucket"] is not None and self._raw[-1].get("bucket") == raw_entry["bucket"]:
+                self._raw[-1] = raw_entry
+            else:
+                self._raw.append(raw_entry)
             date_str = ts.astimezone(CTR_TZ).date().isoformat()
             found_day_entry: dict[str, Any] | None = None
             for existing in self._day:
@@ -524,9 +545,27 @@ class RunHistory:
             return copy.deepcopy(chosen)
 
     @contextlib.contextmanager
-    def acquire_run_lock(self):
+    def acquire_run_lock(self, timeout_seconds: float = TIMEOUT_RUN_SECONDS):
         with self._run_lock:
-            yield
+            os.makedirs(os.path.dirname(self._run_lock_path), exist_ok=True)
+            lock_fd = os.open(self._run_lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+            try:
+                wait_start = time.perf_counter()
+                if not _acquire_file_lock(lock_fd):
+                    print_log("Wrangle", f"Another wrangle process holds [{_RUN_LOCK_FILENAME}], waiting up to [{int(timeout_seconds)}s] for it to finish", level="warning")
+                    while not _acquire_file_lock(lock_fd):
+                        waited_seconds = time.perf_counter() - wait_start
+                        if waited_seconds >= timeout_seconds:
+                            raise TimeoutError(f"Timed out after [{int(waited_seconds)}s] waiting to acquire [{_RUN_LOCK_FILENAME}]")
+                        print_log("Wrangle", f"Queued behind another wrangle process for [{int(waited_seconds)}s] ...", level="info")
+                        time.sleep(1)
+                    print_log("Wrangle", f"Acquired [{_RUN_LOCK_FILENAME}] after [{int((time.perf_counter() - wait_start) * 1000)}ms]", level="info")
+                try:
+                    yield
+                finally:
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            finally:
+                os.close(lock_fd)
 
     def execute_adhoc(self, run_fn: Callable[[], dict]) -> dict:
         with self._adhoc_coord:
@@ -544,7 +583,7 @@ class RunHistory:
             assert current.result is not None
             return current.result
         try:
-            with self._run_lock:
+            with self.acquire_run_lock():
                 result = run_fn()
             current.result = result
             return result
@@ -575,24 +614,49 @@ class RunHistory:
                 return None
             return self._raw[-1]["errored"].get(plugin, False)
 
+    def _fill_raw_slot(self, series: dict, errored: dict, slot_index: int, entry: dict) -> None:
+        entry_plugins: dict[str, Any] = entry.get("plugins") or {}
+        entry_errored: dict[str, bool] = entry.get("errored") or {}
+        for plugin_name in self._all_plugins:
+            plugin_counters = entry_plugins.get(plugin_name) or {}
+            for (source, action) in COUNTERS:
+                source_counters = plugin_counters.get(source) or {}
+                series[plugin_name][source][action][slot_index] = source_counters.get(action)
+            errored[plugin_name][slot_index] = entry_errored.get(plugin_name, False)
+
     def _build_raw_view(self) -> View:
         bins = HISTORY_RAW_RUN_LENGTH
-        raw_list = list(self._raw)
-        ghost_count = bins - len(raw_list)
-        timestamps = [entry["ts"] for entry in raw_list] + [""] * ghost_count
+        bucket_seconds = self._poll_period_minutes * 60
         series = {plugin_name: _empty_counter_series(bins) for plugin_name in self._all_plugins}
         errored: dict[str, list] = {plugin_name: [None] * bins for plugin_name in self._all_plugins}
-        for slot_index, entry in enumerate(raw_list):
-            entry_plugins: dict[str, Any] = entry.get("plugins") or {}
-            entry_errored: dict[str, bool] = entry.get("errored") or {}
-            for plugin_name in self._all_plugins:
-                plugin_counters = entry_plugins.get(plugin_name) or {}
-                for (source, action) in COUNTERS:
-                    source_counters = plugin_counters.get(source) or {}
-                    value = source_counters.get(action)
-                    series[plugin_name][source][action][slot_index] = value
-                errored[plugin_name][slot_index] = entry_errored.get(plugin_name, False)
-        return View(name="raw", label=self._raw_label, bins=bins, bin_seconds=self._poll_period_minutes * 60, in_progress_bin=-1, timestamps=timestamps, series=series, errored=errored)
+        if bucket_seconds <= 0 or not self._raw:
+            raw_list = list(self._raw)
+            timestamps = [entry["ts"] for entry in raw_list] + [""] * (bins - len(raw_list))
+            for slot_index, entry in enumerate(raw_list):
+                self._fill_raw_slot(series, errored, slot_index, entry)
+            return View(name="raw", label=self._raw_label, bins=bins, bin_seconds=bucket_seconds, in_progress_bin=-1, timestamps=timestamps, series=series, errored=errored)
+        bucket_lookup: dict[int, dict] = {}
+        for entry in self._raw:
+            bucket = entry.get("bucket")
+            if bucket is None:
+                bucket = int(datetime.datetime.fromisoformat(entry["ts"]).timestamp()) // bucket_seconds
+            bucket_lookup[bucket] = entry
+        current_bucket = int(datetime.datetime.now(tz=CTR_TZ).timestamp()) // bucket_seconds
+        earliest_bucket = min(bucket_lookup)
+        n_real = min(bins, current_bucket - earliest_bucket + 1)
+        start_bucket = current_bucket - (n_real - 1)
+        timestamps = []
+        for slot_index in range(n_real):
+            bucket = start_bucket + slot_index
+            entry = bucket_lookup.get(bucket)
+            if entry is not None:
+                timestamps.append(entry["ts"])
+                self._fill_raw_slot(series, errored, slot_index, entry)
+            else:
+                timestamps.append(datetime.datetime.fromtimestamp(bucket * bucket_seconds, tz=CTR_TZ).isoformat())
+        timestamps += [""] * (bins - n_real)
+        in_progress_bin = n_real - 1
+        return View(name="raw", label=self._raw_label, bins=bins, bin_seconds=bucket_seconds, in_progress_bin=in_progress_bin, timestamps=timestamps, series=series, errored=errored)
 
     def _build_day_view(self) -> View:
         bins = HISTORY_RAW_RUN_LENGTH

@@ -157,8 +157,21 @@
         return vals.slice();
     }
 
+    var CHART_FLOOR = 0.12;
+
     function toChartData(vals) {
-        return vals.map(function (v) { return v == null ? 0 : v; });
+        var lo = Infinity, hi = -Infinity;
+        vals.forEach(function (v) {
+            if (v == null || v <= 0) return;
+            if (v < lo) lo = v;
+            if (v > hi) hi = v;
+        });
+        if (hi < 0) return vals.map(function () { return 0; });
+        if (hi === lo) return vals.map(function (v) { return (v == null || v <= 0) ? 0 : 1; });
+        return vals.map(function (v) {
+            if (v == null || v <= 0) return 0;
+            return CHART_FLOOR + (1 - CHART_FLOOR) * (v - lo) / (hi - lo);
+        });
     }
 
     function timestampsFor() {
@@ -443,7 +456,7 @@
             var el = document.getElementById(id);
             if (!el) return;
             if (value == null) { el.textContent = '—'; return; }
-            el.textContent = isTime ? (Math.round(value / 1000) + 's') : value;
+            el.textContent = isTime ? ((value / 1000).toFixed(2) + 's') : value;
         }
 
         function setStatErrored(id, value) {

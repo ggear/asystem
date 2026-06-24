@@ -821,13 +821,13 @@ h4 {
 .lcars-text-bar {
     display: flex;
     position: relative;
-    height: clamp(16px, 4vh, 41px);
-    margin-block: 2.75rem;
+    height: clamp(13px, 3vw, 41px);
+    margin-block: clamp(1.35rem, 3vw, 2.75rem);
     overflow: visible;
     border-radius: 100vmax;
     background-color: var(--lcars-bar-color);
-    border-right: clamp(16px, 4vh, 43px) solid var(--lcars-bar-end-color);
-    border-left: clamp(16px, 4vh, 43px) solid var(--lcars-bar-start-color);
+    border-right: clamp(14px, 3vw, 43px) solid var(--lcars-bar-end-color);
+    border-left: clamp(14px, 3vw, 43px) solid var(--lcars-bar-start-color);
     scroll-margin-top: 15px;
 }
 
@@ -837,12 +837,13 @@ h4 {
 .lcars-text-bar span {
     margin-block: 0;
     background-color: black;
-    height: clamp(20px, 5.5vh, 60px);
+    height: clamp(18px, 4.6vw, 60px);
     overflow: visible;
     border-top: 1px solid black;
-    padding-inline: 1vh;
-    font-size: clamp(17px, 4.5vh, 46px);
+    padding-inline: clamp(.3rem, 1vw, 1rem);
+    font-size: clamp(15px, 4vw, 46px);
     line-height: 1;
+    white-space: nowrap;
     text-transform: uppercase;
     color: var(--theme-color, var(--lcars-bar-text-color));
     z-index: 1;
@@ -854,8 +855,8 @@ h4 {
     content: '';
     background-color: black;
     display: block;
-    width: 1vh;
-    height: 6vh;
+    width: 4px;
+    height: clamp(14px, 3.5vw, 50px);
     position: absolute;
     top: 0;
     overflow: hidden;
@@ -897,11 +898,13 @@ h4 {
 .chart-wrap {
     display: flex;
     flex-direction: column;
+    min-width: 0;
     border-bottom: 1px solid #1a1a33;
 }
 
 .chart-wrap > div[id^="c-"] {
     height: 100px;
+    width: 100%;
     flex-shrink: 0;
     overflow: hidden;
     background-image: repeating-linear-gradient(
@@ -949,6 +952,7 @@ h4 {
 @media (max-width: 525px) {
     body {
         padding: .25rem;
+        overflow-x: hidden;
     }
 
     .baseboard,
