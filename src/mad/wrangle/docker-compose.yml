@@ -31,10 +31,17 @@ services:
       - WRANGLE_NETWORK_TIMEOUT_SECONDS
       - WRANGLE_STACK_DUMP_FILE
       - REDBARK_TOKEN
-    ports:
-      - ${WRANGLE_HTTP_PORT}:${WRANGLE_HTTP_PORT}
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/mnt
+    ports:
+      - ${WRANGLE_HTTP_PORT}:${WRANGLE_HTTP_PORT}
+    healthcheck:
+      test: /asystem/etc/checkhealthy.sh
+      interval: 2m
+      timeout: 30s
+      retries: 3
+      start_period: 60s
+      start_interval: 10s
     logging:
       driver: "json-file"
       options:
