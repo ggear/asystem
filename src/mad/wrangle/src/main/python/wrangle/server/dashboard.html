@@ -249,6 +249,8 @@
         });
     });
 
+    setTimeout(syncTimingAxes, 0);
+
     function syncTimingAxes() {
         var bySection = {};
         CHARTS.forEach(function (c) {
@@ -258,9 +260,15 @@
         });
         Object.keys(bySection).forEach(function (sectionId) {
             var charts = bySection[sectionId];
-            var maxVal = 0;
-            charts.forEach(function (c) { c.data.forEach(function (v) { if (v != null && v > maxVal) maxVal = v; }); });
-            charts.forEach(function (c) { c.apex.updateOptions({yaxis: {min: 0, max: maxVal || 1}}, false, false, false); });
+            var globalMax = 0;
+            charts.forEach(function (c) { c.data.forEach(function (v) { if (v != null && v > globalMax) globalMax = v; }); });
+            charts.forEach(function (c) {
+                var normalized = c.data.map(function (v) {
+                    if (v == null || v <= 0 || globalMax === 0) return 0;
+                    return CHART_FLOOR + (1 - CHART_FLOOR) * (v / globalMax);
+                });
+                c.apex.updateSeries([{name: c.cell.source + ' ' + c.cell.action, data: normalized}], false);
+            });
         });
     }
 
@@ -270,7 +278,9 @@
         CHARTS.forEach(function (c) {
             var newData = seriesFor(c.sectionId, c.cell);
             c.data = newData;
-            c.apex.updateSeries([{name: c.cell.source + ' ' + c.cell.action, data: toChartData(newData)}], false);
+            if (!c.isTime) {
+                c.apex.updateSeries([{name: c.cell.source + ' ' + c.cell.action, data: toChartData(newData)}], false);
+            }
         });
         syncTimingAxes();
         document.querySelectorAll('.range-toggle a').forEach(function (link) {
