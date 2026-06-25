@@ -1103,9 +1103,8 @@ def _database_ensure_table(table_name, conn):
 def _database_upsert(long_df, table_name, conn, dsn):
     stage = f"{table_name}_stage"
     with conn.cursor() as cur:
-        cur.execute(f"DROP TABLE IF EXISTS {stage}")
         cur.execute(f"""
-            CREATE UNLOGGED TABLE {stage} (
+            CREATE UNLOGGED TABLE IF NOT EXISTS {stage} (
                 time   DATE  NOT NULL,
                 entity TEXT  NOT NULL,
                 type   TEXT  NOT NULL,
@@ -1114,6 +1113,7 @@ def _database_upsert(long_df, table_name, conn, dsn):
                 value  FLOAT8 NOT NULL
             )
         """)
+        cur.execute(f"TRUNCATE {stage}")
         conn.commit()
     try:
         long_df.write_database(stage, connection=dsn, if_table_exists="append", engine="adbc")
@@ -1128,5 +1128,5 @@ def _database_upsert(long_df, table_name, conn, dsn):
             conn.commit()
     finally:
         with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {stage}")
+            cur.execute(f"TRUNCATE {stage}")
             conn.commit()

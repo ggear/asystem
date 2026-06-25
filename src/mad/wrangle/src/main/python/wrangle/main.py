@@ -1,7 +1,9 @@
 import argparse
 import contextlib
+import ctypes
 import datetime
 import faulthandler
+import gc
 import glob
 import importlib
 import os
@@ -15,6 +17,21 @@ from wrangle import server as web_server
 from wrangle.plugin import database, print_log
 from wrangle.plugin.config import STACK_DUMP_FILE
 from wrangle.plugin.counters import *
+
+try:
+    import pyarrow
+except Exception:
+    pyarrow = None
+
+
+def _release_memory():
+    gc.collect()
+    if pyarrow is not None:
+        with contextlib.suppress(Exception):
+            pyarrow.default_memory_pool().release_unused()
+    if sys.platform.startswith("linux"):
+        with contextlib.suppress(Exception):
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
 
 
 def configure(argv=None):
@@ -314,6 +331,7 @@ def main(argv=None):
             if sleep_seconds <= 0:
                 print_log("wrangle", f"Run took [{elapsed_seconds:.0f}s] which exceeds poll period [{poll_period_seconds:.0f}s], starting next cycle immediately", level="warning")
             else:
+                _release_memory()
                 time.sleep(sleep_seconds)
     except KeyboardInterrupt as exception:
         print_log("wrangle", "Interrupted, exiting", exception=exception)

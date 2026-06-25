@@ -38,6 +38,16 @@ append_bool_arg() {
   esac
 }
 
+# Cap the Polars / Rayon thread pool below the host core count (nproc 10) so the
+# per-cycle peak footprint is bounded and 2 cores stay free for the rest of the box.
+export POLARS_MAX_THREADS="${POLARS_MAX_THREADS:-8}"
+export RAYON_NUM_THREADS="${RAYON_NUM_THREADS:-8}"
+
+# Allocator tuning for the long-running loop: jemalloc (bundled by Polars and
+# PyArrow) returns freed pages to the OS during the idle sleep between cycles
+# instead of holding peak RSS for the whole poll period.
+export MALLOC_CONF="${MALLOC_CONF:-background_thread:true,dirty_decay_ms:0,muzzy_decay_ms:0}"
+
 wrangle_args=(--poll-period "${WRANGLE_POLL_PERIOD:-30}")
 
 append_value_arg WRANGLE_CACHE_DIR --cache-dir
