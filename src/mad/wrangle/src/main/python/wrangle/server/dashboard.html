@@ -139,6 +139,11 @@
         return hours + 'h ' + (minsLeft < 10 ? '0' : '') + minsLeft + 'm';
     }
 
+    function formatDurationSeconds(ms) {
+        if (ms == null || isNaN(ms)) return '0.00 s';
+        return (Number(ms) / 1000).toFixed(2) + ' s';
+    }
+
     var CHART_HEIGHT = 100;
     var VIEWS = window.WRANGLE_DATA.views;
     var _ACTIVE_VIEW = VIEWS[0].name;
@@ -489,7 +494,7 @@
             var el = document.getElementById(id);
             if (!el) return;
             if (value == null) { el.textContent = '—'; return; }
-            el.textContent = isTime ? formatDuration(value) : value;
+            el.textContent = isTime === 'seconds' ? formatDurationSeconds(value) : isTime ? formatDuration(value) : value;
         }
 
         function setStatErrored(id, value) {
@@ -505,10 +510,10 @@
         var tsEl = document.getElementById('stat-last-run');
         if (tsEl) tsEl.textContent = headerTs ? (headerTs.slice(0, 10) + ' ' + headerTs.slice(11, 16)) : '—';
 
-        setStat('stat-total-time', statVal('Timings', 'Total Millis'), true);
-        setStat('stat-marshall-time', statVal('Timings', 'Marshall Millis'), true);
-        setStat('stat-process-time', statVal('Timings', 'Process Millis'), true);
-        setStat('stat-egress-time', statVal('Timings', 'Egress Millis'), true);
+        setStat('stat-total-time', statVal('Timings', 'Total Millis'), 'seconds');
+        setStat('stat-marshall-time', statVal('Timings', 'Marshall Millis'), 'seconds');
+        setStat('stat-process-time', statVal('Timings', 'Process Millis'), 'seconds');
+        setStat('stat-egress-time', statVal('Timings', 'Egress Millis'), 'seconds');
         ['stat-total-time', 'stat-process-time', 'stat-marshall-time', 'stat-egress-time'].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.style.color = '#ff9900';
