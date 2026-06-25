@@ -262,18 +262,12 @@
         });
     }
 
-    window.addEventListener('load', function () {
-        CHARTS.forEach(function (c) { c.apex.updateOptions({}, false, false, false); });
-        syncTimingAxes();
-    });
-
     window.setView = function (sectionId, viewName) {
         _ACTIVE_VIEW = viewName;
         var view = getActiveView();
         CHARTS.forEach(function (c) {
             var newData = seriesFor(c.sectionId, c.cell);
             c.data = newData;
-            c.svgRect = null;
             c.apex.updateSeries([{name: c.cell.source + ' ' + c.cell.action, data: toChartData(newData)}], false);
         });
         syncTimingAxes();
@@ -300,21 +294,14 @@
             c.tt = tt;
         });
 
-        function ensureSvgRect(c) {
-            if (c.svgRect && c.svgRect.ownerSVGElement) return;
-            c.svgRect = null;
+        function ensureOverlay(c) {
+            if (c.overlay) return;
             var el = document.getElementById(c.id);
-            var svg = el && el.querySelector('svg');
-            if (!svg) return;
-            var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('pointer-events', 'none');
-            rect.setAttribute('y', '0');
-            rect.setAttribute('width', '0');
-            rect.setAttribute('height', '100%');
-            rect.setAttribute('fill', 'rgba(255,255,255,0.35)');
-            rect.style.display = 'none';
-            svg.appendChild(rect);
-            c.svgRect = rect;
+            if (!el) return;
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:absolute;top:0;height:100%;pointer-events:none;background:rgba(255,255,255,0.35);display:none;';
+            el.appendChild(overlay);
+            c.overlay = overlay;
         }
 
         function formatTimestamp(ts, binSeconds) {
@@ -360,13 +347,12 @@
                     c.tt.style.transform = 'translateX(-50%) translateY(calc(-100% - 12px))';
                 }
                 c.tt.style.display = 'block';
-                ensureSvgRect(c);
-                if (c.svgRect) {
-                    var svgW = c.svgRect.ownerSVGElement.getBoundingClientRect().width;
-                    var slotW = svgW / currentBins;
-                    c.svgRect.setAttribute('x', String(idx * slotW));
-                    c.svgRect.setAttribute('width', String(slotW));
-                    c.svgRect.style.display = '';
+                ensureOverlay(c);
+                if (c.overlay) {
+                    var slotW = r.width / currentBins;
+                    c.overlay.style.left = (idx * slotW) + 'px';
+                    c.overlay.style.width = slotW + 'px';
+                    c.overlay.style.display = '';
                 }
             });
         }
@@ -374,7 +360,7 @@
         function hide() {
             CHARTS.forEach(function (c) {
                 c.tt.style.display = 'none';
-                if (c.svgRect) c.svgRect.style.display = 'none';
+                if (c.overlay) c.overlay.style.display = 'none';
             });
         }
 
