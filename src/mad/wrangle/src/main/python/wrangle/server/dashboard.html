@@ -229,11 +229,13 @@
                 var chartId = 'c-' + sectionId + '-' + ri + '-' + ci;
                 var data = seriesFor(sectionId, cell);
                 var ts = timestampsFor();
-                var apexChart = new ApexCharts(document.getElementById(chartId), merge(base, {
+                var cellOpts = {
                     colors: [cell.color],
                     series: [{name: cell.source + ' ' + cell.action, data: toChartData(data)}],
                     xaxis: {categories: ts}
-                }));
+                };
+                if (cell.source === 'Timings') cellOpts.yaxis = {min: 0, max: 1};
+                var apexChart = new ApexCharts(document.getElementById(chartId), merge(base, cellOpts));
                 apexChart.render();
                 CHARTS.push({
                     id: chartId,
