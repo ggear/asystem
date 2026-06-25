@@ -247,8 +247,24 @@
         });
     });
 
+    function syncTimingAxes() {
+        var bySection = {};
+        CHARTS.forEach(function (c) {
+            if (!c.isTime) return;
+            if (!bySection[c.sectionId]) bySection[c.sectionId] = [];
+            bySection[c.sectionId].push(c);
+        });
+        Object.keys(bySection).forEach(function (sectionId) {
+            var charts = bySection[sectionId];
+            var maxVal = 0;
+            charts.forEach(function (c) { c.data.forEach(function (v) { if (v != null && v > maxVal) maxVal = v; }); });
+            charts.forEach(function (c) { c.apex.updateOptions({yaxis: {min: 0, max: maxVal || 1}}, false, false, false); });
+        });
+    }
+
     window.addEventListener('load', function () {
         CHARTS.forEach(function (c) { c.apex.updateOptions({}, false, false, false); });
+        syncTimingAxes();
     });
 
     window.setView = function (sectionId, viewName) {
@@ -260,6 +276,7 @@
             c.svgRect = null;
             c.apex.updateSeries([{name: c.cell.source + ' ' + c.cell.action, data: toChartData(newData)}], false);
         });
+        syncTimingAxes();
         document.querySelectorAll('.range-toggle a').forEach(function (link) {
             link.classList.toggle('active', link.getAttribute('data-view') === viewName);
         });
