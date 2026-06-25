@@ -359,6 +359,14 @@ button:active {
     color: var(--banner-color);
 }
 
+.banner-title {
+    white-space: nowrap;
+}
+
+#lcars-stardate {
+    white-space: nowrap;
+}
+
 .banner a {
     color: var(--banner-color);
     text-decoration: none;

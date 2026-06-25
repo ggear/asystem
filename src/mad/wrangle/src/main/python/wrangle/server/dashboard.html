@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="format-detection" content="telephone=no">
     <meta name="format-detection" content="date=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap" rel="stylesheet">
@@ -22,7 +24,7 @@
             <a href="#" onclick="event.preventDefault();window.scrollTo({top:0,behavior:'smooth'})" class="panel-2"></a>
         </div>
         <div class="right-frame-top">
-            <div class="banner">WRANGLE &#149; <span id="lcars-stardate"></span></div>
+            <div class="banner"><span class="banner-title">WRANGLE</span> <span class="banner-sep">&#149;</span> <span id="lcars-stardate"></span></div>
             <div class="data-cascade-button-group">
                 <div class="data-cascade-wrapper" id="frozen">
                     <div class="data-column">
@@ -93,7 +95,7 @@
                 <div class="lcars-text-bar theme-{{ section.theme }}" id="{{ section.id }}">
                     <h2>{{ '%02d' % (loop.index + 1) }}-{{ section.title }}</h2>
                     <span class="range-toggle" data-section="{{ section.id }}">
-                        {%- for view in views %}{{ ' | ' if not loop.first else '' }}<a href="#" data-view="{{ view.name }}" onclick="event.preventDefault();window.setView('{{ section.id }}','{{ view.name }}');window.beepView()">{{ view.label }}</a>{%- endfor %}
+                        {%- for view in views %}{{ ' | ' if not loop.first else '' }}<a href="#" data-view="{{ view.name }}" onclick="event.preventDefault();window.setView('{{ view.name }}');window.beepView()">{{ view.label }}</a>{%- endfor %}
                     </span>
                 </div>
                 <div class="chart-grid">
@@ -262,7 +264,7 @@
         });
     }
 
-    window.setView = function (sectionId, viewName) {
+    window.setView = function (viewName) {
         _ACTIVE_VIEW = viewName;
         var view = getActiveView();
         CHARTS.forEach(function (c) {
@@ -334,7 +336,7 @@
                 var r = document.getElementById(c.id).getBoundingClientRect();
                 var barX = r.left + (idx + 0.5) / currentBins * r.width;
                 var absY = r.top + relY * r.height;
-                var displayValue = c.isTime ? formatDuration(c.data[idx]) : c.data[idx];
+                var displayValue = c.isTime ? formatDuration(c.data[idx]) : (c.data[idx] == null ? '—' : c.data[idx]);
                 c.tt.innerHTML = '<span style="color:' + c.color + ';opacity:.65">' + tsLabel
                     + '</span>&nbsp;<span style="color:' + c.color + ';font-weight:bold">' + displayValue + '</span>';
                 c.tt.style.left = barX + 'px';
@@ -475,7 +477,7 @@
             var el = document.getElementById(id);
             if (!el) return;
             if (value == null) { el.textContent = '—'; return; }
-            el.textContent = isTime ? ((value / 1000).toFixed(2) + 's') : value;
+            el.textContent = isTime ? formatDuration(value) : value;
         }
 
         function setStatErrored(id, value) {
@@ -612,7 +614,7 @@
                 location.reload();
             }
 
-            snd4.addEventListener('ended', doReload);
+            snd4.addEventListener('ended', doReload, {once: true});
             snd4.currentTime = 0;
             snd4.play().catch(doReload);
         };
@@ -657,7 +659,7 @@
         var latestRun = window.WRANGLE_LATEST_RUN;
         var errored = null;
         if (latestRun && latestRun.ts) {
-            errored = !!(latestRun.errored && latestRun.errored.summary);
+            errored = latestRun.errored && latestRun.errored.summary != null ? !!latestRun.errored.summary : null;
         } else if (lastSlot >= 0 && rawView.errored['summary']) {
             errored = !!rawView.errored['summary'][lastSlot];
         }
