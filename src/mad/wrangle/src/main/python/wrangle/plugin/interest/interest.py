@@ -144,7 +144,7 @@ class Interest(plugin.Plugin):
 
             # Upload Data
             started_time = time.time()
-            if len(interest_delta_df) or plugin.config.force_reprocessing:
+            if len(interest_current_df) and (len(interest_delta_df) or plugin.config.force_reprocessing):
                 interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Interest', add_filter=True)
                 self.database_upload(interest_current_df.select(["Date"] + LABELS),

@@ -447,7 +447,7 @@ class RunHistory:
         self._adhoc_coord = threading.Lock()
         self._adhoc_current: _AdhocRun | None = None
 
-    def add_run(self, ts: datetime.datetime, plugin_counters: dict, loop_overhead_ms: int = 0) -> None:
+    def add_run(self, ts: datetime.datetime, plugin_counters: dict, loop_overhead_ms: int = 0, start_ts: datetime.datetime | None = None) -> None:
         with self._lock:
             summary = aggregate_summary(plugin_counters)
             timing_summary = summary.setdefault(CTR_SRC_TIMING, {})
@@ -456,7 +456,7 @@ class RunHistory:
             all_counters = {"summary": summary, **plugin_counters}
             errored_map = {name: _plugin_is_errored(counters) for name, counters in all_counters.items()}
             ts_str = ts.isoformat()
-            raw_entry = {"ts": ts_str, "bucket": _period_bucket(ts, self._poll_period_minutes), "plugins": all_counters, "errored": errored_map}
+            raw_entry = {"ts": ts_str, "bucket": _period_bucket(start_ts if start_ts is not None else ts, self._poll_period_minutes), "plugins": all_counters, "errored": errored_map}
             if self._raw and raw_entry["bucket"] is not None and self._raw[-1].get("bucket") == raw_entry["bucket"]:
                 self._raw[-1] = raw_entry
             else:

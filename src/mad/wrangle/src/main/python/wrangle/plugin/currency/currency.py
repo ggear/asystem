@@ -146,7 +146,7 @@ class Currency(plugin.Plugin):
 
             # Upload Data
             started_time = time.time()
-            if len(rba_delta_df) or plugin.config.force_reprocessing:
+            if len(rba_current_df) and (len(rba_delta_df) or plugin.config.force_reprocessing):
                 rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Currency', add_filter=True)
                 self.database_upload(rba_current_df.select(['Date'] + PAIRS),

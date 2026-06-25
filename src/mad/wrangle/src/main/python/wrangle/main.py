@@ -279,6 +279,7 @@ def main(argv=None):
         prev_add_run_ms = 0
         while True:
             cycle_start = time.perf_counter()
+            cycle_start_dt = datetime.datetime.now(tz=CTR_TZ)
             try:
                 lock_cm = history.acquire_run_lock() if history is not None else contextlib.nullcontext()
                 with lock_cm:
@@ -287,7 +288,7 @@ def main(argv=None):
                     if history is not None and args.poll_period > 0:
                         _, prev_add_run_ms = _record_plugin_run(
                             plugin_results, plugin_count, plugin_errored_count, cycle_start, "loop",
-                            lambda counters, overhead, h=history: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead),
+                            lambda counters, overhead, h=history, s=cycle_start_dt: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead, start_ts=s),
                             extra_overhead_ms=prev_add_run_ms,
                         )
                         success = not history.is_errored()
@@ -297,7 +298,7 @@ def main(argv=None):
                 if history is not None and args.poll_period > 0:
                     _, prev_add_run_ms = _record_plugin_run(
                         plugin_results, plugin_count, plugin_errored_count, cycle_start, "loop",
-                        lambda counters, overhead, h=history: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead),
+                        lambda counters, overhead, h=history, s=cycle_start_dt: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead, start_ts=s),
                         extra_overhead_ms=prev_add_run_ms,
                     )
             if not args.poll_period:

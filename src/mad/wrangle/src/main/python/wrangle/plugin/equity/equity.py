@@ -886,7 +886,7 @@ ORDER BY time
 
             # Upload Data
             started_time = time.time()
-            if len(equity_delta_df) or plugin.config.force_reprocessing:
+            if len(equity_current_df) and (len(equity_delta_df) or plugin.config.force_reprocessing):
                 dimensions_sheet = ["Price Close", "Currency Rate Base"]
                 tickers = _equity_tickers(equity_current_df)
                 equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])

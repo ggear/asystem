@@ -163,7 +163,7 @@ class Balances(plugin.Plugin):
 
                 # Upload Data
                 started_time = time.time()
-                if len(balances_delta_df) or plugin.config.force_reprocessing:
+                if len(balances_current_df) and (len(balances_delta_df) or plugin.config.force_reprocessing):
                     # TODO
                     self.sheet_download(self.remote_repos.sheet_key, "Bank", sheet_name="Balances")
 
