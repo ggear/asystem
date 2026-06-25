@@ -397,6 +397,7 @@
                 }
                 var currentBins = getActiveView().bins;
                 var cr = chartEl.getBoundingClientRect();
+                if (!cr.width) return;
                 var idx = Math.max(0, Math.min(currentBins - 1, Math.floor((e.clientX - cr.left) / cr.width * currentBins)));
                 show(idx, chartEl, e.clientY, sectionId);
             });
