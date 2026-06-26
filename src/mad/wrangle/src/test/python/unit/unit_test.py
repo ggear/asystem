@@ -1017,7 +1017,7 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(4, len(typed_utf))
 
         data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
-        data_str = "[Exchange Symbol(String), Holdings Quantity({}), Unit Price(Float64), Watch Value(Float64), Watch Quantity(Int64), Baseline Quantity(Int64)]"
+        data_str = "[Exchange Symbol(String), Port Quantity({}), Unit Price(Float64), Watch Value(Float64), Watch Quantity(Int64), Base Quantity(Int64)]"
         download = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=True)
         self.assertEqual(DownloadStatus.DOWNLOADED, download.status)
         validated = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=True)
@@ -1031,7 +1031,7 @@ class WrangleTest(unittest.TestCase):
         data_df = _sheet_read(download)
         self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
         self.assertEqual(24, len(data_df))
-        data_df = _sheet_read(download, schema={"Holdings Quantity": pl.Utf8})
+        data_df = _sheet_read(download, schema={"Port Quantity": pl.Utf8})
         self.assertEqual(data_str.format(test.dataframe_type_to_str(pl.Utf8)), test.dataframe_to_str(data_df))
         self.assertEqual(24, len(data_df))
 

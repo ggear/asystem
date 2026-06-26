@@ -563,6 +563,8 @@ ORDER BY time
                 bank_query_result = self.database_download("Interest_BANK_Rates", bank_query)
                 if bank_query_result.status != plugin.DownloadStatus.FAILED:
                     bank_df = self.csv_read(bank_query_result.file_path, schema={"Date": pl.Date, "BANK Price Close": pl.Float64})
+                    bank_df = bank_df.sort("Date").with_columns(
+                        ((1.0 + pl.col("BANK Price Close").shift(1) / 1200.0).fill_null(1.0).cum_prod() * 100.0).alias("BANK Price Close"))
                     equity_df_manual = equity_df_manual.join(bank_df, on="Date", how="full", coalesce=True)
                 manual_exprs = []
                 for ticker in _equity_tickers(equity_df_manual):
@@ -734,7 +736,7 @@ ORDER BY time
             portfolio_indexes_result = self.sheet_download(self.remote_repos.sheet_portfolio, "Portfolio", sheet_name="Indexes", sheet_start_row=2)
             index_weights = self.csv_read(portfolio_indexes_result.file_path) if portfolio_indexes_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new()
             quantity_columns = sorted([column for column in index_weights.columns if column.endswith(" Quantity")])
-            indexes = [column.removesuffix(" Quantity") for column in quantity_columns]
+            indexes = [f"I{column.removesuffix(' Quantity').upper()}" for column in quantity_columns]
             if "Exchange Symbol" in index_weights.columns:
                 index_weights = index_weights.select(["Exchange Symbol"] + quantity_columns).drop_nulls()
                 index_weights = index_weights.rename(dict(zip(index_weights.columns, ["Ticker"] + indexes, strict=False)))
@@ -904,7 +906,11 @@ ORDER BY time
             if len(equity_current_df) and (len(equity_delta_df) or plugin.config.force_reprocessing):
                 dimensions_sheet = ["Price Close", "Currency Rate Base"]
                 tickers = _equity_tickers(equity_current_df)
-                equity_sheet_df = equity_current_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in dimensions_sheet])
+                stock_tickers_stripped = {stock_ticker.strip() for stock_ticker in STOCK}
+                sheet_ticker_order = sorted([ticker for ticker in tickers if ticker in stock_tickers_stripped]) + \
+                    [ticker for ticker in ["MCK", "MUK", "MUS", "BANK", "IBASE", "IWATCH", "IPORT"] if ticker in tickers]
+                sheet_columns = [f"{ticker} {dimension}" for ticker in sheet_ticker_order for dimension in dimensions_sheet if f"{ticker} {dimension}" in equity_current_df.columns]
+                equity_sheet_df = equity_current_df.select(["Date"] + sheet_columns)
                 equity_sheet_df = equity_sheet_df.filter(pl.col("Date") >= pl.lit(datetime(2007, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(equity_sheet_df, self.remote_repos.sheet_prices, workbook_name="Prices", sheet_name='History', add_filter=True)
                 dimensions = []
