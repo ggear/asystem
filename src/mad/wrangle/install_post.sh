@@ -8,4 +8,4 @@ cd ${SERVICE_INSTALL} || exit
 mkdir -p ${SERVICE_HOME}/data
 chmod -R 777 ${SERVICE_HOME}/data
 
-docker exec wrangle bash -c 'wrangle --force-reprocessing --enable-uploads'
+docker exec wrangle bash -c 'wrangle --enable-uploads'
