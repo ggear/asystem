@@ -44,7 +44,7 @@ from wrangle.plugin.counters import *
 from wrangle.plugin.counters import CTR_TZ
 from wrangle.plugin.currency import COLUMNS as CURRENCY_COLUMNS
 from wrangle.plugin.currency import REPOS_CURRENCY
-from wrangle.plugin.equity import DIMENSIONS_STATE, PORTFOLIO_TICKERS_ACTIVE, PORTFOLIO_TICKERS_MCK, REPOS_EQUITY, STOCK
+from wrangle.plugin.equity import DIMENSIONS_STATE, PORTFOLIO_TICKERS_ACTIVE, PORTFOLIO_TICKERS_MANUAL, PORTFOLIO_TICKERS_NODATA, REPOS_EQUITY, STOCK
 from wrangle.plugin.interest import COLUMNS as INTEREST_COLUMNS
 from wrangle.plugin.interest import REPOS_INTEREST
 from wrangle.plugin.logger import dataframe_print, print_log
@@ -500,7 +500,7 @@ class WrangleTest(unittest.TestCase):
 
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_replete_1(self):
-        fixture = _load_fixture("local", "equity", "replete_1", cols_modifier=len(PORTFOLIO_TICKERS_MCK))
+        fixture = _load_fixture("local", "equity", "replete_1")
         self.run_plugin("equity", plugin.RepoScope.LOCAL, "replete_1", log_level="info",
                         disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
                         disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
@@ -522,7 +522,7 @@ class WrangleTest(unittest.TestCase):
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date=fixture["end_date"], contiguous="days"),
+                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                             ],
@@ -534,7 +534,7 @@ class WrangleTest(unittest.TestCase):
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date=fixture["end_date"], contiguous="days"),
+                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                             ],
                         })
@@ -553,8 +553,8 @@ class WrangleTest(unittest.TestCase):
                                     plugin.CTR_ACT_UPLOADED: 1,
                                 },
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
                                     plugin.CTR_ACT_UPDATE_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_COLUMNS: 0,
                                     plugin.CTR_ACT_DELTA_ROWS: 0,
@@ -567,7 +567,7 @@ class WrangleTest(unittest.TestCase):
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date=fixture["end_date"], contiguous="days"),
+                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                             ],
@@ -579,7 +579,7 @@ class WrangleTest(unittest.TestCase):
                             ],
                             "_database_equity.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date=fixture["end_date"], contiguous="days"),
+                                assert_file_dates(start_date="1982-04-01", end_date=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                             ],
                         })
@@ -594,10 +594,10 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_DATA: {
-                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
-                                    plugin.CTR_ACT_CURRENT_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
-                                    plugin.CTR_ACT_UPDATE_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
-                                    plugin.CTR_ACT_DELTA_COLUMNS: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE)) * len(DIMENSIONS_STATE),
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
                                 },
                             },
                             "counter_at_least": {
@@ -615,7 +615,7 @@ class WrangleTest(unittest.TestCase):
                         file_asserts={
                             "__equity_current*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date_at_least=fixture["end_date"], contiguous="days"),
+                                assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
                                 assert_file_equal(),
@@ -629,7 +629,7 @@ class WrangleTest(unittest.TestCase):
                             ],
                             "_database_equity*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1985-01-02", end_date_at_least=fixture["end_date"], contiguous="days"),
+                                assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
                                 assert_file_equal(),
                             ],
@@ -973,7 +973,6 @@ class WrangleTest(unittest.TestCase):
     # Sources
     ########################################################################################################################
 
-    @pytest.mark.skip(reason="very slow")
     def test_library_sheet(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
 
@@ -984,71 +983,20 @@ class WrangleTest(unittest.TestCase):
                 return test.dataframe_new()
             return test.csv_read(_result.file_path, schema=schema)
 
-        missing_name = "missing"
-        missing_key = "!"
-        missing_str = "[]"
         plugin.config.log_level = "fatal"
-        for result in [
-            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(missing_key, missing_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result)
-            self.assertEqual(missing_str, test.dataframe_to_str(data_df))
-            self.assertEqual(0, len(data_df))
+        missing = test.sheet_download("!", "missing", sheet_load_secs=0, sheet_retry_max=1)
+        self.assertEqual(DownloadStatus.FAILED, missing.status)
+        self.assertEqual(0, len(_sheet_read(missing)))
+        loading = test.sheet_download("1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs", "loading", sheet_load_secs=0, sheet_retry_max=1)
+        self.assertEqual(DownloadStatus.FAILED, loading.status)
+        self.assertEqual(0, len(_sheet_read(loading)))
 
-        loading_name = "loading"
-        loading_key = "1bUpZCIOM-olcxLQ7_fdgi4Nu7GOQC30sK_LALZ2B0bs"
-        loading_str = "[]"
-        plugin.config.log_level = "fatal"
-        for result in [
-            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(loading_key, loading_name, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result)
-            self.assertEqual(loading_str, test.dataframe_to_str(data_df))
-            self.assertEqual(0, len(data_df))
-
-        empty_name = "empty"
-        empty_key = "1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4"
-        test_column = {
-            "My Column": pl.Utf8,
-        }
-        empty_str = "[]"
-        empty_str_column = "[]"
         plugin.config.log_level = "info"
-        for result in [
-            test.sheet_download(empty_key, empty_name, write_cache=True),
-            test.sheet_download(empty_key, empty_name, write_cache=False),
-            test.sheet_download(empty_key, empty_name, write_cache=True),
-            test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=False),
-        ]:
-            data_df = _sheet_read(result)
-            self.assertEqual(empty_str, test.dataframe_to_str(data_df))
-            self.assertEqual(0, len(data_df))
-        for result in [
-            test.sheet_download(empty_key, empty_name, write_cache=True),
-            test.sheet_download(empty_key, empty_name, write_cache=False),
-            test.sheet_download(empty_key, empty_name, write_cache=True),
-            test.sheet_download(empty_key, empty_name, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result, schema=test_column)
-            self.assertEqual(empty_str_column, test.dataframe_to_str(data_df))
-            self.assertEqual(0, len(data_df))
+        empty = test.sheet_download("1nPtCOciS81Y-FWJZ8pi5-9Fd6RZ6_EqyfweBekFH6s4", "empty")
+        self.assertEqual(DownloadStatus.DOWNLOADED, empty.status)
+        self.assertEqual("[]", test.dataframe_to_str(_sheet_read(empty)))
+        self.assertEqual("[]", test.dataframe_to_str(_sheet_read(empty, schema={"My Column": pl.Utf8})))
 
-        test_name = "test"
-        test_key = "18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY"
-        test_type_utf = {
-            "Integer": pl.Utf8,
-            "Integer with NULL": pl.Utf8,
-            "Float": pl.Utf8,
-            "Float with NULL": pl.Utf8,
-            "String": pl.Utf8,
-            "String with NULL": pl.Utf8,
-        }
         test_type_number = {
             "Integer": pl.Int64,
             "Integer with NULL": pl.Int64,
@@ -1057,58 +1005,35 @@ class WrangleTest(unittest.TestCase):
             "String": pl.Utf8,
             "String with NULL": pl.Utf8,
         }
+        test_type_utf = dict.fromkeys(test_type_number, pl.Utf8)
         test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
-        test_str_utf = ["String" for _ in range(0, len(test_type_number))]
-        test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
-        plugin.config.log_level = "info"
-        for result in [
-            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=False),
-            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-1", sheet_start_row=3, read_cache=False, write_cache=True),
-            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=False),
-            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-2", sheet_start_row=3, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result, schema=test_type_number)
-            self.assertEqual(test_str.format(*test_str_numeric), test.dataframe_to_str(data_df))
-            self.assertEqual(4, len(data_df))
-        for result in [
-            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=False),
-            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, write_cache=True),
-            test.sheet_download(test_key, test_name + "-3", sheet_start_row=3, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result, schema=test_type_utf)
-            self.assertEqual(test_str.format(*test_str_utf), test.dataframe_to_str(data_df))
-            self.assertEqual(4, len(data_df))
+        typed = test.sheet_download("18MBAIWaQNVQBMESAISHIqLD11sRBz003x5OTH_Vt4SY", "test", sheet_start_row=3)
+        self.assertEqual(DownloadStatus.DOWNLOADED, typed.status)
+        typed_number = _sheet_read(typed, schema=test_type_number)
+        self.assertEqual(test_str.format(*[test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]), test.dataframe_to_str(typed_number))
+        self.assertEqual(4, len(typed_number))
+        typed_utf = _sheet_read(typed, schema=test_type_utf)
+        self.assertEqual(test_str.format(*["String" for _ in test_type_utf]), test.dataframe_to_str(typed_utf))
+        self.assertEqual(4, len(typed_utf))
 
-        data_name = "Index_weights"
         data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
-        data_type = {
-            "Holdings Quantity": pl.Utf8,
-        }
-        data_str = "[Exchange Symbol(String), Holdings Quantity({}), Unit Price(Float64), Watch Value(Float64), Watch Quantity(Int64), Baseline Quantity(Float64)]"
-        data_str_type = [test.dataframe_type_to_str(data_type[column]) for column in data_type]
-        for result in [
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result)
-            self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
-            self.assertEqual(26, len(data_df))
-        for result in [
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=False),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, write_cache=True),
-            test.sheet_download(data_key, data_name + "-1", "Indexes", 2, read_cache=False, write_cache=True),
-        ]:
-            data_df = _sheet_read(result, schema=data_type)
-            self.assertEqual(data_str.format(*data_str_type), test.dataframe_to_str(data_df))
-            self.assertEqual(26, len(data_df))
+        data_str = "[Exchange Symbol(String), Holdings Quantity({}), Unit Price(Float64), Watch Value(Float64), Watch Quantity(Int64), Baseline Quantity(Int64)]"
+        download = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=True)
+        self.assertEqual(DownloadStatus.DOWNLOADED, download.status)
+        validated = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=True)
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_path), validated)
+        blind = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=False)
+        self.assertEqual(DownloadResult(DownloadStatus.CACHED, download.file_path), blind)
+        plugin.config.force_downloads = True
+        forced = test.sheet_download(data_key, "Index_weights", "Indexes", 2, check=False)
+        self.assertEqual(DownloadResult(DownloadStatus.DOWNLOADED, download.file_path), forced)
+        plugin.config.force_downloads = False
+        data_df = _sheet_read(download)
+        self.assertEqual(data_str.format("Float64"), test.dataframe_to_str(data_df))
+        self.assertEqual(24, len(data_df))
+        data_df = _sheet_read(download, schema={"Holdings Quantity": pl.Utf8})
+        self.assertEqual(data_str.format(test.dataframe_type_to_str(pl.Utf8)), test.dataframe_to_str(data_df))
+        self.assertEqual(24, len(data_df))
 
     def test_library_database(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
@@ -1118,9 +1043,8 @@ class WrangleTest(unittest.TestCase):
         invalid_cache = "Invalid"
         invalid_path = abspath(f"{test.local_cache}/_database_{invalid_cache.lower()}.csv")
         for result in [
-            test.database_download(invalid_cache, "SELECT 1", force=True),
-            test.database_download(invalid_cache, "SELECT 1", force=False),
-            test.database_download(invalid_cache, "SELECT 1", check=False, force=True),
+            test.database_download(invalid_cache, "SELECT 1"),
+            test.database_download(invalid_cache, "SELECT 1", check=False),
         ]:
             self.assertEqual(DownloadResult(DownloadStatus.FAILED, None), result)
         self.assertFalse(isfile(invalid_path))
@@ -2682,11 +2606,14 @@ def reset_config(log="warning"):
     plugin.config.cache_dir = abspath(join(DIR_ROOT, "target", "data"))
     plugin.config.force_reprocessing = False
     plugin.config.force_downloads = False
+    plugin.config.force_uploads = False
     plugin.config.disable_drive_uploads = True
     plugin.config.disable_sheet_uploads = True
     plugin.config.disable_database_uploads = True
     plugin.config.disable_drive_downloads = True
     plugin.config.disable_source_downloads = False
+    plugin.config.disable_sheet_downloads = False
+    plugin.config.disable_database_downloads = False
     plugin.database_close()
 
 
@@ -2726,23 +2653,19 @@ class PluginStub(Plugin):
         ))
 
 
-# Total data column count produced by each plugin at full schema width, used to resolve a cols_data sentinel of -1.
-# cols_modifier subtracts that many tickers before applying the per-ticker width (equity local omits the inactive MCK tickers).
-_COLS_FULL = {
-    "balances": lambda cols_modifier: len(CURRENCY_COLUMNS),
-    "currency": lambda cols_modifier: len(CURRENCY_COLUMNS),
-    "interest": lambda cols_modifier: len(INTEREST_COLUMNS),
-    "equity": lambda cols_modifier: (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE) - cols_modifier) * len(DIMENSIONS_STATE),
-}
-
-
-def _load_fixture(scope: str, plugin_name: str, test_name: str, cols_modifier: int = 0) -> dict:
+def _load_fixture(scope: str, plugin_name: str, test_name: str) -> dict:
     path = join(DIR_ROOT, "src/test/resources/repos", scope, plugin_name, test_name, "fixture.toml")
     assert isfile(path), f"Fixture [{path}] not found, run [src/test/resources/repos/refresh.sh] to generate it"
     with open(path, "rb") as toml_file:
         fixture = tomllib.load(toml_file)
-    if int(fixture.get("cols_data", -1)) < 0 and plugin_name in _COLS_FULL:
-        fixture["cols_data"] = _COLS_FULL[plugin_name](cols_modifier)
+    cols_full = {
+        "balances": len(CURRENCY_COLUMNS),
+        "currency": len(CURRENCY_COLUMNS),
+        "interest": len(INTEREST_COLUMNS),
+        "equity": (len(STOCK) + len(PORTFOLIO_TICKERS_ACTIVE) + len(PORTFOLIO_TICKERS_MANUAL) - len(PORTFOLIO_TICKERS_NODATA)) * len(DIMENSIONS_STATE),
+    }
+    if int(fixture.get("cols_data", -1)) < 0 and plugin_name in cols_full:
+        fixture["cols_data"] = cols_full[plugin_name]
     return fixture
 
 

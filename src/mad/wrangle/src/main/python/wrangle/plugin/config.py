@@ -63,6 +63,7 @@ class Config:
     cache_dir: str = "/asystem/mnt/data"
     force_reprocessing: bool = False
     force_downloads: bool = False
+    force_uploads: bool = False
     disable_drive_uploads: bool = False
     disable_sheet_uploads: bool = False
     disable_database_uploads: bool = False

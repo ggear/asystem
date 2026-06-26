@@ -127,6 +127,7 @@ def database_open():
             f"/{os.environ['WRANGLE_DATABASE_USER']}"
         )
         database_conn = psycopg.connect(DSN, autocommit=False, connect_timeout=connect_timeout,
+                                        keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5,
                                         options=f"-c statement_timeout={statement_timeout_ms}")
         print_log(
             "Wrangle",
@@ -164,3 +165,19 @@ def database_close():
         )
     database_conn = None
     DSN = None
+
+
+def database_reconnect():
+    global database_conn
+    if config.disable_database_uploads and config.disable_database_downloads:
+        return False
+    if database_conn is not None and not database_conn.closed:
+        try:
+            with database_conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            database_conn.rollback()
+            return True
+        except Exception as exception:
+            print_log("wrangle", "Database connection lost, reconnecting", exception=exception, level="warning")
+    database_open()
+    return database_conn is not None

@@ -75,8 +75,9 @@ PORTFOLIO_TICKER_MAP = {
     ('Joint', 'GBP'): 'MUK',
     ('Joint', 'SGD'): 'MSG',
 }
-PORTFOLIO_TICKERS_MCK = {'MCK'}
-PORTFOLIO_TICKERS_ACTIVE = {ticker for ticker in PORTFOLIO_TICKER_MAP.values() if ticker not in PORTFOLIO_TICKERS_MCK}
+PORTFOLIO_TICKERS_MANUAL = {'MCK', 'BANK'}
+PORTFOLIO_TICKERS_NODATA = {'MSG'}
+PORTFOLIO_TICKERS_ACTIVE = {ticker for ticker in PORTFOLIO_TICKER_MAP.values() if ticker not in PORTFOLIO_TICKERS_MANUAL}
 
 STOCK = {
     'AORD': {"start": "1985-01", "end of day": "16:00", "prefix": "^", "exchange": "  ", },
@@ -525,8 +526,8 @@ class Equity(plugin.Plugin):
                         ])
                     if statement_exprs:
                         statement_df = statement_df.with_columns(statement_exprs)
-                    tickers = [t for t in tickers if t not in PORTFOLIO_TICKERS_MCK]
-                    statement_tickers = [t for t in statement_tickers if t not in PORTFOLIO_TICKERS_MCK]
+                    tickers = [t for t in tickers if t not in PORTFOLIO_TICKERS_MANUAL]
+                    statement_tickers = [t for t in statement_tickers if t not in PORTFOLIO_TICKERS_MANUAL]
                     statement_df = statement_df.select(["Date"] + [f"{ticker} {dimension}" for ticker in tickers for dimension in DIMENSIONS_PRICE_AUX])
                     statement_df = _equity_upsample(statement_df)
                     statement_df = _equity_clean(statement_df)
@@ -551,6 +552,18 @@ class Equity(plugin.Plugin):
                 prices_manual_result = self.sheet_download(self.remote_repos.sheet_prices, "Prices", sheet_name="Manual")
                 equity_df_manual = self.csv_read(prices_manual_result.file_path, schema={"Date": pl.Date}) \
                     if prices_manual_result.status != plugin.DownloadStatus.FAILED else self.dataframe_new(schema={"Date": pl.Date})
+                bank_query = """
+SELECT time AS "Date", value AS "BANK Price Close"
+FROM interest
+WHERE entity = 'Bank'
+  AND type = 'mean'
+  AND period = '1mo'
+ORDER BY time
+                """
+                bank_query_result = self.database_download("Interest_BANK_Rates", bank_query)
+                if bank_query_result.status != plugin.DownloadStatus.FAILED:
+                    bank_df = self.csv_read(bank_query_result.file_path, schema={"Date": pl.Date, "BANK Price Close": pl.Float64})
+                    equity_df_manual = equity_df_manual.join(bank_df, on="Date", how="full", coalesce=True)
                 manual_exprs = []
                 for ticker in _equity_tickers(equity_df_manual):
                     manual_exprs.extend([
@@ -563,6 +576,8 @@ class Equity(plugin.Plugin):
                         pl.lit(0.0, pl.Float64).alias(f"{ticker} Stock Splits"),
                         pl.lit("AUD").alias(f"{ticker} Currency Base"),
                     ])
+                    if f"{ticker} Currency Rate Base" not in equity_df_manual.columns:
+                        manual_exprs.append(pl.lit(1.0, pl.Float64).alias(f"{ticker} Currency Rate Base"))
                 if manual_exprs:
                     equity_df_manual = equity_df_manual.with_columns(manual_exprs)
                 equity_df_manual = _equity_clean(equity_df_manual)

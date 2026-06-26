@@ -56,8 +56,9 @@ append_value_arg WRANGLE_REPO_SCOPE --repo-scope
 append_value_arg WRANGLE_LOG --log
 
 append_bool_arg WRANGLE_DISABLE_LOOP --disable-loop
-append_bool_arg WRANGLE_FORCE_REPROCESSING --force-reprocessing
+append_bool_arg WRANGLE_DISABLE_REPROCESSING --disable-reprocessing
 append_bool_arg WRANGLE_FORCE_DOWNLOADS --force-downloads
+append_bool_arg WRANGLE_FORCE_UPLOADS --force-uploads
 
 append_bool_arg WRANGLE_ENABLE_DRIVE_UPLOADS --enable-drive-uploads
 append_bool_arg WRANGLE_ENABLE_SHEET_UPLOADS --enable-sheet-uploads

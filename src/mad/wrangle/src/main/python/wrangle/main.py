@@ -53,22 +53,22 @@ def configure(argv=None):
         ),
     )
     parser.add_argument(
-        "-r", "--force-reprocessing",
-        action="store_true",
-        help="flush each plugin's cached state and reprocess all files",
-    )
-    parser.add_argument(
-        "-d", "--force-downloads",
-        action="store_true",
-        help="force all files to be re-downloaded even if cached",
-    )
-    parser.add_argument(
         "-u", "--enable-uploads",
         action="store_true",
         help="enable all upload targets",
     )
 
     # Uncommon switches
+    parser.add_argument(
+        "--disable-reprocessing",
+        action="store_true",
+        help="skip reprocessing of cached files (incremental run); reprocessing is on by default",
+    )
+    parser.add_argument(
+        "--force-uploads",
+        action="store_true",
+        help="force all files to be re-uploaded even if unchanged",
+    )
     parser.add_argument(
         "--enable-drive-uploads",
         action="store_true",
@@ -83,6 +83,11 @@ def configure(argv=None):
         "--enable-database-uploads",
         action="store_true",
         help="enable database uploads",
+    )
+    parser.add_argument(
+        "--force-downloads",
+        action="store_true",
+        help="force all files to be re-downloaded even if cached",
     )
     parser.add_argument(
         "--disable-downloads",
@@ -152,7 +157,7 @@ def configure(argv=None):
 
     args = parser.parse_args(argv)
     if args.poll_period != 0 and args.poll_period not in HISTORY_RAW_LABELS:
-        parser.error(f"argument -p/--poll-period: MINUTES must be 0 or one of {sorted(HISTORY_RAW_LABELS)}")
+        parser.error(f"argument --poll-period: MINUTES must be 0 or one of {sorted(HISTORY_RAW_LABELS)}")
     filter_plugins = None
     if args.filter_plugins is not None:
         filter_plugins_csv: str = args.filter_plugins
@@ -180,8 +185,11 @@ def configure(argv=None):
     plugin.config.poll_period = args.poll_period
     plugin.config.repo_scope = plugin.RepoScope(args.repo_scope)
     plugin.config.cache_dir = args.cache_dir
-    plugin.config.force_reprocessing = args.force_reprocessing
+    # The user-facing flag is the opt-out --disable-reprocessing (default off), so a bare CLI run
+    # reprocesses; the internal config field stays force_reprocessing, set as its inverse here.
+    plugin.config.force_reprocessing = not args.disable_reprocessing
     plugin.config.force_downloads = args.force_downloads
+    plugin.config.force_uploads = args.force_uploads
     plugin.config.disable_drive_uploads = not args.enable_drive_uploads
     plugin.config.disable_sheet_uploads = not args.enable_sheet_uploads
     plugin.config.disable_database_uploads = not args.enable_database_uploads
@@ -257,6 +265,7 @@ def main(argv=None):
                 def run_callback(force_reprocessing=False):
                     def _do_run():
                         callback_start = time.perf_counter()
+                        database.database_reconnect()
                         plugin.config.force_reprocessing = force_reprocessing
                         _, callback_results, callback_plugin_count, callback_errored_count = _run_plugins(filter_plugins=args.filter_plugins)
                         plugin.config.force_reprocessing = False
@@ -297,6 +306,7 @@ def main(argv=None):
         while True:
             cycle_start = time.perf_counter()
             cycle_start_dt = datetime.datetime.now(tz=CTR_TZ)
+            database.database_reconnect()
             try:
                 lock_cm = history.acquire_run_lock() if history is not None else contextlib.nullcontext()
                 with lock_cm:
@@ -318,6 +328,16 @@ def main(argv=None):
                         lambda counters, overhead, h=history, s=cycle_start_dt: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead, start_ts=s),
                         extra_overhead_ms=prev_add_run_ms,
                     )
+            except Exception as exception:
+                print_log("wrangle", "Unexpected error during run cycle, continuing to next poll", exception=exception, level="error")
+                success, plugin_results, plugin_count, plugin_errored_count = False, _failed_run_results(active_plugins), len(active_plugins), len(active_plugins)
+                if history is not None and args.poll_period > 0:
+                    with contextlib.suppress(Exception):
+                        _, prev_add_run_ms = _record_plugin_run(
+                            plugin_results, plugin_count, plugin_errored_count, cycle_start, "loop",
+                            lambda counters, overhead, h=history, s=cycle_start_dt: h.add_run(ts=datetime.datetime.now(tz=CTR_TZ), plugin_counters=counters, loop_overhead_ms=overhead, start_ts=s),
+                            extra_overhead_ms=prev_add_run_ms,
+                        )
             if not args.poll_period:
                 if history is not None:
                     _record_plugin_run(
@@ -374,6 +394,8 @@ def _run_plugins(filter_plugins=None):
             else:
                 print_log(plugin_name, "Plugin failed to load or initialise", exception=exception)
             plugin_errored = True
+        if plugin_errored and not any(action == CTR_ACT_ERRORED and value > 0 for source_actions in counters.values() for action, value in source_actions.items()):
+            counters.setdefault(CTR_SRC_DATA, {})[CTR_ACT_ERRORED] = 1
         plugin_results[plugin_name] = {"counters": counters, "runtime_sec": time.perf_counter() - plugin_started, "errored": plugin_errored}
         if plugin_errored:
             plugin_errored_count += 1
