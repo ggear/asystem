@@ -48,7 +48,20 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           ${FIND_CMD} "${share_current_dir}" -mindepth 1 -type f -print0 | while IFS= read -r -d '' file; do
             source_file="${file}"
             target_file="${share_type_dest}/${file#${share_type_dir}/}"
-            mv -v "${source_file}" "${target_file}"
+            if [ -e "${target_file}" ]; then
+              target_dir="${target_file%/*}"
+              target_base="${target_file##*/}"
+              target_name="${target_base%.*}"
+              target_extension=""
+              [ "${target_name}" != "${target_base}" ] && target_extension=".${target_base##*.}"
+              target_index=1
+              while [ -e "${target_dir}/${target_name}_${target_index}${target_extension}" ]; do
+                target_index=$((target_index + 1))
+              done
+              target_file="${target_dir}/${target_name}_${target_index}${target_extension}"
+              echo "Warning: Target file already exists, moving [${source_file}] to [${target_file}] instead"
+            fi
+            mv -vn "${source_file}" "${target_file}"
           done
           [ -d "${share_current_dir}/.." ] && ${FIND_CMD} "${share_current_dir}/.." -type d -empty -delete >/dev/null 2>&1
         fi

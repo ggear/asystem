@@ -1,6 +1,8 @@
+import contextlib
 import os
 
 import psycopg
+from psycopg import sql
 
 from .config import TIMEOUT_NETWORK_SECONDS, config
 from .logger import print_log
@@ -165,6 +167,26 @@ def database_close():
         )
     database_conn = None
     DSN = None
+
+
+def database_truncate(table_name):
+    if database_conn is None:
+        return False
+    try:
+        with database_conn.cursor() as cursor:
+            cursor.execute("SELECT to_regclass(%s)", (table_name,))
+            row = cursor.fetchone()
+            if row is None or row[0] is None:
+                return False
+            cursor.execute(sql.SQL("TRUNCATE {}").format(sql.Identifier(table_name)))
+        database_conn.commit()
+        print_log("Wrangle", f"Database truncated table [{table_name}]", level="debug")
+        return True
+    except Exception as exception:
+        print_log("wrangle", f"Database truncate of table [{table_name}] failed", exception=exception, level="warning")
+        with contextlib.suppress(Exception):
+            database_conn.rollback()
+        return False
 
 
 def database_reconnect():

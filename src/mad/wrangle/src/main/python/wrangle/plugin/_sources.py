@@ -1093,7 +1093,7 @@ def _database_ensure_table(table_name, conn):
                 PRIMARY KEY (time, entity, type, period, unit)
             )
         """)
-        cur.execute(f"SELECT create_hypertable('{table_name}', 'time', if_not_exists => TRUE)")
+        cur.execute(f"SELECT create_hypertable('{table_name}', 'time', chunk_time_interval => INTERVAL '10 years', if_not_exists => TRUE)")
         cur.execute(
             f"CREATE INDEX IF NOT EXISTS {table_name}_entity_time ON {table_name} (entity, time DESC)"
         )
