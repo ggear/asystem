@@ -5,9 +5,9 @@ umount -fq /media/usbdrive
 [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ] && mount -t exfat $(echo "/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{RAR_FILES=ORAR_FILES=" "}{print $1}')) /media/usbdrive
 
 # Renaming
-rename -v 's/X/Y/' ./*.mkv
+rename -v 's/X/Y/' *.mkv
 rename -v 's/Season /Season 0/' Season\ ?/
-rename -v 's/(.*)[sS]([0-9][0-9])[eE]([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
+rename -v 's/(.*)[sS]([0-9][0-9])[eE]([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' *.mkv
 find . -name "*TRANS*mkv" -exec rename -vf 's/__TRANSCODE_MID//' "{}" \;
 find . -name "*TRANS*mkv" -exec rename -vf 's/__TRANSCODE_MIN//' "{}" \;
 
