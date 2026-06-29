@@ -12,9 +12,12 @@ if [ -n "${SHARE_DIR_MEDIA}" ]; then
     MEDIA_FILE_DIR="${PWD}"
   fi
 fi
+RESULT=0
 if [ -n "${MEDIA_FILE_DIR}" ]; then
-  media-clean
-  "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" --verbose --force "${MEDIA_FILE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}"
+  media-clean || RESULT=1
+  "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" --verbose --force "${MEDIA_FILE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" || RESULT=1
 else
   echo "" && echo "Error: Not in media file root directory, not doing anything!" && echo ""
+  RESULT=1
 fi
+exit ${RESULT}

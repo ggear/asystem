@@ -149,11 +149,11 @@ class Currency(plugin.Plugin):
             if len(rba_current_df) and (len(rba_delta_df) or plugin.config.force_reprocessing):
                 rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime.datetime(2006, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(rba_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Currency', add_filter=True)
-                self.database_upload(rba_current_df.select(['Date'] + PAIRS),
+                self.database_upload(rba_delta_df.select(['Date'] + PAIRS),
                                      metric_type="snapshot", period="1d", unit="$",
                                      print_label="Currency_1_Day_Snapshot")
                 for fx_period in PERIODS:
-                    rba_pctchange_df = rba_current_df.select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
+                    rba_pctchange_df = rba_delta_df.select(['Date'] + [f"{fx_pair} {fx_period}".strip() for fx_pair in PAIRS])
                     rba_pctchange_df.columns = ['Date'] + PAIRS
                     self.database_upload(rba_pctchange_df,
                                          metric_type="delta", period=f"{PERIODS[fx_period]:0.0f}d", unit="%",

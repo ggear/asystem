@@ -356,9 +356,8 @@ class WrangleTest(unittest.TestCase):
                             ],
                             "_database_currency*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1983-12-12", end_date_at_least=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_row(),
-                                assert_file_equal(),
+                                assert_file_subset(),
                             ],
                         })
 
@@ -629,9 +628,8 @@ class WrangleTest(unittest.TestCase):
                             ],
                             "_database_equity*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="days"),
                                 assert_file_nones_per_col(after_first_rows=True),
-                                assert_file_equal(),
+                                assert_file_subset(),
                             ],
                         })
 
@@ -797,9 +795,8 @@ class WrangleTest(unittest.TestCase):
                             ],
                             "_database_interest*.csv": [
                                 assert_file_size(),
-                                assert_file_dates(start_date="1982-04-01", end_date_at_least=fixture["end_date"], contiguous="months"),
                                 assert_file_nones_per_row(exclude=r"type=mean"),
-                                assert_file_equal(),
+                                assert_file_subset(),
                             ],
                         })
 
@@ -1156,7 +1153,8 @@ class WrangleTest(unittest.TestCase):
             instance = wrangle_main._instantiate_plugin(plugin_name)
             if instance.database:
                 self.assertIn(f"# {plugin_name}", text)
-                self.assertEqual(text.count(f"FROM {plugin_name}"), len(database.DATABASE_QUERY_TEMPLATES))
+                for template in database.DATABASE_QUERY_TEMPLATES:
+                    self.assertIn(template.format(table=plugin_name), text)
             else:
                 self.assertNotIn(f"# {plugin_name}\n", text)
 
@@ -2481,6 +2479,36 @@ def assert_file_equal(exclude=None):
         return None
 
     _assert.__name__ = "assert_file_equal"
+    return _assert
+
+
+def assert_file_subset(keys=None, value="value"):
+    def _assert(file_path, key_filename="", *_):
+        stem = file_path[:-4]
+        if not stem.endswith("_1_run"):
+            return None
+        superset_path = stem.removesuffix("_1_run") + "_3_reprocess.csv"
+        if not isfile(superset_path):
+            return f"assert_file_subset: [{basename(file_path)}] superset file does not exist [{basename(superset_path)}]"
+        compare_started = time.time()
+        subset_df = _load_csv(file_path)
+        superset_df = _load_csv(superset_path)
+        if len(subset_df) == 0:
+            return None
+        key_columns = keys if keys is not None else [column for column in subset_df.columns if column != value]
+        joined = subset_df.join(superset_df.select([*key_columns, value]), on=key_columns, how="left", suffix="_superset")
+        missing = joined.filter(pl.col(f"{value}_superset").is_null())
+        if len(missing) > 0:
+            dataframe_print("Assert", missing, f"assert_file_subset: [{basename(file_path)}] rows absent from [{basename(superset_path)}]", level="error")
+            return f"assert_file_subset: [{basename(file_path)}] has [{len(missing)}] row(s) not present in [{basename(superset_path)}]"
+        mismatched = joined.filter(pl.col(value) != pl.col(f"{value}_superset"))
+        if len(mismatched) > 0:
+            dataframe_print("Assert", mismatched, f"assert_file_subset: [{basename(file_path)}] value differs from [{basename(superset_path)}]", level="error")
+            return f"assert_file_subset: [{basename(file_path)}] has [{len(mismatched)}] row(s) whose value differs from [{basename(superset_path)}]"
+        _print_assert_pass(f"assert_file_subset:{key_filename} ({_format_assert_elapsed(time.time() - compare_started)})")
+        return None
+
+    _assert.__name__ = "assert_file_subset"
     return _assert
 
 

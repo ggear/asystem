@@ -34,3 +34,4 @@ printf '%s\n' "${dirs_found[@]}" | sort | while read -r dir_found; do
     echo "cd '${dir_found}'"
   fi
 done
+exit 0

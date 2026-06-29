@@ -9,6 +9,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 SHARE_INDEX_DESTINATION_DEFAULT="11"
 SHARE_SCOPE_DESTINATION_DEFAULT="parents"
 
+RESULT=0
 current_dir="${PWD}"
 if [[ "${current_dir}" == *"/share/"* ]]; then
   share_prefix="${current_dir%%/share/*}"
@@ -22,6 +23,7 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
     share_dest="${share_dir}/media/${1:-${SHARE_SCOPE_DESTINATION_DEFAULT}}"
     if [ ! -d "${share_dest}" ]; then
       echo "Error: Share directory [${share_dest}] does not exist"
+      RESULT=1
     else
       for share_type in series movies; do
         share_type_dir=""
@@ -38,14 +40,14 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
         if [ ! -z "${share_type_dir}" ]; then
           share_type_suffix="${share_current_dir#${share_type_dir}}"
           share_type_dest="${share_dest}/${share_type}"
-          ${FIND_CMD} "${share_type_dir}" -mindepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
+          while IFS= read -r -d '' dir; do
             rel_dir="${dir#${share_type_dir}/}"
             target_dir="${share_type_dest}/${rel_dir}"
             if [[ -z "${share_type_suffix}" ]] || [[ "${target_dir}" == *"${share_type_suffix}"* ]]; then
-              mkdir -p "${target_dir}"
+              mkdir -p "${target_dir}" || RESULT=1
             fi
-          done
-          ${FIND_CMD} "${share_current_dir}" -mindepth 1 -type f -print0 | while IFS= read -r -d '' file; do
+          done < <(${FIND_CMD} "${share_type_dir}" -mindepth 1 -type d -print0)
+          while IFS= read -r -d '' file; do
             source_file="${file}"
             target_file="${share_type_dest}/${file#${share_type_dir}/}"
             if [ -e "${target_file}" ]; then
@@ -61,8 +63,8 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
               target_file="${target_dir}/${target_name}_${target_index}${target_extension}"
               echo "Warning: Target file already exists, moving [${source_file}] to [${target_file}] instead"
             fi
-            mv -vn "${source_file}" "${target_file}"
-          done
+            mv -vn "${source_file}" "${target_file}" || RESULT=1
+          done < <(${FIND_CMD} "${share_current_dir}" -mindepth 1 -type f -print0)
           [ -d "${share_current_dir}/.." ] && ${FIND_CMD} "${share_current_dir}/.." -type d -empty -delete >/dev/null 2>&1
         fi
       done
@@ -89,21 +91,25 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
       fi
       if [ $(mount | grep "${share_dir}" | grep "//" | wc -l) -gt 0 ] && [ -z "${share_ssh}" ]; then
         echo "Error: Current directory [${current_dir}] is not directly attached, nor can it be found on any SAMBA share"
+        RESULT=1
       else
         share_src="/share/${share_index}/${share_suffix}/"
         share_index_dest="${1:-${SHARE_INDEX_DESTINATION_DEFAULT}}"
         if ! [[ "$share_index_dest" =~ ^[0-9]+$ ]]; then
           echo "Error: Share index [${share_index_dest}] is not an integer"
+          RESULT=1
         else
           share_dest="/share/${share_index_dest}/media/$(echo ${share_suffix} | cut -d '/' -f2-)/"
           [ ! -z "${share_ssh}" ] && echo "Executing remotely ..."
           trap '${share_ssh} killall -9 rsync; echo; exit' INT
-          ${share_ssh} bash -s -- \"${share_src}\" \"${share_dest}\" <<'EOF'
+          ${share_ssh} bash -s -- \"${share_src}\" \"${share_dest}\" <<'EOF' || RESULT=1
 share_src="${1}"
 share_dest="${2}"
+result=0
 if [ -n "${share_src}" ] && [ -d "${share_src}" ] && [ -n "${share_dest}" ]; then
   if [ "${share_src}" == "${share_dest}" ]; then
     echo "Error: Source [${share_src}] and destination [${share_dest}] paths are the same"
+    result=1
   elif [[ "${share_src}" == /share/* ]] && [[ $(echo "${share_src}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${share_src}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
      [[ "${share_dest}" == /share/* ]] && [[ $(echo "${share_dest}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${share_dest}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
     mkdir -p "${share_dest}"
@@ -112,6 +118,7 @@ if [ -n "${share_src}" ] && [ -d "${share_src}" ] && [ -n "${share_dest}" ]; the
     if [ $(( source_size * 100 / dest_free )) -gt 95 ]; then
       echo "Error: Source size [${source_size} GB] is greater than 95% of free space [${dest_free} GB] on destination, bailing out"
       [ -d "$share_dest" ] && [ -z "$(ls -A "$share_dest")" ] && rm -rf "$share_dest"
+      result=1
     else
       echo "+ rsync '$(echo "${share_src}" | sed -E 's|^(/share/[0-9]+).*|\1|')'(${source_size} GB files) -> '$(echo "${share_dest}" | sed -E 's|^(/share/[0-9]+).*|\1|')'(${dest_free} GB free)"
       set -vx
@@ -121,23 +128,30 @@ if [ -n "${share_src}" ] && [ -d "${share_src}" ] && [ -n "${share_dest}" ]; the
         [ -d "${share_src}.." ] && find "${share_src}.." -type d -empty -delete >/dev/null 2>&1
       else
         echo "Error: Failed to rsync files from source [${share_src}] to destination [${share_dest}]"
+        result=1
       fi
     fi
   else
     echo "Error: Source [${share_src}] and or destination [${share_dest}] paths are invalid"
+    result=1
   fi
 else
   echo "Error: Source [${share_src}] and or destination [${share_dest}] paths are null"
+  result=1
 fi
+exit ${result}
 EOF
         fi
       fi
     else
       echo "Error: Current directory [${current_dir}] is a share, but not nested in a library"
+      RESULT=1
     fi
     # END: rsync workflow
 
   fi
 else
   echo "Error: Current directory [${current_dir}] is not a share"
+  RESULT=1
 fi
+exit ${RESULT}

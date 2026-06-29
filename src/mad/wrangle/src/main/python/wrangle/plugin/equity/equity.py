@@ -931,7 +931,7 @@ ORDER BY time
                 for dimension_metadata in dimensions_metadata:
                     dimensions.extend(dimension_metadata[0])
                 tickers = _equity_tickers(equity_current_df)
-                equity_output_df = _equity_clean(equity_current_df)
+                equity_output_df = _equity_clean(equity_delta_df)
                 equity_output_df = equity_output_df.select(["Date", *[
                     column for ticker in tickers for dimension in dimensions if (column := f"{ticker} {dimension}") in equity_output_df.columns
                 ]])

@@ -10,15 +10,21 @@ if [ ! -d "${WORKING_DIR}" ]; then
   exit 1
 fi
 
+RESULT=0
 echo -n "Normalising '${WORKING_DIR}' ... "
 if [ $(uname) == "Linux" ]; then
-  command -v setfacl &>/dev/null && setfacl -bR "${WORKING_DIR}"
-  id "graham" &>/dev/null && getent group "users" &>/dev/null && ${FIND_CMD} "${WORKING_DIR}" -exec chown "graham:users" {} \;
-  ${FIND_CMD} "${WORKING_DIR}" -type d -exec chmod 750 {} \;
-  ${FIND_CMD} "${WORKING_DIR}" -type f -name "*.sh" -exec chmod 750 {} \;
-  ${FIND_CMD} "${WORKING_DIR}" -type f ! -name "*.sh" -exec chmod 640 {} \;
+  command -v setfacl &>/dev/null && { setfacl -bR "${WORKING_DIR}" || RESULT=1; }
+  id "graham" &>/dev/null && getent group "users" &>/dev/null && { ${FIND_CMD} "${WORKING_DIR}" -exec chown "graham:users" {} \; || RESULT=1; }
+  ${FIND_CMD} "${WORKING_DIR}" -type d -exec chmod 750 {} \; || RESULT=1
+  ${FIND_CMD} "${WORKING_DIR}" -type f -name "*.sh" -exec chmod 750 {} \; || RESULT=1
+  ${FIND_CMD} "${WORKING_DIR}" -type f ! -name "*.sh" -exec chmod 640 {} \; || RESULT=1
 fi
-${FIND_CMD} "${WORKING_DIR}" -type f -name nohup -exec rm -f {} \;
-${FIND_CMD} "${WORKING_DIR}" -type f -name .DS_Store -exec rm -f {} \;
-${FIND_CMD} "${WORKING_DIR}" -type f -regextype posix-extended -regex '.*/\.[^/]*\.[A-Za-z0-9]{6}$' -exec rm -f {} \;
+${FIND_CMD} "${WORKING_DIR}" -type f -name nohup -exec rm -f {} \; || RESULT=1
+${FIND_CMD} "${WORKING_DIR}" -type f -name .DS_Store -exec rm -f {} \; || RESULT=1
+${FIND_CMD} "${WORKING_DIR}" -type f -regextype posix-extended -regex '.*/\.[^/]*\.[A-Za-z0-9]{6}$' -exec rm -f {} \; || RESULT=1
+if [ ${RESULT} -ne 0 ]; then
+  echo "failed"
+  exit 1
+fi
 echo "done"
+exit 0

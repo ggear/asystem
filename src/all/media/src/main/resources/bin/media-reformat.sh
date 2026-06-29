@@ -7,14 +7,17 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 SCRIPT_NAME="reformat.sh"
 SCRIPT_PATH="${ROOT_DIR}/lib/${SCRIPT_NAME}"
 SCRIPT_FILE="tmp/scripts/media/${SCRIPT_NAME}"
+RESULT=0
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
   ${FIND_CMD} . -name ${SCRIPT_NAME} -exec "{}" \; | grep -v "No such file or directory"
+  RESULT=${PIPESTATUS[0]}
 elif [ -n "${SHARE_DIR}" ]; then
-  [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && media-analyse
-  "${SHARE_DIR}/${SCRIPT_FILE}"
+  [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && { media-analyse || RESULT=1; }
+  "${SHARE_DIR}/${SCRIPT_FILE}" || RESULT=1
 else
   for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do
-    [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && media-analyse
-    "${_SHARE_DIR}/${SCRIPT_FILE}"
+    [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && { media-analyse || RESULT=1; }
+    "${_SHARE_DIR}/${SCRIPT_FILE}" || RESULT=1
   done
 fi
+exit ${RESULT}

@@ -382,7 +382,7 @@ def _run_plugins(filter_plugins=None):
         try:
             plugin_instance = _instantiate_plugin(plugin_name)
             if plugin.config.force_reprocessing and plugin_instance.database and not plugin.config.disable_database_uploads:
-                database.database_truncate(plugin_instance.name.lower())
+                database.database_drop(plugin_instance.name.lower())
             plugin_instance.run()
             counters = plugin_instance.get_counters()
             for source in counters:

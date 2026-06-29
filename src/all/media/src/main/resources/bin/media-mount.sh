@@ -4,6 +4,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 . "${ROOT_DIR}/.env_media"
 
+RESULT=0
 shares_file="${LIB_ROOT}/../../shares.csv"
 if [[ -f "${shares_file}" ]] && ! grep -q "^${HOSTNAME}," "${shares_file}"; then
   while IFS=',' read -r share_host share_index; do
@@ -16,7 +17,8 @@ if [[ -f "${shares_file}" ]] && ! grep -q "^${HOSTNAME}," "${shares_file}"; then
     if [[ ! -d "${share_dir}/tmp" ]]; then
       echo -n "Mounting '${share_samba}' ... "
       diskutil unmount force "${share_dir}" &>/dev/null
-      mount_smbfs -o soft,nodatacache,nodatacache "${share_samba}" "${share_dir}" && echo "done"
+      mount_smbfs -o soft,nodatacache,nodatacache "${share_samba}" "${share_dir}" && echo "done" || RESULT=1
     fi
   done <"${shares_file}"
 fi
+exit ${RESULT}

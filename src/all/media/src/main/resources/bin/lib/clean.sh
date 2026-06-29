@@ -14,18 +14,19 @@ LOG="/tmp/media-clean.log"
 
 echo -n "Cleaning '${WORKING_DIR}' ... "
 rm -rf ${LOG}
-${FIND_CMD} "${WORKING_DIR}" -name ".DS_Store" -type f -delete &>${LOG}
-${FIND_CMD} "${WORKING_DIR}" -name "._metadata_*.yaml" -type f -delete &>${LOG}
-${FIND_CMD} "${WORKING_DIR}" -name "._defaults_analysed_*.yaml" -type f -delete &>${LOG}
+${FIND_CMD} "${WORKING_DIR}" -name ".DS_Store" -type f -delete &>>${LOG}
+${FIND_CMD} "${WORKING_DIR}" -name "._metadata_*.yaml" -type f -delete &>>${LOG}
+${FIND_CMD} "${WORKING_DIR}" -name "._defaults_analysed_*.yaml" -type f -delete &>>${LOG}
 for SCRIPT in "rename" "check" "merge" "upscale" "reformat" "transcode" "downscale"; do
-  ${FIND_CMD} "${WORKING_DIR}" -name "${SCRIPT}.sh" -type f -delete &>${LOG}
-  ${FIND_CMD} "${WORKING_DIR}" -name "._${SCRIPT}_*" -type d -exec rm -rf '{}' + &>${LOG}
+  ${FIND_CMD} "${WORKING_DIR}" -name "${SCRIPT}.sh" -type f -delete &>>${LOG}
+  ${FIND_CMD} "${WORKING_DIR}" -name "._${SCRIPT}_*" -type d -exec rm -rf '{}' + &>>${LOG}
 done
-${FIND_CMD} "${WORKING_DIR}" -path "*/share/*/media/*" -type d -empty -delete &>${LOG}
-${FIND_CMD} "${WORKING_DIR}" -path "*/share/*/media/*" -type d -empty -delete &>${LOG}
-if [ $(cat ${LOG} | wc -l) -gt 0 ]; then
+${FIND_CMD} "${WORKING_DIR}" -path "*/share/*/media/*" -type d -empty -delete &>>${LOG}
+${FIND_CMD} "${WORKING_DIR}" -path "*/share/*/media/*" -type d -empty -delete &>>${LOG}
+if [ -s "${LOG}" ]; then
   echo "failed"
   cat ${LOG}
-else
-  echo "done"
+  exit 1
 fi
+echo "done"
+exit 0

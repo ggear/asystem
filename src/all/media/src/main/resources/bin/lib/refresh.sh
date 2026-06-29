@@ -5,10 +5,21 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 . "${ROOT_DIR}/../.env_media"
 
 echo -n "Refreshing 'http://${PLEX_SERVICE_PROD}/libraries' ... "
-for PLEX_LIBRARY_KEY in $(curl -sf http://${PLEX_SERVICE_PROD}:${PLEX_HTTP_PORT}/library/sections?X-Plex-Token=${PLEX_TOKEN} | xq -x '/MediaContainer/Directory/@key'); do
-  curl -sf http://${PLEX_SERVICE_PROD}:${PLEX_HTTP_PORT}/library/sections/${PLEX_LIBRARY_KEY}/refresh?X-Plex-Token=${PLEX_TOKEN}
-done
+RESULT=0
+PLEX_SECTIONS=$(curl -sf http://${PLEX_SERVICE_PROD}:${PLEX_HTTP_PORT}/library/sections?X-Plex-Token=${PLEX_TOKEN})
+if [ $? -ne 0 ]; then
+  RESULT=1
+else
+  for PLEX_LIBRARY_KEY in $(echo "${PLEX_SECTIONS}" | xq -x '/MediaContainer/Directory/@key'); do
+    curl -sf http://${PLEX_SERVICE_PROD}:${PLEX_HTTP_PORT}/library/sections/${PLEX_LIBRARY_KEY}/refresh?X-Plex-Token=${PLEX_TOKEN} || RESULT=1
+  done
+fi
+if [ ${RESULT} -ne 0 ]; then
+  echo "failed"
+  exit 1
+fi
 echo "done"
+exit 0
 
 # TODO: Only enable if sonarr automatic download does not break
 #  echo -n "Refreshing 'http://${SONARR_SERVICE_PROD}/libraries' ... "

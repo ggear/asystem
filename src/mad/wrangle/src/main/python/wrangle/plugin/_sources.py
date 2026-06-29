@@ -446,8 +446,8 @@ class SourcesMixin(ContractMixin):
                             print_suffix=f"to [{csv_path}]", started=started_time)
             return
         try:
-            _database_ensure_table(table_name, database.database_conn)
-            _database_upsert(long_df, table_name, database.database_conn, database.DSN)
+            database.database_ensure_table(table_name, database.database_conn)
+            database.database_upsert(long_df, table_name, database.database_conn, database.DSN)
             dataframe_print(self.name, long_df, print_label=print_label, print_verb="uploaded",
                             print_suffix=f"to [{table_name}]", started=started_time)
         except Exception as exception:
@@ -1078,55 +1078,3 @@ class SourcesMixin(ContractMixin):
 
         self.print_log(f"Directory [{basename(local_dir).title()}] synchronised [{len(actioned_files)}] files from [https://drive.google.com/drive/folders/{drive_dir}]", started=started_time)
         return collections.OrderedDict(sorted(actioned_files.items()))
-
-
-def _database_ensure_table(table_name, conn):
-    with conn.cursor() as cur:
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                time   DATE  NOT NULL,
-                entity TEXT  NOT NULL,
-                type   TEXT  NOT NULL,
-                period TEXT  NOT NULL,
-                unit   TEXT  NOT NULL,
-                value  FLOAT8 NOT NULL,
-                PRIMARY KEY (time, entity, type, period, unit)
-            )
-        """)
-        cur.execute(f"SELECT create_hypertable('{table_name}', 'time', chunk_time_interval => INTERVAL '10 years', if_not_exists => TRUE)")
-        cur.execute(
-            f"CREATE INDEX IF NOT EXISTS {table_name}_entity_time ON {table_name} (entity, time DESC)"
-        )
-        conn.commit()
-
-
-def _database_upsert(long_df, table_name, conn, dsn):
-    stage = f"{table_name}_stage"
-    with conn.cursor() as cur:
-        cur.execute(f"""
-            CREATE UNLOGGED TABLE IF NOT EXISTS {stage} (
-                time   DATE  NOT NULL,
-                entity TEXT  NOT NULL,
-                type   TEXT  NOT NULL,
-                period TEXT  NOT NULL,
-                unit   TEXT  NOT NULL,
-                value  FLOAT8 NOT NULL
-            )
-        """)
-        cur.execute(f"TRUNCATE {stage}")
-        conn.commit()
-    try:
-        long_df.write_database(stage, connection=dsn, if_table_exists="append", engine="adbc")
-        with conn.cursor() as cur:
-            cur.execute(f"""
-                INSERT INTO {table_name} (time, entity, type, period, unit, value)
-                SELECT time, entity, type, period, unit, value FROM {stage}
-                ON CONFLICT (time, entity, type, period, unit)
-                DO UPDATE SET value = EXCLUDED.value
-                WHERE {table_name}.value IS DISTINCT FROM EXCLUDED.value
-            """)
-            conn.commit()
-    finally:
-        with conn.cursor() as cur:
-            cur.execute(f"TRUNCATE {stage}")
-            conn.commit()

@@ -28,6 +28,8 @@ EOF
   echo "" && echo "Defaults file:" && cat "${DEFAULTS_FILE}"
   echo "" && echo "Defaults edit:" && echo "vi ${DEFAULTS_FILE}"
   echo ""
+  exit 0
 else
   echo "" && echo "Error: Not in media file root directory, not doing anything!" && echo ""
+  exit 1
 fi

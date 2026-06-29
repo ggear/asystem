@@ -641,7 +641,7 @@ class RunHistory:
             if bucket is None:
                 bucket = int(datetime.datetime.fromisoformat(entry["ts"]).timestamp()) // bucket_seconds
             bucket_lookup[bucket] = entry
-        current_bucket = int(datetime.datetime.now(tz=CTR_TZ).timestamp()) // bucket_seconds
+        current_bucket = max(bucket_lookup)
         earliest_bucket = min(bucket_lookup)
         n_real = min(bins, current_bucket - earliest_bucket + 1)
         start_bucket = current_bucket - (n_real - 1)
@@ -655,8 +655,7 @@ class RunHistory:
             else:
                 timestamps.append(datetime.datetime.fromtimestamp(bucket * bucket_seconds, tz=CTR_TZ).isoformat())
         timestamps += [""] * (bins - n_real)
-        in_progress_bin = n_real - 1
-        return View(name="raw", label=self._raw_label, bins=bins, bin_seconds=bucket_seconds, in_progress_bin=in_progress_bin, timestamps=timestamps, series=series, errored=errored)
+        return View(name="raw", label=self._raw_label, bins=bins, bin_seconds=bucket_seconds, in_progress_bin=-1, timestamps=timestamps, series=series, errored=errored)
 
     def _build_day_view(self) -> View:
         bins = HISTORY_RAW_RUN_LENGTH

@@ -147,11 +147,11 @@ class Interest(plugin.Plugin):
             if len(interest_current_df) and (len(interest_delta_df) or plugin.config.force_reprocessing):
                 interest_sheet_df = interest_current_df.filter(pl.col("Date") > pl.lit(datetime(2015, 1, 1))).sort("Date", descending=True)
                 self.sheet_upload(interest_sheet_df, self.remote_repos.sheet_key, workbook_name="Rates", sheet_name='Interest', add_filter=True)
-                self.database_upload(interest_current_df.select(["Date"] + LABELS),
+                self.database_upload(interest_delta_df.select(["Date"] + LABELS),
                                      metric_type="mean", period="1mo", unit="%",
                                      print_label="Interest_1_Month_Mean")
                 for int_period in PERIODS:
-                    interest_periodly_df = interest_current_df.select(["Date"] + [f"{int_rate} {int_period}".strip() for int_rate in LABELS])
+                    interest_periodly_df = interest_delta_df.select(["Date"] + [f"{int_rate} {int_period}".strip() for int_rate in LABELS])
                     interest_periodly_df.columns = ["Date"] + LABELS
                     self.database_upload(interest_periodly_df,
                                          metric_type="mean", period=f"{PERIODS[int_period] / 12:0.0f}y", unit="%",
