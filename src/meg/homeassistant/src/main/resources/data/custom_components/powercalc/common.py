@@ -46,7 +46,7 @@ def is_number(value: str) -> bool:
     return math.isfinite(fvalue)
 
 
-async def create_source_entity(entity_id: str, hass: HomeAssistant) -> SourceEntity:
+def create_source_entity(entity_id: str, hass: HomeAssistant) -> SourceEntity:
     """Create object containing all information about the source entity."""
 
     source_entity_domain, source_object_id = split_entity_id(entity_id)
@@ -61,7 +61,9 @@ async def create_source_entity(entity_id: str, hass: HomeAssistant) -> SourceEnt
     entity_entry = entity_registry.async_get(entity_id)
 
     device_registry = dr.async_get(hass)
-    device_entry = device_registry.async_get(entity_entry.device_id) if entity_entry and entity_entry.device_id else None
+    device_entry = (
+        device_registry.async_get(entity_entry.device_id) if entity_entry and entity_entry.device_id else None
+    )
 
     unique_id = None
     supported_color_modes: list[ColorMode] = []
@@ -69,13 +71,14 @@ async def create_source_entity(entity_id: str, hass: HomeAssistant) -> SourceEnt
         source_entity_domain = entity_entry.domain
         unique_id = entity_entry.unique_id
         if entity_entry.capabilities:
-            supported_color_modes = entity_entry.capabilities.get(  # type: ignore[assignment]
+            supported_color_modes = entity_entry.capabilities.get(
                 ATTR_SUPPORTED_COLOR_MODES,
+                [],
             )
 
     entity_state = hass.states.get(entity_id)
     if entity_state:
-        supported_color_modes = entity_state.attributes.get(ATTR_SUPPORTED_COLOR_MODES)
+        supported_color_modes = entity_state.attributes.get(ATTR_SUPPORTED_COLOR_MODES, [])
 
     return SourceEntity(
         source_object_id,
@@ -103,21 +106,39 @@ def get_wrapped_entity_name(
     device_entry: dr.DeviceEntry | None,
 ) -> str:
     """Construct entity name based on the wrapped entity"""
-    if entity_entry:
-        if entity_entry.name:
-            return entity_entry.name
-        if entity_entry.has_entity_name and device_entry:
-            device_name = device_entry.name_by_user or device_entry.name
-            if device_name:
-                return f"{device_name} {entity_entry.original_name}" if entity_entry.original_name else device_name
+    if entity_entry is None:
+        return _get_state_name(hass, entity_id) or object_id
 
-        return entity_entry.original_name or object_id
+    if entity_entry.name:
+        return entity_entry.name
 
+    device_entity_name = _get_device_entity_name(entity_entry, device_entry)
+    if device_entity_name:
+        return device_entity_name
+
+    return entity_entry.original_name or object_id
+
+
+def _get_device_entity_name(
+    entity_entry: er.RegistryEntry,
+    device_entry: dr.DeviceEntry | None,
+) -> str | None:
+    if not entity_entry.has_entity_name or device_entry is None:
+        return None
+
+    device_name = device_entry.name_by_user or device_entry.name
+    if not device_name:
+        return None
+
+    if entity_entry.original_name:
+        return f"{device_name} {entity_entry.original_name}"
+
+    return device_name
+
+
+def _get_state_name(hass: HomeAssistant, entity_id: str) -> str | None:
     entity_state = hass.states.get(entity_id)
-    if entity_state:
-        return str(entity_state.name)
-
-    return object_id
+    return str(entity_state.name) if entity_state else None
 
 
 def get_merged_sensor_configuration(*configs: dict, validate: bool = True) -> dict:
@@ -147,13 +168,20 @@ def get_merged_sensor_configuration(*configs: dict, validate: bool = True) -> di
             CONF_CREATE_ENERGY_SENSORS,
         )
 
-    is_entity_id_required = not any(key in merged_config for key in (CONF_DAILY_FIXED_ENERGY, CONF_POWER_SENSOR_ID, CONF_MULTI_SWITCH))
+    is_entity_id_required = not any(
+        key in merged_config for key in (CONF_DAILY_FIXED_ENERGY, CONF_POWER_SENSOR_ID, CONF_MULTI_SWITCH)
+    )
 
     if not is_entity_id_required and CONF_ENTITY_ID not in merged_config:
         merged_config[CONF_ENTITY_ID] = DUMMY_ENTITY_ID
 
     sensor_type = merged_config.get(CONF_SENSOR_TYPE)
-    if validate and CONF_CREATE_GROUP not in merged_config and CONF_ENTITY_ID not in merged_config and sensor_type != SensorType.GROUP:
+    if (
+        validate
+        and CONF_CREATE_GROUP not in merged_config
+        and CONF_ENTITY_ID not in merged_config
+        and sensor_type != SensorType.GROUP
+    ):
         raise SensorConfigurationError(
             "You must supply an entity_id in the configuration, see the README",
         )

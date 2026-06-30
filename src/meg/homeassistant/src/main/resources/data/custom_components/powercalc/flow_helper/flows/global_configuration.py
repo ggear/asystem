@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_ENABLED, CONF_SENSORS, UnitOfTime
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from homeassistant.helpers.typing import ConfigType
 import voluptuous as vol
@@ -38,13 +38,18 @@ from custom_components.powercalc.const import (
     DEFAULT_ENERGY_UPDATE_INTERVAL,
     DEFAULT_GROUP_ENERGY_UPDATE_INTERVAL,
     DEFAULT_GROUP_POWER_UPDATE_INTERVAL,
+    DOCS_URI,
     DOMAIN,
     DOMAIN_CONFIG,
     ENTITY_CATEGORIES,
     ENTRY_GLOBAL_CONFIG_UNIQUE_ID,
 )
 from custom_components.powercalc.flow_helper.common import PowercalcFormStep, Step
-from custom_components.powercalc.flow_helper.schema import SCHEMA_ENERGY_OPTIONS, SCHEMA_UTILITY_METER_OPTIONS, SCHEMA_UTILITY_METER_TOGGLE
+from custom_components.powercalc.flow_helper.schema import (
+    SCHEMA_ENERGY_OPTIONS,
+    SCHEMA_UTILITY_METER_OPTIONS,
+    SCHEMA_UTILITY_METER_TOGGLE,
+)
 
 if TYPE_CHECKING:
     from custom_components.powercalc.config_flow import PowercalcCommonFlow, PowercalcConfigFlow, PowercalcOptionsFlow
@@ -95,10 +100,16 @@ SCHEMA_GLOBAL_CONFIGURATION_THROTTLING = vol.Schema(
         vol.Optional(CONF_ENERGY_UPDATE_INTERVAL, default=DEFAULT_ENERGY_UPDATE_INTERVAL): selector.NumberSelector(
             selector.NumberSelectorConfig(unit_of_measurement=UnitOfTime.SECONDS, mode=selector.NumberSelectorMode.BOX),
         ),
-        vol.Optional(CONF_GROUP_POWER_UPDATE_INTERVAL, default=DEFAULT_GROUP_POWER_UPDATE_INTERVAL): selector.NumberSelector(
+        vol.Optional(
+            CONF_GROUP_POWER_UPDATE_INTERVAL,
+            default=DEFAULT_GROUP_POWER_UPDATE_INTERVAL,
+        ): selector.NumberSelector(
             selector.NumberSelectorConfig(unit_of_measurement=UnitOfTime.SECONDS, mode=selector.NumberSelectorMode.BOX),
         ),
-        vol.Optional(CONF_GROUP_ENERGY_UPDATE_INTERVAL, default=DEFAULT_GROUP_ENERGY_UPDATE_INTERVAL): selector.NumberSelector(
+        vol.Optional(
+            CONF_GROUP_ENERGY_UPDATE_INTERVAL,
+            default=DEFAULT_GROUP_ENERGY_UPDATE_INTERVAL,
+        ): selector.NumberSelector(
             selector.NumberSelectorConfig(unit_of_measurement=UnitOfTime.SECONDS, mode=selector.NumberSelectorMode.BOX),
         ),
     },
@@ -122,6 +133,21 @@ SCHEMA_GLOBAL_CONFIGURATION_ENERGY_SENSOR = vol.Schema(
 )
 
 
+def merge_global_config(global_config: ConfigType, user_input: dict[str, Any], schema: vol.Schema) -> None:
+    """Merge submitted user input into the global config.
+
+    Keys present in the schema but absent from the user input were cleared in the form
+    and must be removed, otherwise a previously saved value would incorrectly persist.
+    """
+    for key in schema.schema:
+        if isinstance(key, vol.Marker):
+            key = key.schema
+        if key in user_input:
+            global_config[key] = user_input[key]
+        elif key in global_config:
+            global_config.pop(key)
+
+
 def get_global_powercalc_config(flow: PowercalcCommonFlow) -> ConfigType:
     """Get the global powercalc config."""
     if flow.global_config:
@@ -141,7 +167,10 @@ class GlobalConfigurationFlow:
     def __init__(self, flow: PowercalcCommonFlow) -> None:
         self.flow = flow
 
-    async def async_step_global_configuration_discovery(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_global_configuration_discovery(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
         """Handle the discovery configuration step."""
 
         if user_input is not None:
@@ -162,13 +191,17 @@ class GlobalConfigurationFlow:
             user_input,
         )
 
-    async def async_step_global_configuration_throttling(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_global_configuration_throttling(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
         """Handle the throttling related options."""
 
         if user_input is not None:
-            self.flow.global_config.update(user_input)
             if self.flow.is_options_flow:
+                merge_global_config(self.flow.global_config, user_input, SCHEMA_GLOBAL_CONFIGURATION_THROTTLING)
                 return self.flow.persist_config_entry()
+            self.flow.global_config.update(user_input)
 
         return await self.flow.handle_form_step(
             PowercalcFormStep(
@@ -184,13 +217,17 @@ class GlobalConfigurationFlow:
             user_input,
         )
 
-    async def async_step_global_configuration_energy(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_global_configuration_energy(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
         """Handle the global configuration step."""
 
         if user_input is not None:
-            self.flow.global_config.update(user_input)
             if self.flow.is_options_flow:
+                merge_global_config(self.flow.global_config, user_input, SCHEMA_GLOBAL_CONFIGURATION_ENERGY_SENSOR)
                 return self.flow.persist_config_entry()
+            self.flow.global_config.update(user_input)
 
         if not bool(self.flow.global_config.get(CONF_CREATE_ENERGY_SENSORS)) or user_input is not None:
             return await self.async_step_global_configuration_utility_meter()
@@ -199,20 +236,28 @@ class GlobalConfigurationFlow:
             PowercalcFormStep(
                 step=Step.GLOBAL_CONFIGURATION_ENERGY,
                 schema=SCHEMA_GLOBAL_CONFIGURATION_ENERGY_SENSOR,
-                form_kwarg={"description_placeholders": {"docs_uri": "https://docs.powercalc.nl/configuration/global-configuration/"}},
+                form_kwarg={
+                    "description_placeholders": {
+                        "docs_uri": DOCS_URI,
+                    },
+                },
             ),
         )
 
-    async def async_step_global_configuration_utility_meter(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_global_configuration_utility_meter(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
         """Handle the global configuration step."""
 
         if user_input is not None:
-            self.flow.global_config.update(user_input)
             if self.flow.is_options_flow:
+                merge_global_config(self.flow.global_config, user_input, SCHEMA_UTILITY_METER_OPTIONS)
                 return self.flow.persist_config_entry()
+            self.flow.global_config.update(user_input)
 
         if not bool(self.flow.global_config.get(CONF_CREATE_UTILITY_METERS)) or user_input is not None:
-            return self.flow.async_create_entry(  # type: ignore
+            return self.flow.async_create_entry(
                 title="Global Configuration",
                 data=self.flow.global_config,
             )
@@ -221,7 +266,11 @@ class GlobalConfigurationFlow:
             PowercalcFormStep(
                 step=Step.GLOBAL_CONFIGURATION_UTILITY_METER,
                 schema=SCHEMA_UTILITY_METER_OPTIONS,
-                form_kwarg={"description_placeholders": {"docs_uri": "https://docs.powercalc.nl/configuration/global-configuration/"}},
+                form_kwarg={
+                    "description_placeholders": {
+                        "docs_uri": DOCS_URI,
+                    },
+                },
             ),
         )
 
@@ -231,7 +280,7 @@ class GlobalConfigurationConfigFlow(GlobalConfigurationFlow):
         super().__init__(flow)
         self.flow: PowercalcConfigFlow = flow
 
-    async def async_step_global_configuration(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_global_configuration(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the global configuration step."""
         get_global_powercalc_config(self.flow)
         await self.flow.async_set_unique_id(ENTRY_GLOBAL_CONFIG_UNIQUE_ID)
@@ -247,7 +296,7 @@ class GlobalConfigurationConfigFlow(GlobalConfigurationFlow):
                 schema=SCHEMA_GLOBAL_CONFIGURATION,
                 form_kwarg={
                     "description_placeholders": {
-                        "docs_uri": "https://docs.powercalc.nl/configuration/global-configuration/",
+                        "docs_uri": DOCS_URI,
                     },
                 },
             ),
@@ -272,11 +321,11 @@ class GlobalConfigurationOptionsFlow(GlobalConfigurationFlow):
             menu[Step.GLOBAL_CONFIGURATION_UTILITY_METER] = "Utility meter options"
         return menu
 
-    async def async_step_global_configuration(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_global_configuration(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the global configuration step."""
 
         if user_input is not None:
-            self.flow.global_config.update(user_input)
+            merge_global_config(self.flow.global_config, user_input, SCHEMA_GLOBAL_CONFIGURATION)
             return self.flow.persist_config_entry()
 
         return await self.flow.handle_form_step(

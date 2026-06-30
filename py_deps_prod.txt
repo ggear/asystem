@@ -6,12 +6,12 @@
 # Build/test
 mock==5.2.0
 fabric==3.2.3
-ruff==0.15.18
+ruff==0.15.20
 pytest==9.1.1
 dotenv==0.9.9
 varsubst==2.0.0
 packaging==24.2
-pyright==1.1.410
+pyright==1.1.411
 requests==2.34.2
 setuptools==82.0.1
 pathlib2==2.3.7.post1
@@ -60,7 +60,7 @@ adbc-driver-postgresql==1.11.0
 # External services
 docker==7.1.0
 plexapi==4.17.0
-yfinance==1.4.1
+yfinance==1.5.1
 dnspython==2.8.0
 paho-mqtt==1.6.1
 pydigitemp==1.4.1
