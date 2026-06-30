@@ -6,7 +6,7 @@ orjson==3.11.9
 tabulate==0.10.0
 datetime==5.5
 dropbox==12.0.2
-yfinance==1.4.1
+yfinance==1.5.1
 pdftotext==2.2.2
 psycopg[binary]==3.3.4
 python-calamine==0.7.0

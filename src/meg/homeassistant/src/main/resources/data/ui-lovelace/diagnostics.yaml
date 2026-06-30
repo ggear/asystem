@@ -68,9 +68,6 @@
     - entity: switch.service_openra
       name: OpenRA
       icon: mdi:heart-pulse
-    - entity: switch.service_rhasspy
-      name: Rhasspy
-      icon: mdi:heart-pulse
     - entity: switch.service_digitemp
       name: DigiTemp
       icon: mdi:heart-pulse
