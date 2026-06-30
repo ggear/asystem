@@ -1,13 +1,13 @@
 {
-  "default_entity_id": "switch.service_rhasspy",
-  "unique_id": "service_rhasspy",
-  "name": "Service Rhasspy",
+  "default_entity_id": "switch.service_wrangle",
+  "unique_id": "service_wrangle",
+  "name": "Service Wrangle",
   "icon": "mdi:heart-pulse",
   "force_update": false,
-  "state_topic": "supervisor/macmini-max/data/service/rhasspy/health_status",
+  "state_topic": "supervisor/macmini-mad/data/service/wrangle/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
-  "command_topic": "supervisor/macmini-max/command/service/rhasspy",
-  "availability_topic": "supervisor/macmini-max/status",
+  "command_topic": "supervisor/macmini-mad/command/service/wrangle",
+  "availability_topic": "supervisor/macmini-mad/status",
   "qos": 1,
   "device": {
     "identifiers": [
