@@ -77,7 +77,8 @@ DATABASE_QUERY_TEMPLATES = [
         "   AND period = (SELECT period FROM {table} ORDER BY time DESC LIMIT 1)\n"
         "   AND unit = (SELECT unit FROM {table} ORDER BY time DESC LIMIT 1)\n"
         "   AND time >= date_trunc('year', CURRENT_DATE)\n"
-        "ORDER BY time DESC"
+        "ORDER BY time DESC\n"
+        "LIMIT 50"
     ),
     (
         "SELECT DISTINCT ON (type, period, unit)\n"

@@ -100,7 +100,6 @@ class Balances(plugin.Plugin):
                             })
                         today_df = pl.DataFrame(rows, schema=BALANCES_SCHEMA) if rows else self.dataframe_new(schema=BALANCES_SCHEMA)
                         dataframe_print(self.name, today_df, print_label="Balances", print_verb="transformed", started=started_time_inner)
-
                         balances_changed = (existing_df is None or existing_df.filter(pl.col("Date") == pl.lit(today).cast(pl.Date)).height == 0)
                         if existing_df is not None and not balances_changed:
                             account_key_columns = ["Institution", "Account Number", "Account Name"]
