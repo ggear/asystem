@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-source "$(cd "$(dirname "$0")" && pwd)/../../../refresh_lib.bash"
-refresh_setup "$0" "equity" "preview"
+source "$(cd "$(dirname "$0")" && pwd)/../../../refresh_lib.sh"
+refresh_setup "$0"
 
 # Ensure last run data dir is populated, then clean and repopulate test data from last run
 refresh_download

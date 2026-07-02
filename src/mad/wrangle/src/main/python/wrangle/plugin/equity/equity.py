@@ -219,6 +219,31 @@ class Equity(plugin.Plugin):
                 _equity_df = _equity_df.with_columns(_fill_exprs)
             return _equity_df
 
+        # Predecessor Files
+        def _stock_file_predecessors(_stock_files, _cache_files):
+            _cache_bases = {basename(_cache_file) for _cache_file in _cache_files}
+            _eligible_files = {}
+            for _cache_file in _cache_files:
+                _prefix, _, _period = basename(_cache_file).removesuffix(".csv").rpartition("_")
+                if not _prefix or not _period:
+                    continue
+                if "-" in _period and f"{_prefix}_{_period.split('-')[0]}.csv" in _cache_bases:
+                    continue
+                _eligible_files.setdefault(_prefix, []).append((_period, _cache_file))
+            _predecessor_files = {}
+            for _file_name in _stock_files:
+                if _stock_files[_file_name].status != plugin.DownloadStatus.DOWNLOADED:
+                    continue
+                _prefix, _, _period = basename(_file_name).removesuffix(".csv").rpartition("_")
+                _periods = sorted(_eligible_files.get(_prefix, []))
+                _index = next((_position for _position, _candidate in enumerate(_periods) if _candidate[0] == _period), -1)
+                if _index > 0:
+                    _predecessor_file = _periods[_index - 1][1]
+                    _existing_result = _stock_files.get(_predecessor_file)
+                    if _existing_result is None or _existing_result.status != plugin.DownloadStatus.DOWNLOADED:
+                        _predecessor_files[_predecessor_file] = plugin.DownloadResult(plugin.DownloadStatus.DOWNLOADED, _predecessor_file)
+            return _predecessor_files
+
         stock_downloaded_count = 0
         if not plugin.config.disable_source_downloads:
 
@@ -296,6 +321,10 @@ class Equity(plugin.Plugin):
             new_data = len(stock_files) > 0 or len(statement_files) > 0
         elif new_data:
             statement_files = self.file_list(self.local_cache, "58861")
+            stock_predecessor_files = _stock_file_predecessors(stock_files, self.file_list(self.local_cache, "yahoo"))
+            for stock_predecessor_file in stock_predecessor_files:
+                self.print_log(f"File [{basename(stock_predecessor_file).split('.')[0]}] queued for reprocessing as predecessor of a newly downloaded file", level="debug")
+            stock_files.update(stock_predecessor_files)
         stock_processable_count = sum(1 for s in stock_files.values() if s.status != plugin.DownloadStatus.FAILED)
         statement_processable_count = sum(1 for s in statement_files.values() if s[0])
         self.print_log(f"Files downloaded [{stock_downloaded_count}] and cached [{stock_processable_count + statement_processable_count - stock_downloaded_count}]", started=started_time)
@@ -806,7 +835,7 @@ ORDER BY time
                     equity_df = equity_df.with_columns(missing_exprs)
 
             # Commit Data: source-complete Stock/Fund/Manual input enriched with Rate spot prices and volumes
-            #              → committed state with forward-fill and derived change metrics (delta for egress)
+            #              → committed state with forward-fill and derived change metrics (delta for egress).
             equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, _aggregate_function)
 
             def _apply_indexes(_df, _indexes, _index_weights):

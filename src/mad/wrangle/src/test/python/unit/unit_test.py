@@ -25,6 +25,7 @@ import unittest
 from collections.abc import Iterable
 from datetime import date as date_type
 from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
+from unittest import mock
 
 import csv_diff  # type: ignore
 import google.oauth2.service_account
@@ -292,7 +293,7 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(equals=int(fixture["rows_delta"]))
+                            assert_custom_rows_delta(equals=fixture["rows_delta"])
                         ],
                         file_asserts={
                             "__currency_current.csv": [
@@ -360,21 +361,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_subset(),
                             ],
                         })
-
-    # Create a clean data cache for repopulating tests
-    def test_currency_release_replete_1_download(self):
-        self.run_plugin("currency", plugin.RepoScope.RELEASE, "replete_1", log_level="debug",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_at_least": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: 1,
-                                },
-                            },
-                        }),
-                        )
 
     ########################################################################################################################
     # Equity
@@ -450,7 +436,7 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: int(fixture["files_processed"]),
+                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
                                 },
                             },
                         }),
@@ -466,14 +452,14 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: int(fixture["files_processed"]),
+                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
                                 },
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
                                     plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
                                     plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
                                     plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_ROWS: int(fixture["rows_delta"]),
+                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
                                 },
                             },
                         }),
@@ -497,6 +483,78 @@ class WrangleTest(unittest.TestCase):
                             ],
                         })
 
+    # Current data with year-boundary interpolations anchored on since-revised closes, one new source file served offline from
+    # local cache, incremental run must reprocess the predecessor file so the corrected boundary rows match a full re-process
+    def test_equity_local_partial_3(self):
+        fixture = _load_fixture("local", "equity", "partial_3")
+        stock_download_offline({"yahoo_acdc_2024.csv"})
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_3", log_level="info",
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=False,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_DOWNLOADED: 1,
+                                },
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current*.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2023-12-18", end_date=fixture["end_date"], contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                                assert_file_equal(),
+                            ],
+                        })
+
+    # Current data a year stale, two new source files served offline from local cache, incremental run must reprocess the
+    # predecessor file behind the earliest new file and chain across the consecutive new files
+    def test_equity_local_partial_4(self):
+        fixture = _load_fixture("local", "equity", "partial_4")
+        stock_download_offline({"yahoo_acdc_2023.csv", "yahoo_acdc_2024.csv"})
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "partial_4", log_level="info",
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=False,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=True, force_reprocessing=False, force_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_SOURCES: {
+                                    plugin.CTR_ACT_DOWNLOADED: 2,
+                                },
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current*.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2022-12-19", end_date=fixture["end_date"], contiguous="days"),
+                                assert_file_nones_per_col(after_first_rows=True),
+                                assert_file_zeroes_per_row(exclude=r"Market Volume|Change"),
+                                assert_file_equal(),
+                            ],
+                        })
+
     # Lots of current data, a specific amount of new data, no remote source data downloads, no remote data repo downloads or uploads
     def test_equity_local_replete_1(self):
         fixture = _load_fixture("local", "equity", "replete_1")
@@ -507,14 +565,14 @@ class WrangleTest(unittest.TestCase):
                         counter_asserts=merge_asserts(ASSERT_RUN, {
                             "counter_equals": {
                                 plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: int(fixture["files_processed"]),
+                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
                                 },
                                 plugin.CTR_SRC_DATA: {
                                     plugin.CTR_ACT_PREVIOUS_COLUMNS: fixture["cols_data"],
                                     plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
                                     plugin.CTR_ACT_UPDATE_COLUMNS: fixture["cols_data"],
                                     plugin.CTR_ACT_DELTA_COLUMNS: fixture["cols_data"],
-                                    plugin.CTR_ACT_DELTA_ROWS: int(fixture["rows_delta"]),
+                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
                                 },
                             },
                         }),
@@ -561,7 +619,7 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(equals=int(fixture["rows_delta"]))
+                            assert_custom_rows_delta(equals=fixture["rows_delta"])
                         ],
                         file_asserts={
                             "__equity_current.csv": [
@@ -632,21 +690,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_subset(),
                             ],
                         })
-
-    # Create a clean data cache for repopulating tests
-    def test_equity_release_replete_1_download(self):
-        self.run_plugin("equity", plugin.RepoScope.RELEASE, "replete_1", log_level="debug",
-                        disable_sheet_downloads=False, disable_database_downloads=False, disable_drive_downloads=False, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_at_least": {
-                                plugin.CTR_SRC_SOURCES: {
-                                    plugin.CTR_ACT_DOWNLOADED: 1,
-                                },
-                            },
-                        }),
-                        )
 
     ########################################################################################################################
     # Interest
@@ -735,7 +778,7 @@ class WrangleTest(unittest.TestCase):
                             },
                         }),
                         custom_asserts=[
-                            assert_custom_rows_delta(equals=int(fixture["rows_delta"]))
+                            assert_custom_rows_delta(equals=fixture["rows_delta"])
                         ],
                         file_asserts={
                             "__interest_current.csv": [
@@ -799,21 +842,6 @@ class WrangleTest(unittest.TestCase):
                                 assert_file_subset(),
                             ],
                         })
-
-    # Create a clean data cache for repopulating tests
-    def test_interest_release_replete_1_download(self):
-        self.run_plugin("interest", plugin.RepoScope.RELEASE, "replete_1", log_level="debug",
-                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=False, disable_source_downloads=False,
-                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
-                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
-                        counter_asserts=merge_asserts(ASSERT_RUN, {
-                            "counter_at_least": {
-                                plugin.CTR_SRC_FILES: {
-                                    plugin.CTR_ACT_PROCESSED: 1,
-                                },
-                            },
-                        }),
-                        )
 
     ########################################################################################################################
     # Dashboard
@@ -935,6 +963,32 @@ class WrangleTest(unittest.TestCase):
 
             self.assertEqual(0, len(filtered_history._raw))
             self.assertEqual(0, len(filtered_history._day))
+
+    def test_dashboard_history_retains_when_plugin_added(self):
+        counters = {
+            plugin.CTR_SRC_FILES: {
+                plugin.CTR_ACT_PROCESSED: 1,
+                plugin.CTR_ACT_ERRORED: 0,
+            },
+            plugin.CTR_SRC_TIMING: {
+                plugin.CTR_ACT_PROCESS_MILLIS: 10,
+                plugin.CTR_ACT_TOTAL_MILLIS: 10,
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            history = RunHistory(plugins=["balances"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            history.add_run(datetime.datetime.now(tz=CTR_TZ), {"balances": counters})
+
+            grown_history = RunHistory(plugins=["balances", "currency"], cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
+            grown_history.load()
+
+            self.assertEqual(1, len(grown_history._raw))
+            self.assertEqual(1, len(grown_history._day))
+
+            raw_view = grown_history.snapshot().views[0]
+            self.assertEqual(1, raw_view.series["balances"][plugin.CTR_SRC_FILES][plugin.CTR_ACT_PROCESSED][0])
+            self.assertIsNone(raw_view.series["currency"][plugin.CTR_SRC_FILES][plugin.CTR_ACT_PROCESSED][0])
+            self.assertFalse(raw_view.errored["currency"][0])
 
     def test_dashboard_history_malformed_entries_start_fresh(self):
         counters = {
@@ -2128,6 +2182,7 @@ class WrangleTest(unittest.TestCase):
         reset_config(log="info")
 
     def tearDown(self):
+        mock.patch.stopall()
         reset_config()
 
 
@@ -2624,8 +2679,8 @@ ASSERT_RELOAD = {
     },
 }
 
-for key, value in list(plugin.load_profile(join(DIR_ROOT, ".env")).items()):
-    os.environ[key] = value
+for environment_key, environment_value in list(plugin.load_profile(join(DIR_ROOT, ".env")).items()):
+    os.environ[environment_key] = environment_value
 
 
 def reset_config(log="warning"):
@@ -2668,6 +2723,25 @@ def drive_delete(drive_dir, file_name):
             break
     if drive_file_id is not None:
         service.files().delete(fileId=drive_file_id).execute()
+
+
+def stock_download_offline(new_file_names):
+    served_files = set()
+
+    def _stock_download(self, local_path: str, *_args, **_kwargs):
+        local_path = abspath(local_path).lower()
+        file_name = basename(local_path)
+        if isfile(local_path):
+            if file_name in new_file_names and file_name not in served_files:
+                served_files.add(file_name)
+                self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_DOWNLOADED)
+                return DownloadResult(DownloadStatus.DOWNLOADED, local_path)
+            self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_CACHED)
+            return DownloadResult(DownloadStatus.CACHED, local_path)
+        self.add_counter(plugin.CTR_SRC_SOURCES, plugin.CTR_ACT_SKIPPED)
+        return DownloadResult(DownloadStatus.SKIPPED, None)
+
+    mock.patch.object(Plugin, "stock_download", _stock_download).start()
 
 
 class PluginStub(Plugin):

@@ -606,6 +606,11 @@ class RunHistory:
             ]
             return Snapshot(plugins=list(self._all_plugins), counters=counters_dict, views=views)
 
+    def _plugins_compatible(self, stored_plugins: Any) -> bool:
+        if not isinstance(stored_plugins, list):
+            return False
+        return set(stored_plugins).issubset(set(self._plugins))
+
     def is_errored(self, plugin: str = "summary") -> bool | None:
         with self._lock:
             if plugin not in self._all_plugins:
@@ -808,10 +813,13 @@ class RunHistory:
                     elapsed_ms = int((time.perf_counter() - started) * 1000)
                     print_log("Wrangle", f"{filename} poll_period [{state.get('poll_period')}] != [{self._poll_period_minutes}], starting fresh after [{elapsed_ms}ms]", level="warning")
                     continue
-                if state.get("plugins") != self._plugins:
+                stored_plugins = state.get("plugins")
+                if not self._plugins_compatible(stored_plugins):
                     elapsed_ms = int((time.perf_counter() - started) * 1000)
-                    print_log("Wrangle", f"{filename} plugins [{state.get('plugins')}] != [{self._plugins}], starting fresh after [{elapsed_ms}ms]", level="warning")
+                    print_log("Wrangle", f"{filename} plugins [{stored_plugins}] not a subset of [{self._plugins}], starting fresh after [{elapsed_ms}ms]", level="warning")
                     continue
+                if stored_plugins != self._plugins:
+                    print_log("Wrangle", f"{filename} plugins [{stored_plugins}] differ from [{self._plugins}], retaining history and starting new plugins empty", level="info")
                 if kind == "raw":
                     decoded = collections.deque((_decode_raw_entry(e) for e in state.get("raw", [])), maxlen=HISTORY_RAW_RUN_LENGTH)
                 else:
@@ -834,9 +842,9 @@ class RunHistory:
                 if state.get("schema") != _SCHEMA_FINGERPRINT:
                     elapsed_ms = int((time.perf_counter() - started) * 1000)
                     print_log("Wrangle", f"{_ADHOC_FILENAME} schema [{state.get('schema')}] != [{_SCHEMA_FINGERPRINT}], ignoring after [{elapsed_ms}ms]", level="warning")
-                elif state.get("plugins") != self._plugins:
+                elif not self._plugins_compatible(state.get("plugins")):
                     elapsed_ms = int((time.perf_counter() - started) * 1000)
-                    print_log("Wrangle", f"{_ADHOC_FILENAME} plugins [{state.get('plugins')}] != [{self._plugins}], ignoring after [{elapsed_ms}ms]", level="warning")
+                    print_log("Wrangle", f"{_ADHOC_FILENAME} plugins [{state.get('plugins')}] not a subset of [{self._plugins}], ignoring after [{elapsed_ms}ms]", level="warning")
                 else:
                     entry = state.get("adhoc")
                     if isinstance(entry, dict) and "ts" in entry and "plugins" in entry:

@@ -23,10 +23,16 @@ class StateMixin(ContractMixin):
 
         Parameters:
             data_df_update:               Incoming rows to merge. The first column must be named "Date" (pl.Date).
-            aggregate_func:               Optional transform applied to data both before the merge (on the incoming update)
-                                          and after (on the merged result). Typically used to forward-fill sparse time-series
+            aggregate_func:               Optional transform applied twice: once to data_df_update before the merge, and
+                                          again to the full merged result. Typically used to forward-fill sparse time-series
                                           rows, derive change metrics (e.g. N-day price changes), and round values into
-                                          committed form ready for downstream consumers.
+                                          committed form ready for downstream consumers. Because the second application runs
+                                          over the entire merged dataset, derived values for rows already in the snapshot
+                                          can change when new data extends or revises the time-series span — for example,
+                                          non-trading boundary days previously interpolated from one side of a year boundary
+                                          will be re-interpolated using the new data from the other side. Such rows differ
+                                          from the previous snapshot and therefore appear in delta even though their source
+                                          data was not new.
             key_columns:                  Columns used to identify unique rows; defaults to ["Date"].
 
         Returns:

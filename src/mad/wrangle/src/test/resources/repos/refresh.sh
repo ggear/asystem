@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$(cd "$ROOT_DIR/../../.." && pwd)"
-source "$ROOT_DIR/refresh_lib.bash"
+source "$ROOT_DIR/refresh_lib.sh"
 
 if [ -n "$(git -C "$SRC_DIR" status --porcelain -- . 2>/dev/null | grep -E '^.[MD]|\?\?' || true)" ]; then
   refresh_log_error "Dirty files present, commit or stash before refreshing"

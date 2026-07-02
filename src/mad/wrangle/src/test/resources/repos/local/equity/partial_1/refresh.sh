@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-source "$(cd "$(dirname "$0")" && pwd)/../../../refresh_lib.bash"
-refresh_setup "$0" "equity" "local"
+source "$(cd "$(dirname "$0")" && pwd)/../../../refresh_lib.sh"
+refresh_setup "$0"
 
 # Query the present source data (no plugin run) to derive the fixture
 refresh_query_equity
