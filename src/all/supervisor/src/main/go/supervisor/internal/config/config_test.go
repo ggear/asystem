@@ -561,7 +561,7 @@ func TestConfig_BrokerToken(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_env_database_token_used",
+			name:          "happy_env_broker_token_used",
 			configPath:    "non-existent-file.json",
 			envToken:      "envbrokertoken",
 			expected:      "envbrokertoken",
@@ -582,7 +582,7 @@ func TestConfig_BrokerToken(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_envvar_unset_falls_through_to_database_token_env",
+			name:          "happy_envvar_unset_falls_through_to_broker_token_env",
 			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
 			envToken:      "fallbackbrokertoken",
 			expected:      "fallbackbrokertoken",
@@ -593,7 +593,7 @@ func TestConfig_BrokerToken(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(Reset)
 			if testCase.envToken != "" {
-				t.Setenv("DATABASE_TOKEN", testCase.envToken)
+				t.Setenv("BROKER_TOKEN", testCase.envToken)
 			}
 			for k, v := range testCase.envVars {
 				t.Setenv(k, v)

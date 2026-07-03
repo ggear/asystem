@@ -163,6 +163,17 @@ def _setup(context):
                   ' && echo true || echo false',
                   hide='out').stdout.strip() != 'true':
         raise Exception("Could not install go")
+    _run_local(context, 'rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update > /dev/null;'
+                        'rustup default "${RUST_VERSION}" > /dev/null;'
+                        'mkdir -p "${CARGO_HOME}/bin";'
+                        'for tool in "$(dirname "$(rustup which rustc)")"/*;'
+                        ' do ln -sf "${tool}" "${CARGO_HOME}/bin/$(basename "${tool}")"; done;'
+                        'echo "Installed rust-${RUST_VERSION} at [${CARGO_HOME}]"')
+    if _run_local(context,
+                  '[[ "$(cargo --version)" == *"${RUST_VERSION}"* ]]'
+                  ' && echo true || echo false',
+                  hide='out').stdout.strip() != 'true':
+        raise Exception("Could not install rust")
     _print_footer("asystem", "setup")
 
 
@@ -507,17 +518,14 @@ echo ""
 echo "#######################################################################################"
 echo "# Dockerfile [image_base] command:"
 echo "#######################################################################################" && echo ""
-{}
-echo ""
-echo "#######################################################################################"
-echo "# Docker minimal image install command:"
-echo "#######################################################################################" && echo ""
 echo "USER root"
 echo -n "RUN "
 [[ "$PKG_UPDATE" != "" ]] && echo -n "$PKG_UPDATE"
 echo " && \\\\\\\\"
 for ASYSTEM_PACKAGE in "\\${{ASYSTEM_PACKAGES_BUILD[@]}}"; do echo "    $PKG_INSTALL" "\\$ASYSTEM_PACKAGE="\\$($PKG_VERSION \\$ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | awk '$PKG_VERSION_AWK')" && \\\\\\\\"; done
 echo "    $PKG_CLEAN"
+echo ""
+{}
 EOF
   cat <<EOF >"/tmp/base_image_run.sh"
 echo ""
@@ -710,18 +718,11 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
         if isdir(module_go_test_path):
             _run_local(context, "go mod tidy", module_go_test_path)
             _run_local(context, "go mod download", module_go_test_path)
-        cargo_file = join(ROOT_MODULE_DIR, module, "Cargo.toml")
-        if isfile(cargo_file):
-            _run_local(context, "mkdir -p target/package && cp -rvfp Cargo.toml target/package",
-                       module, hide='err', warn=True)
-            with open(cargo_file, 'r') as cargo_file_source:
-                cargo_file_text = cargo_file_source.read()
-                cargo_file_text = cargo_file_text.replace('version = "0.0.0-SNAPSHOT"', 'version = "{}"' \
-                                                          .format(_get_versions()[0]))
-                cargo_file_text = cargo_file_text.replace('path = "src/', 'path = "')
-                with open(join(ROOT_MODULE_DIR, module, 'target/package/Cargo.toml'), 'w') as cargo_file_destination:
-                    cargo_file_destination.write(cargo_file_text)
-            _run_local(context, "cargo update && cargo build", join(module, "target/package"))
+        module_rust_main_path = join(ROOT_MODULE_DIR, module, "src/main/rust", _get_service(module))
+        if isfile(join(module_rust_main_path, "Cargo.toml")):
+            _run_local(context, "CARGO_TARGET_DIR={} cargo build".format(
+                join(ROOT_MODULE_DIR, module, "target/rust"),
+            ), module_rust_main_path)
         _print_footer(module, "build compile", host=filter_host)
 
 
@@ -749,13 +750,17 @@ def _unittest(context, filter_module=None):
             join(module, "src/main/go/{}".format(_get_service(module))),
         )
         _print_footer(module, "unittest")
-    for module in _get_modules(context, "src/test/rust/unit/unit_test.rs", filter_module=filter_module):
+    for module in _get_modules(context, "src/main/rust", filter_module=filter_module):
+        module_rust_main_path = join(ROOT_MODULE_DIR, module, "src/main/rust", _get_service(module))
+        if not isfile(join(module_rust_main_path, "Cargo.toml")):
+            continue
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
         _run_external(
             context,
             "set -o pipefail && cargo test",
-            join(module, "target/package"),
+            join(module, "src/main/rust/{}".format(_get_service(module))),
+            env_overrides={"CARGO_TARGET_DIR": join(ROOT_MODULE_DIR, module, "target/rust")},
         )
         _print_footer(module, "unittest")
 

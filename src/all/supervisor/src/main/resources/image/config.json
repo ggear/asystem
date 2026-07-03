@@ -28,11 +28,13 @@
       {
         "host": "macmini-max",
         "services": [
+          "hermes",
           "influxdb3",
           "mlflow",
           "mlserver",
           "openra",
-          "supervisor"
+          "supervisor",
+          "zeroth"
         ]
       },
       {

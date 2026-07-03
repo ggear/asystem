@@ -103,7 +103,7 @@ func load(path string) *Config {
 	result.asystem.Mount = resolve("mount", "SUPERVISOR_MOUNT", result.asystem.Mount)
 	result.asystem.Broker.Host = resolve("broker_host", "BROKER_HOST", result.asystem.Broker.Host)
 	result.asystem.Broker.Port = resolve("broker_port", "BROKER_PORT", result.asystem.Broker.Port)
-	result.asystem.Broker.Token = resolve("broker_token", "DATABASE_TOKEN", result.asystem.Broker.Token)
+	result.asystem.Broker.Token = resolve("broker_token", "BROKER_TOKEN", result.asystem.Broker.Token)
 	result.asystem.Database.Host = resolve("database_host", "DATABASE_HOST", result.asystem.Database.Host)
 	result.asystem.Database.Port = resolve("database_port", "DATABASE_PORT", result.asystem.Database.Port)
 	result.asystem.Database.Name = resolve("database_name", "DATABASE_NAME", result.asystem.Database.Name)
@@ -207,24 +207,31 @@ func (c *Config) Services(host string) []string {
 
 func resolve(field, env, key string) string {
 	if value := os.Getenv(env); value != "" {
-		slog.Info("config", "status", "resolved", "env", "true", "file", "false", "name", field, "value", value)
+		slog.Info("config", "status", "resolved", "env", "true", "file", "false", "name", field, "value", mask(field, value))
 		return value
 	}
 	if strings.HasPrefix(key, "$") {
 		name := key[1:]
 		if val := os.Getenv(name); val != "" {
-			slog.Info("config", "status", "resolved", "env", "true", "file", "true", "name", field, "value", val)
+			slog.Info("config", "status", "resolved", "env", "true", "file", "true", "name", field, "value", mask(field, val))
 			return val
 		}
 		slog.Warn("config", "status", "unresolved", "env", "true", "file", "true", "name", field, "value", "")
 		return ""
 	}
 	if key != "" {
-		slog.Info("config", "status", "resolved", "env", "false", "file", "true", "name", field, "value", key)
+		slog.Info("config", "status", "resolved", "env", "false", "file", "true", "name", field, "value", mask(field, key))
 	} else {
-		slog.Info("config", "status", "unresolved", "env", "false", "file", "true", "name", field, "value", key)
+		slog.Info("config", "status", "unresolved", "env", "false", "file", "true", "name", field, "value", mask(field, key))
 	}
 	return key
+}
+
+func mask(field, value string) string {
+	if value != "" && strings.HasSuffix(field, "_token") {
+		return "***"
+	}
+	return value
 }
 
 var VersionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}(-SNAPSHOT)?$`)

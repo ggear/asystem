@@ -91,6 +91,7 @@ func NewDisplay(
 	logBuffer *scribe.LogBuffer,
 	refreshPeriod time.Duration,
 ) (*Display, error) {
+	slog.Info("config", "status", "init", "format", format, "rows", height, "cols", width)
 	return &Display{
 		hosts:           hosts,
 		dimsInit:        dimensions{rows: height, cols: width},
@@ -141,9 +142,9 @@ func (d *Display) Compile() (Format, error) {
 		}
 		if hostCount < 1 {
 			return nil, fmt.Errorf("cannot compile display: no hosts")
-		} else {
-			displayRowMin = len(layout) * ((hostCount + 1) / 2)
 		}
+
+		displayRowMin = len(layout) * ((hostCount + 1) / 2)
 		if displayRowMin <= 0 {
 			return nil, fmt.Errorf("cannot compile display: "+
 				"invalid minimum rows [%d] for format [%s]", displayRowMin, format)
@@ -365,6 +366,7 @@ func (d *Display) Compile() (Format, error) {
 					d.boxes[i].isLast = true
 				}
 			}
+			slog.Info("config", "status", "render", "rendered", attemptedFormat, "rows", d.dimsInit.rows, "cols", d.dimsInit.cols)
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {

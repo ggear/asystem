@@ -1,0 +1,9 @@
+[package]
+name = "solaredge"
+version = "0.0.0-SNAPSHOT"
+edition = "2021"
+publish = false
+
+[dependencies]
+chrono = "0.4"
+tokio = { version = "1", features = ["full"] }

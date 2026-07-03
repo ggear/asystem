@@ -6,6 +6,4 @@ coreutils
 less
 curl
 vim
-git
 jq
-build-essential

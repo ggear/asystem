@@ -1,0 +1,15 @@
+#######################################################################################
+# Container build packages (build stage only, not shipped in the runtime image)
+#######################################################################################
+build-essential
+libc6-dev
+zlib1g-dev
+libssl-dev
+libbz2-dev
+libffi-dev
+liblzma-dev
+libsqlite3-dev
+libreadline-dev
+libncurses5-dev
+libncursesw5-dev
+libpoppler-cpp-dev

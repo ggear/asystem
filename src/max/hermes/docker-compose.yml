@@ -1,0 +1,44 @@
+x-common: &common
+  image: hermes:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  environment:
+    - TZ=Australia/Perth
+    - BROKER_HOST
+    - BROKER_PORT
+    - DATABASE_HOST
+    - DATABASE_PORT
+    - DATABASE_NAME
+    - DATABASE_TOKEN
+  volumes:
+    - ${SERVICE_DATA_DIR}:/asystem/mnt
+  devices:
+    - /dev/ttyUSBTempProbe:/dev/ttyUSB0:rw
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
+services:
+  hermes:
+    container_name: hermes
+    <<: *common
+    restart: ${SERVICE_RESTART}
+    healthcheck:
+      test: /asystem/etc/checkhealthy.sh
+      interval: 2m
+      timeout: 30s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+  hermes_bootstrap:
+    container_name: hermes_bootstrap
+    <<: *common
+    restart: 'no'
+    entrypoint: bash
+    command: /asystem/etc/bootstrap.sh
+    depends_on:
+      - hermes
