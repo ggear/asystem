@@ -70,7 +70,6 @@
     action: none
 - type: custom:windrose-card
   windspeed_bar_location: right
-  input_speed_unit: kph
   data_period:
     period_back: -24h
   wind_direction_entity:
@@ -78,6 +77,7 @@
   windspeed_entities:
     - entity: sensor.roof_wind_speed
       name: Speed
+      speed_unit: kph
       output_speed_unit: kph
       windspeed_bar_full: false
       speed_range_beaufort: false

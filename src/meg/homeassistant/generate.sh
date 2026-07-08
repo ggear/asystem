@@ -32,15 +32,15 @@ npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" install
 npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" run build
 cp "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/bom-radar-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/bom-radar-card.js"
 
-# NOTES: https://github.com/aukedejong/lovelace-windrose-card/releases
-VERSION=v2.3.0
+# NOTES: https://github.com/aukedejong/lovelace-windrose-card/releases (upstream tags lag main; track main for latest fixes)
+VERSION=main
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "windrose-card" "ggear/windrose-card" "ggear-patches" "https://github.com/aukedejong/lovelace-windrose-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card"
 npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" ci --no-audit --no-fund
-echo "[windrose-card] running rollup build (it can pause briefly around circular dependency warnings)"
-npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" run build
-cp "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card/dist/windrose-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card/windrose-card.js"
+echo "[windrose-card] running esbuild build"
+npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" run esbuild
+cp "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card/build/windrose-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card/windrose-card.js"
 
 # NOTES: https://github.com/thomasloven/lovelace-card-mod/releases
 VERSION=v4.2.1-202604
