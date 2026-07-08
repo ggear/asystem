@@ -50,7 +50,7 @@
   show_marker: true
   show_zoom: true
   show_playback: true
-  basemap_style: day
+  basemap_style: default
 ################################################################################
 - type: custom:layout-break
 ################################################################################
