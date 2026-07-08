@@ -791,7 +791,11 @@ def _unittest(context, filter_module=None):
 def _package(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package", host=filter_host)
-        host_arch = _get_host_metadata(_get_host(module) if filter_host is None else _get_host_label(filter_host))[1]
+        if filter_host is None and not is_release and \
+                _get_env(join(ROOT_MODULE_DIR, module, ".env")).get("SERVICE_LOCAL_RUNTIME") == "native":
+            host_arch = os.uname().machine
+        else:
+            host_arch = _get_host_metadata(_get_host(module) if filter_host is None else _get_host_label(filter_host))[1]
         build_args = ""
         for env_global_key, env_global_value in GLOBAL_ENV.items():
             if env_global_key.endswith("_VERSION"):
@@ -1145,6 +1149,8 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
     _run_local(context, "echo 'SERVICE_RESTART={}' >> {}/.env"
                .format("always" if is_release else
                        "no", working_path), module)
+    _run_local(context, "echo 'SERVICE_LOCAL_RUNTIME=emulated' >> {}/.env"
+               .format(working_path), module)
     _run_local(context, "echo 'SERVICE_DATA_DIR={}' >> {}/.env"
                .format("{}/{}/{}".format(HOME_DIR, service, _get_versions()[0]) if is_release else
                        "{}/{}/target/runtime-system".format(ROOT_MODULE_DIR, module), working_path), module)
@@ -1192,12 +1198,12 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
         _run_local(context, "echo '{}_SERVICE_PROD={}' >> {}/.env"
                    .format(dependency_service,
                            dependency_domain, working_path), module)
-        dev_env_file = next((f for f in [".env_dev", ".env_test" if is_test else ".env_exec"]
-                             if isfile(join(ROOT_MODULE_DIR, dependency, f))), ".env_exec")
-        for dependency_env_file in [".env_all", ".env_prod" if is_release else dev_env_file, ".env_all_key"]:
-            dependency_env_dev = "{}/{}/{}".format(ROOT_MODULE_DIR, dependency, dependency_env_file)
-            if isfile(dependency_env_dev):
-                _run_local(context, "cat {} >> {}/.env".format(dependency_env_dev, working_path), module)
+        for dependency_env_file in [".env_all",
+                                    ".env_prod" if is_release else (".env_test" if is_test else ".env_exec"),
+                                    ".env_all_key"]:
+            dependency_env_path = "{}/{}/{}".format(ROOT_MODULE_DIR, dependency, dependency_env_file)
+            if isfile(dependency_env_path):
+                _run_local(context, "cat {} >> {}/.env".format(dependency_env_path, working_path), module)
     _substitute_env(context, "{}/.env".format(working_path), join(working_path, ".env"), join(working_path, ".env"))
 
 

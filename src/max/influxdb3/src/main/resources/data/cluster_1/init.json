@@ -7,14 +7,6 @@
   ],
   "tokens": [
     {
-      "token": "${INFLUXDB3_TOKEN_ADMIN}",
-      "name": "_admin",
-      "expiry_millis": 4913324421613,
-      "permissions": [
-        "*:*:*"
-      ]
-    },
-    {
       "token": "${INFLUXDB3_TOKEN_PUBLIC}",
       "name": "public",
       "expiry_millis": 4913324845378,
