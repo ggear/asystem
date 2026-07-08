@@ -1,16 +1,16 @@
 # NOTES: https://github.com/Koenkk/zigbee2mqtt/releases
-FROM koenkk/zigbee2mqtt:2.11.0 AS image_upstream
+FROM koenkk/zigbee2mqtt:2.12.1 AS image_upstream
 USER root
 RUN apk update && \
-    apk add --upgrade --no-cache bash=5.3.3-r1 && \
-    apk add --upgrade --no-cache coreutils=9.8-r1 && \
-    apk add --upgrade --no-cache less=685-r0 && \
-    apk add --upgrade --no-cache curl=8.19.0-r0 && \
-    apk add --upgrade --no-cache vim=9.2.0567-r0 && \
+    apk add --upgrade --no-cache bash=5.3.9-r1 && \
+    apk add --upgrade --no-cache coreutils=9.11-r0 && \
+    apk add --upgrade --no-cache less=702-r0 && \
+    apk add --upgrade --no-cache curl=8.21.0-r0 && \
+    apk add --upgrade --no-cache vim=9.2.0747-r0 && \
     apk add --upgrade --no-cache jq=1.8.1-r0 && \
-    apk add --upgrade --no-cache py3-pip=25.1.1-r1 && \
-    apk add --upgrade --no-cache python3=3.12.13-r0 && \
-    apk add --upgrade --no-cache mosquitto-clients=2.0.22-r0 && \
+    apk add --upgrade --no-cache py3-pip=26.1.2-r0 && \
+    apk add --upgrade --no-cache python3=3.14.5-r0 && \
+    apk add --upgrade --no-cache mosquitto-clients=2.1.2-r1 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 

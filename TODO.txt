@@ -1,8 +1,29 @@
 ###############################################################################################################################################################
 # All
 ###############################################################################################################################################################
-Improve write_entity_metadata(), write out schema to src/build/resources/schemas/mqtt, take in json and make it the leaf, have sys test use it - start with Tempstats
+Improve write_entity_metadata(), write out schema to src/build/resources/schemas/vernemq, take in json and make it the leaf, have sys test use it - start with Tempstats
 Add src/build/resources/schemas/influxdb and src/build/resources/schemas/postgres and src/build/resources/schemas/timescaledb queries and have sys test use it - start with Wrangle
+
+
+###############################################################################################################################################################
+# InfluxDB3
+###############################################################################################################################################################
+Rename to InfluxDB
+Move to mad and remove emulation env test/exec vars
+Update HASS to use
+add schema describe to src/build/resources/schemas/influxdb
+
+
+###############################################################################################################################################################
+# Postgres
+###############################################################################################################################################################
+add schema describe to src/build/resources/schemas/postgres|timescaledb
+
+
+###############################################################################################################################################################
+# Vernemq
+###############################################################################################################################################################
+add schema describe to src/build/resources/schemas/vernemq
 
 
 ###############################################################################################################################################################
