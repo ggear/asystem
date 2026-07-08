@@ -40,9 +40,8 @@
   double_tap_action:
     action: none
 - type: custom:bom-radar-card
-  basemap_provider: bom
-  basemap_style: default
-  dark_basemap: false
+  basemap_provider: carto
+  basemap_style: light
   zoom_level: 8
   layer: rain_rate
   map_height: 550

@@ -107,4 +107,4 @@ impl media-space, that does repotrting ala duf, benchmarking and stats/health al
 # Home Assistant
 ###############################################################################################################################################################
 Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice
-Fork bom-radar-card to provide basemap_style: theme which picks day/night light/dark depending on theme
+Fork bom-radar-card to provide basemap_style: theme -> which picks default/dark for bom, light/dark for carto, alidade_light/alidade_dark for stadia, topo/imagery for esri - depending on hass theme
