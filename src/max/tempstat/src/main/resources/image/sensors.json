@@ -1,0 +1,5 @@
+[
+  { "unique_id": "utility_temperature",    "rom": "28FF641E870006AE" },
+  { "unique_id": "rack_top_temperature",   "rom": "28FF641E87CB3CF9" },
+  { "unique_id": "rack_bottom_temperature","rom": "28FF641E870576A9" }
+]

@@ -1,0 +1,5 @@
+# Build artifacts are rebuilt inside the image; never ship the host copies into
+# the build context. Glob patterns match nothing (rather than error) when the
+# directory has already been deleted, so this is safe across a clean tree.
+**/target/
+target/

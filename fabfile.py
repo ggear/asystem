@@ -165,6 +165,7 @@ def _setup(context):
         raise Exception("Could not install go")
     _run_local(context, 'rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update > /dev/null;'
                         'rustup default "${RUST_VERSION}" > /dev/null;'
+                        'rustup component add rustfmt clippy --toolchain "${RUST_VERSION}" > /dev/null;'
                         'mkdir -p "${CARGO_HOME}/bin";'
                         'for tool in "$(dirname "$(rustup which rustc)")"/*;'
                         ' do ln -sf "${tool}" "${CARGO_HOME}/bin/$(basename "${tool}")"; done;'
@@ -190,6 +191,7 @@ def _purge(context):
     _run_local(context, 'for env in $(pyenv versions --bare); do '
                         '[[ "$(pyenv version --bare)" != "$env" ]] && pyenv uninstall -f "$env" || true; done')
     _run_local(context, 'for env in $(goenv versions --bare); do goenv uninstall -f "$env"; done')
+    _run_local(context, 'rm -rf "${CARGO_HOME}" "${RUSTUP_HOME}"')
     _print_footer("asystem", "purge")
 
 
@@ -256,6 +258,20 @@ def _pull(context):
     _run_local(context, "pip install --ignore-requires-python --no-deps --default-timeout=1000 -r {}"
                .format(join(ROOT_DIR, ".py_deps_dev.txt")))
     _print_footer("asystem", "pull dependencies install")
+    _print_header("asystem", "pull dependencies update")
+    for module in _get_modules(context, filter_changes=False):
+        module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
+        if isdir(module_go_main_path):
+            _run_local(context, "go get -u ./...", module_go_main_path)
+            _run_local(context, "go mod tidy", module_go_main_path)
+        module_go_test_path = join(ROOT_MODULE_DIR, module, "src/test/go", _get_service(module) + "_test")
+        if isdir(module_go_test_path):
+            _run_local(context, "go get -u ./...", module_go_test_path)
+            _run_local(context, "go mod tidy", module_go_test_path)
+        module_rust_main_path = join(ROOT_MODULE_DIR, module, "src/main/rust", _get_service(module))
+        if isfile(join(module_rust_main_path, "Cargo.toml")):
+            _run_local(context, "cargo update", module_rust_main_path)
+    _print_footer("asystem", "pull dependencies update")
     _generate(context, filter_changes=False, is_pull=True)
     _print_header("asystem", "pull package versions to update")
     _run_local(context, "pip list --outdated | grep 'Package\\|{}'".format("\\|".join(py_deps_dict.keys())))
@@ -720,8 +736,14 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _run_local(context, "go mod download", module_go_test_path)
         module_rust_main_path = join(ROOT_MODULE_DIR, module, "src/main/rust", _get_service(module))
         if isfile(join(module_rust_main_path, "Cargo.toml")):
+            module_rust_target = join(ROOT_MODULE_DIR, module, "target/rust")
+            _print_line("Linting sources ...")
+            _run_local(context, "cargo fmt", module_rust_main_path)
+            _run_local(context, "CARGO_TARGET_DIR={} cargo clippy --all-targets -- -D warnings".format(
+                module_rust_target,
+            ), module_rust_main_path)
             _run_local(context, "CARGO_TARGET_DIR={} cargo build".format(
-                join(ROOT_MODULE_DIR, module, "target/rust"),
+                module_rust_target,
             ), module_rust_main_path)
         _print_footer(module, "build compile", host=filter_host)
 

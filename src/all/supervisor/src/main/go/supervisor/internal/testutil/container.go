@@ -15,6 +15,7 @@ import (
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	mobycontainer "github.com/moby/moby/api/types/container"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/testcontainers/testcontainers-go"
 	tclog "github.com/testcontainers/testcontainers-go/log"
@@ -134,11 +135,11 @@ func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExi
 		containerRequest := testcontainers.ContainerRequest{Name: containerName, Image: "alpine", Cmd: []string{"sleep", "99999"}}
 		if healthScriptPath != "" {
 			containerRequest.Files = []testcontainers.ContainerFile{{HostFilePath: healthScriptPath, ContainerFilePath: "/healthcheck.sh", FileMode: 0755}}
-			containerRequest.ConfigModifier = func(config *container.Config) {
+			containerRequest.ConfigModifier = func(config *mobycontainer.Config) {
 				if config == nil {
 					return
 				}
-				config.Healthcheck = &container.HealthConfig{Test: []string{"CMD-SHELL", "/healthcheck.sh"}, Interval: 250 * time.Millisecond, Timeout: 250 * time.Millisecond, Retries: 1, StartPeriod: 0}
+				config.Healthcheck = &mobycontainer.HealthConfig{Test: []string{"CMD-SHELL", "/healthcheck.sh"}, Interval: 250 * time.Millisecond, Timeout: 250 * time.Millisecond, Retries: 1, StartPeriod: 0}
 			}
 			containerRequest.WaitingFor = nil
 		}

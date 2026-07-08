@@ -1,2 +1,0 @@
-Migrate from speedtest to cloudflare?
-- https://github.com/bruceharrison1984/cloudflare-speed-test

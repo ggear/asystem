@@ -149,7 +149,7 @@ def configure(argv=None):
         help="print common SQL queries for all plugins that query the database, then exit",
     )
     parser.add_argument(
-        "--log",
+        "--log-level",
         choices=["debug", "info", "warning", "error", "fatal"],
         default=None,
         help="logging verbosity (default: info; debug when running once)",

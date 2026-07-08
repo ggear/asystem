@@ -1,0 +1,88 @@
+###############################################################################################################################################################
+# All
+###############################################################################################################################################################
+Improve write_entity_metadata(), write out schema to src/build/resources/schemas/mqtt, take in json and make it the leaf, have sys test use it - start with Tempstats
+Add src/build/resources/schemas/influxdb and src/build/resources/schemas/postgres and src/build/resources/schemas/timescaledb queries and have sys test use it - start with Wrangle
+
+
+###############################################################################################################################################################
+# Wrangle
+###############################################################################################################################################################
+bank:
+implement balances
+implement transactions
+
+equity:
+add cash into bank portfolio?
+move sheets to delta like database? perhaps brek aout sheet/database upload timings, keeping rollup for html display but good for profiling?
+add dividend to create a new total return, bring in from manual data in sheets or another source?
+implement cleanup, dead stock files, dead -current, dead month files, add local tests
+add additional local tests testing issues?
+
+all:
+add verifcation sections to all plugins like quity
+check comments, nicely blocked, consistent accross all plugins
+check all sheet references added to repo structs, eq equity indexes etc
+Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
+
+
+###############################################################################################################################################################
+# Tempstats
+###############################################################################################################################################################
+redesign json as nested? implemnt generate schema
+is complicated template necessary?
+Retire digitemp in favour of tempstats
+
+
+###############################################################################################################################################################
+# Network
+###############################################################################################################################################################
+Rename networks
+Remove html dashboard
+update mqtt publish state to be match superovisor, heeriarchical, top level ok, then ensted detail ok's for HASS presentation of internet/wireless/zigbee/ethernet, include a command topic, map it out and link to xlsx
+document topic and json schema in files, foolow same for other moudles, eg supervispr, generate MQTT schema from xlsx, pass data schmea to generate func and write it into the file
+Do the same as above for database, hardoce if you cant generate, all under schema dir, eg schema/timescaledb, schema/influxdb etc
+Implement the data that informs the OK's for timeseries for InfluxDB
+InfluxDB for hass-zigbee and internet, deocmmission unpoller and then for wireless too? add local for LAN?
+add ethernet plugin
+implement commands as place holder to send commands from HASS switches, eg turn internet on/off
+Update to Plan.md, any questions?
+decomission hass-zigbee and internet
+Add sys test?
+
+
+###############################################################################################################################################################
+# Supervisor
+###############################################################################################################################################################
+implement health scripts and bootstrap, remove the later?
+implement commands to restart services, to work through ui when selected with popup and through HASS
+Add a go linter to pickup IntelliJ style warnings?
+Also service being added/removed from MQTT sometimes leads to empty slot and services not reshuffling sometimes.
+atops doesnt survice vernemq restart
+when maximise host, update update freq to 1s
+Convert from influxdb to postgres?
+Add sys test?
+
+
+###############################################################################################################################################################
+# Finance
+###############################################################################################################################################################
+Super:
+https://www.afr.com/wealth/personal-finance/how-to-bank-40pc-more-profit-on-an-investment-property-after-the-budget-20260522-p5zzqh
+https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-give-you-a-200-000-tax-deduction-20260601-p602pa
+
+
+###############################################################################################################################################################
+# Storage
+###############################################################################################################################################################
+Binaries for media-space to call it, also have a adu and abench?
+Add quirks to asahi install
+Test share_08 on max, slow on Asahi (24 MB/s) see if Fedora resolves issue
+Upgrade Asahi to latest, update macos, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
+Upgrade enclosure firmwares on windows machine?
+impl media-space, that does repotrting ala duf, benchmarking and stats/health ala script, supervisor to use
+
+###############################################################################################################################################################
+# Home Assistant
+###############################################################################################################################################################
+Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice

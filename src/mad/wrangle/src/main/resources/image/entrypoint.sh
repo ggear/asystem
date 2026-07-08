@@ -53,7 +53,7 @@ wrangle_args=(--poll-period "${WRANGLE_POLL_PERIOD:-30}")
 append_value_arg WRANGLE_CACHE_DIR --cache-dir
 append_value_arg WRANGLE_FILTER_PLUGINS --filter-plugins
 append_value_arg WRANGLE_REPO_SCOPE --repo-scope
-append_value_arg WRANGLE_LOG --log
+append_value_arg WRANGLE_LOG --log-level
 
 append_bool_arg WRANGLE_DISABLE_LOOP --disable-loop
 append_bool_arg WRANGLE_DISABLE_REPROCESSING --disable-reprocessing
