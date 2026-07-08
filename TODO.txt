@@ -107,3 +107,4 @@ impl media-space, that does repotrting ala duf, benchmarking and stats/health al
 # Home Assistant
 ###############################################################################################################################################################
 Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice
+Merge latest bom-radar-card
