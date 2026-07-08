@@ -99,7 +99,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/average-component/custom_components/average" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/basnijholt/adaptive-lighting/releases
-VERSION=v1.30.1
+VERSION=v1.31.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "adaptive-lighting-component" "basnijholt/adaptive-lighting" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/adaptive_lighting"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"

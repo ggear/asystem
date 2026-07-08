@@ -33,7 +33,7 @@ sortedcontainers==2.4.0
 pyyaml==6.0.3
 jinja2==3.1.6
 pandas==2.3.3
-polars==1.41.2
+polars==1.42.1
 orjson==3.11.9
 pyarrow==21.0.0
 tabulate==0.10.0
