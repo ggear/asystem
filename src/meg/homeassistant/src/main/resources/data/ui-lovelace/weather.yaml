@@ -40,6 +40,9 @@
   double_tap_action:
     action: none
 - type: custom:bom-radar-card
+  basemap_provider: bom
+  basemap_style: default
+  dark_basemap: false
   zoom_level: 8
   layer: rain_rate
   map_height: 550
@@ -50,7 +53,6 @@
   show_marker: true
   show_zoom: true
   show_playback: true
-  basemap_style: default
 ################################################################################
 - type: custom:layout-break
 ################################################################################
