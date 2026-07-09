@@ -109,6 +109,4 @@ impl media-space, that does repotrting ala duf, benchmarking and stats/health, m
 # Home Assistant
 ###############################################################################################################################################################
 Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice
-Fork bom-radar-card to make controls light if light theme
-Fork bom-radar-card to make delay on last frame
 getting windrose [Warning] WR WARN More then 10 values from sensor.roof_wind_speed are ignored, sest log_level to INFO to investigate. (windrose-card.js, line 3, x3)
