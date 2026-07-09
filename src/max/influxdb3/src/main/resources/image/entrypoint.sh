@@ -23,7 +23,7 @@ recover_log="/tmp/recover.log"
 log() { echo "entrypoint: $*"; }
 
 if [[ ("${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^-) &&
-      -n "$node_id" && -d "$data_dir/$node_id" ]]; then
+  -n "$node_id" && -d "$data_dir/$node_id" ]]; then
 
   # Stage 1: drop empty/truncated WAL files (safe, they carry no records).
   if [[ -d "$wal_dir" ]]; then
@@ -39,7 +39,7 @@ if [[ ("${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^-) &&
   healthy=""
   for _ in $(seq 1 30); do
     if [[ "$(curl -fsS "http://${recover_addr}/health" \
-          -H "Authorization: Bearer ${INFLUXDB3_AUTH_TOKEN:-}" 2>/dev/null)" == "OK" ]]; then
+      -H "Authorization: Bearer ${INFLUXDB3_AUTH_TOKEN:-}" 2>/dev/null)" == "OK" ]]; then
       healthy=1
       break
     fi
@@ -56,8 +56,7 @@ if [[ ("${1:-}" == serve || "${1:-}" == influxdb3 || "${1:-}" =~ ^-) &&
   # Stage 3: surface partially written WAL files the recovery server rejected.
   # Stage 1 already removed the empty ones, so anything still reported corrupt is
   # non-empty and may hold partial data; print rm commands rather than deleting.
-  corrupt=$(grep -F 'Skipping corrupt WAL file' "$recover_log" 2>/dev/null |
-    grep -oE 'path=[^[:space:]]+\.wal' | cut -d= -f2- | tr -d '"' | sort -u || true)
+  corrupt=$(grep -F 'Skipping corrupt WAL file' "$recover_log" 2>/dev/null | grep -oE 'path=[^[:space:]]+\.wal' | cut -d= -f2- | tr -d '"' | sort -u || true)
   if [[ -z "$healthy" || -n "$corrupt" ]]; then
     log "stage 3: recovery server did not come up clean (see $recover_log)"
     if [[ -n "$corrupt" ]]; then

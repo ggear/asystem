@@ -41,7 +41,7 @@
     action: none
 - type: custom:bom-radar-card
   basemap_provider: carto
-  basemap_style: light
+  basemap_style: theme
   zoom_level: 8
   layer: rain_rate
   map_height: 550

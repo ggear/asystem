@@ -25,8 +25,7 @@ cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weath
 
 # NOTES: https://github.com/ashtonau/bom-radar-card/releases
 VERSION=v1.10.0
-#pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "ggear/bom-radar-card" "ggear-patches" "https://github.com/ashtonau/bom-radar-card.git" "${VERSION}"
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "ashtonau/bom-radar-card" "${VERSION}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "ggear/bom-radar-card" "ggear-patches" "https://github.com/ashtonau/bom-radar-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" install
