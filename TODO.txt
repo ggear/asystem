@@ -85,7 +85,7 @@ atops doesnt survice vernemq restart
 when maximise host, update update freq to 1s
 Convert from influxdb to postgres?
 Add sys test?
-
+when influxdb3 process failing was getting this error and empty memory. Make metric not ID but string and always show 0 but erroring memory bar. 09:36:52 ERROR error executing metric task id=26               error=cpu usage unavailable, non-monotonic counters 09:36:52 ERROR error executing metric task id=27               error=memory limit must be > 0
 
 ###############################################################################################################################################################
 # Finance
