@@ -13,7 +13,7 @@ varsubst==2.0.0
 packaging==24.2
 pyright==1.1.411
 requests==2.34.2
-setuptools==82.0.1
+setuptools==83.0.0
 pathlib2==2.3.7.post1
 
 # Date/time

@@ -108,6 +108,6 @@ impl media-space, that does repotrting ala duf, benchmarking and stats/health, m
 ###############################################################################################################################################################
 # Home Assistant
 ###############################################################################################################################################################
+Submit pull requests for bom-radar-map, test all options first
 Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice
-Submit pull requests for bom-radar-map
 getting windrose [Warning] WR WARN More then 10 values from sensor.roof_wind_speed are ignored, sest log_level to INFO to investigate. (windrose-card.js, line 3, x3)
