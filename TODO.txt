@@ -3,7 +3,9 @@
 ###############################################################################################################################################################
 Improve write_entity_metadata(), write out schema to src/build/resources/schemas/vernemq, take in json and make it the leaf, have sys test use it - start with Tempstats
 Add src/build/resources/schemas/influxdb and src/build/resources/schemas/postgres and src/build/resources/schemas/timescaledb queries and have sys test use it - start with Wrangle
-
+Implement backup
+Implement power off
+Implement restart to healthy, mounts all work, mlflow creates a share/1, sonarr requires mad to normalise /share/10 for permissions
 
 ###############################################################################################################################################################
 # InfluxDB3
@@ -101,10 +103,10 @@ Add quirks to asahi install
 Test share_08 on max, slow on Asahi (24 MB/s) see if Fedora resolves issue
 Upgrade Asahi to latest, update macos, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 Upgrade enclosure firmwares on windows machine?
-impl media-space, that does repotrting ala duf, benchmarking and stats/health ala script, supervisor to use
+impl media-space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
 
 ###############################################################################################################################################################
 # Home Assistant
 ###############################################################################################################################################################
 Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice
-Fork bom-radar-card to provide basemap_style: theme -> which picks default/dark for bom, light/dark for carto, alidade_light/alidade_dark for stadia, topo/imagery for esri - depending on hass theme
+Fork bom-radar-card to provide basemap_style: theme -> which picks default/dark for bom, light/dark for carto, alidade_light/alidade_dark for stadia, topo/imagery for esri - depending on hass theme, make controls light if light

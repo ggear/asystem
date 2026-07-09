@@ -42,6 +42,7 @@ services:
     container_name: influxdb3
     <<: *common
     restart: ${SERVICE_RESTART}
+    stop_grace_period: 30s
     ports:
       - ${INFLUXDB3_API_PORT}:8181
     healthcheck:
