@@ -105,6 +105,7 @@
     show_circle_legend: false
   matching_strategy:
     log_measurement_counts: false
+#  log_level: DEBUG
 ################################################################################
 - type: custom:layout-break
 ################################################################################
