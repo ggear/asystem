@@ -20,10 +20,17 @@ RUN apt-get update && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
 FROM image_upstream AS image_base
+ARG ASYSTEM_SONARR_VERSION
+ARG TARGETARCH
 COPY target/package/main/resources/image/. /asystem/etc
-RUN tar -xvzf /asystem/etc/*.gz -C /opt && \
-    chmod +x /opt/Sonarr/Sonarr && \
-    rm /asystem/etc/*.gz
+RUN case "${TARGETARCH}" in \
+      amd64) SONARR_ARCH="x64" ;; \
+      arm64) SONARR_ARCH="arm64" ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    curl -fL "https://github.com/Sonarr/Sonarr/releases/download/v${ASYSTEM_SONARR_VERSION}/Sonarr.main.${ASYSTEM_SONARR_VERSION}.linux-${SONARR_ARCH}.tar.gz" \
+      | tar -xz -C /opt && \
+    chmod +x /opt/Sonarr/Sonarr
 
 FROM image_base AS image_build
 

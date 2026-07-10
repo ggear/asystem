@@ -87,6 +87,7 @@ Convert from influxdb to postgres?
 Add sys test?
 when influxdb3 process failing was getting this error and empty memory. Make metric not ID but string and always show 0 but erroring memory bar. 09:36:52 ERROR error executing metric task id=26               error=cpu usage unavailable, non-monotonic counters 09:36:52 ERROR error executing metric task id=27               error=memory limit must be > 0
 
+
 ###############################################################################################################################################################
 # Finance
 ###############################################################################################################################################################
@@ -105,9 +106,9 @@ Upgrade Asahi to latest, update macos, delete current Asahi volumes, reinstall, 
 Upgrade enclosure firmwares on windows machine?
 impl media-space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
 
+
 ###############################################################################################################################################################
 # Home Assistant
 ###############################################################################################################################################################
 Submit pull requests for bom-radar-map, test all options first
 Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice
-getting windrose [Warning] WR WARN More then 10 values from sensor.roof_wind_speed are ignored, sest log_level to INFO to investigate. (windrose-card.js, line 3, x3)
