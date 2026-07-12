@@ -830,6 +830,8 @@ def _systest(context, filter_module=None):
             test_exit_code = _run_local(context, "python system_test.py", join(module, "src/test/python/system"), warn=True).exited
         else:
             print("Could not find test to run")
+        if test_exit_code != 0:
+            _dump_logs_module(context, module)
         _down_module(context, module)
         if test_exit_code != 0:
             _print_line("Tests ... failed")
@@ -1294,6 +1296,17 @@ def _up_module(context, module, up_this=True, is_test=False):
                                         "--force-recreate "
                                         "--remove-orphans -d", run_dep)
                     _print_footer(run_dep, "run")
+
+
+def _dump_logs_module(context, module):
+    if isfile(join(ROOT_MODULE_DIR, module, "docker-compose.yml")):
+        _print_line("Dumping container logs (systest failed) ...")
+        for run_dep in _get_dependencies(context, module):
+            if isfile(join(ROOT_MODULE_DIR, run_dep, "docker-compose.yml")):
+                _print_header(run_dep, "logs")
+                _run_local(context, "docker compose --ansi never ps -a", run_dep, warn=True)
+                _run_local(context, "docker compose --ansi never logs --tail=200 --timestamps --no-color", run_dep, warn=True)
+                _print_footer(run_dep, "logs")
 
 
 def _down_module(context, module, down_this=True):

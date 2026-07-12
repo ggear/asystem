@@ -1,0 +1,14 @@
+{
+  "Time": "<text>",
+  "SI7021": {
+    "Temperature": <number>,
+    "Humidity": <number>
+  },
+  "DS18B20": {
+    "Temperature": <number>
+  },
+  "ENERGY": {
+    "Power": <number>,
+    "Total": <number>
+  }
+}

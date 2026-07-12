@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     write_healthcheck()
 
-    # Build metadata publish JSON
+    # Build MQTT schema
     metadata_digitemp_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
@@ -18,8 +18,9 @@ if __name__ == "__main__":
         (metadata_df["state_topic"].str.len() > 0) &
         (metadata_df["connection_mac"].str.len() > 0)
         ]
-    write_entity_metadata("digitemp", join(DIR_ROOT, "src/main/resources/image/mqtt"), metadata_digitemp_df,
-                          "homeassistant/+/digitemp/#", "telegraf/+/digitemp/#", )
+    write_entity_metadata(metadata_digitemp_df,
+                          topic_glob_discovery="homeassistant/+/digitemp/#",
+                          topic_glob_data="telegraf/+/digitemp/#")
 
     metadata_digitemp_dicts = []
     for _, row in metadata_digitemp_df.iterrows():

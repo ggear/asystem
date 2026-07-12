@@ -1,0 +1,8 @@
+{
+  "data_utility_temperature_celsius": <number>,
+  "data_rack_top_temperature_celsius": <number>,
+  "data_rack_bottom_temperature_celsius": <number>,
+  "run_success": <true|false>,
+  "run_milliseconds": <number>,
+  "run_timestamp": "<text>"
+}

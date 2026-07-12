@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     write_healthcheck()
 
-    # Build metadata publish JSON
+    # Build MQTT schema
     metadata_tempstat_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
@@ -18,6 +18,21 @@ if __name__ == "__main__":
         (metadata_df["state_topic"].str.len() > 0)
         ].copy()
     metadata_tempstat_df["availability_topic"] = "tempstat/macmini-max/status"
-    write_entity_metadata("tempstat", join(DIR_ROOT, "src/main/resources/image/mqtt"), metadata_tempstat_df,
-                          "homeassistant/+/tempstat/+/config",
-                          "tempstat/+/data", "tempstat")
+    write_entity_metadata(metadata_tempstat_df,
+                          topics_path="tempstat",
+                          topic_glob_discovery="homeassistant/+/tempstat/+/config",
+                          topic_glob_data="tempstat/+/data",
+                          schema_state="""
+{
+  "data_utility_temperature_celsius": <number>,
+  "data_rack_top_temperature_celsius": <number>,
+  "data_rack_bottom_temperature_celsius": <number>,
+  "run_success": <true|false>,
+  "run_milliseconds": <number>,
+  "run_timestamp": "<text>"
+}
+                          """, schema_command="""
+<start|stop|restart>
+                          """, schema_availability="""
+<online|offline>
+                          """)

@@ -33,7 +33,7 @@ if __name__ == "__main__":
                 weewx_conf_file.write(line.replace('$INPUTS_METADATA', metadata_weewx_str))
     print("Build generate script [weewx] entity metadata persisted to [{}]".format(weewx_conf_path))
 
-    # Build metadata publish JSON
+    # Build MQTT schema
     metadata_publish_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
@@ -42,5 +42,9 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
-    write_entity_metadata("weewx", join(DIR_ROOT, "src/main/resources/image/mqtt"),
-                          metadata_publish_df, "homeassistant/+/weewx/#", "weewx/#")
+    write_entity_metadata(metadata_publish_df,
+                          topic_glob_discovery="homeassistant/+/weewx/#",
+                          topic_glob_data="weewx/#",
+                          schema_state="""
+<number>
+                          """)

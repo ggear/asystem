@@ -11,7 +11,7 @@ if __name__ == "__main__":
     write_bootstrap()
     write_healthcheck()
 
-    # Build metadata publish JSON
+    # Build MQTT schema
     metadata_supervisor_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
@@ -21,9 +21,21 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
         ]
-    write_entity_metadata("supervisor", join(DIR_ROOT, "src/main/resources/image/mqtt"), metadata_supervisor_df,
-                          "homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
-                          "supervisor/${SUPERVISOR_HOST}/data/+/+/+", "supervisor_${SUPERVISOR_HOST}")
+    write_entity_metadata(metadata_supervisor_df,
+                          topics_path="supervisor_${SUPERVISOR_HOST}",
+                          topic_glob_discovery="homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
+                          topic_glob_data="supervisor/${SUPERVISOR_HOST}/data/+/+/+",
+                          schema_state="""
+{
+  "pulse": {
+    "ok": <true|false>
+  }
+}
+                          """, schema_command="""
+<start|stop|restart>
+                          """, schema_availability="""
+<online|offline>
+                          """)
 
     # Build config
     hosts = []

@@ -27,8 +27,35 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0)
         ].sort_values("connection_ip")
 
-    write_entity_metadata("tasmota", join(DIR_ROOT, "src/main/resources/config/mqtt"), metadata_tasmota_df,
-                          "homeassistant/+/tasmota/#", "tasmota/#")
+    write_entity_metadata(metadata_tasmota_df,
+                          working_dir=join(DIR_ROOT, "src/main/resources/config/mqtt"),
+                          topic_glob_discovery="homeassistant/+/tasmota/#",
+                          topic_glob_data="tasmota/#",
+                          schema_state={
+                              "*/stat/POWER": """
+<ON|OFF>
+                              """,
+                              "*/tele/SENSOR": """
+{
+  "Time": "<text>",
+  "SI7021": {
+    "Temperature": <number>,
+    "Humidity": <number>
+  },
+  "DS18B20": {
+    "Temperature": <number>
+  },
+  "ENERGY": {
+    "Power": <number>,
+    "Total": <number>
+  }
+}
+                              """,
+                          }, schema_command="""
+<ON|OFF|TOGGLE>
+                          """, schema_availability="""
+<Online|Offline>
+                          """)
 
     metadata_tasmota_dicts = [row.dropna().to_dict() for index, row in metadata_tasmota_df.iterrows()]
     tasmota_config_path = join(DIR_ROOT, "src/build/resources/tasmota_config.sh")

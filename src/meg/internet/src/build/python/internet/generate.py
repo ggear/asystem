@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     write_healthcheck()
 
-    # Build metadata publish JSON
+    # Build MQTT schema
     metadata_publish_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
@@ -16,5 +16,22 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
-    write_entity_metadata("internet", join(DIR_ROOT, "src/main/resources/image/mqtt"), metadata_publish_df,
-                          "homeassistant/+/internet/#", "telegraf/+/internet/#")
+    write_entity_metadata(metadata_publish_df,
+                          topic_glob_discovery="homeassistant/+/internet/#",
+                          topic_glob_data="telegraf/+/internet/#",
+                          schema_state="""
+{
+  "metrics": [
+    {
+      "name": "<text>",
+      "tags": {
+        "metric": "<ping|download|upload>"
+      },
+      "fields": {
+        "<text>": <number>
+      },
+      "timestamp": <number>
+    }
+  ]
+}
+                          """)

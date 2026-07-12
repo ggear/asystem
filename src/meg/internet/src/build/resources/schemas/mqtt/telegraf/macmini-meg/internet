@@ -1,0 +1,14 @@
+{
+  "metrics": [
+    {
+      "name": "<text>",
+      "tags": {
+        "metric": "<ping|download|upload>"
+      },
+      "fields": {
+        "<text>": <number>
+      },
+      "timestamp": <number>
+    }
+  ]
+}

@@ -179,9 +179,9 @@ def configure(argv=None):
         args.disable_source_downloads = True
         args.disable_database_downloads = True
         args.disable_sheet_downloads = True
-    if args.log is None:
-        args.log = "debug" if args.poll_period == 0 else "info"
-    plugin.config.log_level = args.log
+    if args.log_level is None:
+        args.log_level = "debug" if args.poll_period == 0 else "info"
+    plugin.config.log_level = args.log_level
     plugin.config.poll_period = args.poll_period
     plugin.config.repo_scope = plugin.RepoScope(args.repo_scope)
     plugin.config.cache_dir = args.cache_dir

@@ -1,10 +1,12 @@
 import datetime
+import fnmatch
 import glob
 import json
 import os
 import shutil
 import stat
 import sys
+import textwrap
 import time
 from collections import OrderedDict
 from os.path import *
@@ -455,8 +457,18 @@ fi
               .format(module_name, script_path))
 
 
-def write_entity_metadata(module_name, working_dir, metadata_df, topics_discovery, topics_data, topics_path="*"):
+def write_entity_metadata(metadata_df, module_name=None, working_dir=None, schemas_dir=None,
+                          topics_path="*", topic_glob_discovery=None, topic_glob_data=None,
+                          schema_state=None, schema_command=None, schema_availability=None):
     if len(metadata_df) > 0:
+        module_root = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
+        if module_name is None:
+            module_name = basename(module_root)
+        if working_dir is None:
+            working_dir = join(module_root, "src/main/resources/image/mqtt")
+        if schemas_dir is None:
+            schemas_dir = join(module_root, "src/build/resources/schemas/mqtt")
+
         def _coerce_bool(value):
             if isinstance(value, bool):
                 return value
@@ -596,12 +608,12 @@ done
 printf "\\n"
             """.format(
                 module_name,
-                topics_discovery,
-                topics_discovery,
+                topic_glob_discovery,
+                topic_glob_discovery,
                 module_name,
                 module_name,
-                topics_data,
-                topics_data,
+                topic_glob_data,
+                topic_glob_data,
                 module_name,
                 module_name,
                 topics_path,
@@ -609,6 +621,47 @@ printf "\\n"
         os.chmod(metadata_publish_script_path, 0o750)
         print("Build generate script [{}] entity metadata publish script persisted to [{}]"
               .format(module_name, metadata_publish_script_path))
+        schemas = {
+            schema_column: schema_spec
+            for schema_column, schema_spec in (("state_topic", schema_state),
+                                               ("command_topic", schema_command),
+                                               ("availability_topic", schema_availability))
+            if schema_spec is not None
+        }
+        schema_topics = {
+            schema_column: sorted({topic.strip() for topic in metadata_df[schema_column].dropna().unique() if topic.strip()})
+            for schema_column in ["state_topic", "command_topic", "availability_topic"]
+            if schema_column in metadata_df.columns
+        }
+        schema_topics = {schema_column: topics for schema_column, topics in schema_topics.items() if topics}
+        if schema_topics:
+            schema_topics_all = sorted({topic for topics in schema_topics.values() for topic in topics})
+            for schema_topic in schema_topics_all:
+                for schema_topic_other in schema_topics_all:
+                    if schema_topic_other != schema_topic and schema_topic_other.startswith(schema_topic + "/"):
+                        raise ValueError(
+                            "Build generate script [{}] entity schema topic [{}] is a path prefix of [{}]: "
+                            "cannot write a payload leaf file and a directory at the same path"
+                            .format(module_name, schema_topic, schema_topic_other))
+            schemas_dir = abspath(schemas_dir)
+            if exists(schemas_dir):
+                shutil.rmtree(schemas_dir)
+            for schema_column, topics in schema_topics.items():
+                schema_spec = schemas.get(schema_column, "")
+                for schema_topic in topics:
+                    if isinstance(schema_spec, dict):
+                        schema_payload = next((payload for pattern, payload in schema_spec.items()
+                                               if fnmatch.fnmatch(schema_topic, pattern)), "")
+                    else:
+                        schema_payload = schema_spec
+                    schema_payload_str = "\n".join(line.rstrip() for line in textwrap.dedent(schema_payload).splitlines()).strip()
+                    schema_payload_str = schema_payload_str + "\n" if schema_payload_str else ""
+                    schema_path = abspath(join(schemas_dir, *schema_topic.split("/")))
+                    os.makedirs(dirname(schema_path), exist_ok=True)
+                    with open(schema_path, 'w') as schema_file:
+                        schema_file.write(schema_payload_str)
+                    print("Build generate script [{}] entity schema [{}] persisted to [{}]"
+                          .format(module_name, schema_topic, schema_path))
 
 
 if __name__ == "__main__":

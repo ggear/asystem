@@ -1,11 +1,20 @@
 ###############################################################################################################################################################
 # All
 ###############################################################################################################################################################
-Improve write_entity_metadata(), write out schema to src/build/resources/schemas/vernemq, take in json and make it the leaf, have sys test use it - start with Tempstats
-Add src/build/resources/schemas/influxdb and src/build/resources/schemas/postgres and src/build/resources/schemas/timescaledb queries and have sys test use it - start with Wrangle
-Implement backup
-Implement power off
-Implement restart to healthy, mounts all work, mlflow creates a share/1, sonarr requires mad to normalise /share/10 for permissions
+
+
+###############################################################################################################################################################
+# Backup
+###############################################################################################################################################################
+Implement backup - maybe master scripts in storage, each module has personal backup script
+
+
+###############################################################################################################################################################
+# Power
+###############################################################################################################################################################
+Implement power off and restart to healthy (power on makes sure hosts up, docker starts, storgae starts and mounts, supervisor starts, then supervisor brings services up)
+Issues today: mounts all work, mlflow creates a share/1, sonarr requires mad to normalise /share/10 for permissions - move to mad
+
 
 ###############################################################################################################################################################
 # InfluxDB3
@@ -31,6 +40,13 @@ add schema describe to src/build/resources/schemas/vernemq
 ###############################################################################################################################################################
 # Wrangle
 ###############################################################################################################################################################
+all:
+Add src/build/resources/schemas/sql for influxdb/postgres/timescaledb schema describes and sample queries sql and scripts to run, genrated from source (ie per plugin), source is like xlsx for mqtt schema, perhaps shared function
+add verifcation sections to all plugins like quity
+check comments, nicely blocked, consistent accross all plugins
+check all sheet references added to repo structs, eq equity indexes etc
+Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
+
 bank:
 implement balances
 implement transactions
@@ -41,13 +57,6 @@ move sheets to delta like database? perhaps brek aout sheet/database upload timi
 add dividend to create a new total return, bring in from manual data in sheets or another source?
 implement cleanup, dead stock files, dead -current, dead month files, add local tests
 add additional local tests testing issues?
-
-all:
-add verifcation sections to all plugins like quity
-check comments, nicely blocked, consistent accross all plugins
-check all sheet references added to repo structs, eq equity indexes etc
-Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
-
 
 ###############################################################################################################################################################
 # Tempstats
