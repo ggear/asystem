@@ -242,6 +242,8 @@ while read -r mount fstype; do
   read_extra=''
   usepct=$(df -P "$mount" 2>/dev/null | awk 'NR==2 { gsub(/%/,"",$5); print $5 }')
 
+  fstrim -v "$mount" 2>/dev/null || true
+
   testfile=''
   if [ -n "$do_write" ]; then
     avail=$(df -B1 --output=avail "$mount" 2>/dev/null | tail -1 | tr -d ' ')
@@ -269,7 +271,7 @@ while read -r mount fstype; do
         note_row "$mount" "Skipped: media totals under $((READ_FLOOR_BYTES / 1000000000)) GB"
         continue
       fi
-      read_label="$read_count files ($((read_bytes / 1000000000)) GB)"
+      read_label="$(printf '%02d' "$read_count") files ($((read_bytes / 1000000000)) GB)"
     fi
     read_rt=$(awk -v s="$read_bytes" -v c="$READ_MAX_MBPS" -v m="$READ_RUNTIME" 'BEGIN { t = int(s / (c * 1000000)); if (t > m) t = m; if (t < 1) t = 1; print t }')
 
@@ -310,7 +312,7 @@ while read -r mount fstype; do
   fi
   if [ -n "$do_write" ]; then
     [ -n "$rnote" ] && rnote="$rnote | "
-    rnote="${rnote}Write: 1 file (${WRITE_SIZE%G} GB)"
+    rnote="${rnote}Write: 01 file (${WRITE_SIZE%G} GB)"
   fi
   commit_row
   emit_csv
