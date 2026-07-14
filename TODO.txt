@@ -1,6 +1,7 @@
 ###############################################################################################################################################################
 # All
 ###############################################################################################################################################################
+Upgrade macmini-mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 
 
 ###############################################################################################################################################################
@@ -61,7 +62,7 @@ add additional local tests testing issues?
 ###############################################################################################################################################################
 # Tempstats
 ###############################################################################################################################################################
-redesign json as nested? implemnt generate schema
+redesign json as nested? implement generate schema
 is complicated template necessary?
 Retire digitemp in favour of tempstats
 
@@ -108,11 +109,13 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 # Storage
 ###############################################################################################################################################################
+Upgrade RTL9210 enclosure firmwares on windows machine, confirm we can get RTL9210 working for NVME /share/10, then apply same to /share/11
+Implement TRIM on all SSDs
+make bench easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
+remove journals on shares, /share/10 has one? do any others?
 Binaries for media-space to call it, also have a adu and abench?
 Add quirks to asahi install
 Test share_08 on max, slow on Asahi (24 MB/s) see if Fedora resolves issue
-Upgrade Asahi to latest, update macos, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
-Upgrade enclosure firmwares on windows machine?
 impl media-space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
 
 

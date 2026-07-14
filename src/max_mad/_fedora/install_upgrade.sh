@@ -32,6 +32,7 @@ ASYSTEM_PACKAGES_DNF=(
   yq
   xq
   nvme-cli
+  fio
   acl
   parted
   util-linux
