@@ -16,6 +16,7 @@ mkdir -p "$(dirname "${CSV_FILE}")"
 
 for LABEL in ${HOSTS}; do
   MACHINE="$(grep ${LABEL} ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')"
+  [ "${MACHINE}" = "macmini" ] || continue
   HOST="${MACHINE}-${LABEL}"
   ssh -o StrictHostKeyChecking=no root@${HOST} \
     "[ -f ${REMOTE_BENCH} ] && ${REMOTE_BENCH} --csv" \
