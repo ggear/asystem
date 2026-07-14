@@ -13,6 +13,7 @@ READ_MAX_BYTES=$((READ_MIN_BYTES * 2))
 READ_FLOOR_BYTES=$((6 * 1000000000))
 SET_FILE_MIN=$((500 * 1000000))
 READ_POOL=30
+TRIM_SETTLE=5
 
 PARSER='
 import sys, json
@@ -228,6 +229,15 @@ fi
 
 declare -a results=()
 
+trimmed=''
+while read -r mount fstype; do
+  [ -z "$mount" ] && continue
+  [ -n "$FILTER" ] && [ "$mount" != "$FILTER" ] && continue
+  fstype_allowed "$fstype" || continue
+  fstrim -v "$mount" 2>/dev/null && trimmed=1
+done < <(awk '$2 ~ /^\/share\// { print $2, $3 }' /proc/self/mounts | sort -u)
+[ -n "$trimmed" ] && sleep "$TRIM_SETTLE"
+
 printf '  %-12s %-12s %-12s %s\n' 'Mount' 'Read (MB/s)' 'Write (MB/s)' 'Notes'
 
 while read -r mount fstype; do
@@ -241,8 +251,6 @@ while read -r mount fstype; do
   wmbps=''
   read_extra=''
   usepct=$(df -P "$mount" 2>/dev/null | awk 'NR==2 { gsub(/%/,"",$5); print $5 }')
-
-  fstrim -v "$mount" 2>/dev/null || true
 
   testfile=''
   if [ -n "$do_write" ]; then
