@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 #
-# benchmark.sh — measure sequential read/write throughput of every eligible
-# /share/* mount and print a colored per-mount MB/s table (optionally CSV).
+# benchmark.sh — measure read/write throughput of every
+# eligible /share/* mount and print a colored per-mount MB/s table (optionally
+# CSV). One sequential stream (numjobs=1) by design: it models a real share-to-
+# share rsync (the maintenance workload), not peak parallel/high-QD throughput,
+# so the number reflects what an rsync copy would actually sustain.
 #
 # Design decisions:
-#   - One sequential stream (numjobs=1), by design: the benchmark models a real
-#     share-to-share rsync (the maintenance workload), not peak parallel/high-QD
-#     throughput — so the number reflects what an rsync copy would actually
-#     sustain, and multi-threaded/queued speed is deliberately out of scope.
 #   - Trim first: on write runs, all shares are `fstrim`-ed in one up-front pass
 #     (before the table header), then a short settle lets the SSD's background GC
 #     quiesce, so free-block state is consistent and never interleaved with the
