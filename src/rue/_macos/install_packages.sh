@@ -60,6 +60,7 @@ brew install \
   mosquitto \
   regclient \
   pkg-config \
+  shellcheck \
   docker-slim \
   hudochenkov/sshpass/sshpass
 brew upgrade
