@@ -106,8 +106,8 @@ commit_row() {
 
 emit_csv() {
   [ -n "$CSV" ] || return 0
-  printf '"%s","%s","%s","%s","%s"\n' \
-    "$mount" "$(date '+%Y/%m/%d')" "$(date '+%H:%M:%S')" "${rmbps:-}" "${wmbps:-}" >&3
+  printf '"%s","%s","%s","%s","%s","%s"\n' \
+    "$mount" "${usepct:-}" "$(date '+%Y/%m/%d')" "$(date '+%H:%M:%S')" "${rmbps:-}" "${wmbps:-}" >&3
 }
 
 run_col() {
@@ -240,6 +240,7 @@ while read -r mount fstype; do
   rmbps=''
   wmbps=''
   read_extra=''
+  usepct=$(df -P "$mount" 2>/dev/null | awk 'NR==2 { gsub(/%/,"",$5); print $5 }')
 
   testfile=''
   if [ -n "$do_write" ]; then
@@ -302,7 +303,11 @@ while read -r mount fstype; do
     fi
   fi
 
-  [ -n "$do_read" ] && rnote="Read: $read_label$read_extra"
+  [ -n "$usepct" ] && rnote="Used: ${usepct}%"
+  if [ -n "$do_read" ]; then
+    [ -n "$rnote" ] && rnote="$rnote | "
+    rnote="${rnote}Read: $read_label$read_extra"
+  fi
   if [ -n "$do_write" ]; then
     [ -n "$rnote" ] && rnote="$rnote | "
     rnote="${rnote}Write: 1 file (${WRITE_SIZE%G} GB)"
