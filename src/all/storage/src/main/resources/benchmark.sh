@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# benchmark.sh — measure read/write throughput of every
-# eligible /share/* mount and print a colored per-mount MB/s table (optionally
-# CSV). One sequential stream (numjobs=1) by design: it models a real share-to-
-# share rsync (the maintenance workload), not peak parallel/high-QD throughput,
-# so the number reflects what an rsync copy would actually sustain.
+# benchmark.sh — measure read/write throughput of every eligible /share/* mount
+# and print a colored per-mount MB/s table (optionally CSV). It models the real
+# maintenance workload — a share-to-share rsync — as one sequential stream
+# (numjobs=1) rather than peak parallel/high-QD throughput, so each number
+# reflects what an rsync copy would actually sustain.
 #
 # Design decisions:
 #   - Trim first: on write runs, all shares are `fstrim`-ed in one up-front pass
@@ -16,11 +16,14 @@
 #   - Reads use real media, not a synthetic file: a random set of files under
 #     <mount>/media (each > SET_FILE_MIN, and untouched for > RECENT_WRITE_DAYS to
 #     skip files still being written) is assembled until it totals READ_MIN_BYTES
-#     — enough unique data to sustain the run without re-reading. Sampling the
-#     whole media pool keeps file reuse across runs negligible. Caches are dropped
-#     and fio uses O_DIRECT + --readonly so results reflect cold-cache disk rather
-#     than page cache; a loop guard shrinks the runtime (or fails the mount) if
-#     fio still cycles back over the data.
+#     — enough unique data to sustain the run without re-reading. The pool must
+#     hold >= READ_POOL_MIN files or the read is skipped, so reuse across runs
+#     stays low; the note shows used/pool counts plus a short md5 fingerprint of
+#     the chosen set, making run-to-run variety visible. Caches are dropped and
+#     fio reads buffered (--direct=0, --invalidate) — a cold read pipelined by
+#     kernel readahead, exactly how rsync reads, not the latency-bound O_DIRECT
+#     QD1 that understates USB-bridged drives. A loop guard shrinks the runtime
+#     (or fails the read) if a re-read gets served from cache.
 #   - Writes use fio O_DIRECT to a temp file (WRITE_SIZE, 4 GiB), removed after,
 #     with a single end-of-run fsync (--end_fsync, not per-block) so the number is
 #     streaming write bandwidth including the final device-cache flush. A mount is
@@ -40,6 +43,7 @@ READ_MAX_MBPS=1000
 READ_MIN_BYTES=$((READ_RUNTIME * READ_MAX_MBPS * 1000000))
 READ_FLOOR_BYTES=$((6 * 1000000000))
 SET_FILE_MIN=$((500 * 1000000))
+READ_POOL_MIN=50
 RECENT_WRITE_DAYS=5
 TRIM_SETTLE=5
 
@@ -161,7 +165,7 @@ run_read() {
     --runtime="${2:-$READ_RUNTIME}" \
     --time_based \
     --file_service_type=sequential \
-    --direct=1 \
+    --direct=0 \
     --invalidate=1 \
     --output-format=json \
     --readonly 2>/dev/null
@@ -264,23 +268,35 @@ while read -r mount fstype; do
 
   if [ -n "$do_read" ]; then
     media="$mount/media"
+    pool_count=0
     read_bytes=0
     read_count=0
     read_target=''
     if [ -d "$media" ]; then
-      while IFS=$'\t' read -r -d '' size path; do
+      entries=()
+      while IFS= read -r -d '' entry; do
+        entries+=("$entry")
+      done < <(find "$media" -type f -size +"${SET_FILE_MIN}c" -mtime +"$RECENT_WRITE_DAYS" -printf '%s\t%p\0' 2>/dev/null | shuf -z)
+      pool_count=${#entries[@]}
+      for entry in "${entries[@]}"; do
+        size=${entry%%$'\t'*}
+        path=${entry#*$'\t'}
         esc=${path//:/\\:}
         [ -z "$read_target" ] && read_target=$esc || read_target="$read_target:$esc"
         read_bytes=$((read_bytes + size))
         read_count=$((read_count + 1))
         [ "$read_bytes" -ge "$READ_MIN_BYTES" ] && break
-      done < <(find "$media" -type f -size +"${SET_FILE_MIN}c" -mtime +"$RECENT_WRITE_DAYS" -printf '%s\t%p\0' 2>/dev/null | shuf -z)
+      done
     fi
-    if [ "$read_bytes" -lt "$READ_FLOOR_BYTES" ]; then
+    if [ "$pool_count" -lt "$READ_POOL_MIN" ]; then
+      rfield='--'
+      read_note="Read: skipped (pool $pool_count < $READ_POOL_MIN files)"
+    elif [ "$read_bytes" -lt "$READ_FLOOR_BYTES" ]; then
       rfield='--'
       read_note="Read: skipped (<$((READ_FLOOR_BYTES / 1000000000)) GB media)"
     else
-      read_label="$(printf '%02d' "$read_count") files ($((read_bytes / 1000000000)) GB)"
+      read_hash=$(printf '%s' "$read_target" | md5sum 2>/dev/null | cut -c1-6)
+      read_label="$read_count/$pool_count files ($((read_bytes / 1000000000)) GB) #$read_hash"
       read_rt=$(awk -v s="$read_bytes" -v c="$READ_MAX_MBPS" -v m="$READ_RUNTIME" 'BEGIN { t = int(s / (c * 1000000)); if (t > m) t = m; if (t < 1) t = 1; print t }')
       drop_caches
       run_col read "$read_rt" run_read "$read_target" "$read_rt"
