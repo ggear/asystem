@@ -34,7 +34,8 @@
   locale: en-AU
   weather_icon_type: fill
   tap_action:
-    action: none
+    action: more-info
+    entity: sensor.roof_daily_rain
   hold_action:
     action: none
   double_tap_action:
@@ -67,7 +68,8 @@
   locale: en-AU
   weather_icon_type: fill
   tap_action:
-    action: none
+    action: more-info
+    entity: sensor.roof_wind_speed
   hold_action:
     action: none
   double_tap_action:
