@@ -68,10 +68,8 @@ Retire digitemp in favour of tempstats
 
 
 ###############################################################################################################################################################
-# Network
+# Networks
 ###############################################################################################################################################################
-Rename networks
-Remove html dashboard
 update mqtt publish state to be match superovisor, heeriarchical, top level ok, then ensted detail ok's for HASS presentation of internet/wireless/zigbee/ethernet, include a command topic, map it out and link to xlsx
 document topic and json schema in files, foolow same for other moudles, eg supervispr, generate MQTT schema from xlsx, pass data schmea to generate func and write it into the file
 Do the same as above for database, hardoce if you cant generate, all under schema dir, eg schema/timescaledb, schema/influxdb etc
@@ -93,6 +91,7 @@ Add a go linter to pickup IntelliJ style warnings?
 Also service being added/removed from MQTT sometimes leads to empty slot and services not reshuffling sometimes.
 atops doesnt survice vernemq restart
 when maximise host, update update freq to 1s
+Add a hot level metric for network/internet usage? maybe only later?
 Convert from influxdb to postgres?
 Add sys test?
 when influxdb3 process failing was getting this error and empty memory. Make metric not ID but string and always show 0 but erroring memory bar. 09:36:52 ERROR error executing metric task id=26               error=cpu usage unavailable, non-monotonic counters 09:36:52 ERROR error executing metric task id=27               error=memory limit must be > 0
@@ -109,6 +108,15 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 # Storage
 ###############################################################################################################################################################
+should i extend the benchmark read period to 2min? 4xfiles? likewise should 4GiB write be increased?
+enable TRIM:
+    tee /etc/udev/rules.d/60-usb-ssd-trim.rules <<'EOF'
+    ACTION=="add|change", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="9210", SUBSYSTEM=="scsi_disk", ATTR{provisioning_mode}="unmap"
+    ACTION=="add|change", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="9201", SUBSYSTEM=="scsi_disk", ATTR{provisioning_mode}="unmap"
+    ACTION=="add|change", ATTRS{idVendor}=="152d", ATTRS{idProduct}=="0583", SUBSYSTEM=="scsi_disk", ATTR{provisioning_mode}="unmap"
+    EOF
+    sudo udevadm control --reload
+    sudo systemctl enable --now fstrim.timer
 Upgrade RTL9210 enclosure firmwares on windows machine, confirm we can get RTL9210 working for NVME /share/10, then apply same to /share/11
 Implement TRIM on all SSDs
 make bench easliy run accross cluster, export to XLSX easily. do same with health script, move from other module

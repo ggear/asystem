@@ -9,7 +9,7 @@ if __name__ == "__main__":
     write_healthcheck()
 
     # Build MQTT schema
-    metadata_network_df = metadata_df[
+    metadata_networks_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_via_device"] == "Zeroth") &
@@ -18,7 +18,7 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
         ]
-    write_entity_metadata(metadata_network_df,
-                          topics_path="network_${SUPERVISOR_HOST}",
-                          topic_glob_discovery="homeassistant/+/network_${SUPERVISOR_HOST}/+/config",
-                          topic_glob_data="network/${SUPERVISOR_HOST}/data/+/+/+")
+    write_entity_metadata(metadata_networks_df,
+                          topics_path="networks_${SUPERVISOR_HOST}",
+                          topic_glob_discovery="homeassistant/+/networks_${SUPERVISOR_HOST}/+/config",
+                          topic_glob_data="networks/${SUPERVISOR_HOST}/data/+/+/+")

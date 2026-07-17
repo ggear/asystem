@@ -20,6 +20,6 @@ FROM image_base AS image_build
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc
-#CMD ["/asystem/mnt/network"]
+#CMD ["/asystem/mnt/networks"]
 CMD ["sleep", "infinity"]
 

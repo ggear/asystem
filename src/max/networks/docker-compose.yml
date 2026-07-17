@@ -1,5 +1,5 @@
 x-common: &common
-  image: network:${SERVICE_VERSION_ABSOLUTE}
+  image: networks:${SERVICE_VERSION_ABSOLUTE}
   init: true
   environment:
     - TZ=Australia/Perth
@@ -19,8 +19,8 @@ x-common: &common
       max-file: "5"
       max-size: "100m"
 services:
-  network:
-    container_name: network
+  networks:
+    container_name: networks
     <<: *common
     restart: ${SERVICE_RESTART}
     healthcheck:
@@ -34,11 +34,11 @@ services:
       resources:
         limits:
           memory: 256M
-  network_bootstrap:
-    container_name: network_bootstrap
+  networks_bootstrap:
+    container_name: networks_bootstrap
     <<: *common
     restart: 'no'
     entrypoint: bash
     command: /asystem/etc/bootstrap.sh
     depends_on:
-      - network
+      - networks

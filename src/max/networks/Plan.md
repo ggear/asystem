@@ -1,6 +1,6 @@
-# Plan — Redevelop `network` as a Go service
+# Plan — Redevelop `networks` as a Go service
 
-Redevelop `src/max/network` from its current skeleton into a real Go service that
+Redevelop `src/max/networks` from its current skeleton into a real Go service that
 mirrors `src/all/supervisor`'s module shape (directory layout, Docker build, fab
 lifecycle, unit + system tests) but implements a **plugin-based network-health
 monitor**. It polls a set of plugins (internet, wireless, zigbee), rolls their
@@ -20,15 +20,15 @@ Runs on the `max` host (`macmini-max`, x86_64, server, deployment group 31).
 | Wireless source | **Local UniFi Network controller API** (unpoller-style, on-LAN). Controller URL + credentials from config. No cloud dependency. |
 | Publishing | **Vitals only, for now.** `vitals` (aggregate) → MQTT retained (+ HA discovery) + InfluxDB line protocol. `pulse` (per-poll) stays in-memory in the aggregation window and is emitted to the debug log only — not published, not stored. |
 | Poll cadence | **internet** runs the fast poll loop (default `--poll-period` = 5 min) and aggregates (default `--aggregate-period` = 15 min). **wireless** and **zigbee** run **only at the aggregate cadence** (every 15 min); they produce one sample per aggregate window and emit vitals directly, with no fast pulse phase. |
-| Dashboard/API | Bundled HTTP server (Go `net/http` + `embed.FS` + `html/template`) — same *mechanism* as wrangle (server renders HTML with data injected as JSON + a `/api/v1/...` REST API + a trigger endpoint) but **minimal styling**, not wrangle's LCARS/ApexCharts theme. Renders the latest `pulse` and `vitals` `Message`s as pretty JSON with plain status badges and a "CHECK NOW" trigger. This is also where `pulse` (never published to MQTT/DB) becomes observable. |
-| Commands | A single **command queue** (buffered channel) drained by the engine. Both the dashboard's `POST /api/v1/check` and an **MQTT command topic** enqueue onto it — one code path for on-demand actions (supervisor's `commandTopic` idiom + wrangle's `/run` trigger, unified). |
+| Observability | **Headless — no bundled HTTP server, dashboard, or REST API.** State is observed off the wire: `vitals` on MQTT/InfluxDB, and `pulse` (never published) via the debug log only. On-demand checks come from the MQTT command topic and the `check` CLI. |
+| Commands | A single **command queue** (buffered channel) drained by the engine. An **MQTT command topic** enqueues onto it; the `check` subcommand runs the same primitive directly — one code path for on-demand actions (supervisor's `commandTopic` idiom). |
 
 ### Resolved
 - **Short-flag clash** (brief listed `-p` twice): `--poll-period` keeps `-p`;
   `--filter-plugins` takes `-f`. **Confirmed.**
 - **Binary delivery**: switch from the old "delivered at runtime via `/asystem/mnt`"
   model to supervisor's in-image build — Go builder stage compiles
-  `/asystem/bin/network`, runtime stage `COPY --from`s it. `network/CLAUDE.md`
+  `/asystem/bin/networks`, runtime stage `COPY --from`s it. `networks/CLAUDE.md`
   updated accordingly. **Confirmed.**
 - **Temp-probe device**: drop the `/dev/ttyUSBTempProbe` mapping from
   `docker-compose.yml` (temperature-probe leftover, unrelated to network health).
@@ -38,11 +38,11 @@ Runs on the `max` host (`macmini-max`, x86_64, server, deployment group 31).
 
 ## Target module layout
 
-Mirrors supervisor. New/changed paths under `src/max/network/`:
+Mirrors supervisor. New/changed paths under `src/max/networks/`:
 
 ```
-src/main/go/network/
-  go.mod                     module network; go 1.25.0
+src/main/go/networks/
+  go.mod                     module networks; go 1.25.0
   main.go                    func main(){ cmd.Execute() }
   CLAUDE.md                  module go-code guide (env, commands, arch, style)
   cmd/
@@ -63,12 +63,6 @@ src/main/go/network/
       engine_command.go      MQTT command-topic subscribe + command queue drain (on-demand check)
       store.go               thread-safe latest-Message store (per plugin: last pulse + last vitals)
       engine_test.go
-    server/
-      server.go              net/http server: HTML dashboard + /api/v1 REST + POST /api/v1/check
-      server_test.go
-      web/                   //go:embed assets
-        dashboard.html       html/template; latest pulse/vitals as pretty JSON, minimal style
-        dashboard.css        minimal stylesheet (status colors only)
     plugin/
       plugin.go              Plugin interface + registry + Message/Point/Field/Tag types + Status enum
       serialise.go           Message.MarshalJSON + Message.AppendLineProtocol (pooled buffers)
@@ -111,7 +105,7 @@ Dockerfile docker-compose.yml deploy.sh install*.sh docker_deps_base.txt run_dep
 
 ## CLI
 
-Root command `network` with a `serve` daemon and a `check` one-shot. Global
+Root command `networks` with a `serve` daemon and a `check` one-shot. Global
 persistent flags (match supervisor's cobra idiom, `SortFlags=false`):
 
 | Flag | Short | Default | Meaning |
@@ -121,12 +115,11 @@ persistent flags (match supervisor's cobra idiom, `SortFlags=false`):
 | `--aggregate-period` | `-a` | `15m` (`60s*15`) | window rolled up before a status decision → vitals |
 | `--publish-data` | `-d` | `false` | when true, publish vitals to MQTT + InfluxDB; when false, log only (dry run) |
 | `--log-level` | `-l` | `info` | `debug`/`info`/`warn`/`error` |
-| `--config` | `-c` | `/var/lib/asystem/install/network/latest/image/config.json` | config path |
+| `--config` | `-c` | `/var/lib/asystem/install/networks/latest/image/config.json` | config path |
 | `--version` | `-v` | — | print version and exit |
 
-`serve`-only flag: `--http-port` / `-w`, default `8090` — port for the dashboard +
-REST API (`0` disables the server). `check` shares the engine's single-cycle
-primitive with the dashboard button and the MQTT command, so all three are one path.
+`check` shares the engine's single-cycle primitive with the MQTT command topic, so
+both on-demand paths run the same code.
 
 Period parsing follows supervisor's `makePeriods` style: parse via
 `time.ParseDuration`, require `poll > 0`, `aggregate` a whole multiple of `poll`
@@ -243,51 +236,16 @@ Single `context`-cancellable scheduler (supervisor `probe.Run` tick-loop idiom):
    - For **aggregate-only** plugins (wireless, zigbee): call `Poll()` once *now* to
      get a single fresh sample, then `Aggregate([]Message{that})`.
    - Publish each resulting `vitals` `Message` (if `--publish-data`).
-3. Graceful shutdown on `SIGINT`: publish `offline` status, flush, disconnect, stop
-   the HTTP server.
+3. Graceful shutdown on `SIGINT`: publish `offline` status, flush, disconnect.
 
 The engine also owns a **latest-Message store** (`store.go`): a thread-safe map
 keyed by plugin holding the most recent `pulse` and `vitals` `Message`. Each poll
-updates last-pulse; each aggregate updates last-vitals. The HTTP server reads from
-it (network's analogue of wrangle's `history.snapshot()`).
+updates last-pulse; each aggregate updates last-vitals. The command drain reads from
+it, and it backs the debug-log dump of the otherwise-unpublished `pulse`.
 
 ---
 
-## HTTP dashboard & API (`internal/server`)
-
-Same *mechanism* as wrangle's `server.py` (a `net/http` server rendering an HTML
-page with data injected as JSON, a versioned REST API, and a trigger endpoint) but
-**minimal styling**. Started by `serve` on `--http-port` unless `0`; a plain
-`http.ServeMux`, handlers read the engine's latest-store and enqueue commands.
-
-Routes (wrangle-shaped, network payloads):
-
-| Method | Path | Returns |
-|---|---|---|
-| GET | `/` | HTML dashboard (`html/template` from `//go:embed web/`) |
-| GET | `/online` | `online\n` (liveness) |
-| GET | `/health` | `{ "status": <overall triad>, "plugins": { "<name>": <triad> } }` |
-| GET | `/api/v1` | resource index |
-| GET | `/api/v1/plugins` | `{ "plugins": [ {"name","poll_phase"} ] }` |
-| GET | `/api/v1/pulse` `?plugin=` | latest `pulse` `Message`(s), full JSON |
-| GET | `/api/v1/vitals` `?plugin=` | latest `vitals` `Message`(s), full JSON |
-| POST | `/api/v1/check` | body `{"plugin":"internet"}` (or all) → enqueue an on-demand check; chunked keep-alive like wrangle's `/run`; responds with the fresh `vitals` |
-
-**Dashboard content (minimal):** one section per plugin showing a status badge
-(HEALTHY green / DEGRADED amber / FLATLINE red, from a tiny `dashboard.css`), the
-`Detail`/`Reason`, and the latest `pulse` and `vitals` `Message`s pretty-printed in
-`<pre>` blocks (the raw JSON, as requested). A "CHECK NOW" button per plugin does
-`fetch('/api/v1/check',{method:'POST',body:{plugin}})` then refreshes. A small
-`setInterval` auto-refresh (fetches `/api/v1/vitals` + `/api/v1/pulse` and re-renders
-the `<pre>` blocks). No charts, no external CDN, no fonts/sounds — a single embedded
-CSS file. Data injected on first paint as `window.NETWORK_DATA = {{ json }}`.
-
-JSON responses reuse `Message.MarshalJSON`, so the API and the MQTT payloads are
-byte-identical. `no-store`, `X-API-Version: v1` headers as in wrangle.
-
----
-
-## Command queue (HTTP + MQTT) — `engine_command.go`
+## Command queue (MQTT) — `engine_command.go`
 
 One buffered `chan command` decouples request receipt from the engine loop; a
 single drain runs commands so there is no separate "check now" code path.
@@ -296,19 +254,18 @@ single drain runs commands so there is no separate "check now" code path.
 type command struct {
     Action string   // "check"
     Plugin string   // "" = all selected plugins
-    Result chan Message   // optional; HTTP waits on it, MQTT ignores
-    Source string   // "http" | "mqtt"
+    Result chan Message   // optional; the `check` CLI waits on it, MQTT publishes it to the result topic
+    Source string   // "mqtt" | "cli"
 }
 ```
 
 - **MQTT source** (`engine_command.go`): on connect, subscribe
-  `network/${SUPERVISOR_HOST}/command/#` (supervisor's `commandTopic` idiom).
+  `networks/${SUPERVISOR_HOST}/command/#` (supervisor's `commandTopic` idiom).
   Payload `{"command":"check","plugin":"internet"}` → build a `command`, enqueue,
-  and publish an ack/result to `network/${SUPERVISOR_HOST}/command/result` (the
+  and publish an ack/result to `networks/${SUPERVISOR_HOST}/command/result` (the
   resulting `vitals` JSON). Unknown/malformed payloads logged and dropped.
-- **HTTP source**: `POST /api/v1/check` enqueues a `command` with a `Result`
-  channel and streams keep-alive bytes until it resolves (wrangle `/run` pattern),
-  then writes the `vitals` JSON.
+- **CLI source**: the `check` subcommand enqueues a `command` with a `Result`
+  channel, blocks on it, prints the returned `vitals` JSON, and exits.
 - **Drain**: a goroutine (or the aggregate tick) pops a `command`, runs exactly one
   aggregate cycle for the target plugin(s) — `Poll()` once, fold into the current
   window, re-evaluate `Aggregate` — publishes the fresh `vitals` (if
@@ -320,8 +277,8 @@ command storm from stalling the poll loop.
 
 Publishing (`--publish-data` true):
 - **MQTT** (`engine_broker.go`, paho like supervisor): vitals → retained topic
-  `network/${SUPERVISOR_HOST}/data/<plugin>/vitals`; a retained
-  `network/${SUPERVISOR_HOST}/status` = `online`/`offline` with an `offline` LWT.
+  `networks/${SUPERVISOR_HOST}/data/<plugin>/vitals`; a retained
+  `networks/${SUPERVISOR_HOST}/status` = `online`/`offline` with an `offline` LWT.
   Reuse supervisor's broker connect/reconnect/`SetWill` structure.
 - **InfluxDB v3** (`engine_database.go`): call `Message.AppendLineProtocol` for each
   vitals into a single reused `bytes.Buffer` (one line per `Point`), then hand the
@@ -439,19 +396,18 @@ tag `device=<friendly_name>`, fields `lqi`, `available`, last-seen age) — with
 ## Docker / build / deploy
 
 - **Dockerfile** — adopt supervisor's multi-stage shape. Add a Go builder stage
-  (goenv toolchain, `go build` → `/asystem/bin/network`) that the runtime stage
+  (goenv toolchain, `go build` → `/asystem/bin/networks`) that the runtime stage
   `COPY --from`s, so the binary ships **inside the image** (drop the current
-  "binary delivered via `/asystem/mnt`" model and update `network/CLAUDE.md`,
+  "binary delivered via `/asystem/mnt`" model and update `networks/CLAUDE.md`,
   which currently documents the mnt entrypoint). Runtime `FROM debian:slim` with
-  the pinned base packages. `CMD ["/asystem/bin/network","serve","-c","/asystem/etc/config.json"]`.
+  the pinned base packages. `CMD ["/asystem/bin/networks","serve","-c","/asystem/etc/config.json"]`.
   Build-only toolchain packages (`ca-certificates`, `gcc`, `libc6-dev` if cgo)
   go in `docker_deps_build.txt`, pinned; keep `docker_deps_base.txt` slim
   (`bash coreutils less curl vim jq mosquitto-clients`).
-- **docker-compose.yml** — keep `network` + `network_bootstrap`, `256M` limit,
+- **docker-compose.yml** — keep `networks` + `networks_bootstrap`, `256M` limit,
   `TZ=Australia/Perth`, `BROKER_*`/`DATABASE_*` env, `${SERVICE_DATA_DIR}:/asystem/mnt`.
-  Add a `ports:` mapping for the dashboard (`--http-port`, default `8090`) and a
-  `NETWORK_HTTP_PORT`/`UNIFI_*` env passthrough. HA/nginx can proxy the dashboard
-  like other service UIs.
+  Add a `UNIFI_*` env passthrough for the wireless plugin. No `ports:` mapping —
+  the service is headless (publishes to MQTT/InfluxDB only, no HTTP surface).
   The internet plugin needs egress ICMP — verify default bridge networking permits
   unprivileged ICMP; if kernel `ping_group_range` blocks it in-container, document
   the `net.ipv4.ping_group_range` sysctl or `cap_add: NET_RAW` fallback. Drop the
@@ -462,11 +418,11 @@ tag `device=<friendly_name>`, fields `lqi`, `available`, last-seen age) — with
 - **config.json / generate.py** — extend `write_...` generation to emit
   broker + database + a `unifi` block (controller URL/site/creds) + internet
   `targets`/burst tuning. Keep HA discovery generation: `write_entity_metadata`
-  filtered to `device_via_device == "Zeroth"` on `network_${SUPERVISOR_HOST}`
+  filtered to `device_via_device == "Zeroth"` on `networks_${SUPERVISOR_HOST}`
   topics (already wired in `generate.py`).
 - **Health-check fragments** (`src/build/resources/`, then `fab generate`):
-  - `checkalive.sh` — `pgrep -f "/asystem/bin/network" >/dev/null`
-  - `checkexecuting.sh` — checkalive && MQTT `network/$SUPERVISOR_HOST/status` == `online`
+  - `checkalive.sh` — `pgrep -f "/asystem/bin/networks" >/dev/null`
+  - `checkexecuting.sh` — checkalive && MQTT `networks/$SUPERVISOR_HOST/status` == `online`
   - `checkhealthy.sh` — checkexecuting && latest `.../data/internet/vitals` parses and `status != FLATLINE` (via `mosquitto_sub -C 1 -W 2` + `jq -e`)
   - `bootstrap.sh` — (re)publish HA discovery via generated `mqtt.sh`.
   No `#` comments in fragments (they get line-joined).
@@ -485,14 +441,13 @@ tag `device=<friendly_name>`, fields `lqi`, `available`, last-seen age) — with
   `cpuTimes func(...)` seam pattern) so no network in unit tests.
 - **testutil** (`testcontainers-go`): spin an MQTT broker; stub UniFi HTTP and a
   z2m publisher for integration coverage.
-- **server** (`server_test.go`, `httptest`): route/status-code coverage, `/health`
-  triad mapping, `/api/v1/vitals` JSON shape, `POST /api/v1/check` enqueues one
-  command and returns fresh vitals. **command** drain: HTTP and MQTT commands both
-  land on the queue and run exactly one aggregate cycle; bounded-queue overflow.
+- **command** drain (`engine_command_test.go`): an MQTT command and a `check`-CLI
+  command both land on the queue and run exactly one aggregate cycle, returning
+  fresh vitals; bounded-queue overflow drops/rejects with a logged warning.
 - **System** (`fab st`, `system_test.py`): `docker-compose up`, wait for
-  `network/<host>/data/internet/vitals` retained message, assert schema + `status`
-  in the triad; `GET /health` returns `200` and `GET /online` returns `online`;
-  `POST /api/v1/check` returns vitals; tear down.
+  `networks/<host>/data/internet/vitals` retained message, assert schema + `status`
+  in the triad; publish an MQTT `check` command and assert fresh `vitals` on the
+  result topic; tear down.
 
 ---
 
@@ -501,13 +456,12 @@ tag `device=<friendly_name>`, fields `lqi`, `available`, last-seen age) — with
 1. Scaffold Go module: `go.mod`, `main.go`, `cmd/` (flags, version, `serve`/`check` stubs), `config`, `scribe`. Build green, `--version` works.
 2. `plugin` package: interface, registry, `Message`/`Point`/`Field`/`Tag`/`Status`, the two serialisers (JSON + line protocol), window ring + tests.
 3. `engine` scheduler (poll + aggregate tickers, filter, dry-run logging) — no publish yet.
-4. **internet** plugin: ICMP burst `Poll`, pure `decide.go`, full decision tests. `network check` prints vitals.
+4. **internet** plugin: ICMP burst `Poll`, pure `decide.go`, full decision tests. `networks check` prints vitals.
 5. `engine_broker.go` + `engine_database.go`; wire `--publish-data`; HA status/LWT; retained vitals; line protocol.
 6. Latest-store + command queue (`store.go`, `engine_command.go`) + MQTT command topic; wire the `check` subcommand through the queue.
-7. `internal/server`: `net/http` + embedded minimal dashboard + `/api/v1` + `POST /api/v1/check`; `--http-port`; tests via `httptest`.
-8. **wireless** (UniFi local API) + **zigbee** (z2m MQTT), aggregate-only, with decide tests.
-9. Dockerfile Go build stage, `docker_deps_build.txt`, compose ICMP capability + port mapping, health-check fragments, `generate.py` config extension. `fab generate`.
-10. System test; `fab t`; then `fab pkg`; update `network/CLAUDE.md`.
+7. **wireless** (UniFi local API) + **zigbee** (z2m MQTT), aggregate-only, with decide tests.
+8. Dockerfile Go build stage, `docker_deps_build.txt`, compose ICMP capability, health-check fragments, `generate.py` config extension. `fab generate`.
+9. System test; `fab t`; then `fab pkg`; update `networks/CLAUDE.md`.
 
 ---
 

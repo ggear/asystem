@@ -36,10 +36,10 @@ if
   /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && true # TODO: Provide implementation
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [network] is healthy :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [networks] is healthy :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [network] is *NOT* healthy :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [networks] is *NOT* healthy :(" >&2
   exit 1
 fi
