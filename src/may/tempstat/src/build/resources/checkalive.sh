@@ -1,1 +1,2 @@
-pgrep -f "/asystem/bin/tempstat" >/dev/null
+ps -ef | grep "[/]asystem/bin/tempstat" >/dev/null
+

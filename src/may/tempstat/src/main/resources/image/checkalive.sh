@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  pgrep -f "/asystem/bin/tempstat" >/dev/null
+  ps -ef | grep "[/]asystem/bin/tempstat" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [tempstat] is alive :)" >&2
