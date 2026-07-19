@@ -26,20 +26,20 @@ pub fn load_sensors(path: &Path) -> Result<Vec<SensorConfig>, String> {
         .map_err(|err| format!("failed to parse sensors file [{}]: {err}", path.display()))?;
     let sensors: Result<Vec<SensorConfig>, String> = raw
         .into_iter()
-        .map(|r| {
-            let s = r.rom.trim_start_matches("0x").trim_start_matches("0X");
-            s.parse::<Rom>()
-                .map_err(|err| format!("invalid rom [{s}] for sensor [{}]: {err}", r.unique_id))
+        .map(|sensor| {
+            let code = sensor.rom.trim_start_matches("0x").trim_start_matches("0X");
+            code.parse::<Rom>()
+                .map_err(|err| format!("invalid rom [{code}] for sensor [{}]: {err}", sensor.unique_id))
                 .map(|rom| SensorConfig {
-                    unique_id: r.unique_id,
+                    unique_id: sensor.unique_id,
                     rom,
                 })
         })
         .collect();
     if let Ok(ref list) = sensors {
         info!("loaded {} sensor(s) from [{}]", list.len(), path.display());
-        for s in list {
-            info!("  sensor [{}] rom [{}]", s.unique_id, s.rom);
+        for sensor in list {
+            info!("  sensor [{}] rom [{}]", sensor.unique_id, sensor.rom);
         }
     }
     sensors
@@ -52,19 +52,19 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn write_json(json: &str) -> NamedTempFile {
-        let mut f = NamedTempFile::new().unwrap();
-        f.write_all(json.as_bytes()).unwrap();
-        f
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(json.as_bytes()).unwrap();
+        file
     }
 
     #[test]
     fn load_sensors_parses_valid_file() {
-        let f = write_json(
+        let file = write_json(
             r#"[
             {"unique_id": "utility_temperature", "rom": "28FF641E870006AE"}
         ]"#,
         );
-        let sensors = load_sensors(f.path()).unwrap();
+        let sensors = load_sensors(file.path()).unwrap();
         assert_eq!(sensors.len(), 1);
         assert_eq!(sensors[0].unique_id, "utility_temperature");
         assert_eq!(sensors[0].rom.to_string(), "28FF641E870006AE");
@@ -72,34 +72,34 @@ mod tests {
 
     #[test]
     fn load_sensors_accepts_0x_prefix() {
-        let f = write_json(
+        let file = write_json(
             r#"[
             {"unique_id": "foo", "rom": "0x28FF641E870006AE"}
         ]"#,
         );
-        let sensors = load_sensors(f.path()).unwrap();
+        let sensors = load_sensors(file.path()).unwrap();
         assert_eq!(sensors[0].rom.to_string(), "28FF641E870006AE");
     }
 
     #[test]
     fn load_sensors_accepts_connection_mac_alias() {
-        let f = write_json(
+        let file = write_json(
             r#"[
             {"unique_id": "foo", "connection_mac": "28FF641E870006AE"}
         ]"#,
         );
-        let sensors = load_sensors(f.path()).unwrap();
+        let sensors = load_sensors(file.path()).unwrap();
         assert_eq!(sensors[0].unique_id, "foo");
     }
 
     #[test]
     fn load_sensors_accepts_lowercase_hex() {
-        let f = write_json(
+        let file = write_json(
             r#"[
             {"unique_id": "foo", "rom": "28ff641e870006ae"}
         ]"#,
         );
-        let sensors = load_sensors(f.path()).unwrap();
+        let sensors = load_sensors(file.path()).unwrap();
         assert_eq!(sensors[0].rom.to_string(), "28FF641E870006AE");
     }
 
@@ -111,15 +111,15 @@ mod tests {
 
     #[test]
     fn load_sensors_errors_on_invalid_json() {
-        let f = write_json("not json");
-        let err = load_sensors(f.path()).unwrap_err();
+        let file = write_json("not json");
+        let err = load_sensors(file.path()).unwrap_err();
         assert!(err.contains("failed to parse"));
     }
 
     #[test]
     fn load_sensors_errors_on_invalid_rom() {
-        let f = write_json(r#"[{"unique_id": "foo", "rom": "ZZZZ"}]"#);
-        let err = load_sensors(f.path()).unwrap_err();
+        let file = write_json(r#"[{"unique_id": "foo", "rom": "ZZZZ"}]"#);
+        let err = load_sensors(file.path()).unwrap_err();
         assert!(err.contains("invalid rom"));
     }
 }

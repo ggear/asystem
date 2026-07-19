@@ -7,5 +7,6 @@ less
 curl
 vim
 jq
+procps
 mosquitto-clients
 socat

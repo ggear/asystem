@@ -2,7 +2,7 @@
   <rect x="0" y="0" width="1840" height="870" fill="#ffffff"/>
 
   <!-- ================= TITLE ================= -->
-  <text x="850" y="32" text-anchor="middle" font-size="21" font-weight="bold" fill="#1a56db">USB-to-TTL Adapter &#8594; One-Wire Bus &#8594; 3x Temperature Sensors</text>
+  <text x="850" y="32" text-anchor="middle" font-size="21" font-weight="bold" fill="#1a56db">USB-to-TTL Adapter &#8594; 1-Wire Bus &#8594; 3x Temperature Sensors</text>
 
   <!-- ================= USB-A ================= -->
   <text x="70" y="154" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a56db">USB-A</text>

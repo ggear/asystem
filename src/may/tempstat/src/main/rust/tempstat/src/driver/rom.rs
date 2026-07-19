@@ -51,13 +51,13 @@ impl fmt::Display for Rom {
 impl FromStr for Rom {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Error> {
-        if s.len() != 16 || !s.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err(Error::InvalidRom(s.to_string()));
+    fn from_str(text: &str) -> Result<Self, Error> {
+        if text.len() != 16 || !text.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err(Error::InvalidRom(text.to_string()));
         }
         let mut rom = [0u8; 8];
         for (i, byte) in rom.iter_mut().enumerate() {
-            *byte = u8::from_str_radix(&s[2 * i..2 * i + 2], 16).map_err(|_| Error::InvalidRom(s.to_string()))?;
+            *byte = u8::from_str_radix(&text[2 * i..2 * i + 2], 16).map_err(|_| Error::InvalidRom(text.to_string()))?;
         }
         Ok(Rom(rom))
     }

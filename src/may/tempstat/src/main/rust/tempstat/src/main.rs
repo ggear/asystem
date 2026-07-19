@@ -12,7 +12,7 @@ fn main() -> ExitCode {
     );
     let matches = Cli::command().version(version).get_matches();
     let cli = match Cli::from_arg_matches(&matches) {
-        Ok(c) => c,
+        Ok(cli) => cli,
         Err(err) => err.exit(),
     };
     match cli.run() {

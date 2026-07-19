@@ -2,14 +2,17 @@
 //!
 //! - [Guide to 1-Wire Communication](https://www.analog.com/en/resources/technical-articles/guide-to-1wire-communication.html)
 
-pub mod bus;
 pub mod crc;
+pub mod ds2480b;
+pub mod ds9097;
 pub mod mock;
+pub mod onewire;
 pub mod rom;
 pub mod sensor;
 pub mod uart;
 
 pub use crc::crc8;
+pub use onewire::{OneWire, Presence};
 pub use rom::Rom;
 
 use std::fmt;

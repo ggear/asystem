@@ -42,27 +42,27 @@ pub struct MqttPublisher {
 
 impl MqttPublisher {
     pub fn new(host: &str, port: u16, token: &str, status_topic: &str) -> Result<Self> {
-        let mut opts = MqttOptions::new("tempstat", host, port);
+        let mut options = MqttOptions::new("tempstat", host, port);
         let has_token = !token.is_empty();
         if has_token {
-            opts.set_credentials("tempstat", token);
+            options.set_credentials("tempstat", token);
         }
-        opts.set_last_will(LastWill::new(status_topic, "offline", QoS::AtLeastOnce, true));
-        let (client, mut connection) = Client::new(opts, CHANNEL_CAPACITY);
+        options.set_last_will(LastWill::new(status_topic, "offline", QoS::AtLeastOnce, true));
+        let (client, mut connection) = Client::new(options, CHANNEL_CAPACITY);
         let shutdown = Arc::new(AtomicBool::new(false));
-        let (ready_tx, ready_rx) = mpsc::channel();
+        let (ready_sender, ready_receiver) = mpsc::channel();
         let thread_shutdown = Arc::clone(&shutdown);
-        let addr = format!("{}:{}", host, port);
+        let address = format!("{}:{}", host, port);
         let handle = thread::spawn(move || {
-            let mut ready_tx = Some(ready_tx);
+            let mut ready_sender = Some(ready_sender);
             for event in connection.iter() {
                 match event {
                     Ok(Event::Incoming(Packet::ConnAck(_))) => {
-                        if let Some(tx) = ready_tx.take() {
-                            info!("broker connected [{}] auth [{}]", addr, has_token);
-                            let _ = tx.send(());
+                        if let Some(sender) = ready_sender.take() {
+                            info!("broker connected [{}] auth [{}]", address, has_token);
+                            let _ = sender.send(());
                         } else {
-                            info!("broker reconnected [{}]", addr);
+                            info!("broker reconnected [{}]", address);
                         }
                     }
                     Ok(Event::Incoming(Packet::PubAck(ack))) => {
@@ -79,15 +79,15 @@ impl MqttPublisher {
                         if thread_shutdown.load(Ordering::SeqCst) {
                             break;
                         }
-                        warn!("broker error [{addr}]: {err}");
-                        info!("broker reconnecting [{}] in {:?}", addr, RECONNECT_DELAY);
+                        warn!("broker error [{address}]: {err}");
+                        info!("broker reconnecting [{}] in {:?}", address, RECONNECT_DELAY);
                         thread::sleep(RECONNECT_DELAY);
                     }
                 }
             }
             debug!("broker event loop stopped");
         });
-        match ready_rx.recv_timeout(CONNECT_TIMEOUT) {
+        match ready_receiver.recv_timeout(CONNECT_TIMEOUT) {
             Ok(()) => {}
             Err(RecvTimeoutError::Timeout) => {
                 shutdown.store(true, Ordering::SeqCst);
@@ -108,21 +108,21 @@ impl MqttPublisher {
     }
 
     pub fn close(&mut self, status_topic: &str) -> Result<()> {
-        self.publish(status_topic, b"offline")?;
+        let published = self.publish(status_topic, b"offline");
         self.shutdown.store(true, Ordering::SeqCst);
-        self.client.disconnect().map_err(|err| Error::Mqtt(err.to_string()))?;
+        let disconnected = self.client.disconnect().map_err(|err| Error::Mqtt(err.to_string()));
         if let Some(handle) = self.handle.take() {
             handle.join().ok();
         }
         info!("broker disconnected");
-        Ok(())
+        published.and(disconnected)
     }
 }
 
 impl Publisher for MqttPublisher {
     fn publish(&mut self, topic: &str, payload: &[u8]) -> Result<()> {
         match std::str::from_utf8(payload) {
-            Ok(s) => debug!("publish [{topic}] -> {s}"),
+            Ok(text) => debug!("publish [{topic}] -> {text}"),
             Err(_) => debug!("publish [{topic}] -> ({} bytes)", payload.len()),
         }
         self.client

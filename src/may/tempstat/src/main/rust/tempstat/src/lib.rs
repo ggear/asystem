@@ -18,12 +18,14 @@ use serde_json::{json, Map, Value};
 
 use crate::broker::{MqttPublisher, Publisher};
 use crate::config::{load_sensors, SensorConfig};
-use crate::driver::bus::Bus;
+use crate::driver::ds2480b::Ds2480b;
+use crate::driver::ds9097::Ds9097;
 use crate::driver::sensor::Ds18b20;
-use crate::driver::uart::{SerialUart, Uart};
+use crate::driver::uart::SerialUart;
+use crate::driver::OneWire;
 
 static LEVEL_NAMES: LazyLock<Vec<String>> =
-    LazyLock::new(|| LevelFilter::iter().map(|l| l.as_str().to_lowercase()).collect());
+    LazyLock::new(|| LevelFilter::iter().map(|level| level.as_str().to_lowercase()).collect());
 
 const STATE_TOPIC: &str = "tempstat/$HOST/data";
 const STATUS_TOPIC: &str = "tempstat/$HOST/status";
@@ -71,8 +73,8 @@ pub struct Cli {
         long = "log-level",
         value_name = "LEVEL",
         default_value = "info",
-        value_parser = PossibleValuesParser::new(LEVEL_NAMES.iter().map(|s| s.as_str()))
-            .map(|s| s.parse::<LevelFilter>().unwrap())
+        value_parser = PossibleValuesParser::new(LEVEL_NAMES.iter().map(|name| name.as_str()))
+            .map(|name| name.parse::<LevelFilter>().unwrap())
     )]
     pub log_level: LevelFilter,
 }
@@ -108,7 +110,7 @@ impl Cli {
         loop {
             let mut publisher =
                 match MqttPublisher::new(&self.broker_host, self.broker_port, &self.broker_token, &status_topic) {
-                    Ok(p) => p,
+                    Ok(publisher) => publisher,
                     Err(err) => {
                         if period.is_zero() {
                             return Err(err.to_string());
@@ -118,8 +120,8 @@ impl Cli {
                         continue;
                     }
                 };
-            let mut bus = match Bus::<SerialUart>::open(&self.device, timeout) {
-                Ok(b) => b,
+            let mut bus = match self.open_bus(timeout) {
+                Ok(bus) => bus,
                 Err(err) => {
                     let _ = publisher.close(&status_topic);
                     if period.is_zero() {
@@ -130,7 +132,7 @@ impl Cli {
                     continue;
                 }
             };
-            let poll_result = poll(period, &sensors, &mut publisher, &mut bus, &state_topic);
+            let poll_result = poll(period, &sensors, &mut publisher, bus.as_mut(), &state_topic);
             let close_result = publisher.close(&status_topic).map_err(|err| err.to_string());
             let combined = poll_result.and(close_result);
             if period.is_zero() {
@@ -145,12 +147,29 @@ impl Cli {
             thread::sleep(period);
         }
     }
+
+    fn open_bus(&self, timeout: Duration) -> driver::Result<Box<dyn OneWire>> {
+        let mut ds2480b = Ds2480b::from_uart(SerialUart::open(&self.device, timeout)?);
+        match ds2480b.probe() {
+            Ok(()) => {
+                info!("selected adapter [ds2480b]");
+                Ok(Box::new(ds2480b))
+            }
+            Err(err) => {
+                info!("ds2480b not detected ({err}), probing for ds9097");
+                let mut ds9097 = Ds9097::new(ds2480b.into_uart())?;
+                ds9097.redetect()?;
+                info!("selected adapter [ds9097]");
+                Ok(Box::new(ds9097))
+            }
+        }
+    }
 }
 
 pub fn resolve_host() -> String {
     let host = std::env::var("TEMPSTAT_HOST")
         .ok()
-        .filter(|s| !s.is_empty())
+        .filter(|host| !host.is_empty())
         .or_else(system_hostname)
         .unwrap_or_else(|| "unknown".to_string());
     info!("host resolved to [{host}]");
@@ -161,9 +180,9 @@ fn system_hostname() -> Option<String> {
     std::process::Command::new("hostname")
         .output()
         .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|text| text.trim().to_string())
+        .filter(|hostname| !hostname.is_empty())
 }
 
 pub fn parse_duration(raw: &str) -> Result<Duration, String> {
@@ -174,11 +193,11 @@ pub fn parse_duration(raw: &str) -> Result<Duration, String> {
     humantime::parse_duration(trimmed).map_err(|err| format!("invalid duration [{trimmed}]: {err}"))
 }
 
-fn poll<U: Uart, P: Publisher>(
+fn poll<P: Publisher>(
     period: Duration,
     sensors: &[SensorConfig],
     publisher: &mut P,
-    bus: &mut Bus<U>,
+    bus: &mut (impl OneWire + ?Sized),
     state_topic: &str,
 ) -> Result<(), String> {
     let mut iteration: u64 = 0;
@@ -199,10 +218,10 @@ fn poll<U: Uart, P: Publisher>(
     }
 }
 
-fn poll_once<U: Uart, P: Publisher>(
+fn poll_once<P: Publisher>(
     sensors: &[SensorConfig],
     publisher: &mut P,
-    bus: &mut Bus<U>,
+    bus: &mut (impl OneWire + ?Sized),
     state_topic: &str,
 ) -> Result<bool, String> {
     let start = Instant::now();
@@ -213,7 +232,7 @@ fn poll_once<U: Uart, P: Publisher>(
 
     for sensor in sensors {
         debug!("reading sensor [{}] rom [{}]", sensor.unique_id, sensor.rom);
-        match Ds18b20::attach(bus, Some(sensor.rom)).and_then(|d| d.get_temperature(bus)) {
+        match Ds18b20::attach(bus, Some(sensor.rom)).and_then(|device| device.get_temperature(bus)) {
             Ok(temp) => {
                 info!("sensor [{}] rom [{}] = {temp}°C", sensor.unique_id, sensor.rom);
                 fields.insert(format!("data_{}_celsius", sensor.unique_id), json!(f64::from(temp)));
@@ -249,6 +268,8 @@ mod tests {
     use super::*;
     use crate::broker::mock::MockPublisher;
     use crate::driver::crc8;
+    use crate::driver::mock::fsm::FsmUart;
+    use crate::driver::mock::MockDs9097;
     use crate::driver::rom::Rom;
     use crate::driver::uart::mock::MockUart;
 
@@ -259,9 +280,9 @@ mod tests {
     }
 
     fn scratchpad_for(temp: [u8; 2]) -> [u8; 9] {
-        let mut sp = [temp[0], temp[1], 0x4B, 0x46, 0x7F, 0xFF, 0x0C, 0x10, 0x00];
-        sp[8] = crc8(&sp[..8]);
-        sp
+        let mut scratchpad = [temp[0], temp[1], 0x4B, 0x46, 0x7F, 0xFF, 0x0C, 0x10, 0x00];
+        scratchpad[8] = crc8(&scratchpad[..8]);
+        scratchpad
     }
 
     fn queue_match_select(uart: &mut MockUart, rom: &Rom) {
@@ -272,25 +293,25 @@ mod tests {
     }
 
     fn queue_sensor_read(uart: &mut MockUart, rom: &Rom, temp: [u8; 2]) {
-        let sp = scratchpad_for(temp);
+        let scratchpad = scratchpad_for(temp);
         queue_match_select(uart, rom);
         uart.queue_read(&[0xB4]);
         uart.queue_read(&[0x97]);
         queue_match_select(uart, rom);
         uart.queue_read(&[0xBE]);
-        uart.queue_read(&sp);
+        uart.queue_read(&scratchpad);
         queue_match_select(uart, rom);
         uart.queue_read(&[0x44]);
         uart.queue_read(&[0x97]);
         queue_match_select(uart, rom);
         uart.queue_read(&[0xBE]);
-        uart.queue_read(&sp);
+        uart.queue_read(&scratchpad);
     }
 
-    fn make_bus() -> Bus<MockUart> {
+    fn make_bus() -> Ds2480b<MockUart> {
         let mut uart = MockUart::new();
         uart.queue_read(&DETECT_READS);
-        Bus::new(uart).unwrap()
+        Ds2480b::new(uart).unwrap()
     }
 
     #[test]
@@ -410,11 +431,13 @@ mod tests {
         assert_eq!(publisher.messages.len(), 1);
         let (topic, payload) = &publisher.messages[0];
         assert_eq!(topic, "state");
-        let v: Value = serde_json::from_slice(payload).unwrap();
-        assert!((v["data_utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
-        assert_eq!(v["run_success"], true);
-        assert!(v["run_milliseconds"].as_u64().is_some());
-        assert!(v["run_timestamp"].as_str().is_some_and(|s| s.len() == 20));
+        let payload: Value = serde_json::from_slice(payload).unwrap();
+        assert!((payload["data_utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        assert_eq!(payload["run_success"], true);
+        assert!(payload["run_milliseconds"].as_u64().is_some());
+        assert!(payload["run_timestamp"]
+            .as_str()
+            .is_some_and(|timestamp| timestamp.len() == 20));
     }
 
     #[test]
@@ -429,9 +452,9 @@ mod tests {
         let mut publisher = MockPublisher::new();
         assert!(!poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap());
         assert_eq!(publisher.messages.len(), 1);
-        let v: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
-        assert!(v.get("data_utility_temperature_celsius").is_none());
-        assert_eq!(v["run_success"], false);
+        let payload: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
+        assert!(payload.get("data_utility_temperature_celsius").is_none());
+        assert_eq!(payload["run_success"], false);
     }
 
     #[test]
@@ -450,12 +473,33 @@ mod tests {
         bus.redetect().unwrap();
         assert!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap());
         assert_eq!(publisher.messages.len(), 2);
-        let v0: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
-        assert_eq!(v0["run_success"], false);
-        assert!(v0.get("data_utility_temperature_celsius").is_none());
-        let v1: Value = serde_json::from_slice(&publisher.messages[1].1).unwrap();
-        assert_eq!(v1["run_success"], true);
-        assert!((v1["data_utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        let first: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
+        assert_eq!(first["run_success"], false);
+        assert!(first.get("data_utility_temperature_celsius").is_none());
+        let second: Value = serde_json::from_slice(&publisher.messages[1].1).unwrap();
+        assert_eq!(second["run_success"], true);
+        assert!((second["data_utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+    }
+
+    #[test]
+    fn poll_once_reads_sensors_through_dyn_ds9097_bus() {
+        let mut bus: Box<dyn OneWire> = Box::new(Ds9097::new(FsmUart::new(MockDs9097::new())).unwrap());
+        let sensors = vec![
+            SensorConfig {
+                unique_id: "rack_top_temperature".into(),
+                rom: test_rom(),
+            },
+            SensorConfig {
+                unique_id: "rack_bottom_temperature".into(),
+                rom: test_rom(),
+            },
+        ];
+        let mut publisher = MockPublisher::new();
+        assert!(poll_once(&sensors, &mut publisher, bus.as_mut(), "state").unwrap());
+        let payload: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
+        assert!((payload["data_rack_top_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        assert!((payload["data_rack_bottom_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        assert_eq!(payload["run_success"], true);
     }
 
     #[test]

@@ -13,9 +13,10 @@ use super::Result;
 
 pub trait Uart {
     fn write_all(&mut self, data: &[u8]) -> Result<()>;
-    fn read_exact(&mut self, buf: &mut [u8]) -> Result<()>;
+    fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()>;
     fn send_break(&mut self) -> Result<()>;
     fn clear(&mut self) -> Result<()>;
+    fn set_baud(&mut self, baud: u32) -> Result<()>;
 }
 
 pub struct SerialUart {
@@ -24,13 +25,19 @@ pub struct SerialUart {
 
 impl SerialUart {
     pub fn open(path: &str, timeout: Duration) -> Result<Self> {
-        let port = serialport::new(path, 9600)
+        let mut port = serialport::new(path, 9600)
             .data_bits(DataBits::Eight)
             .parity(Parity::None)
             .stop_bits(StopBits::One)
             .flow_control(FlowControl::None)
             .timeout(timeout)
             .open()?;
+        if let Err(err) = port
+            .write_data_terminal_ready(true)
+            .and_then(|()| port.write_request_to_send(true))
+        {
+            debug!("uart modem lines not asserted on [{path}]: {err}");
+        }
         Ok(SerialUart { port })
     }
 }
@@ -43,9 +50,9 @@ impl Uart for SerialUart {
         Ok(())
     }
 
-    fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
-        self.port.read_exact(buf)?;
-        debug!("uart rx {:02X?}", buf);
+    fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+        self.port.read_exact(buffer)?;
+        debug!("uart rx {:02X?}", buffer);
         Ok(())
     }
 
@@ -60,6 +67,12 @@ impl Uart for SerialUart {
     fn clear(&mut self) -> Result<()> {
         debug!("uart clear");
         self.port.clear(ClearBuffer::All)?;
+        Ok(())
+    }
+
+    fn set_baud(&mut self, baud: u32) -> Result<()> {
+        debug!("uart baud [{baud}]");
+        self.port.set_baud_rate(baud)?;
         Ok(())
     }
 }
@@ -78,6 +91,7 @@ pub mod mock {
         pub reads: VecDeque<u8>,
         pub breaks: usize,
         pub clears: usize,
+        pub bauds: Vec<u32>,
     }
 
     impl MockUart {
@@ -96,8 +110,8 @@ pub mod mock {
             Ok(())
         }
 
-        fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
-            for slot in buf.iter_mut() {
+        fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+            for slot in buffer.iter_mut() {
                 *slot = self
                     .reads
                     .pop_front()
@@ -113,6 +127,11 @@ pub mod mock {
 
         fn clear(&mut self) -> Result<()> {
             self.clears += 1;
+            Ok(())
+        }
+
+        fn set_baud(&mut self, baud: u32) -> Result<()> {
+            self.bauds.push(baud);
             Ok(())
         }
     }

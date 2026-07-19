@@ -6,10 +6,9 @@ use std::time::{Duration, Instant};
 
 use log::{debug, warn};
 
-use super::bus::Bus;
 use super::crc::crc8;
+use super::onewire::OneWire;
 use super::rom::Rom;
-use super::uart::Uart;
 use super::{Error, Result};
 
 const FAMILY_CODE: u8 = 0x28;
@@ -65,7 +64,7 @@ pub struct Ds18b20 {
 }
 
 impl Ds18b20 {
-    pub fn attach<U: Uart>(bus: &mut Bus<U>, rom: Option<Rom>) -> Result<Self> {
+    pub fn attach(bus: &mut (impl OneWire + ?Sized), rom: Option<Rom>) -> Result<Self> {
         if let Some(rom) = &rom {
             if rom.family() != FAMILY_CODE {
                 return Err(Error::WrongFamily(*rom));
@@ -80,11 +79,17 @@ impl Ds18b20 {
             resolution: Resolution::Bits12,
         };
         device.parasitic = device.read_power_supply(bus)?;
+        if device.parasitic && !bus.supports_strong_pullup() {
+            warn!(
+                "ds18b20 rom [{}] is parasite powered but the adapter has no strong pullup, conversions may be unreliable",
+                device.rom.map(|rom| rom.to_string()).unwrap_or_else(|| "none".into())
+            );
+        }
         let scratchpad = device.read_scratchpad(bus)?;
         device.resolution = Resolution::from_config(scratchpad[4]);
         debug!(
             "ds18b20 rom [{}] parasitic [{}] resolution [{:?}]",
-            device.rom.map(|r| r.to_string()).unwrap_or_else(|| "none".into()),
+            device.rom.map(|rom| rom.to_string()).unwrap_or_else(|| "none".into()),
             device.parasitic,
             device.resolution
         );
@@ -107,14 +112,14 @@ impl Ds18b20 {
         T_CONV / (8u32 >> u32::from(self.resolution.code()))
     }
 
-    fn select<U: Uart>(&self, bus: &mut Bus<U>) -> Result<()> {
+    fn select(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<()> {
         match &self.rom {
             Some(rom) => bus.match_rom(rom),
             None => bus.skip_rom(),
         }
     }
 
-    fn await_completion<U: Uart>(&self, bus: &mut Bus<U>, duration: Duration) -> Result<()> {
+    fn await_completion(&self, bus: &mut (impl OneWire + ?Sized), duration: Duration) -> Result<()> {
         if self.parasitic {
             thread::sleep(duration);
             return Ok(());
@@ -131,7 +136,7 @@ impl Ds18b20 {
         }
     }
 
-    fn command_with_power<U: Uart>(&self, bus: &mut Bus<U>, byte: u8, duration: Duration) -> Result<()> {
+    fn command_with_power(&self, bus: &mut (impl OneWire + ?Sized), byte: u8, duration: Duration) -> Result<()> {
         if self.parasitic {
             bus.write_byte_power(byte)?;
             thread::sleep(duration);
@@ -142,13 +147,13 @@ impl Ds18b20 {
         }
     }
 
-    fn read_power_supply<U: Uart>(&self, bus: &mut Bus<U>) -> Result<bool> {
+    fn read_power_supply(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<bool> {
         self.select(bus)?;
         bus.write_byte(READ_POWER_SUPPLY)?;
         Ok(!bus.read_bit()?)
     }
 
-    pub fn read_scratchpad<U: Uart>(&self, bus: &mut Bus<U>) -> Result<[u8; SCRATCHPAD_LEN]> {
+    pub fn read_scratchpad(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<[u8; SCRATCHPAD_LEN]> {
         self.select(bus)?;
         bus.write_byte(READ_SCRATCHPAD)?;
         let data = bus.read_bytes(SCRATCHPAD_LEN)?;
@@ -160,33 +165,33 @@ impl Ds18b20 {
         Ok(scratchpad)
     }
 
-    fn write_scratchpad<U: Uart>(&self, bus: &mut Bus<U>, high: i8, low: i8, config: u8) -> Result<()> {
+    fn write_scratchpad(&self, bus: &mut (impl OneWire + ?Sized), high: i8, low: i8, config: u8) -> Result<()> {
         self.select(bus)?;
         bus.write_bytes(&[WRITE_SCRATCHPAD, high as u8, low as u8, config])
     }
 
-    fn copy_scratchpad<U: Uart>(&self, bus: &mut Bus<U>) -> Result<()> {
+    fn copy_scratchpad(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<()> {
         self.select(bus)?;
         self.command_with_power(bus, COPY_SCRATCHPAD, T_RW)
     }
 
-    pub fn recall<U: Uart>(&self, bus: &mut Bus<U>) -> Result<()> {
+    pub fn recall(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<()> {
         self.select(bus)?;
         bus.write_byte(RECALL_EEPROM)?;
         self.await_completion(bus, T_RW)
     }
 
-    pub fn convert_t<U: Uart>(&self, bus: &mut Bus<U>) -> Result<()> {
+    pub fn convert_t(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<()> {
         self.select(bus)?;
         self.command_with_power(bus, CONVERT_T, self.t_conv())
     }
 
-    pub fn get_temperature<U: Uart>(&self, bus: &mut Bus<U>) -> Result<f32> {
+    pub fn get_temperature(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<f32> {
         self.convert_t(bus)?;
         self.read_temperature(bus)
     }
 
-    pub fn read_temperature<U: Uart>(&self, bus: &mut Bus<U>) -> Result<f32> {
+    pub fn read_temperature(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<f32> {
         let mut attempt = 0;
         loop {
             attempt += 1;
@@ -204,12 +209,12 @@ impl Ds18b20 {
         }
     }
 
-    pub fn get_alarms<U: Uart>(&self, bus: &mut Bus<U>) -> Result<(i8, i8)> {
+    pub fn get_alarms(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<(i8, i8)> {
         let scratchpad = self.read_scratchpad(bus)?;
         Ok((scratchpad[2] as i8, scratchpad[3] as i8))
     }
 
-    pub fn set_alarms<U: Uart>(&self, bus: &mut Bus<U>, high: Option<i8>, low: Option<i8>) -> Result<()> {
+    pub fn set_alarms(&self, bus: &mut (impl OneWire + ?Sized), high: Option<i8>, low: Option<i8>) -> Result<()> {
         let scratchpad = self.read_scratchpad(bus)?;
         self.write_scratchpad(
             bus,
@@ -220,7 +225,7 @@ impl Ds18b20 {
         self.copy_scratchpad(bus)
     }
 
-    pub fn set_resolution<U: Uart>(&mut self, bus: &mut Bus<U>, resolution: Resolution) -> Result<()> {
+    pub fn set_resolution(&mut self, bus: &mut (impl OneWire + ?Sized), resolution: Resolution) -> Result<()> {
         let scratchpad = self.read_scratchpad(bus)?;
         self.write_scratchpad(bus, scratchpad[2] as i8, scratchpad[3] as i8, resolution.to_config())?;
         self.copy_scratchpad(bus)?;
@@ -235,19 +240,20 @@ fn decode_temperature(scratchpad: &[u8; SCRATCHPAD_LEN]) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use super::super::ds2480b::Ds2480b;
     use super::super::uart::mock::MockUart;
     use super::*;
 
     const DETECT_WRITES: usize = 6;
 
-    fn bus() -> Bus<MockUart> {
+    fn make_bus() -> Ds2480b<MockUart> {
         let mut uart = MockUart::new();
         uart.queue_read(&[0x16, 0x44, 0x5A, 0x00, 0x93]);
-        Bus::new(uart).unwrap()
+        Ds2480b::new(uart).unwrap()
     }
 
-    fn written(b: &Bus<MockUart>) -> &[u8] {
-        &b.uart.written[DETECT_WRITES..]
+    fn written(bus: &Ds2480b<MockUart>) -> &[u8] {
+        &bus.uart.written[DETECT_WRITES..]
     }
 
     fn scratchpad(temperature: [u8; 2], high: u8, low: u8, config: u8) -> [u8; 9] {
@@ -287,40 +293,40 @@ mod tests {
         uart.queue_read(scratchpad);
     }
 
-    fn device(b: &mut Bus<MockUart>) -> Ds18b20 {
-        device_with_config(b, 0x7F)
+    fn make_device(bus: &mut Ds2480b<MockUart>) -> Ds18b20 {
+        make_device_with_config(bus, 0x7F)
     }
 
-    fn device_with_config(b: &mut Bus<MockUart>, config: u8) -> Ds18b20 {
-        queue_power(&mut b.uart, false);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, config));
-        Ds18b20::attach(b, None).unwrap()
+    fn make_device_with_config(bus: &mut Ds2480b<MockUart>, config: u8) -> Ds18b20 {
+        queue_power(&mut bus.uart, false);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, config));
+        Ds18b20::attach(bus, None).unwrap()
     }
 
     #[test]
     fn attach_detects_power_and_resolution() {
-        let mut b = bus();
-        let d = device(&mut b);
-        assert!(!d.parasitic());
-        assert_eq!(d.resolution(), Resolution::Bits12);
-        assert!(d.rom().is_none());
-        assert!(b.uart.reads.is_empty());
+        let mut bus = make_bus();
+        let device = make_device(&mut bus);
+        assert!(!device.parasitic());
+        assert_eq!(device.resolution(), Resolution::Bits12);
+        assert!(device.rom().is_none());
+        assert!(bus.uart.reads.is_empty());
     }
 
     #[test]
     fn attach_detects_parasitic_power() {
-        let mut b = bus();
-        queue_power(&mut b.uart, true);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
-        let d = Ds18b20::attach(&mut b, None).unwrap();
-        assert!(d.parasitic());
+        let mut bus = make_bus();
+        queue_power(&mut bus.uart, true);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
+        let device = Ds18b20::attach(&mut bus, None).unwrap();
+        assert!(device.parasitic());
     }
 
     #[test]
     fn attach_rejects_wrong_family() {
-        let mut b = bus();
+        let mut bus = make_bus();
         assert!(matches!(
-            Ds18b20::attach(&mut b, Some(valid_rom(0x10))),
+            Ds18b20::attach(&mut bus, Some(valid_rom(0x10))),
             Err(Error::WrongFamily(_))
         ));
     }
@@ -329,27 +335,27 @@ mod tests {
     fn attach_rejects_invalid_rom_crc() {
         let mut rom = valid_rom(0x28);
         rom.0[7] = rom.0[7].wrapping_add(1);
-        let mut b = bus();
-        assert!(matches!(Ds18b20::attach(&mut b, Some(rom)), Err(Error::Crc)));
+        let mut bus = make_bus();
+        assert!(matches!(Ds18b20::attach(&mut bus, Some(rom)), Err(Error::Crc)));
     }
 
     #[test]
     fn multidrop_selects_with_match_rom() {
         let rom = valid_rom(0x28);
-        let mut b = bus();
+        let mut bus = make_bus();
         let mut select_echo = vec![0x55];
         select_echo.extend(rom.0);
-        b.uart.queue_read(&[0xCD]);
-        b.uart.queue_read(&select_echo);
-        b.uart.queue_read(&[0xB4, 0x97]);
-        b.uart.queue_read(&[0xCD]);
-        b.uart.queue_read(&select_echo);
-        b.uart.queue_read(&[0xBE]);
-        b.uart.queue_read(&scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
-        let d = Ds18b20::attach(&mut b, Some(rom)).unwrap();
-        assert_eq!(d.rom(), Some(&rom));
+        bus.uart.queue_read(&[0xCD]);
+        bus.uart.queue_read(&select_echo);
+        bus.uart.queue_read(&[0xB4, 0x97]);
+        bus.uart.queue_read(&[0xCD]);
+        bus.uart.queue_read(&select_echo);
+        bus.uart.queue_read(&[0xBE]);
+        bus.uart.queue_read(&scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
+        let device = Ds18b20::attach(&mut bus, Some(rom)).unwrap();
+        assert_eq!(device.rom(), Some(&rom));
         let expected_select: Vec<u8> = select_echo;
-        assert!(written(&b)
+        assert!(written(&bus)
             .windows(expected_select.len())
             .any(|window| window == expected_select));
     }
@@ -364,32 +370,32 @@ mod tests {
 
     #[test]
     fn get_temperature_converts_then_reads() {
-        let mut b = bus();
-        let d = device(&mut b);
-        queue_skip_select(&mut b.uart);
-        b.uart.queue_read(&[0x44, 0x94, 0x97]);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
-        assert_eq!(d.get_temperature(&mut b).unwrap(), 25.0625);
-        assert!(b.uart.reads.is_empty());
-        let writes = written(&b);
+        let mut bus = make_bus();
+        let device = make_device(&mut bus);
+        queue_skip_select(&mut bus.uart);
+        bus.uart.queue_read(&[0x44, 0x94, 0x97]);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
+        assert_eq!(device.get_temperature(&mut bus).unwrap(), 25.0625);
+        assert!(bus.uart.reads.is_empty());
+        let writes = written(&bus);
         assert!(writes.contains(&0x44));
     }
 
     #[test]
     fn parasitic_convert_uses_strong_pullup() {
-        let mut b = bus();
-        queue_power(&mut b.uart, true);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x1F));
-        let d = Ds18b20::attach(&mut b, None).unwrap();
-        assert!(d.parasitic());
-        queue_skip_select(&mut b.uart);
-        b.uart
+        let mut bus = make_bus();
+        queue_power(&mut bus.uart, true);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x1F));
+        let device = Ds18b20::attach(&mut bus, None).unwrap();
+        assert!(device.parasitic());
+        queue_skip_select(&mut bus.uart);
+        bus.uart
             .queue_read(&[0x3E, 0x94, 0x94, 0x97, 0x94, 0x94, 0x94, 0x97, 0x94]);
-        b.uart.queue_read(&[0xF1]);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x1F));
-        assert_eq!(d.get_temperature(&mut b).unwrap(), 25.0625);
-        assert!(b.uart.reads.is_empty());
-        let writes = written(&b);
+        bus.uart.queue_read(&[0xF1]);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x1F));
+        assert_eq!(device.get_temperature(&mut bus).unwrap(), 25.0625);
+        assert!(bus.uart.reads.is_empty());
+        let writes = written(&bus);
         assert!(writes
             .windows(9)
             .any(|window| window == [0x3F, 0x85, 0x85, 0x95, 0x85, 0x85, 0x85, 0x95, 0x87]));
@@ -398,36 +404,36 @@ mod tests {
 
     #[test]
     fn powered_wait_times_out_when_device_stuck() {
-        let mut b = bus();
-        let d = device_with_config(&mut b, 0x1F);
-        queue_skip_select(&mut b.uart);
-        b.uart.queue_read(&[0x44]);
-        b.uart.queue_read(&[0x94].repeat(1000));
-        assert!(matches!(d.convert_t(&mut b), Err(Error::Timeout)));
+        let mut bus = make_bus();
+        let device = make_device_with_config(&mut bus, 0x1F);
+        queue_skip_select(&mut bus.uart);
+        bus.uart.queue_read(&[0x44]);
+        bus.uart.queue_read(&[0x94].repeat(1000));
+        assert!(matches!(device.convert_t(&mut bus), Err(Error::Timeout)));
     }
 
     #[test]
     fn read_temperature_retries_on_crc_failure() {
-        let mut b = bus();
-        let d = device(&mut b);
+        let mut bus = make_bus();
+        let device = make_device(&mut bus);
         let mut corrupted = scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F);
         corrupted[8] = corrupted[8].wrapping_add(1);
-        queue_scratchpad(&mut b.uart, &corrupted);
-        queue_scratchpad(&mut b.uart, &corrupted);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
-        assert_eq!(d.read_temperature(&mut b).unwrap(), 25.0625);
+        queue_scratchpad(&mut bus.uart, &corrupted);
+        queue_scratchpad(&mut bus.uart, &corrupted);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
+        assert_eq!(device.read_temperature(&mut bus).unwrap(), 25.0625);
     }
 
     #[test]
     fn read_temperature_fails_after_exhausted_retries() {
-        let mut b = bus();
-        let d = device(&mut b);
+        let mut bus = make_bus();
+        let device = make_device(&mut bus);
         let mut corrupted = scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F);
         corrupted[8] = corrupted[8].wrapping_add(1);
         for _ in 0..3 {
-            queue_scratchpad(&mut b.uart, &corrupted);
+            queue_scratchpad(&mut bus.uart, &corrupted);
         }
-        assert!(matches!(d.read_temperature(&mut b), Err(Error::Crc)));
+        assert!(matches!(device.read_temperature(&mut bus), Err(Error::Crc)));
     }
 
     #[test]
@@ -442,51 +448,59 @@ mod tests {
 
     #[test]
     fn t_conv_scales_with_resolution() {
-        let mut b = bus();
-        assert_eq!(device_with_config(&mut b, 0x1F).t_conv(), Duration::from_micros(93_750));
+        let mut bus = make_bus();
         assert_eq!(
-            device_with_config(&mut b, 0x3F).t_conv(),
+            make_device_with_config(&mut bus, 0x1F).t_conv(),
+            Duration::from_micros(93_750)
+        );
+        assert_eq!(
+            make_device_with_config(&mut bus, 0x3F).t_conv(),
             Duration::from_micros(187_500)
         );
         assert_eq!(
-            device_with_config(&mut b, 0x5F).t_conv(),
+            make_device_with_config(&mut bus, 0x5F).t_conv(),
             Duration::from_micros(375_000)
         );
-        assert_eq!(device_with_config(&mut b, 0x7F).t_conv(), Duration::from_millis(750));
+        assert_eq!(
+            make_device_with_config(&mut bus, 0x7F).t_conv(),
+            Duration::from_millis(750)
+        );
     }
 
     #[test]
     fn get_alarms_reads_signed_thresholds() {
-        let mut b = bus();
-        let d = device(&mut b);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0xC0, 0x7F));
-        assert_eq!(d.get_alarms(&mut b).unwrap(), (75, -64));
+        let mut bus = make_bus();
+        let device = make_device(&mut bus);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0xC0, 0x7F));
+        assert_eq!(device.get_alarms(&mut bus).unwrap(), (75, -64));
     }
 
     #[test]
     fn set_alarms_preserves_unspecified_values() {
-        let mut b = bus();
-        let d = device(&mut b);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
-        queue_skip_select(&mut b.uart);
-        b.uart.queue_read(&[0x4E, 50, 0x46, 0x7F]);
-        queue_skip_select(&mut b.uart);
-        b.uart.queue_read(&[0x48, 0x97]);
-        d.set_alarms(&mut b, Some(50), None).unwrap();
-        assert!(written(&b).windows(4).any(|window| window == [0x4E, 50, 0x46, 0x7F]));
+        let mut bus = make_bus();
+        let device = make_device(&mut bus);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
+        queue_skip_select(&mut bus.uart);
+        bus.uart.queue_read(&[0x4E, 50, 0x46, 0x7F]);
+        queue_skip_select(&mut bus.uart);
+        bus.uart.queue_read(&[0x48, 0x97]);
+        device.set_alarms(&mut bus, Some(50), None).unwrap();
+        assert!(written(&bus).windows(4).any(|window| window == [0x4E, 50, 0x46, 0x7F]));
     }
 
     #[test]
     fn set_resolution_writes_config_and_updates_state() {
-        let mut b = bus();
-        let mut d = device(&mut b);
-        queue_scratchpad(&mut b.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
-        queue_skip_select(&mut b.uart);
-        b.uart.queue_read(&[0x4E, 0x4B, 0x46, 0x1F]);
-        queue_skip_select(&mut b.uart);
-        b.uart.queue_read(&[0x48, 0x97]);
-        d.set_resolution(&mut b, Resolution::Bits9).unwrap();
-        assert_eq!(d.resolution(), Resolution::Bits9);
-        assert!(written(&b).windows(4).any(|window| window == [0x4E, 0x4B, 0x46, 0x1F]));
+        let mut bus = make_bus();
+        let mut device = make_device(&mut bus);
+        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
+        queue_skip_select(&mut bus.uart);
+        bus.uart.queue_read(&[0x4E, 0x4B, 0x46, 0x1F]);
+        queue_skip_select(&mut bus.uart);
+        bus.uart.queue_read(&[0x48, 0x97]);
+        device.set_resolution(&mut bus, Resolution::Bits9).unwrap();
+        assert_eq!(device.resolution(), Resolution::Bits9);
+        assert!(written(&bus)
+            .windows(4)
+            .any(|window| window == [0x4E, 0x4B, 0x46, 0x1F]));
     }
 }

@@ -5,6 +5,7 @@ x-common: &common
     - TZ=Australia/Perth
     - TEMPSTAT_HOST
     - TEMPSTAT_MOCK
+    - TEMPSTAT_MOCK_ADAPTER
     - TEMPSTAT_POLL_PERIOD
     - TEMPSTAT_LOG_LEVEL
     - SERVICE_VERSION_ABSOLUTE
