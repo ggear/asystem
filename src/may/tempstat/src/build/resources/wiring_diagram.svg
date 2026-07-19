@@ -1,0 +1,181 @@
+<svg viewBox="0 0 1840 870" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" font-family="Arial, Helvetica, sans-serif">
+  <rect x="0" y="0" width="1840" height="870" fill="#ffffff"/>
+
+  <!-- ================= TITLE ================= -->
+  <text x="850" y="32" text-anchor="middle" font-size="21" font-weight="bold" fill="#1a56db">USB-to-TTL Adapter &#8594; One-Wire Bus &#8594; 3x Temperature Sensors</text>
+
+  <!-- ================= USB-A ================= -->
+  <text x="70" y="154" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a56db">USB-A</text>
+  <rect x="20" y="169" width="100" height="235" rx="4" fill="none" stroke="#1a56db" stroke-width="2"/>
+  <text x="100" y="204" text-anchor="end" font-size="13" fill="#111">+5V</text>
+  <text x="100" y="264" text-anchor="end" font-size="13" fill="#111">D-</text>
+  <text x="100" y="324" text-anchor="end" font-size="13" fill="#111">D+</text>
+  <text x="100" y="384" text-anchor="end" font-size="13" fill="#111">GND</text>
+
+  <!-- USB-A -> PL2303TA wires -->
+  <line x1="120" y1="200" x2="340" y2="200" stroke="#888888" stroke-width="2"/>
+  <line x1="120" y1="260" x2="340" y2="260" stroke="#888888" stroke-width="2"/>
+  <line x1="120" y1="320" x2="340" y2="320" stroke="#888888" stroke-width="2"/>
+  <line x1="120" y1="380" x2="340" y2="380" stroke="#888888" stroke-width="2"/>
+  <line x1="150" y1="380" x2="150" y2="400" stroke="#111111" stroke-width="1.5"/>
+  <line x1="138" y1="400" x2="162" y2="400" stroke="#111111" stroke-width="2"/>
+  <line x1="143" y1="405" x2="157" y2="405" stroke="#111111" stroke-width="1.5"/>
+  <line x1="147" y1="410" x2="153" y2="410" stroke="#111111" stroke-width="1"/>
+
+  <!-- White Cable box border drawn early so that wires crossing its boundary render on top of the dashes -->
+  <rect x="900" y="168" width="340" height="232" rx="4" fill="none" stroke="#888888" stroke-width="2" stroke-dasharray="6,4"/>
+
+  <!-- ================= PL2303TA ================= -->
+  <text x="510" y="154" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a56db">PL2303TA</text>
+  <rect x="340" y="169" width="340" height="235" rx="6" fill="none" stroke="#1a56db" stroke-width="2"/>
+
+  <!-- left pins -->
+  <text x="360" y="204" font-size="13" fill="#111">VCC</text>
+  <text x="360" y="264" font-size="13" fill="#111">TXD</text>
+  <text x="360" y="324" font-size="13" fill="#111">RXD</text>
+  <text x="360" y="384" font-size="13" fill="#111">GND</text>
+
+  <!-- right pins (names per Prolific datasheet) -->
+  <text x="660" y="204" text-anchor="end" font-size="13" fill="#111">VCC</text>
+  <text x="660" y="264" text-anchor="end" font-size="13" fill="#111">GND</text>
+  <text x="660" y="324" text-anchor="end" font-size="13" fill="#111">TXD</text>
+  <text x="660" y="384" text-anchor="end" font-size="13" fill="#111">RXD</text>
+
+  <!-- right-side wires leaving PL2303: RED/BLACK run straight through the cable, GREEN/WHITE join at the boundary (see below) -->
+  <line x1="680" y1="200" x2="1240" y2="200" stroke="#d32f2f" stroke-width="3"/>
+  <text x="790" y="192" text-anchor="middle" font-size="13" fill="#d32f2f" font-weight="bold">RED</text>
+
+  <line x1="680" y1="260" x2="1240" y2="260" stroke="#111111" stroke-width="3"/>
+  <text x="790" y="252" text-anchor="middle" font-size="13" fill="#111111" font-weight="bold">BLACK</text>
+
+  <!-- TXD (green) and RXD (white) join right at the White Cable boundary, flowing in as the cable's White conductor -->
+  <line x1="680" y1="320" x2="900" y2="320" stroke="#2e7d32" stroke-width="3"/>
+  <text x="790" y="312" text-anchor="middle" font-size="13" fill="#2e7d32" font-weight="bold">GREEN</text>
+
+  <path d="M680,380 H900 V320" stroke="#000000" stroke-width="5" fill="none"/>
+  <path d="M680,380 H900 V320" stroke="#ffffff" stroke-width="3" fill="none"/>
+  <text x="790" y="372" text-anchor="middle" font-size="13" fill="#333333" font-weight="bold">WHITE</text>
+
+  <!-- ================= WHITE CABLE ================= -->
+  <text x="1070" y="153" text-anchor="middle" font-size="13" font-weight="bold" fill="#111">White Cable</text>
+
+  <line x1="900" y1="200" x2="1240" y2="200" stroke="#d32f2f" stroke-width="3"/>
+  <text x="1070" y="193" text-anchor="middle" font-size="13" font-weight="bold" fill="#d32f2f">RED</text>
+
+  <line x1="900" y1="260" x2="1240" y2="260" stroke="#111111" stroke-width="3"/>
+  <text x="1070" y="253" text-anchor="middle" font-size="13" font-weight="bold" fill="#111111">BLACK</text>
+
+  <line x1="900" y1="320" x2="1240" y2="320" stroke="#000000" stroke-width="5"/>
+  <line x1="900" y1="320" x2="1240" y2="320" stroke="#ffffff" stroke-width="3"/>
+  <text x="1070" y="313" text-anchor="middle" font-size="13" font-weight="bold" fill="#333333">WHITE</text>
+
+  <!-- BLUE: the cable's 4th conductor, unused - terminated at both ends and not tapped onto the bus -->
+  <line x1="970" y1="380" x2="1170" y2="380" stroke="#1565c0" stroke-width="2.5"/>
+  <text x="1070" y="373" text-anchor="middle" font-size="13" font-weight="bold" fill="#1565c0">BLUE</text>
+  <circle cx="970" cy="380" r="5" fill="#1565c0"/>
+  <circle cx="1170" cy="380" r="5" fill="#1565c0"/>
+
+  <!-- ================= cable exit -> DS18B20s: DQ run coloured yellow to match the sensor's DQ wire ================= -->
+  <path d="M1240,200 H1460" stroke="#d32f2f" stroke-width="3" fill="none"/>
+  <path d="M1240,260 H1452 C1452,246 1468,246 1468,260 H1535" stroke="#111111" stroke-width="3" fill="none"/>
+  <path d="M1240,320 H1452 C1452,306 1468,306 1468,320 H1527 C1527,306 1543,306 1543,320 H1610" stroke="#d4a017" stroke-width="3" fill="none"/>
+
+  <!-- boundary join dots: drawn last so they sit on top of the dashed border, the conductors, and the yellow cable-exit join, coloured per wire -->
+  <circle cx="900" cy="200" r="5" fill="#d32f2f"/>
+  <circle cx="900" cy="260" r="5" fill="#111111"/>
+  <circle cx="900" cy="320" r="5" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <circle cx="1240" cy="200" r="5" fill="#d32f2f"/>
+  <circle cx="1240" cy="260" r="5" fill="#111111"/>
+  <circle cx="1240" cy="320" r="5" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- vertical distribution buses: RED = VDD (+5V), BLACK = GND, YELLOW = DQ (1-Wire data), each running down past all three sensors -->
+  <path d="M1460,125 V605" stroke="#d32f2f" stroke-width="3" fill="none"/>
+  <path d="M1535,205 V685" stroke="#111111" stroke-width="3" fill="none"/>
+  <path d="M1610,165 V645" stroke="#d4a017" stroke-width="3" fill="none"/>
+
+  <!-- RED / BLACK / YELLOW exit labels -->
+  <text x="1350" y="192" text-anchor="middle" font-size="13" font-weight="bold" fill="#d32f2f">RED</text>
+  <text x="1350" y="252" text-anchor="middle" font-size="13" font-weight="bold" fill="#111111">BLACK</text>
+  <text x="1350" y="312" text-anchor="middle" font-size="13" font-weight="bold" fill="#a17d00">YELLOW</text>
+
+  <!-- bus -> sensor stubs (hop where crossing a foreign bus) -->
+  <line x1="1460" y1="125" x2="1715" y2="125" stroke="#d32f2f" stroke-width="2.5"/>
+  <path d="M1460,365 H1527 C1527,351 1543,351 1543,365 H1602 C1602,351 1618,351 1618,365 H1715" stroke="#d32f2f" stroke-width="2.5" fill="none"/>
+  <path d="M1460,605 H1527 C1527,591 1543,591 1543,605 H1602 C1602,591 1618,591 1618,605 H1715" stroke="#d32f2f" stroke-width="2.5" fill="none"/>
+
+  <path d="M1535,205 H1602 C1602,191 1618,191 1618,205 H1715" stroke="#111111" stroke-width="2.5" fill="none"/>
+  <path d="M1535,445 H1602 C1602,431 1618,431 1618,445 H1715" stroke="#111111" stroke-width="2.5" fill="none"/>
+  <line x1="1535" y1="685" x2="1715" y2="685" stroke="#111111" stroke-width="2.5"/>
+
+  <line x1="1610" y1="165" x2="1715" y2="165" stroke="#d4a017" stroke-width="2.5"/>
+  <line x1="1610" y1="405" x2="1715" y2="405" stroke="#d4a017" stroke-width="2.5"/>
+  <line x1="1610" y1="645" x2="1715" y2="645" stroke="#d4a017" stroke-width="2.5"/>
+
+  <!-- junction dots (entries onto buses) - colour matches the wire/net; drawn last so they sit on top of all wires -->
+  <circle cx="1460" cy="200" r="5" fill="#d32f2f"/>
+  <circle cx="1535" cy="260" r="5" fill="#111111"/>
+  <circle cx="1610" cy="320" r="5" fill="#d4a017"/>
+  <!-- junction dots (bus taps to sensors) -->
+  <circle cx="1460" cy="125" r="5" fill="#d32f2f"/>
+  <circle cx="1460" cy="365" r="5" fill="#d32f2f"/>
+  <circle cx="1460" cy="605" r="5" fill="#d32f2f"/>
+  <circle cx="1535" cy="205" r="5" fill="#111111"/>
+  <circle cx="1535" cy="445" r="5" fill="#111111"/>
+  <circle cx="1535" cy="685" r="5" fill="#111111"/>
+  <circle cx="1610" cy="165" r="5" fill="#d4a017"/>
+  <circle cx="1610" cy="405" r="5" fill="#d4a017"/>
+  <circle cx="1610" cy="645" r="5" fill="#d4a017"/>
+
+  <!-- ================= SENSOR 1 ================= -->
+  <text x="1765" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a56db">DS18B20</text>
+  <rect x="1715" y="93" width="100" height="150" rx="6" fill="none" stroke="#1a56db" stroke-width="2"/>
+  <text x="1735" y="128" font-size="13" fill="#111">VDD</text>
+  <text x="1735" y="168" font-size="13" fill="#111">DQ</text>
+  <text x="1735" y="208" font-size="13" fill="#111">GND</text>
+
+  <!-- ================= SENSOR 2 ================= -->
+  <text x="1765" y="318" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a56db">DS18B20</text>
+  <rect x="1715" y="333" width="100" height="150" rx="6" fill="none" stroke="#1a56db" stroke-width="2"/>
+  <text x="1735" y="368" font-size="13" fill="#111">VDD</text>
+  <text x="1735" y="408" font-size="13" fill="#111">DQ</text>
+  <text x="1735" y="448" font-size="13" fill="#111">GND</text>
+
+  <!-- ================= SENSOR 3 ================= -->
+  <text x="1765" y="558" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a56db">DS18B20</text>
+  <rect x="1715" y="573" width="100" height="150" rx="6" fill="none" stroke="#1a56db" stroke-width="2"/>
+  <text x="1735" y="608" font-size="13" fill="#111">VDD</text>
+  <text x="1735" y="648" font-size="13" fill="#111">DQ</text>
+  <text x="1735" y="688" font-size="13" fill="#111">GND</text>
+
+  <!-- ================= REFERENCES ================= -->
+  <rect x="20" y="460" width="880" height="263" rx="6" fill="#fafafa" stroke="#999999" stroke-width="1"/>
+
+  <text x="40" y="489" font-size="13" font-weight="bold" fill="#111">Current design:</text>
+  <text x="60" y="509" font-size="12" fill="#555">&#8226; 3x DS18B20, externally powered (VDD wired, not parasitic), on a short, low-capacitance run with no external pull-up resistor fitted.</text>
+  <text x="60" y="529" font-size="12" fill="#555">&#8226; The USB-TTL adapter's TXD idles high, actively holding the DQ line up between time slots, so 1-Wire timing is met on this short bus.</text>
+
+  <text x="40" y="551" font-size="13" font-weight="bold" fill="#111">Future cable extension and/or additional sensors:</text>
+  <text x="60" y="571" font-size="12" fill="#555">&#8226; The idle-high drive alone is not recommended over longer runs or with many sensors, so a pull-up resistor is required.</text>
+  <text x="60" y="591" font-size="12" fill="#555">&#8226; Place a ~4.7 k&#8486; pull-up resistor between the PL2303TA VCC pin (RED wire) and the joined TXD / RXD pins (GREEN / WHITE wires).</text>
+  <text x="60" y="611" font-size="12" fill="#555">&#8226; Bus cables &lt;200m. DQ capacitance-bound (thin), VDD / GND drop-bound (thick): 24 AWG 3-pair cable, 1 pair DQ, 2 pairs paralleled for VDD / GND.</text>
+
+  <text x="40" y="637" font-size="13" font-weight="bold" fill="#111">USB Wiring Tutorial</text>
+  <a xlink:href="https://martybugs.net/electronics/tempsensor/usb.cgi" href="https://martybugs.net/electronics/tempsensor/usb.cgi" target="_blank">
+    <text x="220" y="637" font-size="12" fill="#1565c0" text-decoration="underline">https://martybugs.net/electronics/tempsensor/usb.cgi</text>
+  </a>
+
+  <text x="40" y="659" font-size="13" font-weight="bold" fill="#111">1-Wire Bus Guidelines</text>
+  <a xlink:href="https://www.analog.com/en/resources/technical-articles/guidelines-for-reliable-long-line-1wire-networks.html" href="https://www.analog.com/en/resources/technical-articles/guidelines-for-reliable-long-line-1wire-networks.html" target="_blank">
+    <text x="220" y="659" font-size="12" fill="#1565c0" text-decoration="underline">https://www.analog.com/en/resources/technical-articles/guidelines-for-reliable-long-line-1wire-networks.html</text>
+  </a>
+
+  <text x="40" y="681" font-size="13" font-weight="bold" fill="#111">PL2303TA Datasheet</text>
+  <a xlink:href="https://cdn-shop.adafruit.com/datasheets/DS_PL2303TA_d20120504.pdf" href="https://cdn-shop.adafruit.com/datasheets/DS_PL2303TA_d20120504.pdf" target="_blank">
+    <text x="220" y="681" font-size="12" fill="#1565c0" text-decoration="underline">https://cdn-shop.adafruit.com/datasheets/DS_PL2303TA_d20120504.pdf</text>
+  </a>
+
+  <text x="40" y="703" font-size="13" font-weight="bold" fill="#111">DS18B20 Datasheet</text>
+  <a xlink:href="https://www.analog.com/media/en/technical-documentation/data-sheets/ds18b20.pdf" href="https://www.analog.com/media/en/technical-documentation/data-sheets/ds18b20.pdf" target="_blank">
+    <text x="220" y="703" font-size="12" fill="#1565c0" text-decoration="underline">https://www.analog.com/media/en/technical-documentation/data-sheets/ds18b20.pdf</text>
+  </a>
+</svg>
