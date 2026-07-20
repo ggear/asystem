@@ -1,8 +1,10 @@
 ###############################################################################################################################################################
 # All
 ###############################################################################################################################################################
-Upgrade macmini-mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
-
+Upgrade mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
+Update max to latest Fedora
+Port may/meg to Fedora
+Upgrade UniFi
 
 ###############################################################################################################################################################
 # Backup
