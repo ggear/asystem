@@ -24,12 +24,13 @@ if __name__ == "__main__":
                           topic_glob_data="tempstat/+/data",
                           schema_state="""
 {
-  "data_utility_temperature_celsius": <number>,
-  "data_rack_top_temperature_celsius": <number>,
-  "data_rack_bottom_temperature_celsius": <number>,
-  "run_success": <true|false>,
-  "run_milliseconds": <number>,
-  "run_timestamp": "<text>"
+  "timestamp": "<text>",
+  "period_ms": <number>,
+  "samples": {
+    "utility_temperature_celsius": <number>,
+    "rack_top_temperature_celsius": <number>,
+    "rack_bottom_temperature_celsius": <number>
+  }
 }
                           """, schema_command="""
 <start|stop|restart>

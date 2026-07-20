@@ -8,7 +8,7 @@
   "icon": "mdi:thermometer",
   "force_update": false,
   "state_topic": "tempstat/macmini-may/data",
-  "value_template": "{{ (value_json['data_rack_top_temperature_celsius'] | float(None)) if (value_json['data_rack_top_temperature_celsius'] is defined) else (states('sensor.rack_top_temperature') | float(None)) }}",
+  "value_template": "{{ (value_json['samples']['rack_top_temperature_celsius'] | float(None)) if (value_json['samples'] is defined and value_json['samples']['rack_top_temperature_celsius'] is defined) else (states('sensor.rack_top_temperature') | float(None)) }}",
   "command_topic": "tempstat/macmini-may/command",
   "availability_topic": "tempstat/macmini-may/status",
   "qos": 1,

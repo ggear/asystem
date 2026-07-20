@@ -1,6 +1,6 @@
 //! State topic payload (`tempstat/$HOST/data`, retained, QoS 1):
-//! `{ "data_<unique_id>_celsius": <f64>, ..., "run_success": <bool>, "run_milliseconds": <u64>, "run_timestamp": <str> }`
-//! Per-sensor `data_*_celsius` fields are absent when a sensor fails; `run_success` is false if any sensor failed.
+//! `{ "timestamp": <str>, "period_ms": <u64>, "samples": { "<unique_id>_celsius": <f64>, ... } }`
+//! Per-sensor `samples.<unique_id>_celsius` fields are absent when a sensor fails.
 
 pub mod broker;
 pub mod config;
@@ -303,7 +303,7 @@ fn poll_once<P: Publisher>(
 ) -> Result<usize, String> {
     let start = Instant::now();
     let timestamp = humantime::format_rfc3339_seconds(SystemTime::now()).to_string();
-    let mut fields: Map<String, Value> = Map::new();
+    let mut samples: Map<String, Value> = Map::new();
     let mut failed: usize = 0;
 
     for sensor in sensors {
@@ -314,7 +314,7 @@ fn poll_once<P: Publisher>(
                     "{}",
                     log_line(&format!("sensor [{}]", sensor.unique_id), &format!("{temp:.3}°C"))
                 );
-                fields.insert(format!("data_{}_celsius", sensor.unique_id), json!(f64::from(temp)));
+                samples.insert(format!("{}_celsius", sensor.unique_id), json!(f64::from(temp)));
             }
             Err(err) => {
                 error!("sensor [{}] ROM [{}] failed: {err}", sensor.unique_id, sensor.rom);
@@ -323,13 +323,12 @@ fn poll_once<P: Publisher>(
         }
     }
 
-    let run_milliseconds = start.elapsed().as_millis() as u64;
-    let run_success = failed == 0;
-    fields.insert("run_success".into(), json!(run_success));
-    fields.insert("run_milliseconds".into(), json!(run_milliseconds));
-    fields.insert("run_timestamp".into(), json!(timestamp));
-
-    let payload = Value::Object(fields);
+    let period_ms = start.elapsed().as_millis() as u64;
+    let payload = json!({
+        "timestamp": timestamp,
+        "period_ms": period_ms,
+        "samples": samples,
+    });
     let payload_bytes = serde_json::to_vec(&payload).map_err(|err| format!("failed to serialize payload: {err}"))?;
 
     publisher
@@ -533,7 +532,7 @@ mod tests {
         assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 0);
         assert!(bus.uart.reads.is_empty());
         let payload: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
-        assert!((payload["data_utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        assert!((payload["samples"]["utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
         assert!(bus
             .uart
             .written
@@ -571,10 +570,9 @@ mod tests {
         let (topic, payload) = &publisher.messages[0];
         assert_eq!(topic, "state");
         let payload: Value = serde_json::from_slice(payload).unwrap();
-        assert!((payload["data_utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
-        assert_eq!(payload["run_success"], true);
-        assert!(payload["run_milliseconds"].as_u64().is_some());
-        assert!(payload["run_timestamp"]
+        assert!((payload["samples"]["utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        assert!(payload["period_ms"].as_u64().is_some());
+        assert!(payload["timestamp"]
             .as_str()
             .is_some_and(|timestamp| timestamp.len() == 20));
     }
@@ -592,8 +590,7 @@ mod tests {
         assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 1);
         assert_eq!(publisher.messages.len(), 1);
         let payload: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
-        assert!(payload.get("data_utility_temperature_celsius").is_none());
-        assert_eq!(payload["run_success"], false);
+        assert!(payload["samples"].get("utility_temperature_celsius").is_none());
     }
 
     #[test]
@@ -613,11 +610,9 @@ mod tests {
         assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 0);
         assert_eq!(publisher.messages.len(), 2);
         let first: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
-        assert_eq!(first["run_success"], false);
-        assert!(first.get("data_utility_temperature_celsius").is_none());
+        assert!(first["samples"].get("utility_temperature_celsius").is_none());
         let second: Value = serde_json::from_slice(&publisher.messages[1].1).unwrap();
-        assert_eq!(second["run_success"], true);
-        assert!((second["data_utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        assert!((second["samples"]["utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
     }
 
     #[test]
@@ -636,9 +631,8 @@ mod tests {
         let mut publisher = MockPublisher::new();
         assert_eq!(poll_once(&sensors, &mut publisher, bus.as_mut(), "state").unwrap(), 0);
         let payload: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
-        assert!((payload["data_rack_top_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
-        assert!((payload["data_rack_bottom_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
-        assert_eq!(payload["run_success"], true);
+        assert!((payload["samples"]["rack_top_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        assert!((payload["samples"]["rack_bottom_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
     }
 
     #[test]

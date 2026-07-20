@@ -48,11 +48,10 @@ def test_publishes_readings():
 
         assert received.get(STATUS_TOPIC) == b"online"
         payload = json.loads(received[STATE_TOPIC])
-        assert payload["run_success"] is True
-        assert isinstance(payload["run_milliseconds"], int)
-        assert isinstance(payload["run_timestamp"], str) and len(payload["run_timestamp"]) == 20
+        assert isinstance(payload["period_ms"], int)
+        assert isinstance(payload["timestamp"], str) and len(payload["timestamp"]) == 20
         for sensor in SENSORS:
-            assert abs(payload["data_{}_celsius".format(sensor)] - CELSIUS) < 0.001
+            assert abs(payload["samples"]["{}_celsius".format(sensor)] - CELSIUS) < 0.001
 
     success = False
     time_start_warmup = time.time()
