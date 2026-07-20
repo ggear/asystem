@@ -805,7 +805,7 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
                    "docker buildx build . --progress=plain --platform linux/{} --output type=docker --tag {}:{} {}"
                    .format(host_arch, _name(module), _get_versions()[0], build_args), module)
         docker_image_build_time = int((time.time() - docker_image_build_start_time) / 60)
-        docker_image_size = _run_local(context, "docker image ls --format json {}:{} | jq -r .VirtualSize".format(
+        docker_image_size = _run_local(context, "docker image ls --format json {}:{} | jq -r .Size".format(
             _name(module),
             _get_versions()[0]
         ), module, hide='out').stdout.strip()
