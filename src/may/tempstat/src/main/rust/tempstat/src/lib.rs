@@ -6,6 +6,7 @@ pub mod broker;
 pub mod config;
 pub mod driver;
 
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::thread;
@@ -20,7 +21,7 @@ use crate::broker::{MqttPublisher, Publisher};
 use crate::config::{load_sensors, SensorConfig};
 use crate::driver::ds2480b::Ds2480b;
 use crate::driver::ds9097::Ds9097;
-use crate::driver::sensor::Ds18b20;
+use crate::driver::sensor::{Ds18b20, Resolution};
 use crate::driver::uart::SerialUart;
 use crate::driver::OneWire;
 
@@ -29,6 +30,13 @@ static LEVEL_NAMES: LazyLock<Vec<String>> =
 
 const STATE_TOPIC: &str = "tempstat/$HOST/data";
 const STATUS_TOPIC: &str = "tempstat/$HOST/status";
+const LOG_LABEL_WIDTH: usize = 45;
+const MAX_CONSECUTIVE_TOTAL_FAILURES: u32 = 3;
+
+fn log_line(label: &str, value: &str) -> String {
+    let leader = format!("{label} ");
+    format!("{leader:.<width$} [{value}]", width = LOG_LABEL_WIDTH)
+}
 
 #[derive(Debug, Parser)]
 #[command(name = "tempstat", about = "Run the tempstat temperature-probe reader", version)]
@@ -90,7 +98,7 @@ impl Cli {
         };
         let _ = env_logger::Builder::new()
             .filter_level(log_level)
-            .format_timestamp_millis()
+            .format(|buf, record| writeln!(buf, "[{} {}] {}", buf.timestamp_millis(), record.level(), record.args()))
             .try_init();
         let timeout = parse_duration(&self.timeout)?;
         let sensors = load_sensors(&self.sensors)?;
@@ -201,21 +209,45 @@ fn poll<P: Publisher>(
     state_topic: &str,
 ) -> Result<(), String> {
     let mut iteration: u64 = 0;
+    let mut total_failures: u32 = 0;
     loop {
         iteration += 1;
-        let success = poll_once(sensors, publisher, bus, state_topic)?;
+        let failed = poll_once(sensors, publisher, bus, state_topic)?;
         if period.is_zero() {
             return Ok(());
         }
-        if !success {
-            warn!("poll had failures, attempting bus re-detection before next iteration");
-            if let Err(err) = bus.redetect() {
-                warn!("bus re-detection failed: {err}");
+        if failed == 0 {
+            total_failures = 0;
+        } else {
+            total_failures = if failed == sensors.len() { total_failures + 1 } else { 0 };
+            if total_failures >= MAX_CONSECUTIVE_TOTAL_FAILURES {
+                return Err(format!(
+                    "all {} sensor(s) failed on [{total_failures}] consecutive poll(s)",
+                    sensors.len()
+                ));
             }
+            warn!("poll had [{failed}] failure(s), attempting bus re-detection before next iteration");
+            bus.redetect()
+                .map_err(|err| format!("bus re-detection failed: {err}"))?;
         }
         debug!("sleeping [{period:?}] until iteration [{}]", iteration + 1);
         thread::sleep(period);
     }
+}
+
+fn read_sensor(bus: &mut (impl OneWire + ?Sized), sensor: &SensorConfig) -> driver::Result<f32> {
+    let mut device = Ds18b20::attach(bus, Some(sensor.rom))?;
+    if device.resolution() != Resolution::Bits12 {
+        info!(
+            "sensor [{}] rom [{}] resolution [{:?}], setting [{:?}]",
+            sensor.unique_id,
+            sensor.rom,
+            device.resolution(),
+            Resolution::Bits12
+        );
+        device.set_resolution(bus, Resolution::Bits12)?;
+    }
+    device.get_temperature(bus)
 }
 
 fn poll_once<P: Publisher>(
@@ -223,23 +255,24 @@ fn poll_once<P: Publisher>(
     publisher: &mut P,
     bus: &mut (impl OneWire + ?Sized),
     state_topic: &str,
-) -> Result<bool, String> {
+) -> Result<usize, String> {
     let start = Instant::now();
     let timestamp = humantime::format_rfc3339_seconds(SystemTime::now()).to_string();
     let mut fields: Map<String, Value> = Map::new();
-    let mut succeeded: u32 = 0;
-    let mut failed: u32 = 0;
+    let mut failed: usize = 0;
 
     for sensor in sensors {
         debug!("reading sensor [{}] rom [{}]", sensor.unique_id, sensor.rom);
-        match Ds18b20::attach(bus, Some(sensor.rom)).and_then(|device| device.get_temperature(bus)) {
+        match read_sensor(bus, sensor) {
             Ok(temp) => {
-                info!("sensor [{}] rom [{}] = {temp}°C", sensor.unique_id, sensor.rom);
+                info!(
+                    "{}",
+                    log_line(&format!("sensor [{}]", sensor.unique_id), &format!("{temp:.3}°C"))
+                );
                 fields.insert(format!("data_{}_celsius", sensor.unique_id), json!(f64::from(temp)));
-                succeeded += 1;
             }
             Err(err) => {
-                warn!("sensor [{}] rom [{}] failed: {err}", sensor.unique_id, sensor.rom);
+                error!("sensor [{}] rom [{}] failed: {err}", sensor.unique_id, sensor.rom);
                 failed += 1;
             }
         }
@@ -254,13 +287,19 @@ fn poll_once<P: Publisher>(
     let payload = Value::Object(fields);
     let payload_bytes = serde_json::to_vec(&payload).map_err(|err| format!("failed to serialize payload: {err}"))?;
 
-    info!("poll complete: {succeeded} ok, {failed} failed, {run_milliseconds}ms");
-
     publisher
         .publish(state_topic, &payload_bytes)
         .map_err(|err| format!("failed to publish: {err}"))?;
 
-    Ok(run_success)
+    info!(
+        "{}",
+        log_line(
+            "sensor samples collected and published in",
+            &format!("{}ms", start.elapsed().as_millis())
+        )
+    );
+
+    Ok(failed)
 }
 
 #[cfg(test)]
@@ -418,6 +457,61 @@ mod tests {
     }
 
     #[test]
+    fn poll_once_normalizes_sensor_resolution_to_12_bits() {
+        let rom = test_rom();
+        let mut bus = make_bus();
+        let mut low = scratchpad_for([0x80, 0x01]);
+        low[4] = 0x1F;
+        low[8] = crc8(&low[..8]);
+        queue_match_select(&mut bus.uart, &rom);
+        bus.uart.queue_read(&[0xB4, 0x97]);
+        queue_match_select(&mut bus.uart, &rom);
+        bus.uart.queue_read(&[0xBE]);
+        bus.uart.queue_read(&low);
+        queue_match_select(&mut bus.uart, &rom);
+        bus.uart.queue_read(&[0xBE]);
+        bus.uart.queue_read(&low);
+        queue_match_select(&mut bus.uart, &rom);
+        bus.uart.queue_read(&[0x4E, 0x4B, 0x46, 0x7F]);
+        queue_match_select(&mut bus.uart, &rom);
+        bus.uart.queue_read(&[0x48, 0x97]);
+        queue_match_select(&mut bus.uart, &rom);
+        bus.uart.queue_read(&[0x44, 0x97]);
+        queue_match_select(&mut bus.uart, &rom);
+        bus.uart.queue_read(&[0xBE]);
+        bus.uart.queue_read(&scratchpad_for([0x91, 0x01]));
+        let sensors = vec![SensorConfig {
+            unique_id: "utility_temperature".into(),
+            rom,
+        }];
+        let mut publisher = MockPublisher::new();
+        assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 0);
+        assert!(bus.uart.reads.is_empty());
+        let payload: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
+        assert!((payload["data_utility_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
+        assert!(bus
+            .uart
+            .written
+            .windows(4)
+            .any(|window| window == [0x4E, 0x4B, 0x46, 0x7F]));
+    }
+
+    #[test]
+    fn poll_once_skips_resolution_write_when_already_12_bits() {
+        let rom = test_rom();
+        let mut bus = make_bus();
+        queue_sensor_read(&mut bus.uart, &rom, [0x91, 0x01]);
+        let sensors = vec![SensorConfig {
+            unique_id: "utility_temperature".into(),
+            rom,
+        }];
+        let mut publisher = MockPublisher::new();
+        assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 0);
+        assert!(!bus.uart.written.contains(&0x4E));
+        assert!(!bus.uart.written.contains(&0x48));
+    }
+
+    #[test]
     fn poll_once_publishes_combined_json_to_state_topic() {
         let rom = test_rom();
         let mut bus = make_bus();
@@ -427,7 +521,7 @@ mod tests {
             rom,
         }];
         let mut publisher = MockPublisher::new();
-        assert!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap());
+        assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 0);
         assert_eq!(publisher.messages.len(), 1);
         let (topic, payload) = &publisher.messages[0];
         assert_eq!(topic, "state");
@@ -450,7 +544,7 @@ mod tests {
             rom,
         }];
         let mut publisher = MockPublisher::new();
-        assert!(!poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap());
+        assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 1);
         assert_eq!(publisher.messages.len(), 1);
         let payload: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
         assert!(payload.get("data_utility_temperature_celsius").is_none());
@@ -469,9 +563,9 @@ mod tests {
             rom,
         }];
         let mut publisher = MockPublisher::new();
-        assert!(!poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap());
+        assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 1);
         bus.redetect().unwrap();
-        assert!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap());
+        assert_eq!(poll_once(&sensors, &mut publisher, &mut bus, "state").unwrap(), 0);
         assert_eq!(publisher.messages.len(), 2);
         let first: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
         assert_eq!(first["run_success"], false);
@@ -495,11 +589,40 @@ mod tests {
             },
         ];
         let mut publisher = MockPublisher::new();
-        assert!(poll_once(&sensors, &mut publisher, bus.as_mut(), "state").unwrap());
+        assert_eq!(poll_once(&sensors, &mut publisher, bus.as_mut(), "state").unwrap(), 0);
         let payload: Value = serde_json::from_slice(&publisher.messages[0].1).unwrap();
         assert!((payload["data_rack_top_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
         assert!((payload["data_rack_bottom_temperature_celsius"].as_f64().unwrap() - 25.0625).abs() < 0.001);
         assert_eq!(payload["run_success"], true);
+    }
+
+    #[test]
+    fn poll_reinitializes_after_consecutive_total_failures() {
+        let mut bus = Ds9097::new(MockUart::new()).unwrap();
+        bus.uart.queue_read(&[0xF0, 0xF0, 0xF0, 0xF0, 0xF0]);
+        let sensors = vec![SensorConfig {
+            unique_id: "t".into(),
+            rom: test_rom(),
+        }];
+        let mut publisher = MockPublisher::new();
+        let err = poll(Duration::from_millis(1), &sensors, &mut publisher, &mut bus, "state").unwrap_err();
+        assert!(err.contains("consecutive"));
+        assert_eq!(publisher.messages.len(), 3);
+        assert!(bus.uart.reads.is_empty());
+    }
+
+    #[test]
+    fn poll_reinitializes_when_redetect_fails() {
+        let mut bus = Ds9097::new(MockUart::new()).unwrap();
+        bus.uart.queue_read(&[0xF0]);
+        let sensors = vec![SensorConfig {
+            unique_id: "t".into(),
+            rom: test_rom(),
+        }];
+        let mut publisher = MockPublisher::new();
+        let err = poll(Duration::from_millis(1), &sensors, &mut publisher, &mut bus, "state").unwrap_err();
+        assert!(err.contains("re-detection failed"));
+        assert_eq!(publisher.messages.len(), 1);
     }
 
     #[test]

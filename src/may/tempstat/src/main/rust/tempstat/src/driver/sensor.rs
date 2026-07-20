@@ -1,6 +1,8 @@
 //! DS18B20 1-Wire temperature sensor.
 //!
 //! - [DS18B20 Datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ds18b20.pdf)
+use std::collections::HashSet;
+use std::sync::{LazyLock, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -16,7 +18,6 @@ const CONVERT_T: u8 = 0x44;
 const WRITE_SCRATCHPAD: u8 = 0x4E;
 const READ_SCRATCHPAD: u8 = 0xBE;
 const COPY_SCRATCHPAD: u8 = 0x48;
-const RECALL_EEPROM: u8 = 0xB8;
 const READ_POWER_SUPPLY: u8 = 0xB4;
 const SCRATCHPAD_LEN: usize = 9;
 const READ_ATTEMPTS: usize = 3;
@@ -24,6 +25,8 @@ const COMPLETION_POLL_PERIOD: Duration = Duration::from_millis(10);
 const COMPLETION_MARGIN: u32 = 2;
 const T_CONV: Duration = Duration::from_millis(750);
 const T_RW: Duration = Duration::from_millis(10);
+
+static WARNED_PARASITIC: LazyLock<Mutex<HashSet<Option<Rom>>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Resolution {
@@ -79,7 +82,7 @@ impl Ds18b20 {
             resolution: Resolution::Bits12,
         };
         device.parasitic = device.read_power_supply(bus)?;
-        if device.parasitic && !bus.supports_strong_pullup() {
+        if device.parasitic && !bus.supports_strong_pullup() && WARNED_PARASITIC.lock().unwrap().insert(device.rom) {
             warn!(
                 "ds18b20 rom [{}] is parasite powered but the adapter has no strong pullup, conversions may be unreliable",
                 device.rom.map(|rom| rom.to_string()).unwrap_or_else(|| "none".into())
@@ -175,12 +178,6 @@ impl Ds18b20 {
         self.command_with_power(bus, COPY_SCRATCHPAD, T_RW)
     }
 
-    pub fn recall(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<()> {
-        self.select(bus)?;
-        bus.write_byte(RECALL_EEPROM)?;
-        self.await_completion(bus, T_RW)
-    }
-
     pub fn convert_t(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<()> {
         self.select(bus)?;
         self.command_with_power(bus, CONVERT_T, self.t_conv())
@@ -198,7 +195,7 @@ impl Ds18b20 {
             match self.read_scratchpad(bus) {
                 Ok(scratchpad) => {
                     let temperature = decode_temperature(&scratchpad);
-                    debug!("read temperature [{temperature}]");
+                    debug!("read temperature [{temperature:.3}]");
                     return Ok(temperature);
                 }
                 Err(Error::Crc) if attempt < READ_ATTEMPTS => {
@@ -241,6 +238,7 @@ fn decode_temperature(scratchpad: &[u8; SCRATCHPAD_LEN]) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::super::ds2480b::Ds2480b;
+    use super::super::ds9097::Ds9097;
     use super::super::uart::mock::MockUart;
     use super::*;
 
@@ -301,6 +299,36 @@ mod tests {
         queue_power(&mut bus.uart, false);
         queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, config));
         Ds18b20::attach(bus, None).unwrap()
+    }
+
+    fn queue_passive_write(uart: &mut MockUart, bytes: &[u8]) {
+        let slots: Vec<u8> = bytes
+            .iter()
+            .flat_map(|&byte| (0..8).map(move |bit| if (byte >> bit) & 0x01 != 0 { 0xFF } else { 0x00 }))
+            .collect();
+        uart.queue_read(&slots);
+    }
+
+    #[test]
+    fn parasitic_sensor_reads_over_passive_adapter() {
+        let mut bus = Ds9097::new(MockUart::new()).unwrap();
+        let data = scratchpad([0x90, 0x01], 0x4B, 0x46, 0x1F);
+        bus.uart.queue_read(&[0xE0]);
+        queue_passive_write(&mut bus.uart, &[0xCC, 0xB4]);
+        bus.uart.queue_read(&[0x00]);
+        bus.uart.queue_read(&[0xE0]);
+        queue_passive_write(&mut bus.uart, &[0xCC, 0xBE]);
+        queue_passive_write(&mut bus.uart, &data);
+        let device = Ds18b20::attach(&mut bus, None).unwrap();
+        assert!(device.parasitic());
+        assert_eq!(device.resolution(), Resolution::Bits9);
+        bus.uart.queue_read(&[0xE0]);
+        queue_passive_write(&mut bus.uart, &[0xCC, 0x44]);
+        bus.uart.queue_read(&[0xE0]);
+        queue_passive_write(&mut bus.uart, &[0xCC, 0xBE]);
+        queue_passive_write(&mut bus.uart, &data);
+        assert_eq!(device.get_temperature(&mut bus).unwrap(), 25.0);
+        assert!(bus.uart.reads.is_empty());
     }
 
     #[test]

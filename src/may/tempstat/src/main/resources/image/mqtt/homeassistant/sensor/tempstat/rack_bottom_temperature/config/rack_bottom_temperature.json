@@ -7,10 +7,10 @@
   "device_class": "temperature",
   "icon": "mdi:thermometer",
   "force_update": false,
-  "state_topic": "tempstat/macmini-max/data",
+  "state_topic": "tempstat/macmini-may/data",
   "value_template": "{{ (value_json['data_rack_bottom_temperature_celsius'] | float(None)) if (value_json['data_rack_bottom_temperature_celsius'] is defined) else (states('sensor.rack_bottom_temperature') | float(None)) }}",
-  "command_topic": "tempstat/macmini-max/command",
-  "availability_topic": "tempstat/macmini-max/status",
+  "command_topic": "tempstat/macmini-may/command",
+  "availability_topic": "tempstat/macmini-may/status",
   "qos": 1,
   "device": {
     "identifiers": [

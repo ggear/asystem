@@ -48,10 +48,6 @@ pub trait OneWire {
         self.write_bytes(&[byte])
     }
 
-    fn read_byte(&mut self) -> Result<u8> {
-        Ok(self.read_bytes(1)?[0])
-    }
-
     fn reset_expecting_device(&mut self) -> Result<()> {
         match self.reset()? {
             Presence::Present | Presence::AlarmingPresent => Ok(()),

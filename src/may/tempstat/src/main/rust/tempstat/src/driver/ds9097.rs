@@ -168,6 +168,24 @@ mod tests {
         }
     }
 
+    fn queue_search_pass(uart: &mut MockUart, seed: &[bool], roms: &[Rom]) -> [bool; 64] {
+        let mut candidates: Vec<[bool; 64]> = roms.iter().map(|rom| rom.bits()).collect();
+        let mut path = [false; 64];
+        for i in 0..64 {
+            let ones = candidates.iter().filter(|bits| bits[i]).count();
+            let zeros = candidates.len() - ones;
+            let direction = if ones > 0 && zeros > 0 {
+                i < seed.len() && seed[i]
+            } else {
+                ones > 0
+            };
+            uart.queue_read(&[slot(zeros == 0), slot(ones == 0), slot(direction)]);
+            candidates.retain(|bits| bits[i] == direction);
+            path[i] = direction;
+        }
+        path
+    }
+
     fn rom_with_serial(serial: [u8; 6]) -> Rom {
         let mut code = [0u8; 8];
         code[0] = 0x28;
@@ -315,6 +333,29 @@ mod tests {
         queue_echo(&mut bus.uart, &[0xF0]);
         queue_search_response(&mut bus.uart, &rom);
         assert_eq!(bus.get_connected_roms().unwrap(), vec![rom]);
+        assert!(bus.uart.reads.is_empty());
+    }
+
+    #[test]
+    fn search_branches_on_discrepancies() {
+        let rom_a = rom_with_serial([0x00, 0, 0, 0, 0, 0]);
+        let rom_b = rom_with_serial([0x01, 0, 0, 0, 0, 0]);
+        let mut bus = Ds9097::new(MockUart::new()).unwrap();
+        bus.uart.queue_read(&[0xE0]);
+        queue_echo(&mut bus.uart, &[0xF0]);
+        let path = queue_search_pass(&mut bus.uart, &[], &[rom_a, rom_b]);
+        let discrepancy = rom_a
+            .bits()
+            .iter()
+            .zip(rom_b.bits().iter())
+            .position(|(first, second)| first != second)
+            .unwrap();
+        let mut branch = path[..discrepancy].to_vec();
+        branch.push(true);
+        bus.uart.queue_read(&[0xE0]);
+        queue_echo(&mut bus.uart, &[0xF0]);
+        queue_search_pass(&mut bus.uart, &branch, &[rom_a, rom_b]);
+        assert_eq!(bus.get_connected_roms().unwrap(), vec![rom_a, rom_b]);
         assert!(bus.uart.reads.is_empty());
     }
 

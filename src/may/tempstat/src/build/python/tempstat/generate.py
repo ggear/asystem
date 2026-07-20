@@ -17,7 +17,7 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
         ].copy()
-    metadata_tempstat_df["availability_topic"] = "tempstat/macmini-max/status"
+    metadata_tempstat_df["availability_topic"] = "tempstat/macmini-may/status"
     write_entity_metadata(metadata_tempstat_df,
                           topics_path="tempstat",
                           topic_glob_discovery="homeassistant/+/tempstat/+/config",

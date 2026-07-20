@@ -52,6 +52,8 @@ impl MqttPublisher {
         let shutdown = Arc::new(AtomicBool::new(false));
         let (ready_sender, ready_receiver) = mpsc::channel();
         let thread_shutdown = Arc::clone(&shutdown);
+        let thread_client = client.clone();
+        let thread_status_topic = status_topic.to_string();
         let address = format!("{}:{}", host, port);
         let handle = thread::spawn(move || {
             let mut ready_sender = Some(ready_sender);
@@ -63,6 +65,11 @@ impl MqttPublisher {
                             let _ = sender.send(());
                         } else {
                             info!("broker reconnected [{}]", address);
+                        }
+                        if let Err(err) =
+                            thread_client.try_publish(&thread_status_topic, QoS::AtLeastOnce, true, "online")
+                        {
+                            warn!("broker status publish failed [{address}]: {err}");
                         }
                     }
                     Ok(Event::Incoming(Packet::PubAck(ack))) => {
@@ -88,23 +95,23 @@ impl MqttPublisher {
             debug!("broker event loop stopped");
         });
         match ready_receiver.recv_timeout(CONNECT_TIMEOUT) {
-            Ok(()) => {}
-            Err(RecvTimeoutError::Timeout) => {
+            Ok(()) => Ok(MqttPublisher {
+                client,
+                shutdown,
+                handle: Some(handle),
+            }),
+            Err(err) => {
                 shutdown.store(true, Ordering::SeqCst);
-                return Err(Error::Timeout);
-            }
-            Err(RecvTimeoutError::Disconnected) => {
-                shutdown.store(true, Ordering::SeqCst);
-                return Err(Error::Mqtt("broker event loop exited before connecting".to_string()));
+                let _ = client.try_disconnect();
+                handle.join().ok();
+                Err(match err {
+                    RecvTimeoutError::Timeout => Error::Timeout,
+                    RecvTimeoutError::Disconnected => {
+                        Error::Mqtt("broker event loop exited before connecting".to_string())
+                    }
+                })
             }
         }
-        let mut publisher = MqttPublisher {
-            client,
-            shutdown,
-            handle: Some(handle),
-        };
-        publisher.publish(status_topic, b"online")?;
-        Ok(publisher)
     }
 
     pub fn close(&mut self, status_topic: &str) -> Result<()> {
@@ -126,7 +133,7 @@ impl Publisher for MqttPublisher {
             Err(_) => debug!("publish [{topic}] -> ({} bytes)", payload.len()),
         }
         self.client
-            .publish(topic, QoS::AtLeastOnce, true, payload.to_vec())
+            .try_publish(topic, QoS::AtLeastOnce, true, payload.to_vec())
             .map_err(|err| Error::Mqtt(err.to_string()))
     }
 }

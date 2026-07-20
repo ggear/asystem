@@ -379,6 +379,33 @@ mod tests {
     }
 
     #[test]
+    fn mock_ds9097_deselects_on_search_direction_mismatch() {
+        let mut mock = MockDs9097::new();
+        let mut out = Vec::new();
+        mock.feed(0xF0, &mut out);
+        assert_eq!(out, vec![0xE0]);
+        for byte in [0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF] {
+            out.clear();
+            mock.feed(byte, &mut out);
+        }
+        out.clear();
+        mock.feed(0xFF, &mut out);
+        assert_eq!(out, vec![0x00]);
+        out.clear();
+        mock.feed(0xFF, &mut out);
+        assert_eq!(out, vec![0xFF]);
+        out.clear();
+        mock.feed(0xFF, &mut out);
+        assert_eq!(out, vec![0xFF]);
+        out.clear();
+        mock.feed(0xFF, &mut out);
+        assert_eq!(out, vec![0xFF]);
+        out.clear();
+        mock.feed(0xF0, &mut out);
+        assert_eq!(out, vec![0xE0]);
+    }
+
+    #[test]
     fn ds2480b_detect_fails_against_passive_mock() {
         assert!(Ds2480b::new(FsmUart::new(MockDs9097::new())).is_err());
     }
