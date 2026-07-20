@@ -81,7 +81,7 @@ Add sys test?
 implement health scripts and bootstrap, remove the later?
 implement commands to restart services, to work through ui when selected with popup and through HASS
 Add a go linter to pickup IntelliJ style warnings?
-Also service being added/removed from MQTT sometimes leads to empty slot and services not reshuffling sometimes. eg deleting top service from git, fab rel, atops shows empty slot at top
+Service being added/removed from MQTT sometimes leads to empty slot and services not reshuffling sometimes. eg deleting top service from git, fab rel, atops shows empty slot at top. retart fixes it.
 atops doesnt survice vernemq restart
 when maximise host, update update freq to 1s
 Add a hot level metric for network/internet usage? maybe only later?
