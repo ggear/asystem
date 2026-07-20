@@ -63,6 +63,7 @@ add additional local tests testing issues?
 ###############################################################################################################################################################
 # Networks
 ###############################################################################################################################################################
+Summarise plan and validate
 update mqtt publish state to be match superovisor, heeriarchical, top level ok, then ensted detail ok's for HASS presentation of internet/wireless/zigbee/ethernet, include a command topic, map it out and link to xlsx
 document topic and json schema in files, foolow same for other moudles, eg supervispr, generate MQTT schema from xlsx, pass data schmea to generate func and write it into the file
 Do the same as above for database, hardoce if you cant generate, all under schema dir, eg schema/timescaledb, schema/influxdb etc
@@ -89,6 +90,12 @@ Convert from influxdb to postgres?
 Add sys test?
 when influxdb3 process failing was getting this error and empty memory. Make metric not ID but string and always show 0 but erroring memory bar. 09:36:52 ERROR error executing metric task id=26               error=cpu usage unavailable, non-monotonic counters 09:36:52 ERROR error executing metric task id=27               error=memory limit must be > 0
 
+
+###############################################################################################################################################################
+# Tempstat
+###############################################################################################################################################################
+Remove macmini-may from MQTT topic?
+Validate rust code
 
 ###############################################################################################################################################################
 # Finance

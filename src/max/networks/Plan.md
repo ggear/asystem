@@ -15,7 +15,7 @@ Runs on the `max` host (`macmini-max`, x86_64, server, deployment group 31).
 
 | Topic | Decision |
 |---|---|
-| Architecture | **Clean-room, borrow patterns only.** Fresh package structure. Supervisor is a *style/idiom* reference (cobra cmd, `slog`+`lumberjack` scribe, JSON `config.Load`, `context`-driven tick loop, table-driven tests, no code comments) — no stats/metric/cache code is lifted. |
+| Architecture | **Clean-room, borrow patterns only.** Fresh package structure. Supervisor is a *style/idiom* reference (cobra cmd, `slog` scribe, JSON `config.Load`, `context`-driven tick loop, table-driven tests, no code comments) — no stats/metric/cache code is lifted. |
 | Status vocabulary | **Generic triad + detail.** Top-level `status ∈ {HEALTHY, DEGRADED, FLATLINE}`. Plugin-specific sub-states (e.g. `LAN_DOWN`, `ISP_DOWN`, `ELEVATED_LOSS`) go in `data.detail`, with an optional human `data.reason`. |
 | Wireless source | **Local UniFi Network controller API** (unpoller-style, on-LAN). Controller URL + credentials from config. No cloud dependency. |
 | Publishing | **Vitals only, for now.** `vitals` (aggregate) → MQTT retained (+ HA discovery) + InfluxDB line protocol. `pulse` (per-poll) stays in-memory in the aggregation window and is emitted to the debug log only — not published, not stored. |
@@ -54,7 +54,7 @@ src/main/go/networks/
       config.go              Load() JSON config + env resolve (broker, database, unifi, targets)
       config_test.go
     scribe/
-      scribe.go              slog + lumberjack file rotation (/tmp/network | /var/log/network)
+      scribe.go              slog handler → stdout (JSON/text by --log-level; docker handles rotation)
       scribe_test.go
     engine/
       engine.go              poll+aggregate scheduler; drives plugins; fans results to publishers
@@ -260,9 +260,9 @@ type command struct {
 ```
 
 - **MQTT source** (`engine_command.go`): on connect, subscribe
-  `networks/${SUPERVISOR_HOST}/command/#` (supervisor's `commandTopic` idiom).
+  `networks/command/#` (supervisor's `commandTopic` idiom).
   Payload `{"command":"check","plugin":"internet"}` → build a `command`, enqueue,
-  and publish an ack/result to `networks/${SUPERVISOR_HOST}/command/result` (the
+  and publish an ack/result to `networks/command/result` (the
   resulting `vitals` JSON). Unknown/malformed payloads logged and dropped.
 - **CLI source**: the `check` subcommand enqueues a `command` with a `Result`
   channel, blocks on it, prints the returned `vitals` JSON, and exits.
@@ -276,9 +276,9 @@ Bounded queue (drop-oldest or reject-when-full with a logged warning) prevents a
 command storm from stalling the poll loop.
 
 Publishing (`--publish-data` true):
-- **MQTT** (`engine_broker.go`, paho like supervisor): vitals → retained topic
-  `networks/${SUPERVISOR_HOST}/data/<plugin>/vitals`; a retained
-  `networks/${SUPERVISOR_HOST}/status` = `online`/`offline` with an `offline` LWT.
+- **MQTT** (`engine_broker.go`, paho like supervisor): vitals → per-plugin retained
+  topic under the `networks/data` root — `networks/data/<plugin>/vitals`; a retained
+  `networks/status` = `online`/`offline` with an `offline` LWT.
   Reuse supervisor's broker connect/reconnect/`SetWill` structure.
 - **InfluxDB v3** (`engine_database.go`): call `Message.AppendLineProtocol` for each
   vitals into a single reused `bytes.Buffer` (one line per `Point`), then hand the
@@ -417,17 +417,148 @@ tag `device=<friendly_name>`, fields `lqi`, `available`, last-seen age) — with
   a dep host up first.
 - **config.json / generate.py** — extend `write_...` generation to emit
   broker + database + a `unifi` block (controller URL/site/creds) + internet
-  `targets`/burst tuning. Keep HA discovery generation: `write_entity_metadata`
-  filtered to `device_via_device == "Zeroth"` on `networks_${SUPERVISOR_HOST}`
-  topics (already wired in `generate.py`).
-- **Health-check fragments** (`src/build/resources/`, then `fab generate`):
-  - `checkalive.sh` — `pgrep -f "/asystem/bin/networks" >/dev/null`
-  - `checkexecuting.sh` — checkalive && MQTT `networks/$SUPERVISOR_HOST/status` == `online`
-  - `checkhealthy.sh` — checkexecuting && latest `.../data/internet/vitals` parses and `status != FLATLINE` (via `mosquitto_sub -C 1 -W 2` + `jq -e`)
+  `targets`/burst tuning. Keep HA discovery generation via `write_entity_metadata`
+  (already wired), now supplying schema descriptors — see
+  "Generation hooks" below.
+- **Health-check fragments** (`src/build/resources/`, then `fab generate` — mirror
+  `src/may/tempstat/src/build/resources/`, whose bodies are wrapped one-per-line by
+  `write_healthcheck()`; no `#` comments in fragments, they get line-joined):
+  - `checkalive.sh` — process is up: `ps -ef | grep "[/]asystem/bin/networks" >/dev/null`
+    (tempstat's `pgrep`-free idiom, works without `procps` in the slim base).
+  - `checkexecuting.sh` — `checkalive` && MQTT status online:
+    `mosquitto_sub … -t "networks/status" -C 1 -W 2 | grep -q "^online$"`
+    (`${BROKER_TOKEN:+-u networks -P $BROKER_TOKEN}` unquoted, as tempstat).
+  - `checkhealthy.sh` — `checkexecuting` && **every plugin's latest vitals is NOT
+    `FLATLINE`**. Subscribe the retained wildcard `networks/data/+/vitals`
+    with a short `-W 2` window (no `-C`, since the number of plugins varies with
+    `--filter-plugins`), slurp all retained payloads, and assert at least one arrived
+    and none is flatlined:
+    ```sh
+    /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" &&
+      mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" ${BROKER_TOKEN:+-u networks -P $BROKER_TOKEN} -t "networks/data/+/vitals" -W 2 2>/dev/null | jq -e -s 'length > 0 and all(.[]; .status != "FLATLINE")' >/dev/null
+    ```
+    `jq -s` slurps the newline-separated retained messages into an array; `length > 0`
+    fails if nothing is retained (service not yet publishing), `all(…; .status != "FLATLINE")`
+    fails the moment any plugin is flatlined. Single-line after generation.
   - `bootstrap.sh` — (re)publish HA discovery via generated `mqtt.sh`.
-  No `#` comments in fragments (they get line-joined).
 - **install_pre.sh** already runs `mqtt.sh`; keep. `deploy.sh` mirrors supervisor's
   SSH-triggered install.
+
+---
+
+## Generation hooks (`generate.py` — mirror `may/tempstat`)
+
+`generate.py` stays a thin `homeassistant.generate` script (like tempstat's) that
+calls **`write_healthcheck()`** (wraps the four `src/build/resources/check*.sh` +
+`bootstrap.sh` fragments) and **`write_entity_metadata()`** (HA discovery JSON +
+`mqtt.sh` + broker topic-schema leaves under `src/build/resources/schemas/vernemq`).
+The current call already filters the metadata to `device_via_device == "Zeroth"` on
+`networks_${SUPERVISOR_HOST}` topics; the change is to **attach the topic columns and
+pass schema descriptors**, exactly as tempstat does for its single device:
+
+- Set the extra topic columns on the filtered df before the call (tempstat sets
+  `availability_topic`): `availability_topic = "networks/status"` and
+  `command_topic = "networks/command"` (the vitals `state_topic`
+  `networks/data/<plugin>/vitals` comes from the xlsx rows). The whole namespace is
+  **host-free** — one `networks` instance per host, so the topic root needs no
+  `${SUPERVISOR_HOST}` segment; the host lives inside the payload (`Message.Host`) and
+  the InfluxDB `host` tag.
+- Pass `schema_state` / `schema_command` / `schema_availability` **schema
+  descriptors** (angle-bracket placeholders documenting type/allowed-set, *not* sample
+  data — repo convention), written flush-left inside `"""…"""` per the `dedent` rule.
+  Because the vitals `state_topic` differs per plugin, `schema_state` can be the
+  single generic `Message`-envelope descriptor (all plugins share the envelope) or a
+  `{topic-glob: payload}` dict keyed on `networks/data/internet/vitals` etc. if
+  per-plugin `points` shapes are worth documenting separately (the tasmota glob-dict form).
+
+```python
+metadata_networks_df = metadata_df[ ...existing Zeroth filter... ].copy()
+metadata_networks_df["availability_topic"] = "networks/status"
+metadata_networks_df["command_topic"] = "networks/command"
+write_entity_metadata(metadata_networks_df,
+                      topics_path="networks",
+                      topic_glob_discovery="homeassistant/+/networks/+/config",
+                      topic_glob_data="networks/data/#",
+                      schema_state="""
+{
+  "message": "vitals",
+  "plugin": "<internet|wireless|zigbee>",
+  "host": "<text>",
+  "timestamp": "<text>",
+  "status": "<HEALTHY|DEGRADED|FLATLINE>",
+  "detail": "<text>",
+  "reason": "<text>",
+  "sample_period_s": <number>,
+  "sample_count": <number>,
+  "points": [ { "tags": { "<key>": "<text>" }, "fields": { "<key>": <number|true|false|text|null> } } ]
+}
+                      """, schema_command="""
+{ "command": "<check>", "plugin": "<internet|wireless|zigbee>" }
+                      """, schema_availability="""
+<online|offline>
+                      """)
+```
+
+This yields, per `fab generate`: the HA discovery JSON + `mqtt.sh` under
+`src/main/resources/image/mqtt/`, and schema leaves at
+`schemas/vernemq/networks/{status,command}` + `schemas/vernemq/networks/data/<plugin>/vitals`.
+`topic_glob_data="networks/data/#"` is the retained-vitals subtree that `mqtt.sh`'s
+`mosquitto_sub --remove-retained` sweeps — the `#` wildcard wipes **every** retained
+message under `networks/data/` (one per plugin at `networks/data/<plugin>/vitals`) on
+each republish. Keep it aligned with the publisher in `engine_broker.go` **and** the
+`checkhealthy.sh` wildcard (`networks/data/+/vitals`) so discovery, schema, publisher,
+and health check never drift.
+
+---
+
+## Resilience & memory efficiency (long-running loop)
+
+The daemon runs unattended for weeks; the design must have **bounded memory** and
+**survive broker/InfluxDB/UniFi outages without operator action or a restart**.
+
+**Bounded memory (no growth over time):**
+- **Fixed-size window ring** (`internal/plugin/window.go`): a ring sized once to
+  `aggregate/poll` samples, overwriting in place — pulses never accumulate beyond one
+  window. Aggregate-only plugins keep a length-1 window.
+- **Latest-store** (`store.go`): fixed key set (one entry per registered plugin ×
+  {pulse,vitals}); replaced in place, never appended.
+- **Pooled/reused serialisation buffers**: `MarshalJSON` and `AppendLineProtocol`
+  stream into a `sync.Pool`-borrowed (or per-writer reused) `bytes.Buffer`, reset
+  between uses; the typed `Field` union + ordered slices keep the hot path
+  allocation-light (no `map[string]any`, no reflection).
+- **Preallocated per-poll slices** (`points`, burst RTTs) sized from known target
+  counts; no unbounded slice growth inside the tick loop.
+- **Logs stream to stdout** (`scribe` = `slog` → stdout, no in-process log files);
+  the Docker runtime owns rotation/retention, so there is no unbounded on-disk or
+  in-memory log growth. `pulse` goes to the debug log only and is never retained in
+  memory beyond the window.
+
+**Transparent reconnect (never let a dependency outage kill the loop):**
+- **MQTT (paho)** — `SetAutoReconnect(true)`, `SetConnectRetry(true)`, a capped
+  `SetMaxReconnectInterval`, and `SetWill(... "offline" retained)` so HA flips offline
+  during an outage and the retained `online` is re-asserted on reconnect. Command-topic
+  subscriptions are re-established in the `OnConnect` handler. Publishes use
+  `token.WaitTimeout` so a dead broker can never block the poll/aggregate tickers.
+- **InfluxDB v3** — wrap `databaseClient.write` in bounded retry-with-backoff;
+  on persistent failure, log, **drop that batch, and continue** (a write outage must
+  not stall or crash the loop), lazily rebuilding the client on the next cycle
+  (supervisor's reconnect-on-error idiom).
+- **UniFi / z2m (aggregate-only plugins)** — HTTP client with a hard timeout and
+  fresh-login-on-401; z2m MQTT reads bounded by `-W`-style timeouts. A plugin that
+  can't reach its source returns a `FLATLINE` vitals (`detail=CONTROLLER_UNREACHABLE`
+  / `COORDINATOR_DOWN`) rather than erroring the cycle — degraded, observable, still
+  publishing.
+
+**Loop robustness:**
+- Everything is `context`-cancellable; every network op (ICMP `BurstTimeout`, HTTP
+  client timeout, MQTT `token.WaitTimeout`) is bounded — no unbounded blocking.
+- Concurrent ICMP bursts run under a bounded worker set (`errgroup`/semaphore), all
+  goroutines tied to the engine `ctx`, so there are **no goroutine leaks** across
+  reconnect churn.
+- A single `panic`/error in one plugin's `Poll`/`Aggregate` is recovered and logged;
+  other plugins and subsequent ticks proceed. Publishing is decoupled from polling
+  (bounded outbound path, drop-oldest on backpressure) so a slow/absent sink never
+  applies backpressure to sampling.
 
 ---
 
@@ -444,6 +575,11 @@ tag `device=<friendly_name>`, fields `lqi`, `available`, last-seen age) — with
 - **command** drain (`engine_command_test.go`): an MQTT command and a `check`-CLI
   command both land on the queue and run exactly one aggregate cycle, returning
   fresh vitals; bounded-queue overflow drops/rejects with a logged warning.
+- **resilience** (`engine_test.go`): window ring stays bounded over many polls
+  (no growth); a broker/InfluxDB write failure is retried, dropped after the cap,
+  and the loop keeps ticking; a plugin whose source is unreachable yields a
+  `FLATLINE` vitals rather than aborting the cycle — all via injected
+  function-field seams, no real network.
 - **System** (`fab st`, `system_test.py`): `docker-compose up`, wait for
   `networks/<host>/data/internet/vitals` retained message, assert schema + `status`
   in the triad; publish an MQTT `check` command and assert fresh `vitals` on the

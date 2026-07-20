@@ -629,8 +629,8 @@ switch.service_mlserver:
 switch.service_openra:
   friendly_name: 'OpenRA'
   icon: 'mdi:heart-pulse'
-switch.service_digitemp:
-  friendly_name: 'DigiTemp'
+switch.service_tempstats:
+  friendly_name: 'TempStats'
   icon: 'mdi:heart-pulse'
 switch.service_grafana:
   friendly_name: 'Grafana'
