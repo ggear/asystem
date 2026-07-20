@@ -102,7 +102,7 @@ impl Cli {
                 writeln!(
                     buf,
                     "[{} {:<5}] {}",
-                    buf.timestamp_millis(),
+                    chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%:z"),
                     record.level(),
                     record.args()
                 )
@@ -132,11 +132,12 @@ impl Cli {
                     continue;
                 }
             };
+            info!("{}", log_line("starting version", &version));
             info!(
                 "{}",
                 log_line(
-                    &format!("version [{version}] connected to"),
-                    &format!("{} ({})", self.device, if mock { "mock" } else { "real" })
+                    "connected to device",
+                    &format!("{}:{}", self.device, if mock { "mock" } else { "real" })
                 )
             );
             let mut publisher =
@@ -188,14 +189,14 @@ impl Cli {
 fn select_adapter(mut ds2480b: Ds2480b<SerialUart>) -> driver::Result<Box<dyn OneWire>> {
     match ds2480b.probe() {
         Ok(()) => {
-            info!("{}", log_line("found adapter chipset", "DS2480B"));
+            info!("{}", log_line("detected adapter chipset", "DS2480B"));
             Ok(Box::new(ds2480b))
         }
         Err(err) => {
             debug!("DS2480B not detected ({err}), probing for DS9097");
             let mut ds9097 = Ds9097::new(ds2480b.into_uart())?;
             ds9097.redetect()?;
-            info!("{}", log_line("found adapter chipset", "DS9097"));
+            info!("{}", log_line("detected adapter chipset", "DS9097"));
             Ok(Box::new(ds9097))
         }
     }
@@ -205,7 +206,7 @@ fn log_sensors(sensors: &[SensorConfig]) {
     for sensor in sensors {
         info!(
             "{}",
-            log_line(&format!("found ROM [{}] attaching to", sensor.rom), &sensor.unique_id)
+            log_line("detected sensor", &format!("{}:{}", sensor.unique_id, sensor.rom))
         );
     }
 }
@@ -248,7 +249,7 @@ fn poll<P: Publisher>(
         info!(
             "{}",
             log_line(
-                "sensor collection/publish loop running every",
+                "sensor sample/publish loop running every",
                 &format!("{}s", period.as_secs())
             )
         );
@@ -312,7 +313,10 @@ fn poll_once<P: Publisher>(
             Ok(temp) => {
                 info!(
                     "{}",
-                    log_line(&format!("sensor [{}]", sensor.unique_id), &format!("{temp:.3}°C"))
+                    log_line(
+                        &format!("sensor [{}] sampled at", sensor.unique_id),
+                        &format!("{temp}°C")
+                    )
                 );
                 samples.insert(format!("{}_celsius", sensor.unique_id), json!(f64::from(temp)));
             }
@@ -338,7 +342,7 @@ fn poll_once<P: Publisher>(
     info!(
         "{}",
         log_line(
-            "sensor samples collected/published in",
+            "sensor sample/publish loop finished in",
             &format!("{}ms", start.elapsed().as_millis())
         )
     );
