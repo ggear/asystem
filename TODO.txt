@@ -135,3 +135,7 @@ Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema n
 Fix powercalc issues
 Fix unifi cameras, upgrade unifi
 
+###############################################################################################################################################################
+# LetsEncrypt
+###############################################################################################################################################################
+Add certifcate expeiry check to healthy script (migrated from internet)
