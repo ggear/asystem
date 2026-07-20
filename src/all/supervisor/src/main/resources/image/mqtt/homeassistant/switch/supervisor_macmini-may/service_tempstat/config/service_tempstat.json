@@ -1,12 +1,12 @@
 {
-  "default_entity_id": "switch.service_tempstats",
-  "unique_id": "service_tempstats",
-  "name": "Service Tempstats",
+  "default_entity_id": "switch.service_tempstat",
+  "unique_id": "service_tempstat",
+  "name": "Service Tempstat",
   "icon": "mdi:heart-pulse",
   "force_update": false,
-  "state_topic": "supervisor/macmini-may/data/service/tempstats/health_status",
+  "state_topic": "supervisor/macmini-may/data/service/tempstat/health_status",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
-  "command_topic": "supervisor/macmini-may/command/service/tempstats",
+  "command_topic": "supervisor/macmini-may/command/service/tempstat",
   "availability_topic": "supervisor/macmini-may/status",
   "qos": 1,
   "device": {
