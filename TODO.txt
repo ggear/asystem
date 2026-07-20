@@ -132,3 +132,6 @@ impl media-space, that does repotrting ala duf, benchmarking and stats/health, m
 ###############################################################################################################################################################
 Submit pull requests for bom-radar-map, test all options first
 Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice
+Fix powercalc issues
+Fix unifi cameras, upgrade unifi
+
