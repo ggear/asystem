@@ -11,8 +11,6 @@ x-common: &common
     - DATABASE_TOKEN
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
-  devices:
-    - /dev/ttyUSBTempProbe:/dev/ttyUSB0:rw
   logging:
     driver: "json-file"
     options:
