@@ -15,6 +15,7 @@ RUN apt-get update && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
 FROM image_upstream AS image_base
+COPY target/package/main/resources/image/. /asystem/etc
 
 FROM image_base AS image_build
 
