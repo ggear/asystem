@@ -38,14 +38,14 @@ impl fmt::Display for Error {
         match self {
             Error::Io(err) => write!(f, "io error: {err}"),
             Error::Serial(err) => write!(f, "serial error: {err}"),
-            Error::NotDetected(response) => write!(f, "ds2480b not detected, response {response:02X?}"),
+            Error::NotDetected(response) => write!(f, "DS2480B not detected, response {response:02X?}"),
             Error::InvalidResponse { operation, response } => {
                 write!(f, "invalid {operation} response [{response:#04X}]")
             }
             Error::EchoMismatch => write!(f, "echo mismatch"),
             Error::NoDevice => write!(f, "no device present"),
             Error::Shorted => write!(f, "bus shorted"),
-            Error::WrongFamily(rom) => write!(f, "not a ds18b20 [{rom}]"),
+            Error::WrongFamily(rom) => write!(f, "not a DS18B20 [{rom}]"),
             Error::InvalidRom(value) => write!(f, "invalid rom code [{value}]"),
             Error::Crc => write!(f, "crc check failed"),
             Error::Timeout => write!(f, "timed out waiting for device"),

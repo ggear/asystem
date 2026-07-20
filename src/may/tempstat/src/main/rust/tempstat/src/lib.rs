@@ -33,7 +33,7 @@ const STATUS_TOPIC: &str = "tempstat/$HOST/status";
 const LOG_LABEL_WIDTH: usize = 45;
 const MAX_CONSECUTIVE_TOTAL_FAILURES: u32 = 3;
 
-fn log_line(label: &str, value: &str) -> String {
+pub(crate) fn log_line(label: &str, value: &str) -> String {
     let leader = format!("{label} ");
     format!("{leader:.<width$} [{value}]", width = LOG_LABEL_WIDTH)
 }
@@ -98,16 +98,21 @@ impl Cli {
         };
         let _ = env_logger::Builder::new()
             .filter_level(log_level)
-            .format(|buf, record| writeln!(buf, "[{} {}] {}", buf.timestamp_millis(), record.level(), record.args()))
+            .format(|buf, record| {
+                writeln!(
+                    buf,
+                    "[{} {:<5}] {}",
+                    buf.timestamp_millis(),
+                    record.level(),
+                    record.args()
+                )
+            })
             .try_init();
         let timeout = parse_duration(&self.timeout)?;
         let sensors = load_sensors(&self.sensors)?;
         let mock = std::env::var("TEMPSTAT_MOCK").as_deref() == Ok("1");
-        info!(
-            "starting tempstat [{}] with device [{}] ({}), timeout [{timeout:?}], poll period [{period:?}], broker [{}:{}], {} sensor(s)",
-            version,
-            self.device,
-            if mock { "mock" } else { "real" },
+        debug!(
+            "timeout [{timeout:?}], poll period [{period:?}], broker [{}:{}], {} sensor(s)",
             self.broker_host,
             self.broker_port,
             sensors.len()
@@ -140,6 +145,13 @@ impl Cli {
                     continue;
                 }
             };
+            info!(
+                "{}",
+                log_line(
+                    &format!("version [{version}] connected to"),
+                    &format!("{} ({})", self.device, if mock { "mock" } else { "real" })
+                )
+            );
             let poll_result = poll(period, &sensors, &mut publisher, bus.as_mut(), &state_topic);
             let close_result = publisher.close(&status_topic).map_err(|err| err.to_string());
             let combined = poll_result.and(close_result);
@@ -160,14 +172,14 @@ impl Cli {
         let mut ds2480b = Ds2480b::from_uart(SerialUart::open(&self.device, timeout)?);
         match ds2480b.probe() {
             Ok(()) => {
-                info!("selected adapter [ds2480b]");
+                info!("{}", log_line("found adapter chipset", "DS2480B"));
                 Ok(Box::new(ds2480b))
             }
             Err(err) => {
-                info!("ds2480b not detected ({err}), probing for ds9097");
+                debug!("DS2480B not detected ({err}), probing for DS9097");
                 let mut ds9097 = Ds9097::new(ds2480b.into_uart())?;
                 ds9097.redetect()?;
-                info!("selected adapter [ds9097]");
+                info!("{}", log_line("found adapter chipset", "DS9097"));
                 Ok(Box::new(ds9097))
             }
         }
@@ -180,7 +192,7 @@ pub fn resolve_host() -> String {
         .filter(|host| !host.is_empty())
         .or_else(system_hostname)
         .unwrap_or_else(|| "unknown".to_string());
-    info!("host resolved to [{host}]");
+    debug!("host resolved to [{host}]");
     host
 }
 
@@ -208,6 +220,15 @@ fn poll<P: Publisher>(
     bus: &mut (impl OneWire + ?Sized),
     state_topic: &str,
 ) -> Result<(), String> {
+    if !period.is_zero() {
+        info!(
+            "{}",
+            log_line(
+                "start collection and publish loop every",
+                &format!("{}s", period.as_secs())
+            )
+        );
+    }
     let mut iteration: u64 = 0;
     let mut total_failures: u32 = 0;
     loop {
@@ -238,8 +259,8 @@ fn poll<P: Publisher>(
 fn read_sensor(bus: &mut (impl OneWire + ?Sized), sensor: &SensorConfig) -> driver::Result<f32> {
     let mut device = Ds18b20::attach(bus, Some(sensor.rom))?;
     if device.resolution() != Resolution::Bits12 {
-        info!(
-            "sensor [{}] rom [{}] resolution [{:?}], setting [{:?}]",
+        debug!(
+            "sensor [{}] ROM [{}] resolution [{:?}], setting [{:?}]",
             sensor.unique_id,
             sensor.rom,
             device.resolution(),
@@ -262,7 +283,7 @@ fn poll_once<P: Publisher>(
     let mut failed: usize = 0;
 
     for sensor in sensors {
-        debug!("reading sensor [{}] rom [{}]", sensor.unique_id, sensor.rom);
+        debug!("reading sensor [{}] ROM [{}]", sensor.unique_id, sensor.rom);
         match read_sensor(bus, sensor) {
             Ok(temp) => {
                 info!(
@@ -272,7 +293,7 @@ fn poll_once<P: Publisher>(
                 fields.insert(format!("data_{}_celsius", sensor.unique_id), json!(f64::from(temp)));
             }
             Err(err) => {
-                error!("sensor [{}] rom [{}] failed: {err}", sensor.unique_id, sensor.rom);
+                error!("sensor [{}] ROM [{}] failed: {err}", sensor.unique_id, sensor.rom);
                 failed += 1;
             }
         }

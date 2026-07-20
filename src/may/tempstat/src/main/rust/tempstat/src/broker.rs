@@ -9,6 +9,8 @@ use std::time::Duration;
 use log::{debug, info, warn};
 use rumqttc::{Client, Event, LastWill, MqttOptions, Outgoing, Packet, QoS};
 
+use crate::log_line;
+
 const CHANNEL_CAPACITY: usize = 10;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 const RECONNECT_DELAY: Duration = Duration::from_secs(5);
@@ -61,7 +63,10 @@ impl MqttPublisher {
                 match event {
                     Ok(Event::Incoming(Packet::ConnAck(_))) => {
                         if let Some(sender) = ready_sender.take() {
-                            info!("broker connected [{}] auth [{}]", address, has_token);
+                            info!(
+                                "{}",
+                                log_line(&format!("broker connected with auth [{has_token}]"), &address)
+                            );
                             let _ = sender.send(());
                         } else {
                             info!("broker reconnected [{}]", address);

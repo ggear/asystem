@@ -6,7 +6,7 @@
 use std::thread;
 use std::time::Duration;
 
-use log::{debug, info};
+use log::debug;
 
 use super::onewire::{OneWire, Presence};
 use super::uart::{SerialUart, Uart};
@@ -80,7 +80,7 @@ pub struct Ds2480b<U: Uart> {
 
 impl Ds2480b<SerialUart> {
     pub fn open(path: &str, timeout: Duration) -> Result<Self> {
-        info!("opening ds2480b on [{path}]");
+        debug!("opening DS2480B on [{path}]");
         Ds2480b::new(SerialUart::open(path, timeout)?)
     }
 }
@@ -118,12 +118,12 @@ impl<U: Uart> Ds2480b<U> {
             attempt += 1;
             match self.try_detect() {
                 Ok(()) => {
-                    info!("ds2480b detected on attempt [{attempt}] of [{attempts}]");
+                    debug!("DS2480B detected on attempt [{attempt}] of [{attempts}]");
                     return Ok(());
                 }
                 Err(err) if attempt >= attempts => return Err(err),
                 Err(err) => {
-                    debug!("ds2480b detect attempt [{attempt}] failed: {err}");
+                    debug!("DS2480B detect attempt [{attempt}] failed: {err}");
                 }
             }
         }

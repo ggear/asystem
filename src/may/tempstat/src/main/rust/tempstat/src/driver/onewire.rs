@@ -3,7 +3,7 @@
 //! - [Guide to 1-Wire Communication](https://www.analog.com/en/resources/technical-articles/guide-to-1wire-communication.html)
 //! - [AN187: 1-Wire Search Algorithm](https://www.analog.com/en/resources/app-notes/1wire-search-algorithm.html)
 
-use log::{debug, info};
+use log::debug;
 
 use super::rom::Rom;
 use super::{Error, Result};
@@ -66,7 +66,7 @@ pub trait OneWire {
         if !rom.is_valid() {
             return Err(Error::Crc);
         }
-        debug!("read rom [{rom}]");
+        debug!("read ROM [{rom}]");
         Ok(rom)
     }
 
@@ -132,6 +132,6 @@ fn search<B: OneWire + ?Sized>(bus: &mut B, command: u8) -> Result<Vec<Rom>> {
         debug!("search found [{rom}]");
         roms.push(rom);
     }
-    info!("search found {} device(s)", roms.len());
+    debug!("search found {} device(s)", roms.len());
     Ok(roms)
 }

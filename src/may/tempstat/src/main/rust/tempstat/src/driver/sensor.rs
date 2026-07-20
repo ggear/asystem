@@ -1,8 +1,6 @@
 //! DS18B20 1-Wire temperature sensor.
 //!
 //! - [DS18B20 Datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ds18b20.pdf)
-use std::collections::HashSet;
-use std::sync::{LazyLock, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -25,8 +23,6 @@ const COMPLETION_POLL_PERIOD: Duration = Duration::from_millis(10);
 const COMPLETION_MARGIN: u32 = 2;
 const T_CONV: Duration = Duration::from_millis(750);
 const T_RW: Duration = Duration::from_millis(10);
-
-static WARNED_PARASITIC: LazyLock<Mutex<HashSet<Option<Rom>>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Resolution {
@@ -81,17 +77,11 @@ impl Ds18b20 {
             parasitic: false,
             resolution: Resolution::Bits12,
         };
-        device.parasitic = device.read_power_supply(bus)?;
-        if device.parasitic && !bus.supports_strong_pullup() && WARNED_PARASITIC.lock().unwrap().insert(device.rom) {
-            warn!(
-                "ds18b20 rom [{}] is parasite powered but the adapter has no strong pullup, conversions may be unreliable",
-                device.rom.map(|rom| rom.to_string()).unwrap_or_else(|| "none".into())
-            );
-        }
+        device.parasitic = bus.supports_strong_pullup() && device.read_power_supply(bus)?;
         let scratchpad = device.read_scratchpad(bus)?;
         device.resolution = Resolution::from_config(scratchpad[4]);
         debug!(
-            "ds18b20 rom [{}] parasitic [{}] resolution [{:?}]",
+            "DS18B20 ROM [{}] parasitic [{}] resolution [{:?}]",
             device.rom.map(|rom| rom.to_string()).unwrap_or_else(|| "none".into()),
             device.parasitic,
             device.resolution
@@ -123,7 +113,7 @@ impl Ds18b20 {
     }
 
     fn await_completion(&self, bus: &mut (impl OneWire + ?Sized), duration: Duration) -> Result<()> {
-        if self.parasitic {
+        if !bus.supports_strong_pullup() {
             thread::sleep(duration);
             return Ok(());
         }
@@ -310,17 +300,14 @@ mod tests {
     }
 
     #[test]
-    fn parasitic_sensor_reads_over_passive_adapter() {
+    fn passive_adapter_skips_power_detection_and_blind_waits() {
         let mut bus = Ds9097::new(MockUart::new()).unwrap();
         let data = scratchpad([0x90, 0x01], 0x4B, 0x46, 0x1F);
-        bus.uart.queue_read(&[0xE0]);
-        queue_passive_write(&mut bus.uart, &[0xCC, 0xB4]);
-        bus.uart.queue_read(&[0x00]);
         bus.uart.queue_read(&[0xE0]);
         queue_passive_write(&mut bus.uart, &[0xCC, 0xBE]);
         queue_passive_write(&mut bus.uart, &data);
         let device = Ds18b20::attach(&mut bus, None).unwrap();
-        assert!(device.parasitic());
+        assert!(!device.parasitic());
         assert_eq!(device.resolution(), Resolution::Bits9);
         bus.uart.queue_read(&[0xE0]);
         queue_passive_write(&mut bus.uart, &[0xCC, 0x44]);

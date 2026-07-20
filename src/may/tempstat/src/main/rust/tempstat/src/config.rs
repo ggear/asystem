@@ -37,12 +37,9 @@ pub fn load_sensors(path: &Path) -> Result<Vec<SensorConfig>, String> {
         })
         .collect();
     if let Ok(ref list) = sensors {
-        let listed = list
-            .iter()
-            .map(|sensor| format!("sensor [{}] rom [{}]", sensor.unique_id, sensor.rom))
-            .collect::<Vec<_>>()
-            .join(", ");
-        info!("loaded {} sensor(s) from [{}]: {listed}", list.len(), path.display());
+        for sensor in list {
+            info!("found ROM [{}] attaching to ... [{}]", sensor.rom, sensor.unique_id);
+        }
     }
     sensors
 }
