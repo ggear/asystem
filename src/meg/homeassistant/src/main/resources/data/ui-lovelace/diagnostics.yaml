@@ -68,8 +68,8 @@
     - entity: switch.service_openra
       name: OpenRA
       icon: mdi:heart-pulse
-    - entity: switch.service_tempstats
-      name: TempStats
+    - entity: switch.service_tempstat
+      name: TempStat
       icon: mdi:heart-pulse
     - entity: switch.service_grafana
       name: Grafana
