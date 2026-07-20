@@ -33,19 +33,18 @@
           "mlserver",
           "networks",
           "openra",
-          "supervisor",
-          "tempstat"
+          "supervisor"
         ]
       },
       {
         "host": "macmini-may",
         "services": [
-          "digitemp",
           "grafana",
           "influxdb",
           "letsencrypt",
           "sonarr",
           "supervisor",
+          "tempstat",
           "unpoller"
         ]
       },

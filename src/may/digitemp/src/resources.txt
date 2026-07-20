@@ -1,4 +1,0 @@
-../install.sh
-../install_pre.sh
-../install_prep.sh
-main/resources/image/telegraf.conf
