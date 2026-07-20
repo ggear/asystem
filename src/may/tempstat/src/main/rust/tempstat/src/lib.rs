@@ -1,4 +1,4 @@
-//! State topic payload (`tempstat/$HOST/data`, retained, QoS 1):
+//! State topic payload (`tempstat/data`, retained, QoS 1):
 //! `{ "timestamp": <str>, "period_ms": <u64>, "samples": { "<unique_id>_celsius": <f64>, ... } }`
 //! Per-sensor `samples.<unique_id>_celsius` fields are absent when a sensor fails.
 
@@ -28,8 +28,8 @@ use crate::driver::OneWire;
 static LEVEL_NAMES: LazyLock<Vec<String>> =
     LazyLock::new(|| LevelFilter::iter().map(|level| level.as_str().to_lowercase()).collect());
 
-const STATE_TOPIC: &str = "tempstat/$HOST/data";
-const STATUS_TOPIC: &str = "tempstat/$HOST/status";
+const STATE_TOPIC: &str = "tempstat/data";
+const STATUS_TOPIC: &str = "tempstat/status";
 const LOG_LABEL_WIDTH: usize = 48;
 const MAX_CONSECUTIVE_TOTAL_FAILURES: u32 = 3;
 
@@ -117,9 +117,8 @@ impl Cli {
             self.broker_port,
             sensors.len()
         );
-        let host = resolve_host();
-        let state_topic = STATE_TOPIC.replace("$HOST", &host);
-        let status_topic = STATUS_TOPIC.replace("$HOST", &host);
+        let state_topic = STATE_TOPIC.to_string();
+        let status_topic = STATUS_TOPIC.to_string();
         loop {
             let ds2480b = match self.open_device(timeout) {
                 Ok(device) => device,
@@ -212,25 +211,6 @@ fn log_sensors(sensors: &[SensorConfig]) {
             )
         );
     }
-}
-
-pub fn resolve_host() -> String {
-    let host = std::env::var("TEMPSTAT_HOST")
-        .ok()
-        .filter(|host| !host.is_empty())
-        .or_else(system_hostname)
-        .unwrap_or_else(|| "unknown".to_string());
-    debug!("host resolved to [{host}]");
-    host
-}
-
-fn system_hostname() -> Option<String> {
-    std::process::Command::new("hostname")
-        .output()
-        .ok()
-        .and_then(|output| String::from_utf8(output.stdout).ok())
-        .map(|text| text.trim().to_string())
-        .filter(|hostname| !hostname.is_empty())
 }
 
 pub fn parse_duration(raw: &str) -> Result<Duration, String> {
@@ -492,19 +472,6 @@ mod tests {
             Cli::parse_from(["tempstat"]).sensors,
             PathBuf::from("/asystem/etc/sensors.json")
         );
-    }
-
-    #[test]
-    fn resolve_host_uses_tempstat_host_env() {
-        unsafe { std::env::set_var("TEMPSTAT_HOST", "env-host") };
-        assert_eq!(resolve_host(), "env-host");
-        unsafe { std::env::remove_var("TEMPSTAT_HOST") };
-    }
-
-    #[test]
-    fn resolve_host_falls_back_to_nonempty() {
-        unsafe { std::env::remove_var("TEMPSTAT_HOST") };
-        assert!(!resolve_host().is_empty());
     }
 
     #[test]

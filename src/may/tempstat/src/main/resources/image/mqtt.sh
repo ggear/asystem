@@ -18,9 +18,9 @@ mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t'
 printf "\nEntity Metadata publish script [tempstat] sleeping before dropping data topics ... " && sleep 2 && printf "done\n\n"
 
 printf "Entity Metadata publish script [tempstat] dropping data topics on [$VERNEMQ_SERVICE]:\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "tempstat/+/data" -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "tempstat/data" -W 1 2>/dev/null
 
-printf "\nEntity Metadata publish script [tempstat/+/data] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\n\n"
+printf "\nEntity Metadata publish script [tempstat/data] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\n\n"
 
 printf "Entity Metadata publish script [tempstat] publishing discovery topics on [$VERNEMQ_SERVICE]:\n"
 find "$ROOT_DIR" -path "*/tempstat/*" -name "*.json" -print0 | sort -z | while read -d $'\0' METADATA_FILE; do

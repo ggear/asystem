@@ -7,19 +7,19 @@
   "device_class": "temperature",
   "icon": "mdi:thermometer",
   "force_update": false,
-  "state_topic": "tempstat/macmini-may/data",
+  "state_topic": "tempstat/data",
   "value_template": "{{ (value_json['samples']['rack_top_temperature_celsius'] | float(None)) if (value_json['samples'] is defined and value_json['samples']['rack_top_temperature_celsius'] is defined) else (states('sensor.rack_top_temperature') | float(None)) }}",
-  "command_topic": "tempstat/macmini-may/command",
-  "availability_topic": "tempstat/macmini-may/status",
+  "command_topic": "tempstat/command",
+  "availability_topic": "tempstat/status",
   "qos": 1,
   "device": {
     "identifiers": [
-      "digitemp-rack-temperature"
+      "analog-devices-rack-temperature"
     ],
     "name": "Rack Temperature",
-    "model": "DS18x20",
-    "manufacturer": "DigiTemp",
-    "sw_version": "UART to 1-Wire Protocol",
+    "model": "DS18B20",
+    "manufacturer": "Analog Devices",
+    "sw_version": "ASYSTEM_VERSION",
     "suggested_area": "Rack",
     "connections": [
       [

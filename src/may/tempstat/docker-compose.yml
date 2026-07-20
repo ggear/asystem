@@ -3,7 +3,6 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
-    - TEMPSTAT_HOST
     - TEMPSTAT_MOCK
     - TEMPSTAT_MOCK_ADAPTER
     - TEMPSTAT_POLL_PERIOD

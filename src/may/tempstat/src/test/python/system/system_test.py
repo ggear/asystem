@@ -1,5 +1,4 @@
 import json
-import os
 import random
 import string
 import sys
@@ -12,9 +11,8 @@ HOST = "127.0.0.1"
 PORT = 32404
 TIMEOUT = 10
 TIMEOUT_WARMUP = 90
-TEMPSTAT_HOST = os.environ.get("TEMPSTAT_HOST", "host.docker.internal")
-STATE_TOPIC = "tempstat/{}/data".format(TEMPSTAT_HOST)
-STATUS_TOPIC = "tempstat/{}/status".format(TEMPSTAT_HOST)
+STATE_TOPIC = "tempstat/data"
+STATUS_TOPIC = "tempstat/status"
 SENSORS = ["utility_temperature", "rack_top_temperature", "rack_bottom_temperature"]
 CELSIUS = 25.0625
 

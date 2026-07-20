@@ -79,6 +79,7 @@ Add sys test?
 ###############################################################################################################################################################
 # Supervisor
 ###############################################################################################################################################################
+add a .sleep that config reads like version that marks a service as ignored and not unhealthy when off. install.sh to delete .sleep when run. Validate design and apply to openra
 implement health scripts and bootstrap, remove the later?
 implement commands to restart services, to work through ui when selected with popup and through HASS
 Add a go linter to pickup IntelliJ style warnings?
