@@ -207,7 +207,7 @@ fn log_sensors(sensors: &[SensorConfig]) {
         info!(
             "{}",
             log_line(
-                &format!("detected sensor [{}] ROM", sensor.unique_id),
+                &format!("sensor [{}] detected ROM", sensor.unique_id),
                 &sensor.rom.to_string()
             )
         );
