@@ -30,7 +30,7 @@ static LEVEL_NAMES: LazyLock<Vec<String>> =
 
 const STATE_TOPIC: &str = "tempstat/$HOST/data";
 const STATUS_TOPIC: &str = "tempstat/$HOST/status";
-const LOG_LABEL_WIDTH: usize = 45;
+const LOG_LABEL_WIDTH: usize = 48;
 const MAX_CONSECUTIVE_TOTAL_FAILURES: u32 = 3;
 
 pub(crate) fn log_line(label: &str, value: &str) -> String {
@@ -121,22 +121,9 @@ impl Cli {
         let state_topic = STATE_TOPIC.replace("$HOST", &host);
         let status_topic = STATUS_TOPIC.replace("$HOST", &host);
         loop {
-            let mut publisher =
-                match MqttPublisher::new(&self.broker_host, self.broker_port, &self.broker_token, &status_topic) {
-                    Ok(publisher) => publisher,
-                    Err(err) => {
-                        if period.is_zero() {
-                            return Err(err.to_string());
-                        }
-                        error!("broker unavailable: {err}, retrying in {period:?}");
-                        thread::sleep(period);
-                        continue;
-                    }
-                };
-            let mut bus = match self.open_bus(timeout) {
-                Ok(bus) => bus,
+            let ds2480b = match self.open_device(timeout) {
+                Ok(device) => device,
                 Err(err) => {
-                    let _ = publisher.close(&status_topic);
                     if period.is_zero() {
                         return Err(format!("failed to open device [{}]: {err}", self.device));
                     }
@@ -152,6 +139,31 @@ impl Cli {
                     &format!("{} ({})", self.device, if mock { "mock" } else { "real" })
                 )
             );
+            let mut publisher =
+                match MqttPublisher::new(&self.broker_host, self.broker_port, &self.broker_token, &status_topic) {
+                    Ok(publisher) => publisher,
+                    Err(err) => {
+                        if period.is_zero() {
+                            return Err(err.to_string());
+                        }
+                        error!("broker unavailable: {err}, retrying in {period:?}");
+                        thread::sleep(period);
+                        continue;
+                    }
+                };
+            let mut bus = match select_adapter(ds2480b) {
+                Ok(bus) => bus,
+                Err(err) => {
+                    let _ = publisher.close(&status_topic);
+                    if period.is_zero() {
+                        return Err(format!("failed to open device [{}]: {err}", self.device));
+                    }
+                    error!("device unavailable [{}]: {err}, retrying in {period:?}", self.device);
+                    thread::sleep(period);
+                    continue;
+                }
+            };
+            log_sensors(&sensors);
             let poll_result = poll(period, &sensors, &mut publisher, bus.as_mut(), &state_topic);
             let close_result = publisher.close(&status_topic).map_err(|err| err.to_string());
             let combined = poll_result.and(close_result);
@@ -168,21 +180,33 @@ impl Cli {
         }
     }
 
-    fn open_bus(&self, timeout: Duration) -> driver::Result<Box<dyn OneWire>> {
-        let mut ds2480b = Ds2480b::from_uart(SerialUart::open(&self.device, timeout)?);
-        match ds2480b.probe() {
-            Ok(()) => {
-                info!("{}", log_line("found adapter chipset", "DS2480B"));
-                Ok(Box::new(ds2480b))
-            }
-            Err(err) => {
-                debug!("DS2480B not detected ({err}), probing for DS9097");
-                let mut ds9097 = Ds9097::new(ds2480b.into_uart())?;
-                ds9097.redetect()?;
-                info!("{}", log_line("found adapter chipset", "DS9097"));
-                Ok(Box::new(ds9097))
-            }
+    fn open_device(&self, timeout: Duration) -> driver::Result<Ds2480b<SerialUart>> {
+        Ok(Ds2480b::from_uart(SerialUart::open(&self.device, timeout)?))
+    }
+}
+
+fn select_adapter(mut ds2480b: Ds2480b<SerialUart>) -> driver::Result<Box<dyn OneWire>> {
+    match ds2480b.probe() {
+        Ok(()) => {
+            info!("{}", log_line("found adapter chipset", "DS2480B"));
+            Ok(Box::new(ds2480b))
         }
+        Err(err) => {
+            debug!("DS2480B not detected ({err}), probing for DS9097");
+            let mut ds9097 = Ds9097::new(ds2480b.into_uart())?;
+            ds9097.redetect()?;
+            info!("{}", log_line("found adapter chipset", "DS9097"));
+            Ok(Box::new(ds9097))
+        }
+    }
+}
+
+fn log_sensors(sensors: &[SensorConfig]) {
+    for sensor in sensors {
+        info!(
+            "{}",
+            log_line(&format!("found ROM [{}] attaching to", sensor.rom), &sensor.unique_id)
+        );
     }
 }
 
@@ -224,7 +248,7 @@ fn poll<P: Publisher>(
         info!(
             "{}",
             log_line(
-                "start collection and publish loop every",
+                "sensor collection/publish loop running every",
                 &format!("{}s", period.as_secs())
             )
         );
@@ -315,7 +339,7 @@ fn poll_once<P: Publisher>(
     info!(
         "{}",
         log_line(
-            "sensor samples collected and published in",
+            "sensor samples collected/published in",
             &format!("{}ms", start.elapsed().as_millis())
         )
     );

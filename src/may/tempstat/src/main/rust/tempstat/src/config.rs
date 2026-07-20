@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 
-use log::info;
 use serde::Deserialize;
 
 use crate::driver::Rom;
@@ -24,8 +23,7 @@ pub fn load_sensors(path: &Path) -> Result<Vec<SensorConfig>, String> {
         fs::read_to_string(path).map_err(|err| format!("failed to read sensors file [{}]: {err}", path.display()))?;
     let raw: Vec<RawSensor> = serde_json::from_str(&data)
         .map_err(|err| format!("failed to parse sensors file [{}]: {err}", path.display()))?;
-    let sensors: Result<Vec<SensorConfig>, String> = raw
-        .into_iter()
+    raw.into_iter()
         .map(|sensor| {
             let code = sensor.rom.trim_start_matches("0x").trim_start_matches("0X");
             code.parse::<Rom>()
@@ -35,13 +33,7 @@ pub fn load_sensors(path: &Path) -> Result<Vec<SensorConfig>, String> {
                     rom,
                 })
         })
-        .collect();
-    if let Ok(ref list) = sensors {
-        for sensor in list {
-            info!("found ROM [{}] attaching to ... [{}]", sensor.rom, sensor.unique_id);
-        }
-    }
-    sensors
+        .collect()
 }
 
 #[cfg(test)]

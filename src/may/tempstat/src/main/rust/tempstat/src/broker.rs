@@ -63,10 +63,7 @@ impl MqttPublisher {
                 match event {
                     Ok(Event::Incoming(Packet::ConnAck(_))) => {
                         if let Some(sender) = ready_sender.take() {
-                            info!(
-                                "{}",
-                                log_line(&format!("broker connected with auth [{has_token}]"), &address)
-                            );
+                            info!("{}", log_line("broker connected to", &address));
                             let _ = sender.send(());
                         } else {
                             info!("broker reconnected [{}]", address);
