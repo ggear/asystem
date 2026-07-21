@@ -165,7 +165,7 @@ def _setup(context):
         raise Exception("Could not install go")
     _run_local(context, 'rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update > /dev/null;'
                         'rustup default "${RUST_VERSION}" > /dev/null;'
-                        'rustup component add rustfmt clippy --toolchain "${RUST_VERSION}" > /dev/null;'
+                        'rustup component add rustfmt clippy rust-src --toolchain "${RUST_VERSION}" > /dev/null;'
                         'mkdir -p "${CARGO_HOME}/bin";'
                         'for tool in "$(dirname "$(rustup which rustc)")"/*;'
                         ' do ln -sf "${tool}" "${CARGO_HOME}/bin/$(basename "${tool}")"; done;'
