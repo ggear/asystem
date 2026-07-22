@@ -1,2 +1,0 @@
-# TODO: Provide implementation
-echo ''

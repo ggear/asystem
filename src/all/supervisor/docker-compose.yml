@@ -36,11 +36,3 @@ services:
       resources:
         limits:
           memory: 256M
-  supervisor_bootstrap:
-    container_name: supervisor_bootstrap
-    <<: *common
-    restart: 'no'
-    entrypoint: bash
-    command: /asystem/etc/bootstrap.sh
-    depends_on:
-      - supervisor
