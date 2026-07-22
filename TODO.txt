@@ -7,11 +7,6 @@ Update max to latest Fedora
 Port may/meg to Fedora
 Upgrade UniFi
 
-###############################################################################################################################################################
-# Backup
-###############################################################################################################################################################
-Implement backup - maybe master scripts in storage, each module has personal backup script
-
 
 ###############################################################################################################################################################
 # Power
@@ -80,21 +75,12 @@ Add sys test?
 ###############################################################################################################################################################
 # Supervisor
 ###############################################################################################################################################################
-add a .sleep that config reads like version that marks a service as ignored and not unhealthy when off.
-    install.sh to delete .sleep when run. turning off from command/HASS adds .sleep.
-    extend install.sh with start/stop/restart/status commands, and have an install_restart script for internet to toggle power plug
-    Validate design and apply to openra
-wrangle uptime is 281d? should be 11d
-implement health scripts and bootstrap, remove the later?
 implement commands to restart services, to work through ui when selected with popup and through HASS
 Add a go linter to pickup IntelliJ style warnings?
-Service being added/removed from MQTT sometimes leads to empty slot and services not reshuffling sometimes. eg deleting top service from git, fab rel, atops shows empty slot at top. retart fixes it.
-atops doesnt survice vernemq restart
 when maximise host, update update freq to 1s
-Add a hot level metric for network/internet usage? maybe only later?
+Add a host level metric for network/internet usage? maybe only later?
 Convert from influxdb to postgres?
 Add sys test?
-when influxdb3 process failing was getting this error and empty memory. Make metric not ID but string and always show 0 but erroring memory bar. 09:36:52 ERROR error executing metric task id=26               error=cpu usage unavailable, non-monotonic counters 09:36:52 ERROR error executing metric task id=27               error=memory limit must be > 0
 
 
 ###############################################################################################################################################################
@@ -131,7 +117,7 @@ Binaries for media-space to call it, also have a adu and abench?
 Add quirks to asahi install
 Test share_08 on max, slow on Asahi (24 MB/s) see if Fedora resolves issue
 impl media-space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
-
+Implement backup - each module has personal backup script, desicovered and serially called by master backup script
 
 ###############################################################################################################################################################
 # Home Assistant

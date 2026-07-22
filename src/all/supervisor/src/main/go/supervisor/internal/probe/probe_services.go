@@ -164,7 +164,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	for polledServiceName, polledService := range servicesByName {
 		healthStatus, _ := polledService.healthStatus()
 		configuredStatus, _ := polledService.configuredStatus()
-		healthyAndConfigured := healthStatus && configuredStatus
+		sleepStatus, _ := polledService.sleepStatus()
+		aggregateStatus := sleepStatus || (healthStatus && configuredStatus)
 		runMetricCacheTasks(p, isPulse, []cacheMetricTask{
 			newCacheMetricTask(
 				metric.ValueBool,
@@ -174,8 +175,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				serviceBools[polledServiceName],
 				func() bool { return serviceBools[polledServiceName].PulseLast() },
 				func() bool { return serviceBools[polledServiceName].TrendMean() },
-				func(bool) bool { return healthyAndConfigured },
-				func(bool) bool { return healthyAndConfigured },
+				func(bool) bool { return aggregateStatus },
+				func(bool) bool { return aggregateStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueBool,
@@ -218,8 +219,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				nameStrings[polledServiceName],
 				func() string { return nameStrings[polledServiceName].PulseLast() },
 				func() string { return nameStrings[polledServiceName].TrendDominant() },
-				func(string) bool { return healthyAndConfigured },
-				func(string) bool { return healthyAndConfigured },
+				func(string) bool { return aggregateStatus },
+				func(string) bool { return aggregateStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueString,
@@ -229,8 +230,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				versionStrings[polledServiceName],
 				func() string { return versionStrings[polledServiceName].PulseLast() },
 				func() string { return versionStrings[polledServiceName].TrendDominant() },
-				func(string) bool { return healthyAndConfigured },
-				func(string) bool { return healthyAndConfigured },
+				func(string) bool { return aggregateStatus },
+				func(string) bool { return aggregateStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -240,8 +241,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedProcessorInts[polledServiceName],
 				func() int8 { return usedProcessorInts[polledServiceName].PulseMax() },
 				func() int8 { return usedProcessorInts[polledServiceName].TrendP95() },
-				func(p int8) bool { return healthyAndConfigured && p <= 90 },
-				func(t int8) bool { return healthyAndConfigured && t <= 70 },
+				func(p int8) bool { return aggregateStatus && p <= 90 },
+				func(t int8) bool { return aggregateStatus && t <= 70 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -251,8 +252,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedMemoryInts[polledServiceName],
 				func() int8 { return usedMemoryInts[polledServiceName].PulseMax() },
 				func() int8 { return usedMemoryInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return healthyAndConfigured && p <= 90 },
-				func(t int8) bool { return healthyAndConfigured && t <= 75 },
+				func(p int8) bool { return aggregateStatus && p <= 90 },
+				func(t int8) bool { return aggregateStatus && t <= 75 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -262,8 +263,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedDiskOpsInts[polledServiceName],
 				func() int8 { return usedDiskOpsInts[polledServiceName].PulseMax() },
 				func() int8 { return usedDiskOpsInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return healthyAndConfigured && p <= 90 },
-				func(t int8) bool { return healthyAndConfigured && t <= 80 },
+				func(p int8) bool { return aggregateStatus && p <= 90 },
+				func(t int8) bool { return aggregateStatus && t <= 80 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -273,8 +274,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedNetworkInts[polledServiceName],
 				func() int8 { return usedNetworkInts[polledServiceName].PulseMax() },
 				func() int8 { return usedNetworkInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return healthyAndConfigured && p <= 90 },
-				func(t int8) bool { return healthyAndConfigured && t <= 80 },
+				func(p int8) bool { return aggregateStatus && p <= 90 },
+				func(t int8) bool { return aggregateStatus && t <= 80 },
 			),
 			newCacheMetricTask(
 				metric.ValueFloat,
@@ -284,8 +285,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				upTimeFloats[polledServiceName],
 				func() float64 { return upTimeFloats[polledServiceName].PulseLast() },
 				func() float64 { return upTimeFloats[polledServiceName].TrendMax() },
-				func(float64) bool { return healthyAndConfigured },
-				func(float64) bool { return healthyAndConfigured },
+				func(float64) bool { return aggregateStatus },
+				func(float64) bool { return aggregateStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueFloat,
@@ -306,8 +307,8 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				restartCountFloats[polledServiceName],
 				func() float64 { return restartCountFloats[polledServiceName].PulseLast() },
 				func() float64 { return restartCountFloats[polledServiceName].TrendMax() },
-				func(p float64) bool { return healthyAndConfigured && p <= 80 },
-				func(t float64) bool { return healthyAndConfigured && t <= 70 },
+				func(p float64) bool { return aggregateStatus && p <= 80 },
+				func(t float64) bool { return aggregateStatus && t <= 70 },
 			),
 		})
 	}
@@ -464,6 +465,14 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 		} else {
 			service.configuredStatusValue = configuredStatusValue
 		}
+		sleepStatusValue, sleepErr := p.sleep(container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + name},
+		})
+		if sleepErr != nil {
+			service.sleepStatusErr = sleepErr
+		} else {
+			service.sleepStatusValue = sleepStatusValue
+		}
 		backupStatusValue, backupErr := p.backupStatus()
 		if backupErr != nil {
 			service.backupStatusErr = backupErr
@@ -477,13 +486,16 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			existingService.configuredStatusValue = true
 			services[configuredServiceName] = existingService
 		} else {
-			ghostVersion, _ := p.version(container.InspectResponse{
+			ghostInspect := container.InspectResponse{
 				ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + configuredServiceName},
 				Config:            &container.Config{Image: configuredServiceName},
-			})
+			}
+			ghostVersion, _ := p.version(ghostInspect)
+			ghostSleep, _ := p.sleep(ghostInspect)
 			services[configuredServiceName] = service{
 				nameValue:             configuredServiceName,
 				configuredStatusValue: true,
+				sleepStatusValue:      ghostSleep,
 				versionValue:          ghostVersion,
 			}
 		}
@@ -512,6 +524,8 @@ type service struct {
 	healthStatusErr       error
 	configuredStatusValue bool
 	configuredStatusErr   error
+	sleepStatusValue      bool
+	sleepStatusErr        error
 	nameValue             string
 	versionValue          string
 	versionErr            error
@@ -547,6 +561,10 @@ func (s *service) healthStatus() (bool, error) {
 
 func (s *service) configuredStatus() (bool, error) {
 	return s.configuredStatusValue, s.configuredStatusErr
+}
+
+func (s *service) sleepStatus() (bool, error) {
+	return s.sleepStatusValue, s.sleepStatusErr
 }
 
 func (s *service) name() string {
@@ -782,6 +800,38 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 		return "-", nil
 	}
 	return version, nil
+}
+
+func (p *servicesProbe) sleep(containerInfo container.InspectResponse) (bool, error) {
+	name := ""
+	if containerInfo.ContainerJSONBase != nil {
+		name = strings.TrimPrefix(containerInfo.Name, "/")
+	}
+	if name == "" && containerInfo.Config != nil && containerInfo.Config.Image != "" {
+		tokens := strings.Split(strings.Split(containerInfo.Config.Image, ":")[0], "/")
+		name = tokens[0]
+	}
+	if name == "" {
+		return false, nil
+	}
+	mount := config.Load(p.configPath).Mount()
+	candidates := []string{""}
+	if mount != "" {
+		candidates = []string{mount, ""}
+	}
+	for _, installBase := range candidates {
+		installDir := installBase + "/var/lib/asystem/install/"
+		latestDir := installDir + name + "/latest"
+		if installBase != "" {
+			if target, linkErr := os.Readlink(latestDir); linkErr == nil && strings.HasPrefix(target, "/") {
+				latestDir = installBase + target
+			}
+		}
+		if _, err := os.Stat(latestDir + "/.sleep"); err == nil {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (p *servicesProbe) upTime(containerInfo container.InspectResponse) (float64, error) {

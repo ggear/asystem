@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/testutil"
@@ -791,6 +793,113 @@ func TestProbe_Version(t *testing.T) {
 			}
 			if got != tt.expected {
 				t.Fatalf("Got version = %q, expected %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestProbe_Sleep(t *testing.T) {
+	writeSleepMarker := func(t *testing.T, dir string) {
+		t.Helper()
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s failed: %v", dir, err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, ".sleep"), nil, 0o644); err != nil {
+			t.Fatalf("write .sleep failed: %v", err)
+		}
+	}
+	tests := []struct {
+		name          string
+		containerInfo container.InspectResponse
+		setup         func(t *testing.T, mount string)
+		expected      bool
+		expectedError bool
+	}{
+		{
+			name: "happy_sleep_marker_present",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+			},
+			setup: func(t *testing.T, mount string) {
+				writeSleepMarker(t, filepath.Join(mount, "var/lib/asystem/install/myservice/latest"))
+			},
+			expected:      true,
+			expectedError: false,
+		},
+		{
+			name: "happy_sleep_marker_via_absolute_symlink",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+			},
+			setup: func(t *testing.T, mount string) {
+				writeSleepMarker(t, filepath.Join(mount, "var/lib/asystem/install/myservice/10.100.5678"))
+				if err := os.Symlink("/var/lib/asystem/install/myservice/10.100.5678", filepath.Join(mount, "var/lib/asystem/install/myservice/latest")); err != nil {
+					t.Fatalf("symlink failed: %v", err)
+				}
+			},
+			expected:      true,
+			expectedError: false,
+		},
+		{
+			name: "happy_ghost_service_image_name_sleep_marker_present",
+			containerInfo: container.InspectResponse{
+				Config: &container.Config{Image: "myservice"},
+			},
+			setup: func(t *testing.T, mount string) {
+				writeSleepMarker(t, filepath.Join(mount, "var/lib/asystem/install/myservice/latest"))
+			},
+			expected:      true,
+			expectedError: false,
+		},
+		{
+			name: "sad_no_sleep_marker_returns_false",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+			},
+			setup: func(t *testing.T, mount string) {
+				if err := os.MkdirAll(filepath.Join(mount, "var/lib/asystem/install/myservice/latest"), 0o755); err != nil {
+					t.Fatalf("mkdir failed: %v", err)
+				}
+			},
+			expected:      false,
+			expectedError: false,
+		},
+		{
+			name: "sad_no_install_dir_returns_false",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+			},
+			setup:         func(t *testing.T, mount string) {},
+			expected:      false,
+			expectedError: false,
+		},
+		{
+			name:          "sad_no_name_returns_false",
+			containerInfo: container.InspectResponse{},
+			setup:         func(t *testing.T, mount string) {},
+			expected:      false,
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(config.Reset)
+			mount := t.TempDir()
+			t.Setenv("SUPERVISOR_MOUNT", mount)
+			tt.setup(t, mount)
+			p := newServicesProbe()
+			got, err := p.sleep(tt.containerInfo)
+			if tt.expectedError {
+				if err == nil {
+					t.Fatalf("Got no error, expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Got error = %v, expected nil", err)
+			}
+			if got != tt.expected {
+				t.Fatalf("Got sleep = %v, expected %v", got, tt.expected)
 			}
 		})
 	}

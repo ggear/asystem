@@ -48,6 +48,9 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 // Cache: shared with display. Receives data published by RunAllProbesPublishLoop on remote hosts.
 // Discovery: service/name messages trigger RegisterService which adds nil entries and returns new topic bindings to subscribe.
 // Host online: unsubscribe+resubscribe forces broker to redeliver retained messages, restoring records. Unknown hosts default to online.
+// Host offline->online transition (serve restart / reconnect): reaps the host's services (Evict+Delete) before resubscribing, so services
+// removed while serve was down do not linger as orphaned slots; survivors repopulate from redelivered retained data. Steady-state online
+// heartbeats skip the reap (gated on the prior status) and only resubscribe.
 // Host offline: Evict (nil) all services (keeps slots for repopulation), store nil for host-kind metrics, drop from subscribed map.
 // Cleanup: empty/nil payload → Evict (nil) + Delete. Purge evicts stale non-nil to nil (via hostLastSeen), then deletes stale nil service records and reindexes.
 func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
@@ -142,18 +145,30 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			switch payload {
 			case hostStatusOnline:
 				statusStart := time.Now()
+				hostStatusMutex.RLock()
+				alreadyOnline := hostStatus[hostName]
+				hostStatusMutex.RUnlock()
 				storeHostStatus(hostName, true)
+				var hostTopics []metric.TopicBinding
 				for _, b := range cache.Topics() {
-					if b.GUID.Host != hostName {
-						continue
+					if b.GUID.Host == hostName {
+						hostTopics = append(hostTopics, b)
 					}
+				}
+				if !alreadyOnline {
+					for _, svc := range cache.Services(hostName) {
+						cache.Evict(hostName, svc)
+						cache.Delete(hostName, svc)
+					}
+				}
+				for _, b := range hostTopics {
 					subscribedMutex.Lock()
 					delete(subscribed, b.Topic)
 					subscribedMutex.Unlock()
 					client.Unsubscribe(b.Topic)
 					subscribe(client, b)
 				}
-				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline)
+				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline, "reaped", !alreadyOnline)
 			case hostStatusOffline, "":
 				statusStart := time.Now()
 				storeHostStatus(hostName, false)
@@ -248,6 +263,10 @@ type lpKey struct {
 
 // RunAllProbesPublishLoop runs local probes and publishes metrics to MQTT and the database.
 // Lifecycle: all probe metrics registered (not filtered). Subscribes to own service/name topic to discover services via retained messages.
+// Self-healing: the service/name topic MUST be published RETAINED (see process below). After a non-graceful exit (SIGKILL/OOM) the
+// deferred tombstone-all does not run, so a departed service's stale retained records linger on the broker. On restart the retained name
+// is the only breadcrumb that lets this loop rediscover that service (RegisterService) so the per-pulse Cleanup below can evict+delete it
+// and publish empty tombstones that clear the broker; without retention the orphan would never be reconciled. See supervisor/CLAUDE.md.
 // Heartbeat: publishes online status + ALL records (not just dirty) + drains dirty. Non-heartbeat: publishes dirty records only.
 // Line protocol: int/float metrics grouped per host+service for database writes.
 // Cache: own instance, not shared with any display. Take drains dirty map each pulse.
@@ -267,6 +286,8 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	statusTopic := "supervisor/" + hostName + "/status"
 	serviceNameTopic := "supervisor/" + hostName + "/data/service/+/name"
 	commandTopic := "supervisor/+/command/service/+"
+	var hasConnected atomic.Bool
+	var forceRepublish atomic.Bool
 	onConnect := func(client mqtt.Client) {
 		client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
 			var value metric.ValueData
@@ -287,6 +308,24 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 
 			slog.Debug("command", "host", tokens[1], "service", tokens[4], "payload", string(msg.Payload()))
 		})
+		if hasConnected.Swap(true) {
+			statusReadback := make(chan string, 1)
+			client.Subscribe(statusTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+				select {
+				case statusReadback <- strings.TrimSpace(string(msg.Payload())):
+				default:
+				}
+			}).Wait()
+			var seen string
+			select {
+			case seen = <-statusReadback:
+			case <-time.After(2 * time.Second):
+			}
+			client.Unsubscribe(statusTopic)
+			if seen != hostStatusOnline {
+				forceRepublish.Store(true)
+			}
+		}
 	}
 	client, err := brokerConnect(configPath, onConnect, statusTopic, hostStatusOffline)
 	if err != nil {
@@ -319,6 +358,17 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	deleted := make(map[lpKey]bool)
 	err = probe.Run(ctx, func(isHeartbeat bool) {
 		pulseStart := time.Now()
+		if forceRepublish.Swap(false) && !isHeartbeat {
+			client.Publish(statusTopic, 1, true, hostStatusOnline)
+			cache.Records(func(_ metric.RecordGUID, record *metric.Record) {
+				if record.Topic == "" || record.Value.Pulse == nil {
+					return
+				}
+				if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
+					client.Publish(record.Topic, 0, true, payload)
+				}
+			})
+		}
 		txCount := 0
 		txBytes := 0
 		lineProtocol.Reset()

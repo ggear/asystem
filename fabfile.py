@@ -724,6 +724,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
         if isdir(module_go_main_path):
             _run_local(context, "go mod tidy", module_go_main_path)
             _run_local(context, "go mod download", module_go_main_path)
+            _run_local(context, "go generate ./...", module_go_main_path)
             _run_local(context, "GOCACHE={} GOBIN={} go build -o {}".format(
                 join(ROOT_MODULE_DIR, module, "target/go/cache"),
                 join(ROOT_MODULE_DIR, module, "target/go/bin"),

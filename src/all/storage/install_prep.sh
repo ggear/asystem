@@ -1,6 +1,10 @@
 #!/bin/bash
 
-cat <<EOF >/etc/samba/smb.conf
+source .env
+
+if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
+
+  cat <<EOF >/etc/samba/smb.conf
 [global]
   server min protocol = SMB2
   server max protocol = SMB3
@@ -59,20 +63,20 @@ cat <<EOF >/etc/samba/smb.conf
   #fruit:model = TimeCapsule9,119
 
 EOF
-for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
-  SHARE_INDEX=$(echo ${SHARE_DIR} | awk 'BEGIN{FS=OFS="/"}{print $3}')
-  rm -rf ${SHARE_DIR}/lost+found
-  mkdir -p ${SHARE_DIR}/backup/data
-  mkdir -p ${SHARE_DIR}/backup/media
-  mkdir -p ${SHARE_DIR}/backup/service
-  mkdir -p ${SHARE_DIR}/backup/timemachine
-  mkdir -p ${SHARE_DIR}/data
-  mkdir -p ${SHARE_DIR}/media
-  mkdir -p ${SHARE_DIR}/service
-  mkdir -p ${SHARE_DIR}/service/mlflow
-  mkdir -p ${SHARE_DIR}/tmp
-  chown -R graham:users ${SHARE_DIR}
-  cat <<EOF >>/etc/samba/smb.conf
+  for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+    SHARE_INDEX=$(echo ${SHARE_DIR} | awk 'BEGIN{FS=OFS="/"}{print $3}')
+    rm -rf ${SHARE_DIR}/lost+found
+    mkdir -p ${SHARE_DIR}/backup/data
+    mkdir -p ${SHARE_DIR}/backup/media
+    mkdir -p ${SHARE_DIR}/backup/service
+    mkdir -p ${SHARE_DIR}/backup/timemachine
+    mkdir -p ${SHARE_DIR}/data
+    mkdir -p ${SHARE_DIR}/media
+    mkdir -p ${SHARE_DIR}/service
+    mkdir -p ${SHARE_DIR}/service/mlflow
+    mkdir -p ${SHARE_DIR}/tmp
+    chown -R graham:users ${SHARE_DIR}
+    cat <<EOF >>/etc/samba/smb.conf
 [share-${SHARE_INDEX}]
   comment = Share-${SHARE_INDEX} Files
   path = ${SHARE_DIR}
@@ -89,32 +93,34 @@ for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BE
 
 EOF
 
-  # TODO: Disable Time Machine share until we want it again
-  #  cat <<EOF >>/etc/samba/smb.conf
-  #[time-machine-${SHARE_INDEX}]
-  #  comment = Time-Machine-${SHARE_INDEX} Files
-  #  path = ${SHARE_DIR}/backup/timemachine
-  #  public = yes
-  #  browseable = yes
-  #  read only = no
-  #  writeable = yes
-  #  force user = graham
-  #  force group = users
-  #  create mask = 0640
-  #  directory mask = 0750
-  #  force create mode = 0640
-  #  force directory mode = 0750
-  #  fruit:aapl = yes
-  #  fruit:time machine = yes
-  #  fruit:time machine max size = "4 T"
-  #  vfs objects = fruit streams_xattr
-  #
-  #EOF
+    # TODO: Disable Time Machine share until we want it again
+    #  cat <<EOF >>/etc/samba/smb.conf
+    #[time-machine-${SHARE_INDEX}]
+    #  comment = Time-Machine-${SHARE_INDEX} Files
+    #  path = ${SHARE_DIR}/backup/timemachine
+    #  public = yes
+    #  browseable = yes
+    #  read only = no
+    #  writeable = yes
+    #  force user = graham
+    #  force group = users
+    #  create mask = 0640
+    #  directory mask = 0750
+    #  force create mode = 0640
+    #  force directory mode = 0750
+    #  fruit:aapl = yes
+    #  fruit:time machine = yes
+    #  fruit:time machine max size = "4 T"
+    #  vfs objects = fruit streams_xattr
+    #
+    #EOF
 
-done
+  done
 
-for _smb in smb.service smbd.service nmb.service nmbd.service remote-fs.target; do
-  systemctl list-unit-files ${_smb} | grep -q ${_smb} && systemctl enable ${_smb} && systemctl restart ${_smb} && systemctl --no-pager status ${_smb}
-done
+  for _smb in smb.service smbd.service nmb.service nmbd.service remote-fs.target; do
+    systemctl list-unit-files ${_smb} | grep -q ${_smb} && systemctl enable ${_smb} && systemctl restart ${_smb} && systemctl --no-pager status ${_smb}
+  done
 
-[ -d /share ] && ls -d /share/* >/dev/null 2>&1 && duf -width 250 -style ascii -output mountpoint,size,used,avail,usage /share/*
+  [ -d /share ] && ls -d /share/* >/dev/null 2>&1 && duf -width 250 -style ascii -output mountpoint,size,used,avail,usage /share/*
+
+fi

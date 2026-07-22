@@ -1,2 +1,1 @@
-true
-# TODO: Provide implementation
+pgrep -f "/asystem/mnt/supervisor serve" >/dev/null

@@ -4,11 +4,13 @@
 ###############################################################################
 
 set -Eeuo pipefail
+
 IFS=$'\n\t'
 
 log_info() { echo "$*"; }
 log_warn() { echo "WARN: $*" >&2; }
 log_error() { echo "ERROR: $*" >&2 && exit 1; }
+
 run_hook() {
   local hook_path="$1"
   if [[ -f "${hook_path}" ]]; then
@@ -17,9 +19,38 @@ run_hook() {
   fi
 }
 
+stop_service() {
+  docker stop "${SERVICE_NAME}" >/dev/null 2>&1 || true
+  docker stop "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
+  docker wait "${SERVICE_NAME}" >/dev/null 2>&1 || true
+  docker wait "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
+}
+
+COMMAND="${1:-start}"
+case "${COMMAND}" in
+start | stop | sleep) ;;
+*) log_error "Unknown command: ${COMMAND} (expected 'start', 'stop' or 'sleep')" ;;
+esac
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_INSTALL="/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
 [[ -d "${SERVICE_INSTALL}" ]] || log_error "Install directory does not exist: ${SERVICE_INSTALL}"
 cd "${SERVICE_INSTALL}"
+
+if [[ "${COMMAND}" == "stop" || "${COMMAND}" == "sleep" ]]; then
+  stop_service
+  if [[ "${COMMAND}" == "sleep" ]]; then
+    touch "${SCRIPT_DIR}/.sleep"
+    log_info "Service put to sleep"
+  else
+    rm -f "${SCRIPT_DIR}/.sleep"
+    log_info "Service stopped"
+  fi
+  exit 0
+fi
+
+rm -f "${SCRIPT_DIR}/.sleep"
+
 run_hook "./install_prep.sh"
 cd "${SERVICE_INSTALL}"
 touch .env
@@ -41,10 +72,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
   IMAGE_TAR="${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz"
   [[ -f "${IMAGE_TAR}" ]] && docker image load -i "${IMAGE_TAR}"
   if [[ -f "docker-compose.yml" ]]; then
-    docker stop "${SERVICE_NAME}" >/dev/null 2>&1 || true
-    docker stop "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
-    docker wait "${SERVICE_NAME}" >/dev/null 2>&1 || true
-    docker wait "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
+    stop_service
     docker system prune --volumes -f >/dev/null 2>&1 || true
   fi
   if [[ ! -d "${SERVICE_HOME}" ]]; then

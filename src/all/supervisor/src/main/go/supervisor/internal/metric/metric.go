@@ -1,5 +1,7 @@
 package metric
 
+//go:generate go tool stringer -type=ID -output=metric_string.go
+
 type ID int
 
 // noinspection GoNameStartsWithPackageName

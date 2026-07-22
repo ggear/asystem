@@ -238,7 +238,7 @@ func runMetricCacheTasks(p probe, isPulse bool, tasks []cacheMetricTask) {
 	for _, task := range tasks {
 		cache := p.records()
 		if cache == nil {
-			slog.Error("metric task missing required cache", "id", task.metricID)
+			slog.Error("metric task missing required cache", "metric", task.metricID)
 			continue
 		}
 		if !p.hasMetric(task.metricID) {
@@ -263,13 +263,13 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 		missing = append(missing, "pulseOKFunc")
 	}
 	if len(missing) > 0 {
-		slog.Error("metric task missing required field", "id", task.metricID, "missing", strings.Join(missing, ","))
+		slog.Error("metric task missing required field", "metric", task.metricID, "missing", strings.Join(missing, ","))
 		return
 	}
 	sample, err := task.sampleFunc()
-	if err != nil && !errors.Is(err, errProbeWarmingUp) {
-		slog.Error("error executing metric task", "id", task.metricID, "error", err)
-		return
+	errored := err != nil && !errors.Is(err, errProbeWarmingUp)
+	if errored {
+		slog.Error("error executing metric task", "metric", task.metricID, "error", err)
 	}
 	task.statsFunc(sample)
 	if !isPulse {
@@ -277,7 +277,7 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 	}
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
-		slog.Error("metric task missing host name", "id", task.metricID)
+		slog.Error("metric task missing host name", "metric", task.metricID)
 		return
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
@@ -285,7 +285,7 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 	if pulse == nil {
 		return
 	}
-	pulseOK := task.pulseOKFunc(pulse)
+	pulseOK := task.pulseOKFunc(pulse) && !errored
 	var valueErr error
 	var value *metric.ValueData
 	trend := any(nil)
@@ -295,11 +295,11 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 	if task.trendOKFunc == nil || trend == nil {
 		value, valueErr = metric.NewDataPulseValue(pulseOK, pulse)
 	} else {
-		trendOK := task.trendOKFunc(trend)
+		trendOK := task.trendOKFunc(trend) && !errored
 		value, valueErr = metric.NewDataValue(pulseOK, pulse, trendOK, trend)
 	}
 	if valueErr != nil {
-		slog.Error("metric task value builder error", "id", task.metricID, "error", valueErr)
+		slog.Error("metric task value builder error", "metric", task.metricID, "error", valueErr)
 		return
 	}
 	record := metric.NewRecord(*value)
