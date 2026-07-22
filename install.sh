@@ -26,7 +26,8 @@ stop_service() {
   docker wait "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
 }
 
-COMMAND="${1:-start}"
+COMMAND="start"
+[[ "$#" -ge 1 ]] && COMMAND="$1"
 case "${COMMAND}" in
 start | stop | sleep) ;;
 *) log_error "Unknown command: ${COMMAND} (expected 'start', 'stop' or 'sleep')" ;;
