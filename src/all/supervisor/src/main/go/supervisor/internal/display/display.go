@@ -671,9 +671,23 @@ func (d *Display) subscribeUpdates() {
 	d.dirty.indexes = make(map[int]struct{}, len(d.boxes))
 	gen := d.dirty.generation
 	d.dirty.mutex.Unlock()
+	runStateInputs := []metric.ID{metric.MetricServiceName, metric.MetricServiceHealthStatus, metric.MetricServiceConfiguredStatus}
 	for i := range d.boxes {
-		if d.boxes[i].recordGUID != nil {
-			d.cache.SubscribeUpdates(*d.boxes[i].recordGUID, &boxListener{i, gen, d})
+		guid := d.boxes[i].recordGUID
+		if guid == nil {
+			continue
+		}
+		listener := &boxListener{i, gen, d}
+		d.cache.SubscribeUpdates(*guid, listener)
+		if metric.GetIDKind(guid.ID) == metric.MetricKindService {
+			for _, id := range runStateInputs {
+				if id == guid.ID {
+					continue
+				}
+				input := *guid
+				input.ID = id
+				d.cache.SubscribeUpdates(input, listener)
+			}
 		}
 	}
 }
