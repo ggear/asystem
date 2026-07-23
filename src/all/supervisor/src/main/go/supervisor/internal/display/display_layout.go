@@ -757,13 +757,13 @@ func resolveServiceRunState(display *Display, guid *metric.RecordGUID) serviceRu
 		}
 		return record.Value.Pulse.OK, true
 	}
-	serviceOK, serviceKnown := isOK(metric.MetricService)
+	aggregateOK, aggregateKnown := isOK(metric.MetricServiceName)
 	healthOK, healthKnown := isOK(metric.MetricServiceHealthStatus)
 	configuredOK, configuredKnown := isOK(metric.MetricServiceConfiguredStatus)
-	if !serviceKnown || !healthKnown || !configuredKnown {
+	if !aggregateKnown || !healthKnown || !configuredKnown {
 		return serviceRunStateUnknown
 	}
-	if !serviceOK {
+	if !aggregateOK {
 		return serviceRunStateStopped
 	}
 	if healthOK && configuredOK {
