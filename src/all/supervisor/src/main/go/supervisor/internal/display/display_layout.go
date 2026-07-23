@@ -629,6 +629,9 @@ func (b *box) drawValue(display *Display) {
 		trendOK = &record.Value.Trend.OK
 	}
 	c := highlight(&record.Value.Pulse.OK, trendOK)
+	if metric.GetIDKind(b.recordGUID.ID) == metric.MetricKindService && resolveServiceRunState(display, b.recordGUID) == serviceRunStateSleeping {
+		c = colourChat
+	}
 	valueString := ""
 	switch b.valKind {
 	case valBool:
@@ -735,6 +738,38 @@ func (b *box) clone() *box {
 		clone.position = &posClone
 	}
 	return &clone
+}
+
+type serviceRunState int
+
+const (
+	serviceRunStateUnknown serviceRunState = iota
+	serviceRunStateRunning
+	serviceRunStateStopped
+	serviceRunStateSleeping
+)
+
+func resolveServiceRunState(display *Display, guid *metric.RecordGUID) serviceRunState {
+	isOK := func(id metric.ID) (bool, bool) {
+		record, ok := display.cache.LoadByID(id, guid.Host, guid.ServiceIndex)
+		if !ok || record == nil || record.Value.Pulse == nil || record.Value.Pulse.IsZero() {
+			return false, false
+		}
+		return record.Value.Pulse.OK, true
+	}
+	serviceOK, serviceKnown := isOK(metric.MetricService)
+	healthOK, healthKnown := isOK(metric.MetricServiceHealthStatus)
+	configuredOK, configuredKnown := isOK(metric.MetricServiceConfiguredStatus)
+	if !serviceKnown || !healthKnown || !configuredKnown {
+		return serviceRunStateUnknown
+	}
+	if !serviceOK {
+		return serviceRunStateStopped
+	}
+	if healthOK && configuredOK {
+		return serviceRunStateRunning
+	}
+	return serviceRunStateSleeping
 }
 
 func highlight(pulse, trend *bool) colour {
