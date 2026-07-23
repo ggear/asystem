@@ -37,8 +37,9 @@ RUN set -eux; \
     weectl extension install -y /asystem/etc/install/weewx-mqtt.zip; \
     sed -i '/#   openssl s_client -help/d' /home/weewx/bin/user/mqtt.py; \
     weectl extension install -y /asystem/etc/install/weewx-loopdata.zip; \
+    touch /home/weewx/bin/user/extensions.py; \
+    chown --reference=/home/weewx/bin/user/loopdata.py /home/weewx/bin/user/extensions.py; \
     rm -rf /asystem/etc/install/weewx*.whl /asystem/etc/install/weewx-mqtt.zip /asystem/etc/install/weewx-loopdata.zip; \
-
     mkdir -p /data/html; \
     touch /data/html/index.html; \
     ln -s /data/html /var/www/html
