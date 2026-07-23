@@ -19,7 +19,7 @@ pull_repo "${ROOT_DIR}" "${1}" weewx weewx-mqtt matthewwall/weewx-mqtt "${VERSIO
 mkdir -p ${ROOT_DIR}/src/main/resources/image/install
 cp -nv ${ROOT_DIR}/../../../.deps/weewx/weewx-mqtt/weewx-mqtt.zip~ ${ROOT_DIR}/src/main/resources/image/install/weewx-mqtt.zip
 
-VERSION=v3.3.2
+VERSION=v6.0
 pull_repo "${ROOT_DIR}" "${1}" weewx weewx-loopdata chaunceygardiner/weewx-loopdata "${VERSION}"
 [ $(ls ${ROOT_DIR}/../../../.deps/weewx/weewx-loopdata/weewx-loopdata.zip.log 2>/dev/null | wc -l) -eq 0 ] && cd ${ROOT_DIR}/../../../.deps/weewx && zip -x "weewx-loopdata/.git*" -r weewx-loopdata.zip.log weewx-loopdata && mv ${ROOT_DIR}/../../../.deps/weewx/weewx-loopdata.zip.log ${ROOT_DIR}/../../../.deps/weewx/weewx-loopdata
 mkdir -p ${ROOT_DIR}/src/main/resources/image/install
