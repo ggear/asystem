@@ -62,7 +62,6 @@ add additional local tests testing issues?
 # Networks
 ###############################################################################################################################################################
 Summarise plan and validate
-update mqtt publish state to be match superovisor, heeriarchical, top level ok, then ensted detail ok's for HASS presentation of internet/wireless/zigbee/ethernet, include a command topic, map it out and link to xlsx
 Implement the data that informs the OK's for timeseries for InfluxDB
 InfluxDB for hass-zigbee and internet, deocmmission unpoller and then for wireless too? add local for LAN?
 add ethernet plugin
@@ -70,6 +69,19 @@ implement commands as place holder to send commands from HASS switches, eg turn 
 Update to Plan.md, any questions?
 decomission hass-zigbee and internet
 Add sys test?
+
+Dsign the HASS xlsx Networks fields, then generate heirachacal internet/wireless/zigbee/ethernet command/data/status schemas to match
+{
+  "timestamp": <number>,
+  "pulse": {
+    "ok": <true|false>,
+    "value": <number|text|true|false>
+  },
+  "trend": {
+    "ok": <true|false>,
+    "value": <number|text|true|false>
+  }
+}
 
 
 ###############################################################################################################################################################

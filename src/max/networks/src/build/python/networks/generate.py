@@ -12,7 +12,7 @@ if __name__ == "__main__":
     metadata_networks_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "Zeroth") &
+        (metadata_df["device_via_device"] == "Networks") &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0) &

@@ -26,8 +26,14 @@ if __name__ == "__main__":
                           topic_glob_data="supervisor/${SUPERVISOR_HOST}/data/+/+/+",
                           schema_state="""
 {
+  "timestamp": <number>,
   "pulse": {
-    "ok": <true|false>
+    "ok": <true|false>,
+    "value": <number|text|true|false>
+  },
+  "trend": {
+    "ok": <true|false>,
+    "value": <number|text|true|false>
   }
 }
                           """, schema_command="""

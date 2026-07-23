@@ -1,5 +1,11 @@
 {
+  "timestamp": <number>,
   "pulse": {
-    "ok": <true|false>
+    "ok": <true|false>,
+    "value": <number|text|true|false>
+  },
+  "trend": {
+    "ok": <true|false>,
+    "value": <number|text|true|false>
   }
 }
