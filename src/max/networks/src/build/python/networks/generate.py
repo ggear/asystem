@@ -5,7 +5,6 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 if __name__ == "__main__":
     metadata_df = load_entity_metadata()
 
-    write_bootstrap()
     write_healthcheck()
 
     # Build MQTT schema
@@ -17,8 +16,21 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
-        ]
+        ].copy()
+    metadata_networks_df["availability_topic"] = "networks/status"
+    metadata_networks_df["command_topic"] = "networks/command"
     write_entity_metadata(metadata_networks_df,
-                          topics_path="networks_${SUPERVISOR_HOST}",
-                          topic_glob_discovery="homeassistant/+/networks_${SUPERVISOR_HOST}/+/config",
-                          topic_glob_data="networks/${SUPERVISOR_HOST}/data/+/+/+")
+                          topic_glob_discovery="homeassistant/+/networks/+/config",
+                          topic_glob_data="networks/data/#",
+                          schema_state="""
+{
+  "timestamp": <number>,
+  "ok": <true|false>,
+  "status": <fit|sick|dead>,
+  "score": <0-100>
+}
+                              """, schema_command="""
+{ "command": <check> }
+                              """, schema_availability="""
+<online|offline>
+                              """)

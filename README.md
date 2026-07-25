@@ -12,7 +12,7 @@ To build, test and package this project the following is required:
 * docker-28+
 
 The following programming toolchains are installed with the required version levels and
-dependencies into an isolated, dedicated Conda environment on project setup:
+dependencies into isolated, dedicated environments on project setup:
 
 * go
 * rust

@@ -1,2 +1,1 @@
-true
-# TODO: Provide implementation
+ps -ef | grep "[/]asystem/bin/networks" >/dev/null

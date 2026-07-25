@@ -20,10 +20,10 @@ printf "\nEntity Metadata publish script [tasmota] sleeping before dropping data
 printf "Entity Metadata publish script [tasmota] dropping data topics on [$VERNEMQ_SERVICE]:\n"
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "tasmota/#" -W 1 2>/dev/null
 
-printf "\nEntity Metadata publish script [tasmota/#] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\n\n"
+printf "\nEntity Metadata publish script [tasmota] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\n\n"
 
 printf "Entity Metadata publish script [tasmota] publishing discovery topics on [$VERNEMQ_SERVICE]:\n"
-find "$ROOT_DIR" -path "*/tasmota/*" -name "*.json" -print0 | sort -z | while read -d $'\0' METADATA_FILE; do
+find "$ROOT_DIR" -path "*/homeassistant/*/tasmota/*/*" -name "*.json" -print0 | sort -z | while read -d $'\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${METADATA_FILE/$ROOT_DIR\//}")
   mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$METADATA_TOPIC" -f "$METADATA_FILE" -r
   printf "%s\n" "$METADATA_TOPIC"

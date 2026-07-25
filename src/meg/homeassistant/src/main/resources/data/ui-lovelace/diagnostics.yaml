@@ -9,22 +9,6 @@
       name: Google Device Syncronise
 ################################################################################
 - type: entities
-  title: Internet Telemetry
-  entities:
-    - entity: sensor.network_internet_ping
-      name: Ping
-      icon: mdi:cloud-refresh
-    - entity: sensor.network_internet_upload
-      name: Upload
-      icon: mdi:cloud-upload
-    - entity: sensor.network_internet_download
-      name: Download
-      icon: mdi:cloud-download
-    - entity: sensor.network_certificate_expiry
-      name: Certifcate Expiry
-      icon: mdi:cloud-lock
-################################################################################
-- type: entities
   title: Zigbee Link Quality
   entities:
     - entity: sensor.template_driveway_repeater_linkquality_percentage

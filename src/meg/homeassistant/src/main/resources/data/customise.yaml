@@ -581,22 +581,6 @@ sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
 button.google_assistant_synchronize_devices:
   friendly_name: 'Google Device Syncronise'
-sensor.network_internet_ping:
-  friendly_name: 'Ping'
-  icon: 'mdi:cloud-refresh'
-  unit_of_measurement: 'ms'
-sensor.network_internet_upload:
-  friendly_name: 'Upload'
-  icon: 'mdi:cloud-upload'
-  unit_of_measurement: 'MB/s'
-sensor.network_internet_download:
-  friendly_name: 'Download'
-  icon: 'mdi:cloud-download'
-  unit_of_measurement: 'MB/s'
-sensor.network_certificate_expiry:
-  friendly_name: 'Certifcate Expiry'
-  icon: 'mdi:cloud-lock'
-  unit_of_measurement: 'd'
 sensor.template_driveway_repeater_linkquality_percentage:
   friendly_name: 'Driveway Repeater'
 sensor.template_landing_repeater_linkquality_percentage:

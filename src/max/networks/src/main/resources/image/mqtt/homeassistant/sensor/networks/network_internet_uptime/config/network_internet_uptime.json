@@ -1,0 +1,21 @@
+{
+  "default_entity_id": "sensor.network_internet_uptime",
+  "unique_id": "network_internet_uptime",
+  "name": "Network Internet Uptime",
+  "state_class": "measurement",
+  "unit_of_measurement": "d",
+  "icon": "mdi:cloud-check",
+  "force_update": false,
+  "state_topic": "telegraf/macmini-meg/networks",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-internet-script"
+    ],
+    "name": "Rack Internet Script",
+    "model": "Python Script",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

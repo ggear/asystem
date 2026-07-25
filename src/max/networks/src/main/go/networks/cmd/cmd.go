@@ -3,11 +3,19 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
-const version = "0.0.0-SNAPSHOT"
+var (
+	flagFilterPlugins   string
+	flagPollPeriod      string
+	flagAggregatePeriod string
+	flagPublishData     bool
+	flagLogLevel        string
+)
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
@@ -17,12 +25,16 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolP("version", "v", false, "display version information and exit")
+	rootCmd.PersistentFlags().StringVarP(&flagFilterPlugins, "filter-plugins", "f", "", "comma separated list restricting which plugins run (default: all): internet,wireless,zigbee,ethernet,certificates")
+	rootCmd.PersistentFlags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence driving pulse for poll-phase plugins, uses unit suffixes [s, m, h]")
+	rootCmd.PersistentFlags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", "15m", "window rolled up before a status decision, must be a whole multiple of poll period, uses unit suffixes [s, m, h]")
+	rootCmd.PersistentFlags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish vitals to MQTT and InfluxDB when true, otherwise log only")
+	rootCmd.PersistentFlags().StringVarP(&flagLogLevel, "log-level", "l", "info", "log level [debug, info, warn, error]")
 	rootCmd.Flags().SortFlags = false
 	rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.InheritedFlags().SortFlags = false
-	rootCmd.AddCommand(serveCmd)
-	rootCmd.AddCommand(checkCmd)
+	rootCmd.AddCommand(newServeCmd())
+	rootCmd.AddCommand(newCheckCmd())
 }
 
 var rootCmd = &cobra.Command{
@@ -32,11 +44,6 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		showVersion, _ := cmd.Flags().GetBool("version")
-		if showVersion {
-			fmt.Println(version)
-			os.Exit(0)
-		}
 		if len(args) == 0 {
 			return cmd.Help()
 		}
@@ -44,22 +51,32 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Run the network health monitor daemon",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("networks serve: not implemented")
-		return nil
-	},
+func makePeriods(pollRaw, aggregateRaw string) (time.Duration, time.Duration, error) {
+	poll, err := time.ParseDuration(pollRaw)
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid poll period [%w]", err)
+	}
+	if poll <= 0 {
+		return 0, 0, fmt.Errorf("invalid poll period must be > 0")
+	}
+	aggregate, err := time.ParseDuration(aggregateRaw)
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid aggregate period [%w]", err)
+	}
+	if aggregate <= 0 {
+		return 0, 0, fmt.Errorf("invalid aggregate period must be > 0")
+	}
+	if aggregate%poll != 0 {
+		return 0, 0, fmt.Errorf("invalid aggregate period must be a whole multiple of poll period")
+	}
+	return poll, aggregate, nil
 }
 
-var checkCmd = &cobra.Command{
-	Use:   "check",
-	Short: "Run one health check cycle and exit",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("networks check: not implemented")
+func pluginNames() []string {
+	if strings.TrimSpace(flagFilterPlugins) == "" {
 		return nil
-	},
+	}
+	return strings.Split(flagFilterPlugins, ",")
 }
 
 const rootDescription = "Monitor network health and publish status"

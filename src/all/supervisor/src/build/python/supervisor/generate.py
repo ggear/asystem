@@ -21,9 +21,8 @@ if __name__ == "__main__":
         (metadata_df["state_topic"].str.len() > 0)
         ]
     write_entity_metadata(metadata_supervisor_df,
-                          topics_path="supervisor_${SUPERVISOR_HOST}",
                           topic_glob_discovery="homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
-                          topic_glob_data="supervisor/${SUPERVISOR_HOST}/data/+/+/+",
+                          topic_glob_data="supervisor/${SUPERVISOR_HOST}/data/#",
                           schema_state="""
 {
   "timestamp": <number>,

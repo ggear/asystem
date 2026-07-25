@@ -5,7 +5,6 @@ Document database schemas as per mqtt in build/resources/sql for schema describe
 Upgrade mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 Update max to latest Fedora
 Port may/meg to Fedora
-Upgrade UniFi
 
 
 ###############################################################################################################################################################
@@ -61,33 +60,23 @@ add additional local tests testing issues?
 ###############################################################################################################################################################
 # Networks
 ###############################################################################################################################################################
-Summarise plan and validate
-Implement the data that informs the OK's for timeseries for InfluxDB
-InfluxDB for hass-zigbee and internet, deocmmission unpoller and then for wireless too? add local for LAN?
-add ethernet plugin
-implement commands as place holder to send commands from HASS switches, eg turn internet on/off
-Update to Plan.md, any questions?
-decomission hass-zigbee and internet
-Add sys test?
+Fix XLSX to map to plugins for switch, generate and update PLAN to match
+Validate codebase, systest, unit-tests
+Production release
+Deocom unpoller, hass-zigbee, internet
 
-Dsign the HASS xlsx Networks fields, then generate heirachacal internet/wireless/zigbee/ethernet command/data/status schemas to match
-{
-  "timestamp": <number>,
-  "pulse": {
-    "ok": <true|false>,
-    "value": <number|text|true|false>
-  },
-  "trend": {
-    "ok": <true|false>,
-    "value": <number|text|true|false>
-  }
-}
+
+###############################################################################################################################################################
+# UniFi
+###############################################################################################################################################################
+Upgrade to 5.1.19+
+Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-NOTES
 
 
 ###############################################################################################################################################################
 # Supervisor
 ###############################################################################################################################################################
-implement commands to restart services, to work through ui when selected with popup and through HASS
+implement commands to restart services, to work through ui when selected with popup and through HASS, add install restart CLI option that manages a .restart, flushed on install start and read into RST fields
 Add a go linter to pickup IntelliJ style warnings?
 when maximise host, update update freq to 1s
 Add a host level metric for network/internet usage? maybe only later?

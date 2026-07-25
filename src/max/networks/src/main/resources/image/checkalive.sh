@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  true # TODO: Provide implementation
+  ps -ef | grep "[/]asystem/bin/networks" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [networks] is alive :)" >&2

@@ -18,7 +18,6 @@ if __name__ == "__main__":
         (metadata_df["state_topic"].str.len() > 0)
         ].copy()
     write_entity_metadata(metadata_tempstat_df,
-                          topics_path="tempstat",
                           topic_glob_discovery="homeassistant/+/tempstat/+/config",
                           topic_glob_data="tempstat/data",
                           schema_state="""

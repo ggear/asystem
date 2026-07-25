@@ -3,14 +3,23 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
+    - NETWORKS_HOST
     - BROKER_HOST
     - BROKER_PORT
+    - BROKER_TOKEN
     - DATABASE_HOST
     - DATABASE_PORT
     - DATABASE_NAME
     - DATABASE_TOKEN
+    - UNIFI_URL
+    - UNIFI_SITE
+    - UNIFI_USER
+    - UNIFI_PASSWORD
+    - ZIGBEE_TOPIC
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
+  sysctls:
+    - net.ipv4.ping_group_range=0 2147483647
   logging:
     driver: "json-file"
     options:
@@ -32,11 +41,3 @@ services:
       resources:
         limits:
           memory: 256M
-  networks_bootstrap:
-    container_name: networks_bootstrap
-    <<: *common
-    restart: 'no'
-    entrypoint: bash
-    command: /asystem/etc/bootstrap.sh
-    depends_on:
-      - networks

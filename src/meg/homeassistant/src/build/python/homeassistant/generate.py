@@ -3,6 +3,7 @@ import fnmatch
 import glob
 import json
 import os
+import re
 import shutil
 import stat
 import sys
@@ -458,7 +459,7 @@ fi
 
 
 def write_entity_metadata(metadata_df, module_name=None, working_dir=None, schemas_dir=None,
-                          topics_path="*", topic_glob_discovery=None, topic_glob_data=None,
+                          topic_glob_discovery=None, topic_glob_data=None,
                           schema_state=None, schema_command=None, schema_availability=None):
     if len(metadata_df) > 0:
         module_root = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
@@ -468,6 +469,41 @@ def write_entity_metadata(metadata_df, module_name=None, working_dir=None, schem
             working_dir = join(module_root, "src/main/resources/image/mqtt")
         if schemas_dir is None:
             schemas_dir = join(module_root, "src/build/resources/schemas/mqtt")
+
+        def _mqtt_glob_match(topic_glob, topic):
+            glob_levels = topic_glob.split("/")
+            topic_levels = topic.split("/")
+            for index, glob_level in enumerate(glob_levels):
+                if glob_level == "#":
+                    return True
+                if index >= len(topic_levels):
+                    return False
+                if glob_level == "+":
+                    continue
+                if not fnmatch.fnmatchcase(topic_levels[index], re.sub(r"\$\{[^}]+\}", "*", glob_level)):
+                    return False
+            return len(glob_levels) == len(topic_levels)
+
+        def _column_topics(column):
+            if column not in metadata_df.columns:
+                return []
+            return sorted({topic.strip() for topic in metadata_df[column].dropna().unique() if topic.strip()})
+
+        for topic_glob, topic_glob_name, topic_glob_column in (
+                (topic_glob_discovery, "topic_glob_discovery", "discovery_topic"),
+                (topic_glob_data, "topic_glob_data", "state_topic")):
+            if topic_glob is None:
+                continue
+            topic_glob_unmatched = [topic for topic in _column_topics(topic_glob_column)
+                                    if not _mqtt_glob_match(topic_glob, topic)]
+            if topic_glob_unmatched:
+                raise ValueError(
+                    "Build generate script [{}] {} [{}] does not match entity_metadata.xlsx {} topic(s) {}: "
+                    "update the glob or the spreadsheet so they agree"
+                    .format(module_name, topic_glob_name, topic_glob, topic_glob_column, topic_glob_unmatched))
+
+        topic_find_discovery = ("*/" + topic_glob_discovery.replace("+", "*").replace("#", "*") + "/*"
+                                if topic_glob_discovery else "*")
 
         def _coerce_bool(value):
             if isinstance(value, bool):
@@ -600,7 +636,7 @@ mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t'
 printf "\\nEntity Metadata publish script [{}] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\\n\\n"
 
 printf "Entity Metadata publish script [{}] publishing discovery topics on [$VERNEMQ_SERVICE]:\\n"
-find "$ROOT_DIR" -path "*/{}/*" -name "*.json" -print0 | sort -z | while read -d $'\\0' METADATA_FILE; do
+find "$ROOT_DIR" -path "{}" -name "*.json" -print0 | sort -z | while read -d $'\\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${{METADATA_FILE/$ROOT_DIR\\//}}")
   mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$METADATA_TOPIC" -f "$METADATA_FILE" -r
   printf "%s\\n" "$METADATA_TOPIC"
@@ -613,10 +649,9 @@ printf "\\n"
                 module_name,
                 module_name,
                 topic_glob_data,
-                topic_glob_data,
                 module_name,
                 module_name,
-                topics_path,
+                topic_find_discovery,
             ).strip())
         os.chmod(metadata_publish_script_path, 0o750)
         print("Build generate script [{}] entity metadata publish script persisted to [{}]"

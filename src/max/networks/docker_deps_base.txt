@@ -7,4 +7,5 @@ less
 curl
 vim
 jq
+ca-certificates
 mosquitto-clients

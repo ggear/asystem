@@ -16,20 +16,20 @@ function pull_repo() {
   [ ! -d "${INVOKING_DIR}/../../../.deps" ] && mkdir -p "${INVOKING_DIR}/../../../.deps"
   if [ ! -d "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}" ]; then
     mkdir -p "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}"
-    cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}"
+    cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}" || return 1
     REPO_URL="git@github.com:${GITHUB_REPO}.git"
     echo "Repository URL [${REPO_URL}]"
     git clone "${REPO_URL}" "${REPO_NAME}"
-    cd "${REPO_NAME}"
+    cd "${REPO_NAME}" || return 1
     git -c advice.detachedHead=false checkout "${CHECKOUT_LABEL}" 2>/dev/null
-    if [ $(git branch | grep HEAD | wc -l) -eq 0 ]; then
+    if ! git branch | grep -q HEAD; then
       git branch --set-upstream-to="origin/${CHECKOUT_LABEL}" "${CHECKOUT_LABEL}"
     fi
   elif [ "${PULL_LATEST}" == "True" ]; then
-    cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}"
+    cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}" || return 1
     echo "Pulling latest ${MODULE_NAME}/${REPO_NAME} ..."
     for BRANCH in master main development dev; do
-      if [ $(git branch | grep ${BRANCH} | wc -l) -eq 1 ]; then
+      if [ "$(git branch | grep -c "${BRANCH}")" -eq 1 ]; then
         git checkout "${BRANCH}"
         git branch --set-upstream-to "origin/${BRANCH}" 2>/dev/null
         if [ "${FORKED_UPSTREAM}" != "" ] && [ "${FORKED_LABEL}" != "" ]; then
@@ -44,7 +44,7 @@ function pull_repo() {
         break
       fi
     done
-    git remote set-url origin git@github.com:$(git remote get-url origin | sed 's|https://github.com/||;s|git@github.com:||')
+    git remote set-url origin "git@github.com:$(git remote get-url origin | sed 's|https://github.com/||;s|git@github.com:||')"
     echo "Remote set to [$(git remote get-url origin)]"
     until git pull --all; do
       echo "Git pull failed, sleeping to avoid Github throttling ..."
@@ -53,18 +53,18 @@ function pull_repo() {
     REPO_DIR="$(cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}" && pwd)"
     REPO_LABEL="$(basename "$(dirname "${INVOKING_DIR}")")"/"$(basename "${INVOKING_DIR}"):${REPO_NAME}"
     git -c advice.detachedHead=false checkout "${CHECKOUT_LABEL}"
-    if [ $(git status | grep "${CHECKOUT_LABEL}" | wc -l) -eq 0 ]; then
+    if ! git status | grep -q "${CHECKOUT_LABEL}"; then
       echo "" && echo "Module repository [${REPO_LABEL}] failed to checkout [${CHECKOUT_LABEL}]" && echo ""
     else
       git status
       echo -n "Module repository [${REPO_LABEL}] is being verified at [${REPO_DIR}] ... "
       TAG_CHECKED_OUT="$(git status | head -n 1 | sed -E 's/^HEAD detached at //')"
-      TAG_MOST_RECENT="$(git tag --sort=creatordate | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv b1 | grep -iv b2 | grep -iv 0b | tail -n 1)"
-      [[ $(git branch | grep "ggear" | wc -l) -gt 0 ]] && TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
+      TAG_MOST_RECENT="$(git tag --sort=creatordate | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv b1 | grep -iv b2 | grep -iv 0b | grep -iv ts | tail -n 1)"
+      git branch | grep -q "ggear" && TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
       [[ "${TAG_CHECKED_OUT}" == "" ]] && TAG_CHECKED_OUT="$(git branch --show-current)" && TAG_MOST_RECENT="$(git branch --show-current)"
       [[ "${TAG_MOST_RECENT}" == "" ]] && TAG_MOST_RECENT="${TAG_CHECKED_OUT}"
       if [ "$(printf "%s\n%s" "${TAG_MOST_RECENT#v}" "${TAG_CHECKED_OUT#v}" | sort -V | head -n1)" != "${TAG_CHECKED_OUT#v}" ]; then
-        TAG_MOST_RECENT="$(git tag --sort=version:refname | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv b1 | grep -iv b2 | grep -iv 0b | tail -n 1)"
+        TAG_MOST_RECENT="$(git tag --sort=version:refname | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv b1 | grep -iv b2 | grep -iv 0b | grep -iv ts | tail -n 1)"
       fi
       if [[ "${FORKED_LABEL}" == "main" || "${FORKED_LABEL}" == "master" ]]; then
         echo "tracking branch [${FORKED_LABEL}] at [${TAG_CHECKED_OUT}]"
@@ -76,5 +76,5 @@ function pull_repo() {
       fi
     fi
   fi
-  cd "${INVOKING_DIR}"
+  cd "${INVOKING_DIR}" || return 1
 }

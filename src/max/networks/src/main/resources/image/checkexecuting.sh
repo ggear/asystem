@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && true # TODO: Provide implementation
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" ${BROKER_TOKEN:+-u networks -P $BROKER_TOKEN} -t "networks/status" -C 1 -W 2 2>/dev/null | grep -q "^online$"
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [networks] is executing :)" >&2
