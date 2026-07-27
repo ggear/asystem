@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestParseLevel(t *testing.T) {
+func TestScribe_ParseLevel(t *testing.T) {
 	tests := []struct {
 		name          string
 		raw           string
@@ -31,7 +31,7 @@ func TestParseLevel(t *testing.T) {
 	}
 }
 
-func TestEnableStdout(t *testing.T) {
+func TestScribe_EnableStdout(t *testing.T) {
 	EnableStdout(slog.LevelDebug)
 	if Level() != slog.LevelDebug {
 		t.Fatalf("level: got %v want debug", Level())

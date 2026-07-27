@@ -84,7 +84,7 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 	return client, nil
 }
 
-func (b *brokerClient) publishVitals(m plugin.Message) {
+func (b *brokerClient) publishAggregate(m plugin.Aggregate) {
 	payload, err := m.MarshalJSON()
 	if err != nil {
 		slog.Warn("state", "engine", "broker", "phase", "publish", "plugin", m.Plugin, "error", err)
@@ -94,7 +94,7 @@ func (b *brokerClient) publishVitals(m plugin.Message) {
 	slog.Debug("state", "engine", "broker", "phase", "publish", "plugin", m.Plugin, "topic", brokerDataTopicPrefix+m.Plugin)
 }
 
-func (b *brokerClient) publishResult(m plugin.Message) {
+func (b *brokerClient) publishResult(m plugin.Aggregate) {
 	payload, err := m.MarshalJSON()
 	if err != nil {
 		return

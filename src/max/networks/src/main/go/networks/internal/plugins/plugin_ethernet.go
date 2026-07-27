@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math"
 	"strconv"
+	"sync"
 
 	"networks/internal/config"
 	"networks/internal/engine"
@@ -18,22 +19,26 @@ const (
 )
 
 type ethernetPlugin struct {
-	fetch func(ctx context.Context) ([]engine.RouterDevice, error)
+	probe      func(ctx context.Context) ([]engine.RouterDevice, error)
+	mu         sync.Mutex
+	lastErrors map[string]int64
 }
 
 func newEthernetPlugin() *ethernetPlugin {
-	return &ethernetPlugin{fetch: fetchEthernetLive}
+	return &ethernetPlugin{probe: probeEthernet, lastErrors: map[string]int64{}}
 }
 
 func (p *ethernetPlugin) Name() string { return "ethernet" }
 
-func (p *ethernetPlugin) PollPhase() bool { return false }
+func (p *ethernetPlugin) SampleMode() plugin.SampleMode { return plugin.Snapshot }
 
-func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Message, error) {
-	devices, err := p.fetch(ctx)
+func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
+	devices, err := p.probe(ctx)
 	if err != nil {
-		return plugin.Message{}, err
+		return plugin.Sample{}, err
 	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	var points []plugin.Point
 	for _, device := range devices {
 		if device.Type != switchType {
@@ -43,22 +48,30 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Message, error) {
 			if !port.Enable {
 				continue
 			}
+			key := device.Name + "/" + strconv.Itoa(port.PortIdx)
+			cumulative := port.RxErrors + port.TxErrors
+			previous, seen := p.lastErrors[key]
+			p.lastErrors[key] = cumulative
+			errors := int64(0)
+			if seen && cumulative > previous {
+				errors = cumulative - previous
+			}
 			tags := []plugin.Tag{{Key: "scope", Value: "port"}, {Key: "switch", Value: device.Name}, {Key: "port", Value: strconv.Itoa(port.PortIdx)}}
 			points = append(points, plugin.NewPoint(tags,
 				plugin.Bool("up", port.Up),
 				plugin.Int("speed", int64(port.Speed)),
 				plugin.Bool("full_duplex", port.FullDuplex),
-				plugin.Int("errors", port.RxErrors+port.TxErrors)))
+				plugin.Int("errors", errors)))
 		}
 	}
-	return plugin.Message{Points: points}, nil
+	return plugin.Sample{Points: points}, nil
 }
 
-func (p *ethernetPlugin) Aggregate(samples []plugin.Message) (plugin.Message, error) {
-	return decideEthernet(samples), nil
+func (p *ethernetPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
+	return diagnoseEthernet(samples), nil
 }
 
-func fetchEthernetLive(ctx context.Context) ([]engine.RouterDevice, error) {
+func probeEthernet(ctx context.Context) ([]engine.RouterDevice, error) {
 	cfg := config.Load()
 	client, err := engine.NewRouterClient(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiPassword())
 	if err != nil {
@@ -68,11 +81,11 @@ func fetchEthernetLive(ctx context.Context) ([]engine.RouterDevice, error) {
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug("fetch", "plugin", "ethernet", "devices", len(devices))
+	slog.Debug("probe", "plugin", "ethernet", "devices", len(devices))
 	return devices, nil
 }
 
-func decideEthernet(samples []plugin.Message) plugin.Message {
+func diagnoseEthernet(samples []plugin.Sample) plugin.Aggregate {
 	points := plugin.LatestPoints(samples)
 	total := 0
 	up := 0
@@ -80,17 +93,17 @@ func decideEthernet(samples []plugin.Message) plugin.Message {
 	errored := 0
 	for _, point := range points {
 		total++
-		isUp := plugin.BoolField(point, "up")
+		isUp, _ := point.Bool("up")
 		if !isUp {
 			continue
 		}
 		up++
-		speed, _ := plugin.FloatField(point, "speed")
-		fullDuplex := plugin.BoolField(point, "full_duplex")
+		speed, _ := point.Float("speed")
+		fullDuplex, _ := point.Bool("full_duplex")
 		if (speed > 0 && speed < expectedSpeed) || !fullDuplex {
 			degraded++
 		}
-		if errs, ok := plugin.FloatField(point, "errors"); ok && errs > 0 {
+		if errs, ok := point.Float("errors"); ok && errs > 0 {
 			errored++
 		}
 	}
@@ -98,7 +111,7 @@ func decideEthernet(samples []plugin.Message) plugin.Message {
 	if total > 0 {
 		upRatio = float64(up) / float64(total)
 	}
-	result := plugin.Message{}
+	result := plugin.Aggregate{}
 	switch {
 	case total == 0:
 		result = plugin.Diagnose(plugin.StatusDead, 0, "SWITCH_UNREACHABLE", "switch unreachable or no monitored ports reporting")
@@ -117,11 +130,11 @@ func decideEthernet(samples []plugin.Message) plugin.Message {
 			result = plugin.Diagnose(plugin.StatusSick, score, "LINK_ERRORS", fmt.Sprintf("%d ports reporting errors", errored))
 		}
 	}
-	result.Points = buildEthernetPoints(result.Score, up, total, degraded, errored, points)
+	result.Points = reportEthernet(result.Score, up, total, degraded, errored, points)
 	return result
 }
 
-func buildEthernetPoints(score, up, total, degraded, errored int, portPoints []plugin.Point) []plugin.Point {
+func reportEthernet(score, up, total, degraded, errored int, portPoints []plugin.Point) []plugin.Point {
 	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}},
 		plugin.Int("score", int64(score)),
 		plugin.Int("ports_up", int64(up)),

@@ -5,6 +5,7 @@ Document database schemas as per mqtt in build/resources/sql for schema describe
 Upgrade mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 Update max to latest Fedora
 Port may/meg to Fedora
+Support Module [*/go] requires update from version [1.25.8] to [1.26.5] for rust from fabfile.py
 
 
 ###############################################################################################################################################################
@@ -54,14 +55,15 @@ add cash into bank portfolio?
 move sheets to delta like database? perhaps brek aout sheet/database upload timings, keeping rollup for html display but good for profiling?
 add dividend to create a new total return, bring in from manual data in sheets or another source?
 implement cleanup, dead stock files, dead -current, dead month files, add local tests
-add additional local tests testing issues?
+add additional local tests
 
 
 ###############################################################################################################################################################
 # Networks
 ###############################################################################################################################################################
 Fix XLSX to map to plugins for switch, generate and update PLAN to match
-Validate codebase, systest, unit-tests
+check cmd (rationalise into one file) and command setup which is generic with 'check' examples at the moment - can only be ON/OFF?. ON->OFF interent does a check, OFF-ON does a modem restart
+Validate codebase file by file, systest, unit-tests
 Production release
 Deocom unpoller, hass-zigbee, internet
 

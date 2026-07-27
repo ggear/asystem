@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"networks/internal/config"
 	"networks/internal/plugin"
 	"sync"
 	"time"
@@ -23,18 +22,16 @@ type Options struct {
 
 type Engine struct {
 	plugins         []plugin.Plugin
-	pollPlugins     []plugin.Plugin
 	pollPeriod      time.Duration
 	aggregatePeriod time.Duration
 	publish         bool
-	host            string
 	sampleBuffers   map[string]*sampleBuffer
 	sampleBufferMu  sync.Mutex
 	commands        chan command
 	broker          *brokerClient
 	database        *databaseClient
 	lineMu          sync.Mutex
-	lineBuf         bytes.Buffer
+	lineBuffer      bytes.Buffer
 }
 
 func Create(opts Options) (*Engine, error) {
@@ -56,13 +53,11 @@ func Create(opts Options) (*Engine, error) {
 		pollPeriod:      opts.PollPeriod,
 		aggregatePeriod: opts.AggregatePeriod,
 		publish:         opts.PublishData,
-		host:            config.Load().Host(),
 		sampleBuffers:   map[string]*sampleBuffer{},
 		commands:        make(chan command, commandQueueSize),
 	}
 	for _, p := range opts.Plugins {
-		if p.PollPhase() {
-			e.pollPlugins = append(e.pollPlugins, p)
+		if p.SampleMode() == plugin.Windowed {
 			e.sampleBuffers[p.Name()] = newSampleBuffer(sampleBufferCap)
 		} else {
 			e.sampleBuffers[p.Name()] = newSampleBuffer(1)
@@ -92,27 +87,30 @@ func (e *Engine) Run(ctx context.Context) error {
 	defer pollTicker.Stop()
 	aggTicker := time.NewTicker(e.aggregatePeriod)
 	defer aggTicker.Stop()
-	e.pollOnce(ctx)
-	for _, v := range e.Cycle(ctx, e.plugins) {
-		e.publishVitals(ctx, v)
+	e.PollSamples(ctx)
+	for _, v := range e.AggregateSamples(ctx, e.plugins) {
+		e.publishAggregate(ctx, v)
 	}
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-pollTicker.C:
-			e.pollOnce(ctx)
+			e.PollSamples(ctx)
 		case <-aggTicker.C:
-			for _, v := range e.Cycle(ctx, e.plugins) {
-				e.publishVitals(ctx, v)
+			for _, v := range e.AggregateSamples(ctx, e.plugins) {
+				e.publishAggregate(ctx, v)
 			}
 		}
 	}
 }
 
-func (e *Engine) pollOnce(ctx context.Context) {
+func (e *Engine) PollSamples(ctx context.Context) {
 	var wg sync.WaitGroup
-	for _, p := range e.pollPlugins {
+	for _, p := range e.plugins {
+		if p.SampleMode() != plugin.Windowed {
+			continue
+		}
 		wg.Add(1)
 		go func(p plugin.Plugin) {
 			defer wg.Done()
@@ -120,48 +118,47 @@ func (e *Engine) pollOnce(ctx context.Context) {
 			e.sampleBufferMu.Lock()
 			e.sampleBuffers[p.Name()].Add(m)
 			e.sampleBufferMu.Unlock()
-			slog.Debug("pulse", "plugin", p.Name(), "status", string(m.Status), "score", m.Score, "detail", m.Detail)
+			slog.Debug("poll", "plugin", p.Name(), "points", len(m.Points))
 		}(p)
 	}
 	wg.Wait()
 }
 
-func (e *Engine) Cycle(ctx context.Context, plugins []plugin.Plugin) []plugin.Message {
-	slog.Debug("cycle", "phase", "start", "plugins", len(plugins))
-	vitals := make([]plugin.Message, 0, len(plugins))
+func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) []plugin.Aggregate {
+	slog.Debug("aggregate", "phase", "start", "plugins", len(plugins))
+	aggregates := make([]plugin.Aggregate, 0, len(plugins))
 	for _, p := range plugins {
-		var samples []plugin.Message
-		if p.PollPhase() {
+		var samples []plugin.Sample
+		if p.SampleMode() == plugin.Windowed {
 			buffer := e.sampleBuffers[p.Name()]
 			e.sampleBufferMu.Lock()
-			samples = buffer.Messages()
+			samples = buffer.Samples()
 			e.sampleBufferMu.Unlock()
 			if len(samples) == 0 {
 				m := e.safePoll(ctx, p)
 				e.sampleBufferMu.Lock()
 				buffer.Add(m)
-				samples = buffer.Messages()
+				samples = buffer.Samples()
 				e.sampleBufferMu.Unlock()
 			}
 		} else {
 			m := e.safePoll(ctx, p)
-			samples = []plugin.Message{m}
+			samples = []plugin.Sample{m}
 		}
 		v := e.safeAggregate(p, samples)
-		vitals = append(vitals, v)
-		slog.Info("vitals", "plugin", p.Name(), "status", string(v.Status), "detail", v.Detail, "reason", v.Reason, "score", v.Score, "ok", v.OK)
+		aggregates = append(aggregates, v)
+		slog.Info("aggregate", "plugin", p.Name(), "status", string(v.Status), "detail", v.Detail, "reason", v.Reason, "score", v.Score, "ok", v.OK)
 	}
-	return vitals
+	return aggregates
 }
 
-func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Message) {
+func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample) {
 	defer func() {
 		if r := recover(); r != nil {
 			slog.Error("poll panic", "plugin", p.Name(), "panic", r)
-			m = plugin.Message{Status: plugin.StatusDead, Detail: "PLUGIN_PANIC"}
+			m = plugin.Sample{}
 		}
 		m.Plugin = p.Name()
-		m.Host = e.host
 		if m.Timestamp.IsZero() {
 			m.Timestamp = time.Now()
 		}
@@ -173,36 +170,35 @@ func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Messag
 	return sample
 }
 
-func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Message) (v plugin.Message) {
+func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plugin.Aggregate) {
 	defer func() {
 		if r := recover(); r != nil {
 			slog.Error("aggregate panic", "plugin", p.Name(), "panic", r)
-			v = plugin.Message{Status: plugin.StatusDead, Detail: "PLUGIN_PANIC"}
+			v = plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_PANIC", "plugin panicked during aggregate")
 		}
 		v.Plugin = p.Name()
-		v.Host = e.host
-		v.SamplePeriodS = int(e.aggregatePeriod / time.Second)
+		v.WindowS = int(e.aggregatePeriod / time.Second)
 		v.SampleCount = len(samples)
 		if v.Timestamp.IsZero() {
 			v.Timestamp = time.Now()
 		}
 	}()
-	vitals, err := p.Aggregate(samples)
+	aggregate, err := p.Aggregate(samples)
 	if err != nil {
 		slog.Warn("aggregate error", "plugin", p.Name(), "error", err)
 	}
-	return vitals
+	return aggregate
 }
 
-func (e *Engine) publishVitals(ctx context.Context, m plugin.Message) {
+func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {
 	if e.broker != nil {
-		e.broker.publishVitals(m)
+		e.broker.publishAggregate(m)
 	}
 	if e.database != nil {
 		e.lineMu.Lock()
-		e.lineBuf.Reset()
-		m.AppendLineProtocol(&e.lineBuf, measurement, time.Now().UnixNano())
-		data := append([]byte(nil), e.lineBuf.Bytes()...)
+		e.lineBuffer.Reset()
+		m.AppendLineProtocol(&e.lineBuffer, measurement, time.Now().UnixNano())
+		data := append([]byte(nil), e.lineBuffer.Bytes()...)
 		e.lineMu.Unlock()
 		if len(data) > 0 {
 			e.database.write(ctx, data)

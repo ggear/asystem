@@ -15,7 +15,7 @@ const commandQueueSize = 16
 type command struct {
 	Action string
 	Plugin string
-	Result chan plugin.Message
+	Result chan plugin.Aggregate
 	Source string
 }
 
@@ -83,15 +83,15 @@ func (e *Engine) runCommand(ctx context.Context, c command) {
 		}
 		targets = []plugin.Plugin{p}
 	}
-	vitals := e.Cycle(ctx, targets)
-	for _, v := range vitals {
-		e.publishVitals(ctx, v)
+	aggregates := e.AggregateSamples(ctx, targets)
+	for _, v := range aggregates {
+		e.publishAggregate(ctx, v)
 		if e.broker != nil && c.Source == "mqtt" {
 			e.broker.publishResult(v)
 		}
 	}
 	if c.Result != nil {
-		for _, v := range vitals {
+		for _, v := range aggregates {
 			c.Result <- v
 		}
 		close(c.Result)

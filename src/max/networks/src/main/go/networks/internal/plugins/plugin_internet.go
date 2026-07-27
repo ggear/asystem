@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Gateway           = "192.168.1.1"
+	gatewayIP         = "192.168.1.1"
 	burstSize         = 8
 	burstGap          = 120 * time.Millisecond
 	burstTimeout      = 2500 * time.Millisecond
@@ -34,101 +34,75 @@ type target struct {
 }
 
 var targets = []target{
-	{Gateway, "gateway"},
+	{gatewayIP, "gateway"},
 	{"1.1.1.1", "target"},
 	{"8.8.8.8", "target"},
 	{"9.9.9.9", "target"},
 }
 
 type internetPlugin struct {
-	ping func(ctx context.Context, ip string) (time.Duration, error)
+	probe func(ctx context.Context, ip string) (time.Duration, error)
 }
 
 func newInternetPlugin() *internetPlugin {
-	return &internetPlugin{ping: pingUDP}
+	return &internetPlugin{probe: probeInternet}
 }
 
 func (p *internetPlugin) Name() string { return "internet" }
 
-func (p *internetPlugin) PollPhase() bool { return true }
+func (p *internetPlugin) SampleMode() plugin.SampleMode { return plugin.Windowed }
 
-func (p *internetPlugin) Poll(ctx context.Context) (plugin.Message, error) {
+func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	points := make([]plugin.Point, len(targets))
 	var wg sync.WaitGroup
 	for i, t := range targets {
 		wg.Add(1)
 		go func(i int, t target) {
 			defer wg.Done()
-			points[i] = p.burst(ctx, t)
+			roundTrips := make([]float64, 0, burstSize)
+			sent := 0
+			for j := 0; j < burstSize; j++ {
+				if ctx.Err() != nil {
+					break
+				}
+				sent++
+				if d, err := p.probe(ctx, t.ip); err == nil {
+					roundTrips = append(roundTrips, float64(d)/float64(time.Millisecond))
+				}
+				if j < burstSize-1 {
+					select {
+					case <-ctx.Done():
+					case <-time.After(burstGap):
+					}
+				}
+			}
+			received := len(roundTrips)
+			loss := 100.0
+			if sent > 0 {
+				loss = 100 * float64(sent-received) / float64(sent)
+			}
+			tags := []plugin.Tag{{Key: "scope", Value: t.scope}, {Key: "target", Value: t.ip}}
+			fields := []plugin.Field{plugin.Int("sent", int64(sent)), plugin.Int("recv", int64(received)), plugin.Float("loss_pct", loss)}
+			if received > 0 {
+				avg, minRTT, maxRTT, jitter := readInternet(roundTrips)
+				fields = append(fields, plugin.Float("avg_rtt_ms", avg), plugin.Float("min_rtt_ms", minRTT), plugin.Float("max_rtt_ms", maxRTT), plugin.Float("jitter_ms", jitter))
+			} else {
+				fields = append(fields, plugin.Null("avg_rtt_ms"), plugin.Null("min_rtt_ms"), plugin.Null("max_rtt_ms"), plugin.Null("jitter_ms"))
+			}
+			points[i] = plugin.NewPoint(tags, fields...)
 		}(i, t)
 	}
 	wg.Wait()
-	return plugin.Message{Points: points}, nil
+	return plugin.Sample{Points: points}, nil
 }
 
-func (p *internetPlugin) Aggregate(samples []plugin.Message) (plugin.Message, error) {
-	return decideInternet(samples), nil
-}
-
-func (p *internetPlugin) burst(ctx context.Context, t target) plugin.Point {
-	roundTrips := make([]float64, 0, burstSize)
-	sent := 0
-	for i := 0; i < burstSize; i++ {
-		if ctx.Err() != nil {
-			break
-		}
-		sent++
-		if d, err := p.ping(ctx, t.ip); err == nil {
-			roundTrips = append(roundTrips, float64(d)/float64(time.Millisecond))
-		}
-		if i < burstSize-1 {
-			select {
-			case <-ctx.Done():
-			case <-time.After(burstGap):
-			}
-		}
-	}
-	received := len(roundTrips)
-	loss := 100.0
-	if sent > 0 {
-		loss = 100 * float64(sent-received) / float64(sent)
-	}
-	tags := []plugin.Tag{{Key: "scope", Value: t.scope}, {Key: "target", Value: t.ip}}
-	fields := []plugin.Field{plugin.Int("sent", int64(sent)), plugin.Int("recv", int64(received)), plugin.Float("loss_pct", loss)}
-	if received > 0 {
-		avg, minRTT, maxRTT, jitter := burstStats(roundTrips)
-		fields = append(fields, plugin.Float("avg_rtt_ms", avg), plugin.Float("min_rtt_ms", minRTT), plugin.Float("max_rtt_ms", maxRTT), plugin.Float("jitter_ms", jitter))
-	} else {
-		fields = append(fields, plugin.Null("avg_rtt_ms"), plugin.Null("min_rtt_ms"), plugin.Null("max_rtt_ms"), plugin.Null("jitter_ms"))
-	}
-	return plugin.NewPoint(tags, fields...)
-}
-
-func burstStats(roundTrips []float64) (avg, minRTT, maxRTT, jitter float64) {
-	minRTT = roundTrips[0]
-	maxRTT = roundTrips[0]
-	sum := 0.0
-	for _, v := range roundTrips {
-		sum += v
-		if v < minRTT {
-			minRTT = v
-		}
-		if v > maxRTT {
-			maxRTT = v
-		}
-	}
-	avg = sum / float64(len(roundTrips))
-	variance := 0.0
-	for _, v := range roundTrips {
-		variance += (v - avg) * (v - avg)
-	}
-	jitter = math.Sqrt(variance / float64(len(roundTrips)))
-	return avg, minRTT, maxRTT, jitter
+func (p *internetPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
+	return diagnoseInternet(samples), nil
 }
 
 var pingSequence atomic.Uint32
 
-func pingUDP(ctx context.Context, ip string) (time.Duration, error) {
+func probeInternet(ctx context.Context, ip string) (time.Duration, error) {
 	conn, err := icmp.ListenPacket("udp4", "0.0.0.0")
 	if err != nil {
 		return 0, err
@@ -167,52 +141,65 @@ func pingUDP(ctx context.Context, ip string) (time.Duration, error) {
 	}
 }
 
-type targetAccumulator struct {
-	ip          string
-	scope       string
-	lossSum     float64
-	lossCount   int
-	rttSum      float64
-	rttCount    int
-	jitterSum   float64
-	jitterCount int
+func readInternet(roundTrips []float64) (avg, minRTT, maxRTT, jitter float64) {
+	minRTT = roundTrips[0]
+	maxRTT = roundTrips[0]
+	sum := 0.0
+	for _, v := range roundTrips {
+		sum += v
+		if v < minRTT {
+			minRTT = v
+		}
+		if v > maxRTT {
+			maxRTT = v
+		}
+	}
+	avg = sum / float64(len(roundTrips))
+	variance := 0.0
+	for _, v := range roundTrips {
+		variance += (v - avg) * (v - avg)
+	}
+	jitter = math.Sqrt(variance / float64(len(roundTrips)))
+	return avg, minRTT, maxRTT, jitter
 }
 
-func decideInternet(samples []plugin.Message) plugin.Message {
-	order := []string{}
+func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 	accumulators := map[string]*targetAccumulator{}
 	for _, message := range samples {
 		for _, point := range message.Points {
-			ip := plugin.TagValue(point, "target")
+			ip, _ := point.Tag("target")
 			if ip == "" {
 				continue
 			}
 			accumulator := accumulators[ip]
 			if accumulator == nil {
-				accumulator = &targetAccumulator{ip: ip, scope: plugin.TagValue(point, "scope")}
+				accumulator = &targetAccumulator{}
 				accumulators[ip] = accumulator
-				order = append(order, ip)
 			}
-			if loss, ok := plugin.FloatField(point, "loss_pct"); ok {
+			if loss, ok := point.Float("loss_pct"); ok {
 				accumulator.lossSum += loss
 				accumulator.lossCount++
 			}
-			if rtt, ok := plugin.FloatField(point, "avg_rtt_ms"); ok {
+			if rtt, ok := point.Float("avg_rtt_ms"); ok {
 				accumulator.rttSum += rtt
 				accumulator.rttCount++
 			}
-			if jitter, ok := plugin.FloatField(point, "jitter_ms"); ok {
+			if jitter, ok := point.Float("jitter_ms"); ok {
 				accumulator.jitterSum += jitter
 				accumulator.jitterCount++
 			}
 		}
 	}
+	order := make([]string, 0, len(accumulators))
+	for ip := range accumulators {
+		order = append(order, ip)
+	}
 	sort.Strings(order)
-	gateway := accumulators[Gateway]
+	gateway := accumulators[gatewayIP]
 	gatewayOK := gateway != nil && gateway.lossCount > 0 && gateway.avgLoss() < 100
 	publicIPs := make([]string, 0, len(order))
 	for _, ip := range order {
-		if ip != Gateway {
+		if ip != gatewayIP {
 			publicIPs = append(publicIPs, ip)
 		}
 	}
@@ -247,7 +234,7 @@ func decideInternet(samples []plugin.Message) plugin.Message {
 	if jitterCount > 0 {
 		avgJitter = jitterSum / float64(jitterCount)
 	}
-	result := plugin.Message{}
+	result := plugin.Aggregate{}
 	switch {
 	case len(publicIPs) == 0:
 		result = plugin.Diagnose(plugin.StatusDead, 0, "NO_DATA", "no internet samples in window")
@@ -280,11 +267,11 @@ func decideInternet(samples []plugin.Message) plugin.Message {
 			result = plugin.Diagnose(plugin.StatusSick, score, "ELEVATED_LOSS", fmt.Sprintf("elevated loss avg_loss_pct=%.1f reachable=%d/%d", avgLoss, reachable, len(publicIPs)))
 		}
 	}
-	result.Points = buildInternetPoints(result.Score, avgLoss, avgRTT, avgJitter, gatewayOK, publicIPs, accumulators)
+	result.Points = reportInternet(result.Score, avgLoss, avgRTT, avgJitter, gatewayOK, publicIPs, accumulators)
 	return result
 }
 
-func buildInternetPoints(score int, avgLoss, avgRTT, avgJitter float64, gatewayOK bool, publicIPs []string, accumulators map[string]*targetAccumulator) []plugin.Point {
+func reportInternet(score int, avgLoss, avgRTT, avgJitter float64, gatewayOK bool, publicIPs []string, accumulators map[string]*targetAccumulator) []plugin.Point {
 	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}},
 		plugin.Int("score", int64(score)),
 		plugin.Float("avg_loss_pct", plugin.Round(avgLoss, 1)),
@@ -304,6 +291,15 @@ func buildInternetPoints(score int, avgLoss, avgRTT, avgJitter float64, gatewayO
 		points = append(points, plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "target"}, {Key: "target", Value: ip}}, fields...))
 	}
 	return points
+}
+
+type targetAccumulator struct {
+	lossSum     float64
+	lossCount   int
+	rttSum      float64
+	rttCount    int
+	jitterSum   float64
+	jitterCount int
 }
 
 func (a *targetAccumulator) avgLoss() float64 {

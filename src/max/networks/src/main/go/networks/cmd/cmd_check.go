@@ -48,14 +48,14 @@ func executeCheck() error {
 	if err != nil {
 		return err
 	}
-	for _, vitals := range e.Cycle(context.Background(), selected) {
-		payload, err := vitals.MarshalJSON()
+	for _, aggregate := range e.AggregateSamples(context.Background(), selected) {
+		payload, err := aggregate.MarshalJSON()
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stdout, "%s %s\n", vitals.Plugin, payload)
+		fmt.Fprintf(os.Stdout, "%s %s\n", aggregate.Plugin, payload)
 	}
 	return nil
 }
 
-const checkDescription = "Run one aggregate cycle for the selected plugins, print vitals, and exit"
+const checkDescription = "Run one aggregate cycle for the selected plugins, print aggregates, and exit"

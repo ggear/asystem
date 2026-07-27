@@ -45,13 +45,6 @@ type RouterPort struct {
 	TxErrors   int64  `json:"tx_errors"`
 }
 
-type RouterStation struct {
-	Mac          string `json:"mac"`
-	Satisfaction int    `json:"satisfaction"`
-	Signal       int    `json:"signal"`
-	ApMac        string `json:"ap_mac"`
-}
-
 func NewRouterClient(base, site, user, pass string) (*RouterClient, error) {
 	if base == "" {
 		return nil, errors.New("router url is empty")
@@ -125,16 +118,6 @@ func (c *RouterClient) Devices(ctx context.Context) ([]RouterDevice, error) {
 		Data []RouterDevice `json:"data"`
 	}
 	if err := c.get(ctx, "/proxy/network/api/s/"+c.site+"/stat/device", &body); err != nil {
-		return nil, err
-	}
-	return body.Data, nil
-}
-
-func (c *RouterClient) Stations(ctx context.Context) ([]RouterStation, error) {
-	var body struct {
-		Data []RouterStation `json:"data"`
-	}
-	if err := c.get(ctx, "/proxy/network/api/s/"+c.site+"/stat/sta", &body); err != nil {
 		return nil, err
 	}
 	return body.Data, nil

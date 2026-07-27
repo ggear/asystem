@@ -61,25 +61,37 @@ type Point struct {
 
 func NewPoint(tags []Tag, fields ...Field) Point { return Point{Tags: tags, Fields: fields} }
 
-type Message struct {
-	Plugin        string
-	Host          string
-	Timestamp     time.Time
-	OK            bool
-	Status        Status
-	Score         int
-	Detail        string
-	Reason        string
-	SamplePeriodS int
-	SampleCount   int
-	Points        []Point
+type Sample struct {
+	Plugin    string
+	Timestamp time.Time
+	Points    []Point
 }
+
+type Aggregate struct {
+	Plugin      string
+	Timestamp   time.Time
+	OK          bool
+	Status      Status
+	Score       int
+	Detail      string
+	Reason      string
+	WindowS     int
+	SampleCount int
+	Points      []Point
+}
+
+type SampleMode uint8
+
+const (
+	Snapshot SampleMode = iota
+	Windowed
+)
 
 type Plugin interface {
 	Name() string
-	PollPhase() bool
-	Poll(ctx context.Context) (Message, error)
-	Aggregate(samples []Message) (Message, error)
+	SampleMode() SampleMode
+	Poll(ctx context.Context) (Sample, error)
+	Aggregate(samples []Sample) (Aggregate, error)
 }
 
 var (
@@ -159,11 +171,11 @@ func Round(v float64, places int) float64 {
 	return math.Round(v*factor) / factor
 }
 
-func Diagnose(status Status, score int, detail, reason string) Message {
-	return Message{Status: status, OK: status != StatusDead, Score: score, Detail: detail, Reason: reason}
+func Diagnose(status Status, score int, detail, reason string) Aggregate {
+	return Aggregate{Status: status, OK: status != StatusDead, Score: score, Detail: detail, Reason: reason}
 }
 
-func LatestPoints(samples []Message) []Point {
+func LatestPoints(samples []Sample) []Point {
 	if len(samples) == 0 {
 		return nil
 	}
@@ -177,17 +189,17 @@ func PrependSummaryPoints(summary Point, details []Point) []Point {
 	return points
 }
 
-func BoolField(point Point, key string) bool {
-	for _, field := range point.Fields {
+func (p Point) Bool(key string) (bool, bool) {
+	for _, field := range p.Fields {
 		if field.Key == key && field.Kind == KindBool {
-			return field.Bool
+			return field.Bool, true
 		}
 	}
-	return false
+	return false, false
 }
 
-func FloatField(point Point, key string) (float64, bool) {
-	for _, field := range point.Fields {
+func (p Point) Float(key string) (float64, bool) {
+	for _, field := range p.Fields {
 		if field.Key != key {
 			continue
 		}
@@ -203,8 +215,8 @@ func FloatField(point Point, key string) (float64, bool) {
 	return 0, false
 }
 
-func IntField(point Point, key string) (int64, bool) {
-	for _, field := range point.Fields {
+func (p Point) Int(key string) (int64, bool) {
+	for _, field := range p.Fields {
 		if field.Key == key && field.Kind == KindInt {
 			return field.Int, true
 		}
@@ -212,46 +224,44 @@ func IntField(point Point, key string) (int64, bool) {
 	return 0, false
 }
 
-func TagValue(point Point, key string) string {
-	for _, tag := range point.Tags {
+func (p Point) Tag(key string) (string, bool) {
+	for _, tag := range p.Tags {
 		if tag.Key == key {
-			return tag.Value
+			return tag.Value, true
 		}
 	}
-	return ""
+	return "", false
 }
 
 var bufferPool = sync.Pool{New: func() any { return new(bytes.Buffer) }}
 
-func (m Message) MarshalJSON() ([]byte, error) {
+func (a Aggregate) MarshalJSON() ([]byte, error) {
 	buf := bufferPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufferPool.Put(buf)
 	buf.WriteString(`{"timestamp":`)
-	buf.WriteString(strconv.FormatInt(m.Timestamp.Unix(), 10))
+	buf.WriteString(strconv.FormatInt(a.Timestamp.Unix(), 10))
 	buf.WriteString(`,"ok":`)
-	buf.WriteString(strconv.FormatBool(m.OK))
+	buf.WriteString(strconv.FormatBool(a.OK))
 	buf.WriteString(`,"status":"`)
-	buf.WriteString(string(m.Status))
+	buf.WriteString(string(a.Status))
 	buf.WriteString(`","score":`)
-	buf.WriteString(strconv.Itoa(m.Score))
+	buf.WriteString(strconv.Itoa(a.Score))
 	buf.WriteByte('}')
 	out := make([]byte, buf.Len())
 	copy(out, buf.Bytes())
 	return out, nil
 }
 
-func (m Message) AppendLineProtocol(buf *bytes.Buffer, measurement string, timestamp int64) {
+func (a Aggregate) AppendLineProtocol(buf *bytes.Buffer, measurement string, timestamp int64) {
 	timestampText := strconv.FormatInt(timestamp, 10)
-	for _, point := range m.Points {
+	for _, point := range a.Points {
 		if !hasNumericField(point.Fields) {
 			continue
 		}
 		buf.WriteString(measurement)
-		buf.WriteString(",host=")
-		buf.WriteString(escapeTag(m.Host))
 		buf.WriteString(",plugin=")
-		buf.WriteString(escapeTag(m.Plugin))
+		buf.WriteString(escapeTag(a.Plugin))
 		for _, tag := range point.Tags {
 			if tag.Value == "" {
 				continue
@@ -261,10 +271,19 @@ func (m Message) AppendLineProtocol(buf *bytes.Buffer, measurement string, times
 			buf.WriteByte('=')
 			buf.WriteString(escapeTag(tag.Value))
 		}
+		for _, field := range point.Fields {
+			if field.Kind != KindStr || field.Str == "" {
+				continue
+			}
+			buf.WriteByte(',')
+			buf.WriteString(escapeTag(field.Key))
+			buf.WriteByte('=')
+			buf.WriteString(escapeTag(field.Str))
+		}
 		buf.WriteByte(' ')
 		first := true
 		for _, field := range point.Fields {
-			if field.Kind == KindNull {
+			if field.Kind != KindFloat && field.Kind != KindInt {
 				continue
 			}
 			if !first {
@@ -283,7 +302,7 @@ func (m Message) AppendLineProtocol(buf *bytes.Buffer, measurement string, times
 
 func hasNumericField(fields []Field) bool {
 	for _, field := range fields {
-		if field.Kind != KindNull {
+		if field.Kind == KindFloat || field.Kind == KindInt {
 			return true
 		}
 	}
@@ -297,18 +316,6 @@ func appendFieldValue(buf *bytes.Buffer, field Field) {
 	case KindInt:
 		buf.WriteString(strconv.FormatInt(field.Int, 10))
 		buf.WriteByte('i')
-	case KindBool:
-		buf.WriteString(strconv.FormatBool(field.Bool))
-	case KindStr:
-		buf.WriteByte('"')
-		for i := 0; i < len(field.Str); i++ {
-			c := field.Str[i]
-			if c == '"' || c == '\\' {
-				buf.WriteByte('\\')
-			}
-			buf.WriteByte(c)
-		}
-		buf.WriteByte('"')
 	}
 }
 

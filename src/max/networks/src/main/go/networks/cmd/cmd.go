@@ -25,10 +25,10 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&flagFilterPlugins, "filter-plugins", "f", "", "comma separated list restricting which plugins run (default: all): internet,wireless,zigbee,ethernet,certificates")
-	rootCmd.PersistentFlags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence driving pulse for poll-phase plugins, uses unit suffixes [s, m, h]")
+	rootCmd.PersistentFlags().StringVarP(&flagFilterPlugins, "filter-plugins", "f", "", "comma separated list restricting which plugins run (default: all)")
+	rootCmd.PersistentFlags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence for poll-phase plugins, uses unit suffixes [s, m, h]")
 	rootCmd.PersistentFlags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", "15m", "window rolled up before a status decision, must be a whole multiple of poll period, uses unit suffixes [s, m, h]")
-	rootCmd.PersistentFlags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish vitals to MQTT and InfluxDB when true, otherwise log only")
+	rootCmd.PersistentFlags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish aggregates to MQTT and InfluxDB when true, otherwise log only")
 	rootCmd.PersistentFlags().StringVarP(&flagLogLevel, "log-level", "l", "info", "log level [debug, info, warn, error]")
 	rootCmd.Flags().SortFlags = false
 	rootCmd.PersistentFlags().SortFlags = false

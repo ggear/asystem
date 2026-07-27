@@ -17,21 +17,21 @@ const (
 )
 
 type wirelessPlugin struct {
-	fetch func(ctx context.Context) ([]engine.RouterDevice, []engine.RouterStation, error)
+	probe func(ctx context.Context) ([]engine.RouterDevice, error)
 }
 
 func newWirelessPlugin() *wirelessPlugin {
-	return &wirelessPlugin{fetch: fetchWirelessLive}
+	return &wirelessPlugin{probe: probeWireless}
 }
 
 func (p *wirelessPlugin) Name() string { return "wireless" }
 
-func (p *wirelessPlugin) PollPhase() bool { return false }
+func (p *wirelessPlugin) SampleMode() plugin.SampleMode { return plugin.Snapshot }
 
-func (p *wirelessPlugin) Poll(ctx context.Context) (plugin.Message, error) {
-	devices, _, err := p.fetch(ctx)
+func (p *wirelessPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
+	devices, err := p.probe(ctx)
 	if err != nil {
-		return plugin.Message{}, err
+		return plugin.Sample{}, err
 	}
 	points := make([]plugin.Point, 0, len(devices))
 	for _, device := range devices {
@@ -41,29 +41,28 @@ func (p *wirelessPlugin) Poll(ctx context.Context) (plugin.Message, error) {
 		tags := []plugin.Tag{{Key: "scope", Value: "ap"}, {Key: "ap", Value: device.Name}}
 		points = append(points, plugin.NewPoint(tags, plugin.Bool("up", device.State == 1), plugin.Int("experience", int64(device.Satisfaction)), plugin.Int("num_clients", int64(device.NumSta))))
 	}
-	return plugin.Message{Points: points}, nil
+	return plugin.Sample{Points: points}, nil
 }
 
-func (p *wirelessPlugin) Aggregate(samples []plugin.Message) (plugin.Message, error) {
-	return decideWireless(samples), nil
+func (p *wirelessPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
+	return diagnoseWireless(samples), nil
 }
 
-func fetchWirelessLive(ctx context.Context) ([]engine.RouterDevice, []engine.RouterStation, error) {
+func probeWireless(ctx context.Context) ([]engine.RouterDevice, error) {
 	cfg := config.Load()
 	client, err := engine.NewRouterClient(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiPassword())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	devices, err := client.Devices(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	stations, _ := client.Stations(ctx)
-	slog.Debug("fetch", "plugin", "wireless", "devices", len(devices), "stations", len(stations))
-	return devices, stations, nil
+	slog.Debug("probe", "plugin", "wireless", "devices", len(devices))
+	return devices, nil
 }
 
-func decideWireless(samples []plugin.Message) plugin.Message {
+func diagnoseWireless(samples []plugin.Sample) plugin.Aggregate {
 	points := plugin.LatestPoints(samples)
 	total := 0
 	up := 0
@@ -71,10 +70,10 @@ func decideWireless(samples []plugin.Message) plugin.Message {
 	experienceCount := 0
 	for _, point := range points {
 		total++
-		isUp := plugin.BoolField(point, "up")
+		isUp, _ := point.Bool("up")
 		if isUp {
 			up++
-			if experience, ok := plugin.FloatField(point, "experience"); ok {
+			if experience, ok := point.Float("experience"); ok {
 				experienceSum += experience
 				experienceCount++
 			}
@@ -89,7 +88,7 @@ func decideWireless(samples []plugin.Message) plugin.Message {
 		upRatio = float64(up) / float64(total)
 	}
 	score := plugin.Clamp(int(math.Round((upRatio*100 + meanExperience) / 2)))
-	result := plugin.Message{}
+	result := plugin.Aggregate{}
 	switch {
 	case total == 0:
 		result = plugin.Diagnose(plugin.StatusDead, 0, "CONTROLLER_UNREACHABLE", "controller unreachable or no access points reporting")
@@ -102,11 +101,11 @@ func decideWireless(samples []plugin.Message) plugin.Message {
 	default:
 		result = plugin.Diagnose(plugin.StatusSick, score, "POOR_CLIENTS", fmt.Sprintf("mean client experience %.0f%%", meanExperience))
 	}
-	result.Points = buildWirelessPoints(result.Score, up, total, meanExperience, points)
+	result.Points = reportWireless(result.Score, up, total, meanExperience, points)
 	return result
 }
 
-func buildWirelessPoints(score, up, total int, meanExperience float64, apPoints []plugin.Point) []plugin.Point {
+func reportWireless(score, up, total int, meanExperience float64, apPoints []plugin.Point) []plugin.Point {
 	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}},
 		plugin.Int("score", int64(score)),
 		plugin.Int("aps_up", int64(up)),

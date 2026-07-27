@@ -1,0 +1,143 @@
+package plugins
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"networks/internal/plugin"
+)
+
+func TestWeewx_Poll(t *testing.T) {
+	p := &weewxPlugin{probe: func(context.Context) (float64, bool, bool, error) {
+		return 82.4, true, true, nil
+	}}
+	msg, err := p.Poll(context.Background())
+	if err != nil {
+		t.Fatalf("poll: unexpected error %v", err)
+	}
+	if len(msg.Points) != 1 {
+		t.Fatalf("points: got %d want 1", len(msg.Points))
+	}
+	if got, ok := msg.Points[0].Float("signal_quality_pct"); !ok || got != 82.4 {
+		t.Errorf("signal_quality_pct: got %v ok=%v want 82.4", got, ok)
+	}
+	if got, ok := msg.Points[0].Bool("fresh"); !ok || !got {
+		t.Errorf("fresh: got %v ok=%v want true", got, ok)
+	}
+}
+
+func TestWeewx_PollError(t *testing.T) {
+	p := &weewxPlugin{probe: func(context.Context) (float64, bool, bool, error) {
+		return 0, false, false, errors.New("broker unreachable")
+	}}
+	if _, err := p.Poll(context.Background()); err == nil {
+		t.Fatal("poll: expected probe error to propagate, got nil")
+	}
+}
+
+func TestWeewx_Diagnose(t *testing.T) {
+	tests := []struct {
+		name           string
+		samples        []plugin.Sample
+		expectedStatus plugin.Status
+		expectedOK     bool
+		expectedScore  int
+		expectedDetail string
+	}{
+		{
+			name:           "fit_fresh_strong_signal",
+			samples:        []plugin.Sample{weewxPoll(true, true, 82)},
+			expectedStatus: plugin.StatusFit,
+			expectedOK:     true,
+			expectedScore:  82,
+			expectedDetail: "HEALTHY",
+		},
+		{
+			name:           "sick_fresh_weak_signal",
+			samples:        []plugin.Sample{weewxPoll(true, true, 30)},
+			expectedStatus: plugin.StatusSick,
+			expectedOK:     true,
+			expectedScore:  30,
+			expectedDetail: "WEAK_SIGNAL",
+		},
+		{
+			name:           "dead_stale_ignores_signal",
+			samples:        []plugin.Sample{weewxPoll(false, true, 82)},
+			expectedStatus: plugin.StatusDead,
+			expectedOK:     false,
+			expectedScore:  0,
+			expectedDetail: "STALE",
+		},
+		{
+			name:           "dead_fresh_no_signal",
+			samples:        []plugin.Sample{weewxPoll(true, false, 0)},
+			expectedStatus: plugin.StatusDead,
+			expectedOK:     false,
+			expectedScore:  0,
+			expectedDetail: "NO_DATA",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := newWeewxPlugin().Aggregate(test.samples)
+			if err != nil {
+				t.Fatalf("aggregate: unexpected error %v", err)
+			}
+			if got.Status != test.expectedStatus {
+				t.Errorf("status: got %s want %s", got.Status, test.expectedStatus)
+			}
+			if got.OK != test.expectedOK {
+				t.Errorf("ok: got %v want %v", got.OK, test.expectedOK)
+			}
+			if got.Score != test.expectedScore {
+				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
+			}
+			if got.Detail != test.expectedDetail {
+				t.Errorf("detail: got %s want %s", got.Detail, test.expectedDetail)
+			}
+		})
+	}
+}
+
+func TestWeewx_Read(t *testing.T) {
+	now := time.Unix(1785117984, 0)
+	tests := []struct {
+		name           string
+		signal         string
+		status         string
+		wantQuality    float64
+		wantHasQuality bool
+		wantFresh      bool
+	}{
+		{name: "fresh_and_quality", signal: "82.4", status: `{"timestamp":1785117984,"pulse":{"ok":true,"value":true}}`, wantQuality: 82.4, wantHasQuality: true, wantFresh: true},
+		{name: "within_hour", signal: "50", status: `{"timestamp":1785115000,"pulse":{"ok":true}}`, wantQuality: 50, wantHasQuality: true, wantFresh: true},
+		{name: "stale", signal: "90", status: `{"timestamp":1785110000,"pulse":{"ok":true}}`, wantQuality: 90, wantHasQuality: true, wantFresh: false},
+		{name: "pulse_down", signal: "90", status: `{"timestamp":1785117984,"pulse":{"ok":false}}`, wantQuality: 90, wantHasQuality: true, wantFresh: false},
+		{name: "missing_timestamp", signal: "90", status: `{"pulse":{"ok":true}}`, wantQuality: 90, wantHasQuality: true, wantFresh: false},
+		{name: "invalid_status", signal: "90", status: `not-json`, wantQuality: 90, wantHasQuality: true, wantFresh: false},
+		{name: "empty_signal", signal: "", status: `{"timestamp":1785117984,"pulse":{"ok":true}}`, wantQuality: 0, wantHasQuality: false, wantFresh: true},
+		{name: "non_numeric_signal", signal: "good", status: `{"timestamp":1785117984,"pulse":{"ok":true}}`, wantQuality: 0, wantHasQuality: false, wantFresh: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			quality, hasQuality, fresh := readWeewx([]byte(test.signal), []byte(test.status), now)
+			if hasQuality != test.wantHasQuality || quality != test.wantQuality {
+				t.Errorf("quality: got (%v,%v) want (%v,%v)", quality, hasQuality, test.wantQuality, test.wantHasQuality)
+			}
+			if fresh != test.wantFresh {
+				t.Errorf("fresh: got %v want %v", fresh, test.wantFresh)
+			}
+		})
+	}
+}
+
+func weewxPoll(fresh, hasQuality bool, quality float64) plugin.Sample {
+	signal := plugin.Null("signal_quality_pct")
+	if hasQuality {
+		signal = plugin.Float("signal_quality_pct", quality)
+	}
+	point := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "weatherstation"}}, signal, plugin.Bool("fresh", fresh))
+	return plugin.Sample{Plugin: "weewx", Points: []plugin.Point{point}}
+}

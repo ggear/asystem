@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	warnDays    = 21
-	dialTimeout = 5 * time.Second
+	warnDays     = 21
+	probeTimeout = 5 * time.Second
 )
 
 type endpoint struct {
@@ -25,30 +25,30 @@ var endpoints = []endpoint{
 	{addr: "home.asystem.io:443", sni: "home.asystem.io"},
 }
 
-type dialResult struct {
+type probeResult struct {
 	notBefore time.Time
 	notAfter  time.Time
 	verified  bool
 }
 
 type certificatesPlugin struct {
-	dial func(ctx context.Context, addr, sni string) (dialResult, error)
+	probe func(ctx context.Context, addr, sni string) (probeResult, error)
 }
 
 func newCertificatesPlugin() *certificatesPlugin {
-	return &certificatesPlugin{dial: dialTLS}
+	return &certificatesPlugin{probe: probeCertificates}
 }
 
 func (p *certificatesPlugin) Name() string { return "certificates" }
 
-func (p *certificatesPlugin) PollPhase() bool { return false }
+func (p *certificatesPlugin) SampleMode() plugin.SampleMode { return plugin.Snapshot }
 
-func (p *certificatesPlugin) Poll(ctx context.Context) (plugin.Message, error) {
+func (p *certificatesPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	now := time.Now()
 	points := make([]plugin.Point, 0, len(endpoints))
 	for _, e := range endpoints {
 		tags := []plugin.Tag{{Key: "scope", Value: "endpoint"}, {Key: "endpoint", Value: e.addr}}
-		result, err := p.dial(ctx, e.addr, e.sni)
+		result, err := p.probe(ctx, e.addr, e.sni)
 		if err != nil || !result.verified {
 			points = append(points, plugin.NewPoint(tags, plugin.Null("days_to_expiry"), plugin.Null("validity_pct"), plugin.Bool("verified", false)))
 			continue
@@ -59,49 +59,44 @@ func (p *certificatesPlugin) Poll(ctx context.Context) (plugin.Message, error) {
 		if total > 0 {
 			validity = 100 * result.notAfter.Sub(now).Seconds() / total
 		}
-		points = append(points, plugin.NewPoint(tags, plugin.Float("days_to_expiry", plugin.Round(days, 1)), plugin.Float("validity_pct", plugin.Round(clampPercent(validity), 1)), plugin.Bool("verified", true)))
+		if validity < 0 {
+			validity = 0
+		} else if validity > 100 {
+			validity = 100
+		}
+		points = append(points, plugin.NewPoint(tags, plugin.Float("days_to_expiry", plugin.Round(days, 1)), plugin.Float("validity_pct", plugin.Round(validity, 1)), plugin.Bool("verified", true)))
 	}
-	return plugin.Message{Points: points}, nil
+	return plugin.Sample{Points: points}, nil
 }
 
-func (p *certificatesPlugin) Aggregate(samples []plugin.Message) (plugin.Message, error) {
-	return decideCertificates(samples), nil
+func (p *certificatesPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
+	return diagnoseCertificates(samples), nil
 }
 
-func dialTLS(ctx context.Context, addr, sni string) (dialResult, error) {
-	dialer := &net.Dialer{Timeout: dialTimeout}
-	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{ServerName: sni})
+func probeCertificates(ctx context.Context, addr, sni string) (probeResult, error) {
+	dialer := tls.Dialer{NetDialer: &net.Dialer{Timeout: probeTimeout}, Config: &tls.Config{ServerName: sni}}
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
-		return dialResult{}, err
+		return probeResult{}, err
 	}
 	defer conn.Close()
-	certs := conn.ConnectionState().PeerCertificates
+	certs := conn.(*tls.Conn).ConnectionState().PeerCertificates
 	if len(certs) == 0 {
-		return dialResult{}, err
+		return probeResult{}, fmt.Errorf("no peer certificates [%s]", addr)
 	}
 	leaf := certs[0]
-	return dialResult{notBefore: leaf.NotBefore, notAfter: leaf.NotAfter, verified: true}, nil
+	return probeResult{notBefore: leaf.NotBefore, notAfter: leaf.NotAfter, verified: true}, nil
 }
 
-func clampPercent(v float64) float64 {
-	if v < 0 {
-		return 0
-	}
-	if v > 100 {
-		return 100
-	}
-	return v
-}
-
-func decideCertificates(samples []plugin.Message) plugin.Message {
+func diagnoseCertificates(samples []plugin.Sample) plugin.Aggregate {
 	points := plugin.LatestPoints(samples)
 	reachable := 0
 	failed := 0
 	minDays := math.MaxFloat64
 	nearestPercent := 100.0
 	for _, point := range points {
-		verified := plugin.BoolField(point, "verified")
-		days, hasDays := plugin.FloatField(point, "days_to_expiry")
+		verified, _ := point.Bool("verified")
+		days, hasDays := point.Float("days_to_expiry")
 		if !verified || !hasDays {
 			failed++
 			continue
@@ -109,13 +104,13 @@ func decideCertificates(samples []plugin.Message) plugin.Message {
 		reachable++
 		if days < minDays {
 			minDays = days
-			if percent, ok := plugin.FloatField(point, "validity_pct"); ok {
+			if percent, ok := point.Float("validity_pct"); ok {
 				nearestPercent = percent
 			}
 		}
 	}
 	score := plugin.Clamp(int(math.Round(nearestPercent)))
-	result := plugin.Message{}
+	result := plugin.Aggregate{}
 	switch {
 	case len(points) == 0 || reachable == 0:
 		result = plugin.Diagnose(plugin.StatusDead, 0, "PROBE_UNREACHABLE", "no certificate endpoint reachable across window")
@@ -127,14 +122,14 @@ func decideCertificates(samples []plugin.Message) plugin.Message {
 	default:
 		result = plugin.Diagnose(plugin.StatusFit, score, "VALID", fmt.Sprintf("nearest certificate valid for %.0f days", minDays))
 	}
-	result.Points = buildCertificatesPoints(result.Score, minDays, failed, points)
+	result.Points = reportCertificates(result.Score, minDays, failed, points)
 	return result
 }
 
-func buildCertificatesPoints(score int, minDays float64, failed int, endpointPoints []plugin.Point) []plugin.Point {
+func reportCertificates(score int, minDays float64, failed int, endpointPoints []plugin.Point) []plugin.Point {
 	warning := 0
 	for _, point := range endpointPoints {
-		if days, ok := plugin.FloatField(point, "days_to_expiry"); ok && days < warnDays {
+		if days, ok := point.Float("days_to_expiry"); ok && days < warnDays {
 			warning++
 		}
 	}

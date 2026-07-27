@@ -7,14 +7,7 @@ import (
 	"time"
 )
 
-type fakePlugin struct{ name string }
-
-func (f fakePlugin) Name() string                          { return f.name }
-func (f fakePlugin) PollPhase() bool                       { return false }
-func (f fakePlugin) Poll(context.Context) (Message, error) { return Message{}, nil }
-func (f fakePlugin) Aggregate([]Message) (Message, error)  { return Message{}, nil }
-
-func TestFilter(t *testing.T) {
+func TestPlugin_Filter(t *testing.T) {
 	Register(fakePlugin{name: "alpha"})
 	Register(fakePlugin{name: "beta"})
 	tests := []struct {
@@ -49,46 +42,28 @@ func TestFilter(t *testing.T) {
 	}
 }
 
-func TestFieldConstructors(t *testing.T) {
-	if f := Float("a", 1.5); f.Kind != KindFloat || f.Float != 1.5 {
-		t.Fatalf("Float wrong: %+v", f)
-	}
-	if f := Int("a", 3); f.Kind != KindInt || f.Int != 3 {
-		t.Fatalf("Int wrong: %+v", f)
-	}
-	if f := Bool("a", true); f.Kind != KindBool || !f.Bool {
-		t.Fatalf("Bool wrong: %+v", f)
-	}
-	if f := Str("a", "x"); f.Kind != KindStr || f.Str != "x" {
-		t.Fatalf("Str wrong: %+v", f)
-	}
-	if f := Null("a"); f.Kind != KindNull {
-		t.Fatalf("Null wrong: %+v", f)
-	}
-}
-
-func TestMessage_MarshalJSON(t *testing.T) {
+func TestAggregate_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
-		message       Message
+		message       Aggregate
 		expected      string
 		expectedError bool
 	}{
 		{
-			name:          "sick_verdict",
-			message:       Message{Timestamp: time.Unix(1737686400, 0), OK: true, Status: StatusSick, Score: 72},
+			name:          "sick_diagnose",
+			message:       Aggregate{Timestamp: time.Unix(1737686400, 0), OK: true, Status: StatusSick, Score: 72},
 			expected:      `{"timestamp":1737686400,"ok":true,"status":"sick","score":72}`,
 			expectedError: false,
 		},
 		{
-			name:          "dead_verdict",
-			message:       Message{Timestamp: time.Unix(1737686400, 0), OK: false, Status: StatusDead, Score: 0},
+			name:          "dead_diagnose",
+			message:       Aggregate{Timestamp: time.Unix(1737686400, 0), OK: false, Status: StatusDead, Score: 0},
 			expected:      `{"timestamp":1737686400,"ok":false,"status":"dead","score":0}`,
 			expectedError: false,
 		},
 		{
-			name:          "fit_verdict",
-			message:       Message{Timestamp: time.Unix(1737686400, 0), OK: true, Status: StatusFit, Score: 100},
+			name:          "fit_diagnose",
+			message:       Aggregate{Timestamp: time.Unix(1737686400, 0), OK: true, Status: StatusFit, Score: 100},
 			expected:      `{"timestamp":1737686400,"ok":true,"status":"fit","score":100}`,
 			expectedError: false,
 		},
@@ -106,32 +81,30 @@ func TestMessage_MarshalJSON(t *testing.T) {
 	}
 }
 
-func TestMessage_AppendLineProtocol(t *testing.T) {
+func TestAggregate_AppendLineProtocol(t *testing.T) {
 	tests := []struct {
 		name          string
-		message       Message
+		message       Aggregate
 		expected      string
 		expectedError bool
 	}{
 		{
 			name: "summary_and_target",
-			message: Message{
+			message: Aggregate{
 				Plugin: "internet",
-				Host:   "macmini-max",
 				Points: []Point{
 					NewPoint([]Tag{{"scope", "summary"}}, Int("score", 72), Float("avg_loss_pct", 12.5), Bool("gateway_ok", true), Null("skip_me")),
 					NewPoint([]Tag{{"scope", "target"}, {"target", "8.8.8.8"}}, Bool("ok", true), Float("loss_pct", 25)),
 				},
 			},
-			expected: "network,host=macmini-max,plugin=internet,scope=summary score=72i,avg_loss_pct=12.5,gateway_ok=true 1000\n" +
-				"network,host=macmini-max,plugin=internet,scope=target,target=8.8.8.8 ok=true,loss_pct=25 1000\n",
+			expected: "network,plugin=internet,scope=summary score=72i,avg_loss_pct=12.5 1000\n" +
+				"network,plugin=internet,scope=target,target=8.8.8.8 loss_pct=25 1000\n",
 			expectedError: false,
 		},
 		{
 			name: "all_null_point_skipped",
-			message: Message{
+			message: Aggregate{
 				Plugin: "internet",
-				Host:   "macmini-max",
 				Points: []Point{NewPoint([]Tag{{"scope", "target"}}, Null("avg_rtt_ms"))},
 			},
 			expected:      "",
@@ -149,7 +122,7 @@ func TestMessage_AppendLineProtocol(t *testing.T) {
 	}
 }
 
-func TestEscapeTag(t *testing.T) {
+func TestPlugin_EscapeTag(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -171,18 +144,24 @@ func TestEscapeTag(t *testing.T) {
 	}
 }
 
-func TestMessage_AppendLineProtocol_Escaping(t *testing.T) {
-	m := Message{
+func TestAggregate_AppendLineProtocol_Escaping(t *testing.T) {
+	m := Aggregate{
 		Plugin: "zig bee",
-		Host:   "host,1",
 		Points: []Point{
-			NewPoint([]Tag{{"scope", "a=b"}}, Str("note", `x"y\z`), Int("n", 3)),
+			NewPoint([]Tag{{"scope", "a=b"}}, Str("note", "x y=z"), Int("n", 3)),
 		},
 	}
 	var buf bytes.Buffer
 	m.AppendLineProtocol(&buf, "network", 1000)
-	want := `network,host=host\,1,plugin=zig\ bee,scope=a\=b note="x\"y\\z",n=3i 1000` + "\n"
+	want := `network,plugin=zig\ bee,scope=a\=b,note=x\ y\=z n=3i 1000` + "\n"
 	if buf.String() != want {
 		t.Fatalf("line protocol mismatch:\n got %q\nwant %q", buf.String(), want)
 	}
 }
+
+type fakePlugin struct{ name string }
+
+func (f fakePlugin) Name() string                          { return f.name }
+func (f fakePlugin) SampleMode() SampleMode                { return Snapshot }
+func (f fakePlugin) Poll(context.Context) (Sample, error)  { return Sample{}, nil }
+func (f fakePlugin) Aggregate([]Sample) (Aggregate, error) { return Aggregate{}, nil }

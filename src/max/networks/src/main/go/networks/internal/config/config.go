@@ -4,18 +4,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 )
 
-const defaultVersion = "10.200.1000-SNAPSHOT"
-
-var VersionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}(-SNAPSHOT)?$`)
-
 type Config struct {
-	version       string
-	host          string
 	brokerHost    string
 	brokerPort    string
 	brokerToken   string
@@ -27,7 +20,6 @@ type Config struct {
 	unifiSite     string
 	unifiUser     string
 	unifiPassword string
-	zigbeeTopic   string
 }
 
 var (
@@ -58,8 +50,6 @@ func Load() *Config {
 
 func load() *Config {
 	return &Config{
-		version:       resolve("version", "SERVICE_VERSION_ABSOLUTE"),
-		host:          resolve("host", "NETWORKS_HOST"),
 		brokerHost:    resolve("broker_host", "BROKER_HOST"),
 		brokerPort:    resolve("broker_port", "BROKER_PORT"),
 		brokerToken:   resolve("broker_token", "BROKER_TOKEN"),
@@ -71,30 +61,7 @@ func load() *Config {
 		unifiSite:     resolve("unifi_site", "UNIFI_SITE"),
 		unifiUser:     resolve("unifi_user", "UNIFI_USER"),
 		unifiPassword: resolve("unifi_password", "UNIFI_PASSWORD"),
-		zigbeeTopic:   resolve("zigbee_topic", "ZIGBEE_TOPIC"),
 	}
-}
-
-func (c *Config) Version() string {
-	if c != nil && VersionPattern.MatchString(c.version) {
-		return c.version
-	}
-	return defaultVersion
-}
-
-func (c *Config) Host() string {
-	if c != nil && c.host != "" {
-		return c.host
-	}
-	cachedHostOnce.Do(func() {
-		hostName, err := os.Hostname()
-		if err != nil {
-			slog.Error("config: failed to get hostname", "error", err)
-			return
-		}
-		cachedHostName = hostName
-	})
-	return cachedHostName
 }
 
 func (c *Config) Broker() string {
@@ -166,13 +133,6 @@ func (c *Config) UnifiPassword() string {
 	return c.unifiPassword
 }
 
-func (c *Config) ZigbeeTopic() string {
-	if c == nil || c.zigbeeTopic == "" {
-		return "zigbee2mqtt"
-	}
-	return c.zigbeeTopic
-}
-
 func resolve(field, env string) string {
 	value := os.Getenv(env)
 	if value != "" {
@@ -189,8 +149,3 @@ func mask(field, value string) string {
 	}
 	return value
 }
-
-var (
-	cachedHostName string
-	cachedHostOnce sync.Once
-)

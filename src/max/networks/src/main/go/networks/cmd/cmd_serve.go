@@ -57,4 +57,4 @@ func executeServe() error {
 	return nil
 }
 
-const serveDescription = "Run the network health monitor daemon, polling plugins and publishing vitals"
+const serveDescription = "Run the network health monitor daemon, polling plugins and publishing aggregates"
