@@ -9,4 +9,4 @@ vim
 jq
 ca-certificates
 mosquitto-clients
-socat
+procps
