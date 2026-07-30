@@ -28,7 +28,7 @@ var resolvers = []resolver{
 	{name: "google", address: "8.8.8.8:53"},
 	{name: "quad9", address: "9.9.9.9:53"},
 	{name: "opendns", address: "208.67.222.222:53"},
-	{name: "level3", address: "4.2.2.2:53"},
+	{name: "adguard", address: "94.140.14.14:53"},
 }
 
 type domainResult struct {
