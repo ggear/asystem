@@ -579,6 +579,26 @@ sensor.servers_network_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
+switch.network_internet:
+  friendly_name: 'Internet'
+  icon: 'mdi:web'
+switch.network_wireless:
+  friendly_name: 'Wireless'
+  icon: 'mdi:wifi'
+switch.network_zigbee:
+  friendly_name: 'Zigbee'
+  icon: 'mdi:wifi-plus'
+switch.network_ethernet:
+  friendly_name: 'Ethernet'
+  icon: 'mdi:cable-data'
+switch.network_weewx:
+  friendly_name: 'WeeWX'
+  icon: 'mdi:access-point-network'
+switch.network_certificates:
+  friendly_name: 'Certificates'
+  icon: 'mdi:certifcate'
+button.google_assistant_synchronize_devices:
+  friendly_name: 'Google Device Syncronise'
 switch.service_plex:
   friendly_name: 'Plex'
   icon: 'mdi:heart-pulse'
@@ -642,26 +662,6 @@ switch.service_weewx:
 switch.service_zigbee2mqtt:
   friendly_name: 'Zigbee2MQTT'
   icon: 'mdi:heart-pulse'
-switch.network_internet:
-  friendly_name: 'Internet'
-  icon: 'mdi:web'
-switch.network_wireless:
-  friendly_name: 'Wireless'
-  icon: 'mdi:wifi'
-switch.network_zigbee:
-  friendly_name: 'Zigbee'
-  icon: 'mdi:wifi-plus'
-switch.network_ethernet:
-  friendly_name: 'Ethernet'
-  icon: 'mdi:cable-data'
-switch.network_weewx:
-  friendly_name: 'WeeWX'
-  icon: 'mdi:access-point-network'
-switch.network_certificates:
-  friendly_name: 'Certificates'
-  icon: 'mdi:certifcate'
-button.google_assistant_synchronize_devices:
-  friendly_name: 'Google Device Syncronise'
 sensor.template_utility_temperature_proxy:
   friendly_name: 'Rack Ambient'
   icon: 'mdi:thermometer'
