@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	zigbeeBaseTopic = "zigbee2mqtt"
+	zigbeeBaseTopic = "zigbee"
 	collectDelay    = 2 * time.Second
 	connectWait     = 5 * time.Second
 	onlineFitRatio  = 0.95
