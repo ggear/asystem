@@ -22,7 +22,7 @@
       icon: mdi:access-point-network
     - entity: switch.network_certificates
       name: Certificates
-      icon: mdi:certifcate
+      icon: mdi:certificate
 ################################################################################
 - type: entities
   title: Device Maintenance

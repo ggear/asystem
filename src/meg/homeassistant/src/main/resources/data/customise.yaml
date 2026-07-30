@@ -596,7 +596,7 @@ switch.network_weewx:
   icon: 'mdi:access-point-network'
 switch.network_certificates:
   friendly_name: 'Certificates'
-  icon: 'mdi:certifcate'
+  icon: 'mdi:certificate'
 button.google_assistant_synchronize_devices:
   friendly_name: 'Google Device Syncronise'
 switch.service_plex:
