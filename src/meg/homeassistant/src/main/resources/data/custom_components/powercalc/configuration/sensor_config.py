@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.components.sensor import PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA
 from homeassistant.components.utility_meter import max_28_days
 from homeassistant.components.utility_meter.const import METER_TYPES
@@ -27,6 +29,10 @@ from custom_components.powercalc.const import (
     CONF_ENERGY_FILTER_OUTLIER_ENABLED,
     CONF_ENERGY_FILTER_OUTLIER_MAX,
     CONF_ENERGY_INTEGRATION_METHOD,
+    CONF_ENERGY_PRICE,
+    CONF_ENERGY_PRICE_MULTIPLIER,
+    CONF_ENERGY_PRICE_SENSOR,
+    CONF_ENERGY_PRICE_SURCHARGE,
     CONF_ENERGY_SENSOR_CATEGORY,
     CONF_ENERGY_SENSOR_ID,
     CONF_ENERGY_SENSOR_NAMING,
@@ -114,6 +120,10 @@ SENSOR_CONFIG = {
     vol.Optional(CONF_MULTIPLY_FACTOR_STANDBY): cv.boolean,
     vol.Optional(CONF_POWER_SENSOR_NAMING): validate_name_pattern,
     vol.Optional(CONF_POWER_SENSOR_CATEGORY): vol.In(ENTITY_CATEGORIES),
+    vol.Optional(CONF_ENERGY_PRICE): vol.Coerce(float),
+    vol.Optional(CONF_ENERGY_PRICE_SENSOR): cv.entity_id,
+    vol.Optional(CONF_ENERGY_PRICE_SURCHARGE): vol.Coerce(float),
+    vol.Optional(CONF_ENERGY_PRICE_MULTIPLIER): vol.Coerce(float),
     vol.Optional(CONF_ENERGY_SENSOR_ID): cv.entity_id,
     vol.Optional(CONF_ENERGY_SENSOR_NAMING): validate_name_pattern,
     vol.Optional(CONF_ENERGY_SENSOR_CATEGORY): vol.In(ENTITY_CATEGORIES),
@@ -154,7 +164,7 @@ SENSOR_CONFIG = {
 }
 
 
-def build_nested_configuration_schema(schema: dict, iteration: int = 0) -> dict:
+def build_nested_configuration_schema(schema: dict[Any, Any], iteration: int = 0) -> dict[Any, Any]:
     if iteration == MAX_GROUP_NESTING_LEVEL:
         return schema
     iteration += 1

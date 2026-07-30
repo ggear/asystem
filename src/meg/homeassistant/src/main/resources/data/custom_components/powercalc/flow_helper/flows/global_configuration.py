@@ -11,7 +11,6 @@ from homeassistant.helpers.schema_config_entry_flow import SchemaFlowError
 from homeassistant.helpers.typing import ConfigType
 import voluptuous as vol
 
-from custom_components.powercalc import DeviceType
 from custom_components.powercalc.const import (
     CONF_APPLY_TO_ALL,
     CONF_CREATE_COST_SENSOR,
@@ -53,6 +52,7 @@ from custom_components.powercalc.const import (
 )
 from custom_components.powercalc.flow_helper.common import PowercalcFormStep, Step, flatten_sections
 from custom_components.powercalc.flow_helper.schema import (
+    COST_DOCS_URI,
     SCHEMA_COST_APPLY,
     SCHEMA_ENERGY_OPTIONS,
     SCHEMA_GLOBAL_COST,
@@ -62,6 +62,7 @@ from custom_components.powercalc.flow_helper.schema import (
     SECTION_COST_NAMING,
     SECTION_COST_PRICING,
 )
+from custom_components.powercalc.power_profile.power_profile import DeviceType
 from custom_components.powercalc.service.gui_configuration import apply_field_to_config_entries
 
 if TYPE_CHECKING:
@@ -327,7 +328,7 @@ class GlobalConfigurationFlow:
             schema=SCHEMA_GLOBAL_COST,
             form_kwarg={
                 "description_placeholders": {
-                    "docs_uri": "https://docs.powercalc.nl/sensor-types/cost-sensor/",
+                    "docs_uri": COST_DOCS_URI,
                 },
             },
         )

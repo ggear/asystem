@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const Global = "*"
@@ -64,10 +65,14 @@ func Warnf(subject, format string, args ...any) { emit(slog.LevelWarn, subject, 
 
 func Errorf(subject, format string, args ...any) { emit(slog.LevelError, subject, format, args...) }
 
-func Diagnosis(subject, status string, score int, reason string) {
+func Diagnosis(subject, status string, score int, took time.Duration, reason string) {
 	scoreText := strconv.Itoa(score)
-	Infof(subject, "probe diagnosed as ... [%s] %s with score ... [%s] %s because [%s]",
-		status, leader(6-len(status)), scoreText, leader(5-len(scoreText)), reason)
+	tookText := fmt.Sprintf("%dms", took.Milliseconds())
+	Infof(subject, "probe diagnosed as ... [%s] %s with score ... [%s] %s in [%s] %s because [%s]",
+		status, leader(6-len(status)),
+		scoreText, leader(5-len(scoreText)),
+		tookText, leader(8-len(tookText)),
+		reason)
 }
 
 func emit(level slog.Level, subject, format string, args ...any) {

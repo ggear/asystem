@@ -126,6 +126,7 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 	scribe.Debugf(scribe.Global, "aggregating [%d] plugins", len(plugins))
 	aggregates := make([]plugin.Aggregate, 0, len(plugins))
 	for _, p := range plugins {
+		start := time.Now()
 		var samples []plugin.Sample
 		if p.Mode() == plugin.ModeWindowed {
 			buffer := e.sampleBuffers[p.Name()]
@@ -144,6 +145,7 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 			samples = []plugin.Sample{m}
 		}
 		v := e.safeAggregate(p, samples)
+		took := time.Since(start)
 		state := plugin.StateOff
 		if v.OK {
 			state = plugin.StateOn
@@ -152,7 +154,7 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 			tracker.Set(state)
 		}
 		aggregates = append(aggregates, v)
-		scribe.Diagnosis(p.Name(), string(v.Status), v.Score, v.Reason)
+		scribe.Diagnosis(p.Name(), string(v.Status), v.Score, took, v.Reason)
 	}
 	return aggregates
 }
