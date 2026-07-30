@@ -68,7 +68,7 @@ func (p *zigbeePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		}
 		points = append(points, plugin.NewPoint(tags, lqiField, plugin.Bool("available", d.available)))
 	}
-	slog.Debug("poll", "plugin", "zigbee", "online", online, "permit_join", permit, "devices", len(devices), "points", len(points))
+	slog.Debug(fmt.Sprintf("plugin [zigbee] polled online [%v] permit_join [%v] devices [%d] points [%d]", online, permit, len(devices), len(points)))
 	return plugin.Sample{Points: points}, nil
 }
 
@@ -117,7 +117,7 @@ func probeZigbee(ctx context.Context) (bool, bool, []zigbeeDevice, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	online, permit, devices := readZigbee(zigbeeBaseTopic, messages)
-	slog.Debug("probe", "plugin", "zigbee", "topics", len(messages), "online", online, "devices", len(devices))
+	slog.Debug(fmt.Sprintf("plugin [zigbee] probed topics [%d] online [%v] devices [%d]", len(messages), online, len(devices)))
 	return online, permit, devices, nil
 }
 

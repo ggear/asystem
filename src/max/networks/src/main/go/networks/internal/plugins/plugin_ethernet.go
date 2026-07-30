@@ -55,7 +55,7 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				plugin.Int("errors", errors)))
 		}
 	}
-	slog.Debug("poll", "plugin", "ethernet", "devices", len(devices), "ports", len(points))
+	slog.Debug(fmt.Sprintf("plugin [ethernet] polled devices [%d] ports [%d]", len(devices), len(points)))
 	return plugin.Sample{Points: points}, nil
 }
 
@@ -79,7 +79,7 @@ func probeEthernet(ctx context.Context) ([]engine.RouterDevice, error) {
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug("probe", "plugin", "ethernet", "devices", len(devices))
+	slog.Debug(fmt.Sprintf("plugin [ethernet] probed devices [%d]", len(devices)))
 	return devices, nil
 }
 

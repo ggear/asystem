@@ -52,11 +52,11 @@ func (p *certificatesPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		tags := []plugin.Tag{{Key: "scope", Value: "endpoint"}, {Key: "endpoint", Value: e.addr}}
 		result, err := p.probe(ctx, e.addr, e.sni)
 		if err != nil || !result.verified {
-			slog.Debug("probe", "plugin", "certificates", "endpoint", e.addr, "error", err)
+			slog.Debug(fmt.Sprintf("plugin [certificates] probe of endpoint [%s] failed [%v]", e.addr, err))
 			points = append(points, plugin.NewPoint(tags, plugin.Null("days_to_expiry"), plugin.Null("validity_pct"), plugin.Bool("verified", false)))
 			continue
 		}
-		slog.Debug("probe", "plugin", "certificates", "endpoint", e.addr, "not_after", result.notAfter)
+		slog.Debug(fmt.Sprintf("plugin [certificates] probed endpoint [%s] not_after [%s]", e.addr, result.notAfter))
 		days := result.notAfter.Sub(now).Hours() / 24
 		validity := 100.0
 		total := result.notAfter.Sub(result.notBefore).Seconds()

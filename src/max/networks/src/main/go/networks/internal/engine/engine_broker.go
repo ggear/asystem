@@ -39,7 +39,7 @@ func (e *Engine) connectBroker(ctx context.Context) error {
 			name := strings.TrimPrefix(topic, brokerCommandPrefix+"/")
 			state, ok := plugin.ParseState(string(msg.Payload()))
 			if !ok {
-				slog.Warn("command", "source", "mqtt", "phase", "parse", "topic", topic, "payload", string(msg.Payload()))
+				slog.Warn(fmt.Sprintf("ignored command on topic [%s] with unparseable payload [%s]", topic, string(msg.Payload())))
 				return
 			}
 			e.runCommand(ctx, name, state)
@@ -56,14 +56,14 @@ func (e *Engine) connectBroker(ctx context.Context) error {
 func (e *Engine) runCommand(ctx context.Context, name string, state plugin.State) {
 	p, ok := e.pluginByName(name)
 	if !ok {
-		slog.Warn("command", "source", "mqtt", "phase", "validate", "plugin", name, "error", "unknown plugin")
+		slog.Warn(fmt.Sprintf("plugin [%s] command ignored because plugin is unknown", name))
 		return
 	}
 	if err := p.Command(ctx, state); err != nil {
-		slog.Warn("command", "source", "mqtt", "phase", "execute", "plugin", name, "state", state.String(), "error", err)
+		slog.Warn(fmt.Sprintf("plugin [%s] command to state [%s] failed [%v]", name, state.String(), err))
 		return
 	}
-	slog.Info("command", "source", "mqtt", "phase", "execute", "plugin", name, "state", state.String())
+	slog.Info(fmt.Sprintf("plugin [%s] command set state [%s]", name, state.String()))
 }
 
 func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
@@ -112,12 +112,10 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 func (b *brokerClient) publishAggregate(m plugin.Aggregate) {
 	payload, err := m.MarshalJSON()
 	if err != nil {
-		slog.Warn("state", "engine", "broker", "phase", "publish", "plugin", m.Plugin, "error", err)
+		slog.Warn(fmt.Sprintf("plugin [%s] marshal for broker failed [%v]", m.Plugin, err))
 		return
 	}
-	topic := brokerDataTopicPrefix + m.Plugin
-	b.client.Publish(topic, 0, true, payload).WaitTimeout(brokerPublishTimeout)
-	slog.Info(fmt.Sprintf("published to broker [%s]", topic))
+	b.client.Publish(brokerDataTopicPrefix+m.Plugin, 0, true, payload).WaitTimeout(brokerPublishTimeout)
 }
 
 func (b *brokerClient) disconnect() {

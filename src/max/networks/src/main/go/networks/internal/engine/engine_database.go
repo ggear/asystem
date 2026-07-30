@@ -65,7 +65,7 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 		slog.Info(fmt.Sprintf("reconnected to database [%s]", d.url))
 		return
 	}
-	slog.Debug("state", "engine", "database", "phase", "write", "bytes", len(data))
+	slog.Debug(fmt.Sprintf("wrote [%d] bytes to database", len(data)))
 }
 
 func (d *databaseClient) close() {

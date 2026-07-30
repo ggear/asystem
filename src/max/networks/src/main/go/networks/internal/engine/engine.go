@@ -67,9 +67,9 @@ func Create(opts Options) (*Engine, error) {
 
 func (e *Engine) Run(ctx context.Context) error {
 	if e.daemon {
-		slog.Info(fmt.Sprintf("starting loop poll [%s] aggregate [%s] plugins [%d] publish [%v]", e.pollPeriod, e.aggregatePeriod, len(e.plugins), e.publish))
+		slog.Info(fmt.Sprintf("starting loop poll every [%s], aggregated over [%s] across [%d] plugins", e.pollPeriod, e.aggregatePeriod, len(e.plugins)))
 	} else {
-		slog.Info(fmt.Sprintf("running single check plugins [%d] publish [%v]", len(e.plugins), e.publish))
+		slog.Info(fmt.Sprintf("running single check across [%d] plugins", len(e.plugins)))
 	}
 	if e.publish {
 		if err := e.connectBroker(ctx); err != nil {
@@ -116,14 +116,14 @@ func (e *Engine) PollSamples(ctx context.Context) {
 			e.sampleBufferMu.Lock()
 			e.sampleBuffers[p.Name()].Add(m)
 			e.sampleBufferMu.Unlock()
-			slog.Debug("poll", "plugin", p.Name(), "points", len(m.Points))
+			slog.Debug(fmt.Sprintf("plugin [%s] polled [%d] points", p.Name(), len(m.Points)))
 		}(p)
 	}
 	wg.Wait()
 }
 
 func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) []plugin.Aggregate {
-	slog.Debug("aggregate", "phase", "start", "plugins", len(plugins))
+	slog.Debug(fmt.Sprintf("aggregating [%d] plugins", len(plugins)))
 	aggregates := make([]plugin.Aggregate, 0, len(plugins))
 	for _, p := range plugins {
 		var samples []plugin.Sample
@@ -152,7 +152,7 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 			tracker.Set(state)
 		}
 		aggregates = append(aggregates, v)
-		slog.Info("aggregate", "plugin", p.Name(), "status", string(v.Status), "detail", v.Detail, "reason", v.Reason, "score", v.Score, "ok", v.OK)
+		slog.Info(fmt.Sprintf("plugin [%s] probe returned status [%s], score [%d] because [%s]", p.Name(), v.Status, v.Score, v.Reason))
 	}
 	return aggregates
 }
@@ -160,7 +160,7 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("poll panic", "plugin", p.Name(), "panic", r)
+			slog.Error(fmt.Sprintf("plugin [%s] panicked during poll [%v]", p.Name(), r))
 			m = plugin.Sample{}
 		}
 		m.Plugin = p.Name()
@@ -170,7 +170,7 @@ func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample
 	}()
 	sample, err := p.Poll(ctx)
 	if err != nil {
-		slog.Warn("poll error", "plugin", p.Name(), "error", err)
+		slog.Warn(fmt.Sprintf("plugin [%s] poll failed [%v]", p.Name(), err))
 	}
 	return sample
 }
@@ -178,7 +178,7 @@ func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample
 func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plugin.Aggregate) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("aggregate panic", "plugin", p.Name(), "panic", r)
+			slog.Error(fmt.Sprintf("plugin [%s] panicked during aggregate [%v]", p.Name(), r))
 			v = plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_PANIC", "plugin panicked during aggregate")
 		}
 		v.Plugin = p.Name()
@@ -190,7 +190,7 @@ func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plug
 	}()
 	aggregate, err := p.Aggregate(samples)
 	if err != nil {
-		slog.Warn("aggregate error", "plugin", p.Name(), "error", err)
+		slog.Warn(fmt.Sprintf("plugin [%s] aggregate failed [%v]", p.Name(), err))
 	}
 	return aggregate
 }
