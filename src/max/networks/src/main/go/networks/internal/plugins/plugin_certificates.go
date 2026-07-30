@@ -23,7 +23,7 @@ type endpoint struct {
 }
 
 var endpoints = []endpoint{
-	{addr: "home.asystem.io:443", sni: "home.asystem.io"},
+	{addr: "home.janeandgraham.com:443", sni: "home.janeandgraham.com"},
 }
 
 type probeResult struct {
