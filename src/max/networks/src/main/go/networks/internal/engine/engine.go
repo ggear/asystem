@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"networks/internal/plugin"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -152,7 +154,11 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 			tracker.Set(state)
 		}
 		aggregates = append(aggregates, v)
-		slog.Info(fmt.Sprintf("plugin [%s] probe returned status [%s], score [%d] because [%s]", p.Name(), v.Status, v.Score, v.Reason))
+		status := string(v.Status)
+		scoreText := strconv.Itoa(v.Score)
+		slog.Info(fmt.Sprintf("plugin [%s] probe returned status ... [%s] %s score ... [%s] %s because [%s]",
+			p.Name(), status, strings.Repeat(".", max(0, 6-len(status))),
+			scoreText, strings.Repeat(".", max(0, 5-len(scoreText))), v.Reason))
 	}
 	return aggregates
 }

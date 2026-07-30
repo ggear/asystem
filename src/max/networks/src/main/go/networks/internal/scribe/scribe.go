@@ -62,12 +62,22 @@ func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *handler) Handle(_ context.Context, record slog.Record) error {
+	subject := "*"
+	message := record.Message
+	if rest, ok := strings.CutPrefix(message, "plugin ["); ok {
+		if end := strings.IndexByte(rest, ']'); end >= 0 {
+			subject = rest[:end]
+			message = strings.TrimPrefix(rest[end+1:], " ")
+		}
+	}
 	var line strings.Builder
 	line.WriteString(record.Time.Format("2006/01/02 15:04:05"))
 	line.WriteByte(' ')
 	fmt.Fprintf(&line, "%-5s", record.Level.String())
 	line.WriteByte(' ')
-	line.WriteString(record.Message)
+	fmt.Fprintf(&line, "%-10s", "["+subject+"]")
+	line.WriteByte(' ')
+	line.WriteString(message)
 	record.Attrs(func(attr slog.Attr) bool {
 		fmt.Fprintf(&line, " %s=[%v]", attr.Key, attr.Value.Any())
 		return true
