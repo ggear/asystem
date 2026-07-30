@@ -641,8 +641,8 @@ switch.service_wrangle:
 switch.service_homeassistant:
   friendly_name: 'Home Assistant'
   icon: 'mdi:heart-pulse'
-switch.service_internet:
-  friendly_name: 'Internet'
+switch.service_networks:
+  friendly_name: 'Networks'
   icon: 'mdi:heart-pulse'
 switch.service_mariadb:
   friendly_name: 'MariaDB'

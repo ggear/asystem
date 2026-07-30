@@ -79,8 +79,8 @@
     - entity: switch.service_homeassistant
       name: Home Assistant
       icon: mdi:heart-pulse
-    - entity: switch.service_internet
-      name: Internet
+    - entity: switch.service_networks
+      name: Networks
       icon: mdi:heart-pulse
     - entity: switch.service_mariadb
       name: MariaDB
