@@ -190,7 +190,7 @@
       icon: mdi:tape-drive
     - entity: switch.rack_fans_plug
       name: Rack Fans
-      icon: mdi:server-remove
+      icon: mdi:turbine
     - entity: switch.lounge_tv_plug
       name: Lounge TV
       icon: mdi:television

@@ -770,7 +770,7 @@ switch.rack_backup_plug:
   icon: 'mdi:tape-drive'
 switch.rack_fans_plug:
   friendly_name: 'Rack Fans'
-  icon: 'mdi:server-remove'
+  icon: 'mdi:turbine'
 switch.lounge_tv_plug:
   friendly_name: 'Lounge TV'
   icon: 'mdi:television'
