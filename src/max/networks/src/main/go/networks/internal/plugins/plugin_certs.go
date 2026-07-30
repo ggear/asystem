@@ -32,31 +32,31 @@ type probeResult struct {
 	verified  bool
 }
 
-type certificatesPlugin struct {
+type certsPlugin struct {
 	probe func(ctx context.Context, addr, sni string) (probeResult, error)
 	state *plugin.StateTracker
 }
 
-func newCertificatesPlugin() *certificatesPlugin {
-	return &certificatesPlugin{probe: probeCertificates, state: plugin.NewStateTracker(plugin.StateOn)}
+func newCertsPlugin() *certsPlugin {
+	return &certsPlugin{probe: probeCerts, state: plugin.NewStateTracker(plugin.StateOn)}
 }
 
-func (p *certificatesPlugin) Name() string { return "certificates" }
+func (p *certsPlugin) Name() string { return "certs" }
 
-func (p *certificatesPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
+func (p *certsPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
 
-func (p *certificatesPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
+func (p *certsPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	now := time.Now()
 	points := make([]plugin.Point, 0, len(endpoints))
 	for _, e := range endpoints {
 		tags := []plugin.Tag{{Key: "scope", Value: "endpoint"}, {Key: "endpoint", Value: e.addr}}
 		result, err := p.probe(ctx, e.addr, e.sni)
 		if err != nil || !result.verified {
-			slog.Debug(fmt.Sprintf("plugin [certificates] probe of endpoint [%s] failed [%v]", e.addr, err))
+			slog.Debug(fmt.Sprintf("plugin [certs] probe of endpoint [%s] failed [%v]", e.addr, err))
 			points = append(points, plugin.NewPoint(tags, plugin.Null("days_to_expiry"), plugin.Null("validity_pct"), plugin.Bool("verified", false)))
 			continue
 		}
-		slog.Debug(fmt.Sprintf("plugin [certificates] probed endpoint [%s] not_after [%s]", e.addr, result.notAfter))
+		slog.Debug(fmt.Sprintf("plugin [certs] probed endpoint [%s] not_after [%s]", e.addr, result.notAfter))
 		days := result.notAfter.Sub(now).Hours() / 24
 		validity := 100.0
 		total := result.notAfter.Sub(result.notBefore).Seconds()
@@ -73,17 +73,17 @@ func (p *certificatesPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	return plugin.Sample{Points: points}, nil
 }
 
-func (p *certificatesPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
-	return diagnoseCertificates(samples), nil
+func (p *certsPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
+	return diagnoseCerts(samples), nil
 }
 
-func (p *certificatesPlugin) Command(ctx context.Context, newState plugin.State) error {
+func (p *certsPlugin) Command(ctx context.Context, newState plugin.State) error {
 	return nil
 }
 
-func (p *certificatesPlugin) State() *plugin.StateTracker { return p.state }
+func (p *certsPlugin) State() *plugin.StateTracker { return p.state }
 
-func probeCertificates(ctx context.Context, addr, sni string) (probeResult, error) {
+func probeCerts(ctx context.Context, addr, sni string) (probeResult, error) {
 	dialer := tls.Dialer{NetDialer: &net.Dialer{Timeout: probeTimeout}, Config: &tls.Config{ServerName: sni}}
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
@@ -98,7 +98,7 @@ func probeCertificates(ctx context.Context, addr, sni string) (probeResult, erro
 	return probeResult{notBefore: leaf.NotBefore, notAfter: leaf.NotAfter, verified: true}, nil
 }
 
-func diagnoseCertificates(samples []plugin.Sample) plugin.Aggregate {
+func diagnoseCerts(samples []plugin.Sample) plugin.Aggregate {
 	points := plugin.LatestPoints(samples)
 	reachable := 0
 	failed := 0
@@ -132,11 +132,11 @@ func diagnoseCertificates(samples []plugin.Sample) plugin.Aggregate {
 	default:
 		result = plugin.Diagnose(plugin.StatusFit, score, "VALID", fmt.Sprintf("nearest certificate valid for %.0f days", minDays))
 	}
-	result.Points = reportCertificates(result.Score, minDays, failed, points)
+	result.Points = reportCerts(result.Score, minDays, failed, points)
 	return result
 }
 
-func reportCertificates(score int, minDays float64, failed int, endpointPoints []plugin.Point) []plugin.Point {
+func reportCerts(score int, minDays float64, failed int, endpointPoints []plugin.Point) []plugin.Point {
 	warning := 0
 	for _, point := range endpointPoints {
 		if days, ok := point.Float("days_to_expiry"); ok && days < warnDays {
@@ -152,5 +152,5 @@ func reportCertificates(score int, minDays float64, failed int, endpointPoints [
 }
 
 func init() {
-	plugin.Register(newCertificatesPlugin())
+	plugin.Register(newCertsPlugin())
 }

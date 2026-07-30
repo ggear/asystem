@@ -1,9 +1,9 @@
 package scribe
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"strings"
@@ -15,15 +15,15 @@ func EnableStdout(level slog.Level) {
 	defer scribeMutex.Unlock()
 	scribeLevel = level
 	scribeMode = "stdout"
-	log.SetOutput(os.Stdout)
-	slog.SetLogLoggerLevel(level)
+	scribeWriter = os.Stdout
+	slog.SetDefault(slog.New(&handler{}))
 }
 
 func Disable() {
 	scribeMutex.Lock()
 	defer scribeMutex.Unlock()
 	scribeMode = "disabled"
-	log.SetOutput(io.Discard)
+	scribeWriter = io.Discard
 }
 
 func Level() slog.Level {
@@ -53,8 +53,43 @@ func ParseLevel(raw string) (slog.Level, error) {
 	}
 }
 
+type handler struct{}
+
+func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
+	scribeMutex.Lock()
+	defer scribeMutex.Unlock()
+	return level >= scribeLevel
+}
+
+func (h *handler) Handle(_ context.Context, record slog.Record) error {
+	var line strings.Builder
+	line.WriteString(record.Time.Format("2006/01/02 15:04:05"))
+	line.WriteByte(' ')
+	fmt.Fprintf(&line, "%-5s", record.Level.String())
+	line.WriteByte(' ')
+	line.WriteString(record.Message)
+	record.Attrs(func(attr slog.Attr) bool {
+		fmt.Fprintf(&line, " %s=[%v]", attr.Key, attr.Value.Any())
+		return true
+	})
+	line.WriteByte('\n')
+	scribeMutex.Lock()
+	writer := scribeWriter
+	scribeMutex.Unlock()
+	if writer == nil {
+		return nil
+	}
+	_, err := io.WriteString(writer, line.String())
+	return err
+}
+
+func (h *handler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+
+func (h *handler) WithGroup(_ string) slog.Handler { return h }
+
 var (
-	scribeMutex sync.Mutex
-	scribeLevel slog.Level
-	scribeMode  string
+	scribeMutex  sync.Mutex
+	scribeLevel  slog.Level
+	scribeMode   string
+	scribeWriter io.Writer
 )

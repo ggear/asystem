@@ -1,12 +1,12 @@
 {
-  "default_entity_id": "switch.network_certificates",
-  "unique_id": "network_certificates",
-  "name": "Network Certificates",
+  "default_entity_id": "switch.network_certs",
+  "unique_id": "network_certs",
+  "name": "Network Certs",
   "icon": "mdi:certificate",
   "force_update": false,
-  "state_topic": "networks/data/certificates",
+  "state_topic": "networks/data/certs",
   "value_template": "{{ 'ON' if value_json is mapping and value_json.ok | default(false) else 'OFF' }}",
-  "command_topic": "networks/command/certificates",
+  "command_topic": "networks/command/certs",
   "availability_topic": "networks/status",
   "qos": 1,
   "device": {

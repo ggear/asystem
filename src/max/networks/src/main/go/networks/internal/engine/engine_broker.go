@@ -39,7 +39,7 @@ func (e *Engine) connectBroker(ctx context.Context) error {
 			name := strings.TrimPrefix(topic, brokerCommandPrefix+"/")
 			state, ok := plugin.ParseState(string(msg.Payload()))
 			if !ok {
-				slog.Warn(fmt.Sprintf("ignored command on topic [%s] with unparseable payload [%s]", topic, string(msg.Payload())))
+				slog.Warn(fmt.Sprintf("plugin [%s] command ignored because payload [%s] is unparseable", name, string(msg.Payload())))
 				return
 			}
 			e.runCommand(ctx, name, state)

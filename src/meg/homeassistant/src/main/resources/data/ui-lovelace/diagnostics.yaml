@@ -20,7 +20,7 @@
     - entity: switch.network_ethernet
       name: Ethernet
       icon: mdi:cable-data
-    - entity: switch.network_certificates
+    - entity: switch.network_certs
       name: Certificates
       icon: mdi:certificate
     - entity: switch.network_domain
