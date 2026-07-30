@@ -2,24 +2,23 @@
 # Fabric management script, to be invoked by fab command
 ###############################################################################
 
+import functools
 import glob
-import math
 import os
 import re
 import signal
 import subprocess
 import sys
 import time
-from os.path import *
+from os.path import abspath, basename, dirname, exists, isdir, isfile, join
 from typing import Any, Dict, Optional
 
 import packaging.version
 import varsubst
-import varsubst.resolvers
 from fabric import task
 from invoke.exceptions import Exit
 from pathlib2 import Path
-from varsubst.resolvers import BaseResolver
+from varsubst.resolvers import DictResolver
 
 FAB_SKIP_GIT = 'FAB_SKIP_GIT'
 FAB_SKIP_TESTS = 'FAB_SKIP_TESTS'
@@ -34,49 +33,53 @@ if FAB_SKIP_GROUP_ALLBUT in os.environ:
     os.environ[FAB_SKIP_GROUP_ABOVE] = str(int(os.environ[FAB_SKIP_GROUP_ALLBUT]) - 1)
 
 
-@task(aliases=["sup"] + ["setup"[0:i] for i in range(1, len("setup"))])
+def _aliases(name, *extra, start=1):
+    return list(extra) + [name[0:i] for i in range(start, len(name))]
+
+
+@task(aliases=_aliases("setup", "sup"))
 def setup(context):
     _setup(context)
     _clean(context)
     _pull(context)
 
 
-@task(aliases=["prg", "f"] + ["purge"[0:i] for i in range(3, len("purge"))])
+@task(aliases=_aliases("purge", "prg", "f", start=3))
 def purge(context):
     _clean(context)
     _backup(context)
     _purge(context)
 
 
-@task(aliases=["bup", "a"] + ["backup"[0:i] for i in range(2, len("backup"))])
+@task(aliases=_aliases("backup", "bup", "a", start=2))
 def backup(context):
     _clean(context)
     _backup(context)
 
 
-@task(aliases=["pll", "u"] + ["pull"[0:i] for i in range(3, len("pull"))])
+@task(aliases=_aliases("pull", "pll", "u", start=3))
 def pull(context):
     _clean(context)
     _backup(context)
     _pull(context)
 
 
-@task(aliases=["lst"] + ["list"[0:i] for i in range(1, len("list"))])
-def list(context):
+@task(name="list", aliases=_aliases("list", "lst"))
+def list_modules(context):
     _list(context)
 
 
-@task(aliases=["gnr"] + ["generate"[0:i] for i in range(1, len("generate"))])
+@task(aliases=_aliases("generate", "gnr"))
 def generate(context):
     _generate(context)
 
 
-@task(aliases=["cln"] + ["clean"[0:i] for i in range(1, len("clean"))])
+@task(aliases=_aliases("clean", "cln"))
 def clean(context):
     _clean(context)
 
 
-@task(default=True, aliases=["bld"] + ["build"[0:i] for i in range(1, len("build"))])
+@task(default=True, aliases=_aliases("build", "bld"))
 def build(context):
     _setup(context)
     _clean(context)
@@ -84,7 +87,7 @@ def build(context):
     _build(context)
 
 
-@task(aliases=["tst"] + ["test"[0:i] for i in range(1, len("test"))])
+@task(aliases=_aliases("test", "tst"))
 def test(context):
     _setup(context)
     _clean(context)
@@ -93,7 +96,8 @@ def test(context):
     _unittest(context)
     _systest(context)
 
-@task(aliases=["ut"] + ["unittest"[0:i] for i in range(2, len("unittest"))])
+
+@task(aliases=_aliases("unittest", "ut", start=2))
 def unittest(context):
     _setup(context)
     _clean(context)
@@ -101,7 +105,8 @@ def unittest(context):
     _build(context)
     _unittest(context)
 
-@task(aliases=["st"] + ["systest"[0:i] for i in range(2, len("systest"))])
+
+@task(aliases=_aliases("systest", "st", start=2))
 def systest(context):
     _setup(context)
     _clean(context)
@@ -109,7 +114,8 @@ def systest(context):
     _build(context)
     _systest(context)
 
-@task(aliases=["pkg"] + ["package"[0:i] for i in range(1, len("package"))])
+
+@task(aliases=_aliases("package", "pkg"))
 def package(context):
     _setup(context)
     _clean(context)
@@ -118,7 +124,7 @@ def package(context):
     _package(context)
 
 
-@task(aliases=["ect"] + ["execute"[0:i] for i in range(1, len("execute"))])
+@task(aliases=_aliases("execute", "ect"))
 def execute(context):
     _setup(context)
     _clean(context)
@@ -126,13 +132,13 @@ def execute(context):
     _execute(context)
 
 
-@task(aliases=["dpy"] + ["deploy"[0:i] for i in range(1, len("deploy"))])
+@task(aliases=_aliases("deploy", "dpy"))
 def deploy(context):
     _generate(context)
     _deploy(context)
 
 
-@task(aliases=["rls"] + ["release"[0:i] for i in range(1, len("release"))])
+@task(aliases=_aliases("release", "rls"))
 def release(context):
     _setup(context)
     _clean(context)
@@ -141,10 +147,11 @@ def release(context):
 
 def _setup(context):
     _print_header("asystem", "setup")
+    version_absolute, version_numeric, version_compact = _get_versions()
     _print_line("Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(
-        _get_versions()[2],
-        _get_versions()[1],
-        _get_versions()[0])
+        version_compact,
+        version_numeric,
+        version_absolute)
     )
     _run_local(context, 'pyenv install -sv "${PYTHON_VERSION}";'
                         'pyenv virtualenv "${PYTHON_VERSION}" asystem 2>/dev/null;'
@@ -325,7 +332,8 @@ def _list(context):
     _print_footer("asystem", "list modules")
 
 
-def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False, is_test=False):
+def _generate(context, filter_module=None, filter_changes=True, filter_host=None,
+              is_release=False, is_pull=False, is_test=False):
     version_types = [
         "up to date",
         "to update",
@@ -578,7 +586,7 @@ docker rm -vf "$CONTAINER_NAME"
                     "\n".join([f'echo "{_cp}"' for _cp in docker_build_copies]),
                     " \\\\\\\\\"\n".join([f'echo "    {_var}' for _var in docker_build_variables]),
                     docker_image,
-                    _get_host_metadata(_get_host(module) if filter_host is None else _get_host_label(filter_host))[1],
+                    _get_host_arch(module, filter_host),
                     " ".join(docker_build_mounts),
                     docker_image,
                     " ".join(docker_build_variables),
@@ -588,11 +596,12 @@ docker rm -vf "$CONTAINER_NAME"
     if is_pull:
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():
-                for i in range(3):
-                    match = re.match(version_regexs[i], line)
+                for version_regex, version_type, version_format in \
+                        zip(version_regexs, version_types, version_formats):
+                    match = re.match(version_regex, line)
                     if match is not None:
-                        version_messages[version_types[i]].append(version_formats[i] \
-                                                                  .format(*match.groupdict().values()))
+                        version_messages[version_type].append(version_format \
+                                                              .format(*match.groupdict().values()))
         for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
             docker_image_metadata = {}
             docker_file_path = join(ROOT_MODULE_DIR, module, "Dockerfile")
@@ -635,13 +644,13 @@ docker rm -vf "$CONTAINER_NAME"
                     version_type = 0 \
                         if docker_image_metadata["version_current"] == docker_image_metadata["version_upstream"] else 1
                     version_messages[version_types[version_type]].append(version_formats[version_type].format(
-                        module + ":" + docker_image_metadata["repository"],
+                        module + ":" + str(docker_image_metadata["repository"]),
                         docker_image_metadata["version_current"],
                         docker_image_metadata["version_upstream"]
                     ))
                 else:
                     version_messages["errors"].append(version_formats[2].format(
-                        module + ":" + docker_image_metadata["repository"],
+                        module + ":" + str(docker_image_metadata["repository"]),
                         "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}"
                         .format(
                             docker_image_metadata["version_current"],
@@ -658,7 +667,7 @@ docker rm -vf "$CONTAINER_NAME"
         for lang, version in {
             "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' '",
             "go": r"goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' '",
-            # "rust": r"curl -s https://api.github.com/repos/rust-lang/rust/releases | jq -r '.[] | "\(.published_at) \(.tag_name)"' | grep -E '^202[0-9]' | sort -r | awk '{print $2}'",
+            "rust": r"""curl -s https://static.rust-lang.org/dist/channel-rust-stable.toml | awk -F'"' '/^\[pkg\.rust\]$/{f=1} f&&/version/{split($2,v," "); print v[1]; exit}'""",
         }.items():
             lang_version_installed = GLOBAL_ENV["{}_VERSION".format(lang.upper())]
             lang_version_upstream = _run_local(context, version, hide='out').stdout.strip()
@@ -796,7 +805,7 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
                 _get_env(join(ROOT_MODULE_DIR, module, ".env")).get("SERVICE_LOCAL_RUNTIME") == "native":
             host_arch = os.uname().machine
         else:
-            host_arch = _get_host_metadata(_get_host(module) if filter_host is None else _get_host_label(filter_host))[1]
+            host_arch = _get_host_arch(module, filter_host)
         build_args = ""
         for env_global_key, env_global_value in GLOBAL_ENV.items():
             if env_global_key.endswith("_VERSION"):
@@ -845,8 +854,8 @@ def _execute(context):
         _up_module(context, module, up_this=False)
         _print_header(module, "execute")
 
-        def _server_stop(_signal, _frame):
-            _down_module(context, module)
+        def _server_stop(_signal, _frame, _module=module):
+            _down_module(context, _module)
 
         signal.signal(signal.SIGINT, _server_stop)
         install_local_path = join(ROOT_MODULE_DIR, module, "install_local.sh")
@@ -895,7 +904,7 @@ def _release(context):
                 # noinspection PyBroadException
                 try:
                     ssh_pass = _ssh_pass(context, host)
-                except:
+                except Exception:
                     host_up = False
                 group_path = Path(join(ROOT_MODULE_DIR, release_module, ".group"))
                 if group_path.exists() and group_path.read_text().strip().isnumeric() and \
@@ -965,8 +974,6 @@ def _release(context):
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && "
                             "git push --all && git push origin --tags"
                    .format(
-            _get_versions()[0],
-            _get_versions()[0],
             _get_versions()[0]
         ), env={"HOME": os.environ["HOME"]})
 
@@ -1083,6 +1090,11 @@ def _get_host_metadata(host):
     return HOSTS[host]
 
 
+def _get_host_arch(module, filter_host=None):
+    host = _get_host(module) if filter_host is None else _get_host_label(filter_host)
+    return _get_host_metadata(host)[1]
+
+
 def _get_service(module):
     return module.split("/")[1]
 
@@ -1131,41 +1143,38 @@ def _get_dependencies(context, module):
 
 def _write_env(context, module, working_path=".", filter_host=None, is_release=False, is_test=False):
     service = _get_service(module)
-    _run_local(context, "mkdir -p {} && rm -rf {}/.env".format(working_path, working_path), module)
-    for env_global_key, env_global_value in GLOBAL_ENV.items():
-        if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
-            _run_local(context, "echo 'ASYSTEM_{}={}' >> {}/.env" \
-                       .format(env_global_key, env_global_value, working_path), module)
-    _run_local(context, "echo '' >> {}/.env".format(working_path), module)
-    _run_local(context, "echo 'SERVICE_NAME={}' >> {}/.env"
-               .format(service, working_path), module)
-    _run_local(context, "echo 'SERVICE_VERSION_ABSOLUTE={}' >> {}/.env"
-               .format(_get_versions()[0], working_path), module)
-    _run_local(context, "echo 'SERVICE_VERSION_PEP440={}' >> {}/.env"
-               .format(_get_versions()[0].replace("-SNAPSHOT", ".dev1"), working_path), module)
-    _run_local(context, "echo 'SERVICE_VERSION_SEMANTIC={}' >> {}/.env"
-               .format(_get_versions()[0].replace("-SNAPSHOT", "-dev.1"), working_path), module)
-    _run_local(context, "echo 'SERVICE_VERSION_NUMERIC={}' >> {}/.env"
-               .format(_get_versions()[1], working_path), module)
-    _run_local(context, "echo 'SERVICE_VERSION_COMPACT={}' >> {}/.env"
-               .format(_get_versions()[2], working_path), module)
-    _run_local(context, "echo 'SERVICE_RESTART={}' >> {}/.env"
-               .format("always" if is_release else
-                       "no", working_path), module)
-    _run_local(context, "echo 'SERVICE_LOCAL_RUNTIME=emulated' >> {}/.env"
-               .format(working_path), module)
-    _run_local(context, "echo 'SERVICE_DATA_DIR={}' >> {}/.env"
-               .format("{}/{}/{}".format(HOME_DIR, service, _get_versions()[0]) if is_release else
-                       "{}/{}/target/runtime-system".format(ROOT_MODULE_DIR, module), working_path), module)
-    _run_local(context, "echo 'SERVICE_FORM_FACTOR={}' >> {}/.env"
-               .format(
-        _get_host_metadata(_get_host_label(filter_host))[4] if (is_release and filter_host is not None) else "server",
-        working_path), module)
+    version_absolute, version_numeric, version_compact = _get_versions()
+    lines = [
+        "ASYSTEM_{}={}".format(env_global_key, env_global_value)
+        for env_global_key, env_global_value in GLOBAL_ENV.items()
+        if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL")
+    ]
+    lines += [
+        "",
+        "SERVICE_NAME={}".format(service),
+        "SERVICE_VERSION_ABSOLUTE={}".format(version_absolute),
+        "SERVICE_VERSION_PEP440={}".format(version_absolute.replace("-SNAPSHOT", ".dev1")),
+        "SERVICE_VERSION_SEMANTIC={}".format(version_absolute.replace("-SNAPSHOT", "-dev.1")),
+        "SERVICE_VERSION_NUMERIC={}".format(version_numeric),
+        "SERVICE_VERSION_COMPACT={}".format(version_compact),
+        "SERVICE_RESTART={}".format("always" if is_release else "no"),
+        "SERVICE_LOCAL_RUNTIME=emulated",
+        "SERVICE_DATA_DIR={}".format(
+            "{}/{}/{}".format(HOME_DIR, service, version_absolute) if is_release else
+            "{}/{}/target/runtime-system".format(ROOT_MODULE_DIR, module)),
+        "SERVICE_FORM_FACTOR={}".format(
+            _get_host_metadata(_get_host_label(filter_host))[4]
+            if (is_release and filter_host is not None) else "server"),
+    ]
+    content = "\n".join(lines) + "\n"
+    _run_local(context, "dscacheutil -flushcache")
+    host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && " +
+                             "ipconfig getifaddr en0 || ipconfig getifaddr en1", hide='out').stdout.strip()
+    host_name_dev = "host.docker.internal"
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
         host_names_prod = _get_hosts(dependency) if _name(module) != _name(dependency) or \
                                                     filter_host is None else [filter_host]
-        _run_local(context, "dscacheutil -flushcache")
         for host in host_names_prod:
             host_ip = _run_local(context, "dig +short {}".format(host), hide='out').stdout.strip()
             if host_ip == "":
@@ -1177,37 +1186,27 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
             host_ips_prod.append(host_ip)
         host_ip_prod = ",".join(host_ips_prod)
         host_name_prod = ",".join(host_names_prod)
-        host_name_dev = "host.docker.internal"
-        host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && " +
-                                 "ipconfig getifaddr en0 || ipconfig getifaddr en1", hide='out').stdout.strip()
         dependency_service = _get_service(dependency).upper()
         dependency_domain = "{}.local.janeandgraham.com".format(dependency_service.lower())
-        _run_local(context, "echo '' >> {}/.env".format(working_path))
-        _run_local(context, "echo '{}_IP={}' >> {}/.env"
-                   .format(dependency_service,
-                           host_ip_prod if is_release else host_ip_dev, working_path), module)
-        _run_local(context, "echo '{}_HOST={}' >> {}/.env"
-                   .format(dependency_service,
-                           host_name_prod if is_release else host_name_dev, working_path), module)
-        _run_local(context, "echo '{}_SERVICE={}' >> {}/.env"
-                   .format(dependency_service,
-                           dependency_domain if is_release else host_name_dev, working_path), module)
-        _run_local(context, "echo '{}_IP_PROD={}' >> {}/.env"
-                   .format(dependency_service,
-                           host_ip_prod, working_path), module)
-        _run_local(context, "echo '{}_HOST_PROD={}' >> {}/.env"
-                   .format(dependency_service,
-                           host_name_prod, working_path), module)
-        _run_local(context, "echo '{}_SERVICE_PROD={}' >> {}/.env"
-                   .format(dependency_service,
-                           dependency_domain, working_path), module)
+        content += "\n".join([
+            "",
+            "{}_IP={}".format(dependency_service, host_ip_prod if is_release else host_ip_dev),
+            "{}_HOST={}".format(dependency_service, host_name_prod if is_release else host_name_dev),
+            "{}_SERVICE={}".format(dependency_service, dependency_domain if is_release else host_name_dev),
+            "{}_IP_PROD={}".format(dependency_service, host_ip_prod),
+            "{}_HOST_PROD={}".format(dependency_service, host_name_prod),
+            "{}_SERVICE_PROD={}".format(dependency_service, dependency_domain),
+        ]) + "\n"
         for dependency_env_file in [".env_all",
                                     ".env_prod" if is_release else (".env_test" if is_test else ".env_exec"),
                                     ".env_all_key"]:
             dependency_env_path = "{}/{}/{}".format(ROOT_MODULE_DIR, dependency, dependency_env_file)
             if isfile(dependency_env_path):
-                _run_local(context, "cat {} >> {}/.env".format(dependency_env_path, working_path), module)
-    _substitute_env(context, "{}/.env".format(working_path), join(working_path, ".env"), join(working_path, ".env"))
+                content += Path(dependency_env_path).read_text()
+    env_path = join(working_path, ".env")
+    os.makedirs(working_path, exist_ok=True)
+    Path(env_path).write_text(content)
+    _substitute_env(context, env_path, env_path, env_path)
 
 
 def _get_env(env_path):
@@ -1222,13 +1221,12 @@ def _get_env(env_path):
     return env
 
 
-# noinspection PyUnusedLocal
-def _substitute_env(context, env_path, source_path, destination_path, header=None):
+def _substitute_env(_context, env_path, source_path, destination_path, header=None):
     env = _get_env(env_path)
     env.update(GLOBAL_ENV)
-    del env["USER"]
-    del env["HOME"]
-    del env["PATH"]
+    env.pop("USER", None)
+    env.pop("HOME", None)
+    env.pop("PATH", None)
     print(". {} && envsubst {}->{}".format(env_path, source_path, destination_path))
     os.makedirs(dirname(destination_path), exist_ok=True)
     Path(destination_path).write_text(("" if header is None else header) + \
@@ -1323,9 +1321,7 @@ def _run_local(context, command, working=".", **kwargs):
         return context.run(". {} && {}".format(GLOBAL_ENV_PATH, command), **kwargs)
 
 
-# noinspection PyUnusedLocal
-def _run_external(context, command, working=".", env_overrides=None):
-    del context
+def _run_external(_context, command, working=".", env_overrides=None):
     cwd = ROOT_DIR if working == "." else join(ROOT_MODULE_DIR, working)
     env = os.environ.copy()
     env.update(GLOBAL_ENV)
@@ -1359,12 +1355,17 @@ def _run_remote(context, command, **kwargs):
     return context.run(command, **kwargs)
 
 
+@functools.lru_cache(maxsize=1)
+def _read_version_file():
+    return Path(join(dirname(abspath(__file__)), ".version")).read_text()
+
+
 def _get_versions(version_absolute=None):
     if version_absolute is None:
-        version_absolute = Path(join(dirname(abspath(__file__)), ".version")).read_text()
+        version_absolute = _read_version_file()
     version_numeric = int(version_absolute.replace(".", "") \
                           .replace("-SNAPSHOT", "")) * (-1 if "SNAPSHOT" in version_absolute else 1)
-    version_compact = int((math.fabs(version_numeric) - 101001000) * (-1 if "SNAPSHOT" in version_absolute else 1))
+    version_compact = int((abs(version_numeric) - 101001000) * (-1 if "SNAPSHOT" in version_absolute else 1))
     return version_absolute, version_numeric, version_compact
 
 
@@ -1382,6 +1383,7 @@ def _get_versions_next(versions=None):
 def _get_versions_next_release():
     versions_next_release = _get_versions(_get_versions_next()[0])
     Path(join(dirname(abspath(__file__)), ".version")).write_text(versions_next_release[0])
+    _read_version_file.cache_clear()
     return versions_next_release
 
 
@@ -1390,6 +1392,7 @@ def _get_versions_next_snapshot():
         _get_versions()[0].replace("-SNAPSHOT", "") \
             if "SNAPSHOT" in _get_versions()[0] else _get_versions()[0]))[0] + "-SNAPSHOT")
     Path(join(dirname(abspath(__file__)), ".version")).write_text(versions_next_snapshot[0])
+    _read_version_file.cache_clear()
     return versions_next_snapshot
 
 
@@ -1441,14 +1444,6 @@ FOOTER = \
     "------------------------------------------------------------"
 
 
-class RetainNotDefinedDictResolver(BaseResolver):
-    def __init__(self, _dict: Dict[str, Any]) -> None:
-        self.dict = _dict
-
+class RetainNotDefinedDictResolver(DictResolver):
     def resolve(self, key: str) -> Optional[Any]:
-        if key in self.dict:
-            return self.dict.get(key)
-        return "${}".format(key)
-
-    def values(self) -> Dict[str, Any]:
-        return self.dict.copy()
+        return self.dict.get(key, "${}".format(key))

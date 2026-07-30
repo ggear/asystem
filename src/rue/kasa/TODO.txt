@@ -1,2 +1,2 @@
 # Remove relay to reduce power usage (https://www.briandorey.com/post/kasa-smart-plug-by-tp-link-power-consumption-mod)
-# 
+# Replace caps on kasa plugs https://community.tp-link.com/en/smart-home/forum/topic/594886?replyId=1298956

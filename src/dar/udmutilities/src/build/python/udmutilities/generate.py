@@ -56,7 +56,7 @@ if __name__ == "__main__":
         }, verify=False).raise_for_status()
         unifi_clients_response = unifi_session.get(
             '{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
-    except:
+    except Exception:
         unifi_server_up = False
     if not unifi_server_up or unifi_clients_response.status_code != 200:
         print("Build generate script [udmutilities] could not connect to UniFi controller")

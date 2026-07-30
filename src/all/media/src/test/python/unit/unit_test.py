@@ -410,7 +410,9 @@ class InternetTest(unittest.TestCase):
             "Kids Movies": [join(dir_test, "10/media/kids/movies"), ]
         }, return_value=1)
 
-    def _test_refresh(self, dir_test, library_paths={}, return_value=0):
+    def _test_refresh(self, dir_test, library_paths=None, return_value=0):
+        library_paths = {} if library_paths is None else library_paths
+
         class MockPlexLibrarySection:
             def __init__(self, title, locations):
                 self.title = title

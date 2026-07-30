@@ -36,7 +36,7 @@ if __name__ == "__main__":
   }
 }
                           """, schema_command="""
-<start|stop|restart>
+<ON|OFF>
                           """, schema_availability="""
 <online|offline>
                           """)

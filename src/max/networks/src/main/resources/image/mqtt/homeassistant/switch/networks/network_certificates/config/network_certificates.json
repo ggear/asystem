@@ -1,0 +1,22 @@
+{
+  "default_entity_id": "switch.network_certificates",
+  "unique_id": "network_certificates",
+  "name": "Network Certificates",
+  "icon": "mdi:certifcate",
+  "force_update": false,
+  "state_topic": "networks/data/certificates",
+  "value_template": "{{ 'ON' if value_json is mapping and value_json.ok | default(false) else 'OFF' }}",
+  "command_topic": "networks/command/certificates",
+  "availability_topic": "networks/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-networks"
+    ],
+    "name": "Rack Networks",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

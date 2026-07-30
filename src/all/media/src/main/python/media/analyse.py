@@ -307,7 +307,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         _file_defaults_dict[_file_defaults_key]))
                 if _bounding_set is not None and _file_defaults_dict[_file_defaults_key] not in _bounding_set:
                     raise Exception("Invalid {}: {}" \
-                                    .format(_file_defaults_key, file_defaults_dict[_file_defaults_key]))
+                                    .format(_file_defaults_key, _file_defaults_dict[_file_defaults_key]))
 
             def _set_default_numeric(_file_defaults_dict, _file_defaults_key, _bounding_lower=None,
                                      _bounding_upper=None):
@@ -753,7 +753,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
     metadata_enriched_list = []
     metadata_enriched_schema = {}
     for metadata in metadata_list:
-        def _add_field(key, value):
+        def _add_field(key, value, metadata=metadata):
             metadata.update({key: value})
             metadata.move_to_end(key, last=False)
 

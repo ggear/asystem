@@ -2,36 +2,7 @@
 # WARNING: This file is written by the build process, any manual edits will be lost!
 ################################################################################
 - type: entities
-  title: Device Maintenance
-  show_header_toggle: false
-  entities:
-    - entity: button.google_assistant_synchronize_devices
-      name: Google Device Syncronise
-################################################################################
-- type: entities
-  title: Zigbee Link Quality
-  entities:
-    - entity: sensor.template_driveway_repeater_linkquality_percentage
-      name: Driveway Repeater
-    - entity: sensor.template_landing_repeater_linkquality_percentage
-      name: Landing Repeater
-    - entity: sensor.template_garden_repeater_linkquality_percentage
-      name: Garden Repeater
-    - entity: sensor.template_kitchen_fan_outlet_linkquality_percentage
-      name: Kitchen Fan Outlet
-    - entity: sensor.template_deck_fans_outlet_linkquality_percentage
-      name: Deck Fans Outlet
-################################################################################
-- type: entities
-  title: Radio Link Quality
-  entities:
-    - entity: sensor.template_weatherstation_coms_signal_quality_percentage
-      name: Davis Console
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
-  title: Service Availability
+  title: Service Status
   show_header_toggle: false
   entities:
     - entity: switch.service_plex
@@ -97,6 +68,38 @@
     - entity: switch.service_zigbee2mqtt
       name: Zigbee2MQTT
       icon: mdi:heart-pulse
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
+  title: Network Status
+  show_header_toggle: false
+  entities:
+    - entity: switch.network_internet
+      name: Internet
+      icon: mdi:web
+    - entity: switch.network_wireless
+      name: Wireless
+      icon: mdi:wifi
+    - entity: switch.network_zigbee
+      name: Zigbee
+      icon: mdi:wifi-plus
+    - entity: switch.network_ethernet
+      name: Ethernet
+      icon: mdi:cable-data
+    - entity: switch.network_weewx
+      name: WeeWX
+      icon: mdi:access-point-network
+    - entity: switch.network_certificates
+      name: Certificates
+      icon: mdi:certifcate
+################################################################################
+- type: entities
+  title: Device Maintenance
+  show_header_toggle: false
+  entities:
+    - entity: button.google_assistant_synchronize_devices
+      name: Google Device Syncronise
 ################################################################################
 - type: custom:layout-break
 ################################################################################

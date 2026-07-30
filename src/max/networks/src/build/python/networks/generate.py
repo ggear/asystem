@@ -17,8 +17,6 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
         ].copy()
-    metadata_networks_df["availability_topic"] = "networks/status"
-    metadata_networks_df["command_topic"] = "networks/command"
     write_entity_metadata(metadata_networks_df,
                           topic_glob_discovery="homeassistant/+/networks/+/config",
                           topic_glob_data="networks/data/#",
@@ -30,7 +28,7 @@ if __name__ == "__main__":
   "score": <0-100>
 }
                               """, schema_command="""
-{ "command": <check> }
+<ON|OFF>
                               """, schema_availability="""
 <online|offline>
                               """)

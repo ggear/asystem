@@ -5,7 +5,24 @@ Document database schemas as per mqtt in build/resources/sql for schema describe
 Upgrade mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 Update max to latest Fedora
 Port may/meg to Fedora
-Support Module [*/go] requires update from version [1.25.8] to [1.26.5] for rust from fabfile.py
+Port Fabric to a Bazel with Gazelle auto-generating targets for Go, Rust, and Python, keeping only the ssh/scp host-deploy step as a thin wrapper outside Bazel
+Appdaemon implementation for Edwin
+Make smart physical light switch
+Repair TPLink KP115 smart plugs and deploy
+Google home remediation
+Add compensators for all batteries, calibrated to lifetime of rechargables, add push notifcations, load data from files with query creating csv, select polynomial order by using BIC, polars test, maybe just ensure non noisy data by averaging bins and removing outliers
+Isolate TV from internet, use apple tv
+Hack Telstra modem to get 5g backup, add aerial
+Rename Basement Netatmo module to Deck
+Fix fedora resolution so screen works on reboot
+Re-enable Time Machine backups
+Build water mains/house tracking
+Implement fuel pump/odometer OCR service
+Calibrate IKEA air sensors
+Install door cameras, use for gates?
+Setup outdoor air quality monitor
+Implement Coral/Frigate
+Add big ass temps for deck
 
 
 ###############################################################################################################################################################
@@ -45,6 +62,7 @@ add verifcation sections to all plugins like quity
 check comments, nicely blocked, consistent accross all plugins
 check all sheet references added to repo structs, eq equity indexes etc
 Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
+Build health wrangle/dashboards, add Streaks
 
 bank:
 implement balances
@@ -133,4 +151,4 @@ Fix unifi cameras, upgrade unifi
 ###############################################################################################################################################################
 # LetsEncrypt
 ###############################################################################################################################################################
-Add certifcate expeiry check to healthy script (migrated from internet)
+Improve cert renewal and dissemination

@@ -880,8 +880,8 @@ if __name__ == "__main__":
                 for energy_meter_label in energy_meter_labels:
                     _add_energy_plug("{}_energy_{}".format(energy_group_unique_id, energy_meter_label),
                                      "{} {}".format(metadata_hass_row[energy_group],
-                                                    energy_meter_labels[energy_meter_label],
-                                                    "mdi:counter"))
+                                                    energy_meter_labels[energy_meter_label]),
+                                     "mdi:counter")
     metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/data/customise.yaml"))
     with open(metadata_customise_path, 'w') as metadata_customise_file:
         metadata_customise_file.write("""
@@ -2234,9 +2234,7 @@ script:
                                     if "NoToggle" in metadata_lovelace_first_dict["hass_display_mode"]:
                                         metadata_lovelace_file.write("  " + """
   show_header_toggle: false
-                                        """.format(
-                                            domain
-                                        ).strip() + "\n")
+                                        """.strip() + "\n")
                                 metadata_lovelace_file.write("  " + """
   entities:
                                 """.strip() + "\n")

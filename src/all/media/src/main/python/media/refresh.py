@@ -32,7 +32,7 @@ def _set_paths_plex(_plex_server, _library_name, _library_paths):
         raise Exception(f"Library [{_library_name}] not found in plex")
 
 
-def _get_filesystem_paths(_share_root, _min_depth=2, _max_depth=2, _excludes={'audio'}):
+def _get_filesystem_paths(_share_root, _min_depth=2, _max_depth=2, _excludes=frozenset({'audio'})):
     library_locations = {}
     share_index_root = f"{_share_root}/share/*"
     share_index_media_root = f"{share_index_root}/media"
@@ -48,7 +48,7 @@ def _get_filesystem_paths(_share_root, _min_depth=2, _max_depth=2, _excludes={'a
         base_path = os.path.abspath(base_path)
         root_depth = base_path.rstrip(os.sep).count(os.sep)
 
-        def walk_paths(current_path):
+        def walk_paths(current_path, root_depth=root_depth):
             current_depth = current_path.count(os.sep) - root_depth
             if current_depth > _max_depth:
                 return
