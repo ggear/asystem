@@ -13,13 +13,13 @@
       icon: mdi:wifi
     - entity: switch.network_zigbee
       name: Zigbee
-      icon: mdi:wifi-plus
-    - entity: switch.network_ethernet
-      name: Ethernet
-      icon: mdi:cable-data
+      icon: mdi:credit-card-wireless
     - entity: switch.network_weewx
       name: WeeWX
       icon: mdi:access-point-network
+    - entity: switch.network_ethernet
+      name: Ethernet
+      icon: mdi:cable-data
     - entity: switch.network_certificates
       name: Certificates
       icon: mdi:certificate

@@ -2,7 +2,7 @@
   "default_entity_id": "switch.network_certificates",
   "unique_id": "network_certificates",
   "name": "Network Certificates",
-  "icon": "mdi:certifcate",
+  "icon": "mdi:certificate",
   "force_update": false,
   "state_topic": "networks/data/certificates",
   "value_template": "{{ 'ON' if value_json is mapping and value_json.ok | default(false) else 'OFF' }}",

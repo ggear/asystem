@@ -587,13 +587,13 @@ switch.network_wireless:
   icon: 'mdi:wifi'
 switch.network_zigbee:
   friendly_name: 'Zigbee'
-  icon: 'mdi:wifi-plus'
-switch.network_ethernet:
-  friendly_name: 'Ethernet'
-  icon: 'mdi:cable-data'
+  icon: 'mdi:credit-card-wireless'
 switch.network_weewx:
   friendly_name: 'WeeWX'
   icon: 'mdi:access-point-network'
+switch.network_ethernet:
+  friendly_name: 'Ethernet'
+  icon: 'mdi:cable-data'
 switch.network_certificates:
   friendly_name: 'Certificates'
   icon: 'mdi:certificate'
