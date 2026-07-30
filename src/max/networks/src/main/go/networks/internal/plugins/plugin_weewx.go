@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"math"
 	"strconv"
 	"strings"
@@ -13,6 +12,7 @@ import (
 
 	"networks/internal/config"
 	"networks/internal/plugin"
+	"networks/internal/scribe"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -48,7 +48,7 @@ func (p *weewxPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		signal = plugin.Float("signal_quality_pct", plugin.Round(quality, 1))
 	}
 	point := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "weatherstation"}}, signal, plugin.Bool("fresh", fresh))
-	slog.Debug(fmt.Sprintf("plugin [weewx] polled quality [%v] has_quality [%v] fresh [%v]", quality, hasQuality, fresh))
+	scribe.Debugf("weewx", "polled quality [%v] has_quality [%v] fresh [%v]", quality, hasQuality, fresh)
 	return plugin.Sample{Points: []plugin.Point{point}}, nil
 }
 
@@ -102,7 +102,7 @@ func probeWeewx(ctx context.Context) (float64, bool, bool, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	quality, hasQuality, fresh := readWeewx(signal, status, time.Now())
-	slog.Debug(fmt.Sprintf("plugin [weewx] probed status_topic [%s] signal_bytes [%d] status_bytes [%d] quality [%v] fresh [%v]", statusTopic, len(signal), len(status), quality, fresh))
+	scribe.Debugf("weewx", "probed status_topic [%s] signal_bytes [%d] status_bytes [%d] quality [%v] fresh [%v]", statusTopic, len(signal), len(status), quality, fresh)
 	return quality, hasQuality, fresh, nil
 }
 

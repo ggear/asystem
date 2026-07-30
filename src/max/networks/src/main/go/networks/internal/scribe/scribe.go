@@ -6,9 +6,12 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 )
+
+const Global = "*"
 
 func EnableStdout(level slog.Level) {
 	scribeMutex.Lock()
@@ -53,6 +56,36 @@ func ParseLevel(raw string) (slog.Level, error) {
 	}
 }
 
+func Debugf(subject, format string, args ...any) { emit(slog.LevelDebug, subject, format, args...) }
+
+func Infof(subject, format string, args ...any) { emit(slog.LevelInfo, subject, format, args...) }
+
+func Warnf(subject, format string, args ...any) { emit(slog.LevelWarn, subject, format, args...) }
+
+func Errorf(subject, format string, args ...any) { emit(slog.LevelError, subject, format, args...) }
+
+func Diagnosis(subject, status string, score int, reason string) {
+	scoreText := strconv.Itoa(score)
+	Infof(subject, "probe diagnosed as ... [%s] %s with score ... [%s] %s because [%s]",
+		status, leader(6-len(status)), scoreText, leader(5-len(scoreText)), reason)
+}
+
+func emit(level slog.Level, subject, format string, args ...any) {
+	logger := slog.Default()
+	ctx := context.Background()
+	if !logger.Enabled(ctx, level) {
+		return
+	}
+	logger.LogAttrs(ctx, level, fmt.Sprintf(format, args...), slog.String(subjectKey, subject))
+}
+
+func leader(width int) string {
+	if width < 0 {
+		width = 0
+	}
+	return strings.Repeat(".", width)
+}
+
 type handler struct{}
 
 func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
@@ -62,14 +95,16 @@ func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *handler) Handle(_ context.Context, record slog.Record) error {
-	subject := "*"
-	message := record.Message
-	if rest, ok := strings.CutPrefix(message, "plugin ["); ok {
-		if end := strings.IndexByte(rest, ']'); end >= 0 {
-			subject = rest[:end]
-			message = strings.TrimPrefix(rest[end+1:], " ")
+	subject := Global
+	var attrs strings.Builder
+	record.Attrs(func(attr slog.Attr) bool {
+		if attr.Key == subjectKey {
+			subject = attr.Value.String()
+			return true
 		}
-	}
+		fmt.Fprintf(&attrs, " %s=[%v]", attr.Key, attr.Value.Any())
+		return true
+	})
 	var line strings.Builder
 	line.WriteString(record.Time.Format("2006/01/02 15:04:05"))
 	line.WriteByte(' ')
@@ -77,11 +112,8 @@ func (h *handler) Handle(_ context.Context, record slog.Record) error {
 	line.WriteByte(' ')
 	fmt.Fprintf(&line, "%-10s", "["+subject+"]")
 	line.WriteByte(' ')
-	line.WriteString(message)
-	record.Attrs(func(attr slog.Attr) bool {
-		fmt.Fprintf(&line, " %s=[%v]", attr.Key, attr.Value.Any())
-		return true
-	})
+	line.WriteString(record.Message)
+	line.WriteString(attrs.String())
 	line.WriteByte('\n')
 	scribeMutex.Lock()
 	writer := scribeWriter
@@ -96,6 +128,8 @@ func (h *handler) Handle(_ context.Context, record slog.Record) error {
 func (h *handler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 
 func (h *handler) WithGroup(_ string) slog.Handler { return h }
+
+const subjectKey = "subject"
 
 var (
 	scribeMutex  sync.Mutex

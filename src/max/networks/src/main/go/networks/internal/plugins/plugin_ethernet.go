@@ -3,13 +3,13 @@ package plugins
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"math"
 	"strconv"
 
 	"networks/internal/config"
 	"networks/internal/engine"
 	"networks/internal/plugin"
+	"networks/internal/scribe"
 )
 
 const (
@@ -55,7 +55,7 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				plugin.Int("errors", errors)))
 		}
 	}
-	slog.Debug(fmt.Sprintf("plugin [ethernet] polled devices [%d] ports [%d]", len(devices), len(points)))
+	scribe.Debugf("ethernet", "polled devices [%d] ports [%d]", len(devices), len(points))
 	return plugin.Sample{Points: points}, nil
 }
 
@@ -79,7 +79,7 @@ func probeEthernet(ctx context.Context) ([]engine.RouterDevice, error) {
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug(fmt.Sprintf("plugin [ethernet] probed devices [%d]", len(devices)))
+	scribe.Debugf("ethernet", "probed devices [%d]", len(devices))
 	return devices, nil
 }
 

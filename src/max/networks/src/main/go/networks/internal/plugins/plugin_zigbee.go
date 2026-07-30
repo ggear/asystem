@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"math"
 	"strings"
 	"sync"
@@ -12,6 +11,7 @@ import (
 
 	"networks/internal/config"
 	"networks/internal/plugin"
+	"networks/internal/scribe"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -68,7 +68,7 @@ func (p *zigbeePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		}
 		points = append(points, plugin.NewPoint(tags, lqiField, plugin.Bool("available", d.available)))
 	}
-	slog.Debug(fmt.Sprintf("plugin [zigbee] polled online [%v] permit_join [%v] devices [%d] points [%d]", online, permit, len(devices), len(points)))
+	scribe.Debugf("zigbee", "polled online [%v] permit_join [%v] devices [%d] points [%d]", online, permit, len(devices), len(points))
 	return plugin.Sample{Points: points}, nil
 }
 
@@ -117,7 +117,7 @@ func probeZigbee(ctx context.Context) (bool, bool, []zigbeeDevice, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	online, permit, devices := readZigbee(zigbeeBaseTopic, messages)
-	slog.Debug(fmt.Sprintf("plugin [zigbee] probed topics [%d] online [%v] devices [%d]", len(messages), online, len(devices)))
+	scribe.Debugf("zigbee", "probed topics [%d] online [%v] devices [%d]", len(messages), online, len(devices))
 	return online, permit, devices, nil
 }
 

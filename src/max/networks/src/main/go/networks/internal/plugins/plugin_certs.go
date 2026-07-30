@@ -4,12 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log/slog"
 	"math"
 	"net"
 	"time"
 
 	"networks/internal/plugin"
+	"networks/internal/scribe"
 )
 
 const (
@@ -52,11 +52,11 @@ func (p *certsPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		tags := []plugin.Tag{{Key: "scope", Value: "endpoint"}, {Key: "endpoint", Value: e.addr}}
 		result, err := p.probe(ctx, e.addr, e.sni)
 		if err != nil || !result.verified {
-			slog.Debug(fmt.Sprintf("plugin [certs] probe of endpoint [%s] failed [%v]", e.addr, err))
+			scribe.Debugf("certs", "probe of endpoint [%s] failed [%v]", e.addr, err)
 			points = append(points, plugin.NewPoint(tags, plugin.Null("days_to_expiry"), plugin.Null("validity_pct"), plugin.Bool("verified", false)))
 			continue
 		}
-		slog.Debug(fmt.Sprintf("plugin [certs] probed endpoint [%s] not_after [%s]", e.addr, result.notAfter))
+		scribe.Debugf("certs", "probed endpoint [%s] not_after [%s]", e.addr, result.notAfter)
 		days := result.notAfter.Sub(now).Hours() / 24
 		validity := 100.0
 		total := result.notAfter.Sub(result.notBefore).Seconds()

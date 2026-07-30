@@ -8,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
+	"networks/internal/scribe"
 	"time"
 )
 
@@ -75,12 +75,12 @@ func (c *RouterClient) login(ctx context.Context) error {
 		return fmt.Errorf("login failed [%s] status [%d]", c.base, resp.StatusCode)
 	}
 	c.loggedIn = true
-	slog.Debug(fmt.Sprintf("router logging in at [%s]", c.base))
+	scribe.Debugf(scribe.Global, "router logging in at [%s]", c.base)
 	return nil
 }
 
 func (c *RouterClient) get(ctx context.Context, path string, out any) error {
-	slog.Debug(fmt.Sprintf("router requesting path [%s]", path))
+	scribe.Debugf(scribe.Global, "router requesting path [%s]", path)
 	return c.getWithRetry(ctx, path, out, true)
 }
 

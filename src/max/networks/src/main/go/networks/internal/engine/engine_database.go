@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"networks/internal/config"
+	"networks/internal/scribe"
 	"sync"
 
 	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
@@ -38,15 +38,15 @@ func newDatabaseInfluxClient() (*influxdb3.Client, string, error) {
 func (e *Engine) connectDatabase() {
 	database := config.Load().Database()
 	if database == "" {
-		slog.Warn("database address is empty")
+		scribe.Warnf(scribe.Global, "database address is empty")
 		return
 	}
 	client, _, err := newDatabaseInfluxClient()
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to connect to database [%v]", err))
+		scribe.Errorf(scribe.Global, "failed to connect to database [%v]", err)
 		return
 	}
-	slog.Info(fmt.Sprintf("connected to database [%s]", database))
+	scribe.Infof(scribe.Global, "connected to database [%s]", database)
 	e.database = &databaseClient{url: database, client: client}
 }
 
@@ -54,24 +54,24 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if err := d.client.Write(ctx, data); err != nil {
-		slog.Warn(fmt.Sprintf("database write failed [%s] [%v]", d.url, err))
+		scribe.Warnf(scribe.Global, "database write failed [%s] [%v]", d.url, err)
 		newClient, _, reconnectErr := newDatabaseInfluxClient()
 		if reconnectErr != nil {
-			slog.Warn(fmt.Sprintf("failed to reconnect to database [%s] [%v]", d.url, reconnectErr))
+			scribe.Warnf(scribe.Global, "failed to reconnect to database [%s] [%v]", d.url, reconnectErr)
 			return
 		}
 		_ = d.client.Close()
 		d.client = newClient
-		slog.Info(fmt.Sprintf("reconnected to database [%s]", d.url))
+		scribe.Infof(scribe.Global, "reconnected to database [%s]", d.url)
 		return
 	}
-	slog.Debug(fmt.Sprintf("wrote [%d] bytes to database", len(data)))
+	scribe.Debugf(scribe.Global, "wrote [%d] bytes to database", len(data))
 }
 
 func (d *databaseClient) close() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if err := d.client.Close(); err != nil {
-		slog.Warn(fmt.Sprintf("database disconnect failed [%s] [%v]", d.url, err))
+		scribe.Warnf(scribe.Global, "database disconnect failed [%s] [%v]", d.url, err)
 	}
 }

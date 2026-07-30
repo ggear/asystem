@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"networks/internal/config"
 	"networks/internal/plugin"
+	"networks/internal/scribe"
 	"strings"
 	"time"
 
@@ -39,7 +39,7 @@ func (e *Engine) connectBroker(ctx context.Context) error {
 			name := strings.TrimPrefix(topic, brokerCommandPrefix+"/")
 			state, ok := plugin.ParseState(string(msg.Payload()))
 			if !ok {
-				slog.Warn(fmt.Sprintf("plugin [%s] command ignored because payload [%s] is unparseable", name, string(msg.Payload())))
+				scribe.Warnf(name, "command ignored because payload [%s] is unparseable", string(msg.Payload()))
 				return
 			}
 			e.runCommand(ctx, name, state)
@@ -56,14 +56,14 @@ func (e *Engine) connectBroker(ctx context.Context) error {
 func (e *Engine) runCommand(ctx context.Context, name string, state plugin.State) {
 	p, ok := e.pluginByName(name)
 	if !ok {
-		slog.Warn(fmt.Sprintf("plugin [%s] command ignored because plugin is unknown", name))
+		scribe.Warnf(name, "command ignored because plugin is unknown")
 		return
 	}
 	if err := p.Command(ctx, state); err != nil {
-		slog.Warn(fmt.Sprintf("plugin [%s] command to state [%s] failed [%v]", name, state.String(), err))
+		scribe.Warnf(name, "command to state [%s] failed [%v]", state.String(), err)
 		return
 	}
-	slog.Info(fmt.Sprintf("plugin [%s] command set state [%s]", name, state.String()))
+	scribe.Infof(name, "command set state [%s]", state.String())
 }
 
 func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
@@ -85,13 +85,13 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 			if onConnect != nil {
 				onConnect(client)
 			}
-			slog.Info(fmt.Sprintf("connected to broker [%s]", broker))
+			scribe.Infof(scribe.Global, "connected to broker [%s]", broker)
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-			slog.Warn(fmt.Sprintf("disconnected from broker [%s] [%v]", broker, err))
+			scribe.Warnf(scribe.Global, "disconnected from broker [%s] [%v]", broker, err)
 		}).
 		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
-			slog.Info(fmt.Sprintf("reconnecting to broker [%s]", broker))
+			scribe.Infof(scribe.Global, "reconnecting to broker [%s]", broker)
 		})
 	if config.Load().BrokerToken() != "" {
 		opts.SetUsername("networks")
@@ -100,7 +100,7 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
 	if !token.WaitTimeout(brokerConnectTimeout) {
-		slog.Info(fmt.Sprintf("connecting to broker [%s]", broker))
+		scribe.Infof(scribe.Global, "connecting to broker [%s]", broker)
 		return client, nil
 	}
 	if token.Error() != nil {
@@ -112,7 +112,7 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 func (b *brokerClient) publishAggregate(m plugin.Aggregate) {
 	payload, err := m.MarshalJSON()
 	if err != nil {
-		slog.Warn(fmt.Sprintf("plugin [%s] marshal for broker failed [%v]", m.Plugin, err))
+		scribe.Warnf(m.Plugin, "marshal for broker failed [%v]", err)
 		return
 	}
 	b.client.Publish(brokerDataTopicPrefix+m.Plugin, 0, true, payload).WaitTimeout(brokerPublishTimeout)

@@ -5,10 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"networks/internal/plugin"
-	"strconv"
-	"strings"
+	"networks/internal/scribe"
 	"sync"
 	"time"
 )
@@ -69,13 +67,13 @@ func Create(opts Options) (*Engine, error) {
 
 func (e *Engine) Run(ctx context.Context) error {
 	if e.daemon {
-		slog.Info(fmt.Sprintf("starting loop poll every [%s], aggregated over [%s] across [%d] plugins", e.pollPeriod, e.aggregatePeriod, len(e.plugins)))
+		scribe.Infof(scribe.Global, "starting loop poll every [%s], aggregated over [%s] across [%d] plugins", e.pollPeriod, e.aggregatePeriod, len(e.plugins))
 	} else {
-		slog.Info(fmt.Sprintf("running single check across [%d] plugins", len(e.plugins)))
+		scribe.Infof(scribe.Global, "running single check across [%d] plugins", len(e.plugins))
 	}
 	if e.publish {
 		if err := e.connectBroker(ctx); err != nil {
-			slog.Error(fmt.Sprintf("failed to connect to broker [%v]", err))
+			scribe.Errorf(scribe.Global, "failed to connect to broker [%v]", err)
 		}
 		e.connectDatabase()
 	}
@@ -118,14 +116,14 @@ func (e *Engine) PollSamples(ctx context.Context) {
 			e.sampleBufferMu.Lock()
 			e.sampleBuffers[p.Name()].Add(m)
 			e.sampleBufferMu.Unlock()
-			slog.Debug(fmt.Sprintf("plugin [%s] polled [%d] points", p.Name(), len(m.Points)))
+			scribe.Debugf(p.Name(), "polled [%d] points", len(m.Points))
 		}(p)
 	}
 	wg.Wait()
 }
 
 func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) []plugin.Aggregate {
-	slog.Debug(fmt.Sprintf("aggregating [%d] plugins", len(plugins)))
+	scribe.Debugf(scribe.Global, "aggregating [%d] plugins", len(plugins))
 	aggregates := make([]plugin.Aggregate, 0, len(plugins))
 	for _, p := range plugins {
 		var samples []plugin.Sample
@@ -154,11 +152,7 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 			tracker.Set(state)
 		}
 		aggregates = append(aggregates, v)
-		status := string(v.Status)
-		scoreText := strconv.Itoa(v.Score)
-		slog.Info(fmt.Sprintf("plugin [%s] probe returned status ... [%s] %s score ... [%s] %s because [%s]",
-			p.Name(), status, strings.Repeat(".", max(0, 6-len(status))),
-			scoreText, strings.Repeat(".", max(0, 5-len(scoreText))), v.Reason))
+		scribe.Diagnosis(p.Name(), string(v.Status), v.Score, v.Reason)
 	}
 	return aggregates
 }
@@ -166,7 +160,7 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error(fmt.Sprintf("plugin [%s] panicked during poll [%v]", p.Name(), r))
+			scribe.Errorf(p.Name(), "panicked during poll [%v]", r)
 			m = plugin.Sample{}
 		}
 		m.Plugin = p.Name()
@@ -176,7 +170,7 @@ func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample
 	}()
 	sample, err := p.Poll(ctx)
 	if err != nil {
-		slog.Warn(fmt.Sprintf("plugin [%s] poll failed [%v]", p.Name(), err))
+		scribe.Warnf(p.Name(), "poll failed [%v]", err)
 	}
 	return sample
 }
@@ -184,7 +178,7 @@ func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample
 func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plugin.Aggregate) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error(fmt.Sprintf("plugin [%s] panicked during aggregate [%v]", p.Name(), r))
+			scribe.Errorf(p.Name(), "panicked during aggregate [%v]", r)
 			v = plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_PANIC", "plugin panicked during aggregate")
 		}
 		v.Plugin = p.Name()
@@ -196,7 +190,7 @@ func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plug
 	}()
 	aggregate, err := p.Aggregate(samples)
 	if err != nil {
-		slog.Warn(fmt.Sprintf("plugin [%s] aggregate failed [%v]", p.Name(), err))
+		scribe.Warnf(p.Name(), "aggregate failed [%v]", err)
 	}
 	return aggregate
 }

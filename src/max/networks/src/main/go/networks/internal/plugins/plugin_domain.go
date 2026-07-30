@@ -3,7 +3,6 @@ package plugins
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"math"
 	"net"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"networks/internal/plugin"
+	"networks/internal/scribe"
 )
 
 const (
@@ -54,7 +54,7 @@ func (p *domainPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	for _, r := range resolvers {
 		result, err := p.probe(ctx, r.address, checkDomain)
 		if err != nil || len(result.addresses) == 0 {
-			slog.Debug(fmt.Sprintf("plugin [domain] probe of resolver [%s] server [%s] failed [%v]", r.name, r.address, err))
+			scribe.Debugf("domain", "probe of resolver [%s] server [%s] failed [%v]", r.name, r.address, err)
 			points = append(points, plugin.NewPoint(
 				[]plugin.Tag{{Key: "scope", Value: "resolver"}, {Key: "resolver", Value: r.name}, {Key: "addresses", Value: ""}},
 				plugin.Bool("resolved", false), plugin.Null("latency_ms")))
@@ -62,7 +62,7 @@ func (p *domainPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		}
 		addresses := strings.Join(result.addresses, ",")
 		latency := plugin.Round(float64(result.latency)/float64(time.Millisecond), 1)
-		slog.Debug(fmt.Sprintf("plugin [domain] probed resolver [%s] server [%s] addresses [%s] latency_ms [%v]", r.name, r.address, addresses, latency))
+		scribe.Debugf("domain", "probed resolver [%s] server [%s] addresses [%s] latency_ms [%v]", r.name, r.address, addresses, latency)
 		points = append(points, plugin.NewPoint(
 			[]plugin.Tag{{Key: "scope", Value: "resolver"}, {Key: "resolver", Value: r.name}, {Key: "addresses", Value: addresses}},
 			plugin.Bool("resolved", true), plugin.Float("latency_ms", latency)))

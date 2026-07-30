@@ -3,7 +3,6 @@ package plugins
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"math"
 	"net"
 	"os"
@@ -14,6 +13,7 @@ import (
 
 	"networks/internal/config"
 	"networks/internal/plugin"
+	"networks/internal/scribe"
 
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
@@ -80,7 +80,7 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				if d, err := p.probe(ctx, t.ip); err == nil {
 					roundTrips = append(roundTrips, float64(d)/float64(time.Millisecond))
 				} else {
-					slog.Debug(fmt.Sprintf("plugin [internet] probe of scope [%s] target [%s] failed [%v]", t.scope, t.ip, err))
+					scribe.Debugf("internet", "probe of scope [%s] target [%s] failed [%v]", t.scope, t.ip, err)
 				}
 				if j < burstSize-1 {
 					select {
@@ -94,7 +94,7 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 			if sent > 0 {
 				loss = 100 * float64(sent-received) / float64(sent)
 			}
-			slog.Debug(fmt.Sprintf("plugin [internet] probed scope [%s] target [%s] sent [%d] recv [%d] loss_pct [%v]", t.scope, t.ip, sent, received, loss))
+			scribe.Debugf("internet", "probed scope [%s] target [%s] sent [%d] recv [%d] loss_pct [%v]", t.scope, t.ip, sent, received, loss)
 			tags := []plugin.Tag{{Key: "scope", Value: t.scope}, {Key: "target", Value: t.ip}}
 			fields := []plugin.Field{plugin.Int("sent", int64(sent)), plugin.Int("recv", int64(received)), plugin.Float("loss_pct", loss)}
 			if received > 0 {
