@@ -9,5 +9,14 @@
   "command_topic": "networks/command/domain",
   "availability_topic": "networks/status",
   "qos": 1,
-  "device": {}
+  "device": {
+    "identifiers": [
+      "asystem-rack-networks"
+    ],
+    "name": "Rack Networks",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
 }
