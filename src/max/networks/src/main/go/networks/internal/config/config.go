@@ -20,6 +20,8 @@ type Config struct {
 	unifiSite     string
 	unifiUser     string
 	unifiPassword string
+	unifiHost     string
+	weewxHost     string
 }
 
 var (
@@ -61,6 +63,8 @@ func load() *Config {
 		unifiSite:     resolve("unifi_site", "UNIFI_SITE"),
 		unifiUser:     resolve("unifi_user", "UNIFI_USER"),
 		unifiPassword: resolve("unifi_password", "UNIFI_PASSWORD"),
+		unifiHost:     resolve("unifi_host", "UNIFI_HOST"),
+		weewxHost:     resolve("weewx_host", "WEEWX_HOST_PROD"),
 	}
 }
 
@@ -131,6 +135,20 @@ func (c *Config) UnifiPassword() string {
 		return ""
 	}
 	return c.unifiPassword
+}
+
+func (c *Config) UnifiHost() string {
+	if c == nil {
+		return ""
+	}
+	return c.unifiHost
+}
+
+func (c *Config) WeewxHost() string {
+	if c == nil {
+		return ""
+	}
+	return c.weewxHost
 }
 
 func resolve(field, env string) string {

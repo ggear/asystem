@@ -159,9 +159,48 @@ func TestAggregate_AppendLineProtocol_Escaping(t *testing.T) {
 	}
 }
 
+func TestPlugin_ParseState(t *testing.T) {
+	tests := []struct {
+		name          string
+		payload       string
+		expectedState State
+		expectedOK    bool
+	}{
+		{name: "on", payload: "ON", expectedState: StateOn, expectedOK: true},
+		{name: "off", payload: "OFF", expectedState: StateOff, expectedOK: true},
+		{name: "lower_trimmed", payload: " on ", expectedState: StateOn, expectedOK: true},
+		{name: "unknown", payload: "check", expectedState: StateOff, expectedOK: false},
+		{name: "empty", payload: "", expectedState: StateOff, expectedOK: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			state, ok := ParseState(test.payload)
+			if ok != test.expectedOK {
+				t.Fatalf("ok: got %v want %v", ok, test.expectedOK)
+			}
+			if state != test.expectedState {
+				t.Errorf("state: got %s want %s", state, test.expectedState)
+			}
+		})
+	}
+}
+
+func TestStateTracker_SetGet(t *testing.T) {
+	s := NewStateTracker(StateOn)
+	if got := s.Get(); got != StateOn {
+		t.Fatalf("initial: got %s want ON", got)
+	}
+	s.Set(StateOff)
+	if got := s.Get(); got != StateOff {
+		t.Fatalf("after set: got %s want OFF", got)
+	}
+}
+
 type fakePlugin struct{ name string }
 
 func (f fakePlugin) Name() string                          { return f.name }
-func (f fakePlugin) SampleMode() SampleMode                { return Snapshot }
+func (f fakePlugin) Mode() Mode                            { return ModeSnapshot }
 func (f fakePlugin) Poll(context.Context) (Sample, error)  { return Sample{}, nil }
 func (f fakePlugin) Aggregate([]Sample) (Aggregate, error) { return Aggregate{}, nil }
+func (f fakePlugin) Command(context.Context, State) error  { return nil }
+func (f fakePlugin) State() *StateTracker                  { return nil }

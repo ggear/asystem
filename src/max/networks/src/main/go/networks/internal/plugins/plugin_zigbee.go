@@ -40,15 +40,16 @@ type bridgeDevice struct {
 
 type zigbeePlugin struct {
 	probe func(ctx context.Context) (online bool, permitJoin bool, devices []zigbeeDevice, err error)
+	state *plugin.StateTracker
 }
 
 func newZigbeePlugin() *zigbeePlugin {
-	return &zigbeePlugin{probe: probeZigbee}
+	return &zigbeePlugin{probe: probeZigbee, state: plugin.NewStateTracker(plugin.StateOn)}
 }
 
 func (p *zigbeePlugin) Name() string { return "zigbee" }
 
-func (p *zigbeePlugin) SampleMode() plugin.SampleMode { return plugin.Snapshot }
+func (p *zigbeePlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
 
 func (p *zigbeePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	online, permit, devices, err := p.probe(ctx)
@@ -73,6 +74,12 @@ func (p *zigbeePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 func (p *zigbeePlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
 	return diagnoseZigbee(samples), nil
 }
+
+func (p *zigbeePlugin) Command(ctx context.Context, newState plugin.State) error {
+	return nil
+}
+
+func (p *zigbeePlugin) State() *plugin.StateTracker { return p.state }
 
 func probeZigbee(ctx context.Context) (bool, bool, []zigbeeDevice, error) {
 	cfg := config.Load()

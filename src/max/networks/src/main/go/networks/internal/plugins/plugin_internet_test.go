@@ -9,8 +9,10 @@ import (
 	"networks/internal/plugin"
 )
 
+const gatewayIP = "10.0.4.1"
+
 func TestInternet_Poll(t *testing.T) {
-	p := &internetPlugin{probe: func(_ context.Context, ip string) (time.Duration, error) {
+	p := &internetPlugin{targets: buildTargets(gatewayIP), probe: func(_ context.Context, ip string) (time.Duration, error) {
 		if ip == "1.1.1.1" {
 			return 10 * time.Millisecond, nil
 		}
@@ -20,8 +22,8 @@ func TestInternet_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != len(targets) {
-		t.Fatalf("points: got %d want %d (one per target)", len(msg.Points), len(targets))
+	if len(msg.Points) != len(p.targets) {
+		t.Fatalf("points: got %d want %d (one per target)", len(msg.Points), len(p.targets))
 	}
 	reachable, ok := pointByTag(msg.Points, "target", "1.1.1.1")
 	if !ok {

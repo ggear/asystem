@@ -1,10 +1,19 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
+
+	"networks/internal/engine"
+	"networks/internal/plugin"
+	"networks/internal/scribe"
+
+	_ "networks/internal/plugins"
 
 	"github.com/spf13/cobra"
 )
@@ -25,16 +34,12 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&flagFilterPlugins, "filter-plugins", "f", "", "comma separated list restricting which plugins run (default: all)")
-	rootCmd.PersistentFlags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence for poll-phase plugins, uses unit suffixes [s, m, h]")
-	rootCmd.PersistentFlags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", "15m", "window rolled up before a status decision, must be a whole multiple of poll period, uses unit suffixes [s, m, h]")
-	rootCmd.PersistentFlags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish aggregates to MQTT and InfluxDB when true, otherwise log only")
-	rootCmd.PersistentFlags().StringVarP(&flagLogLevel, "log-level", "l", "info", "log level [debug, info, warn, error]")
+	rootCmd.Flags().StringVarP(&flagFilterPlugins, "filter-plugins", "f", "", "comma separated list restricting which plugins run (default: all)")
+	rootCmd.Flags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence for poll-phase plugins, uses unit suffixes [s, m, h]")
+	rootCmd.Flags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", "15m", "window rolled up before a status decision, must be a whole multiple of poll period, uses unit suffixes [s, m, h]")
+	rootCmd.Flags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish aggregates to MQTT and InfluxDB when true, otherwise log only")
+	rootCmd.Flags().StringVarP(&flagLogLevel, "log-level", "l", "info", "log level [debug, info, warn, error]")
 	rootCmd.Flags().SortFlags = false
-	rootCmd.PersistentFlags().SortFlags = false
-	rootCmd.InheritedFlags().SortFlags = false
-	rootCmd.AddCommand(newServeCmd())
-	rootCmd.AddCommand(newCheckCmd())
 }
 
 var rootCmd = &cobra.Command{
@@ -43,9 +48,29 @@ var rootCmd = &cobra.Command{
 	Long:          rootDescription,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	Args:          cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return cmd.Help()
+		level, err := scribe.ParseLevel(flagLogLevel)
+		if err != nil {
+			return err
+		}
+		scribe.EnableStdout(level)
+		poll, aggregate, err := makePeriods(flagPollPeriod, flagAggregatePeriod)
+		if err != nil {
+			return err
+		}
+		selected, err := plugin.Filter(pluginNames())
+		if err != nil {
+			return err
+		}
+		e, err := engine.Create(engine.Options{Plugins: selected, PollPeriod: poll, AggregatePeriod: aggregate, PublishData: flagPublishData})
+		if err != nil {
+			return err
+		}
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer cancel()
+		if err := e.Run(ctx); err != nil && ctx.Err() == nil {
+			return err
 		}
 		return nil
 	},

@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"networks/internal/config"
 	"networks/internal/plugin"
 
 	"golang.org/x/net/icmp"
@@ -18,7 +19,7 @@ import (
 )
 
 const (
-	gatewayIP         = "192.168.1.1"
+	gatewayScope      = "gateway"
 	burstSize         = 8
 	burstGap          = 120 * time.Millisecond
 	burstTimeout      = 2500 * time.Millisecond
@@ -33,29 +34,38 @@ type target struct {
 	scope string
 }
 
-var targets = []target{
-	{gatewayIP, "gateway"},
+var publicTargets = []target{
 	{"1.1.1.1", "target"},
 	{"8.8.8.8", "target"},
 	{"9.9.9.9", "target"},
 }
 
 type internetPlugin struct {
-	probe func(ctx context.Context, ip string) (time.Duration, error)
+	probe   func(ctx context.Context, ip string) (time.Duration, error)
+	targets []target
+	state   *plugin.StateTracker
 }
 
 func newInternetPlugin() *internetPlugin {
-	return &internetPlugin{probe: probeInternet}
+	return &internetPlugin{probe: probeInternet, targets: buildTargets(config.Load().UnifiHost()), state: plugin.NewStateTracker(plugin.StateOn)}
+}
+
+func buildTargets(gateway string) []target {
+	targets := make([]target, 0, len(publicTargets)+1)
+	if gateway != "" {
+		targets = append(targets, target{ip: gateway, scope: gatewayScope})
+	}
+	return append(targets, publicTargets...)
 }
 
 func (p *internetPlugin) Name() string { return "internet" }
 
-func (p *internetPlugin) SampleMode() plugin.SampleMode { return plugin.Windowed }
+func (p *internetPlugin) Mode() plugin.Mode { return plugin.ModeWindowed }
 
 func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
-	points := make([]plugin.Point, len(targets))
+	points := make([]plugin.Point, len(p.targets))
 	var wg sync.WaitGroup
-	for i, t := range targets {
+	for i, t := range p.targets {
 		wg.Add(1)
 		go func(i int, t target) {
 			defer wg.Done()
@@ -99,6 +109,12 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 func (p *internetPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
 	return diagnoseInternet(samples), nil
 }
+
+func (p *internetPlugin) Command(ctx context.Context, newState plugin.State) error {
+	return nil
+}
+
+func (p *internetPlugin) State() *plugin.StateTracker { return p.state }
 
 var pingSequence atomic.Uint32
 
@@ -176,6 +192,9 @@ func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 				accumulator = &targetAccumulator{}
 				accumulators[ip] = accumulator
 			}
+			if scope, ok := point.Tag("scope"); ok {
+				accumulator.scope = scope
+			}
 			if loss, ok := point.Float("loss_pct"); ok {
 				accumulator.lossSum += loss
 				accumulator.lossCount++
@@ -195,14 +214,16 @@ func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 		order = append(order, ip)
 	}
 	sort.Strings(order)
-	gateway := accumulators[gatewayIP]
-	gatewayOK := gateway != nil && gateway.lossCount > 0 && gateway.avgLoss() < 100
+	var gateway *targetAccumulator
 	publicIPs := make([]string, 0, len(order))
 	for _, ip := range order {
-		if ip != gatewayIP {
+		if accumulators[ip].scope == gatewayScope {
+			gateway = accumulators[ip]
+		} else {
 			publicIPs = append(publicIPs, ip)
 		}
 	}
+	gatewayOK := gateway != nil && gateway.lossCount > 0 && gateway.avgLoss() < 100
 	reachable := 0
 	lossSum := 0.0
 	rttSum, rttCount := 0.0, 0
@@ -294,6 +315,7 @@ func reportInternet(score int, avgLoss, avgRTT, avgJitter float64, gatewayOK boo
 }
 
 type targetAccumulator struct {
+	scope       string
 	lossSum     float64
 	lossCount   int
 	rttSum      float64

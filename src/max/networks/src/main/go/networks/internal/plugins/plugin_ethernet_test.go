@@ -20,7 +20,7 @@ func TestEthernet_Poll(t *testing.T) {
 			{Name: "attic-ap", Type: apType, PortTable: []engine.RouterPort{{PortIdx: 1, Enable: true, Up: true}}},
 		}, nil
 	}
-	p := &ethernetPlugin{probe: probe, lastErrors: map[string]int64{}}
+	p := &ethernetPlugin{probe: probe, deltas: plugin.NewDeltaTracker()}
 	first, err := p.Poll(context.Background())
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)

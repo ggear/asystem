@@ -1,3 +1,5 @@
+weewx
 vernemq
 postgres
 influxdb3
+_unifios_dar

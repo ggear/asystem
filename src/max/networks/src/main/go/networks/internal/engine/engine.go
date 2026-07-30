@@ -27,7 +27,6 @@ type Engine struct {
 	publish         bool
 	sampleBuffers   map[string]*sampleBuffer
 	sampleBufferMu  sync.Mutex
-	commands        chan command
 	broker          *brokerClient
 	database        *databaseClient
 	lineMu          sync.Mutex
@@ -54,13 +53,10 @@ func Create(opts Options) (*Engine, error) {
 		aggregatePeriod: opts.AggregatePeriod,
 		publish:         opts.PublishData,
 		sampleBuffers:   map[string]*sampleBuffer{},
-		commands:        make(chan command, commandQueueSize),
 	}
 	for _, p := range opts.Plugins {
-		if p.SampleMode() == plugin.Windowed {
+		if p.Mode() == plugin.ModeWindowed {
 			e.sampleBuffers[p.Name()] = newSampleBuffer(sampleBufferCap)
-		} else {
-			e.sampleBuffers[p.Name()] = newSampleBuffer(1)
 		}
 	}
 	return e, nil
@@ -69,20 +65,12 @@ func Create(opts Options) (*Engine, error) {
 func (e *Engine) Run(ctx context.Context) error {
 	slog.Info("state", "engine", "core", "phase", "start", "poll", e.pollPeriod, "aggregate", e.aggregatePeriod, "plugins", len(e.plugins), "publish", e.publish)
 	if e.publish {
-		if err := e.connectBroker(); err != nil {
+		if err := e.connectBroker(ctx); err != nil {
 			slog.Error("state", "engine", "broker", "phase", "connect", "error", err)
 		}
 		e.connectDatabase()
 	}
-	drainDone := make(chan struct{})
-	go func() {
-		e.drainCommands(ctx)
-		close(drainDone)
-	}()
-	defer func() {
-		<-drainDone
-		e.shutdown()
-	}()
+	defer e.shutdown()
 	pollTicker := time.NewTicker(e.pollPeriod)
 	defer pollTicker.Stop()
 	aggTicker := time.NewTicker(e.aggregatePeriod)
@@ -108,7 +96,7 @@ func (e *Engine) Run(ctx context.Context) error {
 func (e *Engine) PollSamples(ctx context.Context) {
 	var wg sync.WaitGroup
 	for _, p := range e.plugins {
-		if p.SampleMode() != plugin.Windowed {
+		if p.Mode() != plugin.ModeWindowed {
 			continue
 		}
 		wg.Add(1)
@@ -129,7 +117,7 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 	aggregates := make([]plugin.Aggregate, 0, len(plugins))
 	for _, p := range plugins {
 		var samples []plugin.Sample
-		if p.SampleMode() == plugin.Windowed {
+		if p.Mode() == plugin.ModeWindowed {
 			buffer := e.sampleBuffers[p.Name()]
 			e.sampleBufferMu.Lock()
 			samples = buffer.Samples()
@@ -146,6 +134,13 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 			samples = []plugin.Sample{m}
 		}
 		v := e.safeAggregate(p, samples)
+		state := plugin.StateOff
+		if v.OK {
+			state = plugin.StateOn
+		}
+		if tracker := p.State(); tracker != nil {
+			tracker.Set(state)
+		}
 		aggregates = append(aggregates, v)
 		slog.Info("aggregate", "plugin", p.Name(), "status", string(v.Status), "detail", v.Detail, "reason", v.Reason, "score", v.Score, "ok", v.OK)
 	}
@@ -177,7 +172,7 @@ func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plug
 			v = plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_PANIC", "plugin panicked during aggregate")
 		}
 		v.Plugin = p.Name()
-		v.WindowS = int(e.aggregatePeriod / time.Second)
+		v.WindowSize = int(e.aggregatePeriod / time.Second)
 		v.SampleCount = len(samples)
 		if v.Timestamp.IsZero() {
 			v.Timestamp = time.Now()

@@ -19,7 +19,6 @@ import (
 
 const (
 	weewxSignalTopic = "weewx/weatherstation_coms_signal_quality"
-	weewxStatusTopic = "supervisor/raspbpi-jen/data/service/weewx"
 	weewxCollectWait = 2 * time.Second
 	weewxConnectWait = 5 * time.Second
 	weewxFreshWindow = time.Hour
@@ -28,15 +27,16 @@ const (
 
 type weewxPlugin struct {
 	probe func(ctx context.Context) (quality float64, hasQuality bool, fresh bool, err error)
+	state *plugin.StateTracker
 }
 
 func newWeewxPlugin() *weewxPlugin {
-	return &weewxPlugin{probe: probeWeewx}
+	return &weewxPlugin{probe: probeWeewx, state: plugin.NewStateTracker(plugin.StateOn)}
 }
 
 func (p *weewxPlugin) Name() string { return "weewx" }
 
-func (p *weewxPlugin) SampleMode() plugin.SampleMode { return plugin.Snapshot }
+func (p *weewxPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
 
 func (p *weewxPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	quality, hasQuality, fresh, err := p.probe(ctx)
@@ -54,6 +54,12 @@ func (p *weewxPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 func (p *weewxPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
 	return diagnoseWeewx(samples), nil
 }
+
+func (p *weewxPlugin) Command(ctx context.Context, newState plugin.State) error {
+	return nil
+}
+
+func (p *weewxPlugin) State() *plugin.StateTracker { return p.state }
 
 func probeWeewx(ctx context.Context) (float64, bool, bool, error) {
 	cfg := config.Load()
@@ -82,7 +88,8 @@ func probeWeewx(ctx context.Context) (float64, bool, bool, error) {
 		signal = append([]byte(nil), msg.Payload()...)
 		mu.Unlock()
 	})
-	client.Subscribe(weewxStatusTopic, 0, func(_ mqtt.Client, msg mqtt.Message) {
+	statusTopic := "supervisor/" + cfg.WeewxHost() + "/data/service/weewx"
+	client.Subscribe(statusTopic, 0, func(_ mqtt.Client, msg mqtt.Message) {
 		mu.Lock()
 		status = append([]byte(nil), msg.Payload()...)
 		mu.Unlock()

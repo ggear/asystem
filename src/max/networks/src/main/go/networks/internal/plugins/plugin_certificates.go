@@ -33,15 +33,16 @@ type probeResult struct {
 
 type certificatesPlugin struct {
 	probe func(ctx context.Context, addr, sni string) (probeResult, error)
+	state *plugin.StateTracker
 }
 
 func newCertificatesPlugin() *certificatesPlugin {
-	return &certificatesPlugin{probe: probeCertificates}
+	return &certificatesPlugin{probe: probeCertificates, state: plugin.NewStateTracker(plugin.StateOn)}
 }
 
 func (p *certificatesPlugin) Name() string { return "certificates" }
 
-func (p *certificatesPlugin) SampleMode() plugin.SampleMode { return plugin.Snapshot }
+func (p *certificatesPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
 
 func (p *certificatesPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	now := time.Now()
@@ -72,6 +73,12 @@ func (p *certificatesPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 func (p *certificatesPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
 	return diagnoseCertificates(samples), nil
 }
+
+func (p *certificatesPlugin) Command(ctx context.Context, newState plugin.State) error {
+	return nil
+}
+
+func (p *certificatesPlugin) State() *plugin.StateTracker { return p.state }
 
 func probeCertificates(ctx context.Context, addr, sni string) (probeResult, error) {
 	dialer := tls.Dialer{NetDialer: &net.Dialer{Timeout: probeTimeout}, Config: &tls.Config{ServerName: sni}}

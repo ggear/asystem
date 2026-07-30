@@ -75,23 +75,41 @@ type Aggregate struct {
 	Score       int
 	Detail      string
 	Reason      string
-	WindowS     int
+	WindowSize  int
 	SampleCount int
 	Points      []Point
 }
 
-type SampleMode uint8
+type Mode uint8
 
 const (
-	Snapshot SampleMode = iota
-	Windowed
+	ModeSnapshot Mode = iota
+	ModeWindowed
 )
+
+type State uint8
+
+const (
+	StateOff State = iota
+	StateOn
+)
+
+type StateTracker struct {
+	mu    sync.Mutex
+	value State
+}
+
+type DeltaTracker struct {
+	previous map[string]int64
+}
 
 type Plugin interface {
 	Name() string
-	SampleMode() SampleMode
+	Mode() Mode
 	Poll(ctx context.Context) (Sample, error)
 	Aggregate(samples []Sample) (Aggregate, error)
+	Command(ctx context.Context, newState State) error
+	State() *StateTracker
 }
 
 var (
@@ -175,6 +193,53 @@ func Diagnose(status Status, score int, detail, reason string) Aggregate {
 	return Aggregate{Status: status, OK: status != StatusDead, Score: score, Detail: detail, Reason: reason}
 }
 
+func ParseState(payload string) (State, bool) {
+	switch strings.ToUpper(strings.TrimSpace(payload)) {
+	case "ON":
+		return StateOn, true
+	case "OFF":
+		return StateOff, true
+	default:
+		return StateOff, false
+	}
+}
+
+func (s State) String() string {
+	if s == StateOn {
+		return "ON"
+	}
+	return "OFF"
+}
+
+func NewStateTracker(initial State) *StateTracker {
+	return &StateTracker{value: initial}
+}
+
+func (s *StateTracker) Get() State {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.value
+}
+
+func (s *StateTracker) Set(value State) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.value = value
+}
+
+func NewDeltaTracker() *DeltaTracker {
+	return &DeltaTracker{previous: map[string]int64{}}
+}
+
+func (d *DeltaTracker) Delta(key string, cumulative int64) int64 {
+	previous, seen := d.previous[key]
+	d.previous[key] = cumulative
+	if seen && cumulative > previous {
+		return cumulative - previous
+	}
+	return 0
+}
+
 func LatestPoints(samples []Sample) []Point {
 	if len(samples) == 0 {
 		return nil
@@ -233,23 +298,17 @@ func (p Point) Tag(key string) (string, bool) {
 	return "", false
 }
 
-var bufferPool = sync.Pool{New: func() any { return new(bytes.Buffer) }}
-
 func (a Aggregate) MarshalJSON() ([]byte, error) {
-	buf := bufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
-	defer bufferPool.Put(buf)
-	buf.WriteString(`{"timestamp":`)
-	buf.WriteString(strconv.FormatInt(a.Timestamp.Unix(), 10))
-	buf.WriteString(`,"ok":`)
-	buf.WriteString(strconv.FormatBool(a.OK))
-	buf.WriteString(`,"status":"`)
-	buf.WriteString(string(a.Status))
-	buf.WriteString(`","score":`)
-	buf.WriteString(strconv.Itoa(a.Score))
-	buf.WriteByte('}')
-	out := make([]byte, buf.Len())
-	copy(out, buf.Bytes())
+	out := make([]byte, 0, 96)
+	out = append(out, `{"timestamp":`...)
+	out = strconv.AppendInt(out, a.Timestamp.Unix(), 10)
+	out = append(out, `,"ok":`...)
+	out = strconv.AppendBool(out, a.OK)
+	out = append(out, `,"status":"`...)
+	out = append(out, a.Status...)
+	out = append(out, `","score":`...)
+	out = strconv.AppendInt(out, int64(a.Score), 10)
+	out = append(out, '}')
 	return out, nil
 }
 

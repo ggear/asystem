@@ -18,15 +18,16 @@ const (
 
 type wirelessPlugin struct {
 	probe func(ctx context.Context) ([]engine.RouterDevice, error)
+	state *plugin.StateTracker
 }
 
 func newWirelessPlugin() *wirelessPlugin {
-	return &wirelessPlugin{probe: probeWireless}
+	return &wirelessPlugin{probe: probeWireless, state: plugin.NewStateTracker(plugin.StateOn)}
 }
 
 func (p *wirelessPlugin) Name() string { return "wireless" }
 
-func (p *wirelessPlugin) SampleMode() plugin.SampleMode { return plugin.Snapshot }
+func (p *wirelessPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
 
 func (p *wirelessPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	devices, err := p.probe(ctx)
@@ -47,6 +48,12 @@ func (p *wirelessPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 func (p *wirelessPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
 	return diagnoseWireless(samples), nil
 }
+
+func (p *wirelessPlugin) Command(ctx context.Context, newState plugin.State) error {
+	return nil
+}
+
+func (p *wirelessPlugin) State() *plugin.StateTracker { return p.state }
 
 func probeWireless(ctx context.Context) ([]engine.RouterDevice, error) {
 	cfg := config.Load()

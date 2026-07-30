@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"math"
 	"strconv"
-	"sync"
 
 	"networks/internal/config"
 	"networks/internal/engine"
@@ -19,26 +18,24 @@ const (
 )
 
 type ethernetPlugin struct {
-	probe      func(ctx context.Context) ([]engine.RouterDevice, error)
-	mu         sync.Mutex
-	lastErrors map[string]int64
+	probe  func(ctx context.Context) ([]engine.RouterDevice, error)
+	state  *plugin.StateTracker
+	deltas *plugin.DeltaTracker
 }
 
 func newEthernetPlugin() *ethernetPlugin {
-	return &ethernetPlugin{probe: probeEthernet, lastErrors: map[string]int64{}}
+	return &ethernetPlugin{probe: probeEthernet, state: plugin.NewStateTracker(plugin.StateOn), deltas: plugin.NewDeltaTracker()}
 }
 
 func (p *ethernetPlugin) Name() string { return "ethernet" }
 
-func (p *ethernetPlugin) SampleMode() plugin.SampleMode { return plugin.Snapshot }
+func (p *ethernetPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
 
 func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	devices, err := p.probe(ctx)
 	if err != nil {
 		return plugin.Sample{}, err
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	var points []plugin.Point
 	for _, device := range devices {
 		if device.Type != switchType {
@@ -49,13 +46,7 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				continue
 			}
 			key := device.Name + "/" + strconv.Itoa(port.PortIdx)
-			cumulative := port.RxErrors + port.TxErrors
-			previous, seen := p.lastErrors[key]
-			p.lastErrors[key] = cumulative
-			errors := int64(0)
-			if seen && cumulative > previous {
-				errors = cumulative - previous
-			}
+			errors := p.deltas.Delta(key, port.RxErrors+port.TxErrors)
 			tags := []plugin.Tag{{Key: "scope", Value: "port"}, {Key: "switch", Value: device.Name}, {Key: "port", Value: strconv.Itoa(port.PortIdx)}}
 			points = append(points, plugin.NewPoint(tags,
 				plugin.Bool("up", port.Up),
@@ -70,6 +61,12 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 func (p *ethernetPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
 	return diagnoseEthernet(samples), nil
 }
+
+func (p *ethernetPlugin) Command(ctx context.Context, newState plugin.State) error {
+	return nil
+}
+
+func (p *ethernetPlugin) State() *plugin.StateTracker { return p.state }
 
 func probeEthernet(ctx context.Context) ([]engine.RouterDevice, error) {
 	cfg := config.Load()

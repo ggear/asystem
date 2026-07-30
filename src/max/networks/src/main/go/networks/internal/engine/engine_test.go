@@ -11,17 +11,20 @@ import (
 )
 
 type fakePlugin struct {
-	name      string
-	mode      plugin.SampleMode
-	pollErr   error
-	pollCount *int
-	aggregate func(sampleBuffer []plugin.Sample) plugin.Aggregate
-	panicAgg  bool
+	name          string
+	mode          plugin.Mode
+	pollErr       error
+	pollCount     *int
+	aggregate     func(sampleBuffer []plugin.Sample) plugin.Aggregate
+	panicAgg      bool
+	commandErr    error
+	commandStates []plugin.State
+	state         *plugin.StateTracker
 }
 
 func (f *fakePlugin) Name() string { return f.name }
 
-func (f *fakePlugin) SampleMode() plugin.SampleMode { return f.mode }
+func (f *fakePlugin) Mode() plugin.Mode { return f.mode }
 
 func (f *fakePlugin) Poll(context.Context) (plugin.Sample, error) {
 	if f.pollCount != nil {
@@ -42,6 +45,13 @@ func (f *fakePlugin) Aggregate(sampleBuffer []plugin.Sample) (plugin.Aggregate, 
 	}
 	return plugin.Aggregate{Status: plugin.StatusFit, OK: true, Score: 100}, nil
 }
+
+func (f *fakePlugin) Command(_ context.Context, state plugin.State) error {
+	f.commandStates = append(f.commandStates, state)
+	return f.commandErr
+}
+
+func (f *fakePlugin) State() *plugin.StateTracker { return f.state }
 
 func newEngine(t *testing.T, plugins ...plugin.Plugin) *Engine {
 	t.Helper()
@@ -116,7 +126,7 @@ func TestEngine_CycleAggregatePanicRecovered(t *testing.T) {
 }
 
 func TestEngine_CycleConcurrentSafe(t *testing.T) {
-	p := &fakePlugin{name: "poller", mode: plugin.Windowed}
+	p := &fakePlugin{name: "poller", mode: plugin.ModeWindowed}
 	e := newEngine(t, p)
 	var wg sync.WaitGroup
 	for i := 0; i < 16; i++ {
@@ -136,42 +146,31 @@ func TestEngine_CycleConcurrentSafe(t *testing.T) {
 	}
 }
 
-func TestCommand_RunResultChannel(t *testing.T) {
+func TestCommand_RunDispatchesToPlugin(t *testing.T) {
 	p := &fakePlugin{name: "agg"}
 	e := newEngine(t, p)
-	result := make(chan plugin.Aggregate, 1)
-	e.runCommand(context.Background(), command{Action: "check", Plugin: "agg", Result: result, Source: "cli"})
-	select {
-	case aggregate := <-result:
-		if aggregate.Status != plugin.StatusFit {
-			t.Fatalf("unexpected aggregate: %+v", aggregate)
-		}
-	case <-time.After(time.Second):
-		t.Fatal("no result received")
+	e.runCommand(context.Background(), "agg", plugin.StateOn)
+	if len(p.commandStates) != 1 || p.commandStates[0] != plugin.StateOn {
+		t.Fatalf("command states: got %v want [ON]", p.commandStates)
 	}
-	if _, open := <-result; open {
-		t.Fatal("result channel should be closed after draining")
+	e.runCommand(context.Background(), "missing", plugin.StateOff)
+	if len(p.commandStates) != 1 {
+		t.Fatalf("unknown plugin should not dispatch: got %v", p.commandStates)
 	}
 }
 
-func TestCommand_EnqueueDropsWhenFull(t *testing.T) {
-	p := &fakePlugin{name: "agg"}
-	e := newEngine(t, p)
-	for i := 0; i < commandQueueSize; i++ {
-		e.enqueue(command{Action: "check", Source: "mqtt"})
+func TestEngine_AggregateSetsState(t *testing.T) {
+	fit := &fakePlugin{name: "fit", state: plugin.NewStateTracker(plugin.StateOff)}
+	dead := &fakePlugin{name: "dead", state: plugin.NewStateTracker(plugin.StateOn), aggregate: func([]plugin.Sample) plugin.Aggregate {
+		return plugin.Diagnose(plugin.StatusDead, 0, "DOWN", "")
+	}}
+	e := newEngine(t, fit, dead)
+	e.AggregateSamples(context.Background(), e.plugins)
+	if got := fit.state.Get(); got != plugin.StateOn {
+		t.Errorf("fit state: got %s want ON", got)
 	}
-	done := make(chan struct{})
-	go func() {
-		e.enqueue(command{Action: "check", Source: "mqtt"})
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("enqueue blocked when queue full")
-	}
-	if len(e.commands) != commandQueueSize {
-		t.Fatalf("queue length: got %d want %d", len(e.commands), commandQueueSize)
+	if got := dead.state.Get(); got != plugin.StateOff {
+		t.Errorf("dead state: got %s want OFF", got)
 	}
 }
 

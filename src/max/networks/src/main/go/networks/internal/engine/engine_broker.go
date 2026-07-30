@@ -1,11 +1,13 @@
 package engine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"networks/internal/config"
 	"networks/internal/plugin"
+	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -16,7 +18,6 @@ const (
 	brokerDataTopicPrefix  = "networks/data/"
 	brokerCommandSubscribe = "networks/command/#"
 	brokerCommandPrefix    = "networks/command"
-	brokerResultTopic      = "networks/command/result"
 	brokerStatusOnline     = "online"
 	brokerStatusOffline    = "offline"
 	brokerPublishTimeout   = 2 * time.Second
@@ -27,10 +28,22 @@ type brokerClient struct {
 	client mqtt.Client
 }
 
-func (e *Engine) connectBroker() error {
+func (e *Engine) connectBroker(ctx context.Context) error {
 	onConnect := func(client mqtt.Client) {
 		client.Publish(brokerStatusTopic, 1, true, brokerStatusOnline)
-		client.Subscribe(brokerCommandSubscribe, 1, e.onCommandMessage)
+		client.Subscribe(brokerCommandSubscribe, 1, func(_ mqtt.Client, msg mqtt.Message) {
+			topic := msg.Topic()
+			if !strings.HasPrefix(topic, brokerCommandPrefix+"/") {
+				return
+			}
+			name := strings.TrimPrefix(topic, brokerCommandPrefix+"/")
+			state, ok := plugin.ParseState(string(msg.Payload()))
+			if !ok {
+				slog.Warn("command", "source", "mqtt", "phase", "parse", "topic", topic, "payload", string(msg.Payload()))
+				return
+			}
+			e.runCommand(ctx, name, state)
+		})
 	}
 	client, err := brokerConnect(onConnect, brokerStatusTopic, brokerStatusOffline)
 	if err != nil {
@@ -38,6 +51,19 @@ func (e *Engine) connectBroker() error {
 	}
 	e.broker = &brokerClient{client: client}
 	return nil
+}
+
+func (e *Engine) runCommand(ctx context.Context, name string, state plugin.State) {
+	p, ok := e.pluginByName(name)
+	if !ok {
+		slog.Warn("command", "source", "mqtt", "phase", "validate", "plugin", name, "error", "unknown plugin")
+		return
+	}
+	if err := p.Command(ctx, state); err != nil {
+		slog.Warn("command", "source", "mqtt", "phase", "execute", "plugin", name, "state", state.String(), "error", err)
+		return
+	}
+	slog.Info("command", "source", "mqtt", "phase", "execute", "plugin", name, "state", state.String())
 }
 
 func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
@@ -92,14 +118,6 @@ func (b *brokerClient) publishAggregate(m plugin.Aggregate) {
 	}
 	b.client.Publish(brokerDataTopicPrefix+m.Plugin, 0, true, payload).WaitTimeout(brokerPublishTimeout)
 	slog.Debug("state", "engine", "broker", "phase", "publish", "plugin", m.Plugin, "topic", brokerDataTopicPrefix+m.Plugin)
-}
-
-func (b *brokerClient) publishResult(m plugin.Aggregate) {
-	payload, err := m.MarshalJSON()
-	if err != nil {
-		return
-	}
-	b.client.Publish(brokerResultTopic, 0, false, payload).WaitTimeout(brokerPublishTimeout)
 }
 
 func (b *brokerClient) disconnect() {
