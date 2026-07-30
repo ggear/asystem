@@ -79,8 +79,6 @@ add additional local tests
 ###############################################################################################################################################################
 # Networks
 ###############################################################################################################################################################
-Fix XLSX to map to plugins for switch, generate and update PLAN to match
-check cmd (rationalise into one file) and command setup which is generic with 'check' examples at the moment - can only be ON/OFF?. ON->OFF interent does a check, OFF-ON does a modem restart
 Validate codebase file by file, systest, unit-tests
 Production release
 Deocom unpoller, hass-zigbee, internet
