@@ -52,7 +52,6 @@
         "host": "macmini-meg",
         "services": [
           "homeassistant",
-          "internet",
           "mariadb",
           "nginx",
           "supervisor",

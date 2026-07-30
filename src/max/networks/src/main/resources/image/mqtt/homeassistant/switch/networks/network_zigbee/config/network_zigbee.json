@@ -2,7 +2,7 @@
   "default_entity_id": "switch.network_zigbee",
   "unique_id": "network_zigbee",
   "name": "Network Zigbee",
-  "icon": "mdi:wifi-plus",
+  "icon": "mdi:credit-card-wireless",
   "force_update": false,
   "state_topic": "networks/data/zigbee",
   "value_template": "{{ 'ON' if value_json is mapping and value_json.ok | default(false) else 'OFF' }}",
