@@ -23,6 +23,9 @@
     - entity: switch.network_certificates
       name: Certificates
       icon: mdi:certificate
+    - entity: switch.network_domain
+      name: Domain
+      icon: mdi:archive-search-outline
 ################################################################################
 - type: entities
   title: Device Maintenance

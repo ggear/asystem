@@ -1,0 +1,6 @@
+{
+  "timestamp": <number>,
+  "ok": <true|false>,
+  "status": <fit|sick|dead>,
+  "score": <0-100>
+}

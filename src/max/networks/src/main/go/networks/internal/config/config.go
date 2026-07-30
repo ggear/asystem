@@ -2,9 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
-	"strings"
 	"sync"
 )
 
@@ -51,21 +49,22 @@ func Load() *Config {
 }
 
 func load() *Config {
-	return &Config{
-		brokerHost:    resolve("broker_host", "BROKER_HOST"),
-		brokerPort:    resolve("broker_port", "BROKER_PORT"),
-		brokerToken:   resolve("broker_token", "BROKER_TOKEN"),
-		databaseHost:  resolve("database_host", "DATABASE_HOST"),
-		databasePort:  resolve("database_port", "DATABASE_PORT"),
-		databaseName:  resolve("database_name", "DATABASE_NAME"),
-		databaseToken: resolve("database_token", "DATABASE_TOKEN"),
-		unifiURL:      resolve("unifi_url", "UNIFI_URL"),
-		unifiSite:     resolve("unifi_site", "UNIFI_SITE"),
-		unifiUser:     resolve("unifi_user", "UNIFI_USER"),
-		unifiPassword: resolve("unifi_password", "UNIFI_PASSWORD"),
-		unifiHost:     resolve("unifi_host", "UNIFI_HOST"),
-		weewxHost:     resolve("weewx_host", "WEEWX_HOST_PROD"),
+	c := &Config{
+		brokerHost:    os.Getenv("BROKER_HOST"),
+		brokerPort:    os.Getenv("BROKER_PORT"),
+		brokerToken:   os.Getenv("BROKER_TOKEN"),
+		databaseHost:  os.Getenv("DATABASE_HOST"),
+		databasePort:  os.Getenv("DATABASE_PORT"),
+		databaseName:  os.Getenv("DATABASE_NAME"),
+		databaseToken: os.Getenv("DATABASE_TOKEN"),
+		unifiURL:      os.Getenv("UNIFI_URL"),
+		unifiSite:     os.Getenv("UNIFI_SITE"),
+		unifiUser:     os.Getenv("UNIFI_USER"),
+		unifiPassword: os.Getenv("UNIFI_PASSWORD"),
+		unifiHost:     os.Getenv("UNIFI_HOST"),
+		weewxHost:     os.Getenv("WEEWX_HOST_PROD"),
 	}
+	return c
 }
 
 func (c *Config) Broker() string {
@@ -149,21 +148,4 @@ func (c *Config) WeewxHost() string {
 		return ""
 	}
 	return c.weewxHost
-}
-
-func resolve(field, env string) string {
-	value := os.Getenv(env)
-	if value != "" {
-		slog.Info("config", "status", "resolved", "name", field, "value", mask(field, value))
-		return value
-	}
-	slog.Warn("config", "status", "unresolved", "name", field, "value", "")
-	return ""
-}
-
-func mask(field, value string) string {
-	if value != "" && (strings.HasSuffix(field, "_token") || strings.HasSuffix(field, "_password")) {
-		return "***"
-	}
-	return value
 }

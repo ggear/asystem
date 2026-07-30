@@ -23,6 +23,7 @@ var (
 	flagPollPeriod      string
 	flagAggregatePeriod string
 	flagPublishData     bool
+	flagDaemon          bool
 	flagLogLevel        string
 )
 
@@ -38,6 +39,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence for poll-phase plugins, uses unit suffixes [s, m, h]")
 	rootCmd.Flags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", "15m", "window rolled up before a status decision, must be a whole multiple of poll period, uses unit suffixes [s, m, h]")
 	rootCmd.Flags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish aggregates to MQTT and InfluxDB when true, otherwise log only")
+	rootCmd.Flags().BoolVarP(&flagDaemon, "daemon", "D", false, "run continuously on the poll/aggregate loop when true, otherwise run a single check at debug level and exit")
 	rootCmd.Flags().StringVarP(&flagLogLevel, "log-level", "l", "info", "log level [debug, info, warn, error]")
 	rootCmd.Flags().SortFlags = false
 }
@@ -54,6 +56,9 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if !flagDaemon {
+			level, _ = scribe.ParseLevel("debug")
+		}
 		scribe.EnableStdout(level)
 		poll, aggregate, err := makePeriods(flagPollPeriod, flagAggregatePeriod)
 		if err != nil {
@@ -63,7 +68,7 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		e, err := engine.Create(engine.Options{Plugins: selected, PollPeriod: poll, AggregatePeriod: aggregate, PublishData: flagPublishData})
+		e, err := engine.Create(engine.Options{Plugins: selected, PollPeriod: poll, AggregatePeriod: aggregate, PublishData: flagPublishData, Daemon: flagDaemon})
 		if err != nil {
 			return err
 		}

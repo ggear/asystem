@@ -48,6 +48,7 @@ func (p *weewxPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		signal = plugin.Float("signal_quality_pct", plugin.Round(quality, 1))
 	}
 	point := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "weatherstation"}}, signal, plugin.Bool("fresh", fresh))
+	slog.Debug("poll", "plugin", "weewx", "quality", quality, "has_quality", hasQuality, "fresh", fresh)
 	return plugin.Sample{Points: []plugin.Point{point}}, nil
 }
 

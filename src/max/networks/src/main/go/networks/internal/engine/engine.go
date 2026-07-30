@@ -18,6 +18,7 @@ type Options struct {
 	PollPeriod      time.Duration
 	AggregatePeriod time.Duration
 	PublishData     bool
+	Daemon          bool
 }
 
 type Engine struct {
@@ -25,6 +26,7 @@ type Engine struct {
 	pollPeriod      time.Duration
 	aggregatePeriod time.Duration
 	publish         bool
+	daemon          bool
 	sampleBuffers   map[string]*sampleBuffer
 	sampleBufferMu  sync.Mutex
 	broker          *brokerClient
@@ -52,6 +54,7 @@ func Create(opts Options) (*Engine, error) {
 		pollPeriod:      opts.PollPeriod,
 		aggregatePeriod: opts.AggregatePeriod,
 		publish:         opts.PublishData,
+		daemon:          opts.Daemon,
 		sampleBuffers:   map[string]*sampleBuffer{},
 	}
 	for _, p := range opts.Plugins {
@@ -63,22 +66,29 @@ func Create(opts Options) (*Engine, error) {
 }
 
 func (e *Engine) Run(ctx context.Context) error {
-	slog.Info("state", "engine", "core", "phase", "start", "poll", e.pollPeriod, "aggregate", e.aggregatePeriod, "plugins", len(e.plugins), "publish", e.publish)
+	if e.daemon {
+		slog.Info(fmt.Sprintf("starting loop poll [%s] aggregate [%s] plugins [%d] publish [%v]", e.pollPeriod, e.aggregatePeriod, len(e.plugins), e.publish))
+	} else {
+		slog.Info(fmt.Sprintf("running single check plugins [%d] publish [%v]", len(e.plugins), e.publish))
+	}
 	if e.publish {
 		if err := e.connectBroker(ctx); err != nil {
-			slog.Error("state", "engine", "broker", "phase", "connect", "error", err)
+			slog.Error(fmt.Sprintf("failed to connect to broker [%v]", err))
 		}
 		e.connectDatabase()
 	}
 	defer e.shutdown()
-	pollTicker := time.NewTicker(e.pollPeriod)
-	defer pollTicker.Stop()
-	aggTicker := time.NewTicker(e.aggregatePeriod)
-	defer aggTicker.Stop()
 	e.PollSamples(ctx)
 	for _, v := range e.AggregateSamples(ctx, e.plugins) {
 		e.publishAggregate(ctx, v)
 	}
+	if !e.daemon {
+		return nil
+	}
+	pollTicker := time.NewTicker(e.pollPeriod)
+	defer pollTicker.Stop()
+	aggTicker := time.NewTicker(e.aggregatePeriod)
+	defer aggTicker.Stop()
 	for {
 		select {
 		case <-ctx.Done():

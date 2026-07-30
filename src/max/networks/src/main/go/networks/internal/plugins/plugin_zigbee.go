@@ -68,6 +68,7 @@ func (p *zigbeePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		}
 		points = append(points, plugin.NewPoint(tags, lqiField, plugin.Bool("available", d.available)))
 	}
+	slog.Debug("poll", "plugin", "zigbee", "online", online, "permit_join", permit, "devices", len(devices), "points", len(points))
 	return plugin.Sample{Points: points}, nil
 }
 

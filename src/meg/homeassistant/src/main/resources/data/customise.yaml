@@ -597,6 +597,9 @@ switch.network_ethernet:
 switch.network_certificates:
   friendly_name: 'Certificates'
   icon: 'mdi:certificate'
+switch.network_domain:
+  friendly_name: 'Domain'
+  icon: 'mdi:archive-search-outline'
 button.google_assistant_synchronize_devices:
   friendly_name: 'Google Device Syncronise'
 switch.service_plex:

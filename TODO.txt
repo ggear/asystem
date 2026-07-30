@@ -79,7 +79,8 @@ add additional local tests
 ###############################################################################################################################################################
 # Networks
 ###############################################################################################################################################################
-Add DNS resolve from a number of DNS root domains to check home.janeandgraham.com working plugin called domain
+add checks to all deployment places for cert
+test interent when downloading
 Check each plugins impl
 Validate codebase file by file, systest, unit-tests
 Production release

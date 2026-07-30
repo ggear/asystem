@@ -82,17 +82,16 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 		SetMaxReconnectInterval(30 * time.Second).
 		SetPassword(config.Load().BrokerToken()).
 		SetOnConnectHandler(func(client mqtt.Client) {
-			connectStart := time.Now()
 			if onConnect != nil {
 				onConnect(client)
 			}
-			slog.Info("state", "engine", "broker", "phase", "connect", "duration", time.Since(connectStart).Truncate(time.Millisecond))
+			slog.Info(fmt.Sprintf("connected to broker [%s]", broker))
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-			slog.Warn("state", "engine", "broker", "phase", "disconnect", "broker", brokerURL, "error", err)
+			slog.Warn(fmt.Sprintf("disconnected from broker [%s] [%v]", broker, err))
 		}).
 		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
-			slog.Warn("state", "engine", "broker", "phase", "reconnect", "broker", brokerURL)
+			slog.Info(fmt.Sprintf("reconnecting to broker [%s]", broker))
 		})
 	if config.Load().BrokerToken() != "" {
 		opts.SetUsername("networks")
@@ -101,7 +100,7 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
 	if !token.WaitTimeout(brokerConnectTimeout) {
-		slog.Warn("state", "engine", "broker", "phase", "connect", "broker", brokerURL, "error", "initial connect pending, retrying in background")
+		slog.Info(fmt.Sprintf("connecting to broker [%s]", broker))
 		return client, nil
 	}
 	if token.Error() != nil {
@@ -116,8 +115,9 @@ func (b *brokerClient) publishAggregate(m plugin.Aggregate) {
 		slog.Warn("state", "engine", "broker", "phase", "publish", "plugin", m.Plugin, "error", err)
 		return
 	}
-	b.client.Publish(brokerDataTopicPrefix+m.Plugin, 0, true, payload).WaitTimeout(brokerPublishTimeout)
-	slog.Debug("state", "engine", "broker", "phase", "publish", "plugin", m.Plugin, "topic", brokerDataTopicPrefix+m.Plugin)
+	topic := brokerDataTopicPrefix + m.Plugin
+	b.client.Publish(topic, 0, true, payload).WaitTimeout(brokerPublishTimeout)
+	slog.Info(fmt.Sprintf("published to broker [%s]", topic))
 }
 
 func (b *brokerClient) disconnect() {
