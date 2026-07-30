@@ -15,7 +15,8 @@ x-common: &common
     - UNIFI_SITE
     - UNIFI_USER
     - UNIFI_PASSWORD
-    - ZIGBEE_TOPIC
+    - UNIFI_HOST
+    - WEEWX_HOST_PROD
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
   sysctls:

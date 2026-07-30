@@ -55,6 +55,7 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				plugin.Int("errors", errors)))
 		}
 	}
+	slog.Debug("poll", "plugin", "ethernet", "devices", len(devices), "ports", len(points))
 	return plugin.Sample{Points: points}, nil
 }
 

@@ -42,6 +42,7 @@ func (p *wirelessPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		tags := []plugin.Tag{{Key: "scope", Value: "ap"}, {Key: "ap", Value: device.Name}}
 		points = append(points, plugin.NewPoint(tags, plugin.Bool("up", device.State == 1), plugin.Int("experience", int64(device.Satisfaction)), plugin.Int("num_clients", int64(device.NumSta))))
 	}
+	slog.Debug("poll", "plugin", "wireless", "devices", len(devices), "aps", len(points))
 	return plugin.Sample{Points: points}, nil
 }
 

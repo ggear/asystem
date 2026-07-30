@@ -3,6 +3,7 @@ package scribe
 import (
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"os"
 	"strings"
@@ -14,16 +15,15 @@ func EnableStdout(level slog.Level) {
 	defer scribeMutex.Unlock()
 	scribeLevel = level
 	scribeMode = "stdout"
-	scribeInstance = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
-	slog.SetDefault(scribeInstance)
+	log.SetOutput(os.Stdout)
+	slog.SetLogLoggerLevel(level)
 }
 
 func Disable() {
 	scribeMutex.Lock()
 	defer scribeMutex.Unlock()
 	scribeMode = "disabled"
-	scribeInstance = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	slog.SetDefault(scribeInstance)
+	log.SetOutput(io.Discard)
 }
 
 func Level() slog.Level {
@@ -54,8 +54,7 @@ func ParseLevel(raw string) (slog.Level, error) {
 }
 
 var (
-	scribeMutex    sync.Mutex
-	scribeLevel    slog.Level
-	scribeMode     string
-	scribeInstance *slog.Logger
+	scribeMutex sync.Mutex
+	scribeLevel slog.Level
+	scribeMode  string
 )

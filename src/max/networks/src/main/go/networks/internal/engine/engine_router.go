@@ -3,6 +3,7 @@ package engine
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -53,7 +54,8 @@ func NewRouterClient(base, site, user, pass string) (*RouterClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RouterClient{base: base, site: site, user: user, pass: pass, http: &http.Client{Timeout: routerHTTPTimeout, Jar: jar}}, nil
+	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	return &RouterClient{base: base, site: site, user: user, pass: pass, http: &http.Client{Timeout: routerHTTPTimeout, Jar: jar, Transport: transport}}, nil
 }
 
 func (c *RouterClient) login(ctx context.Context) error {

@@ -101,7 +101,7 @@ func probeWeewx(ctx context.Context) (float64, bool, bool, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	quality, hasQuality, fresh := readWeewx(signal, status, time.Now())
-	slog.Debug("probe", "plugin", "weewx", "signal", hasQuality, "fresh", fresh, "quality", quality)
+	slog.Debug("probe", "plugin", "weewx", "status_topic", statusTopic, "signal_bytes", len(signal), "status_bytes", len(status), "quality", quality, "fresh", fresh)
 	return quality, hasQuality, fresh, nil
 }
 

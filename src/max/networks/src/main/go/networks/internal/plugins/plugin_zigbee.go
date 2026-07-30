@@ -116,7 +116,7 @@ func probeZigbee(ctx context.Context) (bool, bool, []zigbeeDevice, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	online, permit, devices := readZigbee(zigbeeBaseTopic, messages)
-	slog.Debug("probe", "plugin", "zigbee", "online", online, "devices", len(devices))
+	slog.Debug("probe", "plugin", "zigbee", "topics", len(messages), "online", online, "devices", len(devices))
 	return online, permit, devices, nil
 }
 
