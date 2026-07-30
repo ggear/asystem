@@ -602,8 +602,14 @@ button.google_assistant_synchronize_devices:
 switch.service_plex:
   friendly_name: 'Plex'
   icon: 'mdi:heart-pulse'
+switch.service_postgres:
+  friendly_name: 'Postgres'
+  icon: 'mdi:heart-pulse'
 switch.service_sabnzbd:
   friendly_name: 'SABnzbd'
+  icon: 'mdi:heart-pulse'
+switch.service_wrangle:
+  friendly_name: 'Wrangle'
   icon: 'mdi:heart-pulse'
 switch.service_influxdb3:
   friendly_name: 'InfluxDB3'
@@ -614,17 +620,14 @@ switch.service_mlflow:
 switch.service_mlserver:
   friendly_name: 'MLServer'
   icon: 'mdi:heart-pulse'
+switch.service_networks:
+  friendly_name: 'Networks'
+  icon: 'mdi:heart-pulse'
 switch.service_openra:
   friendly_name: 'OpenRA'
   icon: 'mdi:heart-pulse'
-switch.service_tempstat:
-  friendly_name: 'TempStat'
-  icon: 'mdi:heart-pulse'
 switch.service_grafana:
   friendly_name: 'Grafana'
-  icon: 'mdi:heart-pulse'
-switch.service_influxdb:
-  friendly_name: 'InfluxDB3'
   icon: 'mdi:heart-pulse'
 switch.service_letsencrypt:
   friendly_name: 'LetsEncrypt'
@@ -632,26 +635,17 @@ switch.service_letsencrypt:
 switch.service_sonarr:
   friendly_name: 'Sonarr'
   icon: 'mdi:heart-pulse'
-switch.service_unpoller:
-  friendly_name: 'Unpoller'
-  icon: 'mdi:heart-pulse'
-switch.service_wrangle:
-  friendly_name: 'Wrangle'
+switch.service_tempstat:
+  friendly_name: 'TempStat'
   icon: 'mdi:heart-pulse'
 switch.service_homeassistant:
   friendly_name: 'Home Assistant'
-  icon: 'mdi:heart-pulse'
-switch.service_networks:
-  friendly_name: 'Networks'
   icon: 'mdi:heart-pulse'
 switch.service_mariadb:
   friendly_name: 'MariaDB'
   icon: 'mdi:heart-pulse'
 switch.service_nginx:
   friendly_name: 'Nginx'
-  icon: 'mdi:heart-pulse'
-switch.service_postgres:
-  friendly_name: 'Postgres'
   icon: 'mdi:heart-pulse'
 switch.service_vernemq:
   friendly_name: 'VerneMQ'

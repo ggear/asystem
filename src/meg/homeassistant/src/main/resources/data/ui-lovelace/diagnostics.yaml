@@ -40,8 +40,14 @@
     - entity: switch.service_plex
       name: Plex
       icon: mdi:heart-pulse
+    - entity: switch.service_postgres
+      name: Postgres
+      icon: mdi:heart-pulse
     - entity: switch.service_sabnzbd
       name: SABnzbd
+      icon: mdi:heart-pulse
+    - entity: switch.service_wrangle
+      name: Wrangle
       icon: mdi:heart-pulse
     - entity: switch.service_influxdb3
       name: InfluxDB3
@@ -52,17 +58,14 @@
     - entity: switch.service_mlserver
       name: MLServer
       icon: mdi:heart-pulse
+    - entity: switch.service_networks
+      name: Networks
+      icon: mdi:heart-pulse
     - entity: switch.service_openra
       name: OpenRA
       icon: mdi:heart-pulse
-    - entity: switch.service_tempstat
-      name: TempStat
-      icon: mdi:heart-pulse
     - entity: switch.service_grafana
       name: Grafana
-      icon: mdi:heart-pulse
-    - entity: switch.service_influxdb
-      name: InfluxDB3
       icon: mdi:heart-pulse
     - entity: switch.service_letsencrypt
       name: LetsEncrypt
@@ -70,26 +73,17 @@
     - entity: switch.service_sonarr
       name: Sonarr
       icon: mdi:heart-pulse
-    - entity: switch.service_unpoller
-      name: Unpoller
-      icon: mdi:heart-pulse
-    - entity: switch.service_wrangle
-      name: Wrangle
+    - entity: switch.service_tempstat
+      name: TempStat
       icon: mdi:heart-pulse
     - entity: switch.service_homeassistant
       name: Home Assistant
-      icon: mdi:heart-pulse
-    - entity: switch.service_networks
-      name: Networks
       icon: mdi:heart-pulse
     - entity: switch.service_mariadb
       name: MariaDB
       icon: mdi:heart-pulse
     - entity: switch.service_nginx
       name: Nginx
-      icon: mdi:heart-pulse
-    - entity: switch.service_postgres
-      name: Postgres
       icon: mdi:heart-pulse
     - entity: switch.service_vernemq
       name: VerneMQ
