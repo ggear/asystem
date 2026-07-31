@@ -80,6 +80,7 @@ add additional local tests
 # Networks
 ###############################################################################################################################################################
 test internet when downloading
+have certs check letsnecrypt cert actually deployed to all targets, amke deployment nice
 Check each plugins impl
 Validate codebase file by file, systest, unit-tests
 implement internet/certs restart

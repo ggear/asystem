@@ -17,7 +17,7 @@ type Config struct {
 	unifiURL      string
 	unifiSite     string
 	unifiUser     string
-	unifiPassword string
+	unifiToken    string
 	unifiHost     string
 	weewxHost     string
 }
@@ -60,7 +60,7 @@ func load() *Config {
 		unifiURL:      os.Getenv("UNIFI_URL"),
 		unifiSite:     os.Getenv("UNIFI_SITE"),
 		unifiUser:     os.Getenv("UNIFI_USER"),
-		unifiPassword: os.Getenv("UNIFI_PASSWORD"),
+		unifiToken:    os.Getenv("UNIFI_TOKEN"),
 		unifiHost:     os.Getenv("UNIFI_HOST"),
 		weewxHost:     os.Getenv("WEEWX_HOST_PROD"),
 	}
@@ -129,11 +129,11 @@ func (c *Config) UnifiUser() string {
 	return c.unifiUser
 }
 
-func (c *Config) UnifiPassword() string {
+func (c *Config) UnifiToken() string {
 	if c == nil {
 		return ""
 	}
-	return c.unifiPassword
+	return c.unifiToken
 }
 
 func (c *Config) UnifiHost() string {

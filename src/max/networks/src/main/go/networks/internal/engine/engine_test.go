@@ -16,6 +16,7 @@ type fakePlugin struct {
 	pollErr       error
 	pollCount     *int
 	aggregate     func(sampleBuffer []plugin.Sample) plugin.Aggregate
+	aggregateErr  error
 	panicAgg      bool
 	commandErr    error
 	commandStates []plugin.State
@@ -41,9 +42,9 @@ func (f *fakePlugin) Aggregate(sampleBuffer []plugin.Sample) (plugin.Aggregate, 
 		panic("boom")
 	}
 	if f.aggregate != nil {
-		return f.aggregate(sampleBuffer), nil
+		return f.aggregate(sampleBuffer), f.aggregateErr
 	}
-	return plugin.Aggregate{Status: plugin.StatusFit, OK: true, Score: 100}, nil
+	return plugin.Aggregate{Status: plugin.StatusFit, OK: true, Score: 100}, f.aggregateErr
 }
 
 func (f *fakePlugin) Command(_ context.Context, state plugin.State) error {
@@ -55,8 +56,8 @@ func (f *fakePlugin) State() *plugin.StateTracker { return f.state }
 
 func newEngine(t *testing.T, plugins ...plugin.Plugin) *Engine {
 	t.Helper()
-	e, err := Create(Options{Plugins: plugins, PollPeriod: time.Minute, AggregatePeriod: 3 * time.Minute})
-	if err != nil {
+	e := &Engine{Plugins: plugins, PollPeriod: time.Minute, AggregatePeriod: 3 * time.Minute}
+	if err := Create(e); err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	return e
@@ -75,7 +76,7 @@ func TestEngine_CreatePeriodValidation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := Create(Options{Plugins: []plugin.Plugin{&fakePlugin{name: "a"}}, PollPeriod: test.poll, AggregatePeriod: test.aggregate})
+			err := Create(&Engine{Plugins: []plugin.Plugin{&fakePlugin{name: "a"}}, PollPeriod: test.poll, AggregatePeriod: test.aggregate})
 			if (err != nil) != test.expectedError {
 				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
 			}
@@ -83,11 +84,71 @@ func TestEngine_CreatePeriodValidation(t *testing.T) {
 	}
 }
 
+func TestEngine_CreatePluginValidation(t *testing.T) {
+	var nilPlugin *fakePlugin
+	tests := []struct {
+		name    string
+		engine  *Engine
+		wantErr bool
+	}{
+		{name: "nil_engine", engine: nil, wantErr: true},
+		{name: "nil_plugin", engine: &Engine{Plugins: []plugin.Plugin{nil}, PollPeriod: time.Minute, AggregatePeriod: time.Minute}, wantErr: true},
+		{name: "typed_nil_plugin", engine: &Engine{Plugins: []plugin.Plugin{nilPlugin}, PollPeriod: time.Minute, AggregatePeriod: time.Minute}, wantErr: true},
+		{name: "duplicate_name", engine: &Engine{Plugins: []plugin.Plugin{&fakePlugin{name: "a"}, &fakePlugin{name: "a"}}, PollPeriod: time.Minute, AggregatePeriod: time.Minute}, wantErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := Create(test.engine); (err != nil) != test.wantErr {
+				t.Fatalf("error mismatch: got %v want error=%v", err, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestEngine_RunAlreadyCanceled(t *testing.T) {
+	count := 0
+	e := newEngine(t, &fakePlugin{name: "a", pollCount: &count})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := e.Run(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("run error: got %v want %v", err, context.Canceled)
+	}
+	if count != 0 {
+		t.Fatalf("poll count: got %d want 0", count)
+	}
+}
+
+func TestEngine_RunPollsBeforeScheduledAggregate(t *testing.T) {
+	count := 0
+	aggregateCount := 0
+	observedPolls := make(chan int, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	p := &fakePlugin{name: "a", mode: plugin.ModeWindowed, pollCount: &count}
+	p.aggregate = func([]plugin.Sample) plugin.Aggregate {
+		aggregateCount++
+		if aggregateCount == 2 {
+			observedPolls <- count
+			cancel()
+		}
+		return plugin.Aggregate{Status: plugin.StatusFit, OK: true}
+	}
+	e := &Engine{DaemonLoop: true, Plugins: []plugin.Plugin{p}, PollPeriod: time.Millisecond, AggregatePeriod: 2 * time.Millisecond}
+	if err := Create(e); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := e.Run(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("run error: got %v want %v", err, context.Canceled)
+	}
+	if got := <-observedPolls; got != 3 {
+		t.Fatalf("poll count at scheduled aggregate: got %d want 3", got)
+	}
+}
+
 func TestEngine_CycleAggregateOnly(t *testing.T) {
 	count := 0
 	p := &fakePlugin{name: "agg", pollCount: &count}
 	e := newEngine(t, p)
-	aggregates := e.AggregateSamples(context.Background(), e.plugins)
+	aggregates := e.AggregateSamples(context.Background(), e.Plugins)
 	if len(aggregates) != 1 {
 		t.Fatalf("aggregate count: got %d want 1", len(aggregates))
 	}
@@ -110,7 +171,7 @@ func TestEngine_CyclePollErrorProducesDeadAggregate(t *testing.T) {
 		return plugin.Aggregate{Status: plugin.StatusFit, OK: true}
 	}}
 	e := newEngine(t, p)
-	aggregates := e.AggregateSamples(context.Background(), e.plugins)
+	aggregates := e.AggregateSamples(context.Background(), e.Plugins)
 	if aggregates[0].Status != plugin.StatusDead || aggregates[0].Detail != "SOURCE_UNREACHABLE" {
 		t.Fatalf("expected dead aggregate, got %+v", aggregates[0])
 	}
@@ -119,9 +180,18 @@ func TestEngine_CyclePollErrorProducesDeadAggregate(t *testing.T) {
 func TestEngine_CycleAggregatePanicRecovered(t *testing.T) {
 	p := &fakePlugin{name: "panicky", panicAgg: true}
 	e := newEngine(t, p)
-	aggregates := e.AggregateSamples(context.Background(), e.plugins)
+	aggregates := e.AggregateSamples(context.Background(), e.Plugins)
 	if aggregates[0].Status != plugin.StatusDead || aggregates[0].Detail != "PLUGIN_PANIC" {
 		t.Fatalf("expected recovered dead aggregate, got %+v", aggregates[0])
+	}
+}
+
+func TestEngine_CycleAggregateErrorProducesDeadAggregate(t *testing.T) {
+	p := &fakePlugin{name: "broken", aggregateErr: errors.New("boom")}
+	e := newEngine(t, p)
+	aggregates := e.AggregateSamples(context.Background(), e.Plugins)
+	if aggregates[0].Status != plugin.StatusDead || aggregates[0].Detail != "PLUGIN_ERROR" || aggregates[0].Reason != "boom" {
+		t.Fatalf("expected aggregate error diagnosis, got %+v", aggregates[0])
 	}
 }
 
@@ -134,13 +204,13 @@ func TestEngine_CycleConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 32; j++ {
-				e.AggregateSamples(context.Background(), e.plugins)
+				e.AggregateSamples(context.Background(), e.Plugins)
 				e.PollSamples(context.Background())
 			}
 		}()
 	}
 	wg.Wait()
-	aggregates := e.AggregateSamples(context.Background(), e.plugins)
+	aggregates := e.AggregateSamples(context.Background(), e.Plugins)
 	if len(aggregates) != 1 || aggregates[0].Plugin != "poller" {
 		t.Fatalf("expected aggregate for poller, got %+v", aggregates)
 	}
@@ -165,7 +235,7 @@ func TestEngine_AggregateSetsState(t *testing.T) {
 		return plugin.Diagnose(plugin.StatusDead, 0, "DOWN", "")
 	}}
 	e := newEngine(t, fit, dead)
-	e.AggregateSamples(context.Background(), e.plugins)
+	e.AggregateSamples(context.Background(), e.Plugins)
 	if got := fit.state.Get(); got != plugin.StateOn {
 		t.Errorf("fit state: got %s want ON", got)
 	}

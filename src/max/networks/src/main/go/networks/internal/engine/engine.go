@@ -7,71 +7,77 @@ import (
 	"fmt"
 	"networks/internal/plugin"
 	"networks/internal/scribe"
+	"reflect"
 	"sync"
 	"time"
 )
 
-const measurement = "network"
-
-type Options struct {
-	Plugins         []plugin.Plugin
-	PollPeriod      time.Duration
-	AggregatePeriod time.Duration
-	PublishData     bool
-	Daemon          bool
-}
-
 type Engine struct {
-	plugins         []plugin.Plugin
-	pollPeriod      time.Duration
-	aggregatePeriod time.Duration
-	publish         bool
-	daemon          bool
-	sampleBuffers   map[string]*sampleBuffer
-	sampleBufferMu  sync.Mutex
-	broker          *brokerClient
-	database        *databaseClient
-	lineMu          sync.Mutex
-	lineBuffer      bytes.Buffer
+	DaemonLoop         bool
+	PublishData        bool
+	Plugins            []plugin.Plugin
+	PollPeriod         time.Duration
+	AggregatePeriod    time.Duration
+	sampleMu           sync.Mutex
+	sampleBuffers      map[string]*sampleBuffer
+	broker             *brokerClient
+	database           *databaseClient
+	lineProtocolMu     sync.Mutex
+	lineProtocolBuffer bytes.Buffer
 }
 
-func Create(opts Options) (*Engine, error) {
-	if len(opts.Plugins) == 0 {
-		return nil, errors.New("no plugins selected")
+func Create(e *Engine) error {
+	if e == nil {
+		return errors.New("engine is nil")
 	}
-	if opts.PollPeriod <= 0 {
-		return nil, fmt.Errorf("invalid poll period [%s] must be > 0", opts.PollPeriod)
+	if len(e.Plugins) == 0 {
+		return errors.New("no plugins selected")
 	}
-	if opts.AggregatePeriod <= 0 {
-		return nil, fmt.Errorf("invalid aggregate period [%s] must be > 0", opts.AggregatePeriod)
+	if e.PollPeriod <= 0 {
+		return fmt.Errorf("invalid poll period [%s] must be > 0", e.PollPeriod)
 	}
-	if opts.AggregatePeriod%opts.PollPeriod != 0 {
-		return nil, fmt.Errorf("invalid aggregate period [%s] must be a whole multiple of poll period [%s]", opts.AggregatePeriod, opts.PollPeriod)
+	if e.AggregatePeriod <= 0 {
+		return fmt.Errorf("invalid aggregate period [%s] must be > 0", e.AggregatePeriod)
 	}
-	sampleBufferCap := int(opts.AggregatePeriod / opts.PollPeriod)
-	e := &Engine{
-		plugins:         opts.Plugins,
-		pollPeriod:      opts.PollPeriod,
-		aggregatePeriod: opts.AggregatePeriod,
-		publish:         opts.PublishData,
-		daemon:          opts.Daemon,
-		sampleBuffers:   map[string]*sampleBuffer{},
+	if e.AggregatePeriod%e.PollPeriod != 0 {
+		return fmt.Errorf("invalid aggregate period [%s] must be a whole multiple of poll period [%s]", e.AggregatePeriod, e.PollPeriod)
 	}
-	for _, p := range opts.Plugins {
+	sampleBufferCap := int(e.AggregatePeriod / e.PollPeriod)
+	e.sampleBuffers = map[string]*sampleBuffer{}
+	pluginNames := make(map[string]struct{}, len(e.Plugins))
+	for _, p := range e.Plugins {
+		if p == nil {
+			return errors.New("plugin is nil")
+		}
+		value := reflect.ValueOf(p)
+		switch value.Kind() {
+		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+			if value.IsNil() {
+				return errors.New("plugin is nil")
+			}
+		}
+		name := p.Name()
+		if _, exists := pluginNames[name]; exists {
+			return fmt.Errorf("duplicate plugin [%s]", name)
+		}
+		pluginNames[name] = struct{}{}
 		if p.Mode() == plugin.ModeWindowed {
-			e.sampleBuffers[p.Name()] = newSampleBuffer(sampleBufferCap)
+			e.sampleBuffers[name] = newSampleBuffer(sampleBufferCap)
 		}
 	}
-	return e, nil
+	return nil
 }
 
 func (e *Engine) Run(ctx context.Context) error {
-	if e.daemon {
-		scribe.Infof(scribe.Global, "starting loop poll every [%s], aggregated over [%s] across [%d] plugins", e.pollPeriod, e.aggregatePeriod, len(e.plugins))
-	} else {
-		scribe.Infof(scribe.Global, "running single check across [%d] plugins", len(e.plugins))
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-	if e.publish {
+	if e.DaemonLoop {
+		scribe.Infof(scribe.Global, "starting loop poll every [%s], aggregated over [%s] across [%d] plugins", e.PollPeriod, e.AggregatePeriod, len(e.Plugins))
+	} else {
+		scribe.Infof(scribe.Global, "running single check across [%d] plugins", len(e.Plugins))
+	}
+	if e.PublishData {
 		if err := e.connectBroker(ctx); err != nil {
 			scribe.Errorf(scribe.Global, "failed to connect to broker [%v]", err)
 		}
@@ -79,25 +85,28 @@ func (e *Engine) Run(ctx context.Context) error {
 	}
 	defer e.shutdown()
 	e.PollSamples(ctx)
-	for _, v := range e.AggregateSamples(ctx, e.plugins) {
+	for _, v := range e.AggregateSamples(ctx, e.Plugins) {
 		e.publishAggregate(ctx, v)
 	}
-	if !e.daemon {
+	if !e.DaemonLoop {
 		return nil
 	}
-	pollTicker := time.NewTicker(e.pollPeriod)
+	pollTicker := time.NewTicker(e.PollPeriod)
 	defer pollTicker.Stop()
-	aggTicker := time.NewTicker(e.aggregatePeriod)
-	defer aggTicker.Stop()
+	pollsPerAggregate := int(e.AggregatePeriod / e.PollPeriod)
+	polls := 0
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-pollTicker.C:
 			e.PollSamples(ctx)
-		case <-aggTicker.C:
-			for _, v := range e.AggregateSamples(ctx, e.plugins) {
-				e.publishAggregate(ctx, v)
+			polls++
+			if polls == pollsPerAggregate {
+				polls = 0
+				for _, v := range e.AggregateSamples(ctx, e.Plugins) {
+					e.publishAggregate(ctx, v)
+				}
 			}
 		}
 	}
@@ -105,7 +114,7 @@ func (e *Engine) Run(ctx context.Context) error {
 
 func (e *Engine) PollSamples(ctx context.Context) {
 	var wg sync.WaitGroup
-	for _, p := range e.plugins {
+	for _, p := range e.Plugins {
 		if p.Mode() != plugin.ModeWindowed {
 			continue
 		}
@@ -113,9 +122,9 @@ func (e *Engine) PollSamples(ctx context.Context) {
 		go func(p plugin.Plugin) {
 			defer wg.Done()
 			m := e.safePoll(ctx, p)
-			e.sampleBufferMu.Lock()
+			e.sampleMu.Lock()
 			e.sampleBuffers[p.Name()].Add(m)
-			e.sampleBufferMu.Unlock()
+			e.sampleMu.Unlock()
 			scribe.Debugf(p.Name(), "polled [%d] points", len(m.Points))
 		}(p)
 	}
@@ -130,15 +139,15 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 		var samples []plugin.Sample
 		if p.Mode() == plugin.ModeWindowed {
 			buffer := e.sampleBuffers[p.Name()]
-			e.sampleBufferMu.Lock()
+			e.sampleMu.Lock()
 			samples = buffer.Samples()
-			e.sampleBufferMu.Unlock()
+			e.sampleMu.Unlock()
 			if len(samples) == 0 {
 				m := e.safePoll(ctx, p)
-				e.sampleBufferMu.Lock()
+				e.sampleMu.Lock()
 				buffer.Add(m)
 				samples = buffer.Samples()
-				e.sampleBufferMu.Unlock()
+				e.sampleMu.Unlock()
 			}
 		} else {
 			m := e.safePoll(ctx, p)
@@ -184,7 +193,7 @@ func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plug
 			v = plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_PANIC", "plugin panicked during aggregate")
 		}
 		v.Plugin = p.Name()
-		v.WindowSize = int(e.aggregatePeriod / time.Second)
+		v.WindowSize = int(e.AggregatePeriod / time.Second)
 		v.SampleCount = len(samples)
 		if v.Timestamp.IsZero() {
 			v.Timestamp = time.Now()
@@ -193,20 +202,20 @@ func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plug
 	aggregate, err := p.Aggregate(samples)
 	if err != nil {
 		scribe.Warnf(p.Name(), "aggregate failed [%v]", err)
+		return plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_ERROR", err.Error())
 	}
 	return aggregate
 }
-
 func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {
 	if e.broker != nil {
 		e.broker.publishAggregate(m)
 	}
 	if e.database != nil {
-		e.lineMu.Lock()
-		e.lineBuffer.Reset()
-		m.AppendLineProtocol(&e.lineBuffer, measurement, time.Now().UnixNano())
-		data := append([]byte(nil), e.lineBuffer.Bytes()...)
-		e.lineMu.Unlock()
+		e.lineProtocolMu.Lock()
+		e.lineProtocolBuffer.Reset()
+		m.AppendLineProtocol(&e.lineProtocolBuffer, "network", time.Now().UnixNano())
+		data := append([]byte(nil), e.lineProtocolBuffer.Bytes()...)
+		e.lineProtocolMu.Unlock()
 		if len(data) > 0 {
 			e.database.write(ctx, data)
 		}
@@ -222,8 +231,8 @@ func (e *Engine) shutdown() {
 	}
 }
 
-func (e *Engine) pluginByName(name string) (plugin.Plugin, bool) {
-	for _, p := range e.plugins {
+func (e *Engine) findPlugin(name string) (plugin.Plugin, bool) {
+	for _, p := range e.Plugins {
 		if p.Name() == name {
 			return p, true
 		}

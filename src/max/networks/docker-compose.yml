@@ -14,7 +14,7 @@ x-common: &common
     - UNIFI_URL
     - UNIFI_SITE
     - UNIFI_USER
-    - UNIFI_PASSWORD
+    - UNIFI_TOKEN
     - UNIFI_HOST
     - WEEWX_HOST_PROD
   volumes:

@@ -54,7 +54,7 @@ func (e *Engine) connectBroker(ctx context.Context) error {
 }
 
 func (e *Engine) runCommand(ctx context.Context, name string, state plugin.State) {
-	p, ok := e.pluginByName(name)
+	p, ok := e.findPlugin(name)
 	if !ok {
 		scribe.Warnf(name, "command ignored because plugin is unknown")
 		return

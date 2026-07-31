@@ -29,25 +29,26 @@ var (
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		if _, writeErr := fmt.Fprintln(os.Stderr, err); writeErr != nil {
+			os.Exit(1)
+		}
 		os.Exit(1)
 	}
 }
 
 func init() {
 	rootCmd.Flags().StringVarP(&flagFilterPlugins, "filter-plugins", "f", "", "comma separated list restricting which plugins run (default: all)")
-	rootCmd.Flags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence for poll-phase plugins, uses unit suffixes [s, m, h]")
-	rootCmd.Flags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", "15m", "window rolled up before a status decision, must be a whole multiple of poll period, uses unit suffixes [s, m, h]")
-	rootCmd.Flags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish aggregates to MQTT and InfluxDB when true, otherwise log only (ignored without --daemon, which always logs only)")
+	rootCmd.Flags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence for poll-phase plugins, uses unit suffixes (s, m, h)")
+	rootCmd.Flags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", "15m", "window rolled up before a network diagnosis, must be a whole multiple of poll period, uses unit suffixes (s, m, h)")
+	rootCmd.Flags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish aggregates to MQTT and InfluxDB when true, otherwise log only (ignored without --daemon, which logs only)")
 	rootCmd.Flags().BoolVarP(&flagDaemon, "daemon", "D", false, "run continuously on the poll/aggregate loop when true, otherwise run a single log-only check at debug level and exit")
-	rootCmd.Flags().StringVarP(&flagLogLevel, "log-level", "l", "info", "log level [debug, info, warn, error]")
+	rootCmd.Flags().StringVarP(&flagLogLevel, "log-level", "l", "info", "log level (debug, info, warn, error)")
 	rootCmd.Flags().SortFlags = false
 }
 
 var rootCmd = &cobra.Command{
 	Use:           "networks",
-	Short:         rootDescription,
-	Long:          rootDescription,
+	Short:         "Diagnose network health and publish data",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	Args:          cobra.NoArgs,
@@ -65,12 +66,16 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		selected, err := plugin.Filter(pluginNames())
+		var names []string
+		if strings.TrimSpace(flagFilterPlugins) != "" {
+			names = strings.Split(flagFilterPlugins, ",")
+		}
+		selected, err := plugin.Filter(names)
 		if err != nil {
 			return err
 		}
-		e, err := engine.Create(engine.Options{Plugins: selected, PollPeriod: poll, AggregatePeriod: aggregate, PublishData: flagPublishData, Daemon: flagDaemon})
-		if err != nil {
+		e := &engine.Engine{Plugins: selected, PollPeriod: poll, AggregatePeriod: aggregate, PublishData: flagPublishData, DaemonLoop: flagDaemon}
+		if err := engine.Create(e); err != nil {
 			return err
 		}
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -102,12 +107,3 @@ func makePeriods(pollRaw, aggregateRaw string) (time.Duration, time.Duration, er
 	}
 	return poll, aggregate, nil
 }
-
-func pluginNames() []string {
-	if strings.TrimSpace(flagFilterPlugins) == "" {
-		return nil
-	}
-	return strings.Split(flagFilterPlugins, ",")
-}
-
-const rootDescription = "Monitor network health and publish status"

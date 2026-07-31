@@ -71,7 +71,7 @@ func (p *ethernetPlugin) State() *plugin.StateTracker { return p.state }
 
 func probeEthernet(ctx context.Context) ([]engine.RouterDevice, error) {
 	cfg := config.Load()
-	client, err := engine.NewRouterClient(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiPassword())
+	client, err := engine.NewRouterClient(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiToken())
 	if err != nil {
 		return nil, err
 	}
