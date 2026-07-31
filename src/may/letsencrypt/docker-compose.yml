@@ -1,7 +1,7 @@
 services:
   letsencrypt:
     # NOTES: https://github.com/adferrand/dnsrobocert/releases
-    image: adferrand/dnsrobocert:3.26.1
+    image: adferrand/dnsrobocert:3.27.0
     container_name: letsencrypt
     init: true
     environment:

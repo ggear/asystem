@@ -79,7 +79,6 @@ add additional local tests
 ###############################################################################################################################################################
 # Networks
 ###############################################################################################################################################################
-add checks to all deployment places for cert
 test interent when downloading
 Check each plugins impl
 Validate codebase file by file, systest, unit-tests

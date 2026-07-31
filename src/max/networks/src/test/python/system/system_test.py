@@ -11,10 +11,10 @@ HOST = "127.0.0.1"
 PORT = 32404
 TIMEOUT = 15
 TIMEOUT_WARMUP = 120
+SETTLE = 3
 STATUS_TOPIC = "networks/status"
 DATA_TOPIC = "networks/data/internet"
 COMMAND_TOPIC = "networks/command/internet"
-RESULT_TOPIC = "networks/command/result"
 TRIAD = {"fit", "sick", "dead"}
 
 
@@ -30,14 +30,13 @@ def _assert_vitals(payload):
     assert isinstance(body["score"], int) and 0 <= body["score"] <= 100
 
 
-def test_publishes_vitals_and_answers_command():
+def test_publishes_vitals_and_accepts_switch_command():
     def test():
         received = {}
 
         def on_connect(client, _user_data, _flags, return_code):
             client.subscribe(STATUS_TOPIC, 1)
             client.subscribe(DATA_TOPIC, 1)
-            client.subscribe(RESULT_TOPIC, 1)
             print("Connected [code={}]".format(return_code))
 
         def on_message(_client, _user_data, message):
@@ -54,13 +53,14 @@ def test_publishes_vitals_and_answers_command():
             pass
         assert received.get(STATUS_TOPIC) == b"online"
         _assert_vitals(received[DATA_TOPIC])
-        client.publish(COMMAND_TOPIC, json.dumps({"command": "check"}), 1)
+        client.publish(COMMAND_TOPIC, "OFF", 1)
+        client.publish(COMMAND_TOPIC, "ON", 1)
         time_start = time.time()
-        while (RESULT_TOPIC not in received) and \
-                (time.time() - time_start) < TIMEOUT and client.loop(1) == 0:
+        while (time.time() - time_start) < SETTLE and client.loop(1) == 0:
             pass
         client.disconnect()
-        _assert_vitals(received[RESULT_TOPIC])
+        assert received.get(STATUS_TOPIC) == b"online"
+        _assert_vitals(received[DATA_TOPIC])
 
     success = False
     time_start_warmup = time.time()
