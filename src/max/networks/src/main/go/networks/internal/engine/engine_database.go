@@ -35,19 +35,17 @@ func newDatabaseInfluxClient() (*influxdb3.Client, string, error) {
 	return client, databaseURL, nil
 }
 
-func (e *Engine) connectDatabase() {
+func newDatabaseClient() (*databaseClient, error) {
 	database := config.Load().Database()
 	if database == "" {
-		scribe.Warnf(scribe.Global, "database address is empty")
-		return
+		return nil, errors.New("database address is empty")
 	}
 	client, _, err := newDatabaseInfluxClient()
 	if err != nil {
-		scribe.Errorf(scribe.Global, "failed to connect to database [%v]", err)
-		return
+		return nil, err
 	}
 	scribe.Infof(scribe.Global, "connected to database [%s]", database)
-	e.database = &databaseClient{url: database, client: client}
+	return &databaseClient{url: database, client: client}, nil
 }
 
 func (d *databaseClient) write(ctx context.Context, data []byte) {

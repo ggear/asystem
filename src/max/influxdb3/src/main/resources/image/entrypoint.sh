@@ -14,8 +14,8 @@
 #      These are left for an operator: unlike stage 1 they may hold partial data.
 set -euo pipefail
 
-node_id="${INFLUXDB3_NODE_IDENTIFIER_PREFIX:-}"
-data_dir="${INFLUXDB3_DB_DIR:-/asystem/mnt}"
+node_id="${INFLUXDB3_NODE_ID:-}"
+data_dir="${INFLUXDB3_DATA_DIR:-/asystem/mnt}"
 wal_dir="$data_dir/$node_id/wal"
 recover_addr="127.0.0.1:18181"
 recover_log="/tmp/recover.log"

@@ -28,45 +28,7 @@ type brokerClient struct {
 	client mqtt.Client
 }
 
-func (e *Engine) connectBroker(ctx context.Context) error {
-	onConnect := func(client mqtt.Client) {
-		client.Publish(brokerStatusTopic, 1, true, brokerStatusOnline)
-		client.Subscribe(brokerCommandSubscribe, 1, func(_ mqtt.Client, msg mqtt.Message) {
-			topic := msg.Topic()
-			if !strings.HasPrefix(topic, brokerCommandPrefix+"/") {
-				return
-			}
-			name := strings.TrimPrefix(topic, brokerCommandPrefix+"/")
-			state, ok := plugin.ParseState(string(msg.Payload()))
-			if !ok {
-				scribe.Warnf(name, "command ignored because payload [%s] is unparseable", string(msg.Payload()))
-				return
-			}
-			e.runCommand(ctx, name, state)
-		})
-	}
-	client, err := brokerConnect(onConnect, brokerStatusTopic, brokerStatusOffline)
-	if err != nil {
-		return err
-	}
-	e.broker = &brokerClient{client: client}
-	return nil
-}
-
-func (e *Engine) runCommand(ctx context.Context, name string, state plugin.State) {
-	p, ok := e.findPlugin(name)
-	if !ok {
-		scribe.Warnf(name, "command ignored because plugin is unknown")
-		return
-	}
-	if err := p.Command(ctx, state); err != nil {
-		scribe.Warnf(name, "command to state [%s] failed [%v]", state.String(), err)
-		return
-	}
-	scribe.Infof(name, "command received to set state to [%s]", state.String())
-}
-
-func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
+func newBrokerClient(ctx context.Context, onCommand func(context.Context, string, plugin.State)) (*brokerClient, error) {
 	broker := config.Load().Broker()
 	if broker == "" {
 		return nil, errors.New("broker address is empty")
@@ -82,9 +44,20 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 		SetMaxReconnectInterval(30 * time.Second).
 		SetPassword(config.Load().BrokerToken()).
 		SetOnConnectHandler(func(client mqtt.Client) {
-			if onConnect != nil {
-				onConnect(client)
-			}
+			client.Publish(brokerStatusTopic, 1, true, brokerStatusOnline)
+			client.Subscribe(brokerCommandSubscribe, 1, func(_ mqtt.Client, msg mqtt.Message) {
+				topic := msg.Topic()
+				if !strings.HasPrefix(topic, brokerCommandPrefix+"/") {
+					return
+				}
+				name := strings.TrimPrefix(topic, brokerCommandPrefix+"/")
+				state, ok := plugin.ParseState(string(msg.Payload()))
+				if !ok {
+					scribe.Warnf(name, "command ignored because payload [%s] is unparseable", string(msg.Payload()))
+					return
+				}
+				onCommand(ctx, name, state)
+			})
 			scribe.Infof(scribe.Global, "connected to broker [%s]", broker)
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
@@ -96,17 +69,28 @@ func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (
 	if config.Load().BrokerToken() != "" {
 		opts.SetUsername("networks")
 	}
-	opts.SetWill(willTopic, willPayload, 1, true)
+	opts.SetWill(brokerStatusTopic, brokerStatusOffline, 1, true)
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
 	if !token.WaitTimeout(brokerConnectTimeout) {
 		scribe.Infof(scribe.Global, "connecting to broker [%s]", broker)
-		return client, nil
-	}
-	if token.Error() != nil {
+	} else if token.Error() != nil {
 		return nil, fmt.Errorf("connect failed [%s] [%w]", brokerURL, token.Error())
 	}
-	return client, nil
+	return &brokerClient{client: client}, nil
+}
+
+func (e *Engine) runCommand(ctx context.Context, name string, state plugin.State) {
+	p, ok := e.findPlugin(name)
+	if !ok {
+		scribe.Warnf(name, "command ignored because plugin is unknown")
+		return
+	}
+	if err := p.Command(ctx, state); err != nil {
+		scribe.Warnf(name, "command to state [%s] failed [%v]", state.String(), err)
+		return
+	}
+	scribe.Infof(name, "command received to set state to [%s]", state.String())
 }
 
 func (b *brokerClient) publishAggregate(m plugin.Aggregate) {

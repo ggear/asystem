@@ -78,10 +78,16 @@ func (e *Engine) Run(ctx context.Context) error {
 		scribe.Infof(scribe.Global, "running single check across [%d] plugins", len(e.Plugins))
 	}
 	if e.PublishData {
-		if err := e.connectBroker(ctx); err != nil {
+		if broker, err := newBrokerClient(ctx, e.runCommand); err != nil {
 			scribe.Errorf(scribe.Global, "failed to connect to broker [%v]", err)
+		} else {
+			e.broker = broker
 		}
-		e.connectDatabase()
+		if database, err := newDatabaseClient(); err != nil {
+			scribe.Errorf(scribe.Global, "failed to connect to database [%v]", err)
+		} else {
+			e.database = database
+		}
 	}
 	defer e.shutdown()
 	e.PollSamples(ctx)
