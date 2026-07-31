@@ -79,10 +79,10 @@ add additional local tests
 ###############################################################################################################################################################
 # Networks
 ###############################################################################################################################################################
-test interent when downloading
+test internet when downloading
 Check each plugins impl
 Validate codebase file by file, systest, unit-tests
-Production release
+implement internet/certs restart
 Deocom unpoller, hass-zigbee, internet
 
 
