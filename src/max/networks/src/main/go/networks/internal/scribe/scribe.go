@@ -68,11 +68,17 @@ func Errorf(subject, format string, args ...any) { emit(slog.LevelError, subject
 func Diagnosis(subject, status string, score int, took time.Duration, reason string) {
 	scoreText := strconv.Itoa(score)
 	tookText := fmt.Sprintf("%dms", took.Milliseconds())
-	Infof(subject, "probe diagnosed as ... [%s] %s with score ... [%s] %s in [%s] %s because [%s]",
+	level := slog.LevelInfo
+	switch status {
+	case "sick":
+		level = slog.LevelWarn
+	case "dead":
+		level = slog.LevelError
+	}
+	emit(level, subject, "diagnosed as ... [%s] %s with score ... [%s] %s because [%s] in [%s]",
 		status, leader(6-len(status)),
 		scoreText, leader(5-len(scoreText)),
-		tookText, leader(8-len(tookText)),
-		reason)
+		reason, tookText)
 }
 
 func emit(level slog.Level, subject, format string, args ...any) {

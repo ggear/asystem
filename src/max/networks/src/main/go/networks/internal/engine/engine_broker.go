@@ -63,7 +63,7 @@ func (e *Engine) runCommand(ctx context.Context, name string, state plugin.State
 		scribe.Warnf(name, "command to state [%s] failed [%v]", state.String(), err)
 		return
 	}
-	scribe.Infof(name, "command set state [%s]", state.String())
+	scribe.Infof(name, "command received to set state to [%s]", state.String())
 }
 
 func brokerConnect(onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {

@@ -138,7 +138,7 @@ func diagnoseDomain(samples []plugin.Sample) plugin.Aggregate {
 	case agreeing < total:
 		result = plugin.Diagnose(plugin.StatusSick, score, "RECORD_MISMATCH", fmt.Sprintf("only %d/%d resolvers agree on the same address set", agreeing, total))
 	default:
-		result = plugin.Diagnose(plugin.StatusFit, score, "RESOLVED", fmt.Sprintf("all %d resolvers agree on [%s]", total, consensus))
+		result = plugin.Diagnose(plugin.StatusFit, score, "RESOLVED", fmt.Sprintf("all %d resolvers agree on %s", total, consensus))
 	}
 	result.Points = reportDomain(result.Score, consensus, agreeing, failed, points)
 	return result
