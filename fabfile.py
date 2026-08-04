@@ -1312,8 +1312,9 @@ def _down_module(context, module, down_this=True):
     if isfile(join(ROOT_MODULE_DIR, module, "docker-compose.yml")):
         _print_line("Stopping servers ...")
         for run_dep in reversed(_get_dependencies(context, module)):
-            if run_dep != module or down_this:
-                _run_local(context, "docker compose --ansi never down --volumes --rmi all --remove-orphans", run_dep)
+            if isfile(join(ROOT_MODULE_DIR, run_dep, "docker-compose.yml")):
+                if run_dep != module or down_this:
+                    _run_local(context, "docker compose --ansi never down --volumes --rmi all --remove-orphans", run_dep)
 
 
 def _run_local(context, command, working=".", **kwargs):

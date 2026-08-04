@@ -48,7 +48,7 @@ func (p *weewxPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		signal = plugin.Float("signal_quality_pct", plugin.Round(quality, 1))
 	}
 	point := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "weatherstation"}}, signal, plugin.Bool("fresh", fresh))
-	scribe.Debugf("weewx", "polled quality [%v] has_quality [%v] fresh [%v]", quality, hasQuality, fresh)
+	scribe.LogDebug("weewx", "polled quality [%v] has_quality [%v] fresh [%v]", quality, hasQuality, fresh)
 	return plugin.Sample{Points: []plugin.Point{point}}, nil
 }
 
@@ -102,7 +102,7 @@ func probeWeewx(ctx context.Context) (float64, bool, bool, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	quality, hasQuality, fresh := readWeewx(signal, status, time.Now())
-	scribe.Debugf("weewx", "probed status_topic [%s] signal_bytes [%d] status_bytes [%d] quality [%v] fresh [%v]", statusTopic, len(signal), len(status), quality, fresh)
+	scribe.LogDebug("weewx", "probed status_topic [%s] signal_bytes [%d] status_bytes [%d] quality [%v] fresh [%v]", statusTopic, len(signal), len(status), quality, fresh)
 	return quality, hasQuality, fresh, nil
 }
 
@@ -144,13 +144,13 @@ func diagnoseWeewx(samples []plugin.Sample) plugin.Aggregate {
 	result := plugin.Aggregate{}
 	switch {
 	case !fresh:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "STALE", "weather station not reporting or last update older than one hour")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "STALE: weather station not reporting or last update older than one hour")
 	case !hasQuality:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "NO_DATA", "no retained weather station signal quality on broker")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "NO_DATA: no retained weather station signal quality on broker")
 	case quality >= signalFitMin:
-		result = plugin.Diagnose(plugin.StatusFit, score, "HEALTHY", fmt.Sprintf("weather station signal quality %.0f%%", quality))
+		result = plugin.Diagnose(plugin.StatusFit, score, fmt.Sprintf("HEALTHY: weather station signal quality [%.0f%%]", quality))
 	default:
-		result = plugin.Diagnose(plugin.StatusSick, score, "WEAK_SIGNAL", fmt.Sprintf("weather station signal quality %.0f%%", quality))
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("WEAK_SIGNAL: weather station signal quality [%.0f%%]", quality))
 	}
 	result.Points = reportWeewx(result.Score, points)
 	return result

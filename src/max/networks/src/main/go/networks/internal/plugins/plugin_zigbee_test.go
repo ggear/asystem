@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"networks/internal/plugin"
@@ -68,7 +69,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 		expectedStatus plugin.Status
 		expectedOK     bool
 		expectedScore  int
-		expectedDetail string
+		expectedReason string
 		expectedError  bool
 	}{
 		{
@@ -77,7 +78,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  82,
-			expectedDetail: "HEALTHY",
+			expectedReason:"HEALTHY",
 			expectedError:  false,
 		},
 		{
@@ -86,7 +87,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  47,
-			expectedDetail: "DEVICES_OFFLINE",
+			expectedReason:"DEVICES_OFFLINE",
 			expectedError:  false,
 		},
 		{
@@ -95,7 +96,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  72,
-			expectedDetail: "WEAK_LINKS",
+			expectedReason:"WEAK_LINKS",
 			expectedError:  false,
 		},
 		{
@@ -104,7 +105,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "COORDINATOR_DOWN",
+			expectedReason:"COORDINATOR_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -113,7 +114,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "COORDINATOR_DOWN",
+			expectedReason:"COORDINATOR_DOWN",
 			expectedError:  false,
 		},
 	}
@@ -132,8 +133,8 @@ func TestZigbee_Diagnose(t *testing.T) {
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
 			}
-			if got.Detail != test.expectedDetail {
-				t.Errorf("detail: got %s want %s", got.Detail, test.expectedDetail)
+			if !strings.HasPrefix(got.Reason, test.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
 			}
 		})
 	}

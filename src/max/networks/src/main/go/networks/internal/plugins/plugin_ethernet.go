@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"networks/internal/config"
-	"networks/internal/engine"
 	"networks/internal/plugin"
+	"networks/internal/remote"
 	"networks/internal/scribe"
 )
 
@@ -18,13 +18,16 @@ const (
 )
 
 type ethernetPlugin struct {
-	probe  func(ctx context.Context) ([]engine.RouterDevice, error)
-	state  *plugin.StateTracker
-	deltas *plugin.DeltaTracker
+	probe   func(ctx context.Context) ([]remote.GatewayDevice, error)
+	gateway *remote.Gateway
+	state   *plugin.StateTracker
+	deltas  *plugin.DeltaTracker
 }
 
 func newEthernetPlugin() *ethernetPlugin {
-	return &ethernetPlugin{probe: probeEthernet, state: plugin.NewStateTracker(plugin.StateOn), deltas: plugin.NewDeltaTracker()}
+	p := &ethernetPlugin{state: plugin.NewStateTracker(plugin.StateOn), deltas: plugin.NewDeltaTracker()}
+	p.probe = p.probeEthernet
+	return p
 }
 
 func (p *ethernetPlugin) Name() string { return "ethernet" }
@@ -55,7 +58,7 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				plugin.Int("errors", errors)))
 		}
 	}
-	scribe.Debugf("ethernet", "polled devices [%d] ports [%d]", len(devices), len(points))
+	scribe.LogDebug("ethernet", "polled devices [%d] ports [%d]", len(devices), len(points))
 	return plugin.Sample{Points: points}, nil
 }
 
@@ -69,17 +72,20 @@ func (p *ethernetPlugin) Command(ctx context.Context, newState plugin.State) err
 
 func (p *ethernetPlugin) State() *plugin.StateTracker { return p.state }
 
-func probeEthernet(ctx context.Context) ([]engine.RouterDevice, error) {
-	cfg := config.Load()
-	client, err := engine.NewRouterClient(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiToken())
+func (p *ethernetPlugin) probeEthernet(ctx context.Context) ([]remote.GatewayDevice, error) {
+	if p.gateway == nil {
+		cfg := config.Load()
+		gateway, err := remote.NewGateway(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiToken())
+		if err != nil {
+			return nil, err
+		}
+		p.gateway = gateway
+	}
+	devices, err := p.gateway.Devices(ctx)
 	if err != nil {
 		return nil, err
 	}
-	devices, err := client.Devices(ctx)
-	if err != nil {
-		return nil, err
-	}
-	scribe.Debugf("ethernet", "probed devices [%d]", len(devices))
+	scribe.LogDebug("ethernet", "probed devices [%d]", len(devices))
 	return devices, nil
 }
 
@@ -112,20 +118,20 @@ func diagnoseEthernet(samples []plugin.Sample) plugin.Aggregate {
 	result := plugin.Aggregate{}
 	switch {
 	case total == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "SWITCH_UNREACHABLE", "switch unreachable or no monitored ports reporting")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "SWITCH_UNREACHABLE: switch unreachable or no monitored ports reporting")
 	case up == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "PORT_DOWN", "all monitored ports down across window")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "PORT_DOWN: all monitored ports down across window")
 	case upRatio == 1 && degraded == 0 && errored == 0:
-		result = plugin.Diagnose(plugin.StatusFit, 100, "UP", "all monitored ports up at expected speed")
+		result = plugin.Diagnose(plugin.StatusFit, 100, "UP: all monitored ports up at expected speed")
 	default:
 		score := plugin.Clamp(int(math.Round(upRatio*100)) - degraded*10 - errored*10)
 		switch {
 		case up < total:
-			result = plugin.Diagnose(plugin.StatusSick, score, "PORT_DOWN", fmt.Sprintf("%d/%d monitored ports up", up, total))
+			result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("PORT_DOWN: only [%d] of [%d] monitored ports up", up, total))
 		case degraded > 0:
-			result = plugin.Diagnose(plugin.StatusSick, score, "SPEED_DEGRADED", fmt.Sprintf("%d ports below expected speed or half-duplex", degraded))
+			result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("SPEED_DEGRADED: [%d] ports below expected speed or in half-duplex", degraded))
 		default:
-			result = plugin.Diagnose(plugin.StatusSick, score, "LINK_ERRORS", fmt.Sprintf("%d ports reporting errors", errored))
+			result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("LINK_ERRORS: [%d] ports reporting errors", errored))
 		}
 	}
 	result.Points = reportEthernet(result.Score, up, total, degraded, errored, points)

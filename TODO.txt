@@ -1,6 +1,7 @@
 ###############################################################################################################################################################
 # All
 ###############################################################################################################################################################
+Move all executables to have a prefix, eg media-* amedia-*
 Document database schemas as per mqtt in build/resources/sql for schema describe/stats, common queries for timescaledb, influxdb, postgres etc. Generated if applicable (eg wrangle plugins) or hardcoded
 Upgrade mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 Update max to latest Fedora
@@ -82,7 +83,6 @@ add additional local tests
 test internet when downloading
 have certs check letsnecrypt cert actually deployed to all targets, amke deployment nice
 Check each plugins impl
-Validate codebase file by file, systest, unit-tests
 implement internet/certs restart
 Deocom unpoller, hass-zigbee, internet
 
@@ -122,7 +122,14 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 # Storage
 ###############################################################################################################################################################
-should i extend the benchmark read period to 2min? 4xfiles? likewise should 4GiB write be increased?
+make health script easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
+Binaries for media-space to call it, also have a adu and abench?
+Add quirks to asahi install
+impl media-space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
+Implement backup - each module has personal backup script, desicovered and serially called by master backup script
+
+add storage format to here, if host== and shared funcs. maybe add sftab here too? or storage into each mod wheere fstab is today, move shared media mounting stuff here too?
+Implement TRIM on all SSDs
 enable TRIM:
     tee /etc/udev/rules.d/60-usb-ssd-trim.rules <<'EOF'
     ACTION=="add|change", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="9210", SUBSYSTEM=="scsi_disk", ATTR{provisioning_mode}="unmap"
@@ -131,15 +138,12 @@ enable TRIM:
     EOF
     sudo udevadm control --reload
     sudo systemctl enable --now fstrim.timer
-Upgrade RTL9210 enclosure firmwares on windows machine, confirm we can get RTL9210 working for NVME /share/10, then apply same to /share/11
-Implement TRIM on all SSDs
-make bench easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
-remove journals on shares, /share/10 has one? do any others?
-Binaries for media-space to call it, also have a adu and abench?
-Add quirks to asahi install
-Test share_08 on max, slow on Asahi (24 MB/s) see if Fedora resolves issue
-impl media-space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
-Implement backup - each module has personal backup script, desicovered and serially called by master backup script
+add journals on shares, as per /share/10
+add read ahead tuning blockdev --setra 8192 /dev/sda
+increase commit timeout PARTLABEL=share_08    /share/10    ext4    noatime,commit=60,errors=remount-ro,x-systemd.device-timeout=10s,nofail    0      2
+should i extend the benchmark read period to 2min? 4xfiles? likewise should 4GiB write be increased?
+Upgrade other ssd enclosure
+Rewrite other disks
 
 ###############################################################################################################################################################
 # Home Assistant

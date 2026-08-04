@@ -67,6 +67,12 @@ func TestAggregate_MarshalJSON(t *testing.T) {
 			expected:      `{"timestamp":1737686400,"ok":true,"status":"fit","score":100}`,
 			expectedError: false,
 		},
+		{
+			name:          "status_is_escaped",
+			message:       Aggregate{Timestamp: time.Unix(1737686400, 0), OK: true, Status: Status("bad\"\nstatus"), Score: 1},
+			expected:      `{"timestamp":1737686400,"ok":true,"status":"bad\"\nstatus","score":1}`,
+			expectedError: false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -122,28 +128,6 @@ func TestAggregate_AppendLineProtocol(t *testing.T) {
 	}
 }
 
-func TestPlugin_EscapeTag(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{name: "plain", input: "plain", expected: "plain"},
-		{name: "space", input: "a b", expected: `a\ b`},
-		{name: "comma", input: "a,b", expected: `a\,b`},
-		{name: "equals", input: "a=b", expected: `a\=b`},
-		{name: "mixed", input: "a b,c=d", expected: `a\ b\,c\=d`},
-		{name: "empty", input: "", expected: ""},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if got := escapeTag(test.input); got != test.expected {
-				t.Errorf("got %q want %q", got, test.expected)
-			}
-		})
-	}
-}
-
 func TestAggregate_AppendLineProtocol_Escaping(t *testing.T) {
 	m := Aggregate{
 		Plugin: "zig bee",
@@ -193,6 +177,177 @@ func TestStateTracker_SetGet(t *testing.T) {
 	s.Set(StateOff)
 	if got := s.Get(); got != StateOff {
 		t.Fatalf("after set: got %s want OFF", got)
+	}
+}
+
+func TestPlugin_Clamp(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    int
+		expected int
+	}{
+		{name: "below", value: -5, expected: 0},
+		{name: "low_bound", value: 0, expected: 0},
+		{name: "mid", value: 50, expected: 50},
+		{name: "high_bound", value: 100, expected: 100},
+		{name: "above", value: 150, expected: 100},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := Clamp(test.value); got != test.expected {
+				t.Errorf("clamp: got %d want %d", got, test.expected)
+			}
+		})
+	}
+}
+
+func TestPlugin_Round(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    float64
+		places   int
+		expected float64
+	}{
+		{name: "down", value: 1.2345, places: 2, expected: 1.23},
+		{name: "up", value: 1.2356, places: 2, expected: 1.24},
+		{name: "half_away", value: 12.5, places: 0, expected: 13},
+		{name: "whole", value: 7, places: 2, expected: 7},
+		{name: "negative", value: -1.2356, places: 2, expected: -1.24},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := Round(test.value, test.places); got != test.expected {
+				t.Errorf("round: got %v want %v", got, test.expected)
+			}
+		})
+	}
+}
+
+func TestPlugin_Diagnose(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     Status
+		expectedOK bool
+	}{
+		{name: "fit_is_ok", status: StatusFit, expectedOK: true},
+		{name: "sick_is_ok", status: StatusSick, expectedOK: true},
+		{name: "dead_is_not_ok", status: StatusDead, expectedOK: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := Diagnose(test.status, 42, "CODE: [value]")
+			if got.OK != test.expectedOK {
+				t.Errorf("ok: got %v want %v", got.OK, test.expectedOK)
+			}
+			if got.Status != test.status {
+				t.Errorf("status: got %s want %s", got.Status, test.status)
+			}
+			if got.Score != 42 {
+				t.Errorf("score: got %d want 42", got.Score)
+			}
+			if got.Reason != "CODE: [value]" {
+				t.Errorf("reason: got %s want CODE: [value]", got.Reason)
+			}
+		})
+	}
+}
+
+func TestDeltaTracker_Delta(t *testing.T) {
+	d := NewDeltaTracker()
+	steps := []struct {
+		name       string
+		key        string
+		cumulative int64
+		expected   int64
+	}{
+		{name: "first_seen_zero", key: "rx", cumulative: 100, expected: 0},
+		{name: "increment", key: "rx", cumulative: 150, expected: 50},
+		{name: "equal_zero", key: "rx", cumulative: 150, expected: 0},
+		{name: "reset_zero", key: "rx", cumulative: 120, expected: 0},
+		{name: "increment_after_reset", key: "rx", cumulative: 170, expected: 50},
+		{name: "other_key_first_seen", key: "tx", cumulative: 10, expected: 0},
+		{name: "other_key_increment", key: "tx", cumulative: 25, expected: 15},
+	}
+	for _, step := range steps {
+		if got := d.Delta(step.key, step.cumulative); got != step.expected {
+			t.Errorf("%s: got %d want %d", step.name, got, step.expected)
+		}
+	}
+}
+
+func TestPoint_Accessors(t *testing.T) {
+	p := NewPoint(
+		[]Tag{{"scope", "summary"}},
+		Float("loss_pct", 12.5),
+		Int("count", 7),
+		Bool("up", true),
+		Str("note", "hello"),
+		Null("missing"),
+	)
+	if v, ok := p.Float("loss_pct"); !ok || v != 12.5 {
+		t.Errorf("Float(loss_pct): got %v %v want 12.5 true", v, ok)
+	}
+	if v, ok := p.Float("count"); !ok || v != 7 {
+		t.Errorf("Float(count): got %v %v want 7 true", v, ok)
+	}
+	if _, ok := p.Float("up"); ok {
+		t.Errorf("Float(up): got ok=true want false")
+	}
+	if _, ok := p.Float("absent"); ok {
+		t.Errorf("Float(absent): got ok=true want false")
+	}
+	if v, ok := p.Int("count"); !ok || v != 7 {
+		t.Errorf("Int(count): got %v %v want 7 true", v, ok)
+	}
+	if _, ok := p.Int("loss_pct"); ok {
+		t.Errorf("Int(loss_pct): got ok=true want false")
+	}
+	if v, ok := p.Bool("up"); !ok || !v {
+		t.Errorf("Bool(up): got %v %v want true true", v, ok)
+	}
+	if _, ok := p.Bool("count"); ok {
+		t.Errorf("Bool(count): got ok=true want false")
+	}
+	if v, ok := p.Tag("scope"); !ok || v != "summary" {
+		t.Errorf("Tag(scope): got %v %v want summary true", v, ok)
+	}
+	if _, ok := p.Tag("absent"); ok {
+		t.Errorf("Tag(absent): got ok=true want false")
+	}
+}
+
+func TestPlugin_LatestPoints(t *testing.T) {
+	if got := LatestPoints(nil); got != nil {
+		t.Errorf("empty: got %v want nil", got)
+	}
+	samples := []Sample{
+		{Points: []Point{NewPoint(nil, Int("n", 1))}},
+		{Points: []Point{NewPoint(nil, Int("n", 2))}},
+	}
+	got := LatestPoints(samples)
+	if len(got) != 1 {
+		t.Fatalf("len: got %d want 1", len(got))
+	}
+	if v, ok := got[0].Int("n"); !ok || v != 2 {
+		t.Errorf("latest: got %v %v want 2 true", v, ok)
+	}
+}
+
+func TestPlugin_PrependSummaryPoints(t *testing.T) {
+	summary := NewPoint([]Tag{{"scope", "summary"}}, Int("score", 90))
+	details := []Point{
+		NewPoint([]Tag{{"scope", "target"}}, Int("n", 1)),
+		NewPoint([]Tag{{"scope", "target"}}, Int("n", 2)),
+	}
+	got := PrependSummaryPoints(summary, details)
+	if len(got) != 3 {
+		t.Fatalf("len: got %d want 3", len(got))
+	}
+	if v, _ := got[0].Tag("scope"); v != "summary" {
+		t.Errorf("first scope: got %s want summary", v)
+	}
+	if v, _ := got[2].Int("n"); v != 2 {
+		t.Errorf("last n: got %d want 2", v)
 	}
 }
 

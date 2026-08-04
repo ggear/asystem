@@ -68,7 +68,7 @@ func (p *zigbeePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		}
 		points = append(points, plugin.NewPoint(tags, lqiField, plugin.Bool("available", d.available)))
 	}
-	scribe.Debugf("zigbee", "polled online [%v] permit_join [%v] devices [%d] points [%d]", online, permit, len(devices), len(points))
+	scribe.LogDebug("zigbee", "polled online [%v] permit_join [%v] devices [%d] points [%d]", online, permit, len(devices), len(points))
 	return plugin.Sample{Points: points}, nil
 }
 
@@ -117,7 +117,7 @@ func probeZigbee(ctx context.Context) (bool, bool, []zigbeeDevice, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	online, permit, devices := readZigbee(zigbeeBaseTopic, messages)
-	scribe.Debugf("zigbee", "probed topics [%d] online [%v] devices [%d]", len(messages), online, len(devices))
+	scribe.LogDebug("zigbee", "probed topics [%d] online [%v] devices [%d]", len(messages), online, len(devices))
 	return online, permit, devices, nil
 }
 
@@ -226,14 +226,14 @@ func diagnoseZigbee(samples []plugin.Sample) plugin.Aggregate {
 	result := plugin.Aggregate{}
 	switch {
 	case !bridgeOnline || total == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "COORDINATOR_DOWN", "coordinator offline or no device reports across window")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "COORDINATOR_DOWN: coordinator offline or no device reports across window")
 		minLQI = 0
 	case onlineRatio >= onlineFitRatio && weak == 0:
-		result = plugin.Diagnose(plugin.StatusFit, score, "HEALTHY", "coordinator online with healthy devices")
+		result = plugin.Diagnose(plugin.StatusFit, score, "HEALTHY: coordinator online with healthy devices")
 	case onlineRatio < onlineFitRatio:
-		result = plugin.Diagnose(plugin.StatusSick, score, "DEVICES_OFFLINE", fmt.Sprintf("%d/%d devices online", online, total))
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("DEVICES_OFFLINE: only [%d] of [%d] devices online", online, total))
 	default:
-		result = plugin.Diagnose(plugin.StatusSick, score, "WEAK_LINKS", fmt.Sprintf("%d devices with weak links (min lqi %d)", weak, int(minLQI)))
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("WEAK_LINKS: [%d] devices with weak links with LQI less than [%d]", weak, int(minLQI)))
 	}
 	result.Points = reportZigbee(result.Score, online, total, weak, int(minLQI), points)
 	return result

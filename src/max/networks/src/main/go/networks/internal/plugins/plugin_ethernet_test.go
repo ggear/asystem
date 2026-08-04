@@ -3,21 +3,22 @@ package plugins
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
-	"networks/internal/engine"
 	"networks/internal/plugin"
+	"networks/internal/remote"
 )
 
 func TestEthernet_Poll(t *testing.T) {
 	rx, tx := int64(1), int64(2)
-	probe := func(context.Context) ([]engine.RouterDevice, error) {
-		return []engine.RouterDevice{
-			{Name: "core", Type: switchType, PortTable: []engine.RouterPort{
+	probe := func(context.Context) ([]remote.GatewayDevice, error) {
+		return []remote.GatewayDevice{
+			{Name: "core", Type: switchType, PortTable: []remote.GatewayPort{
 				{PortIdx: 1, Enable: true, Up: true, Speed: 1000, FullDuplex: true, RxErrors: rx, TxErrors: tx},
 				{PortIdx: 9, Enable: false, Up: false},
 			}},
-			{Name: "attic-ap", Type: apType, PortTable: []engine.RouterPort{{PortIdx: 1, Enable: true, Up: true}}},
+			{Name: "attic-ap", Type: apType, PortTable: []remote.GatewayPort{{PortIdx: 1, Enable: true, Up: true}}},
 		}, nil
 	}
 	p := &ethernetPlugin{probe: probe, deltas: plugin.NewDeltaTracker()}
@@ -58,7 +59,9 @@ func TestEthernet_Poll(t *testing.T) {
 }
 
 func TestEthernet_PollError(t *testing.T) {
-	p := &ethernetPlugin{probe: func(context.Context) ([]engine.RouterDevice, error) { return nil, errors.New("controller unreachable") }}
+	p := &ethernetPlugin{probe: func(context.Context) ([]remote.GatewayDevice, error) {
+		return nil, errors.New("controller unreachable")
+	}}
 	if _, err := p.Poll(context.Background()); err == nil {
 		t.Fatal("poll: expected probe error to propagate, got nil")
 	}
@@ -71,7 +74,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 		expectedStatus plugin.Status
 		expectedOK     bool
 		expectedScore  int
-		expectedDetail string
+		expectedReason string
 		expectedError  bool
 	}{
 		{
@@ -80,7 +83,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  100,
-			expectedDetail: "UP",
+			expectedReason:"UP",
 			expectedError:  false,
 		},
 		{
@@ -89,7 +92,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  50,
-			expectedDetail: "PORT_DOWN",
+			expectedReason:"PORT_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -98,7 +101,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  90,
-			expectedDetail: "SPEED_DEGRADED",
+			expectedReason:"SPEED_DEGRADED",
 			expectedError:  false,
 		},
 		{
@@ -107,7 +110,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  90,
-			expectedDetail: "LINK_ERRORS",
+			expectedReason:"LINK_ERRORS",
 			expectedError:  false,
 		},
 		{
@@ -116,7 +119,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "PORT_DOWN",
+			expectedReason:"PORT_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -125,7 +128,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "SWITCH_UNREACHABLE",
+			expectedReason:"SWITCH_UNREACHABLE",
 			expectedError:  false,
 		},
 	}
@@ -144,8 +147,8 @@ func TestEthernet_Diagnose(t *testing.T) {
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
 			}
-			if got.Detail != test.expectedDetail {
-				t.Errorf("detail: got %s want %s", got.Detail, test.expectedDetail)
+			if !strings.HasPrefix(got.Reason, test.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
 			}
 		})
 	}

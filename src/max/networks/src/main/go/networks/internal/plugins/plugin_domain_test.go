@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,7 +60,7 @@ func TestDomain_Diagnose(t *testing.T) {
 		expectedStatus plugin.Status
 		expectedOK     bool
 		expectedScore  int
-		expectedDetail string
+		expectedReason string
 		expectedError  bool
 	}{
 		{
@@ -71,7 +72,7 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  100,
-			expectedDetail: "RESOLVED",
+			expectedReason:"RESOLVED",
 			expectedError:  false,
 		},
 		{
@@ -83,7 +84,7 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  67,
-			expectedDetail: "PARTIAL_RESOLUTION",
+			expectedReason:"PARTIAL_RESOLUTION",
 			expectedError:  false,
 		},
 		{
@@ -95,7 +96,7 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  67,
-			expectedDetail: "RECORD_MISMATCH",
+			expectedReason:"RECORD_MISMATCH",
 			expectedError:  false,
 		},
 		{
@@ -106,7 +107,7 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "NO_RESOLUTION",
+			expectedReason:"NO_RESOLUTION",
 			expectedError:  false,
 		},
 	}
@@ -125,8 +126,8 @@ func TestDomain_Diagnose(t *testing.T) {
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
 			}
-			if got.Detail != test.expectedDetail {
-				t.Errorf("detail: got %s want %s", got.Detail, test.expectedDetail)
+			if !strings.HasPrefix(got.Reason, test.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
 			}
 		})
 	}

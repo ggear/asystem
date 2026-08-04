@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,7 +45,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 		expectedStatus plugin.Status
 		expectedOK     bool
 		expectedScore  int
-		expectedDetail string
+		expectedReason string
 	}{
 		{
 			name:           "fit_fresh_strong_signal",
@@ -52,7 +53,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  82,
-			expectedDetail: "HEALTHY",
+			expectedReason:"HEALTHY",
 		},
 		{
 			name:           "sick_fresh_weak_signal",
@@ -60,7 +61,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  30,
-			expectedDetail: "WEAK_SIGNAL",
+			expectedReason:"WEAK_SIGNAL",
 		},
 		{
 			name:           "dead_stale_ignores_signal",
@@ -68,7 +69,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "STALE",
+			expectedReason:"STALE",
 		},
 		{
 			name:           "dead_fresh_no_signal",
@@ -76,7 +77,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "NO_DATA",
+			expectedReason:"NO_DATA",
 		},
 	}
 	for _, test := range tests {
@@ -94,8 +95,8 @@ func TestWeewx_Diagnose(t *testing.T) {
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
 			}
-			if got.Detail != test.expectedDetail {
-				t.Errorf("detail: got %s want %s", got.Detail, test.expectedDetail)
+			if !strings.HasPrefix(got.Reason, test.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
 			}
 		})
 	}

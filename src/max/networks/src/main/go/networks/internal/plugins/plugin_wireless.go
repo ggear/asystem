@@ -6,8 +6,8 @@ import (
 	"math"
 
 	"networks/internal/config"
-	"networks/internal/engine"
 	"networks/internal/plugin"
+	"networks/internal/remote"
 	"networks/internal/scribe"
 )
 
@@ -17,12 +17,15 @@ const (
 )
 
 type wirelessPlugin struct {
-	probe func(ctx context.Context) ([]engine.RouterDevice, error)
-	state *plugin.StateTracker
+	probe   func(ctx context.Context) ([]remote.GatewayDevice, error)
+	gateway *remote.Gateway
+	state   *plugin.StateTracker
 }
 
 func newWirelessPlugin() *wirelessPlugin {
-	return &wirelessPlugin{probe: probeWireless, state: plugin.NewStateTracker(plugin.StateOn)}
+	p := &wirelessPlugin{state: plugin.NewStateTracker(plugin.StateOn)}
+	p.probe = p.probeWireless
+	return p
 }
 
 func (p *wirelessPlugin) Name() string { return "wireless" }
@@ -42,7 +45,7 @@ func (p *wirelessPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		tags := []plugin.Tag{{Key: "scope", Value: "ap"}, {Key: "ap", Value: device.Name}}
 		points = append(points, plugin.NewPoint(tags, plugin.Bool("up", device.State == 1), plugin.Int("experience", int64(device.Satisfaction)), plugin.Int("num_clients", int64(device.NumSta))))
 	}
-	scribe.Debugf("wireless", "polled devices [%d] aps [%d]", len(devices), len(points))
+	scribe.LogDebug("wireless", "polled devices [%d] aps [%d]", len(devices), len(points))
 	return plugin.Sample{Points: points}, nil
 }
 
@@ -56,17 +59,20 @@ func (p *wirelessPlugin) Command(ctx context.Context, newState plugin.State) err
 
 func (p *wirelessPlugin) State() *plugin.StateTracker { return p.state }
 
-func probeWireless(ctx context.Context) ([]engine.RouterDevice, error) {
-	cfg := config.Load()
-	client, err := engine.NewRouterClient(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiToken())
+func (p *wirelessPlugin) probeWireless(ctx context.Context) ([]remote.GatewayDevice, error) {
+	if p.gateway == nil {
+		cfg := config.Load()
+		gateway, err := remote.NewGateway(cfg.UnifiURL(), cfg.UnifiSite(), cfg.UnifiUser(), cfg.UnifiToken())
+		if err != nil {
+			return nil, err
+		}
+		p.gateway = gateway
+	}
+	devices, err := p.gateway.Devices(ctx)
 	if err != nil {
 		return nil, err
 	}
-	devices, err := client.Devices(ctx)
-	if err != nil {
-		return nil, err
-	}
-	scribe.Debugf("wireless", "probed devices [%d]", len(devices))
+	scribe.LogDebug("wireless", "probed devices [%d]", len(devices))
 	return devices, nil
 }
 
@@ -99,15 +105,15 @@ func diagnoseWireless(samples []plugin.Sample) plugin.Aggregate {
 	result := plugin.Aggregate{}
 	switch {
 	case total == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "CONTROLLER_UNREACHABLE", "controller unreachable or no access points reporting")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "CONTROLLER_UNREACHABLE: controller unreachable or no access points reporting")
 	case up == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "AP_DOWN", "all access points down across window")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "AP_DOWN: all access points down across window")
 	case upRatio == 1 && meanExperience >= experienceFitMin:
-		result = plugin.Diagnose(plugin.StatusFit, score, "UP", "all access points up with good client experience")
+		result = plugin.Diagnose(plugin.StatusFit, score, "UP: all access points up with good client experience")
 	case up < total:
-		result = plugin.Diagnose(plugin.StatusSick, score, "AP_DOWN", fmt.Sprintf("%d/%d access points up", up, total))
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("AP_DOWN: only [%d] of [%d] access points up", up, total))
 	default:
-		result = plugin.Diagnose(plugin.StatusSick, score, "POOR_CLIENTS", fmt.Sprintf("mean client experience %.0f%%", meanExperience))
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("POOR_CLIENTS: mean client experience [%.0f%%]", meanExperience))
 	}
 	result.Points = reportWireless(result.Score, up, total, meanExperience, points)
 	return result

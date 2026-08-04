@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,7 +55,7 @@ func TestInternet_Diagnose(t *testing.T) {
 		expectedStatus plugin.Status
 		expectedOK     bool
 		expectedScore  int
-		expectedDetail string
+		expectedReason string
 		expectedError  bool
 	}{
 		{
@@ -68,7 +69,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  100,
-			expectedDetail: "UP",
+			expectedReason:"UP",
 			expectedError:  false,
 		},
 		{
@@ -82,7 +83,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  90,
-			expectedDetail: "ELEVATED_LOSS",
+			expectedReason:"ELEVATED_LOSS",
 			expectedError:  false,
 		},
 		{
@@ -96,7 +97,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  52,
-			expectedDetail: "ELEVATED_LOSS",
+			expectedReason:"ELEVATED_LOSS",
 			expectedError:  false,
 		},
 		{
@@ -110,7 +111,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  90,
-			expectedDetail: "HIGH_LATENCY",
+			expectedReason:"HIGH_LATENCY",
 			expectedError:  false,
 		},
 		{
@@ -124,7 +125,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "ISP_DOWN",
+			expectedReason:"ISP_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -138,7 +139,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "LAN_DOWN",
+			expectedReason:"LAN_DOWN",
 			expectedError:  false,
 		},
 	}
@@ -157,8 +158,8 @@ func TestInternet_Diagnose(t *testing.T) {
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
 			}
-			if got.Detail != test.expectedDetail {
-				t.Errorf("detail: got %s want %s", got.Detail, test.expectedDetail)
+			if !strings.HasPrefix(got.Reason, test.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
 			}
 		})
 	}

@@ -54,7 +54,7 @@ func (p *domainPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	for _, r := range resolvers {
 		result, err := p.probe(ctx, r.address, checkDomain)
 		if err != nil || len(result.addresses) == 0 {
-			scribe.Debugf("domain", "probe of resolver [%s] server [%s] failed [%v]", r.name, r.address, err)
+			scribe.LogDebug("domain", "probe of resolver [%s] server [%s] failed [%v]", r.name, r.address, err)
 			points = append(points, plugin.NewPoint(
 				[]plugin.Tag{{Key: "scope", Value: "resolver"}, {Key: "resolver", Value: r.name}, {Key: "addresses", Value: ""}},
 				plugin.Bool("resolved", false), plugin.Null("latency_ms")))
@@ -62,7 +62,7 @@ func (p *domainPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		}
 		addresses := strings.Join(result.addresses, ",")
 		latency := plugin.Round(float64(result.latency)/float64(time.Millisecond), 1)
-		scribe.Debugf("domain", "probed resolver [%s] server [%s] addresses [%s] latency_ms [%v]", r.name, r.address, addresses, latency)
+		scribe.LogDebug("domain", "probed resolver [%s] server [%s] addresses [%s] latency_ms [%v]", r.name, r.address, addresses, latency)
 		points = append(points, plugin.NewPoint(
 			[]plugin.Tag{{Key: "scope", Value: "resolver"}, {Key: "resolver", Value: r.name}, {Key: "addresses", Value: addresses}},
 			plugin.Bool("resolved", true), plugin.Float("latency_ms", latency)))
@@ -132,13 +132,13 @@ func diagnoseDomain(samples []plugin.Sample) plugin.Aggregate {
 	result := plugin.Aggregate{}
 	switch {
 	case total == 0 || resolved == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "NO_RESOLUTION", fmt.Sprintf("no resolver returned an address for [%s]", checkDomain))
+		result = plugin.Diagnose(plugin.StatusDead, 0, fmt.Sprintf("NO_RESOLUTION: no resolver returned an address for [%s]", checkDomain))
 	case failed > 0:
-		result = plugin.Diagnose(plugin.StatusSick, score, "PARTIAL_RESOLUTION", fmt.Sprintf("resolution failed on %d/%d resolvers", failed, total))
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("PARTIAL_RESOLUTION: resolution failed on [%d] of [%d] resolvers", failed, total))
 	case agreeing < total:
-		result = plugin.Diagnose(plugin.StatusSick, score, "RECORD_MISMATCH", fmt.Sprintf("only %d/%d resolvers agree on the same address set", agreeing, total))
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("RECORD_MISMATCH: only [%d] of [%d] resolvers agree on the same address set", agreeing, total))
 	default:
-		result = plugin.Diagnose(plugin.StatusFit, score, "RESOLVED", fmt.Sprintf("all %d resolvers agree on %s", total, consensus))
+		result = plugin.Diagnose(plugin.StatusFit, score, fmt.Sprintf("RESOLVED: all [%d] resolvers agree on [%s]", total, consensus))
 	}
 	result.Points = reportDomain(result.Score, consensus, agreeing, failed, points)
 	return result

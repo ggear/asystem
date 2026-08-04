@@ -80,7 +80,7 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				if d, err := p.probe(ctx, t.ip); err == nil {
 					roundTrips = append(roundTrips, float64(d)/float64(time.Millisecond))
 				} else {
-					scribe.Debugf("internet", "probe of scope [%s] target [%s] failed [%v]", t.scope, t.ip, err)
+					scribe.LogDebug("internet", "probe of scope [%s] target [%s] failed [%v]", t.scope, t.ip, err)
 				}
 				if j < burstSize-1 {
 					select {
@@ -94,7 +94,7 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 			if sent > 0 {
 				loss = 100 * float64(sent-received) / float64(sent)
 			}
-			scribe.Debugf("internet", "probed scope [%s] target [%s] sent [%d] recv [%d] loss_pct [%v]", t.scope, t.ip, sent, received, loss)
+			scribe.LogDebug("internet", "probed scope [%s] target [%s] sent [%d] recv [%d] loss_pct [%v]", t.scope, t.ip, sent, received, loss)
 			tags := []plugin.Tag{{Key: "scope", Value: t.scope}, {Key: "target", Value: t.ip}}
 			fields := []plugin.Field{plugin.Int("sent", int64(sent)), plugin.Int("recv", int64(received)), plugin.Float("loss_pct", loss)}
 			if received > 0 {
@@ -262,11 +262,11 @@ func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 	result := plugin.Aggregate{}
 	switch {
 	case len(publicIPs) == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "NO_DATA", "no internet samples in window")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "NO_DATA: no internet samples in window")
 	case !gatewayOK:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "LAN_DOWN", "gateway unreachable across window")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "LAN_DOWN: gateway unreachable across window")
 	case reachable == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "ISP_DOWN", "all internet targets unreachable across window")
+		result = plugin.Diagnose(plugin.StatusDead, 0, "ISP_DOWN: all internet targets unreachable across window")
 	default:
 		latencyPenalty := 0
 		if avgRTT > rttFitMaxMs {
@@ -285,11 +285,11 @@ func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 		score := plugin.Clamp(100 - int(math.Round(avgLoss)) - (len(publicIPs)-reachable)*targetDownCost - latencyPenalty - jitterPenalty)
 		switch {
 		case avgLoss <= lossFitMaxPercent && reachable == len(publicIPs) && avgRTT <= rttFitMaxMs && avgJitter <= jitterFitMaxMs:
-			result = plugin.Diagnose(plugin.StatusFit, score, "UP", "internet reachable within normal range")
+			result = plugin.Diagnose(plugin.StatusFit, score, "UP: internet reachable within normal range")
 		case avgRTT > rttFitMaxMs || avgJitter > jitterFitMaxMs:
-			result = plugin.Diagnose(plugin.StatusSick, score, "HIGH_LATENCY", fmt.Sprintf("elevated latency avg_rtt_ms=%.1f avg_jitter_ms=%.1f", avgRTT, avgJitter))
+			result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("HIGH_LATENCY: elevated latency with average RTT [%.1f]ms and average jitter [%.1f]ms", avgRTT, avgJitter))
 		default:
-			result = plugin.Diagnose(plugin.StatusSick, score, "ELEVATED_LOSS", fmt.Sprintf("elevated loss avg_loss_pct=%.1f reachable=%d/%d", avgLoss, reachable, len(publicIPs)))
+			result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("ELEVATED_LOSS: elevated loss of [%.1f%%] with [%d] of [%d] targets reachable", avgLoss, reachable, len(publicIPs)))
 		}
 	}
 	result.Points = reportInternet(result.Score, avgLoss, avgRTT, avgJitter, gatewayOK, publicIPs, accumulators)

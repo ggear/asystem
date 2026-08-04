@@ -3,19 +3,20 @@ package plugins
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
-	"networks/internal/engine"
 	"networks/internal/plugin"
+	"networks/internal/remote"
 )
 
 func TestWireless_Poll(t *testing.T) {
-	devices := []engine.RouterDevice{
+	devices := []remote.GatewayDevice{
 		{Name: "deck", Type: apType, State: 1, Satisfaction: 90, NumSta: 4},
 		{Name: "hallway", Type: apType, State: 0, Satisfaction: 0, NumSta: 0},
 		{Name: "core", Type: switchType, State: 1},
 	}
-	p := &wirelessPlugin{probe: func(context.Context) ([]engine.RouterDevice, error) {
+	p := &wirelessPlugin{probe: func(context.Context) ([]remote.GatewayDevice, error) {
 		return devices, nil
 	}}
 	msg, err := p.Poll(context.Background())
@@ -48,7 +49,7 @@ func TestWireless_Poll(t *testing.T) {
 }
 
 func TestWireless_PollError(t *testing.T) {
-	p := &wirelessPlugin{probe: func(context.Context) ([]engine.RouterDevice, error) {
+	p := &wirelessPlugin{probe: func(context.Context) ([]remote.GatewayDevice, error) {
 		return nil, errors.New("controller unreachable")
 	}}
 	if _, err := p.Poll(context.Background()); err == nil {
@@ -63,7 +64,7 @@ func TestWireless_Diagnose(t *testing.T) {
 		expectedStatus plugin.Status
 		expectedOK     bool
 		expectedScore  int
-		expectedDetail string
+		expectedReason string
 		expectedError  bool
 	}{
 		{
@@ -72,7 +73,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  95,
-			expectedDetail: "UP",
+			expectedReason:"UP",
 			expectedError:  false,
 		},
 		{
@@ -81,7 +82,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  70,
-			expectedDetail: "AP_DOWN",
+			expectedReason:"AP_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -90,7 +91,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  80,
-			expectedDetail: "POOR_CLIENTS",
+			expectedReason:"POOR_CLIENTS",
 			expectedError:  false,
 		},
 		{
@@ -99,7 +100,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "AP_DOWN",
+			expectedReason:"AP_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -108,7 +109,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "CONTROLLER_UNREACHABLE",
+			expectedReason:"CONTROLLER_UNREACHABLE",
 			expectedError:  false,
 		},
 	}
@@ -127,8 +128,8 @@ func TestWireless_Diagnose(t *testing.T) {
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
 			}
-			if got.Detail != test.expectedDetail {
-				t.Errorf("detail: got %s want %s", got.Detail, test.expectedDetail)
+			if !strings.HasPrefix(got.Reason, test.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
 			}
 		})
 	}

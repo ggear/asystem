@@ -68,16 +68,14 @@ type Sample struct {
 }
 
 type Aggregate struct {
-	Plugin      string
-	Timestamp   time.Time
-	OK          bool
-	Status      Status
-	Score       int
-	Detail      string
-	Reason      string
-	WindowSize  int
-	SampleCount int
-	Points      []Point
+	Plugin        string
+	Timestamp     time.Time
+	OK            bool
+	Status        Status
+	Score         int
+	Reason        string
+	WindowSeconds int
+	Points        []Point
 }
 
 type Mode uint8
@@ -95,8 +93,8 @@ const (
 )
 
 type StateTracker struct {
-	mu    sync.Mutex
-	value State
+	valueMu sync.Mutex
+	value   State
 }
 
 type DeltaTracker struct {
@@ -189,8 +187,8 @@ func Round(v float64, places int) float64 {
 	return math.Round(v*factor) / factor
 }
 
-func Diagnose(status Status, score int, detail, reason string) Aggregate {
-	return Aggregate{Status: status, OK: status != StatusDead, Score: score, Detail: detail, Reason: reason}
+func Diagnose(status Status, score int, reason string) Aggregate {
+	return Aggregate{Status: status, OK: status != StatusDead, Score: score, Reason: reason}
 }
 
 func ParseState(payload string) (State, bool) {
@@ -216,14 +214,14 @@ func NewStateTracker(initial State) *StateTracker {
 }
 
 func (s *StateTracker) Get() State {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.valueMu.Lock()
+	defer s.valueMu.Unlock()
 	return s.value
 }
 
 func (s *StateTracker) Set(value State) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.valueMu.Lock()
+	defer s.valueMu.Unlock()
 	s.value = value
 }
 
@@ -304,9 +302,9 @@ func (a Aggregate) MarshalJSON() ([]byte, error) {
 	out = strconv.AppendInt(out, a.Timestamp.Unix(), 10)
 	out = append(out, `,"ok":`...)
 	out = strconv.AppendBool(out, a.OK)
-	out = append(out, `,"status":"`...)
-	out = append(out, a.Status...)
-	out = append(out, `","score":`...)
+	out = append(out, `,"status":`...)
+	out = strconv.AppendQuote(out, string(a.Status))
+	out = append(out, `,"score":`...)
 	out = strconv.AppendInt(out, int64(a.Score), 10)
 	out = append(out, '}')
 	return out, nil
@@ -375,6 +373,7 @@ func appendFieldValue(buf *bytes.Buffer, field Field) {
 	case KindInt:
 		buf.WriteString(strconv.FormatInt(field.Int, 10))
 		buf.WriteByte('i')
+	default:
 	}
 }
 

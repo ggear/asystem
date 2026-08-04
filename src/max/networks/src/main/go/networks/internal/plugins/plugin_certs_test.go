@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,15 +12,15 @@ import (
 
 func TestCerts_Poll(t *testing.T) {
 	now := time.Now()
-	p := &certsPlugin{probe: func(context.Context, string, string) (probeResult, error) {
-		return probeResult{notBefore: now.Add(-30 * 24 * time.Hour), notAfter: now.Add(60 * 24 * time.Hour), verified: true}, nil
+	p := &certsPlugin{probe: func(context.Context, string) (certsResult, error) {
+		return certsResult{notBefore: now.Add(-30 * 24 * time.Hour), notAfter: now.Add(60 * 24 * time.Hour)}, nil
 	}}
 	msg, err := p.Poll(context.Background())
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != len(endpoints) {
-		t.Fatalf("points: got %d want %d (one per endpoint)", len(msg.Points), len(endpoints))
+	if len(msg.Points) != len(certsEndpoints) {
+		t.Fatalf("points: got %d want %d (one per endpoint)", len(msg.Points), len(certsEndpoints))
 	}
 	point := msg.Points[0]
 	if verified, _ := point.Bool("verified"); !verified {
@@ -42,15 +43,15 @@ func TestCerts_Poll(t *testing.T) {
 }
 
 func TestCerts_PollUnverified(t *testing.T) {
-	p := &certsPlugin{probe: func(context.Context, string, string) (probeResult, error) {
-		return probeResult{}, errors.New("probe timeout")
+	p := &certsPlugin{probe: func(context.Context, string) (certsResult, error) {
+		return certsResult{}, errors.New("probe timeout")
 	}}
 	msg, err := p.Poll(context.Background())
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != len(endpoints) {
-		t.Fatalf("points: got %d want %d", len(msg.Points), len(endpoints))
+	if len(msg.Points) != len(certsEndpoints) {
+		t.Fatalf("points: got %d want %d", len(msg.Points), len(certsEndpoints))
 	}
 	point := msg.Points[0]
 	if verified, _ := point.Bool("verified"); verified {
@@ -68,7 +69,7 @@ func TestCerts_Diagnose(t *testing.T) {
 		expectedStatus plugin.Status
 		expectedOK     bool
 		expectedScore  int
-		expectedDetail string
+		expectedReason string
 		expectedError  bool
 	}{
 		{
@@ -77,7 +78,7 @@ func TestCerts_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  60,
-			expectedDetail: "VALID",
+			expectedReason:"VALID",
 			expectedError:  false,
 		},
 		{
@@ -86,7 +87,7 @@ func TestCerts_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  5,
-			expectedDetail: "EXPIRING_SOON",
+			expectedReason:"EXPIRING_SOON",
 			expectedError:  false,
 		},
 		{
@@ -95,7 +96,7 @@ func TestCerts_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  60,
-			expectedDetail: "VERIFY_FAILED",
+			expectedReason:"VERIFY_FAILED",
 			expectedError:  false,
 		},
 		{
@@ -104,7 +105,7 @@ func TestCerts_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedDetail: "PROBE_UNREACHABLE",
+			expectedReason:"PROBE_UNREACHABLE",
 			expectedError:  false,
 		},
 	}
@@ -123,8 +124,8 @@ func TestCerts_Diagnose(t *testing.T) {
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
 			}
-			if got.Detail != test.expectedDetail {
-				t.Errorf("detail: got %s want %s", got.Detail, test.expectedDetail)
+			if !strings.HasPrefix(got.Reason, test.expectedReason) {
+				t.Errorf("reason: got %q want prefix %q", got.Reason, test.expectedReason)
 			}
 		})
 	}

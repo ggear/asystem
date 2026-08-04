@@ -57,15 +57,15 @@ func ParseLevel(raw string) (slog.Level, error) {
 	}
 }
 
-func Debugf(subject, format string, args ...any) { emit(slog.LevelDebug, subject, format, args...) }
+func LogDebug(subject, format string, args ...any) { emit(slog.LevelDebug, subject, format, args...) }
 
-func Infof(subject, format string, args ...any) { emit(slog.LevelInfo, subject, format, args...) }
+func LogInfo(subject, format string, args ...any) { emit(slog.LevelInfo, subject, format, args...) }
 
-func Warnf(subject, format string, args ...any) { emit(slog.LevelWarn, subject, format, args...) }
+func LogWarn(subject, format string, args ...any) { emit(slog.LevelWarn, subject, format, args...) }
 
-func Errorf(subject, format string, args ...any) { emit(slog.LevelError, subject, format, args...) }
+func LogError(subject, format string, args ...any) { emit(slog.LevelError, subject, format, args...) }
 
-func Diagnosis(subject, status string, score int, took time.Duration, reason string) {
+func LogDiagnosis(subject, status string, score int, took time.Duration, reason string) {
 	scoreText := strconv.Itoa(score)
 	tookText := fmt.Sprintf("%dms", took.Milliseconds())
 	level := slog.LevelInfo
@@ -75,10 +75,16 @@ func Diagnosis(subject, status string, score int, took time.Duration, reason str
 	case "dead":
 		level = slog.LevelError
 	}
-	emit(level, subject, "diagnosed as ... [%s] %s with score ... [%s] %s because [%s] in [%s]",
-		status, leader(6-len(status)),
-		scoreText, leader(5-len(scoreText)),
-		reason, tookText)
+	emit(level,
+		subject,
+		"diagnosed as ... [%s] %s with score ... [%s] %s because [%s] in [%s]",
+		status,
+		leader(6-len(status)),
+		scoreText,
+		leader(5-len(scoreText)),
+		reason,
+		tookText,
+	)
 }
 
 func emit(level slog.Level, subject, format string, args ...any) {
