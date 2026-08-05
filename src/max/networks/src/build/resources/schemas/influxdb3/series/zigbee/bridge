@@ -1,0 +1,12 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+# zigbee/bridge [coordinator state and the mesh it reports]
+zigbee
+    ok=<0|1>i,
+    score=<number>i,
+    devices_total=<number>i,
+    devices_ok=<number>i,
+    devices_weak=<number>i,
+    avg_lqi=<number>
+    <timestamp>

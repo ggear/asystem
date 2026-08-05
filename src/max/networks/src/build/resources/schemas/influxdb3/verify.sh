@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+set -uo pipefail
+
+SCHEMA_VERBOSE=${SCHEMA_VERBOSE:-false}
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  -v | --verbose)
+    SCHEMA_VERBOSE=true
+    shift
+    ;;
+  -h | --help | -*)
+    echo "Usage: ${0} [-v|--verbose] [-h|--help]"
+    echo "       influxdb3 verify assert production matches the declaration"
+    exit 2
+    ;;
+  *)
+    shift
+    ;;
+  esac
+done
+
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
+MODULE_DIR="$(readlink -f "${ROOT_DIR}/../../../../..")"
+
+if [ ! -f "${MODULE_DIR}/.env" ]; then
+  echo "Schema script [networks] could not find env file [${MODULE_DIR}/.env]" >&2
+  exit 1
+fi
+set -a
+# shellcheck disable=SC1091
+. "${MODULE_DIR}/.env"
+set +a
+
+if [ "${SCHEMA_VERBOSE}" == true ]; then
+  set -x
+fi
+
+query() {
+  local response status
+  response="$(curl -sS -w '\n%{http_code}' -X POST \
+    "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/query_sql" \
+    -H "Authorization: Bearer ${INFLUXDB3_TOKEN_ADMIN}" \
+    -H "Content-Type: application/json" \
+    --data-binary "$(jq -n --arg db "${DATABASE_NAME}" --arg q "$1" --arg format "${2:-json}" \
+      '{db: $db, q: $q, format: $format}')")"
+  status="${response##*$'\n'}"
+  printf '%s' "${response%$'\n'*}"
+  [ "${status}" = "200" ]
+}
+
+SCHEMA_ECHO=${SCHEMA_ECHO:-true}
+SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
+SCHEMA_TARGET=${SCHEMA_TARGET:-}
+
+statements() {
+  sed -e 's/--.*$//' "$1" | tr '\n' ' ' | tr ';' '\n' |
+    sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+table() {
+  jq -sr '
+    def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
+    def numeric: type == "number" or (type == "string" and test("^-?[0-9]+([.][0-9]+)?$"));
+    (if length == 1 and (.[0] | type) == "array" then .[0] else . end)
+    | if length == 0 then "no rows" else
+      (.[0] | keys_unsorted) as $columns
+      | [range(0; $columns | length)] as $indexes
+      | (map(. as $row | $columns
+        | map(if $row[.] == null then "" else ($row[.] | tostring) end))) as $body
+      | ([$columns | map(title)] + $body) as $matrix
+      | ($indexes | map(. as $index | $matrix | map(.[$index] | length) | max)) as $widths
+      | ($indexes | map(. as $index | $body | map(.[$index])
+        | (any(numeric) and all(numeric or . == "-" or . == "")))) as $rights
+      | (def row($cells): "|" + ($cells | to_entries | map(
+           ((" " * ($widths[.key] - (.value | length))) // "") as $fill
+           | if $rights[.key] then " " + $fill + .value + " " else " " + .value + $fill + " " end)
+           | join("|")) + "|";
+         def rule: "+" + ($indexes | map("-" * ($widths[.] + 2)) | join("+")) + "+";
+         [rule, row($matrix[0]), rule] + ($body | map(row(.))) + [rule] | join("\n"))
+    end
+  '
+}
+
+query_block() {
+  local block="$1" statement label result
+  statement="$(printf '%s\n' "${block}" | sed -e 's/--.*$//' | tr '\n' ' ' |
+    sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*;*[[:space:]]*$//')"
+  [ -z "${statement}" ] && return 0
+  if [ "${SCHEMA_ECHO}" = true ]; then
+    printf '%s\n\n' "${block}"
+  else
+    label="$(printf '%s\n' "${block}" | sed -n -e 's/^-- //p' | head -1)"
+    printf '%s [%s] against [%s]:\n\n' "${SCHEMA_ACTION}" "${label}" "${SCHEMA_TARGET}"
+  fi
+  if ! result="$(query "${statement}")"; then
+    fail "${statement}" "${result}"
+    return 1
+  fi
+  printf '%s\n' "${result}" | table
+  printf '\n'
+}
+
+fail() {
+  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
+    "################################################################################" \
+    "SCHEMA FAILURE" \
+    "################################################################################" \
+    "$1" "$2" >&2
+}
+
+query_one() {
+  local result
+  if ! result="$(query "$1")"; then
+    fail "$1" "${result}"
+    return 1
+  fi
+  printf '%s\n' "${result}" | table
+}
+
+query_file() {
+  local line block="" faults=0
+  while IFS= read -r line || [ -n "${line}" ]; do
+    case "${line}" in
+    ---*) continue ;;
+    "-- WARNING:"*) continue ;;
+    esac
+    [ -z "${block}" ] && [ -z "${line}" ] && continue
+    block="${block}${line}"$'\n'
+    case "${line}" in
+    *\;)
+      query_block "${block%$'\n'}" || faults=$((faults + 1))
+      block=""
+      ;;
+    esac
+  done < "$1"
+  if [ -n "${block}" ]; then
+    query_block "${block%$'\n'}" || faults=$((faults + 1))
+  fi
+  [ "${faults}" = 0 ]
+}
+
+printf '\nSchema verify [%s] against [%s]\n\n' "networks" "${INFLUXDB3_SERVICE_PROD}"
+
+FAULTS=0
+while IFS= read -r STATEMENT; do
+  [ -z "${STATEMENT}" ] && continue
+  if ! RESULT="$(query "${STATEMENT}")"; then
+    fail "${STATEMENT}" "${RESULT}"
+    exit 1
+  fi
+  ROWS="$(printf '%s' "${RESULT}" | jq 'length')"
+  if [ "${ROWS}" != "0" ]; then
+    FAULTS=$((FAULTS + ROWS))
+    printf '%s\n' "${RESULT}" | table
+    printf '\n'
+  fi
+done < <(statements "${ROOT_DIR}/sql/verify.sql")
+
+printf '\nSchema verify [%s] observed entities of open domains\n\n' "networks"
+query_file "${ROOT_DIR}/sql/observe.sql"
+
+if [ "${FAULTS}" != "0" ]; then
+  printf '\nSchema verify [%s] found [%s] fault row(s)\n' "networks" "${FAULTS}" >&2
+  exit 1
+fi
+printf '\nSchema verify [%s] found no drift\n' "networks"

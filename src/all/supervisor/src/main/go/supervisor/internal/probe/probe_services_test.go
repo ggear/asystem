@@ -511,7 +511,7 @@ func TestProbe_Version(t *testing.T) {
 		expected      string
 		expectedError bool
 	}{
-		// TODO: Fix, breaks in fab test for some reason? 
+		// TODO: Fix, breaks in fab test for some reason?
 		{
 			name: "happy_env_file_absolute_symlink_version",
 			containerInfo: container.InspectResponse{
@@ -678,7 +678,7 @@ func TestProbe_Version(t *testing.T) {
 		{
 			name: "sad_image_tag_version_invalid",
 			containerInfo: container.InspectResponse{
-				Config:            &container.Config{Image: "myimage:10.100.1234p"},
+				Config: &container.Config{Image: "myimage:10.100.1234p"},
 			},
 			expected:      "-",
 			expectedError: false,

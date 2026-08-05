@@ -13,7 +13,7 @@ from osxphotos import ExportOptions
 from osxphotos import PhotoExporter
 from pathvalidate import sanitize_filepath
 
-from homeassistant.generate import load_env
+from asystem import load_bootstrap_env
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
@@ -23,7 +23,7 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 DIR_PHOTOS_DB = "/Users/graham/Pictures/Photos Library.photoslibrary"
 
 if __name__ == "__main__":
-    env = load_env(DIR_ROOT)
+    env = load_bootstrap_env(DIR_ROOT)
 
     export_root_path = join(DIR_ROOT, "../../../../../Backup/photos/photo_album_draft")
     shutil.rmtree(export_root_path, ignore_errors=True)

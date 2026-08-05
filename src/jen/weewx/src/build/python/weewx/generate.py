@@ -1,13 +1,13 @@
-from homeassistant.generate import *
+from asystem import *
 
 pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
-    metadata_df = load_entity_metadata()
+    metadata_df = load_bootstrap_entities()
 
-    write_healthcheck()
+    write_container_healthchecks()
 
     metadata_weewx_df = metadata_df[
         (metadata_df["index"] > 0) &
@@ -33,7 +33,7 @@ if __name__ == "__main__":
                 weewx_conf_file.write(line.replace('$INPUTS_METADATA', metadata_weewx_str))
     print("Build generate script [weewx] entity metadata persisted to [{}]".format(weewx_conf_path))
 
-    # Build MQTT schema
+    # Build broker schema
     metadata_publish_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
@@ -42,9 +42,9 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
-    write_entity_metadata(metadata_publish_df,
-                          topic_glob_discovery="homeassistant/+/weewx/#",
-                          topic_glob_data="weewx/#",
-                          schema_state="""
+    write_schema_broker(metadata_publish_df,
+                        topic_glob_discovery="homeassistant/+/weewx/#",
+                        topic_glob_data="weewx/#",
+                        schema_state="""
 <number>
                           """)

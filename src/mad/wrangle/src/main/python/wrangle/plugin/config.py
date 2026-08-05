@@ -1,7 +1,7 @@
 import socket
 from dataclasses import dataclass
 from enum import Enum, auto
-from os.path import abspath, basename, dirname, isfile
+from os.path import abspath, basename, dirname, isfile, join, realpath
 from typing import NamedTuple
 
 PL_PRINT_ROWS = 20
@@ -10,6 +10,11 @@ TIMEOUT_NETWORK_SECONDS = 60
 TIMEOUT_RUN_SECONDS = 10 * 60
 
 STACK_DUMP_FILE = "/tmp/wrangle-stack.log"
+
+DATABASE_SCHEMA_DIRS = (
+    "/asystem/etc/database",
+    abspath(join(dirname(realpath(__file__)), "../../../resources/image/database")),
+)
 
 socket.setdefaulttimeout(TIMEOUT_NETWORK_SECONDS)
 

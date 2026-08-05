@@ -8,153 +8,255 @@ import (
 )
 
 type builder struct {
-	id       ID
-	template string
-	skipHist bool
-	kind     MetricKind
-	deps     []ID
+	id         ID
+	valueKind  ValueKind
+	metricKind MetricKind
+	unit       string
+	desc       string
+	template   string
+	skipHist   bool
+	deps       []ID
 }
 
 var metricBuildersByID = []builder{
 	MetricHost: {
-		id:       MetricHost,
-		template: "supervisor/$HOST/$SCOPE/host",
+		id:        MetricHost,
+		valueKind: ValueBool,
+		unit:      "state",
+		desc:      "host is reachable and healthy",
+		template:  "supervisor/$HOST/$SCOPE/host",
 	},
 	MetricHostUsedProcessor: {
-		id:       MetricHostUsedProcessor,
-		template: "supervisor/$HOST/$SCOPE/host/used_processor",
+		id:        MetricHostUsedProcessor,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "processor used across the host",
+		template:  "supervisor/$HOST/$SCOPE/host/used_processor",
 	},
 	MetricHostUsedMemory: {
-		id:       MetricHostUsedMemory,
-		template: "supervisor/$HOST/$SCOPE/host/used_memory",
+		id:        MetricHostUsedMemory,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "memory used across the host",
+		template:  "supervisor/$HOST/$SCOPE/host/used_memory",
 	},
 	MetricHostAllocatedMemory: {
-		id:       MetricHostAllocatedMemory,
-		template: "supervisor/$HOST/$SCOPE/host/allocated_memory",
-		deps:     []ID{MetricHostServicesMaxMemory},
+		id:        MetricHostAllocatedMemory,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "memory allocated to services across the host",
+		template:  "supervisor/$HOST/$SCOPE/host/allocated_memory",
+		deps:      []ID{MetricHostServicesMaxMemory},
 	},
 	MetricHostFailedLogs: {
-		id:       MetricHostFailedLogs,
-		template: "supervisor/$HOST/$SCOPE/host/failed_log_messages",
+		id:        MetricHostFailedLogs,
+		valueKind: ValueInt,
+		unit:      "count",
+		desc:      "log messages logged at error level",
+		template:  "supervisor/$HOST/$SCOPE/host/failed_log_messages",
 	},
 	MetricHostFailedShares: {
-		id:       MetricHostFailedShares,
-		template: "supervisor/$HOST/$SCOPE/host/failed_shares",
+		id:        MetricHostFailedShares,
+		valueKind: ValueInt,
+		unit:      "count",
+		desc:      "shares failing to mount or report",
+		template:  "supervisor/$HOST/$SCOPE/host/failed_shares",
 	},
 	MetricHostFailedBackups: {
-		id:       MetricHostFailedBackups,
-		template: "supervisor/$HOST/$SCOPE/host/failed_backups",
+		id:        MetricHostFailedBackups,
+		valueKind: ValueInt,
+		unit:      "count",
+		desc:      "backups failing to complete",
+		template:  "supervisor/$HOST/$SCOPE/host/failed_backups",
 	},
 	MetricHostWarnTemperatureOfMax: {
-		id:       MetricHostWarnTemperatureOfMax,
-		template: "supervisor/$HOST/$SCOPE/host/warn_temperature_of_max",
+		id:        MetricHostWarnTemperatureOfMax,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "hottest drive temperature as a share of its warning threshold",
+		template:  "supervisor/$HOST/$SCOPE/host/warn_temperature_of_max",
 	},
 	MetricHostSpinFanSpeedOfMax: {
-		id:       MetricHostSpinFanSpeedOfMax,
-		template: "supervisor/$HOST/$SCOPE/host/spin_fan_speed_of_max",
+		id:        MetricHostSpinFanSpeedOfMax,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "fastest fan speed as a share of its maximum",
+		template:  "supervisor/$HOST/$SCOPE/host/spin_fan_speed_of_max",
 	},
 	MetricHostLifeUsedDrives: {
-		id:       MetricHostLifeUsedDrives,
-		template: "supervisor/$HOST/$SCOPE/host/life_used_drives",
+		id:        MetricHostLifeUsedDrives,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "most worn drive life used",
+		template:  "supervisor/$HOST/$SCOPE/host/life_used_drives",
 	},
 	MetricHostUsedSystemSpace: {
-		id:       MetricHostUsedSystemSpace,
-		template: "supervisor/$HOST/$SCOPE/host/used_system_space",
+		id:        MetricHostUsedSystemSpace,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "system volume space used",
+		template:  "supervisor/$HOST/$SCOPE/host/used_system_space",
 	},
 	MetricHostUsedShareSpace: {
-		id:       MetricHostUsedShareSpace,
-		template: "supervisor/$HOST/$SCOPE/host/used_share_space",
+		id:        MetricHostUsedShareSpace,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "share volume space used",
+		template:  "supervisor/$HOST/$SCOPE/host/used_share_space",
 	},
 	MetricHostUsedBackupSpace: {
-		id:       MetricHostUsedBackupSpace,
-		template: "supervisor/$HOST/$SCOPE/host/used_backup_space",
+		id:        MetricHostUsedBackupSpace,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "backup volume space used",
+		template:  "supervisor/$HOST/$SCOPE/host/used_backup_space",
 	},
 	MetricHostUsedSwapSpace: {
-		id:       MetricHostUsedSwapSpace,
-		template: "supervisor/$HOST/$SCOPE/host/used_swap_space",
+		id:        MetricHostUsedSwapSpace,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "swap space used",
+		template:  "supervisor/$HOST/$SCOPE/host/used_swap_space",
 	},
 	MetricHostUsedDiskOps: {
-		id:       MetricHostUsedDiskOps,
-		template: "supervisor/$HOST/$SCOPE/host/used_disk_ops",
+		id:        MetricHostUsedDiskOps,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "disk operations used against capacity",
+		template:  "supervisor/$HOST/$SCOPE/host/used_disk_ops",
 	},
 	MetricHostUsedNetwork: {
-		id:       MetricHostUsedNetwork,
-		template: "supervisor/$HOST/$SCOPE/host/used_network",
+		id:        MetricHostUsedNetwork,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "network throughput used against capacity",
+		template:  "supervisor/$HOST/$SCOPE/host/used_network",
 	},
 	MetricHostRunningTime: {
-		id:       MetricHostRunningTime,
-		template: "supervisor/$HOST/$SCOPE/host/running_time",
-		skipHist: true,
+		id:        MetricHostRunningTime,
+		valueKind: ValueFloat,
+		unit:      "seconds",
+		desc:      "time the host has been up",
+		template:  "supervisor/$HOST/$SCOPE/host/running_time",
+		skipHist:  true,
 	},
 	MetricHostTemperature: {
-		id:       MetricHostTemperature,
-		template: "supervisor/$HOST/$SCOPE/host/temperature",
+		id:        MetricHostTemperature,
+		valueKind: ValueFloat,
+		unit:      "celsius",
+		desc:      "hottest drive temperature",
+		template:  "supervisor/$HOST/$SCOPE/host/temperature",
 	},
 	MetricHostServices: {
-		id:       MetricHostServices,
-		template: "supervisor/$HOST/$SCOPE/host/services",
-		skipHist: true,
+		id:        MetricHostServices,
+		valueKind: ValueBool,
+		unit:      "state",
+		desc:      "every service on the host is healthy",
+		template:  "supervisor/$HOST/$SCOPE/host/services",
+		skipHist:  true,
 	},
 	MetricHostServicesMaxMemory: {
-		id:       MetricHostServicesMaxMemory,
-		template: "supervisor/$HOST/$SCOPE/host/services_max_memory",
-		skipHist: true,
+		id:        MetricHostServicesMaxMemory,
+		valueKind: ValueFloat,
+		unit:      "megabytes",
+		desc:      "memory ceiling summed across the services on the host",
+		template:  "supervisor/$HOST/$SCOPE/host/services_max_memory",
+		skipHist:  true,
 	},
 	MetricService: {
-		id:       MetricService,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE",
+		id:        MetricService,
+		valueKind: ValueBool,
+		unit:      "state",
+		desc:      "service is running and healthy",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE",
 	},
 	MetricServiceBackupStatus: {
-		id:       MetricServiceBackupStatus,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/backup_status",
+		id:        MetricServiceBackupStatus,
+		valueKind: ValueBool,
+		unit:      "state",
+		desc:      "service backup completed",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/backup_status",
 	},
 	MetricServiceHealthStatus: {
-		id:       MetricServiceHealthStatus,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/health_status",
+		id:        MetricServiceHealthStatus,
+		valueKind: ValueBool,
+		unit:      "state",
+		desc:      "service healthcheck passed",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/health_status",
 	},
 	MetricServiceConfiguredStatus: {
-		id:       MetricServiceConfiguredStatus,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/configured_status",
+		id:        MetricServiceConfiguredStatus,
+		valueKind: ValueBool,
+		unit:      "state",
+		desc:      "service is configured as expected",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/configured_status",
 	},
 	MetricServiceName: {
-		id:       MetricServiceName,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/name",
-		skipHist: true,
+		id:        MetricServiceName,
+		valueKind: ValueString,
+		unit:      "text",
+		desc:      "service image name",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/name",
+		skipHist:  true,
 	},
 	MetricServiceVersion: {
-		id:       MetricServiceVersion,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/version",
-		skipHist: true,
+		id:        MetricServiceVersion,
+		valueKind: ValueString,
+		unit:      "text",
+		desc:      "service image version",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/version",
+		skipHist:  true,
 	},
 	MetricServiceUsedProcessor: {
-		id:       MetricServiceUsedProcessor,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/used_processor",
+		id:        MetricServiceUsedProcessor,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "processor used by the service",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/used_processor",
 	},
 	MetricServiceUsedMemory: {
-		id:       MetricServiceUsedMemory,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/used_memory",
+		id:        MetricServiceUsedMemory,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "memory used by the service against its ceiling",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/used_memory",
 	},
 	MetricServiceUsedDiskOps: {
-		id:       MetricServiceUsedDiskOps,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/used_disk_ops",
+		id:        MetricServiceUsedDiskOps,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "disk operations used by the service",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/used_disk_ops",
 	},
 	MetricServiceUsedNetwork: {
-		id:       MetricServiceUsedNetwork,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/used_network",
+		id:        MetricServiceUsedNetwork,
+		valueKind: ValueInt,
+		unit:      "percent",
+		desc:      "network throughput used by the service",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/used_network",
 	},
 	MetricServiceUpTime: {
-		id:       MetricServiceUpTime,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/up_time",
-		skipHist: true,
+		id:        MetricServiceUpTime,
+		valueKind: ValueFloat,
+		unit:      "seconds",
+		desc:      "time the service has been up",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/up_time",
+		skipHist:  true,
 	},
 	MetricServiceMaxMemory: {
-		id:       MetricServiceMaxMemory,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/max_memory",
-		skipHist: true,
+		id:        MetricServiceMaxMemory,
+		valueKind: ValueFloat,
+		unit:      "megabytes",
+		desc:      "memory ceiling configured for the service",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/max_memory",
+		skipHist:  true,
 	},
 	MetricServiceRestartCount: {
-		id:       MetricServiceRestartCount,
-		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/restart_count",
+		id:        MetricServiceRestartCount,
+		valueKind: ValueFloat,
+		unit:      "count",
+		desc:      "restarts of the service",
+		template:  "supervisor/$HOST/$SCOPE/service/$SERVICE/restart_count",
 	},
 }
 
@@ -191,14 +293,7 @@ func buildFromID(id ID, hostName string, serviceName string, scope string) (stri
 	if metricBuilder.skipHist {
 		tags = map[string]string{}
 	} else {
-		templateTokens := strings.Split(metricBuilder.template, "/")
-		metric := templateTokens[len(templateTokens)-1]
-		switch metric {
-		case "host", "service", "$SERVICE":
-			tags["metric"] = "status"
-		default:
-			tags["metric"] = metric
-		}
+		tags["metric"] = GetIDField(id)
 	}
 	return topic, tags, nil
 }
@@ -285,13 +380,13 @@ var metricBuildersByTemplate = func() map[string]builder {
 		}
 		switch {
 		case strings.HasPrefix(metricBuildersByID[id].template, "supervisor/$HOST/$SCOPE/service/supervisor"):
-			metricBuildersByID[id].kind = MetricKindSupervisor
+			metricBuildersByID[id].metricKind = MetricKindSupervisor
 		case strings.HasPrefix(metricBuildersByID[id].template, "supervisor/$HOST/$SCOPE/services"):
-			metricBuildersByID[id].kind = MetricKindServices
+			metricBuildersByID[id].metricKind = MetricKindServices
 		case strings.HasPrefix(metricBuildersByID[id].template, "supervisor/$HOST/$SCOPE/service/"):
-			metricBuildersByID[id].kind = MetricKindService
+			metricBuildersByID[id].metricKind = MetricKindService
 		case strings.HasPrefix(metricBuildersByID[id].template, "supervisor/$HOST/$SCOPE/host"):
-			metricBuildersByID[id].kind = MetricKindHost
+			metricBuildersByID[id].metricKind = MetricKindHost
 		default:
 			panic(fmt.Sprintf("error: could not determine metric type from template [%s] for ID [%d]", metricBuildersByID[id].template, id))
 		}

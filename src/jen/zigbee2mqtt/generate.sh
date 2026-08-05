@@ -4,9 +4,9 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-rm -rf "${ROOT_DIR}/src/main/resources/image/mqtt/"*.py
+rm -rf "${ROOT_DIR}/src/main/resources/image/vernemq/"*.py
 for PY_FILE in "${ROOT_DIR}/src/main/python/zigbee2mqtt/"*.py; do
-  PY_PATH="${ROOT_DIR}/src/main/resources/image/mqtt/$(basename "${PY_FILE}")"
+  PY_PATH="${ROOT_DIR}/src/main/resources/image/vernemq/$(basename "${PY_FILE}")"
   echo -e "#!/usr/bin/env python\n\n\"\"\"\nWARNING: This file is written by the build process, any manual edits will be lost!\n\"\"\"\n" >"${PY_PATH}"
   cat "${PY_FILE}" >>"${PY_PATH}"
   chmod +x "${PY_PATH}"

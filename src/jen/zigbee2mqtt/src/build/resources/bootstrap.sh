@@ -1,1 +1,1 @@
-/asystem/etc/mqtt/mqtt_config.sh
+/asystem/etc/vernemq/broker_config.sh

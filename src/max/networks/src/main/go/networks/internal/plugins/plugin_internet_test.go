@@ -23,28 +23,29 @@ func TestInternet_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != len(p.targets) {
-		t.Fatalf("points: got %d want %d (one per target)", len(msg.Points), len(p.targets))
+	readings, _ := msg.Readings.([]internetReading)
+	if len(readings) != len(p.targets) {
+		t.Fatalf("readings: got %d want %d (one per target)", len(readings), len(p.targets))
 	}
-	reachable, ok := pointByTag(msg.Points, "target", "1.1.1.1")
+	reachable, ok := readingByTarget(readings, "1.1.1.1")
 	if !ok {
-		t.Fatal("1.1.1.1 point missing")
+		t.Fatal("1.1.1.1 reading missing")
 	}
-	if loss, _ := reachable.Float("loss_pct"); loss != 0 {
-		t.Errorf("1.1.1.1 loss_pct: got %v want 0", loss)
+	if reachable.lossPct != 0 {
+		t.Errorf("1.1.1.1 loss_pct: got %v want 0", reachable.lossPct)
 	}
-	if _, hasRTT := reachable.Float("avg_rtt_ms"); !hasRTT {
-		t.Errorf("1.1.1.1 avg_rtt_ms: got null want a value")
+	if !reachable.hasRTT {
+		t.Errorf("1.1.1.1 rtt: got none want a value")
 	}
-	down, ok := pointByTag(msg.Points, "target", "8.8.8.8")
+	down, ok := readingByTarget(readings, "8.8.8.8")
 	if !ok {
-		t.Fatal("8.8.8.8 point missing")
+		t.Fatal("8.8.8.8 reading missing")
 	}
-	if loss, _ := down.Float("loss_pct"); loss != 100 {
-		t.Errorf("8.8.8.8 loss_pct: got %v want 100", loss)
+	if down.lossPct != 100 {
+		t.Errorf("8.8.8.8 loss_pct: got %v want 100", down.lossPct)
 	}
-	if _, hasRTT := down.Float("avg_rtt_ms"); hasRTT {
-		t.Errorf("8.8.8.8 avg_rtt_ms: got a value want null")
+	if down.hasRTT {
+		t.Errorf("8.8.8.8 rtt: got a value want none")
 	}
 }
 
@@ -69,7 +70,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  100,
-			expectedReason:"UP",
+			expectedReason: "UP",
 			expectedError:  false,
 		},
 		{
@@ -83,7 +84,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  90,
-			expectedReason:"ELEVATED_LOSS",
+			expectedReason: "ELEVATED_LOSS",
 			expectedError:  false,
 		},
 		{
@@ -97,7 +98,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  52,
-			expectedReason:"ELEVATED_LOSS",
+			expectedReason: "ELEVATED_LOSS",
 			expectedError:  false,
 		},
 		{
@@ -111,7 +112,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  90,
-			expectedReason:"HIGH_LATENCY",
+			expectedReason: "HIGH_LATENCY",
 			expectedError:  false,
 		},
 		{
@@ -125,7 +126,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"ISP_DOWN",
+			expectedReason: "ISP_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -139,7 +140,7 @@ func TestInternet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"LAN_DOWN",
+			expectedReason: "LAN_DOWN",
 			expectedError:  false,
 		},
 	}
@@ -189,15 +190,24 @@ type internetSample struct {
 }
 
 func internetPoll(samples map[string]internetSample) plugin.Sample {
-	points := make([]plugin.Point, 0, len(samples))
+	readings := make([]internetReading, 0, len(samples))
 	for ip, s := range samples {
-		fields := []plugin.Field{plugin.Float("loss_pct", s.loss)}
+		reading := internetReading{target: ip, gateway: s.scope == gatewayScope, lossPct: s.loss}
 		if s.loss < 100 {
-			fields = append(fields, plugin.Float("avg_rtt_ms", s.rtt), plugin.Float("jitter_ms", s.jitter))
-		} else {
-			fields = append(fields, plugin.Null("avg_rtt_ms"), plugin.Null("jitter_ms"))
+			reading.rttMs = s.rtt
+			reading.jitter = s.jitter
+			reading.hasRTT = true
 		}
-		points = append(points, plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: s.scope}, {Key: "target", Value: ip}}, fields...))
+		readings = append(readings, reading)
 	}
-	return plugin.Sample{Plugin: "internet", Points: points}
+	return plugin.Sample{Plugin: "internet", Readings: readings}
+}
+
+func readingByTarget(readings []internetReading, target string) (internetReading, bool) {
+	for _, reading := range readings {
+		if reading.target == target {
+			return reading, true
+		}
+	}
+	return internetReading{}, false
 }

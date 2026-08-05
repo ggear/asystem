@@ -1,0 +1,11 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+# wireless/wifi [access point health across the wireless estate]
+wireless
+    ok=<0|1>i,
+    score=<number>i,
+    aps_total=<number>i,
+    aps_ok=<number>i,
+    avg_experience_pct=<number>
+    <timestamp>

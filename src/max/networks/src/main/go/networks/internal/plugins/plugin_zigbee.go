@@ -11,6 +11,7 @@ import (
 
 	"networks/internal/config"
 	"networks/internal/plugin"
+	"networks/internal/schema"
 	"networks/internal/scribe"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -25,7 +26,22 @@ const (
 	maxLQI          = 255
 )
 
-type zigbeeDevice struct {
+var (
+	zigbeeBridge       = schema.Declare("zigbee/bridge", "coordinator state and the mesh it reports", aggregateCadence)
+	zigbeeOK           = zigbeeBridge.Bool("ok", "coordinator online with its devices reachable")
+	zigbeeScore        = zigbeeBridge.Int("score", "count", "diagnosis score from 0 to 100")
+	zigbeeDevicesTotal = zigbeeBridge.Int("devices_total", "count", "devices paired with the coordinator")
+	zigbeeDevicesOK    = zigbeeBridge.Int("devices_ok", "count", "devices reporting available")
+	zigbeeDevicesWeak  = zigbeeBridge.Int("devices_weak", "count", "devices with a link quality below the weak threshold")
+	zigbeeAvgLQI       = zigbeeBridge.Float("avg_lqi", "count", "mean link quality across the devices reporting one")
+)
+
+type zigbeeSample struct {
+	online  bool
+	devices []zigbeeReading
+}
+
+type zigbeeReading struct {
 	name          string
 	isCoordinator bool
 	lqi           int
@@ -39,7 +55,7 @@ type bridgeDevice struct {
 }
 
 type zigbeePlugin struct {
-	probe func(ctx context.Context) (online bool, permitJoin bool, devices []zigbeeDevice, err error)
+	probe func(ctx context.Context) (online bool, permitJoin bool, devices []zigbeeReading, err error)
 	state *plugin.StateTracker
 }
 
@@ -56,20 +72,15 @@ func (p *zigbeePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	if err != nil {
 		return plugin.Sample{}, err
 	}
-	points := []plugin.Point{plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "bridge"}}, plugin.Bool("online", online), plugin.Bool("permit_join", permit))}
+	paired := make([]zigbeeReading, 0, len(devices))
 	for _, d := range devices {
 		if d.isCoordinator {
 			continue
 		}
-		tags := []plugin.Tag{{Key: "scope", Value: "device"}, {Key: "device", Value: d.name}}
-		lqiField := plugin.Null("lqi")
-		if d.hasLQI {
-			lqiField = plugin.Int("lqi", int64(d.lqi))
-		}
-		points = append(points, plugin.NewPoint(tags, lqiField, plugin.Bool("available", d.available)))
+		paired = append(paired, d)
 	}
-	scribe.LogDebug("zigbee", "polled online [%v] permit_join [%v] devices [%d] points [%d]", online, permit, len(devices), len(points))
-	return plugin.Sample{Points: points}, nil
+	scribe.LogDebug("zigbee", "polled online [%v] permit_join [%v] devices [%d]", online, permit, len(paired))
+	return plugin.Sample{Readings: zigbeeSample{online: online, devices: paired}}, nil
 }
 
 func (p *zigbeePlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
@@ -82,7 +93,7 @@ func (p *zigbeePlugin) Command(ctx context.Context, newState plugin.State) error
 
 func (p *zigbeePlugin) State() *plugin.StateTracker { return p.state }
 
-func probeZigbee(ctx context.Context) (bool, bool, []zigbeeDevice, error) {
+func probeZigbee(ctx context.Context) (bool, bool, []zigbeeReading, error) {
 	cfg := config.Load()
 	broker := cfg.Broker()
 	if broker == "" {
@@ -121,7 +132,7 @@ func probeZigbee(ctx context.Context) (bool, bool, []zigbeeDevice, error) {
 	return online, permit, devices, nil
 }
 
-func readZigbee(base string, messages map[string][]byte) (online bool, permitJoin bool, devices []zigbeeDevice) {
+func readZigbee(base string, messages map[string][]byte) (online bool, permitJoin bool, devices []zigbeeReading) {
 	decodeState := func(payload []byte) string {
 		trimmed := strings.TrimSpace(string(payload))
 		if strings.HasPrefix(trimmed, "{") {
@@ -164,10 +175,10 @@ func readZigbee(base string, messages map[string][]byte) (online bool, permitJoi
 			}
 		}
 	}
-	devices = make([]zigbeeDevice, 0, len(deviceList))
+	devices = make([]zigbeeReading, 0, len(deviceList))
 	for _, d := range deviceList {
 		value, hasLQI := lqi[d.FriendlyName]
-		devices = append(devices, zigbeeDevice{
+		devices = append(devices, zigbeeReading{
 			name:          d.FriendlyName,
 			isCoordinator: strings.EqualFold(d.Type, "Coordinator"),
 			lqi:           value,
@@ -179,28 +190,21 @@ func readZigbee(base string, messages map[string][]byte) (online bool, permitJoi
 }
 
 func diagnoseZigbee(samples []plugin.Sample) plugin.Aggregate {
-	points := plugin.LatestPoints(samples)
-	bridgeOnline := false
+	sample := plugin.Latest[zigbeeSample](samples)
+	bridgeOnline := sample.online
 	total := 0
 	online := 0
 	weak := 0
 	minLQI := math.MaxInt64
 	lqiSum := 0.0
 	lqiCount := 0
-	for _, point := range points {
-		scope, _ := point.Tag("scope")
-		if scope == "bridge" {
-			bridgeOnline, _ = point.Bool("online")
-			continue
-		}
-		if scope != "device" {
-			continue
-		}
+	for _, device := range sample.devices {
 		total++
-		if available, _ := point.Bool("available"); available {
+		if device.available {
 			online++
 		}
-		if lqi, ok := point.Int("lqi"); ok {
+		if device.hasLQI {
+			lqi := int64(device.lqi)
 			lqiSum += float64(lqi)
 			lqiCount++
 			if int(lqi) < minLQI {
@@ -235,18 +239,32 @@ func diagnoseZigbee(samples []plugin.Sample) plugin.Aggregate {
 	default:
 		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("WEAK_LINKS: [%d] devices with weak links with LQI less than [%d]", weak, int(minLQI)))
 	}
-	result.Points = reportZigbee(result.Score, online, total, weak, int(minLQI), points)
+	avgLQI := 0.0
+	if lqiCount > 0 {
+		avgLQI = lqiSum / float64(lqiCount)
+	}
+	stats := zigbeeStats{ok: result.OK, score: result.Score, online: online, total: total, weak: weak, avgLQI: avgLQI}
+	result.Points = reportZigbee(stats)
 	return result
 }
 
-func reportZigbee(score, online, total, weak, minLQI int, devicePoints []plugin.Point) []plugin.Point {
-	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}},
-		plugin.Int("score", int64(score)),
-		plugin.Int("devices_online", int64(online)),
-		plugin.Int("devices_total", int64(total)),
-		plugin.Int("weak_link_count", int64(weak)),
-		plugin.Int("min_lqi", int64(minLQI)))
-	return plugin.PrependSummaryPoints(summary, devicePoints)
+func reportZigbee(stats zigbeeStats) []schema.Point {
+	return []schema.Point{zigbeeBridge.Point(
+		zigbeeOK.Of(stats.ok),
+		zigbeeScore.Of(int64(stats.score)),
+		zigbeeDevicesTotal.Of(int64(stats.total)),
+		zigbeeDevicesOK.Of(int64(stats.online)),
+		zigbeeDevicesWeak.Of(int64(stats.weak)),
+		zigbeeAvgLQI.Of(plugin.Round(stats.avgLQI, 1)))}
+}
+
+type zigbeeStats struct {
+	ok     bool
+	score  int
+	online int
+	total  int
+	weak   int
+	avgLQI float64
 }
 
 func init() {

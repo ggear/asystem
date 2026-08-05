@@ -53,6 +53,43 @@ def test_warmup():
     assert warmup_succeeded is True
 
 
+def test_schema_ddl_applies_and_is_idempotent():
+    for table_name in _database_plugin_tables():
+        ddl = _read_generated(join("tables", f"{table_name}.sql"))
+        assert f"CREATE TABLE IF NOT EXISTS {table_name} (" in ddl
+        with open(join(DIR_ROOT, "src/main/resources/image/database", f"{table_name}.sql")) as shipped_file:
+            shipped = shipped_file.read()
+        assert ddl == shipped, f"generated and shipped DDL differ for [{table_name}]"
+        for attempt in ("first", "second"):
+            with connect() as database_connection, database_connection.cursor() as database_cursor:
+                try:
+                    database_cursor.execute(ddl)
+                except Exception as exception:
+                    pytest.fail(f"generated DDL for [{table_name}] failed on the {attempt} apply: {exception}")
+        with connect() as database_connection, database_connection.cursor() as database_cursor:
+            database_cursor.execute(
+                "SELECT count(*) FROM timescaledb_information.hypertables WHERE hypertable_name = %s", (table_name,))
+            row: tuple = database_cursor.fetchone() or (0,)
+            assert row[0] == 1, f"[{table_name}] is not a hypertable after applying the generated DDL"
+            database_cursor.execute(
+                "SELECT count(*) FROM pg_indexes WHERE tablename = %s AND indexname LIKE %s",
+                (table_name, f"{table_name}\\_%\\_time"))
+            row = database_cursor.fetchone() or (0,)
+            assert row[0] == len(database.database_schema_columns(table_name)["dimensions"]), \
+                f"[{table_name}] is missing generated dimension indexes"
+
+
+def test_schema_statements_execute():
+    for sql_name in ("describe.sql", "observe.sql", *[f"query_{table}.sql" for table in _database_plugin_tables()]):
+        for statement in _statements(_read_generated(join("sql", sql_name))):
+            with connect() as database_connection, database_connection.cursor() as database_cursor:
+                try:
+                    database_cursor.execute(statement)
+                    database_cursor.fetchall()
+                except Exception as exception:
+                    pytest.fail(f"generated statement in [{sql_name}] failed: {exception}\n{statement}")
+
+
 def test_run():
     counters = run_wrangle_once()
     assert counters["Data"]["Delta Rows"] > 0
@@ -79,6 +116,15 @@ def test_rerun():
     assert counters["Egress"]["Database Rows"] == 0
     for table, count in _db_counts_after_run.items():
         assert query_table_count(table) == count
+
+
+def test_schema_verify_reports_no_drift():
+    faults = []
+    for statement in _statements(_read_generated(join("sql", "verify.sql"))):
+        with connect() as database_connection, database_connection.cursor() as database_cursor:
+            database_cursor.execute(statement)
+            faults.extend(database_cursor.fetchall())
+    assert faults == [], f"generated verify.sql reported drift between the declaration and what was written: {faults}"
 
 
 def test_reprocess():
@@ -169,6 +215,18 @@ def _exec_dump_database_queries() -> str:
                 print()
     sys.stdout.flush()
     return output
+
+
+def _read_generated(relative_path: str) -> str:
+    generated_path = join(DIR_ROOT, "src/build/resources/schemas/postgres", relative_path)
+    assert os.path.isfile(generated_path), f"missing generated artifact [{generated_path}]"
+    with open(generated_path) as generated_file:
+        return generated_file.read()
+
+
+def _statements(text: str) -> list[str]:
+    stripped = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("--"))
+    return [statement.strip() for statement in stripped.split(";") if statement.strip()]
 
 
 def connect():

@@ -1,0 +1,151 @@
+package metric
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"supervisor/internal/schema"
+)
+
+func Cadence(pollPeriod string, pulseFactor int) string {
+	poll, err := time.ParseDuration(pollPeriod)
+	if err != nil || poll <= 0 || pulseFactor < 1 {
+		return pollPeriod
+	}
+	pulse := poll * time.Duration(pulseFactor)
+	switch {
+	case pulse%time.Hour == 0:
+		return fmt.Sprintf("%dh", pulse/time.Hour)
+	case pulse%time.Minute == 0:
+		return fmt.Sprintf("%dm", pulse/time.Minute)
+	case pulse%time.Second == 0:
+		return fmt.Sprintf("%ds", pulse/time.Second)
+	default:
+		return pulse.String()
+	}
+}
+
+func Relations(hosts []string, services []string, cadence string) []schema.Relation {
+	host := schema.Relation{
+		Path:     "supervisor/host",
+		Desc:     "health and utilisation of one host",
+		Cadence:  cadence,
+		Entities: append([]string{}, hosts...),
+		Dimensions: []schema.Dimension{
+			{Key: "host", Desc: "name of the monitored host", Subject: true},
+		},
+		Measures: []schema.Measure{},
+	}
+	service := schema.Relation{
+		Path:     "supervisor/service",
+		Desc:     "health and utilisation of one service on one host",
+		Cadence:  cadence,
+		Entities: append([]string{}, services...),
+		Dimensions: []schema.Dimension{
+			{Key: "host", Desc: "name of the host running the service"},
+			{Key: "service", Desc: "name of the monitored service", Subject: true},
+		},
+		Measures: []schema.Measure{},
+	}
+	for _, id := range GetIDs() {
+		builder := metricBuildersByID[id]
+		if builder.template == "" {
+			continue
+		}
+		relation := &host
+		if strings.Contains(builder.template, "$SERVICE") {
+			relation = &service
+		}
+		relation.Measures = append(relation.Measures, schema.Measure{
+			Key:     GetIDField(id),
+			Kind:    GetIDKindSchema(id),
+			Unit:    builder.unit,
+			Desc:    builder.desc,
+			Persist: !builder.skipHist,
+		})
+		if !builder.skipHist {
+			relation.Measures = append(relation.Measures, schema.Measure{
+				Key:     GetIDField(id) + "_trend",
+				Kind:    GetIDKindSchema(id),
+				Unit:    builder.unit,
+				Desc:    builder.desc + ", smoothed across the trend window",
+				Persist: true,
+			})
+		}
+	}
+	return []schema.Relation{host, service}
+}
+
+func HostRelation() schema.Relation { return Relations(nil, nil, "")[0] }
+
+func ServiceRelation() schema.Relation { return Relations(nil, nil, "")[1] }
+
+func GetIDField(id ID) string {
+	if id < 0 || id >= MetricMax {
+		return ""
+	}
+	tokens := strings.Split(metricBuildersByID[id].template, "/")
+	field := tokens[len(tokens)-1]
+	switch field {
+	case "host", "service", "$SERVICE":
+		return "status"
+	default:
+		return field
+	}
+}
+
+func GetIDValueKind(id ID) ValueKind {
+	if id < 0 || id >= MetricMax {
+		return ValueNone
+	}
+	return metricBuildersByID[id].valueKind
+}
+
+func GetIDKindSchema(id ID) schema.Kind {
+	switch GetIDValueKind(id) {
+	case ValueBool:
+		return schema.KindBool
+	case ValueFloat:
+		return schema.KindFloat
+	case ValueInt:
+		return schema.KindInt
+	default:
+		return schema.KindStr
+	}
+}
+
+func Payloads() []schema.Payload {
+	value := schema.Member{
+		Key:  "value",
+		Kind: schema.KindAny,
+		Enum: []string{"number", "text", "true", "false"},
+	}
+	detail := func(key string) schema.Member {
+		return schema.Member{Key: key, Kind: schema.KindObj, Members: []schema.Member{
+			{Key: "ok", Kind: schema.KindBool},
+			value,
+		}}
+	}
+	return []schema.Payload{
+		{
+			Role: schema.RoleState,
+			Desc: "one metric reading, its pulse window and its trend window",
+			Root: schema.Member{Kind: schema.KindObj, Members: []schema.Member{
+				{Key: "timestamp", Kind: schema.KindInt},
+				detail("pulse"),
+				detail("trend"),
+			}},
+		},
+		{
+			Role: schema.RoleCommand,
+			Desc: "switch command accepted for one service",
+			Root: schema.Member{Kind: schema.KindStr, Enum: []string{"ON", "OFF"}},
+		},
+		{
+			Role: schema.RoleAvailability,
+			Desc: "retained host availability",
+			Root: schema.Member{Kind: schema.KindStr, Enum: []string{"online", "offline"}},
+		},
+	}
+}

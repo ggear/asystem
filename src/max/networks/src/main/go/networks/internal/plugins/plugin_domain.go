@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"networks/internal/plugin"
+	"networks/internal/schema"
 	"networks/internal/scribe"
 )
 
@@ -23,12 +24,28 @@ type resolver struct {
 	address string
 }
 
-var resolvers = []resolver{
+var domainResolvers = []resolver{
 	{name: "cloudflare", address: "1.1.1.1:53"},
 	{name: "google", address: "8.8.8.8:53"},
 	{name: "quad9", address: "9.9.9.9:53"},
 	{name: "opendns", address: "208.67.222.222:53"},
 	{name: "adguard", address: "94.140.14.14:53"},
+}
+
+var (
+	domainRelation       = schema.Declare("domain/resolver", "public DNS resolution of the monitored domain across the public resolvers", aggregateCadence)
+	domainOK             = domainRelation.Bool("ok", "every resolver resolved and agreed on the same address set")
+	domainScore          = domainRelation.Int("score", "count", "diagnosis score from 0 to 100")
+	domainResolversTotal = domainRelation.Int("resolvers_total", "count", "resolvers queried")
+	domainResolversOK    = domainRelation.Int("resolvers_ok", "count", "resolvers agreeing with the consensus address set")
+	domainResolversFail  = domainRelation.Int("resolvers_failed", "count", "resolvers that failed to resolve")
+)
+
+type domainReading struct {
+	resolver  string
+	addresses string
+	resolved  bool
+	latencyMs float64
 }
 
 type domainResult struct {
@@ -50,24 +67,21 @@ func (p *domainPlugin) Name() string { return "domain" }
 func (p *domainPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
 
 func (p *domainPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
-	points := make([]plugin.Point, 0, len(resolvers))
-	for _, r := range resolvers {
+	readings := make([]domainReading, 0, len(domainResolvers))
+	for _, r := range domainResolvers {
 		result, err := p.probe(ctx, r.address, checkDomain)
 		if err != nil || len(result.addresses) == 0 {
 			scribe.LogDebug("domain", "probe of resolver [%s] server [%s] failed [%v]", r.name, r.address, err)
-			points = append(points, plugin.NewPoint(
-				[]plugin.Tag{{Key: "scope", Value: "resolver"}, {Key: "resolver", Value: r.name}, {Key: "addresses", Value: ""}},
-				plugin.Bool("resolved", false), plugin.Null("latency_ms")))
+			readings = append(readings, domainReading{resolver: r.name})
 			continue
 		}
 		addresses := strings.Join(result.addresses, ",")
 		latency := plugin.Round(float64(result.latency)/float64(time.Millisecond), 1)
 		scribe.LogDebug("domain", "probed resolver [%s] server [%s] addresses [%s] latency_ms [%v]", r.name, r.address, addresses, latency)
-		points = append(points, plugin.NewPoint(
-			[]plugin.Tag{{Key: "scope", Value: "resolver"}, {Key: "resolver", Value: r.name}, {Key: "addresses", Value: addresses}},
-			plugin.Bool("resolved", true), plugin.Float("latency_ms", latency)))
+		readings = append(readings, domainReading{
+			resolver: r.name, addresses: addresses, resolved: true, latencyMs: latency})
 	}
-	return plugin.Sample{Points: points}, nil
+	return plugin.Sample{Readings: readings}, nil
 }
 
 func (p *domainPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
@@ -104,17 +118,16 @@ func probeDomain(ctx context.Context, server, domain string) (domainResult, erro
 }
 
 func diagnoseDomain(samples []plugin.Sample) plugin.Aggregate {
-	points := plugin.LatestPoints(samples)
-	total := len(points)
+	readings := plugin.Latest[[]domainReading](samples)
+	total := len(readings)
 	resolved := 0
 	counts := map[string]int{}
-	for _, point := range points {
-		if ok, _ := point.Bool("resolved"); !ok {
+	for _, reading := range readings {
+		if !reading.resolved {
 			continue
 		}
 		resolved++
-		addresses, _ := point.Tag("addresses")
-		counts[addresses]++
+		counts[reading.addresses]++
 	}
 	consensus := ""
 	agreeing := 0
@@ -140,30 +153,35 @@ func diagnoseDomain(samples []plugin.Sample) plugin.Aggregate {
 	default:
 		result = plugin.Diagnose(plugin.StatusFit, score, fmt.Sprintf("RESOLVED: all [%d] resolvers agree on [%s]", total, consensus))
 	}
-	result.Points = reportDomain(result.Score, consensus, agreeing, failed, points)
+	stats := domainStats{score: result.Score, resolvers: total, agreeing: agreeing, failed: failed}
+	stats.ok = result.OK
+	result.Points = reportDomain(stats)
 	return result
 }
 
-func reportDomain(score int, consensus string, agreeing, failed int, resolverPoints []plugin.Point) []plugin.Point {
-	details := make([]plugin.Point, 0, len(resolverPoints))
-	for _, point := range resolverPoints {
-		addresses, _ := point.Tag("addresses")
-		resolved, _ := point.Bool("resolved")
-		fields := []plugin.Field{plugin.Bool("resolved", resolved), plugin.Bool("match", resolved && addresses == consensus)}
-		if latency, ok := point.Float("latency_ms"); ok {
-			fields = append(fields, plugin.Float("latency_ms", latency))
-		} else {
-			fields = append(fields, plugin.Null("latency_ms"))
-		}
-		details = append(details, plugin.NewPoint(point.Tags, fields...))
+func reportDomain(stats domainStats) []schema.Point {
+	return []schema.Point{domainRelation.Point(
+		domainOK.Of(stats.ok),
+		domainScore.Of(int64(stats.score)),
+		domainResolversTotal.Of(int64(stats.resolvers)),
+		domainResolversOK.Of(int64(stats.agreeing)),
+		domainResolversFail.Of(int64(stats.failed)))}
+}
+
+func resolverNames() []string {
+	names := make([]string, 0, len(domainResolvers))
+	for _, r := range domainResolvers {
+		names = append(names, r.name)
 	}
-	summary := plugin.NewPoint(
-		[]plugin.Tag{{Key: "scope", Value: "summary"}, {Key: "domain", Value: checkDomain}, {Key: "consensus", Value: consensus}},
-		plugin.Int("score", int64(score)),
-		plugin.Int("resolver_count", int64(len(resolverPoints))),
-		plugin.Int("agree_count", int64(agreeing)),
-		plugin.Int("failed_count", int64(failed)))
-	return plugin.PrependSummaryPoints(summary, details)
+	return names
+}
+
+type domainStats struct {
+	ok        bool
+	score     int
+	resolvers int
+	agreeing  int
+	failed    int
 }
 
 func init() {

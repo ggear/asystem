@@ -8,13 +8,10 @@ import pandas as pd
 import requests
 import urllib3
 
-DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-sys.path.insert(0, join(next(iter(glob(f"{DIR_ROOT}/../../*/homeassistant")), ""), "src/build/python"))
-
-from homeassistant.generate import load_entity_metadata
-from homeassistant.generate import load_env
-from homeassistant.generate import load_modules
-from homeassistant.generate import write_certificates
+from asystem import load_bootstrap_entities
+from asystem import load_bootstrap_env
+from asystem import load_bootstrap_modules
+from asystem import write_container_certificates
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
@@ -25,11 +22,11 @@ DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
 UNIFI_CONTROLLER_URL = "https://unifi.local.janeandgraham.com:443"
 
 if __name__ == "__main__":
-    env = load_env(DIR_ROOT)
-    modules = load_modules(load_disabled=False, load_infrastrcture=False)
-    metadata_df = load_entity_metadata()
+    env = load_bootstrap_env(DIR_ROOT)
+    modules = load_bootstrap_modules(load_disabled=False, load_infrastructure=False)
+    metadata_df = load_bootstrap_entities()
 
-    write_certificates("udmutilities", join(DIR_ROOT, "src/main/resources/image/udm-certificates"))
+    write_container_certificates("udmutilities", join(DIR_ROOT, "src/main/resources/image/udm-certificates"))
 
     metadata_dhcp_df = metadata_df[
         (metadata_df["index"] > 0) &

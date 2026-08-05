@@ -46,7 +46,6 @@ func (d dimensions) String() string {
 	return fmt.Sprintf("[%d,%d]", d.rows, d.cols)
 }
 
-
 type Display struct {
 	hosts           []string
 	periods         config.Periods
@@ -452,7 +451,6 @@ func (d *Display) Logging() {
 		d.terminal.draw(0, row, text, c)
 	}
 }
-
 
 func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 	for _, b := range d.boxes {

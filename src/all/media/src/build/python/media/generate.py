@@ -1,5 +1,5 @@
 from fabfile import _get_modules_by_hosts, _get_host_label
-from homeassistant.generate import *
+from asystem import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 

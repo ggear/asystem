@@ -1,8 +1,11 @@
 import json
+import os
 import random
 import string
+import subprocess
 import sys
 import time
+from os.path import abspath, dirname, isfile, join, realpath
 
 import paho.mqtt.client as mqtt
 import pytest
@@ -15,6 +18,9 @@ STATE_TOPIC = "tempstat/data"
 STATUS_TOPIC = "tempstat/status"
 SENSORS = ["utility_temperature", "rack_top_temperature", "rack_bottom_temperature"]
 CELSIUS = 25.0625
+
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+DIR_SCHEMA = join(DIR_ROOT, "src/build/resources/schemas/vernemq")
 
 
 def test_publishes_readings():
@@ -50,6 +56,8 @@ def test_publishes_readings():
         assert isinstance(payload["timestamp"], str) and len(payload["timestamp"]) == 20
         for sensor in SENSORS:
             assert abs(payload["samples"]["{}_celsius".format(sensor)] - CELSIUS) < 0.001
+        for topic, retained in received.items():
+            assert_declared_shape(topic, retained)
 
     success = False
     time_start_warmup = time.time()
@@ -61,6 +69,35 @@ def test_publishes_readings():
             print(exception)
             time.sleep(1)
     assert success is True
+
+
+def test_declares_every_published_topic():
+    declared = set(schema_topics())
+    assert declared, "no declared topics under [{}]".format(DIR_SCHEMA)
+    for topic in (STATE_TOPIC, STATUS_TOPIC):
+        assert topic in declared, "published topic [{}] is not declared".format(topic)
+
+
+def schema_topics():
+    topics_dir = join(DIR_SCHEMA, "topics")
+    for directory, _, files in os.walk(topics_dir):
+        for name in files:
+            yield os.path.relpath(join(directory, name), topics_dir)
+
+
+def assert_declared_shape(topic, retained):
+    filter_path = join(DIR_SCHEMA, "filters", topic)
+    values_path = join(DIR_SCHEMA, "values", topic)
+    if isfile(filter_path):
+        completed = subprocess.run(["jq", "-e", "-f", filter_path], input=retained,
+                                   capture_output=True, check=False)
+        assert completed.returncode == 0, \
+            "retained payload on [{}] does not match its declared shape [{}]".format(topic, retained)
+    elif isfile(values_path):
+        with open(values_path) as values_file:
+            allowed = {line.strip() for line in values_file if line.strip()}
+        assert retained.decode().strip() in allowed, \
+            "retained payload on [{}] is not a declared value [{}]".format(topic, retained)
 
 
 if __name__ == '__main__':

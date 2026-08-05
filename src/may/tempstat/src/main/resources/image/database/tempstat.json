@@ -1,0 +1,18 @@
+{
+  "table": "tempstat",
+  "time": {
+    "column": "time",
+    "type": "TIMESTAMPTZ"
+  },
+  "dimensions": [
+    "entity",
+    "type",
+    "period",
+    "unit"
+  ],
+  "value": {
+    "column": "value",
+    "type": "FLOAT8"
+  },
+  "strategy": "direct"
+}

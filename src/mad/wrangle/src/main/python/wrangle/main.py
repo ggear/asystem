@@ -144,11 +144,6 @@ def configure(argv=None):
         help="start the HTTP server but skip the polling loop, accepting runs via API",
     )
     parser.add_argument(
-        "--dump-database-queries",
-        action="store_true",
-        help="print common SQL queries for all plugins that query the database, then exit",
-    )
-    parser.add_argument(
         "--log-level",
         choices=["debug", "info", "warning", "error", "fatal"],
         default=None,
@@ -203,30 +198,8 @@ def configure(argv=None):
 _SECRET_ENV_SUFFIXES = ("PASSWORD", "KEY", "TOKEN", "SECRET")
 
 
-def _dump_database_queries():
-    psql_prefix = (
-        "PGPASSWORD=$WRANGLE_DATABASE_PASSWORD \\\n"
-        "  psql \\\n"
-        "    --host=$WRANGLE_DATABASE_HOST \\\n"
-        "    --port=$WRANGLE_DATABASE_PORT \\\n"
-        "    --username=$WRANGLE_DATABASE_USER \\\n"
-        "    --dbname=$WRANGLE_DATABASE_USER"
-    )
-    for plugin_name in _get_plugins():
-        instance = _instantiate_plugin(plugin_name)
-        if instance.database:
-            print(f"# {plugin_name}")
-            for template in database.DATABASE_QUERY_TEMPLATES:
-                print(f"{psql_prefix} \\\n    --command=\"\n{template.format(table=plugin_name)};\n\"")
-                print()
-            print()
-
-
 def main(argv=None):
     args = configure(argv)
-    if args.dump_database_queries:
-        _dump_database_queries()
-        return
     init_start = time.perf_counter()
     print_log("Wrangle", "Starting ...")
     wrangle_env_lines = [

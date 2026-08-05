@@ -1,11 +1,11 @@
-from homeassistant.generate import *
+from asystem import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
-    metadata_df = load_entity_metadata()
+    metadata_df = load_bootstrap_entities()
 
-    # Build MQTT schema
+    # Build broker schema
     metadata_storage_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
@@ -15,6 +15,6 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
         ]
-    write_entity_metadata(metadata_storage_df,
-                          topic_glob_discovery="homeassistant/+/storage_${STORAGE_HOST}/+/config",
-                          topic_glob_data="storage/${STORAGE_HOST}/data/+/+/+")
+    write_schema_broker(metadata_storage_df,
+                        topic_glob_discovery="homeassistant/+/storage_${STORAGE_HOST}/+/config",
+                        topic_glob_data="storage/${STORAGE_HOST}/data/+/+/+")

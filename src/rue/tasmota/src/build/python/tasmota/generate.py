@@ -4,17 +4,17 @@ from os.path import *
 
 import pandas as pd
 
-from homeassistant.generate import load_entity_metadata
-from homeassistant.generate import load_env
-from homeassistant.generate import write_entity_metadata
+from asystem import load_bootstrap_entities
+from asystem import load_bootstrap_env
+from asystem import write_schema_broker
 
 pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
-    env = load_env(DIR_ROOT)
-    metadata_df = load_entity_metadata()
+    env = load_bootstrap_env(DIR_ROOT)
+    metadata_df = load_bootstrap_entities()
 
     metadata_tasmota_df = metadata_df[
         (metadata_df["index"] > 0) &
@@ -27,11 +27,11 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0)
         ].sort_values("connection_ip")
 
-    write_entity_metadata(metadata_tasmota_df,
-                          working_dir=join(DIR_ROOT, "src/main/resources/config/mqtt"),
-                          topic_glob_discovery="homeassistant/+/tasmota/#",
-                          topic_glob_data="tasmota/#",
-                          schema_state={
+    write_schema_broker(metadata_tasmota_df,
+                        working_root=join(DIR_ROOT, "src/main/resources/config"),
+                        topic_glob_discovery="homeassistant/+/tasmota/#",
+                        topic_glob_data="tasmota/#",
+                        schema_state={
                               "*/stat/POWER": """
 <ON|OFF>
                               """,

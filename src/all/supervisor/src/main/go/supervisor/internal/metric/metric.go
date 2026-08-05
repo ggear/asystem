@@ -79,7 +79,7 @@ func GetIDKind(id ID) MetricKind {
 	if id < 0 || id >= MetricMax {
 		return MetricKindUnset
 	}
-	return metricBuildersByID[id].kind
+	return metricBuildersByID[id].metricKind
 }
 
 func GetIDsByKind(types []MetricKind) []ID {
@@ -98,7 +98,7 @@ func GetIDsByKind(types []MetricKind) []ID {
 	}
 	ids := make([]ID, 0, MetricMax)
 	for _, builder := range metricBuildersByID {
-		if allowed[builder.kind] {
+		if allowed[builder.metricKind] {
 			ids = append(ids, builder.id)
 		}
 	}

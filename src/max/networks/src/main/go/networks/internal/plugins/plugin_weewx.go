@@ -12,6 +12,7 @@ import (
 
 	"networks/internal/config"
 	"networks/internal/plugin"
+	"networks/internal/schema"
 	"networks/internal/scribe"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -24,6 +25,18 @@ const (
 	weewxFreshWindow = time.Hour
 	signalFitMin     = 50.0
 )
+
+var (
+	weewxConsole = schema.Declare("weewx/console", "the weather station console link and its health", aggregateCadence)
+	weewxOK      = weewxConsole.Bool("ok", "console reporting a fresh pulse with usable signal quality")
+	weewxScore   = weewxConsole.Int("score", "count", "diagnosis score from 0 to 100")
+)
+
+type weewxReading struct {
+	quality    float64
+	hasQuality bool
+	fresh      bool
+}
 
 type weewxPlugin struct {
 	probe func(ctx context.Context) (quality float64, hasQuality bool, fresh bool, err error)
@@ -43,13 +56,9 @@ func (p *weewxPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	if err != nil {
 		return plugin.Sample{}, err
 	}
-	signal := plugin.Null("signal_quality_pct")
-	if hasQuality {
-		signal = plugin.Float("signal_quality_pct", plugin.Round(quality, 1))
-	}
-	point := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "weatherstation"}}, signal, plugin.Bool("fresh", fresh))
 	scribe.LogDebug("weewx", "polled quality [%v] has_quality [%v] fresh [%v]", quality, hasQuality, fresh)
-	return plugin.Sample{Points: []plugin.Point{point}}, nil
+	return plugin.Sample{Readings: weewxReading{
+		quality: plugin.Round(quality, 1), hasQuality: hasQuality, fresh: fresh}}, nil
 }
 
 func (p *weewxPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
@@ -127,19 +136,10 @@ func readWeewx(signal, status []byte, now time.Time) (quality float64, hasQualit
 }
 
 func diagnoseWeewx(samples []plugin.Sample) plugin.Aggregate {
-	points := plugin.LatestPoints(samples)
-	fresh := false
-	quality := 0.0
-	hasQuality := false
-	for _, point := range points {
-		if value, ok := point.Bool("fresh"); ok {
-			fresh = value
-		}
-		if value, ok := point.Float("signal_quality_pct"); ok {
-			quality = value
-			hasQuality = true
-		}
-	}
+	reading := plugin.Latest[weewxReading](samples)
+	fresh := reading.fresh
+	quality := reading.quality
+	hasQuality := reading.hasQuality
 	score := plugin.Clamp(int(math.Round(quality)))
 	result := plugin.Aggregate{}
 	switch {
@@ -152,13 +152,19 @@ func diagnoseWeewx(samples []plugin.Sample) plugin.Aggregate {
 	default:
 		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("WEAK_SIGNAL: weather station signal quality [%.0f%%]", quality))
 	}
-	result.Points = reportWeewx(result.Score, points)
+	result.Points = reportWeewx(weewxStats{ok: result.OK, score: result.Score})
 	return result
 }
 
-func reportWeewx(score int, stationPoints []plugin.Point) []plugin.Point {
-	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}}, plugin.Int("score", int64(score)))
-	return plugin.PrependSummaryPoints(summary, stationPoints)
+func reportWeewx(stats weewxStats) []schema.Point {
+	return []schema.Point{weewxConsole.Point(
+		weewxOK.Of(stats.ok),
+		weewxScore.Of(int64(stats.score)))}
+}
+
+type weewxStats struct {
+	ok    bool
+	score int
 }
 
 func init() {

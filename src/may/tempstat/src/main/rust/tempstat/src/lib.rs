@@ -5,6 +5,7 @@
 pub mod broker;
 pub mod config;
 pub mod driver;
+pub mod schema;
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -38,10 +39,12 @@ pub(crate) fn log_line(label: &str, value: &str) -> String {
     format!("{leader:.<width$} [{value}]", width = LOG_LABEL_WIDTH)
 }
 
+pub const DEFAULT_POLL_PERIOD: &str = "0";
+
 #[derive(Debug, Parser)]
 #[command(name = "tempstat", about = "Run the tempstat temperature-probe reader", version)]
 pub struct Cli {
-    #[arg(short = 'P', long = "poll-period", value_name = "PERIOD", default_value = "0")]
+    #[arg(short = 'P', long = "poll-period", value_name = "PERIOD", default_value = DEFAULT_POLL_PERIOD)]
     pub poll_period: String,
     #[arg(short = 'D', long = "device", value_name = "PATH", default_value = "/dev/ttyUSB0")]
     pub device: String,

@@ -18,14 +18,15 @@ func TestWeewx_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != 1 {
-		t.Fatalf("points: got %d want 1", len(msg.Points))
+	reading, ok := msg.Readings.(weewxReading)
+	if !ok {
+		t.Fatal("readings: got none want a weewx reading")
 	}
-	if got, ok := msg.Points[0].Float("signal_quality_pct"); !ok || got != 82.4 {
-		t.Errorf("signal_quality_pct: got %v ok=%v want 82.4", got, ok)
+	if !reading.hasQuality || reading.quality != 82.4 {
+		t.Errorf("quality: got %v has=%v want 82.4", reading.quality, reading.hasQuality)
 	}
-	if got, ok := msg.Points[0].Bool("fresh"); !ok || !got {
-		t.Errorf("fresh: got %v ok=%v want true", got, ok)
+	if !reading.fresh {
+		t.Errorf("fresh: got false want true")
 	}
 }
 
@@ -53,7 +54,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  82,
-			expectedReason:"HEALTHY",
+			expectedReason: "HEALTHY",
 		},
 		{
 			name:           "sick_fresh_weak_signal",
@@ -61,7 +62,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  30,
-			expectedReason:"WEAK_SIGNAL",
+			expectedReason: "WEAK_SIGNAL",
 		},
 		{
 			name:           "dead_stale_ignores_signal",
@@ -69,7 +70,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"STALE",
+			expectedReason: "STALE",
 		},
 		{
 			name:           "dead_fresh_no_signal",
@@ -77,7 +78,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"NO_DATA",
+			expectedReason: "NO_DATA",
 		},
 	}
 	for _, test := range tests {
@@ -135,10 +136,6 @@ func TestWeewx_Read(t *testing.T) {
 }
 
 func weewxPoll(fresh, hasQuality bool, quality float64) plugin.Sample {
-	signal := plugin.Null("signal_quality_pct")
-	if hasQuality {
-		signal = plugin.Float("signal_quality_pct", quality)
-	}
-	point := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "weatherstation"}}, signal, plugin.Bool("fresh", fresh))
-	return plugin.Sample{Plugin: "weewx", Points: []plugin.Point{point}}
+	return plugin.Sample{Plugin: "weewx", Readings: weewxReading{
+		quality: quality, hasQuality: hasQuality, fresh: fresh}}
 }

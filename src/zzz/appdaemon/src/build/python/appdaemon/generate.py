@@ -1,12 +1,12 @@
-from homeassistant.generate import *
+from asystem import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
-    env = load_env(DIR_ROOT)
-    modules = load_modules(load_disabled=False, load_infrastrcture=False)
-    metadata_df = load_entity_metadata()
+    env = load_bootstrap_env(DIR_ROOT)
+    modules = load_bootstrap_modules(load_disabled=False, load_infrastructure=False)
+    metadata_df = load_bootstrap_entities()
 
-    write_bootstrap()
-    write_healthcheck()
-    write_certificates()
+    write_container_bootstrap()
+    write_container_healthchecks()
+    write_container_certificates()

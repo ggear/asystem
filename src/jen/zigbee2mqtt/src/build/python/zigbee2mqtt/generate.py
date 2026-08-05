@@ -4,7 +4,7 @@ import urllib3
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
-from homeassistant.generate import *
+from asystem import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
@@ -12,11 +12,11 @@ DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
 UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
 
 if __name__ == "__main__":
-    env = load_env(DIR_ROOT)
-    metadata_df = load_entity_metadata()
+    env = load_bootstrap_env(DIR_ROOT)
+    metadata_df = load_bootstrap_entities()
 
-    write_bootstrap()
-    write_healthcheck()
+    write_container_bootstrap()
+    write_container_healthchecks()
 
     metadata_groups_devices_df = metadata_df[
         (metadata_df["index"] > 0) &
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         (metadata_df["connection_mac"].str.len() > 0)
         ]
     metadata_config_dicts = [row.dropna().to_dict() for index, row in metadata_config_df.iterrows()]
-    metadata_config_path = abspath(join(DIR_ROOT, "src/main/resources/image/mqtt/mqtt_config.sh"))
+    metadata_config_path = abspath(join(DIR_ROOT, "src/main/resources/image/vernemq/broker_config.sh"))
     with open(metadata_config_path, 'w') as metadata_config_file:
         metadata_config_file.write("""
 #!/bin/bash
@@ -87,7 +87,7 @@ while ! mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/br
         """.strip() + "\n")
         for metadata_config_dict in metadata_config_dicts:
             metadata_config_file.write("""
-${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
+${{ROOT_DIR}}/broker_config.py '{}' '{}' '{}' '{}'
             """.format(
                 metadata_config_dict["connection_mac"],
                 metadata_config_dict["device_name"],
@@ -97,7 +97,7 @@ ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
     os.chmod(metadata_config_path, 0o750)
     print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
 
-    metadata_config_clean_path = abspath(join(DIR_ROOT, "src/main/resources/image/mqtt/mqtt_config_clean.sh"))
+    metadata_config_clean_path = abspath(join(DIR_ROOT, "src/main/resources/image/vernemq/broker_config_clean.sh"))
     with open(metadata_config_clean_path, 'w') as metadata_config_clean_file:
         metadata_config_clean_file.write("""
 #!/bin/bash

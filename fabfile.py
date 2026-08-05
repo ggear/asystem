@@ -93,26 +93,51 @@ def test(context):
     _clean(context)
     _generate(context)
     _build(context)
-    _unittest(context)
-    _systest(context)
+    _test_unit(context)
+    _test_sys(context)
 
 
-@task(aliases=_aliases("unittest", "ut", start=2))
-def unittest(context):
+@task(aliases=_aliases("test_unit", "ut", start=6))
+def test_unit(context):
     _setup(context)
     _clean(context)
     _generate(context)
     _build(context)
-    _unittest(context)
+    _test_unit(context)
 
 
-@task(aliases=_aliases("systest", "st", start=2))
-def systest(context):
+@task(aliases=_aliases("test_sys", "st", start=6))
+def test_sys(context):
     _setup(context)
     _clean(context)
     _generate(context)
     _build(context)
-    _systest(context)
+    _test_sys(context)
+
+
+@task(aliases=_aliases("schema", start=2))
+def schema(context):
+    _setup(context)
+    _clean(context)
+    _generate(context)
+    _schema_database(context)
+    _schema_broker(context)
+
+
+@task(aliases=_aliases("schema_database", "sd", start=15))
+def schema_database(context):
+    _setup(context)
+    _clean(context)
+    _generate(context)
+    _schema_database(context)
+
+
+@task(aliases=_aliases("schema_broker", "sb", start=13))
+def schema_broker(context):
+    _setup(context)
+    _clean(context)
+    _generate(context)
+    _schema_broker(context)
 
 
 @task(aliases=_aliases("package", "pkg"))
@@ -297,7 +322,8 @@ def _list(context):
             for _ in _get_host_labels(module):
                 if group not in group_service_dict:
                     group_service_dict[group] = set()
-                group_service_dict[group].add(service)
+                if service != "_":
+                    group_service_dict[group].add(service)
             for host in ["{} [{}-{}, {}, {}]".format(
                     _host,
                     _get_host_metadata(_host)[0],
@@ -309,7 +335,9 @@ def _list(context):
                     host_group_service_dict[host] = {}
                 if group not in host_group_service_dict[host]:
                     host_group_service_dict[host][group] = {}
-                host_group_service_dict[host][group][service] = service
+                if service != "_":
+                    host_group_service_dict[host][group][service] = service
+                host_group_service_dict[host] = {k: v for k, v in host_group_service_dict[host].items() if len(v) > 0}
         else:
             raise Exception(
                 "Error in group file [{}], erroneous group number [{}]".format(group_path, group))
@@ -402,8 +430,8 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                    filter_host=filter_host, is_release=is_release, is_test=is_test)
         _print_footer(module, "generate env", host=filter_host)
     generate_pythonpath = [dirname(abspath(__file__))]
-    for module in _get_modules(context, "src/build/python/*/generate.py", "*/*", filter_groups=False):
-        generate_pythonpath.append(join(ROOT_MODULE_DIR, module, "src/build/python"))
+    for module_python_path in sorted(glob.glob(join(ROOT_MODULE_DIR, "*/*/src/build/python"))):
+        generate_pythonpath.append(module_python_path)
     for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
         _print_header(module, "generate python script", host=filter_host)
         _run_local(context, "PYTHONPATH={} python {}/{}/src/build/python/{}/generate.py" \
@@ -758,7 +786,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
         _print_footer(module, "build compile", host=filter_host)
 
 
-def _unittest(context, filter_module=None):
+def _test_unit(context, filter_module=None):
     for module in _get_modules(context, "src/test/python/unit/unit_test.py", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
@@ -828,7 +856,25 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
         _print_footer(module, "package", host=filter_host)
 
 
-def _systest(context, filter_module=None):
+def _schema_database(context, filter_module=None):
+    _schema(context, ("influxdb3", "postgres"), filter_module=filter_module)
+
+
+def _schema_broker(context, filter_module=None):
+    _schema(context, ("vernemq",), filter_module=filter_module)
+
+
+def _schema(context, dialects, filter_module=None):
+    for dialect in dialects:
+        schemas_dir = join("src/build/resources/schemas", dialect)
+        for module in _get_modules(context, join(schemas_dir, "describe.sh"), filter_module=filter_module):
+            _print_header(module, "schema")
+            _print_line("Describing [{}] schema ...".format(dialect))
+            _run_local(context, "./describe.sh", join(module, schemas_dir))
+            _print_footer(module, "schema")
+
+
+def _test_sys(context, filter_module=None):
     for module in _get_modules(context, "src/test/*/system", filter_module=filter_module):
         _up_module(context, module, is_test=True)
         _print_header(module, "systest")
@@ -880,8 +926,8 @@ def _release(context):
         if FAB_SKIP_TESTS not in os.environ:
             _generate(context, filter_module=release_module)
             _build(context, filter_module=release_module)
-            _unittest(context, filter_module=release_module)
-            _systest(context, filter_module=release_module)
+            _test_unit(context, filter_module=release_module)
+            _test_sys(context, filter_module=release_module)
     _get_versions_next_release()
     if FAB_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
@@ -1001,7 +1047,8 @@ def _get_modules_by_hosts(filter_path=None, filter_module=None, filter_host_type
     modules = {}
     for module_path in glob.glob(join(ROOT_MODULE_DIR, "*/*" if filter_module is None else filter_module)):
         group_path = Path(join(module_path, ".group"))
-        if isfile(group_path) and group_path.read_text().strip().isdigit() and \
+        if basename(module_path) != SHARED_MODULE_NAME and \
+                isfile(group_path) and group_path.read_text().strip().isdigit() and \
                 int(group_path.read_text().strip()) >= 0 and \
                 (filter_path is None or glob.glob("{}/{}*".format(module_path, filter_path))):
             module = module_path.replace(dirname(dirname(module_path)) + "/", "")
@@ -1044,6 +1091,7 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
             if isdir(module_path) and (filter_path is None or
                                        glob.glob("{}/{}".format(module_path, filter_path))):
                 working_modules.append(module_path.replace(ROOT_MODULE_DIR + "/", ""))
+    working_modules[:] = [module for module in working_modules if _name(module) != SHARED_MODULE_NAME]
     grouped_modules = {}
     for module in working_modules:
         group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
@@ -1428,6 +1476,7 @@ HOME_DIR = "/home/asystem"
 INSTALL_DIR = "/var/lib/asystem/install"
 ROOT_DIR = dirname(abspath(__file__))
 ROOT_MODULE_DIR = join(ROOT_DIR, "src")
+SHARED_MODULE_NAME = "_"
 
 GLOBAL_ENV_PATH = join(dirname(abspath(__file__)), ".env_fab")
 GLOBAL_ENV = _get_env(GLOBAL_ENV_PATH)

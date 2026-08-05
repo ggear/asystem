@@ -139,7 +139,7 @@ func (e *Engine) PollSamples(ctx context.Context) {
 			e.sampleMu.Lock()
 			e.addSample(p.Name(), m)
 			e.sampleMu.Unlock()
-			scribe.LogDebug(p.Name(), "polled [%d] points", len(m.Points))
+			scribe.LogDebug(p.Name(), "polled [%s]", p.Name())
 		}(p)
 	}
 	wg.Wait()
@@ -229,7 +229,7 @@ func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {
 	if e.database != nil {
 		e.lineProtocolMu.Lock()
 		e.lineProtocolBuffer.Reset()
-		m.AppendLineProtocol(&e.lineProtocolBuffer, "network", time.Now().UnixNano())
+		m.AppendLineProtocol(&e.lineProtocolBuffer, time.Now().UnixNano())
 		data := append([]byte(nil), e.lineProtocolBuffer.Bytes()...)
 		e.lineProtocolMu.Unlock()
 		if len(data) > 0 {

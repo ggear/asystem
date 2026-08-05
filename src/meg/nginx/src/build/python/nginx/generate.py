@@ -1,6 +1,6 @@
 import urllib3
 
-from homeassistant.generate import *
+from asystem import *
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
@@ -8,11 +8,11 @@ pd.options.mode.chained_assignment = None
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
-    env = load_env(DIR_ROOT)
-    modules = load_modules()
+    env = load_bootstrap_env(DIR_ROOT)
+    modules = load_bootstrap_modules()
 
-    write_healthcheck(working_dir=join(DIR_ROOT, "src/main/resources/data"))
-    write_certificates(working_dir=join(DIR_ROOT, "src/main/resources/data"))
+    write_container_healthchecks(working_dir=join(DIR_ROOT, "src/main/resources/data"))
+    write_container_certificates(working_dir=join(DIR_ROOT, "src/main/resources/data"))
 
     conf_path = abspath(join(DIR_ROOT, "src/main/resources/data/nginx.conf"))
     with open(conf_path, 'w') as conf_file:

@@ -1,5 +1,10 @@
 {
   "venvPath": "/Users/graham/.pyenv/versions",
   "venv": "asystem",
-  "include": ["wrangle"]
+  "include": [
+    "wrangle"
+  ],
+  "extraPaths": [
+    "../../../../../all/_/src/build/python"
+  ]
 }

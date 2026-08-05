@@ -1,8 +1,10 @@
 import json
+import os
 import random
 import string
 import sys
 import time
+from os.path import abspath, dirname, join, realpath
 
 import paho.mqtt.client as mqtt
 import pytest
@@ -16,6 +18,9 @@ STATUS_TOPIC = "networks/status"
 DATA_TOPIC = "networks/data/internet"
 COMMAND_TOPIC = "networks/command/internet"
 TRIAD = {"fit", "sick", "dead"}
+
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+DIR_SCHEMA = join(DIR_ROOT, "src/build/resources/schemas/vernemq")
 
 
 def _client():
@@ -72,6 +77,20 @@ def test_publishes_vitals_and_accepts_switch_command():
             print(exception)
             time.sleep(1)
     assert success is True
+
+
+def test_declares_every_published_topic():
+    declared = set(_schema_topics())
+    assert declared, "no declared topics under [{}]".format(DIR_SCHEMA)
+    for topic in (STATUS_TOPIC, DATA_TOPIC, COMMAND_TOPIC):
+        assert topic in declared, "published topic [{}] is not declared".format(topic)
+
+
+def _schema_topics():
+    topics_dir = join(DIR_SCHEMA, "topics")
+    for directory, _, files in os.walk(topics_dir):
+        for name in files:
+            yield os.path.relpath(join(directory, name), topics_dir)
 
 
 if __name__ == '__main__':

@@ -10,8 +10,8 @@ import (
 )
 
 func TestZigbee_Poll(t *testing.T) {
-	p := &zigbeePlugin{probe: func(context.Context) (bool, bool, []zigbeeDevice, error) {
-		return true, false, []zigbeeDevice{
+	p := &zigbeePlugin{probe: func(context.Context) (bool, bool, []zigbeeReading, error) {
+		return true, false, []zigbeeReading{
 			{name: "lamp", lqi: 120, hasLQI: true, available: true},
 			{name: "coord", isCoordinator: true},
 			{name: "plug", available: false},
@@ -21,40 +21,40 @@ func TestZigbee_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != 3 {
-		t.Fatalf("points: got %d want 3 (bridge + 2 devices, coordinator skipped)", len(msg.Points))
-	}
-	bridge, ok := pointByTag(msg.Points, "scope", "bridge")
+	sample, ok := msg.Readings.(zigbeeSample)
 	if !ok {
-		t.Fatal("bridge point missing")
+		t.Fatal("readings: got none want a zigbee sample")
 	}
-	if online, _ := bridge.Bool("online"); !online {
+	if !sample.online {
 		t.Errorf("bridge online: got false want true")
 	}
-	lamp, ok := pointByTag(msg.Points, "device", "lamp")
-	if !ok {
-		t.Fatal("lamp point missing")
+	if len(sample.devices) != 2 {
+		t.Fatalf("devices: got %d want 2 (coordinator skipped)", len(sample.devices))
 	}
-	if got, ok := lamp.Int("lqi"); !ok || got != 120 {
-		t.Errorf("lamp lqi: got (%d,%v) want (120,true)", got, ok)
+	lamp := deviceByName(sample.devices, "lamp")
+	if lamp == nil {
+		t.Fatal("lamp reading missing")
 	}
-	if avail, _ := lamp.Bool("available"); !avail {
+	if !lamp.hasLQI || lamp.lqi != 120 {
+		t.Errorf("lamp lqi: got (%d,%v) want (120,true)", lamp.lqi, lamp.hasLQI)
+	}
+	if !lamp.available {
 		t.Errorf("lamp available: got false want true")
 	}
-	plug, ok := pointByTag(msg.Points, "device", "plug")
-	if !ok {
-		t.Fatal("plug point missing")
+	plug := deviceByName(sample.devices, "plug")
+	if plug == nil {
+		t.Fatal("plug reading missing")
 	}
-	if _, ok := plug.Int("lqi"); ok {
-		t.Errorf("plug lqi: got a value want null (no lqi reported)")
+	if plug.hasLQI {
+		t.Errorf("plug lqi: got a value want none (no lqi reported)")
 	}
-	if avail, _ := plug.Bool("available"); avail {
+	if plug.available {
 		t.Errorf("plug available: got true want false")
 	}
 }
 
 func TestZigbee_PollError(t *testing.T) {
-	p := &zigbeePlugin{probe: func(context.Context) (bool, bool, []zigbeeDevice, error) {
+	p := &zigbeePlugin{probe: func(context.Context) (bool, bool, []zigbeeReading, error) {
 		return false, false, nil, errors.New("broker unreachable")
 	}}
 	if _, err := p.Poll(context.Background()); err == nil {
@@ -78,7 +78,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  82,
-			expectedReason:"HEALTHY",
+			expectedReason: "HEALTHY",
 			expectedError:  false,
 		},
 		{
@@ -87,7 +87,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  47,
-			expectedReason:"DEVICES_OFFLINE",
+			expectedReason: "DEVICES_OFFLINE",
 			expectedError:  false,
 		},
 		{
@@ -96,7 +96,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  72,
-			expectedReason:"WEAK_LINKS",
+			expectedReason: "WEAK_LINKS",
 			expectedError:  false,
 		},
 		{
@@ -105,7 +105,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"COORDINATOR_DOWN",
+			expectedReason: "COORDINATOR_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -114,7 +114,7 @@ func TestZigbee_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"COORDINATOR_DOWN",
+			expectedReason: "COORDINATOR_DOWN",
 			expectedError:  false,
 		},
 	}
@@ -201,7 +201,7 @@ func TestZigbee_ReadEdges(t *testing.T) {
 	}
 }
 
-func deviceByName(devices []zigbeeDevice, name string) *zigbeeDevice {
+func deviceByName(devices []zigbeeReading, name string) *zigbeeReading {
 	for i := range devices {
 		if devices[i].name == name {
 			return &devices[i]
@@ -218,14 +218,10 @@ type deviceSample struct {
 }
 
 func zigbeePoll(bridgeOnline bool, samples ...deviceSample) plugin.Sample {
-	points := []plugin.Point{plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "bridge"}}, plugin.Bool("online", bridgeOnline), plugin.Bool("permit_join", false))}
+	devices := make([]zigbeeReading, 0, len(samples))
 	for _, s := range samples {
-		tags := []plugin.Tag{{Key: "scope", Value: "device"}, {Key: "device", Value: s.name}}
-		lqiField := plugin.Null("lqi")
-		if s.hasLQI {
-			lqiField = plugin.Int("lqi", int64(s.lqi))
-		}
-		points = append(points, plugin.NewPoint(tags, lqiField, plugin.Bool("available", s.available)))
+		devices = append(devices, zigbeeReading{
+			name: s.name, available: s.available, lqi: s.lqi, hasLQI: s.hasLQI})
 	}
-	return plugin.Sample{Plugin: "zigbee", Points: points}
+	return plugin.Sample{Plugin: "zigbee", Readings: zigbeeSample{online: bridgeOnline, devices: devices}}
 }

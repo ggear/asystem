@@ -3,7 +3,6 @@ from os.path import dirname
 
 sys.path.insert(0, dirname(__file__))
 
-import contextlib
 import copy
 import dataclasses
 import datetime
@@ -11,7 +10,6 @@ import filecmp
 import functools
 import glob
 import importlib
-import io
 import json
 import os
 import random
@@ -25,6 +23,7 @@ import unittest
 from collections.abc import Iterable
 from datetime import date as date_type
 from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
+from pathlib import Path
 from unittest import mock
 
 import csv_diff  # type: ignore
@@ -1196,21 +1195,26 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual({"snapshot", "delta"}, set(long_df["type"].to_list()))
         self.assertEqual({"$", "%"}, set(long_df["unit"].to_list()))
 
-    def test_dump_database_queries(self):
+    def test_database_schema_generated(self):
         reset_config()
-        output = io.StringIO()
-        with contextlib.redirect_stdout(output):
-            wrangle_main._dump_database_queries()
-        text = output.getvalue()
-        print(text)
+        schemas_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/build/resources/schemas/postgres"))
+        image_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/main/resources/image/database"))
+        for artifact in ("sql/describe.sql", "sql/verify.sql", "sql/observe.sql", "describe.sh", "query.sh", "verify.sh"):
+            self.assertTrue(isfile(join(schemas_dir, artifact)), f"missing generated artifact [{artifact}]")
         for plugin_name in wrangle_main._get_plugins():
             instance = wrangle_main._instantiate_plugin(plugin_name)
-            if instance.database:
-                self.assertIn(f"# {plugin_name}", text)
-                for template in database.DATABASE_QUERY_TEMPLATES:
-                    self.assertIn(template.format(table=plugin_name), text)
-            else:
-                self.assertNotIn(f"# {plugin_name}\n", text)
+            if not instance.database:
+                continue
+            table_sql = join(schemas_dir, "tables", f"{plugin_name}.sql")
+            query_sql = join(schemas_dir, "sql", f"query_{plugin_name}.sql")
+            self.assertTrue(isfile(table_sql), f"missing generated DDL for table [{plugin_name}]")
+            self.assertTrue(isfile(query_sql), f"missing generated queries for table [{plugin_name}]")
+            ddl = Path(table_sql).read_text()
+            self.assertIn(f"CREATE TABLE IF NOT EXISTS {plugin_name} (", ddl)
+            self.assertIn("PRIMARY KEY (time, entity, type, period, unit)", ddl)
+            self.assertIn(f"SELECT create_hypertable('{plugin_name}', 'time'", ddl)
+            self.assertEqual(ddl, Path(join(image_dir, f"{plugin_name}.sql")).read_text())
+            self.assertEqual(join(image_dir, f"{plugin_name}.sql"), database.database_schema_path(plugin_name))
 
     def test_library_dataframe(self):
         test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")

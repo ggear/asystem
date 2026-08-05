@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"networks/internal/config"
 	"networks/internal/engine"
 	"networks/internal/plugin"
 	"networks/internal/scribe"
@@ -39,7 +40,7 @@ func Execute() {
 func init() {
 	rootCmd.Flags().StringVarP(&flagFilterPlugins, "filter-plugins", "f", "", "comma separated list restricting which plugins run (default: all)")
 	rootCmd.Flags().StringVarP(&flagPollPeriod, "poll-period", "p", "5m", "fast poll cadence for poll-phase plugins, uses unit suffixes (s, m, h)")
-	rootCmd.Flags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", "15m", "window rolled up before a network diagnosis, must be a whole multiple of poll period, uses unit suffixes (s, m, h)")
+	rootCmd.Flags().StringVarP(&flagAggregatePeriod, "aggregate-period", "a", config.DefaultAggregatePeriod, "window rolled up before a network diagnosis, must be a whole multiple of poll period, uses unit suffixes (s, m, h)")
 	rootCmd.Flags().BoolVarP(&flagPublishData, "publish-data", "d", false, "publish aggregates to MQTT and InfluxDB when true, otherwise log only (ignored without --daemon, which logs only)")
 	rootCmd.Flags().BoolVarP(&flagDaemon, "daemon", "D", false, "run continuously on the poll/aggregate loop when true, otherwise run a single log-only check at debug level and exit")
 	rootCmd.Flags().StringVarP(&flagLogLevel, "log-level", "l", "info", "log level (debug, info, warn, error)")

@@ -1,13 +1,13 @@
-from homeassistant.generate import *
+from asystem import *
 
 pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
-    env = load_env(DIR_ROOT)
+    env = load_bootstrap_env(DIR_ROOT)
 
-    write_healthcheck(working_dir=join(DIR_ROOT, "src/main/resources/data"))
+    write_container_healthchecks(working_dir=join(DIR_ROOT, "src/main/resources/data"))
 
     hosts_path = join(DIR_ROOT, "src/main/resources/pushcerts-hosts.sh")
     os.makedirs(os.path.dirname(hosts_path), exist_ok=True)

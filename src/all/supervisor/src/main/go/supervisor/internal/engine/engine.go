@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
+	"supervisor/internal/schema"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -353,7 +355,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		}
 	}
 	var lineProtocol bytes.Buffer
-	groups := make(map[lpKey]*strings.Builder)
+	groups := make(map[lpKey]map[string]schema.Field)
+	hostRelation := metric.HostRelation()
+	serviceRelation := metric.ServiceRelation()
 	var toDelete []lpKey
 	deleted := make(map[lpKey]bool)
 	err = probe.Run(ctx, func(isHeartbeat bool) {
@@ -372,29 +376,16 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		txCount := 0
 		txBytes := 0
 		lineProtocol.Reset()
-		for _, b := range groups {
-			b.Reset()
-		}
+		clear(groups)
 		toDelete = toDelete[:0]
 		clear(deleted)
 		addToGroup := func(key lpKey, field, suffix string, d *metric.ValueDataDetail) {
-			if d.Kind != metric.ValueInt && d.Kind != metric.ValueFloat {
-				return
+			fields := groups[key]
+			if fields == nil {
+				fields = map[string]schema.Field{}
+				groups[key] = fields
 			}
-			b := groups[key]
-			if b == nil {
-				b = new(strings.Builder)
-				groups[key] = b
-			} else if b.Len() > 0 {
-				b.WriteByte(',')
-			}
-			b.WriteString(field)
-			b.WriteString(suffix)
-			b.WriteByte('=')
-			b.WriteString(d.Value())
-			if d.Kind == metric.ValueInt {
-				b.WriteByte('i')
-			}
+			fields[field+suffix] = schema.Field{Text: d.Value(), Flag: d.OK}
 		}
 		process := func(guid metric.RecordGUID, record *metric.Record) {
 			if record.Topic != "" {
@@ -456,21 +447,24 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		}
 		brokerDuration := time.Since(brokerStart)
 		ts := strconv.FormatInt(time.Now().UnixNano(), 10)
-		for key, b := range groups {
-			if b.Len() == 0 {
-				continue
+		order := make([]lpKey, 0, len(groups))
+		for key := range groups {
+			order = append(order, key)
+		}
+		sort.Slice(order, func(i, j int) bool {
+			if order[i].host != order[j].host {
+				return order[i].host < order[j].host
 			}
-			lineProtocol.WriteString("supervisor,host=")
-			lineProtocol.WriteString(key.host)
+			return order[i].service < order[j].service
+		})
+		for _, key := range order {
+			relation := hostRelation
+			tags := [][2]string{{"host", key.host}}
 			if key.service != "" {
-				lineProtocol.WriteString(",service=")
-				lineProtocol.WriteString(key.service)
+				relation = serviceRelation
+				tags = append(tags, [2]string{"service", key.service})
 			}
-			lineProtocol.WriteByte(' ')
-			lineProtocol.WriteString(b.String())
-			lineProtocol.WriteByte(' ')
-			lineProtocol.WriteString(ts)
-			lineProtocol.WriteByte('\n')
+			schema.AppendLineProtocol(&lineProtocol, "supervisor", relation, tags, groups[key], ts)
 		}
 		lineBytes := lineProtocol.Len()
 		dbStart := time.Now()

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"networks/internal/plugin"
+	"networks/internal/schema"
 )
 
 func TestEngine_CreatePeriodValidation(t *testing.T) {
@@ -213,7 +214,7 @@ func TestEngine_CycleWindowedFallbackPolls(t *testing.T) {
 
 func TestEngine_CyclePollErrorProducesDeadAggregate(t *testing.T) {
 	p := &fakePlugin{name: "unreachable", pollErr: errors.New("boom"), aggregate: func(sampleBuffer []plugin.Sample) plugin.Aggregate {
-		if len(sampleBuffer) == 1 && len(sampleBuffer[0].Points) == 0 {
+		if len(sampleBuffer) == 1 && sampleBuffer[0].Readings == nil {
 			return plugin.Aggregate{Status: plugin.StatusDead, OK: false, Reason: "SOURCE_UNREACHABLE"}
 		}
 		return plugin.Aggregate{Status: plugin.StatusFit, OK: true}
@@ -227,7 +228,7 @@ func TestEngine_CyclePollErrorProducesDeadAggregate(t *testing.T) {
 
 func TestEngine_CyclePollPanicRecovered(t *testing.T) {
 	p := &fakePlugin{name: "panicky", panicPoll: true, aggregate: func(sampleBuffer []plugin.Sample) plugin.Aggregate {
-		if len(sampleBuffer) == 1 && len(sampleBuffer[0].Points) == 0 {
+		if len(sampleBuffer) == 1 && sampleBuffer[0].Readings == nil {
 			return plugin.Aggregate{Status: plugin.StatusDead, OK: false, Reason: "SOURCE_UNREACHABLE"}
 		}
 		return plugin.Aggregate{Status: plugin.StatusFit, OK: true}
@@ -322,6 +323,11 @@ func TestEngine_RunCommandDispatchesToPlugin(t *testing.T) {
 	}
 }
 
+var (
+	engineTestRelation = schema.Declare("enginetest/detail", "detail used by the engine tests", "15 min")
+	engineTestValue    = engineTestRelation.Int("v", "count", "counter used by the engine tests")
+)
+
 type fakePlugin struct {
 	name          string
 	mode          plugin.Mode
@@ -350,7 +356,7 @@ func (f *fakePlugin) Poll(context.Context) (plugin.Sample, error) {
 	if f.pollErr != nil {
 		return plugin.Sample{}, f.pollErr
 	}
-	return plugin.Sample{Points: []plugin.Point{plugin.NewPoint(nil, plugin.Int("v", 1))}}, nil
+	return plugin.Sample{Readings: []int{1}}, nil
 }
 
 func (f *fakePlugin) Aggregate(sampleBuffer []plugin.Sample) (plugin.Aggregate, error) {

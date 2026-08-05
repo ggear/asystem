@@ -13,6 +13,11 @@ import (
 
 const defaultVersion = "10.100.1000-SNAPSHOT"
 
+const (
+	DefaultPollPeriod  = "3s"
+	DefaultPulseFactor = "2"
+)
+
 var DefaultConfigPath = "/var/lib/asystem/install/supervisor/latest/image/config.json"
 
 type Periods struct {

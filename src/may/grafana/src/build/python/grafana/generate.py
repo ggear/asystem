@@ -1,6 +1,6 @@
 from os import makedirs
 
-from homeassistant.generate import *
+from asystem import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
@@ -14,10 +14,10 @@ PREFIX_DESKTOP = PREFIX + "D"
 PREFIX_DASHBOARD_DEFAULTS = PREFIX + "DASHBOARD_DEFAULTS "
 
 if __name__ == "__main__":
-    metadata_df = load_entity_metadata()
+    metadata_df = load_bootstrap_entities()
 
-    write_healthcheck()
-    write_bootstrap()
+    write_container_healthchecks()
+    write_container_bootstrap()
 
     metadata_dashboard_df = metadata_df[
         (metadata_df["index"] > 0) &

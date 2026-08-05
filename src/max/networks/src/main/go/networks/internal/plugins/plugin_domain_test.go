@@ -18,18 +18,16 @@ func TestDomain_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != len(resolvers) {
-		t.Fatalf("points: got %d want %d (one per resolver)", len(msg.Points), len(resolvers))
+	readings, _ := msg.Readings.([]domainReading)
+	if len(readings) != len(domainResolvers) {
+		t.Fatalf("readings: got %d want %d (one per resolver)", len(readings), len(domainResolvers))
 	}
-	point := msg.Points[0]
-	if resolved, _ := point.Bool("resolved"); !resolved {
+	reading := readings[0]
+	if !reading.resolved {
 		t.Errorf("resolved: got false want true")
 	}
-	if addresses, _ := point.Tag("addresses"); addresses != "10.0.0.1" {
-		t.Errorf("addresses: got %q want %q", addresses, "10.0.0.1")
-	}
-	if _, ok := point.Float("latency_ms"); !ok {
-		t.Fatal("latency_ms: got null want a value")
+	if reading.addresses != "10.0.0.1" {
+		t.Errorf("addresses: got %q want %q", reading.addresses, "10.0.0.1")
 	}
 }
 
@@ -41,15 +39,15 @@ func TestDomain_PollUnresolved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != len(resolvers) {
-		t.Fatalf("points: got %d want %d", len(msg.Points), len(resolvers))
+	readings, _ := msg.Readings.([]domainReading)
+	if len(readings) != len(domainResolvers) {
+		t.Fatalf("readings: got %d want %d", len(readings), len(domainResolvers))
 	}
-	point := msg.Points[0]
-	if resolved, _ := point.Bool("resolved"); resolved {
+	if readings[0].resolved {
 		t.Errorf("resolved: got true want false on probe failure")
 	}
-	if _, ok := point.Float("latency_ms"); ok {
-		t.Errorf("latency_ms: got a value want null on probe failure")
+	if readings[0].latencyMs != 0 {
+		t.Errorf("latency: got %v want 0 on probe failure", readings[0].latencyMs)
 	}
 }
 
@@ -72,7 +70,7 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  100,
-			expectedReason:"RESOLVED",
+			expectedReason: "RESOLVED",
 			expectedError:  false,
 		},
 		{
@@ -84,7 +82,7 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  67,
-			expectedReason:"PARTIAL_RESOLUTION",
+			expectedReason: "PARTIAL_RESOLUTION",
 			expectedError:  false,
 		},
 		{
@@ -96,7 +94,7 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  67,
-			expectedReason:"RECORD_MISMATCH",
+			expectedReason: "RECORD_MISMATCH",
 			expectedError:  false,
 		},
 		{
@@ -107,7 +105,7 @@ func TestDomain_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"NO_RESOLUTION",
+			expectedReason: "NO_RESOLUTION",
 			expectedError:  false,
 		},
 	}
@@ -141,14 +139,10 @@ type resolverSample struct {
 }
 
 func domainPoll(samples ...resolverSample) plugin.Sample {
-	points := make([]plugin.Point, 0, len(samples))
+	readings := make([]domainReading, 0, len(samples))
 	for _, s := range samples {
-		tags := []plugin.Tag{{Key: "scope", Value: "resolver"}, {Key: "resolver", Value: s.name}, {Key: "addresses", Value: s.addresses}}
-		if s.resolved {
-			points = append(points, plugin.NewPoint(tags, plugin.Bool("resolved", true), plugin.Float("latency_ms", s.latency)))
-		} else {
-			points = append(points, plugin.NewPoint(tags, plugin.Bool("resolved", false), plugin.Null("latency_ms")))
-		}
+		readings = append(readings, domainReading{
+			resolver: s.name, addresses: s.addresses, resolved: s.resolved, latencyMs: s.latency})
 	}
-	return plugin.Sample{Plugin: "domain", Points: points}
+	return plugin.Sample{Plugin: "domain", Readings: readings}
 }

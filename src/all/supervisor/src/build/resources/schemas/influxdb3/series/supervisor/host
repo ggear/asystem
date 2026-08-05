@@ -1,0 +1,40 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+# supervisor/host [health and utilisation of one host]
+supervisor,host=<host>
+    status=<0|1>i,
+    status_trend=<0|1>i,
+    used_processor=<number>i,
+    used_processor_trend=<number>i,
+    used_memory=<number>i,
+    used_memory_trend=<number>i,
+    allocated_memory=<number>i,
+    allocated_memory_trend=<number>i,
+    failed_log_messages=<number>i,
+    failed_log_messages_trend=<number>i,
+    failed_shares=<number>i,
+    failed_shares_trend=<number>i,
+    failed_backups=<number>i,
+    failed_backups_trend=<number>i,
+    warn_temperature_of_max=<number>i,
+    warn_temperature_of_max_trend=<number>i,
+    spin_fan_speed_of_max=<number>i,
+    spin_fan_speed_of_max_trend=<number>i,
+    life_used_drives=<number>i,
+    life_used_drives_trend=<number>i,
+    used_system_space=<number>i,
+    used_system_space_trend=<number>i,
+    used_share_space=<number>i,
+    used_share_space_trend=<number>i,
+    used_backup_space=<number>i,
+    used_backup_space_trend=<number>i,
+    used_swap_space=<number>i,
+    used_swap_space_trend=<number>i,
+    used_disk_ops=<number>i,
+    used_disk_ops_trend=<number>i,
+    used_network=<number>i,
+    used_network_trend=<number>i,
+    temperature=<number>,
+    temperature_trend=<number>
+    <timestamp>

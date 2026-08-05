@@ -1,0 +1,18 @@
+{
+  "table": "interest",
+  "time": {
+    "column": "time",
+    "type": "DATE"
+  },
+  "dimensions": [
+    "entity",
+    "type",
+    "period",
+    "unit"
+  ],
+  "value": {
+    "column": "value",
+    "type": "FLOAT8"
+  },
+  "strategy": "staging"
+}

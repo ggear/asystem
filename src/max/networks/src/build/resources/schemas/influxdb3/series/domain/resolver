@@ -1,0 +1,11 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+# domain/resolver [public DNS resolution of the monitored domain across the public resolvers]
+domain
+    ok=<0|1>i,
+    score=<number>i,
+    resolvers_total=<number>i,
+    resolvers_ok=<number>i,
+    resolvers_failed=<number>i
+    <timestamp>

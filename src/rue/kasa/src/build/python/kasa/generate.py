@@ -3,14 +3,14 @@ from os.path import *
 
 import pandas as pd
 
-from homeassistant.generate import load_entity_metadata
+from asystem import load_bootstrap_entities
 
 pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
-    metadata_df = load_entity_metadata()
+    metadata_df = load_bootstrap_entities()
 
     metadata_kasa_df = metadata_df[
         (metadata_df["index"] > 0) &

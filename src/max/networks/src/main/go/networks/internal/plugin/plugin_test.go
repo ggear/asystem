@@ -1,10 +1,19 @@
 package plugin
 
 import (
-	"bytes"
 	"context"
 	"testing"
 	"time"
+
+	"networks/internal/schema"
+)
+
+var (
+	testSummary      = schema.Declare("test/summary", "rollup used by the plugin tests", "15 min")
+	testSummaryScore = testSummary.Int("score", "count", "diagnosis score from 0 to 100")
+
+	testDetail      = schema.Declare("test/detail", "detail used by the plugin tests", "15 min")
+	testDetailCount = testDetail.Int("n", "count", "counter used by the plugin tests")
 )
 
 func TestPlugin_Filter(t *testing.T) {
@@ -84,62 +93,6 @@ func TestAggregate_MarshalJSON(t *testing.T) {
 				t.Fatalf("json mismatch:\n got %s\nwant %s", got, test.expected)
 			}
 		})
-	}
-}
-
-func TestAggregate_AppendLineProtocol(t *testing.T) {
-	tests := []struct {
-		name          string
-		message       Aggregate
-		expected      string
-		expectedError bool
-	}{
-		{
-			name: "summary_and_target",
-			message: Aggregate{
-				Plugin: "internet",
-				Points: []Point{
-					NewPoint([]Tag{{"scope", "summary"}}, Int("score", 72), Float("avg_loss_pct", 12.5), Bool("gateway_ok", true), Null("skip_me")),
-					NewPoint([]Tag{{"scope", "target"}, {"target", "8.8.8.8"}}, Bool("ok", true), Float("loss_pct", 25)),
-				},
-			},
-			expected: "network,plugin=internet,scope=summary score=72i,avg_loss_pct=12.5 1000\n" +
-				"network,plugin=internet,scope=target,target=8.8.8.8 loss_pct=25 1000\n",
-			expectedError: false,
-		},
-		{
-			name: "all_null_point_skipped",
-			message: Aggregate{
-				Plugin: "internet",
-				Points: []Point{NewPoint([]Tag{{"scope", "target"}}, Null("avg_rtt_ms"))},
-			},
-			expected:      "",
-			expectedError: false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			test.message.AppendLineProtocol(&buf, "network", 1000)
-			if buf.String() != test.expected {
-				t.Fatalf("line protocol mismatch:\n got %q\nwant %q", buf.String(), test.expected)
-			}
-		})
-	}
-}
-
-func TestAggregate_AppendLineProtocol_Escaping(t *testing.T) {
-	m := Aggregate{
-		Plugin: "zig bee",
-		Points: []Point{
-			NewPoint([]Tag{{"scope", "a=b"}}, Str("note", "x y=z"), Int("n", 3)),
-		},
-	}
-	var buf bytes.Buffer
-	m.AppendLineProtocol(&buf, "network", 1000)
-	want := `network,plugin=zig\ bee,scope=a\=b,note=x\ y\=z n=3i 1000` + "\n"
-	if buf.String() != want {
-		t.Fatalf("line protocol mismatch:\n got %q\nwant %q", buf.String(), want)
 	}
 }
 
@@ -275,83 +228,9 @@ func TestDeltaTracker_Delta(t *testing.T) {
 	}
 }
 
-func TestPoint_Accessors(t *testing.T) {
-	p := NewPoint(
-		[]Tag{{"scope", "summary"}},
-		Float("loss_pct", 12.5),
-		Int("count", 7),
-		Bool("up", true),
-		Str("note", "hello"),
-		Null("missing"),
-	)
-	if v, ok := p.Float("loss_pct"); !ok || v != 12.5 {
-		t.Errorf("Float(loss_pct): got %v %v want 12.5 true", v, ok)
-	}
-	if v, ok := p.Float("count"); !ok || v != 7 {
-		t.Errorf("Float(count): got %v %v want 7 true", v, ok)
-	}
-	if _, ok := p.Float("up"); ok {
-		t.Errorf("Float(up): got ok=true want false")
-	}
-	if _, ok := p.Float("absent"); ok {
-		t.Errorf("Float(absent): got ok=true want false")
-	}
-	if v, ok := p.Int("count"); !ok || v != 7 {
-		t.Errorf("Int(count): got %v %v want 7 true", v, ok)
-	}
-	if _, ok := p.Int("loss_pct"); ok {
-		t.Errorf("Int(loss_pct): got ok=true want false")
-	}
-	if v, ok := p.Bool("up"); !ok || !v {
-		t.Errorf("Bool(up): got %v %v want true true", v, ok)
-	}
-	if _, ok := p.Bool("count"); ok {
-		t.Errorf("Bool(count): got ok=true want false")
-	}
-	if v, ok := p.Tag("scope"); !ok || v != "summary" {
-		t.Errorf("Tag(scope): got %v %v want summary true", v, ok)
-	}
-	if _, ok := p.Tag("absent"); ok {
-		t.Errorf("Tag(absent): got ok=true want false")
-	}
+type fakePlugin struct {
+	name string
 }
-
-func TestPlugin_LatestPoints(t *testing.T) {
-	if got := LatestPoints(nil); got != nil {
-		t.Errorf("empty: got %v want nil", got)
-	}
-	samples := []Sample{
-		{Points: []Point{NewPoint(nil, Int("n", 1))}},
-		{Points: []Point{NewPoint(nil, Int("n", 2))}},
-	}
-	got := LatestPoints(samples)
-	if len(got) != 1 {
-		t.Fatalf("len: got %d want 1", len(got))
-	}
-	if v, ok := got[0].Int("n"); !ok || v != 2 {
-		t.Errorf("latest: got %v %v want 2 true", v, ok)
-	}
-}
-
-func TestPlugin_PrependSummaryPoints(t *testing.T) {
-	summary := NewPoint([]Tag{{"scope", "summary"}}, Int("score", 90))
-	details := []Point{
-		NewPoint([]Tag{{"scope", "target"}}, Int("n", 1)),
-		NewPoint([]Tag{{"scope", "target"}}, Int("n", 2)),
-	}
-	got := PrependSummaryPoints(summary, details)
-	if len(got) != 3 {
-		t.Fatalf("len: got %d want 3", len(got))
-	}
-	if v, _ := got[0].Tag("scope"); v != "summary" {
-		t.Errorf("first scope: got %s want summary", v)
-	}
-	if v, _ := got[2].Int("n"); v != 2 {
-		t.Errorf("last n: got %d want 2", v)
-	}
-}
-
-type fakePlugin struct{ name string }
 
 func (f fakePlugin) Name() string                          { return f.name }
 func (f fakePlugin) Mode() Mode                            { return ModeSnapshot }

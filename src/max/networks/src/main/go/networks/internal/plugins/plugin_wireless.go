@@ -8,6 +8,7 @@ import (
 	"networks/internal/config"
 	"networks/internal/plugin"
 	"networks/internal/remote"
+	"networks/internal/schema"
 	"networks/internal/scribe"
 )
 
@@ -15,6 +16,21 @@ const (
 	apType           = "uap"
 	experienceFitMin = 80.0
 )
+
+var (
+	wirelessWifi          = schema.Declare("wireless/wifi", "access point health across the wireless estate", aggregateCadence)
+	wirelessOK            = wirelessWifi.Bool("ok", "every access point up with good client experience")
+	wirelessScore         = wirelessWifi.Int("score", "count", "diagnosis score from 0 to 100")
+	wirelessApsTotal      = wirelessWifi.Int("aps_total", "count", "access points known to the controller")
+	wirelessApsOK         = wirelessWifi.Int("aps_ok", "count", "access points reporting up")
+	wirelessAvgExperience = wirelessWifi.Float("avg_experience_pct", "percent", "mean client experience across the access points that are up")
+)
+
+type wirelessReading struct {
+	up         bool
+	experience int64
+	clients    int64
+}
 
 type wirelessPlugin struct {
 	probe   func(ctx context.Context) ([]remote.GatewayDevice, error)
@@ -37,16 +53,16 @@ func (p *wirelessPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	if err != nil {
 		return plugin.Sample{}, err
 	}
-	points := make([]plugin.Point, 0, len(devices))
+	readings := make([]wirelessReading, 0, len(devices))
 	for _, device := range devices {
 		if device.Type != apType {
 			continue
 		}
-		tags := []plugin.Tag{{Key: "scope", Value: "ap"}, {Key: "ap", Value: device.Name}}
-		points = append(points, plugin.NewPoint(tags, plugin.Bool("up", device.State == 1), plugin.Int("experience", int64(device.Satisfaction)), plugin.Int("num_clients", int64(device.NumSta))))
+		readings = append(readings, wirelessReading{
+			up: device.State == 1, experience: int64(device.Satisfaction), clients: int64(device.NumSta)})
 	}
-	scribe.LogDebug("wireless", "polled devices [%d] aps [%d]", len(devices), len(points))
-	return plugin.Sample{Points: points}, nil
+	scribe.LogDebug("wireless", "polled devices [%d] aps [%d]", len(devices), len(readings))
+	return plugin.Sample{Readings: readings}, nil
 }
 
 func (p *wirelessPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
@@ -77,20 +93,17 @@ func (p *wirelessPlugin) probeWireless(ctx context.Context) ([]remote.GatewayDev
 }
 
 func diagnoseWireless(samples []plugin.Sample) plugin.Aggregate {
-	points := plugin.LatestPoints(samples)
+	readings := plugin.Latest[[]wirelessReading](samples)
 	total := 0
 	up := 0
 	experienceSum := 0.0
 	experienceCount := 0
-	for _, point := range points {
+	for _, reading := range readings {
 		total++
-		isUp, _ := point.Bool("up")
-		if isUp {
+		if reading.up {
 			up++
-			if experience, ok := point.Float("experience"); ok {
-				experienceSum += experience
-				experienceCount++
-			}
+			experienceSum += float64(reading.experience)
+			experienceCount++
 		}
 	}
 	meanExperience := 0.0
@@ -102,6 +115,7 @@ func diagnoseWireless(samples []plugin.Sample) plugin.Aggregate {
 		upRatio = float64(up) / float64(total)
 	}
 	score := plugin.Clamp(int(math.Round((upRatio*100 + meanExperience) / 2)))
+	stats := wirelessStats{up: up, total: total, meanExperience: meanExperience}
 	result := plugin.Aggregate{}
 	switch {
 	case total == 0:
@@ -115,17 +129,27 @@ func diagnoseWireless(samples []plugin.Sample) plugin.Aggregate {
 	default:
 		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("POOR_CLIENTS: mean client experience [%.0f%%]", meanExperience))
 	}
-	result.Points = reportWireless(result.Score, up, total, meanExperience, points)
+	stats.score = result.Score
+	stats.ok = result.OK
+	result.Points = reportWireless(stats)
 	return result
 }
 
-func reportWireless(score, up, total int, meanExperience float64, apPoints []plugin.Point) []plugin.Point {
-	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}},
-		plugin.Int("score", int64(score)),
-		plugin.Int("aps_up", int64(up)),
-		plugin.Int("aps_total", int64(total)),
-		plugin.Float("mean_experience", plugin.Round(meanExperience, 1)))
-	return plugin.PrependSummaryPoints(summary, apPoints)
+func reportWireless(stats wirelessStats) []schema.Point {
+	return []schema.Point{wirelessWifi.Point(
+		wirelessOK.Of(stats.ok),
+		wirelessScore.Of(int64(stats.score)),
+		wirelessApsTotal.Of(int64(stats.total)),
+		wirelessApsOK.Of(int64(stats.up)),
+		wirelessAvgExperience.Of(plugin.Round(stats.meanExperience, 1)))}
+}
+
+type wirelessStats struct {
+	ok             bool
+	score          int
+	up             int
+	total          int
+	meanExperience float64
 }
 
 func init() {

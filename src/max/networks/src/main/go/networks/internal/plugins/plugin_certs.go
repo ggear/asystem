@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"networks/internal/plugin"
+	"networks/internal/schema"
 	"networks/internal/scribe"
 )
 
@@ -19,6 +20,23 @@ const (
 
 var certsEndpoints = []string{
 	"home.janeandgraham.com:443",
+}
+
+var (
+	certsHome            = schema.Declare("certs/home", "certificate health across the monitored endpoints", aggregateCadence)
+	certsOK              = certsHome.Bool("ok", "every endpoint verified and none expiring inside the warning window")
+	certsScore           = certsHome.Int("score", "count", "diagnosis score from 0 to 100")
+	certsMinExpiryDays   = certsHome.Float("min_expiry_days", "days", "days until the nearest certificate expires")
+	certsEndpointsTotal  = certsHome.Int("endpoints_total", "count", "endpoints monitored")
+	certsEndpointsFailed = certsHome.Int("endpoints_failed", "count", "endpoints unreachable or failing verification")
+
+)
+
+type certsReading struct {
+	endpoint string
+	days     float64
+	validity float64
+	verified bool
 }
 
 type certsResult struct {
@@ -41,13 +59,12 @@ func (p *certsPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
 
 func (p *certsPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	now := time.Now()
-	points := make([]plugin.Point, 0, len(certsEndpoints))
+	readings := make([]certsReading, 0, len(certsEndpoints))
 	for _, address := range certsEndpoints {
-		tags := []plugin.Tag{{Key: "scope", Value: "endpoint"}, {Key: "endpoint", Value: address}}
 		result, err := p.probe(ctx, address)
 		if err != nil {
 			scribe.LogDebug("certs", "probe of endpoint [%s] failed [%v]", address, err)
-			points = append(points, plugin.NewPoint(tags, plugin.Null("days_to_expiry"), plugin.Null("validity_percentage"), plugin.Bool("verified", false)))
+			readings = append(readings, certsReading{endpoint: address})
 			continue
 		}
 		scribe.LogDebug("certs", "probed endpoint [%s] not_after [%s]", address, result.notAfter)
@@ -62,9 +79,14 @@ func (p *certsPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		} else if validityPercentage > 100 {
 			validityPercentage = 100
 		}
-		points = append(points, plugin.NewPoint(tags, plugin.Float("days_to_expiry", plugin.Round(daysToExpiry, 1)), plugin.Float("validity_percentage", plugin.Round(validityPercentage, 1)), plugin.Bool("verified", true)))
+		readings = append(readings, certsReading{
+			endpoint: address,
+			days:     plugin.Round(daysToExpiry, 1),
+			validity: plugin.Round(validityPercentage, 1),
+			verified: true,
+		})
 	}
-	return plugin.Sample{Points: points}, nil
+	return plugin.Sample{Readings: readings}, nil
 }
 
 func (p *certsPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
@@ -101,55 +123,58 @@ func probeCerts(ctx context.Context, address string) (certsResult, error) {
 }
 
 func diagnoseCerts(samples []plugin.Sample) plugin.Aggregate {
-	failed := 0
-	reachable := 0
+	stats := certsStats{minDays: math.MaxFloat64}
 	nearestPercent := 100.0
-	minDays := math.MaxFloat64
-	points := plugin.LatestPoints(samples)
-	for _, point := range points {
-		verified, _ := point.Bool("verified")
-		days, hasDays := point.Float("days_to_expiry")
-		percent, hasPercent := point.Float("validity_percentage")
-		if !verified || !hasDays || !hasPercent {
-			failed++
+	readings := plugin.Latest[[]certsReading](samples)
+	for _, reading := range readings {
+		if !reading.verified {
+			stats.failed++
 			continue
 		}
-		reachable++
-		if days < minDays {
-			minDays = days
-			nearestPercent = percent
+		stats.reachable++
+		if reading.days < warnDays {
+			stats.warning++
+		}
+		if reading.days < stats.minDays {
+			stats.minDays = reading.days
+			nearestPercent = reading.validity
 		}
 	}
 	score := plugin.Clamp(int(math.Round(nearestPercent)))
 	result := plugin.Aggregate{}
 	switch {
-	case len(points) == 0 || reachable == 0:
+	case len(readings) == 0 || stats.reachable == 0:
 		result = plugin.Diagnose(plugin.StatusDead, 0, "PROBE_UNREACHABLE: no certificate endpoint reachable across window")
-		minDays = 0
-	case failed > 0:
-		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("VERIFY_FAILED: verify or reachability failure on [%d] of [%d] endpoints", failed, failed+reachable))
-	case minDays < warnDays:
-		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("EXPIRING_SOON: nearest certificate expires in [%.0f] days", minDays))
+		stats.minDays = 0
+	case stats.failed > 0:
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("VERIFY_FAILED: verify or reachability failure on [%d] of [%d] endpoints", stats.failed, stats.failed+stats.reachable))
+	case stats.minDays < warnDays:
+		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("EXPIRING_SOON: nearest certificate expires in [%.0f] days", stats.minDays))
 	default:
-		result = plugin.Diagnose(plugin.StatusFit, score, fmt.Sprintf("VALID: nearest certificate valid for [%.0f] days", minDays))
+		result = plugin.Diagnose(plugin.StatusFit, score, fmt.Sprintf("VALID: nearest certificate valid for [%.0f] days", stats.minDays))
 	}
-	result.Points = reportCerts(result.Score, minDays, failed, points)
+	stats.score = result.Score
+	stats.ok = result.OK
+	result.Points = reportCerts(stats)
 	return result
 }
 
-func reportCerts(score int, minDays float64, failed int, endpointPoints []plugin.Point) []plugin.Point {
-	warning := 0
-	for _, point := range endpointPoints {
-		if days, ok := point.Float("days_to_expiry"); ok && days < warnDays {
-			warning++
-		}
-	}
-	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}},
-		plugin.Int("score", int64(score)),
-		plugin.Float("min_days_to_expiry", plugin.Round(minDays, 1)),
-		plugin.Int("warning_count", int64(warning)),
-		plugin.Int("verify_failed_count", int64(failed)))
-	return plugin.PrependSummaryPoints(summary, endpointPoints)
+func reportCerts(stats certsStats) []schema.Point {
+	return []schema.Point{certsHome.Point(
+		certsOK.Of(stats.ok),
+		certsScore.Of(int64(stats.score)),
+		certsMinExpiryDays.Of(plugin.Round(stats.minDays, 1)),
+		certsEndpointsTotal.Of(int64(stats.reachable+stats.failed)),
+		certsEndpointsFailed.Of(int64(stats.failed)))}
+}
+
+type certsStats struct {
+	ok        bool
+	score     int
+	minDays   float64
+	warning   int
+	failed    int
+	reachable int
 }
 
 func init() {

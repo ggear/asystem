@@ -26,7 +26,8 @@ func TestEthernet_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if got, _ := first.Points[0].Int("errors"); got != 0 {
+	firstReadings, _ := first.Readings.([]ethernetReading)
+	if got := firstReadings[0].errors; got != 0 {
 		t.Errorf("errors first poll: got %d want 0 (baseline, no delta yet)", got)
 	}
 	rx, tx = 2, 5
@@ -34,27 +35,22 @@ func TestEthernet_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != 1 {
-		t.Fatalf("points: got %d want 1 (disabled port and non-switch device must be skipped)", len(msg.Points))
+	readings, _ := msg.Readings.([]ethernetReading)
+	if len(readings) != 1 {
+		t.Fatalf("readings: got %d want 1 (disabled port and non-switch device must be skipped)", len(readings))
 	}
-	point := msg.Points[0]
-	if got, _ := point.Tag("switch"); got != "core" {
-		t.Errorf("switch tag: got %q want core", got)
-	}
-	if got, _ := point.Tag("port"); got != "1" {
-		t.Errorf("port tag: got %q want 1", got)
-	}
-	if up, _ := point.Bool("up"); !up {
+	reading := readings[0]
+	if !reading.up {
 		t.Errorf("up: got false want true")
 	}
-	if got, _ := point.Int("speed"); got != 1000 {
-		t.Errorf("speed: got %d want 1000", got)
+	if reading.speed != 1000 {
+		t.Errorf("speed: got %d want 1000", reading.speed)
 	}
-	if fd, _ := point.Bool("full_duplex"); !fd {
+	if !reading.fullDuplex {
 		t.Errorf("full_duplex: got false want true")
 	}
-	if got, _ := point.Int("errors"); got != 4 {
-		t.Errorf("errors: got %d want 4 (rx+tx delta since last poll)", got)
+	if reading.errors != 4 {
+		t.Errorf("errors: got %d want 4 (rx+tx delta since last poll)", reading.errors)
 	}
 }
 
@@ -83,7 +79,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  100,
-			expectedReason:"UP",
+			expectedReason: "UP",
 			expectedError:  false,
 		},
 		{
@@ -92,7 +88,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  50,
-			expectedReason:"PORT_DOWN",
+			expectedReason: "PORT_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -101,7 +97,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  90,
-			expectedReason:"SPEED_DEGRADED",
+			expectedReason: "SPEED_DEGRADED",
 			expectedError:  false,
 		},
 		{
@@ -110,7 +106,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  90,
-			expectedReason:"LINK_ERRORS",
+			expectedReason: "LINK_ERRORS",
 			expectedError:  false,
 		},
 		{
@@ -119,7 +115,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"PORT_DOWN",
+			expectedReason: "PORT_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -128,7 +124,7 @@ func TestEthernet_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"SWITCH_UNREACHABLE",
+			expectedReason: "SWITCH_UNREACHABLE",
 			expectedError:  false,
 		},
 	}
@@ -163,19 +159,10 @@ type portSample struct {
 }
 
 func ethernetPoll(samples ...portSample) plugin.Sample {
-	points := make([]plugin.Point, 0, len(samples))
+	readings := make([]ethernetReading, 0, len(samples))
 	for _, s := range samples {
-		tags := []plugin.Tag{{Key: "scope", Value: "port"}, {Key: "switch", Value: "core"}, {Key: "port", Value: s.port}}
-		points = append(points, plugin.NewPoint(tags, plugin.Bool("up", s.up), plugin.Int("speed", s.speed), plugin.Bool("full_duplex", s.fullDuplex), plugin.Int("errors", s.errors)))
+		readings = append(readings, ethernetReading{
+			up: s.up, speed: s.speed, fullDuplex: s.fullDuplex, errors: s.errors})
 	}
-	return plugin.Sample{Plugin: "ethernet", Points: points}
-}
-
-func pointByTag(points []plugin.Point, key, value string) (plugin.Point, bool) {
-	for _, point := range points {
-		if v, _ := point.Tag(key); v == value {
-			return point, true
-		}
-	}
-	return plugin.Point{}, false
+	return plugin.Sample{Plugin: "ethernet", Readings: readings}
 }

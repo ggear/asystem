@@ -1,11 +1,16 @@
 import contextlib
+import json
 import os
+from os.path import isfile, join
 
 import psycopg
 from psycopg import sql
 
-from .config import TIMEOUT_NETWORK_SECONDS, config
+from .config import DATABASE_SCHEMA_DIRS, TIMEOUT_NETWORK_SECONDS, config
 from .logger import print_log
+
+_ensured_tables = set()
+_schema_columns = {}
 
 DATABASE_ENV_VARS = (
     "WRANGLE_DATABASE_HOST",
@@ -14,119 +19,6 @@ DATABASE_ENV_VARS = (
     "WRANGLE_DATABASE_PASSWORD",
 )
 
-DATABASE_QUERY_TEMPLATES = [
-    (
-        "SELECT\n"
-        "   COUNT(*),\n"
-        "   MIN(time) AS oldest,\n"
-        "   MAX(time) AS newest\n"
-        "FROM {table}"
-    ),
-    (
-        "SELECT\n"
-        "   COUNT(*),\n"
-        "   type,\n"
-        "   period,\n"
-        "   unit,\n"
-        "   MIN(time) AS oldest,\n"
-        "   MAX(time) AS newest\n"
-        "FROM {table}\n"
-        "GROUP BY type, period, unit\n"
-        "ORDER BY type, period, unit"
-    ),
-    (
-        "SELECT time, type, period, unit, value\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   entity = (SELECT entity FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND time >= CURRENT_DATE - INTERVAL '1 year'\n"
-        "ORDER BY time DESC"
-    ),
-    (
-        "SELECT time, entity, period, unit, value\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   type = (SELECT type FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND time >= CURRENT_DATE - INTERVAL '90 days'\n"
-        "ORDER BY time DESC\n"
-        "LIMIT 50"
-    ),
-    (
-        "SELECT time, entity, type, unit, value\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   period = (SELECT period FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND time >= CURRENT_DATE - INTERVAL '180 days'\n"
-        "ORDER BY time DESC\n"
-        "LIMIT 50"
-    ),
-    (
-        "SELECT time, entity, type, period, value\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   unit = (SELECT unit FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND time >= CURRENT_DATE - INTERVAL '180 days'\n"
-        "ORDER BY time DESC\n"
-        "LIMIT 50"
-    ),
-    (
-        "SELECT time, entity, value\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   type = (SELECT type FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND period = (SELECT period FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND unit = (SELECT unit FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND time >= date_trunc('year', CURRENT_DATE)\n"
-        "ORDER BY time DESC\n"
-        "LIMIT 50"
-    ),
-    (
-        "SELECT DISTINCT ON (type, period, unit)\n"
-        "   *\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   time >= CURRENT_DATE - INTERVAL '2 days'\n"
-        "ORDER BY type, period, unit, time DESC"
-    ),
-    (
-        "SELECT\n"
-        "   time_bucket('1 week', time) AS bucket,\n"
-        "   entity,\n"
-        "   AVG(value)\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   type = (SELECT type FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND time >= CURRENT_DATE - INTERVAL '1 year'\n"
-        "GROUP BY bucket, entity\n"
-        "ORDER BY bucket DESC, entity\n"
-        "LIMIT 50"
-    ),
-    (
-        "SELECT\n"
-        "   time_bucket('1 month', time) AS bucket,\n"
-        "   entity,\n"
-        "   type,\n"
-        "   AVG(value) AS mean,\n"
-        "   MAX(value) AS high,\n"
-        "   MIN(value) AS low,\n"
-        "   MAX(value) - MIN(value) AS range\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   time >= date_trunc('year', CURRENT_DATE)\n"
-        "GROUP BY bucket, entity, type\n"
-        "ORDER BY bucket DESC, entity\n"
-        "LIMIT 10"
-    ),
-    (
-        "EXPLAIN ANALYZE\n"
-        "SELECT time, value\n"
-        "FROM {table}\n"
-        "WHERE\n"
-        "   entity = (SELECT entity FROM {table} ORDER BY time DESC LIMIT 1)\n"
-        "   AND time >= CURRENT_DATE - INTERVAL '1 year'\n"
-        "ORDER BY time DESC"
-    ),
-]
 
 database_conn: psycopg.Connection | None = None
 DSN: str | None = None
@@ -193,6 +85,7 @@ def database_close():
         )
     database_conn = None
     DSN = None
+    _ensured_tables.clear()
 
 
 def database_drop(table_name):
@@ -202,6 +95,7 @@ def database_drop(table_name):
         with database_conn.cursor() as cursor:
             cursor.execute(sql.SQL("DROP TABLE IF EXISTS {} CASCADE").format(sql.Identifier(table_name)))
         database_conn.commit()
+        _ensured_tables.discard(table_name)
         print_log("Wrangle", f"Database dropped table [{table_name}]", level="debug")
         return True
     except Exception as exception:
@@ -211,43 +105,47 @@ def database_drop(table_name):
         return False
 
 
+def database_schema_path(table_name, suffix="sql"):
+    for schema_dir in DATABASE_SCHEMA_DIRS:
+        schema_path = join(schema_dir, f"{table_name}.{suffix}")
+        if isfile(schema_path):
+            return schema_path
+    raise FileNotFoundError(f"Database schema [{table_name}.{suffix}] not found in {list(DATABASE_SCHEMA_DIRS)}")
+
+
+def database_schema_columns(table_name):
+    if table_name not in _schema_columns:
+        with open(database_schema_path(table_name, "json")) as columns_file:
+            _schema_columns[table_name] = json.load(columns_file)
+    return _schema_columns[table_name]
+
+
 def database_ensure_table(table_name, conn):
+    if table_name in _ensured_tables:
+        return
+    with open(database_schema_path(table_name)) as schema_file:
+        schema_sql = schema_file.read()
     with conn.cursor() as cur:
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                time   DATE  NOT NULL,
-                entity TEXT  NOT NULL,
-                type   TEXT  NOT NULL,
-                period TEXT  NOT NULL,
-                unit   TEXT  NOT NULL,
-                value  FLOAT8 NOT NULL,
-                PRIMARY KEY (time, entity, type, period, unit)
-            )
-        """)
-        cur.execute(f"SELECT create_hypertable('{table_name}', 'time', chunk_time_interval => INTERVAL '10 years', if_not_exists => TRUE)")
-        for column in ("entity", "type", "period", "unit"):
-            cur.execute(f"CREATE INDEX IF NOT EXISTS {table_name}_{column}_time ON {table_name} ({column}, time DESC)")
-        cur.execute("SELECT 1 FROM timescaledb_information.compression_settings WHERE hypertable_name = %s LIMIT 1", (table_name,))
-        if cur.fetchone() is None:
-            cur.execute(f"ALTER TABLE {table_name} SET ("
-                        "timescaledb.compress, "
-                        "timescaledb.compress_segmentby = 'entity, type, period, unit', "
-                        "timescaledb.compress_orderby = 'time DESC')")
-            cur.execute(f"SELECT add_compression_policy('{table_name}', INTERVAL '1 year', if_not_exists => TRUE)")
+        cur.execute(schema_sql)
         conn.commit()
+    _ensured_tables.add(table_name)
 
 
 def database_upsert(long_df, table_name, conn, dsn):
+    columns = database_schema_columns(table_name)
+    time_column, value_column = columns["time"], columns["value"]
+    key = [time_column["column"], *columns["dimensions"]]
+    all_columns = [*key, value_column["column"]]
+    stage_columns = ",\n                ".join(
+        f"{name} {column_type} NOT NULL" for name, column_type in
+        [(time_column["column"], time_column["type"])]
+        + [(dimension, "TEXT") for dimension in columns["dimensions"]]
+        + [(value_column["column"], value_column["type"])])
     stage = f"{table_name}_stage"
     with conn.cursor() as cur:
         cur.execute(f"""
             CREATE UNLOGGED TABLE IF NOT EXISTS {stage} (
-                time   DATE  NOT NULL,
-                entity TEXT  NOT NULL,
-                type   TEXT  NOT NULL,
-                period TEXT  NOT NULL,
-                unit   TEXT  NOT NULL,
-                value  FLOAT8 NOT NULL
+                {stage_columns}
             )
         """)
         cur.execute(f"TRUNCATE {stage}")
@@ -256,11 +154,11 @@ def database_upsert(long_df, table_name, conn, dsn):
         long_df.write_database(stage, connection=dsn, if_table_exists="append", engine="adbc")
         with conn.cursor() as cur:
             cur.execute(f"""
-                INSERT INTO {table_name} (time, entity, type, period, unit, value)
-                SELECT time, entity, type, period, unit, value FROM {stage}
-                ON CONFLICT (time, entity, type, period, unit)
-                DO UPDATE SET value = EXCLUDED.value
-                WHERE {table_name}.value IS DISTINCT FROM EXCLUDED.value
+                INSERT INTO {table_name} ({", ".join(all_columns)})
+                SELECT {", ".join(all_columns)} FROM {stage}
+                ON CONFLICT ({", ".join(key)})
+                DO UPDATE SET {value_column["column"]} = EXCLUDED.{value_column["column"]}
+                WHERE {table_name}.{value_column["column"]} IS DISTINCT FROM EXCLUDED.{value_column["column"]}
             """)
             conn.commit()
     finally:

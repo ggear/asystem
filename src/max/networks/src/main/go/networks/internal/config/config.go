@@ -6,6 +6,8 @@ import (
 	"sync"
 )
 
+const DefaultAggregatePeriod = "15m"
+
 type Config struct {
 	brokerHost    string
 	brokerPort    string

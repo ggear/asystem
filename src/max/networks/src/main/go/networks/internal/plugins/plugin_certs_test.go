@@ -19,26 +19,19 @@ func TestCerts_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != len(certsEndpoints) {
-		t.Fatalf("points: got %d want %d (one per endpoint)", len(msg.Points), len(certsEndpoints))
+	readings, _ := msg.Readings.([]certsReading)
+	if len(readings) != len(certsEndpoints) {
+		t.Fatalf("readings: got %d want %d (one per endpoint)", len(readings), len(certsEndpoints))
 	}
-	point := msg.Points[0]
-	if verified, _ := point.Bool("verified"); !verified {
+	reading := readings[0]
+	if !reading.verified {
 		t.Errorf("verified: got false want true")
 	}
-	days, ok := point.Float("days_to_expiry")
-	if !ok {
-		t.Fatal("days_to_expiry: got null want a value")
+	if reading.days <= 59 || reading.days > 60 {
+		t.Errorf("days: got %v want ~60", reading.days)
 	}
-	if days <= 59 || days > 60 {
-		t.Errorf("days_to_expiry: got %v want ~60", days)
-	}
-	validity, ok := point.Float("validity_pct")
-	if !ok {
-		t.Fatal("validity_pct: got null want a value")
-	}
-	if validity < 66 || validity > 67 {
-		t.Errorf("validity_pct: got %v want ~66.7 (60 of 90 days remaining)", validity)
+	if reading.validity < 66 || reading.validity > 67 {
+		t.Errorf("validity: got %v want ~66.7 (60 of 90 days remaining)", reading.validity)
 	}
 }
 
@@ -50,15 +43,15 @@ func TestCerts_PollUnverified(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != len(certsEndpoints) {
-		t.Fatalf("points: got %d want %d", len(msg.Points), len(certsEndpoints))
+	readings, _ := msg.Readings.([]certsReading)
+	if len(readings) != len(certsEndpoints) {
+		t.Fatalf("readings: got %d want %d", len(readings), len(certsEndpoints))
 	}
-	point := msg.Points[0]
-	if verified, _ := point.Bool("verified"); verified {
+	if readings[0].verified {
 		t.Errorf("verified: got true want false on probe failure")
 	}
-	if _, ok := point.Float("days_to_expiry"); ok {
-		t.Errorf("days_to_expiry: got a value want null on probe failure")
+	if readings[0].days != 0 {
+		t.Errorf("days: got %v want 0 on probe failure", readings[0].days)
 	}
 }
 
@@ -78,7 +71,7 @@ func TestCerts_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  60,
-			expectedReason:"VALID",
+			expectedReason: "VALID",
 			expectedError:  false,
 		},
 		{
@@ -87,7 +80,7 @@ func TestCerts_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  5,
-			expectedReason:"EXPIRING_SOON",
+			expectedReason: "EXPIRING_SOON",
 			expectedError:  false,
 		},
 		{
@@ -96,7 +89,7 @@ func TestCerts_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  60,
-			expectedReason:"VERIFY_FAILED",
+			expectedReason: "VERIFY_FAILED",
 			expectedError:  false,
 		},
 		{
@@ -105,7 +98,7 @@ func TestCerts_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"PROBE_UNREACHABLE",
+			expectedReason: "PROBE_UNREACHABLE",
 			expectedError:  false,
 		},
 	}
@@ -139,14 +132,10 @@ type endpointSample struct {
 }
 
 func certsPoll(samples ...endpointSample) plugin.Sample {
-	points := make([]plugin.Point, 0, len(samples))
+	readings := make([]certsReading, 0, len(samples))
 	for _, s := range samples {
-		tags := []plugin.Tag{{Key: "scope", Value: "endpoint"}, {Key: "endpoint", Value: s.addr}}
-		if s.verified {
-			points = append(points, plugin.NewPoint(tags, plugin.Float("days_to_expiry", s.days), plugin.Float("validity_pct", s.pct), plugin.Bool("verified", true)))
-		} else {
-			points = append(points, plugin.NewPoint(tags, plugin.Null("days_to_expiry"), plugin.Null("validity_pct"), plugin.Bool("verified", false)))
-		}
+		readings = append(readings, certsReading{
+			endpoint: s.addr, days: s.days, validity: s.pct, verified: s.verified})
 	}
-	return plugin.Sample{Plugin: "certs", Points: points}
+	return plugin.Sample{Plugin: "certs", Readings: readings}
 }

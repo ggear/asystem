@@ -1,0 +1,12 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+# ethernet/ports [switch port health across the monitored ports]
+ethernet
+    score=<number>i,
+    ok=<0|1>i,
+    ports_total=<number>i,
+    ports_ok=<number>i,
+    ports_degraded=<number>i,
+    ports_errored=<number>i
+    <timestamp>

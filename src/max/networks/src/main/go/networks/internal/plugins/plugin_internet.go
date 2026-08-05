@@ -13,6 +13,7 @@ import (
 
 	"networks/internal/config"
 	"networks/internal/plugin"
+	"networks/internal/schema"
 	"networks/internal/scribe"
 
 	"golang.org/x/net/icmp"
@@ -41,6 +42,27 @@ var publicTargets = []target{
 	{"9.9.9.9", "target"},
 }
 
+var (
+	internetRelation     = schema.Declare("internet/gateway", "internet reachability through the local gateway and the public ping targets", aggregateCadence)
+	internetOK           = internetRelation.Bool("ok", "gateway up and the public targets reachable within normal range")
+	internetScore        = internetRelation.Int("score", "count", "diagnosis score from 0 to 100")
+	internetTargetsTotal = internetRelation.Int("targets_total", "count", "public targets pinged")
+	internetTargetsOK    = internetRelation.Int("targets_ok", "count", "public targets answering across the window")
+	internetAvgLoss      = internetRelation.Float("avg_loss_pct", "percent", "mean packet loss across the public targets")
+	internetAvgRTT       = internetRelation.Float("avg_rtt_ms", "milliseconds", "mean round trip time across the public targets")
+	internetAvgJitter    = internetRelation.Float("avg_jitter_ms", "milliseconds", "mean jitter across the public targets")
+	internetGatewayOK    = internetRelation.Bool("gateway_ok", "the local gateway answered at least one ping in the window")
+)
+
+type internetReading struct {
+	target  string
+	gateway bool
+	lossPct float64
+	rttMs   float64
+	jitter  float64
+	hasRTT  bool
+}
+
 type internetPlugin struct {
 	probe   func(ctx context.Context, ip string) (time.Duration, error)
 	targets []target
@@ -49,6 +71,14 @@ type internetPlugin struct {
 
 func newInternetPlugin() *internetPlugin {
 	return &internetPlugin{probe: probeInternet, targets: buildTargets(config.Load().UnifiHost()), state: plugin.NewStateTracker(plugin.StateOn)}
+}
+
+func publicTargetIPs() []string {
+	ips := make([]string, 0, len(publicTargets))
+	for _, t := range publicTargets {
+		ips = append(ips, t.ip)
+	}
+	return ips
 }
 
 func buildTargets(gateway string) []target {
@@ -64,7 +94,7 @@ func (p *internetPlugin) Name() string { return "internet" }
 func (p *internetPlugin) Mode() plugin.Mode { return plugin.ModeWindowed }
 
 func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
-	points := make([]plugin.Point, len(p.targets))
+	readings := make([]internetReading, len(p.targets))
 	var wg sync.WaitGroup
 	for i, t := range p.targets {
 		wg.Add(1)
@@ -95,19 +125,18 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				loss = 100 * float64(sent-received) / float64(sent)
 			}
 			scribe.LogDebug("internet", "probed scope [%s] target [%s] sent [%d] recv [%d] loss_pct [%v]", t.scope, t.ip, sent, received, loss)
-			tags := []plugin.Tag{{Key: "scope", Value: t.scope}, {Key: "target", Value: t.ip}}
-			fields := []plugin.Field{plugin.Int("sent", int64(sent)), plugin.Int("recv", int64(received)), plugin.Float("loss_pct", loss)}
+			reading := internetReading{target: t.ip, gateway: t.scope == gatewayScope, lossPct: loss}
 			if received > 0 {
-				avg, minRTT, maxRTT, jitter := readInternet(roundTrips)
-				fields = append(fields, plugin.Float("avg_rtt_ms", avg), plugin.Float("min_rtt_ms", minRTT), plugin.Float("max_rtt_ms", maxRTT), plugin.Float("jitter_ms", jitter))
-			} else {
-				fields = append(fields, plugin.Null("avg_rtt_ms"), plugin.Null("min_rtt_ms"), plugin.Null("max_rtt_ms"), plugin.Null("jitter_ms"))
+				avg, _, _, jitter := readInternet(roundTrips)
+				reading.rttMs = avg
+				reading.jitter = jitter
+				reading.hasRTT = true
 			}
-			points[i] = plugin.NewPoint(tags, fields...)
+			readings[i] = reading
 		}(i, t)
 	}
 	wg.Wait()
-	return plugin.Sample{Points: points}, nil
+	return plugin.Sample{Readings: readings}, nil
 }
 
 func (p *internetPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
@@ -185,30 +214,22 @@ func readInternet(roundTrips []float64) (avg, minRTT, maxRTT, jitter float64) {
 
 func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 	accumulators := map[string]*targetAccumulator{}
-	for _, message := range samples {
-		for _, point := range message.Points {
-			ip, _ := point.Tag("target")
-			if ip == "" {
+	for _, readings := range plugin.Readings[[]internetReading](samples) {
+		for _, reading := range readings {
+			if reading.target == "" {
 				continue
 			}
-			accumulator := accumulators[ip]
+			accumulator := accumulators[reading.target]
 			if accumulator == nil {
-				accumulator = &targetAccumulator{}
-				accumulators[ip] = accumulator
+				accumulator = &targetAccumulator{gateway: reading.gateway}
+				accumulators[reading.target] = accumulator
 			}
-			if scope, ok := point.Tag("scope"); ok {
-				accumulator.scope = scope
-			}
-			if loss, ok := point.Float("loss_pct"); ok {
-				accumulator.lossSum += loss
-				accumulator.lossCount++
-			}
-			if rtt, ok := point.Float("avg_rtt_ms"); ok {
-				accumulator.rttSum += rtt
+			accumulator.lossSum += reading.lossPct
+			accumulator.lossCount++
+			if reading.hasRTT {
+				accumulator.rttSum += reading.rttMs
 				accumulator.rttCount++
-			}
-			if jitter, ok := point.Float("jitter_ms"); ok {
-				accumulator.jitterSum += jitter
+				accumulator.jitterSum += reading.jitter
 				accumulator.jitterCount++
 			}
 		}
@@ -221,7 +242,7 @@ func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 	var gateway *targetAccumulator
 	publicIPs := make([]string, 0, len(order))
 	for _, ip := range order {
-		if accumulators[ip].scope == gatewayScope {
+		if accumulators[ip].gateway {
 			gateway = accumulators[ip]
 		} else {
 			publicIPs = append(publicIPs, ip)
@@ -292,34 +313,37 @@ func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 			result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("ELEVATED_LOSS: elevated loss of [%.1f%%] with [%d] of [%d] targets reachable", avgLoss, reachable, len(publicIPs)))
 		}
 	}
-	result.Points = reportInternet(result.Score, avgLoss, avgRTT, avgJitter, gatewayOK, publicIPs, accumulators)
+	stats := internetStats{ok: result.OK, score: result.Score, targetsTotal: len(publicIPs),
+		targetsOK: reachable, avgLoss: avgLoss, avgRTT: avgRTT, avgJitter: avgJitter, gatewayOK: gatewayOK}
+	result.Points = reportInternet(stats)
 	return result
 }
 
-func reportInternet(score int, avgLoss, avgRTT, avgJitter float64, gatewayOK bool, publicIPs []string, accumulators map[string]*targetAccumulator) []plugin.Point {
-	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}},
-		plugin.Int("score", int64(score)),
-		plugin.Float("avg_loss_pct", plugin.Round(avgLoss, 1)),
-		plugin.Float("avg_rtt_ms", plugin.Round(avgRTT, 1)),
-		plugin.Float("avg_jitter_ms", plugin.Round(avgJitter, 1)),
-		plugin.Bool("gateway_ok", gatewayOK))
-	points := make([]plugin.Point, 0, len(publicIPs)+1)
-	points = append(points, summary)
-	for _, ip := range publicIPs {
-		accumulator := accumulators[ip]
-		fields := []plugin.Field{plugin.Bool("ok", accumulator.avgLoss() < 100), plugin.Float("loss_pct", plugin.Round(accumulator.avgLoss(), 1))}
-		if accumulator.rttCount > 0 {
-			fields = append(fields, plugin.Float("avg_rtt_ms", plugin.Round(accumulator.avgRTT(), 1)))
-		} else {
-			fields = append(fields, plugin.Null("avg_rtt_ms"))
-		}
-		points = append(points, plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "target"}, {Key: "target", Value: ip}}, fields...))
-	}
-	return points
+func reportInternet(stats internetStats) []schema.Point {
+	return []schema.Point{internetRelation.Point(
+		internetOK.Of(stats.ok),
+		internetScore.Of(int64(stats.score)),
+		internetTargetsTotal.Of(int64(stats.targetsTotal)),
+		internetTargetsOK.Of(int64(stats.targetsOK)),
+		internetAvgLoss.Of(plugin.Round(stats.avgLoss, 1)),
+		internetAvgRTT.Of(plugin.Round(stats.avgRTT, 1)),
+		internetAvgJitter.Of(plugin.Round(stats.avgJitter, 1)),
+		internetGatewayOK.Of(stats.gatewayOK))}
+}
+
+type internetStats struct {
+	ok           bool
+	score        int
+	targetsTotal int
+	targetsOK    int
+	avgLoss      float64
+	avgRTT       float64
+	avgJitter    float64
+	gatewayOK    bool
 }
 
 type targetAccumulator struct {
-	scope       string
+	gateway     bool
 	lossSum     float64
 	lossCount   int
 	rttSum      float64

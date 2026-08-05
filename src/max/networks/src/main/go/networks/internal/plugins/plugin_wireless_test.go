@@ -23,27 +23,21 @@ func TestWireless_Poll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	if len(msg.Points) != 2 {
-		t.Fatalf("points: got %d want 2 (switch must be skipped)", len(msg.Points))
+	readings, _ := msg.Readings.([]wirelessReading)
+	if len(readings) != 2 {
+		t.Fatalf("readings: got %d want 2 (switch must be skipped)", len(readings))
 	}
-	deck, ok := pointByTag(msg.Points, "ap", "deck")
-	if !ok {
-		t.Fatal("deck ap point missing")
-	}
-	if up, _ := deck.Bool("up"); !up {
+	deck := readings[0]
+	if !deck.up {
 		t.Errorf("deck up: got false want true")
 	}
-	if got, _ := deck.Int("experience"); got != 90 {
-		t.Errorf("deck experience: got %d want 90", got)
+	if deck.experience != 90 {
+		t.Errorf("deck experience: got %d want 90", deck.experience)
 	}
-	if got, _ := deck.Int("num_clients"); got != 4 {
-		t.Errorf("deck num_clients: got %d want 4", got)
+	if deck.clients != 4 {
+		t.Errorf("deck clients: got %d want 4", deck.clients)
 	}
-	hallway, ok := pointByTag(msg.Points, "ap", "hallway")
-	if !ok {
-		t.Fatal("hallway ap point missing")
-	}
-	if up, _ := hallway.Bool("up"); up {
+	if readings[1].up {
 		t.Errorf("hallway up: got true want false")
 	}
 }
@@ -73,7 +67,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  95,
-			expectedReason:"UP",
+			expectedReason: "UP",
 			expectedError:  false,
 		},
 		{
@@ -82,7 +76,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  70,
-			expectedReason:"AP_DOWN",
+			expectedReason: "AP_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -91,7 +85,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  80,
-			expectedReason:"POOR_CLIENTS",
+			expectedReason: "POOR_CLIENTS",
 			expectedError:  false,
 		},
 		{
@@ -100,7 +94,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"AP_DOWN",
+			expectedReason: "AP_DOWN",
 			expectedError:  false,
 		},
 		{
@@ -109,7 +103,7 @@ func TestWireless_Diagnose(t *testing.T) {
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
-			expectedReason:"CONTROLLER_UNREACHABLE",
+			expectedReason: "CONTROLLER_UNREACHABLE",
 			expectedError:  false,
 		},
 	}
@@ -142,10 +136,9 @@ type apSample struct {
 }
 
 func wirelessPoll(samples ...apSample) plugin.Sample {
-	points := make([]plugin.Point, 0, len(samples))
+	readings := make([]wirelessReading, 0, len(samples))
 	for _, s := range samples {
-		tags := []plugin.Tag{{Key: "scope", Value: "ap"}, {Key: "ap", Value: s.name}}
-		points = append(points, plugin.NewPoint(tags, plugin.Bool("up", s.up), plugin.Int("experience", s.exp), plugin.Int("num_clients", 0)))
+		readings = append(readings, wirelessReading{up: s.up, experience: s.exp})
 	}
-	return plugin.Sample{Plugin: "wireless", Points: points}
+	return plugin.Sample{Plugin: "wireless", Readings: readings}
 }

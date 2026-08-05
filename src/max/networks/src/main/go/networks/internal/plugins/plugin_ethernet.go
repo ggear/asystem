@@ -9,6 +9,7 @@ import (
 	"networks/internal/config"
 	"networks/internal/plugin"
 	"networks/internal/remote"
+	"networks/internal/schema"
 	"networks/internal/scribe"
 )
 
@@ -16,6 +17,23 @@ const (
 	switchType    = "usw"
 	expectedSpeed = 1000
 )
+
+var (
+	ethernetPorts           = schema.Declare("ethernet/ports", "switch port health across the monitored ports", aggregateCadence)
+	ethernetScore         = ethernetPorts.Int("score", "count", "diagnosis score from 0 to 100")
+	ethernetOK            = ethernetPorts.Bool("ok", "every monitored port up at expected speed with no link errors")
+	ethernetPortsTotal    = ethernetPorts.Int("ports_total", "count", "monitored ports")
+	ethernetPortsOK       = ethernetPorts.Int("ports_ok", "count", "monitored ports with a live link")
+	ethernetPortsDegraded = ethernetPorts.Int("ports_degraded", "count", "ports below expected speed or in half duplex")
+	ethernetPortsErrored  = ethernetPorts.Int("ports_errored", "count", "ports reporting link errors this interval")
+)
+
+type ethernetReading struct {
+	up         bool
+	speed      int64
+	fullDuplex bool
+	errors     int64
+}
 
 type ethernetPlugin struct {
 	probe   func(ctx context.Context) ([]remote.GatewayDevice, error)
@@ -39,7 +57,7 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 	if err != nil {
 		return plugin.Sample{}, err
 	}
-	var points []plugin.Point
+	var readings []ethernetReading
 	for _, device := range devices {
 		if device.Type != switchType {
 			continue
@@ -50,16 +68,12 @@ func (p *ethernetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 			}
 			key := device.Name + "/" + strconv.Itoa(port.PortIdx)
 			errors := p.deltas.Delta(key, port.RxErrors+port.TxErrors)
-			tags := []plugin.Tag{{Key: "scope", Value: "port"}, {Key: "switch", Value: device.Name}, {Key: "port", Value: strconv.Itoa(port.PortIdx)}}
-			points = append(points, plugin.NewPoint(tags,
-				plugin.Bool("up", port.Up),
-				plugin.Int("speed", int64(port.Speed)),
-				plugin.Bool("full_duplex", port.FullDuplex),
-				plugin.Int("errors", errors)))
+			readings = append(readings, ethernetReading{
+				up: port.Up, speed: int64(port.Speed), fullDuplex: port.FullDuplex, errors: errors})
 		}
 	}
-	scribe.LogDebug("ethernet", "polled devices [%d] ports [%d]", len(devices), len(points))
-	return plugin.Sample{Points: points}, nil
+	scribe.LogDebug("ethernet", "polled devices [%d] ports [%d]", len(devices), len(readings))
+	return plugin.Sample{Readings: readings}, nil
 }
 
 func (p *ethernetPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
@@ -90,24 +104,21 @@ func (p *ethernetPlugin) probeEthernet(ctx context.Context) ([]remote.GatewayDev
 }
 
 func diagnoseEthernet(samples []plugin.Sample) plugin.Aggregate {
-	points := plugin.LatestPoints(samples)
+	readings := plugin.Latest[[]ethernetReading](samples)
 	total := 0
 	up := 0
 	degraded := 0
 	errored := 0
-	for _, point := range points {
+	for _, reading := range readings {
 		total++
-		isUp, _ := point.Bool("up")
-		if !isUp {
+		if !reading.up {
 			continue
 		}
 		up++
-		speed, _ := point.Float("speed")
-		fullDuplex, _ := point.Bool("full_duplex")
-		if (speed > 0 && speed < expectedSpeed) || !fullDuplex {
+		if (reading.speed > 0 && reading.speed < expectedSpeed) || !reading.fullDuplex {
 			degraded++
 		}
-		if errs, ok := point.Float("errors"); ok && errs > 0 {
+		if reading.errors > 0 {
 			errored++
 		}
 	}
@@ -115,6 +126,7 @@ func diagnoseEthernet(samples []plugin.Sample) plugin.Aggregate {
 	if total > 0 {
 		upRatio = float64(up) / float64(total)
 	}
+	stats := ethernetStats{up: up, total: total, degraded: degraded, errored: errored}
 	result := plugin.Aggregate{}
 	switch {
 	case total == 0:
@@ -134,18 +146,29 @@ func diagnoseEthernet(samples []plugin.Sample) plugin.Aggregate {
 			result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("LINK_ERRORS: [%d] ports reporting errors", errored))
 		}
 	}
-	result.Points = reportEthernet(result.Score, up, total, degraded, errored, points)
+	stats.score = result.Score
+	stats.ok = result.OK
+	result.Points = reportEthernet(stats)
 	return result
 }
 
-func reportEthernet(score, up, total, degraded, errored int, portPoints []plugin.Point) []plugin.Point {
-	summary := plugin.NewPoint([]plugin.Tag{{Key: "scope", Value: "summary"}},
-		plugin.Int("score", int64(score)),
-		plugin.Int("ports_up", int64(up)),
-		plugin.Int("ports_total", int64(total)),
-		plugin.Int("degraded_count", int64(degraded)),
-		plugin.Int("error_count", int64(errored)))
-	return plugin.PrependSummaryPoints(summary, portPoints)
+func reportEthernet(stats ethernetStats) []schema.Point {
+	return []schema.Point{ethernetPorts.Point(
+		ethernetOK.Of(stats.ok),
+		ethernetScore.Of(int64(stats.score)),
+		ethernetPortsTotal.Of(int64(stats.total)),
+		ethernetPortsOK.Of(int64(stats.up)),
+		ethernetPortsDegraded.Of(int64(stats.degraded)),
+		ethernetPortsErrored.Of(int64(stats.errored)))}
+}
+
+type ethernetStats struct {
+	ok       bool
+	score    int
+	up       int
+	total    int
+	degraded int
+	errored  int
 }
 
 func init() {
