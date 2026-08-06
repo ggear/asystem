@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	ethernetPorts           = schema.Declare("ethernet/ports", "switch port health across the monitored ports", aggregateCadence)
+	ethernetPorts         = schema.Declare("ethernet/ports", "switch port health across the monitored ports", aggregateCadence)
 	ethernetScore         = ethernetPorts.Int("score", "count", "diagnosis score from 0 to 100")
 	ethernetOK            = ethernetPorts.Bool("ok", "every monitored port up at expected speed with no link errors")
 	ethernetPortsTotal    = ethernetPorts.Int("ports_total", "count", "monitored ports")

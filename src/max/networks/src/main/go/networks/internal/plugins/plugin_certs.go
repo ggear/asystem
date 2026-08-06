@@ -29,7 +29,6 @@ var (
 	certsMinExpiryDays   = certsHome.Float("min_expiry_days", "days", "days until the nearest certificate expires")
 	certsEndpointsTotal  = certsHome.Int("endpoints_total", "count", "endpoints monitored")
 	certsEndpointsFailed = certsHome.Int("endpoints_failed", "count", "endpoints unreachable or failing verification")
-
 )
 
 type certsReading struct {

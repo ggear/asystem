@@ -55,7 +55,7 @@ def test_warmup():
 
 def test_schema_ddl_applies_and_is_idempotent():
     for table_name in _database_plugin_tables():
-        ddl = _read_generated(join("tables", f"{table_name}.sql"))
+        ddl = _read_generated(join("model", f"{table_name}.sql"))
         assert f"CREATE TABLE IF NOT EXISTS {table_name} (" in ddl
         with open(join(DIR_ROOT, "src/main/resources/image/database", f"{table_name}.sql")) as shipped_file:
             shipped = shipped_file.read()

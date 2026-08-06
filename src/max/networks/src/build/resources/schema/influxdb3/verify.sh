@@ -159,7 +159,7 @@ while IFS= read -r STATEMENT; do
     printf '%s\n' "${RESULT}" | table
     printf '\n'
   fi
-done < <(statements "${ROOT_DIR}/sql/verify.sql")
+done < <(statements "${ROOT_DIR}/query/verify.sql")
 
 if [ "${FAULTS}" != "0" ]; then
   printf '\nSchema verify [%s] found [%s] fault row(s)\n' "networks" "${FAULTS}" >&2

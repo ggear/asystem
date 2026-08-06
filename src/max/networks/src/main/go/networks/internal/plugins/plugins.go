@@ -14,8 +14,7 @@ func BrokerSchema() schema.Broker { return schema.Broker(brokerPayloads) }
 var brokerPayloads = []schema.Payload{
 	{
 		Role: schema.RoleState,
-		Desc: "diagnosis envelope published for one plugin",
-		Root: schema.Member{Kind: schema.KindObj, Members: []schema.Member{
+		Root: schema.Member{Members: []schema.Member{
 			{Key: "timestamp", Kind: schema.KindInt},
 			{Key: "ok", Kind: schema.KindBool},
 			{Key: "status", Kind: schema.KindStr, Enum: []string{"fit", "sick", "dead"}},
@@ -24,12 +23,10 @@ var brokerPayloads = []schema.Payload{
 	},
 	{
 		Role: schema.RoleCommand,
-		Desc: "switch command accepted for one plugin",
-		Root: schema.Member{Kind: schema.KindStr, Enum: []string{"ON", "OFF"}},
+		Root: schema.Member{Enum: []string{"ON", "OFF"}},
 	},
 	{
 		Role: schema.RoleAvailability,
-		Desc: "retained service availability",
-		Root: schema.Member{Kind: schema.KindStr, Enum: []string{"online", "offline"}},
+		Root: schema.Member{Enum: []string{"online", "offline"}},
 	},
 }

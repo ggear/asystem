@@ -6,10 +6,10 @@ import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from os.path import *
 
-KINDS = ("float", "int", "bool", "str", "obj", "any")
+KINDS = ("float", "int", "bool", "str")
 ROLES = ("state", "command", "availability")
 DIALECTS = ("influxdb3", "postgres")
 
@@ -17,7 +17,7 @@ DIALECTS = ("influxdb3", "postgres")
 @dataclass
 class SchemaDatabaseDimension:
     key: str
-    desc: str = ""
+    description: str = ""
     subject: bool = False
 
 
@@ -26,7 +26,7 @@ class SchemaDatabaseMeasure:
     key: str
     kind: str
     unit: str = ""
-    desc: str = ""
+    description: str = ""
     persist: bool = True
     period: str = ""
 
@@ -34,7 +34,7 @@ class SchemaDatabaseMeasure:
 @dataclass
 class SchemaDatabaseRelation:
     path: str
-    desc: str = ""
+    description: str = ""
     cadence: str = ""
     entities: list = field(default_factory=list)
     dimensions: list = field(default_factory=list)
@@ -62,14 +62,12 @@ class SchemaBrokerMember:
     key: str = ""
     kind: str = "str"
     enum: list = field(default_factory=list)
-    dynamic: bool = False
     members: list = field(default_factory=list)
 
 
 @dataclass
 class SchemaBrokerPayload:
     role: str
-    desc: str = ""
     match: str = ""
     root: SchemaBrokerMember = field(default_factory=SchemaBrokerMember)
 
@@ -213,52 +211,52 @@ def _toolchain_env(module_root):
 def _parse_document(text, module_name):
     """Parse the JSON a Go or Rust schema reflector prints on stdout.
 
-    The reflector is the service declaring what it writes, so this JSON is the transport between the
-    service and the build, never a committed artefact. Every key is optional unless marked required,
-    and any key not listed here is rejected, so a typo in a reflector fails the build instead of
-    silently vanishing.
+    A schema document, as the reflector prints it:
 
     {
-      "module": "<name>",                     defaults to the module directory name
-      "database": {
-        "relations": [{
-          "path": "<plugin>/<scope>",         REQUIRED, the [/] separator is enforced
-          "desc": "<text>",
-          "cadence": "<duration>",            the service's real publish period, e.g. [30s] [1d]
-          "entities": ["<entity>"],           closed domain, may instead be filled by generate.py
-          "dimensions": [{
-            "key": "<name>",                  REQUIRED
-            "desc": "<text>",
-            "subject": <true|false>           at most one per relation, the entity axis
-          }],
-          "measures": [{
-            "key": "<name>",                  REQUIRED
-            "kind": "<float|int|bool|str|obj|any>",  REQUIRED
-            "unit": "<text>",
-            "desc": "<text>",
-            "persist": <true|false>,          false is declared but not written, absent from leaves
-            "period": "<duration>"            defaults to the relation cadence
+        "module":      "<name>",            OPTIONAL  Owning module, defaults to the module directory name
+        "database":    {                    OPTIONAL  What the service writes to a database backend
+          "relations":   [{                 OPTIONAL  One per distinct row shape written
+            "path":        "<path>",        REQUIRED  [<plugin>/<scope>], [<plugin>] is the measurement or table
+            "description": "<text>",        OPTIONAL  What the relation holds
+            "cadence":     "<duration>",    OPTIONAL  The service's real publish period
+            "entities":    ["<entity>"],    OPTIONAL  Values the subject takes, generate.py may fill them instead
+            "dimensions":  [{               OPTIONAL  What identifies a row
+              "key":         "<name>",      REQUIRED  Tag name in influxdb3, the postgres columns are fixed
+              "description": "<text>",      OPTIONAL  What the dimension distinguishes
+              "subject":     <true|false>   OPTIONAL  The entity axis, at most one per relation, defaults to false
+            }],
+            "measures":    [{               OPTIONAL  What a row carries
+              "key":         "<name>",      REQUIRED  Field name in influxdb3, [type] value in postgres
+              "kind":        "<kind>",      REQUIRED  Value type
+              "unit":        "<text>",      OPTIONAL  Unit of the value, e.g. [%] [$] [celsius] [seconds]
+              "description": "<text>",      OPTIONAL  What the measure records
+              "persist":     <true|false>,  OPTIONAL  Declared but never written when false, defaults to true
+              "period":      "<duration>"   OPTIONAL  Span the value covers, defaults to the relation cadence
+            }]
           }]
-        }]
-      },
-      "broker": {
-        "payloads": [{
-          "role": "<state|command|availability>",  REQUIRED, matches the xlsx topic column
-          "desc": "<text>",
-          "match": "<topic-glob>",            fnmatch tie-break when a role has several payloads
-          "root": <member>                    the payload shape, rendered to the topic leaf
-        }]
-      }
+        },
+        "broker":      {                    OPTIONAL  What the service publishes to the broker
+          "payloads":    [{                 OPTIONAL  One per payload shape published
+            "role":        "<role>",        REQUIRED  [state|command|availability], the xlsx topic column filled
+            "match":       "<topic-glob>",  OPTIONAL  Picks between payloads sharing a role, matched by fnmatch
+            "root":        <member>         OPTIONAL  Payload shape rendered to the topic leaf
+          }]
+        }
     }
 
-    A member, nested arbitrarily deep through its own [members]:
+    A [<kind>] is one of [float] [int] [bool] [str].
+
+    A [<duration>] is an unsigned integer and a unit suffix, one of [s] [m] [h] [d], e.g. [30s] [15m] [1d].
+    It is carried verbatim into the artefacts, never parsed.
+
+    A [<member>], nesting arbitrarily deep through its own [members]:
 
     {
-      "key": "<name>",                        empty for the root of a bare (non-object) payload
-      "kind": "<float|int|bool|str|obj|any>", defaults to [str]
-      "enum": ["<option>"],                   renders as [<a|b|c>] rather than a kind placeholder
-      "dynamic": <true|false>,                keys vary at runtime, e.g. a map of entity ids
-      "members": [<member>]
+        "key":         "<name>",            OPTIONAL  Member name, empty for the root of a bare payload
+        "kind":        "<kind>",            OPTIONAL  Scalar type, ignored when [members] or [enum] is set
+        "enum":        ["<option>"],        OPTIONAL  Renders as [<a|b|c>] in place of the kind placeholder
+        "members":     [<member>]           OPTIONAL  Nested members, which make this an object
     }
     """
     try:
@@ -267,40 +265,83 @@ def _parse_document(text, module_name):
         raise ValueError("Build generate script [{}] schema reflection emitted unparseable JSON [{}]"
                          .format(module_name, error))
     _reject_unknown(module_name, "document", parsed, ("module", "database", "broker"))
-    _reject_unknown(module_name, "database", parsed.get("database") or {}, ("relations",))
-    _reject_unknown(module_name, "broker", parsed.get("broker") or {}, ("payloads",))
-    document = SchemaDocument(module=parsed.get("module", module_name))
-    for relation in (parsed.get("database") or {}).get("relations", []):
-        _reject_unknown(module_name, "relation", relation,
-                        ("path", "desc", "cadence", "entities", "dimensions", "measures"))
-        for dimension in (relation.get("dimensions") or []):
-            _reject_unknown(module_name, "dimension", dimension, ("key", "desc", "subject"))
-        for measure in (relation.get("measures") or []):
-            _reject_unknown(module_name, "measure", measure, ("key", "kind", "unit", "desc", "persist", "period"))
-        document.relations.append(SchemaDatabaseRelation(
-            path=relation["path"],
-            desc=relation.get("desc", ""),
-            cadence=relation.get("cadence", ""),
-            entities=list(relation.get("entities") or []),
-            dimensions=[SchemaDatabaseDimension(key=dimension["key"], desc=dimension.get("desc", ""),
-                                  subject=bool(dimension.get("subject", False)))
-                        for dimension in (relation.get("dimensions") or [])],
-            measures=[SchemaDatabaseMeasure(key=measure["key"], kind=measure["kind"], unit=measure.get("unit", ""),
-                              desc=measure.get("desc", ""), persist=bool(measure.get("persist", True)),
-                              period=measure.get("period", ""))
-                      for measure in (relation.get("measures") or [])]))
-    for payload in (parsed.get("broker") or {}).get("payloads", []):
-        _reject_unknown(module_name, "payload", payload, ("role", "desc", "match", "root"))
-        document.payloads.append(SchemaBrokerPayload(
-            role=payload["role"],
-            desc=payload.get("desc", ""),
-            match=payload.get("match", ""),
-            root=_parse_member(payload.get("root") or {}, module_name)))
+    database = _mapping(module_name, "document", parsed, "database")
+    broker = _mapping(module_name, "document", parsed, "broker")
+    _reject_unknown(module_name, "database", database, ("relations",))
+    _reject_unknown(module_name, "broker", broker, ("payloads",))
+    document = SchemaDocument(
+        module=_text(module_name, "document", parsed, "module", module_name),
+        relations=[_parse_relation(module_name, relation)
+                   for relation in _mappings(module_name, "database", database, "relations")],
+        payloads=[_parse_payload(module_name, payload)
+                  for payload in _mappings(module_name, "broker", broker, "payloads")])
     _validate(document)
     return document
 
 
+def _parse_relation(module_name, relation):
+    scope = _scope("", "relation", relation, "path")
+    _reject_unknown(module_name, scope, relation, SchemaDatabaseRelation)
+    return SchemaDatabaseRelation(
+        path=_text(module_name, scope, relation, "path"),
+        description=_text(module_name, scope, relation, "description", ""),
+        cadence=_text(module_name, scope, relation, "cadence", ""),
+        entities=_texts(module_name, scope, relation, "entities"),
+        dimensions=[_parse_dimension(module_name, scope, dimension)
+                    for dimension in _mappings(module_name, scope, relation, "dimensions")],
+        measures=[_parse_measure(module_name, scope, measure)
+                  for measure in _mappings(module_name, scope, relation, "measures")])
+
+
+def _parse_dimension(module_name, scope, dimension):
+    scope = _scope(scope, "dimension", dimension)
+    _reject_unknown(module_name, scope, dimension, SchemaDatabaseDimension)
+    return SchemaDatabaseDimension(
+        key=_text(module_name, scope, dimension, "key"),
+        description=_text(module_name, scope, dimension, "description", ""),
+        subject=_flag(module_name, scope, dimension, "subject", False))
+
+
+def _parse_measure(module_name, scope, measure):
+    scope = _scope(scope, "measure", measure)
+    _reject_unknown(module_name, scope, measure, SchemaDatabaseMeasure)
+    return SchemaDatabaseMeasure(
+        key=_text(module_name, scope, measure, "key"),
+        kind=_text(module_name, scope, measure, "kind"),
+        unit=_text(module_name, scope, measure, "unit", ""),
+        description=_text(module_name, scope, measure, "description", ""),
+        persist=_flag(module_name, scope, measure, "persist", True),
+        period=_text(module_name, scope, measure, "period", ""))
+
+
+def _parse_payload(module_name, payload):
+    scope = _scope("", "payload", payload, "role")
+    _reject_unknown(module_name, scope, payload, SchemaBrokerPayload)
+    return SchemaBrokerPayload(
+        role=_text(module_name, scope, payload, "role"),
+        match=_text(module_name, scope, payload, "match", ""),
+        root=_parse_member(module_name, scope, _mapping(module_name, scope, payload, "root")))
+
+
+def _parse_member(module_name, scope, member):
+    scope = _scope(scope, "member", member)
+    _reject_unknown(module_name, scope, member, SchemaBrokerMember)
+    return SchemaBrokerMember(
+        key=_text(module_name, scope, member, "key", ""),
+        kind=_text(module_name, scope, member, "kind", "str"),
+        enum=_texts(module_name, scope, member, "enum"),
+        members=[_parse_member(module_name, scope, nested)
+                 for nested in _mappings(module_name, scope, member, "members")])
+
+
+def _scope(scope, noun, mapping, key="key"):
+    return "{}{} [{}]".format(scope + " " if scope else "", noun,
+                              mapping.get(key, "") if isinstance(mapping, dict) else "")
+
+
 def _reject_unknown(module_name, scope, mapping, allowed):
+    if is_dataclass(allowed):
+        allowed = tuple(declared.name for declared in fields(allowed))
     if not isinstance(mapping, dict):
         raise ValueError("Build generate script [{}] schema reflection emitted non-object [{}] [{}]"
                          .format(module_name, scope, type(mapping).__name__))
@@ -310,14 +351,60 @@ def _reject_unknown(module_name, scope, mapping, allowed):
                          .format(module_name, scope, ",".join(unknown), ",".join(allowed)))
 
 
-def _parse_member(member, module_name):
-    _reject_unknown(module_name, "member", member, ("key", "kind", "enum", "dynamic", "members"))
-    return SchemaBrokerMember(
-        key=member.get("key", ""),
-        kind=member.get("kind", "str"),
-        enum=list(member.get("enum") or []),
-        dynamic=bool(member.get("dynamic", False)),
-        members=[_parse_member(nested, module_name) for nested in (member.get("members") or [])])
+def _text(module_name, scope, mapping, key, default=None):
+    value = mapping.get(key)
+    value = default if value is None else value
+    if value is None:
+        raise ValueError("Build generate script [{}] schema reflection {} requires key [{}]"
+                         .format(module_name, scope, key))
+    if not isinstance(value, str):
+        raise ValueError("Build generate script [{}] schema reflection {} emitted key [{}] as [{}] expected text"
+                         .format(module_name, scope, key, type(value).__name__))
+    return value
+
+
+def _texts(module_name, scope, mapping, key):
+    values = mapping.get(key)
+    if values is None:
+        return []
+    if not isinstance(values, list):
+        raise ValueError("Build generate script [{}] schema reflection {} emitted key [{}] as [{}] expected an array"
+                         .format(module_name, scope, key, type(values).__name__))
+    for value in values:
+        if not isinstance(value, str):
+            raise ValueError("Build generate script [{}] schema reflection {} emitted key [{}] element [{}] as [{}] "
+                             "expected text".format(module_name, scope, key, value, type(value).__name__))
+    return list(values)
+
+
+def _flag(module_name, scope, mapping, key, default):
+    value = mapping.get(key)
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        raise ValueError("Build generate script [{}] schema reflection {} emitted key [{}] as [{}] expected "
+                         "true or false".format(module_name, scope, key, type(value).__name__))
+    return value
+
+
+def _mapping(module_name, scope, mapping, key):
+    value = mapping.get(key)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError("Build generate script [{}] schema reflection {} emitted key [{}] as [{}] expected an object"
+                         .format(module_name, scope, key, type(value).__name__))
+    return value
+
+
+def _mappings(module_name, scope, mapping, key):
+    values = mapping.get(key)
+    if values is None:
+        return []
+    if not isinstance(values, list):
+        raise ValueError("Build generate script [{}] schema reflection {} emitted key [{}] as [{}] expected an array"
+                         .format(module_name, scope, key, type(values).__name__))
+    return values
 
 
 def _validate(document):
@@ -482,7 +569,7 @@ def _artifacts_vernemq(module_name, dialect, topic_glob_discovery, topic_glob_da
     for column, column_topics in topics.items():
         role = schema_vernemq.ROLE_COLUMNS.get(column, "") if document is not None else ""
         for topic in column_topics:
-            artifacts["topics/{}".format(topic)] = (
+            artifacts["model/{}".format(topic)] = (
                 schema_vernemq.leaf(topic, specs.get(column, ""), document, role), False)
     if describe:
         artifacts["describe.sh"] = (schema_vernemq.describe_script(module_name, dialect, globs), True)
@@ -526,19 +613,19 @@ def _artifacts_postgres(document, module_name, dialect, time_column, retention,
     for relation in document.relations:
         by_table.setdefault(tables[relation.path], []).append(relation)
     for table, relations in by_table.items():
-        artifacts["tables/{}.sql".format(table)] = (
+        artifacts["model/{}.sql".format(table)] = (
             schema_postgres.leaf(relations, table, time_column, retention), False)
     if describe:
-        artifacts["sql/describe.sql"] = (
+        artifacts["query/describe.sql"] = (
             schema_postgres.describe(document, tables), False)
         artifacts["describe.sh"] = (schema_postgres.describe_script(module_name, dialect), True)
     if queries:
         for table, relations in by_table.items():
-            artifacts["sql/query_{}.sql".format(table)] = (
+            artifacts["query/query_{}.sql".format(table)] = (
                 schema_postgres.queries(relations, table, time_column), False)
         artifacts["query.sh"] = (schema_postgres.query_script(module_name, dialect), True)
     if verify:
-        artifacts["sql/verify.sql"] = (schema_postgres.verify(document, tables), False)
+        artifacts["query/verify.sql"] = (schema_postgres.verify(document, tables), False)
         artifacts["verify.sh"] = (schema_postgres.verify_script(module_name, dialect), True)
     return artifacts, tables
 
@@ -550,7 +637,7 @@ def _ship_postgres(module_name, module_root, schemas_dir, dialect, tables, time_
         shutil.rmtree(image_dir)
     os.makedirs(image_dir, exist_ok=True)
     for table in sorted(set(tables.values())):
-        source_path = abspath(join(schemas_dir, dialect, "tables", "{}.sql".format(table)))
+        source_path = abspath(join(schemas_dir, dialect, "model", "{}.sql".format(table)))
         target_path = join(image_dir, "{}.sql".format(table))
         shutil.copyfile(source_path, target_path)
         columns_path = join(image_dir, "{}.json".format(table))
@@ -568,21 +655,27 @@ def _ship_postgres(module_name, module_root, schemas_dir, dialect, tables, time_
 def _artifacts_influxdb(document, module_name, dialect, describe, queries, verify):
     from asystem import schema_influxdb
     artifacts = {}
+    scopes = {}
     for relation in document.relations:
         if not relation.persisted:
             continue
-        artifacts["series/{}/{}".format(relation.plugin, relation.scope)] = (
-            schema_influxdb.leaf(relation), False)
+        if relation.scope in scopes:
+            raise ValueError(
+                "Build generate script [{}] relations [{}] and [{}] share the scope [{}] so both would write "
+                "the same leaf, rename one scope".format(module_name, scopes[relation.scope], relation.path,
+                                                         relation.scope))
+        scopes[relation.scope] = relation.path
+        artifacts["model/{}.lp".format(relation.scope)] = (schema_influxdb.leaf(relation), False)
     if describe:
-        artifacts["sql/describe.sql"] = (schema_influxdb.describe(document), False)
+        artifacts["query/describe.sql"] = (schema_influxdb.describe(document), False)
         artifacts["describe.sh"] = (schema_influxdb.describe_script(module_name, dialect), True)
     if queries:
         for measurement in schema_influxdb.measurements(document):
-            artifacts["sql/query_{}.sql".format(measurement)] = (
+            artifacts["query/query_{}.sql".format(measurement)] = (
                 schema_influxdb.queries(document, schema_influxdb.measured(document, measurement)), False)
         artifacts["query.sh"] = (schema_influxdb.query_script(module_name, dialect), True)
     if verify:
-        artifacts["sql/verify.sql"] = (schema_influxdb.verify(document), False)
+        artifacts["query/verify.sql"] = (schema_influxdb.verify(document), False)
         artifacts["verify.sh"] = (schema_influxdb.verify_script(module_name, dialect), True)
     return artifacts
 
@@ -591,6 +684,37 @@ def banner(prefix="#"):
     rule = prefix * (80 // len(prefix))
     return "{0}\n{1} WARNING: This file is written by the build process, any manual edits will be lost!\n{0}".format(
         rule, prefix)
+
+
+def vocabulary(relation, prefix="#", width=110):
+    lines = ["{} {} [{}]".format(prefix, relation.path, relation.description)]
+    if relation.cadence:
+        lines.append("{}   cadence {}".format(prefix, relation.cadence))
+    for dimension in relation.dimensions:
+        lines.append("{}   tag {}{} [{}]".format(
+            prefix, dimension.key, SUBJECT if dimension.subject else "", dimension.description))
+    if relation.subject is not None:
+        lines += _entities(relation.entities, prefix, width)
+    for measure in relation.measures:
+        lines.append("{}   field {} {} {} [{}]{}".format(
+            prefix, measure.key, UNITS.get(measure.unit, measure.unit) or NULL,
+            measure.period or relation.cadence or NULL,
+            measure.description, "" if measure.persist else " (not persisted)"))
+    return lines
+
+
+def _entities(entities, prefix, width):
+    leading = "{}   entity ".format(prefix)
+    if not entities:
+        return [leading + "<undeclared, whatever the service writes>"]
+    lines, current = [], ""
+    for index, entity in enumerate(entities):
+        entity += "," if index < len(entities) - 1 else ""
+        if current and len(leading) + len(current) + 1 + len(entity) > width:
+            lines.append(leading + current)
+            current = ""
+        current += (" " if current else "") + entity
+    return lines + [leading + current]
 
 
 def select(selectors, source, predicates=(), group_by=(), having=(), order_by=(), limit=None,
@@ -722,6 +846,7 @@ NULL = "-"
 YES = "yes"
 NO = "no"
 SUBJECT = "*"
+UNITS = {"celsius": "Celsius"}
 
 DESCRIBE_RELATIONS = ("relation", "dimension", "cadence", "measures", "persisted",
                       "declared", "observed", "rows", "oldest", "newest")

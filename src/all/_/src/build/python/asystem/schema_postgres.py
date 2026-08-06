@@ -1,5 +1,5 @@
-from asystem.schema import (NO, NULL, RUNNER, SUBJECT, YES, banner, indent, literals,
-                            script, select)
+from asystem.schema import (NO, NULL, RUNNER, SUBJECT, UNITS, YES, banner, indent, literals,
+                            script, select, vocabulary)
 
 TIME_COLUMNS = {
     "date": ("DATE", "INTERVAL '10 years'", "CURRENT_DATE", "1"),
@@ -49,13 +49,7 @@ def leaf(relations, table, time_column, retention):
     column_type, chunk_interval, _, _ = TIME_COLUMNS[time_column]
     lines = [banner("--"), ""]
     for relation in relations:
-        lines.append("-- {} [{}]".format(relation.path, relation.desc))
-        lines.append("-- vocabulary, one row per declared (entity, type, period, unit)")
-        lines += ["--   entity {}".format(entity) for entity in relation.entities] or \
-                 ["--   entity <open domain, owned by a live third party source>"]
-        for measure in relation.measures:
-            lines.append("--   type {} period {} unit {} [{}]".format(
-                measure.key, measure.period or relation.cadence, measure.unit, measure.desc))
+        lines += vocabulary(relation, "--")
         lines.append("--")
     lines = lines[:-1]
     lines += [
@@ -108,8 +102,8 @@ def describe(document, tables_by_path):
 
 def queries(relations, table, time_column):
     _, _, now, step = TIME_COLUMNS[time_column]
-    vocabulary = [tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
-    statements = ["-- {} [{}]".format(relation.path, relation.desc) for relation in relations]
+    series = [tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
+    statements = ["-- {} [{}]".format(relation.path, relation.description) for relation in relations]
     statements.append(
         "-- every query below is deliberately rich but row bounded, so a paste into psql stays readable")
 
@@ -174,8 +168,9 @@ def queries(relations, table, time_column):
         having=["max(time) < (SELECT max(time) FROM {})".format(table)],
         order_by=["behind DESC"], limit=20))
 
-    for metric_type, period, unit in vocabulary:
-        statements.append("-- {} [{}] in [{}], yearly shape across entities".format(metric_type, period, unit))
+    for metric_type, period, unit in series:
+        statements.append("-- {} [{}] in [{}], yearly shape across entities".format(
+            metric_type, period, UNITS.get(unit, unit)))
         statements.append(select(
             [("time_bucket('1 month', time)", "bucket"), ("entity", ""), ("avg(value)", "mean"),
              ("min(value)", "low"), ("max(value)", "high"), ("count(*)", "rows_total")],
@@ -207,7 +202,7 @@ def describe_script(module_name, dialect):
     return script(module_name, dialect, "describe", "print what the production tables actually carry", connect(module_name), """
 printf '\\n'
 SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${{POSTGRES_SERVICE_PROD}}" \\
-  query_file "${{ROOT_DIR}}/sql/describe.sql"
+  query_file "${{ROOT_DIR}}/query/describe.sql"
 """.format(module_name))
 
 
@@ -215,7 +210,7 @@ def query_script(module_name, dialect):
     return script(module_name, dialect, "query", "run the generated query for every declared relation", connect(module_name), """
 printf '\\nSchema query [%s] against [%s]\\n\\n' "{}" "${{POSTGRES_SERVICE_PROD}}"
 FAULTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/sql/query_*.sql; do
+for SQL_FILE in "${{ROOT_DIR}}"/query/query_*.sql; do
   printf '\\n== %s ==\\n' "$(basename "${{SQL_FILE}}")"
   query_file "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
 done
@@ -227,15 +222,15 @@ def verify_script(module_name, dialect):
     return script(module_name, dialect, "verify", "assert production matches the declaration", connect(module_name), """
 printf '\\nSchema verify [%s] against [%s]\\n\\n' "{}" "${{POSTGRES_SERVICE_PROD}}"
 
-if ! FAULTS="$("${{PSQL[@]}}" -v ON_ERROR_STOP=1 -t -A -f "${{ROOT_DIR}}/sql/verify.sql" | grep -c .)"; then
+if ! FAULTS="$("${{PSQL[@]}}" -v ON_ERROR_STOP=1 -t -A -f "${{ROOT_DIR}}/query/verify.sql" | grep -c .)"; then
   FAULTS=0
 fi
-if ! OUTPUT="$("${{PSQL[@]}}" -v ON_ERROR_STOP=1 -f "${{ROOT_DIR}}/sql/verify.sql" 2>&1)"; then
-  fail "${{ROOT_DIR}}/sql/verify.sql" "${{OUTPUT}}"
+if ! OUTPUT="$("${{PSQL[@]}}" -v ON_ERROR_STOP=1 -f "${{ROOT_DIR}}/query/verify.sql" 2>&1)"; then
+  fail "${{ROOT_DIR}}/query/verify.sql" "${{OUTPUT}}"
   exit 1
 fi
 if [ "${{FAULTS}}" != "0" ]; then
-  query_file "${{ROOT_DIR}}/sql/verify.sql" || exit 1
+  query_file "${{ROOT_DIR}}/query/verify.sql" || exit 1
 fi
 
 if [ "${{FAULTS}}" != "0" ]; then
@@ -354,7 +349,7 @@ def _declared(relation):
 
 
 def _vocabulary(relation):
-    seen, vocabulary = set(), []
+    seen, series = set(), []
     for measure in relation.measures:
         if not measure.persist:
             continue
@@ -362,8 +357,8 @@ def _vocabulary(relation):
         if tuple_ in seen:
             continue
         seen.add(tuple_)
-        vocabulary.append(tuple_)
-    return vocabulary
+        series.append(tuple_)
+    return series
 
 
 def _statements(statements):

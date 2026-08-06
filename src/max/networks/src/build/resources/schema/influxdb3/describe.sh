@@ -146,4 +146,4 @@ query_file() {
 
 printf '\n'
 SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${INFLUXDB3_SERVICE_PROD}" \
-  query_file "${ROOT_DIR}/sql/describe.sql"
+  query_file "${ROOT_DIR}/query/describe.sql"

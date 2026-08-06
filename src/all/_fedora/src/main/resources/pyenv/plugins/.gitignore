@@ -1,0 +1,5 @@
+/*
+!/.gitignore
+!/version-ext-compat
+!/python-build
+/python-build/test/build

@@ -26,17 +26,7 @@ Implement Coral/Frigate
 Add big ass temps for deck
 
 
-no sql dir, just have descirbe and verify in root, with sql for queries and ddl for tables?
-queries should be in queries dir and drop query prefix
 
-influxdb3/series
-influxdb3/sql
-influxdb3/describe.sh
-influxdb3/query.sh
-influxdb3/verify.sh
-
-
-improve def _parse_document(text, module_name): json and documentation
 ensure units particularly those in supervisor are consistaent and accurate
 improve queries, too many rows, drop comments and make cleaner like dsecribe.sh, more complex timeseries bucketing 14d window, bucket 7d max
 drop dimensions Persisted | Declared | Observed - they apply to entities dont they? add a count for dimensions?
@@ -61,7 +51,7 @@ am i happy with type builder struct {
 move rust bin into tools like go?
 do i bother with broker/database terminology and just use vernemq/influxdb3/postgrese evreywhere? supervisor env's schmea.go - maybe not?
 for zigbeemqtt and others? maybe have discover.sh write to topics to sample payloads? dont overwrite if existing? or only clear/overwrite if they are only dsicvovered? generalise handwritten broker stuff rename broker to vernemq?
-go through module by module to validate
+go through module by module to validate - hass influxdb output for instance
 improve sys tests with datbase/broker asserts
 simplify CLAUDE.md globals and all nested on these chnages
 Move _/volumes into storage?

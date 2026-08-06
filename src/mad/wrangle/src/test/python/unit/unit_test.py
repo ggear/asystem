@@ -1199,13 +1199,13 @@ class WrangleTest(unittest.TestCase):
         reset_config()
         schemas_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/build/resources/schema/postgres"))
         image_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/main/resources/image/database"))
-        for artifact in ("sql/describe.sql", "sql/verify.sql", "sql/observe.sql", "describe.sh", "query.sh", "verify.sh"):
+        for artifact in ("query/describe.sql", "query/verify.sql", "query/observe.sql", "describe.sh", "query.sh", "verify.sh"):
             self.assertTrue(isfile(join(schemas_dir, artifact)), f"missing generated artifact [{artifact}]")
         for plugin_name in wrangle_main._get_plugins():
             instance = wrangle_main._instantiate_plugin(plugin_name)
             if not instance.database:
                 continue
-            table_sql = join(schemas_dir, "tables", f"{plugin_name}.sql")
+            table_sql = join(schemas_dir, "model", f"{plugin_name}.sql")
             query_sql = join(schemas_dir, "sql", f"query_{plugin_name}.sql")
             self.assertTrue(isfile(table_sql), f"missing generated DDL for table [{plugin_name}]")
             self.assertTrue(isfile(query_sql), f"missing generated queries for table [{plugin_name}]")

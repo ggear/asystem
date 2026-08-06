@@ -40,10 +40,10 @@ def _currency():
                      for label, days in CURRENCY_PERIODS.items()]
     return SchemaDatabaseRelation(
         path="currency/rate",
-        desc="foreign exchange rates published by the Reserve Bank of Australia",
+        description="foreign exchange rates published by the Reserve Bank of Australia",
         cadence=CADENCE,
         entities=list(CURRENCY_PAIRS),
-        dimensions=[SchemaDatabaseDimension(key="entity", desc="currency pair", subject=True)],
+        dimensions=[SchemaDatabaseDimension(key="entity", description="currency pair", subject=True)],
         measures=measures_all)
 
 
@@ -54,10 +54,10 @@ def _interest():
                      for label, months in INTEREST_PERIODS.items()]
     return SchemaDatabaseRelation(
         path="interest/rate",
-        desc="interest and inflation rates published by the Reserve Bank of Australia",
+        description="interest and inflation rates published by the Reserve Bank of Australia",
         cadence=CADENCE,
         entities=list(INTEREST_LABELS),
-        dimensions=[SchemaDatabaseDimension(key="entity", desc="rate series", subject=True)],
+        dimensions=[SchemaDatabaseDimension(key="entity", description="rate series", subject=True)],
         measures=measures_all)
 
 
@@ -72,12 +72,12 @@ def _equity():
                 "change in {} across [{}] days".format(price_type.replace("-", " "), change_period)))
     return SchemaDatabaseRelation(
         path="equity/ticker",
-        desc="equity prices and volumes downloaded per ticker",
+        description="equity prices and volumes downloaded per ticker",
         cadence=CADENCE,
         entities=EQUITY_TICKERS,
-        dimensions=[SchemaDatabaseDimension(key="entity", desc="ticker symbol", subject=True)],
+        dimensions=[SchemaDatabaseDimension(key="entity", description="ticker symbol", subject=True)],
         measures=measures_all)
 
 
-def _measure(metric_type, period, unit, desc):
-    return SchemaDatabaseMeasure(key=metric_type, kind="float", unit=unit, desc=desc, period=period)
+def _measure(metric_type, period, unit, description):
+    return SchemaDatabaseMeasure(key=metric_type, kind="float", unit=unit, description=description, period=period)

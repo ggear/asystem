@@ -1,4 +1,5 @@
-from asystem.schema import (NO, NULL, RUNNER, SUBJECT, YES, banner, literals, script, select)
+from asystem.schema import (NO, NULL, RUNNER, SUBJECT, YES, banner, literals, script, select,
+                            vocabulary)
 
 
 PLACEHOLDERS = {
@@ -6,7 +7,6 @@ PLACEHOLDERS = {
     "int": "<number>i",
     "bool": "<0|1>i",
     "str": "<text>",
-    "obj": "<object>",
 }
 
 # noinspection HttpUrlsUsage
@@ -29,8 +29,9 @@ query() {
 def leaf(relation):
     tags = ["{}=<{}>".format(dimension.key, dimension.key) for dimension in relation.dimensions]
     fields = ["{}={}".format(measure.key, PLACEHOLDERS[measure.kind]) for measure in relation.persisted]
-    lines = [banner(), "# {} [{}]".format(relation.path, relation.desc)]
+    lines = [banner(), ""] + vocabulary(relation)
     if fields:
+        lines.append("")
         lines.append(relation.plugin + "".join("," + tag for tag in tags))
         lines += ["    {},".format(field) for field in fields[:-1]]
         lines.append("    {}".format(fields[-1]))
@@ -68,14 +69,14 @@ def queries(document, relations):
     for relation in relations:
         if not relation.persisted:
             statements.append("-- {} [{}] declares no persisted measure, so nothing is written for it"
-                              .format(relation.path, relation.desc))
+                              .format(relation.path, relation.description))
             continue
-        statements.append("-- {} [{}] every {}".format(relation.path, relation.desc, relation.cadence))
+        statements.append("-- {} [{}] every {}".format(relation.path, relation.description, relation.cadence))
         statements += _absent(relation)
         selectors = [("date_bin(INTERVAL '1 hour', time)", "bucket")]
         selectors += [(dimension.key, "") for dimension in relation.dimensions]
         for measure in relation.measures:
-            if not measure.persist or measure.kind in ("str", "obj"):
+            if not measure.persist or measure.kind == "str":
                 continue
             if measure.kind == "bool":
                 selectors.append(("avg({})".format(measure.key), measure.key + "_fraction"))
@@ -196,7 +197,7 @@ def _declared(relation):
 def _absent(relation):
     absent = [(measure.key, measure.kind, "not persisted" if not measure.persist else "carried as a tag")
               for measure in relation.measures
-              if not measure.persist or measure.kind in ("str", "obj")]
+              if not measure.persist or measure.kind == "str"]
     if not absent:
         return []
     key_width = max(len(key) for key, _, _ in absent)
@@ -210,7 +211,7 @@ def describe_script(module_name, dialect):
     return script(module_name, dialect, "describe", "print what production actually carries", CONNECT, """
 printf '\\n'
 SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${{INFLUXDB3_SERVICE_PROD}}" \\
-  query_file "${{ROOT_DIR}}/sql/describe.sql"
+  query_file "${{ROOT_DIR}}/query/describe.sql"
 """.format(module_name))
 
 
@@ -218,7 +219,7 @@ def query_script(module_name, dialect):
     return script(module_name, dialect, "query", "run the generated query for every declared relation", CONNECT, """
 printf '\\nSchema query [%s] against [%s]\\n\\n' "{}" "${{INFLUXDB3_SERVICE_PROD}}"
 FAULTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/sql/query_*.sql; do
+for SQL_FILE in "${{ROOT_DIR}}"/query/query_*.sql; do
   printf '\\n== %s ==\\n' "$(basename "${{SQL_FILE}}")"
   query_file "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
 done
@@ -243,7 +244,7 @@ while IFS= read -r STATEMENT; do
     printf '%s\\n' "${{RESULT}}" | table
     printf '\\n'
   fi
-done < <(statements "${{ROOT_DIR}}/sql/verify.sql")
+done < <(statements "${{ROOT_DIR}}/query/verify.sql")
 
 if [ "${{FAULTS}}" != "0" ]; then
   printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{}" "${{FAULTS}}" >&2

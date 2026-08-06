@@ -16,8 +16,6 @@ const (
 	KindInt   Kind = "int"
 	KindBool  Kind = "bool"
 	KindStr   Kind = "str"
-	KindObj   Kind = "obj"
-	KindAny   Kind = "any"
 )
 
 type Role string
@@ -29,41 +27,39 @@ const (
 )
 
 type Dimension struct {
-	Key     string `json:"key"`
-	Desc    string `json:"desc"`
-	Subject bool   `json:"subject"`
+	Key         string `json:"key"`
+	Description string `json:"description"`
+	Subject     bool   `json:"subject"`
 }
 
 type Measure struct {
-	Key     string `json:"key"`
-	Kind    Kind   `json:"kind"`
-	Unit    string `json:"unit"`
-	Desc    string `json:"desc"`
-	Persist bool   `json:"persist"`
-	Period  string `json:"period,omitempty"`
+	Key         string `json:"key"`
+	Kind        Kind   `json:"kind"`
+	Unit        string `json:"unit"`
+	Description string `json:"description"`
+	Persist     bool   `json:"persist"`
+	Period      string `json:"period,omitempty"`
 }
 
 type Relation struct {
-	Path       string            `json:"path"`
-	Desc       string            `json:"desc"`
-	Cadence    string            `json:"cadence"`
-	Entities   []string          `json:"entities"`
-	Dimensions []Dimension       `json:"dimensions"`
-	Measures   []Measure         `json:"measures"`
+	Path        string      `json:"path"`
+	Description string      `json:"description"`
+	Cadence     string      `json:"cadence"`
+	Entities    []string    `json:"entities"`
+	Dimensions  []Dimension `json:"dimensions"`
+	Measures    []Measure   `json:"measures"`
 }
 
 type Member struct {
-	Key     string   `json:"key"`
-	Kind    Kind     `json:"kind"`
+	Key     string   `json:"key,omitempty"`
+	Kind    Kind     `json:"kind,omitempty"`
 	Enum    []string `json:"enum,omitempty"`
-	Dynamic bool     `json:"dynamic,omitempty"`
 	Members []Member `json:"members,omitempty"`
 }
 
 type Payload struct {
 	Role  Role   `json:"role"`
 	Match string `json:"match,omitempty"`
-	Desc  string `json:"desc"`
 	Root  Member `json:"root"`
 }
 
@@ -145,12 +141,12 @@ type Builder struct {
 	declared map[string]bool
 }
 
-func Declare(path, desc, cadence string) *Builder {
+func Declare(path, description, cadence string) *Builder {
 	if !strings.Contains(path, "/") {
 		panic(fmt.Sprintf("relation path must be [<plugin>/<scope>] [%s]", path))
 	}
 	builder := &Builder{
-		relation: Relation{Path: path, Desc: desc, Cadence: cadence, Entities: []string{},
+		relation: Relation{Path: path, Description: description, Cadence: cadence, Entities: []string{},
 			Dimensions: []Dimension{}, Measures: []Measure{}},
 		declared: map[string]bool{},
 	}
@@ -180,24 +176,24 @@ func (b *Builder) Scope() string {
 	return b.relation.Path[strings.Index(b.relation.Path, "/")+1:]
 }
 
-func (b *Builder) Subject(key, desc string) DimensionKey {
-	return b.dimension(key, desc, true)
+func (b *Builder) Subject(key, description string) DimensionKey {
+	return b.dimension(key, description, true)
 }
 
-func (b *Builder) Dimension(key, desc string) DimensionKey {
-	return b.dimension(key, desc, false)
+func (b *Builder) Dimension(key, description string) DimensionKey {
+	return b.dimension(key, description, false)
 }
 
-func (b *Builder) Float(key, unit, desc string) FloatKey {
-	return FloatKey{b.measure(key, KindFloat, unit, desc)}
+func (b *Builder) Float(key, unit, description string) FloatKey {
+	return FloatKey{b.measure(key, KindFloat, unit, description)}
 }
 
-func (b *Builder) Int(key, unit, desc string) IntKey {
-	return IntKey{b.measure(key, KindInt, unit, desc)}
+func (b *Builder) Int(key, unit, description string) IntKey {
+	return IntKey{b.measure(key, KindInt, unit, description)}
 }
 
-func (b *Builder) Bool(key, desc string) BoolKey {
-	return BoolKey{b.measure(key, KindBool, "state", desc)}
+func (b *Builder) Bool(key, description string) BoolKey {
+	return BoolKey{b.measure(key, KindBool, "state", description)}
 }
 
 func (b *Builder) Point(values ...Value) Point {
@@ -335,15 +331,15 @@ func (k key) read(p Point) (Value, bool) {
 	return p.measures[k.index], true
 }
 
-func (b *Builder) dimension(name, desc string, subject bool) DimensionKey {
+func (b *Builder) dimension(name, description string, subject bool) DimensionKey {
 	b.reserve(name)
-	b.relation.Dimensions = append(b.relation.Dimensions, Dimension{Key: name, Desc: desc, Subject: subject})
+	b.relation.Dimensions = append(b.relation.Dimensions, Dimension{Key: name, Description: description, Subject: subject})
 	return DimensionKey{newKey(b, len(b.relation.Dimensions)-1)}
 }
 
-func (b *Builder) measure(name string, kind Kind, unit, desc string) key {
+func (b *Builder) measure(name string, kind Kind, unit, description string) key {
 	b.reserve(name)
-	b.relation.Measures = append(b.relation.Measures, Measure{Key: name, Kind: kind, Unit: unit, Desc: desc, Persist: true})
+	b.relation.Measures = append(b.relation.Measures, Measure{Key: name, Kind: kind, Unit: unit, Description: description, Persist: true})
 	return newKey(b, len(b.relation.Measures)-1)
 }
 

@@ -50,9 +50,9 @@ payload() {
 }
 
 declared() {
-  find "${ROOT_DIR}/topics" -type f -print0 2>/dev/null |
+  find "${ROOT_DIR}/model" -type f -print0 2>/dev/null |
     while IFS= read -r -d '' LEAF; do
-      printf '%s\n' "${LEAF#"${ROOT_DIR}"/topics/}"
+      printf '%s\n' "${LEAF#"${ROOT_DIR}"/model/}"
     done | sort -u
 }
 

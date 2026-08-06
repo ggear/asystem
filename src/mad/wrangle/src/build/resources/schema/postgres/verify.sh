@@ -151,15 +151,15 @@ query_file() {
 
 printf '\nSchema verify [%s] against [%s]\n\n' "wrangle" "${POSTGRES_SERVICE_PROD}"
 
-if ! FAULTS="$("${PSQL[@]}" -v ON_ERROR_STOP=1 -t -A -f "${ROOT_DIR}/sql/verify.sql" | grep -c .)"; then
+if ! FAULTS="$("${PSQL[@]}" -v ON_ERROR_STOP=1 -t -A -f "${ROOT_DIR}/query/verify.sql" | grep -c .)"; then
   FAULTS=0
 fi
-if ! OUTPUT="$("${PSQL[@]}" -v ON_ERROR_STOP=1 -f "${ROOT_DIR}/sql/verify.sql" 2>&1)"; then
-  fail "${ROOT_DIR}/sql/verify.sql" "${OUTPUT}"
+if ! OUTPUT="$("${PSQL[@]}" -v ON_ERROR_STOP=1 -f "${ROOT_DIR}/query/verify.sql" 2>&1)"; then
+  fail "${ROOT_DIR}/query/verify.sql" "${OUTPUT}"
   exit 1
 fi
 if [ "${FAULTS}" != "0" ]; then
-  query_file "${ROOT_DIR}/sql/verify.sql" || exit 1
+  query_file "${ROOT_DIR}/query/verify.sql" || exit 1
 fi
 
 if [ "${FAULTS}" != "0" ]; then

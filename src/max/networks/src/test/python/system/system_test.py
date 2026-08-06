@@ -87,7 +87,7 @@ def test_declares_every_published_topic():
 
 
 def _schema_topics():
-    topics_dir = join(DIR_SCHEMA, "topics")
+    topics_dir = join(DIR_SCHEMA, "model")
     for directory, _, files in os.walk(topics_dir):
         for name in files:
             yield os.path.relpath(join(directory, name), topics_dir)

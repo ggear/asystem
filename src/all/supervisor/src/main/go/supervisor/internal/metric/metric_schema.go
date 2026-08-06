@@ -28,23 +28,23 @@ func Cadence(pollPeriod string, pulseFactor int) string {
 
 func Relations(hosts []string, services []string, cadence string) []schema.Relation {
 	host := schema.Relation{
-		Path:     "supervisor/host",
-		Desc:     "health and utilisation of one host",
-		Cadence:  cadence,
-		Entities: append([]string{}, hosts...),
+		Path:        "supervisor/host",
+		Description: "health and utilisation of one host",
+		Cadence:     cadence,
+		Entities:    append([]string{}, hosts...),
 		Dimensions: []schema.Dimension{
-			{Key: "host", Desc: "name of the monitored host", Subject: true},
+			{Key: "host", Description: "name of the monitored host", Subject: true},
 		},
 		Measures: []schema.Measure{},
 	}
 	service := schema.Relation{
-		Path:     "supervisor/service",
-		Desc:     "health and utilisation of one service on one host",
-		Cadence:  cadence,
-		Entities: append([]string{}, services...),
+		Path:        "supervisor/service",
+		Description: "health and utilisation of one service on one host",
+		Cadence:     cadence,
+		Entities:    append([]string{}, services...),
 		Dimensions: []schema.Dimension{
-			{Key: "host", Desc: "name of the host running the service"},
-			{Key: "service", Desc: "name of the monitored service", Subject: true},
+			{Key: "host", Description: "name of the host running the service"},
+			{Key: "service", Description: "name of the monitored service", Subject: true},
 		},
 		Measures: []schema.Measure{},
 	}
@@ -58,19 +58,19 @@ func Relations(hosts []string, services []string, cadence string) []schema.Relat
 			relation = &service
 		}
 		relation.Measures = append(relation.Measures, schema.Measure{
-			Key:     GetIDField(id),
-			Kind:    GetIDKindSchema(id),
-			Unit:    builder.unit,
-			Desc:    builder.desc,
-			Persist: !builder.skipHist,
+			Key:         GetIDField(id),
+			Kind:        GetIDKindSchema(id),
+			Unit:        builder.unit,
+			Description: builder.description,
+			Persist:     !builder.skipHist,
 		})
 		if !builder.skipHist {
 			relation.Measures = append(relation.Measures, schema.Measure{
-				Key:     GetIDField(id) + "_trend",
-				Kind:    GetIDKindSchema(id),
-				Unit:    builder.unit,
-				Desc:    builder.desc + ", smoothed across the trend window",
-				Persist: true,
+				Key:         GetIDField(id) + "_trend",
+				Kind:        GetIDKindSchema(id),
+				Unit:        builder.unit,
+				Description: builder.description + ", smoothed across the trend window",
+				Persist:     true,
 			})
 		}
 	}
@@ -118,11 +118,10 @@ func GetIDKindSchema(id ID) schema.Kind {
 func Payloads() []schema.Payload {
 	value := schema.Member{
 		Key:  "value",
-		Kind: schema.KindAny,
 		Enum: []string{"number", "text", "true", "false"},
 	}
 	detail := func(key string) schema.Member {
-		return schema.Member{Key: key, Kind: schema.KindObj, Members: []schema.Member{
+		return schema.Member{Key: key, Members: []schema.Member{
 			{Key: "ok", Kind: schema.KindBool},
 			value,
 		}}
@@ -130,8 +129,7 @@ func Payloads() []schema.Payload {
 	return []schema.Payload{
 		{
 			Role: schema.RoleState,
-			Desc: "one metric reading, its pulse window and its trend window",
-			Root: schema.Member{Kind: schema.KindObj, Members: []schema.Member{
+			Root: schema.Member{Members: []schema.Member{
 				{Key: "timestamp", Kind: schema.KindInt},
 				detail("pulse"),
 				detail("trend"),
@@ -139,13 +137,11 @@ func Payloads() []schema.Payload {
 		},
 		{
 			Role: schema.RoleCommand,
-			Desc: "switch command accepted for one service",
-			Root: schema.Member{Kind: schema.KindStr, Enum: []string{"ON", "OFF"}},
+			Root: schema.Member{Enum: []string{"ON", "OFF"}},
 		},
 		{
 			Role: schema.RoleAvailability,
-			Desc: "retained host availability",
-			Root: schema.Member{Kind: schema.KindStr, Enum: []string{"online", "offline"}},
+			Root: schema.Member{Enum: []string{"online", "offline"}},
 		},
 	}
 }

@@ -146,7 +146,7 @@ query_file() {
 
 printf '\nSchema query [%s] against [%s]\n\n' "networks" "${INFLUXDB3_SERVICE_PROD}"
 FAULTS=0
-for SQL_FILE in "${ROOT_DIR}"/sql/query_*.sql; do
+for SQL_FILE in "${ROOT_DIR}"/query/query_*.sql; do
   printf '\n== %s ==\n' "$(basename "${SQL_FILE}")"
   query_file "${SQL_FILE}" || FAULTS=$((FAULTS + 1))
 done

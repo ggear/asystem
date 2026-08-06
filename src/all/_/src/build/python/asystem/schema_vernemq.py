@@ -50,9 +50,9 @@ payload() {
 }
 
 declared() {
-  find "${ROOT_DIR}/topics" -type f -print0 2>/dev/null |
+  find "${ROOT_DIR}/model" -type f -print0 2>/dev/null |
     while IFS= read -r -d '' LEAF; do
-      printf '%s\\n' "${LEAF#"${ROOT_DIR}"/topics/}"
+      printf '%s\\n' "${LEAF#"${ROOT_DIR}"/model/}"
     done | sort -u
 }
 """
@@ -210,7 +210,7 @@ done < <(topics {})""".format(_arguments(glob)) for glob in globs)))
 
 def render(member, indent=0):
     pad = "  " * indent
-    if member.kind == "obj":
+    if member.members:
         lines = ["{"]
         for index, nested in enumerate(member.members):
             comma = "," if index < len(member.members) - 1 else ""

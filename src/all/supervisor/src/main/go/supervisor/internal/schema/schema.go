@@ -14,8 +14,6 @@ const (
 	KindInt   Kind = "int"
 	KindBool  Kind = "bool"
 	KindStr   Kind = "str"
-	KindObj   Kind = "obj"
-	KindAny   Kind = "any"
 )
 
 type Role string
@@ -27,42 +25,40 @@ const (
 )
 
 type Dimension struct {
-	Key     string `json:"key"`
-	Desc    string `json:"desc"`
-	Subject bool   `json:"subject"`
+	Key         string `json:"key"`
+	Description string `json:"description"`
+	Subject     bool   `json:"subject"`
 }
 
 type Measure struct {
-	Key     string `json:"key"`
-	Kind    Kind   `json:"kind"`
-	Unit    string `json:"unit"`
-	Desc    string `json:"desc"`
-	Persist bool   `json:"persist"`
-	Period  string `json:"period,omitempty"`
+	Key         string `json:"key"`
+	Kind        Kind   `json:"kind"`
+	Unit        string `json:"unit"`
+	Description string `json:"description"`
+	Persist     bool   `json:"persist"`
+	Period      string `json:"period,omitempty"`
 }
 
 type Relation struct {
-	Path       string            `json:"path"`
-	Desc       string            `json:"desc"`
-	Cadence    string            `json:"cadence"`
-	Filter     map[string]string `json:"filter,omitempty"`
-	Entities   []string          `json:"entities"`
-	Dimensions []Dimension       `json:"dimensions"`
-	Measures   []Measure         `json:"measures"`
+	Path        string            `json:"path"`
+	Description string            `json:"description"`
+	Cadence     string            `json:"cadence"`
+	Filter      map[string]string `json:"filter,omitempty"`
+	Entities    []string          `json:"entities"`
+	Dimensions  []Dimension       `json:"dimensions"`
+	Measures    []Measure         `json:"measures"`
 }
 
 type Member struct {
-	Key     string   `json:"key"`
-	Kind    Kind     `json:"kind"`
+	Key     string   `json:"key,omitempty"`
+	Kind    Kind     `json:"kind,omitempty"`
 	Enum    []string `json:"enum,omitempty"`
-	Dynamic bool     `json:"dynamic,omitempty"`
 	Members []Member `json:"members,omitempty"`
 }
 
 type Payload struct {
 	Role  Role   `json:"role"`
 	Match string `json:"match,omitempty"`
-	Desc  string `json:"desc"`
 	Root  Member `json:"root"`
 }
 

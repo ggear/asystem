@@ -14,8 +14,6 @@ pub enum Kind {
     Int,
     Bool,
     Str,
-    Obj,
-    Any,
 }
 
 #[allow(dead_code)]
@@ -30,7 +28,7 @@ pub enum Role {
 #[derive(Serialize)]
 pub struct Dimension {
     pub key: String,
-    pub desc: String,
+    pub description: String,
     pub subject: bool,
 }
 
@@ -39,14 +37,14 @@ pub struct Measure {
     pub key: String,
     pub kind: Kind,
     pub unit: String,
-    pub desc: String,
+    pub description: String,
     pub persist: bool,
 }
 
 #[derive(Serialize)]
 pub struct Relation {
     pub path: String,
-    pub desc: String,
+    pub description: String,
     pub cadence: String,
     pub entities: Vec<String>,
     pub dimensions: Vec<Dimension>,
@@ -55,12 +53,12 @@ pub struct Relation {
 
 #[derive(Serialize)]
 pub struct Member {
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub key: String,
-    pub kind: Kind,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<Kind>,
     #[serde(rename = "enum", skip_serializing_if = "Vec::is_empty")]
     pub enum_values: Vec<String>,
-    #[serde(skip_serializing_if = "is_false")]
-    pub dynamic: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub members: Vec<Member>,
 }
@@ -70,7 +68,6 @@ pub struct Payload {
     pub role: Role,
     #[serde(rename = "match", skip_serializing_if = "String::is_empty")]
     pub match_glob: String,
-    pub desc: String,
     pub root: Member,
 }
 
@@ -137,12 +134,12 @@ impl DatabaseSchema for TempStat {
         vec![
             Relation {
                 path: format!("{MODULE}/device"),
-                desc: "the tempstat service itself, one row set per poll".to_string(),
+                description: "the tempstat service itself, one row set per poll".to_string(),
                 cadence: self.cadence.clone(),
                 entities: vec![MODULE.to_string()],
                 dimensions: vec![Dimension {
                     key: "device".to_string(),
-                    desc: "the service instance".to_string(),
+                    description: "the service instance".to_string(),
                     subject: true,
                 }],
                 measures: vec![
@@ -150,33 +147,33 @@ impl DatabaseSchema for TempStat {
                         key: "period_ms".to_string(),
                         kind: Kind::Int,
                         unit: "milliseconds".to_string(),
-                        desc: "wall time taken to sample every sensor".to_string(),
+                        description: "wall time taken to sample every sensor".to_string(),
                         persist: true,
                     },
                     Measure {
                         key: "sensors_failed".to_string(),
                         kind: Kind::Int,
                         unit: "count".to_string(),
-                        desc: "sensors that did not return a reading this poll".to_string(),
+                        description: "sensors that did not return a reading this poll".to_string(),
                         persist: true,
                     },
                 ],
             },
             Relation {
                 path: format!("{MODULE}/sensor"),
-                desc: "one DS18B20 probe on the one-wire bus".to_string(),
+                description: "one DS18B20 probe on the one-wire bus".to_string(),
                 cadence: self.cadence.clone(),
                 entities: self.sensors.iter().map(|sensor| sensor.unique_id.clone()).collect(),
                 dimensions: vec![Dimension {
                     key: "sensor".to_string(),
-                    desc: "sensor unique_id from sensors.json".to_string(),
+                    description: "sensor unique_id from sensors.json".to_string(),
                     subject: true,
                 }],
                 measures: vec![Measure {
                     key: "temperature_celsius".to_string(),
                     kind: Kind::Float,
                     unit: "celsius".to_string(),
-                    desc: "probe temperature, absent when the sensor fails".to_string(),
+                    description: "probe temperature, absent when the sensor fails".to_string(),
                     persist: true,
                 }],
             },
@@ -190,40 +187,34 @@ impl BrokerSchema for TempStat {
             Payload {
                 role: Role::State,
                 match_glob: String::new(),
-                desc: "one poll of every configured sensor".to_string(),
                 root: Member {
                     key: String::new(),
-                    kind: Kind::Obj,
+                    kind: None,
                     enum_values: Vec::new(),
-                    dynamic: false,
                     members: vec![
                         Member {
                             key: "timestamp".to_string(),
-                            kind: Kind::Str,
+                            kind: Some(Kind::Str),
                             enum_values: Vec::new(),
-                            dynamic: false,
                             members: Vec::new(),
                         },
                         Member {
                             key: "period_ms".to_string(),
-                            kind: Kind::Int,
+                            kind: Some(Kind::Int),
                             enum_values: Vec::new(),
-                            dynamic: false,
                             members: Vec::new(),
                         },
                         Member {
                             key: "samples".to_string(),
-                            kind: Kind::Obj,
+                            kind: None,
                             enum_values: Vec::new(),
-                            dynamic: true,
                             members: self
                                 .sensors
                                 .iter()
                                 .map(|sensor| Member {
                                     key: format!("{}_celsius", sensor.unique_id),
-                                    kind: Kind::Float,
+                                    kind: Some(Kind::Float),
                                     enum_values: Vec::new(),
-                                    dynamic: false,
                                     members: Vec::new(),
                                 })
                                 .collect(),
@@ -234,24 +225,20 @@ impl BrokerSchema for TempStat {
             Payload {
                 role: Role::Command,
                 match_glob: String::new(),
-                desc: "service lifecycle command".to_string(),
                 root: Member {
                     key: String::new(),
-                    kind: Kind::Str,
+                    kind: None,
                     enum_values: vec!["start".to_string(), "stop".to_string(), "restart".to_string()],
-                    dynamic: false,
                     members: Vec::new(),
                 },
             },
             Payload {
                 role: Role::Availability,
                 match_glob: String::new(),
-                desc: "retained service availability".to_string(),
                 root: Member {
                     key: String::new(),
-                    kind: Kind::Str,
+                    kind: None,
                     enum_values: vec!["online".to_string(), "offline".to_string()],
-                    dynamic: false,
                     members: Vec::new(),
                 },
             },
@@ -259,6 +246,3 @@ impl BrokerSchema for TempStat {
     }
 }
 
-fn is_false(value: &bool) -> bool {
-    !*value
-}

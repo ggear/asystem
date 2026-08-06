@@ -58,7 +58,7 @@ func TestMetric_SchemaPersistMirrorsSkipHist(t *testing.T) {
 			if measure.Unit == "" {
 				t.Errorf("%s: measure [%s] declares no unit", relation.Path, measure.Key)
 			}
-			if measure.Desc == "" {
+			if measure.Description == "" {
 				t.Errorf("%s: measure [%s] declares no description", relation.Path, measure.Key)
 			}
 		}
