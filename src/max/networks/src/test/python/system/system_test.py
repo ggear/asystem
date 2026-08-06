@@ -20,7 +20,7 @@ COMMAND_TOPIC = "networks/command/internet"
 TRIAD = {"fit", "sick", "dead"}
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-DIR_SCHEMA = join(DIR_ROOT, "src/build/resources/schemas/vernemq")
+DIR_SCHEMA = join(DIR_ROOT, "src/build/resources/schema/vernemq")
 
 
 def _client():

@@ -24,4 +24,4 @@ if __name__ == "__main__":
                         document=document)
 
     # Build database schema
-    write_schema_database(document, dialect="influxdb3", discover=True)
+    write_schema_database(document, dialect="influxdb3")

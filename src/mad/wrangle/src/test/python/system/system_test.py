@@ -218,7 +218,7 @@ def _exec_dump_database_queries() -> str:
 
 
 def _read_generated(relative_path: str) -> str:
-    generated_path = join(DIR_ROOT, "src/build/resources/schemas/postgres", relative_path)
+    generated_path = join(DIR_ROOT, "src/build/resources/schema/postgres", relative_path)
     assert os.path.isfile(generated_path), f"missing generated artifact [{generated_path}]"
     with open(generated_path) as generated_file:
         return generated_file.read()

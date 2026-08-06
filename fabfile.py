@@ -120,24 +120,7 @@ def schema(context):
     _setup(context)
     _clean(context)
     _generate(context)
-    _schema_database(context)
-    _schema_broker(context)
-
-
-@task(aliases=_aliases("schema_database", "sd", start=15))
-def schema_database(context):
-    _setup(context)
-    _clean(context)
-    _generate(context)
-    _schema_database(context)
-
-
-@task(aliases=_aliases("schema_broker", "sb", start=13))
-def schema_broker(context):
-    _setup(context)
-    _clean(context)
-    _generate(context)
-    _schema_broker(context)
+    _schema(context)
 
 
 @task(aliases=_aliases("package", "pkg"))
@@ -788,16 +771,16 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
 
 def _test_unit(context, filter_module=None):
     for module in _get_modules(context, "src/test/python/unit/unit_test.py", filter_module=filter_module):
-        _print_header(module, "unittest")
+        _print_header(module, "unit test")
         _print_line("Running unit tests ...")
         _run_external(
             context,
             "python -u unit_test.py 2>&1",
             join(module, "src/test/python/unit"),
         )
-        _print_footer(module, "unittest")
+        _print_footer(module, "unit test")
     for module in _get_modules(context, "src/main/go", filter_module=filter_module):
-        _print_header(module, "unittest")
+        _print_header(module, "unit test")
         _print_line("Running unit tests ...")
         _run_external(
             context,
@@ -809,12 +792,12 @@ def _test_unit(context, filter_module=None):
             ),
             join(module, "src/main/go/{}".format(_get_service(module))),
         )
-        _print_footer(module, "unittest")
+        _print_footer(module, "unit test")
     for module in _get_modules(context, "src/main/rust", filter_module=filter_module):
         module_rust_main_path = join(ROOT_MODULE_DIR, module, "src/main/rust", _get_service(module))
         if not isfile(join(module_rust_main_path, "Cargo.toml")):
             continue
-        _print_header(module, "unittest")
+        _print_header(module, "unit test")
         _print_line("Running unit tests ...")
         _run_external(
             context,
@@ -822,7 +805,7 @@ def _test_unit(context, filter_module=None):
             join(module, "src/main/rust/{}".format(_get_service(module))),
             env_overrides={"CARGO_TARGET_DIR": join(ROOT_MODULE_DIR, module, "target/rust")},
         )
-        _print_footer(module, "unittest")
+        _print_footer(module, "unit test")
 
 
 # noinspection PyUnusedLocal
@@ -856,28 +839,23 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
         _print_footer(module, "package", host=filter_host)
 
 
-def _schema_database(context, filter_module=None):
-    _schema(context, ("influxdb3", "postgres"), filter_module=filter_module)
-
-
-def _schema_broker(context, filter_module=None):
-    _schema(context, ("vernemq",), filter_module=filter_module)
-
-
-def _schema(context, dialects, filter_module=None):
-    for dialect in dialects:
-        schemas_dir = join("src/build/resources/schemas", dialect)
-        for module in _get_modules(context, join(schemas_dir, "describe.sh"), filter_module=filter_module):
+def _schema(context, filter_module=None):
+    for dialect in ("influxdb3", "postgres", "vernemq"):
+        schema_dir = join("src/build/resources/schema", dialect)
+        for module in _get_modules(context, join(schema_dir, "describe.sh"), filter_module=filter_module):
             _print_header(module, "schema")
-            _print_line("Describing [{}] schema ...".format(dialect))
-            _run_local(context, "./describe.sh", join(module, schemas_dir))
+            for script in ("describe", "verify", "query"):
+                if not isfile(join(ROOT_MODULE_DIR, module, schema_dir, "{}.sh".format(script))):
+                    continue
+                _print_line("Running [{}] {} ...".format(dialect, script))
+                _run_local(context, "./{}.sh".format(script), join(module, schema_dir))
             _print_footer(module, "schema")
 
 
 def _test_sys(context, filter_module=None):
     for module in _get_modules(context, "src/test/*/system", filter_module=filter_module):
         _up_module(context, module, is_test=True)
-        _print_header(module, "systest")
+        _print_header(module, "system test")
         install_local_path = join(ROOT_MODULE_DIR, module, "install_local.sh")
         if isfile(install_local_path):
             _run_local(context, "./install_local.sh", module)
@@ -892,7 +870,7 @@ def _test_sys(context, filter_module=None):
         if test_exit_code != 0:
             _print_line("Tests ... failed")
             _run_local(context, "false")
-        _print_footer(module, "systest")
+        _print_footer(module, "system test")
 
 
 def _execute(context):
@@ -1347,7 +1325,7 @@ def _up_module(context, module, up_this=True, is_test=False):
 
 def _dump_logs_module(context, module):
     if isfile(join(ROOT_MODULE_DIR, module, "docker-compose.yml")):
-        _print_line("Dumping container logs (systest failed) ...")
+        _print_line("Dumping container logs (system test failed) ...")
         for run_dep in _get_dependencies(context, module):
             if isfile(join(ROOT_MODULE_DIR, run_dep, "docker-compose.yml")):
                 _print_header(run_dep, "logs")

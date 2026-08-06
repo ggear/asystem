@@ -1197,7 +1197,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_database_schema_generated(self):
         reset_config()
-        schemas_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/build/resources/schemas/postgres"))
+        schemas_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/build/resources/schema/postgres"))
         image_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/main/resources/image/database"))
         for artifact in ("sql/describe.sql", "sql/verify.sql", "sql/observe.sql", "describe.sh", "query.sh", "verify.sh"):
             self.assertTrue(isfile(join(schemas_dir, artifact)), f"missing generated artifact [{artifact}]")

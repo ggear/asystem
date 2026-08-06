@@ -20,7 +20,7 @@ SENSORS = ["utility_temperature", "rack_top_temperature", "rack_bottom_temperatu
 CELSIUS = 25.0625
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-DIR_SCHEMA = join(DIR_ROOT, "src/build/resources/schemas/vernemq")
+DIR_SCHEMA = join(DIR_ROOT, "src/build/resources/schema/vernemq")
 
 
 def test_publishes_readings():

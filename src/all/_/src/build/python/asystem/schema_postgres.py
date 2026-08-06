@@ -1,9 +1,9 @@
-from asystem.schema import (NO, NULL, PLACEHOLDER, RUNNER, SUBJECT, YES, banner, indent,
-                            literals, script, select)
+from asystem.schema import (NO, NULL, RUNNER, SUBJECT, YES, banner, indent, literals,
+                            script, select)
 
 TIME_COLUMNS = {
-    "date": ("DATE", "INTERVAL '10 years'", "CURRENT_DATE"),
-    "timestamp": ("TIMESTAMPTZ", "INTERVAL '1 month'", "now()"),
+    "date": ("DATE", "INTERVAL '10 years'", "CURRENT_DATE", "1"),
+    "timestamp": ("TIMESTAMPTZ", "INTERVAL '1 month'", "now()", "INTERVAL '1 day'"),
 }
 
 RESOLVE = """
@@ -35,7 +35,7 @@ def connect(module_name):
 
 
 def columns(table, time_column):
-    column_type, _, _ = TIME_COLUMNS[time_column]
+    column_type, _, _, _ = TIME_COLUMNS[time_column]
     return {
         "table": table,
         "time": {"column": "time", "type": column_type},
@@ -46,7 +46,7 @@ def columns(table, time_column):
 
 
 def leaf(relations, table, time_column, retention):
-    column_type, chunk_interval, _ = TIME_COLUMNS[time_column]
+    column_type, chunk_interval, _, _ = TIME_COLUMNS[time_column]
     lines = [banner("--"), ""]
     for relation in relations:
         lines.append("-- {} [{}]".format(relation.path, relation.desc))
@@ -107,7 +107,7 @@ def describe(document, tables_by_path):
 
 
 def queries(relations, table, time_column):
-    _, _, now = TIME_COLUMNS[time_column]
+    _, _, now, step = TIME_COLUMNS[time_column]
     vocabulary = [tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
     statements = ["-- {} [{}]".format(relation.path, relation.desc) for relation in relations]
     statements.append(
@@ -125,7 +125,7 @@ def queries(relations, table, time_column):
             "(\n{}\n) AS stepped".format("\n".join(indent(select(
                 [("type", ""), ("period", ""), ("unit", ""), ("entity", ""),
                  ("time - lag(time) OVER (PARTITION BY type, period, unit, entity ORDER BY time)", "step"),
-                 ("INTERVAL '1 day'", "expected")], table)))),
+                 (step, "expected")], table)))),
             group_by=["type", "period", "unit", "entity"]))),
         select([("b.type", ""), ("b.period", ""), ("b.unit", ""), ("count(*)", "entities"),
                 ("sum(b.rows_total)", "rows_total"), ("min(b.oldest)", "oldest"),
@@ -200,24 +200,6 @@ def verify(document, tables_by_path):
             "FULL OUTER JOIN (SELECT DISTINCT type, period, unit FROM {}) AS o\n"
             "    ON d.type = o.type AND d.period = o.period AND d.unit = o.unit".format(values, table),
             ["d.type IS NULL OR o.type IS NULL"]))
-        entities_all = [entity for relation in relations for entity in relation.entities]
-        if entities_all and all(relation.entities for relation in relations):
-            statements.append(select(
-                [("'{}'".format(table), "relation"), ("entity", ""), ("count(*)", "rows_total"),
-                 ("'undeclared'", "fault")],
-                table, [literals("entity", sorted(set(entities_all)))], group_by=["entity"]))
-    return _statements(statements)
-
-
-def observe(document, tables_by_path):
-    statements = ["-- open entity domains, printed for eyeballing and never asserted"]
-    for table in sorted(set(tables_by_path.values())):
-        relations = [relation for relation in document.relations if tables_by_path[relation.path] == table]
-        if all(relation.entities for relation in relations):
-            continue
-        statements.append(select(
-            [("'{}'".format(table), "relation"), ("entity", ""), ("count(*)", "rows_total"),
-             ("max(time)", "last_seen")], table, group_by=["entity"], order_by=["entity"]))
     return _statements(statements)
 
 
@@ -256,24 +238,12 @@ if [ "${{FAULTS}}" != "0" ]; then
   query_file "${{ROOT_DIR}}/sql/verify.sql" || exit 1
 fi
 
-printf '\\nSchema verify [%s] observed entities of open domains\\n\\n' "{}"
-query_file "${{ROOT_DIR}}/sql/observe.sql" || exit 1
-
 if [ "${{FAULTS}}" != "0" ]; then
   printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{}" "${{FAULTS}}" >&2
   exit 1
 fi
 printf '\\nSchema verify [%s] found no drift\\n' "{}"
-""".format(module_name, module_name, module_name, module_name, module_name))
-
-
-def discover_script(module_name, dialect, tables):
-    return script(module_name, dialect, "discover", "draft a declaration from what production carries", connect(module_name), """
-printf '\\nSchema discover [%s] against [%s], a drafting aid that is never an input to the build\\n\\n' "{}" "${{POSTGRES_SERVICE_PROD}}"
-{}
-""".format(module_name, "\n".join(
-        'printf \'\\n== %s ==\\n\' "{0}"\nquery_one "SELECT DISTINCT entity, type, period, unit '
-        'FROM {0} ORDER BY entity, type, period, unit" || exit 1'.format(table) for table in tables)))
+""".format(module_name, module_name, module_name, module_name))
 
 
 def applier_script(module_name):
@@ -309,7 +279,7 @@ def _describe_relations(relations):
                  "observed"),
                 ("count(*)", "rows"), ("min(time)", "oldest"), ("max(time)", "newest")],
                table, [_types(relation, negate=False)])
-        for relation, table in relations) + "\nORDER BY relation"
+        for relation, table in relations) + "\nORDER BY rows DESC"
 
 
 def _describe_measures(relations, tables_by_path):
@@ -323,37 +293,28 @@ def _describe_measures(relations, tables_by_path):
             for measure in relation.measures:
                 period = measure.period or relation.cadence or NULL
                 unit = measure.unit or NULL
-                columns = _declared_measure(relation, measure, unit, period)
                 if measure.key not in persisted:
-                    arms.append(select(columns + _absent_measure(), PLACEHOLDER))
                     continue
+                columns = _declared_measure(relation, measure, unit, period)
                 declared.add(measure.key)
                 arms.append(select(columns + [
-                    ("CASE WHEN count(*) > 0 THEN '{}' ELSE '{}' END".format(YES, NO), "observed"),
-                    ("CAST(count(*) AS VARCHAR)", "rows"),
+                    ("count(*)", "rows"),
                     ("CAST(min(time) AS VARCHAR)", "oldest"),
                     ("CAST(max(time) AS VARCHAR)", "newest")], table,
                     ["type = '{}'".format(measure.key), "period = '{}'".format(period),
                      "unit = '{}'".format(unit)]))
         arms.append(select(
             [("'{}'".format(NULL), "relation"), ("type", "measure"), ("'{}'".format(NULL), "kind"),
-             ("unit", ""), ("period", ""), ("'{}'".format(NULL), "persisted"),
-             ("'{}'".format(YES), "observed"), ("CAST(count(*) AS VARCHAR)", "rows"),
+             ("unit", ""), ("period", ""), ("count(*)", "rows"),
              ("CAST(min(time) AS VARCHAR)", "oldest"), ("CAST(max(time) AS VARCHAR)", "newest")],
             table, [literals("type", sorted(declared))], group_by=["type", "unit", "period"]))
-    return "\nUNION ALL\n".join(arms) + "\nORDER BY relation, measure, unit, period"
+    return "\nUNION ALL\n".join(arms) + "\nORDER BY rows DESC"
 
 
 def _declared_measure(relation, measure, unit, period):
     return [("'{}'".format(relation.path), "relation"), ("'{}'".format(measure.key), "measure"),
             ("'{}'".format(measure.kind), "kind"), ("'{}'".format(unit), "unit"),
-            ("'{}'".format(period), "period"),
-            ("'{}'".format(YES if measure.persist else NO), "persisted")]
-
-
-def _absent_measure():
-    return [("'{}'".format(NO), "observed")] + \
-        [("'{}'".format(NULL), key) for key in ("rows", "oldest", "newest")]
+            ("'{}'".format(period), "period")]
 
 
 def _describe_entities(relations):
@@ -364,11 +325,11 @@ def _describe_entities(relations):
                 ("min(time)", "oldest"), ("max(time)", "newest")],
                table, [_types(relation, negate=False)],
                group_by=_grouping("entity", _declared(relation)))
-        for relation, table in relations) + "\nORDER BY relation, entity"
+        for relation, table in relations) + "\nORDER BY rows DESC"
 
 
 def _declared_entities(relation):
-    return len(relation.entities) if relation.entities else NULL
+    return len(relation.entities) if relation.subject else NULL
 
 
 def _dimension(relation):
@@ -386,7 +347,7 @@ def _grouping(entity, declared):
 
 
 def _declared(relation):
-    if not relation.entities or relation.subject is None:
+    if relation.subject is None:
         return "'{}'".format(NULL)
     return "CASE WHEN {} THEN '{}' ELSE '{}' END".format(
         literals("entity", relation.entities, negate=False), YES, NO)

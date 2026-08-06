@@ -26,14 +26,27 @@ Implement Coral/Frigate
 Add big ass temps for deck
 
 
-
-what is observe? why is supervisor observe empty and describe seems to have some plugin stuff in there?
 no sql dir, just have descirbe and verify in root, with sql for queries and ddl for tables?
 queries should be in queries dir and drop query prefix
+
+influxdb3/series
+influxdb3/sql
+influxdb3/describe.sh
+influxdb3/query.sh
+influxdb3/verify.sh
+
+
+improve def _parse_document(text, module_name): json and documentation
+ensure units particularly those in supervisor are consistaent and accurate
+improve queries, too many rows, drop comments and make cleaner like dsecribe.sh, more complex timeseries bucketing 14d window, bucket 7d max
+drop dimensions Persisted | Declared | Observed - they apply to entities dont they? add a count for dimensions?
+influxdb describe to be similiar to schema on file system
+if describe queries fail, log it and just print what is known statically
+Explain all schema types, neessary, can be fixed? Singleton | Filter | Subject | Persist | Declared
+what is observe? why is supervisor observe empty and describe seems to have some plugin stuff in there?
 why is query_supervisor.sql and not query? make query do some time bucketing
 consolidate for postgres and influxdb?
 
-make sure generate funcs select executable go/rust or python correctly.
 how to deal with rust/go not built before generate?
 am i happy with type builder struct {
 	id         ID
@@ -47,15 +60,13 @@ am i happy with type builder struct {
 } better name for unit/desc? Look at descriptions. Bool has state unit? seems wrong?
 move rust bin into tools like go?
 do i bother with broker/database terminology and just use vernemq/influxdb3/postgrese evreywhere? supervisor env's schmea.go - maybe not?
-define broker/schema contracts clearly in comments.
-improve schema output for database, have it resemble iether influx or postgres describe output. maybe just make it multi-line
 for zigbeemqtt and others? maybe have discover.sh write to topics to sample payloads? dont overwrite if existing? or only clear/overwrite if they are only dsicvovered? generalise handwritten broker stuff rename broker to vernemq?
 go through module by module to validate
 improve sys tests with datbase/broker asserts
 simplify CLAUDE.md globals and all nested on these chnages
-Delete plan.md
+Move _/volumes into storage?
 When HASS ported to InfluxDB3 -> Add homeassistant influxdb genernated describe.sh   query.sh   verify.sh scripts that reflect on production? do in generalised way? perhaps with a python schema description to pick up series from prod that then does describes, which then writes scripts?
-
+Define process by which schema can be updated, what is additive and safe, what is destructive, how to migrate old to new so histpory is not lost etc
 
 ###############################################################################################################################################################
 # Power

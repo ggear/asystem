@@ -353,7 +353,7 @@ def _validate_member(document, member):
 
 def write_schema_database(document, dialect="influxdb3", time_column="timestamp", retention=None,
                           entities=None, module_name=None, schemas_dir=None,
-                          describe=True, queries=True, verify=True, discover=False):
+                          describe=True, queries=True, verify=True):
     if dialect not in DIALECTS:
         raise ValueError("Build generate script [{}] unknown dialect [{}] expected one of {}"
                          .format(document.module, dialect, list(DIALECTS)))
@@ -361,7 +361,7 @@ def write_schema_database(document, dialect="influxdb3", time_column="timestamp"
     if module_name is None:
         module_name = basename(module_root)
     if schemas_dir is None:
-        schemas_dir = join(module_root, "src/build/resources/schemas")
+        schemas_dir = join(module_root, "src/build/resources/schema")
     merge_schema_entities(document, entities)
     tables = {}
     if dialect == "influxdb3":
@@ -369,13 +369,13 @@ def write_schema_database(document, dialect="influxdb3", time_column="timestamp"
             raise ValueError("Build generate script [{}] time_column and retention are postgres only, "
                              "the influxdb3 dialect must never be wired to them".format(module_name))
         artifacts = _artifacts_influxdb(document, module_name, dialect,
-                                        describe, queries, verify, discover)
+                                        describe, queries, verify)
     else:
         if time_column not in ("date", "timestamp"):
             raise ValueError("Build generate script [{}] unknown time_column [{}] expected date or timestamp"
                              .format(module_name, time_column))
         artifacts, tables = _artifacts_postgres(document, module_name, dialect, time_column, retention,
-                                                describe, queries, verify, discover)
+                                                describe, queries, verify)
     write_schema_dialect(module_name, schemas_dir, dialect, artifacts)
     if dialect == "postgres":
         _ship_postgres(module_name, module_root, schemas_dir, dialect, tables, time_column)
@@ -394,7 +394,7 @@ def write_schema_broker(metadata_df, module_name=None, working_root=None, schema
     if working_root is None:
         working_root = join(module_root, "src/main/resources/image")
     if schemas_dir is None:
-        schemas_dir = join(module_root, "src/build/resources/schemas")
+        schemas_dir = join(module_root, "src/build/resources/schema")
     dialect = schema_vernemq.DIALECT
     _validate_topics(metadata_df, module_name, topic_glob_discovery, topic_glob_data)
     topics = _broker_topics(metadata_df, module_name)
@@ -518,7 +518,7 @@ def _ship_vernemq(metadata_df, module_name, working_root, dialect, topic_glob_di
 
 
 def _artifacts_postgres(document, module_name, dialect, time_column, retention,
-                        describe, queries, verify, discover):
+                        describe, queries, verify):
     from asystem import schema_postgres
     tables = {relation.path: relation.plugin for relation in document.relations}
     artifacts = {}
@@ -539,11 +539,7 @@ def _artifacts_postgres(document, module_name, dialect, time_column, retention,
         artifacts["query.sh"] = (schema_postgres.query_script(module_name, dialect), True)
     if verify:
         artifacts["sql/verify.sql"] = (schema_postgres.verify(document, tables), False)
-        artifacts["sql/observe.sql"] = (schema_postgres.observe(document, tables), False)
         artifacts["verify.sh"] = (schema_postgres.verify_script(module_name, dialect), True)
-    if discover:
-        artifacts["discover.sh"] = (
-            schema_postgres.discover_script(module_name, dialect, sorted(set(tables.values()))), True)
     return artifacts, tables
 
 
@@ -569,7 +565,7 @@ def _ship_postgres(module_name, module_root, schemas_dir, dialect, tables, time_
     print("Build generate script [{}] database applier persisted to [{}]".format(module_name, applier_path))
 
 
-def _artifacts_influxdb(document, module_name, dialect, describe, queries, verify, discover):
+def _artifacts_influxdb(document, module_name, dialect, describe, queries, verify):
     from asystem import schema_influxdb
     artifacts = {}
     for relation in document.relations:
@@ -587,10 +583,7 @@ def _artifacts_influxdb(document, module_name, dialect, describe, queries, verif
         artifacts["query.sh"] = (schema_influxdb.query_script(module_name, dialect), True)
     if verify:
         artifacts["sql/verify.sql"] = (schema_influxdb.verify(document), False)
-        artifacts["sql/observe.sql"] = (schema_influxdb.observe(document), False)
         artifacts["verify.sh"] = (schema_influxdb.verify_script(module_name, dialect), True)
-    if discover:
-        artifacts["discover.sh"] = (schema_influxdb.discover_script(module_name, dialect, document), True)
     return artifacts
 
 
@@ -644,6 +637,7 @@ table() {
   jq -sr '
     def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
     def numeric: type == "number" or (type == "string" and test("^-?[0-9]+([.][0-9]+)?$"));
+    def placeholder: . == "-" or . == "";
     (if length == 1 and (.[0] | type) == "array" then .[0] else . end)
     | if length == 0 then "no rows" else
       (.[0] | keys_unsorted) as $columns
@@ -653,7 +647,7 @@ table() {
       | ([$columns | map(title)] + $body) as $matrix
       | ($indexes | map(. as $index | $matrix | map(.[$index] | length) | max)) as $widths
       | ($indexes | map(. as $index | $body | map(.[$index])
-        | (any(numeric) and all(numeric or . == "-" or . == "")))) as $rights
+        | (any(numeric) and all(numeric or placeholder)))) as $rights
       | (def row($cells): "|" + ($cells | to_entries | map(
            ((" " * ($widths[.key] - (.value | length))) // "") as $fill
            | if $rights[.key] then " " + $fill + .value + " " else " " + .value + $fill + " " end)
@@ -731,8 +725,7 @@ SUBJECT = "*"
 
 DESCRIBE_RELATIONS = ("relation", "dimension", "cadence", "measures", "persisted",
                       "declared", "observed", "rows", "oldest", "newest")
-DESCRIBE_MEASURES = ("relation", "measure", "kind", "unit", "period", "persisted")
-PLACEHOLDER = "(VALUES (1)) AS placeholder(one)"
+DESCRIBE_MEASURES = ("relation", "measure", "kind", "unit", "period")
 DESCRIBE_ENTITIES = ("relation", "dimension", "entity", "declared", "rows", "oldest", "newest")
 
 

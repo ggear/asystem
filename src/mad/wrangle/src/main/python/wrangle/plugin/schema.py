@@ -3,10 +3,20 @@ from asystem.schema import SchemaDatabaseDimension, SchemaDatabaseMeasure, Schem
 from .currency import PAIRS as CURRENCY_PAIRS
 from .currency import PERIODS as CURRENCY_PERIODS
 from .equity import DIMENSIONS_CHANGE_PERIODS
+from .equity import PORTFOLIO_TICKER_MAP as EQUITY_PORTFOLIO_TICKERS
+from .equity import PORTFOLIO_TICKERS_MANUAL as EQUITY_MANUAL_TICKERS
+from .equity import PORTFOLIO_TICKERS_NODATA as EQUITY_NODATA_TICKERS
+from .equity import STOCK as EQUITY_STOCK
 from .interest import LABELS as INTEREST_LABELS
 from .interest import PERIODS as INTEREST_PERIODS
 
 CADENCE = "1d"
+
+EQUITY_TICKERS = sorted(
+    ({ticker.strip() for ticker in EQUITY_STOCK} |
+     {ticker.strip() for ticker in EQUITY_PORTFOLIO_TICKERS.values()} |
+     {ticker.strip() for ticker in EQUITY_MANUAL_TICKERS}) -
+    {ticker.strip() for ticker in EQUITY_NODATA_TICKERS})
 
 EQUITY_SPOT_TYPES = [
     "market-volume-spot",
@@ -64,7 +74,7 @@ def _equity():
         path="equity/ticker",
         desc="equity prices and volumes downloaded per ticker",
         cadence=CADENCE,
-        entities=[],
+        entities=EQUITY_TICKERS,
         dimensions=[SchemaDatabaseDimension(key="entity", desc="ticker symbol", subject=True)],
         measures=measures_all)
 
