@@ -594,7 +594,7 @@ switch.network_weewx:
 switch.network_ethernet:
   friendly_name: 'Ethernet'
   icon: 'mdi:cable-data'
-switch.network_certs:
+switch.network_certificate:
   friendly_name: 'Certificates'
   icon: 'mdi:certificate'
 switch.network_domain:

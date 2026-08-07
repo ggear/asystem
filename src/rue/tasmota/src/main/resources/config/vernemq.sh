@@ -5,7 +5,10 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")/vernemq"
 
-for f in "$ROOT_DIR/../../.env" "$ROOT_DIR/../../../../.env"; do [ -f "$f" ] && . "$f"; done
+ENV_DIR="$ROOT_DIR"
+while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "$ENV_DIR")"; done
+# shellcheck disable=SC1091
+[ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
 
 printf "\nEntity Metadata publish script [tasmota] dropping discovery topics on [$VERNEMQ_SERVICE]:\n"
 mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "homeassistant/+/tasmota/#" -W 5 2>/dev/null | sort -u | \

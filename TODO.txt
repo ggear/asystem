@@ -27,27 +27,15 @@ Implement Coral/Frigate
 Add big ass temps for deck
 
 
-reiew _ src, fix issues, format
-ensure units particularly those in supervisor are consistaent and accurate
-how to deal with rust/go not built before generate?
-am i happy with type builder struct {
-	id         ID
-	valueKind  ValueKind
-	metricKind MetricKind
-	unit       string
-	desc       string
-	template   string
-	skipHist   bool
-	deps       []ID
-} better name for unit/desc? Look at descriptions. Bool has state unit? seems wrong?
-move rust bin into tools like go?
-do i bother with broker/database terminology and just use vernemq/influxdb3/postgrese evreywhere? supervisor env's schmea.go - maybe not?
+rename networks to be network
+redesign influxdb databases to be module based, or single with tags for source = homeassistant|supervisor|network and align supervisor|network with new homeasistant schema
+HASS to InfluxDB3, filter what is written, add a database schema discover class that prints json to match what is in influxdb for describe/query etc to work
+validate all database modules - supervisor/networks/wrangle/homeassistant, test whats on file and describe/query/verify
+validate all broker modules, test whats on file and describe/query/verify
 for zigbeemqtt and others? maybe have discover.sh write to topics to sample payloads? dont overwrite if existing? or only clear/overwrite if they are only dsicvovered? generalise handwritten broker stuff rename broker to vernemq?
-go through module by module to validate - hass influxdb output for instance
 improve sys tests with datbase/broker asserts
 simplify CLAUDE.md globals and all nested on these chnages
 Move _/volumes into storage?
-When HASS ported to InfluxDB3 -> Add homeassistant influxdb genernated describe.sh   query.sh   verify.sh scripts that reflect on production? do in generalised way? perhaps with a python schema description to pick up series from prod that then does describes, which then writes scripts?
 Define process by which schema can be updated, what is additive and safe, what is destructive, how to migrate old to new so histpory is not lost etc
 
 ###############################################################################################################################################################

@@ -24,10 +24,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
-MODULE_DIR="$(readlink -f "${ROOT_DIR}/../../../../..")"
+MODULE_DIR="${ROOT_DIR}"
+while [ "${MODULE_DIR}" != "/" ] && [ ! -f "${MODULE_DIR}/.env" ]; do
+  MODULE_DIR="$(dirname "${MODULE_DIR}")"
+done
 
 if [ ! -f "${MODULE_DIR}/.env" ]; then
-  echo "Schema script [wrangle] could not find env file [${MODULE_DIR}/.env]" >&2
+  echo "Schema script [wrangle] could not find env file [.env] searching up from [${ROOT_DIR}]" >&2
   exit 1
 fi
 set -a
