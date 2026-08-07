@@ -19,10 +19,10 @@ pd.options.mode.chained_assignment = None
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
-UNIFI_CONTROLLER_URL = "https://unifi.local.janeandgraham.com:443"
 
 if __name__ == "__main__":
     env = load_bootstrap_env(DIR_ROOT)
+    unifi_controller_url = "https://{}:443".format(env["UNIFI_HOST_PROD"])
     modules = load_bootstrap_modules(load_disabled=False, load_infrastructure=False)
     metadata_df = load_bootstrap_entities()
 
@@ -47,12 +47,12 @@ if __name__ == "__main__":
     unifi_session = requests.Session()
     unifi_server_up = True
     try:
-        unifi_session.post('{}/api/auth/login'.format(UNIFI_CONTROLLER_URL), json={
+        unifi_session.post('{}/api/auth/login'.format(unifi_controller_url), json={
             'username': env["UNIFI_ADMIN_USER"],
             'password': env["UNIFI_ADMIN_KEY"]
         }, verify=False).raise_for_status()
         unifi_clients_response = unifi_session.get(
-            '{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
+            '{}/proxy/network/api/s/default/list/user'.format(unifi_controller_url), verify=False)
     except Exception:
         unifi_server_up = False
     if not unifi_server_up or unifi_clients_response.status_code != 200:
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             unifi_mac_name[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else (
                 unifi_client["hostname"] if "hostname" in unifi_client else "")
         unifi_devices_response = unifi_session.get(
-            '{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
+            '{}/proxy/network/api/s/default/stat/device'.format(unifi_controller_url), verify=False)
         if unifi_devices_response.status_code != 200:
             print("Build generate script [udmutilities] could not connect to UniFi controller")
         else:
