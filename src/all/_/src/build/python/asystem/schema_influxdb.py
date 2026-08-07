@@ -1,12 +1,28 @@
-from asystem.schema import (BUCKET, NULL, RUNNER, aggregations, banner, bucketed,
-                            declared_entity,
-                            declared_measure, describe_runner, dimension_label, grouping_keys, labels,
-                            literals, parted, query_runner, recent, render_statements, select,
-                            verify_runner, vocabulary)
+from asystem.schema import (
+    BUCKET,
+    NULL,
+    RUNNER,
+    aggregations,
+    banner,
+    bucketed,
+    declared_entity,
+    declared_measure,
+    describe_runner,
+    dimension_label,
+    grouping_keys,
+    labels,
+    literals,
+    parted,
+    query_runner,
+    recent,
+    render_statements,
+    select,
+    verify_runner,
+    vocabulary,
+)
 
 DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
-
 
 PLACEHOLDERS = {
     "float": "<number>",
@@ -52,7 +68,7 @@ def artifacts(document, module_name, time_column="timestamp", retention=None):
     return written
 
 
-def ship(document, module_name, module_root, schemas_dir, time_column="timestamp"):
+def ship(_document, _module_name, _module_root, _schemas_dir, _time_column="timestamp"):
     return None
 
 
@@ -104,9 +120,7 @@ def queries(document, relations):
         heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(
             relation.path, relation.description, relation.cadence, bucket)
         measured_selectors = []
-        for measure in relation.measures:
-            if not measure.persist or measure.kind == "str":
-                continue
+        for measure in relation.persisted:
             for function, suffix in aggregations(measure, relation.cadence):
                 measured_selectors.append((_aggregate(function, measure.key),
                                            "_".join(part for part in (measure.key, suffix) if part)))
@@ -138,7 +152,7 @@ def verify(document):
                 columns.add(measure.key)
                 arms.append(select(
                     [("'{}'".format(relation.path), "relation"), ("'{}'".format(measure.key), "measure"),
-                     ("'{}'".format(measure.period or relation.cadence or NULL), "period"),
+                     ("'{}'".format(relation.span(measure) or NULL), "period"),
                      ("'{}'".format(measure.unit or NULL), "unit"), ("'missing'", "fault")],
                     "information_schema.columns", ["table_name = '{}'".format(measurement)],
                     having=["count(*) FILTER (WHERE column_name = '{}') = 0".format(measure.key)]))
@@ -195,12 +209,12 @@ def _describe_measures(document):
                 columns.add(measure.key)
                 if measure.key not in persisted:
                     continue
-                declared = declared_measure(relation, measure, measure.unit or NULL, measure.period or NULL)
+                declared = declared_measure(relation, measure, measure.unit or NULL, relation.span(measure) or NULL)
                 arms.append(select(declared + [
                     ("count({})".format(measure.key), "rows"),
                     ("CAST(min(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(measure.key), "oldest"),
                     ("CAST(max(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(measure.key), "newest")],
-                    measurement, where(relation, document)))
+                                   measurement, where(relation, document)))
         arms.append(select(
             [("'{}'".format(NULL), "relation"), ("column_name", "measure")] +
             [("'{}'".format(NULL), key) for key in ("kind", "unit", "period")] +
@@ -209,7 +223,6 @@ def _describe_measures(document):
             "information_schema.columns",
             ["table_name = '{}'".format(measurement), literals("column_name", sorted(columns))]))
     return "\nUNION ALL\n".join(arms) + "\nORDER BY rows DESC NULLS LAST"
-
 
 
 def _describe_entities(relations, document):
@@ -226,13 +239,9 @@ def _describe_entities(relations, document):
         for relation in arms) + "\nORDER BY rows DESC"
 
 
-
-
 def _entity(relation):
     keys = [dimension.key for dimension in relation.dimensions]
     return keys[0] if len(keys) == 1 else "concat({})".format(", '/', ".join(keys))
-
-
 
 
 def _aggregate(function, column):
@@ -243,5 +252,3 @@ def _aggregate(function, column):
 
 def _rounded(expression):
     return "round({}, 1)".format(expression)
-
-

@@ -7,7 +7,7 @@ SELECT
     'supervisor/host' AS relation,
     'status'          AS measure,
     '6s'              AS period,
-    'state'           AS unit,
+    '-'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -18,7 +18,7 @@ SELECT
     'supervisor/host' AS relation,
     'status_trend'    AS measure,
     '6s'              AS period,
-    'state'           AS unit,
+    '-'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -29,7 +29,7 @@ SELECT
     'supervisor/host' AS relation,
     'used_processor'  AS measure,
     '6s'              AS period,
-    'percent'         AS unit,
+    '%'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -40,7 +40,7 @@ SELECT
     'supervisor/host'      AS relation,
     'used_processor_trend' AS measure,
     '6s'                   AS period,
-    'percent'              AS unit,
+    '%'                    AS unit,
     'missing'              AS fault
 FROM information_schema.columns
 WHERE
@@ -51,7 +51,7 @@ SELECT
     'supervisor/host' AS relation,
     'used_memory'     AS measure,
     '6s'              AS period,
-    'percent'         AS unit,
+    '%'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -62,7 +62,7 @@ SELECT
     'supervisor/host'   AS relation,
     'used_memory_trend' AS measure,
     '6s'                AS period,
-    'percent'           AS unit,
+    '%'                 AS unit,
     'missing'           AS fault
 FROM information_schema.columns
 WHERE
@@ -73,7 +73,7 @@ SELECT
     'supervisor/host'  AS relation,
     'allocated_memory' AS measure,
     '6s'               AS period,
-    'percent'          AS unit,
+    '%'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -84,7 +84,7 @@ SELECT
     'supervisor/host'        AS relation,
     'allocated_memory_trend' AS measure,
     '6s'                     AS period,
-    'percent'                AS unit,
+    '%'                      AS unit,
     'missing'                AS fault
 FROM information_schema.columns
 WHERE
@@ -95,7 +95,7 @@ SELECT
     'supervisor/host'     AS relation,
     'failed_log_messages' AS measure,
     '6s'                  AS period,
-    'count'               AS unit,
+    '-'                   AS unit,
     'missing'             AS fault
 FROM information_schema.columns
 WHERE
@@ -106,7 +106,7 @@ SELECT
     'supervisor/host'           AS relation,
     'failed_log_messages_trend' AS measure,
     '6s'                        AS period,
-    'count'                     AS unit,
+    '-'                         AS unit,
     'missing'                   AS fault
 FROM information_schema.columns
 WHERE
@@ -117,7 +117,7 @@ SELECT
     'supervisor/host' AS relation,
     'failed_shares'   AS measure,
     '6s'              AS period,
-    'count'           AS unit,
+    '-'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -128,7 +128,7 @@ SELECT
     'supervisor/host'     AS relation,
     'failed_shares_trend' AS measure,
     '6s'                  AS period,
-    'count'               AS unit,
+    '-'                   AS unit,
     'missing'             AS fault
 FROM information_schema.columns
 WHERE
@@ -139,7 +139,7 @@ SELECT
     'supervisor/host' AS relation,
     'failed_backups'  AS measure,
     '6s'              AS period,
-    'count'           AS unit,
+    '-'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -150,7 +150,7 @@ SELECT
     'supervisor/host'      AS relation,
     'failed_backups_trend' AS measure,
     '6s'                   AS period,
-    'count'                AS unit,
+    '-'                    AS unit,
     'missing'              AS fault
 FROM information_schema.columns
 WHERE
@@ -161,7 +161,7 @@ SELECT
     'supervisor/host'         AS relation,
     'warn_temperature_of_max' AS measure,
     '6s'                      AS period,
-    'percent'                 AS unit,
+    '%'                       AS unit,
     'missing'                 AS fault
 FROM information_schema.columns
 WHERE
@@ -172,7 +172,7 @@ SELECT
     'supervisor/host'               AS relation,
     'warn_temperature_of_max_trend' AS measure,
     '6s'                            AS period,
-    'percent'                       AS unit,
+    '%'                             AS unit,
     'missing'                       AS fault
 FROM information_schema.columns
 WHERE
@@ -183,7 +183,7 @@ SELECT
     'supervisor/host'       AS relation,
     'spin_fan_speed_of_max' AS measure,
     '6s'                    AS period,
-    'percent'               AS unit,
+    '%'                     AS unit,
     'missing'               AS fault
 FROM information_schema.columns
 WHERE
@@ -194,7 +194,7 @@ SELECT
     'supervisor/host'             AS relation,
     'spin_fan_speed_of_max_trend' AS measure,
     '6s'                          AS period,
-    'percent'                     AS unit,
+    '%'                           AS unit,
     'missing'                     AS fault
 FROM information_schema.columns
 WHERE
@@ -205,7 +205,7 @@ SELECT
     'supervisor/host'  AS relation,
     'life_used_drives' AS measure,
     '6s'               AS period,
-    'percent'          AS unit,
+    '%'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -216,7 +216,7 @@ SELECT
     'supervisor/host'        AS relation,
     'life_used_drives_trend' AS measure,
     '6s'                     AS period,
-    'percent'                AS unit,
+    '%'                      AS unit,
     'missing'                AS fault
 FROM information_schema.columns
 WHERE
@@ -227,7 +227,7 @@ SELECT
     'supervisor/host'   AS relation,
     'used_system_space' AS measure,
     '6s'                AS period,
-    'percent'           AS unit,
+    '%'                 AS unit,
     'missing'           AS fault
 FROM information_schema.columns
 WHERE
@@ -238,7 +238,7 @@ SELECT
     'supervisor/host'         AS relation,
     'used_system_space_trend' AS measure,
     '6s'                      AS period,
-    'percent'                 AS unit,
+    '%'                       AS unit,
     'missing'                 AS fault
 FROM information_schema.columns
 WHERE
@@ -249,7 +249,7 @@ SELECT
     'supervisor/host'  AS relation,
     'used_share_space' AS measure,
     '6s'               AS period,
-    'percent'          AS unit,
+    '%'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -260,7 +260,7 @@ SELECT
     'supervisor/host'        AS relation,
     'used_share_space_trend' AS measure,
     '6s'                     AS period,
-    'percent'                AS unit,
+    '%'                      AS unit,
     'missing'                AS fault
 FROM information_schema.columns
 WHERE
@@ -271,7 +271,7 @@ SELECT
     'supervisor/host'   AS relation,
     'used_backup_space' AS measure,
     '6s'                AS period,
-    'percent'           AS unit,
+    '%'                 AS unit,
     'missing'           AS fault
 FROM information_schema.columns
 WHERE
@@ -282,7 +282,7 @@ SELECT
     'supervisor/host'         AS relation,
     'used_backup_space_trend' AS measure,
     '6s'                      AS period,
-    'percent'                 AS unit,
+    '%'                       AS unit,
     'missing'                 AS fault
 FROM information_schema.columns
 WHERE
@@ -293,7 +293,7 @@ SELECT
     'supervisor/host' AS relation,
     'used_swap_space' AS measure,
     '6s'              AS period,
-    'percent'         AS unit,
+    '%'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -304,7 +304,7 @@ SELECT
     'supervisor/host'       AS relation,
     'used_swap_space_trend' AS measure,
     '6s'                    AS period,
-    'percent'               AS unit,
+    '%'                     AS unit,
     'missing'               AS fault
 FROM information_schema.columns
 WHERE
@@ -315,7 +315,7 @@ SELECT
     'supervisor/host' AS relation,
     'used_disk_ops'   AS measure,
     '6s'              AS period,
-    'percent'         AS unit,
+    '%'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -326,7 +326,7 @@ SELECT
     'supervisor/host'     AS relation,
     'used_disk_ops_trend' AS measure,
     '6s'                  AS period,
-    'percent'             AS unit,
+    '%'                   AS unit,
     'missing'             AS fault
 FROM information_schema.columns
 WHERE
@@ -337,7 +337,7 @@ SELECT
     'supervisor/host' AS relation,
     'used_network'    AS measure,
     '6s'              AS period,
-    'percent'         AS unit,
+    '%'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -348,7 +348,7 @@ SELECT
     'supervisor/host'    AS relation,
     'used_network_trend' AS measure,
     '6s'                 AS period,
-    'percent'            AS unit,
+    '%'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -359,7 +359,7 @@ SELECT
     'supervisor/host' AS relation,
     'temperature'     AS measure,
     '6s'              AS period,
-    'celsius'         AS unit,
+    '°C'              AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -370,7 +370,7 @@ SELECT
     'supervisor/host'   AS relation,
     'temperature_trend' AS measure,
     '6s'                AS period,
-    'celsius'           AS unit,
+    '°C'                AS unit,
     'missing'           AS fault
 FROM information_schema.columns
 WHERE
@@ -381,7 +381,7 @@ SELECT
     'supervisor/service' AS relation,
     'status'             AS measure,
     '6s'                 AS period,
-    'state'              AS unit,
+    '-'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -392,7 +392,7 @@ SELECT
     'supervisor/service' AS relation,
     'status_trend'       AS measure,
     '6s'                 AS period,
-    'state'              AS unit,
+    '-'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -403,7 +403,7 @@ SELECT
     'supervisor/service' AS relation,
     'backup_status'      AS measure,
     '6s'                 AS period,
-    'state'              AS unit,
+    '-'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -414,7 +414,7 @@ SELECT
     'supervisor/service'  AS relation,
     'backup_status_trend' AS measure,
     '6s'                  AS period,
-    'state'               AS unit,
+    '-'                   AS unit,
     'missing'             AS fault
 FROM information_schema.columns
 WHERE
@@ -425,7 +425,7 @@ SELECT
     'supervisor/service' AS relation,
     'health_status'      AS measure,
     '6s'                 AS period,
-    'state'              AS unit,
+    '-'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -436,7 +436,7 @@ SELECT
     'supervisor/service'  AS relation,
     'health_status_trend' AS measure,
     '6s'                  AS period,
-    'state'               AS unit,
+    '-'                   AS unit,
     'missing'             AS fault
 FROM information_schema.columns
 WHERE
@@ -447,7 +447,7 @@ SELECT
     'supervisor/service' AS relation,
     'configured_status'  AS measure,
     '6s'                 AS period,
-    'state'              AS unit,
+    '-'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -458,7 +458,7 @@ SELECT
     'supervisor/service'      AS relation,
     'configured_status_trend' AS measure,
     '6s'                      AS period,
-    'state'                   AS unit,
+    '-'                       AS unit,
     'missing'                 AS fault
 FROM information_schema.columns
 WHERE
@@ -469,7 +469,7 @@ SELECT
     'supervisor/service' AS relation,
     'used_processor'     AS measure,
     '6s'                 AS period,
-    'percent'            AS unit,
+    '%'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -480,7 +480,7 @@ SELECT
     'supervisor/service'   AS relation,
     'used_processor_trend' AS measure,
     '6s'                   AS period,
-    'percent'              AS unit,
+    '%'                    AS unit,
     'missing'              AS fault
 FROM information_schema.columns
 WHERE
@@ -491,7 +491,7 @@ SELECT
     'supervisor/service' AS relation,
     'used_memory'        AS measure,
     '6s'                 AS period,
-    'percent'            AS unit,
+    '%'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -502,7 +502,7 @@ SELECT
     'supervisor/service' AS relation,
     'used_memory_trend'  AS measure,
     '6s'                 AS period,
-    'percent'            AS unit,
+    '%'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -513,7 +513,7 @@ SELECT
     'supervisor/service' AS relation,
     'used_disk_ops'      AS measure,
     '6s'                 AS period,
-    'percent'            AS unit,
+    '%'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -524,7 +524,7 @@ SELECT
     'supervisor/service'  AS relation,
     'used_disk_ops_trend' AS measure,
     '6s'                  AS period,
-    'percent'             AS unit,
+    '%'                   AS unit,
     'missing'             AS fault
 FROM information_schema.columns
 WHERE
@@ -535,7 +535,7 @@ SELECT
     'supervisor/service' AS relation,
     'used_network'       AS measure,
     '6s'                 AS period,
-    'percent'            AS unit,
+    '%'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -546,7 +546,7 @@ SELECT
     'supervisor/service' AS relation,
     'used_network_trend' AS measure,
     '6s'                 AS period,
-    'percent'            AS unit,
+    '%'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -557,7 +557,7 @@ SELECT
     'supervisor/service' AS relation,
     'restart_count'      AS measure,
     '6s'                 AS period,
-    'count'              AS unit,
+    '-'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
@@ -568,7 +568,7 @@ SELECT
     'supervisor/service'  AS relation,
     'restart_count_trend' AS measure,
     '6s'                  AS period,
-    'count'               AS unit,
+    '-'                   AS unit,
     'missing'             AS fault
 FROM information_schema.columns
 WHERE

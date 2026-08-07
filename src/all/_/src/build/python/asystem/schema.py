@@ -10,10 +10,15 @@ from os.path import *
 
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
 
+DIALECTS = ("influxdb3", "postgres")
 KINDS = ("float", "int", "bool", "str")
 ROLES = ("state", "command", "availability")
-DIALECTS = ("influxdb3", "postgres")
-TYPES = {str: "text", bool: "true or false", dict: "an object", list: "an array"}
+TYPES = {
+    str: "text",
+    list: "an array",
+    dict: "an object",
+    bool: "true or false",
+}
 
 
 @dataclass
@@ -58,6 +63,9 @@ class SchemaDatabaseRelation:
     def persisted(self):
         return [measure for measure in self.measures if measure.persist and measure.kind in ("float", "int", "bool")]
 
+    def span(self, measure):
+        return measure.period or self.cadence
+
 
 @dataclass
 class SchemaBrokerMember:
@@ -82,6 +90,70 @@ class SchemaDocument:
 
 
 def load_schema_document(module_root=None, config=None, args=None):
+    """Reflect a module's schema declaration into a SchemaDocument.
+
+    A module declares its broker and database schema, opting in via a reflector in known locations,
+    dispatched on module contents, first match wins:
+
+    src/main/python/<module>/plugin/schema.py   Imported in process, it's optional [database_schema] and
+                                                [broker_schema] called with [config] when the caller passes
+                                                one and with nothing when it does not, returning objects
+
+    src/main/go/<module>/tools/schema/          A [main] package of its own, run as [go run ./tools/schema],
+                                                printing a schema document
+
+    src/main/rust/<module>/tools/schema/        A workspace member crate of its own, named in the service
+                                                crate [workspace] members and depending on it by path, run
+                                                as [cargo run --manifest-path tools/schema/Cargo.toml],
+                                                printing a schema document
+
+    The go/rust tools are handed [--config <path>] and [args] as flags, printing a schema document with spec:
+
+    {
+        "module":      "<name>",            OPTIONAL  Owning module, defaults to the module directory name
+        "database":    {                    OPTIONAL  What the service writes to a database backend
+          "relations":   [{                 OPTIONAL  One per distinct row shape written
+            "path":        "<path>",        REQUIRED  [<plugin>/<scope>], [<plugin>] is what the backend writes to
+            "description": "<text>",        OPTIONAL  What the relation holds
+            "cadence":     "<duration>",    OPTIONAL  How often a row arrives, never written, sizes buckets and windows
+            "entities":    ["<entity>"],    OPTIONAL  Values the subject takes, generate.py may fill them instead
+            "dimensions":  [{               OPTIONAL  What identifies a row
+              "key":         "<name>",      REQUIRED  Name of the dimension, each backend projects it its own way
+              "description": "<text>",      OPTIONAL  What the dimension distinguishes
+              "subject":     <true|false>   OPTIONAL  The entity axis, at most one per relation, defaults to false
+            }],
+            "measures":    [{               OPTIONAL  What a row carries
+              "key":         "<name>",      REQUIRED  Name of the measure, each backend projects it its own way
+              "kind":        "<kind>",      REQUIRED  Value type
+              "unit":        "<text>",      OPTIONAL  Unit of the value, e.g. [%] [$] [celsius] [seconds]
+              "description": "<text>",      OPTIONAL  What the measure records
+              "persist":     <true|false>,  OPTIONAL  Declared but never written when false, defaults to true
+              "period":      "<duration>"   OPTIONAL  Span the value covers, part of the row key, defaults to cadence
+            }]
+          }]
+        },
+        "broker":      {                    OPTIONAL  What the service publishes to the broker
+          "payloads":    [{                 OPTIONAL  One per payload shape published
+            "role":        "<role>",        REQUIRED  [state|command|availability], the xlsx topic column filled
+            "match":       "<topic-glob>",  OPTIONAL  Picks between payloads sharing a role, matched by fnmatch
+            "root":        <member>         OPTIONAL  Payload shape rendered to the topic leaf
+          }]
+        }
+    }
+
+    A [<kind>] is one of [float] [int] [bool] [str].
+
+    A [<duration>] is an unsigned integer and a unit suffix, one of [s] [m] [h] [d], e.g. [30s] [15m] [1d].
+
+    A [<member>], nesting arbitrarily deep through its own [members]:
+
+    {
+        "key":         "<name>",            OPTIONAL  Member name, empty for the root of a bare payload
+        "kind":        "<kind>",            OPTIONAL  Scalar type, ignored when [members] or [enum] is set
+        "enum":        ["<option>"],        OPTIONAL  Renders as [<a|b|c>] in place of the kind placeholder
+        "members":     [<member>]           OPTIONAL  Nested members, which make this an object
+    }
+    """
     if module_root is None:
         module_root = load_bootstrap_root()
     module_name = basename(module_root)
@@ -89,12 +161,12 @@ def load_schema_document(module_root=None, config=None, args=None):
         config = abspath(join(module_root, config))
     python_path = join(module_root, "src/main/python", module_name, "plugin/schema.py")
     go_path = join(module_root, "src/main/go", module_name, "tools/schema")
-    rust_path = join(module_root, "src/main/rust", module_name, "src/bin/schema.rs")
+    rust_path = join(module_root, "src/main/rust", module_name, "tools/schema")
     if isfile(python_path):
         document = _load_schema_python(module_root, module_name, python_path, config)
     elif isdir(go_path):
         document = _parse_document(_run_schema_go(module_root, module_name, config, args), module_name)
-    elif isfile(rust_path):
+    elif isdir(rust_path):
         document = _parse_document(_run_schema_rust(module_root, module_name, config, args), module_name)
     else:
         raise ValueError("Build generate script [{}] declares no schema reflector, expected one of [{}] [{}] [{}]"
@@ -165,9 +237,9 @@ def _run_schema_rust(module_root, module_name, config, args=None):
     cargo_binary = join(cargo_home, "bin/cargo")
     if not isfile(cargo_binary):
         raise ValueError("Build generate script [{}] cargo binary not found [{}]".format(module_name, cargo_binary))
-    command = [cargo_binary, "run", "--quiet", "--bin", "schema", "--"]
+    command = [cargo_binary, "run", "--quiet", "--manifest-path", "tools/schema/Cargo.toml", "--"]
     if config is not None:
-        command += ["--sensors", config]
+        command += ["--config", config]
     command += list(args or [])
     return _run(module_name, command, join(module_root, "src/main/rust", module_name), {
         "CARGO_HOME": cargo_home,
@@ -182,8 +254,7 @@ def _run(module_name, command, working_dir, overrides):
     env = dict(os.environ)
     env.update({key: value for key, value in overrides.items() if value})
     try:
-        completed = subprocess.run(command, cwd=working_dir, env=env, check=True,
-                                   capture_output=True, text=True, timeout=120)
+        completed = subprocess.run(command, cwd=working_dir, env=env, check=True, capture_output=True, text=True, timeout=120)
     except subprocess.CalledProcessError as error:
         raise ValueError("Build generate script [{}] schema reflection failed [{}] in [{}] with [{}]"
                          .format(module_name, " ".join(command), working_dir, error.stderr.strip()))
@@ -196,55 +267,7 @@ def _run(module_name, command, working_dir, overrides):
 
 
 def _parse_document(text, module_name):
-    """Parse the JSON a Go or Rust schema reflector prints on stdout.
-
-    A schema document, as the reflector prints it:
-
-    {
-        "module":      "<name>",            OPTIONAL  Owning module, defaults to the module directory name
-        "database":    {                    OPTIONAL  What the service writes to a database backend
-          "relations":   [{                 OPTIONAL  One per distinct row shape written
-            "path":        "<path>",        REQUIRED  [<plugin>/<scope>], [<plugin>] is the measurement or table
-            "description": "<text>",        OPTIONAL  What the relation holds
-            "cadence":     "<duration>",    OPTIONAL  The service's real publish period
-            "entities":    ["<entity>"],    OPTIONAL  Values the subject takes, generate.py may fill them instead
-            "dimensions":  [{               OPTIONAL  What identifies a row
-              "key":         "<name>",      REQUIRED  Tag name in influxdb3, the postgres columns are fixed
-              "description": "<text>",      OPTIONAL  What the dimension distinguishes
-              "subject":     <true|false>   OPTIONAL  The entity axis, at most one per relation, defaults to false
-            }],
-            "measures":    [{               OPTIONAL  What a row carries
-              "key":         "<name>",      REQUIRED  Field name in influxdb3, [type] value in postgres
-              "kind":        "<kind>",      REQUIRED  Value type
-              "unit":        "<text>",      OPTIONAL  Unit of the value, e.g. [%] [$] [celsius] [seconds]
-              "description": "<text>",      OPTIONAL  What the measure records
-              "persist":     <true|false>,  OPTIONAL  Declared but never written when false, defaults to true
-              "period":      "<duration>"   OPTIONAL  Span the value covers, defaults to the relation cadence
-            }]
-          }]
-        },
-        "broker":      {                    OPTIONAL  What the service publishes to the broker
-          "payloads":    [{                 OPTIONAL  One per payload shape published
-            "role":        "<role>",        REQUIRED  [state|command|availability], the xlsx topic column filled
-            "match":       "<topic-glob>",  OPTIONAL  Picks between payloads sharing a role, matched by fnmatch
-            "root":        <member>         OPTIONAL  Payload shape rendered to the topic leaf
-          }]
-        }
-    }
-
-    A [<kind>] is one of [float] [int] [bool] [str].
-
-    A [<duration>] is an unsigned integer and a unit suffix, one of [s] [m] [h] [d], e.g. [30s] [15m] [1d].
-    It is carried verbatim into the artefacts, never parsed.
-
-    A [<member>], nesting arbitrarily deep through its own [members]:
-
-    {
-        "key":         "<name>",            OPTIONAL  Member name, empty for the root of a bare payload
-        "kind":        "<kind>",            OPTIONAL  Scalar type, ignored when [members] or [enum] is set
-        "enum":        ["<option>"],        OPTIONAL  Renders as [<a|b|c>] in place of the kind placeholder
-        "members":     [<member>]           OPTIONAL  Nested members, which make this an object
-    }
+    """Parse and validate a reflected document, the private half of the contract on [load_schema_document].
     """
     try:
         parsed = json.loads(text)
@@ -258,10 +281,8 @@ def _parse_document(text, module_name):
     _reject_unknown(module_name, "broker", broker, ("payloads",))
     document = SchemaDocument(
         module=_text(module_name, "document", parsed, "module", module_name),
-        relations=[_parse_relation(module_name, relation)
-                   for relation in _mappings(module_name, "database", database, "relations")],
-        payloads=[_parse_payload(module_name, payload)
-                  for payload in _mappings(module_name, "broker", broker, "payloads")])
+        relations=[_parse_relation(module_name, relation) for relation in _mappings(module_name, "database", database, "relations")],
+        payloads=[_parse_payload(module_name, payload) for payload in _mappings(module_name, "broker", broker, "payloads")])
     _validate(document)
     return document
 
@@ -274,10 +295,8 @@ def _parse_relation(module_name, relation):
         description=_text(module_name, scope, relation, "description", ""),
         cadence=_text(module_name, scope, relation, "cadence", ""),
         entities=_texts(module_name, scope, relation, "entities"),
-        dimensions=[_parse_dimension(module_name, scope, dimension)
-                    for dimension in _mappings(module_name, scope, relation, "dimensions")],
-        measures=[_parse_measure(module_name, scope, measure)
-                  for measure in _mappings(module_name, scope, relation, "measures")])
+        dimensions=[_parse_dimension(module_name, scope, dimension) for dimension in _mappings(module_name, scope, relation, "dimensions")],
+        measures=[_parse_measure(module_name, scope, measure) for measure in _mappings(module_name, scope, relation, "measures")])
 
 
 def _parse_dimension(module_name, scope, dimension):
@@ -317,13 +336,11 @@ def _parse_member(module_name, scope, member):
         key=_text(module_name, scope, member, "key", ""),
         kind=_text(module_name, scope, member, "kind", "str"),
         enum=_texts(module_name, scope, member, "enum"),
-        members=[_parse_member(module_name, scope, nested)
-                 for nested in _mappings(module_name, scope, member, "members")])
+        members=[_parse_member(module_name, scope, nested) for nested in _mappings(module_name, scope, member, "members")])
 
 
 def _scope(scope, noun, mapping, key="key"):
-    return "{}{} [{}]".format(scope + " " if scope else "", noun,
-                              mapping.get(key, "") if isinstance(mapping, dict) else "")
+    return "{}{} [{}]".format(scope + " " if scope else "", noun, mapping.get(key, "") if isinstance(mapping, dict) else "")
 
 
 def _reject_unknown(module_name, scope, mapping, allowed):
@@ -371,8 +388,7 @@ def _value(module_name, scope, mapping, key, kind, default=None, element=None):
         for item in value:
             if not isinstance(item, element):
                 raise ValueError("Build generate script [{}] schema reflection {} emitted key [{}] element [{}] "
-                                 "as [{}] expected [{}]".format(module_name, scope, key, item,
-                                                                type(item).__name__, TYPES[element]))
+                                 "as [{}] expected [{}]".format(module_name, scope, key, item, type(item).__name__, TYPES[element]))
     return value
 
 
@@ -407,8 +423,8 @@ def _validate_member(document, member):
         _validate_member(document, nested)
 
 
-def write_schema_database(document, dialect="influxdb3", time_column="timestamp", retention=None,
-                          entities=None, module_name=None, schemas_dir=None):
+def write_schema_database(document, dialect="influxdb3", time_column="timestamp",
+                          retention=None, entities=None, module_name=None, schemas_dir=None):
     if dialect not in DIALECTS:
         raise ValueError("Build generate script [{}] unknown dialect [{}] expected one of {}"
                          .format(document.module, dialect, list(DIALECTS)))
@@ -426,8 +442,7 @@ def write_schema_database(document, dialect="influxdb3", time_column="timestamp"
 
 
 def write_schema_broker(metadata_df, module_name=None, working_root=None, schemas_dir=None,
-                        topic_glob_discovery=None, topic_glob_data=None,
-                        schema_state=None, schema_command=None, schema_availability=None, document=None):
+                        topic_glob_discovery=None, topic_glob_data=None, schema_state=None, schema_command=None, schema_availability=None, document=None):
     from asystem import schema_vernemq
     if len(metadata_df) == 0:
         return
@@ -438,8 +453,7 @@ def write_schema_broker(metadata_df, module_name=None, working_root=None, schema
         working_root = join(module_root, "src/main/resources/image")
     if schemas_dir is None:
         schemas_dir = join(module_root, "src/build/resources/schema")
-    artifacts = schema_vernemq.artifacts(metadata_df, module_name, topic_glob_discovery, topic_glob_data,
-                                         schema_state, schema_command, schema_availability, document)
+    artifacts = schema_vernemq.artifacts(metadata_df, module_name, topic_glob_discovery, topic_glob_data, schema_state, schema_command, schema_availability, document)
     if artifacts:
         write_schema_dialect(module_name, schemas_dir, schema_vernemq.DIALECT, artifacts)
     schema_vernemq.ship(metadata_df, module_name, working_root, topic_glob_discovery, topic_glob_data)
@@ -462,8 +476,7 @@ def vocabulary(relation, prefix="#"):
         lines += _entities(relation.entities, prefix)
     for measure in relation.measures:
         lines.append("{}   field {} {} {} [{}]{}".format(
-            prefix, measure.key, UNITS.get(measure.unit, measure.unit) or NULL,
-            measure.period or relation.cadence or NULL,
+            prefix, measure.key, UNITS.get(measure.unit, measure.unit) or NULL, relation.span(measure) or NULL,
             measure.description, "" if measure.persist else " (not persisted)"))
     return lines
 
@@ -482,7 +495,8 @@ def _entities(entities, prefix, width=110):
     return lines + [leading + current]
 
 
-def select(selectors, source, predicates=(), group_by=(), having=(), order_by=(), limit=None, distinct_on=()):
+def select(selectors, source, predicates=(),
+           group_by=(), having=(), order_by=(), limit=None, distinct_on=()):
     width = max([len(expression) for expression, alias in selectors if alias and "\n" not in expression] or [0])
     rendered = []
     for expression, alias in selectors:
@@ -490,8 +504,7 @@ def select(selectors, source, predicates=(), group_by=(), having=(), order_by=()
             wrapped = indent(expression)
             rendered.append("\n".join(wrapped[:-1] + ["{} AS {}".format(wrapped[-1], alias)] if alias else wrapped))
         else:
-            rendered.append("    {} AS {}".format(expression.ljust(width), alias) if alias
-                            else "    {}".format(expression))
+            rendered.append("    {} AS {}".format(expression.ljust(width), alias) if alias else "    {}".format(expression))
     lines = ["SELECT" + (" DISTINCT ON ({})".format(", ".join(distinct_on)) if distinct_on else "")]
     lines += [line + "," for line in rendered[:-1]] + rendered[-1:]
     lines.append("FROM {}".format(source))
@@ -612,7 +625,6 @@ query_file() {
 }
 """
 
-
 NULL = "-"
 YES = "yes"
 NO = "no"
@@ -628,12 +640,27 @@ KEYED = 15
 STAMPED = 19
 SAMPLES = 100
 GUARD = 100
-BUCKETS = ("1 minute", "5 minute", "15 minute", "1 hour", "6 hour", "1 day")
-BUCKET = "1 day"
-DURATIONS = {"s": 1, "sec": 1, "second": 1, "m": 60, "min": 60, "minute": 60, "h": 3600, "hour": 3600,
-             "d": 86400, "day": 86400, "w": 604800, "week": 604800, "mo": 2592000, "month": 2592000,
-             "y": 31536000, "year": 31536000}
 VOWELS = "aeiou"
+BUCKET = "1 day"
+BUCKETS = ("1 minute", "5 minute", "15 minute", "1 hour", "6 hour", "1 day")
+DURATIONS = {
+    "s": 1,
+    "sec": 1,
+    "second": 1,
+    "m": 60,
+    "min": 60,
+    "minute": 60,
+    "h": 3600,
+    "hour": 3600,
+    "d": 86400,
+    "day": 86400,
+    "w": 604800,
+    "week": 604800,
+    "mo": 2592000,
+    "month": 2592000,
+    "y": 31536000,
+    "year": 31536000,
+}
 
 
 def labels(names, taken=(), limit=ALIAS, spelled=SPELLED, crowded=CROWDED):
@@ -652,14 +679,11 @@ def bucketed(cadence, floor=None):
     span = duration(cadence)
     wanted = span * SAMPLES if span else duration(BUCKET)
     least = (duration(floor) or 0) if floor else 0
-    return next((candidate for candidate in BUCKETS
-                 if (duration(candidate) or 0) >= (wanted or 0) and (duration(candidate) or 0) >= least),
-                BUCKETS[-1])
+    return next((candidate for candidate in BUCKETS if (duration(candidate) or 0) >= (wanted or 0) and (duration(candidate) or 0) >= least), BUCKETS[-1])
 
 
 def recent(source, bucket=BUCKET, now="now()"):
-    return ["time >= {} - INTERVAL '{}'".format(now, guarded(bucket)),
-            "time >= (SELECT max(time) FROM {}) - INTERVAL '{}'".format(source, bucket)]
+    return ["time >= {} - INTERVAL '{}'".format(now, guarded(bucket)), "time >= (SELECT max(time) FROM {}) - INTERVAL '{}'".format(source, bucket)]
 
 
 def guarded(bucket, factor=GUARD):
@@ -672,6 +696,8 @@ def parted(selectors, keys, headers=None, width=WIDTH):
     parts, current, used = [], [], 0
     for selector in selectors:
         header = (headers or {}).get(selector[1], selector[1])
+        if not isinstance(header, str):
+            header = selector[1] if isinstance(selector[1], str) else ""
         cost = max(len(header), CELL) + 3
         if current and used + cost > room:
             parts.append(current)
@@ -716,7 +742,7 @@ def indent(text, pad="    "):
 
 
 def literals(column, values, negate=True, width: int | None = 92, pad="        "):
-    quoted = ["'{}'".format(value) for value in values]
+    quoted = ["'{}'".format(str(value).replace("'", "''")) for value in values]
     wrap = float("inf") if width is None else width
     lines, current = [], ""
     for index, value in enumerate(quoted):
@@ -745,9 +771,13 @@ def render_statements(rendered):
 
 
 def declared_measure(relation, measure, unit, period):
-    return [("'{}'".format(relation.path), "relation"), ("'{}'".format(measure.key), "measure"),
-            ("'{}'".format(measure.kind), "kind"), ("'{}'".format(unit), "unit"),
-            ("'{}'".format(period), "period")]
+    return [
+        ("'{}'".format(relation.path), "relation"),
+        ("'{}'".format(measure.key), "measure"),
+        ("'{}'".format(measure.kind), "kind"),
+        ("'{}'".format(unit), "unit"),
+        ("'{}'".format(period), "period")
+    ]
 
 
 def declared_entity(relation, column=None):
@@ -912,8 +942,11 @@ def _letters(word, want, shift=0):
 
 
 def _budget(count, limit, mode):
-    order = {"tail": list(reversed(range(count))), "head": list(range(count)),
-             "middle": sorted(range(count), key=lambda index: (abs(2 * index - count + 1), index))}[mode]
+    order = {
+        "head": list(range(count)),
+        "middle": sorted(range(count), key=lambda index: (abs(2 * index - count + 1), index)),
+        "tail": list(reversed(range(count))),
+    }[mode]
     share = [1] * count
     for slack in range(limit - count):
         share[order[slack % count]] += 1

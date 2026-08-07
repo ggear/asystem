@@ -303,7 +303,7 @@ while read -r dev size; do
     if [ -z "$tbw" ]; then
       tbw=$(smartctl -a "$dev" 2>/dev/null | awk '$1 == 246 {printf "%.3f", $10*512/1e12}')
     fi
-    errors=$(smartctl -a "$dev" 2>/dev/null | awk '$1==1 {$10}')
+    errors=$(smartctl -a "$dev" 2>/dev/null | awk '$1==1 {print $10}')
   fi
   life=""
   if [[ "$tbw" == *GB ]]; then

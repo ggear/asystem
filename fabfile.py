@@ -760,7 +760,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             module_rust_target = join(ROOT_MODULE_DIR, module, "target/rust")
             _print_line("Linting sources ...")
             _run_local(context, "cargo fmt", module_rust_main_path)
-            _run_local(context, "CARGO_TARGET_DIR={} cargo clippy --all-targets -- -D warnings".format(
+            _run_local(context, "CARGO_TARGET_DIR={} cargo clippy --workspace --all-targets -- -D warnings".format(
                 module_rust_target,
             ), module_rust_main_path)
             _run_local(context, "CARGO_TARGET_DIR={} cargo build".format(

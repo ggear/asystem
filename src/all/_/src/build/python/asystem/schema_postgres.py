@@ -3,11 +3,28 @@ import os
 import shutil
 from os.path import abspath, exists, join
 
-from asystem.schema import (BUCKET, NULL, RUNNER, aggregations, banner, bucketed,
-                            declared_entity,
-                            declared_measure, describe_runner, dimension_label, grouping_keys, labels,
-                            literals, parted, query_runner, recent, render_statements, select,
-                            verify_runner, vocabulary)
+from asystem.schema import (
+    BUCKET,
+    NULL,
+    RUNNER,
+    aggregations,
+    banner,
+    bucketed,
+    declared_entity,
+    declared_measure,
+    describe_runner,
+    dimension_label,
+    grouping_keys,
+    labels,
+    literals,
+    parted,
+    query_runner,
+    recent,
+    render_statements,
+    select,
+    verify_runner,
+    vocabulary,
+)
 
 DIALECT = "postgres"
 TARGET = "POSTGRES_SERVICE_PROD"
@@ -162,9 +179,7 @@ def queries(relations, table, time_column):
         heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(
             relation.path, relation.description, relation.cadence, bucket)
         measured_selectors, measured_keys = [], {}
-        for measure in relation.measures:
-            if not measure.persist or measure.kind == "str":
-                continue
+        for measure in relation.persisted:
             filtered = _filtered(relation, measure)
             for function, suffix in aggregations(measure, relation.cadence):
                 alias = "_".join(part for part in (_named(relation, measure), suffix) if part)
@@ -245,7 +260,7 @@ def _describe_measures(document):
         for relation in relations:
             persisted = {measure.key for measure in relation.persisted}
             for measure in relation.measures:
-                period = measure.period or relation.cadence or NULL
+                period = relation.span(measure) or NULL
                 unit = measure.unit or NULL
                 if measure.key not in persisted:
                     continue
@@ -309,10 +324,8 @@ def _types(relation, negate=True, keys=None, width: int | None = 92):
 
 def _vocabulary(relation):
     seen, series = set(), []
-    for measure in relation.measures:
-        if not measure.persist:
-            continue
-        tuple_ = (measure.key, measure.period or relation.cadence, measure.unit)
+    for measure in relation.persisted:
+        tuple_ = (measure.key, relation.span(measure), measure.unit)
         if tuple_ in seen:
             continue
         seen.add(tuple_)
@@ -323,15 +336,15 @@ def _vocabulary(relation):
 def _named(relation, measure):
     name = measure.key.replace("-", "_")
     if len([other for other in relation.measures if other.key == measure.key]) > 1:
-        name = "{}_{}".format(name, measure.period or relation.cadence)
+        name = "{}_{}".format(name, relation.span(measure))
     return name
 
 
 def _filtered(relation, measure):
-    period = measure.period or relation.cadence
+    period = relation.span(measure)
     keyed = [other for other in relation.measures if other.key == measure.key]
-    periods = {other.period or relation.cadence for other in keyed}
-    units = {other.unit for other in keyed if (other.period or relation.cadence) == period}
+    periods = {relation.span(other) for other in keyed}
+    units = {other.unit for other in keyed if relation.span(other) == period}
     predicates = ["type = '{}'".format(measure.key)]
     if len(periods) > 1:
         predicates.append("period = '{}'".format(period))
@@ -349,5 +362,4 @@ def _aggregate(function, predicate):
 def _rounded(expression):
     return "round({}::numeric, 1)".format(
         expression if expression.isidentifier() else "({})".format(expression))
-
 

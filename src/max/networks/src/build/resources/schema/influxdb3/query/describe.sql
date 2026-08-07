@@ -80,7 +80,7 @@ SELECT
     'ok'                                                     AS measure,
     'bool'                                                   AS kind,
     'state'                                                  AS unit,
-    '-'                                                      AS period,
+    '15m'                                                    AS period,
     count(ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
@@ -91,7 +91,7 @@ SELECT
     'score'                                                     AS measure,
     'int'                                                       AS kind,
     'count'                                                     AS unit,
-    '-'                                                         AS period,
+    '15m'                                                       AS period,
     count(score)                                                AS rows,
     CAST(min(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS newest
@@ -102,7 +102,7 @@ SELECT
     'min_expiry_days'                                                     AS measure,
     'float'                                                               AS kind,
     'days'                                                                AS unit,
-    '-'                                                                   AS period,
+    '15m'                                                                 AS period,
     count(min_expiry_days)                                                AS rows,
     CAST(min(time) FILTER (WHERE min_expiry_days IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE min_expiry_days IS NOT NULL) AS VARCHAR) AS newest
@@ -113,7 +113,7 @@ SELECT
     'endpoints_total'                                                     AS measure,
     'int'                                                                 AS kind,
     'count'                                                               AS unit,
-    '-'                                                                   AS period,
+    '15m'                                                                 AS period,
     count(endpoints_total)                                                AS rows,
     CAST(min(time) FILTER (WHERE endpoints_total IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE endpoints_total IS NOT NULL) AS VARCHAR) AS newest
@@ -124,7 +124,7 @@ SELECT
     'endpoints_failed'                                                     AS measure,
     'int'                                                                  AS kind,
     'count'                                                                AS unit,
-    '-'                                                                    AS period,
+    '15m'                                                                  AS period,
     count(endpoints_failed)                                                AS rows,
     CAST(min(time) FILTER (WHERE endpoints_failed IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE endpoints_failed IS NOT NULL) AS VARCHAR) AS newest
@@ -149,7 +149,7 @@ SELECT
     'ok'                                                     AS measure,
     'bool'                                                   AS kind,
     'state'                                                  AS unit,
-    '-'                                                      AS period,
+    '15m'                                                    AS period,
     count(ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
@@ -160,7 +160,7 @@ SELECT
     'score'                                                     AS measure,
     'int'                                                       AS kind,
     'count'                                                     AS unit,
-    '-'                                                         AS period,
+    '15m'                                                       AS period,
     count(score)                                                AS rows,
     CAST(min(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS newest
@@ -171,7 +171,7 @@ SELECT
     'resolvers_total'                                                     AS measure,
     'int'                                                                 AS kind,
     'count'                                                               AS unit,
-    '-'                                                                   AS period,
+    '15m'                                                                 AS period,
     count(resolvers_total)                                                AS rows,
     CAST(min(time) FILTER (WHERE resolvers_total IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE resolvers_total IS NOT NULL) AS VARCHAR) AS newest
@@ -182,7 +182,7 @@ SELECT
     'resolvers_ok'                                                     AS measure,
     'int'                                                              AS kind,
     'count'                                                            AS unit,
-    '-'                                                                AS period,
+    '15m'                                                              AS period,
     count(resolvers_ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE resolvers_ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE resolvers_ok IS NOT NULL) AS VARCHAR) AS newest
@@ -193,7 +193,7 @@ SELECT
     'resolvers_failed'                                                     AS measure,
     'int'                                                                  AS kind,
     'count'                                                                AS unit,
-    '-'                                                                    AS period,
+    '15m'                                                                  AS period,
     count(resolvers_failed)                                                AS rows,
     CAST(min(time) FILTER (WHERE resolvers_failed IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE resolvers_failed IS NOT NULL) AS VARCHAR) AS newest
@@ -218,7 +218,7 @@ SELECT
     'score'                                                     AS measure,
     'int'                                                       AS kind,
     'count'                                                     AS unit,
-    '-'                                                         AS period,
+    '15m'                                                       AS period,
     count(score)                                                AS rows,
     CAST(min(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS newest
@@ -229,7 +229,7 @@ SELECT
     'ok'                                                     AS measure,
     'bool'                                                   AS kind,
     'state'                                                  AS unit,
-    '-'                                                      AS period,
+    '15m'                                                    AS period,
     count(ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
@@ -240,7 +240,7 @@ SELECT
     'ports_total'                                                     AS measure,
     'int'                                                             AS kind,
     'count'                                                           AS unit,
-    '-'                                                               AS period,
+    '15m'                                                             AS period,
     count(ports_total)                                                AS rows,
     CAST(min(time) FILTER (WHERE ports_total IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ports_total IS NOT NULL) AS VARCHAR) AS newest
@@ -251,7 +251,7 @@ SELECT
     'ports_ok'                                                     AS measure,
     'int'                                                          AS kind,
     'count'                                                        AS unit,
-    '-'                                                            AS period,
+    '15m'                                                          AS period,
     count(ports_ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE ports_ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ports_ok IS NOT NULL) AS VARCHAR) AS newest
@@ -262,7 +262,7 @@ SELECT
     'ports_degraded'                                                     AS measure,
     'int'                                                                AS kind,
     'count'                                                              AS unit,
-    '-'                                                                  AS period,
+    '15m'                                                                AS period,
     count(ports_degraded)                                                AS rows,
     CAST(min(time) FILTER (WHERE ports_degraded IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ports_degraded IS NOT NULL) AS VARCHAR) AS newest
@@ -273,7 +273,7 @@ SELECT
     'ports_errored'                                                     AS measure,
     'int'                                                               AS kind,
     'count'                                                             AS unit,
-    '-'                                                                 AS period,
+    '15m'                                                               AS period,
     count(ports_errored)                                                AS rows,
     CAST(min(time) FILTER (WHERE ports_errored IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ports_errored IS NOT NULL) AS VARCHAR) AS newest
@@ -298,7 +298,7 @@ SELECT
     'ok'                                                     AS measure,
     'bool'                                                   AS kind,
     'state'                                                  AS unit,
-    '-'                                                      AS period,
+    '15m'                                                    AS period,
     count(ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
@@ -309,7 +309,7 @@ SELECT
     'score'                                                     AS measure,
     'int'                                                       AS kind,
     'count'                                                     AS unit,
-    '-'                                                         AS period,
+    '15m'                                                       AS period,
     count(score)                                                AS rows,
     CAST(min(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS newest
@@ -320,7 +320,7 @@ SELECT
     'targets_total'                                                     AS measure,
     'int'                                                               AS kind,
     'count'                                                             AS unit,
-    '-'                                                                 AS period,
+    '15m'                                                               AS period,
     count(targets_total)                                                AS rows,
     CAST(min(time) FILTER (WHERE targets_total IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE targets_total IS NOT NULL) AS VARCHAR) AS newest
@@ -331,7 +331,7 @@ SELECT
     'targets_ok'                                                     AS measure,
     'int'                                                            AS kind,
     'count'                                                          AS unit,
-    '-'                                                              AS period,
+    '15m'                                                            AS period,
     count(targets_ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE targets_ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE targets_ok IS NOT NULL) AS VARCHAR) AS newest
@@ -342,7 +342,7 @@ SELECT
     'avg_loss_pct'                                                     AS measure,
     'float'                                                            AS kind,
     'percent'                                                          AS unit,
-    '-'                                                                AS period,
+    '15m'                                                              AS period,
     count(avg_loss_pct)                                                AS rows,
     CAST(min(time) FILTER (WHERE avg_loss_pct IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE avg_loss_pct IS NOT NULL) AS VARCHAR) AS newest
@@ -353,7 +353,7 @@ SELECT
     'avg_rtt_ms'                                                     AS measure,
     'float'                                                          AS kind,
     'milliseconds'                                                   AS unit,
-    '-'                                                              AS period,
+    '15m'                                                            AS period,
     count(avg_rtt_ms)                                                AS rows,
     CAST(min(time) FILTER (WHERE avg_rtt_ms IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE avg_rtt_ms IS NOT NULL) AS VARCHAR) AS newest
@@ -364,7 +364,7 @@ SELECT
     'avg_jitter_ms'                                                     AS measure,
     'float'                                                             AS kind,
     'milliseconds'                                                      AS unit,
-    '-'                                                                 AS period,
+    '15m'                                                               AS period,
     count(avg_jitter_ms)                                                AS rows,
     CAST(min(time) FILTER (WHERE avg_jitter_ms IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE avg_jitter_ms IS NOT NULL) AS VARCHAR) AS newest
@@ -375,7 +375,7 @@ SELECT
     'gateway_ok'                                                     AS measure,
     'bool'                                                           AS kind,
     'state'                                                          AS unit,
-    '-'                                                              AS period,
+    '15m'                                                            AS period,
     count(gateway_ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE gateway_ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE gateway_ok IS NOT NULL) AS VARCHAR) AS newest
@@ -403,7 +403,7 @@ SELECT
     'ok'                                                     AS measure,
     'bool'                                                   AS kind,
     'state'                                                  AS unit,
-    '-'                                                      AS period,
+    '15m'                                                    AS period,
     count(ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
@@ -414,7 +414,7 @@ SELECT
     'score'                                                     AS measure,
     'int'                                                       AS kind,
     'count'                                                     AS unit,
-    '-'                                                         AS period,
+    '15m'                                                       AS period,
     count(score)                                                AS rows,
     CAST(min(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS newest
@@ -439,7 +439,7 @@ SELECT
     'ok'                                                     AS measure,
     'bool'                                                   AS kind,
     'state'                                                  AS unit,
-    '-'                                                      AS period,
+    '15m'                                                    AS period,
     count(ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
@@ -450,7 +450,7 @@ SELECT
     'score'                                                     AS measure,
     'int'                                                       AS kind,
     'count'                                                     AS unit,
-    '-'                                                         AS period,
+    '15m'                                                       AS period,
     count(score)                                                AS rows,
     CAST(min(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS newest
@@ -461,7 +461,7 @@ SELECT
     'aps_total'                                                     AS measure,
     'int'                                                           AS kind,
     'count'                                                         AS unit,
-    '-'                                                             AS period,
+    '15m'                                                           AS period,
     count(aps_total)                                                AS rows,
     CAST(min(time) FILTER (WHERE aps_total IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE aps_total IS NOT NULL) AS VARCHAR) AS newest
@@ -472,7 +472,7 @@ SELECT
     'aps_ok'                                                     AS measure,
     'int'                                                        AS kind,
     'count'                                                      AS unit,
-    '-'                                                          AS period,
+    '15m'                                                        AS period,
     count(aps_ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE aps_ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE aps_ok IS NOT NULL) AS VARCHAR) AS newest
@@ -483,7 +483,7 @@ SELECT
     'avg_experience_pct'                                                     AS measure,
     'float'                                                                  AS kind,
     'percent'                                                                AS unit,
-    '-'                                                                      AS period,
+    '15m'                                                                    AS period,
     count(avg_experience_pct)                                                AS rows,
     CAST(min(time) FILTER (WHERE avg_experience_pct IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE avg_experience_pct IS NOT NULL) AS VARCHAR) AS newest
@@ -508,7 +508,7 @@ SELECT
     'ok'                                                     AS measure,
     'bool'                                                   AS kind,
     'state'                                                  AS unit,
-    '-'                                                      AS period,
+    '15m'                                                    AS period,
     count(ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
@@ -519,7 +519,7 @@ SELECT
     'score'                                                     AS measure,
     'int'                                                       AS kind,
     'count'                                                     AS unit,
-    '-'                                                         AS period,
+    '15m'                                                       AS period,
     count(score)                                                AS rows,
     CAST(min(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS newest
@@ -530,7 +530,7 @@ SELECT
     'devices_total'                                                     AS measure,
     'int'                                                               AS kind,
     'count'                                                             AS unit,
-    '-'                                                                 AS period,
+    '15m'                                                               AS period,
     count(devices_total)                                                AS rows,
     CAST(min(time) FILTER (WHERE devices_total IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE devices_total IS NOT NULL) AS VARCHAR) AS newest
@@ -541,7 +541,7 @@ SELECT
     'devices_ok'                                                     AS measure,
     'int'                                                            AS kind,
     'count'                                                          AS unit,
-    '-'                                                              AS period,
+    '15m'                                                            AS period,
     count(devices_ok)                                                AS rows,
     CAST(min(time) FILTER (WHERE devices_ok IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE devices_ok IS NOT NULL) AS VARCHAR) AS newest
@@ -552,7 +552,7 @@ SELECT
     'devices_weak'                                                     AS measure,
     'int'                                                              AS kind,
     'count'                                                            AS unit,
-    '-'                                                                AS period,
+    '15m'                                                              AS period,
     count(devices_weak)                                                AS rows,
     CAST(min(time) FILTER (WHERE devices_weak IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE devices_weak IS NOT NULL) AS VARCHAR) AS newest
@@ -563,7 +563,7 @@ SELECT
     'avg_lqi'                                                     AS measure,
     'float'                                                       AS kind,
     'count'                                                       AS unit,
-    '-'                                                           AS period,
+    '15m'                                                         AS period,
     count(avg_lqi)                                                AS rows,
     CAST(min(time) FILTER (WHERE avg_lqi IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE avg_lqi IS NOT NULL) AS VARCHAR) AS newest

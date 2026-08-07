@@ -4,6 +4,9 @@ version = "0.0.0-SNAPSHOT"
 edition = "2021"
 publish = false
 
+[workspace]
+members = ["tools/schema"]
+
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 clap = { version = "4", features = ["derive", "env"] }

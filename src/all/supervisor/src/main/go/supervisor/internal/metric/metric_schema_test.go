@@ -76,9 +76,9 @@ func TestMetric_SchemaPersistMirrorsSkipHist(t *testing.T) {
 			if measure.Key != GetIDField(id) {
 				continue
 			}
-			if measure.Persist == builder.skipHist {
+			if measure.Persist == builder.skipDatabase {
 				t.Errorf("%v: measure [%s] persist=%v but skipHist=%v, they must be opposites",
-					id, measure.Key, measure.Persist, builder.skipHist)
+					id, measure.Key, measure.Persist, builder.skipDatabase)
 			}
 		}
 	}

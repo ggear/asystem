@@ -26,32 +26,6 @@ pub enum Role {
 }
 
 #[derive(Serialize)]
-pub struct Dimension {
-    pub key: String,
-    pub description: String,
-    pub subject: bool,
-}
-
-#[derive(Serialize)]
-pub struct Measure {
-    pub key: String,
-    pub kind: Kind,
-    pub unit: String,
-    pub description: String,
-    pub persist: bool,
-}
-
-#[derive(Serialize)]
-pub struct Relation {
-    pub path: String,
-    pub description: String,
-    pub cadence: String,
-    pub entities: Vec<String>,
-    pub dimensions: Vec<Dimension>,
-    pub measures: Vec<Measure>,
-}
-
-#[derive(Serialize)]
 pub struct Member {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub key: String,
@@ -72,11 +46,6 @@ pub struct Payload {
 }
 
 #[derive(Serialize)]
-pub struct DatabaseSection {
-    pub relations: Vec<Relation>,
-}
-
-#[derive(Serialize)]
 pub struct BrokerSection {
     pub payloads: Vec<Payload>,
 }
@@ -85,30 +54,16 @@ pub struct BrokerSection {
 pub struct Document {
     pub module: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub database: Option<DatabaseSection>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub broker: Option<BrokerSection>,
-}
-
-pub trait DatabaseSchema {
-    fn relations(&self) -> Vec<Relation>;
 }
 
 pub trait BrokerSchema {
     fn payloads(&self) -> Vec<Payload>;
 }
 
-pub fn reflect<W: Write>(
-    writer: &mut W,
-    module: &str,
-    database: Option<&dyn DatabaseSchema>,
-    broker: Option<&dyn BrokerSchema>,
-) -> Result<(), String> {
+pub fn reflect<W: Write>(writer: &mut W, module: &str, broker: Option<&dyn BrokerSchema>) -> Result<(), String> {
     let document = Document {
         module: module.to_string(),
-        database: database.map(|schema| DatabaseSection {
-            relations: schema.relations(),
-        }),
         broker: broker.map(|schema| BrokerSection {
             payloads: schema.payloads(),
         }),
@@ -120,64 +75,11 @@ pub fn reflect<W: Write>(
 
 pub struct TempStat {
     sensors: Vec<SensorConfig>,
-    cadence: String,
 }
 
 impl TempStat {
-    pub fn new(sensors: Vec<SensorConfig>, cadence: String) -> Self {
-        Self { sensors, cadence }
-    }
-}
-
-impl DatabaseSchema for TempStat {
-    fn relations(&self) -> Vec<Relation> {
-        vec![
-            Relation {
-                path: format!("{MODULE}/device"),
-                description: "the tempstat service itself, one row set per poll".to_string(),
-                cadence: self.cadence.clone(),
-                entities: vec![MODULE.to_string()],
-                dimensions: vec![Dimension {
-                    key: "device".to_string(),
-                    description: "the service instance".to_string(),
-                    subject: true,
-                }],
-                measures: vec![
-                    Measure {
-                        key: "period_ms".to_string(),
-                        kind: Kind::Int,
-                        unit: "milliseconds".to_string(),
-                        description: "wall time taken to sample every sensor".to_string(),
-                        persist: true,
-                    },
-                    Measure {
-                        key: "sensors_failed".to_string(),
-                        kind: Kind::Int,
-                        unit: "count".to_string(),
-                        description: "sensors that did not return a reading this poll".to_string(),
-                        persist: true,
-                    },
-                ],
-            },
-            Relation {
-                path: format!("{MODULE}/sensor"),
-                description: "one DS18B20 probe on the one-wire bus".to_string(),
-                cadence: self.cadence.clone(),
-                entities: self.sensors.iter().map(|sensor| sensor.unique_id.clone()).collect(),
-                dimensions: vec![Dimension {
-                    key: "sensor".to_string(),
-                    description: "sensor unique_id from sensors.json".to_string(),
-                    subject: true,
-                }],
-                measures: vec![Measure {
-                    key: "temperature_celsius".to_string(),
-                    kind: Kind::Float,
-                    unit: "celsius".to_string(),
-                    description: "probe temperature, absent when the sensor fails".to_string(),
-                    persist: true,
-                }],
-            },
-        ]
+    pub fn new(sensors: Vec<SensorConfig>) -> Self {
+        Self { sensors }
     }
 }
 
@@ -245,4 +147,3 @@ impl BrokerSchema for TempStat {
         ]
     }
 }
-

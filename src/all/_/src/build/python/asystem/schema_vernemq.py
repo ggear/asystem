@@ -115,8 +115,7 @@ def leaf(topic, spec=None, document=None, role=""):
 
 
 def discovery(row):
-    device_columns = [column for column in row.index
-                      if column.startswith("device_") and column != "device_class"]
+    device_columns = [column for column in row.index if column.startswith("device_") and column != "device_class"]
     discovery_dict = row[[column for column in DISCOVERY_COLUMNS if column in row.index]].dropna().to_dict()
     if "force_update" in discovery_dict:
         discovery_dict["force_update"] = _coerce_bool(discovery_dict["force_update"])
@@ -128,7 +127,7 @@ def discovery(row):
     discovery_dict = discovery_clone
     discovery_dict["device"] = row[device_columns].rename(
         {column: column.replace("device_", "") for column in device_columns}).dropna().to_dict()
-    del discovery_dict["device"]["via_device"]
+    discovery_dict["device"].pop("via_device", None)
     if "connections" in discovery_dict["device"]:
         discovery_dict["device"]["connections"] = json.loads(discovery_dict["device"]["connections"])
     if "identifiers" in discovery_dict["device"]:
@@ -137,8 +136,7 @@ def discovery(row):
 
 
 def publish_script(module_name, topic_glob_discovery, topic_glob_data):
-    topic_find_discovery = ("*/" + topic_glob_discovery.replace("+", "*").replace("#", "*") + "/*"
-                            if topic_glob_discovery else "*")
+    topic_find_discovery = ("*/" + topic_glob_discovery.replace("+", "*").replace("#", "*") + "/*" if topic_glob_discovery else "*")
     return """
 #!/usr/bin/env bash
 ################################################################################
@@ -238,8 +236,7 @@ if [ "${{FAULTS}}" != "0" ]; then
 fi
 printf '\\nSchema verify [%s] found no drift\\n' "{}"
 """.format(module_name, " ".join('"{}"'.format(command) for command in commands), "\n".join(
-        'topics {} >> "${{RETAINED_FILE}}"'.format(_arguments(glob)) for glob in globs),
-           module_name, module_name))
+        'topics {} >> "${{RETAINED_FILE}}"'.format(_arguments(glob)) for glob in globs), module_name, module_name))
 
 
 def render(member, indent=0):
@@ -300,7 +297,8 @@ def _coerce_int(value):
             return int(normalized)
         except ValueError:
             try:
-                return int(float(normalized))
+                numeric = float(normalized)
+                return int(numeric) if numeric.is_integer() else value
             except ValueError:
                 return value
     return value

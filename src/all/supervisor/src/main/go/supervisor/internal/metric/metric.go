@@ -72,7 +72,7 @@ func GetIDDeps(id ID) []ID {
 	if id < 0 || id >= MetricMax {
 		return nil
 	}
-	return metricBuildersByID[id].deps
+	return metricBuildersByID[id].dependencies
 }
 
 func GetIDKind(id ID) MetricKind {

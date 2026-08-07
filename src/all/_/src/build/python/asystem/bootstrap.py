@@ -59,15 +59,12 @@ def load_bootstrap_modules(load_disabled=True, load_infrastructure=True):
     modules = {}
     hosts_path = Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts"))
     host_labels_names = {
-        line.split("=")[0]: line.split("=")[-1].split(",")
-        for line in hosts_path.read_text().strip().split("\n")
-        if line.strip() and not line.strip().startswith("#")
+        line.split("=")[0]: line.split("=")[-1].split(",") for line in hosts_path.read_text().strip().split("\n") if line.strip() and not line.strip().startswith("#")
     }
     for module in glob.glob(abspath(join(DIR_ROOT, "../../*/*"))):
         group_path = Path(join(module, ".group"))
         if basename(module) != SHARED_MODULE_NAME and \
-                (load_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and
-                                   int(group_path.read_text().strip()) >= 0)) and \
+                (load_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and int(group_path.read_text().strip()) >= 0)) and \
                 (load_infrastructure or not basename(module).startswith("_")):
             env = load_bootstrap_env(module)
             name = basename(module)

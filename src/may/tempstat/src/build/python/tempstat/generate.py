@@ -17,12 +17,8 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
         ].copy()
-    document = load_schema_document(config="src/main/resources/image/sensors.json",
-                           args=["--poll-period", load_bootstrap_env_value("TEMPSTAT_POLL_PERIOD", "0")])
+    document = load_schema_document(config="src/main/resources/image/sensors.json")
     write_schema_broker(metadata_tempstat_df,
                         topic_glob_discovery="homeassistant/+/tempstat/+/config",
                         topic_glob_data="tempstat/data",
                         document=document)
-
-    # Build database schema
-    write_schema_database(document, dialect="postgres", time_column="timestamp", retention="2 years")
