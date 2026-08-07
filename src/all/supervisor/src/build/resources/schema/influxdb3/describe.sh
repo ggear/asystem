@@ -55,6 +55,7 @@ query() {
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
 SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
 SCHEMA_TARGET=${SCHEMA_TARGET:-}
+SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
 statements() {
   sed -e 's/--.*$//' "$1" | tr '\n' ' ' | tr ';' '\n' |
@@ -91,6 +92,9 @@ query_block() {
   statement="$(printf '%s\n' "${block}" | sed -e 's/--.*$//' | tr '\n' ' ' |
     sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*;*[[:space:]]*$//')"
   [ -z "${statement}" ] && return 0
+  if [ -n "${SCHEMA_LABEL}" ]; then
+    printf -- '-- %s\n' "${SCHEMA_LABEL}"
+  fi
   if [ "${SCHEMA_ECHO}" = true ]; then
     printf '%s\n\n' "${block}"
   else
@@ -122,6 +126,10 @@ query_one() {
   printf '%s\n' "${result}" | table
 }
 
+rows() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
+}
+
 query_file() {
   local line block="" faults=0
   while IFS= read -r line || [ -n "${line}" ]; do
@@ -144,6 +152,7 @@ query_file() {
   [ "${faults}" = 0 ]
 }
 
-printf '\n'
+printf '\nSchema describe [%s] against [%s]\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
+printf -- '\n-- %s\n\n' "describe.sql"
 SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${INFLUXDB3_SERVICE_PROD}" \
   query_file "${ROOT_DIR}/query/describe.sql"

@@ -2,6 +2,7 @@
 # All
 ###############################################################################################################################################################
 Move networks to mad
+Should src/all/_fedora/src/main/resources/pyenv be in git?
 Move all executables to have a prefix, eg media-* amedia-*
 Upgrade mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 Update max to latest Fedora
@@ -26,17 +27,8 @@ Implement Coral/Frigate
 Add big ass temps for deck
 
 
-
+reiew _ src, fix issues, format
 ensure units particularly those in supervisor are consistaent and accurate
-improve queries, too many rows, drop comments and make cleaner like dsecribe.sh, more complex timeseries bucketing 14d window, bucket 7d max
-drop dimensions Persisted | Declared | Observed - they apply to entities dont they? add a count for dimensions?
-influxdb describe to be similiar to schema on file system
-if describe queries fail, log it and just print what is known statically
-Explain all schema types, neessary, can be fixed? Singleton | Filter | Subject | Persist | Declared
-what is observe? why is supervisor observe empty and describe seems to have some plugin stuff in there?
-why is query_supervisor.sql and not query? make query do some time bucketing
-consolidate for postgres and influxdb?
-
 how to deal with rust/go not built before generate?
 am i happy with type builder struct {
 	id         ID

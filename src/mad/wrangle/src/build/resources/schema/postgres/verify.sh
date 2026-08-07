@@ -60,6 +60,7 @@ query() {
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
 SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
 SCHEMA_TARGET=${SCHEMA_TARGET:-}
+SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
 statements() {
   sed -e 's/--.*$//' "$1" | tr '\n' ' ' | tr ';' '\n' |
@@ -96,6 +97,9 @@ query_block() {
   statement="$(printf '%s\n' "${block}" | sed -e 's/--.*$//' | tr '\n' ' ' |
     sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*;*[[:space:]]*$//')"
   [ -z "${statement}" ] && return 0
+  if [ -n "${SCHEMA_LABEL}" ]; then
+    printf -- '-- %s\n' "${SCHEMA_LABEL}"
+  fi
   if [ "${SCHEMA_ECHO}" = true ]; then
     printf '%s\n\n' "${block}"
   else
@@ -127,6 +131,10 @@ query_one() {
   printf '%s\n' "${result}" | table
 }
 
+rows() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
+}
+
 query_file() {
   local line block="" faults=0
   while IFS= read -r line || [ -n "${line}" ]; do
@@ -149,18 +157,23 @@ query_file() {
   [ "${faults}" = 0 ]
 }
 
-printf '\nSchema verify [%s] against [%s]\n\n' "wrangle" "${POSTGRES_SERVICE_PROD}"
+printf '\nSchema verify [%s] against [%s]\n' "wrangle" "${POSTGRES_SERVICE_PROD}"
+printf -- '\n-- %s\n\n' "verify.sql"
 
-if ! FAULTS="$("${PSQL[@]}" -v ON_ERROR_STOP=1 -t -A -f "${ROOT_DIR}/query/verify.sql" | grep -c .)"; then
-  FAULTS=0
-fi
-if ! OUTPUT="$("${PSQL[@]}" -v ON_ERROR_STOP=1 -f "${ROOT_DIR}/query/verify.sql" 2>&1)"; then
-  fail "${ROOT_DIR}/query/verify.sql" "${OUTPUT}"
-  exit 1
-fi
-if [ "${FAULTS}" != "0" ]; then
-  query_file "${ROOT_DIR}/query/verify.sql" || exit 1
-fi
+FAULTS=0
+while IFS= read -r STATEMENT; do
+  [ -z "${STATEMENT}" ] && continue
+  if ! RESULT="$(query "${STATEMENT}")"; then
+    fail "${STATEMENT}" "${RESULT}"
+    exit 1
+  fi
+  COUNT="$(printf '%s' "${RESULT}" | rows)"
+  if [ "${COUNT}" != "0" ]; then
+    FAULTS=$((FAULTS + COUNT))
+    printf '%s\n' "${RESULT}" | table
+    printf '\n'
+  fi
+done < <(statements "${ROOT_DIR}/query/verify.sql")
 
 if [ "${FAULTS}" != "0" ]; then
   printf '\nSchema verify [%s] found [%s] fault row(s)\n' "wrangle" "${FAULTS}" >&2

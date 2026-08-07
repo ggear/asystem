@@ -4,31 +4,25 @@
 
 -- dimensions
 SELECT
-    'tempstat/device'      AS relation,
-    'device*'              AS dimension,
-    '15m'                  AS cadence,
-    2                      AS measures,
-    2                      AS persisted,
-    '1'                    AS declared,
-    count(DISTINCT entity) AS observed,
-    count(*)               AS rows,
-    min(time)              AS oldest,
-    max(time)              AS newest
+    'tempstat/device' AS relation,
+    'device*'         AS dimension,
+    2                 AS measures,
+    '15m'             AS cadence,
+    count(*)          AS rows,
+    min(time)         AS oldest,
+    max(time)         AS newest
 FROM tempstat
 WHERE
     type IN ('period_ms', 'sensors_failed')
 UNION ALL
 SELECT
-    'tempstat/sensor'      AS relation,
-    'sensor*'              AS dimension,
-    '15m'                  AS cadence,
-    1                      AS measures,
-    1                      AS persisted,
-    '3'                    AS declared,
-    count(DISTINCT entity) AS observed,
-    count(*)               AS rows,
-    min(time)              AS oldest,
-    max(time)              AS newest
+    'tempstat/sensor' AS relation,
+    'sensor*'         AS dimension,
+    1                 AS measures,
+    '15m'             AS cadence,
+    count(*)          AS rows,
+    min(time)         AS oldest,
+    max(time)         AS newest
 FROM tempstat
 WHERE
     type IN ('temperature_celsius')
@@ -93,7 +87,7 @@ FROM tempstat
 WHERE
     type NOT IN ('period_ms', 'sensors_failed', 'temperature_celsius')
 GROUP BY type, unit, period
-ORDER BY rows DESC;
+ORDER BY rows DESC NULLS LAST;
 
 -- entities
 SELECT

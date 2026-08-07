@@ -1,5 +1,16 @@
-from asystem.schema import (NO, NULL, RUNNER, SUBJECT, UNITS, YES, banner, indent, literals,
-                            script, select, vocabulary)
+import json
+import os
+import shutil
+from os.path import abspath, exists, join
+
+from asystem.schema import (BUCKET, NULL, RUNNER, aggregations, banner, bucketed,
+                            declared_entity,
+                            declared_measure, describe_runner, dimension_label, grouping_keys, labels,
+                            literals, parted, query_runner, recent, render_statements, select,
+                            verify_runner, vocabulary)
+
+DIALECT = "postgres"
+TARGET = "POSTGRES_SERVICE_PROD"
 
 TIME_COLUMNS = {
     "date": ("DATE", "INTERVAL '10 years'", "CURRENT_DATE", "1"),
@@ -28,6 +39,44 @@ query() {
   "${PSQL[@]}" -q -t -A -v ON_ERROR_STOP=1 -c "SELECT row_to_json(result) FROM ($1) AS result" 2>&1
 }
 """ + RUNNER
+
+
+def artifacts(document, module_name, time_column="timestamp", retention=None):
+    if time_column not in TIME_COLUMNS:
+        raise ValueError("Build generate script [{}] unknown time_column [{}] expected one of {}"
+                         .format(module_name, time_column, list(TIME_COLUMNS)))
+    _validate(document, module_name)
+    written = {}
+    for table, relations in _tabled(document).items():
+        written["model/{}.sql".format(table)] = (leaf(relations, table, time_column, retention), False)
+        written["query/query_{}.sql".format(table)] = (queries(relations, table, time_column), False)
+    written["query/describe.sql"] = (describe(document), False)
+    written["query/verify.sql"] = (verify(document), False)
+    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
+    written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
+    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
+    return written
+
+
+def ship(document, module_name, module_root, schemas_dir, time_column="timestamp"):
+    image_dir = abspath(join(module_root, "src/main/resources/image/database"))
+    if exists(image_dir):
+        shutil.rmtree(image_dir)
+    os.makedirs(image_dir, exist_ok=True)
+    for table in sorted(_tabled(document)):
+        source_path = abspath(join(schemas_dir, DIALECT, "model", "{}.sql".format(table)))
+        target_path = join(image_dir, "{}.sql".format(table))
+        shutil.copyfile(source_path, target_path)
+        columns_path = join(image_dir, "{}.json".format(table))
+        with open(columns_path, 'w') as columns_file:
+            columns_file.write(json.dumps(columns(table, time_column), indent=2) + "\n")
+        print("Build generate script [{}] database table [{}] shipped to [{}] and [{}]"
+              .format(module_name, table, target_path, columns_path))
+    applier_path = abspath(join(module_root, "src/main/resources/image/database.sh"))
+    with open(applier_path, 'w') as applier_file:
+        applier_file.write(applier_script(module_name))
+    os.chmod(applier_path, 0o750)
+    print("Build generate script [{}] database applier persisted to [{}]".format(module_name, applier_path))
 
 
 def connect(module_name):
@@ -92,153 +141,69 @@ def leaf(relations, table, time_column, retention):
     return "\n".join(lines) + "\n"
 
 
-def describe(document, tables_by_path):
-    relations = [(relation, tables_by_path[relation.path]) for relation in document.relations]
-    return _statements([
+def describe(document):
+    relations = [(relation, table) for table, tabled in _tabled(document).items() for relation in tabled]
+    return render_statements([
         "-- dimensions", _describe_relations(relations),
-        "-- measures", _describe_measures(relations, tables_by_path),
+        "-- measures", _describe_measures(document),
         "-- entities", _describe_entities(relations)])
 
 
 def queries(relations, table, time_column):
-    _, _, now, step = TIME_COLUMNS[time_column]
-    series = [tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
-    statements = ["-- {} [{}]".format(relation.path, relation.description) for relation in relations]
-    statements.append(
-        "-- every query below is deliberately rich but row bounded, so a paste into psql stays readable")
+    _, _, now, _ = TIME_COLUMNS[time_column]
+    floor = BUCKET if time_column == "date" else None
+    statements = []
+    for relation in relations:
+        if not relation.persisted:
+            statements.append("-- {} [{}] declares no persisted measure, so nothing is written for it"
+                              .format(relation.path, relation.description))
+            continue
+        bucket = bucketed(relation.cadence, floor)
+        heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(
+            relation.path, relation.description, relation.cadence, bucket)
+        measured_selectors, measured_keys = [], {}
+        for measure in relation.measures:
+            if not measure.persist or measure.kind == "str":
+                continue
+            filtered = _filtered(relation, measure)
+            for function, suffix in aggregations(measure, relation.cadence):
+                alias = "_".join(part for part in (_named(relation, measure), suffix) if part)
+                measured_selectors.append((_aggregate(function, filtered), alias))
+                measured_keys[alias] = measure.key
+        if not measured_selectors:
+            continue
+        subject = [relation.subject.key] if relation.subject else []
+        label = labels(["bucket"] + subject + [alias for _, alias in measured_selectors], ["time"])
+        parts = parted(measured_selectors, len(subject) + 1, {alias: label[alias].strip('"') for _, alias in measured_selectors})
+        for index, part in enumerate(parts):
+            statements.append(heading)
+            statements.append("-- part {} of {}:".format(index + 1, len(parts)))
+            selectors = [("time_bucket('{}', time)".format(bucket), label["bucket"])]
+            selectors += [("entity", label[key]) for key in subject]
+            selectors += [(expression, label[alias]) for expression, alias in part]
+            grouping = [label["bucket"]] + ["entity" for _ in subject]
+            keys = {measured_keys[alias] for _, alias in part}
+            statements.append(select(selectors, table,
+                                     [_types(relation, negate=False, keys=keys, width=None)]
+                                     + recent(table, bucket, now),
+                                     group_by=grouping, order_by=grouping))
+    return render_statements(statements)
 
-    statements.append("-- coverage, one row per declared series with its span, density and gap count")
-    statements.append("WITH bounds AS (\n{}\n),\ngaps AS (\n{}\n)\n{}".format(
-        "\n".join(indent(select(
-            [("type", ""), ("period", ""), ("unit", ""), ("entity", ""),
-             ("min(time)", "oldest"), ("max(time)", "newest"), ("count(*)", "rows_total")], table,
-            group_by=["type", "period", "unit", "entity"]))),
-        "\n".join(indent(select(
-            [("type", ""), ("period", ""), ("unit", ""), ("entity", ""),
-             ("count(*) FILTER (WHERE step > expected)", "gaps_total")],
-            "(\n{}\n) AS stepped".format("\n".join(indent(select(
-                [("type", ""), ("period", ""), ("unit", ""), ("entity", ""),
-                 ("time - lag(time) OVER (PARTITION BY type, period, unit, entity ORDER BY time)", "step"),
-                 (step, "expected")], table)))),
-            group_by=["type", "period", "unit", "entity"]))),
-        select([("b.type", ""), ("b.period", ""), ("b.unit", ""), ("count(*)", "entities"),
-                ("sum(b.rows_total)", "rows_total"), ("min(b.oldest)", "oldest"),
-                ("max(b.newest)", "newest"), ("sum(g.gaps_total)", "gaps_total")],
-               "bounds AS b JOIN gaps AS g USING (type, period, unit, entity)",
-               group_by=["b.type", "b.period", "b.unit"],
-               order_by=["b.type", "b.period", "b.unit"])))
 
-    statements.append("-- latest reading per declared series, with its rank against the trailing year")
-    statements.append(select(
-        [("type", ""), ("period", ""), ("unit", ""), ("entity", ""), ("time", ""), ("value", ""),
-         ("percent_rank() OVER (PARTITION BY type, period, unit, entity ORDER BY value)", "pct_rank_year")],
-        table, ["time >= {} - INTERVAL '1 year'".format(now)],
-        distinct_on=["type", "period", "unit", "entity"],
-        order_by=["type", "period", "unit", "entity", "time DESC"]))
-
-    statements.append("-- monthly distribution per series, quartiles and swing, last year only")
-    statements.append(select(
-        [("time_bucket('1 month', time)", "bucket"), ("type", ""), ("period", ""), ("unit", ""),
-         ("count(*)", "rows_total"), ("avg(value)", "mean"),
-         ("percentile_cont(0.25) WITHIN GROUP (ORDER BY value)", "p25"),
-         ("percentile_cont(0.50) WITHIN GROUP (ORDER BY value)", "median"),
-         ("percentile_cont(0.75) WITHIN GROUP (ORDER BY value)", "p75"),
-         ("max(value) - min(value)", "swing")],
-        table, ["time >= {} - INTERVAL '1 year'".format(now)],
-        group_by=["bucket", "type", "period", "unit"],
-        order_by=["bucket DESC", "type", "period", "unit"], limit=50))
-
-    statements.append("-- biggest movers, each series compared against its own trailing 30 reading mean")
-    statements.append("WITH trailing_mean AS (\n{}\n)\n{}".format(
-        "\n".join(indent(select(
-            [("type", ""), ("period", ""), ("unit", ""), ("entity", ""), ("time", ""), ("value", ""),
-             ("avg(value) OVER (PARTITION BY type, period, unit, entity ORDER BY time "
-              "ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING)", "mean_30")],
-            table, ["time >= {} - INTERVAL '90 days'".format(now)]))),
-        select([("type", ""), ("period", ""), ("unit", ""), ("entity", ""), ("time", ""), ("value", ""),
-                ("mean_30", ""), ("value - mean_30", "drift")],
-               "trailing_mean", ["mean_30 IS NOT NULL"],
-               order_by=["abs(value - mean_30) DESC"], limit=20)))
-
-    statements.append("-- staleness, series whose newest reading is behind the table as a whole")
-    statements.append(select(
-        [("type", ""), ("period", ""), ("unit", ""), ("entity", ""), ("max(time)", "newest"),
-         ("(SELECT max(time) FROM {}) - max(time)".format(table), "behind")],
-        table, group_by=["type", "period", "unit", "entity"],
-        having=["max(time) < (SELECT max(time) FROM {})".format(table)],
-        order_by=["behind DESC"], limit=20))
-
-    for metric_type, period, unit in series:
-        statements.append("-- {} [{}] in [{}], yearly shape across entities".format(
-            metric_type, period, UNITS.get(unit, unit)))
+def verify(document):
+    statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
+    for table, relations in _tabled(document).items():
+        declared = [(relation.path,) + tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
+        values = ",\n".join("    ('{}', '{}', '{}', '{}')".format(*tuple_) for tuple_ in declared)
         statements.append(select(
-            [("time_bucket('1 month', time)", "bucket"), ("entity", ""), ("avg(value)", "mean"),
-             ("min(value)", "low"), ("max(value)", "high"), ("count(*)", "rows_total")],
-            table, ["type = '{}'".format(metric_type), "period = '{}'".format(period),
-                    "unit = '{}'".format(unit), "time >= {} - INTERVAL '1 year'".format(now)],
-            group_by=["bucket", "entity"], order_by=["bucket DESC", "entity"], limit=30))
-    return _statements(statements)
-
-
-def verify(document, tables_by_path):
-    statements = ["-- declared vocabulary against what the service actually wrote, "
-                  "rows come back only on drift"]
-    for table in sorted(set(tables_by_path.values())):
-        relations = [relation for relation in document.relations if tables_by_path[relation.path] == table]
-        declared = [tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
-        values = ",\n".join("    ('{}', '{}', '{}')".format(*tuple_) for tuple_ in declared)
-        statements.append(select(
-            [("'{}'".format(table), "relation"), ("coalesce(d.type, o.type)", "type"),
+            [("coalesce(d.relation, '{}')".format(table), "relation"), ("coalesce(d.type, o.type)", "measure"),
              ("coalesce(d.period, o.period)", "period"), ("coalesce(d.unit, o.unit)", "unit"),
              ("CASE WHEN d.type IS NULL THEN 'undeclared' ELSE 'missing' END", "fault")],
-            "(VALUES\n{}\n) AS d(type, period, unit)\n"
+            "(VALUES\n{}\n) AS d(relation, type, period, unit)\n"
             "FULL OUTER JOIN (SELECT DISTINCT type, period, unit FROM {}) AS o\n"
             "    ON d.type = o.type AND d.period = o.period AND d.unit = o.unit".format(values, table),
-            ["d.type IS NULL OR o.type IS NULL"]))
-    return _statements(statements)
-
-
-def describe_script(module_name, dialect):
-    return script(module_name, dialect, "describe", "print what the production tables actually carry", connect(module_name), """
-printf '\\n'
-SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${{POSTGRES_SERVICE_PROD}}" \\
-  query_file "${{ROOT_DIR}}/query/describe.sql"
-""".format(module_name))
-
-
-def query_script(module_name, dialect):
-    return script(module_name, dialect, "query", "run the generated query for every declared relation", connect(module_name), """
-printf '\\nSchema query [%s] against [%s]\\n\\n' "{}" "${{POSTGRES_SERVICE_PROD}}"
-FAULTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/query/query_*.sql; do
-  printf '\\n== %s ==\\n' "$(basename "${{SQL_FILE}}")"
-  query_file "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
-done
-[ "${{FAULTS}}" = 0 ]
-""".format(module_name))
-
-
-def verify_script(module_name, dialect):
-    return script(module_name, dialect, "verify", "assert production matches the declaration", connect(module_name), """
-printf '\\nSchema verify [%s] against [%s]\\n\\n' "{}" "${{POSTGRES_SERVICE_PROD}}"
-
-if ! FAULTS="$("${{PSQL[@]}}" -v ON_ERROR_STOP=1 -t -A -f "${{ROOT_DIR}}/query/verify.sql" | grep -c .)"; then
-  FAULTS=0
-fi
-if ! OUTPUT="$("${{PSQL[@]}}" -v ON_ERROR_STOP=1 -f "${{ROOT_DIR}}/query/verify.sql" 2>&1)"; then
-  fail "${{ROOT_DIR}}/query/verify.sql" "${{OUTPUT}}"
-  exit 1
-fi
-if [ "${{FAULTS}}" != "0" ]; then
-  query_file "${{ROOT_DIR}}/query/verify.sql" || exit 1
-fi
-
-if [ "${{FAULTS}}" != "0" ]; then
-  printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{}" "${{FAULTS}}" >&2
-  exit 1
-fi
-printf '\\nSchema verify [%s] found no drift\\n' "{}"
-""".format(module_name, module_name, module_name, module_name))
+            ["d.type IS NULL OR o.type IS NULL"], order_by=["fault", "measure"]))
+    return render_statements(statements)
 
 
 def applier_script(module_name):
@@ -265,34 +230,28 @@ done
 
 def _describe_relations(relations):
     return "\nUNION ALL\n".join(
-        select([("'{}'".format(relation.path), "relation"), ("'{}'".format(_dimension(relation)), "dimension"),
-                ("'{}'".format(relation.cadence), "cadence"),
+        select([("'{}'".format(relation.path), "relation"), ("'{}'".format(dimension_label(relation)), "dimension"),
                 ("{}".format(len(relation.measures)), "measures"),
-                ("{}".format(len(relation.persisted)), "persisted"),
-                ("'{}'".format(_declared_entities(relation)), "declared"),
-                ("count(DISTINCT entity)" if relation.subject else "'{}'".format(NULL),
-                 "observed"),
+                ("'{}'".format(relation.cadence), "cadence"),
                 ("count(*)", "rows"), ("min(time)", "oldest"), ("max(time)", "newest")],
                table, [_types(relation, negate=False)])
         for relation, table in relations) + "\nORDER BY rows DESC"
 
 
-def _describe_measures(relations, tables_by_path):
+def _describe_measures(document):
     arms = []
-    for table in sorted(set(tables_by_path.values())):
+    for table, relations in _tabled(document).items():
         declared = set()
-        for relation, owner in relations:
-            if owner != table:
-                continue
+        for relation in relations:
             persisted = {measure.key for measure in relation.persisted}
             for measure in relation.measures:
                 period = measure.period or relation.cadence or NULL
                 unit = measure.unit or NULL
                 if measure.key not in persisted:
                     continue
-                columns = _declared_measure(relation, measure, unit, period)
+                selectors = declared_measure(relation, measure, unit, period)
                 declared.add(measure.key)
-                arms.append(select(columns + [
+                arms.append(select(selectors + [
                     ("count(*)", "rows"),
                     ("CAST(min(time) AS VARCHAR)", "oldest"),
                     ("CAST(max(time) AS VARCHAR)", "newest")], table,
@@ -303,49 +262,49 @@ def _describe_measures(relations, tables_by_path):
              ("unit", ""), ("period", ""), ("count(*)", "rows"),
              ("CAST(min(time) AS VARCHAR)", "oldest"), ("CAST(max(time) AS VARCHAR)", "newest")],
             table, [literals("type", sorted(declared))], group_by=["type", "unit", "period"]))
-    return "\nUNION ALL\n".join(arms) + "\nORDER BY rows DESC"
+    return "\nUNION ALL\n".join(arms) + "\nORDER BY rows DESC NULLS LAST"
 
-
-def _declared_measure(relation, measure, unit, period):
-    return [("'{}'".format(relation.path), "relation"), ("'{}'".format(measure.key), "measure"),
-            ("'{}'".format(measure.kind), "kind"), ("'{}'".format(unit), "unit"),
-            ("'{}'".format(period), "period")]
 
 
 def _describe_entities(relations):
     return "\nUNION ALL\n".join(
         select([("'{}'".format(relation.path), "relation"),
-                ("'{}'".format(_dimension(relation)), "dimension"), ("entity", ""),
-                (_declared(relation), "declared"), ("count(*)", "rows"),
+                ("'{}'".format(dimension_label(relation)), "dimension"), ("entity", ""),
+                (declared_entity(relation, "entity"), "declared"), ("count(*)", "rows"),
                 ("min(time)", "oldest"), ("max(time)", "newest")],
                table, [_types(relation, negate=False)],
-               group_by=_grouping("entity", _declared(relation)))
+               group_by=grouping_keys("entity", declared_entity(relation, "entity")))
         for relation, table in relations) + "\nORDER BY rows DESC"
 
 
-def _declared_entities(relation):
-    return len(relation.entities) if relation.subject else NULL
 
 
-def _dimension(relation):
-    return "/".join(dimension.key + (SUBJECT if dimension.subject else "")
-                    for dimension in relation.dimensions) or NULL
+def _tabled(document):
+    tabled = {}
+    for relation in document.relations:
+        if relation.persisted:
+            tabled.setdefault(relation.plugin, []).append(relation)
+    return {table: tabled[table] for table in sorted(tabled)}
 
 
-def _types(relation, negate=True):
-    return literals("type", sorted({metric_type for metric_type, _, _ in _vocabulary(relation)}),
-                    negate=negate)
+def _validate(document, module_name):
+    for table, relations in _tabled(document).items():
+        keys = {}
+        for relation in relations:
+            for measure in relation.persisted:
+                if measure.key in keys and keys[measure.key] != relation.path:
+                    raise ValueError(
+                        "Build generate script [{}] relations [{}] and [{}] share the table [{}] and the measure "
+                        "[{}] so neither can be told apart by type, rename one measure or fold them together"
+                        .format(module_name, keys[measure.key], relation.path, table, measure.key))
+                keys[measure.key] = relation.path
 
 
-def _grouping(entity, declared):
-    return [entity] + ([declared] if declared.startswith("CASE") else [])
+def _types(relation, negate=True, keys=None, width: int | None = 92):
+    types = {metric_type for metric_type, _, _ in _vocabulary(relation)}
+    return literals("type", sorted(types if keys is None else types & keys), negate=negate, width=width)
 
 
-def _declared(relation):
-    if relation.subject is None:
-        return "'{}'".format(NULL)
-    return "CASE WHEN {} THEN '{}' ELSE '{}' END".format(
-        literals("entity", relation.entities, negate=False), YES, NO)
 
 
 def _vocabulary(relation):
@@ -361,13 +320,34 @@ def _vocabulary(relation):
     return series
 
 
-def _statements(statements):
-    blocks, block = [], []
-    for statement in statements:
-        if block and not block[-1].startswith("--"):
-            blocks.append(block)
-            block = []
-        block.append(statement if statement.startswith("--") else statement + ";")
-    if block:
-        blocks.append(block)
-    return banner("--") + "\n\n" + "\n\n".join("\n".join(block) for block in blocks) + "\n"
+def _named(relation, measure):
+    name = measure.key.replace("-", "_")
+    if len([other for other in relation.measures if other.key == measure.key]) > 1:
+        name = "{}_{}".format(name, measure.period or relation.cadence)
+    return name
+
+
+def _filtered(relation, measure):
+    period = measure.period or relation.cadence
+    keyed = [other for other in relation.measures if other.key == measure.key]
+    periods = {other.period or relation.cadence for other in keyed}
+    units = {other.unit for other in keyed if (other.period or relation.cadence) == period}
+    predicates = ["type = '{}'".format(measure.key)]
+    if len(periods) > 1:
+        predicates.append("period = '{}'".format(period))
+    if len(units) > 1:
+        predicates.append("unit = '{}'".format(measure.unit))
+    return " AND ".join(predicates)
+
+
+def _aggregate(function, predicate):
+    if function == "last":
+        return _rounded("last(value, time) FILTER (WHERE {})".format(predicate))
+    return _rounded("{}(value) FILTER (WHERE {})".format(function, predicate))
+
+
+def _rounded(expression):
+    return "round({}::numeric, 1)".format(
+        expression if expression.isidentifier() else "({})".format(expression))
+
+

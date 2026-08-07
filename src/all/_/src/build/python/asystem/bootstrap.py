@@ -11,10 +11,14 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 SHARED_MODULE_NAME = basename(DIR_ROOT)
 
 
+def load_bootstrap_root() -> str:
+    return abspath(join(dirname(realpath(sys.argv[0])), "../../../.."))
+
+
 def load_bootstrap_env(root_dir=None):
     env_load = {}
     if root_dir is None:
-        root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
+        root_dir = load_bootstrap_root()
     env_load_path = abspath(join(root_dir, ".env"))
     env_load_path_dev = env_load_path
     if not isfile(env_load_path):
@@ -37,7 +41,7 @@ def load_bootstrap_env(root_dir=None):
 
 def load_bootstrap_env_value(name, default="", filename=".env_prod", module_root=None):
     if module_root is None:
-        module_root = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
+        module_root = load_bootstrap_root()
     env_path = join(module_root, filename)
     if not isfile(env_path):
         return default

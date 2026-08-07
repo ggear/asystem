@@ -1,11 +1,16 @@
 import fnmatch
 import json
+import os
 import re
+import shutil
 import textwrap
+from os.path import abspath, exists, join
 
 from asystem.schema import script
 
 DIALECT = "vernemq"
+
+PLACEHOLDER = r"\$\{[^}]+}"
 
 ROLE_COLUMNS = {"state_topic": "state", "command_topic": "command", "availability_topic": "availability"}
 
@@ -56,6 +61,46 @@ declared() {
     done | sort -u
 }
 """
+
+
+def artifacts(metadata_df, module_name, topic_glob_discovery, topic_glob_data,
+              schema_state, schema_command, schema_availability, document):
+    _validate_globs(metadata_df, module_name, topic_glob_discovery, topic_glob_data)
+    topics = _topics(metadata_df, module_name)
+    specs = _specs(module_name, document, schema_state, schema_command, schema_availability)
+    if not topics:
+        return {}
+    globs = [glob for glob in (topic_glob_discovery, topic_glob_data) if glob]
+    generated = {}
+    for column, column_topics in topics.items():
+        role = ROLE_COLUMNS.get(column, "") if document is not None else ""
+        for topic in column_topics:
+            generated["model/{}".format(topic)] = (leaf(topic, specs.get(column, ""), document, role), False)
+    generated["describe.sh"] = (describe_script(module_name, globs), True)
+    generated["query.sh"] = (query_script(module_name), True)
+    generated["verify.sh"] = (
+        verify_script(module_name, globs, sorted(topics.get("command_topic", []))), True)
+    return generated
+
+
+def ship(metadata_df, module_name, working_root, topic_glob_discovery, topic_glob_data):
+    working_dir = join(str(working_root), DIALECT)
+    if exists(working_dir):
+        shutil.rmtree(working_dir)
+    for _, row in metadata_df.iterrows():
+        discovery_dir = abspath(join(working_dir, str(row["discovery_topic"])))
+        os.makedirs(discovery_dir)
+        discovery_path = abspath(join(discovery_dir, str(row["unique_id"]) + ".json"))
+        with open(discovery_path, 'a') as discovery_file:
+            discovery_file.write(discovery(row))
+        print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
+              .format(module_name, row["unique_id"], discovery_path))
+    publish_path = abspath(join(str(working_root), DIALECT + ".sh"))
+    with open(publish_path, 'w') as publish_file:
+        publish_file.write(publish_script(module_name, topic_glob_discovery, topic_glob_data))
+    os.chmod(publish_path, 0o750)
+    print("Build generate script [{}] entity metadata publish script persisted to [{}]"
+          .format(module_name, publish_path))
 
 
 def leaf(topic, spec=None, document=None, role=""):
@@ -139,16 +184,16 @@ printf "\\n"
     ).strip()
 
 
-def describe_script(module_name, dialect, globs):
-    return script(module_name, dialect, "describe", "print what the production broker actually retains", CONNECT, """
+def describe_script(module_name, globs):
+    return script(module_name, DIALECT, "describe", "print what the production broker actually retains", CONNECT, """
 printf '\\nSchema describe [%s] against [%s]\\n\\n' "{}" "${{VERNEMQ_SERVICE_PROD}}"
 {}
 """.format(module_name, "\n".join(
         "printf '\\n== %s ==\\n' \"{0}\"\ntopics {1}".format(_expand(glob), _arguments(glob)) for glob in globs)))
 
 
-def query_script(module_name, dialect):
-    return script(module_name, dialect, "query", "print the retained payload of every declared topic", CONNECT, """
+def query_script(module_name):
+    return script(module_name, DIALECT, "query", "print the retained payload of every declared topic", CONNECT, """
 printf '\\nSchema query [%s] against [%s]\\n\\n' "{}" "${{VERNEMQ_SERVICE_PROD}}"
 while IFS= read -r TOPIC; do
   printf '\\n== %s ==\\n' "${{TOPIC}}"
@@ -157,8 +202,8 @@ done < <(declared)
 """.format(module_name))
 
 
-def verify_script(module_name, dialect, globs, commands):
-    return script(module_name, dialect, "verify", "assert the broker retains exactly the declared topics", CONNECT, """
+def verify_script(module_name, globs, commands):
+    return script(module_name, DIALECT, "verify", "assert the broker retains exactly the declared topics", CONNECT, """
 printf '\\nSchema verify [%s] against [%s]\\n\\n' "{}" "${{VERNEMQ_SERVICE_PROD}}"
 
 COMMAND_TOPICS=({})
@@ -195,17 +240,6 @@ printf '\\nSchema verify [%s] found no drift\\n' "{}"
 """.format(module_name, " ".join('"{}"'.format(command) for command in commands), "\n".join(
         'topics {} >> "${{RETAINED_FILE}}"'.format(_arguments(glob)) for glob in globs),
            module_name, module_name))
-
-
-def discover_script(module_name, dialect, globs):
-    return script(module_name, dialect, "discover", "draft a declaration from what the broker retains", CONNECT, """
-printf '\\nSchema discover [%s] against [%s], a drafting aid that is never an input to the build\\n\\n' "{}" "${{VERNEMQ_SERVICE_PROD}}"
-{}
-""".format(module_name, "\n".join(
-        """while IFS= read -r TOPIC; do
-  printf '\\n== %s ==\\n' "${{TOPIC}}"
-  payload "${{TOPIC}}" | jq 'if type == "object" then map_values(type) else type end' 2>/dev/null || payload "${{TOPIC}}"
-done < <(topics {})""".format(_arguments(glob)) for glob in globs)))
 
 
 def render(member, indent=0):
@@ -292,6 +326,71 @@ def _coerce_identifiers(value):
     return [str(value)]
 
 
+def _validate_globs(metadata_df, module_name, topic_glob_discovery, topic_glob_data):
+    for topic_glob, topic_glob_name, topic_glob_column in (
+            (topic_glob_discovery, "topic_glob_discovery", "discovery_topic"),
+            (topic_glob_data, "topic_glob_data", "state_topic")):
+        if topic_glob is None:
+            continue
+        unmatched = [topic for topic in _column_topics(metadata_df, topic_glob_column)
+                     if not _glob_match(topic_glob, topic)]
+        if unmatched:
+            raise ValueError(
+                "Build generate script [{}] {} [{}] does not match entity_metadata.xlsx {} topic(s) {}: "
+                "update the glob or the spreadsheet so they agree"
+                .format(module_name, topic_glob_name, topic_glob, topic_glob_column, unmatched))
+
+
+def _glob_match(topic_glob, topic):
+    glob_levels = topic_glob.split("/")
+    topic_levels = topic.split("/")
+    for index, glob_level in enumerate(glob_levels):
+        if glob_level == "#":
+            return True
+        if index >= len(topic_levels):
+            return False
+        if glob_level == "+":
+            continue
+        if not fnmatch.fnmatchcase(topic_levels[index], re.sub(PLACEHOLDER, "*", glob_level)):
+            return False
+    return len(glob_levels) == len(topic_levels)
+
+
+def _column_topics(metadata_df, column):
+    if column not in metadata_df.columns:
+        return []
+    return sorted({topic.strip() for topic in metadata_df[column].dropna().unique() if topic.strip()})
+
+
+def _topics(metadata_df, module_name):
+    topics = {column: _column_topics(metadata_df, column) for column in TOPIC_COLUMNS}
+    topics = {column: column_topics for column, column_topics in topics.items() if column_topics}
+    topics_all = sorted({topic for column_topics in topics.values() for topic in column_topics})
+    for topic in topics_all:
+        for topic_other in topics_all:
+            if topic_other != topic and topic_other.startswith(topic + "/"):
+                raise ValueError(
+                    "Build generate script [{}] entity schema topic [{}] is a path prefix of [{}]: "
+                    "cannot write a payload leaf file and a directory at the same path"
+                    .format(module_name, topic, topic_other))
+    return topics
+
+
+def _specs(module_name, document, schema_state, schema_command, schema_availability):
+    specs = {column: spec for column, spec in (("state_topic", schema_state),
+                                               ("command_topic", schema_command),
+                                               ("availability_topic", schema_availability))
+             if spec is not None}
+    if document is not None:
+        for column, role in ROLE_COLUMNS.items():
+            if column in specs and any(payload.role == role for payload in document.payloads):
+                raise ValueError(
+                    "Build generate script [{}] role [{}] is declared in code and also passed as a literal [{}]: "
+                    "supply one or the other, never both".format(module_name, role, column))
+    specs["discovery_topic"] = DISCOVERY_PAYLOAD
+    return specs
+
+
 def _arguments(glob):
     pattern = _pattern(glob)
     return '"{}"'.format(_expand(glob)) if not pattern else '"{}" "{}"'.format(_expand(glob), pattern)
@@ -303,7 +402,7 @@ def _expand(glob):
 
 def _pattern(glob):
     levels = glob.split("/")
-    if all(re.fullmatch(r"\$\{[^}]+}", level) or "${" not in level for level in levels):
+    if all(re.fullmatch(PLACEHOLDER, level) or "${" not in level for level in levels):
         return ""
     trailing = levels and levels[-1] == "#"
     parts = []
@@ -311,5 +410,5 @@ def _pattern(glob):
         if level in ("+", "#"):
             parts.append("[^/]+" if level == "+" else "[^/]+(/[^/]+)*")
             continue
-        parts.append("[^/]+".join(re.escape(chunk) for chunk in re.split(r"\$\{[^}]+}", level)))
+        parts.append("[^/]+".join(re.escape(chunk) for chunk in re.split(PLACEHOLDER, level)))
     return "^" + "/".join(parts) + ("(/.*)?$" if trailing else "$")

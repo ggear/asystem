@@ -2,18 +2,20 @@
 -- WARNING: This file is written by the build process, any manual edits will be lost!
 --------------------------------------------------------------------------------
 
--- certs/home [certificate health across the monitored endpoints] every 15m
+-- certs/home [certificate health across the monitored endpoints] every 15m, bucketed [1 day] across the newest two buckets
+-- part 1 of 1:
 SELECT
-    date_bin(INTERVAL '1 hour', time)          AS bucket,
-    avg(ok)                                    AS ok_fraction,
-    last_value(score ORDER BY time)            AS score,
-    avg(min_expiry_days)                       AS min_expiry_days_avg,
-    min(min_expiry_days)                       AS min_expiry_days_min,
-    max(min_expiry_days)                       AS min_expiry_days_max,
-    last_value(endpoints_total ORDER BY time)  AS endpoints_total,
-    last_value(endpoints_failed ORDER BY time) AS endpoints_failed
+    date_bin(INTERVAL '1 day', time)                     AS "Bucket",
+    round(avg(ok), 1)                                    AS "Ok Fraction",
+    round(last_value(score ORDER BY time), 1)            AS "Score",
+    round(avg(min_expiry_days), 1)                       AS "Min Expiry Days Avg",
+    round(min(min_expiry_days), 1)                       AS "Min Expiry Days Min",
+    round(max(min_expiry_days), 1)                       AS "Min Expiry Days Max",
+    round(last_value(endpoints_total ORDER BY time), 1)  AS "Endpoints Total",
+    round(last_value(endpoints_failed ORDER BY time), 1) AS "Endpoints Failed"
 FROM certs
 WHERE
-    time > now() - INTERVAL '7 days'
-GROUP BY bucket
-ORDER BY bucket;
+    time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM certs) - INTERVAL '1 day'
+GROUP BY "Bucket"
+ORDER BY "Bucket";

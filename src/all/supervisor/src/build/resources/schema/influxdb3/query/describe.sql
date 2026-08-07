@@ -4,32 +4,26 @@
 
 -- dimensions
 SELECT
-    'supervisor/host'    AS relation,
-    'host*'              AS dimension,
-    '6s'                 AS cadence,
-    37                   AS measures,
-    34                   AS persisted,
-    '6'                  AS declared,
-    count(DISTINCT host) AS observed,
-    count(*)             AS rows,
-    min(time)            AS oldest,
-    max(time)            AS newest
+    'supervisor/host' AS relation,
+    'host*'           AS dimension,
+    37                AS measures,
+    '6s'              AS cadence,
+    count(*)          AS rows,
+    min(time)         AS oldest,
+    max(time)         AS newest
 FROM supervisor
 WHERE
     host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
-    'supervisor/service'    AS relation,
-    'host/service*'         AS dimension,
-    '6s'                    AS cadence,
-    22                      AS measures,
-    18                      AS persisted,
-    '22'                    AS declared,
-    count(DISTINCT service) AS observed,
-    count(*)                AS rows,
-    min(time)               AS oldest,
-    max(time)               AS newest
+    'supervisor/service' AS relation,
+    'host/service*'      AS dimension,
+    22                   AS measures,
+    '6s'                 AS cadence,
+    count(*)             AS rows,
+    min(time)            AS oldest,
+    max(time)            AS newest
 FROM supervisor
 WHERE
     host IS NOT NULL

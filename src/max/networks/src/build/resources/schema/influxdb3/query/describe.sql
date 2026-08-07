@@ -6,11 +6,8 @@
 SELECT
     'certs/home' AS relation,
     '-'          AS dimension,
-    '15m'        AS cadence,
     5            AS measures,
-    5            AS persisted,
-    '-'          AS declared,
-    '-'          AS observed,
+    '15m'        AS cadence,
     count(*)     AS rows,
     min(time)    AS oldest,
     max(time)    AS newest
@@ -19,11 +16,8 @@ UNION ALL
 SELECT
     'domain/resolver' AS relation,
     '-'               AS dimension,
-    '15m'             AS cadence,
     5                 AS measures,
-    5                 AS persisted,
-    '-'               AS declared,
-    '-'               AS observed,
+    '15m'             AS cadence,
     count(*)          AS rows,
     min(time)         AS oldest,
     max(time)         AS newest
@@ -32,11 +26,8 @@ UNION ALL
 SELECT
     'ethernet/ports' AS relation,
     '-'              AS dimension,
-    '15m'            AS cadence,
     6                AS measures,
-    6                AS persisted,
-    '-'              AS declared,
-    '-'              AS observed,
+    '15m'            AS cadence,
     count(*)         AS rows,
     min(time)        AS oldest,
     max(time)        AS newest
@@ -45,11 +36,8 @@ UNION ALL
 SELECT
     'internet/gateway' AS relation,
     '-'                AS dimension,
-    '15m'              AS cadence,
     8                  AS measures,
-    8                  AS persisted,
-    '-'                AS declared,
-    '-'                AS observed,
+    '15m'              AS cadence,
     count(*)           AS rows,
     min(time)          AS oldest,
     max(time)          AS newest
@@ -58,11 +46,8 @@ UNION ALL
 SELECT
     'weewx/console' AS relation,
     '-'             AS dimension,
-    '15m'           AS cadence,
     2               AS measures,
-    2               AS persisted,
-    '-'             AS declared,
-    '-'             AS observed,
+    '15m'           AS cadence,
     count(*)        AS rows,
     min(time)       AS oldest,
     max(time)       AS newest
@@ -71,11 +56,8 @@ UNION ALL
 SELECT
     'wireless/wifi' AS relation,
     '-'             AS dimension,
-    '15m'           AS cadence,
     5               AS measures,
-    5               AS persisted,
-    '-'             AS declared,
-    '-'             AS observed,
+    '15m'           AS cadence,
     count(*)        AS rows,
     min(time)       AS oldest,
     max(time)       AS newest
@@ -84,11 +66,8 @@ UNION ALL
 SELECT
     'zigbee/bridge' AS relation,
     '-'             AS dimension,
-    '15m'           AS cadence,
     6               AS measures,
-    6               AS persisted,
-    '-'             AS declared,
-    '-'             AS observed,
+    '15m'           AS cadence,
     count(*)        AS rows,
     min(time)       AS oldest,
     max(time)       AS newest
@@ -606,4 +585,3 @@ WHERE
 ORDER BY rows DESC NULLS LAST;
 
 -- entities
-;

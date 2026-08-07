@@ -4,46 +4,25 @@
 
 -- dimensions
 SELECT
-    'currency/rate'        AS relation,
-    'entity*'              AS dimension,
-    '1d'                   AS cadence,
-    5                      AS measures,
-    5                      AS persisted,
-    '3'                    AS declared,
-    count(DISTINCT entity) AS observed,
-    count(*)               AS rows,
-    min(time)              AS oldest,
-    max(time)              AS newest
+    'currency/rate' AS relation,
+    'entity*'       AS dimension,
+    5               AS measures,
+    '1d'            AS cadence,
+    count(*)        AS rows,
+    min(time)       AS oldest,
+    max(time)       AS newest
 FROM currency
 WHERE
     type IN ('delta', 'snapshot')
 UNION ALL
 SELECT
-    'interest/rate'        AS relation,
-    'entity*'              AS dimension,
-    '1d'                   AS cadence,
-    6                      AS measures,
-    6                      AS persisted,
-    '3'                    AS declared,
-    count(DISTINCT entity) AS observed,
-    count(*)               AS rows,
-    min(time)              AS oldest,
-    max(time)              AS newest
-FROM interest
-WHERE
-    type IN ('mean')
-UNION ALL
-SELECT
-    'equity/ticker'        AS relation,
-    'entity*'              AS dimension,
-    '1d'                   AS cadence,
-    16                     AS measures,
-    16                     AS persisted,
-    '26'                   AS declared,
-    count(DISTINCT entity) AS observed,
-    count(*)               AS rows,
-    min(time)              AS oldest,
-    max(time)              AS newest
+    'equity/ticker' AS relation,
+    'entity*'       AS dimension,
+    16              AS measures,
+    '1d'            AS cadence,
+    count(*)        AS rows,
+    min(time)       AS oldest,
+    max(time)       AS newest
 FROM equity
 WHERE
     type IN (
@@ -56,6 +35,18 @@ WHERE
         'price-close-spot-30d-change-percentage', 'price-close-spot-365d-change-percentage',
         'price-close-spot-90d-change-percentage'
     )
+UNION ALL
+SELECT
+    'interest/rate' AS relation,
+    'entity*'       AS dimension,
+    6               AS measures,
+    '1d'            AS cadence,
+    count(*)        AS rows,
+    min(time)       AS oldest,
+    max(time)       AS newest
+FROM interest
+WHERE
+    type IN ('mean')
 ORDER BY rows DESC;
 
 -- measures
@@ -514,7 +505,7 @@ FROM interest
 WHERE
     type NOT IN ('mean')
 GROUP BY type, unit, period
-ORDER BY rows DESC;
+ORDER BY rows DESC NULLS LAST;
 
 -- entities
 SELECT
@@ -529,19 +520,6 @@ FROM currency
 WHERE
     type IN ('delta', 'snapshot')
 GROUP BY entity, CASE WHEN entity IN ('AUD/USD', 'AUD/GBP', 'AUD/SGD') THEN 'yes' ELSE 'no' END
-UNION ALL
-SELECT
-    'interest/rate'                                                           AS relation,
-    'entity*'                                                                 AS dimension,
-    entity,
-    CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END AS declared,
-    count(*)                                                                  AS rows,
-    min(time)                                                                 AS oldest,
-    max(time)                                                                 AS newest
-FROM interest
-WHERE
-    type IN ('mean')
-GROUP BY entity, CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
     'equity/ticker' AS relation,
@@ -572,4 +550,17 @@ GROUP BY entity, CASE WHEN entity IN (
     'IAF', 'MCK', 'MUK', 'MUS', 'MVW', 'NDQ', 'QSML', 'SIG', 'URNM', 'VAE', 'VAS',
     'VDHG', 'VGE', 'VGS', 'VHY', 'WDS'
 ) THEN 'yes' ELSE 'no' END
+UNION ALL
+SELECT
+    'interest/rate'                                                           AS relation,
+    'entity*'                                                                 AS dimension,
+    entity,
+    CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                                                                  AS rows,
+    min(time)                                                                 AS oldest,
+    max(time)                                                                 AS newest
+FROM interest
+WHERE
+    type IN ('mean')
+GROUP BY entity, CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END
 ORDER BY rows DESC;

@@ -1,5 +1,11 @@
-from asystem.schema import (NO, NULL, RUNNER, SUBJECT, YES, banner, literals, script, select,
-                            vocabulary)
+from asystem.schema import (BUCKET, NULL, RUNNER, aggregations, banner, bucketed,
+                            declared_entity,
+                            declared_measure, describe_runner, dimension_label, grouping_keys, labels,
+                            literals, parted, query_runner, recent, render_statements, select,
+                            verify_runner, vocabulary)
+
+DIALECT = "influxdb3"
+TARGET = "INFLUXDB3_SERVICE_PROD"
 
 
 PLACEHOLDERS = {
@@ -26,6 +32,30 @@ query() {
 """ + RUNNER
 
 
+def artifacts(document, module_name, time_column="timestamp", retention=None):
+    if time_column != "timestamp" or retention is not None:
+        raise ValueError("Build generate script [{}] time_column and retention are postgres only, "
+                         "the influxdb3 dialect must never be wired to them".format(module_name))
+    _validate(document, module_name)
+    written = {}
+    for relation in document.relations:
+        if relation.persisted:
+            written["model/{}.lp".format(relation.scope)] = (leaf(relation), False)
+    for measurement in measurements(document):
+        written["query/query_{}.sql".format(measurement)] = (
+            queries(document, measured(document, measurement)), False)
+    written["query/describe.sql"] = (describe(document), False)
+    written["query/verify.sql"] = (verify(document), False)
+    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, CONNECT), True)
+    written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, CONNECT), True)
+    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, CONNECT), True)
+    return written
+
+
+def ship(document, module_name, module_root, schemas_dir, time_column="timestamp"):
+    return None
+
+
 def leaf(relation):
     tags = ["{}=<{}>".format(dimension.key, dimension.key) for dimension in relation.dimensions]
     fields = ["{}={}".format(measure.key, PLACEHOLDERS[measure.kind]) for measure in relation.persisted]
@@ -39,13 +69,12 @@ def leaf(relation):
     return "\n".join(lines) + "\n"
 
 
-def where(relation, document, window=None):
+def where(relation, document, source=None, window=BUCKET):
     declared = {dimension.key for dimension in relation.dimensions}
-    siblings = {dimension.key for sibling in measured(document, relation.plugin)
-                for dimension in sibling.dimensions}
+    siblings = {dimension.key for sibling in measured(document, relation.plugin) for dimension in sibling.dimensions}
     predicates = ["{} IS NOT NULL".format(key) for key in sorted(declared)]
     predicates += ["{} IS NULL".format(key) for key in sorted(siblings - declared)]
-    return predicates + (["time > now() - INTERVAL '{}'".format(window)] if window else [])
+    return predicates + (recent(source, window) if source else [])
 
 
 def measured(document, measurement):
@@ -58,7 +87,7 @@ def measurements(document):
 
 def describe(document):
     relations = [relation for relation in document.relations if relation.persisted]
-    return _statements([
+    return render_statements([
         "-- dimensions", _describe_relations(relations, document),
         "-- measures", _describe_measures(document),
         "-- entities", _describe_entities(relations, document)])
@@ -71,52 +100,85 @@ def queries(document, relations):
             statements.append("-- {} [{}] declares no persisted measure, so nothing is written for it"
                               .format(relation.path, relation.description))
             continue
-        statements.append("-- {} [{}] every {}".format(relation.path, relation.description, relation.cadence))
-        statements += _absent(relation)
-        selectors = [("date_bin(INTERVAL '1 hour', time)", "bucket")]
-        selectors += [(dimension.key, "") for dimension in relation.dimensions]
+        bucket = bucketed(relation.cadence)
+        heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(
+            relation.path, relation.description, relation.cadence, bucket)
+        measured_selectors = []
         for measure in relation.measures:
             if not measure.persist or measure.kind == "str":
                 continue
-            if measure.kind == "bool":
-                selectors.append(("avg({})".format(measure.key), measure.key + "_fraction"))
-            elif measure.kind == "int":
-                selectors.append(("last_value({} ORDER BY time)".format(measure.key), measure.key))
-            else:
-                selectors += [("{}({})".format(function, measure.key), "{}_{}".format(measure.key, suffix))
-                              for function, suffix in (("avg", "avg"), ("min", "min"), ("max", "max"))]
-        if len(selectors) == 1 + len(relation.dimensions):
+            for function, suffix in aggregations(measure, relation.cadence):
+                measured_selectors.append((_aggregate(function, measure.key),
+                                           "_".join(part for part in (measure.key, suffix) if part)))
+        if not measured_selectors:
             continue
-        grouping = ["bucket"] + [dimension.key for dimension in relation.dimensions]
-        statements.append(select(selectors, relation.plugin, where(relation, document, "7 days"),
-                                 group_by=grouping, order_by=grouping))
-    return _statements(statements)
+        keys = [dimension.key for dimension in relation.dimensions]
+        label = labels(["bucket"] + keys + [alias for _, alias in measured_selectors], ["time"])
+        parts = parted(measured_selectors, len(keys) + 1, {alias: label[alias].strip('"') for _, alias in measured_selectors})
+        for index, part in enumerate(parts):
+            statements.append(heading)
+            statements.append("-- part {} of {}:".format(index + 1, len(parts)))
+            selectors = [("date_bin(INTERVAL '{}', time)".format(bucket), label["bucket"])]
+            selectors += [(key, label[key]) for key in keys]
+            selectors += [(expression, label[alias]) for expression, alias in part]
+            grouping = [label["bucket"]] + keys
+            statements.append(select(selectors, relation.plugin, where(relation, document, relation.plugin, bucket),
+                                     group_by=grouping, order_by=grouping))
+    return render_statements(statements)
 
 
 def verify(document):
-    statements = ["-- every column in every measurement is declared, rows come back only on drift"]
+    statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
     for measurement in measurements(document):
         columns = {"time"}
+        arms = []
         for relation in measured(document, measurement):
             columns.update(dimension.key for dimension in relation.dimensions)
-            columns.update(measure.key for measure in relation.persisted)
-        statements.append(select([("'{}'".format(measurement), "measurement"), ("column_name", "")],
-                                 "information_schema.columns",
-                                 ["table_name = '{}'".format(measurement),
-                                  literals("column_name", sorted(columns))],
-                                 order_by=["column_name"]))
-    return _statements(statements)
+            for measure in relation.persisted:
+                columns.add(measure.key)
+                arms.append(select(
+                    [("'{}'".format(relation.path), "relation"), ("'{}'".format(measure.key), "measure"),
+                     ("'{}'".format(measure.period or relation.cadence or NULL), "period"),
+                     ("'{}'".format(measure.unit or NULL), "unit"), ("'missing'", "fault")],
+                    "information_schema.columns", ["table_name = '{}'".format(measurement)],
+                    having=["count(*) FILTER (WHERE column_name = '{}') = 0".format(measure.key)]))
+        arms.append(select(
+            [("'{}'".format(measurement), "relation"), ("column_name", "measure"),
+             ("'{}'".format(NULL), "period"), ("'{}'".format(NULL), "unit"), ("'undeclared'", "fault")],
+            "information_schema.columns",
+            ["table_name = '{}'".format(measurement), literals("column_name", sorted(columns))]))
+        statements.append("\nUNION ALL\n".join(arms) + "\nORDER BY fault, measure")
+    return render_statements(statements)
+
+
+def _validate(document, module_name):
+    scopes = {}
+    for relation in document.relations:
+        if not relation.persisted:
+            continue
+        if relation.scope in scopes:
+            raise ValueError(
+                "Build generate script [{}] relations [{}] and [{}] share the scope [{}] so both would write "
+                "the same leaf, rename one scope".format(module_name, scopes[relation.scope], relation.path,
+                                                         relation.scope))
+        scopes[relation.scope] = relation.path
+    for measurement in measurements(document):
+        dimensions = {}
+        for relation in measured(document, measurement):
+            keyed = tuple(sorted(dimension.key for dimension in relation.dimensions))
+            if keyed in dimensions:
+                raise ValueError(
+                    "Build generate script [{}] relations [{}] and [{}] share the measurement [{}] and declare the "
+                    "same dimensions {} so neither can be told apart, give one a distinguishing dimension or fold "
+                    "them together".format(module_name, dimensions[keyed], relation.path, measurement, list(keyed)))
+            dimensions[keyed] = relation.path
 
 
 def _describe_relations(relations, document):
     return "\nUNION ALL\n".join(
-        select([("'{}'".format(relation.path), "relation"), ("'{}'".format(_dimension(relation)), "dimension"),
-                ("'{}'".format(relation.cadence), "cadence"),
+        select([("'{}'".format(relation.path), "relation"), ("'{}'".format(dimension_label(relation)), "dimension"),
                 ("{}".format(len(relation.measures)), "measures"),
-                ("{}".format(len(relation.persisted)), "persisted"),
-                ("'{}'".format(_declared_entities(relation)), "declared"),
-                ("count(DISTINCT {})".format(relation.subject.key) if relation.subject
-                 else "'{}'".format(NULL), "observed"),
+                ("'{}'".format(relation.cadence), "cadence"),
                 ("count(*)", "rows"), ("min(time)", "oldest"), ("max(time)", "newest")],
                relation.plugin, where(relation, document))
         for relation in relations) + "\nORDER BY rows DESC"
@@ -133,7 +195,7 @@ def _describe_measures(document):
                 columns.add(measure.key)
                 if measure.key not in persisted:
                     continue
-                declared = _declared_measure(relation, measure, measure.unit or NULL, measure.period or NULL)
+                declared = declared_measure(relation, measure, measure.unit or NULL, measure.period or NULL)
                 arms.append(select(declared + [
                     ("count({})".format(measure.key), "rows"),
                     ("CAST(min(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(measure.key), "oldest"),
@@ -149,11 +211,6 @@ def _describe_measures(document):
     return "\nUNION ALL\n".join(arms) + "\nORDER BY rows DESC NULLS LAST"
 
 
-def _declared_measure(relation, measure, unit, period):
-    return [("'{}'".format(relation.path), "relation"), ("'{}'".format(measure.key), "measure"),
-            ("'{}'".format(measure.kind), "kind"), ("'{}'".format(unit), "unit"),
-            ("'{}'".format(period), "period")]
-
 
 def _describe_entities(relations, document):
     arms = [relation for relation in relations if relation.dimensions]
@@ -161,21 +218,14 @@ def _describe_entities(relations, document):
         return ""
     return "\nUNION ALL\n".join(
         select([("'{}'".format(relation.path), "relation"),
-                ("'{}'".format(_dimension(relation)), "dimension"), (_entity(relation), "entity"),
-                (_declared(relation), "declared"), ("count(*)", "rows"),
+                ("'{}'".format(dimension_label(relation)), "dimension"), (_entity(relation), "entity"),
+                (declared_entity(relation), "declared"), ("count(*)", "rows"),
                 ("min(time)", "oldest"), ("max(time)", "newest")],
                relation.plugin, where(relation, document),
-               group_by=_grouping(_entity(relation), _declared(relation)))
+               group_by=grouping_keys(_entity(relation), declared_entity(relation)))
         for relation in arms) + "\nORDER BY rows DESC"
 
 
-def _declared_entities(relation):
-    return len(relation.entities) if relation.subject else NULL
-
-
-def _dimension(relation):
-    return "/".join(dimension.key + (SUBJECT if dimension.subject else "")
-                    for dimension in relation.dimensions) or NULL
 
 
 def _entity(relation):
@@ -183,84 +233,15 @@ def _entity(relation):
     return keys[0] if len(keys) == 1 else "concat({})".format(", '/', ".join(keys))
 
 
-def _grouping(entity, declared):
-    return [entity] + ([declared] if declared.startswith("CASE") else [])
 
 
-def _declared(relation):
-    if relation.subject is None:
-        return "'{}'".format(NULL)
-    return "CASE WHEN {} THEN '{}' ELSE '{}' END".format(
-        literals(relation.subject.key, relation.entities, negate=False), YES, NO)
+def _aggregate(function, column):
+    if function == "last":
+        return _rounded("last_value({} ORDER BY time)".format(column))
+    return _rounded("{}({})".format(function, column))
 
 
-def _absent(relation):
-    absent = [(measure.key, measure.kind, "not persisted" if not measure.persist else "carried as a tag")
-              for measure in relation.measures
-              if not measure.persist or measure.kind == "str"]
-    if not absent:
-        return []
-    key_width = max(len(key) for key, _, _ in absent)
-    kind_width = max(len(kind) for _, kind, _ in absent)
-    return ["-- {} {} is declared but {}, so it is absent by design".format(
-        key.ljust(key_width), "[{}]".format(kind).ljust(kind_width + 2), reason)
-        for key, kind, reason in absent]
+def _rounded(expression):
+    return "round({}, 1)".format(expression)
 
 
-def describe_script(module_name, dialect):
-    return script(module_name, dialect, "describe", "print what production actually carries", CONNECT, """
-printf '\\n'
-SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${{INFLUXDB3_SERVICE_PROD}}" \\
-  query_file "${{ROOT_DIR}}/query/describe.sql"
-""".format(module_name))
-
-
-def query_script(module_name, dialect):
-    return script(module_name, dialect, "query", "run the generated query for every declared relation", CONNECT, """
-printf '\\nSchema query [%s] against [%s]\\n\\n' "{}" "${{INFLUXDB3_SERVICE_PROD}}"
-FAULTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/query/query_*.sql; do
-  printf '\\n== %s ==\\n' "$(basename "${{SQL_FILE}}")"
-  query_file "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
-done
-[ "${{FAULTS}}" = 0 ]
-""".format(module_name))
-
-
-def verify_script(module_name, dialect):
-    return script(module_name, dialect, "verify", "assert production matches the declaration", CONNECT, """
-printf '\\nSchema verify [%s] against [%s]\\n\\n' "{}" "${{INFLUXDB3_SERVICE_PROD}}"
-
-FAULTS=0
-while IFS= read -r STATEMENT; do
-  [ -z "${{STATEMENT}}" ] && continue
-  if ! RESULT="$(query "${{STATEMENT}}")"; then
-    fail "${{STATEMENT}}" "${{RESULT}}"
-    exit 1
-  fi
-  ROWS="$(printf '%s' "${{RESULT}}" | jq 'length')"
-  if [ "${{ROWS}}" != "0" ]; then
-    FAULTS=$((FAULTS + ROWS))
-    printf '%s\\n' "${{RESULT}}" | table
-    printf '\\n'
-  fi
-done < <(statements "${{ROOT_DIR}}/query/verify.sql")
-
-if [ "${{FAULTS}}" != "0" ]; then
-  printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{}" "${{FAULTS}}" >&2
-  exit 1
-fi
-printf '\\nSchema verify [%s] found no drift\\n' "{}"
-""".format(module_name, module_name, module_name))
-
-
-def _statements(statements):
-    blocks, block = [], []
-    for statement in statements:
-        if block and not block[-1].startswith("--"):
-            blocks.append(block)
-            block = []
-        block.append(statement if statement.startswith("--") else statement + ";")
-    if block:
-        blocks.append(block)
-    return banner("--") + "\n\n" + "\n\n".join("\n".join(block) for block in blocks) + "\n"

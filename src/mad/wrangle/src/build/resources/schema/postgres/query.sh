@@ -60,6 +60,7 @@ query() {
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
 SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
 SCHEMA_TARGET=${SCHEMA_TARGET:-}
+SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
 statements() {
   sed -e 's/--.*$//' "$1" | tr '\n' ' ' | tr ';' '\n' |
@@ -96,6 +97,9 @@ query_block() {
   statement="$(printf '%s\n' "${block}" | sed -e 's/--.*$//' | tr '\n' ' ' |
     sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*;*[[:space:]]*$//')"
   [ -z "${statement}" ] && return 0
+  if [ -n "${SCHEMA_LABEL}" ]; then
+    printf -- '-- %s\n' "${SCHEMA_LABEL}"
+  fi
   if [ "${SCHEMA_ECHO}" = true ]; then
     printf '%s\n\n' "${block}"
   else
@@ -127,6 +131,10 @@ query_one() {
   printf '%s\n' "${result}" | table
 }
 
+rows() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
+}
+
 query_file() {
   local line block="" faults=0
   while IFS= read -r line || [ -n "${line}" ]; do
@@ -152,7 +160,6 @@ query_file() {
 printf '\nSchema query [%s] against [%s]\n\n' "wrangle" "${POSTGRES_SERVICE_PROD}"
 FAULTS=0
 for SQL_FILE in "${ROOT_DIR}"/query/query_*.sql; do
-  printf '\n== %s ==\n' "$(basename "${SQL_FILE}")"
-  query_file "${SQL_FILE}" || FAULTS=$((FAULTS + 1))
+  SCHEMA_LABEL="$(basename "${SQL_FILE}")" query_file "${SQL_FILE}" || FAULTS=$((FAULTS + 1))
 done
 [ "${FAULTS}" = 0 ]
