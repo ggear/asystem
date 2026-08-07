@@ -58,7 +58,7 @@ declared() {
 
 printf '\nSchema verify [%s] against [%s]\n\n' "networks" "${VERNEMQ_SERVICE_PROD}"
 
-COMMAND_TOPICS=("networks/command/certs" "networks/command/domain" "networks/command/ethernet" "networks/command/internet" "networks/command/weewx" "networks/command/wireless" "networks/command/zigbee")
+COMMAND_TOPICS=("networks/command/certificate" "networks/command/domain" "networks/command/ethernet" "networks/command/internet" "networks/command/weewx" "networks/command/wireless" "networks/command/zigbee")
 
 FAULTS=0
 

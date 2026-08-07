@@ -4,12 +4,12 @@
 
 # zigbee/bridge [coordinator state and the mesh it reports]
 #   cadence 15m
-#   field ok state 15m [coordinator online with its devices reachable]
-#   field score count 15m [diagnosis score from 0 to 100]
-#   field devices_total count 15m [devices paired with the coordinator]
-#   field devices_ok count 15m [devices reporting available]
-#   field devices_weak count 15m [devices with a link quality below the weak threshold]
-#   field avg_lqi count 15m [mean link quality across the devices reporting one]
+#   field ok - 15m [coordinator online with its devices reachable]
+#   field score - 15m [diagnosis score from 0 to 100]
+#   field devices_total - 15m [devices paired with the coordinator]
+#   field devices_ok - 15m [devices reporting available]
+#   field devices_weak - 15m [devices with a link quality below the weak threshold]
+#   field avg_lqi - 15m [mean link quality across the devices reporting one]
 
 zigbee
     ok=<0|1>i,

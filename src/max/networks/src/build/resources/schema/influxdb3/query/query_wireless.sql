@@ -2,7 +2,7 @@
 -- WARNING: This file is written by the build process, any manual edits will be lost!
 --------------------------------------------------------------------------------
 
--- wireless/wifi [access point health across the wireless estate] every 15m, bucketed [1 day] across the newest two buckets
+-- wireless/accesspoint [access point health across the wireless estate] every 15m, bucketed [1 day] across the newest two buckets
 -- part 1 of 1:
 SELECT
     date_bin(INTERVAL '1 day', time)              AS "Bucket",

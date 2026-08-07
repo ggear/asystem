@@ -4,69 +4,69 @@
 
 -- declared vocabulary against what the service actually wrote, rows come back only on drift
 SELECT
-    'certs/home' AS relation,
-    'ok'         AS measure,
-    '15m'        AS period,
-    'state'      AS unit,
-    'missing'    AS fault
+    'certificate/endpoint' AS relation,
+    'ok'                   AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
-    table_name = 'certs'
+    table_name = 'certificate'
 HAVING count(*) FILTER (WHERE column_name = 'ok') = 0
 UNION ALL
 SELECT
-    'certs/home' AS relation,
-    'score'      AS measure,
-    '15m'        AS period,
-    'count'      AS unit,
-    'missing'    AS fault
+    'certificate/endpoint' AS relation,
+    'score'                AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
-    table_name = 'certs'
+    table_name = 'certificate'
 HAVING count(*) FILTER (WHERE column_name = 'score') = 0
 UNION ALL
 SELECT
-    'certs/home'      AS relation,
-    'min_expiry_days' AS measure,
-    '15m'             AS period,
-    'days'            AS unit,
-    'missing'         AS fault
+    'certificate/endpoint' AS relation,
+    'min_expiry_days'      AS measure,
+    '15m'                  AS period,
+    'd'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
-    table_name = 'certs'
+    table_name = 'certificate'
 HAVING count(*) FILTER (WHERE column_name = 'min_expiry_days') = 0
 UNION ALL
 SELECT
-    'certs/home'      AS relation,
-    'endpoints_total' AS measure,
-    '15m'             AS period,
-    'count'           AS unit,
-    'missing'         AS fault
+    'certificate/endpoint' AS relation,
+    'endpoints_total'      AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
-    table_name = 'certs'
+    table_name = 'certificate'
 HAVING count(*) FILTER (WHERE column_name = 'endpoints_total') = 0
 UNION ALL
 SELECT
-    'certs/home'       AS relation,
-    'endpoints_failed' AS measure,
-    '15m'              AS period,
-    'count'            AS unit,
-    'missing'          AS fault
+    'certificate/endpoint' AS relation,
+    'endpoints_failed'     AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
-    table_name = 'certs'
+    table_name = 'certificate'
 HAVING count(*) FILTER (WHERE column_name = 'endpoints_failed') = 0
 UNION ALL
 SELECT
-    'certs'      AS relation,
-    column_name  AS measure,
-    '-'          AS period,
-    '-'          AS unit,
-    'undeclared' AS fault
+    'certificate' AS relation,
+    column_name   AS measure,
+    '-'           AS period,
+    '-'           AS unit,
+    'undeclared'  AS fault
 FROM information_schema.columns
 WHERE
-    table_name = 'certs'
+    table_name = 'certificate'
     AND column_name NOT IN ('endpoints_failed', 'endpoints_total', 'min_expiry_days', 'ok', 'score', 'time')
 ORDER BY fault, measure;
 
@@ -74,7 +74,7 @@ SELECT
     'domain/resolver' AS relation,
     'ok'              AS measure,
     '15m'             AS period,
-    'state'           AS unit,
+    '-'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -85,7 +85,7 @@ SELECT
     'domain/resolver' AS relation,
     'score'           AS measure,
     '15m'             AS period,
-    'count'           AS unit,
+    '-'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -96,7 +96,7 @@ SELECT
     'domain/resolver' AS relation,
     'resolvers_total' AS measure,
     '15m'             AS period,
-    'count'           AS unit,
+    '-'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -107,7 +107,7 @@ SELECT
     'domain/resolver' AS relation,
     'resolvers_ok'    AS measure,
     '15m'             AS period,
-    'count'           AS unit,
+    '-'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -118,7 +118,7 @@ SELECT
     'domain/resolver'  AS relation,
     'resolvers_failed' AS measure,
     '15m'              AS period,
-    'count'            AS unit,
+    '-'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -138,54 +138,54 @@ WHERE
 ORDER BY fault, measure;
 
 SELECT
-    'ethernet/ports' AS relation,
-    'score'          AS measure,
-    '15m'            AS period,
-    'count'          AS unit,
-    'missing'        AS fault
+    'ethernet/port' AS relation,
+    'score'         AS measure,
+    '15m'           AS period,
+    '-'             AS unit,
+    'missing'       AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
 HAVING count(*) FILTER (WHERE column_name = 'score') = 0
 UNION ALL
 SELECT
-    'ethernet/ports' AS relation,
-    'ok'             AS measure,
-    '15m'            AS period,
-    'state'          AS unit,
-    'missing'        AS fault
+    'ethernet/port' AS relation,
+    'ok'            AS measure,
+    '15m'           AS period,
+    '-'             AS unit,
+    'missing'       AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
 HAVING count(*) FILTER (WHERE column_name = 'ok') = 0
 UNION ALL
 SELECT
-    'ethernet/ports' AS relation,
-    'ports_total'    AS measure,
-    '15m'            AS period,
-    'count'          AS unit,
-    'missing'        AS fault
+    'ethernet/port' AS relation,
+    'ports_total'   AS measure,
+    '15m'           AS period,
+    '-'             AS unit,
+    'missing'       AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
 HAVING count(*) FILTER (WHERE column_name = 'ports_total') = 0
 UNION ALL
 SELECT
-    'ethernet/ports' AS relation,
-    'ports_ok'       AS measure,
-    '15m'            AS period,
-    'count'          AS unit,
-    'missing'        AS fault
+    'ethernet/port' AS relation,
+    'ports_ok'      AS measure,
+    '15m'           AS period,
+    '-'             AS unit,
+    'missing'       AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
 HAVING count(*) FILTER (WHERE column_name = 'ports_ok') = 0
 UNION ALL
 SELECT
-    'ethernet/ports' AS relation,
+    'ethernet/port'  AS relation,
     'ports_degraded' AS measure,
     '15m'            AS period,
-    'count'          AS unit,
+    '-'              AS unit,
     'missing'        AS fault
 FROM information_schema.columns
 WHERE
@@ -193,11 +193,11 @@ WHERE
 HAVING count(*) FILTER (WHERE column_name = 'ports_degraded') = 0
 UNION ALL
 SELECT
-    'ethernet/ports' AS relation,
-    'ports_errored'  AS measure,
-    '15m'            AS period,
-    'count'          AS unit,
-    'missing'        AS fault
+    'ethernet/port' AS relation,
+    'ports_errored' AS measure,
+    '15m'           AS period,
+    '-'             AS unit,
+    'missing'       AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
@@ -219,7 +219,7 @@ SELECT
     'internet/gateway' AS relation,
     'ok'               AS measure,
     '15m'              AS period,
-    'state'            AS unit,
+    '-'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -230,7 +230,7 @@ SELECT
     'internet/gateway' AS relation,
     'score'            AS measure,
     '15m'              AS period,
-    'count'            AS unit,
+    '-'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -241,7 +241,7 @@ SELECT
     'internet/gateway' AS relation,
     'targets_total'    AS measure,
     '15m'              AS period,
-    'count'            AS unit,
+    '-'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -252,7 +252,7 @@ SELECT
     'internet/gateway' AS relation,
     'targets_ok'       AS measure,
     '15m'              AS period,
-    'count'            AS unit,
+    '-'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -263,7 +263,7 @@ SELECT
     'internet/gateway' AS relation,
     'avg_loss_pct'     AS measure,
     '15m'              AS period,
-    'percent'          AS unit,
+    '%'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -274,7 +274,7 @@ SELECT
     'internet/gateway' AS relation,
     'avg_rtt_ms'       AS measure,
     '15m'              AS period,
-    'milliseconds'     AS unit,
+    'ms'               AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -285,7 +285,7 @@ SELECT
     'internet/gateway' AS relation,
     'avg_jitter_ms'    AS measure,
     '15m'              AS period,
-    'milliseconds'     AS unit,
+    'ms'               AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -296,7 +296,7 @@ SELECT
     'internet/gateway' AS relation,
     'gateway_ok'       AS measure,
     '15m'              AS period,
-    'state'            AS unit,
+    '-'                AS unit,
     'missing'          AS fault
 FROM information_schema.columns
 WHERE
@@ -322,7 +322,7 @@ SELECT
     'weewx/console' AS relation,
     'ok'            AS measure,
     '15m'           AS period,
-    'state'         AS unit,
+    '-'             AS unit,
     'missing'       AS fault
 FROM information_schema.columns
 WHERE
@@ -333,7 +333,7 @@ SELECT
     'weewx/console' AS relation,
     'score'         AS measure,
     '15m'           AS period,
-    'count'         AS unit,
+    '-'             AS unit,
     'missing'       AS fault
 FROM information_schema.columns
 WHERE
@@ -353,55 +353,55 @@ WHERE
 ORDER BY fault, measure;
 
 SELECT
-    'wireless/wifi' AS relation,
-    'ok'            AS measure,
-    '15m'           AS period,
-    'state'         AS unit,
-    'missing'       AS fault
+    'wireless/accesspoint' AS relation,
+    'ok'                   AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
 HAVING count(*) FILTER (WHERE column_name = 'ok') = 0
 UNION ALL
 SELECT
-    'wireless/wifi' AS relation,
-    'score'         AS measure,
-    '15m'           AS period,
-    'count'         AS unit,
-    'missing'       AS fault
+    'wireless/accesspoint' AS relation,
+    'score'                AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
 HAVING count(*) FILTER (WHERE column_name = 'score') = 0
 UNION ALL
 SELECT
-    'wireless/wifi' AS relation,
-    'aps_total'     AS measure,
-    '15m'           AS period,
-    'count'         AS unit,
-    'missing'       AS fault
+    'wireless/accesspoint' AS relation,
+    'aps_total'            AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
 HAVING count(*) FILTER (WHERE column_name = 'aps_total') = 0
 UNION ALL
 SELECT
-    'wireless/wifi' AS relation,
-    'aps_ok'        AS measure,
-    '15m'           AS period,
-    'count'         AS unit,
-    'missing'       AS fault
+    'wireless/accesspoint' AS relation,
+    'aps_ok'               AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
 HAVING count(*) FILTER (WHERE column_name = 'aps_ok') = 0
 UNION ALL
 SELECT
-    'wireless/wifi'      AS relation,
-    'avg_experience_pct' AS measure,
-    '15m'                AS period,
-    'percent'            AS unit,
-    'missing'            AS fault
+    'wireless/accesspoint' AS relation,
+    'avg_experience_pct'   AS measure,
+    '15m'                  AS period,
+    '%'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
@@ -423,7 +423,7 @@ SELECT
     'zigbee/bridge' AS relation,
     'ok'            AS measure,
     '15m'           AS period,
-    'state'         AS unit,
+    '-'             AS unit,
     'missing'       AS fault
 FROM information_schema.columns
 WHERE
@@ -434,7 +434,7 @@ SELECT
     'zigbee/bridge' AS relation,
     'score'         AS measure,
     '15m'           AS period,
-    'count'         AS unit,
+    '-'             AS unit,
     'missing'       AS fault
 FROM information_schema.columns
 WHERE
@@ -445,7 +445,7 @@ SELECT
     'zigbee/bridge' AS relation,
     'devices_total' AS measure,
     '15m'           AS period,
-    'count'         AS unit,
+    '-'             AS unit,
     'missing'       AS fault
 FROM information_schema.columns
 WHERE
@@ -456,7 +456,7 @@ SELECT
     'zigbee/bridge' AS relation,
     'devices_ok'    AS measure,
     '15m'           AS period,
-    'count'         AS unit,
+    '-'             AS unit,
     'missing'       AS fault
 FROM information_schema.columns
 WHERE
@@ -467,7 +467,7 @@ SELECT
     'zigbee/bridge' AS relation,
     'devices_weak'  AS measure,
     '15m'           AS period,
-    'count'         AS unit,
+    '-'             AS unit,
     'missing'       AS fault
 FROM information_schema.columns
 WHERE
@@ -478,7 +478,7 @@ SELECT
     'zigbee/bridge' AS relation,
     'avg_lqi'       AS measure,
     '15m'           AS period,
-    'count'         AS unit,
+    '-'             AS unit,
     'missing'       AS fault
 FROM information_schema.columns
 WHERE

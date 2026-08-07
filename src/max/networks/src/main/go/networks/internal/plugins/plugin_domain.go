@@ -33,12 +33,12 @@ var domainResolvers = []resolver{
 }
 
 var (
-	domainRelation       = schema.Declare("domain/resolver", "public DNS resolution of the monitored domain across the public resolvers", aggregateCadence)
-	domainOK             = domainRelation.Bool("ok", "every resolver resolved and agreed on the same address set")
-	domainScore          = domainRelation.Int("score", "count", "diagnosis score from 0 to 100")
-	domainResolversTotal = domainRelation.Int("resolvers_total", "count", "resolvers queried")
-	domainResolversOK    = domainRelation.Int("resolvers_ok", "count", "resolvers agreeing with the consensus address set")
-	domainResolversFail  = domainRelation.Int("resolvers_failed", "count", "resolvers that failed to resolve")
+	domainResolver       = schema.Declare("domain/resolver", "public DNS resolution of the monitored domain across the public resolvers", aggregateCadence)
+	domainOK             = domainResolver.Bool("ok", "every resolver resolved and agreed on the same address set")
+	domainScore          = domainResolver.Int("score", "", "diagnosis score from 0 to 100")
+	domainResolversTotal = domainResolver.Int("resolvers_total", "", "resolvers queried")
+	domainResolversOK    = domainResolver.Int("resolvers_ok", "", "resolvers agreeing with the consensus address set")
+	domainResolversFail  = domainResolver.Int("resolvers_failed", "", "resolvers that failed to resolve")
 )
 
 type domainReading struct {
@@ -160,7 +160,7 @@ func diagnoseDomain(samples []plugin.Sample) plugin.Aggregate {
 }
 
 func reportDomain(stats domainStats) []schema.Point {
-	return []schema.Point{domainRelation.Point(
+	return []schema.Point{domainResolver.Point(
 		domainOK.Of(stats.ok),
 		domainScore.Of(int64(stats.score)),
 		domainResolversTotal.Of(int64(stats.resolvers)),

@@ -43,15 +43,15 @@ var publicTargets = []target{
 }
 
 var (
-	internetRelation     = schema.Declare("internet/gateway", "internet reachability through the local gateway and the public ping targets", aggregateCadence)
-	internetOK           = internetRelation.Bool("ok", "gateway up and the public targets reachable within normal range")
-	internetScore        = internetRelation.Int("score", "count", "diagnosis score from 0 to 100")
-	internetTargetsTotal = internetRelation.Int("targets_total", "count", "public targets pinged")
-	internetTargetsOK    = internetRelation.Int("targets_ok", "count", "public targets answering across the window")
-	internetAvgLoss      = internetRelation.Float("avg_loss_pct", "percent", "mean packet loss across the public targets")
-	internetAvgRTT       = internetRelation.Float("avg_rtt_ms", "milliseconds", "mean round trip time across the public targets")
-	internetAvgJitter    = internetRelation.Float("avg_jitter_ms", "milliseconds", "mean jitter across the public targets")
-	internetGatewayOK    = internetRelation.Bool("gateway_ok", "the local gateway answered at least one ping in the window")
+	internetGateway      = schema.Declare("internet/gateway", "internet reachability through the local gateway and the public ping targets", aggregateCadence)
+	internetOK           = internetGateway.Bool("ok", "gateway up and the public targets reachable within normal range")
+	internetScore        = internetGateway.Int("score", "", "diagnosis score from 0 to 100")
+	internetTargetsTotal = internetGateway.Int("targets_total", "", "public targets pinged")
+	internetTargetsOK    = internetGateway.Int("targets_ok", "", "public targets answering across the window")
+	internetAvgLoss      = internetGateway.Float("avg_loss_pct", "%", "mean packet loss across the public targets")
+	internetAvgRTT       = internetGateway.Float("avg_rtt_ms", "ms", "mean round trip time across the public targets")
+	internetAvgJitter    = internetGateway.Float("avg_jitter_ms", "ms", "mean jitter across the public targets")
+	internetGatewayOK    = internetGateway.Bool("gateway_ok", "the local gateway answered at least one ping in the window")
 )
 
 type internetReading struct {
@@ -320,7 +320,7 @@ func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 }
 
 func reportInternet(stats internetStats) []schema.Point {
-	return []schema.Point{internetRelation.Point(
+	return []schema.Point{internetGateway.Point(
 		internetOK.Of(stats.ok),
 		internetScore.Of(int64(stats.score)),
 		internetTargetsTotal.Of(int64(stats.targetsTotal)),

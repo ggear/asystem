@@ -10,18 +10,18 @@ import (
 	"networks/internal/plugin"
 )
 
-func TestCerts_Poll(t *testing.T) {
+func TestCertificate_Poll(t *testing.T) {
 	now := time.Now()
-	p := &certsPlugin{probe: func(context.Context, string) (certsResult, error) {
-		return certsResult{notBefore: now.Add(-30 * 24 * time.Hour), notAfter: now.Add(60 * 24 * time.Hour)}, nil
+	p := &certificatePlugin{probe: func(context.Context, string) (certificateResult, error) {
+		return certificateResult{notBefore: now.Add(-30 * 24 * time.Hour), notAfter: now.Add(60 * 24 * time.Hour)}, nil
 	}}
 	msg, err := p.Poll(context.Background())
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	readings, _ := msg.Readings.([]certsReading)
-	if len(readings) != len(certsEndpoints) {
-		t.Fatalf("readings: got %d want %d (one per endpoint)", len(readings), len(certsEndpoints))
+	readings, _ := msg.Readings.([]certificateReading)
+	if len(readings) != len(certificateEndpoints) {
+		t.Fatalf("readings: got %d want %d (one per endpoint)", len(readings), len(certificateEndpoints))
 	}
 	reading := readings[0]
 	if !reading.verified {
@@ -35,17 +35,17 @@ func TestCerts_Poll(t *testing.T) {
 	}
 }
 
-func TestCerts_PollUnverified(t *testing.T) {
-	p := &certsPlugin{probe: func(context.Context, string) (certsResult, error) {
-		return certsResult{}, errors.New("probe timeout")
+func TestCertificate_PollUnverified(t *testing.T) {
+	p := &certificatePlugin{probe: func(context.Context, string) (certificateResult, error) {
+		return certificateResult{}, errors.New("probe timeout")
 	}}
 	msg, err := p.Poll(context.Background())
 	if err != nil {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
-	readings, _ := msg.Readings.([]certsReading)
-	if len(readings) != len(certsEndpoints) {
-		t.Fatalf("readings: got %d want %d", len(readings), len(certsEndpoints))
+	readings, _ := msg.Readings.([]certificateReading)
+	if len(readings) != len(certificateEndpoints) {
+		t.Fatalf("readings: got %d want %d", len(readings), len(certificateEndpoints))
 	}
 	if readings[0].verified {
 		t.Errorf("verified: got true want false on probe failure")
@@ -55,7 +55,7 @@ func TestCerts_PollUnverified(t *testing.T) {
 	}
 }
 
-func TestCerts_Diagnose(t *testing.T) {
+func TestCertificate_Diagnose(t *testing.T) {
 	tests := []struct {
 		name           string
 		samples        []plugin.Sample
@@ -67,7 +67,7 @@ func TestCerts_Diagnose(t *testing.T) {
 	}{
 		{
 			name:           "fit_valid",
-			samples:        []plugin.Sample{certsPoll(endpointSample{"a:443", true, 90, 60})},
+			samples:        []plugin.Sample{certificatePoll(endpointSample{"a:443", true, 90, 60})},
 			expectedStatus: plugin.StatusFit,
 			expectedOK:     true,
 			expectedScore:  60,
@@ -76,7 +76,7 @@ func TestCerts_Diagnose(t *testing.T) {
 		},
 		{
 			name:           "sick_expiring_soon",
-			samples:        []plugin.Sample{certsPoll(endpointSample{"a:443", true, 10, 5})},
+			samples:        []plugin.Sample{certificatePoll(endpointSample{"a:443", true, 10, 5})},
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  5,
@@ -85,7 +85,7 @@ func TestCerts_Diagnose(t *testing.T) {
 		},
 		{
 			name:           "sick_verify_failed",
-			samples:        []plugin.Sample{certsPoll(endpointSample{"a:443", true, 90, 60}, endpointSample{addr: "b:443", verified: false})},
+			samples:        []plugin.Sample{certificatePoll(endpointSample{"a:443", true, 90, 60}, endpointSample{addr: "b:443", verified: false})},
 			expectedStatus: plugin.StatusSick,
 			expectedOK:     true,
 			expectedScore:  60,
@@ -94,7 +94,7 @@ func TestCerts_Diagnose(t *testing.T) {
 		},
 		{
 			name:           "dead_unreachable",
-			samples:        []plugin.Sample{certsPoll(endpointSample{addr: "a:443", verified: false})},
+			samples:        []plugin.Sample{certificatePoll(endpointSample{addr: "a:443", verified: false})},
 			expectedStatus: plugin.StatusDead,
 			expectedOK:     false,
 			expectedScore:  0,
@@ -104,7 +104,7 @@ func TestCerts_Diagnose(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := newCertsPlugin().Aggregate(test.samples)
+			got, err := newCertificatePlugin().Aggregate(test.samples)
 			if (err != nil) != test.expectedError {
 				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
 			}
@@ -131,11 +131,11 @@ type endpointSample struct {
 	pct      float64
 }
 
-func certsPoll(samples ...endpointSample) plugin.Sample {
-	readings := make([]certsReading, 0, len(samples))
+func certificatePoll(samples ...endpointSample) plugin.Sample {
+	readings := make([]certificateReading, 0, len(samples))
 	for _, s := range samples {
-		readings = append(readings, certsReading{
+		readings = append(readings, certificateReading{
 			endpoint: s.addr, days: s.days, validity: s.pct, verified: s.verified})
 	}
-	return plugin.Sample{Plugin: "certs", Readings: readings}
+	return plugin.Sample{Plugin: "certificate", Readings: readings}
 }

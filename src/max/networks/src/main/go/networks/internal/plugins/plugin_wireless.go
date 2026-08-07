@@ -18,12 +18,12 @@ const (
 )
 
 var (
-	wirelessWifi          = schema.Declare("wireless/wifi", "access point health across the wireless estate", aggregateCadence)
-	wirelessOK            = wirelessWifi.Bool("ok", "every access point up with good client experience")
-	wirelessScore         = wirelessWifi.Int("score", "count", "diagnosis score from 0 to 100")
-	wirelessApsTotal      = wirelessWifi.Int("aps_total", "count", "access points known to the controller")
-	wirelessApsOK         = wirelessWifi.Int("aps_ok", "count", "access points reporting up")
-	wirelessAvgExperience = wirelessWifi.Float("avg_experience_pct", "percent", "mean client experience across the access points that are up")
+	wirelessAccessPoint   = schema.Declare("wireless/accesspoint", "access point health across the wireless estate", aggregateCadence)
+	wirelessOK            = wirelessAccessPoint.Bool("ok", "every access point up with good client experience")
+	wirelessScore         = wirelessAccessPoint.Int("score", "", "diagnosis score from 0 to 100")
+	wirelessApsTotal      = wirelessAccessPoint.Int("aps_total", "", "access points known to the controller")
+	wirelessApsOK         = wirelessAccessPoint.Int("aps_ok", "", "access points reporting up")
+	wirelessAvgExperience = wirelessAccessPoint.Float("avg_experience_pct", "%", "mean client experience across the access points that are up")
 )
 
 type wirelessReading struct {
@@ -136,7 +136,7 @@ func diagnoseWireless(samples []plugin.Sample) plugin.Aggregate {
 }
 
 func reportWireless(stats wirelessStats) []schema.Point {
-	return []schema.Point{wirelessWifi.Point(
+	return []schema.Point{wirelessAccessPoint.Point(
 		wirelessOK.Of(stats.ok),
 		wirelessScore.Of(int64(stats.score)),
 		wirelessApsTotal.Of(int64(stats.total)),

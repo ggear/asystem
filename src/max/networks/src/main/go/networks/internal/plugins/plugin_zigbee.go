@@ -29,11 +29,11 @@ const (
 var (
 	zigbeeBridge       = schema.Declare("zigbee/bridge", "coordinator state and the mesh it reports", aggregateCadence)
 	zigbeeOK           = zigbeeBridge.Bool("ok", "coordinator online with its devices reachable")
-	zigbeeScore        = zigbeeBridge.Int("score", "count", "diagnosis score from 0 to 100")
-	zigbeeDevicesTotal = zigbeeBridge.Int("devices_total", "count", "devices paired with the coordinator")
-	zigbeeDevicesOK    = zigbeeBridge.Int("devices_ok", "count", "devices reporting available")
-	zigbeeDevicesWeak  = zigbeeBridge.Int("devices_weak", "count", "devices with a link quality below the weak threshold")
-	zigbeeAvgLQI       = zigbeeBridge.Float("avg_lqi", "count", "mean link quality across the devices reporting one")
+	zigbeeScore        = zigbeeBridge.Int("score", "", "diagnosis score from 0 to 100")
+	zigbeeDevicesTotal = zigbeeBridge.Int("devices_total", "", "devices paired with the coordinator")
+	zigbeeDevicesOK    = zigbeeBridge.Int("devices_ok", "", "devices reporting available")
+	zigbeeDevicesWeak  = zigbeeBridge.Int("devices_weak", "", "devices with a link quality below the weak threshold")
+	zigbeeAvgLQI       = zigbeeBridge.Float("avg_lqi", "", "mean link quality across the devices reporting one")
 )
 
 type zigbeeSample struct {

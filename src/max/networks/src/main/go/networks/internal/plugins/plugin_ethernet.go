@@ -19,13 +19,13 @@ const (
 )
 
 var (
-	ethernetPorts         = schema.Declare("ethernet/ports", "switch port health across the monitored ports", aggregateCadence)
-	ethernetScore         = ethernetPorts.Int("score", "count", "diagnosis score from 0 to 100")
-	ethernetOK            = ethernetPorts.Bool("ok", "every monitored port up at expected speed with no link errors")
-	ethernetPortsTotal    = ethernetPorts.Int("ports_total", "count", "monitored ports")
-	ethernetPortsOK       = ethernetPorts.Int("ports_ok", "count", "monitored ports with a live link")
-	ethernetPortsDegraded = ethernetPorts.Int("ports_degraded", "count", "ports below expected speed or in half duplex")
-	ethernetPortsErrored  = ethernetPorts.Int("ports_errored", "count", "ports reporting link errors this interval")
+	ethernetPort          = schema.Declare("ethernet/port", "switch port health across the monitored ports", aggregateCadence)
+	ethernetScore         = ethernetPort.Int("score", "", "diagnosis score from 0 to 100")
+	ethernetOK            = ethernetPort.Bool("ok", "every monitored port up at expected speed with no link errors")
+	ethernetPortsTotal    = ethernetPort.Int("ports_total", "", "monitored ports")
+	ethernetPortsOK       = ethernetPort.Int("ports_ok", "", "monitored ports with a live link")
+	ethernetPortsDegraded = ethernetPort.Int("ports_degraded", "", "ports below expected speed or in half duplex")
+	ethernetPortsErrored  = ethernetPort.Int("ports_errored", "", "ports reporting link errors this interval")
 )
 
 type ethernetReading struct {
@@ -153,7 +153,7 @@ func diagnoseEthernet(samples []plugin.Sample) plugin.Aggregate {
 }
 
 func reportEthernet(stats ethernetStats) []schema.Point {
-	return []schema.Point{ethernetPorts.Point(
+	return []schema.Point{ethernetPort.Point(
 		ethernetOK.Of(stats.ok),
 		ethernetScore.Of(int64(stats.score)),
 		ethernetPortsTotal.Of(int64(stats.total)),

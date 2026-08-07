@@ -29,7 +29,7 @@ const (
 var (
 	weewxConsole = schema.Declare("weewx/console", "the weather station console link and its health", aggregateCadence)
 	weewxOK      = weewxConsole.Bool("ok", "console reporting a fresh pulse with usable signal quality")
-	weewxScore   = weewxConsole.Int("score", "count", "diagnosis score from 0 to 100")
+	weewxScore   = weewxConsole.Int("score", "", "diagnosis score from 0 to 100")
 )
 
 type weewxReading struct {

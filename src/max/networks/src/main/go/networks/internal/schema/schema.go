@@ -193,7 +193,7 @@ func (b *Builder) Int(key, unit, description string) IntKey {
 }
 
 func (b *Builder) Bool(key, description string) BoolKey {
-	return BoolKey{b.measure(key, KindBool, "state", description)}
+	return BoolKey{b.measure(key, KindBool, "", description)}
 }
 
 func (b *Builder) Point(values ...Value) Point {
