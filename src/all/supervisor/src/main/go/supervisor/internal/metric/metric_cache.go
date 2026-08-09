@@ -90,6 +90,10 @@ type DeletesListener interface {
 	Unsubscribe(topic string)
 }
 
+type RefreshListener interface {
+	MarkRefresh()
+}
+
 type RecordCache struct {
 	mutex           sync.RWMutex
 	guids           []RecordGUID
@@ -97,6 +101,7 @@ type RecordCache struct {
 	serviceIndex    map[indexKey]guidKey
 	listeners       map[guidKey][]UpdatesListener
 	deletesListener DeletesListener
+	refreshListener RefreshListener
 	dirty           map[guidKey]RecordGUID
 	hostLastSeen    map[string]int64
 }
@@ -560,6 +565,27 @@ func (c *RecordCache) SubscribeDeletes(listener DeletesListener) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.deletesListener = listener
+}
+
+func (c *RecordCache) SubscribeRefresh(listener RefreshListener) {
+	if c == nil || listener == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.refreshListener = listener
+}
+
+func (c *RecordCache) Refresh() {
+	if c == nil {
+		return
+	}
+	c.mutex.RLock()
+	listener := c.refreshListener
+	c.mutex.RUnlock()
+	if listener != nil {
+		listener.MarkRefresh()
+	}
 }
 
 func (c *RecordCache) ListenerIDs() map[string][]ID {

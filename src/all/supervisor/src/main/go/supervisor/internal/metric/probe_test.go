@@ -3,7 +3,7 @@ package metric
 import "testing"
 
 func TestProbeStatusTagging(t *testing.T) {
-	cache := NewRecordCache(nil, nil)
+	cache := NewRecordCache()
 	host := NewRecord(*NewBoolValue(true, true))
 	cache.Store(NewRecordGUID(MetricHost, "macmini-mad"), &host)
 	service := NewRecord(*NewBoolValue(true, true))

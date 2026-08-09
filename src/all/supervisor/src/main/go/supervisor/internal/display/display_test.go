@@ -13,6 +13,7 @@ import (
 	"supervisor/internal/scribe"
 	"supervisor/internal/testutil"
 	"testing"
+	"time"
 
 	"github.com/divan/num2words"
 	"github.com/mattn/go-runewidth"
@@ -1521,6 +1522,92 @@ func TestDisplay_Highlight(t *testing.T) {
 			rendered := highlight(testCase.pulse, testCase.trend)
 			if rendered != testCase.expected {
 				t.Fatalf("Got render = %v, expected %v", rendered, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestDisplay_Refresh(t *testing.T) {
+	tests := []struct {
+		name            string
+		refresh         bool
+		expectedRefresh bool
+		expectedError   bool
+	}{
+		{
+			name:            "happy_refresh_signalled",
+			refresh:         true,
+			expectedRefresh: true,
+			expectedError:   false,
+		},
+		{
+			name:            "happy_refresh_not_signalled",
+			refresh:         false,
+			expectedRefresh: false,
+			expectedError:   false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			cache := metric.NewRecordCache()
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				cache,
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1],
+				caseCols,
+				caseRows,
+				0,
+				0,
+				FormatCompact,
+				false,
+				config.Periods{},
+				true,
+				"",
+				nil,
+				0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			drawn := make(chan struct{})
+			go func() {
+				display.Draw(ctx, cancel)
+				close(drawn)
+			}()
+			time.Sleep(500 * time.Millisecond)
+			cache.ClearUpdateListeners()
+			for host, ids := range cache.ListenerIDs() {
+				for _, id := range ids {
+					if metric.GetIDKind(id) == metric.MetricKindService {
+						continue
+					}
+					record := metric.NewRecord(*metric.NewIntValue(true, 42, true, 42))
+					cache.Store(metric.NewRecordGUID(id, host), &record)
+				}
+			}
+			time.Sleep(500 * time.Millisecond)
+			if testCase.refresh {
+				cache.Refresh()
+				time.Sleep(500 * time.Millisecond)
+			}
+			display.Close()
+			<-drawn
+			rendered := terminal.string(false)
+			fmt.Print(terminal.string(true))
+			if got := strings.Contains(rendered, "42%"); got != testCase.expectedRefresh {
+				t.Fatalf("Got rendered values = %v, expected %v", got, testCase.expectedRefresh)
 			}
 		})
 	}

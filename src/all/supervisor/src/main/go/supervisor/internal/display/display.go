@@ -68,6 +68,7 @@ type Display struct {
 	logOverlay      bool
 	logOverlayAuto  bool
 	logGeneration   uint64
+	refreshSignal   chan struct{}
 }
 
 type dirtyBoxes struct {
@@ -105,6 +106,7 @@ func NewDisplay(
 		cache:           cache,
 		logBuffer:       logBuffer,
 		refreshPeriod:   refreshPeriod,
+		refreshSignal:   make(chan struct{}, 1),
 		singleHostIndex: singleHostIndex(hosts),
 	}, nil
 }
@@ -393,7 +395,18 @@ func (d *Display) Load() error {
 		d.terminal = terminal
 	}
 	d.subscribeUpdates()
+	d.cache.SubscribeRefresh(d)
 	return nil
+}
+
+func (d *Display) MarkRefresh() {
+	if d == nil || d.refreshSignal == nil {
+		return
+	}
+	select {
+	case d.refreshSignal <- struct{}{}:
+	default:
+	}
 }
 
 func (d *Display) Run(ctx context.Context) {
@@ -470,18 +483,11 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 		case <-ctx.Done():
 			return
 		case <-refreshC:
-			refreshStart := time.Now()
-			d.terminal.sync()
-			d.terminal.clear()
-			if d.logOverlay {
-				d.Logging()
-			} else {
-				for _, b := range d.boxes {
-					b.drawLabels(d)
-				}
-			}
+			d.refresh("period")
 			force = true
-			slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "boxes", len(d.boxes))
+		case <-d.refreshSignal:
+			d.refresh("stream")
+			force = true
 		case event, ok := <-d.terminal.events():
 			if !ok {
 				return
@@ -533,18 +539,8 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					return
 				}
 				if ev.Key() == tcell.KeyCtrlR {
-					refreshStart := time.Now()
-					d.terminal.sync()
-					d.terminal.clear()
-					if d.logOverlay {
-						d.Logging()
-					} else {
-						for _, b := range d.boxes {
-							b.drawLabels(d)
-						}
-					}
+					d.refresh("manual")
 					force = true
-					slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "boxes", len(d.boxes))
 				}
 				if ev.Key() == tcell.KeyEscape {
 					if d.singleHostIndex >= 0 && len(d.hosts) > 1 {
@@ -660,6 +656,21 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			force = false
 		}
 	}
+}
+
+func (d *Display) refresh(trigger string) {
+	refreshStart := time.Now()
+	d.subscribeUpdates()
+	d.terminal.sync()
+	d.terminal.clear()
+	if d.logOverlay {
+		d.Logging()
+	} else {
+		for _, b := range d.boxes {
+			b.drawLabels(d)
+		}
+	}
+	slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "trigger", trigger, "boxes", len(d.boxes))
 }
 
 func (d *Display) subscribeUpdates() {
