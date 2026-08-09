@@ -1531,19 +1531,29 @@ func TestDisplay_Refresh(t *testing.T) {
 	tests := []struct {
 		name            string
 		refresh         bool
+		stall           time.Duration
 		expectedRefresh bool
 		expectedError   bool
 	}{
 		{
 			name:            "happy_refresh_signalled",
 			refresh:         true,
+			stall:           tickStall,
 			expectedRefresh: true,
 			expectedError:   false,
 		},
 		{
 			name:            "happy_refresh_not_signalled",
 			refresh:         false,
+			stall:           tickStall,
 			expectedRefresh: false,
+			expectedError:   false,
+		},
+		{
+			name:            "happy_refresh_stall_detected",
+			refresh:         false,
+			stall:           time.Nanosecond,
+			expectedRefresh: true,
 			expectedError:   false,
 		},
 	}
@@ -1579,6 +1589,7 @@ func TestDisplay_Refresh(t *testing.T) {
 			if err = display.Load(); err != nil {
 				t.Fatalf("Load Display err = %v, expected nil", err)
 			}
+			display.tickStall = testCase.stall
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			drawn := make(chan struct{})

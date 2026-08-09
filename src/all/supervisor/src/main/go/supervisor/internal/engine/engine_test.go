@@ -11,6 +11,7 @@ import (
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 	"supervisor/internal/testutil"
+	"sync"
 	"testing"
 	"time"
 )
@@ -379,8 +380,10 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal non-nil value failed: %v", err)
 	}
+	refreshes := &countingRefreshListener{}
 	tests := []struct {
 		name      string
+		topic     string
 		setupFunc func(*testing.T, *metric.RecordCache, metric.TopicBinding) []byte
 		checkFunc func(*testing.T, *metric.RecordCache, metric.TopicBinding)
 	}{
@@ -419,6 +422,28 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 				t.Fatalf("Got nil pulse after non-nil publish, expected evicted service record restored")
 			},
 		},
+		{
+			name:  "happy_online_status_refreshes_once_per_transition",
+			topic: "supervisor/alpha/status",
+			setupFunc: func(_ *testing.T, cache *metric.RecordCache, _ metric.TopicBinding) []byte {
+				cache.SubscribeRefresh(refreshes)
+				return []byte(hostStatusOnline)
+			},
+			checkFunc: func(t *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) {
+				deadline := time.Now().Add(3 * time.Second)
+				for time.Now().Before(deadline) && refreshes.count() < 1 {
+					time.Sleep(50 * time.Millisecond)
+				}
+				if got := refreshes.count(); got != 1 {
+					t.Fatalf("Got refresh count = %d after online transition, expected 1", got)
+				}
+				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
+				time.Sleep(time.Second)
+				if got := refreshes.count(); got != 1 {
+					t.Fatalf("Got refresh count = %d after online heartbeat, expected 1", got)
+				}
+			},
+		},
 	}
 	periods := config.Periods{PulseMillis: 1000, HeartbeatSecs: 30}
 	for _, tt := range tests {
@@ -451,10 +476,31 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			}()
 			time.Sleep(500 * time.Millisecond)
 			payload := tt.setupFunc(t, cache, binding)
-			mqttClient.Publish(binding.Topic, 0, false, payload)
+			topic := tt.topic
+			if topic == "" {
+				topic = binding.Topic
+			}
+			mqttClient.Publish(topic, 0, false, payload)
 			tt.checkFunc(t, cache, binding)
 			cancel()
 			<-done
 		})
 	}
+}
+
+type countingRefreshListener struct {
+	mutex     sync.Mutex
+	refreshes int
+}
+
+func (l *countingRefreshListener) MarkRefresh() {
+	l.mutex.Lock()
+	l.refreshes++
+	l.mutex.Unlock()
+}
+
+func (l *countingRefreshListener) count() int {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	return l.refreshes
 }

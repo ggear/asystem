@@ -1608,8 +1608,8 @@ func TestRecordCache_Purge(t *testing.T) {
 				listener := &mockDeletesListener{}
 				cache.SubscribeDeletes(listener)
 				cache.Purge(100)
-				if listener.unsubscribeCount != 1 {
-					t.Fatalf("Got deletes listener count = %d, expected 1", listener.unsubscribeCount)
+				if listener.markDeleteCount != 1 {
+					t.Fatalf("Got deletes listener count = %d, expected 1", listener.markDeleteCount)
 				}
 			},
 		},
@@ -2154,8 +2154,8 @@ func TestRecordCache_SubscribeDeletes(t *testing.T) {
 				listener := &mockDeletesListener{}
 				cache.SubscribeDeletes(listener)
 				cache.Delete("alpha", "svc-a")
-				if listener.unsubscribeCount != 1 {
-					t.Fatalf("Got unsubscribe count = %d, expected 1", listener.unsubscribeCount)
+				if listener.markDeleteCount != 1 {
+					t.Fatalf("Got mark delete count = %d, expected 1", listener.markDeleteCount)
 				}
 			},
 		},
@@ -2170,8 +2170,8 @@ func TestRecordCache_SubscribeDeletes(t *testing.T) {
 				listener := &mockDeletesListener{}
 				cache.SubscribeDeletes(listener)
 				cache.Purge(9999)
-				if listener.unsubscribeCount != 0 {
-					t.Fatalf("Got unsubscribe count = %d, expected 0 — purge must not unsubscribe evicted service topics", listener.unsubscribeCount)
+				if listener.markDeleteCount != 0 {
+					t.Fatalf("Got mark delete count = %d, expected 0 — purge must not mark delete evicted service topics", listener.markDeleteCount)
 				}
 			},
 		},
@@ -2206,8 +2206,8 @@ func TestRecordCache_SubscribeDeletes(t *testing.T) {
 				listener := &mockDeletesListener{}
 				cache.SubscribeDeletes(listener)
 				cache.Delete("alpha", "svc-a")
-				if listener.unsubscribeCount != 2 {
-					t.Fatalf("Got unsubscribe count = %d, expected 2", listener.unsubscribeCount)
+				if listener.markDeleteCount != 2 {
+					t.Fatalf("Got mark delete count = %d, expected 2", listener.markDeleteCount)
 				}
 			},
 		},
@@ -2230,11 +2230,11 @@ func (m *mockListener) MarkDirty() {
 }
 
 type mockDeletesListener struct {
-	unsubscribeCount int
+	markDeleteCount int
 }
 
-func (m *mockDeletesListener) Unsubscribe(_ string) {
-	m.unsubscribeCount++
+func (m *mockDeletesListener) MarkDelete(_ string) {
+	m.markDeleteCount++
 }
 
 func guidSliceToSet(guids []RecordGUID) map[guidKey]struct{} {

@@ -87,7 +87,7 @@ type UpdatesListener interface {
 }
 
 type DeletesListener interface {
-	Unsubscribe(topic string)
+	MarkDelete(topic string)
 }
 
 type RefreshListener interface {
@@ -363,7 +363,7 @@ func (c *RecordCache) Delete(hostName, serviceName string) bool {
 		}
 		if deletesListener != nil {
 			for _, topic := range removedTopics {
-				deletesListener.Unsubscribe(topic)
+				deletesListener.MarkDelete(topic)
 			}
 		}
 	}
@@ -438,7 +438,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 		}
 		if deletesListener != nil {
 			for _, topic := range removedTopics {
-				deletesListener.Unsubscribe(topic)
+				deletesListener.MarkDelete(topic)
 			}
 		}
 	}

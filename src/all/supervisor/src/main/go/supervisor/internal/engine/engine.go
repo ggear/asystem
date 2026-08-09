@@ -50,8 +50,9 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 // Cache: shared with display. Receives data published by RunAllProbesPublishLoop on remote hosts.
 // Discovery: service/name messages trigger RegisterService which adds nil entries and returns new topic bindings to subscribe.
 // Host online: unsubscribe+resubscribe forces broker to redeliver retained messages, restoring records. Unknown hosts default to online.
-// Refresh: on connect and on every host online status, cache.Refresh() signals the display to redraw everything from the cache and
-// re-register its update listeners, so a reconnect (laptop wake) cannot leave the screen stuck on nils waiting for a manual Ctrl-R.
+// Refresh: on connect and on the offline->online transition (never on a steady-state heartbeat, which would clear and repaint the
+// screen every beat), cache.Refresh() signals the display to redraw everything from the cache and re-register its update listeners,
+// so a reconnect (laptop wake) cannot leave the screen stuck on nils waiting for a manual Ctrl-R.
 // Host offline->online transition (serve restart / reconnect): reaps the host's services (Evict+Delete) before resubscribing, so services
 // removed while serve was down do not linger as orphaned slots; survivors repopulate from redelivered retained data. Steady-state online
 // heartbeats skip the reap (gated on the prior status) and only resubscribe.
@@ -172,7 +173,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					client.Unsubscribe(b.Topic)
 					subscribe(client, b)
 				}
-				cache.Refresh()
+				if !alreadyOnline {
+					cache.Refresh()
+				}
 				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart).Truncate(time.Millisecond), "host", hostName, "status", hostStatusOnline, "reaped", !alreadyOnline)
 			case hostStatusOffline, "":
 				statusStart := time.Now()

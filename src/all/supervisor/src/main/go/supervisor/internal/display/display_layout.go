@@ -737,6 +737,10 @@ func (b *box) clone() *box {
 		posClone := *b.position
 		clone.position = &posClone
 	}
+	if b.compiled != nil {
+		compiledClone := *b.compiled
+		clone.compiled = &compiledClone
+	}
 	return &clone
 }
 

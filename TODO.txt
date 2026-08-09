@@ -1,6 +1,11 @@
 ###############################################################################################################################################################
 # All
 ###############################################################################################################################################################
+Order of attach:
+  - schema
+  - network
+  - grafana
+  - wrangle balances/transactions
 Move networks to mad
 Should src/all/_fedora/src/main/resources/pyenv be in git?
 Move all executables to have a prefix, eg media-* amedia-*

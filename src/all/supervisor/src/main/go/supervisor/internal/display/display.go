@@ -69,6 +69,8 @@ type Display struct {
 	logOverlayAuto  bool
 	logGeneration   uint64
 	refreshSignal   chan struct{}
+	tickPeriod      time.Duration
+	tickStall       time.Duration
 }
 
 type dirtyBoxes struct {
@@ -107,6 +109,8 @@ func NewDisplay(
 		logBuffer:       logBuffer,
 		refreshPeriod:   refreshPeriod,
 		refreshSignal:   make(chan struct{}, 1),
+		tickPeriod:      tickPeriod,
+		tickStall:       tickStall,
 		singleHostIndex: singleHostIndex(hosts),
 	}, nil
 }
@@ -284,8 +288,10 @@ func (d *Display) Compile() (Format, error) {
 						if b.metricID == metric.MetricServiceName {
 							hostServiceIndex[hostIndex]++
 						}
-						recordGUID := metric.NewServiceSchemaRecordGUID(b.metricID, hostName, hostServiceIndex[hostIndex])
-						b.recordGUID = &recordGUID
+						if b.kind == boxDatum && b.valLen > 0 {
+							recordGUID := metric.NewServiceSchemaRecordGUID(b.metricID, hostName, hostServiceIndex[hostIndex])
+							b.recordGUID = &recordGUID
+						}
 						b.position = &dimensions{layoutRowIndex + hostRowIndex*(len(layout)), rowColsCount}
 						b.resize(d.useUnicode, displayResizeIncrement, displayResizeRemainder, hostCount)
 						rowColsCount += b.length(d.useUnicode)
@@ -361,10 +367,12 @@ func (d *Display) Compile() (Format, error) {
 				}
 			}
 			d.maxServices = serviceSlots
-			lastIdx := serviceSlots - 1
-			for i := range d.boxes {
-				if d.boxes[i].recordGUID != nil && d.boxes[i].recordGUID.ServiceIndex == lastIdx {
-					d.boxes[i].isLast = true
+			if serviceSlots > 0 {
+				lastIdx := serviceSlots - 1
+				for i := range d.boxes {
+					if d.boxes[i].recordGUID != nil && d.boxes[i].recordGUID.ServiceIndex == lastIdx {
+						d.boxes[i].isLast = true
+					}
 				}
 			}
 			slog.Info("config", "status", "render", "rendered", attemptedFormat, "rows", d.dimsInit.rows, "cols", d.dimsInit.cols)
@@ -469,8 +477,9 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 	for _, b := range d.boxes {
 		b.drawLabels(d)
 	}
-	ticker := time.NewTicker(250 * time.Millisecond)
+	ticker := time.NewTicker(d.tickPeriod)
 	defer ticker.Stop()
+	ticked := time.Now()
 	var refreshC <-chan time.Time
 	if d.refreshPeriod > 0 {
 		refreshTicker := time.NewTicker(d.refreshPeriod)
@@ -620,6 +629,12 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 		case <-ticker.C:
+			if elapsed := time.Since(ticked); elapsed > d.tickStall {
+				slog.Warn("state", "engine", "display", "phase", "stall", "duration", elapsed.Truncate(time.Millisecond))
+				d.refresh("wake")
+				force = true
+			}
+			ticked = time.Now()
 			if d.logOverlay {
 				if d.logBuffer != nil {
 					v := d.logBuffer.Version()
@@ -670,6 +685,7 @@ func (d *Display) refresh(trigger string) {
 			b.drawLabels(d)
 		}
 	}
+	d.terminal.show()
 	slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "trigger", trigger, "boxes", len(d.boxes))
 }
 
@@ -733,3 +749,8 @@ type boxListener struct {
 func (l *boxListener) MarkDirty() {
 	l.display.markDirty(l.index, l.generation)
 }
+
+const (
+	tickPeriod = 250 * time.Millisecond
+	tickStall  = 5 * time.Second
+)

@@ -15,7 +15,7 @@ type brokerDeletesListener struct {
 	onDelete func(topic string)
 }
 
-func (b *brokerDeletesListener) Unsubscribe(topic string) {
+func (b *brokerDeletesListener) MarkDelete(topic string) {
 	if b.onDelete != nil {
 		b.onDelete(topic)
 	}
@@ -26,7 +26,7 @@ type brokerPublishDeletesListener struct {
 	client mqtt.Client
 }
 
-func (b *brokerPublishDeletesListener) Unsubscribe(topic string) {
+func (b *brokerPublishDeletesListener) MarkDelete(topic string) {
 	b.client.Publish(topic, 0, true, "")
 }
 
