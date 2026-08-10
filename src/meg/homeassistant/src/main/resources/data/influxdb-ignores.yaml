@@ -60,6 +60,7 @@
 - 'count_sources'
 - 'rgb_color_str'
 - 'available_str'
+- 'friendly_name'
 - 'manual_control'
 - 'queue_position'
 - 'forecast_float'

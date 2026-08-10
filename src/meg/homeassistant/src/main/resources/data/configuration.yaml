@@ -65,9 +65,9 @@ influxdb:
   measurement_attr: 'domain__device_class'
   tags:
     module: 'homeassistant'
+    domain: ''
   tags_attributes:
     - 'state_class'
-    - 'friendly_name'
     - 'unit_of_measurement'
   exclude:
     domains:
