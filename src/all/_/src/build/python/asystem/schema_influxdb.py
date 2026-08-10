@@ -2,6 +2,7 @@ from asystem.schema import (
     BUCKET,
     NULL,
     RUNNER,
+    SchemaDatabaseDimension,
     aggregations,
     banner,
     bucketed,
@@ -23,6 +24,7 @@ from asystem.schema import (
 
 DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
+MODULE = "module"
 
 PLACEHOLDERS = {
     "float": "<number>",
@@ -56,7 +58,7 @@ def artifacts(document, module_name, time_column="timestamp", retention=None):
     written = {}
     for relation in document.relations:
         if relation.persisted:
-            written["model/{}.lp".format(relation.scope)] = (leaf(relation), False)
+            written["model/{}.lp".format(relation.scope)] = (leaf(relation, document), False)
     for measurement in measurements(document):
         written["query/query_{}.sql".format(measurement)] = (
             queries(document, measured(document, measurement)), False)
@@ -72,10 +74,11 @@ def ship(_document, _module_name, _module_root, _schemas_dir, _time_column="time
     return None
 
 
-def leaf(relation):
-    tags = ["{}=<{}>".format(dimension.key, dimension.key) for dimension in relation.dimensions]
+def leaf(relation, document):
+    tags = ["{}={}".format(MODULE, document.module)]
+    tags += ["{}=<{}>".format(dimension.key, dimension.key) for dimension in relation.dimensions]
     fields = ["{}={}".format(measure.key, PLACEHOLDERS[measure.kind]) for measure in relation.persisted]
-    lines = [banner(), ""] + vocabulary(relation)
+    lines = [banner(), ""] + vocabulary(relation, tags=[module_dimension(document)])
     if fields:
         lines.append("")
         lines.append(relation.plugin + "".join("," + tag for tag in tags))
@@ -85,10 +88,16 @@ def leaf(relation):
     return "\n".join(lines) + "\n"
 
 
+def module_dimension(document):
+    return SchemaDatabaseDimension(
+        key=MODULE, description="module the rows are written by, always [{}]".format(document.module))
+
+
 def where(relation, document, source=None, window=BUCKET):
     declared = {dimension.key for dimension in relation.dimensions}
     siblings = {dimension.key for sibling in measured(document, relation.plugin) for dimension in sibling.dimensions}
-    predicates = ["{} IS NOT NULL".format(key) for key in sorted(declared)]
+    predicates = ["{} = '{}'".format(MODULE, document.module)]
+    predicates += ["{} IS NOT NULL".format(key) for key in sorted(declared)]
     predicates += ["{} IS NULL".format(key) for key in sorted(siblings - declared)]
     return predicates + (recent(source, window) if source else [])
 
@@ -144,7 +153,7 @@ def queries(document, relations):
 def verify(document):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
     for measurement in measurements(document):
-        columns = {"time"}
+        columns = {"time", MODULE}
         arms = []
         for relation in measured(document, measurement):
             columns.update(dimension.key for dimension in relation.dimensions)
@@ -201,7 +210,7 @@ def _describe_relations(relations, document):
 def _describe_measures(document):
     arms = []
     for measurement in measurements(document):
-        columns = {"time"}
+        columns = {"time", MODULE}
         for relation in measured(document, measurement):
             columns.update(dimension.key for dimension in relation.dimensions)
             persisted = {measure.key for measure in relation.persisted}

@@ -16,7 +16,8 @@ SELECT
     round(max(validity_pct), 1)      AS "Validity Pct Max"
 FROM certificate
 WHERE
-    endpoint IS NOT NULL
+    module = 'network'
+    AND endpoint IS NOT NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM certificate) - INTERVAL '1 day'
 GROUP BY "Bucket", endpoint

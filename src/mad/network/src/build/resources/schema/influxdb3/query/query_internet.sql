@@ -19,7 +19,8 @@ SELECT
     round(max(jitter_ms), 1)         AS "Jitter Ms Max"
 FROM internet
 WHERE
-    target IS NOT NULL
+    module = 'network'
+    AND target IS NOT NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM internet) - INTERVAL '1 day'
 GROUP BY "Bucket", target

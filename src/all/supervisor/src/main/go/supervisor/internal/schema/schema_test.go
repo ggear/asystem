@@ -6,6 +6,7 @@ import (
 )
 
 func TestSchema_AppendLineProtocol(t *testing.T) {
+	t.Setenv("SERVICE_NAME", "supervisor")
 	relation := Relation{
 		Path: "supervisor/service",
 		Measures: []Measure{
@@ -33,14 +34,14 @@ func TestSchema_AppendLineProtocol(t *testing.T) {
 				"status":        {Flag: true},
 				"status_trend":  {Flag: false},
 			},
-			expected:      "supervisor,host=macmini-mad,service=plex status=1i,status_trend=0i,used_memory=41i,restart_count=2.0 1000\n",
+			expected:      "supervisor,module=supervisor,host=macmini-mad,service=plex status=1i,status_trend=0i,used_memory=41i,restart_count=2.0 1000\n",
 			expectedWrote: true,
 		},
 		{
 			name:          "host_scope_omits_empty_tag",
 			tags:          [][2]string{{"host", "macmini-max"}, {"service", ""}},
 			fields:        map[string]Field{"used_memory": {Text: "7"}},
-			expected:      "supervisor,host=macmini-max used_memory=7i 1000\n",
+			expected:      "supervisor,module=supervisor,host=macmini-max used_memory=7i 1000\n",
 			expectedWrote: true,
 		},
 		{

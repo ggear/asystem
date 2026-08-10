@@ -4,6 +4,7 @@
 
 # supervisor/host [health and utilisation of one host]
 #   cadence 6s
+#   tag module [module the rows are written by, always [supervisor]]
 #   tag host* [name of the monitored host]
 #   entity macmini-mad, macmini-max, macmini-may, macmini-meg, raspbpi-jen, raspbpi-jil
 #   field status - 6s [host is reachable and healthy]
@@ -44,7 +45,7 @@
 #   field services - 6s [every service on the host is healthy] (not persisted)
 #   field services_max_memory MiB 6s [memory ceiling summed across the services on the host] (not persisted)
 
-supervisor,host=<host>
+supervisor,module=supervisor,host=<host>
     status=<0|1>i,
     status_trend=<0|1>i,
     used_processor=<number>i,

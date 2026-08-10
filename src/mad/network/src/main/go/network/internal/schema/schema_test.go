@@ -64,6 +64,7 @@ func TestSchema_DeclareRejectsDuplicateRelation(t *testing.T) {
 }
 
 func TestSchema_AppendLineProtocol(t *testing.T) {
+	t.Setenv("SERVICE_NAME", "network")
 	tests := []struct {
 		name     string
 		points   []Point
@@ -72,17 +73,17 @@ func TestSchema_AppendLineProtocol(t *testing.T) {
 		{
 			name:     "summary_coerces_bool_to_int",
 			points:   []Point{fakeSummary.Point(fakeScore.Of(72), fakeLoss.Of(12.5), fakeGatewayOK.Of(true))},
-			expected: "fake score=72i,avg_loss_pct=12.5,gateway_ok=1i 1000\n",
+			expected: "fake,module=network score=72i,avg_loss_pct=12.5,gateway_ok=1i 1000\n",
 		},
 		{
 			name:     "false_bool_is_zero",
 			points:   []Point{fakeSummary.Point(fakeGatewayOK.Of(false))},
-			expected: "fake gateway_ok=0i 1000\n",
+			expected: "fake,module=network gateway_ok=0i 1000\n",
 		},
 		{
 			name:     "dimensions_become_tags_in_declared_order",
 			points:   []Point{fakeThing.Point(fakeThingName.Of("alpha"), fakeThingNote.Of("x y=z"), fakeThingUp.Of(true))},
-			expected: "fake,thing=alpha,note=x\\ y\\=z up=1i 1000\n",
+			expected: "fake,module=network,thing=alpha,note=x\\ y\\=z up=1i 1000\n",
 		},
 		{
 			name:     "transient_measure_is_not_written",

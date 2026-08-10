@@ -465,11 +465,11 @@ def banner(prefix="#"):
         rule, prefix)
 
 
-def vocabulary(relation, prefix="#"):
+def vocabulary(relation, prefix="#", tags=()):
     lines = ["{} {} [{}]".format(prefix, relation.path, relation.description)]
     if relation.cadence:
         lines.append("{}   cadence {}".format(prefix, relation.cadence))
-    for dimension in relation.dimensions:
+    for dimension in list(tags) + list(relation.dimensions):
         lines.append("{}   tag {}{} [{}]".format(
             prefix, dimension.key, SUBJECT if dimension.subject else "", dimension.description))
     if relation.subject is not None:

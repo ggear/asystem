@@ -13,7 +13,8 @@ SELECT
     max(time)         AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -26,7 +27,8 @@ SELECT
     max(time)            AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 ORDER BY rows DESC;
 
@@ -42,7 +44,8 @@ SELECT
     CAST(max(time) FILTER (WHERE status IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -56,7 +59,8 @@ SELECT
     CAST(max(time) FILTER (WHERE status_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -70,7 +74,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_processor IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -84,7 +89,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_processor_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -98,7 +104,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_memory IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -112,7 +119,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_memory_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -126,7 +134,8 @@ SELECT
     CAST(max(time) FILTER (WHERE allocated_memory IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -140,7 +149,8 @@ SELECT
     CAST(max(time) FILTER (WHERE allocated_memory_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -154,7 +164,8 @@ SELECT
     CAST(max(time) FILTER (WHERE failed_log_messages IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -168,7 +179,8 @@ SELECT
     CAST(max(time) FILTER (WHERE failed_log_messages_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -182,7 +194,8 @@ SELECT
     CAST(max(time) FILTER (WHERE failed_shares IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -196,7 +209,8 @@ SELECT
     CAST(max(time) FILTER (WHERE failed_shares_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -210,7 +224,8 @@ SELECT
     CAST(max(time) FILTER (WHERE failed_backups IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -224,7 +239,8 @@ SELECT
     CAST(max(time) FILTER (WHERE failed_backups_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -238,7 +254,8 @@ SELECT
     CAST(max(time) FILTER (WHERE warn_temperature_of_max IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -252,7 +269,8 @@ SELECT
     CAST(max(time) FILTER (WHERE warn_temperature_of_max_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -266,7 +284,8 @@ SELECT
     CAST(max(time) FILTER (WHERE spin_fan_speed_of_max IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -280,7 +299,8 @@ SELECT
     CAST(max(time) FILTER (WHERE spin_fan_speed_of_max_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -294,7 +314,8 @@ SELECT
     CAST(max(time) FILTER (WHERE life_used_drives IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -308,7 +329,8 @@ SELECT
     CAST(max(time) FILTER (WHERE life_used_drives_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -322,7 +344,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_system_space IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -336,7 +359,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_system_space_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -350,7 +374,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_share_space IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -364,7 +389,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_share_space_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -378,7 +404,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_backup_space IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -392,7 +419,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_backup_space_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -406,7 +434,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_swap_space IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -420,7 +449,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_swap_space_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -434,7 +464,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_disk_ops IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -448,7 +479,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_disk_ops_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -462,7 +494,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_network IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -476,7 +509,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_network_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -490,7 +524,8 @@ SELECT
     CAST(max(time) FILTER (WHERE temperature IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -504,7 +539,8 @@ SELECT
     CAST(max(time) FILTER (WHERE temperature_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 UNION ALL
 SELECT
@@ -518,7 +554,8 @@ SELECT
     CAST(max(time) FILTER (WHERE status IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -532,7 +569,8 @@ SELECT
     CAST(max(time) FILTER (WHERE status_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -546,7 +584,8 @@ SELECT
     CAST(max(time) FILTER (WHERE backup_status IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -560,7 +599,8 @@ SELECT
     CAST(max(time) FILTER (WHERE backup_status_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -574,7 +614,8 @@ SELECT
     CAST(max(time) FILTER (WHERE health_status IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -588,7 +629,8 @@ SELECT
     CAST(max(time) FILTER (WHERE health_status_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -602,7 +644,8 @@ SELECT
     CAST(max(time) FILTER (WHERE configured_status IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -616,7 +659,8 @@ SELECT
     CAST(max(time) FILTER (WHERE configured_status_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -630,7 +674,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_processor IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -644,7 +689,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_processor_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -658,7 +704,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_memory IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -672,7 +719,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_memory_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -686,7 +734,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_disk_ops IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -700,7 +749,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_disk_ops_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -714,7 +764,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_network IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -728,7 +779,8 @@ SELECT
     CAST(max(time) FILTER (WHERE used_network_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -742,7 +794,8 @@ SELECT
     CAST(max(time) FILTER (WHERE restart_count IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -756,7 +809,8 @@ SELECT
     CAST(max(time) FILTER (WHERE restart_count_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 UNION ALL
 SELECT
@@ -777,7 +831,7 @@ WHERE
         'failed_backups', 'failed_backups_trend', 'failed_log_messages',
         'failed_log_messages_trend', 'failed_shares', 'failed_shares_trend',
         'health_status', 'health_status_trend', 'host', 'life_used_drives',
-        'life_used_drives_trend', 'max_memory', 'name', 'restart_count',
+        'life_used_drives_trend', 'max_memory', 'module', 'name', 'restart_count',
         'restart_count_trend', 'running_time', 'service', 'services', 'services_max_memory',
         'spin_fan_speed_of_max', 'spin_fan_speed_of_max_trend', 'status', 'status_trend',
         'temperature', 'temperature_trend', 'time', 'up_time', 'used_backup_space',
@@ -804,7 +858,8 @@ SELECT
     max(time)         AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
 GROUP BY host, CASE WHEN host IN (
     'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
@@ -826,7 +881,8 @@ SELECT
     max(time)                  AS newest
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
 GROUP BY concat(host, '/', service), CASE WHEN service IN (
     'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt', 'mariadb',

@@ -14,7 +14,8 @@ SELECT
     round(max(latency_ms), 1)        AS "Latency Ms Max"
 FROM domain
 WHERE
-    resolver IS NOT NULL
+    module = 'network'
+    AND resolver IS NOT NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM domain) - INTERVAL '1 day'
 GROUP BY "Bucket", resolver

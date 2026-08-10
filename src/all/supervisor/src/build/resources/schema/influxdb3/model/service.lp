@@ -4,6 +4,7 @@
 
 # supervisor/service [health and utilisation of one service on one host]
 #   cadence 6s
+#   tag module [module the rows are written by, always [supervisor]]
 #   tag host [name of the host running the service]
 #   tag service* [name of the monitored service]
 #   entity grafana, homeassistant, influxdb, influxdb3, letsencrypt, mariadb, mlflow, mlserver, network,
@@ -32,7 +33,7 @@
 #   field restart_count - 6s [restarts of the service]
 #   field restart_count_trend - 6s [restarts of the service, smoothed across the trend window]
 
-supervisor,host=<host>,service=<service>
+supervisor,module=supervisor,host=<host>,service=<service>
     status=<0|1>i,
     status_trend=<0|1>i,
     backup_status=<0|1>i,

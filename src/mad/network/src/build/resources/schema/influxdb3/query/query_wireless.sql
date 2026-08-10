@@ -14,7 +14,8 @@ SELECT
     round(last_value(clients ORDER BY time), 1) AS "Clients"
 FROM wireless
 WHERE
-    accesspoint IS NOT NULL
+    module = 'network'
+    AND accesspoint IS NOT NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM wireless) - INTERVAL '1 day'
 GROUP BY "Bucket", accesspoint

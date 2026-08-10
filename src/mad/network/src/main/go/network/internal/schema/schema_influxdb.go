@@ -13,6 +13,12 @@ func AppendLineProtocol(buf *bytes.Buffer, points []Point, timestamp int64) {
 		}
 		relation := point.builder.relation
 		buf.WriteString(escapeTag(point.builder.Plugin()))
+		if module := Module(); module != "" {
+			buf.WriteByte(',')
+			buf.WriteString(TagModule)
+			buf.WriteByte('=')
+			buf.WriteString(escapeTag(module))
+		}
 		for index, dimension := range relation.Dimensions {
 			if !point.dimensionsSet[index] || point.dimensions[index] == "" {
 				continue

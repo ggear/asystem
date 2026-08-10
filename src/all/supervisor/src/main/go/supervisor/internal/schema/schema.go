@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"os"
 	"strings"
 )
+
+const TagModule = "module"
 
 type Kind string
 
@@ -92,6 +95,10 @@ type BrokerSection struct {
 	Payloads []Payload `json:"payloads"`
 }
 
+func Module() string {
+	return os.Getenv("SERVICE_NAME")
+}
+
 func Reflect(w io.Writer, module string, database DatabaseSchema, broker BrokerSchema) error {
 	document := Document{Module: module}
 	if database != nil {
@@ -138,7 +145,7 @@ func AppendLineProtocol(buf *bytes.Buffer, measurement string, relation Relation
 		return false
 	}
 	buf.WriteString(measurement)
-	for _, tag := range tags {
+	for _, tag := range append([][2]string{{TagModule, Module()}}, tags...) {
 		if tag[1] == "" {
 			continue
 		}

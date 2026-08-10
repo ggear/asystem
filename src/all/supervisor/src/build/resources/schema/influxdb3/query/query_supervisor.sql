@@ -21,7 +21,8 @@ SELECT
     round(last_value(failed_shares_trend ORDER BY time), 1)       AS "Failed Shares Trend"
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
     AND time >= now() - INTERVAL '1500 minute'
     AND time >= (SELECT max(time) FROM supervisor) - INTERVAL '15 minute'
@@ -45,7 +46,8 @@ SELECT
     round(last_value(used_system_space_trend ORDER BY time), 1)       AS "Used System Space Trend"
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
     AND time >= now() - INTERVAL '1500 minute'
     AND time >= (SELECT max(time) FROM supervisor) - INTERVAL '15 minute'
@@ -71,7 +73,8 @@ SELECT
     round(min(temperature), 1)                                  AS "Temperature Min"
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
     AND time >= now() - INTERVAL '1500 minute'
     AND time >= (SELECT max(time) FROM supervisor) - INTERVAL '15 minute'
@@ -89,7 +92,8 @@ SELECT
     round(max(temperature_trend), 1)     AS "Temperature Trend Max"
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NULL
     AND time >= now() - INTERVAL '1500 minute'
     AND time >= (SELECT max(time) FROM supervisor) - INTERVAL '15 minute'
@@ -113,7 +117,8 @@ SELECT
     round(last_value(used_processor ORDER BY time), 1) AS "Used Processor"
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
     AND time >= now() - INTERVAL '1500 minute'
     AND time >= (SELECT max(time) FROM supervisor) - INTERVAL '15 minute'
@@ -139,7 +144,8 @@ SELECT
     round(avg(restart_count_trend), 1)                       AS "Restart Count Trend Avg"
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
     AND time >= now() - INTERVAL '1500 minute'
     AND time >= (SELECT max(time) FROM supervisor) - INTERVAL '15 minute'
@@ -156,7 +162,8 @@ SELECT
     round(max(restart_count_trend), 1)   AS "Restart Count Trend Max"
 FROM supervisor
 WHERE
-    host IS NOT NULL
+    module = 'supervisor'
+    AND host IS NOT NULL
     AND service IS NOT NULL
     AND time >= now() - INTERVAL '1500 minute'
     AND time >= (SELECT max(time) FROM supervisor) - INTERVAL '15 minute'

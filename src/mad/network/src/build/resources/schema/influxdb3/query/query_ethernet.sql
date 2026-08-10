@@ -14,7 +14,8 @@ SELECT
     round(last_value(errors ORDER BY time), 1)     AS "Errors"
 FROM ethernet
 WHERE
-    port IS NOT NULL
+    module = 'network'
+    AND port IS NOT NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM ethernet) - INTERVAL '1 day'
 GROUP BY "Bucket", port

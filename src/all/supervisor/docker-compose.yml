@@ -3,6 +3,7 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
+    - SERVICE_NAME
     - SUPERVISOR_HOST
     - SUPERVISOR_MOUNT
     - BROKER_HOST

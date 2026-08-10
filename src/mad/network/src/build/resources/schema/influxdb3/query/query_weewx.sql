@@ -13,7 +13,8 @@ SELECT
     round(max(quality_pct), 1)       AS "Quality Pct Max"
 FROM weewx
 WHERE
-    console IS NOT NULL
+    module = 'network'
+    AND console IS NOT NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM weewx) - INTERVAL '1 day'
 GROUP BY "Bucket", console

@@ -11,7 +11,8 @@ SELECT
     round(last_value(score ORDER BY time), 1) AS "Score"
 FROM diagnosis
 WHERE
-    plugin IS NOT NULL
+    module = 'network'
+    AND plugin IS NOT NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM diagnosis) - INTERVAL '1 day'
 GROUP BY "Bucket", plugin

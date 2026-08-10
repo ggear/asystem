@@ -13,7 +13,8 @@ SELECT
     round(avg(weak), 1)                     AS "Weak Fraction"
 FROM zigbee
 WHERE
-    device IS NOT NULL
+    module = 'network'
+    AND device IS NOT NULL
     AND time >= now() - INTERVAL '100 day'
     AND time >= (SELECT max(time) FROM zigbee) - INTERVAL '1 day'
 GROUP BY "Bucket", device

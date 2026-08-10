@@ -13,7 +13,8 @@ SELECT
     max(time)              AS newest
 FROM certificate
 WHERE
-    endpoint IS NOT NULL
+    module = 'network'
+    AND endpoint IS NOT NULL
 UNION ALL
 SELECT
     'diagnosis/plugin' AS relation,
@@ -25,7 +26,8 @@ SELECT
     max(time)          AS newest
 FROM diagnosis
 WHERE
-    plugin IS NOT NULL
+    module = 'network'
+    AND plugin IS NOT NULL
 UNION ALL
 SELECT
     'domain/resolver' AS relation,
@@ -37,7 +39,8 @@ SELECT
     max(time)         AS newest
 FROM domain
 WHERE
-    resolver IS NOT NULL
+    module = 'network'
+    AND resolver IS NOT NULL
 UNION ALL
 SELECT
     'ethernet/port' AS relation,
@@ -49,7 +52,8 @@ SELECT
     max(time)       AS newest
 FROM ethernet
 WHERE
-    port IS NOT NULL
+    module = 'network'
+    AND port IS NOT NULL
 UNION ALL
 SELECT
     'internet/target' AS relation,
@@ -61,7 +65,8 @@ SELECT
     max(time)         AS newest
 FROM internet
 WHERE
-    target IS NOT NULL
+    module = 'network'
+    AND target IS NOT NULL
 UNION ALL
 SELECT
     'weewx/console' AS relation,
@@ -73,7 +78,8 @@ SELECT
     max(time)       AS newest
 FROM weewx
 WHERE
-    console IS NOT NULL
+    module = 'network'
+    AND console IS NOT NULL
 UNION ALL
 SELECT
     'wireless/accesspoint' AS relation,
@@ -85,7 +91,8 @@ SELECT
     max(time)              AS newest
 FROM wireless
 WHERE
-    accesspoint IS NOT NULL
+    module = 'network'
+    AND accesspoint IS NOT NULL
 UNION ALL
 SELECT
     'zigbee/device' AS relation,
@@ -97,7 +104,8 @@ SELECT
     max(time)       AS newest
 FROM zigbee
 WHERE
-    device IS NOT NULL
+    module = 'network'
+    AND device IS NOT NULL
 ORDER BY rows DESC;
 
 -- measures
@@ -112,7 +120,8 @@ SELECT
     CAST(max(time) FILTER (WHERE verified IS NOT NULL) AS VARCHAR) AS newest
 FROM certificate
 WHERE
-    endpoint IS NOT NULL
+    module = 'network'
+    AND endpoint IS NOT NULL
 UNION ALL
 SELECT
     'certificate/endpoint'                                            AS relation,
@@ -125,7 +134,8 @@ SELECT
     CAST(max(time) FILTER (WHERE expiry_days IS NOT NULL) AS VARCHAR) AS newest
 FROM certificate
 WHERE
-    endpoint IS NOT NULL
+    module = 'network'
+    AND endpoint IS NOT NULL
 UNION ALL
 SELECT
     'certificate/endpoint'                                             AS relation,
@@ -138,7 +148,8 @@ SELECT
     CAST(max(time) FILTER (WHERE validity_pct IS NOT NULL) AS VARCHAR) AS newest
 FROM certificate
 WHERE
-    endpoint IS NOT NULL
+    module = 'network'
+    AND endpoint IS NOT NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -152,7 +163,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'certificate'
-    AND column_name NOT IN ('endpoint', 'expiry_days', 'time', 'validity_pct', 'verified')
+    AND column_name NOT IN ('endpoint', 'expiry_days', 'module', 'time', 'validity_pct', 'verified')
 UNION ALL
 SELECT
     'diagnosis/plugin'                                       AS relation,
@@ -165,7 +176,8 @@ SELECT
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
 FROM diagnosis
 WHERE
-    plugin IS NOT NULL
+    module = 'network'
+    AND plugin IS NOT NULL
 UNION ALL
 SELECT
     'diagnosis/plugin'                                          AS relation,
@@ -178,7 +190,8 @@ SELECT
     CAST(max(time) FILTER (WHERE score IS NOT NULL) AS VARCHAR) AS newest
 FROM diagnosis
 WHERE
-    plugin IS NOT NULL
+    module = 'network'
+    AND plugin IS NOT NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -192,7 +205,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'diagnosis'
-    AND column_name NOT IN ('ok', 'plugin', 'score', 'time')
+    AND column_name NOT IN ('module', 'ok', 'plugin', 'score', 'time')
 UNION ALL
 SELECT
     'domain/resolver'                                        AS relation,
@@ -205,7 +218,8 @@ SELECT
     CAST(max(time) FILTER (WHERE ok IS NOT NULL) AS VARCHAR) AS newest
 FROM domain
 WHERE
-    resolver IS NOT NULL
+    module = 'network'
+    AND resolver IS NOT NULL
 UNION ALL
 SELECT
     'domain/resolver'                                              AS relation,
@@ -218,7 +232,8 @@ SELECT
     CAST(max(time) FILTER (WHERE resolved IS NOT NULL) AS VARCHAR) AS newest
 FROM domain
 WHERE
-    resolver IS NOT NULL
+    module = 'network'
+    AND resolver IS NOT NULL
 UNION ALL
 SELECT
     'domain/resolver'                                                AS relation,
@@ -231,7 +246,8 @@ SELECT
     CAST(max(time) FILTER (WHERE latency_ms IS NOT NULL) AS VARCHAR) AS newest
 FROM domain
 WHERE
-    resolver IS NOT NULL
+    module = 'network'
+    AND resolver IS NOT NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -245,7 +261,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'domain'
-    AND column_name NOT IN ('latency_ms', 'ok', 'resolved', 'resolver', 'time')
+    AND column_name NOT IN ('latency_ms', 'module', 'ok', 'resolved', 'resolver', 'time')
 UNION ALL
 SELECT
     'ethernet/port'                                          AS relation,
@@ -258,7 +274,8 @@ SELECT
     CAST(max(time) FILTER (WHERE up IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
-    port IS NOT NULL
+    module = 'network'
+    AND port IS NOT NULL
 UNION ALL
 SELECT
     'ethernet/port'                                                  AS relation,
@@ -271,7 +288,8 @@ SELECT
     CAST(max(time) FILTER (WHERE speed_mbps IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
-    port IS NOT NULL
+    module = 'network'
+    AND port IS NOT NULL
 UNION ALL
 SELECT
     'ethernet/port'                                                   AS relation,
@@ -284,7 +302,8 @@ SELECT
     CAST(max(time) FILTER (WHERE full_duplex IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
-    port IS NOT NULL
+    module = 'network'
+    AND port IS NOT NULL
 UNION ALL
 SELECT
     'ethernet/port'                                                AS relation,
@@ -297,7 +316,8 @@ SELECT
     CAST(max(time) FILTER (WHERE degraded IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
-    port IS NOT NULL
+    module = 'network'
+    AND port IS NOT NULL
 UNION ALL
 SELECT
     'ethernet/port'                                              AS relation,
@@ -310,7 +330,8 @@ SELECT
     CAST(max(time) FILTER (WHERE errors IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
-    port IS NOT NULL
+    module = 'network'
+    AND port IS NOT NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -324,7 +345,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
-    AND column_name NOT IN ('degraded', 'errors', 'full_duplex', 'port', 'speed_mbps', 'time', 'up')
+    AND column_name NOT IN ('degraded', 'errors', 'full_duplex', 'module', 'port', 'speed_mbps', 'time', 'up')
 UNION ALL
 SELECT
     'internet/target'                                               AS relation,
@@ -337,7 +358,8 @@ SELECT
     CAST(max(time) FILTER (WHERE reachable IS NOT NULL) AS VARCHAR) AS newest
 FROM internet
 WHERE
-    target IS NOT NULL
+    module = 'network'
+    AND target IS NOT NULL
 UNION ALL
 SELECT
     'internet/target'                                              AS relation,
@@ -350,7 +372,8 @@ SELECT
     CAST(max(time) FILTER (WHERE loss_pct IS NOT NULL) AS VARCHAR) AS newest
 FROM internet
 WHERE
-    target IS NOT NULL
+    module = 'network'
+    AND target IS NOT NULL
 UNION ALL
 SELECT
     'internet/target'                                            AS relation,
@@ -363,7 +386,8 @@ SELECT
     CAST(max(time) FILTER (WHERE rtt_ms IS NOT NULL) AS VARCHAR) AS newest
 FROM internet
 WHERE
-    target IS NOT NULL
+    module = 'network'
+    AND target IS NOT NULL
 UNION ALL
 SELECT
     'internet/target'                                               AS relation,
@@ -376,7 +400,8 @@ SELECT
     CAST(max(time) FILTER (WHERE jitter_ms IS NOT NULL) AS VARCHAR) AS newest
 FROM internet
 WHERE
-    target IS NOT NULL
+    module = 'network'
+    AND target IS NOT NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -390,7 +415,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'internet'
-    AND column_name NOT IN ('jitter_ms', 'loss_pct', 'reachable', 'rtt_ms', 'target', 'time')
+    AND column_name NOT IN ('jitter_ms', 'loss_pct', 'module', 'reachable', 'rtt_ms', 'target', 'time')
 UNION ALL
 SELECT
     'weewx/console'                                             AS relation,
@@ -403,7 +428,8 @@ SELECT
     CAST(max(time) FILTER (WHERE fresh IS NOT NULL) AS VARCHAR) AS newest
 FROM weewx
 WHERE
-    console IS NOT NULL
+    module = 'network'
+    AND console IS NOT NULL
 UNION ALL
 SELECT
     'weewx/console'                                                   AS relation,
@@ -416,7 +442,8 @@ SELECT
     CAST(max(time) FILTER (WHERE quality_pct IS NOT NULL) AS VARCHAR) AS newest
 FROM weewx
 WHERE
-    console IS NOT NULL
+    module = 'network'
+    AND console IS NOT NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -430,7 +457,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'weewx'
-    AND column_name NOT IN ('console', 'fresh', 'quality_pct', 'time')
+    AND column_name NOT IN ('console', 'fresh', 'module', 'quality_pct', 'time')
 UNION ALL
 SELECT
     'wireless/accesspoint'                                   AS relation,
@@ -443,7 +470,8 @@ SELECT
     CAST(max(time) FILTER (WHERE up IS NOT NULL) AS VARCHAR) AS newest
 FROM wireless
 WHERE
-    accesspoint IS NOT NULL
+    module = 'network'
+    AND accesspoint IS NOT NULL
 UNION ALL
 SELECT
     'wireless/accesspoint'                                               AS relation,
@@ -456,7 +484,8 @@ SELECT
     CAST(max(time) FILTER (WHERE experience_pct IS NOT NULL) AS VARCHAR) AS newest
 FROM wireless
 WHERE
-    accesspoint IS NOT NULL
+    module = 'network'
+    AND accesspoint IS NOT NULL
 UNION ALL
 SELECT
     'wireless/accesspoint'                                        AS relation,
@@ -469,7 +498,8 @@ SELECT
     CAST(max(time) FILTER (WHERE clients IS NOT NULL) AS VARCHAR) AS newest
 FROM wireless
 WHERE
-    accesspoint IS NOT NULL
+    module = 'network'
+    AND accesspoint IS NOT NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -483,7 +513,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
-    AND column_name NOT IN ('accesspoint', 'clients', 'experience_pct', 'time', 'up')
+    AND column_name NOT IN ('accesspoint', 'clients', 'experience_pct', 'module', 'time', 'up')
 UNION ALL
 SELECT
     'zigbee/device'                                                 AS relation,
@@ -496,7 +526,8 @@ SELECT
     CAST(max(time) FILTER (WHERE available IS NOT NULL) AS VARCHAR) AS newest
 FROM zigbee
 WHERE
-    device IS NOT NULL
+    module = 'network'
+    AND device IS NOT NULL
 UNION ALL
 SELECT
     'zigbee/device'                                                   AS relation,
@@ -509,7 +540,8 @@ SELECT
     CAST(max(time) FILTER (WHERE coordinator IS NOT NULL) AS VARCHAR) AS newest
 FROM zigbee
 WHERE
-    device IS NOT NULL
+    module = 'network'
+    AND device IS NOT NULL
 UNION ALL
 SELECT
     'zigbee/device'                                           AS relation,
@@ -522,7 +554,8 @@ SELECT
     CAST(max(time) FILTER (WHERE lqi IS NOT NULL) AS VARCHAR) AS newest
 FROM zigbee
 WHERE
-    device IS NOT NULL
+    module = 'network'
+    AND device IS NOT NULL
 UNION ALL
 SELECT
     'zigbee/device'                                            AS relation,
@@ -535,7 +568,8 @@ SELECT
     CAST(max(time) FILTER (WHERE weak IS NOT NULL) AS VARCHAR) AS newest
 FROM zigbee
 WHERE
-    device IS NOT NULL
+    module = 'network'
+    AND device IS NOT NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -549,7 +583,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'zigbee'
-    AND column_name NOT IN ('available', 'coordinator', 'device', 'lqi', 'time', 'weak')
+    AND column_name NOT IN ('available', 'coordinator', 'device', 'lqi', 'module', 'time', 'weak')
 ORDER BY rows DESC NULLS LAST;
 
 -- entities
@@ -563,7 +597,8 @@ SELECT
     max(time)                                                                     AS newest
 FROM certificate
 WHERE
-    endpoint IS NOT NULL
+    module = 'network'
+    AND endpoint IS NOT NULL
 GROUP BY endpoint, CASE WHEN endpoint IN ('home.janeandgraham.com:443') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
@@ -576,7 +611,8 @@ SELECT
     max(time)                                                                                                                     AS newest
 FROM diagnosis
 WHERE
-    plugin IS NOT NULL
+    module = 'network'
+    AND plugin IS NOT NULL
 GROUP BY plugin, CASE WHEN plugin IN ('certificate', 'domain', 'ethernet', 'internet', 'weewx', 'wireless', 'zigbee') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
@@ -589,7 +625,8 @@ SELECT
     max(time)                                                                                              AS newest
 FROM domain
 WHERE
-    resolver IS NOT NULL
+    module = 'network'
+    AND resolver IS NOT NULL
 GROUP BY resolver, CASE WHEN resolver IN ('cloudflare', 'google', 'quad9', 'opendns', 'adguard') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
@@ -602,7 +639,8 @@ SELECT
     max(time)       AS newest
 FROM ethernet
 WHERE
-    port IS NOT NULL
+    module = 'network'
+    AND port IS NOT NULL
 GROUP BY port
 UNION ALL
 SELECT
@@ -615,7 +653,8 @@ SELECT
     max(time)                                                                                 AS newest
 FROM internet
 WHERE
-    target IS NOT NULL
+    module = 'network'
+    AND target IS NOT NULL
 GROUP BY target, CASE WHEN target IN ('gateway', '1.1.1.1', '8.8.8.8', '9.9.9.9') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
@@ -628,7 +667,8 @@ SELECT
     max(time)                                                        AS newest
 FROM weewx
 WHERE
-    console IS NOT NULL
+    module = 'network'
+    AND console IS NOT NULL
 GROUP BY console, CASE WHEN console IN ('weatherstation') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
@@ -641,7 +681,8 @@ SELECT
     max(time)              AS newest
 FROM wireless
 WHERE
-    accesspoint IS NOT NULL
+    module = 'network'
+    AND accesspoint IS NOT NULL
 GROUP BY accesspoint
 UNION ALL
 SELECT
@@ -654,6 +695,7 @@ SELECT
     max(time)       AS newest
 FROM zigbee
 WHERE
-    device IS NOT NULL
+    module = 'network'
+    AND device IS NOT NULL
 GROUP BY device
 ORDER BY rows DESC;

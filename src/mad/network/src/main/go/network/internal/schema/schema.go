@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"sync"
 )
+
+const TagModule = "module"
 
 type Kind string
 
@@ -91,6 +94,10 @@ type DatabaseSection struct {
 
 type BrokerSection struct {
 	Payloads []Payload `json:"payloads"`
+}
+
+func Module() string {
+	return os.Getenv("SERVICE_NAME")
 }
 
 func Reflect(w io.Writer, module string, database DatabaseSchema, broker BrokerSchema) error {

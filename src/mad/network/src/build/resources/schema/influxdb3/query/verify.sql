@@ -45,7 +45,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'certificate'
-    AND column_name NOT IN ('endpoint', 'expiry_days', 'time', 'validity_pct', 'verified')
+    AND column_name NOT IN ('endpoint', 'expiry_days', 'module', 'time', 'validity_pct', 'verified')
 ORDER BY fault, measure;
 
 SELECT
@@ -79,7 +79,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'diagnosis'
-    AND column_name NOT IN ('ok', 'plugin', 'score', 'time')
+    AND column_name NOT IN ('module', 'ok', 'plugin', 'score', 'time')
 ORDER BY fault, measure;
 
 SELECT
@@ -124,7 +124,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'domain'
-    AND column_name NOT IN ('latency_ms', 'ok', 'resolved', 'resolver', 'time')
+    AND column_name NOT IN ('latency_ms', 'module', 'ok', 'resolved', 'resolver', 'time')
 ORDER BY fault, measure;
 
 SELECT
@@ -191,7 +191,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
-    AND column_name NOT IN ('degraded', 'errors', 'full_duplex', 'port', 'speed_mbps', 'time', 'up')
+    AND column_name NOT IN ('degraded', 'errors', 'full_duplex', 'module', 'port', 'speed_mbps', 'time', 'up')
 ORDER BY fault, measure;
 
 SELECT
@@ -247,7 +247,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'internet'
-    AND column_name NOT IN ('jitter_ms', 'loss_pct', 'reachable', 'rtt_ms', 'target', 'time')
+    AND column_name NOT IN ('jitter_ms', 'loss_pct', 'module', 'reachable', 'rtt_ms', 'target', 'time')
 ORDER BY fault, measure;
 
 SELECT
@@ -281,7 +281,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'weewx'
-    AND column_name NOT IN ('console', 'fresh', 'quality_pct', 'time')
+    AND column_name NOT IN ('console', 'fresh', 'module', 'quality_pct', 'time')
 ORDER BY fault, measure;
 
 SELECT
@@ -326,7 +326,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
-    AND column_name NOT IN ('accesspoint', 'clients', 'experience_pct', 'time', 'up')
+    AND column_name NOT IN ('accesspoint', 'clients', 'experience_pct', 'module', 'time', 'up')
 ORDER BY fault, measure;
 
 SELECT
@@ -382,5 +382,5 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'zigbee'
-    AND column_name NOT IN ('available', 'coordinator', 'device', 'lqi', 'time', 'weak')
+    AND column_name NOT IN ('available', 'coordinator', 'device', 'lqi', 'module', 'time', 'weak')
 ORDER BY fault, measure;

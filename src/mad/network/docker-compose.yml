@@ -3,6 +3,7 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
+    - SERVICE_NAME
     - NETWORKS_HOST
     - BROKER_HOST
     - BROKER_PORT
