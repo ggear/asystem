@@ -37,14 +37,9 @@ Order of attach:
   - grafana
   - wrangle balances/transactions
 
-Move network to mad
-Redeploy networks
-Redeploy supervisor
-Update influxdb for only one database, Redeploy influxdb
-Redeploy haas
-
 HASS to InfluxDB3, filter what is written, add a database schema discover class that prints json to match what is in influxdb for describe/query etc to work
-For each module with an influxdb schema add a compulsory tag "module" which stores the source module name that the data comes from, eg "supervisor" or "networks"
+Redeploy influxdb and wipe, backup V2 to V3 home and delete V2, reploy supervisor/network
+
 
 validate all database modules - supervisor/networks/wrangle/homeassistant, test whats on file and describe/query/verify
 validate all broker modules, test whats on file and describe/query/verify
@@ -194,6 +189,8 @@ Submit pull requests for bom-radar-map, test all options first
 Revert to native InfluxDB, investigate TimescaleDB, how to filter, make schema nice
 Fix powercalc issues
 Fix unifi cameras, upgrade unifi
+Add Apple TV/Homepod
+
 
 ###############################################################################################################################################################
 # LetsEncrypt
