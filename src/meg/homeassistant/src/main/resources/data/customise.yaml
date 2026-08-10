@@ -623,8 +623,8 @@ switch.service_mlflow:
 switch.service_mlserver:
   friendly_name: 'MLServer'
   icon: 'mdi:heart-pulse'
-switch.service_networks:
-  friendly_name: 'Networks'
+switch.service_network:
+  friendly_name: 'Network'
   icon: 'mdi:heart-pulse'
 switch.service_openra:
   friendly_name: 'OpenRA'

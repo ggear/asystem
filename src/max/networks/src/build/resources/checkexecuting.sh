@@ -1,2 +1,0 @@
-/asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" &&
-  mosquitto_sub -h "$BROKER_HOST" -p "$BROKER_PORT" ${BROKER_TOKEN:+-u networks -P $BROKER_TOKEN} -t "networks/status" -C 1 -W 2 2>/dev/null | grep -q "^online$"

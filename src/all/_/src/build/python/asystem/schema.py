@@ -781,7 +781,7 @@ def declared_measure(relation, measure, unit, period):
 
 
 def declared_entity(relation, column=None):
-    if relation.subject is None:
+    if relation.subject is None or not relation.entities:
         return "'{}'".format(NULL)
     return "CASE WHEN {} THEN '{}' ELSE '{}' END".format(
         literals(column or relation.subject.key, relation.entities, negate=False), YES, NO)

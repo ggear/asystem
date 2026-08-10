@@ -1,0 +1,44 @@
+x-common: &common
+  image: network:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  environment:
+    - TZ=Australia/Perth
+    - NETWORKS_HOST
+    - BROKER_HOST
+    - BROKER_PORT
+    - BROKER_TOKEN
+    - DATABASE_HOST
+    - DATABASE_PORT
+    - DATABASE_NAME
+    - DATABASE_TOKEN
+    - UNIFI_URL
+    - UNIFI_SITE
+    - UNIFI_USER
+    - UNIFI_TOKEN
+    - UNIFI_HOST
+    - WEEWX_HOST_PROD
+  volumes:
+    - ${SERVICE_DATA_DIR}:/asystem/mnt
+  sysctls:
+    - net.ipv4.ping_group_range=0 2147483647
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
+services:
+  network:
+    container_name: network
+    <<: *common
+    restart: ${SERVICE_RESTART}
+    healthcheck:
+      test: /asystem/etc/checkhealthy.sh
+      interval: 2m
+      timeout: 30s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M

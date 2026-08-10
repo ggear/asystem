@@ -61,8 +61,8 @@
     - entity: switch.service_mlserver
       name: MLServer
       icon: mdi:heart-pulse
-    - entity: switch.service_networks
-      name: Networks
+    - entity: switch.service_network
+      name: Network
       icon: mdi:heart-pulse
     - entity: switch.service_openra
       name: OpenRA

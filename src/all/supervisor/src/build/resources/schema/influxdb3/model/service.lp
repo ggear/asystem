@@ -6,7 +6,7 @@
 #   cadence 6s
 #   tag host [name of the host running the service]
 #   tag service* [name of the monitored service]
-#   entity grafana, homeassistant, influxdb, influxdb3, letsencrypt, mariadb, mlflow, mlserver, networks,
+#   entity grafana, homeassistant, influxdb, influxdb3, letsencrypt, mariadb, mlflow, mlserver, network,
 #   entity nginx, openra, plex, postgres, sabnzbd, sonarr, supervisor, tempstat, unpoller, vernemq, weewx,
 #   entity wrangle, zigbee2mqtt
 #   field status - 6s [service is running and healthy]

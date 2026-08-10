@@ -18,6 +18,7 @@
       {
         "host": "macmini-mad",
         "services": [
+          "network",
           "plex",
           "postgres",
           "sabnzbd",
@@ -31,7 +32,6 @@
           "influxdb3",
           "mlflow",
           "mlserver",
-          "networks",
           "openra",
           "supervisor"
         ]

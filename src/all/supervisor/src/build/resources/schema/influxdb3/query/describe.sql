@@ -817,7 +817,7 @@ SELECT
     concat(host, '/', service) AS entity,
     CASE WHEN service IN (
         'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt', 'mariadb',
-        'mlflow', 'mlserver', 'networks', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
+        'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
         'sonarr', 'supervisor', 'tempstat', 'unpoller', 'vernemq', 'weewx', 'wrangle',
         'zigbee2mqtt'
     ) THEN 'yes' ELSE 'no' END AS declared,
@@ -830,7 +830,7 @@ WHERE
     AND service IS NOT NULL
 GROUP BY concat(host, '/', service), CASE WHEN service IN (
     'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt', 'mariadb',
-    'mlflow', 'mlserver', 'networks', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
+    'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
     'sonarr', 'supervisor', 'tempstat', 'unpoller', 'vernemq', 'weewx', 'wrangle',
     'zigbee2mqtt'
 ) THEN 'yes' ELSE 'no' END
