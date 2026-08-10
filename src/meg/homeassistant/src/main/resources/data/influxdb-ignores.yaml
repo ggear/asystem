@@ -45,6 +45,7 @@
 - 'integration'
 - 'last_period'
 - 'preset_mode'
+- 'state_class'
 - 'preset_modes'
 - 'power_source'
 - 'coefficients'
