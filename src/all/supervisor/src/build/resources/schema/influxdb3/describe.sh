@@ -42,6 +42,8 @@ if [ "${SCHEMA_VERBOSE}" == true ]; then
   set -x
 fi
 
+DATABASE_NAME="${DATABASE_NAME:-${INFLUXDB3_DATABASE_HOME}}"
+
 query() {
   local response status
   response="$(curl -sS -w '\n%{http_code}' -X POST \

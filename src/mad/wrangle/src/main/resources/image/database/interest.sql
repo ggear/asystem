@@ -4,8 +4,10 @@
 
 -- interest/rate [interest and inflation rates published by the Reserve Bank of Australia]
 --   cadence 1d
---   tag entity* [rate series]
---   entity Bank, Inflation, Net
+--   tag entity* [rate series:
+--     Bank,
+--     Inflation,
+--     Net]
 --   field mean % 1mo [mean rate across the month]
 --   field mean % 1y [mean rate across [1 Year Mean]]
 --   field mean % 5y [mean rate across [5 Year Mean]]

@@ -4,9 +4,14 @@
 
 # supervisor/host [health and utilisation of one host]
 #   cadence 6s
-#   tag module [module the rows are written by, always [supervisor]]
-#   tag host* [name of the monitored host]
-#   entity macmini-mad, macmini-max, macmini-may, macmini-meg, raspbpi-jen, raspbpi-jil
+#   tag module [always 'supervisor']
+#   tag host* [name of the monitored host:
+#     macmini-mad,
+#     macmini-max,
+#     macmini-may,
+#     macmini-meg,
+#     raspbpi-jen,
+#     raspbpi-jil]
 #   field status - 6s [host is reachable and healthy]
 #   field status_trend - 6s [host is reachable and healthy, smoothed across the trend window]
 #   field used_processor % 6s [processor used across the host]
@@ -45,39 +50,41 @@
 #   field services - 6s [every service on the host is healthy] (not persisted)
 #   field services_max_memory MiB 6s [memory ceiling summed across the services on the host] (not persisted)
 
-supervisor,module=supervisor,host=<host>
-    status=<0|1>i,
-    status_trend=<0|1>i,
-    used_processor=<number>i,
-    used_processor_trend=<number>i,
-    used_memory=<number>i,
-    used_memory_trend=<number>i,
-    allocated_memory=<number>i,
-    allocated_memory_trend=<number>i,
-    failed_log_messages=<number>i,
-    failed_log_messages_trend=<number>i,
-    failed_shares=<number>i,
-    failed_shares_trend=<number>i,
-    failed_backups=<number>i,
-    failed_backups_trend=<number>i,
-    warn_temperature_of_max=<number>i,
-    warn_temperature_of_max_trend=<number>i,
-    spin_fan_speed_of_max=<number>i,
-    spin_fan_speed_of_max_trend=<number>i,
-    life_used_drives=<number>i,
-    life_used_drives_trend=<number>i,
-    used_system_space=<number>i,
-    used_system_space_trend=<number>i,
-    used_share_space=<number>i,
-    used_share_space_trend=<number>i,
-    used_backup_space=<number>i,
-    used_backup_space_trend=<number>i,
-    used_swap_space=<number>i,
-    used_swap_space_trend=<number>i,
-    used_disk_ops=<number>i,
-    used_disk_ops_trend=<number>i,
-    used_network=<number>i,
-    used_network_trend=<number>i,
-    temperature=<number>,
-    temperature_trend=<number>
-    <timestamp>
+supervisor,
+  module=supervisor,
+  host=<string>
+    status=<0|1>,
+    status_trend=<0|1>,
+    used_processor=<int>,
+    used_processor_trend=<int>,
+    used_memory=<int>,
+    used_memory_trend=<int>,
+    allocated_memory=<int>,
+    allocated_memory_trend=<int>,
+    failed_log_messages=<int>,
+    failed_log_messages_trend=<int>,
+    failed_shares=<int>,
+    failed_shares_trend=<int>,
+    failed_backups=<int>,
+    failed_backups_trend=<int>,
+    warn_temperature_of_max=<int>,
+    warn_temperature_of_max_trend=<int>,
+    spin_fan_speed_of_max=<int>,
+    spin_fan_speed_of_max_trend=<int>,
+    life_used_drives=<int>,
+    life_used_drives_trend=<int>,
+    used_system_space=<int>,
+    used_system_space_trend=<int>,
+    used_share_space=<int>,
+    used_share_space_trend=<int>,
+    used_backup_space=<int>,
+    used_backup_space_trend=<int>,
+    used_swap_space=<int>,
+    used_swap_space_trend=<int>,
+    used_disk_ops=<int>,
+    used_disk_ops_trend=<int>,
+    used_network=<int>,
+    used_network_trend=<int>,
+    temperature=<float>,
+    temperature_trend=<float>
+  <timestamp>

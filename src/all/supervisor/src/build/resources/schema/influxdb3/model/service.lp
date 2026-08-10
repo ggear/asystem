@@ -4,12 +4,36 @@
 
 # supervisor/service [health and utilisation of one service on one host]
 #   cadence 6s
-#   tag module [module the rows are written by, always [supervisor]]
-#   tag host [name of the host running the service]
-#   tag service* [name of the monitored service]
-#   entity grafana, homeassistant, influxdb, influxdb3, letsencrypt, mariadb, mlflow, mlserver, network,
-#   entity nginx, openra, plex, postgres, sabnzbd, sonarr, supervisor, tempstat, vernemq, weewx, wrangle,
-#   entity zigbee2mqtt
+#   tag module [always 'supervisor']
+#   tag host [name of the host running the service:
+#     macmini-mad,
+#     macmini-max,
+#     macmini-may,
+#     macmini-meg,
+#     raspbpi-jen,
+#     raspbpi-jil]
+#   tag service* [name of the monitored service:
+#     grafana,
+#     homeassistant,
+#     influxdb,
+#     influxdb3,
+#     letsencrypt,
+#     mariadb,
+#     mlflow,
+#     mlserver,
+#     network,
+#     nginx,
+#     openra,
+#     plex,
+#     postgres,
+#     sabnzbd,
+#     sonarr,
+#     supervisor,
+#     tempstat,
+#     vernemq,
+#     weewx,
+#     wrangle,
+#     zigbee2mqtt]
 #   field status - 6s [service is running and healthy]
 #   field status_trend - 6s [service is running and healthy, smoothed across the trend window]
 #   field backup_status - 6s [service backup completed]
@@ -33,23 +57,26 @@
 #   field restart_count - 6s [restarts of the service]
 #   field restart_count_trend - 6s [restarts of the service, smoothed across the trend window]
 
-supervisor,module=supervisor,host=<host>,service=<service>
-    status=<0|1>i,
-    status_trend=<0|1>i,
-    backup_status=<0|1>i,
-    backup_status_trend=<0|1>i,
-    health_status=<0|1>i,
-    health_status_trend=<0|1>i,
-    configured_status=<0|1>i,
-    configured_status_trend=<0|1>i,
-    used_processor=<number>i,
-    used_processor_trend=<number>i,
-    used_memory=<number>i,
-    used_memory_trend=<number>i,
-    used_disk_ops=<number>i,
-    used_disk_ops_trend=<number>i,
-    used_network=<number>i,
-    used_network_trend=<number>i,
-    restart_count=<number>,
-    restart_count_trend=<number>
-    <timestamp>
+supervisor,
+  module=supervisor,
+  host=<string>,
+  service=<string>
+    status=<0|1>,
+    status_trend=<0|1>,
+    backup_status=<0|1>,
+    backup_status_trend=<0|1>,
+    health_status=<0|1>,
+    health_status_trend=<0|1>,
+    configured_status=<0|1>,
+    configured_status_trend=<0|1>,
+    used_processor=<int>,
+    used_processor_trend=<int>,
+    used_memory=<int>,
+    used_memory_trend=<int>,
+    used_disk_ops=<int>,
+    used_disk_ops_trend=<int>,
+    used_network=<int>,
+    used_network_trend=<int>,
+    restart_count=<float>,
+    restart_count_trend=<float>
+  <timestamp>

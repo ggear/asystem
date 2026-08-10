@@ -37,10 +37,13 @@ Order of attach:
   - grafana
   - wrangle balances/transactions
 
-HASS to InfluxDB3, filter what is written, add a database schema discover class that prints json to match what is in influxdb for describe/query etc to work
+filter haas entities down, make them line up nicely with others
+deal with str vars out of haas, patch influxdb?
+bool should be 0|1 from my own persistence layer, influx might have bools? ON/OFF state from hass to be 0/1?
 Redeploy influxdb and wipe, backup V2 to V3 home and delete V2, reploy supervisor/network
 
 
+tune influxdb compactor given real world inputs
 validate all database modules - supervisor/networks/wrangle/homeassistant, test whats on file and describe/query/verify
 validate all broker modules, test whats on file and describe/query/verify
 for zigbeemqtt and others? maybe have discover.sh write to topics to sample payloads? dont overwrite if existing? or only clear/overwrite if they are only dsicvovered? generalise handwritten broker stuff rename broker to vernemq?

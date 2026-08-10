@@ -4,9 +4,33 @@
 
 -- equity/ticker [equity prices and volumes downloaded per ticker]
 --   cadence 1d
---   tag entity* [ticker symbol]
---   entity ACDC, AORD, ATOI, AXJO, BANK, CLNE, EMKT, ERTH, GAME, GOLD, IAF, MCK, MUK, MUS, MVW, NDQ, QSML,
---   entity SIG, URNM, VAE, VAS, VDHG, VGE, VGS, VHY, WDS
+--   tag entity* [ticker symbol:
+--     ACDC,
+--     AORD,
+--     ATOI,
+--     AXJO,
+--     BANK,
+--     CLNE,
+--     EMKT,
+--     ERTH,
+--     GAME,
+--     GOLD,
+--     IAF,
+--     MCK,
+--     MUK,
+--     MUS,
+--     MVW,
+--     NDQ,
+--     QSML,
+--     SIG,
+--     URNM,
+--     VAE,
+--     VAS,
+--     VDHG,
+--     VGE,
+--     VGS,
+--     VHY,
+--     WDS]
 --   field market-volume-spot $ 1d [daily market volume spot reading]
 --   field price-close $ 1d [daily price close reading]
 --   field price-close-base $ 1d [daily price close base reading]

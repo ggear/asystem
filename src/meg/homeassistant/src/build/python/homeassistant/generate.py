@@ -9,6 +9,8 @@ if __name__ == "__main__":
     write_container_bootstrap(working_dir=join(DIR_ROOT, "src/main/resources/data"))
     write_container_healthchecks(working_dir=join(DIR_ROOT, "src/main/resources/data"))
 
+    write_schema_database(schema_influxdb.Discover(label="Home Assistant").document())
+
     # Verify entity IDs
     metadata_verify_df = metadata_hass_df[
         (metadata_hass_df["index"] > 0) &

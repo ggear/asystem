@@ -4,8 +4,10 @@
 
 -- currency/rate [foreign exchange rates published by the Reserve Bank of Australia]
 --   cadence 1d
---   tag entity* [currency pair]
---   entity AUD/USD, AUD/GBP, AUD/SGD
+--   tag entity* [currency pair:
+--     AUD/USD,
+--     AUD/GBP,
+--     AUD/SGD]
 --   field snapshot $ 1d [closing rate for the currency pair]
 --   field delta % 1d [change in the rate across [1 Day Delta]]
 --   field delta % 7d [change in the rate across [1 Week Delta]]

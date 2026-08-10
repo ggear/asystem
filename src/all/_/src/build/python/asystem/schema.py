@@ -26,6 +26,7 @@ class SchemaDatabaseDimension:
     key: str
     description: str = ""
     subject: bool = False
+    entities: list = field(default_factory=list)
 
 
 @dataclass
@@ -87,6 +88,7 @@ class SchemaDocument:
     module: str
     relations: list = field(default_factory=list)
     payloads: list = field(default_factory=list)
+    discovered: bool = False
 
 
 def load_schema_document(module_root=None, config=None, args=None):
@@ -113,7 +115,9 @@ def load_schema_document(module_root=None, config=None, args=None):
         "module":      "<name>",            OPTIONAL  Owning module, defaults to the module directory name
         "database":    {                    OPTIONAL  What the service writes to a database backend
           "relations":   [{                 OPTIONAL  One per distinct row shape written
-            "path":        "<path>",        REQUIRED  [<plugin>/<scope>], [<plugin>] is what the backend writes to
+            "path":        "<path>",        REQUIRED  [<plugin>/<scope>], [<plugin>] is what the backend writes to,
+                                                      [<plugin>] alone where there is nothing to scope, as when a
+                                                      schema is discovered rather than declared
             "description": "<text>",        OPTIONAL  What the relation holds
             "cadence":     "<duration>",    OPTIONAL  How often a row arrives, never written, sizes buckets and windows
             "entities":    ["<entity>"],    OPTIONAL  Values the subject takes, generate.py may fill them instead
@@ -305,7 +309,8 @@ def _parse_dimension(module_name, scope, dimension):
     return SchemaDatabaseDimension(
         key=_text(module_name, scope, dimension, "key"),
         description=_text(module_name, scope, dimension, "description", ""),
-        subject=_flag(module_name, scope, dimension, "subject", False))
+        subject=_flag(module_name, scope, dimension, "subject", False),
+        entities=_texts(module_name, scope, dimension, "entities"))
 
 
 def _parse_measure(module_name, scope, measure):
@@ -395,8 +400,9 @@ def _value(module_name, scope, mapping, key, kind, default=None, element=None):
 def _validate(document):
     paths = set()
     for relation in document.relations:
-        if "/" not in relation.path:
-            raise ValueError("Build generate script [{}] relation path must be [<plugin>/<scope>] [{}]"
+        if not relation.path or relation.path.count("/") > 1 or relation.path.startswith("/"):
+            raise ValueError("Build generate script [{}] relation path must be [<plugin>/<scope>], or [<plugin>] "
+                             "alone where the backend holds nothing to scope [{}]"
                              .format(document.module, relation.path))
         if relation.path in paths:
             raise ValueError("Build generate script [{}] duplicate relation [{}]".format(document.module, relation.path))
@@ -459,21 +465,27 @@ def write_schema_broker(metadata_df, module_name=None, working_root=None, schema
     schema_vernemq.ship(metadata_df, module_name, working_root, topic_glob_discovery, topic_glob_data)
 
 
+def parse_schema_document(text, module_name):
+    """Parse a reflected document, the public half of the contract on [load_schema_document].
+
+    Any producer emitting the documented JSON reaches a SchemaDocument through here, whichever
+    way it was produced, so a discovered document is validated exactly like a declared one.
+    """
+    return _parse_document(text, module_name)
+
+
 def banner(prefix="#"):
     rule = prefix * (80 // len(prefix))
     return "{0}\n{1} WARNING: This file is written by the build process, any manual edits will be lost!\n{0}".format(
         rule, prefix)
 
 
-def vocabulary(relation, prefix="#", tags=()):
+def vocabulary(relation, prefix="#", tags=(), entities=None):
     lines = ["{} {} [{}]".format(prefix, relation.path, relation.description)]
     if relation.cadence:
         lines.append("{}   cadence {}".format(prefix, relation.cadence))
     for dimension in list(tags) + list(relation.dimensions):
-        lines.append("{}   tag {}{} [{}]".format(
-            prefix, dimension.key, SUBJECT if dimension.subject else "", dimension.description))
-    if relation.subject is not None:
-        lines += _entities(relation.entities, prefix)
+        lines += _tagged(relation, dimension, prefix, entities)
     for measure in relation.measures:
         lines.append("{}   field {} {} {} [{}]{}".format(
             prefix, measure.key, UNITS.get(measure.unit, measure.unit) or NULL, relation.span(measure) or NULL,
@@ -481,18 +493,19 @@ def vocabulary(relation, prefix="#", tags=()):
     return lines
 
 
-def _entities(entities, prefix, width=110):
-    leading = "{}   entity ".format(prefix)
-    if not entities:
-        return [leading + "<undeclared, whatever the service writes>"]
-    lines, current = [], ""
-    for index, entity in enumerate(entities):
-        entity += "," if index < len(entities) - 1 else ""
-        if current and len(leading) + len(current) + 1 + len(entity) > width:
-            lines.append(leading + current)
-            current = ""
-        current += (" " if current else "") + entity
-    return lines + [leading + current]
+def _tagged(relation, dimension, prefix, entities=None):
+    values = dimension.entities or (entities or {}).get(dimension.key)
+    if values is None:
+        values = relation.entities if dimension.subject else []
+    heading = "{}   tag {}{} [{}".format(
+        prefix, dimension.key, SUBJECT if dimension.subject else "", dimension.description)
+    if not values and not dimension.subject:
+        return [heading + "]"]
+    if not values:
+        values = [UNDECLARED]
+    return ([heading + ":"] +
+            ["{}     {},".format(prefix, value) for value in values[:-1]] +
+            ["{}     {}]".format(prefix, values[-1])])
 
 
 def select(selectors, source, predicates=(),
@@ -629,12 +642,13 @@ NULL = "-"
 YES = "yes"
 NO = "no"
 SUBJECT = "*"
+UNDECLARED = "<string>"
 UNITS = {"celsius": "Celsius"}
 ALIAS = 4
 SPELLED = 6
 CROWDED = 5
 ABBREVIATED = False
-WIDTH = 300
+WIDTH = 200
 CELL = 8
 KEYED = 15
 STAMPED = 19
