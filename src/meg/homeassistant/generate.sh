@@ -112,13 +112,6 @@ rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/powercalc"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/powercalc-component/custom_components/powercalc" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
-# NOTES: https://github.com/home-assistant/core/tree/dev/homeassistant/components/influxdb
-VERSION=${HOMEASSISTANT_VERSION}
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "influxdb-component" "ggear/homeassistant-core" "ggear-influxdb" "https://github.com/home-assistant/core.git" "${VERSION}"
-rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/influxdb"
-mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
-cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/influxdb-component/homeassistant/components/influxdb" "${ROOT_DIR}/src/main/resources/data/custom_components"
-
 # NOTES: https://github.com/home-assistant/core/tree/dev/homeassistant/components/tplink
 VERSION=${HOMEASSISTANT_VERSION}
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "tplink-component" "ggear/homeassistant-core" "ggear-tplink" "https://github.com/home-assistant/core.git" "${VERSION}"

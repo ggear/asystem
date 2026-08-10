@@ -8,8 +8,8 @@
 #   tag host [name of the host running the service]
 #   tag service* [name of the monitored service]
 #   entity grafana, homeassistant, influxdb, influxdb3, letsencrypt, mariadb, mlflow, mlserver, network,
-#   entity nginx, openra, plex, postgres, sabnzbd, sonarr, supervisor, tempstat, unpoller, vernemq, weewx,
-#   entity wrangle, zigbee2mqtt
+#   entity nginx, openra, plex, postgres, sabnzbd, sonarr, supervisor, tempstat, vernemq, weewx, wrangle,
+#   entity zigbee2mqtt
 #   field status - 6s [service is running and healthy]
 #   field status_trend - 6s [service is running and healthy, smoothed across the trend window]
 #   field backup_status - 6s [service backup completed]

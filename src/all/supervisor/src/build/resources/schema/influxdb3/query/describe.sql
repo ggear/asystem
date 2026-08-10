@@ -873,8 +873,7 @@ SELECT
     CASE WHEN service IN (
         'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt', 'mariadb',
         'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
-        'sonarr', 'supervisor', 'tempstat', 'unpoller', 'vernemq', 'weewx', 'wrangle',
-        'zigbee2mqtt'
+        'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt'
     ) THEN 'yes' ELSE 'no' END AS declared,
     count(*)                   AS rows,
     min(time)                  AS oldest,
@@ -887,7 +886,6 @@ WHERE
 GROUP BY concat(host, '/', service), CASE WHEN service IN (
     'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt', 'mariadb',
     'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
-    'sonarr', 'supervisor', 'tempstat', 'unpoller', 'vernemq', 'weewx', 'wrangle',
-    'zigbee2mqtt'
+    'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt'
 ) THEN 'yes' ELSE 'no' END
 ORDER BY rows DESC;
