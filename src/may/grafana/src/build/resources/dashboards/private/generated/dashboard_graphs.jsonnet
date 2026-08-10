@@ -7,6 +7,8 @@ local graph_internet = import 'graph_internet.jsonnet';
 local graph_servers = import 'graph_servers.jsonnet';
 local graph_containers = import 'graph_containers.jsonnet';
 local graph_equity = import 'graph_equity.jsonnet';
+local graph_currency = import 'graph_currency.jsonnet';
+local graph_interest = import 'graph_interest.jsonnet';
 local graph_health = import 'graph_health.jsonnet';
 local graph_network = import 'graph_network.jsonnet';
 local graph_rain = import 'graph_rain.jsonnet';
@@ -14,8 +16,6 @@ local graph_diagnostics = import 'graph_diagnostics.jsonnet';
 local graph_conditions = import 'graph_conditions.jsonnet';
 local graph_control = import 'graph_control.jsonnet';
 local graph_electricity = import 'graph_electricity.jsonnet';
-local graph_currency = import 'graph_currency.jsonnet';
-local graph_interest = import 'graph_interest.jsonnet';
 
 {
             
@@ -111,6 +111,50 @@ local graph_interest = import 'graph_interest.jsonnet';
                         time_from='now-12M', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_equity.graphs()),
+
+
+            currency_dashboard:
+                  dashboard.new(
+                        schemaVersion=30,
+                        title='Currency',
+//ASM                   uid='currency-mobile',
+//AST                   uid='currency-tablet',
+//ASD                   uid='currency-desktop',
+//ASM                   editable=false,
+//AST                   editable=false,
+//ASD                   editable=true,
+//ASM                   hideControls=true,
+//AST                   hideControls=true,
+//ASD                   hideControls=false,
+                        graphTooltip='shared_tooltip',
+//ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
+//ASD                   tags=['private', 'desktop'],
+                        time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+                  )
+                  .addPanels(graph_currency.graphs()),
+
+
+            interest_dashboard:
+                  dashboard.new(
+                        schemaVersion=30,
+                        title='Interest',
+//ASM                   uid='interest-mobile',
+//AST                   uid='interest-tablet',
+//ASD                   uid='interest-desktop',
+//ASM                   editable=false,
+//AST                   editable=false,
+//ASD                   editable=true,
+//ASM                   hideControls=true,
+//AST                   hideControls=true,
+//ASD                   hideControls=false,
+                        graphTooltip='shared_tooltip',
+//ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
+//ASD                   tags=['private', 'desktop'],
+                        time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+                  )
+                  .addPanels(graph_interest.graphs()),
 
 
             health_dashboard:
@@ -265,50 +309,6 @@ local graph_interest = import 'graph_interest.jsonnet';
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_electricity.graphs()),
-
-
-            currency_dashboard:
-                  dashboard.new(
-                        schemaVersion=30,
-                        title='Currency',
-//ASM                   uid='currency-mobile',
-//AST                   uid='currency-tablet',
-//ASD                   uid='currency-desktop',
-//ASM                   editable=false,
-//AST                   editable=false,
-//ASD                   editable=true,
-//ASM                   hideControls=true,
-//AST                   hideControls=true,
-//ASD                   hideControls=false,
-                        graphTooltip='shared_tooltip',
-//ASM                   tags=['private', 'mobile'],
-//AST                   tags=['private', 'tablet'],
-//ASD                   tags=['private', 'desktop'],
-                        time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
-                  )
-                  .addPanels(graph_currency.graphs()),
-
-
-            interest_dashboard:
-                  dashboard.new(
-                        schemaVersion=30,
-                        title='Interest',
-//ASM                   uid='interest-mobile',
-//AST                   uid='interest-tablet',
-//ASD                   uid='interest-desktop',
-//ASM                   editable=false,
-//AST                   editable=false,
-//ASD                   editable=true,
-//ASM                   hideControls=true,
-//AST                   hideControls=true,
-//ASD                   hideControls=false,
-                        graphTooltip='shared_tooltip',
-//ASM                   tags=['private', 'mobile'],
-//AST                   tags=['private', 'tablet'],
-//ASD                   tags=['private', 'desktop'],
-                        time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
-                  )
-                  .addPanels(graph_interest.graphs()),
 
   },
 }
