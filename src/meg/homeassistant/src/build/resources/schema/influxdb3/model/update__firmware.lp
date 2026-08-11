@@ -19,6 +19,9 @@
 #     dining_main_bulb_6,
 #     edwin_night_light_bulb_1,
 #     ensuite_main_bulb_1,
+#     ensuite_sconces_bulb_1,
+#     ensuite_sconces_bulb_2,
+#     ensuite_sconces_bulb_3,
 #     hallway_sconces_bulb_1,
 #     hallway_sconces_bulb_2,
 #     kitchen_fan_outlet,
@@ -54,7 +57,7 @@
 
 update__firmware,
   module=homeassistant,
-  entity_id=<ada_desk_outlet|ada_lamp_bulb_1|bathroom_main_bulb_1|deck_fans_outlet|dining_air_purifier|dining_main_bulb_1|dining_main_bulb_2|dining_main_bulb_3|dining_main_bulb_4|dining_main_bulb_5|dining_main_bulb_6|edwin_night_light_bulb_1|ensuite_main_bulb_1|hallway_sconces_bulb_1|hallway_sconces_bulb_2|kitchen_fan_outlet|kitchen_main_bulb_1|kitchen_main_bulb_2|kitchen_main_bulb_3|kitchen_main_bulb_4|laundry_main_bulb_1|lounge_air_purifier|lounge_lamp_bulb_1|lounge_main_bulb_1|lounge_main_bulb_2|lounge_main_bulb_3|office_main_bulb_1|pantry_main_bulb_1|parents_main_bulb_1|parents_main_bulb_2|parents_main_bulb_3|wardrobe_main_bulb_1>
+  entity_id=<ada_desk_outlet|ada_lamp_bulb_1|bathroom_main_bulb_1|deck_fans_outlet|dining_air_purifier|dining_main_bulb_1|dining_main_bulb_2|dining_main_bulb_3|dining_main_bulb_4|dining_main_bulb_5|dining_main_bulb_6|edwin_night_light_bulb_1|ensuite_main_bulb_1|ensuite_sconces_bulb_1|ensuite_sconces_bulb_2|ensuite_sconces_bulb_3|hallway_sconces_bulb_1|hallway_sconces_bulb_2|kitchen_fan_outlet|kitchen_main_bulb_1|kitchen_main_bulb_2|kitchen_main_bulb_3|kitchen_main_bulb_4|laundry_main_bulb_1|lounge_air_purifier|lounge_lamp_bulb_1|lounge_main_bulb_1|lounge_main_bulb_2|lounge_main_bulb_3|office_main_bulb_1|pantry_main_bulb_1|parents_main_bulb_1|parents_main_bulb_2|parents_main_bulb_3|wardrobe_main_bulb_1>
     auto_update=<float>,
     display_precision=<float>,
     in_progress=<float>,

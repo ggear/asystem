@@ -246,7 +246,7 @@ UNION ALL
 SELECT
     'sensor'                         AS relation,
     'entity_id*/unit_of_measurement' AS dimension,
-    75                               AS measures,
+    78                               AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
     CAST(min(time) AS VARCHAR)       AS oldest,
@@ -1534,6 +1534,19 @@ WHERE
     )
 UNION ALL
 SELECT
+    'sensor'                                                                                                                              AS relation,
+    'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)'                                                       AS measure,
+    'float'                                                                                                                               AS kind,
+    '-'                                                                                                                                   AS unit,
+    '<on-change>'                                                                                                                         AS period,
+    count("Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'sensor'                                                                                                                             AS relation,
     'Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)'                                                       AS measure,
     'float'                                                                                                                              AS kind,
@@ -1897,6 +1910,8 @@ FROM information_schema.columns
 WHERE
     table_name = 'sensor'
     AND column_name NOT IN (
+        'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)',
+        'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)_str',
         'Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)',
         'Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)_str',
         'Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)',
@@ -1915,6 +1930,7 @@ WHERE
         'Cellular Technology_str', 'Confidence_str', 'Country_str',
         'Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)',
         'Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)_str',
+        'Fire (SWAN VIEW, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810055)_str',
         'ISO Country Code_str',
         'Incident (MIDLAND, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809976)_str',
         'Incident (MIDLAND, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810043)_str',
