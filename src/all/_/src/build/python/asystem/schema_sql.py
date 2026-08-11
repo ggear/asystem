@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 NULL = "-"
 YES = "yes"
@@ -65,11 +65,10 @@ def vocabulary(relation, prefix="#", tags=(), entities=None):
         lines.append("{}   cadence {}".format(prefix, relation.cadence))
     for dimension in list(tags) + list(relation.dimensions):
         lines += _tagged(relation, dimension, prefix, entities)
-    persisted = {id(measure) for measure in relation.persisted}
     for measure in relation.measures:
         lines.append("{}   field {} {} {} [{}]{}".format(
             prefix, measure.key, measure.unit or NULL, relation.span(measure) or NULL,
-            measure.description, "" if id(measure) in persisted else " (not persisted)"))
+            measure.description, "" if measure.persist else " (not persisted)"))
     return lines
 
 
@@ -313,10 +312,10 @@ def _describe_measures(document, dialect):
     for group, relations in dialect.groups(document):
         declared, keyed = set(), set()
         for relation in relations:
-            persisted = {id(measure) for measure in relation.persisted}
+            persisted = {measure.key for measure in relation.persisted}
             for measure in relation.measures:
                 keyed.add(measure.key)
-                if id(measure) not in persisted:
+                if measure.key not in persisted:
                     continue
                 declared.add(measure.key)
                 arms.append(select(
