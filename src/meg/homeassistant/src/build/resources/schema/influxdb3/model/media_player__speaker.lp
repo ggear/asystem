@@ -15,12 +15,14 @@
 #     parents_move]
 #   field app_name_str - <on-change> [Home Assistant value]
 #   field is_volume_muted - <on-change> [Home Assistant value]
+#   field media_album_name - <on-change> [Home Assistant value]
 #   field media_album_name_str - <on-change> [Home Assistant value]
 #   field media_artist_str - <on-change> [Home Assistant value]
 #   field media_channel - <on-change> [Home Assistant value]
 #   field media_channel_str - <on-change> [Home Assistant value]
 #   field media_content_type_str - <on-change> [Home Assistant value]
 #   field media_duration - <on-change> [Home Assistant value]
+#   field media_title - <on-change> [Home Assistant value]
 #   field media_title_str - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
@@ -30,8 +32,10 @@ media_player__speaker,
   module=homeassistant,
   entity_id=<string>
     is_volume_muted=<float>,
+    media_album_name=<float>,
     media_channel=<float>,
     media_duration=<float>,
+    media_title=<float>,
     value=<float>,
     volume_level=<float>
   <timestamp>

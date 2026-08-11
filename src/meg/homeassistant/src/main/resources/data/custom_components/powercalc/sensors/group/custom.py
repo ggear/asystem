@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta
@@ -113,7 +111,7 @@ from custom_components.powercalc.sensors.abstract import (
     generate_power_sensor_entity_id,
     generate_power_sensor_name,
 )
-from custom_components.powercalc.sensors.energy import EnergySensor, VirtualEnergySensor
+from custom_components.powercalc.sensors.energy import EnergySensor, VirtualEnergySensor, VirtualStandbyEnergySensor
 from custom_components.powercalc.sensors.energy_related import create_energy_related_sensors
 from custom_components.powercalc.sensors.power import PowerSensor
 from custom_components.powercalc.unit import (
@@ -235,6 +233,7 @@ def filter_entity_list_by_class(
     filter_list = default_filters.copy() if default_filters else []
     filter_list.append(lambda elm: not isinstance(elm, GroupedSensor))
     filter_list.append(lambda elm: isinstance(elm, class_name))
+    filter_list.append(lambda elm: not isinstance(elm, VirtualStandbyEnergySensor))
     return {
         x.entity_id
         for x in filter(
@@ -939,8 +938,8 @@ class PreviousStateStore:
                 instance.states[group] = {
                     entity_id: State.from_dict(json_state) for (entity_id, json_state) in entities.items()
                 }
-        except HomeAssistantError as exc:  # pragma: no cover
-            _LOGGER.error("Error loading previous energy sensor states", exc_info=exc)
+        except HomeAssistantError:  # pragma: no cover
+            _LOGGER.exception("Error loading previous energy sensor states")
 
         instance.async_setup_dump()
 
@@ -984,8 +983,8 @@ class PreviousStateStore:
         """Save the current states to storage."""
         try:
             await self.store.async_save(self.states)
-        except HomeAssistantError as exc:  # pragma: no cover
-            _LOGGER.error("Error saving current states", exc_info=exc)
+        except HomeAssistantError:  # pragma: no cover
+            _LOGGER.exception("Error saving current states")
 
     @callback
     def async_setup_dump(self) -> None:

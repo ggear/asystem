@@ -384,6 +384,16 @@
         "description": "Wybierz model urządzenia. Zobacz [listę]({supported_models_link}) obsługiwanych modeli, aby uzyskać więcej informacji",
         "title": "Konfiguracja modelu"
       },
+      "select_device": {
+        "data": {
+          "device": "Urządzenie"
+        },
+        "data_description": {
+          "device": "Urządzenie, z którym mają zostać powiązane encje Powercalc"
+        },
+        "description": "Wybierz urządzenie, z którym ma zostać powiązany czujnik Powercalc.",
+        "title": "Wybierz urządzenie"
+      },
       "menu_group": {
         "menu_options": {
           "group_custom": "Standardowa grupa",
@@ -550,6 +560,7 @@
       "virtual_power": {
         "data": {
           "create_energy_sensor": "Utwórz sensor energii",
+          "create_standby_energy_sensor": "Utwórz czujnik energii w trybie czuwania",
           "create_cost_sensor": "Utwórz czujnik kosztów",
           "create_utility_meters": "Utwórz liczniki mediów",
           "entity_id": "Encja źródłowa",
@@ -559,6 +570,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Czy Powercalc musi utworzyć sensor kWh",
+          "create_standby_energy_sensor": "Czy Powercalc ma utworzyć czujnik kWh śledzący tylko zużycie w trybie czuwania",
           "create_utility_meters": "Pozwól Powercalc stworzyć liczniki mediów, które pracują w cyklach dziennych, godzinowych itp.",
           "entity_id": "Encja źródłowa, na której opiera się wirtualna moc; sensor mocy, który ma być aktualizowany będzie nasłuchiwał zmian stanu tej encji",
           "name": "Pozostawienie pustego pola spowoduje pobranie nazwy z encji źródłowej",
@@ -675,6 +687,7 @@
         "title": "Opcje podstawowe",
         "data": {
           "create_energy_sensor": "Utwórz sensor energii",
+          "create_standby_energy_sensor": "Utwórz czujnik energii w trybie czuwania",
           "create_cost_sensor": "Utwórz czujnik kosztów",
           "create_utility_meters": "Utwórz liczniki mediów",
           "entity_id": "Encja źródłowa",
@@ -683,6 +696,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Czy powercalc musi utworzyć czujnik kWh",
+          "create_standby_energy_sensor": "Czy Powercalc ma utworzyć czujnik kWh śledzący tylko zużycie w trybie czuwania",
           "create_utility_meters": "Pozwól, aby powercalc tworzył liczniki mediów, które będą działać w cyklach dziennych, godzinowych itp.",
           "entity_id": "Encja źródłowa, na której opiera się wirtualna moc; sensor mocy będzie nasłuchiwał zmiany stanu tej encji dla swojej aktualizacji",
           "name": "Pozostawienie pustego pola spowoduje pobranie nazwy z encji źródłowej",
@@ -957,6 +971,7 @@
           "playbook": "Opcje playbook",
           "multi_switch": "Opcje wieloprzełącznika",
           "real_power": "Opcje rzeczywistej mocy",
+          "select_device": "Urządzenie",
           "utility_meter_options": "Opcje licznika mediów",
           "wled": "Opcje WLED",
           "cost_options": "Opcje kosztów"
@@ -965,6 +980,16 @@
       "library_options": {
         "title": "Opcje biblioteki",
         "description": "Obecnie wybrany jest następujący profil biblioteki: \n producent: {manufacturer}\n model: {model}\n\nJeśli chcesz zmienić profil, kliknij dalej."
+      },
+      "select_device": {
+        "data": {
+          "device": "Urządzenie"
+        },
+        "data_description": {
+          "device": "Urządzenie, z którym mają zostać powiązane encje Powercalc"
+        },
+        "description": "Wybierz urządzenie, z którym ma zostać powiązany czujnik Powercalc.",
+        "title": "Wybierz urządzenie"
       },
       "linear": {
         "title": "Opcje liniowe",

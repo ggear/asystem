@@ -384,6 +384,16 @@
         "description": "Selecione o modelo do dispositivo. Consulte a [lista]({supported_models_link}) de modelos compatíveis para obter mais informações",
         "title": "Configuração do modelo"
       },
+      "select_device": {
+        "data": {
+          "device": "Dispositivo"
+        },
+        "data_description": {
+          "device": "O dispositivo ao qual as entidades do Powercalc devem ser associadas"
+        },
+        "description": "Selecione o dispositivo ao qual o sensor do Powercalc deve ser associado.",
+        "title": "Selecionar dispositivo"
+      },
       "menu_group": {
         "menu_options": {
           "group_custom": "Grupo padrão",
@@ -550,6 +560,7 @@
       "virtual_power": {
         "data": {
           "create_energy_sensor": "Criar sensor de energia",
+          "create_standby_energy_sensor": "Criar sensor de energia em standby",
           "create_cost_sensor": "Criar sensor de custo",
           "create_utility_meters": "Criar medidores de utilidade",
           "entity_id": "Entidade de origem",
@@ -559,6 +570,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Se o powercalc precisa criar um sensor kWh",
+          "create_standby_energy_sensor": "Se o Powercalc deve criar um sensor de kWh que monitoriza apenas o consumo em standby",
           "create_utility_meters": "Deixe o powercalc criar medidores de utilidade, que circulam diariamente, de hora em hora, etc.",
           "entity_id": "entidade na qual a energia virtual é baseada, o sensor de energia escutará as mudanças de estado desta entidade para serem atualizadas",
           "name": "Deixar em branco levará o nome da entidade de origem",
@@ -675,6 +687,7 @@
         "title": "Opções básicas",
         "data": {
           "create_energy_sensor": "Criar sensor de energia",
+          "create_standby_energy_sensor": "Criar sensor de energia em standby",
           "create_cost_sensor": "Criar sensor de custo",
           "create_utility_meters": "Criar medidores de utilidade",
           "entity_id": "Entidade de origem",
@@ -683,6 +696,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Se o Powercalc precisa de criar um sensor kWh",
+          "create_standby_energy_sensor": "Se o Powercalc deve criar um sensor de kWh que monitoriza apenas o consumo em standby",
           "create_utility_meters": "Permitir que o Powercalc crie contadores de serviços com ciclos diários, horários, etc.",
           "entity_id": "Entidade na qual a potência virtual se baseia; o sensor de potência acompanhará as alterações de estado desta entidade para ser atualizado",
           "name": "Ao deixar em branco, será usado o nome da entidade de origem",
@@ -957,6 +971,7 @@
           "playbook": "Opções de sequência",
           "multi_switch": "Opções de interruptor múltiplo",
           "real_power": "Opções de potência real",
+          "select_device": "Dispositivo",
           "utility_meter_options": "Opções de contador de serviços",
           "wled": "Opções WLED",
           "cost_options": "Opções de custo"
@@ -965,6 +980,16 @@
       "library_options": {
         "title": "Opções da biblioteca",
         "description": "Atualmente está selecionado o seguinte perfil da biblioteca: \n fabricante: {manufacturer}\n modelo: {model}\n\nSe quiser alterar o perfil, clique em seguinte."
+      },
+      "select_device": {
+        "data": {
+          "device": "Dispositivo"
+        },
+        "data_description": {
+          "device": "O dispositivo ao qual as entidades do Powercalc devem ser associadas"
+        },
+        "description": "Selecione o dispositivo ao qual o sensor do Powercalc deve ser associado.",
+        "title": "Selecionar dispositivo"
       },
       "linear": {
         "title": "Opções lineares",

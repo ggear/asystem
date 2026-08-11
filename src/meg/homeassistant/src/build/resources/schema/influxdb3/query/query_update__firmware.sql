@@ -48,6 +48,9 @@ SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
     round(max(latest_version), 1)    AS "Latest Version Max",
+    round(avg(update_percentage), 1) AS "Update Percentage Avg",
+    round(min(update_percentage), 1) AS "Update Percentage Min",
+    round(max(update_percentage), 1) AS "Update Percentage Max",
     round(avg(value), 1)             AS "Value Avg",
     round(min(value), 1)             AS "Value Min",
     round(max(value), 1)             AS "Value Max"

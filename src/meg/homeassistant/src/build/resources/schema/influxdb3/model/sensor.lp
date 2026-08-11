@@ -81,6 +81,7 @@
 #     ceiling_water_booster_plug_energy_total_weekly,
 #     ceiling_water_booster_plug_energy_total_yearly,
 #     deck_fans_outlet_linkquality,
+#     dfes_incidents_metro_south_east_any,
 #     dining_air_purifier_fan_speed,
 #     dining_air_purifier_filter_age,
 #     driveway_repeater_linkquality_energy_daily,
@@ -239,6 +240,7 @@
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     %,
 #     % available,
+#     Events,
 #     cm,
 #     floors,
 #     km/h,
@@ -250,6 +252,8 @@
 #     mm/h,
 #     steps,
 #     °]
+#   field Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971) - <on-change> [Home Assistant value]
+#   field Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)_str - <on-change> [Home Assistant value]
 #   field Administrative Area_str - <on-change> [Home Assistant value]
 #   field Areas Of Interest_str - <on-change> [Home Assistant value]
 #   field Available - <on-change> [Home Assistant value]
@@ -258,10 +262,19 @@
 #   field Available (Opportunistic) - <on-change> [Home Assistant value]
 #   field Available (Opportunistic)_str - <on-change> [Home Assistant value]
 #   field Available_str - <on-change> [Home Assistant value]
+#   field Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996) - <on-change> [Home Assistant value]
+#   field Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)_str - <on-change> [Home Assistant value]
+#   field Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023) - <on-change> [Home Assistant value]
+#   field Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023)_str - <on-change> [Home Assistant value]
+#   field Bushfire (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810022) - <on-change> [Home Assistant value]
+#   field Bushfire (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810022)_str - <on-change> [Home Assistant value]
 #   field Cellular Technology_str - <on-change> [Home Assistant value]
 #   field Confidence_str - <on-change> [Home Assistant value]
 #   field Country_str - <on-change> [Home Assistant value]
+#   field Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994) - <on-change> [Home Assistant value]
+#   field Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)_str - <on-change> [Home Assistant value]
 #   field ISO Country Code_str - <on-change> [Home Assistant value]
+#   field Incident (MIDLAND, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809976)_str - <on-change> [Home Assistant value]
 #   field Inland Water_str - <on-change> [Home Assistant value]
 #   field Locality_str - <on-change> [Home Assistant value]
 #   field Location_str - <on-change> [Home Assistant value]
@@ -270,6 +283,12 @@
 #   field Name_str - <on-change> [Home Assistant value]
 #   field Ocean_str - <on-change> [Home Assistant value]
 #   field Postal Code - <on-change> [Home Assistant value]
+#   field Road Crash (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810011) - <on-change> [Home Assistant value]
+#   field Road Crash (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810011)_str - <on-change> [Home Assistant value]
+#   field Road Crash (MORLEY, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 809968) - <on-change> [Home Assistant value]
+#   field Road Crash (MORLEY, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 809968)_str - <on-change> [Home Assistant value]
+#   field Structure Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994) - <on-change> [Home Assistant value]
+#   field Structure Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)_str - <on-change> [Home Assistant value]
 #   field Sub Administrative Area_str - <on-change> [Home Assistant value]
 #   field Sub Locality_str - <on-change> [Home Assistant value]
 #   field Sub Thoroughfare - <on-change> [Home Assistant value]
@@ -308,12 +327,20 @@ sensor,
   module=homeassistant,
   entity_id=<string>,
   unit_of_measurement=<string>
+    Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)=<float>,
     Available=<float>,
     Available (Important)=<float>,
     Available (Opportunistic)=<float>,
+    Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)=<float>,
+    Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023)=<float>,
+    Bushfire (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810022)=<float>,
+    Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)=<float>,
     Low Power Mode=<float>,
     Name=<float>,
     Postal Code=<float>,
+    Road Crash (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810011)=<float>,
+    Road Crash (MORLEY, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 809968)=<float>,
+    Structure Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)=<float>,
     Sub Thoroughfare=<float>,
     Total=<float>,
     bom_id=<float>,

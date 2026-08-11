@@ -384,6 +384,16 @@
         "description": "Wählen Sie das Gerätemodell. Siehe in der [list]({supported_models_link}) der unterstützten Modelle für weitere Informationen",
         "title": "Modelnummer Konfiguration"
       },
+      "select_device": {
+        "data": {
+          "device": "Gerät"
+        },
+        "data_description": {
+          "device": "Das Gerät, mit dem die Powercalc-Entitäten verknüpft werden sollen"
+        },
+        "description": "Wählen Sie das Gerät aus, mit dem der Powercalc-Sensor verknüpft werden soll.",
+        "title": "Gerät auswählen"
+      },
       "menu_group": {
         "menu_options": {
           "group_custom": "Standardgruppe",
@@ -550,6 +560,7 @@
       "virtual_power": {
         "data": {
           "create_energy_sensor": "Energiesensor erstellen",
+          "create_standby_energy_sensor": "Standby-Energiesensor erstellen",
           "create_cost_sensor": "Kostensensor erstellen",
           "create_utility_meters": "Utilitymeter erstellen",
           "entity_id": "Quell-Entität",
@@ -559,6 +570,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Ob Powercalc einen kWh Sensor erstellen soll",
+          "create_standby_energy_sensor": "Ob Powercalc einen kWh-Sensor erstellen soll, der nur den Standby-Verbrauch erfasst",
           "create_utility_meters": "Powercalc soll utility-Meter erstellen, die täglich, stündlich usw. zyklisch sind",
           "entity_id": "Entität, auf der die virtuelle Leistung basiert; der Leistungssensor wird auf Zustandsänderungen dieser Entität reagieren, um aktualisiert zu werden",
           "name": "Leer lassen wird den Namen von der Quell-Entität übernehmen",
@@ -675,6 +687,7 @@
         "title": "Grundeinstellungen",
         "data": {
           "create_energy_sensor": "Energiessensor erstellen",
+          "create_standby_energy_sensor": "Standby-Energiesensor erstellen",
           "create_cost_sensor": "Kostensensor erstellen",
           "create_utility_meters": "Utilitymeter erstellen",
           "entity_id": "Quell-Entität",
@@ -683,6 +696,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Ob Powercalc einen kWh Sensor erstellen soll",
+          "create_standby_energy_sensor": "Ob Powercalc einen kWh-Sensor erstellen soll, der nur den Standby-Verbrauch erfasst",
           "create_utility_meters": "Powercalc soll Utility-Meter erstellen, die den Verbrauch täglich, stündlich usw. festhalten.",
           "entity_id": "Entität, auf der die virtuelle Leistung basiert; der Leistungssensor wird auf Zustandsänderungen dieser Entität reagieren, um aktualisiert zu werden",
           "name": "Leer lassen wird den Namen von der Quell-Entität übernehmen",
@@ -957,6 +971,7 @@
           "playbook": "Playbook-Optionen",
           "multi_switch": "Mehrfachschalter-Optionen",
           "real_power": "Optionen für reale Leistung",
+          "select_device": "Gerät",
           "utility_meter_options": "Verbrauchszähler-Optionen",
           "wled": "WLED Einstellung",
           "cost_options": "Kostenoptionen"
@@ -965,6 +980,16 @@
       "library_options": {
         "title": "Bibliotheksoptionen",
         "description": "Derzeit ist folgendes Bibliotheksprofil ausgewählt: \n Hersteller: {manufacturer}\n Modell: {model}\n\nWenn du das Profil ändern möchtest, klicke auf Weiter."
+      },
+      "select_device": {
+        "data": {
+          "device": "Gerät"
+        },
+        "data_description": {
+          "device": "Das Gerät, mit dem die Powercalc-Entitäten verknüpft werden sollen"
+        },
+        "description": "Wählen Sie das Gerät aus, mit dem der Powercalc-Sensor verknüpft werden soll.",
+        "title": "Gerät auswählen"
       },
       "linear": {
         "title": "Lineare Optionen",

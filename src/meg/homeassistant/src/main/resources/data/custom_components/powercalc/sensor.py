@@ -1,7 +1,5 @@
 """Platform for sensor integration."""
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 import logging
@@ -45,6 +43,7 @@ from .const import (
     CONF_COST,
     CONF_CREATE_ENERGY_SENSOR,
     CONF_CREATE_GROUP,
+    CONF_CREATE_STANDBY_ENERGY_SENSOR,
     CONF_DAILY_FIXED_ENERGY,
     CONF_ENERGY_SENSOR_ID,
     CONF_FORCE_ENERGY_SENSOR_CREATION,
@@ -87,7 +86,10 @@ from .const import (
     PowercalcDiscoveryType,
     SensorType,
 )
-from .device_binding import attach_configured_device_entry, attach_entities_to_resolved_device
+from .device_binding import (
+    attach_configured_device_entry,
+    attach_entities_to_resolved_device,
+)
 from .errors import (
     PowercalcSetupError,
     SensorAlreadyConfiguredError,
@@ -100,7 +102,7 @@ from .sensors.daily_energy import (
     create_daily_fixed_energy_power_sensor,
     create_daily_fixed_energy_sensor,
 )
-from .sensors.energy import EnergySensor, create_energy_sensor
+from .sensors.energy import EnergySensor, create_energy_sensor, create_standby_energy_sensor
 from .sensors.energy_related import create_energy_related_sensors
 from .sensors.group.config_entry_utils import add_to_associated_groups
 from .sensors.group.custom import GroupedSensor
@@ -536,11 +538,8 @@ async def handle_nested_entity(
             ),
         )
         entities_to_add.extend_items(child_entities)
-    except SensorConfigurationError as exception:
-        _LOGGER.error(
-            "Group state might be misbehaving because there was an error with an entity",
-            exc_info=exception,
-        )
+    except SensorConfigurationError:
+        _LOGGER.exception("Group state might be misbehaving because there was an error with an entity")
 
 
 async def add_discovered_entities(
@@ -692,6 +691,8 @@ async def create_individual_sensors(
         except PowercalcSetupError:
             return EntitiesBucket()
         energy_sensor = _add_power_and_energy_sensor(hass, sensor_config, source_entity, power_sensor, entities_to_add)
+        if sensor_config.get(CONF_CREATE_STANDBY_ENERGY_SENSOR) and isinstance(power_sensor, VirtualPowerSensor):
+            entities_to_add.append(create_standby_energy_sensor(hass, sensor_config, power_sensor, source_entity))
 
     if energy_sensor:
         entities_to_add.extend(

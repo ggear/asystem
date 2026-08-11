@@ -384,6 +384,16 @@
         "description": "Vyberte model zařízení. Viz [list]({supported_models_link}) podporovaných modelů pro více informací",
         "title": "Nastavení modelu"
       },
+      "select_device": {
+        "data": {
+          "device": "Zařízení"
+        },
+        "data_description": {
+          "device": "Zařízení, ke kterému mají být entity Powercalc připojeny"
+        },
+        "description": "Vyberte zařízení, ke kterému má být senzor Powercalc připojen.",
+        "title": "Vyberte zařízení"
+      },
       "menu_group": {
         "menu_options": {
           "group_custom": "Standardní skupina",
@@ -550,6 +560,7 @@
       "virtual_power": {
         "data": {
           "create_energy_sensor": "Vytvořit senzor energie",
+          "create_standby_energy_sensor": "Vytvořit senzor energie v pohotovostním režimu",
           "create_cost_sensor": "Vytvořit senzor nákladů",
           "create_utility_meters": "Vytvořit měřiče spotřeby",
           "entity_id": "Zdrojová entita",
@@ -559,6 +570,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Zda má Powercalc vytvořit senzor kWh",
+          "create_standby_energy_sensor": "Zda má Powercalc vytvořit senzor kWh, který sleduje pouze spotřebu v pohotovostním režimu",
           "create_utility_meters": "Nechat Powercalc vytvořit měřiče spotřeby s denními, hodinovými apod. cykly",
           "entity_id": "Entita, na které je virtuální výkon založen. Senzor výkonu bude poslouchat změny stavu této entity, aby se aktualizoval",
           "name": "Při ponechání prázdné hodnoty se použije název ze zdrojové entity",
@@ -675,6 +687,7 @@
         "title": "Základní možnosti",
         "data": {
           "create_energy_sensor": "Vytvořit senzor energie",
+          "create_standby_energy_sensor": "Vytvořit senzor energie v pohotovostním režimu",
           "create_cost_sensor": "Vytvořit senzor nákladů",
           "create_utility_meters": "Vytvořit měřiče spotřeby",
           "entity_id": "Zdrojová entita",
@@ -683,6 +696,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Zda má Powercalc vytvořit senzor kWh",
+          "create_standby_energy_sensor": "Zda má Powercalc vytvořit senzor kWh, který sleduje pouze spotřebu v pohotovostním režimu",
           "create_utility_meters": "Nechat Powercalc vytvořit měřiče spotřeby s denními, hodinovými apod. cykly",
           "entity_id": "Entita, na které je virtuální výkon založen. Senzor výkonu bude poslouchat změny stavu této entity, aby se aktualizoval",
           "name": "Při ponechání prázdné hodnoty se použije název ze zdrojové entity",
@@ -957,6 +971,7 @@
           "playbook": "Možnosti playbooku",
           "multi_switch": "Možnosti vícenásobného spínače",
           "real_power": "Možnosti skutečného výkonu",
+          "select_device": "Zařízení",
           "utility_meter_options": "Možnosti měřičů spotřeby",
           "wled": "Možnosti WLED",
           "cost_options": "Možnosti nákladů"
@@ -965,6 +980,16 @@
       "library_options": {
         "title": "Možnosti knihovny",
         "description": "Aktuálně je vybrán následující profil knihovny: \n výrobce: {manufacturer}\n model: {model}\n\nPokud chcete profil změnit, klikněte na Další."
+      },
+      "select_device": {
+        "data": {
+          "device": "Zařízení"
+        },
+        "data_description": {
+          "device": "Zařízení, ke kterému mají být entity Powercalc připojeny"
+        },
+        "description": "Vyberte zařízení, ke kterému má být senzor Powercalc připojen.",
+        "title": "Vyberte zařízení"
       },
       "linear": {
         "title": "Lineární možnosti",

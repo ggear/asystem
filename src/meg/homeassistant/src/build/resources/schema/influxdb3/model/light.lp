@@ -34,6 +34,8 @@
 #     kitchen_main_bulb_3,
 #     kitchen_main_bulb_4,
 #     landing_festoons_plug,
+#     laundry_main,
+#     laundry_main_bulb_1,
 #     lounge_fan,
 #     lounge_lamp,
 #     lounge_lamp_bulb_1,
@@ -48,7 +50,9 @@
 #     parents_main,
 #     parents_main_bulb_1,
 #     parents_main_bulb_2,
-#     parents_main_bulb_3]
+#     parents_main_bulb_3,
+#     wardrobe_main,
+#     wardrobe_main_bulb_1]
 #   field assumed_state - <on-change> [Home Assistant value]
 #   field brightness - <on-change> [Home Assistant value]
 #   field brightness_str - <on-change> [Home Assistant value]

@@ -21,19 +21,26 @@ homeassistant:
   customize: !include customise.yaml
   packages: !include_dir_named custom_packages
 #######################################################################################
-http:
-  server_port: !env_var HOMEASSISTANT_HTTP_PORT
-  ip_ban_enabled: true
-  login_attempts_threshold: 5
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - '10.0.0.0/16'
-    - '172.16.0.0/12'
-  cors_allowed_origins:
-    - 'https://home.janeandgraham.com'
-    - 'https://homeassistant.janeandgraham.com'
-    - 'http://homeassistant.local.janeandgraham.com'
+
+
 #######################################################################################
+# INFO: The UI is now used to configure these params, perhaps return with a version <= 2026.8.0
+#######################################################################################
+#http:
+#  server_port: !env_var HOMEASSISTANT_HTTP_PORT
+#  ip_ban_enabled: true
+#  login_attempts_threshold: 5
+#  use_x_forwarded_for: true
+#  trusted_proxies:
+#    - '10.0.0.0/16'
+#    - '172.16.0.0/12'
+#  cors_allowed_origins:
+#    - 'https://home.janeandgraham.com'
+#    - 'https://homeassistant.janeandgraham.com'
+#    - 'http://homeassistant.local.janeandgraham.com'
+#######################################################################################
+
+
 tts:
   - platform: 'google_translate'
 #######################################################################################

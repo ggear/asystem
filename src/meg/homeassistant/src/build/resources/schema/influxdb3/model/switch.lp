@@ -21,6 +21,7 @@
 #     adaptive_lighting_ambient_dimming,
 #     adaptive_lighting_ambient_narrowband_dimming,
 #     adaptive_lighting_night,
+#     adaptive_lighting_sleep_mode_night,
 #     adaptive_lighting_task,
 #     adaptive_lighting_task_narrowband,
 #     bathroom_rails_plug,
@@ -137,12 +138,15 @@
 #   field assumed_state - <on-change> [Home Assistant value]
 #   field autoreset_time_remaining_str - <on-change> [Home Assistant value]
 #   field brightness_pct - <on-change> [Home Assistant value]
+#   field brightness_pct_str - <on-change> [Home Assistant value]
 #   field configuration_str - <on-change> [Home Assistant value]
 #   field force_rgb_color - <on-change> [Home Assistant value]
+#   field force_rgb_color_str - <on-change> [Home Assistant value]
 #   field rgb_color - <on-change> [Home Assistant value]
 #   field rgb_color_str - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]
 #   field sun_position - <on-change> [Home Assistant value]
+#   field sun_position_str - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 
 switch,

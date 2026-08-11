@@ -1,4 +1,5 @@
 import json
+import re
 
 from requests import post
 
@@ -43,6 +44,7 @@ PLACEHOLDERS = {
 }
 
 ENV = ".env"
+IDENTIFIER = re.compile(r"^[a-z_][a-z0-9_]*$")
 TIME = "time"
 SCHEMA = "iox"
 DIMENSION = "Dictionary"
@@ -90,11 +92,11 @@ def artifacts(document, module_name, time_column="timestamp", retention=None):
         written["query/query_{}.sql".format(measurement)] = (
             queries(document, measured(document, measurement)), False)
     written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, CONNECT), True)
+    written["query/describe.sql"] = (describe(document), False)
+    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, CONNECT), True)
     if document.discovered:
         return written
-    written["query/describe.sql"] = (describe(document), False)
     written["query/verify.sql"] = (verify(document), False)
-    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, CONNECT), True)
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, CONNECT), True)
     return written
 
@@ -233,6 +235,10 @@ def named(relation):
     return relation.scope or relation.plugin
 
 
+def column(key):
+    return key if IDENTIFIER.match(key) else '"{}"'.format(key.replace('"', '""'))
+
+
 def leaf(relation, document):
     tags = ["{}={}".format(MODULE, document.module)]
     tags += ["{}={}".format(dimension.key, TAG) for dimension in relation.dimensions]
@@ -260,8 +266,8 @@ def where(relation, document, source=None, window=BUCKET):
         declared = {dimension.key for dimension in relation.dimensions}
         siblings = {dimension.key for sibling in measured(document, relation.plugin)
                     for dimension in sibling.dimensions}
-        predicates += ["{} IS NOT NULL".format(key) for key in sorted(declared)]
-        predicates += ["{} IS NULL".format(key) for key in sorted(siblings - declared)]
+        predicates += ["{} IS NOT NULL".format(column(key)) for key in sorted(declared)]
+        predicates += ["{} IS NULL".format(column(key)) for key in sorted(siblings - declared)]
     return predicates + (recent(source, window) if source else [])
 
 
@@ -294,7 +300,7 @@ def queries(document, relations):
         measured_selectors = []
         for measure in relation.persisted:
             for function, suffix in aggregations(measure, relation.cadence):
-                measured_selectors.append((_aggregate(function, measure.key),
+                measured_selectors.append((_aggregate(function, column(measure.key)),
                                            "_".join(part for part in (measure.key, suffix) if part)))
         if not measured_selectors:
             continue
@@ -305,9 +311,9 @@ def queries(document, relations):
             statements.append(heading)
             statements.append("-- part {} of {}:".format(index + 1, len(parts)))
             selectors = [("date_bin(INTERVAL '{}', time)".format(bucket), label["bucket"])]
-            selectors += [(key, label[key]) for key in keys]
+            selectors += [(column(key), label[key]) for key in keys]
             selectors += [(expression, label[alias]) for expression, alias in part]
-            grouping = [label["bucket"]] + keys
+            grouping = [label["bucket"]] + [column(key) for key in keys]
             statements.append(select(selectors, relation.plugin, where(relation, document, relation.plugin, bucket),
                                      group_by=grouping, order_by=grouping))
     return render_statements(statements)
@@ -396,9 +402,9 @@ def _describe_measures(document):
                     continue
                 declared = declared_measure(relation, measure, measure.unit or NULL, relation.span(measure) or NULL)
                 arms.append(select(declared + [
-                    ("count({})".format(measure.key), "rows"),
-                    ("CAST(min(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(measure.key), "oldest"),
-                    ("CAST(max(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(measure.key), "newest")],
+                    ("count({})".format(column(measure.key)), "rows"),
+                    ("CAST(min(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(column(measure.key)), "oldest"),
+                    ("CAST(max(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(column(measure.key)), "newest")],
                                    measurement, where(relation, document)))
         arms.append(select(
             [("'{}'".format(NULL), "relation"), ("column_name", "measure")] +
@@ -417,15 +423,19 @@ def _describe_entities(relations, document):
     return "\nUNION ALL\n".join(
         select([("'{}'".format(relation.path), "relation"),
                 ("'{}'".format(dimension_label(relation)), "dimension"), (_entity(relation), "entity"),
-                (declared_entity(relation), "declared"), ("count(*)", "rows"),
+                (_declared(relation), "declared"), ("count(*)", "rows"),
                 ("min(time)", "oldest"), ("max(time)", "newest")],
                relation.plugin, where(relation, document),
-               group_by=grouping_keys(_entity(relation), declared_entity(relation)))
+               group_by=grouping_keys(_entity(relation), _declared(relation)))
         for relation in arms) + "\nORDER BY rows DESC"
 
 
+def _declared(relation):
+    return declared_entity(relation, column(relation.subject.key) if relation.subject is not None else None)
+
+
 def _entity(relation):
-    keys = [dimension.key for dimension in relation.dimensions]
+    keys = [column(dimension.key) for dimension in relation.dimensions]
     return keys[0] if len(keys) == 1 else "concat({})".format(", '/', ".join(keys))
 
 

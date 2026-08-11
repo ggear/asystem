@@ -384,6 +384,16 @@
         "description": "Seleziona il modello del dispositivo. Vedi la [list]({supported_models_link}) dei modelli supportati per maggiori informazioni",
         "title": "Configurazione modello"
       },
+      "select_device": {
+        "data": {
+          "device": "Dispositivo"
+        },
+        "data_description": {
+          "device": "Il dispositivo a cui devono essere collegate le entità Powercalc"
+        },
+        "description": "Seleziona il dispositivo a cui deve essere collegato il sensore Powercalc.",
+        "title": "Seleziona dispositivo"
+      },
       "menu_group": {
         "menu_options": {
           "group_custom": "Gruppo standard",
@@ -550,6 +560,7 @@
       "virtual_power": {
         "data": {
           "create_energy_sensor": "Crea sensore di energia",
+          "create_standby_energy_sensor": "Crea sensore di energia in standby",
           "create_cost_sensor": "Crea sensore di costo",
           "create_utility_meters": "Crea contatori di consumo",
           "entity_id": "Entità sorgente",
@@ -559,6 +570,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Indica se powercalc deve creare un sensore kWh",
+          "create_standby_energy_sensor": "Indica se Powercalc deve creare un sensore kWh che monitora solo il consumo in standby",
           "create_utility_meters": "Consenti a Powercalc di creare contatori di consumo con cicli giornalieri, orari, ecc.",
           "entity_id": "entità su cui si basa la potenza virtuale; il sensore di potenza ascolterà le modifiche di stato di questa entità per aggiornarsi",
           "name": "Lasciando vuoto prenderà il nome dal dispositivo di origine",
@@ -675,6 +687,7 @@
         "title": "Opzioni di base",
         "data": {
           "create_energy_sensor": "Crea sensore di energia",
+          "create_standby_energy_sensor": "Crea sensore di energia in standby",
           "create_cost_sensor": "Crea sensore di costo",
           "create_utility_meters": "Crea contatori di consumo",
           "entity_id": "Entità di origine",
@@ -683,6 +696,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Indica se powercalc deve creare un sensore kWh",
+          "create_standby_energy_sensor": "Indica se Powercalc deve creare un sensore kWh che monitora solo il consumo in standby",
           "create_utility_meters": "Lasciate powercalc creare contatori di utilità, di ciclo quotidiano, oraria ecc.",
           "entity_id": "Entità su cui si basa la potenza virtuale, il sensore di potenza ascolterà le modifiche di stato di questa entità da aggiornare",
           "name": "Lasciando vuoto prenderà il nome dal dispositivo di origine",
@@ -957,6 +971,7 @@
           "playbook": "Opzioni del playbook",
           "multi_switch": "Opzioni multiinterruttore",
           "real_power": "Opzioni di potenza reale",
+          "select_device": "Dispositivo",
           "utility_meter_options": "Opzioni del contatore di utilità",
           "wled": "Opzioni WLED",
           "cost_options": "Opzioni di costo"
@@ -965,6 +980,16 @@
       "library_options": {
         "title": "Opzioni della libreria",
         "description": "Attualmente è selezionato il seguente profilo libreria: \n produttore: {manufacturer}\n modello: {model}\n\nSe desideri modificare il profilo, fai clic su Avanti."
+      },
+      "select_device": {
+        "data": {
+          "device": "Dispositivo"
+        },
+        "data_description": {
+          "device": "Il dispositivo a cui devono essere collegate le entità Powercalc"
+        },
+        "description": "Seleziona il dispositivo a cui deve essere collegato il sensore Powercalc.",
+        "title": "Seleziona dispositivo"
       },
       "linear": {
         "title": "Opzioni lineari",

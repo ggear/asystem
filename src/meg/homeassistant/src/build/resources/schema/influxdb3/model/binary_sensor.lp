@@ -20,6 +20,8 @@
 #     lounge_arc_microphone,
 #     parents_move_microphone,
 #     template_back_door_state,
+#     template_bathroom_rails_plug_proxy,
+#     template_kitchen_coffee_machine_plug_proxy,
 #     workday_sensor]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]

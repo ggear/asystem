@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections import defaultdict
 from collections.abc import Mapping
 from copy import deepcopy
@@ -68,6 +66,7 @@ class DeviceType(StrEnum):
 
 
 class DiscoveryBy(StrEnum):
+    CONFIG_ENTRY = "config_entry"
     DEVICE = "device"
     ENTITY = "entity"
 

@@ -10,7 +10,7 @@
       "already_configured": "Sensor is reeds geconfigureerd, specifieer een uniek ID"
     },
     "error": {
-      "cost_price_mandatory": "U moet een energieprijs of een energieprijssensor aanleveren",
+      "cost_price_mandatory": "U moet een energieprijs of een sensor van de energieprijs leveren",
       "daily_energy_mandatory": "Je moet minimaal waarde of waarde template opgeven",
       "entity_mandatory": "Je moet verplicht een entiteit opgeven voor iedere andere strategie dan playbook",
       "fixed_mandatory": "Je dient minimaal een van de volgende velden te definiëren: Vermogen, Vermogen template of Vermogen per status",
@@ -384,6 +384,16 @@
         "description": "Selecteer het model. Zie de [lijst]({supported_models_link}) van ondersteunde apparaten voor meer informatie",
         "title": "Model configuratie"
       },
+      "select_device": {
+        "data": {
+          "device": "Apparaat"
+        },
+        "data_description": {
+          "device": "Het apparaat waaraan de Powercalc-entiteiten moeten worden gekoppeld"
+        },
+        "description": "Selecteer het apparaat waaraan de Powercalc-sensor moet worden gekoppeld.",
+        "title": "Apparaat selecteren"
+      },
       "menu_group": {
         "menu_options": {
           "group_custom": "Standaard groep",
@@ -550,6 +560,7 @@
       "virtual_power": {
         "data": {
           "create_energy_sensor": "Creëer energie sensoren",
+          "create_standby_energy_sensor": "Stand-by-energiesensor maken",
           "create_cost_sensor": "Maak een kostensensor",
           "create_utility_meters": "Creëer utiliteit meters",
           "entity_id": "Bron entiteit",
@@ -559,6 +570,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Laat Powercalc een kWh meter maken",
+          "create_standby_energy_sensor": "Of Powercalc een kWh-sensor moet maken die alleen het stand-byverbruik bijhoudt",
           "create_utility_meters": "Laat powercalc utiliteit meters maken. Deze resetten dagelijks, uurlijks etc.",
           "entity_id": "entiteit waarop de virtuele energie sensor is gebaseerd, de energiesensor update zichzelf wanneer deze entiteit van status wijzigt",
           "name": "Indien dit leeg gelaten wordt dan wordt de naam van de bron entiteit overgenomen",
@@ -675,6 +687,7 @@
         "title": "Basisopties",
         "data": {
           "create_energy_sensor": "Creëer energie sensoren",
+          "create_standby_energy_sensor": "Stand-by-energiesensor maken",
           "create_cost_sensor": "Maak een kostensensor",
           "create_utility_meters": "Creëer utiliteit meters",
           "entity_id": "Bron entiteit",
@@ -683,6 +696,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Laat powercalc een kWh meter maken",
+          "create_standby_energy_sensor": "Of Powercalc een kWh-sensor moet maken die alleen het stand-byverbruik bijhoudt",
           "create_utility_meters": "Laat powercalc utiliteit meters maken. Deze resetten dagelijks, uurlijks etc.",
           "entity_id": "entiteit waarop de virtuele energie sensor is gebaseerd, de energiesensor update zichzelf wanneer deze entiteit van status wijzigt",
           "name": "Indien dit leeg gelaten wordt dan wordt de naam van de bron entiteit overgenomen",
@@ -957,6 +971,7 @@
           "playbook": "Playbook opties",
           "multi_switch": "Multi switch opties",
           "real_power": "Opties voor werkelijk vermogen",
+          "select_device": "Apparaat",
           "utility_meter_options": "Nutsmeter opties",
           "wled": "WLED opties",
           "cost_options": "Kosten opties"
@@ -965,6 +980,16 @@
       "library_options": {
         "title": "Bibliotheek opties",
         "description": "Momenteel is het huidige profiel geselecteerd: \nfabrikant: {manufacturer}\nmodel: {model}\n\nAls u het profiel wilt wijzigen, klikt u op volgende."
+      },
+      "select_device": {
+        "data": {
+          "device": "Apparaat"
+        },
+        "data_description": {
+          "device": "Het apparaat waaraan de Powercalc-entiteiten moeten worden gekoppeld"
+        },
+        "description": "Selecteer het apparaat waaraan de Powercalc-sensor moet worden gekoppeld.",
+        "title": "Apparaat selecteren"
       },
       "linear": {
         "title": "Lineaire opties",
