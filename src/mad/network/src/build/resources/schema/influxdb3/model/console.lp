@@ -12,7 +12,7 @@
 
 weewx,
   module=network,
-  console=<string>
+  console=weatherstation
     fresh=<0|1>,
     quality_pct=<float>
   <timestamp>

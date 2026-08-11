@@ -42,6 +42,14 @@ if [ "${SCHEMA_VERBOSE}" == true ]; then
   set -x
 fi
 
+fail() {
+  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
+    "################################################################################" \
+    "SCHEMA FAILURE" \
+    "################################################################################" \
+    "$1" "$2" >&2
+}
+
 BROKER_ARGS=(-h "${VERNEMQ_SERVICE_PROD}" -p "${VERNEMQ_API_PORT}")
 
 topics() {

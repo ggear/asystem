@@ -13,7 +13,7 @@
 
 certificate,
   module=network,
-  endpoint=<string>
+  endpoint=home.janeandgraham.com:443
     verified=<0|1>,
     expiry_days=<float>,
     validity_pct=<float>

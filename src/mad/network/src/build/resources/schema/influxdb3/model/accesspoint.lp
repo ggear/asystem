@@ -13,7 +13,7 @@
 
 wireless,
   module=network,
-  accesspoint=<string>
+  accesspoint=<accesspoint>
     up=<0|1>,
     experience_pct=<float>,
     clients=<int>

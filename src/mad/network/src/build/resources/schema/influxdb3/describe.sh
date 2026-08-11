@@ -42,19 +42,35 @@ if [ "${SCHEMA_VERBOSE}" == true ]; then
   set -x
 fi
 
-DATABASE_NAME="${DATABASE_NAME:-${INFLUXDB3_DATABASE_HOME}}"
+DATABASE_NAME="${DATABASE_NAME:-${NETWORK_DATABASE_NAME:-${INFLUXDB3_DATABASE_HOME:-}}}"
+DATABASE_TOKEN="${DATABASE_TOKEN:-${NETWORK_DATABASE_TOKEN:-${INFLUXDB3_TOKEN_ADMIN:-}}}"
+
+for VARIABLE in DATABASE_NAME DATABASE_TOKEN; do
+  if [ -z "${!VARIABLE}" ]; then
+    echo "Schema script [network] could not resolve [${VARIABLE}] from it or any fallback, declare it in the module env files" >&2
+    exit 1
+  fi
+done
 
 query() {
   local response status
   response="$(curl -sS -w '\n%{http_code}' -X POST \
     "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/query_sql" \
-    -H "Authorization: Bearer ${INFLUXDB3_TOKEN_ADMIN}" \
+    -H "Authorization: Bearer ${DATABASE_TOKEN}" \
     -H "Content-Type: application/json" \
     --data-binary "$(jq -n --arg db "${DATABASE_NAME}" --arg q "$1" --arg format "${2:-json}" \
       '{db: $db, q: $q, format: $format}')")"
   status="${response##*$'\n'}"
   printf '%s' "${response%$'\n'*}"
   [ "${status}" = "200" ]
+}
+
+fail() {
+  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
+    "################################################################################" \
+    "SCHEMA FAILURE" \
+    "################################################################################" \
+    "$1" "$2" >&2
 }
 
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
@@ -112,14 +128,6 @@ query_block() {
   fi
   printf '%s\n' "${result}" | table
   printf '\n'
-}
-
-fail() {
-  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
-    "################################################################################" \
-    "SCHEMA FAILURE" \
-    "################################################################################" \
-    "$1" "$2" >&2
 }
 
 query_one() {

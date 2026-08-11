@@ -4,104 +4,104 @@
 
 -- dimensions
 SELECT
-    'certificate/endpoint' AS relation,
-    'endpoint*'            AS dimension,
-    3                      AS measures,
-    '15m'                  AS cadence,
-    count(*)               AS rows,
-    min(time)              AS oldest,
-    max(time)              AS newest
+    'certificate/endpoint'     AS relation,
+    'endpoint*'                AS dimension,
+    3                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM certificate
 WHERE
     module = 'network'
     AND endpoint IS NOT NULL
 UNION ALL
 SELECT
-    'diagnosis/plugin' AS relation,
-    'plugin*'          AS dimension,
-    2                  AS measures,
-    '15m'              AS cadence,
-    count(*)           AS rows,
-    min(time)          AS oldest,
-    max(time)          AS newest
+    'diagnosis/plugin'         AS relation,
+    'plugin*'                  AS dimension,
+    2                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM diagnosis
 WHERE
     module = 'network'
     AND plugin IS NOT NULL
 UNION ALL
 SELECT
-    'domain/resolver' AS relation,
-    'resolver*'       AS dimension,
-    3                 AS measures,
-    '15m'             AS cadence,
-    count(*)          AS rows,
-    min(time)         AS oldest,
-    max(time)         AS newest
+    'domain/resolver'          AS relation,
+    'resolver*'                AS dimension,
+    3                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM domain
 WHERE
     module = 'network'
     AND resolver IS NOT NULL
 UNION ALL
 SELECT
-    'ethernet/port' AS relation,
-    'port*'         AS dimension,
-    5               AS measures,
-    '15m'           AS cadence,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'ethernet/port'            AS relation,
+    'port*'                    AS dimension,
+    5                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
     module = 'network'
     AND port IS NOT NULL
 UNION ALL
 SELECT
-    'internet/target' AS relation,
-    'target*'         AS dimension,
-    4                 AS measures,
-    '15m'             AS cadence,
-    count(*)          AS rows,
-    min(time)         AS oldest,
-    max(time)         AS newest
+    'internet/target'          AS relation,
+    'target*'                  AS dimension,
+    4                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM internet
 WHERE
     module = 'network'
     AND target IS NOT NULL
 UNION ALL
 SELECT
-    'weewx/console' AS relation,
-    'console*'      AS dimension,
-    2               AS measures,
-    '15m'           AS cadence,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'weewx/console'            AS relation,
+    'console*'                 AS dimension,
+    2                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM weewx
 WHERE
     module = 'network'
     AND console IS NOT NULL
 UNION ALL
 SELECT
-    'wireless/accesspoint' AS relation,
-    'accesspoint*'         AS dimension,
-    3                      AS measures,
-    '15m'                  AS cadence,
-    count(*)               AS rows,
-    min(time)              AS oldest,
-    max(time)              AS newest
+    'wireless/accesspoint'     AS relation,
+    'accesspoint*'             AS dimension,
+    3                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM wireless
 WHERE
     module = 'network'
     AND accesspoint IS NOT NULL
 UNION ALL
 SELECT
-    'zigbee/device' AS relation,
-    'device*'       AS dimension,
-    4               AS measures,
-    '15m'           AS cadence,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'zigbee/device'            AS relation,
+    'device*'                  AS dimension,
+    4                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM zigbee
 WHERE
     module = 'network'
@@ -593,8 +593,8 @@ SELECT
     endpoint                                                                      AS entity,
     CASE WHEN endpoint IN ('home.janeandgraham.com:443') THEN 'yes' ELSE 'no' END AS declared,
     count(*)                                                                      AS rows,
-    min(time)                                                                     AS oldest,
-    max(time)                                                                     AS newest
+    CAST(min(time) AS VARCHAR)                                                    AS oldest,
+    CAST(max(time) AS VARCHAR)                                                    AS newest
 FROM certificate
 WHERE
     module = 'network'
@@ -607,8 +607,8 @@ SELECT
     plugin                                                                                                                        AS entity,
     CASE WHEN plugin IN ('certificate', 'domain', 'ethernet', 'internet', 'weewx', 'wireless', 'zigbee') THEN 'yes' ELSE 'no' END AS declared,
     count(*)                                                                                                                      AS rows,
-    min(time)                                                                                                                     AS oldest,
-    max(time)                                                                                                                     AS newest
+    CAST(min(time) AS VARCHAR)                                                                                                    AS oldest,
+    CAST(max(time) AS VARCHAR)                                                                                                    AS newest
 FROM diagnosis
 WHERE
     module = 'network'
@@ -621,8 +621,8 @@ SELECT
     resolver                                                                                               AS entity,
     CASE WHEN resolver IN ('cloudflare', 'google', 'quad9', 'opendns', 'adguard') THEN 'yes' ELSE 'no' END AS declared,
     count(*)                                                                                               AS rows,
-    min(time)                                                                                              AS oldest,
-    max(time)                                                                                              AS newest
+    CAST(min(time) AS VARCHAR)                                                                             AS oldest,
+    CAST(max(time) AS VARCHAR)                                                                             AS newest
 FROM domain
 WHERE
     module = 'network'
@@ -630,13 +630,13 @@ WHERE
 GROUP BY resolver, CASE WHEN resolver IN ('cloudflare', 'google', 'quad9', 'opendns', 'adguard') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
-    'ethernet/port' AS relation,
-    'port*'         AS dimension,
-    port            AS entity,
-    '-'             AS declared,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'ethernet/port'            AS relation,
+    'port*'                    AS dimension,
+    port                       AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
     module = 'network'
@@ -649,8 +649,8 @@ SELECT
     target                                                                                    AS entity,
     CASE WHEN target IN ('gateway', '1.1.1.1', '8.8.8.8', '9.9.9.9') THEN 'yes' ELSE 'no' END AS declared,
     count(*)                                                                                  AS rows,
-    min(time)                                                                                 AS oldest,
-    max(time)                                                                                 AS newest
+    CAST(min(time) AS VARCHAR)                                                                AS oldest,
+    CAST(max(time) AS VARCHAR)                                                                AS newest
 FROM internet
 WHERE
     module = 'network'
@@ -663,8 +663,8 @@ SELECT
     console                                                          AS entity,
     CASE WHEN console IN ('weatherstation') THEN 'yes' ELSE 'no' END AS declared,
     count(*)                                                         AS rows,
-    min(time)                                                        AS oldest,
-    max(time)                                                        AS newest
+    CAST(min(time) AS VARCHAR)                                       AS oldest,
+    CAST(max(time) AS VARCHAR)                                       AS newest
 FROM weewx
 WHERE
     module = 'network'
@@ -672,13 +672,13 @@ WHERE
 GROUP BY console, CASE WHEN console IN ('weatherstation') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
-    'wireless/accesspoint' AS relation,
-    'accesspoint*'         AS dimension,
-    accesspoint            AS entity,
-    '-'                    AS declared,
-    count(*)               AS rows,
-    min(time)              AS oldest,
-    max(time)              AS newest
+    'wireless/accesspoint'     AS relation,
+    'accesspoint*'             AS dimension,
+    accesspoint                AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM wireless
 WHERE
     module = 'network'
@@ -686,13 +686,13 @@ WHERE
 GROUP BY accesspoint
 UNION ALL
 SELECT
-    'zigbee/device' AS relation,
-    'device*'       AS dimension,
-    device          AS entity,
-    '-'             AS declared,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'zigbee/device'            AS relation,
+    'device*'                  AS dimension,
+    device                     AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM zigbee
 WHERE
     module = 'network'

@@ -18,7 +18,7 @@
 
 diagnosis,
   module=network,
-  plugin=<string>
+  plugin=<certificate|domain|ethernet|internet|weewx|wireless|zigbee>
     ok=<0|1>,
     score=<int>
   <timestamp>

@@ -48,7 +48,7 @@ DATABASE_PASSWORD="${DATABASE_PASSWORD:-${WRANGLE_DATABASE_PASSWORD:-${POSTGRES_
 
 for VARIABLE in DATABASE_USER DATABASE_NAME DATABASE_PASSWORD; do
   if [ -z "${!VARIABLE}" ]; then
-    echo "Schema script [wrangle] could not resolve [${VARIABLE}] from [${VARIABLE}] or [WRANGLE_${VARIABLE}] or its POSTGRES_ equivalent, declare it in the module env files" >&2
+    echo "Schema script [wrangle] could not resolve [${VARIABLE}] from it or any fallback, declare it in the module env files" >&2
     exit 1
   fi
 done
@@ -58,6 +58,14 @@ export PGPASSWORD="${DATABASE_PASSWORD}"
 
 query() {
   "${PSQL[@]}" -q -t -A -v ON_ERROR_STOP=1 -c "SELECT row_to_json(result) FROM ($1) AS result" 2>&1
+}
+
+fail() {
+  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
+    "################################################################################" \
+    "SCHEMA FAILURE" \
+    "################################################################################" \
+    "$1" "$2" >&2
 }
 
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
@@ -115,14 +123,6 @@ query_block() {
   fi
   printf '%s\n' "${result}" | table
   printf '\n'
-}
-
-fail() {
-  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
-    "################################################################################" \
-    "SCHEMA FAILURE" \
-    "################################################################################" \
-    "$1" "$2" >&2
 }
 
 query_one() {
