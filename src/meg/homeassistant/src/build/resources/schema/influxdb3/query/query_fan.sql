@@ -7,15 +7,9 @@
 SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
-    round(avg(assumed_state), 1)     AS "Assumed State Avg",
-    round(min(assumed_state), 1)     AS "Assumed State Min",
-    round(max(assumed_state), 1)     AS "Assumed State Max",
-    round(avg(percentage), 1)        AS "Percentage Avg",
-    round(min(percentage), 1)        AS "Percentage Min",
-    round(max(percentage), 1)        AS "Percentage Max",
-    round(avg(value), 1)             AS "Value Avg",
-    round(min(value), 1)             AS "Value Min",
-    round(max(value), 1)             AS "Value Max"
+    round(avg(assumed_state), 1)     AS "Assumed State",
+    round(avg(percentage), 1)        AS "Percentage",
+    round(avg(value), 1)             AS "Value"
 FROM fan
 WHERE
     module = 'homeassistant'

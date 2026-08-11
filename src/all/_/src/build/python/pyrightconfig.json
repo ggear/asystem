@@ -1,0 +1,10 @@
+{
+  "venvPath": "/Users/graham/.pyenv/versions",
+  "venv": "asystem",
+  "include": [
+    "asystem"
+  ],
+  "extraPaths": [
+    "."
+  ]
+}

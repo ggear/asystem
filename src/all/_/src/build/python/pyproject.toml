@@ -1,0 +1,16 @@
+[tool.ruff]
+line-length = 200
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "SIM", "UP", "I"]
+# UP032: the library formats every message with [.format], matching the rest of the repo, so f-strings
+# are not adopted piecemeal here. F403/F405: the star imports are the published surface of the package.
+ignore = ["F403", "F405", "UP032"]
+
+[tool.ruff.lint.per-file-ignores]
+# Every import in an [__init__.py] is a re-export, those files are the package's public API.
+"asystem/__init__.py" = ["F401"]
+"asystem/schema/__init__.py" = ["F401"]
+"asystem/schema/dialects/__init__.py" = ["F401"]
+# E501: container.py holds shipped bash lines inside string literals, wrapping them would change what ships.
+"asystem/container.py" = ["E501"]

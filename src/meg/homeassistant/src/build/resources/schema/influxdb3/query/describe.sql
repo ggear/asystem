@@ -4,37 +4,37 @@
 
 -- dimensions
 SELECT
-    'automation'  AS relation,
-    'entity_id*'  AS dimension,
-    5             AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'automation'               AS relation,
+    'entity_id*'               AS dimension,
+    5                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM automation
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'binary_sensor' AS relation,
-    'entity_id*'    AS dimension,
-    2               AS measures,
-    '<on-change>'   AS cadence,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'binary_sensor'            AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'binary_sensor__battery' AS relation,
-    'entity_id*'             AS dimension,
-    2                        AS measures,
-    '<on-change>'            AS cadence,
-    count(*)                 AS rows,
-    min(time)                AS oldest,
-    max(time)                AS newest
+    'binary_sensor__battery'   AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__battery
 WHERE
     module = 'homeassistant'
@@ -45,8 +45,8 @@ SELECT
     2                                 AS measures,
     '<on-change>'                     AS cadence,
     count(*)                          AS rows,
-    min(time)                         AS oldest,
-    max(time)                         AS newest
+    CAST(min(time) AS VARCHAR)        AS oldest,
+    CAST(max(time) AS VARCHAR)        AS newest
 FROM binary_sensor__battery_charging
 WHERE
     module = 'homeassistant'
@@ -57,20 +57,20 @@ SELECT
     4                             AS measures,
     '<on-change>'                 AS cadence,
     count(*)                      AS rows,
-    min(time)                     AS oldest,
-    max(time)                     AS newest
+    CAST(min(time) AS VARCHAR)    AS oldest,
+    CAST(max(time) AS VARCHAR)    AS newest
 FROM binary_sensor__connectivity
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'binary_sensor__door' AS relation,
-    'entity_id*'          AS dimension,
-    2                     AS measures,
-    '<on-change>'         AS cadence,
-    count(*)              AS rows,
-    min(time)             AS oldest,
-    max(time)             AS newest
+    'binary_sensor__door'      AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__door
 WHERE
     module = 'homeassistant'
@@ -81,140 +81,140 @@ SELECT
     2                          AS measures,
     '<on-change>'              AS cadence,
     count(*)                   AS rows,
-    min(time)                  AS oldest,
-    max(time)                  AS newest
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__occupancy
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'binary_sensor__safety' AS relation,
-    'entity_id*'            AS dimension,
-    2                       AS measures,
-    '<on-change>'           AS cadence,
-    count(*)                AS rows,
-    min(time)               AS oldest,
-    max(time)               AS newest
+    'binary_sensor__safety'    AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__safety
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'calendar'    AS relation,
-    'entity_id*'  AS dimension,
-    10            AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'calendar'                 AS relation,
+    'entity_id*'               AS dimension,
+    10                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM calendar
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'climate'     AS relation,
-    'entity_id*'  AS dimension,
-    7             AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'climate'                  AS relation,
+    'entity_id*'               AS dimension,
+    7                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM climate
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'device_tracker' AS relation,
-    'entity_id*'     AS dimension,
-    11               AS measures,
-    '<on-change>'    AS cadence,
-    count(*)         AS rows,
-    min(time)        AS oldest,
-    max(time)        AS newest
+    'device_tracker'           AS relation,
+    'entity_id*'               AS dimension,
+    11                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM device_tracker
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'fan'         AS relation,
-    'entity_id*'  AS dimension,
-    5             AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'fan'                      AS relation,
+    'entity_id*'               AS dimension,
+    5                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM fan
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'input_boolean' AS relation,
-    'entity_id*'    AS dimension,
-    2               AS measures,
-    '<on-change>'   AS cadence,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'input_boolean'            AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM input_boolean
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'light'       AS relation,
-    'entity_id*'  AS dimension,
-    12            AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'light'                    AS relation,
+    'entity_id*'               AS dimension,
+    12                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM light
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'lock'        AS relation,
-    'entity_id*'  AS dimension,
-    2             AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'lock'                     AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM lock
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'media_player' AS relation,
-    'entity_id*'   AS dimension,
-    2              AS measures,
-    '<on-change>'  AS cadence,
-    count(*)       AS rows,
-    min(time)      AS oldest,
-    max(time)      AS newest
+    'media_player'             AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM media_player
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'media_player__speaker' AS relation,
-    'entity_id*'            AS dimension,
-    14                      AS measures,
-    '<on-change>'           AS cadence,
-    count(*)                AS rows,
-    min(time)               AS oldest,
-    max(time)               AS newest
+    'media_player__speaker'    AS relation,
+    'entity_id*'               AS dimension,
+    14                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM media_player__speaker
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'media_player__tv' AS relation,
-    'entity_id*'       AS dimension,
-    2                  AS measures,
-    '<on-change>'      AS cadence,
-    count(*)           AS rows,
-    min(time)          AS oldest,
-    max(time)          AS newest
+    'media_player__tv'         AS relation,
+    'entity_id*'               AS dimension,
+    2                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM media_player__tv
 WHERE
     module = 'homeassistant'
@@ -225,20 +225,20 @@ SELECT
     4                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM number
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'person'      AS relation,
-    'entity_id*'  AS dimension,
-    7             AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'person'                   AS relation,
+    'entity_id*'               AS dimension,
+    7                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM person
 WHERE
     module = 'homeassistant'
@@ -246,11 +246,11 @@ UNION ALL
 SELECT
     'sensor'                         AS relation,
     'entity_id*/unit_of_measurement' AS dimension,
-    74                               AS measures,
+    75                               AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor
 WHERE
     module = 'homeassistant'
@@ -261,8 +261,8 @@ SELECT
     3                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__atmospheric_pressure
 WHERE
     module = 'homeassistant'
@@ -273,8 +273,8 @@ SELECT
     3                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__battery
 WHERE
     module = 'homeassistant'
@@ -285,8 +285,8 @@ SELECT
     3                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__carbon_dioxide
 WHERE
     module = 'homeassistant'
@@ -297,8 +297,8 @@ SELECT
     1                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__current
 WHERE
     module = 'homeassistant'
@@ -309,20 +309,20 @@ SELECT
     4                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__energy
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'sensor__enum' AS relation,
-    'entity_id*'   AS dimension,
-    4              AS measures,
-    '<on-change>'  AS cadence,
-    count(*)       AS rows,
-    min(time)      AS oldest,
-    max(time)      AS newest
+    'sensor__enum'             AS relation,
+    'entity_id*'               AS dimension,
+    4                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM sensor__enum
 WHERE
     module = 'homeassistant'
@@ -333,8 +333,8 @@ SELECT
     13                               AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__humidity
 WHERE
     module = 'homeassistant'
@@ -345,8 +345,8 @@ SELECT
     1                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__pm25
 WHERE
     module = 'homeassistant'
@@ -357,8 +357,8 @@ SELECT
     2                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__power
 WHERE
     module = 'homeassistant'
@@ -369,8 +369,8 @@ SELECT
     12                               AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__precipitation
 WHERE
     module = 'homeassistant'
@@ -381,8 +381,8 @@ SELECT
     1                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__pressure
 WHERE
     module = 'homeassistant'
@@ -393,8 +393,8 @@ SELECT
     1                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__signal_strength
 WHERE
     module = 'homeassistant'
@@ -405,8 +405,8 @@ SELECT
     3                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__sound_pressure
 WHERE
     module = 'homeassistant'
@@ -417,20 +417,20 @@ SELECT
     21                               AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__temperature
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'sensor__timestamp' AS relation,
-    'entity_id*'        AS dimension,
-    12                  AS measures,
-    '<on-change>'       AS cadence,
-    count(*)            AS rows,
-    min(time)           AS oldest,
-    max(time)           AS newest
+    'sensor__timestamp'        AS relation,
+    'entity_id*'               AS dimension,
+    12                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM sensor__timestamp
 WHERE
     module = 'homeassistant'
@@ -441,8 +441,8 @@ SELECT
     1                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__voltage
 WHERE
     module = 'homeassistant'
@@ -453,56 +453,56 @@ SELECT
     11                               AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
-    min(time)                        AS oldest,
-    max(time)                        AS newest
+    CAST(min(time) AS VARCHAR)       AS oldest,
+    CAST(max(time) AS VARCHAR)       AS newest
 FROM sensor__wind_speed
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'sun'         AS relation,
-    'entity_id*'  AS dimension,
-    13            AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'sun'                      AS relation,
+    'entity_id*'               AS dimension,
+    13                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM sun
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'switch'      AS relation,
-    'entity_id*'  AS dimension,
-    13            AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'switch'                   AS relation,
+    'entity_id*'               AS dimension,
+    13                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM switch
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'update__firmware' AS relation,
-    'entity_id*'       AS dimension,
-    13                 AS measures,
-    '<on-change>'      AS cadence,
-    count(*)           AS rows,
-    min(time)          AS oldest,
-    max(time)          AS newest
+    'update__firmware'         AS relation,
+    'entity_id*'               AS dimension,
+    13                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM update__firmware
 WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'weather'     AS relation,
-    'entity_id*'  AS dimension,
-    33            AS measures,
-    '<on-change>' AS cadence,
-    count(*)      AS rows,
-    min(time)     AS oldest,
-    max(time)     AS newest
+    'weather'                  AS relation,
+    'entity_id*'               AS dimension,
+    33                         AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM weather
 WHERE
     module = 'homeassistant'
@@ -1917,6 +1917,7 @@ WHERE
         'Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)_str',
         'ISO Country Code_str',
         'Incident (MIDLAND, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809976)_str',
+        'Incident (MIDLAND, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810043)_str',
         'Inland Water_str', 'Locality_str', 'Location_str', 'Low Power Mode', 'Name',
         'Name_str', 'Ocean_str', 'Postal Code',
         'Road Crash (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810011)',
@@ -3509,39 +3510,39 @@ ORDER BY rows DESC NULLS LAST;
 
 -- entities
 SELECT
-    'automation' AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'automation'               AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM automation
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'binary_sensor' AS relation,
-    'entity_id*'    AS dimension,
-    entity_id       AS entity,
-    '-'             AS declared,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'binary_sensor'            AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'binary_sensor__battery' AS relation,
-    'entity_id*'             AS dimension,
-    entity_id                AS entity,
-    '-'                      AS declared,
-    count(*)                 AS rows,
-    min(time)                AS oldest,
-    max(time)                AS newest
+    'binary_sensor__battery'   AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__battery
 WHERE
     module = 'homeassistant'
@@ -3553,8 +3554,8 @@ SELECT
     entity_id                         AS entity,
     '-'                               AS declared,
     count(*)                          AS rows,
-    min(time)                         AS oldest,
-    max(time)                         AS newest
+    CAST(min(time) AS VARCHAR)        AS oldest,
+    CAST(max(time) AS VARCHAR)        AS newest
 FROM binary_sensor__battery_charging
 WHERE
     module = 'homeassistant'
@@ -3566,21 +3567,21 @@ SELECT
     entity_id                     AS entity,
     '-'                           AS declared,
     count(*)                      AS rows,
-    min(time)                     AS oldest,
-    max(time)                     AS newest
+    CAST(min(time) AS VARCHAR)    AS oldest,
+    CAST(max(time) AS VARCHAR)    AS newest
 FROM binary_sensor__connectivity
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'binary_sensor__door' AS relation,
-    'entity_id*'          AS dimension,
-    entity_id             AS entity,
-    '-'                   AS declared,
-    count(*)              AS rows,
-    min(time)             AS oldest,
-    max(time)             AS newest
+    'binary_sensor__door'      AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__door
 WHERE
     module = 'homeassistant'
@@ -3592,151 +3593,151 @@ SELECT
     entity_id                  AS entity,
     '-'                        AS declared,
     count(*)                   AS rows,
-    min(time)                  AS oldest,
-    max(time)                  AS newest
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__occupancy
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'binary_sensor__safety' AS relation,
-    'entity_id*'            AS dimension,
-    entity_id               AS entity,
-    '-'                     AS declared,
-    count(*)                AS rows,
-    min(time)               AS oldest,
-    max(time)               AS newest
+    'binary_sensor__safety'    AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__safety
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'calendar'   AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'calendar'                 AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM calendar
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'climate'    AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'climate'                  AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM climate
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'device_tracker' AS relation,
-    'entity_id*'     AS dimension,
-    entity_id        AS entity,
-    '-'              AS declared,
-    count(*)         AS rows,
-    min(time)        AS oldest,
-    max(time)        AS newest
+    'device_tracker'           AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM device_tracker
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'fan'        AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'fan'                      AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM fan
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'input_boolean' AS relation,
-    'entity_id*'    AS dimension,
-    entity_id       AS entity,
-    '-'             AS declared,
-    count(*)        AS rows,
-    min(time)       AS oldest,
-    max(time)       AS newest
+    'input_boolean'            AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM input_boolean
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'light'      AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'light'                    AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM light
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'lock'       AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'lock'                     AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM lock
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'media_player' AS relation,
-    'entity_id*'   AS dimension,
-    entity_id      AS entity,
-    '-'            AS declared,
-    count(*)       AS rows,
-    min(time)      AS oldest,
-    max(time)      AS newest
+    'media_player'             AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM media_player
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'media_player__speaker' AS relation,
-    'entity_id*'            AS dimension,
-    entity_id               AS entity,
-    '-'                     AS declared,
-    count(*)                AS rows,
-    min(time)               AS oldest,
-    max(time)               AS newest
+    'media_player__speaker'    AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM media_player__speaker
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'media_player__tv' AS relation,
-    'entity_id*'       AS dimension,
-    entity_id          AS entity,
-    '-'                AS declared,
-    count(*)           AS rows,
-    min(time)          AS oldest,
-    max(time)          AS newest
+    'media_player__tv'         AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM media_player__tv
 WHERE
     module = 'homeassistant'
@@ -3748,21 +3749,21 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM number
 WHERE
     module = 'homeassistant'
 GROUP BY concat(entity_id, '/', unit_of_measurement)
 UNION ALL
 SELECT
-    'person'     AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'person'                   AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM person
 WHERE
     module = 'homeassistant'
@@ -3774,8 +3775,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor
 WHERE
     module = 'homeassistant'
@@ -3787,8 +3788,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__atmospheric_pressure
 WHERE
     module = 'homeassistant'
@@ -3800,8 +3801,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__battery
 WHERE
     module = 'homeassistant'
@@ -3813,8 +3814,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__carbon_dioxide
 WHERE
     module = 'homeassistant'
@@ -3826,8 +3827,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__current
 WHERE
     module = 'homeassistant'
@@ -3839,21 +3840,21 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__energy
 WHERE
     module = 'homeassistant'
 GROUP BY concat(entity_id, '/', unit_of_measurement)
 UNION ALL
 SELECT
-    'sensor__enum' AS relation,
-    'entity_id*'   AS dimension,
-    entity_id      AS entity,
-    '-'            AS declared,
-    count(*)       AS rows,
-    min(time)      AS oldest,
-    max(time)      AS newest
+    'sensor__enum'             AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM sensor__enum
 WHERE
     module = 'homeassistant'
@@ -3865,8 +3866,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__humidity
 WHERE
     module = 'homeassistant'
@@ -3878,8 +3879,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__pm25
 WHERE
     module = 'homeassistant'
@@ -3891,8 +3892,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__power
 WHERE
     module = 'homeassistant'
@@ -3904,8 +3905,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__precipitation
 WHERE
     module = 'homeassistant'
@@ -3917,8 +3918,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__pressure
 WHERE
     module = 'homeassistant'
@@ -3930,8 +3931,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__signal_strength
 WHERE
     module = 'homeassistant'
@@ -3943,8 +3944,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__sound_pressure
 WHERE
     module = 'homeassistant'
@@ -3956,21 +3957,21 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__temperature
 WHERE
     module = 'homeassistant'
 GROUP BY concat(entity_id, '/', unit_of_measurement)
 UNION ALL
 SELECT
-    'sensor__timestamp' AS relation,
-    'entity_id*'        AS dimension,
-    entity_id           AS entity,
-    '-'                 AS declared,
-    count(*)            AS rows,
-    min(time)           AS oldest,
-    max(time)           AS newest
+    'sensor__timestamp'        AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM sensor__timestamp
 WHERE
     module = 'homeassistant'
@@ -3982,8 +3983,8 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__voltage
 WHERE
     module = 'homeassistant'
@@ -3995,60 +3996,60 @@ SELECT
     concat(entity_id, '/', unit_of_measurement) AS entity,
     '-'                                         AS declared,
     count(*)                                    AS rows,
-    min(time)                                   AS oldest,
-    max(time)                                   AS newest
+    CAST(min(time) AS VARCHAR)                  AS oldest,
+    CAST(max(time) AS VARCHAR)                  AS newest
 FROM sensor__wind_speed
 WHERE
     module = 'homeassistant'
 GROUP BY concat(entity_id, '/', unit_of_measurement)
 UNION ALL
 SELECT
-    'sun'        AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'sun'                      AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM sun
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'switch'     AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'switch'                   AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM switch
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'update__firmware' AS relation,
-    'entity_id*'       AS dimension,
-    entity_id          AS entity,
-    '-'                AS declared,
-    count(*)           AS rows,
-    min(time)          AS oldest,
-    max(time)          AS newest
+    'update__firmware'         AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM update__firmware
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id
 UNION ALL
 SELECT
-    'weather'    AS relation,
-    'entity_id*' AS dimension,
-    entity_id    AS entity,
-    '-'          AS declared,
-    count(*)     AS rows,
-    min(time)    AS oldest,
-    max(time)    AS newest
+    'weather'                  AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM weather
 WHERE
     module = 'homeassistant'

@@ -24,7 +24,7 @@
 
 fan,
   module=homeassistant,
-  entity_id=<string>
+  entity_id=<ada_fan|deck_east_fan|deck_fan|deck_west_fan|dining_air_purifier|edwin_fan|kitchen_fan_plug|lounge_air_purifier|lounge_fan|parents_fan>
     assumed_state=<float>,
     percentage=<float>,
     value=<float>

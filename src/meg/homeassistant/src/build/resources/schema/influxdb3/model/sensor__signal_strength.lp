@@ -13,7 +13,7 @@
 
 sensor__signal_strength,
   module=homeassistant,
-  entity_id=<string>,
-  unit_of_measurement=<string>
+  entity_id=template_weatherstation_coms_signal_quality_percentage,
+  unit_of_measurement=%
     value=<float>
   <timestamp>

@@ -13,6 +13,6 @@
 
 binary_sensor__door,
   module=homeassistant,
-  entity_id=<string>
+  entity_id=<back_door_sensor_contact|template_back_door_sensor_contact_last>
     value=<float>
   <timestamp>

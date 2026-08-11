@@ -20,8 +20,8 @@
 
 sensor__sound_pressure,
   module=homeassistant,
-  entity_id=<string>,
-  unit_of_measurement=<string>
+  entity_id=<ada_noise|edwin_noise|kitchen_noise|laundry_noise|office_noise|parents_noise>,
+  unit_of_measurement=dB
     latitude=<float>,
     longitude=<float>,
     value=<float>

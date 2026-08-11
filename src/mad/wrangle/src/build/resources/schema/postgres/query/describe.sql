@@ -16,18 +16,6 @@ WHERE
     type IN ('delta', 'snapshot')
 UNION ALL
 SELECT
-    'interest/rate'            AS relation,
-    'entity*'                  AS dimension,
-    6                          AS measures,
-    '1d'                       AS cadence,
-    count(*)                   AS rows,
-    CAST(min(time) AS VARCHAR) AS oldest,
-    CAST(max(time) AS VARCHAR) AS newest
-FROM interest
-WHERE
-    type IN ('mean')
-UNION ALL
-SELECT
     'equity/ticker'            AS relation,
     'entity*'                  AS dimension,
     16                         AS measures,
@@ -47,6 +35,18 @@ WHERE
         'price-close-spot-30d-change-percentage', 'price-close-spot-365d-change-percentage',
         'price-close-spot-90d-change-percentage'
     )
+UNION ALL
+SELECT
+    'interest/rate'            AS relation,
+    'entity*'                  AS dimension,
+    6                          AS measures,
+    '1d'                       AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type IN ('mean')
 ORDER BY rows DESC;
 
 -- measures
@@ -522,19 +522,6 @@ WHERE
 GROUP BY entity, CASE WHEN entity IN ('AUD/USD', 'AUD/GBP', 'AUD/SGD') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
-    'interest/rate'                                                           AS relation,
-    'entity*'                                                                 AS dimension,
-    entity                                                                    AS entity,
-    CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END AS declared,
-    count(*)                                                                  AS rows,
-    CAST(min(time) AS VARCHAR)                                                AS oldest,
-    CAST(max(time) AS VARCHAR)                                                AS newest
-FROM interest
-WHERE
-    type IN ('mean')
-GROUP BY entity, CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END
-UNION ALL
-SELECT
     'equity/ticker'            AS relation,
     'entity*'                  AS dimension,
     entity                     AS entity,
@@ -563,4 +550,17 @@ GROUP BY entity, CASE WHEN entity IN (
     'IAF', 'MCK', 'MUK', 'MUS', 'MVW', 'NDQ', 'QSML', 'SIG', 'URNM', 'VAE', 'VAS',
     'VDHG', 'VGE', 'VGS', 'VHY', 'WDS'
 ) THEN 'yes' ELSE 'no' END
+UNION ALL
+SELECT
+    'interest/rate'                                                           AS relation,
+    'entity*'                                                                 AS dimension,
+    entity                                                                    AS entity,
+    CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                                                                  AS rows,
+    CAST(min(time) AS VARCHAR)                                                AS oldest,
+    CAST(max(time) AS VARCHAR)                                                AS newest
+FROM interest
+WHERE
+    type IN ('mean')
+GROUP BY entity, CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END
 ORDER BY rows DESC;

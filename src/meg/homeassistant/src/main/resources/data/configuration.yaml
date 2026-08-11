@@ -81,11 +81,10 @@ influxdb:
       - 'scene'
       - 'select'
     entity_globs:
-      - '*_bass'
-      - '*_treble'
-      - '*_sim_*'
-      - '*_microphone_level'
-      - 'adaptive_lighting_*'
+      - '*bass*'
+      - '*treble*'
+      - '*microphone_level*'
+      - '*adaptive_lighting*'
   ignore_attributes: !include influxdb-ignores.yaml
 #######################################################################################
 

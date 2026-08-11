@@ -3,8 +3,7 @@ import os
 import shutil
 from os.path import abspath, exists, join
 
-from asystem.schema_runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
-from asystem.schema_sql import (
+from asystem.schema.query import (
     BUCKET,
     NULL,
     SchemaDialect,
@@ -18,6 +17,7 @@ from asystem.schema_sql import (
     select,
     vocabulary,
 )
+from asystem.schema.runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
 
 DIALECT = "postgres"
 TARGET = "POSTGRES_SERVICE_PROD"

@@ -7,15 +7,9 @@
 SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
-    round(avg(last_triggered), 1)    AS "Last Triggered Avg",
-    round(min(last_triggered), 1)    AS "Last Triggered Min",
-    round(max(last_triggered), 1)    AS "Last Triggered Max",
-    round(avg(max), 1)               AS "Max Avg",
-    round(min(max), 1)               AS "Max Min",
-    round(max(max), 1)               AS "Max Max",
-    round(avg(value), 1)             AS "Value Avg",
-    round(min(value), 1)             AS "Value Min",
-    round(max(value), 1)             AS "Value Max"
+    round(avg(last_triggered), 1)    AS "Last Triggered",
+    round(avg(max), 1)               AS "Max",
+    round(avg(value), 1)             AS "Value"
 FROM automation
 WHERE
     module = 'homeassistant'

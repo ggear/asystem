@@ -1,4 +1,4 @@
-from asystem.schema_document import SchemaDatabaseDimension, SchemaDatabaseMeasure, SchemaDatabaseRelation
+from asystem.schema.document import SchemaDatabaseDimension, SchemaDatabaseMeasure, SchemaDatabaseRelation
 
 from .currency import PAIRS as CURRENCY_PAIRS
 from .currency import PERIODS as CURRENCY_PERIODS

@@ -12,6 +12,6 @@
 
 media_player__tv,
   module=homeassistant,
-  entity_id=<string>
+  entity_id=lg_webos_smart_tv
     value=<float>
   <timestamp>

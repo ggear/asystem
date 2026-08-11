@@ -20,7 +20,7 @@
 
 sensor__current,
   module=homeassistant,
-  entity_id=<string>,
-  unit_of_measurement=<string>
+  entity_id=<bathroom_rails_plug_current|deck_freezer_plug_current|garden_sewerage_blower_plug_current|kitchen_coffee_machine_plug_current|kitchen_dish_washer_plug_current|lounge_tv_plug_current|rack_backup_plug_current|server_lia_plug_current>,
+  unit_of_measurement=A
     value=<float>
   <timestamp>

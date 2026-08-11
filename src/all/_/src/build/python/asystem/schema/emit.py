@@ -3,13 +3,13 @@ import shutil
 import sys
 from os.path import abspath, basename, dirname, exists, join
 
-from asystem import schema_influxdb, schema_postgres, schema_vernemq
 from asystem.bootstrap import load_bootstrap_root
-from asystem.schema_document import SchemaBrokerOptions, SchemaDatabaseOptions, merge_schema_entities
+from asystem.schema.dialects import influxdb3, postgres, vernemq
+from asystem.schema.document import SchemaBrokerOptions, SchemaDatabaseOptions, merge_schema_entities
 
 DIALECTS = {
-    schema_influxdb.DIALECT: schema_influxdb,
-    schema_postgres.DIALECT: schema_postgres,
+    influxdb3.DIALECT: influxdb3,
+    postgres.DIALECT: postgres,
 }
 
 
@@ -46,15 +46,13 @@ def write_schema_broker(metadata_df, module_name=None, working_root=None, schema
         topic_glob_data=topic_glob_data or "",
         state=schema_state, command=schema_command, availability=schema_availability, document=document)
     empty = len(metadata_df) == 0
-    artifacts = {} if empty else schema_vernemq.artifacts(metadata_df, module_name, options)
-    write_schema_dialect(module_name, schemas_dir, schema_vernemq.DIALECT, artifacts)
+    artifacts = {} if empty else vernemq.artifacts(metadata_df, module_name, options)
+    write_schema_dialect(module_name, schemas_dir, vernemq.DIALECT, artifacts)
     if not empty:
-        schema_vernemq.ship(metadata_df, module_name, module_root, schemas_dir, options)
+        vernemq.ship(metadata_df, module_name, module_root, schemas_dir, options)
 
 
 def write_schema_dialect(module_name, schemas_dir, dialect, artifacts):
-    """Write a dialect's artifacts, the tree wiped first so nothing survives that is no longer generated.
-    """
     dialect_dir = abspath(join(str(schemas_dir), dialect))
     if exists(dialect_dir):
         shutil.rmtree(dialect_dir)

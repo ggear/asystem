@@ -1,4 +1,4 @@
-from asystem.schema_sql import banner
+from asystem.schema.query import banner
 
 REPORT = r"""
 fail() {
@@ -106,12 +106,6 @@ query_file() {
 
 
 def resolved(module_name, variables):
-    """Resolve a script's connection variables, one fallback chain per variable, failing loudly on any gap.
-
-    Every backend needs the same thing, a value the operator may override, falling back to a module
-    scoped name, falling back to the backend's own. Spelling that out once means no backend can
-    quietly skip the check the way a hardcoded value does.
-    """
     lines = [""]
     for variable, fallbacks in variables:
         chain = "${{{}:-}}".format(fallbacks[-1])
@@ -184,27 +178,27 @@ fi
 
 def describe_runner(module_name, dialect, target, connect):
     return script(module_name, dialect, "describe", "print what production actually carries", connect, """
-printf '\\nSchema describe [%s] against [%s]\\n' "{1}" "${{{0}}}"
+printf '\\nSchema describe [%s] against [%s]\\n' "{module}" "${{{target}}}"
 printf -- '\\n-- %s\\n\\n' "describe.sql"
-SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${{{0}}}" \\
+SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${{{target}}}" \\
   query_file "${{ROOT_DIR}}/query/describe.sql"
-""".format(target, module_name))
+""".format(target=target, module=module_name))
 
 
 def query_runner(module_name, dialect, target, connect):
     return script(module_name, dialect, "query", "run the generated query for every declared relation", connect, """
-printf '\\nSchema query [%s] against [%s]\\n\\n' "{1}" "${{{0}}}"
+printf '\\nSchema query [%s] against [%s]\\n\\n' "{module}" "${{{target}}}"
 FAULTS=0
 for SQL_FILE in "${{ROOT_DIR}}"/query/query_*.sql; do
   SCHEMA_LABEL="$(basename "${{SQL_FILE}}")" query_file "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
 done
 [ "${{FAULTS}}" = 0 ]
-""".format(target, module_name))
+""".format(target=target, module=module_name))
 
 
 def verify_runner(module_name, dialect, target, connect):
     return script(module_name, dialect, "verify", "assert production matches the declaration", connect, """
-printf '\\nSchema verify [%s] against [%s]\\n' "{1}" "${{{0}}}"
+printf '\\nSchema verify [%s] against [%s]\\n' "{module}" "${{{target}}}"
 printf -- '\\n-- %s\\n\\n' "verify.sql"
 
 FAULTS=0
@@ -223,8 +217,8 @@ while IFS= read -r STATEMENT; do
 done < <(statements "${{ROOT_DIR}}/query/verify.sql")
 
 if [ "${{FAULTS}}" != "0" ]; then
-  printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{1}" "${{FAULTS}}" >&2
+  printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{module}" "${{FAULTS}}" >&2
   exit 1
 fi
-printf '\\nSchema verify [%s] found no drift\\n' "{1}"
-""".format(target, module_name))
+printf '\\nSchema verify [%s] found no drift\\n' "{module}"
+""".format(target=target, module=module_name))

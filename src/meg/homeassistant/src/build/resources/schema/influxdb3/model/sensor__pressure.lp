@@ -17,7 +17,7 @@
 
 sensor__pressure,
   module=homeassistant,
-  entity_id=<string>,
-  unit_of_measurement=<string>
+  entity_id=<iphone_graham_pressure|janes_ipad_pressure|janes_iphone_pressure|roof_barometer_pressure>,
+  unit_of_measurement=<hPa|mbar>
     value=<float>
   <timestamp>

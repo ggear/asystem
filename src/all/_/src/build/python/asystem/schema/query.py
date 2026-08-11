@@ -30,12 +30,6 @@ DURATIONS = {
 
 @dataclass
 class SchemaDialect:
-    """What a SQL dialect supplies so [describe_statements] and [query_statements] can be written once.
-
-    Everything structural about a describe or a query is the same in every SQL backend, only the
-    expressions differ, so each backend hands over the expressions and nothing else. A field is a
-    callable unless named otherwise.
-    """
     source: object = None
     predicates: object = None
     groups: object = None
@@ -73,8 +67,6 @@ def vocabulary(relation, prefix="#", tags=(), entities=None):
 
 
 def expanded(relation, dimension, entities=None):
-    """The values a tag takes, however they were declared, empty where nothing declares them.
-    """
     values = dimension.entities or (entities or {}).get(dimension.key)
     if values is None:
         values = relation.entities if dimension.subject else []
@@ -108,8 +100,6 @@ def select(selectors, source, predicates=(),
 
 
 def unioned(arms, order_by=()):
-    """Join select arms into one statement, the only place a compound statement is ordered.
-    """
     joined = "\nUNION ALL\n".join(arm for arm in arms if arm)
     if joined and order_by:
         joined += "\nORDER BY {}".format(", ".join(order_by))
@@ -117,9 +107,8 @@ def unioned(arms, order_by=()):
 
 
 def describe_statements(document, dialect):
-    """The three describe sections, written once for every SQL backend.
-    """
-    relations = [relation for relation in document.relations if relation.persisted]
+    relations = sorted((relation for relation in document.relations if relation.persisted),
+                       key=lambda relation: (dialect.source(relation), relation.path))
     return render_statements([
         "-- dimensions", _describe_relations(relations, dialect),
         "-- measures", _describe_measures(document, dialect),
@@ -127,8 +116,6 @@ def describe_statements(document, dialect):
 
 
 def query_statements(relations, dialect):
-    """The generic per relation query, written once for every SQL backend.
-    """
     statements = []
     for relation in relations:
         if not relation.persisted:

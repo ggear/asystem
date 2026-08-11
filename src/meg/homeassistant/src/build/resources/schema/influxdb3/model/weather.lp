@@ -43,7 +43,7 @@
 
 weather,
   module=homeassistant,
-  entity_id=<string>
+  entity_id=bom_darlington
     apparent_temperature=<float>,
     dew_point=<float>,
     humidity=<float>,

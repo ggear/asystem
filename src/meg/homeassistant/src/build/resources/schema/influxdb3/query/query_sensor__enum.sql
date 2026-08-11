@@ -7,12 +7,8 @@
 SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
-    round(avg(latitude), 1)          AS "Latitude Avg",
-    round(min(latitude), 1)          AS "Latitude Min",
-    round(max(latitude), 1)          AS "Latitude Max",
-    round(avg(longitude), 1)         AS "Longitude Avg",
-    round(min(longitude), 1)         AS "Longitude Min",
-    round(max(longitude), 1)         AS "Longitude Max"
+    round(avg(latitude), 1)          AS "Latitude",
+    round(avg(longitude), 1)         AS "Longitude"
 FROM sensor__enum
 WHERE
     module = 'homeassistant'

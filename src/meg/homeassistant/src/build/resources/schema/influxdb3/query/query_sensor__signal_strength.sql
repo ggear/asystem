@@ -8,9 +8,7 @@ SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
     unit_of_measurement              AS "Unit Of Measurement",
-    round(avg(value), 1)             AS "Value Avg",
-    round(min(value), 1)             AS "Value Min",
-    round(max(value), 1)             AS "Value Max"
+    round(avg(value), 1)             AS "Value"
 FROM sensor__signal_strength
 WHERE
     module = 'homeassistant'

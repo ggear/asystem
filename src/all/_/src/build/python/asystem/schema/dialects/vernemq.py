@@ -6,8 +6,8 @@ import shutil
 import textwrap
 from os.path import abspath, exists, join
 
-from asystem.schema_runner import REPORT, script
-from asystem.schema_sql import banner
+from asystem.schema.query import banner
+from asystem.schema.runner import REPORT, script
 
 DIALECT = "vernemq"
 TARGET = "VERNEMQ_SERVICE_PROD"
@@ -46,7 +46,7 @@ DISCOVERY_PAYLOAD = """
 """
 
 CONNECT = REPORT + """
-BROKER_ARGS=(-h "${%s}" -p "${VERNEMQ_API_PORT}")""" % TARGET + """
+BROKER_ARGS=(-h "${TARGET_VARIABLE}" -p "${VERNEMQ_API_PORT}")
 
 topics() {
   mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "$1" -W 5 2>/dev/null | grep -E "${2:-.}" | sort -u
@@ -62,7 +62,7 @@ declared() {
       printf '%s\\n' "${LEAF#"${ROOT_DIR}"/model/}"
     done | sort -u
 }
-"""
+""".replace("TARGET_VARIABLE", TARGET)
 
 
 def artifacts(metadata_df, module_name, options):
@@ -192,7 +192,7 @@ def describe_script(module_name, globs):
 printf '\\nSchema describe [%s] against [%s]\\n\\n' "{}" "${{{}}}"
 {}
 """.format(module_name, TARGET, "\n".join(
-        "printf '\\n== %s ==\\n' \"{0}\"\ntopics {1}".format(_expand(glob), _arguments(glob)) for glob in globs)))
+        "printf '\\n== %s ==\\n' \"{}\"\ntopics {}".format(_expand(glob), _arguments(glob)) for glob in globs)))
 
 
 def query_script(module_name):

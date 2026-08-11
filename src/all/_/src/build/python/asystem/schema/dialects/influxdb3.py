@@ -1,14 +1,12 @@
 import json
 import re
+from os.path import basename
 
 from requests import post
 
-from os.path import basename
-
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
-from asystem.schema_document import SchemaDatabaseDimension, parse_schema_document
-from asystem.schema_runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
-from asystem.schema_sql import (
+from asystem.schema.document import SchemaDatabaseDimension, parse_schema_document
+from asystem.schema.query import (
     BUCKET,
     NULL,
     SchemaDialect,
@@ -24,6 +22,7 @@ from asystem.schema_sql import (
     unioned,
     vocabulary,
 )
+from asystem.schema.runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
 
 DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
@@ -94,8 +93,6 @@ def artifacts(document, module_name, options):
 
 
 def ship(document, module_name, module_root, schemas_dir, options):
-    """Nothing of an influxdb3 schema ships, the database owns its own shape, so this is deliberately empty.
-    """
     return None
 
 
@@ -107,29 +104,6 @@ def connect(module_name):
 
 
 class Discover:
-    """Reflect a live influxdb3 database into the documented schema JSON.
-
-    A service that declares its schema in code reflects it through [load_schema_document]. A database
-    written by something outside this repo declares nothing, so its schema is only knowable by asking
-    the database what it holds. This asks, and emits the very same document the go and rust reflectors
-    print, so a discovered schema reaches [write_schema_database] by the same path a declared one does
-    and is validated by the same rules.
-
-    Nothing here knows any module, only influxdb3. The vocabulary a discovered document cannot carry
-    (what a relation means, what a measure is worth, how often it is written) is the caller's to supply
-    through [label] and [cadence], or to set on the returned document before handing it on.
-
-    Every table in [database] becomes one relation named by the table, since a discovered table has no
-    scope to divide it. Dictionary columns become dimensions carrying their distinct values, the subject
-    being the widest of them, and every other column but [time] becomes a measure typed by mapping its
-    arrow type onto a declared kind.
-
-    Discovery is scoped to the rows one module wrote, [module] defaulting to the calling module's
-    directory name, which is the value every module tags its rows with. Every table is checked for a
-    row carrying it and skipped when it holds none, so a database shared by several writers yields
-    only what this module wrote. The module tag is dropped from the dimensions, the dialect owning
-    it. Pass an empty [module] to discover a whole database regardless of who wrote it.
-    """
 
     def __init__(self, database=None, module=None, label="", cadence=CADENCE,
                  target=None, port=None, token=None, timeout=TIMEOUT, module_root=None):

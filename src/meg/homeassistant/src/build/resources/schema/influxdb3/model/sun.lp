@@ -23,7 +23,7 @@
 
 sun,
   module=homeassistant,
-  entity_id=<string>
+  entity_id=sun
     azimuth=<float>,
     elevation=<float>,
     next_dawn=<float>,

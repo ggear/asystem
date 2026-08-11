@@ -18,7 +18,7 @@
 
 person,
   module=homeassistant,
-  entity_id=<string>
+  entity_id=<graham_gear|jane_thomson>
     gps_accuracy=<float>,
     latitude=<float>,
     longitude=<float>,

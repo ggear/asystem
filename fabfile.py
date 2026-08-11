@@ -723,7 +723,23 @@ def _clean(context, filter_module=None, filter_host=None):
         _print_footer(module, "clean transients", host=filter_host)
 
 
+def _build_shared(context):
+    """Lint and type check the shared build library, which is not a module so no module build reaches it.
+    """
+    for shared_path in glob.glob(join(ROOT_MODULE_DIR, "*", SHARED_MODULE_NAME, "src/build/python")):
+        shared_module = shared_path.replace(ROOT_MODULE_DIR + "/", "")
+        if isfile(join(shared_path, "pyproject.toml")):
+            _print_header(shared_module, "build shared")
+            _print_line("Linting sources ...")
+            _run_local(context, "ruff check --fix --config pyproject.toml asystem/", shared_module)
+            if isfile(join(shared_path, "pyrightconfig.json")):
+                _print_line("Type checking sources ...")
+                _run_local(context, "pyright --project .", shared_module)
+            _print_footer(shared_module, "build shared")
+
+
 def _build(context, filter_module=None, filter_host=None, is_release=False):
+    _build_shared(context)
     for module in _get_modules(context, filter_module=filter_module):
         _print_header(module, "build process", host=filter_host)
         _process_target(context, module, is_release)

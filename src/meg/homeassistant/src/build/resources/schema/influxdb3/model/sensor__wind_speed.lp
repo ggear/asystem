@@ -27,8 +27,8 @@
 
 sensor__wind_speed,
   module=homeassistant,
-  entity_id=<string>,
-  unit_of_measurement=<string>
+  entity_id=<bom_darlington_gust_speed_kilometre|bom_darlington_gust_speed_knot|bom_darlington_wind_speed_kilometre|bom_darlington_wind_speed_knot>,
+  unit_of_measurement=<km/h|kn>
     bom_id=<float>,
     distance=<float>,
     issue_time=<float>,

@@ -90,16 +90,12 @@ class SchemaDocument:
 
 @dataclass
 class SchemaDatabaseOptions:
-    """What a database dialect needs beyond the document, the [options] half of its [artifacts] and [ship].
-    """
     time_column: str = "timestamp"
     retention: str = ""
 
 
 @dataclass
 class SchemaBrokerOptions:
-    """What the broker dialect needs beyond the entity rows, the [options] half of its [artifacts] and [ship].
-    """
     working_root: str = ""
     topic_glob_discovery: str = ""
     topic_glob_data: str = ""
@@ -202,16 +198,11 @@ def load_schema_document(module_root=None, config=None, args=None):
 
 
 def parse_schema_document(text, module_name):
-    """Parse and validate a reflected document, the other half of the contract on [load_schema_document].
-
-    Any producer emitting the documented JSON reaches a SchemaDocument through here, whichever
-    way it was produced, so a discovered document is validated exactly like a declared one.
-    """
     try:
         parsed = json.loads(text)
     except ValueError as error:
         raise ValueError("Build generate script [{}] schema reflection emitted unparseable JSON [{}]"
-                         .format(module_name, error))
+                         .format(module_name, error)) from error
     _reject_unknown(module_name, "document", parsed, ("module", "database", "broker"))
     database = _mapping(module_name, "document", parsed, "database")
     broker = _mapping(module_name, "document", parsed, "broker")
@@ -252,7 +243,7 @@ def _load_schema_python(module_root, module_name, python_path, config):
         module = importlib.import_module("{}.plugin.schema".format(module_name))
     except ImportError as error:
         raise ValueError("Build generate script [{}] could not import schema module [{}] [{}]"
-                         .format(module_name, python_path, error))
+                         .format(module_name, python_path, error)) from error
     document = SchemaDocument(module=module_name)
     if hasattr(module, "database_schema"):
         document.relations = list(module.database_schema(config) if config is not None else module.database_schema())
@@ -305,10 +296,10 @@ def _run(module_name, command, working_dir, overrides):
         completed = subprocess.run(command, cwd=working_dir, env=env, check=True, capture_output=True, text=True, timeout=120)
     except subprocess.CalledProcessError as error:
         raise ValueError("Build generate script [{}] schema reflection failed [{}] in [{}] with [{}]"
-                         .format(module_name, " ".join(command), working_dir, error.stderr.strip()))
-    except subprocess.TimeoutExpired:
+                         .format(module_name, " ".join(command), working_dir, error.stderr.strip())) from error
+    except subprocess.TimeoutExpired as error:
         raise ValueError("Build generate script [{}] schema reflection timed out [{}] in [{}]"
-                         .format(module_name, " ".join(command), working_dir))
+                         .format(module_name, " ".join(command), working_dir)) from error
     if completed.stderr.strip():
         print(completed.stderr.strip(), file=sys.stderr)
     return completed.stdout

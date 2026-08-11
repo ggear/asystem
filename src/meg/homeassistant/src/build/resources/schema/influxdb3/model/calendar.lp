@@ -20,7 +20,7 @@
 
 calendar,
   module=homeassistant,
-  entity_id=<string>
+  entity_id=workday_sensor_calendar
     all_day=<float>,
     end_time=<float>,
     start_time=<float>,

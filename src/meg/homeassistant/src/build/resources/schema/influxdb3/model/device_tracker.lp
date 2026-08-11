@@ -25,7 +25,7 @@
 
 device_tracker,
   module=homeassistant,
-  entity_id=<string>
+  entity_id=<ipad_graham|iphone_graham|janes_ipad|janes_iphone|janes_iphone_2>
     altitude=<float>,
     battery_level=<float>,
     gps_accuracy=<float>,

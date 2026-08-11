@@ -25,7 +25,7 @@ def load_bootstrap_env(root_dir=None):
         env_load_path = abspath(join(root_dir, "target/release/.env"))
     if not isfile(env_load_path):
         raise Exception("Could not find dev [{}] or prod [{}] env file".format(env_load_path_dev, env_load_path))
-    with open(env_load_path, 'r') as env_file:
+    with open(env_load_path) as env_file:
         for env_load_line in env_file:
             env_load_line = env_load_line.replace("export ", "").rstrip()
             if "=" not in env_load_line:
@@ -45,7 +45,9 @@ def load_bootstrap_env_value(name, default="", filename=".env_prod", module_root
     env_path = join(module_root, filename)
     if not isfile(env_path):
         return default
-    for line in open(env_path, 'r'):
+    with open(env_path) as env_file:
+        lines = env_file.readlines()
+    for line in lines:
         line = line.replace("export ", "").rstrip()
         if "=" not in line or line.startswith("#"):
             continue
