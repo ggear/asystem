@@ -1,6 +1,16 @@
 from asystem.schema_sql import banner
 
-RUNNER = r"""
+REPORT = r"""
+fail() {
+  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
+    "################################################################################" \
+    "SCHEMA FAILURE" \
+    "################################################################################" \
+    "$1" "$2" >&2
+}
+"""
+
+RUNNER = REPORT + r"""
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
 SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
 SCHEMA_TARGET=${SCHEMA_TARGET:-}
@@ -91,16 +101,6 @@ query_file() {
     query_block "${block%$'\n'}" || faults=$((faults + 1))
   fi
   [ "${faults}" = 0 ]
-}
-"""
-
-REPORT = r"""
-fail() {
-  printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
-    "################################################################################" \
-    "SCHEMA FAILURE" \
-    "################################################################################" \
-    "$1" "$2" >&2
 }
 """
 

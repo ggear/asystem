@@ -4,13 +4,13 @@
 
 -- dimensions
 SELECT
-    'supervisor/host' AS relation,
-    'host*'           AS dimension,
-    37                AS measures,
-    '6s'              AS cadence,
-    count(*)          AS rows,
-    min(time)         AS oldest,
-    max(time)         AS newest
+    'supervisor/host'          AS relation,
+    'host*'                    AS dimension,
+    37                         AS measures,
+    '6s'                       AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -18,13 +18,13 @@ WHERE
     AND service IS NULL
 UNION ALL
 SELECT
-    'supervisor/service' AS relation,
-    'host/service*'      AS dimension,
-    22                   AS measures,
-    '6s'                 AS cadence,
-    count(*)             AS rows,
-    min(time)            AS oldest,
-    max(time)            AS newest
+    'supervisor/service'       AS relation,
+    'host/service*'            AS dimension,
+    22                         AS measures,
+    '6s'                       AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -846,16 +846,16 @@ ORDER BY rows DESC NULLS LAST;
 
 -- entities
 SELECT
-    'supervisor/host' AS relation,
-    'host*'           AS dimension,
-    host              AS entity,
+    'supervisor/host'          AS relation,
+    'host*'                    AS dimension,
+    host                       AS entity,
     CASE WHEN host IN (
         'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
         'raspbpi-jil'
     ) THEN 'yes' ELSE 'no' END AS declared,
-    count(*)          AS rows,
-    min(time)         AS oldest,
-    max(time)         AS newest
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -876,8 +876,8 @@ SELECT
         'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt'
     ) THEN 'yes' ELSE 'no' END AS declared,
     count(*)                   AS rows,
-    min(time)                  AS oldest,
-    max(time)                  AS newest
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'

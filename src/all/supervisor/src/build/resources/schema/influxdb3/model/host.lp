@@ -52,7 +52,7 @@
 
 supervisor,
   module=supervisor,
-  host=<string>
+  host=<macmini-mad|macmini-max|macmini-may|macmini-meg|raspbpi-jen|raspbpi-jil>
     status=<0|1>,
     status_trend=<0|1>,
     used_processor=<int>,

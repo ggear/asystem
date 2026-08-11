@@ -6,9 +6,11 @@ import shutil
 import textwrap
 from os.path import abspath, exists, join
 
-from asystem.schema import script
+from asystem.schema_runner import REPORT, script
+from asystem.schema_sql import banner
 
 DIALECT = "vernemq"
+TARGET = "VERNEMQ_SERVICE_PROD"
 
 PLACEHOLDER = r"\$\{[^}]+}"
 
@@ -43,8 +45,8 @@ DISCOVERY_PAYLOAD = """
 }
 """
 
-CONNECT = """
-BROKER_ARGS=(-h "${VERNEMQ_SERVICE_PROD}" -p "${VERNEMQ_API_PORT}")
+CONNECT = REPORT + """
+BROKER_ARGS=(-h "${%s}" -p "${VERNEMQ_API_PORT}")""" % TARGET + """
 
 topics() {
   mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "$1" -W 5 2>/dev/null | grep -E "${2:-.}" | sort -u
@@ -63,14 +65,14 @@ declared() {
 """
 
 
-def artifacts(metadata_df, module_name, topic_glob_discovery, topic_glob_data,
-              schema_state, schema_command, schema_availability, document):
-    _validate_globs(metadata_df, module_name, topic_glob_discovery, topic_glob_data)
+def artifacts(metadata_df, module_name, options):
+    _validate_globs(metadata_df, module_name, options.topic_glob_discovery, options.topic_glob_data)
     topics = _topics(metadata_df, module_name)
-    specs = _specs(module_name, document, schema_state, schema_command, schema_availability)
+    specs = _specs(module_name, options)
     if not topics:
         return {}
-    globs = [glob for glob in (topic_glob_discovery, topic_glob_data) if glob]
+    document = options.document
+    globs = [glob for glob in (options.topic_glob_discovery, options.topic_glob_data) if glob]
     generated = {}
     for column, column_topics in topics.items():
         role = ROLE_COLUMNS.get(column, "") if document is not None else ""
@@ -83,7 +85,8 @@ def artifacts(metadata_df, module_name, topic_glob_discovery, topic_glob_data,
     return generated
 
 
-def ship(metadata_df, module_name, working_root, topic_glob_discovery, topic_glob_data):
+def ship(metadata_df, module_name, module_root, schemas_dir, options):
+    working_root = options.working_root
     working_dir = join(str(working_root), DIALECT)
     if exists(working_dir):
         shutil.rmtree(working_dir)
@@ -91,13 +94,13 @@ def ship(metadata_df, module_name, working_root, topic_glob_discovery, topic_glo
         discovery_dir = abspath(join(working_dir, str(row["discovery_topic"])))
         os.makedirs(discovery_dir)
         discovery_path = abspath(join(discovery_dir, str(row["unique_id"]) + ".json"))
-        with open(discovery_path, 'a') as discovery_file:
+        with open(discovery_path, 'w') as discovery_file:
             discovery_file.write(discovery(row))
         print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
               .format(module_name, row["unique_id"], discovery_path))
     publish_path = abspath(join(str(working_root), DIALECT + ".sh"))
     with open(publish_path, 'w') as publish_file:
-        publish_file.write(publish_script(module_name, topic_glob_discovery, topic_glob_data))
+        publish_file.write(publish_script(module_name, options.topic_glob_discovery, options.topic_glob_data))
     os.chmod(publish_path, 0o750)
     print("Build generate script [{}] entity metadata publish script persisted to [{}]"
           .format(module_name, publish_path))
@@ -139,9 +142,7 @@ def publish_script(module_name, topic_glob_discovery, topic_glob_data):
     topic_find_discovery = ("*/" + topic_glob_discovery.replace("+", "*").replace("#", "*") + "/*" if topic_glob_discovery else "*")
     return """
 #!/usr/bin/env bash
-################################################################################
-# WARNING: This file is written by the build process, any manual edits will be lost!
-################################################################################
+{}
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")/vernemq"
 
@@ -173,6 +174,7 @@ find "$ROOT_DIR" -path "{}" -name "*.json" -print0 | sort -z | while read -d $'\
 done
 printf "\\n"
             """.format(
+        banner(),
         module_name,
         topic_glob_discovery,
         topic_glob_discovery,
@@ -187,25 +189,25 @@ printf "\\n"
 
 def describe_script(module_name, globs):
     return script(module_name, DIALECT, "describe", "print what the production broker actually retains", CONNECT, """
-printf '\\nSchema describe [%s] against [%s]\\n\\n' "{}" "${{VERNEMQ_SERVICE_PROD}}"
+printf '\\nSchema describe [%s] against [%s]\\n\\n' "{}" "${{{}}}"
 {}
-""".format(module_name, "\n".join(
+""".format(module_name, TARGET, "\n".join(
         "printf '\\n== %s ==\\n' \"{0}\"\ntopics {1}".format(_expand(glob), _arguments(glob)) for glob in globs)))
 
 
 def query_script(module_name):
     return script(module_name, DIALECT, "query", "print the retained payload of every declared topic", CONNECT, """
-printf '\\nSchema query [%s] against [%s]\\n\\n' "{}" "${{VERNEMQ_SERVICE_PROD}}"
+printf '\\nSchema query [%s] against [%s]\\n\\n' "{}" "${{{}}}"
 while IFS= read -r TOPIC; do
   printf '\\n== %s ==\\n' "${{TOPIC}}"
   payload "${{TOPIC}}"
 done < <(declared)
-""".format(module_name))
+""".format(module_name, TARGET))
 
 
 def verify_script(module_name, globs, commands):
     return script(module_name, DIALECT, "verify", "assert the broker retains exactly the declared topics", CONNECT, """
-printf '\\nSchema verify [%s] against [%s]\\n\\n' "{}" "${{VERNEMQ_SERVICE_PROD}}"
+printf '\\nSchema verify [%s] against [%s]\\n\\n' "{}" "${{{}}}"
 
 COMMAND_TOPICS=({})
 
@@ -238,7 +240,7 @@ if [ "${{FAULTS}}" != "0" ]; then
   exit 1
 fi
 printf '\\nSchema verify [%s] found no drift\\n' "{}"
-""".format(module_name, " ".join('"{}"'.format(command) for command in commands), "\n".join(
+""".format(module_name, TARGET, " ".join('"{}"'.format(command) for command in commands), "\n".join(
         'topics {} >> "${{RETAINED_FILE}}"'.format(_arguments(glob)) for glob in globs), module_name, module_name))
 
 
@@ -377,10 +379,11 @@ def _topics(metadata_df, module_name):
     return topics
 
 
-def _specs(module_name, document, schema_state, schema_command, schema_availability):
-    specs = {column: spec for column, spec in (("state_topic", schema_state),
-                                               ("command_topic", schema_command),
-                                               ("availability_topic", schema_availability))
+def _specs(module_name, options):
+    document = options.document
+    specs = {column: spec for column, spec in (("state_topic", options.state),
+                                               ("command_topic", options.command),
+                                               ("availability_topic", options.availability))
              if spec is not None}
     if document is not None:
         for column, role in ROLE_COLUMNS.items():

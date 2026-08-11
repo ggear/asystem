@@ -147,7 +147,7 @@ def query_statements(relations, dialect):
         if not selectors:
             continue
         subjects = dialect.subject(relation)
-        label = labels(["bucket"] + [key for _, key in subjects] + [alias for _, alias in selectors], ["time"])
+        label = labels(["bucket"] + [key for _, key in subjects] + [alias for _, alias in selectors])
         parts = parted(selectors, len(subjects) + 1, {alias: label[alias].strip('"') for _, alias in selectors})
         for index, part in enumerate(parts):
             statements.append(heading)
@@ -162,7 +162,7 @@ def query_statements(relations, dialect):
     return render_statements(statements)
 
 
-def labels(names, taken=()):
+def labels(names):
     return {name: '"{}"'.format(titled(name)) for name in names}
 
 

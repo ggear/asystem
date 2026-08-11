@@ -42,17 +42,17 @@ from asystem import (
 )
 from asystem.bootstrap import *
 from asystem.container import *
-from asystem.schema import (
-    SchemaDocument,
+from asystem.schema_document import (
     SchemaBrokerMember,
     SchemaBrokerPayload,
     SchemaDatabaseDimension,
     SchemaDatabaseMeasure,
     SchemaDatabaseRelation,
+    SchemaDocument,
+    load_schema_document,
+    parse_schema_document,
 )
 from asystem.schema import (
-    load_schema_document,
-    merge_schema_entities,
     write_schema_broker,
     write_schema_database,
 )

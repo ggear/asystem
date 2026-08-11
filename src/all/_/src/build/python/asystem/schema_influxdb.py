@@ -6,35 +6,28 @@ from requests import post
 from os.path import basename
 
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
-from asystem.schema import (
+from asystem.schema_document import SchemaDatabaseDimension, parse_schema_document
+from asystem.schema_runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
+from asystem.schema_sql import (
     BUCKET,
     NULL,
-    RUNNER,
-    SchemaDatabaseDimension,
-    aggregations,
+    SchemaDialect,
     banner,
-    bucketed,
     declared_entity,
-    declared_measure,
-    describe_runner,
-    dimension_label,
-    grouping_keys,
-    labels,
+    describe_statements,
+    expanded,
     literals,
-    parted,
-    parse_schema_document,
-    query_runner,
+    query_statements,
     recent,
     render_statements,
     select,
-    verify_runner,
+    unioned,
     vocabulary,
 )
 
 DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
 MODULE = "module"
-TAG = "<string>"
 
 PLACEHOLDERS = {
     "float": "<float>",
@@ -62,13 +55,11 @@ KINDS = (
 
 # noinspection HttpUrlsUsage
 CONNECT = """
-DATABASE_NAME="${DATABASE_NAME:-${INFLUXDB3_DATABASE_HOME}}"
-
 query() {
   local response status
   response="$(curl -sS -w '\\n%{http_code}' -X POST \\
     "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/query_sql" \\
-    -H "Authorization: Bearer ${INFLUXDB3_TOKEN_ADMIN}" \\
+    -H "Authorization: Bearer ${DATABASE_TOKEN}" \\
     -H "Content-Type: application/json" \\
     --data-binary "$(jq -n --arg db "${DATABASE_NAME}" --arg q "$1" --arg format "${2:-json}" \\
       '{db: $db, q: $q, format: $format}')")"
@@ -79,30 +70,40 @@ query() {
 """ + RUNNER
 
 
-def artifacts(document, module_name, time_column="timestamp", retention=None):
-    if time_column != "timestamp" or retention is not None:
+def artifacts(document, module_name, options):
+    if options.time_column != "timestamp" or options.retention:
         raise ValueError("Build generate script [{}] time_column and retention are postgres only, "
                          "the influxdb3 dialect must never be wired to them".format(module_name))
     _validate(document, module_name)
+    dialect = _dialect(document)
     written = {}
     for relation in document.relations:
         if relation.persisted:
             written["model/{}.lp".format(named(relation))] = (leaf(relation, document), False)
     for measurement in measurements(document):
         written["query/query_{}.sql".format(measurement)] = (
-            queries(document, measured(document, measurement)), False)
-    written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, CONNECT), True)
-    written["query/describe.sql"] = (describe(document), False)
-    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, CONNECT), True)
+            query_statements(measured(document, measurement), dialect), False)
+    written["query/describe.sql"] = (describe_statements(document, dialect), False)
+    written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
+    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
     if document.discovered:
         return written
     written["query/verify.sql"] = (verify(document), False)
-    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, CONNECT), True)
+    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
     return written
 
 
-def ship(_document, _module_name, _module_root, _schemas_dir, _time_column="timestamp"):
+def ship(document, module_name, module_root, schemas_dir, options):
+    """Nothing of an influxdb3 schema ships, the database owns its own shape, so this is deliberately empty.
+    """
     return None
+
+
+def connect(module_name):
+    return resolved(module_name, (
+        ("DATABASE_NAME", ("{}_DATABASE_NAME".format(module_name.upper()), "INFLUXDB3_DATABASE_HOME")),
+        ("DATABASE_TOKEN", ("{}_DATABASE_TOKEN".format(module_name.upper()), "INFLUXDB3_TOKEN_ADMIN")),
+    )) + CONNECT
 
 
 class Discover:
@@ -136,10 +137,10 @@ class Discover:
         self.label = label
         self.cadence = cadence
         self.timeout = timeout
-        self.database = database or self._env("INFLUXDB3_DATABASE_HOME", module_root)
+        self.database = database or self._named("DATABASE_NAME", "INFLUXDB3_DATABASE_HOME", module_root)
         self.target = target or self._env(TARGET, module_root)
         self.port = port or self._env("INFLUXDB3_API_PORT", module_root)
-        self.token = token or self._env("INFLUXDB3_TOKEN_ADMIN", module_root)
+        self.token = token or self._named("DATABASE_TOKEN", "INFLUXDB3_TOKEN_ADMIN", module_root)
         if not self.target or not self.database:
             raise ValueError("Build generate script [{}] influxdb3 discovery found no target [{}] or database [{}] "
                              "in the module env file [{}]".format(module, self.target, self.database, ENV))
@@ -219,6 +220,10 @@ class Discover:
                              "response [{}]".format(self.module, statement, response.status_code, response.text))
         return response.json()
 
+    def _named(self, scoped, backend, module_root):
+        return (self._env("{}_{}".format((self.module or "").upper(), scoped), module_root)
+                or self._env(backend, module_root))
+
     @staticmethod
     def _env(name, module_root):
         return load_bootstrap_env_value(name, filename=ENV, module_root=module_root)
@@ -240,11 +245,13 @@ def column(key):
 
 
 def leaf(relation, document):
+    borrowed = _borrowed(relation, document)
     tags = ["{}={}".format(MODULE, document.module)]
-    tags += ["{}={}".format(dimension.key, TAG) for dimension in relation.dimensions]
+    tags += ["{}={}".format(dimension.key, _values(relation, dimension, borrowed))
+             for dimension in relation.dimensions]
     fields = ["{}={}".format(measure.key, PLACEHOLDERS[measure.kind]) for measure in relation.persisted]
     lines = [banner(), ""] + vocabulary(
-        relation, tags=[module_dimension(document)], entities=_borrowed(relation, document))
+        relation, tags=[module_dimension(document)], entities=borrowed)
     if fields:
         lines.append("")
         lines.append(relation.plugin + ",")
@@ -279,50 +286,10 @@ def measurements(document):
     return sorted({relation.plugin for relation in document.relations})
 
 
-def describe(document):
-    relations = [relation for relation in document.relations if relation.persisted]
-    return render_statements([
-        "-- dimensions", _describe_relations(relations, document),
-        "-- measures", _describe_measures(document),
-        "-- entities", _describe_entities(relations, document)])
-
-
-def queries(document, relations):
-    statements = []
-    for relation in relations:
-        if not relation.persisted:
-            statements.append("-- {} [{}] declares no persisted measure, so nothing is written for it"
-                              .format(relation.path, relation.description))
-            continue
-        bucket = bucketed(relation.cadence)
-        heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(
-            relation.path, relation.description, relation.cadence, bucket)
-        measured_selectors = []
-        for measure in relation.persisted:
-            for function, suffix in aggregations(measure, relation.cadence):
-                measured_selectors.append((_aggregate(function, column(measure.key)),
-                                           "_".join(part for part in (measure.key, suffix) if part)))
-        if not measured_selectors:
-            continue
-        keys = [dimension.key for dimension in relation.dimensions]
-        label = labels(["bucket"] + keys + [alias for _, alias in measured_selectors], ["time"])
-        parts = parted(measured_selectors, len(keys) + 1, {alias: label[alias].strip('"') for _, alias in measured_selectors})
-        for index, part in enumerate(parts):
-            statements.append(heading)
-            statements.append("-- part {} of {}:".format(index + 1, len(parts)))
-            selectors = [("date_bin(INTERVAL '{}', time)".format(bucket), label["bucket"])]
-            selectors += [(column(key), label[key]) for key in keys]
-            selectors += [(expression, label[alias]) for expression, alias in part]
-            grouping = [label["bucket"]] + [column(key) for key in keys]
-            statements.append(select(selectors, relation.plugin, where(relation, document, relation.plugin, bucket),
-                                     group_by=grouping, order_by=grouping))
-    return render_statements(statements)
-
-
 def verify(document):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
     for measurement in measurements(document):
-        columns = {"time", MODULE}
+        columns = {TIME, MODULE}
         arms = []
         for relation in measured(document, measurement):
             columns.update(dimension.key for dimension in relation.dimensions)
@@ -334,13 +301,57 @@ def verify(document):
                      ("'{}'".format(measure.unit or NULL), "unit"), ("'missing'", "fault")],
                     "information_schema.columns", ["table_name = '{}'".format(measurement)],
                     having=["count(*) FILTER (WHERE column_name = '{}') = 0".format(measure.key)]))
-        arms.append(select(
-            [("'{}'".format(measurement), "relation"), ("column_name", "measure"),
-             ("'{}'".format(NULL), "period"), ("'{}'".format(NULL), "unit"), ("'undeclared'", "fault")],
-            "information_schema.columns",
-            ["table_name = '{}'".format(measurement), literals("column_name", sorted(columns))]))
-        statements.append("\nUNION ALL\n".join(arms) + "\nORDER BY fault, measure")
+        arms.append(_undeclared(measurement, sorted(columns)))
+        statements.append(unioned(arms, order_by=["fault", "measure"]))
     return render_statements(statements)
+
+
+def _dialect(document):
+    return SchemaDialect(
+        source=lambda relation: relation.plugin,
+        predicates=lambda relation: where(relation, document),
+        groups=lambda _: [(measurement, measured(document, measurement)) for measurement in measurements(document)],
+        measured=lambda relation, _: where(relation, document),
+        counted=lambda measure: "count({})".format(column(measure.key)),
+        stamped=lambda function, measure: "CAST({}(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(
+            function, column(measure.key)),
+        entity=_entity,
+        declared=_declared,
+        undeclared=lambda measurement, relations, declared, keyed: _describe_undeclared(
+            measurement, relations, keyed),
+        bucket=lambda bucket: "date_bin(INTERVAL '{}', time)".format(bucket),
+        subject=lambda relation: [(column(dimension.key), dimension.key) for dimension in relation.dimensions],
+        alias=lambda _, measure: measure.key,
+        aggregate=lambda _, measure, function: _aggregate(function, column(measure.key)),
+        windowed=lambda relation, _, bucket: where(relation, document, relation.plugin, bucket))
+
+
+def _describe_undeclared(measurement, relations, keyed):
+    columns = set(keyed) | {TIME, MODULE}
+    for relation in relations:
+        columns.update(dimension.key for dimension in relation.dimensions)
+    return select(
+        [("'{}'".format(NULL), "relation"), ("column_name", "measure"), ("'{}'".format(NULL), "kind")] +
+        [("'{}'".format(NULL), key) for key in ("unit", "period")] +
+        [("CAST(NULL AS BIGINT)", "rows")] +
+        [("CAST(NULL AS VARCHAR)", key) for key in ("oldest", "newest")],
+        "information_schema.columns",
+        ["table_name = '{}'".format(measurement), literals("column_name", sorted(columns))])
+
+
+def _undeclared(measurement, columns):
+    return select(
+        [("'{}'".format(measurement), "relation"), ("column_name", "measure"),
+         ("'{}'".format(NULL), "period"), ("'{}'".format(NULL), "unit"), ("'undeclared'", "fault")],
+        "information_schema.columns",
+        ["table_name = '{}'".format(measurement), literals("column_name", columns)])
+
+
+def _values(relation, dimension, borrowed):
+    values = expanded(relation, dimension, borrowed)
+    if len(values) == 1:
+        return values[0]
+    return "<{}>".format("|".join(values) if values else dimension.key)
 
 
 def _borrowed(relation, document):
@@ -379,57 +390,6 @@ def _validate(document, module_name):
             dimensions[keyed] = relation.path
 
 
-def _describe_relations(relations, document):
-    return "\nUNION ALL\n".join(
-        select([("'{}'".format(relation.path), "relation"), ("'{}'".format(dimension_label(relation)), "dimension"),
-                ("{}".format(len(relation.measures)), "measures"),
-                ("'{}'".format(relation.cadence), "cadence"),
-                ("count(*)", "rows"), ("min(time)", "oldest"), ("max(time)", "newest")],
-               relation.plugin, where(relation, document))
-        for relation in relations) + "\nORDER BY rows DESC"
-
-
-def _describe_measures(document):
-    arms = []
-    for measurement in measurements(document):
-        columns = {"time", MODULE}
-        for relation in measured(document, measurement):
-            columns.update(dimension.key for dimension in relation.dimensions)
-            persisted = {measure.key for measure in relation.persisted}
-            for measure in relation.measures:
-                columns.add(measure.key)
-                if measure.key not in persisted:
-                    continue
-                declared = declared_measure(relation, measure, measure.unit or NULL, relation.span(measure) or NULL)
-                arms.append(select(declared + [
-                    ("count({})".format(column(measure.key)), "rows"),
-                    ("CAST(min(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(column(measure.key)), "oldest"),
-                    ("CAST(max(time) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(column(measure.key)), "newest")],
-                                   measurement, where(relation, document)))
-        arms.append(select(
-            [("'{}'".format(NULL), "relation"), ("column_name", "measure")] +
-            [("'{}'".format(NULL), key) for key in ("kind", "unit", "period")] +
-            [("CAST(NULL AS BIGINT)", "rows")] +
-            [("CAST(NULL AS VARCHAR)", key) for key in ("oldest", "newest")],
-            "information_schema.columns",
-            ["table_name = '{}'".format(measurement), literals("column_name", sorted(columns))]))
-    return "\nUNION ALL\n".join(arms) + "\nORDER BY rows DESC NULLS LAST"
-
-
-def _describe_entities(relations, document):
-    arms = [relation for relation in relations if relation.dimensions]
-    if not arms:
-        return ""
-    return "\nUNION ALL\n".join(
-        select([("'{}'".format(relation.path), "relation"),
-                ("'{}'".format(dimension_label(relation)), "dimension"), (_entity(relation), "entity"),
-                (_declared(relation), "declared"), ("count(*)", "rows"),
-                ("min(time)", "oldest"), ("max(time)", "newest")],
-               relation.plugin, where(relation, document),
-               group_by=grouping_keys(_entity(relation), _declared(relation)))
-        for relation in arms) + "\nORDER BY rows DESC"
-
-
 def _declared(relation):
     return declared_entity(relation, column(relation.subject.key) if relation.subject is not None else None)
 
@@ -439,10 +399,10 @@ def _entity(relation):
     return keys[0] if len(keys) == 1 else "concat({})".format(", '/', ".join(keys))
 
 
-def _aggregate(function, column):
+def _aggregate(function, expression):
     if function == "last":
-        return _rounded("last_value({} ORDER BY time)".format(column))
-    return _rounded("{}({})".format(function, column))
+        return _rounded("last_value({} ORDER BY time)".format(expression))
+    return _rounded("{}({})".format(function, expression))
 
 
 def _rounded(expression):
