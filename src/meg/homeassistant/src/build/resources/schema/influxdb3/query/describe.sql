@@ -246,7 +246,7 @@ UNION ALL
 SELECT
     'sensor'                         AS relation,
     'entity_id*/unit_of_measurement' AS dimension,
-    70                               AS measures,
+    74                               AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
     min(time)                        AS oldest,
@@ -1534,6 +1534,19 @@ WHERE
     )
 UNION ALL
 SELECT
+    'sensor'                                                                                                                             AS relation,
+    'Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)'                                                       AS measure,
+    'float'                                                                                                                              AS kind,
+    '-'                                                                                                                                  AS unit,
+    '<on-change>'                                                                                                                        AS period,
+    count("Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'sensor'                                                                                                                         AS relation,
     'Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)'                                                       AS measure,
     'float'                                                                                                                          AS kind,
@@ -1594,6 +1607,19 @@ SELECT
     count("Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)")                                                AS rows,
     CAST(min(time) FILTER (WHERE "Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)" IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE "Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor'                                                                                                                    AS relation,
+    'Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)'                                                       AS measure,
+    'float'                                                                                                                     AS kind,
+    '-'                                                                                                                         AS unit,
+    '<on-change>'                                                                                                               AS period,
+    count("Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)" IS NOT NULL) AS VARCHAR) AS newest
 FROM sensor
 WHERE
     module = 'homeassistant'
@@ -1871,6 +1897,8 @@ FROM information_schema.columns
 WHERE
     table_name = 'sensor'
     AND column_name NOT IN (
+        'Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)',
+        'Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)_str',
         'Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)',
         'Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)_str',
         'Administrative Area_str', 'Areas Of Interest_str', 'Available',
@@ -1878,6 +1906,8 @@ WHERE
         'Available (Opportunistic)_str', 'Available_str',
         'Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)',
         'Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)_str',
+        'Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)',
+        'Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)_str',
         'Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023)',
         'Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023)_str',
         'Bushfire (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810022)',

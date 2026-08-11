@@ -252,6 +252,8 @@
 #     mm/h,
 #     steps,
 #     °]
+#   field Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033) - <on-change> [Home Assistant value]
+#   field Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)_str - <on-change> [Home Assistant value]
 #   field Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971) - <on-change> [Home Assistant value]
 #   field Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)_str - <on-change> [Home Assistant value]
 #   field Administrative Area_str - <on-change> [Home Assistant value]
@@ -264,6 +266,8 @@
 #   field Available_str - <on-change> [Home Assistant value]
 #   field Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996) - <on-change> [Home Assistant value]
 #   field Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)_str - <on-change> [Home Assistant value]
+#   field Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037) - <on-change> [Home Assistant value]
+#   field Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)_str - <on-change> [Home Assistant value]
 #   field Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023) - <on-change> [Home Assistant value]
 #   field Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023)_str - <on-change> [Home Assistant value]
 #   field Bushfire (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810022) - <on-change> [Home Assistant value]
@@ -327,11 +331,13 @@ sensor,
   module=homeassistant,
   entity_id=<string>,
   unit_of_measurement=<string>
+    Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)=<float>,
     Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)=<float>,
     Available=<float>,
     Available (Important)=<float>,
     Available (Opportunistic)=<float>,
     Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)=<float>,
+    Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)=<float>,
     Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023)=<float>,
     Bushfire (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810022)=<float>,
     Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)=<float>,

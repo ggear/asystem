@@ -3,7 +3,52 @@
 --------------------------------------------------------------------------------
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 1 of 30:
+-- part 1 of 36:
+SELECT
+    date_bin(INTERVAL '1 day', time)                                                              AS "Bucket",
+    entity_id                                                                                     AS "Entity Id",
+    unit_of_measurement                                                                           AS "Unit Of Measurement",
+    round(avg("Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)"), 1) AS "Active alarm (embleton, city of bayswater, metro north east, cad-id: 810033) Avg"
+FROM sensor
+WHERE
+    module = 'homeassistant'
+    AND time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM sensor) - INTERVAL '1 day'
+GROUP BY "Bucket", entity_id, unit_of_measurement
+ORDER BY "Bucket", entity_id, unit_of_measurement;
+
+-- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
+-- part 2 of 36:
+SELECT
+    date_bin(INTERVAL '1 day', time)                                                              AS "Bucket",
+    entity_id                                                                                     AS "Entity Id",
+    unit_of_measurement                                                                           AS "Unit Of Measurement",
+    round(min("Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)"), 1) AS "Active alarm (embleton, city of bayswater, metro north east, cad-id: 810033) Min"
+FROM sensor
+WHERE
+    module = 'homeassistant'
+    AND time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM sensor) - INTERVAL '1 day'
+GROUP BY "Bucket", entity_id, unit_of_measurement
+ORDER BY "Bucket", entity_id, unit_of_measurement;
+
+-- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
+-- part 3 of 36:
+SELECT
+    date_bin(INTERVAL '1 day', time)                                                              AS "Bucket",
+    entity_id                                                                                     AS "Entity Id",
+    unit_of_measurement                                                                           AS "Unit Of Measurement",
+    round(max("Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)"), 1) AS "Active alarm (embleton, city of bayswater, metro north east, cad-id: 810033) Max"
+FROM sensor
+WHERE
+    module = 'homeassistant'
+    AND time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM sensor) - INTERVAL '1 day'
+GROUP BY "Bucket", entity_id, unit_of_measurement
+ORDER BY "Bucket", entity_id, unit_of_measurement;
+
+-- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
+-- part 4 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                          AS "Bucket",
     entity_id                                                                                 AS "Entity Id",
@@ -18,7 +63,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 2 of 30:
+-- part 5 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                          AS "Bucket",
     entity_id                                                                                 AS "Entity Id",
@@ -33,7 +78,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 3 of 30:
+-- part 6 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                          AS "Bucket",
     entity_id                                                                                 AS "Entity Id",
@@ -51,7 +96,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 4 of 30:
+-- part 7 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)           AS "Bucket",
     entity_id                                  AS "Entity Id",
@@ -69,7 +114,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 5 of 30:
+-- part 8 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                  AS "Bucket",
     entity_id                                                                         AS "Entity Id",
@@ -86,7 +131,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 6 of 30:
+-- part 9 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                  AS "Bucket",
     entity_id                                                                         AS "Entity Id",
@@ -101,7 +146,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 7 of 30:
+-- part 10 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                  AS "Bucket",
     entity_id                                                                         AS "Entity Id",
@@ -116,7 +161,52 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 8 of 30:
+-- part 11 of 36:
+SELECT
+    date_bin(INTERVAL '1 day', time)                                                     AS "Bucket",
+    entity_id                                                                            AS "Entity Id",
+    unit_of_measurement                                                                  AS "Unit Of Measurement",
+    round(avg("Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)"), 1) AS "Burn off (whiteman, city of swan, metro north east, cad-id: 810037) Avg"
+FROM sensor
+WHERE
+    module = 'homeassistant'
+    AND time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM sensor) - INTERVAL '1 day'
+GROUP BY "Bucket", entity_id, unit_of_measurement
+ORDER BY "Bucket", entity_id, unit_of_measurement;
+
+-- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
+-- part 12 of 36:
+SELECT
+    date_bin(INTERVAL '1 day', time)                                                     AS "Bucket",
+    entity_id                                                                            AS "Entity Id",
+    unit_of_measurement                                                                  AS "Unit Of Measurement",
+    round(min("Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)"), 1) AS "Burn off (whiteman, city of swan, metro north east, cad-id: 810037) Min"
+FROM sensor
+WHERE
+    module = 'homeassistant'
+    AND time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM sensor) - INTERVAL '1 day'
+GROUP BY "Bucket", entity_id, unit_of_measurement
+ORDER BY "Bucket", entity_id, unit_of_measurement;
+
+-- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
+-- part 13 of 36:
+SELECT
+    date_bin(INTERVAL '1 day', time)                                                     AS "Bucket",
+    entity_id                                                                            AS "Entity Id",
+    unit_of_measurement                                                                  AS "Unit Of Measurement",
+    round(max("Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)"), 1) AS "Burn off (whiteman, city of swan, metro north east, cad-id: 810037) Max"
+FROM sensor
+WHERE
+    module = 'homeassistant'
+    AND time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM sensor) - INTERVAL '1 day'
+GROUP BY "Bucket", entity_id, unit_of_measurement
+ORDER BY "Bucket", entity_id, unit_of_measurement;
+
+-- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
+-- part 14 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                           AS "Bucket",
     entity_id                                                                                  AS "Entity Id",
@@ -131,7 +221,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 9 of 30:
+-- part 15 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                           AS "Bucket",
     entity_id                                                                                  AS "Entity Id",
@@ -146,7 +236,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 10 of 30:
+-- part 16 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                           AS "Bucket",
     entity_id                                                                                  AS "Entity Id",
@@ -161,7 +251,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 11 of 30:
+-- part 17 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                           AS "Bucket",
     entity_id                                                                                  AS "Entity Id",
@@ -176,7 +266,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 12 of 30:
+-- part 18 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                           AS "Bucket",
     entity_id                                                                                  AS "Entity Id",
@@ -191,7 +281,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 13 of 30:
+-- part 19 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                           AS "Bucket",
     entity_id                                                                                  AS "Entity Id",
@@ -206,7 +296,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 14 of 30:
+-- part 20 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                     AS "Bucket",
     entity_id                                                                            AS "Entity Id",
@@ -221,7 +311,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 15 of 30:
+-- part 21 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                     AS "Bucket",
     entity_id                                                                            AS "Entity Id",
@@ -236,7 +326,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 16 of 30:
+-- part 22 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                     AS "Bucket",
     entity_id                                                                            AS "Entity Id",
@@ -254,7 +344,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 17 of 30:
+-- part 23 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
@@ -274,7 +364,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 18 of 30:
+-- part 24 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                        AS "Bucket",
     entity_id                                                                               AS "Entity Id",
@@ -289,7 +379,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 19 of 30:
+-- part 25 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                        AS "Bucket",
     entity_id                                                                               AS "Entity Id",
@@ -304,7 +394,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 20 of 30:
+-- part 26 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                        AS "Bucket",
     entity_id                                                                               AS "Entity Id",
@@ -319,7 +409,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 21 of 30:
+-- part 27 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                          AS "Bucket",
     entity_id                                                                                 AS "Entity Id",
@@ -334,7 +424,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 22 of 30:
+-- part 28 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                          AS "Bucket",
     entity_id                                                                                 AS "Entity Id",
@@ -349,7 +439,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 23 of 30:
+-- part 29 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                          AS "Bucket",
     entity_id                                                                                 AS "Entity Id",
@@ -364,7 +454,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 24 of 30:
+-- part 30 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                               AS "Bucket",
     entity_id                                                                                      AS "Entity Id",
@@ -379,7 +469,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 25 of 30:
+-- part 31 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                               AS "Bucket",
     entity_id                                                                                      AS "Entity Id",
@@ -394,7 +484,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 26 of 30:
+-- part 32 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)                                                               AS "Bucket",
     entity_id                                                                                      AS "Entity Id",
@@ -411,7 +501,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 27 of 30:
+-- part 33 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)  AS "Bucket",
     entity_id                         AS "Entity Id",
@@ -435,7 +525,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 28 of 30:
+-- part 34 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
@@ -457,7 +547,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 29 of 30:
+-- part 35 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
@@ -477,7 +567,7 @@ GROUP BY "Bucket", entity_id, unit_of_measurement
 ORDER BY "Bucket", entity_id, unit_of_measurement;
 
 -- sensor [Home Assistant sensor] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 30 of 30:
+-- part 36 of 36:
 SELECT
     date_bin(INTERVAL '1 day', time)  AS "Bucket",
     entity_id                         AS "Entity Id",
