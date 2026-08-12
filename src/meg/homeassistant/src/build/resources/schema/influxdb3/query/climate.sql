@@ -9,8 +9,6 @@ SELECT
     entity_id                                 AS "Entity Id",
     round(avg(current_temperature), 1)        AS "Current Temperature",
     last_value(hvac_action_str ORDER BY time) AS "Hvac Action Str",
-    round(avg(max_temp), 1)                   AS "Max Temp",
-    round(avg(min_temp), 1)                   AS "Min Temp",
     last_value(state ORDER BY time)           AS "State",
     round(avg(temperature), 1)                AS "Temperature"
 FROM climate

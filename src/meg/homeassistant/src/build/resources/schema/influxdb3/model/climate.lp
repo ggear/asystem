@@ -14,8 +14,6 @@
 #     parents_fan_auto_comfort]
 #   field current_temperature - <on-change> [Home Assistant value]
 #   field hvac_action_str - <on-change> [Home Assistant value]
-#   field max_temp - <on-change> [Home Assistant value]
-#   field min_temp - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]
 #   field temperature - <on-change> [Home Assistant value]
 
@@ -24,8 +22,6 @@ climate,
   entity_id=<string>
     current_temperature=<float>,
     hvac_action_str=<text>,
-    max_temp=<float>,
-    min_temp=<float>,
     state=<text>,
     temperature=<float>
   <timestamp>

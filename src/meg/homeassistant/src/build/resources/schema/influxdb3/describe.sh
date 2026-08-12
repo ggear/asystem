@@ -209,18 +209,6 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'binary_sensor__battery_charging' AS relation,
-    'entity_id*'                      AS dimension,
-    2                                 AS measures,
-    '<on-change>'                     AS cadence,
-    count(*)                          AS rows,
-    CAST(min(time) AS VARCHAR)        AS oldest,
-    CAST(max(time) AS VARCHAR)        AS newest
-FROM binary_sensor__battery_charging
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
     'binary_sensor__connectivity' AS relation,
     'entity_id*'                  AS dimension,
     2                             AS measures,
@@ -271,7 +259,7 @@ UNION ALL
 SELECT
     'climate'                  AS relation,
     'entity_id*'               AS dimension,
-    6                          AS measures,
+    4                          AS measures,
     '<on-change>'              AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -355,7 +343,7 @@ UNION ALL
 SELECT
     'media_player__speaker'    AS relation,
     'entity_id*'               AS dimension,
-    5                          AS measures,
+    2                          AS measures,
     '<on-change>'              AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -792,46 +780,6 @@ WHERE
     AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
 UNION ALL
 SELECT
-    'binary_sensor__battery_charging'                           AS relation,
-    'state'                                                     AS measure,
-    'str'                                                       AS kind,
-    '-'                                                         AS unit,
-    '<on-change>'                                               AS period,
-    count(state)                                                AS rows,
-    CAST(min(time) FILTER (WHERE state IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE state IS NOT NULL) AS VARCHAR) AS newest
-FROM binary_sensor__battery_charging
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
-    'binary_sensor__battery_charging'                           AS relation,
-    'value'                                                     AS measure,
-    'float'                                                     AS kind,
-    '-'                                                         AS unit,
-    '<on-change>'                                               AS period,
-    count(value)                                                AS rows,
-    CAST(min(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS newest
-FROM binary_sensor__battery_charging
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
-    '-'                   AS relation,
-    column_name           AS measure,
-    '-'                   AS kind,
-    '-'                   AS unit,
-    '-'                   AS period,
-    CAST(NULL AS BIGINT)  AS rows,
-    CAST(NULL AS VARCHAR) AS oldest,
-    CAST(NULL AS VARCHAR) AS newest
-FROM information_schema.columns
-WHERE
-    table_name = 'binary_sensor__battery_charging'
-    AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
-UNION ALL
-SELECT
     'binary_sensor__connectivity'                               AS relation,
     'state'                                                     AS measure,
     'str'                                                       AS kind,
@@ -1018,32 +966,6 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'climate'                                                      AS relation,
-    'max_temp'                                                     AS measure,
-    'float'                                                        AS kind,
-    '-'                                                            AS unit,
-    '<on-change>'                                                  AS period,
-    count(max_temp)                                                AS rows,
-    CAST(min(time) FILTER (WHERE max_temp IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE max_temp IS NOT NULL) AS VARCHAR) AS newest
-FROM climate
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
-    'climate'                                                      AS relation,
-    'min_temp'                                                     AS measure,
-    'float'                                                        AS kind,
-    '-'                                                            AS unit,
-    '<on-change>'                                                  AS period,
-    count(min_temp)                                                AS rows,
-    CAST(min(time) FILTER (WHERE min_temp IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE min_temp IS NOT NULL) AS VARCHAR) AS newest
-FROM climate
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
     'climate'                                                   AS relation,
     'state'                                                     AS measure,
     'str'                                                       AS kind,
@@ -1082,8 +1004,8 @@ FROM information_schema.columns
 WHERE
     table_name = 'climate'
     AND column_name NOT IN (
-        'current_temperature', 'entity_id', 'hvac_action_str', 'max_temp', 'min_temp',
-        'module', 'state', 'temperature', 'time'
+        'current_temperature', 'entity_id', 'hvac_action_str', 'module', 'state',
+        'temperature', 'time'
     )
 UNION ALL
 SELECT
@@ -1489,32 +1411,6 @@ WHERE
     AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
 UNION ALL
 SELECT
-    'media_player__speaker'                                                      AS relation,
-    'media_content_type_str'                                                     AS measure,
-    'str'                                                                        AS kind,
-    '-'                                                                          AS unit,
-    '<on-change>'                                                                AS period,
-    count(media_content_type_str)                                                AS rows,
-    CAST(min(time) FILTER (WHERE media_content_type_str IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE media_content_type_str IS NOT NULL) AS VARCHAR) AS newest
-FROM media_player__speaker
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
-    'media_player__speaker'                                              AS relation,
-    'media_duration'                                                     AS measure,
-    'float'                                                              AS kind,
-    '-'                                                                  AS unit,
-    '<on-change>'                                                        AS period,
-    count(media_duration)                                                AS rows,
-    CAST(min(time) FILTER (WHERE media_duration IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE media_duration IS NOT NULL) AS VARCHAR) AS newest
-FROM media_player__speaker
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
     'media_player__speaker'                                     AS relation,
     'state'                                                     AS measure,
     'str'                                                       AS kind,
@@ -1541,19 +1437,6 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
-    'media_player__speaker'                                            AS relation,
-    'volume_level'                                                     AS measure,
-    'float'                                                            AS kind,
-    '-'                                                                AS unit,
-    '<on-change>'                                                      AS period,
-    count(volume_level)                                                AS rows,
-    CAST(min(time) FILTER (WHERE volume_level IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE volume_level IS NOT NULL) AS VARCHAR) AS newest
-FROM media_player__speaker
-WHERE
-    module = 'homeassistant'
-UNION ALL
-SELECT
     '-'                   AS relation,
     column_name           AS measure,
     '-'                   AS kind,
@@ -1565,10 +1448,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'media_player__speaker'
-    AND column_name NOT IN (
-        'entity_id', 'media_content_type_str', 'media_duration', 'module', 'state', 'time',
-        'value', 'volume_level'
-    )
+    AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
 UNION ALL
 SELECT
     'media_player__tv'                                          AS relation,
@@ -2793,19 +2673,6 @@ SELECT
     CAST(min(time) AS VARCHAR) AS oldest,
     CAST(max(time) AS VARCHAR) AS newest
 FROM binary_sensor__battery
-WHERE
-    module = 'homeassistant'
-GROUP BY entity_id
-UNION ALL
-SELECT
-    'binary_sensor__battery_charging' AS relation,
-    'entity_id*'                      AS dimension,
-    entity_id                         AS entity,
-    '-'                               AS declared,
-    count(*)                          AS rows,
-    CAST(min(time) AS VARCHAR)        AS oldest,
-    CAST(max(time) AS VARCHAR)        AS newest
-FROM binary_sensor__battery_charging
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id

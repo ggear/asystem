@@ -15,10 +15,7 @@
 #     janes_iphone_focus,
 #     janes_iphone_focus_2,
 #     janes_iphone_kiosk_mode,
-#     kitchen_move_microphone,
 #     lounge_air_purifier_replace_filter,
-#     lounge_arc_microphone,
-#     parents_move_microphone,
 #     workday_sensor]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]

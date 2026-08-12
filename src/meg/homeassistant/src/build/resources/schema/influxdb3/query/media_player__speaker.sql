@@ -5,13 +5,10 @@
 -- media_player__speaker [Home Assistant media_player__speaker] every <on-change>, bucketed [1 day] across the newest two buckets
 -- part 1 of 1:
 SELECT
-    date_bin(INTERVAL '1 day', time)                 AS "Bucket",
-    entity_id                                        AS "Entity Id",
-    last_value(media_content_type_str ORDER BY time) AS "Media Content Type Str",
-    round(avg(media_duration), 1)                    AS "Media Duration",
-    last_value(state ORDER BY time)                  AS "State",
-    round(avg(value), 1)                             AS "Value",
-    round(avg(volume_level), 1)                      AS "Volume Level"
+    date_bin(INTERVAL '1 day', time) AS "Bucket",
+    entity_id                        AS "Entity Id",
+    last_value(state ORDER BY time)  AS "State",
+    round(avg(value), 1)             AS "Value"
 FROM media_player__speaker
 WHERE
     module = 'homeassistant'
