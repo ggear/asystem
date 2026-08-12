@@ -9,10 +9,14 @@
 #     ada_fan,
 #     ada_lamp,
 #     ada_lamp_bulb_1,
+#     bathroom_main,
+#     bathroom_main_bulb_1,
 #     deck_festoons_plug,
 #     edwin_fan,
 #     edwin_night_light,
 #     edwin_night_light_bulb_1,
+#     ensuite_main,
+#     ensuite_main_bulb_1,
 #     hallway_sconces,
 #     hallway_sconces_bulb_1,
 #     hallway_sconces_bulb_2,
@@ -23,6 +27,8 @@
 #     kitchen_main_bulb_3,
 #     kitchen_main_bulb_4,
 #     landing_festoons_plug,
+#     laundry_main,
+#     laundry_main_bulb_1,
 #     lounge_fan,
 #     lounge_lamp,
 #     lounge_lamp_bulb_1,
@@ -33,7 +39,11 @@
 #     office_main,
 #     office_main_bulb_1,
 #     pantry_main,
-#     pantry_main_bulb_1]
+#     pantry_main_bulb_1,
+#     parents_main,
+#     parents_main_bulb_1,
+#     parents_main_bulb_2,
+#     parents_main_bulb_3]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 

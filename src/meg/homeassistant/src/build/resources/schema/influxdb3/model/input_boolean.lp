@@ -7,6 +7,7 @@
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
 #     back_door_lock_security,
+#     home_security,
 #     home_security_triggered,
 #     home_started]
 #   field state - <on-change> [Home Assistant value]
