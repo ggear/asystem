@@ -44,6 +44,7 @@ class SchemaDialect:
     alias: object = None
     aggregate: object = None
     windowed: object = None
+    kinds: tuple = ()
     floor: str = ""
 
 
@@ -107,7 +108,7 @@ def unioned(arms, order_by=()):
 
 
 def describe_statements(document, dialect):
-    relations = sorted((relation for relation in document.relations if relation.persisted),
+    relations = sorted((relation for relation in document.relations if relation.carried(dialect.kinds)),
                        key=lambda relation: (dialect.source(relation), relation.path))
     return render_statements([
         "-- dimensions", _describe_relations(relations, dialect),
@@ -118,7 +119,7 @@ def describe_statements(document, dialect):
 def query_statements(relations, dialect):
     statements = []
     for relation in relations:
-        if not relation.persisted:
+        if not relation.carried(dialect.kinds):
             statements.append("-- {} [{}] declares no persisted measure, so nothing is written for it"
                               .format(relation.path, relation.description))
             continue
@@ -126,7 +127,7 @@ def query_statements(relations, dialect):
         heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(
             relation.path, relation.description, relation.cadence, bucket)
         selectors, keyed = [], {}
-        for measure in relation.persisted:
+        for measure in relation.carried(dialect.kinds):
             for function, suffix in aggregations(measure, relation.cadence):
                 alias = "_".join(part for part in (dialect.alias(relation, measure), suffix) if part)
                 selectors.append((dialect.aggregate(relation, measure, function), alias))
@@ -192,7 +193,7 @@ def parted(selectors, keys, headers=None, width=WIDTH):
 def aggregations(measure, cadence=None):
     if measure.kind == "bool":
         return [("avg", "fraction")]
-    if measure.kind == "int":
+    if measure.kind in ("int", "str"):
         return [("last", "")]
     span, bucket = duration(cadence), duration(BUCKET)
     if span is None or bucket is None or span >= bucket:
@@ -299,7 +300,7 @@ def _describe_measures(document, dialect):
     for group, relations in dialect.groups(document):
         declared, keyed = set(), set()
         for relation in relations:
-            persisted = {measure.key for measure in relation.persisted}
+            persisted = {measure.key for measure in relation.carried(dialect.kinds)}
             for measure in relation.measures:
                 keyed.add(measure.key)
                 if measure.key not in persisted:

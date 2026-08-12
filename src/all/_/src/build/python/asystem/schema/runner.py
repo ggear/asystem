@@ -17,7 +17,7 @@ SCHEMA_TARGET=${SCHEMA_TARGET:-}
 SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
 statements() {
-  sed -e 's/--.*$//' "$1" | tr '\n' ' ' | tr ';' '\n' |
+  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
     sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
@@ -81,7 +81,7 @@ rows() {
   jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
 }
 
-query_file() {
+query_sql() {
   local line block="" faults=0
   while IFS= read -r line || [ -n "${line}" ]; do
     case "${line}" in
@@ -96,7 +96,7 @@ query_file() {
       block=""
       ;;
     esac
-  done < "$1"
+  done
   if [ -n "${block}" ]; then
     query_block "${block%$'\n'}" || faults=$((faults + 1))
   fi
@@ -176,30 +176,43 @@ fi
     """.format(banner(), dialect, name, summary, module_name, connect.strip(), body.strip()).strip() + "\n"
 
 
-def describe_runner(module_name, dialect, target, connect):
+def describe_runner(module_name, dialect, target, connect, sql):
     return script(module_name, dialect, "describe", "print what production actually carries", connect, """
+describe_sql() {{
+  cat <<'SCHEMA_SQL'
+{sql}
+SCHEMA_SQL
+}}
+
 printf '\\nSchema describe [%s] against [%s]\\n' "{module}" "${{{target}}}"
-printf -- '\\n-- %s\\n\\n' "describe.sql"
-SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${{{target}}}" \\
-  query_file "${{ROOT_DIR}}/query/describe.sql"
-""".format(target=target, module=module_name))
+printf -- '\\n-- %s\\n\\n' "describe"
+describe_sql | SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${{{target}}}" \\
+  query_sql
+""".format(target=target, module=module_name, sql=sql.strip()))
 
 
 def query_runner(module_name, dialect, target, connect):
     return script(module_name, dialect, "query", "run the generated query for every declared relation", connect, """
 printf '\\nSchema query [%s] against [%s]\\n\\n' "{module}" "${{{target}}}"
 FAULTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/query/query_*.sql; do
-  SCHEMA_LABEL="$(basename "${{SQL_FILE}}")" query_file "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
+for SQL_FILE in "${{ROOT_DIR}}"/query/*.sql; do
+  SCHEMA_LABEL="$(basename "${{SQL_FILE}}")"
+  query_sql < "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
 done
 [ "${{FAULTS}}" = 0 ]
 """.format(target=target, module=module_name))
 
 
-def verify_runner(module_name, dialect, target, connect):
+def verify_runner(module_name, dialect, target, connect, sql):
     return script(module_name, dialect, "verify", "assert production matches the declaration", connect, """
+verify_sql() {{
+  cat <<'SCHEMA_SQL'
+{sql}
+SCHEMA_SQL
+}}
+
 printf '\\nSchema verify [%s] against [%s]\\n' "{module}" "${{{target}}}"
-printf -- '\\n-- %s\\n\\n' "verify.sql"
+printf -- '\\n-- %s\\n\\n' "verify"
 
 FAULTS=0
 while IFS= read -r STATEMENT; do
@@ -214,11 +227,11 @@ while IFS= read -r STATEMENT; do
     printf '%s\\n' "${{RESULT}}" | table
     printf '\\n'
   fi
-done < <(statements "${{ROOT_DIR}}/query/verify.sql")
+done < <(verify_sql | statements)
 
 if [ "${{FAULTS}}" != "0" ]; then
   printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{module}" "${{FAULTS}}" >&2
   exit 1
 fi
 printf '\\nSchema verify [%s] found no drift\\n' "{module}"
-""".format(target=target, module=module_name))
+""".format(target=target, module=module_name, sql=sql.strip()))

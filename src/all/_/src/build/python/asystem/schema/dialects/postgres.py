@@ -20,6 +20,7 @@ from asystem.schema.query import (
 from asystem.schema.runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
 
 DIALECT = "postgres"
+KINDS = ("float", "int", "bool")
 TARGET = "POSTGRES_SERVICE_PROD"
 
 TIME_COLUMNS = {
@@ -46,12 +47,12 @@ def artifacts(document, module_name, options):
     written = {}
     for table, relations in _tabled(document).items():
         written["model/{}.sql".format(table)] = (leaf(relations, table, options), False)
-        written["query/query_{}.sql".format(table)] = (query_statements(relations, dialect), False)
-    written["query/describe.sql"] = (describe_statements(document, dialect), False)
-    written["query/verify.sql"] = (verify(document), False)
-    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
+        written["query/{}.sql".format(table)] = (query_statements(relations, dialect), False)
+    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, connect(module_name),
+                                              describe_statements(document, dialect)), True)
     written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
-    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
+    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
+                                          verify(document)), True)
     return written
 
 
@@ -200,6 +201,7 @@ def _dialect(time_column):
         aggregate=lambda relation, measure, function: _aggregate(function, _filtered(relation, measure)),
         windowed=lambda relation, keys, bucket: [_types(relation, negate=False, keys=keys, width=None)]
         + recent(relation.plugin, bucket, now),
+        kinds=KINDS,
         floor=BUCKET if time_column == "date" else "")
 
 
@@ -214,7 +216,7 @@ def _describe_undeclared(table, declared):
 def _tabled(document):
     tabled = {}
     for relation in document.relations:
-        if relation.persisted:
+        if relation.carried(KINDS):
             tabled.setdefault(relation.plugin, []).append(relation)
     return {table: tabled[table] for table in sorted(tabled)}
 
@@ -223,7 +225,7 @@ def _validate(document, module_name):
     for table, relations in _tabled(document).items():
         keys = {}
         for relation in relations:
-            for measure in relation.persisted:
+            for measure in relation.carried(KINDS):
                 if measure.key in keys and keys[measure.key] != relation.path:
                     raise ValueError(
                         "Build generate script [{}] relations [{}] and [{}] share the table [{}] and the measure "
@@ -239,7 +241,7 @@ def _types(relation, negate=True, keys=None, width: int | None = 92):
 
 def _vocabulary(relation):
     seen, series = set(), []
-    for measure in relation.persisted:
+    for measure in relation.carried(KINDS):
         tuple_ = (measure.key, relation.span(measure), measure.unit)
         if tuple_ in seen:
             continue

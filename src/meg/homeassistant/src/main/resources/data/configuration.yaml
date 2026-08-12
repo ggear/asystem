@@ -88,6 +88,7 @@ influxdb:
       - '*dfes*'
       - '*bass*'
       - '*ssid*'
+      - '*_sim_*'
       - '*treble*'
       - '*mdi_icon*'
       - '*app_version*'
@@ -103,6 +104,15 @@ influxdb:
       - '*location_permission*'
       - '*last_update_trigger*'
   ignore_attributes: !include influxdb-ignores.yaml
+  component_config_domain:
+    sensor:
+      ignore_attributes:
+        - 'latitude'
+        - 'longitude'
+    binary_sensor:
+      ignore_attributes:
+        - 'latitude'
+        - 'longitude'
 #######################################################################################
 
 

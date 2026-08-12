@@ -18,6 +18,10 @@ TYPES = {
 }
 
 
+class SchemaUnreachable(Exception):
+    """A backend a generate script needed to read could not be reached."""
+
+
 @dataclass
 class SchemaDatabaseDimension:
     key: str
@@ -57,9 +61,8 @@ class SchemaDatabaseRelation:
     def subject(self):
         return next((dimension for dimension in self.dimensions if dimension.subject), None)
 
-    @property
-    def persisted(self):
-        return [measure for measure in self.measures if measure.persist and measure.kind in ("float", "int", "bool")]
+    def carried(self, kinds):
+        return [measure for measure in self.measures if measure.persist and measure.kind in kinds]
 
     def span(self, measure):
         return measure.period or self.cadence
@@ -159,9 +162,11 @@ def load_schema_document(module_root=None, config=None, args=None):
         }
     }
 
-    A [<kind>] is one of [float] [int] [bool] [str]. Only [float] [int] [bool] are persisted to a
-    database, a [str] measure is declared but never written, so it is reported like any other measure
-    declared and not written.
+    A [<kind>] is one of [float] [int] [bool] [str]. Which of them a backend carries is the dialect's
+    call, declared as its [KINDS] and read through [carried] — influxdb3 carries all four since line
+    protocol has a string field, postgres carries the numeric three since its long form pivots through
+    a numeric [value] column. A measure a backend cannot carry is declared but never written by it, so
+    it is reported like any other measure declared and not written.
 
     A [<duration>] is an unsigned integer and a unit suffix, one of [s] [m] [h] [d], e.g. [30s] [15m] [1d].
 

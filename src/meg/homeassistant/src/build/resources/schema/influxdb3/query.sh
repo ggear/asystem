@@ -79,7 +79,7 @@ SCHEMA_TARGET=${SCHEMA_TARGET:-}
 SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
 statements() {
-  sed -e 's/--.*$//' "$1" | tr '\n' ' ' | tr ';' '\n' |
+  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
     sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
@@ -143,7 +143,7 @@ rows() {
   jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
 }
 
-query_file() {
+query_sql() {
   local line block="" faults=0
   while IFS= read -r line || [ -n "${line}" ]; do
     case "${line}" in
@@ -158,7 +158,7 @@ query_file() {
       block=""
       ;;
     esac
-  done < "$1"
+  done
   if [ -n "${block}" ]; then
     query_block "${block%$'\n'}" || faults=$((faults + 1))
   fi
@@ -167,7 +167,8 @@ query_file() {
 
 printf '\nSchema query [%s] against [%s]\n\n' "homeassistant" "${INFLUXDB3_SERVICE_PROD}"
 FAULTS=0
-for SQL_FILE in "${ROOT_DIR}"/query/query_*.sql; do
-  SCHEMA_LABEL="$(basename "${SQL_FILE}")" query_file "${SQL_FILE}" || FAULTS=$((FAULTS + 1))
+for SQL_FILE in "${ROOT_DIR}"/query/*.sql; do
+  SCHEMA_LABEL="$(basename "${SQL_FILE}")"
+  query_sql < "${SQL_FILE}" || FAULTS=$((FAULTS + 1))
 done
 [ "${FAULTS}" = 0 ]

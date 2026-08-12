@@ -79,7 +79,7 @@ SCHEMA_TARGET=${SCHEMA_TARGET:-}
 SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
 statements() {
-  sed -e 's/--.*$//' "$1" | tr '\n' ' ' | tr ';' '\n' |
+  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
     sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
@@ -143,7 +143,7 @@ rows() {
   jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
 }
 
-query_file() {
+query_sql() {
   local line block="" faults=0
   while IFS= read -r line || [ -n "${line}" ]; do
     case "${line}" in
@@ -158,14 +158,26 @@ query_file() {
       block=""
       ;;
     esac
-  done < "$1"
+  done
   if [ -n "${block}" ]; then
     query_block "${block%$'\n'}" || faults=$((faults + 1))
   fi
   [ "${faults}" = 0 ]
 }
 
+describe_sql() {
+  cat <<'SCHEMA_SQL'
+--------------------------------------------------------------------------------
+-- WARNING: This file is written by the build process, any manual edits will be lost!
+--------------------------------------------------------------------------------
+
+-- dimensions
+-- measures
+-- entities
+SCHEMA_SQL
+}
+
 printf '\nSchema describe [%s] against [%s]\n' "homeassistant" "${INFLUXDB3_SERVICE_PROD}"
-printf -- '\n-- %s\n\n' "describe.sql"
-SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${INFLUXDB3_SERVICE_PROD}" \
-  query_file "${ROOT_DIR}/query/describe.sql"
+printf -- '\n-- %s\n\n' "describe"
+describe_sql | SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${INFLUXDB3_SERVICE_PROD}" \
+  query_sql

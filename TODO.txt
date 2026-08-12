@@ -37,7 +37,8 @@ Order of attach:
   - grafana
   - wrangle balances/transactions
 
-filter haas entities down, make them line up nicely with others
+queries to give totals and sample of data?
+filter haas entities down, make them line up nicely with others, maybe have different rows col in each of the 3 summaries?
 deal with str vars out of haas, patch influxdb? make schema src deal with consistently - show up dont filter so I can see issues
 bool should be 0|1 from my own persistence layer, influx might have bools? ON/OFF state from hass to be 0/1?
 Redeploy influxdb and wipe, backup V2 to V3 home and delete V2, reploy supervisor/network

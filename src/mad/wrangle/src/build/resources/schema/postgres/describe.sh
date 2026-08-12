@@ -74,7 +74,7 @@ SCHEMA_TARGET=${SCHEMA_TARGET:-}
 SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
 statements() {
-  sed -e 's/--.*$//' "$1" | tr '\n' ' ' | tr ';' '\n' |
+  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
     sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
@@ -138,7 +138,7 @@ rows() {
   jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
 }
 
-query_file() {
+query_sql() {
   local line block="" faults=0
   while IFS= read -r line || [ -n "${line}" ]; do
     case "${line}" in
@@ -153,14 +153,585 @@ query_file() {
       block=""
       ;;
     esac
-  done < "$1"
+  done
   if [ -n "${block}" ]; then
     query_block "${block%$'\n'}" || faults=$((faults + 1))
   fi
   [ "${faults}" = 0 ]
 }
 
+describe_sql() {
+  cat <<'SCHEMA_SQL'
+--------------------------------------------------------------------------------
+-- WARNING: This file is written by the build process, any manual edits will be lost!
+--------------------------------------------------------------------------------
+
+-- dimensions
+SELECT
+    'currency/rate'            AS relation,
+    'entity*'                  AS dimension,
+    5                          AS measures,
+    '1d'                       AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM currency
+WHERE
+    type IN ('delta', 'snapshot')
+UNION ALL
+SELECT
+    'equity/ticker'            AS relation,
+    'entity*'                  AS dimension,
+    16                         AS measures,
+    '1d'                       AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM equity
+WHERE
+    type IN (
+        'market-volume-spot', 'price-close', 'price-close-1d-change-percentage',
+        'price-close-30d-change-percentage', 'price-close-365d-change-percentage',
+        'price-close-90d-change-percentage', 'price-close-base',
+        'price-close-base-1d-change-percentage', 'price-close-base-30d-change-percentage',
+        'price-close-base-365d-change-percentage', 'price-close-base-90d-change-percentage',
+        'price-close-spot', 'price-close-spot-1d-change-percentage',
+        'price-close-spot-30d-change-percentage', 'price-close-spot-365d-change-percentage',
+        'price-close-spot-90d-change-percentage'
+    )
+UNION ALL
+SELECT
+    'interest/rate'            AS relation,
+    'entity*'                  AS dimension,
+    6                          AS measures,
+    '1d'                       AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type IN ('mean')
+ORDER BY rows DESC;
+
+-- measures
+SELECT
+    'currency/rate'            AS relation,
+    'snapshot'                 AS measure,
+    'float'                    AS kind,
+    '$'                        AS unit,
+    '1d'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM currency
+WHERE
+    type = 'snapshot'
+    AND period = '1d'
+    AND unit = '$'
+UNION ALL
+SELECT
+    'currency/rate'            AS relation,
+    'delta'                    AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '1d'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM currency
+WHERE
+    type = 'delta'
+    AND period = '1d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'currency/rate'            AS relation,
+    'delta'                    AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '7d'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM currency
+WHERE
+    type = 'delta'
+    AND period = '7d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'currency/rate'            AS relation,
+    'delta'                    AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '30d'                      AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM currency
+WHERE
+    type = 'delta'
+    AND period = '30d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'currency/rate'            AS relation,
+    'delta'                    AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '365d'                     AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM currency
+WHERE
+    type = 'delta'
+    AND period = '365d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    '-'                        AS relation,
+    type                       AS measure,
+    '-'                        AS kind,
+    unit                       AS unit,
+    period                     AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM currency
+WHERE
+    type NOT IN ('delta', 'snapshot')
+GROUP BY type, unit, period
+UNION ALL
+SELECT
+    'equity/ticker'            AS relation,
+    'market-volume-spot'       AS measure,
+    'float'                    AS kind,
+    '$'                        AS unit,
+    '1d'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM equity
+WHERE
+    type = 'market-volume-spot'
+    AND period = '1d'
+    AND unit = '$'
+UNION ALL
+SELECT
+    'equity/ticker'            AS relation,
+    'price-close'              AS measure,
+    'float'                    AS kind,
+    '$'                        AS unit,
+    '1d'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM equity
+WHERE
+    type = 'price-close'
+    AND period = '1d'
+    AND unit = '$'
+UNION ALL
+SELECT
+    'equity/ticker'            AS relation,
+    'price-close-base'         AS measure,
+    'float'                    AS kind,
+    '$'                        AS unit,
+    '1d'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM equity
+WHERE
+    type = 'price-close-base'
+    AND period = '1d'
+    AND unit = '$'
+UNION ALL
+SELECT
+    'equity/ticker'            AS relation,
+    'price-close-spot'         AS measure,
+    'float'                    AS kind,
+    '$'                        AS unit,
+    '1d'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM equity
+WHERE
+    type = 'price-close-spot'
+    AND period = '1d'
+    AND unit = '$'
+UNION ALL
+SELECT
+    'equity/ticker'                    AS relation,
+    'price-close-1d-change-percentage' AS measure,
+    'float'                            AS kind,
+    '%'                                AS unit,
+    '1d'                               AS period,
+    count(*)                           AS rows,
+    CAST(min(time) AS VARCHAR)         AS oldest,
+    CAST(max(time) AS VARCHAR)         AS newest
+FROM equity
+WHERE
+    type = 'price-close-1d-change-percentage'
+    AND period = '1d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                         AS relation,
+    'price-close-base-1d-change-percentage' AS measure,
+    'float'                                 AS kind,
+    '%'                                     AS unit,
+    '1d'                                    AS period,
+    count(*)                                AS rows,
+    CAST(min(time) AS VARCHAR)              AS oldest,
+    CAST(max(time) AS VARCHAR)              AS newest
+FROM equity
+WHERE
+    type = 'price-close-base-1d-change-percentage'
+    AND period = '1d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                         AS relation,
+    'price-close-spot-1d-change-percentage' AS measure,
+    'float'                                 AS kind,
+    '%'                                     AS unit,
+    '1d'                                    AS period,
+    count(*)                                AS rows,
+    CAST(min(time) AS VARCHAR)              AS oldest,
+    CAST(max(time) AS VARCHAR)              AS newest
+FROM equity
+WHERE
+    type = 'price-close-spot-1d-change-percentage'
+    AND period = '1d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                     AS relation,
+    'price-close-30d-change-percentage' AS measure,
+    'float'                             AS kind,
+    '%'                                 AS unit,
+    '30d'                               AS period,
+    count(*)                            AS rows,
+    CAST(min(time) AS VARCHAR)          AS oldest,
+    CAST(max(time) AS VARCHAR)          AS newest
+FROM equity
+WHERE
+    type = 'price-close-30d-change-percentage'
+    AND period = '30d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                          AS relation,
+    'price-close-base-30d-change-percentage' AS measure,
+    'float'                                  AS kind,
+    '%'                                      AS unit,
+    '30d'                                    AS period,
+    count(*)                                 AS rows,
+    CAST(min(time) AS VARCHAR)               AS oldest,
+    CAST(max(time) AS VARCHAR)               AS newest
+FROM equity
+WHERE
+    type = 'price-close-base-30d-change-percentage'
+    AND period = '30d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                          AS relation,
+    'price-close-spot-30d-change-percentage' AS measure,
+    'float'                                  AS kind,
+    '%'                                      AS unit,
+    '30d'                                    AS period,
+    count(*)                                 AS rows,
+    CAST(min(time) AS VARCHAR)               AS oldest,
+    CAST(max(time) AS VARCHAR)               AS newest
+FROM equity
+WHERE
+    type = 'price-close-spot-30d-change-percentage'
+    AND period = '30d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                     AS relation,
+    'price-close-90d-change-percentage' AS measure,
+    'float'                             AS kind,
+    '%'                                 AS unit,
+    '90d'                               AS period,
+    count(*)                            AS rows,
+    CAST(min(time) AS VARCHAR)          AS oldest,
+    CAST(max(time) AS VARCHAR)          AS newest
+FROM equity
+WHERE
+    type = 'price-close-90d-change-percentage'
+    AND period = '90d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                          AS relation,
+    'price-close-base-90d-change-percentage' AS measure,
+    'float'                                  AS kind,
+    '%'                                      AS unit,
+    '90d'                                    AS period,
+    count(*)                                 AS rows,
+    CAST(min(time) AS VARCHAR)               AS oldest,
+    CAST(max(time) AS VARCHAR)               AS newest
+FROM equity
+WHERE
+    type = 'price-close-base-90d-change-percentage'
+    AND period = '90d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                          AS relation,
+    'price-close-spot-90d-change-percentage' AS measure,
+    'float'                                  AS kind,
+    '%'                                      AS unit,
+    '90d'                                    AS period,
+    count(*)                                 AS rows,
+    CAST(min(time) AS VARCHAR)               AS oldest,
+    CAST(max(time) AS VARCHAR)               AS newest
+FROM equity
+WHERE
+    type = 'price-close-spot-90d-change-percentage'
+    AND period = '90d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                      AS relation,
+    'price-close-365d-change-percentage' AS measure,
+    'float'                              AS kind,
+    '%'                                  AS unit,
+    '365d'                               AS period,
+    count(*)                             AS rows,
+    CAST(min(time) AS VARCHAR)           AS oldest,
+    CAST(max(time) AS VARCHAR)           AS newest
+FROM equity
+WHERE
+    type = 'price-close-365d-change-percentage'
+    AND period = '365d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                           AS relation,
+    'price-close-base-365d-change-percentage' AS measure,
+    'float'                                   AS kind,
+    '%'                                       AS unit,
+    '365d'                                    AS period,
+    count(*)                                  AS rows,
+    CAST(min(time) AS VARCHAR)                AS oldest,
+    CAST(max(time) AS VARCHAR)                AS newest
+FROM equity
+WHERE
+    type = 'price-close-base-365d-change-percentage'
+    AND period = '365d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'equity/ticker'                           AS relation,
+    'price-close-spot-365d-change-percentage' AS measure,
+    'float'                                   AS kind,
+    '%'                                       AS unit,
+    '365d'                                    AS period,
+    count(*)                                  AS rows,
+    CAST(min(time) AS VARCHAR)                AS oldest,
+    CAST(max(time) AS VARCHAR)                AS newest
+FROM equity
+WHERE
+    type = 'price-close-spot-365d-change-percentage'
+    AND period = '365d'
+    AND unit = '%'
+UNION ALL
+SELECT
+    '-'                        AS relation,
+    type                       AS measure,
+    '-'                        AS kind,
+    unit                       AS unit,
+    period                     AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM equity
+WHERE
+    type NOT IN (
+        'market-volume-spot', 'price-close', 'price-close-1d-change-percentage',
+        'price-close-30d-change-percentage', 'price-close-365d-change-percentage',
+        'price-close-90d-change-percentage', 'price-close-base',
+        'price-close-base-1d-change-percentage', 'price-close-base-30d-change-percentage',
+        'price-close-base-365d-change-percentage', 'price-close-base-90d-change-percentage',
+        'price-close-spot', 'price-close-spot-1d-change-percentage',
+        'price-close-spot-30d-change-percentage', 'price-close-spot-365d-change-percentage',
+        'price-close-spot-90d-change-percentage'
+    )
+GROUP BY type, unit, period
+UNION ALL
+SELECT
+    'interest/rate'            AS relation,
+    'mean'                     AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '1mo'                      AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type = 'mean'
+    AND period = '1mo'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'interest/rate'            AS relation,
+    'mean'                     AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '1y'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type = 'mean'
+    AND period = '1y'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'interest/rate'            AS relation,
+    'mean'                     AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '5y'                       AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type = 'mean'
+    AND period = '5y'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'interest/rate'            AS relation,
+    'mean'                     AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '10y'                      AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type = 'mean'
+    AND period = '10y'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'interest/rate'            AS relation,
+    'mean'                     AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '20y'                      AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type = 'mean'
+    AND period = '20y'
+    AND unit = '%'
+UNION ALL
+SELECT
+    'interest/rate'            AS relation,
+    'mean'                     AS measure,
+    'float'                    AS kind,
+    '%'                        AS unit,
+    '40y'                      AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type = 'mean'
+    AND period = '40y'
+    AND unit = '%'
+UNION ALL
+SELECT
+    '-'                        AS relation,
+    type                       AS measure,
+    '-'                        AS kind,
+    unit                       AS unit,
+    period                     AS period,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM interest
+WHERE
+    type NOT IN ('mean')
+GROUP BY type, unit, period
+ORDER BY rows DESC NULLS LAST;
+
+-- entities
+SELECT
+    'currency/rate'                                                                AS relation,
+    'entity*'                                                                      AS dimension,
+    entity                                                                         AS entity,
+    CASE WHEN entity IN ('AUD/USD', 'AUD/GBP', 'AUD/SGD') THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                                                                       AS rows,
+    CAST(min(time) AS VARCHAR)                                                     AS oldest,
+    CAST(max(time) AS VARCHAR)                                                     AS newest
+FROM currency
+WHERE
+    type IN ('delta', 'snapshot')
+GROUP BY entity, CASE WHEN entity IN ('AUD/USD', 'AUD/GBP', 'AUD/SGD') THEN 'yes' ELSE 'no' END
+UNION ALL
+SELECT
+    'equity/ticker'            AS relation,
+    'entity*'                  AS dimension,
+    entity                     AS entity,
+    CASE WHEN entity IN (
+        'ACDC', 'AORD', 'ATOI', 'AXJO', 'BANK', 'CLNE', 'EMKT', 'ERTH', 'GAME', 'GOLD',
+        'IAF', 'MCK', 'MUK', 'MUS', 'MVW', 'NDQ', 'QSML', 'SIG', 'URNM', 'VAE', 'VAS',
+        'VDHG', 'VGE', 'VGS', 'VHY', 'WDS'
+    ) THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM equity
+WHERE
+    type IN (
+        'market-volume-spot', 'price-close', 'price-close-1d-change-percentage',
+        'price-close-30d-change-percentage', 'price-close-365d-change-percentage',
+        'price-close-90d-change-percentage', 'price-close-base',
+        'price-close-base-1d-change-percentage', 'price-close-base-30d-change-percentage',
+        'price-close-base-365d-change-percentage', 'price-close-base-90d-change-percentage',
+        'price-close-spot', 'price-close-spot-1d-change-percentage',
+        'price-close-spot-30d-change-percentage', 'price-close-spot-365d-change-percentage',
+        'price-close-spot-90d-change-percentage'
+    )
+GROUP BY entity, CASE WHEN entity IN (
+    'ACDC', 'AORD', 'ATOI', 'AXJO', 'BANK', 'CLNE', 'EMKT', 'ERTH', 'GAME', 'GOLD',
+    'IAF', 'MCK', 'MUK', 'MUS', 'MVW', 'NDQ', 'QSML', 'SIG', 'URNM', 'VAE', 'VAS',
+    'VDHG', 'VGE', 'VGS', 'VHY', 'WDS'
+) THEN 'yes' ELSE 'no' END
+UNION ALL
+SELECT
+    'interest/rate'                                                           AS relation,
+    'entity*'                                                                 AS dimension,
+    entity                                                                    AS entity,
+    CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                                                                  AS rows,
+    CAST(min(time) AS VARCHAR)                                                AS oldest,
+    CAST(max(time) AS VARCHAR)                                                AS newest
+FROM interest
+WHERE
+    type IN ('mean')
+GROUP BY entity, CASE WHEN entity IN ('Bank', 'Inflation', 'Net') THEN 'yes' ELSE 'no' END
+ORDER BY rows DESC;
+SCHEMA_SQL
+}
+
 printf '\nSchema describe [%s] against [%s]\n' "wrangle" "${POSTGRES_SERVICE_PROD}"
-printf -- '\n-- %s\n\n' "describe.sql"
-SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${POSTGRES_SERVICE_PROD}" \
-  query_file "${ROOT_DIR}/query/describe.sql"
+printf -- '\n-- %s\n\n' "describe"
+describe_sql | SCHEMA_ECHO=false SCHEMA_ACTION=Describe SCHEMA_TARGET="${POSTGRES_SERVICE_PROD}" \
+  query_sql

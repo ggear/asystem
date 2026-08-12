@@ -3,9 +3,10 @@ import re
 from os.path import basename
 
 from requests import post
+from requests.exceptions import RequestException
 
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
-from asystem.schema.document import SchemaDatabaseDimension, parse_schema_document
+from asystem.schema.document import SchemaDatabaseDimension, SchemaUnreachable, parse_schema_document
 from asystem.schema.query import (
     BUCKET,
     NULL,
@@ -28,6 +29,7 @@ DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
 MODULE = "module"
 
+KINDS = ("float", "int", "bool", "str")
 TAG = "<string>"
 
 PLACEHOLDERS = {
@@ -45,7 +47,7 @@ DIMENSION = "Dictionary"
 CADENCE = "<on-change>"
 TIMEOUT = 120
 
-KINDS = (
+ARROW = (
     ("Dictionary", "str"),
     ("Utf8", "str"),
     ("Boolean", "bool"),
@@ -79,18 +81,18 @@ def artifacts(document, module_name, options):
     dialect = _dialect(document)
     written = {}
     for relation in document.relations:
-        if relation.persisted:
+        if relation.carried(KINDS):
             written["model/{}.lp".format(named(relation))] = (leaf(relation, document), False)
     for measurement in measurements(document):
-        written["query/query_{}.sql".format(measurement)] = (
+        written["query/{}.sql".format(measurement)] = (
             query_statements(measured(document, measurement), dialect), False)
-    written["query/describe.sql"] = (describe_statements(document, dialect), False)
     written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
-    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
+    written["describe.sh"] = (describe_runner(module_name, DIALECT, TARGET, connect(module_name),
+                                              describe_statements(document, dialect)), True)
     if document.discovered:
         return written
-    written["query/verify.sql"] = (verify(document), False)
-    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
+    written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
+                                          verify(document)), True)
     return written
 
 
@@ -122,7 +124,12 @@ class Discover:
                              "in the module env file [{}]".format(module, self.target, self.database, ENV))
 
     def document(self):
-        document = parse_schema_document(self.json(), self.module or self.database)
+        try:
+            document = parse_schema_document(self.json(), self.module or self.database)
+        except SchemaUnreachable as unreachable:
+            print("Build generate script [{}] could not connect to {} with error [{}]"
+                  .format(self.module or self.database, DIALECT, unreachable))
+            return None
         document.discovered = True
         return document
 
@@ -188,9 +195,12 @@ class Discover:
 
     # noinspection HttpUrlsUsage
     def query(self, statement):
-        response = post("http://{}:{}/api/v3/query_sql".format(self.target, self.port),
-                        headers={"Authorization": "Bearer {}".format(self.token)},
-                        json={"db": self.database, "q": statement, "format": "json"}, timeout=self.timeout)
+        try:
+            response = post("http://{}:{}/api/v3/query_sql".format(self.target, self.port),
+                            headers={"Authorization": "Bearer {}".format(self.token)},
+                            json={"db": self.database, "q": statement, "format": "json"}, timeout=self.timeout)
+        except RequestException as exception:
+            raise SchemaUnreachable(exception) from exception
         if response.status_code != 200:
             raise ValueError("Build generate script [{}] influxdb3 discovery query failed [{}] status [{}] "
                              "response [{}]".format(self.module, statement, response.status_code, response.text))
@@ -206,7 +216,7 @@ class Discover:
 
 
 def kind(data_type):
-    for pattern, declared in KINDS:
+    for pattern, declared in ARROW:
         if pattern in data_type:
             return declared
     raise ValueError("Build generate script influxdb3 discovery found unmappable arrow type [{}]".format(data_type))
@@ -225,7 +235,7 @@ def leaf(relation, document):
     tags = ["{}={}".format(MODULE, document.module)]
     tags += ["{}={}".format(dimension.key, _values(relation, dimension, borrowed))
              for dimension in relation.dimensions]
-    fields = ["{}={}".format(measure.key, PLACEHOLDERS[measure.kind]) for measure in relation.persisted]
+    fields = ["{}={}".format(measure.key, PLACEHOLDERS[measure.kind]) for measure in relation.carried(KINDS)]
     lines = [banner(), ""] + vocabulary(
         relation, tags=[module_dimension(document)], entities=borrowed)
     if fields:
@@ -269,7 +279,7 @@ def verify(document):
         arms = []
         for relation in measured(document, measurement):
             columns.update(dimension.key for dimension in relation.dimensions)
-            for measure in relation.persisted:
+            for measure in relation.carried(KINDS):
                 columns.add(measure.key)
                 arms.append(select(
                     [("'{}'".format(relation.path), "relation"), ("'{}'".format(measure.key), "measure"),
@@ -298,8 +308,9 @@ def _dialect(document):
         bucket=lambda bucket: "date_bin(INTERVAL '{}', time)".format(bucket),
         subject=lambda relation: [(column(dimension.key), dimension.key) for dimension in relation.dimensions],
         alias=lambda _, measure: measure.key,
-        aggregate=lambda _, measure, function: _aggregate(function, column(measure.key)),
-        windowed=lambda relation, _, bucket: where(relation, document, relation.plugin, bucket))
+        aggregate=lambda _, measure, function: _aggregate(function, column(measure.key), measure.kind),
+        windowed=lambda relation, _, bucket: where(relation, document, relation.plugin, bucket),
+        kinds=KINDS)
 
 
 def _describe_undeclared(measurement, relations, keyed):
@@ -344,7 +355,7 @@ def _borrowed(relation, document):
 def _validate(document, module_name):
     scopes = {}
     for relation in document.relations:
-        if not relation.persisted:
+        if not relation.carried(KINDS):
             continue
         if named(relation) in scopes:
             raise ValueError(
@@ -373,9 +384,10 @@ def _entity(relation):
     return keys[0] if len(keys) == 1 else "concat({})".format(", '/', ".join(keys))
 
 
-def _aggregate(function, expression):
+def _aggregate(function, expression, kind):
     if function == "last":
-        return _rounded("last_value({} ORDER BY time)".format(expression))
+        latest = "last_value({} ORDER BY time)".format(expression)
+        return latest if kind == "str" else _rounded(latest)
     return _rounded("{}({})".format(function, expression))
 
 

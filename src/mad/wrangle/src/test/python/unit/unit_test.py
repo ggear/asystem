@@ -1199,14 +1199,19 @@ class WrangleTest(unittest.TestCase):
         reset_config()
         schemas_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/build/resources/schema/postgres"))
         image_dir = abspath(join(dirname(realpath(__file__)), "../../../../src/main/resources/image/database"))
-        for artifact in ("query/describe.sql", "query/verify.sql", "describe.sh", "query.sh", "verify.sh"):
+        for artifact in ("describe.sh", "query.sh", "verify.sh"):
             self.assertTrue(isfile(join(schemas_dir, artifact)), f"missing generated artifact [{artifact}]")
+        for runner in ("describe", "verify"):
+            script = Path(join(schemas_dir, f"{runner}.sh")).read_text()
+            self.assertIn(f"{runner}_sql() {{", script, f"[{runner}.sh] does not carry its SQL inline")
+        self.assertNotIn("SCHEMA_SQL", Path(join(schemas_dir, "query.sh")).read_text())
+        self.assertEqual([], sorted(Path(join(schemas_dir, "query")).glob("query_*.sql")))
         for plugin_name in wrangle_main._get_plugins():
             instance = wrangle_main._instantiate_plugin(plugin_name)
             if not instance.database:
                 continue
             table_sql = join(schemas_dir, "model", f"{plugin_name}.sql")
-            query_sql = join(schemas_dir, "query", f"query_{plugin_name}.sql")
+            query_sql = join(schemas_dir, "query", f"{plugin_name}.sql")
             self.assertTrue(isfile(table_sql), f"missing generated DDL for table [{plugin_name}]")
             self.assertTrue(isfile(query_sql), f"missing generated queries for table [{plugin_name}]")
             ddl = Path(table_sql).read_text()
