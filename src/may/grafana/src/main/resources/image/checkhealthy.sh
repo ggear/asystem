@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl -o /dev/null -s -w "%{http_code}" "https://data.janeandgraham.com/d/public-home-default/home")" = "200" ]
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl -L -o /dev/null -s -w "%{http_code}" "https://grafana.janeandgraham.com")" = "200" ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [grafana] is healthy :)" >&2

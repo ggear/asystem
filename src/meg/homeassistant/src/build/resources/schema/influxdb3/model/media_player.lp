@@ -6,6 +6,7 @@
 #   cadence <on-change>
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
+#     ada_tablet,
 #     kitchen_home,
 #     nesthubfb4d,
 #     pixel_tablet]
