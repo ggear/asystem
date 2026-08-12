@@ -44,6 +44,8 @@
 - 'in_zones'
 - 'is_group'
 - 'location'
+- 'max_temp'
+- 'min_temp'
 - 'workdays'
 - 'xy_color'
 - 'Available'
