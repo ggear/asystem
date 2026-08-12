@@ -442,6 +442,20 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			},
 		},
 		{
+			name: "happy_reconcile_keeps_service_delivered_before_transition",
+			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
+				return nonNilPayload
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				time.Sleep(time.Second)
+				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
+				time.Sleep(4 * time.Second)
+				if _, ok := cache.Load(b.GUID); !ok {
+					t.Fatalf("Got record reaped, expected service delivered after connect but before the transition to survive")
+				}
+			},
+		},
+		{
 			name:  "happy_reconcile_reaps_service_absent_since_transition",
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, cache *metric.RecordCache, b metric.TopicBinding) []byte {
@@ -488,7 +502,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			if binding.Topic == "" {
 				t.Fatalf("Got no binding for svc-a, expected topic to be set after store")
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 			defer cancel()
 			done := make(chan struct{})
 			go func() {

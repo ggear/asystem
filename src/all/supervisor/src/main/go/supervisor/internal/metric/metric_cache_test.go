@@ -181,6 +181,17 @@ func TestRecordCache_ServicesBefore(t *testing.T) {
 			expected: []string{"svc-a"},
 		},
 		{
+			name: "happy_service_registered_after_cutoff_is_not_stale",
+			records: []stamped{
+				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), 100},
+				{NewServiceRecordGUID(MetricServiceUsedProcessor, "alpha", "svc-new"), 250},
+				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-new"), 250},
+			},
+			host:     "alpha",
+			since:    200,
+			expected: []string{"svc-a"},
+		},
+		{
 			name: "happy_all_fresh_returns_nil",
 			records: []stamped{
 				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), 300},

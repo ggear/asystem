@@ -69,6 +69,7 @@ type Display struct {
 	logOverlayAuto  bool
 	logGeneration   uint64
 	refreshSignal   chan struct{}
+	force           bool
 	tickPeriod      time.Duration
 	tickStall       time.Duration
 }
@@ -486,17 +487,14 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 		defer refreshTicker.Stop()
 		refreshC = refreshTicker.C
 	}
-	var force bool
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-refreshC:
 			d.refresh("period")
-			force = true
 		case <-d.refreshSignal:
 			d.refresh("stream")
-			force = true
 		case event, ok := <-d.terminal.events():
 			if !ok {
 				return
@@ -517,7 +515,6 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 				d.dimsInit = dims
 				d.rebuild("resize")
-				force = true
 				slog.Info("state", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart).Truncate(time.Millisecond), "cols", cols, "rows", rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
@@ -526,18 +523,15 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 				if ev.Key() == tcell.KeyCtrlR {
 					d.refresh("manual")
-					force = true
 				}
 				if ev.Key() == tcell.KeyEscape {
 					if d.singleHostIndex >= 0 && len(d.hosts) > 1 {
 						d.singleHostIndex = -1
 						d.rebuild("select")
-						force = true
 					} else if d.logBuffer != nil {
 						d.logOverlay = !d.logOverlay
 						d.logOverlayAuto = false
 						d.refresh("toggle")
-						force = !d.logOverlay
 					}
 				}
 				if !d.logOverlay && len(d.hosts) > 1 && ev.Key() == tcell.KeyRune {
@@ -555,7 +549,6 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 							d.singleHostIndex = hostIndex
 						}
 						d.rebuild("select")
-						force = true
 					}
 				}
 			}
@@ -564,7 +557,6 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				slog.Warn("state", "engine", "display", "phase", "stall", "duration", elapsed.Truncate(time.Millisecond))
 				engine.Wake()
 				d.refresh("wake")
-				force = true
 			}
 			ticked = time.Now()
 			if d.logOverlay {
@@ -577,16 +569,16 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 						d.terminal.show()
 					}
 				}
-				force = false
+				d.force = false
 				continue
 			}
 			dirtyIndexes := d.takeDirtyIndexes()
-			if !force && len(dirtyIndexes) == 0 {
+			if !d.force && len(dirtyIndexes) == 0 {
 				continue
 			}
 			drawStart := time.Now()
 			drawnCount := len(dirtyIndexes)
-			if force {
+			if d.force {
 				drawnCount = len(d.boxes)
 				for i := range d.boxes {
 					d.boxes[i].drawValue(d)
@@ -600,7 +592,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 			d.terminal.show()
 			slog.Info("state", "engine", "display", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "boxes", drawnCount)
-			force = false
+			d.force = false
 		}
 	}
 }
@@ -632,6 +624,7 @@ func (d *Display) refresh(trigger string) {
 		}
 	}
 	d.terminal.show()
+	d.force = true
 	slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "trigger", trigger, "boxes", len(d.boxes))
 }
 
