@@ -1,10 +1,12 @@
 package engine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"supervisor/internal/config"
+	"sync/atomic"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -40,7 +42,10 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 		AddBroker(brokerURL).
 		SetClientID(fmt.Sprintf("supervisor-subscriber-%d", time.Now().UnixNano())).
 		SetCleanSession(true).
-		SetConnectTimeout(5 * time.Second).
+		SetConnectTimeout(brokerConnectTimeout).
+		SetKeepAlive(brokerKeepAlive).
+		SetPingTimeout(brokerPingTimeout).
+		SetMaxReconnectInterval(brokerReconnectMax).
 		SetAutoReconnect(true).
 		SetPassword(config.Load(configPath).BrokerToken()).
 		SetOnConnectHandler(func(client mqtt.Client) {
@@ -63,7 +68,54 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 	token := client.Connect()
 	token.Wait()
 	if token.Error() != nil {
-		return nil, fmt.Errorf("connect failed [%s]: %w", brokerURL, token.Error())
+		return nil, fmt.Errorf("connect failed [%s] [%w]", brokerURL, token.Error())
 	}
 	return client, nil
 }
+
+func brokerRevive(ctx context.Context, client mqtt.Client) {
+	if client == nil || !client.IsConnectionOpen() || !brokerReviving.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		defer brokerReviving.Store(false)
+		probeStart := time.Now()
+		token := client.Unsubscribe(brokerProbeTopic)
+		if token.WaitTimeout(brokerProbeTimeout) && token.Error() == nil {
+			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart).Truncate(time.Millisecond), "alive", true)
+			return
+		}
+		if !client.IsConnectionOpen() {
+			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart).Truncate(time.Millisecond), "alive", false)
+			return
+		}
+		reviveStart := time.Now()
+		slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(probeStart).Truncate(time.Millisecond))
+		client.Disconnect(0)
+		for backoff := brokerReviveBackoff; ; backoff = min(2*backoff, brokerReconnectMax) {
+			token := client.Connect()
+			if token.WaitTimeout(brokerConnectTimeout) && token.Error() == nil {
+				slog.Info("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart).Truncate(time.Millisecond))
+				return
+			}
+			slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart).Truncate(time.Millisecond), "error", token.Error())
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(backoff):
+			}
+		}
+	}()
+}
+
+const (
+	brokerProbeTopic     = "supervisor/probe/wake"
+	brokerProbeTimeout   = 2 * time.Second
+	brokerConnectTimeout = 5 * time.Second
+	brokerKeepAlive      = 10 * time.Second
+	brokerPingTimeout    = 3 * time.Second
+	brokerReconnectMax   = 10 * time.Second
+	brokerReviveBackoff  = 1 * time.Second
+)
+
+var brokerReviving atomic.Bool

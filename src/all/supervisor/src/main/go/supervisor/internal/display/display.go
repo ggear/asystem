@@ -516,30 +516,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					continue
 				}
 				d.dimsInit = dims
-				d.format = d.formatInit
-				d.boxes = nil
-				_, compileErr := d.Compile()
-				d.subscribeUpdates()
-				d.terminal.sync()
-				d.terminal.clear()
-				if compileErr != nil {
-					slog.Error(compileErr.Error())
-					d.logOverlay = true
-					d.logOverlayAuto = true
-					d.Logging()
-				} else {
-					if d.logOverlayAuto {
-						d.logOverlay = false
-						d.logOverlayAuto = false
-					}
-					if d.logOverlay {
-						d.Logging()
-					} else {
-						for _, b := range d.boxes {
-							b.drawLabels(d)
-						}
-					}
-				}
+				d.rebuild("resize")
 				force = true
 				slog.Info("state", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart).Truncate(time.Millisecond), "cols", cols, "rows", rows)
 			case *tcell.EventKey:
@@ -554,40 +531,13 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				if ev.Key() == tcell.KeyEscape {
 					if d.singleHostIndex >= 0 && len(d.hosts) > 1 {
 						d.singleHostIndex = -1
-						d.format = d.formatInit
-						d.boxes = nil
-						_, compileErr := d.Compile()
-						d.subscribeUpdates()
-						d.terminal.clear()
-						if compileErr != nil {
-							slog.Error(compileErr.Error())
-							d.logOverlay = true
-							d.logOverlayAuto = true
-							d.Logging()
-						} else {
-							if d.logOverlayAuto {
-								d.logOverlay = false
-								d.logOverlayAuto = false
-							}
-							for _, b := range d.boxes {
-								b.drawLabels(d)
-							}
-						}
+						d.rebuild("select")
 						force = true
-						d.terminal.show()
 					} else if d.logBuffer != nil {
 						d.logOverlay = !d.logOverlay
 						d.logOverlayAuto = false
-						d.terminal.clear()
-						if d.logOverlay {
-							d.Logging()
-						} else {
-							for _, b := range d.boxes {
-								b.drawLabels(d)
-							}
-							force = true
-						}
-						d.terminal.show()
+						d.refresh("toggle")
+						force = !d.logOverlay
 					}
 				}
 				if !d.logOverlay && len(d.hosts) > 1 && ev.Key() == tcell.KeyRune {
@@ -604,33 +554,15 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 						} else {
 							d.singleHostIndex = hostIndex
 						}
-						d.format = d.formatInit
-						d.boxes = nil
-						_, compileErr := d.Compile()
-						d.subscribeUpdates()
-						d.terminal.clear()
-						if compileErr != nil {
-							slog.Error(compileErr.Error())
-							d.logOverlay = true
-							d.logOverlayAuto = true
-							d.Logging()
-						} else {
-							if d.logOverlayAuto {
-								d.logOverlay = false
-								d.logOverlayAuto = false
-							}
-							for _, b := range d.boxes {
-								b.drawLabels(d)
-							}
-						}
+						d.rebuild("select")
 						force = true
-						d.terminal.show()
 					}
 				}
 			}
 		case <-ticker.C:
 			if elapsed := time.Since(ticked); elapsed > d.tickStall {
 				slog.Warn("state", "engine", "display", "phase", "stall", "duration", elapsed.Truncate(time.Millisecond))
+				engine.Wake()
 				d.refresh("wake")
 				force = true
 			}
@@ -671,6 +603,20 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			force = false
 		}
 	}
+}
+
+func (d *Display) rebuild(trigger string) {
+	d.format = d.formatInit
+	d.boxes = nil
+	if _, err := d.Compile(); err != nil {
+		slog.Error(err.Error())
+		d.logOverlay = true
+		d.logOverlayAuto = true
+	} else if d.logOverlayAuto {
+		d.logOverlay = false
+		d.logOverlayAuto = false
+	}
+	d.refresh(trigger)
 }
 
 func (d *Display) refresh(trigger string) {

@@ -381,6 +381,9 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 		t.Fatalf("marshal non-nil value failed: %v", err)
 	}
 	refreshes := &countingRefreshListener{}
+	reconciles := &countingRefreshListener{}
+	reconcileGrace = time.Second
+	t.Cleanup(func() { reconcileGrace = 10 * time.Second })
 	tests := []struct {
 		name      string
 		topic     string
@@ -423,25 +426,43 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			},
 		},
 		{
-			name:  "happy_online_status_refreshes_once_per_transition",
+			name:  "happy_online_status_does_not_refresh_per_transition",
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, cache *metric.RecordCache, _ metric.TopicBinding) []byte {
 				cache.SubscribeRefresh(refreshes)
 				return []byte(hostStatusOnline)
 			},
 			checkFunc: func(t *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) {
-				deadline := time.Now().Add(3 * time.Second)
-				for time.Now().Before(deadline) && refreshes.count() < 1 {
-					time.Sleep(50 * time.Millisecond)
-				}
-				if got := refreshes.count(); got != 1 {
-					t.Fatalf("Got refresh count = %d after online transition, expected 1", got)
-				}
+				time.Sleep(time.Second)
 				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
 				time.Sleep(time.Second)
-				if got := refreshes.count(); got != 1 {
-					t.Fatalf("Got refresh count = %d after online heartbeat, expected 1", got)
+				if got := refreshes.count(); got != 0 {
+					t.Fatalf("Got refresh count = %d after online transition and heartbeat, expected 0 — refresh is connect scoped", got)
 				}
+			},
+		},
+		{
+			name:  "happy_reconcile_reaps_service_absent_since_transition",
+			topic: "supervisor/alpha/status",
+			setupFunc: func(_ *testing.T, cache *metric.RecordCache, b metric.TopicBinding) []byte {
+				cache.SubscribeRefresh(reconciles)
+				stale := nonNilValue
+				stale.Timestamp = time.Now().Add(-time.Hour).Unix()
+				cache.Store(b.GUID, &metric.Record{Value: stale})
+				return []byte(hostStatusOnline)
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				deadline := time.Now().Add(6 * time.Second)
+				for time.Now().Before(deadline) {
+					if _, ok := cache.Load(b.GUID); !ok {
+						if got := reconciles.count(); got != 1 {
+							t.Fatalf("Got refresh count = %d after reconcile reaped a service, expected 1", got)
+						}
+						return
+					}
+					time.Sleep(50 * time.Millisecond)
+				}
+				t.Fatalf("Got record still present after reconcile grace, expected service absent since the transition reaped")
 			},
 		},
 	}

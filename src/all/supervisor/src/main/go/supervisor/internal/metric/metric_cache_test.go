@@ -127,6 +127,97 @@ func TestRecordCache_ServicesForHost(t *testing.T) {
 	})
 }
 
+func TestRecordCache_ServicesBefore(t *testing.T) {
+	type stamped struct {
+		guid      RecordGUID
+		timestamp int64
+	}
+	tests := []struct {
+		name     string
+		records  []stamped
+		host     string
+		since    int64
+		expected []string
+	}{
+		{
+			name: "happy_reports_service_with_no_record_since_cutoff",
+			records: []stamped{
+				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), 100},
+				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-b"), 300},
+			},
+			host:     "alpha",
+			since:    200,
+			expected: []string{"svc-a"},
+		},
+		{
+			name: "happy_service_survives_when_any_record_is_fresh",
+			records: []stamped{
+				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), 100},
+				{NewServiceRecordGUID(MetricServiceHealthStatus, "alpha", "svc-a"), 300},
+			},
+			host:     "alpha",
+			since:    200,
+			expected: nil,
+		},
+		{
+			name: "happy_excludes_services_from_other_hosts",
+			records: []stamped{
+				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), 100},
+				{NewServiceRecordGUID(MetricServiceName, "beta", "svc-b"), 100},
+			},
+			host:     "alpha",
+			since:    200,
+			expected: []string{"svc-a"},
+		},
+		{
+			name: "happy_excludes_schema_and_host_entries",
+			records: []stamped{
+				{NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), 100},
+				{NewRecordGUID(MetricHostUsedProcessor, "alpha"), 100},
+				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), 100},
+			},
+			host:     "alpha",
+			since:    200,
+			expected: []string{"svc-a"},
+		},
+		{
+			name: "happy_all_fresh_returns_nil",
+			records: []stamped{
+				{NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), 300},
+			},
+			host:     "alpha",
+			since:    200,
+			expected: nil,
+		},
+		{
+			name:     "happy_empty_cache_returns_nil",
+			records:  []stamped{},
+			host:     "alpha",
+			since:    200,
+			expected: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewRecordCache()
+			for _, record := range tt.records {
+				cache.Store(record.guid, &Record{Value: ValueData{Timestamp: record.timestamp}})
+			}
+			services := cache.ServicesBefore(tt.host, tt.since)
+			t.Logf("Cache:\n%s", cache.String())
+			if !reflect.DeepEqual(services, tt.expected) {
+				t.Fatalf("Got services = %+v, expected %+v", services, tt.expected)
+			}
+		})
+	}
+	t.Run("happy_nil_cache_returns_nil", func(t *testing.T) {
+		var c *RecordCache
+		if c.ServicesBefore("alpha", 0) != nil {
+			t.Fatalf("Got non-nil from nil cache, expected nil")
+		}
+	})
+}
+
 func TestRecordCache_Records(t *testing.T) {
 	tests := []struct {
 		name      string

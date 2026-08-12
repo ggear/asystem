@@ -113,7 +113,7 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 				if d, err := p.probe(ctx, t.ip); err == nil {
 					roundTrips = append(roundTrips, float64(d)/float64(time.Millisecond))
 				} else {
-					scribe.LogDebug("internet", "probe of scope [%s] target [%s] failed [%v]", t.scope, t.ip, err)
+					scribe.LogDebug("internet", "probe of [%s] failed [%v]", t.ip, err)
 				}
 				if j < burstSize-1 {
 					select {
@@ -127,7 +127,7 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 			if sent > 0 {
 				loss = 100 * float64(sent-received) / float64(sent)
 			}
-			scribe.LogDebug("internet", "probed scope [%s] target [%s] sent [%d] recv [%d] loss_pct [%v]", t.scope, t.ip, sent, received, loss)
+			scribe.LogDebug("internet", "probed [%s] sent [%d] recv [%d] loss_pct [%v]", t.ip, sent, received, loss)
 			reading := internetReading{target: t.ip, gateway: t.scope == gatewayScope, lossPct: loss}
 			if received > 0 {
 				avg, _, _, jitter := readInternet(roundTrips)

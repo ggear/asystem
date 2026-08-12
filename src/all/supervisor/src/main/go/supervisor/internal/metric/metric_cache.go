@@ -497,6 +497,38 @@ func (c *RecordCache) Services(hostName string) []string {
 	return services
 }
 
+func (c *RecordCache) ServicesBefore(hostName string, since int64) []string {
+	if c == nil {
+		return nil
+	}
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	latest := make(map[string]int64)
+	for _, guid := range c.guids {
+		if guid.Host != hostName {
+			continue
+		}
+		if guid.ServiceName == ServiceNameUnset || strings.HasPrefix(guid.ServiceName, ServiceNameSchema) {
+			continue
+		}
+		record := c.records[guid.key()]
+		if record == nil {
+			continue
+		}
+		if seen, exists := latest[guid.ServiceName]; !exists || record.Value.Timestamp > seen {
+			latest[guid.ServiceName] = record.Value.Timestamp
+		}
+	}
+	var services []string
+	for service, seen := range latest {
+		if seen < since {
+			services = append(services, service)
+		}
+	}
+	slices.Sort(services)
+	return services
+}
+
 func (c *RecordCache) Records(fn func(RecordGUID, *Record)) {
 	if c == nil {
 		return
