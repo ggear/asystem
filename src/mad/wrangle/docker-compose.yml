@@ -5,7 +5,7 @@ services:
     init: true
     restart: ${SERVICE_RESTART}
     environment:
-      - TZ=Australia/Perth
+      - TZ=${TZ}
       - WRANGLE_HOST
       - WRANGLE_HTTP_PORT
       - WRANGLE_DATABASE_HOST

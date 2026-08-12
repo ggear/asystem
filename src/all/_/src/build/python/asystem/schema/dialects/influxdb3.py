@@ -1,6 +1,8 @@
 import json
 import re
+from datetime import datetime
 from os.path import basename
+from zoneinfo import ZoneInfo
 
 from requests import post
 from requests.exceptions import RequestException
@@ -78,7 +80,7 @@ def artifacts(document, module_name, options):
         raise ValueError("Build generate script [{}] time_column and retention are postgres only, "
                          "the influxdb3 dialect must never be wired to them".format(module_name))
     _validate(document, module_name)
-    dialect = _dialect(document)
+    dialect = _dialect(document, options.timezone)
     written = {}
     for relation in document.relations:
         if relation.carried(KINDS):
@@ -292,7 +294,7 @@ def verify(document):
     return render_statements(statements)
 
 
-def _dialect(document):
+def _dialect(document, zone=""):
     return SchemaDialect(
         source=lambda relation: relation.plugin,
         predicates=lambda relation: where(relation, document),
@@ -305,7 +307,8 @@ def _dialect(document):
         declared=_declared,
         undeclared=lambda measurement, relations, declared, keyed: _describe_undeclared(
             measurement, relations, keyed),
-        bucket=lambda bucket: "date_bin(INTERVAL '{}', time)".format(bucket),
+        bucket=lambda bucket: _binned(bucket, zone),
+        localised=lambda expression: _localised(expression, zone),
         subject=lambda relation: [(column(dimension.key), dimension.key) for dimension in relation.dimensions],
         alias=lambda _, measure: measure.key,
         aggregate=lambda _, measure, function: _aggregate(function, column(measure.key), measure.kind),
@@ -385,10 +388,30 @@ def _entity(relation):
 
 
 def _aggregate(function, expression, kind):
+    if function == "count":
+        return "count({})".format(expression)
+    if function == "distinct":
+        return "count(DISTINCT {})".format(expression)
     if function == "last":
         latest = "last_value({} ORDER BY time)".format(expression)
         return latest if kind == "str" else _rounded(latest)
     return _rounded("{}({})".format(function, expression))
+
+
+def _binned(bucket, zone):
+    return "date_bin(INTERVAL '{}', {})".format(bucket, _localised("time", zone))
+
+
+def _localised(expression, zone):
+    offset = _offset(zone)
+    return expression if not offset else "{} + INTERVAL '{} minute'".format(expression, offset)
+
+
+def _offset(zone):
+    if not zone or zone == "UTC":
+        return 0
+    shift = datetime(2000, 1, 1, tzinfo=ZoneInfo(zone)).utcoffset()
+    return 0 if shift is None else int(shift.total_seconds() // 60)
 
 
 def _rounded(expression):

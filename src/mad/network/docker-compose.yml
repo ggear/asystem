@@ -2,7 +2,7 @@ x-common: &common
   image: network:${SERVICE_VERSION_ABSOLUTE}
   init: true
   environment:
-    - TZ=Australia/Perth
+    - TZ=${TZ}
     - SERVICE_NAME
     - NETWORKS_HOST
     - BROKER_HOST

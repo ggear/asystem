@@ -2,7 +2,7 @@ x-common: &common
   image: supervisor:${SERVICE_VERSION_ABSOLUTE}
   init: true
   environment:
-    - TZ=Australia/Perth
+    - TZ=${TZ}
     - SERVICE_NAME
     - SUPERVISOR_HOST
     - SUPERVISOR_MOUNT

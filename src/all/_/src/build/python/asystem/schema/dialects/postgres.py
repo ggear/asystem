@@ -31,6 +31,7 @@ TIME_COLUMNS = {
 CONNECT = """
 PSQL=(psql -h "${POSTGRES_SERVICE_PROD}" -p "${POSTGRES_API_PORT}" -U "${DATABASE_USER}" -d "${DATABASE_NAME}")
 export PGPASSWORD="${DATABASE_PASSWORD}"
+export PGTZ="${TZ:-UTC}"
 
 query() {
   "${PSQL[@]}" -q -t -A -v ON_ERROR_STOP=1 -c "SELECT row_to_json(result) FROM ($1) AS result" 2>&1
@@ -43,7 +44,7 @@ def artifacts(document, module_name, options):
         raise ValueError("Build generate script [{}] unknown time_column [{}] expected one of {}"
                          .format(module_name, options.time_column, list(TIME_COLUMNS)))
     _validate(document, module_name)
-    dialect = _dialect(options.time_column)
+    dialect = _dialect(options.time_column, options.timezone)
     written = {}
     for table, relations in _tabled(document).items():
         written["model/{}.sql".format(table)] = (leaf(relations, table, options), False)
@@ -180,7 +181,7 @@ done
 """.format(banner(), module_name).strip() + "\n"
 
 
-def _dialect(time_column):
+def _dialect(time_column, zone=""):
     _, _, now, _ = TIME_COLUMNS[time_column]
     return SchemaDialect(
         source=lambda relation: relation.plugin,
@@ -195,12 +196,13 @@ def _dialect(time_column):
         entity=lambda _: "entity",
         declared=lambda relation: declared_entity(relation, "entity"),
         undeclared=lambda table, _, declared, __: _describe_undeclared(table, declared),
-        bucket=lambda bucket: "time_bucket('{}', time)".format(bucket),
+        bucket=lambda bucket: _binned(bucket, zone if time_column != "date" else ""),
         subject=lambda relation: [("entity", relation.subject.key)] if relation.subject else [],
         alias=_named,
         aggregate=lambda relation, measure, function: _aggregate(function, _filtered(relation, measure)),
         windowed=lambda relation, keys, bucket: [_types(relation, negate=False, keys=keys, width=None)]
         + recent(relation.plugin, bucket, now),
+        observed="count(DISTINCT time)",
         kinds=KINDS,
         floor=BUCKET if time_column == "date" else "")
 
@@ -271,9 +273,19 @@ def _filtered(relation, measure):
 
 
 def _aggregate(function, predicate):
+    if function == "count":
+        return "count(*) FILTER (WHERE {})".format(predicate)
+    if function == "distinct":
+        return "count(DISTINCT value) FILTER (WHERE {})".format(predicate)
     if function == "last":
         return _rounded("last(value, time) FILTER (WHERE {})".format(predicate))
     return _rounded("{}(value) FILTER (WHERE {})".format(function, predicate))
+
+
+def _binned(bucket, zone):
+    if not zone or zone == "UTC":
+        return "time_bucket('{}', time)".format(bucket)
+    return "time_bucket('{}', time, '{}')".format(bucket, zone)
 
 
 def _rounded(expression):

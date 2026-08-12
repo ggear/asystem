@@ -8,11 +8,13 @@ SUBJECT = "*"
 UNDECLARED = "<string>"
 WIDTH = 300
 CELL = 8
+TEXT = 50
 KEYED = 15
 STAMPED = 19
 SAMPLES = 100
 GUARD = 100
 BUCKET = "1 day"
+COUNTED = ("rows", "oldest", "newest")
 BUCKETS = ("1 minute", "5 minute", "15 minute", "1 hour", "6 hour", "1 day")
 DURATIONS = {
     "s": 1,
@@ -44,6 +46,8 @@ class SchemaDialect:
     alias: object = None
     aggregate: object = None
     windowed: object = None
+    observed: str = "count(*)"
+    localised: object = None
     kinds: tuple = ()
     floor: str = ""
 
@@ -126,22 +130,33 @@ def query_statements(relations, dialect):
         bucket = bucketed(relation.cadence, dialect.floor or None)
         heading = "-- {} [{}] every {}, bucketed [{}] across the newest two buckets".format(
             relation.path, relation.description, relation.cadence, bucket)
-        selectors, keyed = [], {}
+        grouped, selectors, keyed, sized = [], [], {}, {}
         for measure in relation.carried(dialect.kinds):
+            group = []
             for function, suffix in aggregations(measure, relation.cadence):
                 alias = "_".join(part for part in (dialect.alias(relation, measure), suffix) if part)
-                selectors.append((dialect.aggregate(relation, measure, function), alias))
+                group.append((dialect.aggregate(relation, measure, function), alias))
                 keyed[alias] = measure.key
+                if measure.kind == "str" and function == "last":
+                    sized[alias] = TEXT
+            grouped.append(group)
+            selectors += group
         if not selectors:
             continue
         subjects = dialect.subject(relation)
-        label = labels(["bucket"] + [key for _, key in subjects] + [alias for _, alias in selectors])
-        parts = parted(selectors, len(subjects) + 1, {alias: label[alias].strip('"') for _, alias in selectors})
+        label = labels(["bucket"] + list(COUNTED) + [key for _, key in subjects]
+                       + [alias for _, alias in selectors])
+        reserved = ((STAMPED + 3) + len(subjects) * (KEYED + 3) + (CELL + 3) + 2 * (STAMPED + 3))
+        parts = parted(grouped, reserved, {alias: label[alias].strip('"') for _, alias in selectors}, sized)
         for index, part in enumerate(parts):
             statements.append(heading)
             statements.append("-- part {} of {}:".format(index + 1, len(parts)))
             rendered = [(dialect.bucket(bucket), label["bucket"])]
             rendered += [(expression, label[key]) for expression, key in subjects]
+            stamp = dialect.localised or (lambda expression: expression)
+            rendered += [(dialect.observed, label[COUNTED[0]]),
+                         (stamp("min(time)"), label[COUNTED[1]]),
+                         (stamp("max(time)"), label[COUNTED[2]])]
             rendered += [(expression, label[alias]) for expression, alias in part]
             grouping = [label["bucket"]] + [expression for expression, _ in subjects]
             statements.append(select(rendered, dialect.source(relation),
@@ -174,31 +189,22 @@ def guarded(bucket, factor=GUARD):
     return "{} {}".format(int(count) * factor, unit)
 
 
-def parted(selectors, keys, headers=None, width=WIDTH):
-    room = max(width - (STAMPED + 3) - (keys - 1) * (KEYED + 3) - 1, CELL + 3)
+def parted(grouped, reserved, headers=None, sized=None, width=WIDTH):
+    room = max(width - reserved - 1, CELL + 3)
     parts, current, used = [], [], 0
-    for selector in selectors:
-        header = (headers or {}).get(selector[1], selector[1])
-        if not isinstance(header, str):
-            header = selector[1] if isinstance(selector[1], str) else ""
-        cost = max(len(header), CELL) + 3
+    for group in grouped:
+        cost = sum(max(len(str((headers or {}).get(alias, alias))), (sized or {}).get(alias, CELL)) + 3
+                   for _, alias in group)
         if current and used + cost > room:
             parts.append(current)
             current, used = [], 0
-        current.append(selector)
+        current += group
         used += cost
     return parts + ([current] if current else [])
 
 
 def aggregations(measure, cadence=None):
-    if measure.kind == "bool":
-        return [("avg", "fraction")]
-    if measure.kind in ("int", "str"):
-        return [("last", "")]
-    span, bucket = duration(cadence), duration(BUCKET)
-    if span is None or bucket is None or span >= bucket:
-        return [("avg", "")]
-    return [("avg", "avg"), ("min", "min"), ("max", "max")]
+    return _sampled(measure, cadence) + [("count", "count"), ("distinct", "distinct")]
 
 
 def duration(period):
@@ -270,6 +276,17 @@ def grouping_keys(entity, declared_expression):
 
 def stamped(function, expression):
     return "CAST({}({}) AS VARCHAR)".format(function, expression)
+
+
+def _sampled(measure, cadence):
+    if measure.kind == "bool":
+        return [("avg", "fraction")]
+    if measure.kind in ("int", "str"):
+        return [("last", "")]
+    span, bucket = duration(cadence), duration(BUCKET)
+    if bucket is None or (span is not None and span >= bucket):
+        return [("avg", "")]
+    return [("avg", "avg"), ("min", "min"), ("max", "max")]
 
 
 def _tagged(relation, dimension, prefix, entities=None):

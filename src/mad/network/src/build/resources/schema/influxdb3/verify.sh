@@ -88,12 +88,13 @@ table() {
     def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
     def numeric: type == "number" or (type == "string" and test("^-?[0-9]+([.][0-9]+)?$"));
     def placeholder: . == "-" or . == "";
+    def clip: if length > 50 then .[0:47] + "..." else . end;
     (if length == 1 and (.[0] | type) == "array" then .[0] else . end)
     | if length == 0 then "no rows" else
       (.[0] | keys_unsorted) as $columns
       | [range(0; $columns | length)] as $indexes
       | (map(. as $row | $columns
-        | map(if $row[.] == null then "" else ($row[.] | tostring) end))) as $body
+        | map(if $row[.] == null then "" else ($row[.] | tostring | clip) end))) as $body
       | ([$columns | map(title)] + $body) as $matrix
       | ($indexes | map(. as $index | $matrix | map(.[$index] | length) | max)) as $widths
       | ($indexes | map(. as $index | $body | map(.[$index])

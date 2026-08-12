@@ -1,4 +1,4 @@
-from asystem.schema.query import banner
+from asystem.schema.query import TEXT, banner
 
 REPORT = r"""
 fail() {
@@ -10,7 +10,7 @@ fail() {
 }
 """
 
-RUNNER = REPORT + r"""
+RUNNER = (REPORT + r"""
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
 SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
 SCHEMA_TARGET=${SCHEMA_TARGET:-}
@@ -26,12 +26,13 @@ table() {
     def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
     def numeric: type == "number" or (type == "string" and test("^-?[0-9]+([.][0-9]+)?$"));
     def placeholder: . == "-" or . == "";
+    def clip: if length > SCHEMA_TEXT_WIDTH then .[0:SCHEMA_TEXT_TRIM] + "..." else . end;
     (if length == 1 and (.[0] | type) == "array" then .[0] else . end)
     | if length == 0 then "no rows" else
       (.[0] | keys_unsorted) as $columns
       | [range(0; $columns | length)] as $indexes
       | (map(. as $row | $columns
-        | map(if $row[.] == null then "" else ($row[.] | tostring) end))) as $body
+        | map(if $row[.] == null then "" else ($row[.] | tostring | clip) end))) as $body
       | ([$columns | map(title)] + $body) as $matrix
       | ($indexes | map(. as $index | $matrix | map(.[$index] | length) | max)) as $widths
       | ($indexes | map(. as $index | $body | map(.[$index])
@@ -102,7 +103,8 @@ query_sql() {
   fi
   [ "${faults}" = 0 ]
 }
-"""
+""".replace("SCHEMA_TEXT_WIDTH", str(TEXT))
+   .replace("SCHEMA_TEXT_TRIM", str(TEXT - 3)))
 
 
 def resolved(module_name, variables):

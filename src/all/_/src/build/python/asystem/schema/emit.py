@@ -3,7 +3,7 @@ import shutil
 import sys
 from os.path import abspath, basename, dirname, exists, join
 
-from asystem.bootstrap import load_bootstrap_root
+from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
 from asystem.schema.dialects import influxdb3, postgres, vernemq
 from asystem.schema.document import (
     SchemaBrokerOptions,
@@ -12,6 +12,8 @@ from asystem.schema.document import (
     merge_schema_entities,
 )
 
+ENV = ".env"
+
 DIALECTS = {
     influxdb3.DIALECT: influxdb3,
     postgres.DIALECT: postgres,
@@ -19,7 +21,8 @@ DIALECTS = {
 
 
 def write_schema_database(document, dialect="influxdb3", time_column="timestamp",
-                          retention=None, entities=None, module_name=None, schemas_dir=None):
+                          retention=None, entities=None, module_name=None, schemas_dir=None,
+                          timezone=None):
     module_root = load_bootstrap_root()
     if module_name is None:
         module_name = basename(module_root)
@@ -32,7 +35,10 @@ def write_schema_database(document, dialect="influxdb3", time_column="timestamp"
         return skip_schema_dialect(module_name, schemas_dir, dialect)
     merge_schema_entities(document, entities)
     emitter = DIALECTS[dialect]
-    options = SchemaDatabaseOptions(time_column=time_column, retention=retention or "")
+    if timezone is None:
+        timezone = load_bootstrap_env_value("TZ", "UTC", filename=ENV, module_root=module_root)
+    options = SchemaDatabaseOptions(time_column=time_column, retention=retention or "",
+                                    timezone=timezone)
     try:
         artifacts = emitter.artifacts(document, module_name, options)
     except SchemaUnreachable as unreachable:

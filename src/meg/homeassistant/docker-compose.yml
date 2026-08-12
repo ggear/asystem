@@ -3,7 +3,7 @@ x-common: &common
   image: homeassistant/home-assistant:${ASYSTEM_HOMEASSISTANT_VERSION}
   user: root
   environment:
-    - TZ=Australia/Perth
+    - TZ=${TZ}
     - SERVICE_VERSION_COMPACT
     - HOMEASSISTANT_SERVICE
     - HOMEASSISTANT_HTTP_PORT

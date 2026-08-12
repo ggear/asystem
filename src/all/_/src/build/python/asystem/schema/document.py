@@ -95,6 +95,7 @@ class SchemaDocument:
 class SchemaDatabaseOptions:
     time_column: str = "timestamp"
     retention: str = ""
+    timezone: str = ""
 
 
 @dataclass
