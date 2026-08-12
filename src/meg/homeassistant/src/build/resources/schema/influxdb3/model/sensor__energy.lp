@@ -6,6 +6,16 @@
 #   cadence <on-change>
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
+#     ceiling_network_devices_energy,
+#     ceiling_network_devices_energy_daily,
+#     ceiling_network_devices_energy_monthly,
+#     ceiling_network_devices_energy_weekly,
+#     ceiling_network_devices_energy_yearly,
+#     ceiling_network_switch_plug_energy_total,
+#     ceiling_network_switch_plug_energy_total_daily,
+#     ceiling_network_switch_plug_energy_total_monthly,
+#     ceiling_network_switch_plug_energy_total_weekly,
+#     ceiling_network_switch_plug_energy_total_yearly,
 #     garden_sewerage_blower_plug_energy_4,
 #     home_base_energy,
 #     home_base_energy_daily,

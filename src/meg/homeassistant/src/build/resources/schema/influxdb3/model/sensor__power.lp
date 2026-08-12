@@ -6,6 +6,7 @@
 #   cadence <on-change>
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
+#     bathroom_rails_plug_power,
 #     ceiling_network_devices_power,
 #     ceiling_network_switch_plug_energy_power,
 #     deck_freezer_plug_power,
