@@ -9,12 +9,16 @@
 #     ada_home,
 #     edwin_home,
 #     lounge_home]
+#   field media_content_type_str - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
+#   field volume_level - <on-change> [Home Assistant value]
 
 media_player__speaker,
   module=homeassistant,
   entity_id=<string>
+    media_content_type_str=<text>,
     state=<text>,
-    value=<float>
+    value=<float>,
+    volume_level=<float>
   <timestamp>

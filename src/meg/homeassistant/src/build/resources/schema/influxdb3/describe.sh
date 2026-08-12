@@ -344,7 +344,7 @@ UNION ALL
 SELECT
     'media_player__speaker'    AS relation,
     'entity_id*'               AS dimension,
-    2                          AS measures,
+    4                          AS measures,
     '<on-change>'              AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -1344,6 +1344,19 @@ WHERE
     AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
 UNION ALL
 SELECT
+    'media_player__speaker'                                                      AS relation,
+    'media_content_type_str'                                                     AS measure,
+    'str'                                                                        AS kind,
+    '-'                                                                          AS unit,
+    '<on-change>'                                                                AS period,
+    count(media_content_type_str)                                                AS rows,
+    CAST(min(time) FILTER (WHERE media_content_type_str IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE media_content_type_str IS NOT NULL) AS VARCHAR) AS newest
+FROM media_player__speaker
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'media_player__speaker'                                     AS relation,
     'state'                                                     AS measure,
     'str'                                                       AS kind,
@@ -1370,6 +1383,19 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'media_player__speaker'                                            AS relation,
+    'volume_level'                                                     AS measure,
+    'float'                                                            AS kind,
+    '-'                                                                AS unit,
+    '<on-change>'                                                      AS period,
+    count(volume_level)                                                AS rows,
+    CAST(min(time) FILTER (WHERE volume_level IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE volume_level IS NOT NULL) AS VARCHAR) AS newest
+FROM media_player__speaker
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     '-'                   AS relation,
     column_name           AS measure,
     '-'                   AS kind,
@@ -1381,7 +1407,10 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'media_player__speaker'
-    AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
+    AND column_name NOT IN (
+        'entity_id', 'media_content_type_str', 'module', 'state', 'time', 'value',
+        'volume_level'
+    )
 UNION ALL
 SELECT
     'media_player__tv'                                          AS relation,
