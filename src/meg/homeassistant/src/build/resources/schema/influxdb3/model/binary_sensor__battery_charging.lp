@@ -13,6 +13,6 @@
 
 binary_sensor__battery_charging,
   module=homeassistant,
-  entity_id=<kitchen_move_charging|parents_move_charging>
+  entity_id=<string>
     value=<float>
   <timestamp>

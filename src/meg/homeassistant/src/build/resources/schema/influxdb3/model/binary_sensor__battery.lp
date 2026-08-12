@@ -14,6 +14,6 @@
 
 binary_sensor__battery,
   module=homeassistant,
-  entity_id=<back_door_lock_battery_low|back_door_sensor_battery_low|front_door_lock_battery_low>
+  entity_id=<string>
     value=<float>
   <timestamp>

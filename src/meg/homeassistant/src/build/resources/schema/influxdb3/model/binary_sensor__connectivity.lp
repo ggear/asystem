@@ -36,7 +36,7 @@
 
 binary_sensor__connectivity,
   module=homeassistant,
-  entity_id=<ada_connectivity|bathroom_rails_plug_connectivity|deck_freezer_plug_connectivity|edwin_connectivity|garden_sewerage_blower_plug_connectivity|ignore_connectivity|ignore_connectivity_2|ignore_connectivity_3|kitchen_coffee_machine_plug_connectivity|kitchen_connectivity|kitchen_deck_connectivity|kitchen_dish_washer_plug_connectivity|laundry_connectivity|lounge_tv_plug_connectivity|office_basement_connectivity|office_connectivity|office_dining_connectivity|office_lounge_connectivity|office_pantry_connectivity|parents_connectivity|rack_backup_plug_connectivity|server_lia_plug_connectivity|zigbee2mqtt_bridge_connection_state>
+  entity_id=<string>
     latitude=<float>,
     longitude=<float>,
     value=<float>

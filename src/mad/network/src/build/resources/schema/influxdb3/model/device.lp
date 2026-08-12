@@ -14,7 +14,7 @@
 
 zigbee,
   module=network,
-  device=<device>
+  device=<string>
     available=<0|1>,
     coordinator=<0|1>,
     lqi=<int>,

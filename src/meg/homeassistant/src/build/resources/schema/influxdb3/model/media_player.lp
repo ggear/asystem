@@ -15,6 +15,6 @@
 
 media_player,
   module=homeassistant,
-  entity_id=<ada_tablet|kitchen_home|nesthubfb4d|pixel_tablet>
+  entity_id=<string>
     value=<float>
   <timestamp>

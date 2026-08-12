@@ -15,7 +15,7 @@
 
 ethernet,
   module=network,
-  port=<port>
+  port=<string>
     up=<0|1>,
     speed_mbps=<int>,
     full_duplex=<0|1>,

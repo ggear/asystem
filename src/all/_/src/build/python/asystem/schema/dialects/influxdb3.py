@@ -28,6 +28,8 @@ DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
 MODULE = "module"
 
+TAG = "<string>"
+
 PLACEHOLDERS = {
     "float": "<float>",
     "int": "<int>",
@@ -323,9 +325,7 @@ def _undeclared(measurement, columns):
 
 def _values(relation, dimension, borrowed):
     values = expanded(relation, dimension, borrowed)
-    if len(values) == 1:
-        return values[0]
-    return "<{}>".format("|".join(values) if values else dimension.key)
+    return values[0] if len(values) == 1 else TAG
 
 
 def _borrowed(relation, document):

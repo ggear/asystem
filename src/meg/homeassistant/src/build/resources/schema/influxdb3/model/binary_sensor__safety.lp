@@ -23,6 +23,6 @@
 
 binary_sensor__safety,
   module=homeassistant,
-  entity_id=<bom_darlington_bushwalkers_alert|bom_darlington_fire_weather_warning|bom_darlington_flood_warning|bom_darlington_flood_watch|bom_darlington_frost_warning|bom_darlington_hazardous_surf_warning|bom_darlington_heatwave_warning|bom_darlington_marine_wind_warning|bom_darlington_severe_thunderstorm_warning|bom_darlington_severe_weather_warning|bom_darlington_sheep_graziers_warning|bom_darlington_tropical_cyclone_warning>
+  entity_id=<string>
     value=<float>
   <timestamp>

@@ -17,7 +17,7 @@
 
 internet,
   module=network,
-  target=<gateway|1.1.1.1|8.8.8.8|9.9.9.9>
+  target=<string>
     reachable=<0|1>,
     loss_pct=<float>,
     rtt_ms=<float>,

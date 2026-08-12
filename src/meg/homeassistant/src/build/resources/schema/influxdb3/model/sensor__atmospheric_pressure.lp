@@ -20,7 +20,7 @@
 
 sensor__atmospheric_pressure,
   module=homeassistant,
-  entity_id=<ada_atmospheric_pressure|edwin_atmospheric_pressure|kitchen_atmospheric_pressure|laundry_atmospheric_pressure|office_atmospheric_pressure|parents_atmospheric_pressure>,
+  entity_id=<string>,
   unit_of_measurement=hPa
     latitude=<float>,
     longitude=<float>,

@@ -18,7 +18,7 @@ UNION ALL
 SELECT
     'binary_sensor'            AS relation,
     'entity_id*'               AS dimension,
-    2                          AS measures,
+    3                          AS measures,
     '<on-change>'              AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -244,9 +244,21 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'script'                   AS relation,
+    'entity_id*'               AS dimension,
+    5                          AS measures,
+    '<on-change>'              AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM script
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'sensor'                         AS relation,
     'entity_id*/unit_of_measurement' AS dimension,
-    78                               AS measures,
+    94                               AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
     CAST(min(time) AS VARCHAR)       AS oldest,
@@ -566,6 +578,19 @@ WHERE
     )
 UNION ALL
 SELECT
+    'binary_sensor'                                                 AS relation,
+    'fan_speed'                                                     AS measure,
+    'float'                                                         AS kind,
+    '-'                                                             AS unit,
+    '<on-change>'                                                   AS period,
+    count(fan_speed)                                                AS rows,
+    CAST(min(time) FILTER (WHERE fan_speed IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE fan_speed IS NOT NULL) AS VARCHAR) AS newest
+FROM binary_sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'binary_sensor'                                             AS relation,
     'value'                                                     AS measure,
     'float'                                                     AS kind,
@@ -590,7 +615,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'binary_sensor'
-    AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
+    AND column_name NOT IN ('entity_id', 'fan_speed', 'module', 'state', 'time', 'value')
 UNION ALL
 SELECT
     'binary_sensor__battery'                                    AS relation,
@@ -1534,6 +1559,62 @@ WHERE
     )
 UNION ALL
 SELECT
+    'script'                                                             AS relation,
+    'last_triggered'                                                     AS measure,
+    'float'                                                              AS kind,
+    '-'                                                                  AS unit,
+    '<on-change>'                                                        AS period,
+    count(last_triggered)                                                AS rows,
+    CAST(min(time) FILTER (WHERE last_triggered IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE last_triggered IS NOT NULL) AS VARCHAR) AS newest
+FROM script
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'script'                                                  AS relation,
+    'max'                                                     AS measure,
+    'float'                                                   AS kind,
+    '-'                                                       AS unit,
+    '<on-change>'                                             AS period,
+    count(max)                                                AS rows,
+    CAST(min(time) FILTER (WHERE max IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE max IS NOT NULL) AS VARCHAR) AS newest
+FROM script
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'script'                                                    AS relation,
+    'value'                                                     AS measure,
+    'float'                                                     AS kind,
+    '-'                                                         AS unit,
+    '<on-change>'                                               AS period,
+    count(value)                                                AS rows,
+    CAST(min(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE value IS NOT NULL) AS VARCHAR) AS newest
+FROM script
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    '-'                   AS relation,
+    column_name           AS measure,
+    '-'                   AS kind,
+    '-'                   AS unit,
+    '-'                   AS period,
+    CAST(NULL AS BIGINT)  AS rows,
+    CAST(NULL AS VARCHAR) AS oldest,
+    CAST(NULL AS VARCHAR) AS newest
+FROM information_schema.columns
+WHERE
+    table_name = 'script'
+    AND column_name NOT IN (
+        'entity_id', 'last_triggered', 'last_triggered_str', 'max', 'module', 'state',
+        'time', 'value'
+    )
+UNION ALL
+SELECT
     'sensor'                                                                                                                              AS relation,
     'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)'                                                       AS measure,
     'float'                                                                                                                               AS kind,
@@ -1542,6 +1623,19 @@ SELECT
     count("Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)")                                                AS rows,
     CAST(min(time) FILTER (WHERE "Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)" IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE "Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor'                                                                                                                              AS relation,
+    'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810097)'                                                       AS measure,
+    'float'                                                                                                                               AS kind,
+    '-'                                                                                                                                   AS unit,
+    '<on-change>'                                                                                                                         AS period,
+    count("Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810097)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810097)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810097)" IS NOT NULL) AS VARCHAR) AS newest
 FROM sensor
 WHERE
     module = 'homeassistant'
@@ -1612,6 +1706,19 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'sensor'                                                                                                                      AS relation,
+    'Burn Off (BULLSBROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810102)'                                                       AS measure,
+    'float'                                                                                                                       AS kind,
+    '-'                                                                                                                           AS unit,
+    '<on-change>'                                                                                                                 AS period,
+    count("Burn Off (BULLSBROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810102)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Burn Off (BULLSBROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810102)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Burn Off (BULLSBROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810102)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'sensor'                                                                                                                 AS relation,
     'Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)'                                                       AS measure,
     'float'                                                                                                                  AS kind,
@@ -1633,6 +1740,19 @@ SELECT
     count("Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)")                                                AS rows,
     CAST(min(time) FILTER (WHERE "Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)" IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE "Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor'                                                                                                                    AS relation,
+    'Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810155)'                                                       AS measure,
+    'float'                                                                                                                     AS kind,
+    '-'                                                                                                                         AS unit,
+    '<on-change>'                                                                                                               AS period,
+    count("Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810155)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810155)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810155)" IS NOT NULL) AS VARCHAR) AS newest
 FROM sensor
 WHERE
     module = 'homeassistant'
@@ -1664,6 +1784,19 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'sensor'                                                                                                                 AS relation,
+    'Fire (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810092)'                                                       AS measure,
+    'float'                                                                                                                  AS kind,
+    '-'                                                                                                                      AS unit,
+    '<on-change>'                                                                                                            AS period,
+    count("Fire (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810092)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Fire (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810092)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Fire (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810092)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'sensor'                                                                                                                    AS relation,
     'Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)'                                                       AS measure,
     'float'                                                                                                                     AS kind,
@@ -1672,6 +1805,19 @@ SELECT
     count("Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)")                                                AS rows,
     CAST(min(time) FILTER (WHERE "Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)" IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE "Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor'                                                                                                                   AS relation,
+    'Fuel Leak (DAYTON, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810161)'                                                       AS measure,
+    'float'                                                                                                                    AS kind,
+    '-'                                                                                                                        AS unit,
+    '<on-change>'                                                                                                              AS period,
+    count("Fuel Leak (DAYTON, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810161)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Fuel Leak (DAYTON, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810161)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Fuel Leak (DAYTON, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810161)" IS NOT NULL) AS VARCHAR) AS newest
 FROM sensor
 WHERE
     module = 'homeassistant'
@@ -1737,6 +1883,19 @@ SELECT
     count("Road Crash (MORLEY, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 809968)")                                                AS rows,
     CAST(min(time) FILTER (WHERE "Road Crash (MORLEY, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 809968)" IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE "Road Crash (MORLEY, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 809968)" IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor'                                                                                                                               AS relation,
+    'Structure Fire (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810087)'                                                       AS measure,
+    'float'                                                                                                                                AS kind,
+    '-'                                                                                                                                    AS unit,
+    '<on-change>'                                                                                                                          AS period,
+    count("Structure Fire (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810087)")                                                AS rows,
+    CAST(min(time) FILTER (WHERE "Structure Fire (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810087)" IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE "Structure Fire (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810087)" IS NOT NULL) AS VARCHAR) AS newest
 FROM sensor
 WHERE
     module = 'homeassistant'
@@ -1912,34 +2071,50 @@ WHERE
     AND column_name NOT IN (
         'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)',
         'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810058)_str',
+        'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810097)',
+        'Active Alarm (BAYSWATER, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810097)_str',
         'Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)',
         'Active Alarm (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810033)_str',
         'Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)',
         'Active Alarm (GUILDFORD, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809971)_str',
+        'Active Alarm (STRATTON, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810089)_str',
         'Administrative Area_str', 'Areas Of Interest_str', 'Available',
         'Available (Important)', 'Available (Important)_str', 'Available (Opportunistic)',
         'Available (Opportunistic)_str', 'Available_str',
+        'Burn Off (BULLSBROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810102)',
+        'Burn Off (BULLSBROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810102)_str',
         'Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)',
         'Burn Off (LEXIA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809996)_str',
         'Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)',
         'Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810037)_str',
+        'Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810155)',
+        'Burn Off (WHITEMAN, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810155)_str',
         'Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023)',
         'Burn Off (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810023)_str',
         'Bushfire (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810022)',
         'Bushfire (WOOROLOO, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810022)_str',
         'Cellular Technology_str', 'Confidence_str', 'Country_str',
+        'Fire (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810092)',
+        'Fire (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810092)_str',
         'Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)',
         'Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)_str',
+        'Fire (HIGH WYCOMBE, CITY OF KALAMUNDA, METRO NORTH EAST, CAD-ID: 810088)_str',
         'Fire (SWAN VIEW, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810055)_str',
+        'Fuel Leak (DAYTON, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810161)',
+        'Fuel Leak (DAYTON, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810161)_str',
         'ISO Country Code_str',
         'Incident (MIDLAND, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809976)_str',
         'Incident (MIDLAND, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810043)_str',
         'Inland Water_str', 'Locality_str', 'Location_str', 'Low Power Mode', 'Name',
         'Name_str', 'Ocean_str', 'Postal Code',
+        'Rescue (PARKERVILLE, SHIRE OF MUNDARING, METRO NORTH EAST, CAD-ID: 810115)_str',
         'Road Crash (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810011)',
         'Road Crash (BALLAJURA, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810011)_str',
         'Road Crash (MORLEY, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 809968)',
         'Road Crash (MORLEY, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 809968)_str',
+        'Structure Fire (BELLEVUE, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 810111)_str',
+        'Structure Fire (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810087)',
+        'Structure Fire (EMBLETON, CITY OF BAYSWATER, METRO NORTH EAST, CAD-ID: 810087)_str',
         'Structure Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)',
         'Structure Fire (HENLEY BROOK, CITY OF SWAN, METRO NORTH EAST, CAD-ID: 809994)_str',
         'Sub Administrative Area_str', 'Sub Locality_str', 'Sub Thoroughfare',
@@ -3781,6 +3956,19 @@ SELECT
     CAST(min(time) AS VARCHAR) AS oldest,
     CAST(max(time) AS VARCHAR) AS newest
 FROM person
+WHERE
+    module = 'homeassistant'
+GROUP BY entity_id
+UNION ALL
+SELECT
+    'script'                   AS relation,
+    'entity_id*'               AS dimension,
+    entity_id                  AS entity,
+    '-'                        AS declared,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM script
 WHERE
     module = 'homeassistant'
 GROUP BY entity_id

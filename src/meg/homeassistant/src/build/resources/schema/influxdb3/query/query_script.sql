@@ -2,17 +2,18 @@
 -- WARNING: This file is written by the build process, any manual edits will be lost!
 --------------------------------------------------------------------------------
 
--- binary_sensor [Home Assistant binary_sensor] every <on-change>, bucketed [1 day] across the newest two buckets
+-- script [Home Assistant script] every <on-change>, bucketed [1 day] across the newest two buckets
 -- part 1 of 1:
 SELECT
     date_bin(INTERVAL '1 day', time) AS "Bucket",
     entity_id                        AS "Entity Id",
-    round(avg(fan_speed), 1)         AS "Fan Speed",
+    round(avg(last_triggered), 1)    AS "Last Triggered",
+    round(avg(max), 1)               AS "Max",
     round(avg(value), 1)             AS "Value"
-FROM binary_sensor
+FROM script
 WHERE
     module = 'homeassistant'
     AND time >= now() - INTERVAL '100 day'
-    AND time >= (SELECT max(time) FROM binary_sensor) - INTERVAL '1 day'
+    AND time >= (SELECT max(time) FROM script) - INTERVAL '1 day'
 GROUP BY "Bucket", entity_id
 ORDER BY "Bucket", entity_id;

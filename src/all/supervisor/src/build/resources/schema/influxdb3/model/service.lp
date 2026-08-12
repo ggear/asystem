@@ -59,8 +59,8 @@
 
 supervisor,
   module=supervisor,
-  host=<macmini-mad|macmini-max|macmini-may|macmini-meg|raspbpi-jen|raspbpi-jil>,
-  service=<grafana|homeassistant|influxdb|influxdb3|letsencrypt|mariadb|mlflow|mlserver|network|nginx|openra|plex|postgres|sabnzbd|sonarr|supervisor|tempstat|vernemq|weewx|wrangle|zigbee2mqtt>
+  host=<string>,
+  service=<string>
     status=<0|1>,
     status_trend=<0|1>,
     backup_status=<0|1>,

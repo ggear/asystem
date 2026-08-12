@@ -14,7 +14,7 @@
 
 sensor__pm25,
   module=homeassistant,
-  entity_id=<dining_air_purifier_pm25|lounge_air_purifier_pm25>,
+  entity_id=<string>,
   unit_of_measurement=μg/m³
     value=<float>
   <timestamp>

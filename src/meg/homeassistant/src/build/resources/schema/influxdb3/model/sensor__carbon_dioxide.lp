@@ -23,7 +23,7 @@
 
 sensor__carbon_dioxide,
   module=homeassistant,
-  entity_id=<ada_carbon_dioxide|edwin_carbon_dioxide|kitchen_carbon_dioxide|laundry_carbon_dioxide|office_carbon_dioxide|office_dining_carbon_dioxide|office_lounge_carbon_dioxide|office_pantry_carbon_dioxide|parents_carbon_dioxide>,
+  entity_id=<string>,
   unit_of_measurement=ppm
     latitude=<float>,
     longitude=<float>,

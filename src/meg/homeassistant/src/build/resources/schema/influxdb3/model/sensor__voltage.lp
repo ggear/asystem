@@ -25,7 +25,7 @@
 
 sensor__voltage,
   module=homeassistant,
-  entity_id=<back_door_sensor_voltage|bathroom_rails_plug_voltage|compensation_sensor_weatherstation_console_battery_voltage|deck_freezer_plug_voltage|garden_sewerage_blower_plug_voltage|kitchen_coffee_machine_plug_voltage|kitchen_dish_washer_plug_voltage|lounge_tv_plug_voltage|rack_backup_plug_voltage|server_lia_plug_voltage|weatherstation_console_battery_voltage>,
-  unit_of_measurement=<%|V|mV>
+  entity_id=<string>,
+  unit_of_measurement=<string>
     value=<float>
   <timestamp>

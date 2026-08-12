@@ -77,14 +77,31 @@ influxdb:
     - 'unit_of_measurement'
   exclude:
     domains:
+      - 'sun'
       - 'zone'
       - 'scene'
+      - 'number'
+      - 'script'
       - 'select'
+      - 'calendar'
     entity_globs:
+      - '*dfes*'
       - '*bass*'
+      - '*ssid*'
       - '*treble*'
+      - '*mdi_icon*'
+      - '*app_version*'
+      - '*audio_output*'
+      - '*abbreviation*'
+      - '*direction_text*'
+      - '*connection_type*'
+      - '*icon_descriptor*'
       - '*microphone_level*'
+      - '*audio_input_format*'
       - '*adaptive_lighting*'
+      - '*geocoded_location*'
+      - '*location_permission*'
+      - '*last_update_trigger*'
   ignore_attributes: !include influxdb-ignores.yaml
 #######################################################################################
 

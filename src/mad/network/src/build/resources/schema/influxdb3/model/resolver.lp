@@ -17,7 +17,7 @@
 
 domain,
   module=network,
-  resolver=<cloudflare|google|quad9|opendns|adguard>
+  resolver=<string>
     ok=<0|1>,
     resolved=<0|1>,
     latency_ms=<float>

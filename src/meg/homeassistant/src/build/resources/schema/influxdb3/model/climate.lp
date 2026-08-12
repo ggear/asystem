@@ -22,7 +22,7 @@
 
 climate,
   module=homeassistant,
-  entity_id=<ada_fan_auto_comfort|deck_east_fan_auto_comfort|deck_west_fan_auto_comfort|edwin_fan_auto_comfort|lounge_fan_auto_comfort|parents_fan_auto_comfort>
+  entity_id=<string>
     current_temperature=<float>,
     max_temp=<float>,
     min_temp=<float>,

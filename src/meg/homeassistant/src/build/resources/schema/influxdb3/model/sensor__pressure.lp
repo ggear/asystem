@@ -9,7 +9,8 @@
 #     iphone_graham_pressure,
 #     janes_ipad_pressure,
 #     janes_iphone_pressure,
-#     roof_barometer_pressure]
+#     roof_barometer_pressure,
+#     roof_pressure]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     hPa,
 #     mbar]
@@ -17,7 +18,7 @@
 
 sensor__pressure,
   module=homeassistant,
-  entity_id=<iphone_graham_pressure|janes_ipad_pressure|janes_iphone_pressure|roof_barometer_pressure>,
-  unit_of_measurement=<hPa|mbar>
+  entity_id=<string>,
+  unit_of_measurement=<string>
     value=<float>
   <timestamp>

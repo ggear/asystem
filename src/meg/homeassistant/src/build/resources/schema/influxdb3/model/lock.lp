@@ -13,6 +13,6 @@
 
 lock,
   module=homeassistant,
-  entity_id=<back_door_lock|front_door_lock>
+  entity_id=<string>
     value=<float>
   <timestamp>

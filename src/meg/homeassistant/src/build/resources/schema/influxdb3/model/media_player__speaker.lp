@@ -30,7 +30,7 @@
 
 media_player__speaker,
   module=homeassistant,
-  entity_id=<ada_home|edwin_home|kitchen_five|kitchen_move|lounge_arc|lounge_home|parents_move>
+  entity_id=<string>
     is_volume_muted=<float>,
     media_album_name=<float>,
     media_channel=<float>,

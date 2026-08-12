@@ -17,6 +17,6 @@
 
 binary_sensor__occupancy,
   module=homeassistant,
-  entity_id=<ada_fan_occupancy|deck_east_fan_occupancy|deck_west_fan_occupancy|edwin_fan_occupancy|lounge_fan_occupancy|parents_fan_occupancy>
+  entity_id=<string>
     value=<float>
   <timestamp>
