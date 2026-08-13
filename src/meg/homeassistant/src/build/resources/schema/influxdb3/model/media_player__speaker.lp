@@ -1,0 +1,24 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+# media_player__speaker [Home Assistant media_player__speaker]
+#   cadence <on-change>
+#   tag module [always 'homeassistant']
+#   tag entity_id* [Home Assistant entity_id:
+#     ada_home,
+#     edwin_home,
+#     kitchen_five,
+#     kitchen_move,
+#     lounge_arc,
+#     lounge_home,
+#     parents_move]
+#   field state - <on-change> [Home Assistant value]
+#   field value - <on-change> [Home Assistant value]
+
+media_player__speaker,
+  module=homeassistant,
+  entity_id=<string>
+    state=<text>,
+    value=<float>
+  <timestamp>
