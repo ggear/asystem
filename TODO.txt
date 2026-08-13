@@ -41,7 +41,7 @@ filter haas entities down, make them line up nicely with others, maybe have diff
 Redeploy influxdb and wipe, backup V2 to V3 home and delete V2, reploy supervisor/network
 retire influx and move backups to portable version on max
 
-add influx/vernemq discover that uses all module tags and wildcard # that pulls down full schema, compars it to the onfile system schema and diff missing/added
+doesnt seem worth it? is it possible to have postgress/influxdb3/vernemq discover their schemas and then have verify.sh diff with the agrgegate of the modules to check missing and extra elements in the schema without too much code? worthwhile?
 tune influxdb compactor given real world inputs
 validate all database modules - supervisor/network/wrangle/homeassistant, test whats on file and describe/query/verify
 validate all broker modules, test whats on file and describe/query/verify
