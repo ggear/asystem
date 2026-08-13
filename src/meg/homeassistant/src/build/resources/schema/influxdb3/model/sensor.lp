@@ -43,10 +43,12 @@
 #     bom_darlington_uv_category_1,
 #     bom_darlington_uv_category_2,
 #     bom_darlington_uv_category_3,
+#     bom_darlington_uv_category_4,
 #     bom_darlington_uv_max_index_0,
 #     bom_darlington_uv_max_index_1,
 #     bom_darlington_uv_max_index_2,
 #     bom_darlington_uv_max_index_3,
+#     bom_darlington_uv_max_index_4,
 #     bom_darlington_warnings,
 #     bom_darlington_wind_direction,
 #     ceiling_water_booster_plug_energy_total_daily,
@@ -54,6 +56,7 @@
 #     ceiling_water_booster_plug_energy_total_weekly,
 #     ceiling_water_booster_plug_energy_total_yearly,
 #     deck_fans_outlet_linkquality,
+#     dining_air_purifier_air_quality,
 #     dining_air_purifier_fan_speed,
 #     dining_air_purifier_filter_age,
 #     driveway_repeater_linkquality_energy_daily,
@@ -175,6 +178,10 @@
 #     steps,
 #     wpm²,
 #     °]
+#   field color_fill - <on-change> [Home Assistant value]
+#   field color_fill_str - <on-change> [Home Assistant value]
+#   field color_text - <on-change> [Home Assistant value]
+#   field color_text_str - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 #   field warnings_str - <on-change> [Home Assistant value]
@@ -183,6 +190,10 @@ sensor,
   module=homeassistant,
   entity_id=<string>,
   unit_of_measurement=<string>
+    color_fill=<float>,
+    color_fill_str=<text>,
+    color_text=<float>,
+    color_text_str=<text>,
     state=<text>,
     value=<float>,
     warnings_str=<text>

@@ -9,6 +9,7 @@
 #     back_door_lock_security,
 #     home_security,
 #     home_security_triggered,
+#     home_sleep,
 #     home_started]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]

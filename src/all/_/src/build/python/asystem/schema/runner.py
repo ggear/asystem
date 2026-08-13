@@ -10,17 +10,7 @@ fail() {
 }
 """
 
-RUNNER = (REPORT + r"""
-SCHEMA_ECHO=${SCHEMA_ECHO:-true}
-SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
-SCHEMA_TARGET=${SCHEMA_TARGET:-}
-SCHEMA_LABEL=${SCHEMA_LABEL:-}
-
-statements() {
-  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
-    sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
-}
-
+TABLE = r"""
 table() {
   jq -sr '
     def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
@@ -45,6 +35,22 @@ table() {
          [rule, row($matrix[0]), rule] + ($body | map(row(.))) + [rule] | join("\n"))
     end
   '
+}
+
+rows() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
+}
+""".replace("SCHEMA_TEXT_WIDTH", str(TEXT)).replace("SCHEMA_TEXT_TRIM", str(TEXT - 3))
+
+RUNNER = REPORT + TABLE + r"""
+SCHEMA_ECHO=${SCHEMA_ECHO:-true}
+SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
+SCHEMA_TARGET=${SCHEMA_TARGET:-}
+SCHEMA_LABEL=${SCHEMA_LABEL:-}
+
+statements() {
+  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
+    sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
 query_block() {
@@ -78,10 +84,6 @@ query_one() {
   printf '%s\n' "${result}" | table
 }
 
-rows() {
-  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
-}
-
 query_sql() {
   local line block="" faults=0
   while IFS= read -r line || [ -n "${line}" ]; do
@@ -103,8 +105,7 @@ query_sql() {
   fi
   [ "${faults}" = 0 ]
 }
-""".replace("SCHEMA_TEXT_WIDTH", str(TEXT))
-   .replace("SCHEMA_TEXT_TRIM", str(TEXT - 3)))
+"""
 
 
 def resolved(module_name, variables):

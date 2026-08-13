@@ -37,15 +37,13 @@ Order of attach:
   - grafana
   - wrangle balances/transactions
 
-queries to give totals and sample of data?
 filter haas entities down, make them line up nicely with others, maybe have different rows col in each of the 3 summaries?
-deal with str vars out of haas, patch influxdb? make schema src deal with consistently - show up dont filter so I can see issues
-bool should be 0|1 from my own persistence layer, influx might have bools? ON/OFF state from hass to be 0/1?
 Redeploy influxdb and wipe, backup V2 to V3 home and delete V2, reploy supervisor/network
+retire influx and move backups to portable version on max
 
-
+add influx/vernemq discover that uses all module tags and wildcard # that pulls down full schema, compars it to the onfile system schema and diff missing/added
 tune influxdb compactor given real world inputs
-validate all database modules - supervisor/networks/wrangle/homeassistant, test whats on file and describe/query/verify
+validate all database modules - supervisor/network/wrangle/homeassistant, test whats on file and describe/query/verify
 validate all broker modules, test whats on file and describe/query/verify
 for zigbeemqtt and others? maybe have discover.sh write to topics to sample payloads? dont overwrite if existing? or only clear/overwrite if they are only dsicvovered? generalise handwritten broker stuff rename broker to vernemq?
 improve sys tests with datbase/broker asserts
@@ -200,3 +198,11 @@ Add Apple TV/Homepod
 # LetsEncrypt
 ###############################################################################################################################################################
 Improve cert renewal and dissemination
+
+
+###############################################################################################################################################################
+# MLFlow/MLServer
+###############################################################################################################################################################
+Implement hot water real world temp
+Implement a mad temp based on what I have, ssd temp + ambient + model of M2 Pro temp gradient/fan speeds
+Implement battery linear curves with sklearn.isotonic.IsotonicRegression

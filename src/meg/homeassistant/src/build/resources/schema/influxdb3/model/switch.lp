@@ -123,6 +123,7 @@
 #     service_mariadb,
 #     service_mlflow,
 #     service_mlserver,
+#     service_network,
 #     service_nginx,
 #     service_openra,
 #     service_plex,

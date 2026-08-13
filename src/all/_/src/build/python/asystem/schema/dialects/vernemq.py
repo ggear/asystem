@@ -49,11 +49,11 @@ CONNECT = REPORT + """
 BROKER_ARGS=(-h "${TARGET_VARIABLE}" -p "${VERNEMQ_API_PORT}")
 
 topics() {
-  mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "$1" -W 5 2>/dev/null | grep -E "${2:-.}" | sort -u
+  mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "$1" -W 5 2>/dev/null | grep -E "${2:-.}" | sort -u || true
 }
 
 payload() {
-  mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -C 1 -W 2 2>/dev/null
+  mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -C 1 -W 2 2>/dev/null || true
 }
 
 declared() {

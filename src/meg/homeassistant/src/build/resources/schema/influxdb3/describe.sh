@@ -296,7 +296,7 @@ UNION ALL
 SELECT
     'fan'                      AS relation,
     'entity_id*'               AS dimension,
-    4                          AS measures,
+    5                          AS measures,
     '<on-change>'              AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -392,7 +392,7 @@ UNION ALL
 SELECT
     'sensor'                         AS relation,
     'entity_id*/unit_of_measurement' AS dimension,
-    3                                AS measures,
+    7                                AS measures,
     '<on-change>'                    AS cadence,
     count(*)                         AS rows,
     CAST(min(time) AS VARCHAR)       AS oldest,
@@ -1196,6 +1196,19 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'fan'                                                                AS relation,
+    'percentage_str'                                                     AS measure,
+    'str'                                                                AS kind,
+    '-'                                                                  AS unit,
+    '<on-change>'                                                        AS period,
+    count(percentage_str)                                                AS rows,
+    CAST(min(time) FILTER (WHERE percentage_str IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE percentage_str IS NOT NULL) AS VARCHAR) AS newest
+FROM fan
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'fan'                                                       AS relation,
     'state'                                                     AS measure,
     'str'                                                       AS kind,
@@ -1233,7 +1246,10 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'fan'
-    AND column_name NOT IN ('direction_str', 'entity_id', 'module', 'percentage', 'state', 'time', 'value')
+    AND column_name NOT IN (
+        'direction_str', 'entity_id', 'module', 'percentage', 'percentage_str', 'state',
+        'time', 'value'
+    )
 UNION ALL
 SELECT
     'input_boolean'                                             AS relation,
@@ -1600,6 +1616,58 @@ WHERE
     )
 UNION ALL
 SELECT
+    'sensor'                                                         AS relation,
+    'color_fill'                                                     AS measure,
+    'float'                                                          AS kind,
+    '-'                                                              AS unit,
+    '<on-change>'                                                    AS period,
+    count(color_fill)                                                AS rows,
+    CAST(min(time) FILTER (WHERE color_fill IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE color_fill IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor'                                                             AS relation,
+    'color_fill_str'                                                     AS measure,
+    'str'                                                                AS kind,
+    '-'                                                                  AS unit,
+    '<on-change>'                                                        AS period,
+    count(color_fill_str)                                                AS rows,
+    CAST(min(time) FILTER (WHERE color_fill_str IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE color_fill_str IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor'                                                         AS relation,
+    'color_text'                                                     AS measure,
+    'float'                                                          AS kind,
+    '-'                                                              AS unit,
+    '<on-change>'                                                    AS period,
+    count(color_text)                                                AS rows,
+    CAST(min(time) FILTER (WHERE color_text IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE color_text IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
+    'sensor'                                                             AS relation,
+    'color_text_str'                                                     AS measure,
+    'str'                                                                AS kind,
+    '-'                                                                  AS unit,
+    '<on-change>'                                                        AS period,
+    count(color_text_str)                                                AS rows,
+    CAST(min(time) FILTER (WHERE color_text_str IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE color_text_str IS NOT NULL) AS VARCHAR) AS newest
+FROM sensor
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'sensor'                                                    AS relation,
     'state'                                                     AS measure,
     'str'                                                       AS kind,
@@ -1651,8 +1719,8 @@ FROM information_schema.columns
 WHERE
     table_name = 'sensor'
     AND column_name NOT IN (
-        'entity_id', 'module', 'state', 'time', 'unit_of_measurement', 'value',
-        'warnings_str'
+        'color_fill', 'color_fill_str', 'color_text', 'color_text_str', 'entity_id',
+        'module', 'state', 'time', 'unit_of_measurement', 'value', 'warnings_str'
     )
 UNION ALL
 SELECT

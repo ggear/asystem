@@ -18,6 +18,7 @@
 #     parents_fan]
 #   field direction_str - <on-change> [Home Assistant value]
 #   field percentage - <on-change> [Home Assistant value]
+#   field percentage_str - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 
@@ -26,6 +27,7 @@ fan,
   entity_id=<string>
     direction_str=<text>,
     percentage=<float>,
+    percentage_str=<text>,
     state=<text>,
     value=<float>
   <timestamp>

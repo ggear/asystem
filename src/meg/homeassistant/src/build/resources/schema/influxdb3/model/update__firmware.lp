@@ -13,6 +13,13 @@
 #     dining_air_purifier,
 #     edwin_night_light_bulb_1,
 #     ensuite_main_bulb_1,
+#     ensuite_sconces_bulb_1,
+#     ensuite_sconces_bulb_2,
+#     ensuite_sconces_bulb_3,
+#     hallway_main_bulb_1,
+#     hallway_main_bulb_2,
+#     hallway_main_bulb_3,
+#     hallway_main_bulb_4,
 #     hallway_sconces_bulb_1,
 #     hallway_sconces_bulb_2,
 #     kitchen_fan_outlet,
@@ -30,7 +37,8 @@
 #     pantry_main_bulb_1,
 #     parents_main_bulb_1,
 #     parents_main_bulb_2,
-#     parents_main_bulb_3]
+#     parents_main_bulb_3,
+#     wardrobe_main_bulb_1]
 #   field installed_version - <on-change> [Home Assistant value]
 #   field latest_version - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]

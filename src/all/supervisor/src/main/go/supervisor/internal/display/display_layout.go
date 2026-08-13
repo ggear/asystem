@@ -384,7 +384,6 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 		{b_X_Y, d_X_0, d_X_1, d_X_2, s_Y_Y, d_X_3, d_X_4, d_X_5, d_X_6, d_X_7, d_X_8, b_X_Z, v_X_X},
 		{b_X_Y, d_X_0, d_X_1, d_X_2, s_Y_Y, d_X_3, d_X_4, d_X_5, d_X_6, d_X_7, d_X_8, b_X_Z, v_X_X},
 		{b_X_Y, d_X_0, d_X_1, d_X_2, s_Y_Y, d_X_3, d_X_4, d_X_5, d_X_6, d_X_7, d_X_8, b_X_Z, v_X_X},
-		{b_X_Y, d_X_0, d_X_1, d_X_2, s_Y_Y, d_X_3, d_X_4, d_X_5, d_X_6, d_X_7, d_X_8, b_X_Z, v_X_X},
 		{s_X_Y, v_X_X},
 	})
 }
