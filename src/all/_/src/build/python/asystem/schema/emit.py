@@ -8,6 +8,7 @@ from asystem.schema.dialects import influxdb3, postgres, vernemq
 from asystem.schema.document import (
     SchemaBrokerOptions,
     SchemaDatabaseOptions,
+    SchemaDocument,
     SchemaUnreachable,
     merge_schema_entities,
 )
@@ -49,7 +50,7 @@ def write_schema_database(document, dialect="influxdb3", time_column="timestamp"
     emitter.ship(document, module_name, module_root, schemas_dir, options)
 
 
-def write_schema_broker(metadata_df, module_name=None, working_root=None, schemas_dir=None,
+def write_schema_broker(source, module_name=None, working_root=None, schemas_dir=None,
                         topic_glob_discovery=None, topic_glob_data=None,
                         schema_state=None, schema_command=None, schema_availability=None, document=None):
     module_root = load_bootstrap_root()
@@ -59,21 +60,23 @@ def write_schema_broker(metadata_df, module_name=None, working_root=None, schema
         working_root = join(module_root, "src/main/resources/image")
     if schemas_dir is None:
         schemas_dir = join(module_root, "src/build/resources/schema")
+    if source is None:
+        return skip_schema_dialect(module_name, schemas_dir, vernemq.DIALECT)
     options = SchemaBrokerOptions(
         working_root=str(working_root),
         topic_glob_discovery=topic_glob_discovery or "",
         topic_glob_data=topic_glob_data or "",
         state=schema_state, command=schema_command, availability=schema_availability, document=document)
-    empty = len(metadata_df) == 0
+    empty = not source.payloads if isinstance(source, SchemaDocument) else len(source) == 0
     try:
-        artifacts = {} if empty else vernemq.artifacts(metadata_df, module_name, options)
+        artifacts = {} if empty else vernemq.artifacts(source, module_name, options)
     except SchemaUnreachable as unreachable:
         print("Build generate script [{}] could not connect to {} with error [{}]"
               .format(module_name, vernemq.DIALECT, unreachable))
         return skip_schema_dialect(module_name, schemas_dir, vernemq.DIALECT)
     write_schema_dialect(module_name, schemas_dir, vernemq.DIALECT, artifacts)
     if not empty:
-        vernemq.ship(metadata_df, module_name, module_root, schemas_dir, options)
+        vernemq.ship(source, module_name, module_root, schemas_dir, options)
 
 
 def skip_schema_dialect(module_name, schemas_dir, dialect):

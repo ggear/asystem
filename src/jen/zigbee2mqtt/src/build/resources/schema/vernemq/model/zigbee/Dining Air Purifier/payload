@@ -1,0 +1,22 @@
+{
+  "air_quality": "<text>",
+  "child_lock": "<text>",
+  "device_age": "<text>",
+  "fan_mode": "<text>",
+  "fan_speed": <number>,
+  "fan_state": "<text>",
+  "filter_age": <number>,
+  "identify": "<text>",
+  "last_seen": "<text>",
+  "led_enable": <true|false>,
+  "linkquality": <number>,
+  "pm25": <number>,
+  "replace_filter": <true|false>,
+  "update": {
+    "installed_version": <number>,
+    "latest_release_notes": "<text>",
+    "latest_source": "<text>",
+    "latest_version": <number>,
+    "state": "<text>"
+  }
+}

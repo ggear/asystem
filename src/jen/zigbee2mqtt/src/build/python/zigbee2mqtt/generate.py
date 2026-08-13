@@ -10,6 +10,10 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
 UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
+ZIGBEE_TOPIC_GLOB = "zigbee/#"
+ZIGBEE_HEALTH_TOPIC = "zigbee/bridge/health"
+ZIGBEE_HEALTH_FILTER = ".process.uptime_sec > 0"
+ZIGBEE_GROUP_REMOVE_TOPIC = "zigbee/bridge/request/group/members/remove_all"
 
 if __name__ == "__main__":
     env = load_bootstrap_env(DIR_ROOT)
@@ -17,6 +21,8 @@ if __name__ == "__main__":
 
     write_container_bootstrap()
     write_container_healthchecks()
+
+    write_schema_broker(dialects.vernemq.Discover(ZIGBEE_TOPIC_GLOB, label="Zigbee2MQTT").document())
 
     metadata_groups_devices_df = metadata_df[
         (metadata_df["index"] > 0) &
@@ -77,44 +83,29 @@ if __name__ == "__main__":
     metadata_config_dicts = [row.dropna().to_dict() for index, row in metadata_config_df.iterrows()]
     metadata_config_path = abspath(join(DIR_ROOT, "src/main/resources/image/vernemq/broker_config.sh"))
     with open(metadata_config_path, 'w') as metadata_config_file:
-        metadata_config_file.write("""
-#!/bin/bash
-#######################################################################################
-# WARNING: This file is written by the build process, any manual edits will be lost!
-#######################################################################################
-ROOT_DIR="$(dirname "$(readlink -f "$0")")"
-while ! mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/bridge/health' -W 1 2>/dev/null | jq -r '.process.uptime_sec' | awk '{exit ($1>0?0:1)}'; do echo 'Waiting for zigbee2mqtt server to come up ... '; sleep 2; done
-        """.strip() + "\n")
-        for metadata_config_dict in metadata_config_dicts:
-            metadata_config_file.write("""
-${{ROOT_DIR}}/broker_config.py '{}' '{}' '{}' '{}'
-            """.format(
-                metadata_config_dict["connection_mac"],
-                metadata_config_dict["device_name"],
-                metadata_groups_dict[metadata_config_dict["zigbee_group"]]["device_name"],
-                metadata_config_dict["zigbee_device_config"].replace("'", "\"") if "zigbee_device_config" in metadata_config_dict else "",
-            ).strip() + "\n")
+        metadata_config_file.write(dialects.vernemq.config_script(
+            "zigbee2mqtt", "config", "apply the declared device and group configuration to the bridge",
+            ZIGBEE_HEALTH_TOPIC, ZIGBEE_HEALTH_FILTER, [
+                '"${{ROOT_DIR}}/broker_config.py" \'{}\' \'{}\' \'{}\' \'{}\''.format(
+                    metadata_config_dict["connection_mac"],
+                    metadata_config_dict["device_name"],
+                    metadata_groups_dict[metadata_config_dict["zigbee_group"]]["device_name"],
+                    metadata_config_dict["zigbee_device_config"].replace("'", "\"") if "zigbee_device_config" in metadata_config_dict else "",
+                ) for metadata_config_dict in metadata_config_dicts]))
     os.chmod(metadata_config_path, 0o750)
     print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
 
     metadata_config_clean_path = abspath(join(DIR_ROOT, "src/main/resources/image/vernemq/broker_config_clean.sh"))
     with open(metadata_config_clean_path, 'w') as metadata_config_clean_file:
-        metadata_config_clean_file.write("""
-#!/bin/bash
-#######################################################################################
-# WARNING: This file is written by the build process, any manual edits will be lost!
-#######################################################################################
-ROOT_DIR="$(dirname "$(readlink -f "$0")")"
-while ! mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/bridge/health' -W 1 2>/dev/null | jq -r '.process.uptime_sec' | awk '{exit ($1>0?0:1)}'; do echo 'Waiting for zigbee2mqtt server to come up ... '; sleep 2; done
-        """.strip() + "\n")
-        for metadata_config_clean_dict in metadata_config_dicts:
-            metadata_name = metadata_config_clean_dict["device_name"]
-            metadata_config_clean_file.write("""
-        mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{}' && echo '[INFO] Device [{}] removed from all groups' && sleep 1
-                    """.format(
-                '{{ "device": "{}" }}'.format(metadata_name),
-                metadata_name,
-            ).strip() + "\n")
+        metadata_config_clean_file.write(dialects.vernemq.config_script(
+            "zigbee2mqtt", "clean", "remove every declared device from all of its bridge groups",
+            ZIGBEE_HEALTH_TOPIC, ZIGBEE_HEALTH_FILTER, [
+                'mosquitto_pub "${{BROKER_ARGS[@]}}" -t \'{}\' -m \'{}\' &&\n'
+                '  printf \'Device [%s] removed from all groups\\n\' \'{}\' && sleep 1'.format(
+                    ZIGBEE_GROUP_REMOVE_TOPIC,
+                    '{{ "device": "{}" }}'.format(metadata_config_clean_dict["device_name"]),
+                    metadata_config_clean_dict["device_name"],
+                ) for metadata_config_clean_dict in metadata_config_dicts]))
     os.chmod(metadata_config_clean_path, 0o750)
     print("Build generate script [zigbee2mqtt] entity device clean persisted to [{}]".format(metadata_config_clean_path))
 

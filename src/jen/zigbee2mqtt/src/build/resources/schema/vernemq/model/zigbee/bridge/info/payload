@@ -1,0 +1,1617 @@
+{
+  "commit": "<text>",
+  "config": {
+    "advanced": {
+      "cache_state": <true|false>,
+      "cache_state_persistent": <true|false>,
+      "cache_state_send_on_startup": <true|false>,
+      "channel": <number>,
+      "elapsed": <true|false>,
+      "enable_external_js": <true|false>,
+      "ext_pan_id": "<text>",
+      "homeassistant_legacy_entity_attributes": <true|false>,
+      "homeassistant_legacy_triggers": <true|false>,
+      "last_seen": "<text>",
+      "legacy_api": <true|false>,
+      "legacy_availability_payload": <true|false>,
+      "log_console_json": <true|false>,
+      "log_debug_namespace_ignore": "<text>",
+      "log_debug_to_mqtt_frontend": <true|false>,
+      "log_directories_to_keep": <number>,
+      "log_directory": "<text>",
+      "log_file": "<text>",
+      "log_level": "<text>",
+      "log_namespaced_levels": {
+        "z2m": "<text>",
+        "zh": "<text>",
+        "zhc": "<text>"
+      },
+      "log_output": "<text>",
+      "log_rotation": <true|false>,
+      "log_symlink_current": <true|false>,
+      "log_syslog": "<text>",
+      "output": "<text>",
+      "pan_id": <number>,
+      "timestamp_format": "<text>"
+    },
+    "availability": {
+      "active": {
+        "backoff": <true|false>,
+        "max_jitter": <number>,
+        "pause_on_backoff_gt": <number>,
+        "timeout": <number>
+      },
+      "enabled": <true|false>,
+      "passive": {
+        "timeout": <number>
+      }
+    },
+    "blocklist": "<text>",
+    "device_options": {
+      "debounce": <number>,
+      "legacy": <true|false>,
+      "optimistic": <true|false>,
+      "qos": <number>,
+      "retain": <true|false>
+    },
+    "devices": {
+      "0x000d6f0011274420": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x000d6f001127f08c": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00124b0029113713": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00124b0029119f9a": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00158d0005d9d088": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x0017880103433075": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010343b9d8": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010343c147": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010343c34f": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010343c36f": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f4eed": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f56c4": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f574e": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f584a": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f585a": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f69d1": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f69d4": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f69d5": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f6b4a": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801039f6b78": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801040e2034": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801040edcad": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801040eddb2": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801040ede93": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801040edfae": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801040f8db2": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801043283b0": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010432996f": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x0017880104329975": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010432a064": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010444db4e": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010444ef85": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x0017880104eaa272": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x0017880104eaa288": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x0017880106bc4f2d": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x00178801086168ac": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>,
+          "last_seen": {
+            "enabled_by_default": <true|false>
+          },
+          "linkquality": {
+            "enabled_by_default": <true|false>
+          }
+        }
+      },
+      "0x0017880108fd8633": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>,
+          "last_seen": {
+            "enabled_by_default": <true|false>
+          },
+          "linkquality": {
+            "enabled_by_default": <true|false>
+          }
+        }
+      },
+      "0x0017880109d4659c": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>,
+          "last_seen": {
+            "enabled_by_default": <true|false>
+          },
+          "linkquality": {
+            "enabled_by_default": <true|false>
+          }
+        }
+      },
+      "0x001788010ec76d57": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x001788010f03f035": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>,
+          "last_seen": {
+            "enabled_by_default": <true|false>
+          },
+          "linkquality": {
+            "enabled_by_default": <true|false>
+          }
+        }
+      },
+      "0x1c34f1fffe7f7e96": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffe109407": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffe12d5c4": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffe168c7e": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffe18e424": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffe2787f0": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffea5cd4b": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffea89f5f": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffea8c4d8": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffeb07271": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x2c1165fffebaa93c": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>,
+          "last_seen": {
+            "enabled_by_default": <true|false>
+          },
+          "linkquality": {
+            "enabled_by_default": <true|false>
+          }
+        }
+      },
+      "0x2c1165fffec5a3f6": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>,
+          "last_seen": {
+            "enabled_by_default": <true|false>
+          },
+          "linkquality": {
+            "enabled_by_default": <true|false>
+          }
+        }
+      },
+      "0x50325ffffe47b8fa": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>,
+          "last_seen": {
+            "enabled_by_default": <true|false>
+          },
+          "linkquality": {
+            "enabled_by_default": <true|false>
+          }
+        }
+      },
+      "0x8c65a3fffef0c92d": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x9035eafffe404425": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      },
+      "0x9035eafffe82fef8": {
+        "friendly_name": "<text>",
+        "homeassistant": {
+          "expire_after": <number>
+        }
+      }
+    },
+    "frontend": {
+      "base_url": "<text>",
+      "enabled": <true|false>,
+      "package": "<text>",
+      "port": <number>,
+      "url": "<text>"
+    },
+    "groups": {
+      "100": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "102": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "103": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "104": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "105": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "106": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "107": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "108": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "109": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "110": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "111": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "112": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "113": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "114": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "117": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "118": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "119": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "120": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "121": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "122": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      },
+      "123": {
+        "devices": "<text>",
+        "friendly_name": "<text>",
+        "off_state": "<text>",
+        "optimistic": <true|false>,
+        "retain": <true|false>,
+        "transition": <number>
+      }
+    },
+    "health": {
+      "interval": <number>,
+      "reset_on_check": <true|false>
+    },
+    "homeassistant": {
+      "discovery_topic": "<text>",
+      "enabled": <true|false>,
+      "experimental_event_entities": <true|false>,
+      "legacy_action_sensor": <true|false>,
+      "status_topic": "<text>"
+    },
+    "map_options": {
+      "graphviz": {
+        "colors": {
+          "fill": {
+            "coordinator": "<text>",
+            "enddevice": "<text>",
+            "router": "<text>"
+          },
+          "font": {
+            "coordinator": "<text>",
+            "enddevice": "<text>",
+            "router": "<text>"
+          },
+          "line": {
+            "active": "<text>",
+            "inactive": "<text>"
+          }
+        }
+      }
+    },
+    "mqtt": {
+      "base_topic": "<text>",
+      "force_disable_retain": <true|false>,
+      "include_device_information": <true|false>,
+      "keepalive": <number>,
+      "maximum_packet_size": <number>,
+      "reject_unauthorized": <true|false>,
+      "server": "<text>",
+      "version": <number>
+    },
+    "ota": {
+      "default_maximum_data_size": <number>,
+      "disable_automatic_update_check": <true|false>,
+      "image_block_request_timeout": <number>,
+      "image_block_response_delay": <number>,
+      "update_check_interval": <number>
+    },
+    "passlist": "<text>",
+    "serial": {
+      "adapter": "<text>",
+      "disable_led": <true|false>,
+      "port": "<text>"
+    },
+    "version": <number>
+  },
+  "config_schema": {
+    "definitions": {
+      "device": {
+        "properties": {
+          "debounce": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "debounce_ignore": {
+            "description": "<text>",
+            "examples": "<text>",
+            "items": {
+              "type": "<text>"
+            },
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "disable_automatic_update_check": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "disabled": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "filtered_attributes": {
+            "description": "<text>",
+            "examples": "<text>",
+            "items": {
+              "type": "<text>"
+            },
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "filtered_cache": {
+            "description": "<text>",
+            "examples": "<text>",
+            "items": {
+              "type": "<text>"
+            },
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "filtered_optimistic": {
+            "description": "<text>",
+            "examples": "<text>",
+            "items": {
+              "type": "<text>"
+            },
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "friendly_name": {
+            "description": "<text>",
+            "readOnly": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "homeassistant": {
+            "properties": {
+              "name": {
+                "description": "<text>",
+                "title": "<text>",
+                "type": "<text>"
+              }
+            },
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "icon": {
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "optimistic": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "qos": {
+            "description": "<text>",
+            "enum": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "retain": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "retention": {
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "throttle": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "required": "<text>",
+        "type": "<text>"
+      },
+      "group": {
+        "properties": {
+          "filtered_attributes": {
+            "items": {
+              "type": "<text>"
+            },
+            "type": "<text>"
+          },
+          "friendly_name": {
+            "type": "<text>"
+          },
+          "homeassistant": {
+            "properties": {
+              "name": {
+                "description": "<text>",
+                "title": "<text>",
+                "type": "<text>"
+              }
+            },
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "off_state": {
+            "default": "<text>",
+            "description": "<text>",
+            "enum": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "optimistic": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "qos": {
+            "description": "<text>",
+            "enum": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "retain": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "required": "<text>",
+        "type": "<text>"
+      }
+    },
+    "properties": {
+      "advanced": {
+        "properties": {
+          "adapter_concurrent": {
+            "default": "<text>",
+            "description": "<text>",
+            "maximum": <number>,
+            "minimum": <number>,
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "adapter_delay": {
+            "default": "<text>",
+            "description": "<text>",
+            "maximum": <number>,
+            "minimum": <number>,
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "cache_state": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "cache_state_persistent": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "cache_state_send_on_startup": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "channel": {
+            "default": <number>,
+            "description": "<text>",
+            "examples": "<text>",
+            "maximum": <number>,
+            "minimum": <number>,
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "elapsed": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "enable_external_js": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "ext_pan_id": {
+            "default": "<text>",
+            "description": "<text>",
+            "oneOf": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>"
+          },
+          "last_seen": {
+            "default": "<text>",
+            "description": "<text>",
+            "enum": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_console_json": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_debug_namespace_ignore": {
+            "default": "<text>",
+            "description": "<text>",
+            "examples": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_debug_to_mqtt_frontend": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_directories_to_keep": {
+            "default": <number>,
+            "description": "<text>",
+            "maximum": <number>,
+            "minimum": <number>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_directory": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_file": {
+            "default": "<text>",
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_level": {
+            "default": "<text>",
+            "description": "<text>",
+            "enum": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_namespaced_levels": {
+            "additionalProperties": {
+              "enum": "<text>",
+              "type": "<text>"
+            },
+            "default": "<text>",
+            "description": "<text>",
+            "examples": "<text>",
+            "propertyNames": {
+              "pattern": "<text>"
+            },
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_output": {
+            "default": "<text>",
+            "description": "<text>",
+            "items": {
+              "enum": "<text>",
+              "type": "<text>"
+            },
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_rotation": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_symlink_current": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "log_syslog": {
+            "oneOf": "<text>",
+            "requiresRestart": <true|false>
+          },
+          "network_key": {
+            "default": "<text>",
+            "description": "<text>",
+            "oneOf": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>"
+          },
+          "output": {
+            "default": "<text>",
+            "description": "<text>",
+            "enum": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "pan_id": {
+            "default": <number>,
+            "description": "<text>",
+            "oneOf": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>"
+          },
+          "timestamp_format": {
+            "default": "<text>",
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "transmit_power": {
+            "description": "<text>",
+            "maximum": <number>,
+            "minimum": <number>,
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "availability": {
+        "description": "<text>",
+        "properties": {
+          "active": {
+            "description": "<text>",
+            "properties": {
+              "backoff": {
+                "default": <true|false>,
+                "description": "<text>",
+                "title": "<text>",
+                "type": "<text>"
+              },
+              "max_jitter": {
+                "default": <number>,
+                "description": "<text>",
+                "minimum": <number>,
+                "title": "<text>",
+                "type": "<text>"
+              },
+              "pause_on_backoff_gt": {
+                "default": <number>,
+                "description": "<text>",
+                "minimum": <number>,
+                "title": "<text>",
+                "type": "<text>"
+              },
+              "timeout": {
+                "default": <number>,
+                "description": "<text>",
+                "minimum": <number>,
+                "requiresRestart": <true|false>,
+                "title": "<text>",
+                "type": "<text>"
+              }
+            },
+            "required": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "enabled": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "passive": {
+            "description": "<text>",
+            "properties": {
+              "timeout": {
+                "default": <number>,
+                "description": "<text>",
+                "minimum": <number>,
+                "requiresRestart": <true|false>,
+                "title": "<text>",
+                "type": "<text>"
+              }
+            },
+            "required": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "required": "<text>",
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "blocklist": {
+        "description": "<text>",
+        "items": {
+          "type": "<text>"
+        },
+        "requiresRestart": <true|false>,
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "device_options": {
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "devices": {
+        "patternProperties": {
+          "^.*$": {
+            "$ref": "<text>"
+          }
+        },
+        "propertyNames": {
+          "pattern": "<text>"
+        },
+        "type": "<text>"
+      },
+      "frontend": {
+        "properties": {
+          "auth_token": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "base_url": {
+            "default": "<text>",
+            "description": "<text>",
+            "pattern": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "disable_ui_serving": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "enabled": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "host": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "notification_filter": {
+            "description": "<text>",
+            "items": {
+              "type": "<text>"
+            },
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "package": {
+            "default": "<text>",
+            "description": "<text>",
+            "enum": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "port": {
+            "default": <number>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "ssl_cert": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "ssl_key": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "url": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "required": "<text>",
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "groups": {
+        "patternProperties": {
+          "^.*$": {
+            "$ref": "<text>"
+          }
+        },
+        "propertyNames": {
+          "pattern": "<text>"
+        },
+        "type": "<text>"
+      },
+      "health": {
+        "description": "<text>",
+        "properties": {
+          "interval": {
+            "default": <number>,
+            "description": "<text>",
+            "minimum": <number>,
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "reset_on_check": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "required": "<text>",
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "homeassistant": {
+        "description": "<text>",
+        "properties": {
+          "discovery_topic": {
+            "default": "<text>",
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "enabled": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "experimental_event_entities": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "legacy_action_sensor": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "status_topic": {
+            "default": "<text>",
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "required": "<text>",
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "map_options": {
+        "properties": {
+          "graphviz": {
+            "properties": {
+              "colors": {
+                "properties": {
+                  "fill": {
+                    "properties": {
+                      "coordinator": {
+                        "default": "<text>",
+                        "type": "<text>"
+                      },
+                      "enddevice": {
+                        "default": "<text>",
+                        "type": "<text>"
+                      },
+                      "router": {
+                        "default": "<text>",
+                        "type": "<text>"
+                      }
+                    },
+                    "type": "<text>"
+                  },
+                  "font": {
+                    "properties": {
+                      "coordinator": {
+                        "default": "<text>",
+                        "type": "<text>"
+                      },
+                      "enddevice": {
+                        "default": "<text>",
+                        "type": "<text>"
+                      },
+                      "router": {
+                        "default": "<text>",
+                        "type": "<text>"
+                      }
+                    },
+                    "type": "<text>"
+                  },
+                  "line": {
+                    "properties": {
+                      "active": {
+                        "default": "<text>",
+                        "type": "<text>"
+                      },
+                      "inactive": {
+                        "default": "<text>",
+                        "type": "<text>"
+                      }
+                    },
+                    "type": "<text>"
+                  }
+                },
+                "type": "<text>"
+              }
+            },
+            "type": "<text>"
+          }
+        },
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "mqtt": {
+        "properties": {
+          "base_topic": {
+            "default": "<text>",
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "ca": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "cert": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "client_id": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "force_disable_retain": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "include_device_information": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "keepalive": {
+            "default": <number>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "key": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "maximum_packet_size": {
+            "default": <number>,
+            "description": "<text>",
+            "maximum": <number>,
+            "minimum": <number>,
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "password": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "reject_unauthorized": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "server": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "server_name": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "user": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "version": {
+            "default": <number>,
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "required": "<text>",
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "ota": {
+        "properties": {
+          "default_maximum_data_size": {
+            "default": <number>,
+            "description": "<text>",
+            "maximum": <number>,
+            "minimum": <number>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "disable_automatic_update_check": {
+            "default": <true|false>,
+            "description": "<text>",
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "image_block_request_timeout": {
+            "default": <number>,
+            "description": "<text>",
+            "maximum": <number>,
+            "minimum": <number>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "image_block_response_delay": {
+            "default": <number>,
+            "description": "<text>",
+            "minimum": <number>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "update_check_interval": {
+            "default": <number>,
+            "description": "<text>",
+            "minimum": <number>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "zigbee_ota_override_index_location": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "passlist": {
+        "description": "<text>",
+        "items": {
+          "type": "<text>"
+        },
+        "requiresRestart": <true|false>,
+        "title": "<text>",
+        "type": "<text>"
+      },
+      "serial": {
+        "properties": {
+          "adapter": {
+            "description": "<text>",
+            "enum": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "baudrate": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "disable_led": {
+            "default": <true|false>,
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "port": {
+            "description": "<text>",
+            "examples": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          },
+          "rtscts": {
+            "description": "<text>",
+            "requiresRestart": <true|false>,
+            "title": "<text>",
+            "type": "<text>"
+          }
+        },
+        "title": "<text>",
+        "type": "<text>"
+      }
+    },
+    "required": "<text>",
+    "type": "<text>"
+  },
+  "coordinator": {
+    "ieee_address": "<text>",
+    "meta": {
+      "maintrel": <number>,
+      "majorrel": <number>,
+      "minorrel": <number>,
+      "product": <number>,
+      "revision": <number>,
+      "transportrev": <number>
+    },
+    "type": "<text>"
+  },
+  "log_level": "<text>",
+  "mqtt": {
+    "server": "<text>",
+    "version": <number>
+  },
+  "network": {
+    "channel": <number>,
+    "extended_pan_id": "<text>",
+    "pan_id": <number>
+  },
+  "os": {
+    "cpus": "<text>",
+    "memory_mb": <number>,
+    "node_version": "<text>",
+    "version": "<text>"
+  },
+  "permit_join": <true|false>,
+  "restart_required": <true|false>,
+  "version": "<text>",
+  "zigbee_herdsman": {
+    "version": "<text>"
+  },
+  "zigbee_herdsman_converters": {
+    "version": "<text>"
+  }
+}

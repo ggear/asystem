@@ -1,0 +1,23 @@
+{
+  "default_entity_id": "sensor.rack_dew_point",
+  "unique_id": "rack_dew_point",
+  "name": "Rack Dew Point",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": false,
+  "state_topic": "weewx/rack_dew_point",
+  "value_template": "{{ value | float(None) }}",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "davis-wardrobe-weather-station-console"
+    ],
+    "name": "Wardrobe Weather Station Console",
+    "model": "Vantage Pro2",
+    "manufacturer": "Davis",
+    "sw_version": "4.10.2",
+    "suggested_area": "Wardrobe"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "brightness": <number>,
+  "color_mode": "<text>",
+  "color_temp": <number>,
+  "state": "<text>"
+}

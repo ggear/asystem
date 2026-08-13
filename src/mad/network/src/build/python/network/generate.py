@@ -20,7 +20,7 @@ if __name__ == "__main__":
     document = load_schema_document()
     write_schema_broker(metadata_network_df,
                         topic_glob_discovery="homeassistant/+/network/+/config",
-                        topic_glob_data="network/data/#",
+                        topic_glob_data="network/#",
                         document=document)
 
     # Build database schema

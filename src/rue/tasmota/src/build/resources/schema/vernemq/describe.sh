@@ -42,6 +42,16 @@ if [ "${SCHEMA_VERBOSE}" == true ]; then
   set -x
 fi
 
+BROKER_SERVICE="${BROKER_SERVICE:-${TASMOTA_BROKER_SERVICE:-${VERNEMQ_SERVICE_PROD:-}}}"
+BROKER_PORT="${BROKER_PORT:-${TASMOTA_BROKER_PORT:-${VERNEMQ_API_PORT:-}}}"
+
+for VARIABLE in BROKER_SERVICE BROKER_PORT; do
+  if [ -z "${!VARIABLE}" ]; then
+    echo "Schema script [tasmota] could not resolve [${VARIABLE}] from it or any fallback, declare it in the module env files" >&2
+    exit 1
+  fi
+done
+
 fail() {
   printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
     "################################################################################" \
@@ -50,7 +60,37 @@ fail() {
     "$1" "$2" >&2
 }
 
-BROKER_ARGS=(-h "${VERNEMQ_SERVICE_PROD}" -p "${VERNEMQ_API_PORT}")
+table() {
+  jq -sr '
+    def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
+    def numeric: type == "number" or (type == "string" and test("^-?[0-9]+([.][0-9]+)?$"));
+    def placeholder: . == "-" or . == "";
+    def clip: if length > 50 then .[0:47] + "..." else . end;
+    (if length == 1 and (.[0] | type) == "array" then .[0] else . end)
+    | if length == 0 then "no rows" else
+      (.[0] | keys_unsorted) as $columns
+      | [range(0; $columns | length)] as $indexes
+      | (map(. as $row | $columns
+        | map(if $row[.] == null then "" else ($row[.] | tostring | clip) end))) as $body
+      | ([$columns | map(title)] + $body) as $matrix
+      | ($indexes | map(. as $index | $matrix | map(.[$index] | length) | max)) as $widths
+      | ($indexes | map(. as $index | $body | map(.[$index])
+        | (any(numeric) and all(numeric or placeholder)))) as $rights
+      | (def row($cells): "|" + ($cells | to_entries | map(
+           ((" " * ($widths[.key] - (.value | length))) // "") as $fill
+           | if $rights[.key] then " " + $fill + .value + " " else " " + .value + $fill + " " end)
+           | join("|")) + "|";
+         def rule: "+" + ($indexes | map("-" * ($widths[.] + 2)) | join("+")) + "+";
+         [rule, row($matrix[0]), rule] + ($body | map(row(.))) + [rule] | join("\n"))
+    end
+  '
+}
+
+rows() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
+}
+
+BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
 
 topics() {
   mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "$1" -W 5 2>/dev/null | grep -E "${2:-.}" | sort -u || true
@@ -61,14 +101,25 @@ payload() {
 }
 
 declared() {
-  find "${ROOT_DIR}/model" -type f -print0 2>/dev/null |
+  find "${ROOT_DIR}/model" -type f -name 'payload' -print0 2>/dev/null |
     while IFS= read -r -d '' LEAF; do
-      printf '%s\n' "${LEAF#"${ROOT_DIR}"/model/}"
+      TOPIC="${LEAF#"${ROOT_DIR}"/model/}"
+      printf '%s\n' "${TOPIC%/payload}"
     done | sort -u
 }
 
-printf '\nSchema describe [%s] against [%s]\n\n' "tasmota" "${VERNEMQ_SERVICE_PROD}"
-printf '\n== %s ==\n' "homeassistant/+/tasmota/#"
-topics "homeassistant/+/tasmota/#"
-printf '\n== %s ==\n' "tasmota/#"
-topics "tasmota/#"
+listed() {
+  jq -R '{topic: .}' | table
+}
+
+faulted() {
+  jq -nc --arg topic "$1" --arg fault "$2" '{topic: $topic, fault: $fault}'
+}
+
+printf '\nSchema describe [%s] against [%s]\n' "tasmota" "${BROKER_SERVICE}"
+printf -- '\n-- %s\n\n' "homeassistant/+/tasmota/#"
+topics "homeassistant/+/tasmota/#" | listed
+printf '\n'
+printf -- '\n-- %s\n\n' "tasmota/#"
+topics "tasmota/#" | listed
+printf '\n'

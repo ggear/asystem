@@ -1,0 +1,22 @@
+{
+  "brightness": <number>,
+  "color_mode": "<text>",
+  "color_options": "<text>",
+  "color_temp": <number>,
+  "effect": "<text>",
+  "identify": "<text>",
+  "last_seen": "<text>",
+  "level_config": {
+    "on_level": "<text>"
+  },
+  "linkquality": <number>,
+  "power_on_behavior": "<text>",
+  "state": "<text>",
+  "update": {
+    "installed_version": <number>,
+    "latest_release_notes": "<text>",
+    "latest_source": "<text>",
+    "latest_version": <number>,
+    "state": "<text>"
+  }
+}

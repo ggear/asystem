@@ -1,0 +1,22 @@
+{
+  "default_entity_id": "switch.network_weewx",
+  "unique_id": "network_weewx",
+  "name": "Network Weewx",
+  "icon": "mdi:access-point-network",
+  "force_update": false,
+  "state_topic": "network/data/weewx",
+  "value_template": "{{ 'ON' if value_json is mapping and value_json.ok | default(false) else 'OFF' }}",
+  "command_topic": "network/command/weewx",
+  "availability_topic": "network/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-network"
+    ],
+    "name": "Rack Network",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

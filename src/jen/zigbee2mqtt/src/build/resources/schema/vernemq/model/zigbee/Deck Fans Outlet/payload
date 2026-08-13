@@ -1,0 +1,13 @@
+{
+  "last_seen": "<text>",
+  "linkquality": <number>,
+  "power_on_behavior": "<text>",
+  "state": "<text>",
+  "update": {
+    "installed_version": <number>,
+    "latest_release_notes": "<text>",
+    "latest_source": "<text>",
+    "latest_version": <number>,
+    "state": "<text>"
+  }
+}

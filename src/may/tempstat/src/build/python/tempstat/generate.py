@@ -20,5 +20,5 @@ if __name__ == "__main__":
     document = load_schema_document(config="src/main/resources/image/sensors.json")
     write_schema_broker(metadata_tempstat_df,
                         topic_glob_discovery="homeassistant/+/tempstat/+/config",
-                        topic_glob_data="tempstat/data",
+                        topic_glob_data="tempstat/#",
                         document=document)

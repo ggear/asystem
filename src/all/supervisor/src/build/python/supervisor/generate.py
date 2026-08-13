@@ -23,7 +23,7 @@ if __name__ == "__main__":
     document = load_schema_document()
     write_schema_broker(metadata_supervisor_df,
                         topic_glob_discovery="homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
-                        topic_glob_data="supervisor/${SUPERVISOR_HOST}/data/#",
+                        topic_glob_data="supervisor/${SUPERVISOR_HOST}/#",
                         document=document)
 
     # Build config and database schema

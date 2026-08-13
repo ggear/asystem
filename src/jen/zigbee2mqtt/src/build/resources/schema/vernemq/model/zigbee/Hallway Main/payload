@@ -1,0 +1,14 @@
+{
+  "brightness": <number>,
+  "color": {
+    "h": <number>,
+    "hue": <number>,
+    "s": <number>,
+    "saturation": <number>,
+    "x": <number>,
+    "y": <number>
+  },
+  "color_mode": "<text>",
+  "color_temp": <number>,
+  "state": "<text>"
+}

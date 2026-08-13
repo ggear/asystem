@@ -73,16 +73,6 @@ fail() {
     "$1" "$2" >&2
 }
 
-SCHEMA_ECHO=${SCHEMA_ECHO:-true}
-SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
-SCHEMA_TARGET=${SCHEMA_TARGET:-}
-SCHEMA_LABEL=${SCHEMA_LABEL:-}
-
-statements() {
-  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
-    sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
-}
-
 table() {
   jq -sr '
     def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
@@ -107,6 +97,20 @@ table() {
          [rule, row($matrix[0]), rule] + ($body | map(row(.))) + [rule] | join("\n"))
     end
   '
+}
+
+rows() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
+}
+
+SCHEMA_ECHO=${SCHEMA_ECHO:-true}
+SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
+SCHEMA_TARGET=${SCHEMA_TARGET:-}
+SCHEMA_LABEL=${SCHEMA_LABEL:-}
+
+statements() {
+  sed -e 's/--.*$//' | tr '\n' ' ' | tr ';' '\n' |
+    sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
 query_block() {
@@ -138,10 +142,6 @@ query_one() {
     return 1
   fi
   printf '%s\n' "${result}" | table
-}
-
-rows() {
-  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
 }
 
 query_sql() {

@@ -3,14 +3,27 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import textwrap
-from os.path import abspath, exists, join
+from os.path import abspath, basename, exists, join
 
+from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
+from asystem.schema.document import (
+    SchemaBrokerMember,
+    SchemaBrokerPayload,
+    SchemaDocument,
+    SchemaUnreachable,
+)
 from asystem.schema.query import banner
-from asystem.schema.runner import REPORT, script
+from asystem.schema.runner import REPORT, TABLE, resolved, script
 
 DIALECT = "vernemq"
 TARGET = "VERNEMQ_SERVICE_PROD"
+
+ENV = ".env"
+TIMEOUT = 15
+DISCOVERED = "discovered"
+LEAF = "payload"
 
 PLACEHOLDER = r"\$\{[^}]+}"
 
@@ -39,14 +52,8 @@ DISCOVERY_COLUMNS = (
     "qos",
 )
 
-DISCOVERY_PAYLOAD = """
-{
-  "<home assistant mqtt discovery config, generated into src/main/resources/image/vernemq and published by vernemq.sh>"
-}
-"""
-
-CONNECT = REPORT + """
-BROKER_ARGS=(-h "${TARGET_VARIABLE}" -p "${VERNEMQ_API_PORT}")
+CONNECT = REPORT + TABLE + """
+BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
 
 topics() {
   mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "$1" -W 5 2>/dev/null | grep -E "${2:-.}" | sort -u || true
@@ -57,35 +64,55 @@ payload() {
 }
 
 declared() {
-  find "${ROOT_DIR}/model" -type f -print0 2>/dev/null |
+  find "${ROOT_DIR}/model" -type f -name 'SCHEMA_LEAF' -print0 2>/dev/null |
     while IFS= read -r -d '' LEAF; do
-      printf '%s\\n' "${LEAF#"${ROOT_DIR}"/model/}"
+      TOPIC="${LEAF#"${ROOT_DIR}"/model/}"
+      printf '%s\\n' "${TOPIC%/SCHEMA_LEAF}"
     done | sort -u
 }
-""".replace("TARGET_VARIABLE", TARGET)
+
+listed() {
+  jq -R '{topic: .}' | table
+}
+
+faulted() {
+  jq -nc --arg topic "$1" --arg fault "$2" '{topic: $topic, fault: $fault}'
+}
+""".replace("SCHEMA_LEAF", LEAF)
 
 
-def artifacts(metadata_df, module_name, options):
-    _validate_globs(metadata_df, module_name, options.topic_glob_discovery, options.topic_glob_data)
-    topics = _topics(metadata_df, module_name)
-    specs = _specs(module_name, options)
-    if not topics:
-        return {}
-    document = options.document
-    globs = [glob for glob in (options.topic_glob_discovery, options.topic_glob_data) if glob]
-    generated = {}
-    for column, column_topics in topics.items():
-        role = ROLE_COLUMNS.get(column, "") if document is not None else ""
-        for topic in column_topics:
-            generated["model/{}".format(topic)] = (leaf(topic, specs.get(column, ""), document, role), False)
-    generated["describe.sh"] = (describe_script(module_name, globs), True)
-    generated["query.sh"] = (query_script(module_name), True)
-    generated["verify.sh"] = (
-        verify_script(module_name, globs, sorted(topics.get("command_topic", []))), True)
-    return generated
+CONFIG = REPORT + """
+BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
+
+awaited() {
+  while ! mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -W 1 2>/dev/null | jq -re "$2" >/dev/null; do
+    printf 'Waiting for [%s] to come up ...\\n' "$3"
+    sleep 2
+  done
+}
+"""
 
 
-def ship(metadata_df, module_name, module_root, schemas_dir, options):
+def resolve(module_name, fallbacks=()):
+    return resolved(module_name, (
+        ("BROKER_SERVICE", ("{}_BROKER_SERVICE".format(module_name.upper()),) + tuple(fallbacks) + (TARGET,)),
+        ("BROKER_PORT", ("{}_BROKER_PORT".format(module_name.upper()), "VERNEMQ_API_PORT")),
+    ))
+
+
+def connect(module_name):
+    return resolve(module_name) + CONNECT
+
+
+def artifacts(source, module_name, options):
+    return (_artifacts_discovered(source, module_name) if isinstance(source, SchemaDocument)
+            else _artifacts_declared(source, module_name, options))
+
+
+def ship(source, module_name, module_root, schemas_dir, options):
+    if isinstance(source, SchemaDocument):
+        return
+    metadata_df = source
     working_root = options.working_root
     working_dir = join(str(working_root), DIALECT)
     if exists(working_dir):
@@ -188,60 +215,148 @@ printf "\\n"
 
 
 def describe_script(module_name, globs):
-    return script(module_name, DIALECT, "describe", "print what the production broker actually retains", CONNECT, """
-printf '\\nSchema describe [%s] against [%s]\\n\\n' "{}" "${{{}}}"
+    return script(module_name, DIALECT, "describe", "print what the production broker actually retains",
+                  connect(module_name), """
+printf '\\nSchema describe [%s] against [%s]\\n' "{}" "${{BROKER_SERVICE}}"
 {}
-""".format(module_name, TARGET, "\n".join(
-        "printf '\\n== %s ==\\n' \"{}\"\ntopics {}".format(_expand(glob), _arguments(glob)) for glob in globs)))
+""".format(module_name, "\n".join(
+        "printf -- '\\n-- %s\\n\\n' \"{}\"\ntopics {} | listed\nprintf '\\n'".format(_expand(glob), _arguments(glob))
+        for glob in globs)))
 
 
 def query_script(module_name):
-    return script(module_name, DIALECT, "query", "print the retained payload of every declared topic", CONNECT, """
-printf '\\nSchema query [%s] against [%s]\\n\\n' "{}" "${{{}}}"
+    return script(module_name, DIALECT, "query", "print the retained payload of every declared topic",
+                  connect(module_name), """
+printf '\\nSchema query [%s] against [%s]\\n' "{}" "${{BROKER_SERVICE}}"
 while IFS= read -r TOPIC; do
-  printf '\\n== %s ==\\n' "${{TOPIC}}"
+  printf -- '\\n-- %s\\n\\n' "${{TOPIC}}"
   payload "${{TOPIC}}"
+  printf '\\n'
 done < <(declared)
-""".format(module_name, TARGET))
+""".format(module_name))
 
 
 def verify_script(module_name, globs, commands):
-    return script(module_name, DIALECT, "verify", "assert the broker retains exactly the declared topics", CONNECT, """
-printf '\\nSchema verify [%s] against [%s]\\n\\n' "{}" "${{{}}}"
+    return script(module_name, DIALECT, "verify", "assert the broker retains exactly the declared topics",
+                  connect(module_name), """
+printf '\\nSchema verify [%s] against [%s]\\n' "{}" "${{BROKER_SERVICE}}"
+printf -- '\\n-- %s\\n\\n' "verify"
 
 COMMAND_TOPICS=({})
 
 FAULTS=0
+FAULT_FILE="$(mktemp)"
+RETAINED_FILE="$(mktemp)"
+trap 'rm -f "${{FAULT_FILE}}" "${{RETAINED_FILE}}"' EXIT
 
 while IFS= read -r TOPIC; do
   for COMMAND_TOPIC in ${{COMMAND_TOPICS[@]+"${{COMMAND_TOPICS[@]}}"}}; do
     [ "${{TOPIC}}" == "${{COMMAND_TOPIC}}" ] && continue 2
   done
-  RETAINED="$(payload "${{TOPIC}}")"
-  if [ -z "${{RETAINED}}" ]; then
+  if [ -z "$(payload "${{TOPIC}}")" ]; then
     FAULTS=$((FAULTS + 1))
-    printf 'declared topic has no retained payload [%s]\\n' "${{TOPIC}}" >&2
+    faulted "${{TOPIC}}" missing >> "${{FAULT_FILE}}"
   fi
 done < <(declared)
 
-RETAINED_FILE="$(mktemp)"
-trap 'rm -f "${{RETAINED_FILE}}"' EXIT
 {}
 while IFS= read -r TOPIC; do
   [ -z "${{TOPIC}}" ] && continue
   if ! declared | grep -qxF "${{TOPIC}}"; then
     FAULTS=$((FAULTS + 1))
-    printf 'retained topic is stale, nothing declares it [%s]\\n' "${{TOPIC}}" >&2
+    faulted "${{TOPIC}}" undeclared >> "${{FAULT_FILE}}"
   fi
 done < "${{RETAINED_FILE}}"
 
 if [ "${{FAULTS}}" != "0" ]; then
-  printf '\\nSchema verify [%s] found [%s] fault(s)\\n' "{}" "${{FAULTS}}" >&2
+  table < "${{FAULT_FILE}}"
+  printf '\\n'
+  printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{}" "${{FAULTS}}" >&2
   exit 1
 fi
 printf '\\nSchema verify [%s] found no drift\\n' "{}"
-""".format(module_name, TARGET, " ".join('"{}"'.format(command) for command in commands), "\n".join(
+""".format(module_name, " ".join('"{}"'.format(command) for command in commands), "\n".join(
         'topics {} >> "${{RETAINED_FILE}}"'.format(_arguments(glob)) for glob in globs), module_name, module_name))
+
+
+class Discover:
+
+    def __init__(self, glob, module=None, label="", target=None, port=None,
+                 timeout=TIMEOUT, module_root=None):
+        self.module = basename(module_root or load_bootstrap_root()) if module is None else module
+        self.glob = glob
+        self.label = label
+        self.timeout = timeout
+        self.target = target or self._env(TARGET, module_root)
+        self.port = port or self._env("VERNEMQ_API_PORT", module_root)
+        if not self.target or not self.port:
+            raise ValueError("Build generate script [{}] vernemq discovery found no target [{}] or port [{}] "
+                             "in the module env file [{}]".format(self.module, self.target, self.port, ENV))
+
+    def document(self):
+        try:
+            payloads = [self.payload(topic, retained) for topic, retained in sorted(self.retained().items())]
+        except SchemaUnreachable as unreachable:
+            print("Build generate script [{}] could not connect to {} with error [{}]"
+                  .format(self.module, DIALECT, unreachable))
+            return None
+        return SchemaDocument(module=self.module, payloads=payloads, discovered=True, glob=self.glob)
+
+    def retained(self):
+        messages = {}
+        for line in self.subscribe():
+            try:
+                message = json.loads(line)
+            except ValueError:
+                continue
+            topic = message.get("topic")
+            if topic and message.get("retain"):
+                messages[topic] = message.get("payload")
+        return messages
+
+    def subscribe(self):
+        command = ["mosquitto_sub", "-h", str(self.target), "-p", str(self.port),
+                   "-F", "%J", "-t", self.glob, "-W", str(self.timeout)]
+        try:
+            completed = subprocess.run(command, capture_output=True, text=True, timeout=self.timeout * 4)
+        except (OSError, subprocess.SubprocessError) as exception:
+            raise SchemaUnreachable(exception) from exception
+        if not completed.stdout.strip() and completed.returncode not in (0, 27):
+            raise SchemaUnreachable(completed.stderr.strip() or
+                                    "mosquitto_sub exited [{}]".format(completed.returncode))
+        return completed.stdout.splitlines()
+
+    def payload(self, topic, retained):
+        return SchemaBrokerPayload(role=DISCOVERED, match=topic, root=self.member("", retained))
+
+    def member(self, key, value):
+        if isinstance(value, dict):
+            return SchemaBrokerMember(key=key, members=[self.member(nested, value[nested]) for nested in value])
+        return SchemaBrokerMember(key=key, kind=self.kind(value))
+
+    @staticmethod
+    def kind(value):
+        if isinstance(value, bool):
+            return "bool"
+        if isinstance(value, int):
+            return "int"
+        if isinstance(value, float):
+            return "float"
+        return "str"
+
+    @staticmethod
+    def _env(name, module_root):
+        return load_bootstrap_env_value(name, filename=ENV, module_root=module_root)
+
+
+def config_script(module_name, name, summary, health_topic, health_filter, commands):
+    return script(module_name, DIALECT, name, summary, resolve(module_name, ("VERNEMQ_SERVICE",)) + CONFIG, """
+printf '\\nBroker {} [%s] against [%s]\\n\\n' "{}" "${{BROKER_SERVICE}}"
+
+awaited "{}" '{}' "{}"
+
+{}
+""".format(name, module_name, health_topic, health_filter, module_name, "\n".join(commands)), env_required=False)
 
 
 def render(member, indent=0):
@@ -264,6 +379,9 @@ def render(member, indent=0):
 
 def payload_for(document, role, topic):
     payloads = [payload for payload in document.payloads if payload.role == role]
+    for payload in payloads:
+        if payload.match == topic:
+            return render(payload.root)
     for payload in payloads:
         if payload.match and fnmatch.fnmatch(topic, payload.match):
             return render(payload.root)
@@ -330,18 +448,17 @@ def _coerce_identifiers(value):
 
 
 def _validate_globs(metadata_df, module_name, topic_glob_discovery, topic_glob_data):
-    for topic_glob, topic_glob_name, topic_glob_column in (
-            (topic_glob_discovery, "topic_glob_discovery", "discovery_topic"),
-            (topic_glob_data, "topic_glob_data", "state_topic")):
-        if topic_glob is None:
-            continue
-        unmatched = [topic for topic in _column_topics(metadata_df, topic_glob_column)
-                     if not _glob_match(topic_glob, topic)]
-        if unmatched:
-            raise ValueError(
-                "Build generate script [{}] {} [{}] does not match entity_metadata.xlsx {} topic(s) {}: "
-                "update the glob or the spreadsheet so they agree"
-                .format(module_name, topic_glob_name, topic_glob, topic_glob_column, unmatched))
+    for topic_glob, topic_glob_name, topic_glob_columns in (
+            (topic_glob_discovery, "topic_glob_discovery", ("discovery_topic",)),
+            (topic_glob_data, "topic_glob_data", ("state_topic", "command_topic", "availability_topic"))):
+        for topic_glob_column in topic_glob_columns:
+            unmatched = [topic for topic in _column_topics(metadata_df, topic_glob_column)
+                         if not _glob_match(topic_glob, topic)]
+            if unmatched:
+                raise ValueError(
+                    "Build generate script [{}] {} [{}] does not match entity_metadata.xlsx {} topic(s) {}: "
+                    "update the glob or the spreadsheet so they agree"
+                    .format(module_name, topic_glob_name, topic_glob, topic_glob_column, unmatched))
 
 
 def _glob_match(topic_glob, topic):
@@ -359,24 +476,58 @@ def _glob_match(topic_glob, topic):
     return len(glob_levels) == len(topic_levels)
 
 
+def _discoveries(metadata_df):
+    if "discovery_topic" not in metadata_df.columns:
+        return {}
+    return {str(row["discovery_topic"]).strip(): row for _, row in metadata_df.iterrows()
+            if str(row["discovery_topic"]).strip()}
+
+
 def _column_topics(metadata_df, column):
     if column not in metadata_df.columns:
         return []
     return sorted({topic.strip() for topic in metadata_df[column].dropna().unique() if topic.strip()})
 
 
-def _topics(metadata_df, module_name):
+def _artifacts_declared(metadata_df, module_name, options):
+    _validate_globs(metadata_df, module_name, options.topic_glob_discovery, options.topic_glob_data)
+    topics = _topics(metadata_df)
+    specs = _specs(module_name, options)
+    if not topics:
+        return {}
+    document = options.document
+    globs = [glob for glob in (options.topic_glob_discovery, options.topic_glob_data) if glob]
+    discoveries = _discoveries(metadata_df)
+    generated = {}
+    for column, column_topics in topics.items():
+        role = ROLE_COLUMNS.get(column, "") if document is not None else ""
+        for topic in column_topics:
+            payload = (discovery(discoveries[topic]) if column == "discovery_topic" and topic in discoveries
+                       else leaf(topic, specs.get(column, ""), document, role))
+            generated["model/{}/{}".format(topic, LEAF)] = (payload, False)
+    generated["describe.sh"] = (describe_script(module_name, globs), True)
+    generated["query.sh"] = (query_script(module_name), True)
+    generated["verify.sh"] = (
+        verify_script(module_name, globs, sorted(topics.get("command_topic", []))), True)
+    return generated
+
+
+def _artifacts_discovered(document, module_name):
+    topics = sorted({payload.match for payload in document.payloads if payload.match})
+    if not topics:
+        return {}
+    generated = {}
+    for topic in topics:
+        generated["model/{}/{}".format(topic, LEAF)] = (leaf(topic, None, document, DISCOVERED), False)
+    globs = [document.glob] if document.glob else []
+    generated["describe.sh"] = (describe_script(module_name, globs), True)
+    generated["query.sh"] = (query_script(module_name), True)
+    return generated
+
+
+def _topics(metadata_df):
     topics = {column: _column_topics(metadata_df, column) for column in TOPIC_COLUMNS}
-    topics = {column: column_topics for column, column_topics in topics.items() if column_topics}
-    topics_all = sorted({topic for column_topics in topics.values() for topic in column_topics})
-    for topic in topics_all:
-        for topic_other in topics_all:
-            if topic_other != topic and topic_other.startswith(topic + "/"):
-                raise ValueError(
-                    "Build generate script [{}] entity schema topic [{}] is a path prefix of [{}]: "
-                    "cannot write a payload leaf file and a directory at the same path"
-                    .format(module_name, topic, topic_other))
-    return topics
+    return {column: column_topics for column, column_topics in topics.items() if column_topics}
 
 
 def _specs(module_name, options):
@@ -391,7 +542,6 @@ def _specs(module_name, options):
                 raise ValueError(
                     "Build generate script [{}] role [{}] is declared in code and also passed as a literal [{}]: "
                     "supply one or the other, never both".format(module_name, role, column))
-    specs["discovery_topic"] = DISCOVERY_PAYLOAD
     return specs
 
 

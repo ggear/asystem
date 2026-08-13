@@ -1,0 +1,10 @@
+{
+  "identify": "<text>",
+  "last_seen": "<text>",
+  "linkquality": <number>,
+  "update": {
+    "installed_version": <number>,
+    "latest_version": <number>,
+    "state": "<text>"
+  }
+}

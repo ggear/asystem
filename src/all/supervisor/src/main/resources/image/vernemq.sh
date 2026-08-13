@@ -21,7 +21,7 @@ mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t'
 printf "\nEntity Metadata publish script [supervisor] sleeping before dropping data topics ... " && sleep 2 && printf "done\n\n"
 
 printf "Entity Metadata publish script [supervisor] dropping data topics on [$VERNEMQ_SERVICE]:\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "supervisor/${SUPERVISOR_HOST}/data/#" -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "supervisor/${SUPERVISOR_HOST}/#" -W 1 2>/dev/null
 
 printf "\nEntity Metadata publish script [supervisor] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\n\n"
 

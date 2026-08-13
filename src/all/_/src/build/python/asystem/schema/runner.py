@@ -129,7 +129,24 @@ def resolved(module_name, variables):
     return "\n".join(lines)
 
 
-def script(module_name, dialect, name, summary, connect, body):
+def script(module_name, dialect, name, summary, connect, body, env_required=True):
+    env = """
+if [ ! -f "${{MODULE_DIR}}/.env" ]; then
+  echo "Schema script [{}] could not find env file [.env] searching up from [${{ROOT_DIR}}]" >&2
+  exit 1
+fi
+set -a
+# shellcheck disable=SC1091
+. "${{MODULE_DIR}}/.env"
+set +a
+""".format(module_name).strip() if env_required else """
+if [ -f "${MODULE_DIR}/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "${MODULE_DIR}/.env"
+  set +a
+fi
+""".strip()
     return """
 #!/usr/bin/env bash
 {}
@@ -160,14 +177,7 @@ while [ "${{MODULE_DIR}}" != "/" ] && [ ! -f "${{MODULE_DIR}}/.env" ]; do
   MODULE_DIR="$(dirname "${{MODULE_DIR}}")"
 done
 
-if [ ! -f "${{MODULE_DIR}}/.env" ]; then
-  echo "Schema script [{}] could not find env file [.env] searching up from [${{ROOT_DIR}}]" >&2
-  exit 1
-fi
-set -a
-# shellcheck disable=SC1091
-. "${{MODULE_DIR}}/.env"
-set +a
+{}
 
 if [ "${{SCHEMA_VERBOSE}}" == true ]; then
   set -x
@@ -176,7 +186,7 @@ fi
 {}
 
 {}
-    """.format(banner(), dialect, name, summary, module_name, connect.strip(), body.strip()).strip() + "\n"
+    """.format(banner(), dialect, name, summary, env, connect.strip(), body.strip()).strip() + "\n"
 
 
 def describe_runner(module_name, dialect, target, connect, sql):

@@ -1,0 +1,22 @@
+{
+  "brightness": <number>,
+  "color_mode": "<text>",
+  "color_temp": <number>,
+  "color_temp_startup": <number>,
+  "effect": "<text>",
+  "effect_color": "<text>",
+  "effect_speed": "<text>",
+  "hue_power_on_behavior": "<text>",
+  "last_seen": "<text>",
+  "linkquality": <number>,
+  "philips_raw": "<text>",
+  "power_on_behavior": "<text>",
+  "state": "<text>",
+  "update": {
+    "installed_version": <number>,
+    "latest_release_notes": "<text>",
+    "latest_source": "<text>",
+    "latest_version": <number>,
+    "state": "<text>"
+  }
+}

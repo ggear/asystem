@@ -89,6 +89,7 @@ class SchemaDocument:
     relations: list = field(default_factory=list)
     payloads: list = field(default_factory=list)
     discovered: bool = False
+    glob: str = ""
 
 
 @dataclass
