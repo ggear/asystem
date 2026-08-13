@@ -3,16 +3,35 @@
 --------------------------------------------------------------------------------
 
 -- media_player__tv [Home Assistant media_player__tv] every <on-change>, bucketed [1 day] across the newest two buckets
--- part 1 of 1:
+-- part 1 of 2:
 SELECT
     date_bin(INTERVAL '1 day', time + INTERVAL '480 minute') AS "Bucket",
     entity_id                                                AS "Entity Id",
     count(*)                                                 AS "Rows",
     min(time) + INTERVAL '480 minute'                        AS "Oldest",
     max(time) + INTERVAL '480 minute'                        AS "Newest",
+    last_value(sound_output_str ORDER BY time)               AS "Sound Output Str",
+    count(sound_output_str)                                  AS "Sound Output Str Count",
+    count(DISTINCT sound_output_str)                         AS "Sound Output Str Distinct",
     last_value(state ORDER BY time)                          AS "State",
     count(state)                                             AS "State Count",
-    count(DISTINCT state)                                    AS "State Distinct",
+    count(DISTINCT state)                                    AS "State Distinct"
+FROM media_player__tv
+WHERE
+    module = 'homeassistant'
+    AND time >= now() - INTERVAL '100 day'
+    AND time >= (SELECT max(time) FROM media_player__tv) - INTERVAL '1 day'
+GROUP BY "Bucket", entity_id
+ORDER BY "Bucket", entity_id;
+
+-- media_player__tv [Home Assistant media_player__tv] every <on-change>, bucketed [1 day] across the newest two buckets
+-- part 2 of 2:
+SELECT
+    date_bin(INTERVAL '1 day', time + INTERVAL '480 minute') AS "Bucket",
+    entity_id                                                AS "Entity Id",
+    count(*)                                                 AS "Rows",
+    min(time) + INTERVAL '480 minute'                        AS "Oldest",
+    max(time) + INTERVAL '480 minute'                        AS "Newest",
     round(avg(value), 1)                                     AS "Value Avg",
     round(min(value), 1)                                     AS "Value Min",
     round(max(value), 1)                                     AS "Value Max",

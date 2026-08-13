@@ -7,12 +7,14 @@
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
 #     lg_webos_smart_tv]
+#   field sound_output_str - <on-change> [Home Assistant value]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 
 media_player__tv,
   module=homeassistant,
   entity_id=lg_webos_smart_tv
+    sound_output_str=<text>,
     state=<text>,
     value=<float>
   <timestamp>

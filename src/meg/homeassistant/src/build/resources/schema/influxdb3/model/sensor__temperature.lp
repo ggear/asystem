@@ -76,6 +76,7 @@
 #     roof_wind_chill_temperature,
 #     template_deck_festoons_plug_temperature_proxy,
 #     template_utility_temperature_proxy,
+#     template_wardrobe_temperature_proxy,
 #     utility_temperature,
 #     wardrobe_temperature]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:

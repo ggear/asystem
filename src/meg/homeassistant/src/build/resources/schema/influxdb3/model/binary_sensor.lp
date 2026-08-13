@@ -19,6 +19,7 @@
 #     lounge_air_purifier_replace_filter,
 #     lounge_arc_microphone,
 #     parents_move_microphone,
+#     template_back_door_state,
 #     workday_sensor]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]

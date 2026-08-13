@@ -6,6 +6,7 @@
 #   cadence <on-change>
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
+#     back_door_lock_action_source_name,
 #     bom_darlington_condition,
 #     bom_darlington_fire_danger_0,
 #     bom_darlington_fire_danger_1,

@@ -356,7 +356,7 @@ UNION ALL
 SELECT
     'media_player__tv'         AS relation,
     'entity_id*'               AS dimension,
-    2                          AS measures,
+    3                          AS measures,
     '<on-change>'              AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -1280,6 +1280,19 @@ WHERE
     AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
 UNION ALL
 SELECT
+    'media_player__tv'                                                     AS relation,
+    'sound_output_str'                                                     AS measure,
+    'str'                                                                  AS kind,
+    '-'                                                                    AS unit,
+    '<on-change>'                                                          AS period,
+    count(sound_output_str)                                                AS rows,
+    CAST(min(time) FILTER (WHERE sound_output_str IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE sound_output_str IS NOT NULL) AS VARCHAR) AS newest
+FROM media_player__tv
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'media_player__tv'                                          AS relation,
     'state'                                                     AS measure,
     'str'                                                       AS kind,
@@ -1317,7 +1330,7 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'media_player__tv'
-    AND column_name NOT IN ('entity_id', 'module', 'state', 'time', 'value')
+    AND column_name NOT IN ('entity_id', 'module', 'sound_output_str', 'state', 'time', 'value')
 UNION ALL
 SELECT
     'sensor'                                                         AS relation,

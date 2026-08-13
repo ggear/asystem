@@ -32,6 +32,8 @@
 #     lounge_main_bulb_3,
 #     office_main,
 #     office_main_bulb_1,
+#     pantry_main,
+#     pantry_main_bulb_1,
 #     parents_main,
 #     parents_main_bulb_1,
 #     parents_main_bulb_2,

@@ -6,13 +6,14 @@
 #   cadence <on-change>
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
-#     back_door_sensor_contact]
+#     back_door_sensor_contact,
+#     template_back_door_sensor_contact_last]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 
 binary_sensor__door,
   module=homeassistant,
-  entity_id=back_door_sensor_contact
+  entity_id=<string>
     state=<text>,
     value=<float>
   <timestamp>

@@ -6,7 +6,9 @@
 #   cadence <on-change>
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
+#     ada_tablet,
 #     kitchen_home,
+#     lounge_tv,
 #     nesthubfb4d,
 #     pixel_tablet]
 #   field state - <on-change> [Home Assistant value]

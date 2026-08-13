@@ -82,6 +82,8 @@
 #     lounge_tv_power,
 #     office_lights_power,
 #     office_main_bulb_1_power,
+#     pantry_lights_power,
+#     pantry_main_bulb_1_power,
 #     parents_fan_power,
 #     parents_fans_power,
 #     parents_lights_power,
