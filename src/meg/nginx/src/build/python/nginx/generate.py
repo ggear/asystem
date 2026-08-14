@@ -255,14 +255,17 @@ http {
             if public_value:
                 host_names.append(public_value)
             for host_name in host_names:
+                domain_name = "{}.{}".format(host_name, DOMAIN)
+                server_name_value = domain_name if host_name == public_value \
+                    else "{} {}.{}".format(domain_name, resource, DOMAIN)
                 conf_file.write("  " + """
-  # Api server for [{}] resource [{}] and domain [{}.janeandgraham.com]
+  # Api server for [{}] resource [{}] and domain [{}]
   server {{
     listen {};
-    server_name {}.janeandgraham.com;
+    server_name {};
 {}
 {}
-    add_header Access-Control-Allow-Origin https://{}.janeandgraham.com always;
+    add_header Access-Control-Allow-Origin https://{} always;
     add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
     add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
     proxy_buffering off;
@@ -273,12 +276,12 @@ http {
               """.format(
                     name,
                     resource,
-                    host_name,
+                    domain_name,
                     modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
-                    host_name,
+                    server_name_value,
                     "    allow all;" if host_name == public_value else ACCESS_PRIVATE,
                     HEADERS_SECURITY,
-                    host_name,
+                    domain_name,
                     name,
                     context,
                 ).strip() + "\n\n")

@@ -7,6 +7,4 @@ metrics: 0.0.0.0:32419
 ingress:
   - hostname: prices.janeandgraham.com
     service: https://prices.data.janeandgraham.com:443
-    originRequest:
-      httpHostHeader: prices.data.janeandgraham.com
   - service: http_status:404

@@ -40,8 +40,6 @@ ingress:
             config_file.write("""
   - hostname: {}.{}
     service: https://{}:{}
-    originRequest:
-      httpHostHeader: {}
-""".format(resource, DOMAIN, origin, env["CLOUDFLARE_ORIGIN_PORT"], origin).strip("\n") + "\n")
+""".format(resource, DOMAIN, origin, env["CLOUDFLARE_ORIGIN_PORT"]).strip("\n") + "\n")
         config_file.write("  - service: http_status:404\n")
     print("Build generate script [cloudflare] entity metadata persisted to [{}]".format(config_path))
