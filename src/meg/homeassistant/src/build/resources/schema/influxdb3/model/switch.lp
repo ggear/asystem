@@ -37,6 +37,7 @@
 #     rack_screen_plug,
 #     server_jen_plug,
 #     server_lia_plug_none,
+#     service_cloudflare,
 #     service_grafana,
 #     service_homeassistant,
 #     service_influxdb3,

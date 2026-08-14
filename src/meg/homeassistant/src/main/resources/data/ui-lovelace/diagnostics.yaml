@@ -70,6 +70,9 @@
     - entity: switch.service_grafana
       name: Grafana
       icon: mdi:heart-pulse
+    - entity: switch.service_cloudflare
+      name: Cloudflare
+      icon: mdi:heart-pulse
     - entity: switch.service_letsencrypt
       name: LetsEncrypt
       icon: mdi:heart-pulse
