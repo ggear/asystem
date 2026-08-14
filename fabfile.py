@@ -361,22 +361,22 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         "Module [{}] threw errors determining versions: {}",
     ]
     file_image_regexs = [
-        r"FROM (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*) AS image_upstream",
-        r"FROM (?P<repository>.*):(?P<version_current>.*) AS image_upstream",
+        r"FROM (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*) AS (?P<stage>image_[a-z_]+)",
+        r"FROM (?P<repository>.*):(?P<version_current>.*) AS (?P<stage>image_[a-z_]+)",
     ]
     compose_image_regexs = [
         r"image: (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*)",
         r"image: (?P<repository>.*):(?P<version_current>.*)",
     ]
 
-    def get_docker_image_metadata(config_path, config_regexs, config_env):
-        docker_image_metadata_dict = {}
+    def get_docker_image_metadatas(config_path, config_regexs, config_env):
+        docker_image_metadata_dicts = []
         with (open(config_path, 'r') as config_file):
             for config_line in config_file:
                 for config_regex in config_regexs:
                     config_match = re.match(config_regex, config_line.strip())
                     if config_match is not None:
-                        docker_image_metadata_dict = {"namespace": "library", "skipped": False} \
+                        docker_image_metadata_dict = {"namespace": "library", "stage": "", "skipped": False} \
                                                      | config_match.groupdict()
                         version_current = str(docker_image_metadata_dict.get("version_current", ""))
                         docker_image_metadata_dict["version_current"] = varsubst.varsubst(
@@ -401,8 +401,27 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                     if re.match(config_version_regex, version_current):
                                         docker_image_metadata_dict["version_regex"] = config_version_regex
                                         break
-                        return docker_image_metadata_dict
-            return docker_image_metadata_dict
+                        if not any(all(docker_image_metadata_dict.get(key) == docker_image_metadata_dedup.get(key)
+                                       for key in ["namespace", "repository", "version_current"])
+                                   for docker_image_metadata_dedup in docker_image_metadata_dicts):
+                            docker_image_metadata_dicts.append(docker_image_metadata_dict)
+                        if not docker_image_metadata_dict["stage"]:
+                            return docker_image_metadata_dicts
+                        break
+            return docker_image_metadata_dicts
+
+    def get_docker_image_config(config_module):
+        for config_path, config_regexs in [
+            (join(ROOT_MODULE_DIR, config_module, "Dockerfile"), file_image_regexs),
+            (join(ROOT_MODULE_DIR, config_module, "docker-compose.yml"), compose_image_regexs),
+        ]:
+            if exists(config_path):
+                return config_path, config_regexs
+        return None, None
+
+    def get_docker_image_upstream(docker_image_metadata_dicts):
+        return next((docker_image_metadata_dict for docker_image_metadata_dict in docker_image_metadata_dicts
+                     if docker_image_metadata_dict["stage"] in ["", "image_upstream"]), {})
 
     version_messages = {_type: [] for _type in version_types}
     module_generate_stdout = {}
@@ -432,15 +451,9 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
             docker_version_env["ASYSTEM_" + env_global_key] = env_global_value.removeprefix('"').removesuffix('"')
     for module in _get_modules(context, filter_changes=False):
-        docker_image_metadata = {}
-        docker_file_path = join(ROOT_MODULE_DIR, module, "Dockerfile")
-        docker_compose_path = join(ROOT_MODULE_DIR, module, "docker-compose.yml")
-        if exists(docker_file_path):
-            docker_image_metadata = get_docker_image_metadata(
-                docker_file_path, file_image_regexs, docker_version_env)
-        elif exists(docker_compose_path):
-            docker_image_metadata = get_docker_image_metadata(
-                docker_compose_path, compose_image_regexs, docker_version_env)
+        docker_config_path, docker_config_regexs = get_docker_image_config(module)
+        docker_image_metadata = get_docker_image_upstream(get_docker_image_metadatas(
+            docker_config_path, docker_config_regexs, docker_version_env)) if docker_config_path else {}
         if "repository" in docker_image_metadata and "version_current" in docker_image_metadata:
             docker_deps_script_path = join(ROOT_MODULE_DIR, module, "docker_deps.sh")
             docker_image = "{}{}:{}".format(
@@ -614,66 +627,62 @@ docker rm -vf "$CONTAINER_NAME"
                         version_messages[version_type].append(version_format \
                                                               .format(*match.groupdict().values()))
         for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
-            docker_image_metadata = {}
-            docker_file_path = join(ROOT_MODULE_DIR, module, "Dockerfile")
-            docker_compose_path = join(ROOT_MODULE_DIR, module, "docker-compose.yml")
-            if exists(docker_file_path):
-                docker_image_metadata = \
-                    get_docker_image_metadata(docker_file_path, file_image_regexs, docker_version_env)
-            elif exists(docker_compose_path):
-                docker_image_metadata = \
-                    get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
+            docker_config_path, docker_config_regexs = get_docker_image_config(module)
+            docker_image_metadatas = get_docker_image_metadatas(
+                docker_config_path, docker_config_regexs, docker_version_env) if docker_config_path else []
             docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "a", "0a", "0b", "b1", "b"]
-            if all(key in docker_image_metadata for key in
-                   ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
-                    and not docker_image_metadata["skipped"]:
-                docker_image_tags_command = "regctl -v error tag ls {}/{}" \
-                    .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
-                docker_image_tags_stdout = _run_local(context, docker_image_tags_command, hide='out').stdout
-                docker_image_tags = str(docker_image_tags_stdout).splitlines() if docker_image_tags_stdout else []
-                if len(docker_image_tags) == 0:
-                    version_messages["errors"].append(version_formats[2].format(
-                        module, "Could not determine versions from Github repository command [{}]" \
-                            .format(docker_image_tags_command)))
-                docker_image_metadata["version_upstream"] = docker_image_metadata["version_current"]
-                if docker_image_metadata["version_upstream"] != "latest":
-                    version_regex = str(docker_image_metadata["version_regex"])
-                    for docker_image_version in docker_image_tags:
-                        if not any(_ignored.lower() in docker_image_version.lower() \
-                                   for _ignored in docker_image_version_ignores):
-                            docker_image_version_match = \
-                                re.match(version_regex, docker_image_version)
-                            version_upstream_match = re.match(
-                                version_regex, str(docker_image_metadata["version_upstream"])
-                            )
-                            if docker_image_version_match is not None and \
-                                    version_upstream_match is not None and \
-                                    packaging.version.parse(docker_image_version_match.groups()[0]) >= \
-                                    packaging.version.parse(version_upstream_match.groups()[0]):
-                                docker_image_metadata["version_upstream"] = docker_image_version
-                if "version_upstream" in docker_image_metadata:
-                    version_type = 0 \
-                        if docker_image_metadata["version_current"] == docker_image_metadata["version_upstream"] else 1
-                    version_messages[version_types[version_type]].append(version_formats[version_type].format(
-                        module + ":" + str(docker_image_metadata["repository"]),
-                        docker_image_metadata["version_current"],
-                        docker_image_metadata["version_upstream"]
-                    ))
-                else:
-                    version_messages["errors"].append(version_formats[2].format(
-                        module + ":" + str(docker_image_metadata["repository"]),
-                        "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}"
-                        .format(
+            if len(docker_image_metadatas) == 0 and docker_config_path:
+                version_messages["errors"].append(version_formats[2].format(
+                    module + ":unknown",
+                    "Could not determine versions from parsed metadata {}".format({})))
+            for docker_image_metadata in docker_image_metadatas:
+                if all(key in docker_image_metadata for key in
+                       ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
+                        and not docker_image_metadata["skipped"]:
+                    docker_image_tags_command = "regctl -v error tag ls {}/{}" \
+                        .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
+                    docker_image_tags_stdout = _run_local(context, docker_image_tags_command, hide='out').stdout
+                    docker_image_tags = str(docker_image_tags_stdout).splitlines() if docker_image_tags_stdout else []
+                    if len(docker_image_tags) == 0:
+                        version_messages["errors"].append(version_formats[2].format(
+                            module, "Could not determine versions from Github repository command [{}]" \
+                                .format(docker_image_tags_command)))
+                    docker_image_metadata["version_upstream"] = docker_image_metadata["version_current"]
+                    if docker_image_metadata["version_upstream"] != "latest":
+                        version_regex = str(docker_image_metadata["version_regex"])
+                        for docker_image_version in docker_image_tags:
+                            if not any(_ignored.lower() in docker_image_version.lower() \
+                                       for _ignored in docker_image_version_ignores):
+                                docker_image_version_match = \
+                                    re.match(version_regex, docker_image_version)
+                                version_upstream_match = re.match(
+                                    version_regex, str(docker_image_metadata["version_upstream"])
+                                )
+                                if docker_image_version_match is not None and \
+                                        version_upstream_match is not None and \
+                                        packaging.version.parse(docker_image_version_match.groups()[0]) >= \
+                                        packaging.version.parse(version_upstream_match.groups()[0]):
+                                    docker_image_metadata["version_upstream"] = docker_image_version
+                    if "version_upstream" in docker_image_metadata:
+                        version_type = 0 \
+                            if docker_image_metadata["version_current"] == \
+                               docker_image_metadata["version_upstream"] else 1
+                        version_messages[version_types[version_type]].append(version_formats[version_type].format(
+                            module + ":" + str(docker_image_metadata["repository"]),
                             docker_image_metadata["version_current"],
-                            docker_image_metadata["version_regex"],
-                            "\n".join(docker_image_tags))))
-            elif exists(docker_file_path) or exists(docker_compose_path):
-                if docker_image_metadata is None or \
-                        "skipped" not in docker_image_metadata or not docker_image_metadata["skipped"]:
-                    repository = str(docker_image_metadata.get("repository", "unknown")) \
-                        if isinstance(docker_image_metadata, dict) else "unknown"
+                            docker_image_metadata["version_upstream"]
+                        ))
+                    else:
+                        version_messages["errors"].append(version_formats[2].format(
+                            module + ":" + str(docker_image_metadata["repository"]),
+                            "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}"
+                            .format(
+                                docker_image_metadata["version_current"],
+                                docker_image_metadata["version_regex"],
+                                "\n".join(docker_image_tags))))
+                elif not docker_image_metadata["skipped"]:
                     version_messages["errors"].append(version_formats[2].format(
-                        module + ":" + repository,
+                        module + ":" + str(docker_image_metadata.get("repository", "unknown")),
                         "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
         for lang, version in {
             "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' '",

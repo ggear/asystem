@@ -24,15 +24,16 @@ Install door cameras, use for gates?
 Setup outdoor air quality monitor
 Implement Coral/Frigate
 Add big ass temps for deck
+retire nginx and use cloudflared for homeasistant?
 
 
 
 
 
 
-Update cloudflare config screen shots for new tunnel, move to same dir?
 add wrangle api caching 15min?
-add wrangle google sheet function to build
+rotoate tunnel keys
+
 
 Order of attach:
   - schema
