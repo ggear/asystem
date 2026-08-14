@@ -8,6 +8,8 @@ if grep -qE '^[^#].*[[:space:]]+'"${SABNZBD_SHARE_ROOT_DIR}"'[[:space:]]' /etc/f
     mkdir -p "${SABNZBD_SHARE_DIR}/$DIR"
   done
   chown -R graham:users "${SABNZBD_SHARE_DIR}"
+  chmod -R g+rwX "${SABNZBD_SHARE_DIR}"
+  find "${SABNZBD_SHARE_DIR}" -type d -exec chmod g+s {} +
   touch "${SABNZBD_SHARE_DIR}/.sabnzbd"
 else
   echo "Error: [${SABNZBD_SHARE_ROOT_DIR}] missing or not mounted"

@@ -8,6 +8,7 @@ services:
       - TZ=Australia/Perth
       - PUID=0
       - PGID=0
+      - UMASK=002
       - SABNZBD_SERVICE_PROD
       - SABNZBD_HTTP_PORT
       - SABNZBD_API_KEY
