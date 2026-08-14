@@ -629,11 +629,11 @@ switch.service_network:
 switch.service_openra:
   friendly_name: 'OpenRA'
   icon: 'mdi:heart-pulse'
-switch.service_grafana:
-  friendly_name: 'Grafana'
-  icon: 'mdi:heart-pulse'
 switch.service_cloudflare:
   friendly_name: 'Cloudflare'
+  icon: 'mdi:heart-pulse'
+switch.service_grafana:
+  friendly_name: 'Grafana'
   icon: 'mdi:heart-pulse'
 switch.service_letsencrypt:
   friendly_name: 'LetsEncrypt'
