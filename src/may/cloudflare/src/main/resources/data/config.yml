@@ -1,7 +1,7 @@
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-tunnel: 2f707d9a-b5d0-4ad2-b96d-520776787cea
+tunnel: 3c11aa84-13c7-4c78-94a2-7b21ab6a88fb
 credentials-file: /asystem/etc/.credentials.json
 metrics: 0.0.0.0:32419
 ingress:

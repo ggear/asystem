@@ -1021,7 +1021,7 @@ class WrangleTest(unittest.TestCase):
     # Feeds
     ########################################################################################################################
 
-    def test_feeds_equity_pricess(self):
+    def test_feeds_equity_prices(self):
         started = time.time()
         priced = self._feed_live(feeds.equity_prices, "BHP.AX", {})
         self.assertEqual("BHP.AX", priced["symbol"])
@@ -1037,7 +1037,7 @@ class WrangleTest(unittest.TestCase):
             resolved = self._feed_live(feeds.equity_prices, symbol, {})
             self.assertEqual(expected, resolved["symbol"])
             self.assertGreater(resolved["price"], 0)
-        _print_assert_pass("feeds_price_symbols", "actual=bhp.ax", "actual=^AXJO", "actual=BRK-B")
+        _print_assert_pass("feeds_price_tickers", "actual=bhp.ax", "actual=^AXJO", "actual=BRK-B")
 
         cached_started = time.time()
         cached = feeds.equity_prices("BHP.AX", {})
@@ -1048,32 +1048,13 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(priced, parameterised)
         _print_assert_pass("feeds_price_cached", f"actual={_format_assert_elapsed(cached_elapsed)}")
 
-    def test_feeds_equity_symbols(self):
-        started = time.time()
-        found = self._feed_live(feeds.equity_symbols, "bhp", {"limit": "3"})
-        self.assertEqual("bhp", found["query"])
-        self.assertGreater(len(found["matches"]), 0)
-        self.assertLessEqual(len(found["matches"]), 3)
-        for match in found["matches"]:
-            self.assertTrue(match["symbol"])
-            self.assertIn("bhp", (match["symbol"] + str(match["name"])).lower())
-        self.assertIn("BHP.AX", [match["symbol"] for match in found["matches"]])
-        _print_assert_pass("feeds_symbols_live", f"actual={found['matches'][0]['symbol']}", f"actual={len(found['matches'])}", f"actual={_format_assert_elapsed(time.time() - started)}")
-
     def test_feeds_errors(self):
         for symbol in ["", "  ", "BHP AX", "'; DROP TABLE", "../../etc/passwd", "A" * 21]:
             with self.assertRaises(feeds.FeedError) as raised:
                 feeds.equity_prices(symbol, {})
             self.assertEqual("invalid_symbol", raised.exception.code)
             self.assertEqual(400, raised.exception.status)
-        for limit in ["0", "-1", "abc"]:
-            with self.assertRaises(feeds.FeedError) as raised:
-                feeds.equity_symbols("bhp", {"limit": limit})
-            self.assertEqual("invalid_limit", raised.exception.code)
-        with self.assertRaises(feeds.FeedError) as raised:
-            feeds.equity_symbols(None, {})
-        self.assertEqual("invalid_query", raised.exception.code)
-        _print_assert_pass("feeds_errors_rejected", "actual=invalid_symbol", "actual=invalid_limit", "actual=invalid_query")
+        _print_assert_pass("feeds_errors_rejected", "actual=invalid_symbol", "actual=400")
 
         try:
             with self.assertRaises(feeds.FeedError) as raised:
@@ -1086,7 +1067,7 @@ class WrangleTest(unittest.TestCase):
         _print_assert_pass("feeds_errors_unknown", f"actual={raised.exception.code}", f"actual={raised.exception.status}")
 
     def test_feeds_routing(self):
-        self.assertEqual({"equity.prices": "feed/equity/prices", "equity.symbols": "feed/equity/symbols"}, feeds.paths())
+        self.assertEqual({"equity.prices": "feed/equity/prices"}, feeds.paths())
         resource, argument = feeds.resolve("equity/prices/BHP.AX")
         self.assertEqual("BHP.AX", argument)
         with mock.patch.dict(feeds.FEEDS, {"equity": {"prices": lambda captured, params: {"argument": captured, "params": params}}}):

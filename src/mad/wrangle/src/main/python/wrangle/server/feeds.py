@@ -40,7 +40,7 @@ from collections.abc import Callable
 import yfinance as yf
 from requests.exceptions import RequestException
 
-from wrangle.plugin.config import FEED_CACHE_SECONDS, FEED_SEARCH_LIMIT, FEED_SYMBOL_PATTERN
+from wrangle.plugin.config import FEED_CACHE_SECONDS, FEED_SYMBOL_PATTERN
 
 FEED_ROOT = "feed"
 
@@ -110,55 +110,10 @@ def equity_prices(argument: str | None, params: dict) -> dict:
         return result
 
 
-def equity_symbols(argument: str | None, params: dict) -> dict:
-    """Ticker search by name or partial symbol.
-
-    ``GET /api/v1/feed/equity/symbols/{query}`` or ``?q=`` — also ``https://symbols.data.janeandgraham.com/{query}``.
-    Optional ``?limit=`` capped at ``FEED_SEARCH_LIMIT``.
-
-    Payload::
-
-        {
-            "query": "bhp",
-            "matches": [
-                {
-                    "symbol": "BHP.AX",
-                    "name": "BHP GROUP FPO [BHP]",
-                    "exchange": "ASX",
-                    "type": "equity"
-                }
-            ]
-        }
-
-    ``matches`` may be empty. Not cached — searches are one-off, unlike a repeatedly recalculated price.
-    Errors: 400 ``invalid_query`` / ``invalid_limit``, 404 ``unknown_query``, 502 ``upstream_error``.
-    """
-    query = argument if argument is not None else params.get("q")
-    if not query:
-        raise FeedError("invalid_query", "query [q] must not be empty")
-    limit = _limited(params.get("limit"))
-    try:
-        found = yf.Lookup(query).get_all(count=limit)
-    except RequestException as error:
-        raise FeedError("upstream_error", f"lookup failed for [{query}] [{error}]", 502) from error
-    except Exception as error:
-        raise FeedError("unknown_query", f"no matches for [{query}]", 404) from error
-    matches = []
-    if found is not None and len(found) > 0:
-        for symbol, row in found.head(limit).iterrows():
-            matches.append({
-                "symbol": str(symbol),
-                "name": _text(row.get("shortName")),
-                "exchange": _text(row.get("exchange")),
-                "type": _text(row.get("quoteType")),
-            })
-    return {"query": query, "matches": matches}
-
 
 FEEDS: dict[str, dict[str, Callable[[str | None, dict], dict]]] = {
     "equity": {
         "prices": equity_prices,
-        "symbols": equity_symbols,
     },
 }
 
@@ -174,17 +129,6 @@ def _validated(symbol) -> str:
         raise FeedError("invalid_symbol", f"invalid symbol [{symbol}]")
     return symbol
 
-
-def _limited(limit) -> int:
-    if limit is None:
-        return FEED_SEARCH_LIMIT
-    try:
-        value = int(limit)
-    except ValueError:
-        raise FeedError("invalid_limit", f"invalid limit [{limit}]") from None
-    if value < 1:
-        raise FeedError("invalid_limit", f"invalid limit [{limit}]")
-    return min(value, FEED_SEARCH_LIMIT)
 
 
 def _lock_for(symbol: str) -> threading.Lock:
