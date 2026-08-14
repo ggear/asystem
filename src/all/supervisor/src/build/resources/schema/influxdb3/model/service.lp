@@ -13,6 +13,7 @@
 #     raspbpi-jen,
 #     raspbpi-jil]
 #   tag service* [name of the monitored service:
+#     cloudflared,
 #     grafana,
 #     homeassistant,
 #     influxdb,

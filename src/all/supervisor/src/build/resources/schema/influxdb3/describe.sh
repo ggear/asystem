@@ -1041,9 +1041,10 @@ SELECT
     'host/service*'            AS dimension,
     concat(host, '/', service) AS entity,
     CASE WHEN service IN (
-        'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt', 'mariadb',
-        'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
-        'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt'
+        'cloudflared', 'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt',
+        'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres',
+        'sabnzbd', 'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle',
+        'zigbee2mqtt'
     ) THEN 'yes' ELSE 'no' END AS declared,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -1054,9 +1055,10 @@ WHERE
     AND host IS NOT NULL
     AND service IS NOT NULL
 GROUP BY concat(host, '/', service), CASE WHEN service IN (
-    'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt', 'mariadb',
-    'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
-    'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt'
+    'cloudflared', 'grafana', 'homeassistant', 'influxdb', 'influxdb3', 'letsencrypt',
+    'mariadb', 'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres',
+    'sabnzbd', 'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle',
+    'zigbee2mqtt'
 ) THEN 'yes' ELSE 'no' END
 ORDER BY rows DESC;
 SCHEMA_SQL

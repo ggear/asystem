@@ -152,6 +152,12 @@ if __name__ == "__main__":
                     name,
                     modules["nginx"][0][0],
                 ))
+            for key in modules[name][1]:
+                if key.startswith("{}_HTTP_API_".format(name.upper())) and key.endswith("_CONTEXT"):
+                    metadata_hass_file.write("cname={}.data.janeandgraham.com,{}\n".format(
+                        key[len("{}_HTTP_API_".format(name.upper())):-len("_CONTEXT")].lower(),
+                        modules["nginx"][0][0],
+                    ))
             metadata_hass_file.write("cname={},{}.local.janeandgraham.com,{}\n".format(
                 name,
                 name,
