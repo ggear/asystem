@@ -133,7 +133,7 @@ if __name__ == "__main__":
     #             metadata_dhcp_ips[metadata_dhcp_ip]
     #         ))
 
-    # INFO: Host and domain naming schemes are documented in src/main/resources/namespace.md
+    # INFO: Host and domain naming schemes are documented in src/build/resources/naming.md
 
     metadata_dhcpaliases_path = abspath(join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
     with open(metadata_dhcpaliases_path, 'w') as metadata_hass_file:
