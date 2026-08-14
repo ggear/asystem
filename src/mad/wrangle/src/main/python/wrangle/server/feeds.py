@@ -1,3 +1,37 @@
+"""Real-time read-through proxy feeds, served at ``/api/v1/feed/{feed}/{resource}[/{argument}]``.
+
+A feed answers "what is the value right now" and nothing else: no history, no counters, no database,
+no plugin run lock. Each resource is published by nginx at ``https://<resource>.data.janeandgraham.com``
+(declared by ``WRANGLE_HTTP_API_<RESOURCE>_CONTEXT`` in ``.env_all``), so the origin path is hidden and
+``/BHP.AX`` reaches ``/api/v1/feed/equity/quotes/BHP.AX``.
+
+Google Sheets pulls these through a Cloudflare Tunnel with an Access service token, since the hostnames
+are LAN-only on the port-forward. ``IMPORTDATA`` cannot send headers, so use an Apps Script custom
+function with the token pair in Script Properties (Extensions > Apps Script > Project Settings)::
+
+    function WRANGLE_PRICE(symbol) {
+      var props = PropertiesService.getScriptProperties();
+      var response = UrlFetchApp.fetch(
+        'https://quotes.data.janeandgraham.com/' + encodeURIComponent(symbol), {
+          headers: {
+            'CF-Access-Client-Id': props.getProperty('CF_ACCESS_CLIENT_ID'),
+            'CF-Access-Client-Secret': props.getProperty('CF_ACCESS_CLIENT_SECRET')
+          },
+          muteHttpExceptions: true
+        });
+      if (response.getResponseCode() != 200) throw new Error(response.getContentText());
+      return JSON.parse(response.getContentText()).price;
+    }
+
+Used as ``=WRANGLE_PRICE("BHP.AX")``. Sheets caches custom function results and cannot be forced to
+refresh, so where cadence matters write values into cells from a time-driven trigger instead.
+
+The ``CF-Access-Client-Id`` / ``CF-Access-Client-Secret`` pair is a Cloudflare Access service token,
+issued under Zero Trust > Access > Service Auth and bound to the hostname by an application policy
+whose action is ``Service Auth`` (an ``Allow`` policy demands an interactive login and rejects a
+machine caller). The token never enters this repo — it lives only in Script Properties.
+"""
+
 import re
 import threading
 import time
@@ -12,6 +46,8 @@ FEED_ROOT = "feed"
 
 
 class FeedError(Exception):
+    """Caller or upstream fault, rendered as ``{"error": {"code", "message"}}`` with ``status``."""
+
     def __init__(self, code: str, message: str, status: int = 400):
         super().__init__(message)
         self.code = code
@@ -20,6 +56,10 @@ class FeedError(Exception):
 
 
 def resolve(path: str) -> tuple[Callable[[dict], dict], str | None]:
+    """Map ``{feed}/{resource}[/{argument}]`` onto a registered resource, bound to its path argument.
+
+    Returns a callable taking the query params. Raises ``FeedError`` 404 for an unknown feed or resource.
+    """
     segments = [segment for segment in path.split("/") if segment]
     if len(segments) < 2 or len(segments) > 3:
         raise FeedError("not_found", f"unknown feed resource [{path}]", 404)
@@ -35,10 +75,31 @@ def resolve(path: str) -> tuple[Callable[[dict], dict], str | None]:
 
 
 def paths() -> dict[str, str]:
+    """Every registered resource as ``{"<feed>.<resource>": "feed/<feed>/<resource>"}`` for the API index."""
     return {f"{feed_name}.{resource_name}": f"{FEED_ROOT}/{feed_name}/{resource_name}" for feed_name, resources in FEEDS.items() for resource_name in resources}
 
 
 def equity_quote(argument: str | None, params: dict) -> dict:
+    """Live price for one ticker.
+
+    ``GET /api/v1/feed/equity/quotes/{symbol}`` or ``?symbol=`` — also ``https://quotes.data.janeandgraham.com/{symbol}``.
+    Symbols are Yahoo tickers (``BHP.AX``, ``^AXJO``, ``BRK-B``), upper-cased, matched against ``FEED_SYMBOL_PATTERN``.
+
+    Payload::
+
+        {
+            "symbol": "BHP.AX",
+            "price": 61.14,
+            "currency": "AUD",
+            "previousClose": 63.45,
+            "change": -2.31,
+            "exchange": "ASX"
+        }
+
+    ``previousClose`` and ``change`` may be null. Cached ``FEED_CACHE_SECONDS`` per symbol behind a
+    per-symbol lock, so concurrent sheet cells collapse to one upstream fetch. Errors: 400
+    ``invalid_symbol``, 404 ``unknown_symbol``, 502 ``upstream_error``.
+    """
     symbol = _validated(argument if argument is not None else params.get("symbol"))
     with _lock_for(symbol):
         cached = _CACHE.get(symbol)
@@ -50,6 +111,28 @@ def equity_quote(argument: str | None, params: dict) -> dict:
 
 
 def equity_symbols(argument: str | None, params: dict) -> dict:
+    """Ticker search by name or partial symbol.
+
+    ``GET /api/v1/feed/equity/symbols/{query}`` or ``?q=`` — also ``https://symbols.data.janeandgraham.com/{query}``.
+    Optional ``?limit=`` capped at ``FEED_SEARCH_LIMIT``.
+
+    Payload::
+
+        {
+            "query": "bhp",
+            "matches": [
+                {
+                    "symbol": "BHP.AX",
+                    "name": "BHP GROUP FPO [BHP]",
+                    "exchange": "ASX",
+                    "type": "equity"
+                }
+            ]
+        }
+
+    ``matches`` may be empty. Not cached — searches are one-off, unlike a repeatedly recalculated quote.
+    Errors: 400 ``invalid_query`` / ``invalid_limit``, 404 ``unknown_query``, 502 ``upstream_error``.
+    """
     query = argument if argument is not None else params.get("q")
     if not query:
         raise FeedError("invalid_query", "query [q] must not be empty")
