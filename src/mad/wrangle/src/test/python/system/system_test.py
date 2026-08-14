@@ -18,6 +18,7 @@ sys.path.append('../../../main/python')
 
 from wrangle import plugin
 from wrangle.plugin import database
+from wrangle.server.server import API_ROOT
 
 TIMEOUT_SECONDS = 10
 TIMEOUT_QUERY_SECONDS = 5
@@ -157,7 +158,7 @@ def run_wrangle_once(force_reprocessing=False):
     sys.stdout.flush()
     body = json.dumps({"force_reprocessing": force_reprocessing}).encode()
     request = urllib.request.Request(
-        f"http://localhost:{HTTP_PORT}/api/v1/run",
+        f"http://localhost:{HTTP_PORT}{API_ROOT}/run",
         data=body,
         headers={"Content-Type": "application/json"},
         method="POST",

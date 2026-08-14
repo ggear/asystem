@@ -33,13 +33,13 @@ fi
 shopt -s expand_aliases
 
 if
-  pgrep -f cloudflared >/dev/null
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && curl -fsS "http://localhost:${CLOUDFLARE_METRICS_PORT}/ready" | jq -e '.readyConnections >= 1' >/dev/null
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [cloudflared] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [cloudflare] is healthy :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [cloudflared] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [cloudflare] is *NOT* healthy :(" >&2
   exit 1
 fi

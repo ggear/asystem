@@ -1,13 +1,13 @@
 services:
-  cloudflared:
+  cloudflare:
     # NOTES: https://github.com/cloudflare/cloudflared/releases
-    image: cloudflared:${SERVICE_VERSION_ABSOLUTE}
-    container_name: cloudflared
+    image: cloudflare:${SERVICE_VERSION_ABSOLUTE}
+    container_name: cloudflare
     init: true
     environment:
-      - CLOUDFLARED_METRICS_PORT
-      - CLOUDFLARED_HOSTNAME
-    command: tunnel --no-autoupdate --config /asystem/etc/config.yml --metrics 0.0.0.0:${CLOUDFLARED_METRICS_PORT} run
+      - CLOUDFLARE_METRICS_PORT
+      - CLOUDFLARE_HOSTNAME
+    command: tunnel --no-autoupdate --config /asystem/etc/config.yml --metrics 0.0.0.0:${CLOUDFLARE_METRICS_PORT} run
     restart: ${SERVICE_RESTART}
     volumes:
       - ${SERVICE_DATA_DIR}/config.yml:/asystem/etc/config.yml

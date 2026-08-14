@@ -11,6 +11,7 @@ src/*/*/.env
 .py_deps_trans.txt
 .gspread_pandas
 .google_service_account.json
+.credentials.json
 .DS_Store
 .project
 .settings

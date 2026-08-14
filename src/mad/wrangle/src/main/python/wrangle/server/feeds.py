@@ -3,7 +3,7 @@
 A feed answers "what is the value right now" and nothing else: no history, no counters, no database,
 no plugin run lock. Each resource is published by nginx at ``https://<resource>.data.janeandgraham.com``
 (declared by ``WRANGLE_HTTP_API_<RESOURCE>_CONTEXT`` in ``.env_all``), so the origin path is hidden and
-``/BHP.AX`` reaches ``/api/v1/feed/equity/quotes/BHP.AX``.
+``/BHP.AX`` reaches ``/api/v1/feed/equity/prices/BHP.AX``.
 
 Google Sheets pulls these through a Cloudflare Tunnel with an Access service token, since the hostnames
 are LAN-only on the port-forward. ``IMPORTDATA`` cannot send headers, so use an Apps Script custom
@@ -12,7 +12,7 @@ function with the token pair in Script Properties (Extensions > Apps Script > Pr
     function WRANGLE_PRICE(symbol) {
       var props = PropertiesService.getScriptProperties();
       var response = UrlFetchApp.fetch(
-        'https://quotes.data.janeandgraham.com/' + encodeURIComponent(symbol), {
+        'https://prices.data.janeandgraham.com/' + encodeURIComponent(symbol), {
           headers: {
             'CF-Access-Client-Id': props.getProperty('CF_ACCESS_CLIENT_ID'),
             'CF-Access-Client-Secret': props.getProperty('CF_ACCESS_CLIENT_SECRET')
@@ -79,10 +79,10 @@ def paths() -> dict[str, str]:
     return {f"{feed_name}.{resource_name}": f"{FEED_ROOT}/{feed_name}/{resource_name}" for feed_name, resources in FEEDS.items() for resource_name in resources}
 
 
-def equity_quote(argument: str | None, params: dict) -> dict:
+def equity_prices(argument: str | None, params: dict) -> dict:
     """Live price for one ticker.
 
-    ``GET /api/v1/feed/equity/quotes/{symbol}`` or ``?symbol=`` — also ``https://quotes.data.janeandgraham.com/{symbol}``.
+    ``GET /api/v1/feed/equity/prices/{symbol}`` or ``?symbol=`` — also ``https://prices.data.janeandgraham.com/{symbol}``.
     Symbols are Yahoo tickers (``BHP.AX``, ``^AXJO``, ``BRK-B``), upper-cased, matched against ``FEED_SYMBOL_PATTERN``.
 
     Payload::
@@ -105,7 +105,7 @@ def equity_quote(argument: str | None, params: dict) -> dict:
         cached = _CACHE.get(symbol)
         if cached is not None and time.time() - cached[0] < FEED_CACHE_SECONDS:
             return cached[1]
-        result = _quoted(symbol)
+        result = _priced(symbol)
         _CACHE[symbol] = (time.time(), result)
         return result
 
@@ -130,7 +130,7 @@ def equity_symbols(argument: str | None, params: dict) -> dict:
             ]
         }
 
-    ``matches`` may be empty. Not cached — searches are one-off, unlike a repeatedly recalculated quote.
+    ``matches`` may be empty. Not cached — searches are one-off, unlike a repeatedly recalculated price.
     Errors: 400 ``invalid_query`` / ``invalid_limit``, 404 ``unknown_query``, 502 ``upstream_error``.
     """
     query = argument if argument is not None else params.get("q")
@@ -157,7 +157,7 @@ def equity_symbols(argument: str | None, params: dict) -> dict:
 
 FEEDS: dict[str, dict[str, Callable[[str | None, dict], dict]]] = {
     "equity": {
-        "quotes": equity_quote,
+        "prices": equity_prices,
         "symbols": equity_symbols,
     },
 }
@@ -192,16 +192,16 @@ def _lock_for(symbol: str) -> threading.Lock:
         return _LOCKS.setdefault(symbol, threading.Lock())
 
 
-def _quoted(symbol: str) -> dict:
+def _priced(symbol: str) -> dict:
     try:
         info = dict(yf.Ticker(symbol).fast_info)
     except RequestException as error:
         raise FeedError("upstream_error", f"quote failed for [{symbol}] [{error}]", 502) from error
     except Exception as error:
-        raise FeedError("unknown_symbol", f"no quote for [{symbol}]", 404) from error
+        raise FeedError("unknown_symbol", f"no price for [{symbol}]", 404) from error
     price = info.get("lastPrice")
     if price is None:
-        raise FeedError("unknown_symbol", f"no quote for [{symbol}]", 404)
+        raise FeedError("unknown_symbol", f"no price for [{symbol}]", 404)
     previous_close = info.get("previousClose")
     return {
         "symbol": symbol,

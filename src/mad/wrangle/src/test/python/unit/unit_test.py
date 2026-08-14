@@ -1021,32 +1021,32 @@ class WrangleTest(unittest.TestCase):
     # Feeds
     ########################################################################################################################
 
-    def test_feeds_equity_quotes(self):
+    def test_feeds_equity_pricess(self):
         started = time.time()
-        quote = self._feed_live(feeds.equity_quote, "BHP.AX", {})
-        self.assertEqual("BHP.AX", quote["symbol"])
-        self.assertEqual("AUD", quote["currency"])
-        self.assertEqual("ASX", quote["exchange"])
-        self.assertIsInstance(quote["price"], float)
-        self.assertGreater(quote["price"], 0)
-        self.assertGreater(quote["previousClose"], 0)
-        self.assertAlmostEqual(quote["price"] - quote["previousClose"], quote["change"], places=3)
-        _print_assert_pass("feeds_quote_live", f"actual={quote['symbol']}", f"actual={quote['price']}", f"actual={quote['currency']}", f"actual={_format_assert_elapsed(time.time() - started)}")
+        priced = self._feed_live(feeds.equity_prices, "BHP.AX", {})
+        self.assertEqual("BHP.AX", priced["symbol"])
+        self.assertEqual("AUD", priced["currency"])
+        self.assertEqual("ASX", priced["exchange"])
+        self.assertIsInstance(priced["price"], float)
+        self.assertGreater(priced["price"], 0)
+        self.assertGreater(priced["previousClose"], 0)
+        self.assertAlmostEqual(priced["price"] - priced["previousClose"], priced["change"], places=3)
+        _print_assert_pass("feeds_price_live", f"actual={priced['symbol']}", f"actual={priced['price']}", f"actual={priced['currency']}", f"actual={_format_assert_elapsed(time.time() - started)}")
 
         for symbol, expected in [("bhp.ax", "BHP.AX"), ("^AXJO", "^AXJO"), ("BRK-B", "BRK-B")]:
-            resolved = self._feed_live(feeds.equity_quote, symbol, {})
+            resolved = self._feed_live(feeds.equity_prices, symbol, {})
             self.assertEqual(expected, resolved["symbol"])
             self.assertGreater(resolved["price"], 0)
-        _print_assert_pass("feeds_quote_symbols", "actual=bhp.ax", "actual=^AXJO", "actual=BRK-B")
+        _print_assert_pass("feeds_price_symbols", "actual=bhp.ax", "actual=^AXJO", "actual=BRK-B")
 
         cached_started = time.time()
-        cached = feeds.equity_quote("BHP.AX", {})
+        cached = feeds.equity_prices("BHP.AX", {})
         cached_elapsed = time.time() - cached_started
-        self.assertEqual(quote, cached)
+        self.assertEqual(priced, cached)
         self.assertLess(cached_elapsed, 0.1)
-        parameterised = feeds.equity_quote(None, {"symbol": "BHP.AX"})
-        self.assertEqual(quote, parameterised)
-        _print_assert_pass("feeds_quote_cached", f"actual={_format_assert_elapsed(cached_elapsed)}")
+        parameterised = feeds.equity_prices(None, {"symbol": "BHP.AX"})
+        self.assertEqual(priced, parameterised)
+        _print_assert_pass("feeds_price_cached", f"actual={_format_assert_elapsed(cached_elapsed)}")
 
     def test_feeds_equity_symbols(self):
         started = time.time()
@@ -1063,7 +1063,7 @@ class WrangleTest(unittest.TestCase):
     def test_feeds_errors(self):
         for symbol in ["", "  ", "BHP AX", "'; DROP TABLE", "../../etc/passwd", "A" * 21]:
             with self.assertRaises(feeds.FeedError) as raised:
-                feeds.equity_quote(symbol, {})
+                feeds.equity_prices(symbol, {})
             self.assertEqual("invalid_symbol", raised.exception.code)
             self.assertEqual(400, raised.exception.status)
         for limit in ["0", "-1", "abc"]:
@@ -1077,7 +1077,7 @@ class WrangleTest(unittest.TestCase):
 
         try:
             with self.assertRaises(feeds.FeedError) as raised:
-                feeds.equity_quote("ZZZZQQ.AX", {})
+                feeds.equity_prices("ZZZZQQ.AX", {})
         except AssertionError:
             self.skipTest("yahoo unexpectedly resolved the unknown symbol")
         self.assertEqual("unknown_symbol", raised.exception.code)
@@ -1086,17 +1086,17 @@ class WrangleTest(unittest.TestCase):
         _print_assert_pass("feeds_errors_unknown", f"actual={raised.exception.code}", f"actual={raised.exception.status}")
 
     def test_feeds_routing(self):
-        self.assertEqual({"equity.quotes": "feed/equity/quotes", "equity.symbols": "feed/equity/symbols"}, feeds.paths())
-        resource, argument = feeds.resolve("equity/quotes/BHP.AX")
+        self.assertEqual({"equity.prices": "feed/equity/prices", "equity.symbols": "feed/equity/symbols"}, feeds.paths())
+        resource, argument = feeds.resolve("equity/prices/BHP.AX")
         self.assertEqual("BHP.AX", argument)
-        with mock.patch.dict(feeds.FEEDS, {"equity": {"quotes": lambda captured, params: {"argument": captured, "params": params}}}):
-            bound, _ = feeds.resolve("equity/quotes/VAS.AX")
+        with mock.patch.dict(feeds.FEEDS, {"equity": {"prices": lambda captured, params: {"argument": captured, "params": params}}}):
+            bound, _ = feeds.resolve("equity/prices/VAS.AX")
             self.assertEqual({"argument": "VAS.AX", "params": {"q": "x"}}, bound({"q": "x"}))
-            bound, argument = feeds.resolve("equity/quotes")
+            bound, argument = feeds.resolve("equity/prices")
             self.assertIsNone(argument)
             self.assertEqual({"argument": None, "params": {}}, bound({}))
-        for path, code in [("equity", "not_found"), ("", "not_found"), ("equity/quotes/A/B", "not_found"),
-                           ("crypto/quotes", "unknown_feed"), ("equity/nope", "unknown_resource")]:
+        for path, code in [("equity", "not_found"), ("", "not_found"), ("equity/prices/A/B", "not_found"),
+                           ("crypto/prices", "unknown_feed"), ("equity/nope", "unknown_resource")]:
             with self.assertRaises(feeds.FeedError) as raised:
                 feeds.resolve(path)
             self.assertEqual(code, raised.exception.code)

@@ -1,7 +1,7 @@
 # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
 ARG ASYSTEM_CLOUDFLARED_VERSION="latest"
-FROM cloudflare/cloudflared:${ASYSTEM_CLOUDFLARED_VERSION} AS image_cloudflared
+FROM cloudflare/cloudflared:${ASYSTEM_CLOUDFLARED_VERSION} AS image_cloudflare
 
 FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
 USER root
@@ -17,6 +17,6 @@ RUN apt-get update && \
 
 FROM image_upstream AS image_runtime
 ENV TZ=Australia/Perth
-COPY --from=image_cloudflared /usr/local/bin/cloudflared /asystem/bin/cloudflared
+COPY --from=image_cloudflare /usr/local/bin/cloudflared /asystem/bin/cloudflared
 WORKDIR /asystem/etc
 ENTRYPOINT ["/asystem/bin/cloudflared"]

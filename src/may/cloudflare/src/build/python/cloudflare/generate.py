@@ -15,7 +15,7 @@ if __name__ == "__main__":
         for key in modules[name][1]:
             if key.startswith("{}_HTTP_API_".format(name.upper())) and key.endswith("_CONTEXT"):
                 resources.add(key[len("{}_HTTP_API_".format(name.upper())):-len("_CONTEXT")].lower())
-    hostnames = [hostname.strip() for hostname in env["CLOUDFLARED_HOSTNAME"].split(",") if hostname.strip()]
+    hostnames = [hostname.strip() for hostname in env["CLOUDFLARE_HOSTNAME"].split(",") if hostname.strip()]
     for hostname in hostnames:
         if hostname.split(".")[0] not in resources:
             raise ValueError("tunnel hostname [{}] matches no declared api resource of [{}]".format(hostname, sorted(resources)))
@@ -31,11 +31,11 @@ tunnel: {}
 credentials-file: /asystem/etc/.credentials.json
 metrics: 0.0.0.0:{}
 ingress:
-""".format(env["CLOUDFLARED_ID"], env["CLOUDFLARED_METRICS_PORT"]).strip() + "\n")
+""".format(env["CLOUDFLARE_ID"], env["CLOUDFLARE_METRICS_PORT"]).strip() + "\n")
         for hostname in hostnames:
             config_file.write("""
   - hostname: {}
     service: https://{}:{}
-""".format(hostname, hostname, env["CLOUDFLARED_ORIGIN_PORT"]).strip("\n") + "\n")
+""".format(hostname, hostname, env["CLOUDFLARE_ORIGIN_PORT"]).strip("\n") + "\n")
         config_file.write("  - service: http_status:404\n")
-    print("Build generate script [cloudflared] entity metadata persisted to [{}]".format(config_path))
+    print("Build generate script [cloudflare] entity metadata persisted to [{}]".format(config_path))
