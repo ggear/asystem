@@ -36,7 +36,7 @@ homeassistant:
 #    - '172.16.0.0/12'
 #  cors_allowed_origins:
 #    - 'https://home.janeandgraham.com'
-#    - 'https://homeassistant.janeandgraham.com'
+#    - 'https://homeassistant.proxy.janeandgraham.com'
 #    - 'http://homeassistant.local.janeandgraham.com'
 #######################################################################################
 

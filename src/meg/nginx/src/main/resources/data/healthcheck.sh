@@ -16,7 +16,7 @@ alive() {
   fi
 }
 ready() {
-  if [ "$(curl -I https://nginx.janeandgraham.com | grep HTTP | cut -d ' ' -f2)" = "200" ]; then
+  if [ "$(curl -I https://nginx.proxy.janeandgraham.com | grep HTTP | cut -d ' ' -f2)" = "200" ]; then
     return 0
   else
     return 1
