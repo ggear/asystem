@@ -26,10 +26,12 @@
 #     bom_darlington_uv_end_time_1,
 #     bom_darlington_uv_end_time_2,
 #     bom_darlington_uv_end_time_3,
+#     bom_darlington_uv_end_time_4,
 #     bom_darlington_uv_start_time_0,
 #     bom_darlington_uv_start_time_1,
 #     bom_darlington_uv_start_time_2,
-#     bom_darlington_uv_start_time_3]
+#     bom_darlington_uv_start_time_3,
+#     bom_darlington_uv_start_time_4]
 #   field state - <on-change> [Home Assistant value]
 
 sensor__timestamp,

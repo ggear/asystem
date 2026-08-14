@@ -11,6 +11,10 @@ TIMEOUT_RUN_SECONDS = 10 * 60
 
 STACK_DUMP_FILE = "/tmp/wrangle-stack.log"
 
+FEED_CACHE_SECONDS = 60
+FEED_SEARCH_LIMIT = 10
+FEED_SYMBOL_PATTERN = r"^[A-Za-z0-9.^=-]{1,20}$"
+
 DATABASE_SCHEMA_DIRS = (
     "/asystem/etc/database",
     abspath(join(dirname(realpath(__file__)), "../../../resources/image/database")),

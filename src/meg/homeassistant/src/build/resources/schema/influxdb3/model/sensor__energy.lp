@@ -147,6 +147,7 @@
 #     dining_fans_energy_monthly,
 #     dining_fans_energy_weekly,
 #     dining_fans_energy_yearly,
+#     dining_lights_energy,
 #     dining_lights_energy_daily,
 #     dining_lights_energy_monthly,
 #     dining_lights_energy_weekly,

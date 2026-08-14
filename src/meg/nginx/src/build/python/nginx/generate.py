@@ -7,6 +7,22 @@ pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
+HEADERS_SECURITY = """
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+""".strip("\n")
+
+ACCESS_PRIVATE = """
+    allow 127.0.0.1;
+    allow 10.0.0.0/8;
+    allow 172.16.0.0/12;
+    allow 192.168.0.0/16;
+    deny all;
+""".strip("\n")
+
 if __name__ == "__main__":
     env = load_bootstrap_env(DIR_ROOT)
     modules = load_bootstrap_modules()
@@ -16,7 +32,7 @@ if __name__ == "__main__":
 
     conf_path = abspath(join(DIR_ROOT, "src/main/resources/data/nginx.conf"))
     with open(conf_path, 'w') as conf_file:
-        conf_file.write("""
+        conf_file.write(("""
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
@@ -102,17 +118,18 @@ http {
     return 301 https://$host$request_uri;
   }
 
-  # HTTPS server
+  # HTTPS server, also the default server closing any connection with an unmatched host
   server {
-    listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
+    listen ${NGINX_PORT_INTERNAL_HTTPS} ssl default_server ipv6only=off;
     server_name *.janeandgraham.com;
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;    
+    ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305;
+    return 444;
   }
 
   # Remote domain redirect
@@ -126,6 +143,7 @@ http {
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
     server_name nginx.janeandgraham.com nginx.local.janeandgraham.com;
+""" + ACCESS_PRIVATE + "\n" + HEADERS_SECURITY + """
     location = /health {
       root /usr/share/nginx/html;
       try_files /health.txt =404;
@@ -144,7 +162,7 @@ http {
   }
 
 
-      """.strip() + "\n\n")
+      """).strip() + "\n\n")
         for name in modules:
             ip_key = "{}_IP".format(name.upper())
             port_key = "{}_HTTP_PORT".format(name.upper())
@@ -169,6 +187,8 @@ http {
   server {{
     listen {};
     server_name {}.janeandgraham.com;
+{}
+{}
     add_header Access-Control-Allow-Origin https://{}.janeandgraham.com always;
     add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
     add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
@@ -187,6 +207,8 @@ http {
                         port_value,
                         nginx_port_value,
                         server_name,
+                        "    allow all;" if name != server_name else ACCESS_PRIVATE,
+                        HEADERS_SECURITY,
                         server_name,
                         name,
                         console_context_value,

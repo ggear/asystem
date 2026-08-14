@@ -5,14 +5,19 @@ import os
 import threading
 from email.utils import parsedate_to_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from wrangle.plugin.config import TIMEOUT_RUN_SECONDS
 from wrangle.plugin.counters import COUNTERS, aggregate_summary
+from wrangle.server.feeds import FEED_ROOT, FeedError, paths, resolve
 
 WEB_ROOT_DIR: str = os.path.dirname(os.path.realpath(__file__))
+
+API_VERSION: str = "v1"
+API_ROOT: str = f"/api/{API_VERSION}"
+STATIC_ROOT_DIR: str = os.path.join(WEB_ROOT_DIR, "static")
 
 THEMES = ["creme", "butter", "gold", "orange", "pumpkin", "rich", "ember", "cinnabar"]
 
@@ -98,27 +103,30 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send_error_json(500, "internal_error", "internal server error")
 
     def _routes_for(self, path: str, params):
-        if path in ("/", "/history"):
-            return {"GET": self._serve_history}
+        if path in ("/", "/dashboard"):
+            return {"GET": self._serve_dashboard}
         if path == "/health":
             return {"GET": self._serve_health_json}
         if path == "/online":
             return {"GET": lambda: self._send_text(b"online\n")}
-        if path == "/api/v1":
+        if path == API_ROOT:
             return {"GET": self._serve_index}
-        if path == "/api/v1/plugins":
+        if path == f"{API_ROOT}/plugins":
             return {"GET": self._serve_plugins}
-        if path == "/api/v1/counters":
+        if path == f"{API_ROOT}/counters":
             return {"GET": self._serve_counters}
-        if path == "/api/v1/snapshot":
+        if path == f"{API_ROOT}/snapshot":
             return {"GET": lambda: self._serve_snapshot_filtered(params)}
-        if path == "/api/v1/snapshot/views":
+        if path == f"{API_ROOT}/snapshot/views":
             return {"GET": lambda: self._serve_views_filtered(params)}
-        if path.startswith("/api/v1/snapshot/views/"):
-            view_name = path[len("/api/v1/snapshot/views/"):]
+        if path.startswith(f"{API_ROOT}/snapshot/views/"):
+            view_name = path[len(f"{API_ROOT}/snapshot/views/"):]
             return {"GET": lambda: self._serve_single_view(view_name, params)}
-        if path == "/api/v1/run":
+        if path == f"{API_ROOT}/run":
             return {"POST": self._serve_run}
+        if path.startswith(f"{API_ROOT}/{FEED_ROOT}/"):
+            feed_path = unquote(path[len(f"{API_ROOT}/{FEED_ROOT}/"):])
+            return {"GET": lambda: self._serve_feed(feed_path, params)}
         if path.startswith("/static/"):
             relative_path = path[len("/static/"):]
             return {"GET": lambda: self._serve_static(relative_path)}
@@ -126,16 +134,24 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _serve_index(self):
         self._send_json({
-            "version": "v1",
+            "version": API_VERSION,
             "resources": {
-                "plugins": "/api/v1/plugins",
-                "counters": "/api/v1/counters",
-                "snapshot": "/api/v1/snapshot",
-                "views": "/api/v1/snapshot/views",
-                "view": "/api/v1/snapshot/views/{name}",
-                "run": "/api/v1/run",
+                "plugins": f"{API_ROOT}/plugins",
+                "counters": f"{API_ROOT}/counters",
+                "snapshot": f"{API_ROOT}/snapshot",
+                "views": f"{API_ROOT}/snapshot/views",
+                "view": f"{API_ROOT}/snapshot/views/{{name}}",
+                "run": f"{API_ROOT}/run",
+                **{name: f"{API_ROOT}/{resource_path}" for name, resource_path in paths().items()},
             },
         })
+
+    def _serve_feed(self, feed_path: str, params):
+        try:
+            resource, _ = resolve(feed_path)
+            self._send_json(resource(params))
+        except FeedError as error:
+            self._send_error_json(error.status, error.code, error.message)
 
     def _serve_plugins(self):
         snapshot = self._history.snapshot()
@@ -171,7 +187,7 @@ class _Handler(BaseHTTPRequestHandler):
         self._response_started = True
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
-        self.send_header("X-API-Version", "v1")
+        self.send_header("X-API-Version", API_VERSION)
         self.send_header("Cache-Control", "no-store")
         self.send_header("Transfer-Encoding", "chunked")
         self.end_headers()
@@ -200,7 +216,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
-        self.send_header("X-API-Version", "v1")
+        self.send_header("X-API-Version", API_VERSION)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         if not self._head:
@@ -213,7 +229,7 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_response(code)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
-            self.send_header("X-API-Version", "v1")
+            self.send_header("X-API-Version", API_VERSION)
             if allow is not None:
                 self.send_header("Allow", ", ".join(allow))
             self.send_header("Content-Length", str(len(body)))
@@ -236,7 +252,7 @@ class _Handler(BaseHTTPRequestHandler):
         plugins_status = {name: status_for(name) for name in snapshot.plugins}
         self._send_json({"status": overall, "plugins": plugins_status}, 200)
 
-    def _serve_history(self):
+    def _serve_dashboard(self):
         snapshot = self._history.snapshot()
         plugin_sections = [{"id": "summary", "title": "Summary", "theme": "ghost-gray"}] + [
             {"id": name, "title": name.capitalize(), "theme": THEMES[index % len(THEMES)]}
@@ -249,6 +265,7 @@ class _Handler(BaseHTTPRequestHandler):
             snapshot_json=snapshot_json,
             latest_run_json=latest_run_json,
             run_timeout_ms=TIMEOUT_RUN_SECONDS * 1000,
+            api_root=API_ROOT,
             views=[{"name": v.name, "label": v.label} for v in snapshot.views],
             chart_spec=CHART_SPEC,
             plugin_sections=plugin_sections,
@@ -344,8 +361,8 @@ class _Handler(BaseHTTPRequestHandler):
         self._send_json(matched)
 
     def _serve_static(self, relative_path: str):
-        safe_path = os.path.normpath(os.path.join(WEB_ROOT_DIR, relative_path))
-        if not safe_path.startswith(WEB_ROOT_DIR + os.sep) or not os.path.isfile(safe_path):
+        safe_path = os.path.normpath(os.path.join(STATIC_ROOT_DIR, relative_path))
+        if not safe_path.startswith(STATIC_ROOT_DIR + os.sep) or not os.path.isfile(safe_path):
             self._send_error_json(404, "not_found", f"unknown static asset: {relative_path}")
             return
         stat_result = os.stat(safe_path)

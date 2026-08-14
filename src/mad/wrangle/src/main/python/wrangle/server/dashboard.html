@@ -121,6 +121,7 @@
     window.WRANGLE_DATA = {{ snapshot_json | safe }};
     window.WRANGLE_LATEST_RUN = {{ latest_run_json | safe }};
     window.WRANGLE_RUN_TIMEOUT_MS = {{ run_timeout_ms }};
+    window.WRANGLE_API_ROOT = "{{ api_root }}";
 
     function formatDuration(ms) {
         if (ms == null || isNaN(ms)) return '0';
@@ -780,7 +781,7 @@
             }
             var controller = new AbortController();
             var timeoutId = setTimeout(function () { controller.abort(); }, window.WRANGLE_RUN_TIMEOUT_MS);
-            fetch('/api/v1/run', {
+            fetch(window.WRANGLE_API_ROOT + '/run', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({force_reprocessing: forceReprocessing}),

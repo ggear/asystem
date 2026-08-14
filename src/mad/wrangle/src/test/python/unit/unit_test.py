@@ -48,7 +48,8 @@ from wrangle.plugin.equity import DIMENSIONS_STATE, PORTFOLIO_TICKERS_ACTIVE, PO
 from wrangle.plugin.interest import COLUMNS as INTEREST_COLUMNS
 from wrangle.plugin.interest import REPOS_INTEREST
 from wrangle.plugin.logger import dataframe_print, print_log
-from wrangle.server.server import CHART_SPEC, TEMPLATE, THEMES, WEB_ROOT_DIR
+from wrangle.server import feeds
+from wrangle.server.server import CHART_SPEC, STATIC_ROOT_DIR, TEMPLATE, THEMES
 
 ########################################################################################################################
 # NOTES:
@@ -891,10 +892,7 @@ class WrangleTest(unittest.TestCase):
             os.unlink(static_copy)
         elif os.path.isdir(static_copy):
             shutil.rmtree(static_copy)
-        os.makedirs(static_copy, exist_ok=True)
-        for file_name in os.listdir(WEB_ROOT_DIR):
-            if os.path.splitext(str(file_name))[1] in {".css", ".js", ".mp3"}:
-                shutil.copy2(join(WEB_ROOT_DIR, str(file_name)), join(static_copy, str(file_name)))
+        shutil.copytree(STATIC_ROOT_DIR, static_copy)
         rng = random.Random(42)
         with tempfile.TemporaryDirectory() as tmp:
             history = RunHistory(plugins=plugins, cache_dir=tmp, poll_period_minutes=30, raw_label="1d")
@@ -1018,6 +1016,100 @@ class WrangleTest(unittest.TestCase):
 
             self.assertEqual(0, len(loaded._raw))
             self.assertEqual(0, len(loaded._day))
+
+    ########################################################################################################################
+    # Feeds
+    ########################################################################################################################
+
+    def test_feeds_equity_quotes(self):
+        started = time.time()
+        quote = self._feed_live(feeds.equity_quote, "BHP.AX", {})
+        self.assertEqual("BHP.AX", quote["symbol"])
+        self.assertEqual("AUD", quote["currency"])
+        self.assertEqual("ASX", quote["exchange"])
+        self.assertIsInstance(quote["price"], float)
+        self.assertGreater(quote["price"], 0)
+        self.assertGreater(quote["previousClose"], 0)
+        self.assertAlmostEqual(quote["price"] - quote["previousClose"], quote["change"], places=3)
+        _print_assert_pass("feeds_quote_live", f"actual={quote['symbol']}", f"actual={quote['price']}", f"actual={quote['currency']}", f"actual={_format_assert_elapsed(time.time() - started)}")
+
+        for symbol, expected in [("bhp.ax", "BHP.AX"), ("^AXJO", "^AXJO"), ("BRK-B", "BRK-B")]:
+            resolved = self._feed_live(feeds.equity_quote, symbol, {})
+            self.assertEqual(expected, resolved["symbol"])
+            self.assertGreater(resolved["price"], 0)
+        _print_assert_pass("feeds_quote_symbols", "actual=bhp.ax", "actual=^AXJO", "actual=BRK-B")
+
+        cached_started = time.time()
+        cached = feeds.equity_quote("BHP.AX", {})
+        cached_elapsed = time.time() - cached_started
+        self.assertEqual(quote, cached)
+        self.assertLess(cached_elapsed, 0.1)
+        parameterised = feeds.equity_quote(None, {"symbol": "BHP.AX"})
+        self.assertEqual(quote, parameterised)
+        _print_assert_pass("feeds_quote_cached", f"actual={_format_assert_elapsed(cached_elapsed)}")
+
+    def test_feeds_equity_symbols(self):
+        started = time.time()
+        found = self._feed_live(feeds.equity_symbols, "bhp", {"limit": "3"})
+        self.assertEqual("bhp", found["query"])
+        self.assertGreater(len(found["matches"]), 0)
+        self.assertLessEqual(len(found["matches"]), 3)
+        for match in found["matches"]:
+            self.assertTrue(match["symbol"])
+            self.assertIn("bhp", (match["symbol"] + str(match["name"])).lower())
+        self.assertIn("BHP.AX", [match["symbol"] for match in found["matches"]])
+        _print_assert_pass("feeds_symbols_live", f"actual={found['matches'][0]['symbol']}", f"actual={len(found['matches'])}", f"actual={_format_assert_elapsed(time.time() - started)}")
+
+    def test_feeds_errors(self):
+        for symbol in ["", "  ", "BHP AX", "'; DROP TABLE", "../../etc/passwd", "A" * 21]:
+            with self.assertRaises(feeds.FeedError) as raised:
+                feeds.equity_quote(symbol, {})
+            self.assertEqual("invalid_symbol", raised.exception.code)
+            self.assertEqual(400, raised.exception.status)
+        for limit in ["0", "-1", "abc"]:
+            with self.assertRaises(feeds.FeedError) as raised:
+                feeds.equity_symbols("bhp", {"limit": limit})
+            self.assertEqual("invalid_limit", raised.exception.code)
+        with self.assertRaises(feeds.FeedError) as raised:
+            feeds.equity_symbols(None, {})
+        self.assertEqual("invalid_query", raised.exception.code)
+        _print_assert_pass("feeds_errors_rejected", "actual=invalid_symbol", "actual=invalid_limit", "actual=invalid_query")
+
+        try:
+            with self.assertRaises(feeds.FeedError) as raised:
+                feeds.equity_quote("ZZZZQQ.AX", {})
+        except AssertionError:
+            self.skipTest("yahoo unexpectedly resolved the unknown symbol")
+        self.assertEqual("unknown_symbol", raised.exception.code)
+        self.assertEqual(404, raised.exception.status)
+        self.assertNotIn("exchangeTimezoneName", raised.exception.message)
+        _print_assert_pass("feeds_errors_unknown", f"actual={raised.exception.code}", f"actual={raised.exception.status}")
+
+    def test_feeds_routing(self):
+        self.assertEqual({"equity.quotes": "feed/equity/quotes", "equity.symbols": "feed/equity/symbols"}, feeds.paths())
+        resource, argument = feeds.resolve("equity/quotes/BHP.AX")
+        self.assertEqual("BHP.AX", argument)
+        with mock.patch.dict(feeds.FEEDS, {"equity": {"quotes": lambda captured, params: {"argument": captured, "params": params}}}):
+            bound, _ = feeds.resolve("equity/quotes/VAS.AX")
+            self.assertEqual({"argument": "VAS.AX", "params": {"q": "x"}}, bound({"q": "x"}))
+            bound, argument = feeds.resolve("equity/quotes")
+            self.assertIsNone(argument)
+            self.assertEqual({"argument": None, "params": {}}, bound({}))
+        for path, code in [("equity", "not_found"), ("", "not_found"), ("equity/quotes/A/B", "not_found"),
+                           ("crypto/quotes", "unknown_feed"), ("equity/nope", "unknown_resource")]:
+            with self.assertRaises(feeds.FeedError) as raised:
+                feeds.resolve(path)
+            self.assertEqual(code, raised.exception.code)
+            self.assertEqual(404, raised.exception.status)
+        _print_assert_pass("feeds_routing", f"actual={len(feeds.FEEDS)}", "actual=unknown_feed", "actual=unknown_resource")
+
+    def _feed_live(self, resource, argument, params):
+        try:
+            return resource(argument, params)
+        except feeds.FeedError as error:
+            if error.code == "upstream_error":
+                self.skipTest(f"yahoo unreachable [{error.message}]")
+            raise
 
     ########################################################################################################################
     # Sources

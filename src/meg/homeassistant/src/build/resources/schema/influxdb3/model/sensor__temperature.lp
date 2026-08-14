@@ -22,6 +22,7 @@
 #     bom_darlington_temp_max_4,
 #     bom_darlington_temp_max_5,
 #     bom_darlington_temp_max_6,
+#     bom_darlington_temp_max_7,
 #     bom_darlington_temp_min_0,
 #     bom_darlington_temp_min_1,
 #     bom_darlington_temp_min_2,

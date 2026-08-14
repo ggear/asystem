@@ -10,7 +10,7 @@ version = "$SERVICE_VERSION_PEP440"
 wrangle = "wrangle.main:main"
 
 [tool.setuptools.package-data]
-"wrangle.server" = ["*.html", "*.css", "*.js", "*.mp3"]
+"wrangle.server" = ["*.html", "static/*"]
 
 [tool.ruff]
 line-length = 200
