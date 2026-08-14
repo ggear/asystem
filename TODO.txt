@@ -34,7 +34,6 @@ retire nginx and use cloudflared for homeasistant?
 make sure 1h on portfolio works, seed timestamp into requests?
 better way to do cloudflaire config?
 drop fallback into prices sheet when google/yahoo fail, custom message?
-deply supervisor and add service in ha
 
 
 
