@@ -133,22 +133,14 @@ if __name__ == "__main__":
     #             metadata_dhcp_ips[metadata_dhcp_ip]
     #         ))
 
-    # INFO: Host and domain naming schemes:
-    #
-    # home.dar.janeandgraham.com
-    # homeassistant.dar.janeandgraham.com
-    # homeassistant.lan.janeandgraham.com
-    # homeassistant
-    # macmini-meg.lan.janeandgraham.com
-    # macmini-meg.lan
-    # macmini-meg
+    # INFO: Host and domain naming schemes are documented in src/main/resources/namespace.md
 
     metadata_dhcpaliases_path = abspath(join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
     with open(metadata_dhcpaliases_path, 'w') as metadata_hass_file:
         for name in modules:
 
             if "{}_HTTP_PORT".format(name.upper()) in modules[name][1]:
-                metadata_hass_file.write("cname={}.janeandgraham.com,{}\n".format(
+                metadata_hass_file.write("cname={}.proxy.janeandgraham.com,{}\n".format(
                     name,
                     modules["nginx"][0][0],
                 ))

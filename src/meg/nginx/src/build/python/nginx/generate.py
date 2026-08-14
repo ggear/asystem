@@ -7,7 +7,9 @@ pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
+DOMAIN = "janeandgraham.com"
 DOMAIN_API = "data"
+DOMAIN_PROXY = "proxy"
 
 HEADERS_SECURITY = """
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -141,10 +143,10 @@ http {
     return 301 https://home.janeandgraham.com$request_uri;
   }
 
-  # Local server for [nginx] and domain [nginx}.janeandgraham.com]
+  # Local server for [nginx] and domain [nginx.proxy.janeandgraham.com]
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
-    server_name nginx.janeandgraham.com nginx.local.janeandgraham.com;
+    server_name nginx.proxy.janeandgraham.com nginx.local.janeandgraham.com;
 """ + ACCESS_PRIVATE + "\n" + HEADERS_SECURITY + """
     location = /health {
       root /usr/share/nginx/html;
@@ -183,15 +185,17 @@ http {
                 if host_public_key in modules[name][1]:
                     server_names.append(modules[name][1][host_public_key])
                 for server_name in server_names:
+                    host_name = "{}.{}".format(server_name, DOMAIN) if name != server_name \
+                        else "{}.{}.{}".format(server_name, DOMAIN_PROXY, DOMAIN)
                     conf_file.write("  " + """
-  # {} server for [{}] and domain [{}.janeandgraham.com]
+  # {} server for [{}] and domain [{}]
   map $host ${}_url {{ default {}${}:{}; }}
   server {{
     listen {};
-    server_name {}.janeandgraham.com;
+    server_name {};
 {}
 {}
-    add_header Access-Control-Allow-Origin https://{}.janeandgraham.com always;
+    add_header Access-Control-Allow-Origin https://{} always;
     add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
     add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
     add_header Access-Control-Allow-Credentials "true" always;
@@ -202,16 +206,16 @@ http {
               """.format(
                         "Remote" if name != server_name else "Local",
                         name,
-                        server_name,
+                        host_name,
                         name,
                         scheme_value,
                         ip_key,
                         port_value,
                         nginx_port_value,
-                        server_name,
+                        host_name,
                         "    allow all;" if name != server_name else ACCESS_PRIVATE,
                         HEADERS_SECURITY,
-                        server_name,
+                        host_name,
                         name,
                         console_context_value,
                     ).strip() + "\n")
