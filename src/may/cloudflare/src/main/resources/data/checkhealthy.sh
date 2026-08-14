@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && curl -fsS "http://localhost:${CLOUDFLARE_METRICS_PORT}/ready" | jq -e '.readyConnections >= 1' >/dev/null
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl "http://localhost:${CLOUDFLARE_METRICS_PORT}/ready" | jq -er '.readyConnections')" -ge 1 ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [cloudflare] is healthy :)" >&2

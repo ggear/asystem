@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  pgrep -f cloudflared >/dev/null
+  pgrep -f "/asystem/bin/cloudflared" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [cloudflare] is alive :)" >&2

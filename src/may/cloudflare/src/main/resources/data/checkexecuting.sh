@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && curl -fsS "http://localhost:${CLOUDFLARE_METRICS_PORT}/ready" >/dev/null
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl -o /dev/null -w "%{http_code}" "http://localhost:${CLOUDFLARE_METRICS_PORT}/ready")" = "200" ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [cloudflare] is executing :)" >&2

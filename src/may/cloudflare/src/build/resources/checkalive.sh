@@ -1,1 +1,1 @@
-pgrep -f cloudflared >/dev/null
+pgrep -f "/asystem/bin/cloudflared" >/dev/null
