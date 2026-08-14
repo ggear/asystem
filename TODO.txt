@@ -30,6 +30,10 @@ Add big ass temps for deck
 
 
 
+Update cloudflare config screen shots for new tunnel, move to same dir?
+add wrangle api caching 15min?
+add wrangle google sheet function to build
+
 Order of attach:
   - schema
   - network
@@ -103,7 +107,6 @@ check all sheet references added to repo structs, eq equity indexes etc
 Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
 Build health wrangle/dashboards, add Streaks
 Optimise indexes, have a single composite index (entity, period, type - no unit) rather than individual, consider compression 10y segment after batch insert and dropping all index entirely - cost is have to decompress on upsert on current 10y segment
-Add a yahoo finance api proxy using curl_cffi so that google sheets can download via an extension script the same way yfinance does for real time GOLD - workout how to split URLS nicely with dashboard
 
 bank:
 implement balances

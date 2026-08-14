@@ -1,0 +1,13 @@
+#######################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+#######################################################################################
+tunnel: 
+credentials-file: /asystem/etc/.credentials.json
+metrics: 0.0.0.0:32419
+ingress:
+  - hostname: quotes.data.janeandgraham.com
+    service: https://nginx.local.janeandgraham.com:443
+    originRequest:
+      httpHostHeader: quotes.data.janeandgraham.com
+      noTLSVerify: true
+  - service: http_status:404

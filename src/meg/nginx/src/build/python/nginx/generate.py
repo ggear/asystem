@@ -7,6 +7,8 @@ pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
+DOMAIN_API = "data"
+
 HEADERS_SECURITY = """
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -228,6 +230,54 @@ http {
                     conf_file.write("  " + """
   }
               """.strip() + "\n\n")
+        apis = {}
+        for name in modules:
+            for key in modules[name][1]:
+                if key.startswith("{}_HTTP_API_".format(name.upper())) and key.endswith("_CONTEXT"):
+                    resource = key[len("{}_HTTP_API_".format(name.upper())):-len("_CONTEXT")].lower()
+                    context = modules[name][1][key]
+                    if not context.startswith("/"):
+                        raise ValueError("api resource [{}] of module [{}] declares context [{}] not starting with [/]".format(resource, name, context))
+                    if "{}_HTTP_PORT".format(name.upper()) not in modules[name][1]:
+                        raise ValueError("api resource [{}] of module [{}] declares no http port".format(resource, name))
+                    if resource in apis:
+                        raise ValueError("api resource [{}] of module [{}] collides with module [{}]".format(resource, name, apis[resource][0]))
+                    apis[resource] = (name, context)
+        for resource in sorted(apis):
+            name, context = apis[resource]
+            public_key = "{}_HTTP_API_{}_PUBLIC".format(name.upper(), resource.upper())
+            public_value = modules[name][1][public_key] if public_key in modules[name][1] else ""
+            host_names = ["{}.{}".format(resource, DOMAIN_API)]
+            if public_value:
+                host_names.append(public_value)
+            for host_name in host_names:
+                conf_file.write("  " + """
+  # Api server for [{}] resource [{}] and domain [{}.janeandgraham.com]
+  server {{
+    listen {};
+    server_name {}.janeandgraham.com;
+{}
+{}
+    add_header Access-Control-Allow-Origin https://{}.janeandgraham.com always;
+    add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
+    proxy_buffering off;
+    location / {{
+      proxy_pass ${}_url{}$request_uri;
+    }}
+  }}
+              """.format(
+                    name,
+                    resource,
+                    host_name,
+                    modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
+                    host_name,
+                    "    allow all;" if host_name == public_value else ACCESS_PRIVATE,
+                    HEADERS_SECURITY,
+                    host_name,
+                    name,
+                    context,
+                ).strip() + "\n\n")
         conf_file.write("""
 }
       """.strip() + "\n")

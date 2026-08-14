@@ -1,19 +1,17 @@
 services:
-  letsencrypt:
-    # NOTES: https://github.com/adferrand/dnsrobocert/releases
-    image: adferrand/dnsrobocert:3.27.1
-    container_name: letsencrypt
+  cloudflared:
+    # NOTES: https://github.com/cloudflare/cloudflared/releases
+    image: cloudflared:${SERVICE_VERSION_ABSOLUTE}
+    container_name: cloudflared
     init: true
     environment:
-      - TZ=Australia/Perth
-      - CLOUDFLARE_TOKEN
-      - LETSENCRYPT_STAGING
-      - NGINX_SERVICE
-      - UDMUTILITIES_SERVICE
+      - CLOUDFLARED_METRICS_PORT
+      - CLOUDFLARED_HOSTNAME
+    command: tunnel --no-autoupdate --config /asystem/etc/config.yml --metrics 0.0.0.0:${CLOUDFLARED_METRICS_PORT} run
     restart: ${SERVICE_RESTART}
     volumes:
-      - ${SERVICE_DATA_DIR}/letsencrypt:/etc/letsencrypt
-      - ${SERVICE_DATA_DIR}/dnsrobocert:/etc/dnsrobocert
+      - ${SERVICE_DATA_DIR}/config.yml:/asystem/etc/config.yml
+      - ${SERVICE_DATA_DIR}/.credentials.json:/asystem/etc/.credentials.json
       - ${SERVICE_DATA_DIR}/checkalive.sh:/asystem/etc/checkalive.sh
       - ${SERVICE_DATA_DIR}/checkexecuting.sh:/asystem/etc/checkexecuting.sh
       - ${SERVICE_DATA_DIR}/checkhealthy.sh:/asystem/etc/checkhealthy.sh
