@@ -39,7 +39,7 @@
       {
         "host": "macmini-may",
         "services": [
-          "cloudflared",
+          "cloudflare",
           "grafana",
           "influxdb",
           "letsencrypt",
