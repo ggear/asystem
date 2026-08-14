@@ -44,11 +44,11 @@ share_tmp_scripts_dir() {
 
 echo -n "Normalising '${WORKING_DIR}' ... "
 if [ "$(uname)" == "Linux" ]; then
-  normalise_permissions "${WORKING_DIR}" 750 750 640
+  normalise_permissions "${WORKING_DIR}" 2750 750 640
   SHARE_DIR_TMP=$(share_tmp_scripts_dir)
   if [ -n "${SHARE_DIR_TMP}" ]; then
     run mkdir -p "${SHARE_DIR_TMP}"
-    normalise_permissions "${SHARE_DIR_TMP}" 770 770 660
+    normalise_permissions "${SHARE_DIR_TMP}" 2770 770 660
   fi
 fi
 ${FIND_CMD} "${WORKING_DIR}" -type f -name nohup -exec rm -f {} \; || RESULT=1
