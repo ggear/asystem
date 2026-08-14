@@ -1,7 +1,9 @@
 """Real-time read-through proxy feeds, served at ``/api/v1/feed/{feed}/{resource}[/{argument}]``.
 
 A feed answers "what is the value right now" and nothing else: no history, no counters, no database,
-no plugin run lock. Each resource is published by nginx at ``https://<resource>.data.janeandgraham.com``
+no plugin run lock. Each resource is published by nginx at ``https://<resource>.data.janeandgraham.com`` on the LAN, and
+through the Cloudflare tunnel at the flat ``https://<resource>.janeandgraham.com`` (Cloudflare's Universal SSL
+covers first-level subdomains only, so the edge name cannot carry the ``.data`` infix)
 (declared by ``WRANGLE_HTTP_API_<RESOURCE>_CONTEXT`` in ``.env_all``), so the origin path is hidden and
 ``/BHP.AX`` reaches ``/api/v1/feed/equity/prices/BHP.AX``.
 
@@ -12,7 +14,7 @@ function with the token pair in Script Properties (Extensions > Apps Script > Pr
     function WRANGLE_PRICE(symbol) {
       var props = PropertiesService.getScriptProperties();
       var response = UrlFetchApp.fetch(
-        'https://prices.data.janeandgraham.com/' + encodeURIComponent(symbol), {
+        'https://prices.janeandgraham.com/' + encodeURIComponent(symbol), {
           headers: {
             'CF-Access-Client-Id': props.getProperty('CF_ACCESS_CLIENT_ID'),
             'CF-Access-Client-Secret': props.getProperty('CF_ACCESS_CLIENT_SECRET')
@@ -82,7 +84,8 @@ def paths() -> dict[str, str]:
 def equity_prices(argument: str | None, params: dict) -> dict:
     """Live price for one ticker.
 
-    ``GET /api/v1/feed/equity/prices/{symbol}`` or ``?symbol=`` — also ``https://prices.data.janeandgraham.com/{symbol}``.
+    ``GET /api/v1/feed/equity/prices/{symbol}`` or ``?symbol=`` — ``https://prices.data.janeandgraham.com/{symbol}`` on the LAN, or
+    ``https://prices.janeandgraham.com/{symbol}`` through the tunnel.
     Symbols are Yahoo tickers (``BHP.AX``, ``^AXJO``, ``BRK-B``), upper-cased, matched against ``FEED_SYMBOL_PATTERN``.
 
     Payload::
