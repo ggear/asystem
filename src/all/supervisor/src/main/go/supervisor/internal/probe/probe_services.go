@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 	"supervisor/internal/stats"
 	"time"
 
@@ -129,11 +129,17 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	for name := range servicesByName {
 		polledServiceNames[name] = struct{}{}
 	}
+	tombstoneStart := time.Now()
+	var tombstoned []string
 	for _, cachedServiceName := range p.cache.Services(p.hostName) {
 		if _, exists := polledServiceNames[cachedServiceName]; !exists {
 			p.cache.Evict(p.hostName, cachedServiceName)
 			p.cache.Delete(p.hostName, cachedServiceName)
+			tombstoned = append(tombstoned, cachedServiceName)
 		}
+	}
+	if len(tombstoned) > 0 {
+		scribe.Probe("state", "services").Info("tombstone", tombstoneStart, "host [%s] removed [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
 	}
 	newBool := func() *stats.BoolStats {
 		return stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
@@ -394,11 +400,11 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			continue
 		}
 		if name == "" {
-			slog.Error("state", "probe", "services", "phase", "docker", "duration", time.Since(servicesStart), "detail", "empty container name reported by docker, excluding from the service list")
+			scribe.Probe("state", "services").Error("docker", servicesStart, "empty container name reported, excluding from the service list")
 			continue
 		}
 		if _, exists := seenNames[name]; exists {
-			slog.Error("state", "probe", "services", "phase", "docker", "duration", time.Since(servicesStart), "detail", fmt.Sprintf("non-unique container name [%s] reported by docker, excluding from the service list", name))
+			scribe.Probe("state", "services").Error("docker", servicesStart, "non-unique container name [%s] reported, excluding from the service list", name)
 			continue
 		}
 		seenNames[name] = struct{}{}
@@ -717,7 +723,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 			if config.VersionPattern.MatchString(tokens[1]) {
 				version = tokens[1]
 			} else {
-				candidateErrs = append(candidateErrs, fmt.Sprintf("version [%s] from image [%s] could not be parsed", tokens[1], containerInfo.Config.Image))
+				candidateErrs = append(candidateErrs, fmt.Sprintf("[%s] from image [%s] could not be parsed", tokens[1], containerInfo.Config.Image))
 			}
 		}
 		// TODO: Cache this at least for each pulse, if not for longer eg cmd.cache-period
@@ -731,7 +737,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				name = tokens[0]
 			}
 			if name == "" {
-				candidateErrs = append(candidateErrs, fmt.Sprintf("version not available from image [%s] carrying no container name", containerInfo.Config.Image))
+				candidateErrs = append(candidateErrs, fmt.Sprintf("not available from image [%s] carrying no container name", containerInfo.Config.Image))
 			} else {
 				mount := config.Load(p.configPath).Mount()
 				candidates := []string{""}
@@ -749,7 +755,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 					installPath := latestDir + "/.env"
 					data, err := os.ReadFile(installPath)
 					if err != nil {
-						candidateErrs = append(candidateErrs, fmt.Sprintf("version not available from install dir [%s] with [%v]", installPath, err))
+						candidateErrs = append(candidateErrs, fmt.Sprintf("not available from install dir [%s] with [%v]", installPath, err))
 						continue
 					}
 					found := false
@@ -759,13 +765,13 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 							if config.VersionPattern.MatchString(v) {
 								version = v
 							} else {
-								candidateErrs = append(candidateErrs, fmt.Sprintf("version [%s] from install dir [%s] could not be parsed", v, installPath))
+								candidateErrs = append(candidateErrs, fmt.Sprintf("[%s] from install dir [%s] could not be parsed", v, installPath))
 							}
 							break
 						}
 					}
 					if !found {
-						candidateErrs = append(candidateErrs, fmt.Sprintf("version not declared in install dir [%s]", installPath))
+						candidateErrs = append(candidateErrs, fmt.Sprintf("not declared in install dir [%s]", installPath))
 					}
 					if version != "" {
 						break
@@ -780,9 +786,9 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 			image = containerInfo.Config.Image
 		}
 		for _, candidateErr := range candidateErrs {
-			slog.Error("state", "probe", "services", "phase", "version", "duration", time.Since(versionStart), "detail", candidateErr)
+			scribe.Probe("state", "services").Error("version", versionStart, "%s", candidateErr)
 		}
-		slog.Error("state", "probe", "services", "phase", "version", "duration", time.Since(versionStart), "detail", fmt.Sprintf("version not available from docker for image [%s]", image))
+		scribe.Probe("state", "services").Error("version", versionStart, "not available from docker for image [%s]", image)
 		return "-", nil
 	}
 	return version, nil

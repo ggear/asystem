@@ -370,10 +370,12 @@ func (c *RecordCache) Delete(hostName, serviceName string) bool {
 	return removedGuids
 }
 
-func (c *RecordCache) Purge(evictSecs int) {
+func (c *RecordCache) Purge(evictSecs int) (int, int) {
 	if c == nil {
-		return
+		return 0, 0
 	}
+	evicted := 0
+	deleted := 0
 	now := time.Now().Unix()
 	nilValue := NewNilValue()
 	c.mutex.Lock()
@@ -390,6 +392,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 			delete(c.dirty, k)
 			delete(c.listeners, k)
 			removedGuids = true
+			deleted++
 			continue
 		}
 		if strings.HasPrefix(guid.ServiceName, ServiceNameSchema) {
@@ -410,6 +413,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 			delete(c.listeners, k)
 			removedGuids = true
 			changed = true
+			deleted++
 			continue
 		}
 		if !record.Value.Equal(&nilValue) && now-c.hostLastSeen[guid.Host] > int64(evictSecs) {
@@ -421,6 +425,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 				allListeners = append(allListeners, c.listeners[schemaKey]...)
 			}
 			changed = true
+			evicted++
 		}
 		updated = append(updated, guid)
 	}
@@ -442,6 +447,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 			}
 		}
 	}
+	return evicted, deleted
 }
 
 func (c *RecordCache) IDs() []ID {

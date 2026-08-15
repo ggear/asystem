@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,6 +12,7 @@ import (
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
 	"supervisor/internal/schema"
+	"supervisor/internal/scribe"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -38,12 +37,12 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		slog.Error("state", "engine", "probes", "phase", "create", "duration", time.Since(createStart), "detail", fmt.Sprintf("listening probes loop create failed with [%v]", err))
+		scribe.Engine("state", "probes").Error("create", createStart, "listening probes loop failed with [%v]", err)
 		return
 	}
 	runStart := time.Now()
 	if err := probe.Run(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		slog.Error("state", "engine", "probes", "phase", "run", "duration", time.Since(runStart), "detail", fmt.Sprintf("listening probes loop run failed with [%v]", err))
+		scribe.Engine("state", "probes").Error("run", runStart, "listening probes loop failed with [%v]", err)
 	}
 }
 
@@ -92,7 +91,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		var value metric.ValueData
 		streamStart := time.Now()
 		if err := json.Unmarshal(msg.Payload(), &value); err != nil {
-			slog.Warn("state", "engine", "subscribe", "phase", "stream", "duration", time.Since(streamStart), "detail", fmt.Sprintf("unmarshal failed on [%s] with [%v]", msg.Topic(), err))
+			scribe.Engine("state", "subscribe").Warn("stream", streamStart, "unmarshal failed on [%s] with [%v]", msg.Topic(), err)
 			return
 		}
 		if value.Pulse == nil {
@@ -170,7 +169,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				return
 			}
 			rxCount.Add(1)
-			subscribeTopics(client, cache.RegisterService(hostName, serviceName, false))
+			registerStart := time.Now()
+			if bindings := cache.RegisterService(hostName, serviceName, false); len(bindings) > 0 {
+				subscribeTopics(client, bindings)
+				scribe.Engine("state", "subscribe").Info("register", registerStart, "host [%s] service [%s] subscribed [%d] topics", hostName, serviceName, len(bindings))
+			}
 			value.Timestamp = time.Now().Unix()
 			record := metric.NewRecord(value)
 			cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, hostName, serviceName), &record)
@@ -206,7 +209,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				if resubscribe {
 					topics = resubscribeHost(client, hostName)
 				}
-				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "detail", fmt.Sprintf("host [%s] status [%s] resubscribed [%d] topics reconcile [%v]", hostName, hostStatusOnline, topics, !alreadyOnline))
+				scribe.Engine("state", "broker").Info("status", statusStart, "host [%s] status [%s] resubscribed [%d] topics reconcile [%v]", hostName, hostStatusOnline, topics, !alreadyOnline)
 			case hostStatusOffline, "":
 				storeHostStatus(hostName, false)
 				evicted := cache.Services(hostName)
@@ -230,18 +233,18 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					record := metric.NewRecord(metric.NewNilValue())
 					cache.Store(metric.NewRecordGUID(id, hostName), &record)
 				}
-				slog.Warn("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "detail", fmt.Sprintf("host [%s] status [%s] evicted [%d] services", hostName, hostStatusOffline, len(evicted)))
+				scribe.Engine("state", "broker").Warn("status", statusStart, "host [%s] status [%s] evicted [%d] services", hostName, hostStatusOffline, len(evicted))
 			default:
-				slog.Warn("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "detail", fmt.Sprintf("host [%s] unknown status payload [%s]", hostName, payload))
+				scribe.Engine("state", "broker").Warn("status", statusStart, "host [%s] unknown payload [%s]", hostName, payload)
 			}
 		})
 		cache.Refresh()
-		slog.Info("state", "engine", "subscribe", "phase", "connect", "duration", time.Since(connectStart), "detail", fmt.Sprintf("subscribed [%d] topics", topics))
+		scribe.Engine("state", "subscribe").Info("connect", connectStart, "subscribed [%d] topics", topics)
 	}
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
 	if err != nil {
-		slog.Error("state", "engine", "subscribe", "phase", "connect", "duration", time.Since(clientStart), "detail", fmt.Sprintf("listening stream loop connect failed with [%v]", err))
+		scribe.Engine("state", "subscribe").Error("connect", clientStart, "listening stream loop failed with [%v]", err)
 		return
 	}
 	defer client.Disconnect(250)
@@ -264,7 +267,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return
 		case <-purgeTicker.C:
 			purgeStart := time.Now()
-			cache.Purge(periods.HeartbeatSecs + 10*periods.PulseMillis/1000)
+			evicted, deleted := cache.Purge(periods.HeartbeatSecs + 10*periods.PulseMillis/1000)
 			now := time.Now()
 			var due []hostReconcile
 			reconcileMutex.Lock()
@@ -287,14 +290,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				if len(services) > 0 {
 					cache.Refresh()
 				}
-				slog.Info("state", "engine", "subscribe", "phase", "reconcile", "duration", time.Since(reconcileStart), "detail", fmt.Sprintf("host [%s] reaped [%d] services after [%d] ms", pending.host, len(services), time.Since(pending.started).Milliseconds()))
+				scribe.Engine("state", "subscribe").Info("reconcile", reconcileStart, "host [%s] reaped [%d] services after [%d] ms", pending.host, len(services), time.Since(pending.started).Milliseconds())
 			}
 			rx := rxCount.Swap(0)
 			rate := int64(0)
 			if secs := int64(purgeInterval.Seconds()); secs > 0 {
 				rate = rx / secs
 			}
-			slog.Debug("profiling", "engine", "subscribe", "phase", "purge", "duration", time.Since(purgeStart), "detail", fmt.Sprintf("received [%d] msgs at [%d] msg/s", rx, rate))
+			scribe.Engine("profiling", "subscribe").Debug("purge", purgeStart, "received [%d] msgs at [%d] msg/s evicted [%d] deleted [%d] records", rx, rate, evicted, deleted)
 		}
 	}
 }
@@ -317,7 +320,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		slog.Error("state", "engine", "probes", "phase", "create", "duration", time.Since(createStart), "detail", fmt.Sprintf("all probes once create failed with [%v]", err))
+		scribe.Engine("state", "probes").Error("create", createStart, "all probes once failed with [%v]", err)
 		return
 	}
 	timeout := time.Duration(3*periods.PulseMillis) * time.Millisecond
@@ -326,7 +329,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	runStart := time.Now()
 	err := probe.Run(ctx, nil)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		slog.Error("state", "engine", "probes", "phase", "run", "duration", time.Since(runStart), "detail", fmt.Sprintf("all probes once run failed with [%v]", err))
+		scribe.Engine("state", "probes").Error("run", runStart, "all probes once failed with [%v]", err)
 	}
 }
 
@@ -354,7 +357,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		slog.Error("state", "engine", "publish", "phase", "create", "duration", time.Since(createStart), "detail", fmt.Sprintf("publish loop create failed with [%v]", err))
+		scribe.Engine("state", "publish").Error("create", createStart, "publish loop failed with [%v]", err)
 		return
 	}
 	hostName := config.Load(configPath).Host()
@@ -370,7 +373,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				return
 			}
 			if serviceName := value.Pulse.ValueString; serviceName != "" {
-				cache.RegisterService(hostName, serviceName, true)
+				registerStart := time.Now()
+				if bindings := cache.RegisterService(hostName, serviceName, true); len(bindings) > 0 {
+					scribe.Engine("state", "publish").Info("register", registerStart, "host [%s] service [%s] rediscovered [%d] topics", hostName, serviceName, len(bindings))
+				}
 			}
 		})
 		client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
@@ -382,7 +388,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 
 			// TODO: Implement command handling
 
-			slog.Debug("command", "engine", "broker", "phase", "command", "duration", time.Since(commandStart), "detail", fmt.Sprintf("host [%s] service [%s] payload [%s]", tokens[1], tokens[4], string(msg.Payload())))
+			scribe.Engine("command", "broker").Debug("command", commandStart, "host [%s] service [%s] payload [%s]", tokens[1], tokens[4], string(msg.Payload()))
 		})
 		if hasConnected.Swap(true) {
 			statusReadback := make(chan string, 1)
@@ -406,17 +412,21 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, statusTopic, hostStatusOffline)
 	if err != nil {
-		slog.Error("state", "engine", "broker", "phase", "connect", "duration", time.Since(clientStart), "detail", fmt.Sprintf("publish loop broker connect failed with [%v]", err))
+		scribe.Engine("state", "broker").Error("connect", clientStart, "publish loop failed with [%v]", err)
 		return
 	}
 	defer func() {
+		shutdownStart := time.Now()
 		client.Publish(statusTopic, 1, true, hostStatusOffline).WaitTimeout(2 * time.Second)
+		tombstoned := 0
 		cache.Records(func(_ metric.RecordGUID, record *metric.Record) {
 			if record.Topic != "" {
 				client.Publish(record.Topic, 0, true, "")
+				tombstoned++
 			}
 		})
 		client.Disconnect(2500)
+		scribe.Engine("state", "broker").Info("shutdown", shutdownStart, "host [%s] status [%s] tombstoned [%d] topics", hostName, hostStatusOffline, tombstoned)
 	}()
 	cache.SubscribeDeletes(&brokerPublishDeletesListener{client: client})
 	var db *databaseClient
@@ -425,7 +435,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		databaseStart := time.Now()
 		db, dbErr = databaseConnect(configPath)
 		if dbErr != nil {
-			slog.Error("state", "engine", "database", "phase", "connect", "duration", time.Since(databaseStart), "detail", fmt.Sprintf("publish loop database connect failed with [%v]", dbErr))
+			scribe.Engine("state", "database").Error("connect", databaseStart, "publish loop failed with [%v]", dbErr)
 		} else {
 			defer db.close()
 		}
@@ -473,7 +483,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 						txCount++
 						txBytes += len(payload)
 					} else {
-						slog.Warn("state", "engine", "publish", "phase", "marshal", "duration", time.Since(processStart), "detail", fmt.Sprintf("marshal failed on [%s] with [%v]", record.Topic, jsonErr))
+						scribe.Engine("state", "publish").Warn("marshal", processStart, "failed on [%s] with [%v]", record.Topic, jsonErr)
 					}
 				} else if guid.ServiceName != metric.ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, metric.ServiceNameSchema) {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
@@ -554,12 +564,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if isHeartbeat {
 			phase = "heartbeat"
 		}
-		slog.Debug("profiling", "engine", "broker", "phase", phase, "duration", brokerDuration, "detail", fmt.Sprintf("transmitted [%d] msgs", txCount))
-		slog.Debug("profiling", "engine", "database", "phase", phase, "duration", dbDuration, "detail", fmt.Sprintf("transmitted [%d] bytes", lineBytes))
-		slog.Debug("profiling", "engine", "publish", "phase", phase, "duration", time.Since(pulseStart), "detail", fmt.Sprintf("transmitted [%d] bytes", txBytes))
+		scribe.Engine("profiling", "publish").Debug(phase, pulseStart, "broker [%d] msgs [%d] bytes in [%d] ms database [%d] bytes in [%d] ms", txCount, txBytes, brokerDuration.Milliseconds(), lineBytes, dbDuration.Milliseconds())
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		slog.Error("state", "engine", "publish", "phase", "run", "duration", time.Since(publishStart), "detail", fmt.Sprintf("publish loop run failed with [%v]", err))
+		scribe.Engine("state", "publish").Error("run", publishStart, "publish loop failed with [%v]", err)
 	}
 }
 
@@ -567,12 +575,15 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 // signal that the broker session may be dead. Without it the stream loop waits on the keepalive to notice, and the screen holds
 // values that stopped updating at suspend until then.
 func Wake() {
+	wakeStart := time.Now()
 	wakeMutex.RLock()
 	handler := wakeHandler
 	wakeMutex.RUnlock()
-	if handler != nil {
-		handler()
+	if handler == nil {
+		return
 	}
+	handler()
+	scribe.Engine("state", "broker").Info("wake", wakeStart, "revive requested by the display stall detector")
 }
 
 type hostReconcile struct {

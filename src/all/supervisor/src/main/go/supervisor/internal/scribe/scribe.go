@@ -90,6 +90,43 @@ func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
 	return buf
 }
 
+func Engine(tag, name string) Logger {
+	return Logger{tag: tag, key: "engine", name: name}
+}
+
+func Probe(tag, name string) Logger {
+	return Logger{tag: tag, key: "probe", name: name}
+}
+
+type Logger struct {
+	tag  string
+	key  string
+	name string
+}
+
+func (l Logger) Debug(phase string, started time.Time, detail string, args ...any) {
+	l.log(slog.LevelDebug, phase, started, detail, args...)
+}
+
+func (l Logger) Info(phase string, started time.Time, detail string, args ...any) {
+	l.log(slog.LevelInfo, phase, started, detail, args...)
+}
+
+func (l Logger) Warn(phase string, started time.Time, detail string, args ...any) {
+	l.log(slog.LevelWarn, phase, started, detail, args...)
+}
+
+func (l Logger) Error(phase string, started time.Time, detail string, args ...any) {
+	l.log(slog.LevelError, phase, started, detail, args...)
+}
+
+func (l Logger) log(level slog.Level, phase string, started time.Time, detail string, args ...any) {
+	if len(args) > 0 {
+		detail = fmt.Sprintf(detail, args...)
+	}
+	slog.Log(context.Background(), level, l.tag, l.key, l.name, keyPhase, phase, keyDuration, time.Since(started), keyDetail, detail)
+}
+
 func Level() slog.Level {
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()
@@ -190,7 +227,6 @@ func (h *streamHandler) WithGroup(_ string) slog.Handler      { return h }
 
 func format(record slog.Record) string {
 	columns := make([]string, len(columnWidths))
-	var extras []string
 	detail := ""
 	record.Attrs(func(a slog.Attr) bool {
 		switch {
@@ -202,8 +238,6 @@ func format(record slog.Record) string {
 			columns[columnPhase] = a.Key + "=" + a.Value.String()
 		case slices.Contains(keysEngine, a.Key):
 			columns[columnEngine] = a.Key + "=" + a.Value.String()
-		default:
-			extras = append(extras, a.Key+"="+a.Value.String())
 		}
 		return true
 	})
@@ -212,10 +246,6 @@ func format(record slog.Record) string {
 	for index, width := range columnWidths {
 		builder.WriteByte(' ')
 		builder.WriteString(pad(columns[index], width))
-	}
-	for _, extra := range extras {
-		builder.WriteByte(' ')
-		builder.WriteString(extra)
 	}
 	if detail != "" {
 		builder.WriteString(" " + keyDetail + "=")

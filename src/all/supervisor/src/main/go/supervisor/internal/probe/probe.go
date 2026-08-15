@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"reflect"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 	"supervisor/internal/stats"
 	"time"
 )
@@ -41,7 +41,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		}
 		p := probesByMetricMask[id]
 		if p == nil {
-			slog.Error("state", "engine", "probes", "phase", "create", "duration", time.Since(registerStart), "detail", fmt.Sprintf("no probe registered for metric [%d]", id))
+			scribe.Probe("state", "*").Error("create", registerStart, "no probe registered for metric [%d]", id)
 			continue
 		}
 		mask := probeMap[p]
@@ -53,14 +53,14 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		probeCreateStart := time.Now()
 		err := p.create(configPath, cache, mask, periods)
 		if err != nil {
-			slog.Error("state", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "detail", fmt.Sprintf("create failed with [%v]", err))
+			scribe.Probe("state", p.name()).Error("create", probeCreateStart, "failed with [%v]", err)
 			delete(probeMap, p)
-			slog.Debug("profiling", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "detail", "success [false] probe removed from the poll set")
+			scribe.Probe("profiling", p.name()).Debug("create", probeCreateStart, "success [false] removed from the poll set")
 			continue
 		}
-		slog.Debug("profiling", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "detail", fmt.Sprintf("success [true] created [1] of [%d] probes", len(probeMap)))
+		scribe.Probe("profiling", p.name()).Debug("create", probeCreateStart, "success [true] metrics [%d]", len(p.metrics()))
 	}
-	slog.Debug("profiling", "probe", "*", "phase", "create", "duration", time.Since(createStart), "detail", fmt.Sprintf("success [true] created [%d] probes", len(probeMap)))
+	scribe.Probe("profiling", "*").Debug("create", createStart, "success [true] created [%d] probes", len(probeMap))
 	execProbes = probeMap
 	execPeriods = periods
 	execConfigPath = configPath
@@ -96,9 +96,9 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 			for p := range execProbes {
 				probeStart := time.Now()
 				if err := p.run(ctx, isPulse); err != nil {
-					slog.Error("state", "probe", p.name(), "phase", phase, "duration", time.Since(probeStart), "detail", fmt.Sprintf("execute failed with [%v]", err))
+					scribe.Probe("state", p.name()).Error(phase, probeStart, "failed with [%v]", err)
 				}
-				slog.Debug("profiling", "probe", p.name(), "phase", phase, "duration", time.Since(probeStart), "detail", fmt.Sprintf("polled [1] of [%d] probes", len(execProbes)))
+				scribe.Probe("profiling", p.name()).Debug(phase, probeStart, "polled [%d] metrics", len(p.metrics()))
 			}
 			if isPulse {
 				heartbeatPulseCount--
@@ -110,7 +110,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 					onPulse(isHeartbeat)
 				}
 			}
-			slog.Debug("profiling", "probe", "*", "phase", phase, "duration", time.Since(tickStart), "detail", fmt.Sprintf("polled [%d] probes", len(execProbes)))
+			scribe.Probe("profiling", "*").Debug(phase, tickStart, "polled [%d] probes", len(execProbes))
 		}
 	}
 }
@@ -240,7 +240,7 @@ func runMetricCacheTasks(p probe, isPulse bool, tasks []cacheMetricTask) {
 	for _, task := range tasks {
 		cache := p.records()
 		if cache == nil {
-			slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(tasksStart), "detail", fmt.Sprintf("metric [%d] task missing the required cache", task.metricID))
+			scribe.Probe("state", p.name()).Error("metric", tasksStart, "metric [%d] missing the required cache", task.metricID)
 			continue
 		}
 		if !p.hasMetric(task.metricID) {
@@ -266,13 +266,13 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 		missing = append(missing, "pulseOKFunc")
 	}
 	if len(missing) > 0 {
-		slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(taskStart), "detail", fmt.Sprintf("metric [%d] task missing required fields [%s]", task.metricID, strings.Join(missing, ",")))
+		scribe.Probe("state", p.name()).Error("metric", taskStart, "metric [%d] missing required fields [%s]", task.metricID, strings.Join(missing, ","))
 		return
 	}
 	sample, err := task.sampleFunc()
 	errored := err != nil && !errors.Is(err, errProbeWarmingUp)
 	if errored {
-		slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(taskStart), "detail", fmt.Sprintf("metric [%d] task failed with [%v]", task.metricID, err))
+		scribe.Probe("state", p.name()).Error("metric", taskStart, "metric [%d] failed with [%v]", task.metricID, err)
 	}
 	task.statsFunc(sample)
 	if !isPulse {
@@ -280,7 +280,7 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 	}
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
-		slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(taskStart), "detail", fmt.Sprintf("metric [%d] task missing the host name", task.metricID))
+		scribe.Probe("state", p.name()).Error("metric", taskStart, "metric [%d] missing the host name", task.metricID)
 		return
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
@@ -302,7 +302,7 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 		value, valueErr = metric.NewDataValue(pulseOK, pulse, trendOK, trend)
 	}
 	if valueErr != nil {
-		slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(taskStart), "detail", fmt.Sprintf("metric [%d] task value builder failed with [%v]", task.metricID, valueErr))
+		scribe.Probe("state", p.name()).Error("metric", taskStart, "metric [%d] value builder failed with [%v]", task.metricID, valueErr)
 		return
 	}
 	record := metric.NewRecord(*value)

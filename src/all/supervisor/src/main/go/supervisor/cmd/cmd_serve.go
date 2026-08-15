@@ -10,6 +10,7 @@ import (
 	"supervisor/internal/engine"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -59,7 +60,11 @@ func executeServe(configPath string, opts *serveOptions) error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+	serveStart := time.Now()
+	loaded := config.Load(configPath)
+	scribe.Engine("state", "serve").Info("start", serveStart, "version [%s] host [%s] config [%s] poll [%d] ms pulse [%d] ms heartbeat [%d] s", loaded.Version(), loaded.Host(), configPath, periods.PollMillis, periods.PulseMillis, periods.HeartbeatSecs)
 	engine.RunAllProbesPublishLoop(ctx, configPath, metric.NewRecordCache(), periods)
+	scribe.Engine("state", "serve").Info("stop", serveStart, "version [%s] host [%s] exited gracefully", loaded.Version(), loaded.Host())
 	return nil
 }
 

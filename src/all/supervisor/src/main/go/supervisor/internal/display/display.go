@@ -114,7 +114,7 @@ func NewDisplay(
 		tickStall:       tickStall,
 		singleHostIndex: singleHostIndex(hosts),
 	}
-	slog.Info("config", "engine", "display", "phase", "init", "duration", time.Since(initStart), "detail", fmt.Sprintf("format [%v] rows [%d] cols [%d]", format, height, width))
+	scribe.Engine("config", "display").Info("init", initStart, "format [%v] rows [%d] cols [%d]", format, height, width)
 	return display, nil
 }
 
@@ -379,14 +379,14 @@ func (d *Display) Compile() (Format, error) {
 					}
 				}
 			}
-			slog.Info("config", "engine", "display", "phase", "render", "duration", time.Since(compileStart), "detail", fmt.Sprintf("format [%v] rows [%d] cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols))
+			scribe.Engine("config", "display").Info("render", compileStart, "format [%v] rows [%d] cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			slog.Warn("state", "engine", "display", "phase", "compile", "duration", time.Since(compileStart), "detail", fmt.Sprintf("relaxed layout compilation failed with [%v], falling back to compact", err))
+			scribe.Engine("state", "display").Warn("compile", compileStart, "relaxed layout failed with [%v], falling back to compact", err)
 		}
 		d.format = FormatCompact
 	}
@@ -518,7 +518,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 				d.dimsInit = dims
 				d.rebuild("resize")
-				slog.Info("state", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart), "detail", fmt.Sprintf("resized to [%d] cols by [%d] rows", cols, rows))
+				scribe.Engine("state", "display").Info("resize", resizeStart, "[%d] cols by [%d] rows", cols, rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
@@ -557,7 +557,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 		case <-ticker.C:
 			if elapsed := time.Since(ticked); elapsed > d.tickStall {
-				slog.Warn("state", "engine", "display", "phase", "stall", "duration", elapsed, "detail", fmt.Sprintf("draw tick gap exceeded [%d] ms", d.tickStall.Milliseconds()))
+				scribe.Engine("state", "display").Warn("stall", ticked, "draw tick gap exceeded [%d] ms", d.tickStall.Milliseconds())
 				engine.Wake()
 				d.refresh("wake")
 			}
@@ -594,7 +594,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			d.terminal.show()
-			slog.Info("state", "engine", "display", "phase", "draw", "duration", time.Since(drawStart), "detail", fmt.Sprintf("drawn [%d] boxes", drawnCount))
+			scribe.Engine("state", "display").Info("draw", drawStart, "drawn [%d] boxes", drawnCount)
 			d.force = false
 		}
 	}
@@ -605,7 +605,7 @@ func (d *Display) rebuild(trigger string) {
 	d.format = d.formatInit
 	d.boxes = nil
 	if _, err := d.Compile(); err != nil {
-		slog.Error("state", "engine", "display", "phase", "draw", "duration", time.Since(rebuildStart), "detail", fmt.Sprintf("rebuild failed with [%v]", err))
+		scribe.Engine("state", "display").Error("rebuild", rebuildStart, "failed with [%v]", err)
 		d.logOverlay = true
 		d.logOverlayAuto = true
 	} else if d.logOverlayAuto {
@@ -629,7 +629,7 @@ func (d *Display) refresh(trigger string) {
 	}
 	d.terminal.show()
 	d.force = true
-	slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart), "detail", fmt.Sprintf("trigger [%s] refreshed [%d] boxes", trigger, len(d.boxes)))
+	scribe.Engine("state", "display").Info("refresh", refreshStart, "trigger [%s] refreshed [%d] boxes", trigger, len(d.boxes))
 }
 
 func (d *Display) subscribeUpdates() {

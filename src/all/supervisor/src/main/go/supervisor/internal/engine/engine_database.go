@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"supervisor/internal/config"
+	"supervisor/internal/scribe"
 	"time"
 
 	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
@@ -45,29 +45,29 @@ func databaseConnect(configPath string) (*databaseClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect failed: %w", err)
 	}
-	slog.Info("state", "engine", "database", "phase", "connect", "duration", time.Since(connectStart), "detail", fmt.Sprintf("connected to [%s]", databaseURL))
+	scribe.Engine("state", "database").Info("connect", connectStart, "database [%s]", databaseURL)
 	return &databaseClient{configPath: configPath, url: databaseURL, client: client}, nil
 }
 
 func (d *databaseClient) write(ctx context.Context, data []byte) {
 	writeStart := time.Now()
 	if err := d.client.Write(ctx, data); err != nil {
-		slog.Warn("state", "engine", "database", "phase", "write", "duration", time.Since(writeStart), "detail", fmt.Sprintf("write failed to [%s] with [%v]", d.url, err))
+		scribe.Engine("state", "database").Warn("write", writeStart, "database [%s] failed with [%v]", d.url, err)
 		reconnectStart := time.Now()
 		newClient, _, reconnErr := newInfluxClient(d.configPath)
 		if reconnErr != nil {
-			slog.Warn("state", "engine", "database", "phase", "reconnect", "duration", time.Since(reconnectStart), "detail", fmt.Sprintf("reconnect failed to [%s] with [%v]", d.url, reconnErr))
+			scribe.Engine("state", "database").Warn("reconnect", reconnectStart, "database [%s] failed with [%v]", d.url, reconnErr)
 			return
 		}
 		_ = d.client.Close()
 		d.client = newClient
-		slog.Info("state", "engine", "database", "phase", "reconnect", "duration", time.Since(reconnectStart), "detail", fmt.Sprintf("reconnected to [%s]", d.url))
+		scribe.Engine("state", "database").Info("reconnect", reconnectStart, "database [%s]", d.url)
 	}
 }
 
 func (d *databaseClient) close() {
 	closeStart := time.Now()
 	if err := d.client.Close(); err != nil {
-		slog.Warn("state", "engine", "database", "phase", "disconnect", "duration", time.Since(closeStart), "detail", fmt.Sprintf("disconnect failed from [%s] with [%v]", d.url, err))
+		scribe.Engine("state", "database").Warn("disconnect", closeStart, "database [%s] failed with [%v]", d.url, err)
 	}
 }
