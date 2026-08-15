@@ -82,23 +82,23 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 		probeStart := time.Now()
 		token := client.Unsubscribe(brokerProbeTopic)
 		if token.WaitTimeout(brokerProbeTimeout) && token.Error() == nil {
-			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart), "alive", true, "detail", "session responded, no revive needed")
+			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart), "detail", "alive [true] session responded, no revive needed")
 			return
 		}
 		if !client.IsConnectionOpen() {
-			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart), "alive", false, "detail", "connection already closed, paho is reconnecting")
+			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart), "detail", "alive [false] connection already closed, paho is reconnecting")
 			return
 		}
 		reviveStart := time.Now()
-		slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(probeStart), "alive", false, "detail", "session unresponsive, disconnecting to force reconnect")
+		slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(probeStart), "detail", "alive [false] session unresponsive, disconnecting to force reconnect")
 		client.Disconnect(0)
 		for backoff := brokerReviveBackoff; ; backoff = min(2*backoff, brokerReconnectMax) {
 			token := client.Connect()
 			if token.WaitTimeout(brokerConnectTimeout) && token.Error() == nil {
-				slog.Info("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart), "alive", true, "detail", "session revived")
+				slog.Info("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart), "detail", "alive [true] session revived")
 				return
 			}
-			slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart), "alive", false, "detail", fmt.Sprintf("reconnect failed with [%v], retrying after [%d] ms", token.Error(), backoff.Milliseconds()))
+			slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart), "detail", fmt.Sprintf("alive [false] reconnect failed with [%v], retrying after [%d] ms", token.Error(), backoff.Milliseconds()))
 			select {
 			case <-ctx.Done():
 				return

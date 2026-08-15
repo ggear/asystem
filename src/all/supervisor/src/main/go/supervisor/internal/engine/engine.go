@@ -203,7 +203,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				if resubscribe {
 					topics = resubscribeHost(client, hostName)
 				}
-				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "host", hostName, "status", hostStatusOnline, "detail", fmt.Sprintf("resubscribed [%d] topics reconcile [%v]", topics, !alreadyOnline))
+				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "detail", fmt.Sprintf("host [%s] status [%s] resubscribed [%d] topics reconcile [%v]", hostName, hostStatusOnline, topics, !alreadyOnline))
 			case hostStatusOffline, "":
 				statusStart := time.Now()
 				storeHostStatus(hostName, false)
@@ -228,9 +228,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					record := metric.NewRecord(metric.NewNilValue())
 					cache.Store(metric.NewRecordGUID(id, hostName), &record)
 				}
-				slog.Warn("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "host", hostName, "status", hostStatusOffline, "detail", fmt.Sprintf("evicted [%d] services", len(evicted)))
+				slog.Warn("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "detail", fmt.Sprintf("host [%s] status [%s] evicted [%d] services", hostName, hostStatusOffline, len(evicted)))
 			default:
-				slog.Warn("state", "engine", "broker", "phase", "status", "host", hostName, "detail", fmt.Sprintf("unknown status payload [%s]", payload))
+				slog.Warn("state", "engine", "broker", "phase", "status", "detail", fmt.Sprintf("host [%s] unknown status payload [%s]", hostName, payload))
 			}
 		})
 		cache.Refresh()
@@ -284,7 +284,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				if len(services) > 0 {
 					cache.Refresh()
 				}
-				slog.Info("state", "engine", "subscribe", "phase", "reconcile", "duration", time.Since(reconcileStart), "host", pending.host, "detail", fmt.Sprintf("reaped [%d] services after [%d] ms", len(services), time.Since(pending.started).Milliseconds()))
+				slog.Info("state", "engine", "subscribe", "phase", "reconcile", "duration", time.Since(reconcileStart), "detail", fmt.Sprintf("host [%s] reaped [%d] services after [%d] ms", pending.host, len(services), time.Since(pending.started).Milliseconds()))
 			}
 			rx := rxCount.Swap(0)
 			rate := int64(0)
@@ -375,7 +375,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 
 			// TODO: Implement command handling
 
-			slog.Debug("command", "engine", "broker", "phase", "command", "host", tokens[1], "detail", fmt.Sprintf("service [%s] payload [%s]", tokens[4], string(msg.Payload())))
+			slog.Debug("command", "engine", "broker", "phase", "command", "detail", fmt.Sprintf("host [%s] service [%s] payload [%s]", tokens[1], tokens[4], string(msg.Payload())))
 		})
 		if hasConnected.Swap(true) {
 			statusReadback := make(chan string, 1)

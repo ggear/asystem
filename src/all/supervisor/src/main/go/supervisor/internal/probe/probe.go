@@ -54,12 +54,12 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		if err != nil {
 			slog.Error("state", "probe", p.name(), "phase", "create", "detail", fmt.Sprintf("create failed with [%v]", err))
 			delete(probeMap, p)
-			slog.Debug("profiling", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "success", false, "detail", "probe removed from the poll set")
+			slog.Debug("profiling", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "detail", "success [false] probe removed from the poll set")
 			continue
 		}
-		slog.Debug("profiling", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "success", true, "detail", fmt.Sprintf("created [1] of [%d] probes", len(probeMap)))
+		slog.Debug("profiling", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "detail", fmt.Sprintf("success [true] created [1] of [%d] probes", len(probeMap)))
 	}
-	slog.Debug("profiling", "probe", "*", "phase", "create", "duration", time.Since(createStart), "success", true, "detail", fmt.Sprintf("created [%d] probes", len(probeMap)))
+	slog.Debug("profiling", "probe", "*", "phase", "create", "duration", time.Since(createStart), "detail", fmt.Sprintf("success [true] created [%d] probes", len(probeMap)))
 	execProbes = probeMap
 	execPeriods = periods
 	execConfigPath = configPath

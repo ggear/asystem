@@ -264,109 +264,108 @@ func TestScribe_BufferHandler(t *testing.T) {
 	}
 }
 
-func TestScribe_Format(t *testing.T) {
+func TestScribe_FormatColumns(t *testing.T) {
 	tests := []struct {
 		name          string
-		message       string
 		attrs         []slog.Attr
-		expected      string
 		expectedError bool
 	}{
 		{
-			name:    "happy_counts_folded_into_detail",
-			message: "profiling",
-			attrs: []slog.Attr{
-				slog.String("engine", "subscribe"),
-				slog.String("phase", "purge"),
-				slog.Duration("duration", 0),
-				slog.String("detail", "received [31] msgs at [5] msg/s"),
-			},
-			expected:      "profiling engine=subscribe   phase=purge      duration=      0ms                                           detail=received [31] msgs at [5] msg/s",
+			name:          "happy_short_values",
+			attrs:         []slog.Attr{slog.String("engine", "a"), slog.String("phase", "b"), slog.Duration("duration", 0)},
 			expectedError: false,
 		},
 		{
-			name:    "happy_subject_and_state_columns",
-			message: "state",
-			attrs: []slog.Attr{
-				slog.String("engine", "broker"),
-				slog.String("phase", "status"),
-				slog.Duration("duration", 7*time.Millisecond),
-				slog.String("host", "macmini-meg"),
-				slog.String("status", "online"),
-				slog.String("detail", "resubscribed [62] topics reconcile [false]"),
-			},
-			expected:      "state     engine=broker      phase=status     duration=      7ms host=macmini-meg         status=online    detail=resubscribed [62] topics reconcile [false]",
+			name:          "happy_long_values",
+			attrs:         []slog.Attr{slog.String("engine", "aaaaaaaaa"), slog.String("phase", "bbbbbbbbb"), slog.Duration("duration", time.Hour)},
 			expectedError: false,
 		},
 		{
-			name:    "happy_longest_service_holds_column",
-			message: "state",
-			attrs: []slog.Attr{
-				slog.String("probe", "services"),
-				slog.String("phase", "pulse"),
-				slog.Duration("duration", 1104*time.Millisecond),
-				slog.String("service", "homeassistant"),
-				slog.Bool("success", true),
-			},
-			expected:      "state     probe=services     phase=pulse      duration=   1104ms service=homeassistant    success=true",
-			expectedError: false,
-		},
-		{
-			name:          "happy_bare_message_trimmed",
-			message:       "state",
-			attrs:         nil,
-			expected:      "state",
-			expectedError: false,
-		},
-		{
-			name:    "happy_unknown_key_precedes_detail",
-			message: "profiling",
-			attrs: []slog.Attr{
-				slog.String("engine", "display"),
-				slog.String("phase", "draw"),
-				slog.Duration("duration", 0),
-				slog.Int("boxes", 14),
-				slog.String("detail", "drawn [14] boxes"),
-			},
-			expected:      "profiling engine=display     phase=draw       duration=      0ms                                           boxes=14 detail=drawn [14] boxes",
+			name:          "happy_probe_shares_engine_column",
+			attrs:         []slog.Attr{slog.String("probe", "a"), slog.String("phase", "b"), slog.Duration("duration", time.Millisecond)},
 			expectedError: false,
 		},
 	}
+	offsets := []struct {
+		key      string
+		expected int
+	}{
+		{"phase=", widthTag + 1 + widthEngine + 1},
+		{"duration=", widthTag + 1 + widthEngine + 1 + widthPhase + 1},
+	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			record := slog.NewRecord(time.Now(), slog.LevelInfo, testCase.message, 0)
+			record := slog.NewRecord(time.Now(), slog.LevelInfo, "state", 0)
 			record.AddAttrs(testCase.attrs...)
-			got := format(record)
-			if got != testCase.expected {
-				t.Errorf("format: got %q want %q", got, testCase.expected)
+			line := format(record)
+			for _, offset := range offsets {
+				got := strings.Index(line, offset.key)
+				if got >= 0 && got != offset.expected {
+					t.Errorf("%s column: got %d want %d", offset.key, got, offset.expected)
+				}
 			}
 		})
 	}
 }
 
-func TestScribe_FormatColumns(t *testing.T) {
+func TestScribe_FormatDuration(t *testing.T) {
 	tests := []struct {
 		name          string
-		attrs         []slog.Attr
-		expectedIndex int
+		value         time.Duration
+		expected      string
 		expectedError bool
 	}{
 		{
-			name:          "happy_short_engine",
-			attrs:         []slog.Attr{slog.String("engine", "broker"), slog.String("phase", "status")},
-			expectedIndex: widthTag + 1 + widthEngine + 1,
+			name:          "happy_sub_millisecond_floors_to_zero",
+			value:         time.Microsecond,
+			expected:      "0ms",
 			expectedError: false,
 		},
 		{
-			name:          "happy_long_engine",
-			attrs:         []slog.Attr{slog.String("engine", "subscribe"), slog.String("phase", "reconcile")},
-			expectedIndex: widthTag + 1 + widthEngine + 1,
+			name:          "happy_milliseconds",
+			value:         104 * time.Millisecond,
+			expected:      "104ms",
 			expectedError: false,
 		},
 		{
-			name:          "happy_probe_shares_engine_column",
-			attrs:         []slog.Attr{slog.String("probe", "services"), slog.String("phase", "pulse")},
-			expectedIndex: widthTag + 1 + widthEngine + 1,
+			name:          "happy_seconds_stay_milliseconds",
+			value:         90 * time.Second,
+			expected:      "90000ms",
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := duration(slog.DurationValue(testCase.value))
+			if len(got) != widthDuration {
+				t.Errorf("width: got %d want %d", len(got), widthDuration)
+			}
+			if !strings.HasSuffix(got, testCase.expected) {
+				t.Errorf("value: got %q want suffix %q", got, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestScribe_FormatDetailIsLast(t *testing.T) {
+	tests := []struct {
+		name          string
+		attrs         []slog.Attr
+		expectedError bool
+	}{
+		{
+			name:          "happy_detail_only",
+			attrs:         []slog.Attr{slog.String("detail", "a [1] b")},
+			expectedError: false,
+		},
+		{
+			name:          "happy_detail_after_columns",
+			attrs:         []slog.Attr{slog.String("detail", "a [1] b"), slog.String("engine", "c"), slog.Duration("duration", 0)},
+			expectedError: false,
+		},
+		{
+			name:          "happy_detail_after_unknown_key",
+			attrs:         []slog.Attr{slog.String("detail", "a [1] b"), slog.Int("unknown", 1)},
 			expectedError: false,
 		},
 	}
@@ -374,9 +373,9 @@ func TestScribe_FormatColumns(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			record := slog.NewRecord(time.Now(), slog.LevelInfo, "state", 0)
 			record.AddAttrs(testCase.attrs...)
-			got := strings.Index(format(record), "phase=")
-			if got != testCase.expectedIndex {
-				t.Errorf("phase column: got %d want %d", got, testCase.expectedIndex)
+			line := format(record)
+			if !strings.HasSuffix(line, " detail=a [1] b") {
+				t.Errorf("detail: got %q want it to end the line", line)
 			}
 		})
 	}

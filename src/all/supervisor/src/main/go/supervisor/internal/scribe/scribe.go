@@ -202,10 +202,6 @@ func format(record slog.Record) string {
 			columns[columnPhase] = a.Key + "=" + a.Value.String()
 		case slices.Contains(keysEngine, a.Key):
 			columns[columnEngine] = a.Key + "=" + a.Value.String()
-		case slices.Contains(keysSubject, a.Key):
-			columns[columnSubject] = a.Key + "=" + a.Value.String()
-		case slices.Contains(keysState, a.Key):
-			columns[columnState] = a.Key + "=" + a.Value.String()
 		default:
 			extras = append(extras, a.Key+"="+a.Value.String())
 		}
@@ -251,8 +247,6 @@ const (
 	columnEngine = iota
 	columnPhase
 	columnDuration
-	columnSubject
-	columnState
 )
 
 const (
@@ -266,15 +260,11 @@ const (
 	widthEngine   = 18
 	widthPhase    = 16
 	widthDuration = 18
-	widthSubject  = 24
-	widthState    = 16
 )
 
 var (
-	columnWidths = []int{widthEngine, widthPhase, widthDuration, widthSubject, widthState}
+	columnWidths = []int{widthEngine, widthPhase, widthDuration}
 	keysEngine   = []string{"engine", "probe"}
-	keysSubject  = []string{"host", "service"}
-	keysState    = []string{"status", "trigger", "alive", "success"}
 )
 
 var (

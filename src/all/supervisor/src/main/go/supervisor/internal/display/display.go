@@ -625,7 +625,7 @@ func (d *Display) refresh(trigger string) {
 	}
 	d.terminal.show()
 	d.force = true
-	slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart), "trigger", trigger, "detail", fmt.Sprintf("refreshed [%d] boxes", len(d.boxes)))
+	slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart), "detail", fmt.Sprintf("trigger [%s] refreshed [%d] boxes", trigger, len(d.boxes)))
 }
 
 func (d *Display) subscribeUpdates() {
