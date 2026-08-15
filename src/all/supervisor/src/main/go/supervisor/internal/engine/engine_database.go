@@ -45,27 +45,27 @@ func databaseConnect(configPath string) (*databaseClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect failed: %w", err)
 	}
-	slog.Info("state", "engine", "database", "phase", "connect", "duration", time.Since(connectStart).Truncate(time.Millisecond))
+	slog.Info("state", "engine", "database", "phase", "connect", "duration", time.Since(connectStart), "detail", fmt.Sprintf("connected to [%s]", databaseURL))
 	return &databaseClient{configPath: configPath, url: databaseURL, client: client}, nil
 }
 
 func (d *databaseClient) write(ctx context.Context, data []byte) {
 	if err := d.client.Write(ctx, data); err != nil {
-		slog.Warn("state", "engine", "database", "phase", "write", "database", d.url, "error", err)
+		slog.Warn("state", "engine", "database", "phase", "write", "detail", fmt.Sprintf("write failed to [%s] with [%v]", d.url, err))
 		reconnectStart := time.Now()
 		newClient, _, reconnErr := newInfluxClient(d.configPath)
 		if reconnErr != nil {
-			slog.Warn("state", "engine", "database", "phase", "reconnect", "duration", time.Since(reconnectStart).Truncate(time.Millisecond), "database", d.url, "error", reconnErr)
+			slog.Warn("state", "engine", "database", "phase", "reconnect", "duration", time.Since(reconnectStart), "detail", fmt.Sprintf("reconnect failed to [%s] with [%v]", d.url, reconnErr))
 			return
 		}
 		_ = d.client.Close()
 		d.client = newClient
-		slog.Info("state", "engine", "database", "phase", "reconnect", "duration", time.Since(reconnectStart).Truncate(time.Millisecond))
+		slog.Info("state", "engine", "database", "phase", "reconnect", "duration", time.Since(reconnectStart), "detail", fmt.Sprintf("reconnected to [%s]", d.url))
 	}
 }
 
 func (d *databaseClient) close() {
 	if err := d.client.Close(); err != nil {
-		slog.Warn("state", "engine", "database", "phase", "disconnect", "database", d.url, "error", err)
+		slog.Warn("state", "engine", "database", "phase", "disconnect", "detail", fmt.Sprintf("disconnect failed from [%s] with [%v]", d.url, err))
 	}
 }

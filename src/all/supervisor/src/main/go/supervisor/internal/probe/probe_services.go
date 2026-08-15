@@ -393,11 +393,11 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			continue
 		}
 		if name == "" {
-			slog.Error("empty container name reported by docker, excluding from service list")
+			slog.Error("state", "probe", "services", "phase", "docker", "detail", "empty container name reported by docker, excluding from the service list")
 			continue
 		}
 		if _, exists := seenNames[name]; exists {
-			slog.Error("non-unique container name reported by docker, excluding from service list", "name", name)
+			slog.Error("state", "probe", "services", "phase", "docker", "detail", fmt.Sprintf("non-unique container name [%s] reported by docker, excluding from the service list", name))
 			continue
 		}
 		seenNames[name] = struct{}{}
@@ -706,25 +706,16 @@ func (p *servicesProbe) restartCount(containerInfo container.InspectResponse) (f
 	return float64(containerInfo.RestartCount), nil
 }
 
-func hasKey(args []any, key string) bool {
-	for i := 0; i+1 < len(args); i += 2 {
-		if args[i] == key {
-			return true
-		}
-	}
-	return false
-}
-
 func (p *servicesProbe) version(containerInfo container.InspectResponse) (string, error) {
 	version := ""
-	var candidateErrs [][]any
+	var candidateErrs []string
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
 		tokens := strings.Split(containerInfo.Config.Image, ":")
 		if len(tokens) > 1 && tokens[1] != "" {
 			if config.VersionPattern.MatchString(tokens[1]) {
 				version = tokens[1]
 			} else {
-				candidateErrs = append(candidateErrs, []any{"image", containerInfo.Config.Image, "version", tokens[1]})
+				candidateErrs = append(candidateErrs, fmt.Sprintf("version [%s] from image [%s] could not be parsed", tokens[1], containerInfo.Config.Image))
 			}
 		}
 		// TODO: Cache this at least for each pulse, if not for longer eg cmd.cache-period
@@ -738,7 +729,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 				name = tokens[0]
 			}
 			if name == "" {
-				candidateErrs = append(candidateErrs, []any{"image", containerInfo.Config.Image})
+				candidateErrs = append(candidateErrs, fmt.Sprintf("version not available from image [%s] carrying no container name", containerInfo.Config.Image))
 			} else {
 				mount := config.Load(p.configPath).Mount()
 				candidates := []string{""}
@@ -756,7 +747,7 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 					installPath := latestDir + "/.env"
 					data, err := os.ReadFile(installPath)
 					if err != nil {
-						candidateErrs = append(candidateErrs, []any{"install", installPath})
+						candidateErrs = append(candidateErrs, fmt.Sprintf("version not available from install dir [%s] with [%v]", installPath, err))
 						continue
 					}
 					found := false
@@ -766,13 +757,13 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 							if config.VersionPattern.MatchString(v) {
 								version = v
 							} else {
-								candidateErrs = append(candidateErrs, []any{"install", installPath, "version", v})
+								candidateErrs = append(candidateErrs, fmt.Sprintf("version [%s] from install dir [%s] could not be parsed", v, installPath))
 							}
 							break
 						}
 					}
 					if !found {
-						candidateErrs = append(candidateErrs, []any{"install", installPath})
+						candidateErrs = append(candidateErrs, fmt.Sprintf("version not declared in install dir [%s]", installPath))
 					}
 					if version != "" {
 						break
@@ -786,17 +777,10 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 		if containerInfo.Config != nil {
 			image = containerInfo.Config.Image
 		}
-		for _, args := range candidateErrs {
-			switch {
-			case hasKey(args, "version"):
-				slog.Error("version could not be parsed", args...)
-			case hasKey(args, "install"):
-				slog.Error("version not available from install dir", args...)
-			default:
-				slog.Error("version not available from docker", args...)
-			}
+		for _, candidateErr := range candidateErrs {
+			slog.Error("state", "probe", "services", "phase", "version", "detail", candidateErr)
 		}
-		slog.Error("version not available from docker", "image", image)
+		slog.Error("state", "probe", "services", "phase", "version", "detail", fmt.Sprintf("version not available from docker for image [%s]", image))
 		return "-", nil
 	}
 	return version, nil

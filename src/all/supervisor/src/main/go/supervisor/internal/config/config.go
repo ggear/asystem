@@ -57,13 +57,13 @@ func Load(path string) *Config {
 func load(path string) *Config {
 	result := &Config{asystem: configData{Schema: []configServices{}}}
 	if path == "" {
-		slog.Warn("config: no path provided, using defaults")
+		slog.Warn("config", "engine", "config", "phase", "load", "detail", "no path provided, using defaults")
 	} else if data, err := os.ReadFile(path); err != nil {
-		slog.Warn("config: file not found, using defaults", "path", path)
+		slog.Warn("config", "engine", "config", "phase", "load", "detail", fmt.Sprintf("file not found at [%s], using defaults", path))
 	} else {
 		var raw struct{ Asystem configData }
 		if err := json.Unmarshal(data, &raw); err != nil {
-			slog.Warn("config: failed to parse, using defaults", "path", path, "error", err)
+			slog.Warn("config", "engine", "config", "phase", "parse", "detail", fmt.Sprintf("parse failed for [%s] with [%v], using defaults", path, err))
 		} else {
 			result.asystem = raw.Asystem
 			if result.asystem.Schema == nil {
@@ -73,11 +73,11 @@ func load(path string) *Config {
 			validSchema := make([]configServices, 0, len(result.asystem.Schema))
 			for _, hostSchema := range result.asystem.Schema {
 				if hostSchema.Host == "" {
-					slog.Warn("config: empty host in schema, skipping")
+					slog.Warn("config", "engine", "config", "phase", "schema", "detail", "empty host in schema, skipping")
 					continue
 				}
 				if seenHosts[hostSchema.Host] {
-					slog.Warn("config: duplicate host in schema, skipping", "host", hostSchema.Host)
+					slog.Warn("config", "engine", "config", "phase", "schema", "host", hostSchema.Host, "detail", "duplicate host in schema, skipping")
 					continue
 				}
 				seenHosts[hostSchema.Host] = true
@@ -85,11 +85,11 @@ func load(path string) *Config {
 				validServices := make([]string, 0, len(hostSchema.Services))
 				for _, service := range hostSchema.Services {
 					if service == "" {
-						slog.Warn("config: empty service, skipping", "host", hostSchema.Host)
+						slog.Warn("config", "engine", "config", "phase", "schema", "host", hostSchema.Host, "detail", "empty service in schema, skipping")
 						continue
 					}
 					if seenServices[service] {
-						slog.Warn("config: duplicate service, skipping", "host", hostSchema.Host, "service", service)
+						slog.Warn("config", "engine", "config", "phase", "schema", "host", hostSchema.Host, "detail", fmt.Sprintf("duplicate service [%s] in schema, skipping", service))
 						continue
 					}
 					seenServices[service] = true
@@ -130,7 +130,7 @@ func (c *Config) Host() string {
 	cachedHostOnceMu.Do(func() {
 		hostName, err := os.Hostname()
 		if err != nil {
-			slog.Error("config: failed to get hostname", "error", err)
+			slog.Error("config", "engine", "config", "phase", "hostname", "detail", fmt.Sprintf("get hostname failed with [%v]", err))
 			return
 		}
 		cachedHostName = hostName
@@ -212,22 +212,22 @@ func (c *Config) Services(host string) []string {
 
 func resolve(field, env, key string) string {
 	if value := os.Getenv(env); value != "" {
-		slog.Info("config", "status", "resolved", "env", "true", "file", "false", "name", field, "value", mask(field, value))
+		slog.Info("config", "engine", "config", "phase", "resolve", "status", "resolved", "detail", fmt.Sprintf("field [%s] value [%s] from [env]", field, mask(field, value)))
 		return value
 	}
 	if strings.HasPrefix(key, "$") {
 		name := key[1:]
 		if val := os.Getenv(name); val != "" {
-			slog.Info("config", "status", "resolved", "env", "true", "file", "true", "name", field, "value", mask(field, val))
+			slog.Info("config", "engine", "config", "phase", "resolve", "status", "resolved", "detail", fmt.Sprintf("field [%s] value [%s] from [env] referenced by [file]", field, mask(field, val)))
 			return val
 		}
-		slog.Warn("config", "status", "unresolved", "env", "true", "file", "true", "name", field, "value", "")
+		slog.Warn("config", "engine", "config", "phase", "resolve", "status", "unresolved", "detail", fmt.Sprintf("field [%s] referenced by [file] but unset in [env]", field))
 		return ""
 	}
 	if key != "" {
-		slog.Info("config", "status", "resolved", "env", "false", "file", "true", "name", field, "value", mask(field, key))
+		slog.Info("config", "engine", "config", "phase", "resolve", "status", "resolved", "detail", fmt.Sprintf("field [%s] value [%s] from [file]", field, mask(field, key)))
 	} else {
-		slog.Info("config", "status", "unresolved", "env", "false", "file", "true", "name", field, "value", mask(field, key))
+		slog.Info("config", "engine", "config", "phase", "resolve", "status", "unresolved", "detail", fmt.Sprintf("field [%s] unset in [env] and [file]", field))
 	}
 	return key
 }

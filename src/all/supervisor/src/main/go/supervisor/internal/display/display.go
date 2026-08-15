@@ -94,7 +94,7 @@ func NewDisplay(
 	logBuffer *scribe.LogBuffer,
 	refreshPeriod time.Duration,
 ) (*Display, error) {
-	slog.Info("config", "status", "init", "format", format, "rows", height, "cols", width)
+	slog.Info("config", "engine", "display", "phase", "init", "detail", fmt.Sprintf("format [%v] rows [%d] cols [%d]", format, height, width))
 	return &Display{
 		hosts:           hosts,
 		dimsInit:        dimensions{rows: height, cols: width},
@@ -376,14 +376,14 @@ func (d *Display) Compile() (Format, error) {
 					}
 				}
 			}
-			slog.Info("config", "status", "render", "rendered", attemptedFormat, "rows", d.dimsInit.rows, "cols", d.dimsInit.cols)
+			slog.Info("config", "engine", "display", "phase", "render", "detail", fmt.Sprintf("format [%v] rows [%d] cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols))
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			slog.Warn("layout relaxed compilation failed, fallback to compact", "error", err)
+			slog.Warn("state", "engine", "display", "phase", "compile", "detail", fmt.Sprintf("relaxed layout compilation failed with [%v], falling back to compact", err))
 		}
 		d.format = FormatCompact
 	}
@@ -515,7 +515,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 				d.dimsInit = dims
 				d.rebuild("resize")
-				slog.Info("state", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart).Truncate(time.Millisecond), "cols", cols, "rows", rows)
+				slog.Info("state", "engine", "display", "phase", "resize", "duration", time.Since(resizeStart), "detail", fmt.Sprintf("resized to [%d] cols by [%d] rows", cols, rows))
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
@@ -554,7 +554,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 		case <-ticker.C:
 			if elapsed := time.Since(ticked); elapsed > d.tickStall {
-				slog.Warn("state", "engine", "display", "phase", "stall", "duration", elapsed.Truncate(time.Millisecond))
+				slog.Warn("state", "engine", "display", "phase", "stall", "duration", elapsed, "detail", fmt.Sprintf("draw tick gap exceeded [%d] ms", d.tickStall.Milliseconds()))
 				engine.Wake()
 				d.refresh("wake")
 			}
@@ -591,7 +591,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			d.terminal.show()
-			slog.Info("state", "engine", "display", "phase", "draw", "duration", time.Since(drawStart).Truncate(time.Millisecond), "boxes", drawnCount)
+			slog.Info("state", "engine", "display", "phase", "draw", "duration", time.Since(drawStart), "detail", fmt.Sprintf("drawn [%d] boxes", drawnCount))
 			d.force = false
 		}
 	}
@@ -601,7 +601,7 @@ func (d *Display) rebuild(trigger string) {
 	d.format = d.formatInit
 	d.boxes = nil
 	if _, err := d.Compile(); err != nil {
-		slog.Error(err.Error())
+		slog.Error("state", "engine", "display", "phase", "draw", "detail", fmt.Sprintf("draw failed with [%v]", err))
 		d.logOverlay = true
 		d.logOverlayAuto = true
 	} else if d.logOverlayAuto {
@@ -625,7 +625,7 @@ func (d *Display) refresh(trigger string) {
 	}
 	d.terminal.show()
 	d.force = true
-	slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart).Truncate(time.Millisecond), "trigger", trigger, "boxes", len(d.boxes))
+	slog.Info("state", "engine", "display", "phase", "refresh", "duration", time.Since(refreshStart), "trigger", trigger, "detail", fmt.Sprintf("refreshed [%d] boxes", len(d.boxes)))
 }
 
 func (d *Display) subscribeUpdates() {

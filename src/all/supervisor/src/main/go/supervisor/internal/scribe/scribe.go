@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 const (
 	logDirUser = "/tmp/supervisor"
 	logDirRoot = "/var/log/supervisor"
+	timeLayout = "2006-01-02 15:04:05"
 )
 
 func EnableStdout(level slog.Level) {
@@ -24,7 +26,7 @@ func EnableStdout(level slog.Level) {
 	defer scribeLoggerMutex.Unlock()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout"
-	scribeLoggerInstance = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: os.Stdout})
 	slog.SetDefault(scribeLoggerInstance)
 }
 
@@ -43,7 +45,7 @@ func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays 
 	scribeLoggerLevel = level
 	scribeLoggerMode = "file"
 	writer := &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}
-	scribeLoggerInstance = slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{Level: level}))
+	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: writer})
 	slog.SetDefault(scribeLoggerInstance)
 	return nil
 }
@@ -64,7 +66,7 @@ func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, ma
 	scribeLoggerMode = "stdout+file"
 	writer := &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}
 	multi := io.MultiWriter(os.Stdout, writer)
-	scribeLoggerInstance = slog.New(slog.NewTextHandler(multi, &slog.HandlerOptions{Level: level}))
+	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: multi})
 	slog.SetDefault(scribeLoggerInstance)
 	return nil
 }
@@ -73,7 +75,7 @@ func Disable() {
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()
 	scribeLoggerMode = "disabled"
-	scribeLoggerInstance = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
+	scribeLoggerInstance = slog.New(&streamHandler{level: slog.LevelError + 1, writer: io.Discard})
 	slog.SetDefault(scribeLoggerInstance)
 }
 
@@ -158,59 +160,122 @@ func (h *bufferHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
-	var sb strings.Builder
-	sb.WriteString(messagePadder.pad(record.Message))
-	idx := 0
-	record.Attrs(func(a slog.Attr) bool {
-		sb.WriteByte(' ')
-		sb.WriteString(attrPadder(idx).pad(a.Key + "=" + a.Value.String()))
-		idx++
-		return true
-	})
-	h.buffer.Push(LogLine{Time: record.Time, Level: record.Level, Message: sb.String()})
+	h.buffer.Push(LogLine{Time: record.Time, Level: record.Level, Message: format(record)})
 	return nil
 }
 
 func (h *bufferHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 func (h *bufferHandler) WithGroup(_ string) slog.Handler      { return h }
 
-type padder struct {
-	mu    sync.Mutex
-	width int
+type streamHandler struct {
+	level  slog.Level
+	writer io.Writer
+	mutex  sync.Mutex
 }
 
-func newPadder(minWidth int) *padder {
-	return &padder{width: minWidth}
+func (h *streamHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= h.level
 }
 
-func (p *padder) pad(s string) string {
-	p.mu.Lock()
-	if len(s) > p.width {
-		p.width = len(s)
+func (h *streamHandler) Handle(_ context.Context, record slog.Record) error {
+	line := fmt.Sprintf("%s %-5s %s\n", record.Time.Format(timeLayout), record.Level.String(), format(record))
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	_, err := io.WriteString(h.writer, line)
+	return err
+}
+
+func (h *streamHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+func (h *streamHandler) WithGroup(_ string) slog.Handler      { return h }
+
+func format(record slog.Record) string {
+	columns := make([]string, len(columnWidths))
+	var extras []string
+	detail := ""
+	record.Attrs(func(a slog.Attr) bool {
+		switch {
+		case a.Key == keyDetail:
+			detail = a.Value.String()
+		case a.Key == keyDuration:
+			columns[columnDuration] = duration(a.Value)
+		case a.Key == keyPhase:
+			columns[columnPhase] = a.Key + "=" + a.Value.String()
+		case slices.Contains(keysEngine, a.Key):
+			columns[columnEngine] = a.Key + "=" + a.Value.String()
+		case slices.Contains(keysSubject, a.Key):
+			columns[columnSubject] = a.Key + "=" + a.Value.String()
+		case slices.Contains(keysState, a.Key):
+			columns[columnState] = a.Key + "=" + a.Value.String()
+		default:
+			extras = append(extras, a.Key+"="+a.Value.String())
+		}
+		return true
+	})
+	var builder strings.Builder
+	builder.WriteString(pad(record.Message, widthTag))
+	for index, width := range columnWidths {
+		builder.WriteByte(' ')
+		builder.WriteString(pad(columns[index], width))
 	}
-	w := p.width
-	p.mu.Unlock()
-	if len(s) >= w {
-		return s
+	for _, extra := range extras {
+		builder.WriteByte(' ')
+		builder.WriteString(extra)
 	}
-	return s + strings.Repeat(" ", w-len(s))
+	if detail != "" {
+		builder.WriteString(" " + keyDetail + "=")
+		builder.WriteString(detail)
+	}
+	return strings.TrimRight(builder.String(), " ")
 }
 
-var messagePadder = newPadder(9)
+func duration(value slog.Value) string {
+	text := value.String()
+	if value.Kind() == slog.KindDuration {
+		text = fmt.Sprintf("%dms", value.Duration().Milliseconds())
+	}
+	prefix := keyDuration + "="
+	if space := widthDuration - len(prefix) - len(text); space > 0 {
+		return prefix + strings.Repeat(" ", space) + text
+	}
+	return prefix + text
+}
 
-var (
-	attrPaddersMu sync.Mutex
-	attrPadders   = []*padder{newPadder(19), newPadder(16), newPadder(14), newPadder(18)}
+func pad(text string, width int) string {
+	if len(text) >= width {
+		return text
+	}
+	return text + strings.Repeat(" ", width-len(text))
+}
+
+const (
+	columnEngine = iota
+	columnPhase
+	columnDuration
+	columnSubject
+	columnState
 )
 
-func attrPadder(idx int) *padder {
-	attrPaddersMu.Lock()
-	defer attrPaddersMu.Unlock()
-	for len(attrPadders) <= idx {
-		attrPadders = append(attrPadders, newPadder(9))
-	}
-	return attrPadders[idx]
-}
+const (
+	keyDetail   = "detail"
+	keyDuration = "duration"
+	keyPhase    = "phase"
+)
+
+const (
+	widthTag      = 9
+	widthEngine   = 18
+	widthPhase    = 16
+	widthDuration = 18
+	widthSubject  = 24
+	widthState    = 16
+)
+
+var (
+	columnWidths = []int{widthEngine, widthPhase, widthDuration, widthSubject, widthState}
+	keysEngine   = []string{"engine", "probe"}
+	keysSubject  = []string{"host", "service"}
+	keysState    = []string{"status", "trigger", "alive", "success"}
+)
 
 var (
 	scribeLoggerMutex    sync.Mutex

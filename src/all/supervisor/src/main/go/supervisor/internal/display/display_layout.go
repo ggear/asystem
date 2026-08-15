@@ -1,6 +1,7 @@
 package display
 
 import (
+	"fmt"
 	"log/slog"
 	"math"
 	"strconv"
@@ -100,7 +101,7 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 			case 4, 5:
 				b.lblRhs = b.lblRhs.resize(2, func(value string, length int) string { return extend(value, 1, length) })
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		}
 	}
@@ -111,7 +112,7 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 			case 2:
 				b.lblMid = b.lblMid.resize(1, func(value string, length int) string { return " " })
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		} else {
 			switch rem {
@@ -119,7 +120,7 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 			case 4, 5:
 				b.lblMid = b.lblMid.resize(1, func(value string, length int) string { return " " })
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		}
 	}
@@ -130,7 +131,7 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 				b.lblRhs = b.lblRhs.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			case 2, 3:
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		}
 	}
@@ -143,7 +144,7 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 			case 5:
 				b.lblLhs = b.lblLhs.resize(1, func(value string, length int) string { return repeat(" ", 1, 0, 1) })
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		}
 	}
@@ -244,7 +245,7 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 			case 2, 3, 4, 5, 6, 7:
 				b.lblRhs = b.lblRhs.resize(rem/2, func(value string, length int) string { return extend(value, 1, length) })
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		}
 	}
@@ -255,7 +256,7 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 			case 2, 3:
 				b.lblMid = b.lblMid.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		} else {
 			switch rem {
@@ -263,7 +264,7 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 			case 4, 5, 6, 7:
 				b.lblMid = b.lblMid.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		}
 	}
@@ -274,7 +275,7 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 				b.lblRhs = b.lblRhs.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			case 2:
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		} else {
 			switch rem {
@@ -282,7 +283,7 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 			case 2, 3, 6, 7:
 				b.lblRhs = b.lblRhs.resize(1, func(value string, length int) string { return extend(value, 0, length) })
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		}
 	}
@@ -293,7 +294,7 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 				b.lblLhs = b.lblLhs.resize(1, func(value string, length int) string { return " " })
 			case 2, 4, 6:
 			default:
-				slog.Error("layout resize failed, invalid remainder", "hosts", hostCount, "remainder", rem)
+				slog.Error("state", "engine", "display", "phase", "layout", "detail", fmt.Sprintf("resize failed with invalid remainder [%d] for hosts [%d]", rem, hostCount))
 			}
 		}
 	}

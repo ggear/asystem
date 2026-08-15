@@ -53,13 +53,13 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 			if onConnect != nil {
 				onConnect(client)
 			}
-			slog.Info("state", "engine", "broker", "phase", "connect", "duration", time.Since(connectStart).Truncate(time.Millisecond))
+			slog.Info("state", "engine", "broker", "phase", "connect", "duration", time.Since(connectStart), "detail", fmt.Sprintf("connected to [%s]", brokerURL))
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-			slog.Warn("state", "engine", "broker", "phase", "disconnect", "duration", "0s", "broker", brokerURL, "error", err)
+			slog.Warn("state", "engine", "broker", "phase", "disconnect", "detail", fmt.Sprintf("lost connection to [%s] with [%v]", brokerURL, err))
 		}).
 		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
-			slog.Warn("state", "engine", "broker", "phase", "reconnect", "duration", "0s", "broker", brokerURL)
+			slog.Warn("state", "engine", "broker", "phase", "reconnect", "detail", fmt.Sprintf("reconnecting to [%s]", brokerURL))
 		})
 	if willTopic != "" {
 		opts.SetWill(willTopic, willPayload, 1, true)
@@ -82,23 +82,23 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 		probeStart := time.Now()
 		token := client.Unsubscribe(brokerProbeTopic)
 		if token.WaitTimeout(brokerProbeTimeout) && token.Error() == nil {
-			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart).Truncate(time.Millisecond), "alive", true)
+			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart), "alive", true, "detail", "session responded, no revive needed")
 			return
 		}
 		if !client.IsConnectionOpen() {
-			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart).Truncate(time.Millisecond), "alive", false)
+			slog.Debug("profiling", "engine", "broker", "phase", "probe", "duration", time.Since(probeStart), "alive", false, "detail", "connection already closed, paho is reconnecting")
 			return
 		}
 		reviveStart := time.Now()
-		slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(probeStart).Truncate(time.Millisecond))
+		slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(probeStart), "alive", false, "detail", "session unresponsive, disconnecting to force reconnect")
 		client.Disconnect(0)
 		for backoff := brokerReviveBackoff; ; backoff = min(2*backoff, brokerReconnectMax) {
 			token := client.Connect()
 			if token.WaitTimeout(brokerConnectTimeout) && token.Error() == nil {
-				slog.Info("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart).Truncate(time.Millisecond))
+				slog.Info("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart), "alive", true, "detail", "session revived")
 				return
 			}
-			slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart).Truncate(time.Millisecond), "error", token.Error())
+			slog.Warn("state", "engine", "broker", "phase", "revive", "duration", time.Since(reviveStart), "alive", false, "detail", fmt.Sprintf("reconnect failed with [%v], retrying after [%d] ms", token.Error(), backoff.Milliseconds()))
 			select {
 			case <-ctx.Done():
 				return
