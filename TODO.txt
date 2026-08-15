@@ -30,7 +30,6 @@ retire nginx and use cloudflared for homeasistant?
 
 
 
-
 make sure 1h on portfolio works, seed timestamp into requests?
 better way to do cloudflaire config?
 drop fallback into prices sheet when google/yahoo fail, custom message?
@@ -76,7 +75,7 @@ Define process by which schema can be updated, what is additive and safe, what i
 # Power
 ###############################################################################################################################################################
 Implement power off and restart to healthy (power on makes sure hosts up, docker starts, storgae starts and mounts, supervisor starts, then supervisor brings services up)
-Issues today: mounts all work, mlflow creates a share/1, sonarr requires mad to normalise /share/10 for permissions - move to mad
+Issues today: mounts all work, mlflow creates a share/1, sonarr requires mad to normalise /share/10 for permissions after restart of sabnvdb - move to mad
 
 
 ###############################################################################################################################################################

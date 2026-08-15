@@ -7,6 +7,16 @@ cd "${SERVICE_INSTALL}" || exit
 
 source "./.env"
 
+normalise_owner() {
+  local NORMALISE_PATH=${1}
+  local NORMALISE_MODE=${2}
+  [ -e "${NORMALISE_PATH}" ] || return
+  if id "graham" &>/dev/null && getent group "users" &>/dev/null; then
+    chown "graham:users" "${NORMALISE_PATH}"
+  fi
+  chmod "${NORMALISE_MODE}" "${NORMALISE_PATH}"
+}
+
 if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   if ! command -v ffprobe >/dev/null 2>&1 || [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -eq 0 ]; then
     [[ ! -d "/usr/local/lib/ffmpeg" ]] && git clone git://git.videolan.org/ffmpeg.git "/usr/local/lib/ffmpeg"
@@ -26,9 +36,12 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   for SHARE_DIR in $(grep -v '^#' "/etc/fstab" | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
     rm -rf "${SHARE_DIR}/tmp/scripts"
     mkdir -p "${SHARE_DIR}/tmp/scripts"
+    normalise_owner "${SHARE_DIR}/tmp" 2750
+    normalise_owner "${SHARE_DIR}/tmp/scripts" 2770
     for SHARE_DIR_SCOPE in "kids" "parents" "docos" "comedy"; do
       for SHARE_DIR_TYPE in "audio" "movies" "series"; do
         mkdir -p "${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}"
+        normalise_owner "${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}" 2750
       done
     done
   done
@@ -38,15 +51,18 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
         cat <<EOF >"${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}/._defaults.yaml"
 - target_quality: 4
 EOF
+        normalise_owner "${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}/._defaults.yaml" 640
       done
     done
     cat <<EOF >"${SHARE_DIR}/media/parents/movies/._defaults.yaml"
 - target_quality: 6
 - target_channels: 5
 EOF
+    normalise_owner "${SHARE_DIR}/media/parents/movies/._defaults.yaml" 640
     cat <<EOF >"${SHARE_DIR}/media/parents/series/._defaults.yaml"
 - target_quality: 4
 EOF
+    normalise_owner "${SHARE_DIR}/media/parents/series/._defaults.yaml" 640
   done
 fi
 if [[ "${SERVICE_FORM_FACTOR:-}" == "client" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
