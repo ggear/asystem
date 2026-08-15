@@ -370,6 +370,7 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 		}
 	}
 	services := make(map[string]service, len(containers))
+	servicesStart := time.Now()
 	seenNames := make(map[string]struct{})
 	activeIDs := make(map[string]struct{}, len(containers))
 	for _, c := range containers {
@@ -393,11 +394,11 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			continue
 		}
 		if name == "" {
-			slog.Error("state", "probe", "services", "phase", "docker", "detail", "empty container name reported by docker, excluding from the service list")
+			slog.Error("state", "probe", "services", "phase", "docker", "duration", time.Since(servicesStart), "detail", "empty container name reported by docker, excluding from the service list")
 			continue
 		}
 		if _, exists := seenNames[name]; exists {
-			slog.Error("state", "probe", "services", "phase", "docker", "detail", fmt.Sprintf("non-unique container name [%s] reported by docker, excluding from the service list", name))
+			slog.Error("state", "probe", "services", "phase", "docker", "duration", time.Since(servicesStart), "detail", fmt.Sprintf("non-unique container name [%s] reported by docker, excluding from the service list", name))
 			continue
 		}
 		seenNames[name] = struct{}{}
@@ -707,6 +708,7 @@ func (p *servicesProbe) restartCount(containerInfo container.InspectResponse) (f
 }
 
 func (p *servicesProbe) version(containerInfo container.InspectResponse) (string, error) {
+	versionStart := time.Now()
 	version := ""
 	var candidateErrs []string
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
@@ -778,9 +780,9 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 			image = containerInfo.Config.Image
 		}
 		for _, candidateErr := range candidateErrs {
-			slog.Error("state", "probe", "services", "phase", "version", "detail", candidateErr)
+			slog.Error("state", "probe", "services", "phase", "version", "duration", time.Since(versionStart), "detail", candidateErr)
 		}
-		slog.Error("state", "probe", "services", "phase", "version", "detail", fmt.Sprintf("version not available from docker for image [%s]", image))
+		slog.Error("state", "probe", "services", "phase", "version", "duration", time.Since(versionStart), "detail", fmt.Sprintf("version not available from docker for image [%s]", image))
 		return "-", nil
 	}
 	return version, nil

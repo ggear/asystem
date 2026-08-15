@@ -34,13 +34,14 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		return fmt.Errorf("pulse period [%d]ms is not a whole multiple of poll period [%d]ms", periods.PulseMillis, periods.PollMillis)
 	}
 	probeMap := map[probe][metric.MetricMax]bool{}
+	registerStart := time.Now()
 	for _, id := range cache.IDs() {
 		if id < 0 || id >= metric.MetricMax {
 			continue
 		}
 		p := probesByMetricMask[id]
 		if p == nil {
-			slog.Error("state", "engine", "probes", "phase", "create", "detail", fmt.Sprintf("no probe registered for metric [%d]", id))
+			slog.Error("state", "engine", "probes", "phase", "create", "duration", time.Since(registerStart), "detail", fmt.Sprintf("no probe registered for metric [%d]", id))
 			continue
 		}
 		mask := probeMap[p]
@@ -52,7 +53,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		probeCreateStart := time.Now()
 		err := p.create(configPath, cache, mask, periods)
 		if err != nil {
-			slog.Error("state", "probe", p.name(), "phase", "create", "detail", fmt.Sprintf("create failed with [%v]", err))
+			slog.Error("state", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "detail", fmt.Sprintf("create failed with [%v]", err))
 			delete(probeMap, p)
 			slog.Debug("profiling", "probe", p.name(), "phase", "create", "duration", time.Since(probeCreateStart), "detail", "success [false] probe removed from the poll set")
 			continue
@@ -95,7 +96,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 			for p := range execProbes {
 				probeStart := time.Now()
 				if err := p.run(ctx, isPulse); err != nil {
-					slog.Error("state", "probe", p.name(), "phase", phase, "detail", fmt.Sprintf("execute failed with [%v]", err))
+					slog.Error("state", "probe", p.name(), "phase", phase, "duration", time.Since(probeStart), "detail", fmt.Sprintf("execute failed with [%v]", err))
 				}
 				slog.Debug("profiling", "probe", p.name(), "phase", phase, "duration", time.Since(probeStart), "detail", fmt.Sprintf("polled [1] of [%d] probes", len(execProbes)))
 			}
@@ -235,10 +236,11 @@ func newCacheMetricTask[T any](
 }
 
 func runMetricCacheTasks(p probe, isPulse bool, tasks []cacheMetricTask) {
+	tasksStart := time.Now()
 	for _, task := range tasks {
 		cache := p.records()
 		if cache == nil {
-			slog.Error("state", "probe", p.name(), "phase", "metric", "detail", fmt.Sprintf("metric [%d] task missing the required cache", task.metricID))
+			slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(tasksStart), "detail", fmt.Sprintf("metric [%d] task missing the required cache", task.metricID))
 			continue
 		}
 		if !p.hasMetric(task.metricID) {
@@ -249,6 +251,7 @@ func runMetricCacheTasks(p probe, isPulse bool, tasks []cacheMetricTask) {
 }
 
 func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
+	taskStart := time.Now()
 	var missing []string
 	if task.sampleFunc == nil {
 		missing = append(missing, "sampleFunc")
@@ -263,13 +266,13 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 		missing = append(missing, "pulseOKFunc")
 	}
 	if len(missing) > 0 {
-		slog.Error("state", "probe", p.name(), "phase", "metric", "detail", fmt.Sprintf("metric [%d] task missing required fields [%s]", task.metricID, strings.Join(missing, ",")))
+		slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(taskStart), "detail", fmt.Sprintf("metric [%d] task missing required fields [%s]", task.metricID, strings.Join(missing, ",")))
 		return
 	}
 	sample, err := task.sampleFunc()
 	errored := err != nil && !errors.Is(err, errProbeWarmingUp)
 	if errored {
-		slog.Error("state", "probe", p.name(), "phase", "metric", "detail", fmt.Sprintf("metric [%d] task failed with [%v]", task.metricID, err))
+		slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(taskStart), "detail", fmt.Sprintf("metric [%d] task failed with [%v]", task.metricID, err))
 	}
 	task.statsFunc(sample)
 	if !isPulse {
@@ -277,7 +280,7 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 	}
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
-		slog.Error("state", "probe", p.name(), "phase", "metric", "detail", fmt.Sprintf("metric [%d] task missing the host name", task.metricID))
+		slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(taskStart), "detail", fmt.Sprintf("metric [%d] task missing the host name", task.metricID))
 		return
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
@@ -299,7 +302,7 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 		value, valueErr = metric.NewDataValue(pulseOK, pulse, trendOK, trend)
 	}
 	if valueErr != nil {
-		slog.Error("state", "probe", p.name(), "phase", "metric", "detail", fmt.Sprintf("metric [%d] task value builder failed with [%v]", task.metricID, valueErr))
+		slog.Error("state", "probe", p.name(), "phase", "metric", "duration", time.Since(taskStart), "detail", fmt.Sprintf("metric [%d] task value builder failed with [%v]", task.metricID, valueErr))
 		return
 	}
 	record := metric.NewRecord(*value)

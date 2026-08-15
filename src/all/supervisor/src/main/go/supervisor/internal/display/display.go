@@ -94,8 +94,8 @@ func NewDisplay(
 	logBuffer *scribe.LogBuffer,
 	refreshPeriod time.Duration,
 ) (*Display, error) {
-	slog.Info("config", "engine", "display", "phase", "init", "detail", fmt.Sprintf("format [%v] rows [%d] cols [%d]", format, height, width))
-	return &Display{
+	initStart := time.Now()
+	display := &Display{
 		hosts:           hosts,
 		dimsInit:        dimensions{rows: height, cols: width},
 		dimsTerminal:    dimensions{rows: maxHeight, cols: maxWidth},
@@ -113,7 +113,9 @@ func NewDisplay(
 		tickPeriod:      tickPeriod,
 		tickStall:       tickStall,
 		singleHostIndex: singleHostIndex(hosts),
-	}, nil
+	}
+	slog.Info("config", "engine", "display", "phase", "init", "duration", time.Since(initStart), "detail", fmt.Sprintf("format [%v] rows [%d] cols [%d]", format, height, width))
+	return display, nil
 }
 
 func singleHostIndex(hosts []string) int {
@@ -137,6 +139,7 @@ func (d *Display) compileHosts() []string {
 }
 
 func (d *Display) Compile() (Format, error) {
+	compileStart := time.Now()
 	compileHosts := d.compileHosts()
 	hostCount := len(compileHosts)
 	compile := func(format Format, layout [][]box) ([]box, error) {
@@ -376,14 +379,14 @@ func (d *Display) Compile() (Format, error) {
 					}
 				}
 			}
-			slog.Info("config", "engine", "display", "phase", "render", "detail", fmt.Sprintf("format [%v] rows [%d] cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols))
+			slog.Info("config", "engine", "display", "phase", "render", "duration", time.Since(compileStart), "detail", fmt.Sprintf("format [%v] rows [%d] cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols))
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			slog.Warn("state", "engine", "display", "phase", "compile", "detail", fmt.Sprintf("relaxed layout compilation failed with [%v], falling back to compact", err))
+			slog.Warn("state", "engine", "display", "phase", "compile", "duration", time.Since(compileStart), "detail", fmt.Sprintf("relaxed layout compilation failed with [%v], falling back to compact", err))
 		}
 		d.format = FormatCompact
 	}
@@ -598,10 +601,11 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 }
 
 func (d *Display) rebuild(trigger string) {
+	rebuildStart := time.Now()
 	d.format = d.formatInit
 	d.boxes = nil
 	if _, err := d.Compile(); err != nil {
-		slog.Error("state", "engine", "display", "phase", "draw", "detail", fmt.Sprintf("draw failed with [%v]", err))
+		slog.Error("state", "engine", "display", "phase", "draw", "duration", time.Since(rebuildStart), "detail", fmt.Sprintf("rebuild failed with [%v]", err))
 		d.logOverlay = true
 		d.logOverlayAuto = true
 	} else if d.logOverlayAuto {

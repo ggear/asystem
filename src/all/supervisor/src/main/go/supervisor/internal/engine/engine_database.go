@@ -50,8 +50,9 @@ func databaseConnect(configPath string) (*databaseClient, error) {
 }
 
 func (d *databaseClient) write(ctx context.Context, data []byte) {
+	writeStart := time.Now()
 	if err := d.client.Write(ctx, data); err != nil {
-		slog.Warn("state", "engine", "database", "phase", "write", "detail", fmt.Sprintf("write failed to [%s] with [%v]", d.url, err))
+		slog.Warn("state", "engine", "database", "phase", "write", "duration", time.Since(writeStart), "detail", fmt.Sprintf("write failed to [%s] with [%v]", d.url, err))
 		reconnectStart := time.Now()
 		newClient, _, reconnErr := newInfluxClient(d.configPath)
 		if reconnErr != nil {
@@ -65,7 +66,8 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 }
 
 func (d *databaseClient) close() {
+	closeStart := time.Now()
 	if err := d.client.Close(); err != nil {
-		slog.Warn("state", "engine", "database", "phase", "disconnect", "detail", fmt.Sprintf("disconnect failed from [%s] with [%v]", d.url, err))
+		slog.Warn("state", "engine", "database", "phase", "disconnect", "duration", time.Since(closeStart), "detail", fmt.Sprintf("disconnect failed from [%s] with [%v]", d.url, err))
 	}
 }

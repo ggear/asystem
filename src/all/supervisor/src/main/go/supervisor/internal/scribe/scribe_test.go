@@ -3,9 +3,14 @@ package scribe
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -379,4 +384,113 @@ func TestScribe_FormatDetailIsLast(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestScribe_RequiredFields(t *testing.T) {
+	tests := []struct {
+		name          string
+		required      []string
+		expectedError bool
+	}{
+		{
+			name:          "happy_engine_or_probe",
+			required:      []string{"engine", "probe"},
+			expectedError: false,
+		},
+		{
+			name:          "happy_phase",
+			required:      []string{"phase"},
+			expectedError: false,
+		},
+		{
+			name:          "happy_duration",
+			required:      []string{"duration"},
+			expectedError: false,
+		},
+		{
+			name:          "happy_detail",
+			required:      []string{"detail"},
+			expectedError: false,
+		},
+	}
+	calls := logCalls(t, "../..")
+	if len(calls) == 0 {
+		t.Fatalf("log calls: got %d want more than 0", len(calls))
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			for _, call := range calls {
+				carried := false
+				for _, key := range testCase.required {
+					if slices.Contains(call.keys, key) {
+						carried = true
+					}
+				}
+				if !carried {
+					t.Errorf("%s: got keys %v want one of %v", call.position, call.keys, testCase.required)
+				}
+			}
+		})
+	}
+}
+
+type logCall struct {
+	position string
+	keys     []string
+}
+
+func logCalls(t *testing.T, root string) []logCall {
+	t.Helper()
+	var calls []logCall
+	fileSet := token.NewFileSet()
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			if entry.Name() == "target" || entry.Name() == ".go" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			selector, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			pkg, ok := selector.X.(*ast.Ident)
+			if !ok || pkg.Name != "slog" {
+				return true
+			}
+			if !slices.Contains([]string{"Debug", "Info", "Warn", "Error"}, selector.Sel.Name) {
+				return true
+			}
+			var keys []string
+			for index := 1; index < len(call.Args); index += 2 {
+				literal, ok := call.Args[index].(*ast.BasicLit)
+				if !ok || literal.Kind != token.STRING {
+					continue
+				}
+				keys = append(keys, strings.Trim(literal.Value, `"`))
+			}
+			calls = append(calls, logCall{position: fileSet.Position(call.Pos()).String(), keys: keys})
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", root, err)
+	}
+	return calls
 }

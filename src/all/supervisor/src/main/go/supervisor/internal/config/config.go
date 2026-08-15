@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 const defaultVersion = "10.100.1000-SNAPSHOT"
@@ -55,15 +56,16 @@ func Load(path string) *Config {
 }
 
 func load(path string) *Config {
+	loadStart := time.Now()
 	result := &Config{asystem: configData{Schema: []configServices{}}}
 	if path == "" {
-		slog.Warn("config", "engine", "config", "phase", "load", "detail", "no path provided, using defaults")
+		slog.Warn("config", "engine", "config", "phase", "load", "duration", time.Since(loadStart), "detail", "no path provided, using defaults")
 	} else if data, err := os.ReadFile(path); err != nil {
-		slog.Warn("config", "engine", "config", "phase", "load", "detail", fmt.Sprintf("file not found at [%s], using defaults", path))
+		slog.Warn("config", "engine", "config", "phase", "load", "duration", time.Since(loadStart), "detail", fmt.Sprintf("file not found at [%s], using defaults", path))
 	} else {
 		var raw struct{ Asystem configData }
 		if err := json.Unmarshal(data, &raw); err != nil {
-			slog.Warn("config", "engine", "config", "phase", "parse", "detail", fmt.Sprintf("parse failed for [%s] with [%v], using defaults", path, err))
+			slog.Warn("config", "engine", "config", "phase", "parse", "duration", time.Since(loadStart), "detail", fmt.Sprintf("parse failed for [%s] with [%v], using defaults", path, err))
 		} else {
 			result.asystem = raw.Asystem
 			if result.asystem.Schema == nil {
@@ -73,11 +75,11 @@ func load(path string) *Config {
 			validSchema := make([]configServices, 0, len(result.asystem.Schema))
 			for _, hostSchema := range result.asystem.Schema {
 				if hostSchema.Host == "" {
-					slog.Warn("config", "engine", "config", "phase", "schema", "detail", "empty host in schema, skipping")
+					slog.Warn("config", "engine", "config", "phase", "schema", "duration", time.Since(loadStart), "detail", "empty host in schema, skipping")
 					continue
 				}
 				if seenHosts[hostSchema.Host] {
-					slog.Warn("config", "engine", "config", "phase", "schema", "detail", fmt.Sprintf("host [%s] duplicate in schema, skipping", hostSchema.Host))
+					slog.Warn("config", "engine", "config", "phase", "schema", "duration", time.Since(loadStart), "detail", fmt.Sprintf("host [%s] duplicate in schema, skipping", hostSchema.Host))
 					continue
 				}
 				seenHosts[hostSchema.Host] = true
@@ -85,11 +87,11 @@ func load(path string) *Config {
 				validServices := make([]string, 0, len(hostSchema.Services))
 				for _, service := range hostSchema.Services {
 					if service == "" {
-						slog.Warn("config", "engine", "config", "phase", "schema", "detail", fmt.Sprintf("host [%s] empty service in schema, skipping", hostSchema.Host))
+						slog.Warn("config", "engine", "config", "phase", "schema", "duration", time.Since(loadStart), "detail", fmt.Sprintf("host [%s] empty service in schema, skipping", hostSchema.Host))
 						continue
 					}
 					if seenServices[service] {
-						slog.Warn("config", "engine", "config", "phase", "schema", "detail", fmt.Sprintf("host [%s] duplicate service [%s] in schema, skipping", hostSchema.Host, service))
+						slog.Warn("config", "engine", "config", "phase", "schema", "duration", time.Since(loadStart), "detail", fmt.Sprintf("host [%s] duplicate service [%s] in schema, skipping", hostSchema.Host, service))
 						continue
 					}
 					seenServices[service] = true
@@ -128,9 +130,10 @@ func (c *Config) Host() string {
 		return c.asystem.Host
 	}
 	cachedHostOnceMu.Do(func() {
+		hostnameStart := time.Now()
 		hostName, err := os.Hostname()
 		if err != nil {
-			slog.Error("config", "engine", "config", "phase", "hostname", "detail", fmt.Sprintf("get hostname failed with [%v]", err))
+			slog.Error("config", "engine", "config", "phase", "hostname", "duration", time.Since(hostnameStart), "detail", fmt.Sprintf("get hostname failed with [%v]", err))
 			return
 		}
 		cachedHostName = hostName
@@ -211,23 +214,24 @@ func (c *Config) Services(host string) []string {
 }
 
 func resolve(field, env, key string) string {
+	resolveStart := time.Now()
 	if value := os.Getenv(env); value != "" {
-		slog.Info("config", "engine", "config", "phase", "resolve", "detail", fmt.Sprintf("status [resolved] field [%s] value [%s] from [env]", field, mask(field, value)))
+		slog.Info("config", "engine", "config", "phase", "resolve", "duration", time.Since(resolveStart), "detail", fmt.Sprintf("status [resolved] field [%s] value [%s] from [env]", field, mask(field, value)))
 		return value
 	}
 	if strings.HasPrefix(key, "$") {
 		name := key[1:]
 		if val := os.Getenv(name); val != "" {
-			slog.Info("config", "engine", "config", "phase", "resolve", "detail", fmt.Sprintf("status [resolved] field [%s] value [%s] from [env] referenced by [file]", field, mask(field, val)))
+			slog.Info("config", "engine", "config", "phase", "resolve", "duration", time.Since(resolveStart), "detail", fmt.Sprintf("status [resolved] field [%s] value [%s] from [env] referenced by [file]", field, mask(field, val)))
 			return val
 		}
-		slog.Warn("config", "engine", "config", "phase", "resolve", "detail", fmt.Sprintf("status [unresolved] field [%s] referenced by [file] but unset in [env]", field))
+		slog.Warn("config", "engine", "config", "phase", "resolve", "duration", time.Since(resolveStart), "detail", fmt.Sprintf("status [unresolved] field [%s] referenced by [file] but unset in [env]", field))
 		return ""
 	}
 	if key != "" {
-		slog.Info("config", "engine", "config", "phase", "resolve", "detail", fmt.Sprintf("status [resolved] field [%s] value [%s] from [file]", field, mask(field, key)))
+		slog.Info("config", "engine", "config", "phase", "resolve", "duration", time.Since(resolveStart), "detail", fmt.Sprintf("status [resolved] field [%s] value [%s] from [file]", field, mask(field, key)))
 	} else {
-		slog.Info("config", "engine", "config", "phase", "resolve", "detail", fmt.Sprintf("status [unresolved] field [%s] unset in [env] and [file]", field))
+		slog.Info("config", "engine", "config", "phase", "resolve", "duration", time.Since(resolveStart), "detail", fmt.Sprintf("status [unresolved] field [%s] unset in [env] and [file]", field))
 	}
 	return key
 }

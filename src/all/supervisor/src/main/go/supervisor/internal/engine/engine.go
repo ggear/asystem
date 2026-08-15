@@ -36,12 +36,14 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 			}
 		}
 	}
+	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		slog.Error("state", "engine", "probes", "phase", "create", "detail", fmt.Sprintf("listening probes loop create failed with [%v]", err))
+		slog.Error("state", "engine", "probes", "phase", "create", "duration", time.Since(createStart), "detail", fmt.Sprintf("listening probes loop create failed with [%v]", err))
 		return
 	}
+	runStart := time.Now()
 	if err := probe.Run(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		slog.Error("state", "engine", "probes", "phase", "run", "detail", fmt.Sprintf("listening probes loop run failed with [%v]", err))
+		slog.Error("state", "engine", "probes", "phase", "run", "duration", time.Since(runStart), "detail", fmt.Sprintf("listening probes loop run failed with [%v]", err))
 	}
 }
 
@@ -88,8 +90,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return
 		}
 		var value metric.ValueData
+		streamStart := time.Now()
 		if err := json.Unmarshal(msg.Payload(), &value); err != nil {
-			slog.Warn("state", "engine", "subscribe", "phase", "stream", "detail", fmt.Sprintf("unmarshal failed on [%s] with [%v]", msg.Topic(), err))
+			slog.Warn("state", "engine", "subscribe", "phase", "stream", "duration", time.Since(streamStart), "detail", fmt.Sprintf("unmarshal failed on [%s] with [%v]", msg.Topic(), err))
 			return
 		}
 		if value.Pulse == nil {
@@ -178,11 +181,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				return
 			}
 			hostName := tokens[1]
+			statusStart := time.Now()
 			payload := strings.TrimSpace(string(msg.Payload()))
 			rxCount.Add(1)
 			switch payload {
 			case hostStatusOnline:
-				statusStart := time.Now()
 				hostStatusMutex.RLock()
 				alreadyOnline := hostStatus[hostName]
 				hostStatusMutex.RUnlock()
@@ -205,7 +208,6 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 				slog.Info("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "detail", fmt.Sprintf("host [%s] status [%s] resubscribed [%d] topics reconcile [%v]", hostName, hostStatusOnline, topics, !alreadyOnline))
 			case hostStatusOffline, "":
-				statusStart := time.Now()
 				storeHostStatus(hostName, false)
 				evicted := cache.Services(hostName)
 				for _, svc := range evicted {
@@ -230,15 +232,16 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 				slog.Warn("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "detail", fmt.Sprintf("host [%s] status [%s] evicted [%d] services", hostName, hostStatusOffline, len(evicted)))
 			default:
-				slog.Warn("state", "engine", "broker", "phase", "status", "detail", fmt.Sprintf("host [%s] unknown status payload [%s]", hostName, payload))
+				slog.Warn("state", "engine", "broker", "phase", "status", "duration", time.Since(statusStart), "detail", fmt.Sprintf("host [%s] unknown status payload [%s]", hostName, payload))
 			}
 		})
 		cache.Refresh()
 		slog.Info("state", "engine", "subscribe", "phase", "connect", "duration", time.Since(connectStart), "detail", fmt.Sprintf("subscribed [%d] topics", topics))
 	}
+	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
 	if err != nil {
-		slog.Error("state", "engine", "subscribe", "phase", "connect", "detail", fmt.Sprintf("listening stream loop connect failed with [%v]", err))
+		slog.Error("state", "engine", "subscribe", "phase", "connect", "duration", time.Since(clientStart), "detail", fmt.Sprintf("listening stream loop connect failed with [%v]", err))
 		return
 	}
 	defer client.Disconnect(250)
@@ -312,16 +315,18 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 		CacheHours:   0,
 		SnapshotMins: 0,
 	}
+	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		slog.Error("state", "engine", "probes", "phase", "create", "detail", fmt.Sprintf("all probes once create failed with [%v]", err))
+		slog.Error("state", "engine", "probes", "phase", "create", "duration", time.Since(createStart), "detail", fmt.Sprintf("all probes once create failed with [%v]", err))
 		return
 	}
 	timeout := time.Duration(3*periods.PulseMillis) * time.Millisecond
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	runStart := time.Now()
 	err := probe.Run(ctx, nil)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		slog.Error("state", "engine", "probes", "phase", "run", "detail", fmt.Sprintf("all probes once run failed with [%v]", err))
+		slog.Error("state", "engine", "probes", "phase", "run", "duration", time.Since(runStart), "detail", fmt.Sprintf("all probes once run failed with [%v]", err))
 	}
 }
 
@@ -347,8 +352,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		record := metric.NewRecord(metric.NewNilValue())
 		cache.Store(metric.NewServiceSchemaRecordGUID(id, config.Load(configPath).Host(), 0), &record)
 	}
+	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		slog.Error("state", "engine", "publish", "phase", "create", "detail", fmt.Sprintf("publish loop create failed with [%v]", err))
+		slog.Error("state", "engine", "publish", "phase", "create", "duration", time.Since(createStart), "detail", fmt.Sprintf("publish loop create failed with [%v]", err))
 		return
 	}
 	hostName := config.Load(configPath).Host()
@@ -368,6 +374,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 		})
 		client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+			commandStart := time.Now()
 			tokens := strings.Split(msg.Topic(), "/")
 			if len(tokens) < 5 || tokens[1] == "" || tokens[4] == "" {
 				return
@@ -375,7 +382,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 
 			// TODO: Implement command handling
 
-			slog.Debug("command", "engine", "broker", "phase", "command", "detail", fmt.Sprintf("host [%s] service [%s] payload [%s]", tokens[1], tokens[4], string(msg.Payload())))
+			slog.Debug("command", "engine", "broker", "phase", "command", "duration", time.Since(commandStart), "detail", fmt.Sprintf("host [%s] service [%s] payload [%s]", tokens[1], tokens[4], string(msg.Payload())))
 		})
 		if hasConnected.Swap(true) {
 			statusReadback := make(chan string, 1)
@@ -396,9 +403,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 		}
 	}
+	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, statusTopic, hostStatusOffline)
 	if err != nil {
-		slog.Error("state", "engine", "broker", "phase", "connect", "detail", fmt.Sprintf("publish loop broker connect failed with [%v]", err))
+		slog.Error("state", "engine", "broker", "phase", "connect", "duration", time.Since(clientStart), "detail", fmt.Sprintf("publish loop broker connect failed with [%v]", err))
 		return
 	}
 	defer func() {
@@ -414,9 +422,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	var db *databaseClient
 	if config.Load(configPath).Database() != "" {
 		var dbErr error
+		databaseStart := time.Now()
 		db, dbErr = databaseConnect(configPath)
 		if dbErr != nil {
-			slog.Error("state", "engine", "database", "phase", "connect", "detail", fmt.Sprintf("publish loop database connect failed with [%v]", dbErr))
+			slog.Error("state", "engine", "database", "phase", "connect", "duration", time.Since(databaseStart), "detail", fmt.Sprintf("publish loop database connect failed with [%v]", dbErr))
 		} else {
 			defer db.close()
 		}
@@ -427,6 +436,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	serviceRelation := metric.ServiceRelation()
 	var toDelete []lpKey
 	deleted := make(map[lpKey]bool)
+	publishStart := time.Now()
 	err = probe.Run(ctx, func(isHeartbeat bool) {
 		pulseStart := time.Now()
 		if forceRepublish.Swap(false) && !isHeartbeat {
@@ -455,6 +465,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			fields[field+suffix] = schema.Field{Text: d.Value(), Flag: d.OK}
 		}
 		process := func(guid metric.RecordGUID, record *metric.Record) {
+			processStart := time.Now()
 			if record.Topic != "" {
 				if record.Value.Pulse != nil {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
@@ -462,7 +473,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 						txCount++
 						txBytes += len(payload)
 					} else {
-						slog.Warn("state", "engine", "publish", "phase", "marshal", "detail", fmt.Sprintf("marshal failed on [%s] with [%v]", record.Topic, jsonErr))
+						slog.Warn("state", "engine", "publish", "phase", "marshal", "duration", time.Since(processStart), "detail", fmt.Sprintf("marshal failed on [%s] with [%v]", record.Topic, jsonErr))
 					}
 				} else if guid.ServiceName != metric.ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, metric.ServiceNameSchema) {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
@@ -548,7 +559,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		slog.Debug("profiling", "engine", "publish", "phase", phase, "duration", time.Since(pulseStart), "detail", fmt.Sprintf("transmitted [%d] bytes", txBytes))
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		slog.Error("state", "engine", "publish", "phase", "run", "detail", fmt.Sprintf("publish loop run failed with [%v]", err))
+		slog.Error("state", "engine", "publish", "phase", "run", "duration", time.Since(publishStart), "detail", fmt.Sprintf("publish loop run failed with [%v]", err))
 	}
 }
 
