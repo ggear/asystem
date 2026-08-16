@@ -99,10 +99,14 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           echo "Error: Share index [${share_index_dest}] is not an integer"
           RESULT=1
         else
-          share_dest="/share/${share_index_dest}/media/$(echo ${share_suffix} | cut -d '/' -f2-)/"
-          [ ! -z "${share_ssh}" ] && echo "Executing remotely ..."
+          share_dest="/share/${share_index_dest}/media/$(echo "${share_suffix}" | cut -d '/' -f2-)/"
+          share_args=("${share_src}" "${share_dest}")
+          if [ ! -z "${share_ssh}" ]; then
+            echo "Executing remotely ..."
+            share_args=("$(printf '%q' "${share_src}")" "$(printf '%q' "${share_dest}")")
+          fi
           trap '${share_ssh} killall -9 rsync; echo; exit' INT
-          ${share_ssh} bash -s -- \"${share_src}\" \"${share_dest}\" <<'EOF' || RESULT=1
+          ${share_ssh} bash -s -- "${share_args[@]}" <<'EOF' || RESULT=1
 share_src="${1}"
 share_dest="${2}"
 result=0
