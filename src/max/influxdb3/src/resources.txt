@@ -1,3 +1,4 @@
 ../install.sh
+../install_prep.sh
 main/resources/data/cluster_1/admin.json
 main/resources/data/cluster_1/init.json
