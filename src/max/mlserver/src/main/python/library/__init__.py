@@ -1,6 +1,7 @@
 import os
 import os.path
 import subprocess
+from csv import reader
 
 import matplotlib.pyplot as plt
 from dateutil.parser import parse
@@ -27,19 +28,26 @@ def init_env(prod_env=True):
     return env
 
 
-def query_influxdb(env, query):
+def query_influxdb3(env, query, database=None):
     response = post(
-        url="http://{}:{}/api/v2/query?org={}".format(env["INFLUXDB_IP_PROD"], env["INFLUXDB_HTTP_PORT"], env["INFLUXDB_ORG"]),
+        url="http://{}:{}/api/v3/query_sql".format(env["INFLUXDB3_IP_PROD"], env["INFLUXDB3_API_PORT"]),
         headers={
             'Accept': 'application/csv',
-            'Content-type': 'application/vnd.flux',
-            'Authorization': 'Token {}'.format(env["INFLUXDB_TOKEN"])
-        }, data=query)
+            'Content-type': 'application/json',
+            'Authorization': 'Bearer {}'.format(env["INFLUXDB3_TOKEN_ADMIN"])
+        }, json={
+            "db": database if database is not None else env["INFLUXDB3_DATABASE_HOME"],
+            "q": query,
+            "format": "csv"
+        })
+    response.raise_for_status()
+    lines = response.text.strip().split("\n")
+    if len(lines) < 2:
+        return []
+    header = next(reader([lines[0]]))
     rows = []
-    for row in response.text.strip().split("\n")[1:]:
-        cols = row.strip().split(",")
-        if len(cols) > 4:
-            rows.append([parse(cols[3])] + cols[4:])
+    for cols in reader(lines[1:]):
+        rows.append([parse(col) if key == "time" and col else col for key, col in zip(header, cols)])
     return rows
 
 

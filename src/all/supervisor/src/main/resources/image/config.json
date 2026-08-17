@@ -41,7 +41,6 @@
         "services": [
           "cloudflare",
           "grafana",
-          "influxdb",
           "letsencrypt",
           "sonarr",
           "supervisor",

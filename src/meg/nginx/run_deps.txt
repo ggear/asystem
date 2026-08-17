@@ -9,7 +9,6 @@ wrangle
 mlserver
 unpoller
 postgres
-influxdb
 influxdb3
 appdaemon
 zigbee2mqtt

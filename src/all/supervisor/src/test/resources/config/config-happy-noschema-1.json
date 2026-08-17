@@ -8,7 +8,7 @@
       "token": "noschematoken456"
     },
     "database": {
-      "host": "influxdb.local.janeandgraham.com",
+      "host": "influxdb3.local.janeandgraham.com",
       "port": "2000",
       "name": "supervisor",
       "token": "noschematoken456"

@@ -84,48 +84,6 @@ curl -sf "${GRAFANA_URL}"/api/admin/stats | jq
 #######################################################################################
 # Private Datasource
 #######################################################################################
-if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l)" -eq 0 ]; then
-  curl -sf -XPOST "${GRAFANA_URL_PRIVATE}"/api/datasources \
-    -H "Accept: application/json" \
-    -H "Content-Type: application/json" \
-    -d '{
-          "name": "InfluxDB_V2",
-          "type": "influxdb",
-          "url": "http://'"${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT}"'",
-          "access": "proxy",
-          "isDefault": true,
-          "jsonData": {
-            "version": "Flux",
-            "organization": "'"${INFLUXDB_ORG}"'",
-            "timeout": 60,
-            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PRIVATE}"'",
-            "httpMode": "POST"
-          },
-          "secureJsonData": {
-            "token": "'"${INFLUXDB_TOKEN}"'"
-          },
-          "secureJsonFields": {
-            "token": true
-          }
-        }' | jq
-fi
-if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l)" -eq 0 ]; then
-  curl -sf -XPOST "${GRAFANA_URL_PRIVATE}"/api/datasources \
-    -H "Accept: application/json" \
-    -H "Content-Type: application/json" \
-    -d '{
-          "name": "InfluxDB_V1",
-          "type": "influxdb",
-          "url": "http://'"${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT}"'",
-          "access": "proxy",
-          "isDefault": false,
-          "database": "'"${INFLUXDB_BUCKET_DATA_PRIVATE}"'",
-          "user": "'"${INFLUXDB_USER_PRIVATE}"'",
-          "secureJsonData": {
-            "password": "'"${INFLUXDB_TOKEN}"'"
-          }
-        }' | jq
-fi
 if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V3 | jq -r '.name' | grep InfluxDB_V3 | wc -l)" -eq 0 ]; then
   curl -sf -XPOST "${GRAFANA_URL_PRIVATE}"/api/datasources \
     -H "Accept: application/json" \
@@ -135,7 +93,7 @@ if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V3 | jq 
           "type": "influxdb",
           "url": "http://'"${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}"'",
           "access": "proxy",
-          "isDefault": false,
+          "isDefault": true,
           "jsonData": {
             "version": "SQL",
             "dbName": "'"${INFLUXDB3_DATABASE_HOME}"'",

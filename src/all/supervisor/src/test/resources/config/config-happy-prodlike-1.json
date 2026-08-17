@@ -9,7 +9,7 @@
       "token": "prodtoken123"
     },
     "database": {
-      "host": "influxdb.local.janeandgraham.com",
+      "host": "influxdb3.local.janeandgraham.com",
       "port": "2000",
       "name": "supervisor",
       "token": "prodtoken123"
@@ -39,7 +39,6 @@
         "services": [
           "digitemp",
           "grafana",
-          "influxdb",
           "letsencrypt",
           "monitor",
           "sonarr",

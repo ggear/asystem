@@ -1,3 +1,0 @@
-../install.sh
-main/resources/data/config.yml
-main/resources/data/influx-configs

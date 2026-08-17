@@ -16,7 +16,6 @@
 #     cloudflare,
 #     grafana,
 #     homeassistant,
-#     influxdb,
 #     influxdb3,
 #     letsencrypt,
 #     mariadb,

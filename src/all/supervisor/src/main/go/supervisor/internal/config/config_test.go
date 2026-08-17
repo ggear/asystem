@@ -430,25 +430,25 @@ func TestConfig_Database(t *testing.T) {
 		{
 			name:          "happy_production_like_1",
 			configPath:    testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
-			expected:      "influxdb.local.janeandgraham.com:2000",
+			expected:      "influxdb3.local.janeandgraham.com:2000",
 			expectedError: false,
 		},
 		{
 			name:          "happy_noschema_1",
 			configPath:    testutil.FindTestFile(t, "config-happy-noschema-1.json", "config"),
-			expected:      "influxdb.local.janeandgraham.com:2000",
+			expected:      "influxdb3.local.janeandgraham.com:2000",
 			expectedError: false,
 		},
 		{
 			name:          "happy_noservices_1",
 			configPath:    testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
-			expected:      "influxdb.local.janeandgraham.com:2000",
+			expected:      "influxdb3.local.janeandgraham.com:2000",
 			expectedError: false,
 		},
 		{
 			name:          "happy_no_port_in_file_uses_host_only",
 			configPath:    testutil.FindTestFile(t, "config-sad-no-database-port-1.json", "config"),
-			expected:      "influxdb.local.janeandgraham.com",
+			expected:      "influxdb3.local.janeandgraham.com",
 			expectedError: false,
 		},
 		{

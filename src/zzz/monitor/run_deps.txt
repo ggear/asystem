@@ -1,3 +1,2 @@
 vernemq
-influxdb
 influxdb3

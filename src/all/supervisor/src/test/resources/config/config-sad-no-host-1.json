@@ -6,7 +6,7 @@
       "port": "1000"
     },
     "database": {
-      "host": "influxdb.local.janeandgraham.com",
+      "host": "influxdb3.local.janeandgraham.com",
       "port": "2000"
     },
     "schema": [

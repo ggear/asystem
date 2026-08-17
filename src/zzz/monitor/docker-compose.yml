@@ -10,8 +10,6 @@ services:
       - HOST_NAME
       - VERNEMQ_SERVICE
       - VERNEMQ_API_PORT
-      - INFLUXDB_SERVICE
-      - INFLUXDB_HTTP_PORT
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
       - HOST_SYS=/hostfs/sys
