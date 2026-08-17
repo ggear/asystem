@@ -13,7 +13,7 @@ CLUSTER_ID="${INFLUXDB3_CLUSTER_ID:-cluster_1}"
 VERSION="${SERVICE_VERSION_ABSOLUTE:-unknown}"
 
 DIR_BACKUP="${DATA_DIR}/${CLUSTER_ID}/backups"
-LINK_BACKUP="${DATA_DIR}/backup"
+DIR_EXPORT="${DATA_DIR}/backup"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 
 backups_listed() {
@@ -70,6 +70,14 @@ backup_awaited() {
   done
 }
 
+export_refreshed() {
+  [ -d "${DIR_BACKUP}" ] || return 0
+  rm -rf "${DIR_EXPORT}"
+  mkdir -p "${DIR_EXPORT}/${CLUSTER_ID}"
+  cp -al "${DIR_BACKUP}" "${DIR_EXPORT}/${CLUSTER_ID}/backups"
+  echo "Exported [$(backups_listed | wc -l)] backups to [${DIR_EXPORT}] holding [$(du -sh "${DIR_EXPORT}" | cut -f1)]"
+}
+
 chains_pruned() {
   local names bases excess index
   mapfile -t names < <(backups_listed)
@@ -99,6 +107,7 @@ if [ "${#BACKUPS[@]}" -gt 0 ]; then
   AGE=$(($(date -u +%s) - $(backup_epoch "${NEWEST}")))
   if [ "${AGE}" -lt "${MIN_INTERVAL}" ]; then
     echo "Backup skipped, newest backup [${NEWEST}] is [${AGE}] seconds old, minimum interval [${MIN_INTERVAL}] seconds"
+    export_refreshed
     exit 0
   fi
 fi
@@ -142,7 +151,4 @@ backup_awaited "${NAME}"
 echo "Completed backup [${NAME}]"
 
 chains_pruned
-
-if [ -d "${DIR_BACKUP}" ] && [ ! -e "${LINK_BACKUP}" ]; then
-  ln -sfn "${CLUSTER_ID}/backups" "${LINK_BACKUP}"
-fi
+export_refreshed
