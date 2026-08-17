@@ -4,6 +4,10 @@
 //   1. Extensions > Apps Script, paste this file into Code.gs
 //   2. Extensions > Apps Script > Project Settings > Script Properties, add CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET (case-sensitive) from src/may/cloudflare/.env_all_key.
 //   3. Use as =WRANGLE_PRICE("GOLD", "ASX")
+//
+// Sheets caches a custom function's result against its arguments, so a recalculation with unchanged arguments reuses the cached value rather than re-running the function.
+// The optional third argument is ignored by the function and exists purely to break that cache, e.g. =WRANGLE_PRICE(B29, K29, A1) where A1 holds a value that changes,
+// such as =NOW() on an hourly recalculation trigger. Changing A1 changes the input signature and forces a genuine re-run.
 
 var WRANGLE_SUFFIX = {
     '': '',
@@ -17,7 +21,7 @@ var WRANGLE_SUFFIX = {
     'BATS': ''
 };
 
-function WRANGLE_PRICE(symbol, exchange) {
+function WRANGLE_PRICE(symbol, exchange, invalidate) {
     var props = PropertiesService.getScriptProperties();
     var id = props.getProperty('CF_ACCESS_CLIENT_ID');
     var secret = props.getProperty('CF_ACCESS_CLIENT_SECRET');
