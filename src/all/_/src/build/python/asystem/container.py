@@ -454,6 +454,8 @@ BACKUP_PUB_RETAIN_DAYS="{retain}"
 BACKUP_PUB_TARGET=""
 
 BACKUP_PRI_MIN_INTERVAL="{interval}"
+BACKUP_PRI_NEWEST=""
+BACKUP_PRI_SIZE=0
 BACKUP_PRI_STARTED=0
 BACKUP_PRI_STATUS=0
 
@@ -570,22 +572,26 @@ find "${{BACKUP_PUB_DIR}}" -type f -name '*.tmp' -delete 2>/dev/null
 
 mapfile -t BACKUP_PRI_EXISTING < <(backup_listed)
 if [ "${{#BACKUP_PRI_EXISTING[@]}}" -gt 0 ]; then
-  BACKUP_PRI_AGE=$(($(date +%s) - $(backup_epoch "${{BACKUP_PRI_EXISTING[-1]}}")))
+  BACKUP_PRI_NEWEST="${{BACKUP_PRI_EXISTING[-1]}}"
+  BACKUP_PRI_AGE=$(($(date +%s) - $(backup_epoch "${{BACKUP_PRI_NEWEST}}")))
   if [ "${{BACKUP_PRI_AGE}}" -lt "${{BACKUP_PRI_MIN_INTERVAL}}" ]; then
-    echo "Backup skipped, newest backup [${{BACKUP_PRI_EXISTING[-1]}}] is [${{BACKUP_PRI_AGE}}] seconds old, minimum interval [${{BACKUP_PRI_MIN_INTERVAL}}] seconds"
+    echo "Backup skipped, newest backup [${{BACKUP_PRI_NEWEST}}] is [${{BACKUP_PRI_AGE}}] seconds old, minimum interval [${{BACKUP_PRI_MIN_INTERVAL}}] seconds"
     exit 0
   fi
 fi
+
+echo "Starting backup [${{BACKUP_PUB_MODULE}}] from [${{BACKUP_PUB_SOURCE}}] stamped [${{BACKUP_PUB_STAMP}}] holding [${{#BACKUP_PRI_EXISTING[@]}}] backups newest [${{BACKUP_PRI_NEWEST:-none}}] retaining [${{BACKUP_PUB_RETAIN_DAYS}}] days"
 
 trap backup_discarded EXIT
 BACKUP_PRI_STARTED=${{SECONDS}}
 if backup_written && [ -n "${{BACKUP_PUB_TARGET}}" ] && [ -s "${{BACKUP_PUB_TARGET}}.tmp" ]; then
   mv "${{BACKUP_PUB_TARGET}}.tmp" "${{BACKUP_PUB_TARGET}}"
-  echo "Completed backup [${{BACKUP_PUB_MODULE}}] in [$((SECONDS - BACKUP_PRI_STARTED))s] to [${{BACKUP_PUB_TARGET}}]"
+  BACKUP_PRI_SIZE="$(du -m "${{BACKUP_PUB_TARGET}}" | cut -f1)"
+  echo "Completed backup [${{BACKUP_PUB_MODULE}}] of [${{BACKUP_PRI_SIZE}}] MB in [$((SECONDS - BACKUP_PRI_STARTED))] seconds to [${{BACKUP_PUB_TARGET}}]"
   backup_pruned
 else
   [ -n "${{BACKUP_PUB_TARGET}}" ] || echo "Nothing named the artifact, call backup_target in backup_written" >&2
-  echo "Failed backup [${{BACKUP_PUB_MODULE}}] in [$((SECONDS - BACKUP_PRI_STARTED))s]" >&2
+  echo "Failed backup [${{BACKUP_PUB_MODULE}}] in [$((SECONDS - BACKUP_PRI_STARTED))] seconds" >&2
   BACKUP_PRI_STATUS=1
 fi
 
