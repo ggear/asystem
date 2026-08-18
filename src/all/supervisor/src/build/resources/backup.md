@@ -81,11 +81,24 @@ A generate parameter could do neither of those, which is why they are variables.
 ### Backup naming
 
 ```
-<data dir>/backup/<stamp>/<module>_<stamp>_full.<extension>
-<data dir>/backup/<stamp>/<module>_<stamp>_delta.<extension>
+<data root>/backup/<stamp>/<module>_<stamp>_<version>_full.<extension>
+<data root>/backup/<stamp>/<module>_<stamp>_<version>_delta.<extension>
 ```
 
-`<stamp>` is `%Y-%m-%d_%H-%M-%S` local, in both the directory and the filename. The **`_full` /
+`<data root>` is the **parent** of the data directory, so backups sit beside the versioned homes
+rather than inside one — `/home/asystem/<module>/backup`, not `/home/asystem/<module>/<version>/backup`.
+That keeps them clear of `install.sh`, which copies the old home into the new one on every deploy and
+prunes the older homes; a backup directory inside a home was duplicated forward by that copy.
+
+`<stamp>` is `%Y-%m-%d_%H-%M-%S` local, in both the directory and the filename. The directory name is
+the bare stamp and nothing else — `backup_listed` matches it with an anchored pattern, so anything
+appended there would hide the backup from listing, pruning and the health check.
+
+`<version>` is the version the backup was **extracted from** — the basename of the resolved
+`BACKUP_SOURCE_PATH`, not `SERVICE_VERSION_ABSOLUTE`. The two differ exactly when it matters: on an
+upgrade the wrapper runs from the new install directory, whose `.env` names the version being
+deployed, while the data being backed up is the old home. It sits before the suffix so `_full` /
+`_delta` stay immediately before the extension. The **`_full` /
 `_delta` suffix is the whole point**: it tells a later tier, without knowing anything about the
 module, whether a backup stands alone.
 
@@ -108,11 +121,11 @@ Two kinds, named for what a single backup is worth on its own:
 
 | Module | Kind | Produced by | Backup |
 |--------|------|-------------|----------|
-| `postgres` | `FULL` | `pg_dumpall \| gzip` in the container | `postgres_<stamp>_full.sql.gz` |
-| `mariadb` | `FULL` | `mariadb-dump --all-databases --single-transaction \| gzip` | `mariadb_<stamp>_full.sql.gz` |
-| `zigbee2mqtt` | `FULL` | `zigbee/bridge/request/backup`, base64 zip off the response topic | `zigbee2mqtt_<stamp>_full.zip` |
-| `letsencrypt` | `FULL` | `backup_files`, the shared `tar` of the paths it is passed | `letsencrypt_<stamp>_full.tar.gz` |
-| `influxdb3` | `DELTA` | `influxdb3 create backup`, tarred out of the object store | `influxdb3_<stamp>_{full,delta}.tar.gz` |
+| `postgres` | `FULL` | `pg_dumpall \| gzip` in the container | `postgres_<stamp>_<version>_full.sql.gz` |
+| `mariadb` | `FULL` | `mariadb-dump --all-databases --single-transaction \| gzip` | `mariadb_<stamp>_<version>_full.sql.gz` |
+| `zigbee2mqtt` | `FULL` | `zigbee/bridge/request/backup`, base64 zip off the response topic | `zigbee2mqtt_<stamp>_<version>_full.zip` |
+| `letsencrypt` | `FULL` | `backup_files`, the shared `tar` of the paths it is passed | `letsencrypt_<stamp>_<version>_full.tar.gz` |
+| `influxdb3` | `DELTA` | `influxdb3 create backup`, tarred out of the object store | `influxdb3_<stamp>_<version>_{full,delta}.tar.gz` |
 
 A `FULL` backup is always self-contained, so any subset can be kept. A `DELTA`
 module emits a `full` when there is none or the current one has aged past `BACKUP_RETAIN_DAYS`, and a
@@ -135,7 +148,8 @@ wrapper variable, and the wrapper never reads a snippet one.
 |----------|---------|
 | `BACKUP_MODULE_NAME` | the module name |
 | `BACKUP_SOURCE_PATH` | `${SERVICE_DATA_DIR}`, the module's data directory |
-| `BACKUP_INTERNAL_ROOT_DIR` | `${BACKUP_SOURCE_PATH}/backup` |
+| `BACKUP_SOURCE_VERSION` | the version the backup was extracted from, the resolved source path's basename |
+| `BACKUP_INTERNAL_ROOT_DIR` | `$(dirname "${BACKUP_SOURCE_PATH}")/backup`, beside the versioned homes rather than inside one |
 | `BACKUP_RUN_TIMESTAMP` | this run's timestamp |
 | `BACKUP_FULL_SUFFIX` / `BACKUP_DELTA_SUFFIX` | the `_full` / `_delta` suffixes |
 | `BACKUP_RETAIN_DAYS` | the dense window in days, default 7 |
@@ -321,7 +335,7 @@ rather than a description of what exists.
 6. **Do not add it to `src/resources.txt`.** The script reads its environment at runtime and holds
    no `${VAR}` placeholders.
 7. **Check the result**: a successful run leaves exactly one backup named
-   `<module>_<stamp>_full.<extension>`; a failed one leaves no file and no directory. Running it
+   `<module>_<stamp>_<version>_full.<extension>`; a failed one leaves no file and no directory. Running it
    twice inside `BACKUP_SKIP_HOURS` must skip. Sourcing it must produce no backup.
 
 ## Driver — planned

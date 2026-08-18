@@ -395,6 +395,7 @@ def write_container_backup(module_name=None, working_dir=None):
 #
 # BACKUP_MODULE_NAME      this module's name
 # BACKUP_SOURCE_PATH      this module's source data path
+# BACKUP_SOURCE_VERSION   the version the backup was extracted from
 # BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
 # BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
 # BACKUP_FULL_SUFFIX      the file suffix marking a full backup
@@ -446,7 +447,9 @@ BACKUP_INTERNAL_ENV="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)/.env"
 
 BACKUP_MODULE_NAME="{module}"
 BACKUP_SOURCE_PATH="${{BACKUP_SOURCE_PATH:-${{SERVICE_DATA_DIR:-/home/asystem/{module}/latest}}}}"
-BACKUP_INTERNAL_ROOT_DIR="${{BACKUP_SOURCE_PATH}}/backup"
+BACKUP_INTERNAL_SOURCE_DIR="$(readlink -f "${{BACKUP_SOURCE_PATH}}")"
+BACKUP_SOURCE_VERSION="$(basename "${{BACKUP_INTERNAL_SOURCE_DIR}}")"
+BACKUP_INTERNAL_ROOT_DIR="$(dirname "${{BACKUP_INTERNAL_SOURCE_DIR}}")/backup"
 BACKUP_RUN_TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
 BACKUP_FULL_SUFFIX="_full"
 BACKUP_DELTA_SUFFIX="_delta"
@@ -465,7 +468,7 @@ backup_target() {{
     echo "Cannot name the backup, pass the suffix and the extension to backup_target" >&2
     return 1
   fi
-  BACKUP_TARGET_PATH="${{BACKUP_INTERNAL_ROOT_DIR}}/${{BACKUP_RUN_TIMESTAMP}}/${{BACKUP_MODULE_NAME}}_${{BACKUP_RUN_TIMESTAMP}}${{suffix}}.${{extension}}"
+  BACKUP_TARGET_PATH="${{BACKUP_INTERNAL_ROOT_DIR}}/${{BACKUP_RUN_TIMESTAMP}}/${{BACKUP_MODULE_NAME}}_${{BACKUP_RUN_TIMESTAMP}}_${{BACKUP_SOURCE_VERSION}}${{suffix}}.${{extension}}"
   mkdir -p "$(dirname "${{BACKUP_TARGET_PATH}}")"
 }}
 

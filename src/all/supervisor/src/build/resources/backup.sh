@@ -7,6 +7,7 @@
 #
 # BACKUP_MODULE_NAME      this module's name
 # BACKUP_SOURCE_PATH      this module's source data path
+# BACKUP_SOURCE_VERSION   the version the backup was extracted from
 # BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
 # BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
 # BACKUP_FULL_SUFFIX      the file suffix marking a full backup
