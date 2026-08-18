@@ -81,16 +81,31 @@ faulted() {
 """.replace("SCHEMA_LEAF", LEAF)
 
 
+AWAITED = 300
+
 CONFIG = REPORT + """
 BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
 
+AWAITED_TIMEOUT=${AWAITED_TIMEOUT:-SCHEMA_AWAITED}
+
 awaited() {
-  while ! mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -W 1 2>/dev/null | jq -re "$2" >/dev/null; do
+  local waited=0 payload
+  while true; do
+    payload="$(mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -W 1 2>/dev/null)"
+    if [ -n "${payload}" ] && jq -re "$2" <<<"${payload}" >/dev/null 2>&1; then
+      return 0
+    fi
+    if [ "${waited}" -ge "${AWAITED_TIMEOUT}" ]; then
+      fail "Waited [${waited}] seconds for [$3] on topic [$1] against broker [${BROKER_SERVICE}]" \
+        "The topic held no payload matching [$2], check the service is publishing and the broker is reachable"
+      return 1
+    fi
     printf 'Waiting for [%s] to come up ...\\n' "$3"
     sleep 2
+    waited=$((waited + 3))
   done
 }
-"""
+""".replace("SCHEMA_AWAITED", str(AWAITED))
 
 
 def resolve(module_name, fallbacks=()):
@@ -353,7 +368,7 @@ def config_script(module_name, name, summary, health_topic, health_filter, comma
     return script(module_name, DIALECT, name, summary, resolve(module_name, ("VERNEMQ_SERVICE",)) + CONFIG, """
 printf '\\nBroker {} [%s] against [%s]\\n\\n' "{}" "${{BROKER_SERVICE}}"
 
-awaited "{}" '{}' "{}"
+awaited "{}" '{}' "{}" || exit 1
 
 {}
 """.format(name, module_name, health_topic, health_filter, module_name, "\n".join(commands)), env_required=False)

@@ -60,16 +60,28 @@ fail() {
 
 BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
 
+AWAITED_TIMEOUT=${AWAITED_TIMEOUT:-300}
+
 awaited() {
-  while ! mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -W 1 2>/dev/null | jq -re "$2" >/dev/null; do
+  local waited=0 payload
+  while true; do
+    payload="$(mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -W 1 2>/dev/null)"
+    if [ -n "${payload}" ] && jq -re "$2" <<<"${payload}" >/dev/null 2>&1; then
+      return 0
+    fi
+    if [ "${waited}" -ge "${AWAITED_TIMEOUT}" ]; then
+      fail "Waited [${waited}] seconds for [$3] on topic [$1] against broker [${BROKER_SERVICE}]"         "The topic held no payload matching [$2], check the service is publishing and the broker is reachable"
+      return 1
+    fi
     printf 'Waiting for [%s] to come up ...\n' "$3"
     sleep 2
+    waited=$((waited + 3))
   done
 }
 
 printf '\nBroker clean [%s] against [%s]\n\n' "zigbee2mqtt" "${BROKER_SERVICE}"
 
-awaited "zigbee/bridge/health" '.process.uptime_sec > 0' "zigbee2mqtt"
+awaited "zigbee/bridge/health" '.process.uptime_sec > 0' "zigbee2mqtt" || exit 1
 
 mosquitto_pub "${BROKER_ARGS[@]}" -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Ada Lamp Bulb 1" }' &&
   printf 'Device [%s] removed from all groups\n' 'Ada Lamp Bulb 1' && sleep 1

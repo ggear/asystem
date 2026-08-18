@@ -2,8 +2,17 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")/broker"
 
+ENV_DIR="$ROOT_DIR"
+while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "$ENV_DIR")"; done
 # shellcheck disable=SC1091
-. "$ROOT_DIR/../../.env"
+[ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
+
+for VARIABLE in VERNEMQ_SERVICE VERNEMQ_API_PORT; do
+  if [ -z "${!VARIABLE:-}" ]; then
+    echo "Entity Metadata publish script [zigbee2mqtt] could not resolve [${VARIABLE}] from [${ENV_DIR}/.env] or the environment" >&2
+    exit 1
+  fi
+done
 
 printf "\nEntity Metadata publish script [zigbee2mqtt] dropping discovery topics on [%s]:\n" "$VERNEMQ_SERVICE"
 mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -F '%t' -t "homeassistant/#" -W 5 2>/dev/null | sort -u |

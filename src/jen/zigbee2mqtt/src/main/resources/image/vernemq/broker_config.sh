@@ -60,16 +60,28 @@ fail() {
 
 BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
 
+AWAITED_TIMEOUT=${AWAITED_TIMEOUT:-300}
+
 awaited() {
-  while ! mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -W 1 2>/dev/null | jq -re "$2" >/dev/null; do
+  local waited=0 payload
+  while true; do
+    payload="$(mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -W 1 2>/dev/null)"
+    if [ -n "${payload}" ] && jq -re "$2" <<<"${payload}" >/dev/null 2>&1; then
+      return 0
+    fi
+    if [ "${waited}" -ge "${AWAITED_TIMEOUT}" ]; then
+      fail "Waited [${waited}] seconds for [$3] on topic [$1] against broker [${BROKER_SERVICE}]"         "The topic held no payload matching [$2], check the service is publishing and the broker is reachable"
+      return 1
+    fi
     printf 'Waiting for [%s] to come up ...\n' "$3"
     sleep 2
+    waited=$((waited + 3))
   done
 }
 
 printf '\nBroker config [%s] against [%s]\n\n' "zigbee2mqtt" "${BROKER_SERVICE}"
 
-awaited "zigbee/bridge/health" '.process.uptime_sec > 0' "zigbee2mqtt"
+awaited "zigbee/bridge/health" '.process.uptime_sec > 0' "zigbee2mqtt" || exit 1
 
 "${ROOT_DIR}/broker_config.py" '0x0017880103433075' 'Ada Lamp Bulb 1' 'Ada Lamp' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 "${ROOT_DIR}/broker_config.py" '0x001788010343c36f' 'Edwin Night Light Bulb 1' 'Edwin Night Light' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":454, "color_temp_startup":454 }'
