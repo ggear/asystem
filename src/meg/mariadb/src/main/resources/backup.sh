@@ -38,6 +38,12 @@ BACKUP_PRI_SIZE=0
 BACKUP_PRI_STARTED=0
 BACKUP_PRI_STATUS=0
 
+if [ "${1:-}" = "--source" ] && [ -n "${2:-}" ]; then
+  BACKUP_PUB_SOURCE="${2}"
+  BACKUP_PUB_DIR="${BACKUP_PUB_SOURCE}/backup"
+  shift 2
+fi
+
 backup_target() {
   local suffix="${1:-}" extension="${2:-}"
   if [ -z "${suffix}" ] || [ -z "${extension}" ]; then

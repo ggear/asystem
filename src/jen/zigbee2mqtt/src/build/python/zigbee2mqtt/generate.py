@@ -11,8 +11,8 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
 UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
 ZIGBEE_TOPIC_GLOB = "zigbee/#"
-ZIGBEE_HEALTH_TOPIC = "zigbee/bridge/health"
-ZIGBEE_HEALTH_FILTER = ".process.uptime_sec > 0"
+ZIGBEE_STATE_TOPIC = "zigbee/bridge/state"
+ZIGBEE_STATE_FILTER = '.state == "online"'
 ZIGBEE_GROUP_REMOVE_TOPIC = "zigbee/bridge/request/group/members/remove_all"
 
 if __name__ == "__main__":
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     with open(metadata_config_path, 'w') as metadata_config_file:
         metadata_config_file.write(dialects.vernemq.config_script(
             "zigbee2mqtt", "config", "apply the declared device and group configuration to the bridge",
-            ZIGBEE_HEALTH_TOPIC, ZIGBEE_HEALTH_FILTER, [
+            ZIGBEE_STATE_TOPIC, ZIGBEE_STATE_FILTER, [
                 '"${{ROOT_DIR}}/broker_config.py" \'{}\' \'{}\' \'{}\' \'{}\''.format(
                     metadata_config_dict["connection_mac"],
                     metadata_config_dict["device_name"],
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     with open(metadata_config_clean_path, 'w') as metadata_config_clean_file:
         metadata_config_clean_file.write(dialects.vernemq.config_script(
             "zigbee2mqtt", "clean", "remove every declared device from all of its bridge groups",
-            ZIGBEE_HEALTH_TOPIC, ZIGBEE_HEALTH_FILTER, [
+            ZIGBEE_STATE_TOPIC, ZIGBEE_STATE_FILTER, [
                 'mosquitto_pub "${{BROKER_ARGS[@]}}" -t \'{}\' -m \'{}\' &&\n'
                 '  printf \'Device [%s] removed from all groups\\n\' \'{}\' && sleep 1'.format(
                     ZIGBEE_GROUP_REMOVE_TOPIC,
