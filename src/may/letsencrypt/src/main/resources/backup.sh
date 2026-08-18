@@ -194,12 +194,12 @@ if [ "${#BACKUP_INTERNAL_EXISTING[@]}" -gt 0 ]; then
   BACKUP_INTERNAL_AGE=$(($(date +%s) - $(backup_epoch "${BACKUP_INTERNAL_NEWEST}")))
   if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ] &&
     [ "${BACKUP_INTERNAL_NEWEST_VERSION}" = "${BACKUP_SOURCE_VERSION}" ]; then
-    echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] of version [${BACKUP_INTERNAL_NEWEST_VERSION}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping within [${BACKUP_SKIP_HOURS}] hours"
+    echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] of version [${BACKUP_INTERNAL_NEWEST_VERSION}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping given within [${BACKUP_SKIP_HOURS}] hours"
     exit 0
   fi
 fi
 
-echo "Starting backup from version [${BACKUP_SOURCE_VERSION}] holding [${#BACKUP_INTERNAL_EXISTING[@]}] backups newest [${BACKUP_INTERNAL_NEWEST:-none}] retaining [${BACKUP_RETAIN_DAYS}] days skipping within [${BACKUP_SKIP_HOURS}] hours"
+echo "Starting backup from version [${BACKUP_SOURCE_VERSION}] holding [${#BACKUP_INTERNAL_EXISTING[@]}] backups, newest [${BACKUP_INTERNAL_NEWEST:-none}] retaining [${BACKUP_RETAIN_DAYS}] days, skipping backup if executing again within [${BACKUP_SKIP_HOURS}] hours"
 
 trap backup_discarded EXIT
 BACKUP_INTERNAL_STARTED=${SECONDS}
