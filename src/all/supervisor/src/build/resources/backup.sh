@@ -1,3 +1,6 @@
+# Defines the entire ASystem backup process accross all modules intalled on this host,
+# through the HOT, WARM and COLD paths, as implemented in backup_written.
+#
 # Defines backup_written for this module, naming its artifact with backup_target (or letting
 # backup_files do both) and writing "${BACKUP_PUB_TARGET}.tmp". Read the wrapper variables below,
 # never assign one, and prefix this snippet's own state with the module name.

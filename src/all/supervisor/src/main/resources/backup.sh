@@ -33,6 +33,7 @@ BACKUP_PUB_RETAIN_DAYS="7"
 BACKUP_PUB_TARGET=""
 
 BACKUP_PRI_MIN_INTERVAL="3600"
+BACKUP_PRI_STARTED=0
 BACKUP_PRI_STATUS=0
 
 backup_target() {
@@ -184,13 +185,14 @@ if [ "${#BACKUP_PRI_EXISTING[@]}" -gt 0 ]; then
 fi
 
 trap backup_discarded EXIT
+BACKUP_PRI_STARTED=${SECONDS}
 if backup_written && [ -n "${BACKUP_PUB_TARGET}" ] && [ -s "${BACKUP_PUB_TARGET}.tmp" ]; then
   mv "${BACKUP_PUB_TARGET}.tmp" "${BACKUP_PUB_TARGET}"
-  echo "Completed backup [${BACKUP_PUB_MODULE}] to [${BACKUP_PUB_TARGET}]"
+  echo "Completed backup [${BACKUP_PUB_MODULE}] in [$((SECONDS - BACKUP_PRI_STARTED))s] to [${BACKUP_PUB_TARGET}]"
   backup_pruned
 else
   [ -n "${BACKUP_PUB_TARGET}" ] || echo "Nothing named the artifact, call backup_target in backup_written" >&2
-  echo "Failed backup [${BACKUP_PUB_MODULE}]" >&2
+  echo "Failed backup [${BACKUP_PUB_MODULE}] in [$((SECONDS - BACKUP_PRI_STARTED))s]" >&2
   BACKUP_PRI_STATUS=1
 fi
 

@@ -28,11 +28,11 @@ require (
 	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
+	golang.org/x/telemetry v0.0.0-20260814151720-d8c169486af1 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260810153831-ec0a7760b754 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260817212433-ac3dfec99bb1 // indirect
 	google.golang.org/grpc v1.83.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
