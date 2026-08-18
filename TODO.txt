@@ -33,16 +33,19 @@ retire nginx and use cloudflared for homeasistant?
 make sure 1h on portfolio works, seed timestamp into requests? seems to do a lot of others hourly and not gold?
 
 
-inspect and implement others and close out 6
-src/all/supervisor/src/build/resources/backup.sh
-src/jen/zigbee2mqtt/src/build/resources/backup.sh
-src/mad/postgres/src/build/resources/backup.sh
-src/max/influxdb3/src/build/resources/backup.sh
-src/may/letsencrypt/src/build/resources/backup.sh
-src/meg/mariadb/src/build/resources/backup.sh
+is there a way in plex to not restart and stop after backup when doing a release - new target release?
+dela with plex/database ssd churn - 22GB for plex, storing 7 days is a lot!:
+have media scripts copy artwork into media dir in refresh script, 
 
-how does assystem version interact with backups? encode version of module into backup name? 
+resinstate BACKUP_RETAIN_DAYS for HOT, maybe rename and create new ones for WARM that are both available as defaults in script but passed as params into python write too, which will be tuned on a module by module basis - implications for success? write an hard link copy? not worth it?
+
+go through each module and inspect or implement close out 6 with results, prune backup aggresively, offload metatadata outside of backup in slow moving, single copy backups
+
+
+
+
 add restore.sh and test 
+implement plan
 
 
 

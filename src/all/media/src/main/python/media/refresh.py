@@ -37,11 +37,9 @@ def _get_filesystem_paths(_share_root, _min_depth=2, _max_depth=2, _excludes=fro
     share_index_root = f"{_share_root}/share/*"
     share_index_media_root = f"{share_index_root}/media"
     if len(glob.glob(share_index_root)) == 0:
-        raise Exception(f"No shares found  at "
-                        f"[{share_index_root}], check shares are mounted")
+        raise Exception(f"No shares found  at [{share_index_root}], check shares are mounted")
     if len(glob.glob(share_index_root)) != len(glob.glob(share_index_media_root)):
-        raise Exception(f"Could not find all share media directories at "
-                        f"[{share_index_media_root}], check shares are all mounted")
+        raise Exception(f"Could not find all share media directories at [{share_index_media_root}], check shares are all mounted")
     exclude_paths = tuple(os.sep + exclude for exclude in _excludes)
     base_paths = glob.glob(share_index_media_root)
     for base_path in base_paths:

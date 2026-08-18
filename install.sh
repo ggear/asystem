@@ -22,8 +22,8 @@ run_hook() {
 run_backup() {
   local backup_script="${SERVICE_INSTALL}/backup.sh" backup_source
   [[ -f "${backup_script}" ]] || return 0
-  if [[ "${COMMAND}" == "restart" ]]; then
-    log_info "Backup skipped, restarting the current version [${SERVICE_VERSION_ABSOLUTE}]"
+  if [[ "${COMMAND}" != "install" ]]; then
+    log_info "Backup skipped, command is [${COMMAND}] not [install]"
     return 0
   fi
   if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
@@ -40,8 +40,51 @@ run_backup() {
     return 0
   fi
   chmod +x "${backup_script}"
-  BACKUP_SOURCE_PATH="${backup_source}" BACKUP_SKIP_HOURS=24 timeout 1800 "${backup_script}" ||
+  BACKUP_SOURCE_PATH="${backup_source}" BACKUP_SKIP_HOURS=24 BACKUP_SERVICE_RESTART=false \
+    timeout 1800 "${backup_script}" || {
+    start_service
     log_error "Backup failed before upgrade [${backup_script}] source [${backup_source}]"
+  }
+}
+
+SERVICE_WAIT_EXECUTING_SECONDS=300
+SERVICE_WAIT_HEALTHY_SECONDS=900
+
+wait_service() {
+  local script="$1" label="$2" interval="$3" timeout="$4" waited=0
+  while ! docker exec "${SERVICE_NAME}" "/asystem/etc/${script}"; do
+    if ((waited >= timeout)); then
+      log_error "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
+    fi
+    echo "Waiting for service to ${label} ... waited [${waited}] of [${timeout}] seconds"
+    sleep "${interval}"
+    waited=$((waited + interval))
+  done
+}
+
+retire_home() {
+  local home="${1:-}" reason=""
+  if [[ -z "${home}" ]]; then
+    reason="empty path"
+  elif [[ -L "${home}" ]]; then
+    reason="symlink"
+  elif [[ ! -d "${home}" ]]; then
+    reason="not a directory"
+  elif [[ "$(dirname "${home}")" != "${SERVICE_PARENT}" ]]; then
+    reason="outside [${SERVICE_PARENT}]"
+  elif [[ ! "$(basename "${home}")" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?$ ]]; then
+    reason="not a version"
+  elif [[ "${home}" == "${SERVICE_HOME}" ]]; then
+    reason="current home"
+  elif [[ "${home}" == "${SERVICE_HOME_OLD}" ]]; then
+    reason="source home"
+  fi
+  if [[ -n "${reason}" ]]; then
+    log_warn "Retire skipped, ${reason} [${home}]"
+    return 0
+  fi
+  log_info "Retiring old home [${home}]"
+  rm -rf "${home}"
 }
 
 stop_service() {
@@ -51,11 +94,15 @@ stop_service() {
   docker wait "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
 }
 
+start_service() {
+  docker compose --compatibility --ansi never up --force-recreate -d
+}
+
 COMMAND="start"
 [[ "$#" -ge 1 ]] && COMMAND="$1"
 case "${COMMAND}" in
-start | stop | sleep | restart) ;;
-*) log_error "Unknown command: ${COMMAND} (expected 'start', 'stop', 'sleep' or 'restart')" ;;
+install | start | stop | sleep) ;;
+*) log_error "Unknown command [${COMMAND}] expected [install] [start] [stop] or [sleep]" ;;
 esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -85,7 +132,8 @@ source .env
 if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
   SERVICE_PARENT="$(dirname "${SERVICE_HOME}")"
-  mapfile -t EXISTING_HOMES < <(find "${SERVICE_PARENT}" -maxdepth 1 -mindepth 1 -type d ! -name latest 2>/dev/null | sort)
+  mapfile -t EXISTING_HOMES < <(find "${SERVICE_PARENT}" -maxdepth 1 -mindepth 1 -type d ! -name latest 2>/dev/null |
+    grep -E '/[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?$' | sort)
   SERVICE_HOME_OLD=""
   SERVICE_HOME_OLDEST=()
   if ((${#EXISTING_HOMES[@]} > 0)); then
@@ -109,11 +157,18 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
       chattr +C "${SERVICE_HOME}" || true
     fi
     if [[ -n "${SERVICE_HOME_OLD}" && -d "${SERVICE_HOME_OLD}" ]]; then
-      log_info "Copying old home to new ..."
+      REQUIRED_KB="$(du -sk "${SERVICE_HOME_OLD}" | cut -f1)"
+      AVAILABLE_KB="$(df -Pk "${SERVICE_PARENT}" | awk 'NR==2 {print $4}')"
+      if ((AVAILABLE_KB < REQUIRED_KB)); then
+        log_error "Insufficient space to copy home, need [${REQUIRED_KB}] KB have [${AVAILABLE_KB}] KB [${SERVICE_HOME_OLD}]"
+      fi
+      log_info "Copying old home to new ... [${REQUIRED_KB}] KB"
       cp -rfpa "${SERVICE_HOME_OLD}/." "${SERVICE_HOME}"
     fi
-    if ((${#SERVICE_HOME_OLDEST[@]} > 0)); then
-      rm -rf "${SERVICE_HOME_OLDEST[@]}"
+    if [[ "${COMMAND}" == "install" ]] && ((${#SERVICE_HOME_OLDEST[@]} > 0)); then
+      for HOME_OLDEST in "${SERVICE_HOME_OLDEST[@]}"; do
+        retire_home "${HOME_OLDEST}"
+      done
     fi
   fi
   shopt -s dotglob nullglob
@@ -126,7 +181,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
   ln -sfv "${SERVICE_HOME}" "${SERVICE_PARENT}/latest"
   run_hook "./install_pre.sh"
   if [[ -f "docker-compose.yml" ]]; then
-    docker compose --compatibility --ansi never up --force-recreate -d
+    start_service
     if docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}_bootstrap"; then
       sleep 1
       docker logs "${SERVICE_NAME}_bootstrap" -f
@@ -136,15 +191,9 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
     echo "--------------------------------------------------------------------------------"
     if find "${SERVICE_INSTALL}" -name checkexecuting.sh | grep -q . && find "${SERVICE_INSTALL}" -name checkhealthy.sh | grep -q .; then
       echo
-      while ! docker exec "${SERVICE_NAME}" /asystem/etc/checkexecuting.sh; do
-        echo "Waiting for service to start executing ..."
-        sleep 1
-      done
+      wait_service "checkexecuting.sh" "start executing" 1 "${SERVICE_WAIT_EXECUTING_SECONDS}"
       echo && echo "Waiting to check service health ... " && echo && sleep 2
-      while ! docker exec "${SERVICE_NAME}" /asystem/etc/checkhealthy.sh; do
-        echo "Waiting for service to become healthy ..."
-        sleep 5
-      done
+      wait_service "checkhealthy.sh" "become healthy" 5 "${SERVICE_WAIT_HEALTHY_SECONDS}"
       docker exec -i "${SERVICE_NAME}" bash -c 'command -v stdbuf >/dev/null 2>&1 && exec stdbuf -oL /asystem/etc/checkhealthy.sh -v || exec /asystem/etc/checkhealthy.sh -v'
       echo && echo
       sleep 1

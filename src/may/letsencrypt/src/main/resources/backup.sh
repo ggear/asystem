@@ -33,9 +33,11 @@ BACKUP_FULL_SUFFIX="_full"
 BACKUP_DELTA_SUFFIX="_delta"
 BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-7}"
 BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
+BACKUP_SERVICE_RESTART="${BACKUP_SERVICE_RESTART:-true}"
 BACKUP_TARGET_PATH=""
 
 BACKUP_INTERNAL_NEWEST=""
+BACKUP_INTERNAL_NEWEST_VERSION=""
 BACKUP_INTERNAL_SIZE=0
 BACKUP_INTERNAL_STARTED=0
 BACKUP_INTERNAL_STATUS=0
@@ -71,6 +73,21 @@ backup_listed() {
   find "${dir}" -maxdepth 1 -mindepth 1 -type d -printf '%f
 ' 2>/dev/null |
     grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort
+}
+
+backup_versioned() {
+  local stamp="${1:-}" dir="${2:-${BACKUP_INTERNAL_ROOT_DIR}}" path name
+  [ -n "${stamp}" ] || return 0
+  for path in "${dir}/${stamp}"/*; do
+    [ -f "${path}" ] || continue
+    name="$(basename "${path}")"
+    name="${name#"${BACKUP_MODULE_NAME}_${stamp}_"}"
+    name="${name%"${BACKUP_FULL_SUFFIX}".*}"
+    name="${name%"${BACKUP_DELTA_SUFFIX}".*}"
+    printf '%s
+' "${name}"
+    return 0
+  done
 }
 
 backup_healthy() {
@@ -173,9 +190,11 @@ find "${BACKUP_INTERNAL_ROOT_DIR}" -type f -name '*.tmp' -delete 2>/dev/null
 mapfile -t BACKUP_INTERNAL_EXISTING < <(backup_listed)
 if [ "${#BACKUP_INTERNAL_EXISTING[@]}" -gt 0 ]; then
   BACKUP_INTERNAL_NEWEST="${BACKUP_INTERNAL_EXISTING[-1]}"
+  BACKUP_INTERNAL_NEWEST_VERSION="$(backup_versioned "${BACKUP_INTERNAL_NEWEST}")"
   BACKUP_INTERNAL_AGE=$(($(date +%s) - $(backup_epoch "${BACKUP_INTERNAL_NEWEST}")))
-  if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ]; then
-    echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping within [${BACKUP_SKIP_HOURS}] hours"
+  if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ] &&
+    [ "${BACKUP_INTERNAL_NEWEST_VERSION}" = "${BACKUP_SOURCE_VERSION}" ]; then
+    echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] of version [${BACKUP_INTERNAL_NEWEST_VERSION}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping within [${BACKUP_SKIP_HOURS}] hours"
     exit 0
   fi
 fi

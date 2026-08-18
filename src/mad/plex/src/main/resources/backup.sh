@@ -33,9 +33,11 @@ BACKUP_FULL_SUFFIX="_full"
 BACKUP_DELTA_SUFFIX="_delta"
 BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-7}"
 BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
+BACKUP_SERVICE_RESTART="${BACKUP_SERVICE_RESTART:-true}"
 BACKUP_TARGET_PATH=""
 
 BACKUP_INTERNAL_NEWEST=""
+BACKUP_INTERNAL_NEWEST_VERSION=""
 BACKUP_INTERNAL_SIZE=0
 BACKUP_INTERNAL_STARTED=0
 BACKUP_INTERNAL_STATUS=0
@@ -71,6 +73,21 @@ backup_listed() {
   find "${dir}" -maxdepth 1 -mindepth 1 -type d -printf '%f
 ' 2>/dev/null |
     grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort
+}
+
+backup_versioned() {
+  local stamp="${1:-}" dir="${2:-${BACKUP_INTERNAL_ROOT_DIR}}" path name
+  [ -n "${stamp}" ] || return 0
+  for path in "${dir}/${stamp}"/*; do
+    [ -f "${path}" ] || continue
+    name="$(basename "${path}")"
+    name="${name#"${BACKUP_MODULE_NAME}_${stamp}_"}"
+    name="${name%"${BACKUP_FULL_SUFFIX}".*}"
+    name="${name%"${BACKUP_DELTA_SUFFIX}".*}"
+    printf '%s
+' "${name}"
+    return 0
+  done
 }
 
 backup_healthy() {
@@ -156,28 +173,41 @@ backup_written() {
 # BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
 # BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this
-#
-# Plex holds its plug-in databases open, so the service is stopped for the copy and restarted
-# afterwards, whether the copy worked or not, both through install.sh rather than docker directly. Paths inside the tar are relative
-# to the config directory, so a restore is:
-#
-#   tar --extract --gzip --file <backup>.tar.gz --directory ${BACKUP_SOURCE_PATH}/config
+# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
 
 PLEX_BACKUP_CONFIG="config"
-PLEX_BACKUP_INSTALL="/var/lib/asystem/install/plex/latest/install.sh"
-PLEX_BACKUP_INCLUDE="Library/Application Support/Plex Media Server/Plug-in Support"
+PLEX_BACKUP_CONTAINER="${SERVICE_NAME:?}"
+PLEX_BACKUP_INCLUDES=(
+  "Library/Application Support/Plex Media Server/Plug-in Support"
+  "Library/Application Support/Plex Media Server/Preferences.xml"
+)
+PLEX_BACKUP_EXCLUDES=(
+  "*.db-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
+  "Caches"
+)
 
 backup_written() {
-  local status=0
-  if [ ! -d "${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}/${PLEX_BACKUP_INCLUDE}" ]; then
-    echo "Declared path [${PLEX_BACKUP_INCLUDE}] is absent from [${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}]" >&2
-    return 1
-  fi
+  local status=0 include exclude excludes=()
+  for include in "${PLEX_BACKUP_INCLUDES[@]}"; do
+    if [ ! -e "${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}/${include}" ]; then
+      echo "Declared path [${include}] is absent from [${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}]" >&2
+      return 1
+    fi
+  done
+  for exclude in "${PLEX_BACKUP_EXCLUDES[@]}"; do
+    excludes+=("--exclude=${exclude}")
+  done
   backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
-  "${PLEX_BACKUP_INSTALL}" stop >/dev/null || echo "Stop failed [${PLEX_BACKUP_INSTALL}], copying the running configuration" >&2
+  if docker stop "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1; then
+    docker wait "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1 || true
+  else
+    echo "Stop failed [${PLEX_BACKUP_CONTAINER}], copying the running configuration" >&2
+  fi
   tar --create --directory "${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}" --numeric-owner --preserve-permissions \
-    --file - -- "${PLEX_BACKUP_INCLUDE}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp" || status=1
-  "${PLEX_BACKUP_INSTALL}" restart >/dev/null || echo "Restart failed [${PLEX_BACKUP_INSTALL}]" >&2
+    "${excludes[@]}" --file - -- "${PLEX_BACKUP_INCLUDES[@]}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp" || status=1
+  if [ "${BACKUP_SERVICE_RESTART}" = "true" ]; then
+    docker start "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1 || echo "Start failed [${PLEX_BACKUP_CONTAINER}]" >&2
+  fi
   return "${status}"
 }
 
@@ -193,9 +223,11 @@ find "${BACKUP_INTERNAL_ROOT_DIR}" -type f -name '*.tmp' -delete 2>/dev/null
 mapfile -t BACKUP_INTERNAL_EXISTING < <(backup_listed)
 if [ "${#BACKUP_INTERNAL_EXISTING[@]}" -gt 0 ]; then
   BACKUP_INTERNAL_NEWEST="${BACKUP_INTERNAL_EXISTING[-1]}"
+  BACKUP_INTERNAL_NEWEST_VERSION="$(backup_versioned "${BACKUP_INTERNAL_NEWEST}")"
   BACKUP_INTERNAL_AGE=$(($(date +%s) - $(backup_epoch "${BACKUP_INTERNAL_NEWEST}")))
-  if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ]; then
-    echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping within [${BACKUP_SKIP_HOURS}] hours"
+  if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ] &&
+    [ "${BACKUP_INTERNAL_NEWEST_VERSION}" = "${BACKUP_SOURCE_VERSION}" ]; then
+    echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] of version [${BACKUP_INTERNAL_NEWEST_VERSION}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping within [${BACKUP_SKIP_HOURS}] hours"
     exit 0
   fi
 fi

@@ -1003,10 +1003,10 @@ def _release(context):
                     _run_local(context, "{}scp -qpr target/release/.  root@{}.local:{}"
                                .format(ssh_pass, host, install), release_module)
                     print("Installing release to {} ... ".format(host))
+                    _run_local(context, "{}ssh -q root@{}.local 'chmod +x {}/install.sh && {}/install.sh install'"
+                               .format(ssh_pass, host, install, install))
                     _run_local(context, "{}ssh -q root@{}.local 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
                                .format(ssh_pass, host, install, install, install))
-                    _run_local(context, "{}ssh -q root@{}.local 'chmod +x {}/install.sh && {}/install.sh'"
-                               .format(ssh_pass, host, install, install))
                     _run_local(context, "{}ssh -q root@{}.local 'docker system prune --volumes -f'"
                                .format(ssh_pass, host), hide='err', warn=True)
                     _run_local(context, "{}ssh -q root@{}.local "
