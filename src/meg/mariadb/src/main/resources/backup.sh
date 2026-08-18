@@ -7,61 +7,55 @@
 
 set -o pipefail
 
-# The wrapper owns the run, the module snippet owns the artifact. The wrapper checks the throttle,
+# The wrapper owns the run, the module snippet owns the backup. The wrapper checks the throttle,
 # calls backup_written, renames the temporary file on success, prunes and sets the exit code. The
-# snippet defines backup_written, which names its artifact with backup_target (or lets backup_files
-# do both) and writes "${BACKUP_PUB_TARGET}.tmp". Nothing else crosses the line: a snippet never
+# snippet defines backup_written, which names its backup with backup_target (or lets backup_files
+# do both) and writes "${BACKUP_TARGET_PATH}.tmp". Nothing else crosses the line: a snippet never
 # assigns a wrapper variable, and the wrapper never reads a snippet one.
 #
-# BACKUP_PUB_*  published by the wrapper for the snippet to read, never assigned by a snippet
-# BACKUP_PRI_*  the wrapper's own, read by nothing outside this file
-# <MODULE>_*    a snippet's own state, prefixed with its module so it can never collide with either
+# BACKUP_*           vars owned by the wrapper for the snippet to read, never assigned by a snippet
+# BACKUP_INTERNAL_*  vars owned by the wrapper for its internal use
+# <MODULE>_*         vars owned by a snippet, prefixed with its module name to avoid collisions with wrapper vars
 #
 # A snippet needing a value from .env expands it with "${VAR:?}", so a renamed or missing key
-# fails by name rather than producing an empty argument and a corrupt artifact.
+# fails by name rather than producing an empty argument and a corrupt backup.
 
-BACKUP_PRI_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
-[ -f "${BACKUP_PRI_ENV}" ] && . "${BACKUP_PRI_ENV}"
+BACKUP_INTERNAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
+[ -f "${BACKUP_INTERNAL_ENV}" ] && . "${BACKUP_INTERNAL_ENV}"
 
-BACKUP_PUB_MODULE="mariadb"
-BACKUP_PUB_SOURCE="${SERVICE_DATA_DIR:-/home/asystem/mariadb/latest}"
-BACKUP_PUB_DIR="${BACKUP_PUB_SOURCE}/backup"
-BACKUP_PUB_STAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
-BACKUP_PUB_FULL="_full"
-BACKUP_PUB_DELTA="_delta"
-BACKUP_PUB_RETAIN_DAYS="7"
-BACKUP_PUB_TARGET=""
+BACKUP_MODULE_NAME="mariadb"
+BACKUP_SOURCE_PATH="${BACKUP_SOURCE_PATH:-${SERVICE_DATA_DIR:-/home/asystem/mariadb/latest}}"
+BACKUP_INTERNAL_ROOT_DIR="${BACKUP_SOURCE_PATH}/backup"
+BACKUP_RUN_TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
+BACKUP_FULL_SUFFIX="_full"
+BACKUP_DELTA_SUFFIX="_delta"
+BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-7}"
+BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
+BACKUP_TARGET_PATH=""
 
-BACKUP_PRI_MIN_INTERVAL="3600"
-BACKUP_PRI_NEWEST=""
-BACKUP_PRI_SIZE=0
-BACKUP_PRI_STARTED=0
-BACKUP_PRI_STATUS=0
-
-if [ "${1:-}" = "--source" ] && [ -n "${2:-}" ]; then
-  BACKUP_PUB_SOURCE="${2}"
-  BACKUP_PUB_DIR="${BACKUP_PUB_SOURCE}/backup"
-  shift 2
-fi
+BACKUP_INTERNAL_NEWEST=""
+BACKUP_INTERNAL_SIZE=0
+BACKUP_INTERNAL_STARTED=0
+BACKUP_INTERNAL_STATUS=0
 
 backup_target() {
   local suffix="${1:-}" extension="${2:-}"
   if [ -z "${suffix}" ] || [ -z "${extension}" ]; then
-    echo "Cannot name the artifact, pass the suffix and the extension to backup_target" >&2
+    echo "Cannot name the backup, pass the suffix and the extension to backup_target" >&2
     return 1
   fi
-  BACKUP_PUB_TARGET="${BACKUP_PUB_DIR}/${BACKUP_PUB_STAMP}/${BACKUP_PUB_MODULE}_${BACKUP_PUB_STAMP}${suffix}.${extension}"
-  mkdir -p "$(dirname "${BACKUP_PUB_TARGET}")"
+  BACKUP_TARGET_PATH="${BACKUP_INTERNAL_ROOT_DIR}/${BACKUP_RUN_TIMESTAMP}/${BACKUP_MODULE_NAME}_${BACKUP_RUN_TIMESTAMP}${suffix}.${extension}"
+  mkdir -p "$(dirname "${BACKUP_TARGET_PATH}")"
 }
 
-backup_is_full() { [[ "${1}" == *"${BACKUP_PUB_FULL}".* ]]; }
+backup_is_full() { [[ "${1}" == *"${BACKUP_FULL_SUFFIX}".* ]]; }
 
-backup_is_delta() { [[ "${1}" == *"${BACKUP_PUB_DELTA}".* ]]; }
+backup_is_delta() { [[ "${1}" == *"${BACKUP_DELTA_SUFFIX}".* ]]; }
 
 backup_discarded() {
-  [ -n "${BACKUP_PUB_TARGET}" ] || return 0
-  rm -f "${BACKUP_PUB_TARGET}.tmp"
-  [ -e "${BACKUP_PUB_TARGET}" ] || rmdir "$(dirname "${BACKUP_PUB_TARGET}")" 2>/dev/null
+  [ -n "${BACKUP_TARGET_PATH}" ] || return 0
+  rm -f "${BACKUP_TARGET_PATH}.tmp"
+  [ -e "${BACKUP_TARGET_PATH}" ] || rmdir "$(dirname "${BACKUP_TARGET_PATH}")" 2>/dev/null
 }
 
 backup_epoch() {
@@ -70,7 +64,7 @@ backup_epoch() {
 }
 
 backup_listed() {
-  local dir="${1:-${BACKUP_PUB_DIR}}"
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}"
   [ -d "${dir}" ] || return 0
   find "${dir}" -maxdepth 1 -mindepth 1 -type d -printf '%f
 ' 2>/dev/null |
@@ -78,21 +72,21 @@ backup_listed() {
 }
 
 backup_healthy() {
-  local dir="${1:-${BACKUP_PUB_DIR}}" elapsed=3600 names
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}" elapsed=3600 names
   mapfile -t names < <(backup_listed "${dir}")
   [ "${#names[@]}" -gt 0 ] || return 1
   [ $(($(date +%s) - $(backup_epoch "${names[-1]}"))) -lt $((86400 + elapsed)) ]
 }
 
 backup_pruned() {
-  local dir="${1:-${BACKUP_PUB_DIR}}" names index cutoff
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}" names index cutoff
   mapfile -t names < <(backup_listed "${dir}")
   [ "${#names[@]}" -gt 1 ] || return 0
-  cutoff=$(($(date +%s) - BACKUP_PUB_RETAIN_DAYS * 86400))
+  cutoff=$(($(date +%s) - BACKUP_RETAIN_DAYS * 86400))
   for ((index = 0; index < ${#names[@]} - 1; index++)); do
     if [ "$(backup_epoch "${names[${index}]}")" -lt "${cutoff}" ]; then
       rm -rf "${dir:?}/${names[${index}]}"
-      echo "Deleted backup [${names[${index}]}] older than [${BACKUP_PUB_RETAIN_DAYS}] days"
+      echo "Deleted backup [${names[${index}]}] older than [${BACKUP_RETAIN_DAYS}] days"
     fi
   done
 }
@@ -101,11 +95,11 @@ backup_included() {
   local path
   while IFS= read -r -d ':' path || [ -n "${path}" ]; do
     [ -n "${path}" ] || continue
-    if [ -e "${BACKUP_PUB_SOURCE}/${path}" ]; then
+    if [ -e "${BACKUP_SOURCE_PATH}/${path}" ]; then
       printf '%s
 ' "${path}"
     else
-      echo "Declared path [${path}] is absent from [${BACKUP_PUB_SOURCE}]" >&2
+      echo "Declared path [${path}] is absent from [${BACKUP_SOURCE_PATH}]" >&2
     fi
   done < <(printf '%s:' "${1}")
 }
@@ -121,7 +115,7 @@ backup_unmatched() {
     done
     [ -n "${matched}" ] || printf '%s
 ' "${entry}"
-  done < <(find "${BACKUP_PUB_SOURCE}" -maxdepth 1 -mindepth 1 -printf '%f
+  done < <(find "${BACKUP_SOURCE_PATH}" -maxdepth 1 -mindepth 1 -printf '%f
 ' 2>/dev/null | sort)
 }
 
@@ -133,13 +127,13 @@ backup_files() {
   fi
   mapfile -t paths < <(backup_included "${declared}")
   if [ "${#paths[@]}" -eq 0 ]; then
-    echo "No declared path exists under [${BACKUP_PUB_SOURCE}]" >&2
+    echo "No declared path exists under [${BACKUP_SOURCE_PATH}]" >&2
     return 1
   fi
-  backup_target "${BACKUP_PUB_FULL}" "${2:-tar.gz}" || return 1
+  backup_target "${BACKUP_FULL_SUFFIX}" "${2:-tar.gz}" || return 1
   mapfile -t unmatched < <(backup_unmatched "${declared}")
   [ "${#unmatched[@]}" -gt 0 ] && echo "Not backed up, no declared path covers [${unmatched[*]}]"
-  tar --create --directory "${BACKUP_PUB_SOURCE}" --numeric-owner --preserve-permissions     --exclude=backup --file - -- "${paths[@]}" 2>/dev/null | gzip >"${BACKUP_PUB_TARGET}.tmp"
+  tar --create --directory "${BACKUP_SOURCE_PATH}" --numeric-owner --preserve-permissions     --exclude=backup --file - -- "${paths[@]}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp"
 }
 
 backup_written() {
@@ -147,24 +141,24 @@ backup_written() {
   return 1
 }
 
-# Defines backup_written for this module, naming its artifact with backup_target (or letting
-# backup_files do both) and writing "${BACKUP_PUB_TARGET}.tmp". Read the wrapper variables below,
+# Defines backup_written for this module, naming its backup with backup_target (or letting
+# backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". Read the wrapper variables below,
 # never assign one, and prefix this snippet's own state with the module name.
 #
-# BACKUP_PUB_MODULE       this module's name, and its container's name
-# BACKUP_PUB_SOURCE       this module's data directory
-# BACKUP_PUB_DIR          the backup directory inside it, where artifacts land
-# BACKUP_PUB_STAMP        this run's timestamp, shared by the directory and the filename
-# BACKUP_PUB_FULL         the suffix marking a self-contained artifact
-# BACKUP_PUB_DELTA        the suffix marking an artifact that needs the full before it
-# BACKUP_PUB_RETAIN_DAYS  the dense window, in days
-# BACKUP_PUB_TARGET       this run's artifact path, empty until backup_target names it
+# BACKUP_MODULE_NAME      this module's name
+# BACKUP_SOURCE_PATH      this module's source data path
+# BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
+# BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
+# BACKUP_FULL_SUFFIX      the file suffix marking a full backup
+# BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
+# BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
+# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this
 
 backup_written() {
-  backup_target "${BACKUP_PUB_FULL}" "sql.gz" || return 1
-  docker exec --user root "${BACKUP_PUB_MODULE}" bash -c '
+  backup_target "${BACKUP_FULL_SUFFIX}" "sql.gz" || return 1
+  docker exec --user root "${BACKUP_MODULE_NAME}" bash -c '
 mariadb-dump -uroot -p"${MARIADB_ROOT_PASSWORD:?}" --all-databases --single-transaction --quick | gzip
-  ' >"${BACKUP_PUB_TARGET}.tmp"
+  ' >"${BACKUP_TARGET_PATH}.tmp"
 }
 
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
@@ -174,32 +168,32 @@ if [ "${1:-}" = "--prune" ]; then
   exit 0
 fi
 
-find "${BACKUP_PUB_DIR}" -type f -name '*.tmp' -delete 2>/dev/null
+find "${BACKUP_INTERNAL_ROOT_DIR}" -type f -name '*.tmp' -delete 2>/dev/null
 
-mapfile -t BACKUP_PRI_EXISTING < <(backup_listed)
-if [ "${#BACKUP_PRI_EXISTING[@]}" -gt 0 ]; then
-  BACKUP_PRI_NEWEST="${BACKUP_PRI_EXISTING[-1]}"
-  BACKUP_PRI_AGE=$(($(date +%s) - $(backup_epoch "${BACKUP_PRI_NEWEST}")))
-  if [ "${BACKUP_PRI_AGE}" -lt "${BACKUP_PRI_MIN_INTERVAL}" ]; then
-    echo "Backup skipped, newest backup [${BACKUP_PRI_NEWEST}] is [${BACKUP_PRI_AGE}] seconds old, minimum interval [${BACKUP_PRI_MIN_INTERVAL}] seconds"
+mapfile -t BACKUP_INTERNAL_EXISTING < <(backup_listed)
+if [ "${#BACKUP_INTERNAL_EXISTING[@]}" -gt 0 ]; then
+  BACKUP_INTERNAL_NEWEST="${BACKUP_INTERNAL_EXISTING[-1]}"
+  BACKUP_INTERNAL_AGE=$(($(date +%s) - $(backup_epoch "${BACKUP_INTERNAL_NEWEST}")))
+  if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ]; then
+    echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping within [${BACKUP_SKIP_HOURS}] hours"
     exit 0
   fi
 fi
 
-echo "Starting backup [${BACKUP_PUB_MODULE}] from [${BACKUP_PUB_SOURCE}] stamped [${BACKUP_PUB_STAMP}] holding [${#BACKUP_PRI_EXISTING[@]}] backups newest [${BACKUP_PRI_NEWEST:-none}] retaining [${BACKUP_PUB_RETAIN_DAYS}] days"
+echo "Starting backup [${BACKUP_MODULE_NAME}] from [${BACKUP_SOURCE_PATH}] stamped [${BACKUP_RUN_TIMESTAMP}] holding [${#BACKUP_INTERNAL_EXISTING[@]}] backups newest [${BACKUP_INTERNAL_NEWEST:-none}] retaining [${BACKUP_RETAIN_DAYS}] days skipping within [${BACKUP_SKIP_HOURS}] hours"
 
 trap backup_discarded EXIT
-BACKUP_PRI_STARTED=${SECONDS}
-if backup_written && [ -n "${BACKUP_PUB_TARGET}" ] && [ -s "${BACKUP_PUB_TARGET}.tmp" ]; then
-  mv "${BACKUP_PUB_TARGET}.tmp" "${BACKUP_PUB_TARGET}"
-  BACKUP_PRI_SIZE="$(du -m "${BACKUP_PUB_TARGET}" | cut -f1)"
-  echo "Completed backup [${BACKUP_PUB_MODULE}] of [${BACKUP_PRI_SIZE}] MB in [$((SECONDS - BACKUP_PRI_STARTED))] seconds to [${BACKUP_PUB_TARGET}]"
+BACKUP_INTERNAL_STARTED=${SECONDS}
+if backup_written && [ -n "${BACKUP_TARGET_PATH}" ] && [ -s "${BACKUP_TARGET_PATH}.tmp" ]; then
+  mv "${BACKUP_TARGET_PATH}.tmp" "${BACKUP_TARGET_PATH}"
+  BACKUP_INTERNAL_SIZE="$(du -m "${BACKUP_TARGET_PATH}" | cut -f1)"
+  echo "Completed backup [${BACKUP_MODULE_NAME}] of [${BACKUP_INTERNAL_SIZE}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${BACKUP_TARGET_PATH}]"
   backup_pruned
 else
-  [ -n "${BACKUP_PUB_TARGET}" ] || echo "Nothing named the artifact, call backup_target in backup_written" >&2
-  echo "Failed backup [${BACKUP_PUB_MODULE}] in [$((SECONDS - BACKUP_PRI_STARTED))] seconds" >&2
-  BACKUP_PRI_STATUS=1
+  [ -n "${BACKUP_TARGET_PATH}" ] || echo "Nothing named the backup, call backup_target in backup_written" >&2
+  echo "Failed backup [${BACKUP_MODULE_NAME}] in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
+  BACKUP_INTERNAL_STATUS=1
 fi
 
-find "${BACKUP_PUB_DIR}" -depth -empty -delete -type d
-exit "${BACKUP_PRI_STATUS}"
+find "${BACKUP_INTERNAL_ROOT_DIR}" -depth -empty -delete -type d
+exit "${BACKUP_INTERNAL_STATUS}"

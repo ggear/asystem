@@ -1,6 +1,9 @@
 #!/bin/bash
 
-source .env
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
+
+# shellcheck disable=SC1091 # .env is generated at build time, not available to shellcheck
+. "${ROOT_DIR}/.env"
 
 if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
 
@@ -63,15 +66,15 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   #fruit:model = TimeCapsule9,119
 
 EOF
-  for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
-    SHARE_INDEX=$(echo ${SHARE_DIR} | awk 'BEGIN{FS=OFS="/"}{print $3}')
-    rm -rf ${SHARE_DIR}/lost+found
-    mkdir -p ${SHARE_DIR}/backup
-    mkdir -p ${SHARE_DIR}/media
-    mkdir -p ${SHARE_DIR}/service
-    mkdir -p ${SHARE_DIR}/service/mlflow
-    mkdir -p ${SHARE_DIR}/tmp
-    chown -R graham:users ${SHARE_DIR}
+  while IFS= read -r SHARE_DIR; do
+    SHARE_INDEX=$(echo "${SHARE_DIR}" | awk 'BEGIN{FS=OFS="/"}{print $3}')
+    rm -rf "${SHARE_DIR}/lost+found"
+    mkdir -p "${SHARE_DIR}/backup"
+    mkdir -p "${SHARE_DIR}/media"
+    mkdir -p "${SHARE_DIR}/service"
+    mkdir -p "${SHARE_DIR}/service/mlflow"
+    mkdir -p "${SHARE_DIR}/tmp"
+    chown -R graham:users "${SHARE_DIR}"
     cat <<EOF >>/etc/samba/smb.conf
 [share-${SHARE_INDEX}]
   comment = Share-${SHARE_INDEX} Files
@@ -111,7 +114,7 @@ EOF
     #
     #EOF
 
-  done
+  done < <(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}')
 
   for _smb in smb.service smbd.service nmb.service nmbd.service remote-fs.target; do
     systemctl list-unit-files ${_smb} | grep -q ${_smb} && systemctl enable ${_smb} && systemctl restart ${_smb} && systemctl --no-pager status ${_smb}

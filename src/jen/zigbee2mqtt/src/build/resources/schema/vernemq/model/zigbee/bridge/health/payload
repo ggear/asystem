@@ -1,0 +1,141 @@
+{
+  "response_time": <number>,
+  "os": {
+    "load_average": "<text>",
+    "memory_used_mb": <number>,
+    "memory_percent": <number>
+  },
+  "process": {
+    "uptime_sec": <number>,
+    "memory_used_mb": <number>,
+    "memory_percent": <number>
+  },
+  "mqtt": {
+    "connected": <true|false>,
+    "queued": <number>,
+    "published": <number>,
+    "received": <number>
+  },
+  "devices": {
+    "0x001788010343c36f": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x0017880103433075": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x2c1165fffe109407": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x2c1165fffe12d5c4": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x9035eafffe404425": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801086168ac": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x000d6f001127f08c": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x000d6f0011274420": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x0017880104eaa272": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x001788010444ef85": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f69d1": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801040edfae": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f6b78": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x001788010f03f035": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x9035eafffe82fef8": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f585a": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x0017880109d4659c": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x001788010432a064": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x001788010ec76d57": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801039f6b4a": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    }
+  }
+}

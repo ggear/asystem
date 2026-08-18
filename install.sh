@@ -19,6 +19,31 @@ run_hook() {
   fi
 }
 
+run_backup() {
+  local backup_script="${SERVICE_INSTALL}/backup.sh" backup_source
+  [[ -f "${backup_script}" ]] || return 0
+  if [[ "${COMMAND}" == "restart" ]]; then
+    log_info "Backup skipped, restarting the current version [${SERVICE_VERSION_ABSOLUTE}]"
+    return 0
+  fi
+  if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
+    log_warn "Backup skipped, container is not running [${SERVICE_NAME}]"
+    return 0
+  fi
+  backup_source="$(readlink -f "${SERVICE_PARENT}/latest")"
+  if [[ ! -d "${backup_source}" ]]; then
+    log_warn "Backup skipped, no current home [${SERVICE_PARENT}/latest]"
+    return 0
+  fi
+  if [[ "${backup_source}" == "${SERVICE_HOME}" ]]; then
+    log_info "Backup skipped, reinstalling the current version [${SERVICE_VERSION_ABSOLUTE}]"
+    return 0
+  fi
+  chmod +x "${backup_script}"
+  BACKUP_SOURCE_PATH="${backup_source}" BACKUP_SKIP_HOURS=24 timeout 1800 "${backup_script}" ||
+    log_error "Backup failed before upgrade [${backup_script}] source [${backup_source}]"
+}
+
 stop_service() {
   docker stop "${SERVICE_NAME}" >/dev/null 2>&1 || true
   docker stop "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
@@ -29,8 +54,8 @@ stop_service() {
 COMMAND="start"
 [[ "$#" -ge 1 ]] && COMMAND="$1"
 case "${COMMAND}" in
-start | stop | sleep) ;;
-*) log_error "Unknown command: ${COMMAND} (expected 'start', 'stop' or 'sleep')" ;;
+start | stop | sleep | restart) ;;
+*) log_error "Unknown command: ${COMMAND} (expected 'start', 'stop', 'sleep' or 'restart')" ;;
 esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -73,6 +98,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
   IMAGE_TAR="${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz"
   [[ -f "${IMAGE_TAR}" ]] && docker image load -i "${IMAGE_TAR}"
   if [[ -f "docker-compose.yml" ]]; then
+    run_backup
     stop_service
     docker system prune --volumes -f >/dev/null 2>&1 || true
   fi

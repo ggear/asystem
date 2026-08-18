@@ -1,8 +1,8 @@
 #!/bin/bash
 
-SERVICE_HOME=/home/asystem/${SERVICE_NAME}/latest
-SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/latest
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-. "${SERVICE_INSTALL}/.env"
+# shellcheck disable=SC1091 # .env is generated at build time, not available to shellcheck
+. "${ROOT_DIR}/.env"
 
-"${SERVICE_INSTALL}/image/vernemq.sh"
+"${ROOT_DIR}/image/vernemq.sh"

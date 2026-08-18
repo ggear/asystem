@@ -24,7 +24,7 @@ from. Only cold is a real backup.
 **Cold is a subtree of a share replication, not a backup-specific job.** `/backup` is a separate
 mounted disk that mirrors `/share`, and cold replicates **every** mounted share on the host —
 `/share/*` into `/backup/share/` — not only the primary. `/backup/share/<index>0/backup/<module>` is
-simply where the module artifacts land inside a copy of the *whole* share set — `media/` and `service/` come along
+simply where the module backups land inside a copy of the *whole* share set — `media/` and `service/` come along
 with them. `tmp/` is excluded: it is scratch, created by `storage/install_prep.sh` and written
 by things like `benchmark.sh`'s fio test file, so replicating it costs space and preserves nothing. Two consequences, and the second is the awkward one:
 
@@ -61,18 +61,24 @@ on the host, runs there, and writes into the module's own `${SERVICE_DATA_DIR}/b
 **The call is the enrolment.** No call, no generated script, no participation — exactly as a module
 without `write_container_healthchecks()` has no health checks. There is no `<MODULE>_BACKUP_ENABLED`
 variable, because the presence of the call already says it. No registry, no list, and no way to be
-half-enrolled, since the declaration is what produces the artifact.
+half-enrolled, since the declaration is what produces the backup.
 
 ```python
-write_container_backup()                                  # defaults: 3600s throttle, 7 day window
-write_container_backup(min_interval=0, retain_days=30)    # override where a module needs to
+write_container_backup()    # the whole enrolment, no policy parameters
 ```
 
-Parameters are kept to the minimum that cannot sensibly live in the module's snippet — the standard
-`module_name` / `working_dir` resolution pair, plus `min_interval` and `retain_days`. Everything
-else the snippet sets as a variable.
+**The call takes no policy.** It resolves `module_name` / `working_dir` the standard way and nothing
+else — the two policy values are wrapper variables with defaults, `BACKUP_RETAIN_DAYS` (7) and
+`BACKUP_SKIP_HOURS` (1), each written as `${VAR:-default}` **after** the module's `.env` is
+sourced. So a module changes them in its env files, and an operator overrides them per run:
 
-### Artifact naming
+```bash
+BACKUP_SKIP_HOURS=0 ./backup.sh    # take one now, whatever the last run's age
+```
+
+A generate parameter could do neither of those, which is why they are variables.
+
+### Backup naming
 
 ```
 <data dir>/backup/<stamp>/<module>_<stamp>_full.<extension>
@@ -81,26 +87,26 @@ else the snippet sets as a variable.
 
 `<stamp>` is `%Y-%m-%d_%H-%M-%S` local, in both the directory and the filename. The **`_full` /
 `_delta` suffix is the whole point**: it tells a later tier, without knowing anything about the
-module, whether an artifact stands alone.
+module, whether a backup stands alone.
 
 - **`_full`** is self-contained. It can be kept as a sparse restore point and deleted individually.
 - **`_delta`** depends on the full before it. It is only meaningful inside a window that also holds
   that full, and deleting a full invalidates every delta after it.
 
 That is what makes GFS possible at warm without the driver learning anything module-specific: monthly
-and weekly points must be `_full`, and `_delta` artifacts are only retained inside the dense window.
-Modules producing standalone artifacts always emit `_full`; only `influxdb3` emits both.
+and weekly points must be `_full`, and `_delta` backups are only retained inside the dense window.
+Modules producing standalone backups always emit `_full`; only `influxdb3` emits both.
 
 ### Kinds
 
-Two kinds, named for what a single artifact is worth on its own:
+Two kinds, named for what a single backup is worth on its own:
 
 | Kind | Meaning |
 |------|---------|
-| `FULL` | self-contained artifacts only, each one restorable on its own |
-| `DELTA` | dependent artifacts, a `_full` and the `_delta`s hanging off it |
+| `FULL` | self-contained backups only, each one restorable on its own |
+| `DELTA` | dependent backups, a `_full` and the `_delta`s hanging off it |
 
-| Module | Kind | Produced by | Artifact |
+| Module | Kind | Produced by | Backup |
 |--------|------|-------------|----------|
 | `postgres` | `FULL` | `pg_dumpall \| gzip` in the container | `postgres_<stamp>_full.sql.gz` |
 | `mariadb` | `FULL` | `mariadb-dump --all-databases --single-transaction \| gzip` | `mariadb_<stamp>_full.sql.gz` |
@@ -108,8 +114,8 @@ Two kinds, named for what a single artifact is worth on its own:
 | `letsencrypt` | `FULL` | `backup_files`, the shared `tar` of the paths it is passed | `letsencrypt_<stamp>_full.tar.gz` |
 | `influxdb3` | `DELTA` | `influxdb3 create backup`, tarred out of the object store | `influxdb3_<stamp>_{full,delta}.tar.gz` |
 
-A `FULL` artifact is always self-contained, so any subset can be kept. A `DELTA`
-module emits a `full` when there is none or the current one has aged past `retain_days`, and a
+A `FULL` backup is always self-contained, so any subset can be kept. A `DELTA`
+module emits a `full` when there is none or the current one has aged past `BACKUP_RETAIN_DAYS`, and a
 `delta` against the newest member otherwise.
 
 ### What the snippet gets
@@ -121,31 +127,32 @@ wrapper variable, and the wrapper never reads a snippet one.
 
 | Namespace | Owner | Rule |
 |-----------|-------|------|
-| `BACKUP_PUB_*` | wrapper | published for the snippet to read, never assigned by a snippet |
-| `BACKUP_PRI_*` | wrapper | its own — the throttle, the exit status, the `.env` path |
+| `BACKUP_*` | wrapper | published for the snippet to read, never assigned by a snippet |
+| `BACKUP_INTERNAL_*` | wrapper | its own — the throttle, the exit status, the `.env` path |
 | `<MODULE>_*` | snippet | a snippet's own state, prefixed with its module so it cannot collide with either |
 
 | Variable | Meaning |
 |----------|---------|
-| `BACKUP_PUB_MODULE` | the module name |
-| `BACKUP_PUB_SOURCE` | `${SERVICE_DATA_DIR}`, the module's data directory |
-| `BACKUP_PUB_DIR` | `${BACKUP_PUB_SOURCE}/backup` |
-| `BACKUP_PUB_STAMP` | this run's timestamp |
-| `BACKUP_PUB_FULL` / `BACKUP_PUB_DELTA` | the `_full` / `_delta` suffixes |
-| `BACKUP_PUB_RETAIN_DAYS` | from the generate call |
-| `BACKUP_PUB_TARGET` | the artifact path — empty until `backup_target` names it |
+| `BACKUP_MODULE_NAME` | the module name |
+| `BACKUP_SOURCE_PATH` | `${SERVICE_DATA_DIR}`, the module's data directory |
+| `BACKUP_INTERNAL_ROOT_DIR` | `${BACKUP_SOURCE_PATH}/backup` |
+| `BACKUP_RUN_TIMESTAMP` | this run's timestamp |
+| `BACKUP_FULL_SUFFIX` / `BACKUP_DELTA_SUFFIX` | the `_full` / `_delta` suffixes |
+| `BACKUP_RETAIN_DAYS` | the dense window in days, default 7 |
+| `BACKUP_SKIP_HOURS` | skip the run when the newest backup is younger than this, default 1 |
+| `BACKUP_TARGET_PATH` | the backup path — empty until `backup_target` names it |
 
 | Function | Purpose |
 |----------|---------|
-| `backup_target <suffix> <extension>` | name this run's artifact, set `BACKUP_PUB_TARGET`, create its directory |
+| `backup_target <suffix> <extension>` | name this run's backup, set `BACKUP_TARGET_PATH`, create its directory |
 | `backup_epoch <name>` | timestamp to epoch |
 | `backup_listed [dir]` | the stamp directories, oldest first |
-| `backup_pruned [dir]` | delete past `retain_days`, always keeping the newest |
+| `backup_pruned [dir]` | delete past `BACKUP_RETAIN_DAYS`, always keeping the newest |
 | `backup_included` / `backup_unmatched` | resolve the passed paths, report what they do not cover |
-| `backup_files <paths> [extension]` | the shared file copy — names a `_full` artifact, then `tar`s the colon-separated paths into it |
-| `backup_written` | writes the artifact — **every snippet defines this**, the wrapper's only fails |
+| `backup_files <paths> [extension]` | the shared file copy — names a `_full` backup, then `tar`s the colon-separated paths into it |
+| `backup_written` | writes the backup — **every snippet defines this**, the wrapper's only fails |
 
-**There is no `BACKUP_EXTENSION`, and no snippet assigns `BACKUP_PUB_TARGET`.** Both were snippet →
+**There is no `BACKUP_EXTENSION`, and no snippet assigns `BACKUP_TARGET_PATH`.** Both were snippet →
 wrapper writes: the snippet set a global that code *below* it read to compose the path, which is why
 `influxdb3` had to reassign `BACKUP_TARGET` twice and `mkdir` the parent itself — only the produce
 write step knows whether a run is a full or a delta. Naming is now a call inside `backup_written`, so the
@@ -154,16 +161,16 @@ cannot know:
 
 ```bash
 backup_written() {
-  backup_target "${BACKUP_PUB_FULL}" "sql.gz" || return 1
-  docker exec --user root "${BACKUP_PUB_MODULE}" \
-    bash -c 'pg_dumpall -U postgres | gzip' >"${BACKUP_PUB_TARGET}.tmp"
+  backup_target "${BACKUP_FULL_SUFFIX}" "sql.gz" || return 1
+  docker exec --user root "${BACKUP_MODULE_NAME}" \
+    bash -c 'pg_dumpall -U postgres | gzip' >"${BACKUP_TARGET_PATH}.tmp"
 }
 ```
 
 **Every snippet defines `backup_written`, including a plain file copy.** The wrapper's own
 definition does nothing but fail with a reason, so a module that forgets it is a loud failure rather
 than a silent one, and reading a snippet always tells you how that module is produced. `letsencrypt`
-defers to the shared file copy, which names the artifact for it:
+defers to the shared file copy, which names the backup for it:
 
 ```bash
 backup_written() {
@@ -171,25 +178,25 @@ backup_written() {
 }
 ```
 
-A run where `backup_written` never named an artifact is reported as such and fails, rather than
+A run where `backup_written` never named a backup is reported as such and fails, rather than
 renaming a file nothing wrote.
 
 **A snippet reads `.env` values with `"${VAR:?}"`.** `mariadb` needs `MARIADB_ROOT_PASSWORD` and
 `zigbee2mqtt` needs `VERNEMQ_SERVICE`/`VERNEMQ_API_PORT`; expanded bare, a renamed or missing key
 becomes an empty argument and the failure surfaces as a confusing tool error, or worse as a
-truncated artifact. The `:?` form fails by name at the point of use.
+truncated backup. The `:?` form fails by name at the point of use.
 
 `influxdb3` defines `backup_written`, adds its own full/delta helpers, and keeps its state in
 `INFLUXDB3_BACKUP_CLUSTER` / `INFLUXDB3_BACKUP_STORE`, the directory the server writes its own
 backups into — which is what `backup_stored` lists, as distinct from the wrapper's `backup_listed`
-over our artifacts.
+over our backups.
 
 **It waits, and that is not removable.** `influxdb3 create backup` returns as soon as the server has
 accepted the job, so `backup_awaited` polls `influxdb3 status backup` until `completed` — without it
 the `tar` captures an in-flight backup directory and writes a valid gzip holding partial data, the
 one failure this design cannot detect later. What *was* removed is everything around the wait:
 progress lines every 30 seconds, a `TIMEOUT` knob and a cancel-on-timeout, none of which change the
-artifact. The same `backup_status` also answers the full-versus-delta question, since a parent must
+backup. The same `backup_status` also answers the full-versus-delta question, since a parent must
 be `completed` before a delta can be taken against it.
 
 ### It is sourceable, and that is how warm avoids knowing anything
@@ -201,8 +208,8 @@ The generated script ends its definitions with:
 ```
 
 Executed, it takes a backup. **Sourced, it defines the module's vocabulary and returns**, so
-supervisor's `backup.sh` can source a module's own `backup.sh` and get `BACKUP_PUB_FULL`,
-`BACKUP_PUB_DELTA`, `backup_listed`, `backup_pruned` and the rest — for *that* module — without
+supervisor's `backup.sh` can source a module's own `backup.sh` and get `BACKUP_FULL_SUFFIX`,
+`BACKUP_DELTA_SUFFIX`, `backup_listed`, `backup_pruned` and the rest — for *that* module — without
 supervisor containing a single module-specific line. Warm decides the policy; the module supplies
 the vocabulary and the thinning.
 
@@ -230,7 +237,7 @@ keeping is small and stable; the set of junk is open-ended and grows with every 
 recoverable; a silently omitted directory is neither. So a file-copying script **must record the
 top-level entries no include pattern matched** in its result, so a newly appeared state directory
 surfaces as unbacked rather than being discovered at restore. With that reporting, an allow-list is
-strictly better than a deny-list — a small deliberate artifact *and* drift notification.
+strictly better than a deny-list — a small deliberate backup *and* drift notification.
 
 Rules for a file-copying module:
 
@@ -241,7 +248,7 @@ Rules for a file-copying module:
 - an empty path list is a loud skip with a reason, never a silent success
 - preserve ownership, permissions, xattrs and symlinks, and never dereference — a copy that loses
   them restores looking complete and will not start
-- write to a temporary name and rename on success, so warm never copies a half-written artifact
+- write to a temporary name and rename on success, so warm never copies a half-written backup
 
 **Prefer the application's own mechanism over a file copy**, in this order:
 
@@ -260,7 +267,7 @@ subdirectory"; add subtraction if and when a module needs it, applied after the 
 
 ### Copy safety
 
-All artifacts can be copied while the service runs and while a backup is in progress.
+All backups can be copied while the service runs and while a backup is in progress.
 
 - SQL dumps stream to `<file>.tmp` and are renamed only once `set -o pipefail` confirms success, so
   a reader never sees a partial `.gz` and a failed dump never overwrites a good one. Stale `.tmp`
@@ -271,9 +278,9 @@ All artifacts can be copied while the service runs and while a backup is in prog
 
 ### Retention, hot
 
-`RETAIN_DAYS` is a guaranteed **minimum** recoverable window, not a footprint.
+`BACKUP_RETAIN_DAYS` is a guaranteed **minimum** recoverable window, not a footprint.
 
-`FULL` modules delete artifacts older than the window, always keeping the newest
+`FULL` modules delete backups older than the window, always keeping the newest
 whatever its age, so a run of failures can never leave zero backups.
 
 influxdb3 cannot be thinned that way. Restoring a delta walks back to the full it hangs off, and
@@ -299,22 +306,23 @@ rather than a description of what exists.
    redeployed from `src/main/resources/data/` or lives in a database that is itself backed up, the
    module is *derived* and needs nothing — record that in the inventory rather than leaving it blank.
 2. **Write the snippet** at `src/build/resources/backup.sh`. Define `backup_written` — either
-   passing the paths to copy to `backup_files`, or naming the artifact with `backup_target` and
-   writing `"${BACKUP_PUB_TARGET}.tmp"` itself. Prefer the application's own backup mechanism over a file copy; where
-   producing the artifact needs something only inside the container, wrap that one command in
+   passing the paths to copy to `backup_files`, or naming the backup with `backup_target` and
+   writing `"${BACKUP_TARGET_PATH}.tmp"` itself. Prefer the application's own backup mechanism over a file copy; where
+   producing the backup needs something only inside the container, wrap that one command in
    `docker exec` and redirect host-side.
 3. **Call `write_container_backup()`** in the module's generate script. That call is the entire
-   enrolment — there is no env var, no registry, and omitting it is how a module opts out. Pass
-   `min_interval` or `retain_days` only if the defaults are wrong for this module.
+   enrolment — there is no parameter, no registry, and omitting it is how a module opts out. Set
+   `BACKUP_RETAIN_DAYS` / `BACKUP_SKIP_HOURS` in the module's env files if the defaults are
+   wrong for it.
 4. **Run `fab generate`.** It writes `src/main/resources/backup.sh` with the build banner and
    the executable bit. Never edit that file; edit the snippet.
 5. **Wire nothing.** `supervisor` is the only invoker and finds the module by the generated script.
    Do not add an `install_pre.sh` or `install_prep.sh` — release-time triggering is retired.
 6. **Do not add it to `src/resources.txt`.** The script reads its environment at runtime and holds
    no `${VAR}` placeholders.
-7. **Check the result**: a successful run leaves exactly one artifact named
+7. **Check the result**: a successful run leaves exactly one backup named
    `<module>_<stamp>_full.<extension>`; a failed one leaves no file and no directory. Running it
-   twice inside `min_interval` must skip. Sourcing it must produce no backup.
+   twice inside `BACKUP_SKIP_HOURS` must skip. Sourcing it must produce no backup.
 
 ## Driver — planned
 
@@ -352,17 +360,17 @@ Inputs, read from `.../supervisor/latest/image/config.json`, unless modules are 
 2. exit `0` is produced or throttled by its own minimum interval, non-zero is failed, the rest of
    its output is log
 3. it writes `${SERVICE_DATA_DIR}/backup/<stamp>/<module>_<stamp>_{full,delta}.<extension>`
-4. never read a data directory, choose an exclusion or parse an artifact — the module owns its
+4. never read a data directory, choose an exclusion or parse a backup — the module owns its
    format, its throttle and its pruning
 
-**warm** — for each module whose hot run succeeded, so a bad artifact is never promoted:
+**warm** — for each module whose hot run succeeded, so a bad backup is never promoted:
 
 1. `rsync -a --link-dest` of the previous copy, no `--delete`, of
    `/home/asystem/<module>/latest/backup/` into `/share/<index>0/backup/<module>/`
 2. source that module's `backup.sh` in a subshell, so `backup_is_full`, `backup_is_delta` and
    `backup_listed` are its own
 3. thin to grandfather-father-son, oldest tier wins a tie:
-   - **son** — every artifact of either kind inside `BACKUP_PUB_RETAIN_DAYS`
+   - **son** — every backup of either kind inside `BACKUP_RETAIN_DAYS`
    - **father** — the newest `_full` of each ISO week, for `BACKUP_KEEP_WEEKLY` weeks
    - **grandfather** — the first `_full` of each month, for `BACKUP_KEEP_MONTHLY` months
 4. a `_full` stands alone, a `_delta` restores only with its `_full` and every `_delta` between, so
@@ -377,8 +385,8 @@ sides guarded on `mountpoint`:
 2. `rsync -a`, no `--delete`, of `/share/<n>/backup/` into `/backup/share/<n>/backup/`, so a
    mistaken thin at warm cannot reach the cold copy
 
-**The artifact is the run's log** — it exists only if the run completed, its timestamp says when,
-and `BACKUP_PUB_RETAIN_DAYS` keeps a week of them. Status is read back with `backup_healthy` against
+**The backup is the run's log** — it exists only if the run completed, its timestamp says when,
+and `BACKUP_RETAIN_DAYS` keeps a week of them. Status is read back with `backup_healthy` against
 each module's own backup directory.
 
 The three tiers are separable inside the one script, so they can be run or scheduled apart — hot
@@ -433,7 +441,7 @@ these mounts replacing the current read-only `/:/host`.
 
 **hot to warm is additive** — `rsync -a` without `--delete` — in both shapes. Mirroring here would
 propagate the hot tier's seven day window to warm, and no history longer than a week could exist
-anywhere. `--link-dest` against the previous copy makes an unchanged artifact cost an inode rather
+anywhere. `--link-dest` against the previous copy makes an unchanged backup cost an inode rather
 than its bytes.
 
 **warm thins, then cold mirrors.** The driver copies from hot, applies the GFS policy to what it
@@ -445,14 +453,14 @@ deletes a backup on purpose.
 data on a host's other shares are carried by the same job.
 
 **`--delete` everywhere except `backup/`, and that choice decides where retention actually bites.**
-Warm is the only tier that deletes an artifact on purpose — the GFS thin. Cold then has to decide
+Warm is the only tier that deletes a backup on purpose — the GFS thin. Cold then has to decide
 whether to copy that decision:
 
 | Cold path | `--delete` | Consequence |
 |---|---|---|
 | `media/`, `service/` | **yes** | a file deleted on the share disappears from cold, which is what a mirror is for |
 | `tmp/` | — | not replicated at all; scratch, and large enough to be worth skipping |
-| `backup/` | **no** | cold keeps every artifact warm ever held, including ones warm has since thinned |
+| `backup/` | **no** | cold keeps every backup warm ever held, including ones warm has since thinned |
 
 So **the GFS policy bounds warm, not cold**. Cold is append-only for backups and grows by the thin
 churn — a full and its deltas per week, a full per month — which at these volumes is small beside
@@ -462,7 +470,7 @@ only remaining copy: the two tiers can never be wrong in the same way at the sam
 The alternative is `--delete` on `backup/` too, making cold an exact mirror and bounding both tiers
 by the same policy. That is tidier and cheaper, and it is the right change if cold ever grows
 uncomfortably — but it removes the second copy's independence, so a single bad prune at warm would
-take both. Not worth it while the artifacts are this small.
+take both. Not worth it while the backups are this small.
 
 Either way, **nothing at cold prunes on its own**. If `backup/` is append-only it needs an eventual
 ceiling, and that ceiling is the only retention this document does not yet specify.
@@ -490,7 +498,7 @@ is the test to apply to any change here.
 | `1` | at least one module failed — partial |
 | `2` | could not start — no config, share not mounted, lock held |
 
-**The filesystem is the result — there is no report file.** An artifact's *existence* means that
+**The filesystem is the result — there is no report file.** A backup's *existence* means that
 backup succeeded, because nothing is renamed into place until it did; its *timestamp* says when. So
 everything a report would have carried is already on disk, and a second source of truth that could
 disagree with it is not worth having.
@@ -502,7 +510,7 @@ BACKUP_ELAPSED="3600"
 BACKUP_MAX_AGE=$((86400 + BACKUP_ELAPSED))
 ```
 
-A module is healthy when its newest artifact is younger than `BACKUP_MAX_AGE` — a daily cadence plus
+A module is healthy when its newest backup is younger than `BACKUP_MAX_AGE` — a daily cadence plus
 an hour's allowance to get through every module, so **25 hours**. The allowance is a variable rather
 than a literal 25, so the arithmetic stays legible and either half can move.
 
@@ -513,7 +521,7 @@ run's claim about it, so a manual run, a partial run, or a supervisor restart al
 answer — and there is no report to go stale.
 
 **A lock belongs in the script** — `flock`, exit `2` if held — so a scheduled run and a hand run
-cannot collide. Together with `MIN_INTERVAL` that is what makes running it yourself always safe.
+cannot collide. Together with `BACKUP_SKIP_HOURS` that is what makes running it yourself always safe.
 
 **The timeout removed from the influxdb3 script reappears here, correctly.** `backup_awaited` now
 waits forever, which would hang Go's exec. A scheduler is the right owner of "this
@@ -536,7 +544,7 @@ Measured before building it: `postgres` and `mariadb` differed by **four lines**
 prefix and the dump command were normalised, and the listing/epoch/prune helper block was
 **byte-identical** between `postgres` and `letsencrypt`. Of 78 lines, roughly 70 were boilerplate —
 and they were precisely the lines carrying the hazards: implicit self-exclusion, atomic rename,
-metadata preservation, keeping the newest artifact regardless of age, sweeping stale `.tmp`, and not
+metadata preservation, keeping the newest backup regardless of age, sweeping stale `.tmp`, and not
 pruning after a failure. Generating them fixes each hazard once instead of once per module.
 
 The five snippets that replaced those scripts total **under 90 lines**, of which `influxdb3` is 63.
@@ -564,7 +572,7 @@ The snippet is inserted **after** the wrapper's definitions and **before** the m
 overrides anything simply by redefining it. There is no hook protocol, no registration, and no
 parameter describing what a module overrides:
 
-- `postgres`, `mariadb`, `zigbee2mqtt` define `backup_written`, naming a `_full` artifact with
+- `postgres`, `mariadb`, `zigbee2mqtt` define `backup_written`, naming a `_full` backup with
   their own extension
 - `letsencrypt` defines `backup_written` as a call to `backup_files` with its paths
 - `influxdb3` defines `backup_written`, adds its own full/delta helpers, and keeps its state under
@@ -578,29 +586,29 @@ like the one command that module actually needs.
 
 ### Failure leaves nothing behind
 
-The artifact's existence at its final name is the **only** success signal, and it is structural
+The backup's existence at its final name is the **only** success signal, and it is structural
 rather than a convention a reader has to know:
 
 ```bash
 trap backup_discarded EXIT
-if backup_written && [ -n "${BACKUP_PUB_TARGET}" ] && [ -s "${BACKUP_PUB_TARGET}.tmp" ]; then
-  mv "${BACKUP_PUB_TARGET}.tmp" "${BACKUP_PUB_TARGET}"
+if backup_written && [ -n "${BACKUP_TARGET_PATH}" ] && [ -s "${BACKUP_TARGET_PATH}.tmp" ]; then
+  mv "${BACKUP_TARGET_PATH}.tmp" "${BACKUP_TARGET_PATH}"
 ```
 
 Everything is written to `.tmp` and renamed only on success, so a consumer never sees a partial file
 under the final name — `mv` within a filesystem is atomic. `backup_discarded` runs on **every** exit
-path, including a crash or a kill, removing the `.tmp` and the stamp directory if no artifact
+path, including a crash or a kill, removing the `.tmp` and the stamp directory if no backup
 landed. A failed run therefore leaves no file and no empty directory.
 
-A `.sha256` sidecar was considered and rejected: every artifact is `.gz` or `.zip`, whose container
+A `.sha256` sidecar was considered and rejected: every backup is `.gz` or `.zip`, whose container
 formats already carry CRC32, so `gzip -t` detects corruption without a second file to keep in step.
 If periodic integrity checking is ever wanted, that is the mechanism, not a sidecar.
 
-### Classifying an artifact
+### Classifying a backup
 
 ```bash
-backup_is_full() { [[ "${1}" == *"${BACKUP_PUB_FULL}".* ]]; }
-backup_is_delta() { [[ "${1}" == *"${BACKUP_PUB_DELTA}".* ]]; }
+backup_is_full() { [[ "${1}" == *"${BACKUP_FULL_SUFFIX}".* ]]; }
+backup_is_delta() { [[ "${1}" == *"${BACKUP_DELTA_SUFFIX}".* ]]; }
 ```
 
 These are what let the warm step apply GFS to a module it knows nothing about: a `_full` may be kept
@@ -613,14 +621,14 @@ as a weekly or monthly point, a `_delta` only inside the dense window.
 | `influxdb3` | untar the `_full` and every `_delta` after it, in order, into an empty object store — a `_delta` is meaningless without the `_full` it hangs off |
 | `postgres` | `gunzip -c all_<stamp>.sql.gz \| psql -U postgres` |
 | `mariadb` | `gunzip -c all_<stamp>.sql.gz \| mariadb -uroot -p` |
-| file copy | restore the artifact over the data directory, then redeploy the module so the git-managed files return |
+| file copy | restore the backup over the data directory, then redeploy the module so the git-managed files return |
 
 For anything older than the hot tier, restoring in place is rarely right — rolling a database back
 a month discards a month of good data. Stand the copy up beside production, compare, and extract the
 range that matters.
 
 HA's configuration lives in `homeassistant` but its recorder lives in `postgres`, so restoring HA to
-a day needs both at that day. A single daily pass produces same-day artifacts minutes apart: not
+a day needs both at that day. A single daily pass produces same-day backups minutes apart: not
 transactional, but a loose estate-wide restore point, and a reason to keep every module on one
 schedule rather than letting them drift onto their own.
 
@@ -654,15 +662,15 @@ That third option was rejected above on the grounds that volumes are small. **Th
 for four of the five modules and expires for InfluxDB**, so the decision is *not yet*, not *no* —
 revisit when the object store passes a few GB.
 
-Two things accepted meanwhile: monthly artifacts sit at **full size on both disks**, which is only a
+Two things accepted meanwhile: monthly backups sit at **full size on both disks**, which is only a
 real cost for InfluxDB, and there is **no integrity verification** beyond the filesystem's — nothing
-detects a silently corrupted artifact until a restore needs it.
+detects a silently corrupted backup until a restore needs it.
 
 Granularity tracks detection latency: caught in a week, caught this month, caught this year.
 
 | Tier | Points | `FULL` | `DELTA` |
 |------|--------|--------|---------|
-| daily | 7 | the 7 newest artifacts | every increment inside the window |
+| daily | 7 | the 7 newest backups | every increment inside the window |
 | weekly | 4 | newest per ISO week | that week's `_full`, its deltas dropped |
 | monthly | 12 | newest per month | that month's first `_full`, its deltas dropped |
 
@@ -671,12 +679,12 @@ the filename suffix declares, and why warm can apply this policy without knowing
 looking at. Deltas are only ever retained inside the dense window.
 
 **Warm must not thin blindly**, and the `_full` / `_delta` suffix is what stops it having to guess.
-Dropping a `_full` destroys every `_delta` after it, so warm keeps `_full` artifacts as its weekly
-and monthly points and retains `_delta` artifacts only inside the dense window.
+Dropping a `_full` destroys every `_delta` after it, so warm keeps `_full` backups as its weekly
+and monthly points and retains `_delta` backups only inside the dense window.
 
 **So warm delegates: it calls the module's own `backup.sh --prune <dir>` against the warm
 directory.** Warm decides the policy — which points to keep, from the GFS knobs in the environment —
-and the module enacts it on artifacts it alone understands. A `FULL` module reuses its
+and the module enacts it on backups it alone understands. A `FULL` module reuses its
 default pruning against a different directory; `influxdb3` applies its own rule. No new script and
 no new hook, and the driver never learns which module it is thinning.
 
@@ -718,12 +726,12 @@ already covered by the `fab backup` task that rsyncs git-ignored files to `~/Bac
 Every mechanism here is verified; no restore is. Restore each kind into a scratch target and record
 the result: an influxdb3 `_full` plus its `_delta`s into an empty object store, a `pg_dumpall` into a
 throwaway postgres, a `mariadb-dump` likewise, and a file-copy tar over a data directory. influxdb3 is the
-one most likely to surprise, being the only artifact that is not self-contained. The output of that
+one most likely to surprise, being the only backup that is not self-contained. The output of that
 exercise is the per-module restore runbook, which also does not exist. The `letsencrypt` tar has been
 round-tripped into an empty tree with symlinks and `0600` modes intact — that is the closest thing to
 a tested restore so far, and it is not a service restore.
 
-Note the influxdb3 restore shape **changed** when it moved to generation: artifacts are now gzipped
+Note the influxdb3 restore shape **changed** when it moved to generation: backups are now gzipped
 tars of individual backup directories rather than the object store's own layout, so a restore means
 untarring the `_full` and each `_delta` in order back under `{{cluster_id}}/backups/` before invoking
 influxdb3's restore. That path has never been exercised.
@@ -756,13 +764,13 @@ until hot has produced it, and cold has nothing to mirror until warm has been wr
 The snippet exists as a pointer to that section and a `return 1` placeholder, so the script is
 generated, lints, and fails honestly rather than pretending to work.
 
-Enrolling it this way is what gives the driver the shared vocabulary — `BACKUP_PUB_FULL`,
-`BACKUP_PUB_DELTA`, `backup_is_full`, `backup_listed`, `backup_pruned`, `backup_healthy` — without a
+Enrolling it this way is what gives the driver the shared vocabulary — `BACKUP_FULL_SUFFIX`,
+`BACKUP_DELTA_SUFFIX`, `backup_is_full`, `backup_listed`, `backup_pruned`, `backup_healthy` — without a
 second implementation of any of it, and it makes the wrapper's own behaviour correct for a driver
 rather than merely tolerated: the throttle stops a second estate-wide run within the hour, the
 `.tmp`-and-rename means a killed run leaves no trace, and `backup_pruned` keeps a week of runs.
 
-**Its artifact is the run log** (`backup_target "${BACKUP_PUB_FULL}" "log"`), so
+**Its backup is the run log** (`backup_target "${BACKUP_FULL_SUFFIX}" "log"`), so
 `supervisor_<stamp>_full.log` exists
 only if the run completed, and its timestamp says when. That is the same filesystem-as-state rule
 every module follows, applied to the run itself.
@@ -787,7 +795,7 @@ samba. They cannot be excluded, because a restore needs exactly those files. Pic
 
 Everything lives on the machine it protects, so a dead host loses hot and warm together.
 
-The shape is settled: cold is the replication of `/share` to `/backup`, module artifacts riding
+The shape is settled: cold is the replication of `/share` to `/backup`, module backups riding
 along in the `backup/` subtree, and **warm owns the GFS thinning** because a mirror cannot thin. A
 `restic`/`borg` repository alongside it was considered and rejected at these volumes — revisit only
 if the volumes ever justify it. Nothing new has to own cold: whatever replicates `/share`
@@ -803,7 +811,7 @@ nothing on the share is ever deleted.
 
 And once built, **cold still has no ceiling of its own**. `backup/` is deliberately excluded from
 `--delete` so a bad thin at warm cannot reach both copies, which means cold accumulates every
-artifact warm ever held. Affordable at current volumes, and the last retention this document does
+backup warm ever held. Affordable at current volumes, and the last retention this document does
 not specify — see *Copy rules* for the trade and the alternative.
 
 ### 6 Six modules need a script, four need a verdict — gap, partly open
@@ -825,7 +833,7 @@ configuration and tooling, with no container and no service state.
 | `sonarr` | may | ❌ | **yes** | `sonarr.db` and `config.xml`. Sonarr's v3 API is believed to expose a Backup command — verify before relying on it; otherwise `OFFLINE` with `backup_files` |
 | `sabnzbd` | mad | ❌ | **yes** | `sabnzbd.ini` and `admin/` (history and queue databases, written live) — `OFFLINE` with `backup_files` |
 | `grafana` | may | ❌ | **yes** | users, API keys and preferences in `grafana.db`; dashboards come from jsonnet so are not needed. `sqlite3 grafana.db ".backup $1"` is online-safe, else `OFFLINE` with `backup_files` |
-| `mlflow` | max | ❌ | **yes** | **not visible in a data-directory scan** — its artifact root is a share mount, `/share/1/service/mlflow/artifacts` in production. Experiment metadata is in `postgres` and already covered; the artifacts are not. A tar of the artifact root, or a deliberate decision that artifacts are reproducible |
+| `mlflow` | max | ❌ | **yes** | **not visible in a data-directory scan** — its backup root is a share mount, `/share/1/service/mlflow/backups` in production. Experiment metadata is in `postgres` and already covered; the backups are not. A tar of the backup root, or a deliberate decision that backups are reproducible |
 | `rhasspy` | zzz | ❌ | verify | trained voice profiles, if any are trained — `backup_files` the profile directory, else declare derived |
 | `openra` | max | ❌ | verify | settings and replays; low value, most likely declare derived |
 | `appdaemon` | zzz | ❌ | verify | apps come from git — check whether anything generated is kept alongside them |
@@ -837,7 +845,7 @@ configuration and tooling, with no container and no service state.
 | `nginx` | meg | ❌ | no | configuration generated, certificates pulled from `letsencrypt` |
 | `cloudflare` | may | ❌ | no | configuration generated, credentials from the environment |
 | `supervisor` | all | ❌ | no | data directory holds the binary, shipped each release |
-| `mlserver` | max | ❌ | no | mounts `mlflow`'s artifact root; no state of its own |
+| `mlserver` | max | ❌ | no | mounts `mlflow`'s backup root; no state of its own |
 | `monitor` | zzz | ❌ | no | host paths mounted read-only |
 | `unpoller` | zzz | ❌ | no | no volumes |
 | `redpanda` | zzz | ❌ | no | no volumes |
@@ -860,7 +868,7 @@ already exist in every generated script, so this is a call site, not a design.
 
 ### 8 Nothing has been sized — gap
 
-Partly answered by the cold-tier finding: module artifacts share the `/backup` disk with the media,
+Partly answered by the cold-tier finding: module backups share the `/backup` disk with the media,
 which dwarfs them, so *will it fit* is no longer the worry it looked. What is still unmeasured is the
 influxdb3 object store, the dump sizes, and what the per-release `cp -rfpa` of the backup tree costs
 at the current cadence. Two commands settle it:
@@ -888,12 +896,12 @@ supervisor is about to be the scheduler anyway.
 ### 11 A module's script has no lock — gap, minor
 
 Two concurrent runs of the same module's `backup.sh` inside one second would share a stamp and race
-on the same `.tmp`. The `min_interval` throttle makes it unlikely rather than impossible, and the
-driver is expected to hold a lock of its own, but a `flock` on `BACKUP_PUB_DIR` would close it properly.
+on the same `.tmp`. The `BACKUP_SKIP_HOURS` throttle makes it unlikely rather than impossible, and the
+driver is expected to hold a lock of its own, but a `flock` on `BACKUP_INTERNAL_ROOT_DIR` would close it properly.
 
 ### Closed during design and build
 
-- **Encryption at rest** — decided against. Artifacts stay in the clear at every tier. That also
+- **Encryption at rest** — decided against. Backups stay in the clear at every tier. That also
   removes the one argument that would have justified `restic`/`borg` at current volumes, so cold
   stays a plain mirror, and it narrows item 3 to two options rather than three.
 
@@ -903,8 +911,8 @@ driver is expected to hold a lock of its own, but a `flock` on `BACKUP_PUB_DIR` 
 - **Always run from the install directory** — one execution mode, no sidecar, no `bash -s`.
 - **Per-module env vars** — `<MODULE>_BACKUP_ENABLED` / `_MIN_INTERVAL` / `_RETAIN_DAYS` /
   `_INCLUDE` / `_OFFLINE` / `_TIMEOUT` are all gone. Presence of the generate call is the enable;
-  the two policy values are its parameters; everything else is a snippet variable.
-- **`full` / `delta` naming** — one vocabulary from the artifact filename down to influxdb3's
+  the two policy values are overridable wrapper variables; everything else is a snippet variable.
+- **`full` / `delta` naming** — one vocabulary from the backup filename down to influxdb3's
   server-side backup names, its snippet's `backup_stored` / `INFLUXDB3_BACKUP_STORE`, and its log
   lines. `base`, `inc` and `chain` are retired, in the code as well as the prose.
 - **Dependency-aware thinning** — the `_full` / `_delta` suffix plus `backup_is_full` /
@@ -915,7 +923,7 @@ driver is expected to hold a lock of its own, but a `flock` on `BACKUP_PUB_DIR` 
 - **`OFFLINE` execution mode** — no longer a driver concern; a script in supervisor's container can
   stop a different container without dying.
 - **`zigbee2mqtt` mechanism** — its bridge API over MQTT.
-- **A `.sha256` sidecar** — rejected; every artifact is `.gz` or `.zip`, whose formats already carry
+- **A `.sha256` sidecar** — rejected; every backup is `.gz` or `.zip`, whose formats already carry
   CRC32, so `gzip -t` detects corruption without a second file to keep in step.
 - **influxdb3 excluding unpersisted data** — accepted, not fixed. A backup covers only what has
   reached object storage, so with `INFLUXDB3_GEN1_DURATION=10m` its restore point lags the SQL

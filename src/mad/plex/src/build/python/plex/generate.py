@@ -8,3 +8,4 @@ if __name__ == "__main__":
     metadata_df = load_bootstrap_entities()
 
     write_container_healthchecks()
+    write_container_backup()

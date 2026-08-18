@@ -1,6 +1,9 @@
 #!/bin/bash
 
-. ./.env
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
+
+# shellcheck disable=SC1091 # .env is generated at build time, not available to shellcheck
+. "${ROOT_DIR}/.env"
 
 SONARR_SHARE_ROOT_DIR="/share/$(echo "${SONARR_SHARE_DIR}" | awk -F'/' '{print $3}')"
 if grep -qE '^[^#].*[[:space:]]+'"${SONARR_SHARE_ROOT_DIR}"'[[:space:]]' /etc/fstab && mountpoint -q "${SONARR_SHARE_ROOT_DIR}"; then
