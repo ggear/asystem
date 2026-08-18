@@ -13,6 +13,7 @@
 #     kitchen_move,
 #     lounge_arc,
 #     lounge_home,
+#     office_home,
 #     parents_move]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]

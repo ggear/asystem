@@ -1146,6 +1146,11 @@ def _get_host_arch(module, filter_host=None):
     return _get_host_metadata(host)[1]
 
 
+def _get_host_index(host):
+    metadata = _get_host_metadata(host)
+    return int(metadata[5]) if len(metadata) > 5 and metadata[5].strip().isnumeric() else None
+
+
 def _get_service(module):
     return module.split("/")[1]
 

@@ -66,11 +66,7 @@ EOF
   for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
     SHARE_INDEX=$(echo ${SHARE_DIR} | awk 'BEGIN{FS=OFS="/"}{print $3}')
     rm -rf ${SHARE_DIR}/lost+found
-    mkdir -p ${SHARE_DIR}/backup/data
-    mkdir -p ${SHARE_DIR}/backup/media
-    mkdir -p ${SHARE_DIR}/backup/service
-    mkdir -p ${SHARE_DIR}/backup/timemachine
-    mkdir -p ${SHARE_DIR}/data
+    mkdir -p ${SHARE_DIR}/backup
     mkdir -p ${SHARE_DIR}/media
     mkdir -p ${SHARE_DIR}/service
     mkdir -p ${SHARE_DIR}/service/mlflow

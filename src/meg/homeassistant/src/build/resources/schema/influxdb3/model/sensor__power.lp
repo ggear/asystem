@@ -103,6 +103,8 @@
 #     lounge_main_bulb_3_power,
 #     lounge_tv_plug_power,
 #     lounge_tv_power,
+#     office_home_devices_power,
+#     office_home_power,
 #     office_lights_power,
 #     office_main_bulb_1_power,
 #     pantry_lights_power,

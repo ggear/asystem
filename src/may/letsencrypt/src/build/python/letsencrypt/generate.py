@@ -9,6 +9,8 @@ if __name__ == "__main__":
 
     write_container_healthchecks(working_dir=join(DIR_ROOT, "src/main/resources/data"))
 
+    write_container_backup()
+
     hosts_path = join(DIR_ROOT, "src/main/resources/pushcerts-hosts.sh")
     os.makedirs(os.path.dirname(hosts_path), exist_ok=True)
     hosts_labels = {line.split("=")[0]: line.split("=")[-1].split(",")

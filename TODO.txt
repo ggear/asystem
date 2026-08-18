@@ -30,10 +30,19 @@ retire nginx and use cloudflared for homeasistant?
 
 
 
-make sure 1h on portfolio works, seed timestamp into requests?
-better way to do cloudflaire config?
-drop fallback into prices sheet when google/yahoo fail, custom message?
+make sure 1h on portfolio works, seed timestamp into requests? seems to do a lot of others hourly and not gold?
 
+
+inspect and implement others and close out 6
+src/all/supervisor/src/build/resources/backup.sh
+src/jen/zigbee2mqtt/src/build/resources/backup.sh
+src/mad/postgres/src/build/resources/backup.sh
+src/max/influxdb3/src/build/resources/backup.sh
+src/may/letsencrypt/src/build/resources/backup.sh
+src/meg/mariadb/src/build/resources/backup.sh
+
+how does assystem version interact with backups? encode version of module into backup name? 
+add restore.sh and test 
 
 
 
@@ -44,9 +53,9 @@ Order of attach:
   - grafana
   - wrangle balances/transactions
 
-filter haas entities down, make them line up nicely with others, maybe have different rows col in each of the 3 summaries?
-Redeploy influxdb and wipe, backup V2 to V3 home and delete V2, reploy supervisor/network
-retire influx and move backups to portable version on max
+add explorer module for influxdb, call is influxdb3ui or explorer?
+
+
 
 doesnt seem worth it? is it possible to have postgress/influxdb3/vernemq discover their schemas and then have verify.sh diff with the agrgegate of the modules to check missing and extra elements in the schema without too much code? worthwhile?
 tune influxdb compactor given real world inputs

@@ -1,9 +1,10 @@
 #!/bin/bash
 
+# shellcheck disable=SC2034,SC2153
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
-cd ${SERVICE_INSTALL} || exit
+cd "${SERVICE_INSTALL}" || exit
 
 chmod +x "./pushcerts.sh"
 chmod +x "./pushcerts-hosts.sh"

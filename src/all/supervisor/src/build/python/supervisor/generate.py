@@ -1,6 +1,6 @@
 from operator import itemgetter
 
-from fabfile import _get_modules_by_hosts, _get_host_label, HOSTS
+from fabfile import _get_modules_by_hosts, _get_host_label, _get_host_index, HOSTS
 from asystem import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
@@ -8,6 +8,7 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 if __name__ == "__main__":
     metadata_df = load_bootstrap_entities()
 
+    write_container_backup()
     write_container_healthchecks()
 
     # Build broker schema
@@ -36,6 +37,14 @@ if __name__ == "__main__":
         "supervisor/host": sorted(modules_server.keys()),
         "supervisor/service": sorted({service for services in modules_server.values() for service in services}),
     })
+    metadata_supervisor_schema = []
+    for host, services in sorted(modules_server.items(), key=itemgetter(0)):
+        host_index = _get_host_index(_get_host_label(host))
+        host_schema = {"host": host}
+        if host_index is not None:
+            host_schema["index"] = host_index
+        host_schema["services"] = sorted(services)
+        metadata_supervisor_schema.append(host_schema)
     metadata_supervisor_path = abspath(join(DIR_ROOT, "src/main/resources/image/config.json"))
     with open(metadata_supervisor_path, 'w') as metadata_supervisor_file:
         metadata_supervisor_file.write(json.dumps({
@@ -54,10 +63,7 @@ if __name__ == "__main__":
                     "name": "$DATABASE_NAME",
                     "token": "$DATABASE_TOKEN"
                 },
-                "schema": [{
-                    "host": host,
-                    "services": sorted(services)
-                } for host, services in sorted(modules_server.items(), key=itemgetter(0))]
+                "schema": metadata_supervisor_schema
             },
         }, indent=2))
     print("Build generate script [supervisor] service metadata persisted to [{}]".format(metadata_supervisor_path))
