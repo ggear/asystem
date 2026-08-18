@@ -161,8 +161,8 @@ backup_written() {
 #   tar --extract --gzip --file <backup>.tar.gz --directory ${BACKUP_SOURCE_PATH}/config
 
 PLEX_BACKUP_CONFIG="config"
-PLEX_BACKUP_INCLUDE="Library/Application Support/Plex Media Server/Plug-in Support"
 PLEX_BACKUP_INSTALL="/var/lib/asystem/install/plex/latest/install.sh"
+PLEX_BACKUP_INCLUDE="Library/Application Support/Plex Media Server/Plug-in Support"
 
 backup_written() {
   local status=0
