@@ -160,9 +160,9 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
       REQUIRED_KB="$(du -sk "${SERVICE_HOME_OLD}" | cut -f1)"
       AVAILABLE_KB="$(df -Pk "${SERVICE_PARENT}" | awk 'NR==2 {print $4}')"
       if ((AVAILABLE_KB < REQUIRED_KB)); then
-        log_error "Insufficient space to copy home, need [${REQUIRED_KB}] KB have [${AVAILABLE_KB}] KB [${SERVICE_HOME_OLD}]"
+        log_error "Insufficient space to copy home, need [$((REQUIRED_KB / 1024))] MB have [$((AVAILABLE_KB / 1024))] MB [${SERVICE_HOME_OLD}]"
       fi
-      log_info "Copying old home to new ... [${REQUIRED_KB}] KB"
+      log_info "Copying old home [$((REQUIRED_KB / 1024))] MB to new ..."
       cp -rfpa "${SERVICE_HOME_OLD}/." "${SERVICE_HOME}"
     fi
     if [[ "${COMMAND}" == "install" ]] && ((${#SERVICE_HOME_OLDEST[@]} > 0)); then

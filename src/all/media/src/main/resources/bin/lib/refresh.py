@@ -1,3 +1,7 @@
+"""
+WARNING: This file is written by the build process, any manual edits will be lost!
+"""
+
 import argparse
 import glob
 import os

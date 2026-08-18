@@ -5,7 +5,7 @@
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 cp -rvf "${ROOT_DIR}/src/main/python/.py_deps.txt" "${ROOT_DIR}/src/main/resources/.reqs.txt"
-for FILE in "ingress.py" "analyse.py"; do
+for FILE in "ingress.py" "analyse.py" "refresh.py"; do
   echo -e "\"\"\"\nWARNING: This file is written by the build process, any manual edits will be lost!\n\"\"\"\n" >"${ROOT_DIR}/src/main/resources/bin/lib/${FILE}"
   cat "${ROOT_DIR}/src/main/python/media/${FILE}" >>"${ROOT_DIR}/src/main/resources/bin/lib/${FILE}"
 done

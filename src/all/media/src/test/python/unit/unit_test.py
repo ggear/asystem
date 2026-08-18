@@ -384,11 +384,27 @@ class InternetTest(unittest.TestCase):
     def test_refresh_happy(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
         print(dir_test)
-        self._test_refresh(join(dir_test, ".."), {
+        self._test_refresh(dir_test, {
             "Docos Movies": [
-                join(dir_test, "10/media/docos/movies"),
-                join(dir_test, "20/media/docos/movies"),
-                join(dir_test, "30/media/docos/movies"),
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
+                "/share/30/media/docos/movies",
+            ]
+        }, locations_expected={
+            "Docos Movies": [
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
+                "/share/30/media/docos/movies",
+            ]
+        })
+        self._test_refresh(dir_test, {
+            "Docos Movies": [
+                "/share/20/media/docos/movies",
+            ]
+        }, locations_expected={
+            "Docos Movies": [
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
             ]
         })
 
@@ -406,11 +422,11 @@ class InternetTest(unittest.TestCase):
             "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
             "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
         }, return_value=1)
-        self._test_refresh(join(dir_test, ".."), {
-            "Kids Movies": [join(dir_test, "10/media/kids/movies"), ]
+        self._test_refresh(dir_test, {
+            "Kids Movies": ["/share/10/media/kids/movies", ]
         }, return_value=1)
 
-    def _test_refresh(self, dir_test, library_paths=None, return_value=0):
+    def _test_refresh(self, dir_test, library_paths=None, return_value=0, locations_expected=None):
         library_paths = {} if library_paths is None else library_paths
 
         class MockPlexLibrarySection:
@@ -442,8 +458,11 @@ class InternetTest(unittest.TestCase):
                 self._baseurl = base_url
                 self.library = MockPlexLibrary(library_paths)
 
-        self.assertEqual(return_value, refresh._refresh(
-            MockPlexServer("http://mocked.plex.com", library_paths), dir_test))
+        plex_server = MockPlexServer("http://mocked.plex.com", library_paths)
+        self.assertEqual(return_value, refresh._refresh(plex_server, dir_test))
+        if locations_expected is not None:
+            self.assertEqual(locations_expected, {
+                section.title: sorted(section.locations) for section in plex_server.library.sections()})
 
     def _test_prepare_dir(self, label, index):
         dir_test = join(DIR_ROOT, "target/runtime-unit/{}_{}/share".format(label, index))
