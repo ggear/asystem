@@ -184,6 +184,18 @@
       "messages_per_sec": <number>,
       "leave_count": <number>,
       "network_address_changes": <number>
+    },
+    "0x00178801040ede93": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
+    },
+    "0x00178801040eddb2": {
+      "messages": <number>,
+      "messages_per_sec": <number>,
+      "leave_count": <number>,
+      "network_address_changes": <number>
     }
   }
 }

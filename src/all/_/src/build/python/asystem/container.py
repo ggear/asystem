@@ -602,18 +602,18 @@ if [ "${{#BACKUP_INTERNAL_EXISTING[@]}}" -gt 0 ]; then
   fi
 fi
 
-echo "Starting backup [${{BACKUP_MODULE_NAME}}] from [${{BACKUP_SOURCE_PATH}}] stamped [${{BACKUP_RUN_TIMESTAMP}}] holding [${{#BACKUP_INTERNAL_EXISTING[@]}}] backups newest [${{BACKUP_INTERNAL_NEWEST:-none}}] retaining [${{BACKUP_RETAIN_DAYS}}] days skipping within [${{BACKUP_SKIP_HOURS}}] hours"
+echo "Starting backup from version [${{BACKUP_SOURCE_VERSION}}] holding [${{#BACKUP_INTERNAL_EXISTING[@]}}] backups newest [${{BACKUP_INTERNAL_NEWEST:-none}}] retaining [${{BACKUP_RETAIN_DAYS}}] days skipping within [${{BACKUP_SKIP_HOURS}}] hours"
 
 trap backup_discarded EXIT
 BACKUP_INTERNAL_STARTED=${{SECONDS}}
 if backup_written && [ -n "${{BACKUP_TARGET_PATH}}" ] && [ -s "${{BACKUP_TARGET_PATH}}.tmp" ]; then
   mv "${{BACKUP_TARGET_PATH}}.tmp" "${{BACKUP_TARGET_PATH}}"
   BACKUP_INTERNAL_SIZE="$(du -m "${{BACKUP_TARGET_PATH}}" | cut -f1)"
-  echo "Completed backup [${{BACKUP_MODULE_NAME}}] of [${{BACKUP_INTERNAL_SIZE}}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${{BACKUP_TARGET_PATH}}]"
+  echo "Finished backup [${{BACKUP_INTERNAL_SIZE}}] MB in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds to [${{BACKUP_TARGET_PATH}}]"
   backup_pruned
 else
   [ -n "${{BACKUP_TARGET_PATH}}" ] || echo "Nothing named the backup, call backup_target in backup_written" >&2
-  echo "Failed backup [${{BACKUP_MODULE_NAME}}] in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
+  echo "Failed backup in [$((SECONDS - BACKUP_INTERNAL_STARTED))] seconds" >&2
   BACKUP_INTERNAL_STATUS=1
 fi
 
