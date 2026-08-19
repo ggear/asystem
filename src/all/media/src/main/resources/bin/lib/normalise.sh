@@ -26,11 +26,11 @@ normalise_permissions() {
     run setfacl -bR "${NORMALISE_DIR}"
   fi
   if id "graham" &>/dev/null && getent group "users" &>/dev/null; then
-    ${FIND_CMD} "${NORMALISE_DIR}" -exec chown "graham:users" {} \; || RESULT=1
+    run chown -R "graham:users" "${NORMALISE_DIR}"
   fi
-  ${FIND_CMD} "${NORMALISE_DIR}" -type d -exec chmod "${DIR_MODE}" {} \; || RESULT=1
-  ${FIND_CMD} "${NORMALISE_DIR}" -type f -name "*.sh" -exec chmod "${SCRIPT_MODE}" {} \; || RESULT=1
-  ${FIND_CMD} "${NORMALISE_DIR}" -type f ! -name "*.sh" -exec chmod "${FILE_MODE}" {} \; || RESULT=1
+  ${FIND_CMD} "${NORMALISE_DIR}" -type d -exec chmod "${DIR_MODE}" {} + || RESULT=1
+  ${FIND_CMD} "${NORMALISE_DIR}" -type f -name "*.sh" -exec chmod "${SCRIPT_MODE}" {} + || RESULT=1
+  ${FIND_CMD} "${NORMALISE_DIR}" -type f ! -name "*.sh" -exec chmod "${FILE_MODE}" {} + || RESULT=1
 }
 
 share_tmp_scripts_dir() {
@@ -51,9 +51,8 @@ if [ "$(uname)" == "Linux" ]; then
     normalise_permissions "${SHARE_DIR_TMP}" 2770 770 660
   fi
 fi
-${FIND_CMD} "${WORKING_DIR}" -type f -name nohup -exec rm -f {} \; || RESULT=1
-${FIND_CMD} "${WORKING_DIR}" -type f -name .DS_Store -exec rm -f {} \; || RESULT=1
-${FIND_CMD} "${WORKING_DIR}" -type f -regextype posix-extended -regex '.*/\.[^/]*\.[A-Za-z0-9]{6}$' -exec rm -f {} \; || RESULT=1
+${FIND_CMD} "${WORKING_DIR}" -type f \( -name nohup -o -name .DS_Store -o \
+  -regextype posix-extended -regex '.*/\.[^/]*\.[A-Za-z0-9]{6}$' \) -delete || RESULT=1
 if [ ${RESULT} -ne 0 ]; then
   echo "failed"
   exit 1

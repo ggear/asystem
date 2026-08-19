@@ -10,6 +10,17 @@ if [ ! -d "${WORKING_DIR}" ]; then
   exit 1
 fi
 
+# The FileAction enum in analyse.py is the single source of truth for which per-file action scripts
+# exist, and equally for which generated scripts must survive a clean: analyse, clean and normalise
+# are absent from it deliberately, so they are never deleted from tmp/scripts/media or its .lib
+MEDIA_FILE_SCRIPTS=$("${PYTHON_DIR}/python" -c \
+  "import sys; sys.path.insert(0, '${ROOT_DIR}'); \
+   from analyse import MEDIA_FILE_SCRIPTS; print(' '.join(MEDIA_FILE_SCRIPTS))")
+if [ -z "${MEDIA_FILE_SCRIPTS}" ]; then
+  echo "Failed to derive [MEDIA_FILE_SCRIPTS] from [${ROOT_DIR}/analyse.py]"
+  exit 1
+fi
+
 LOG="/tmp/media-clean.log"
 
 echo -n "Cleaning '${WORKING_DIR}' ... "
@@ -17,7 +28,7 @@ rm -f "${LOG}"
 ${FIND_CMD} "${WORKING_DIR}" -name ".DS_Store" -type f -delete >>"${LOG}" 2>&1
 ${FIND_CMD} "${WORKING_DIR}" -name "._metadata_*.yaml" -type f -delete >>"${LOG}" 2>&1
 ${FIND_CMD} "${WORKING_DIR}" -name "._defaults_analysed_*.yaml" -type f -delete >>"${LOG}" 2>&1
-for SCRIPT in "rename" "check" "merge" "upscale" "reformat" "transcode" "downscale"; do
+for SCRIPT in ${MEDIA_FILE_SCRIPTS}; do
   ${FIND_CMD} "${WORKING_DIR}" -name "${SCRIPT}.sh" -type f -delete >>"${LOG}" 2>&1
   ${FIND_CMD} "${WORKING_DIR}" -name "._${SCRIPT}_*" -type d -exec rm -rf '{}' + >>"${LOG}" 2>&1
 done

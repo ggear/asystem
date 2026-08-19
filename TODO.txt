@@ -33,9 +33,9 @@ retire nginx and use cloudflared for homeasistant?
 make sure 1h on portfolio works, seed timestamp into requests? seems to do a lot of others hourly and not gold?
 
 
-is there a way in plex to not restart and stop after backup when doing a release - new target release?
-dela with plex/database ssd churn - 22GB for plex, storing 7 days is a lot!:
-have media scripts copy artwork into media dir in refresh script, 
+implement artwork - maybe not, seems too much work?
+artwork.py to delete downloaded plex artwork once it is synced to media so that space can be reclaimed? good idea or not?
+have refresh.py do sonnar refresh too, including dropping from sabnzdb? maybe, refresh sab in sonnar, and full series refresh
 
 resinstate BACKUP_RETAIN_DAYS for HOT, maybe rename and create new ones for WARM that are both available as defaults in script but passed as params into python write too, which will be tuned on a module by module basis - implications for success? write an hard link copy? not worth it?
 

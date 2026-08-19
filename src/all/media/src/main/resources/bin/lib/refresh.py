@@ -15,7 +15,7 @@ PLEX_SHARE_ROOT = "/share"
 
 def _refresh_plex_libraries(_plex_server):
     for section in sorted(_plex_server.library.sections(), key=lambda _section: _section.title):
-        print(f"Scanning '{_plex_server._baseurl}?library={section.title.replace(' ', '+')}' paths ... ", end='')
+        print(f"Refreshing library [{section.title}] ... ", end='')
         section.update()
         section.analyze()
         print("done")
@@ -31,7 +31,7 @@ def _get_plex_paths(_plex_server):
 def _set_paths_plex(_plex_server, _library_name, _library_paths):
     section = next((s for s in _plex_server.library.sections() if s.title == _library_name), None)
     if section:
-        print(f"Updating '{_plex_server._baseurl}?library={_library_name.replace(' ', '+')}' paths ... ", end='')
+        print(f"Updating library [{_library_name}] paths {_library_paths} ... ", end='')
         section.edit(location=_library_paths)
         print("done")
     else:
