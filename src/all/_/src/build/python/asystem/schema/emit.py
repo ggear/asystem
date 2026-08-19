@@ -75,8 +75,7 @@ def write_schema_broker(source, module_name=None, working_root=None, schemas_dir
               .format(module_name, vernemq.DIALECT, unreachable))
         return skip_schema_dialect(module_name, schemas_dir, vernemq.DIALECT)
     write_schema_dialect(module_name, schemas_dir, vernemq.DIALECT, artifacts)
-    if not empty:
-        vernemq.ship(source, module_name, module_root, schemas_dir, options)
+    vernemq.ship(source, module_name, module_root, schemas_dir, options)
 
 
 def skip_schema_dialect(module_name, schemas_dir, dialect):

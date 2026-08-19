@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     ;;
   -h | --help | -*)
     echo "Usage: ${0} [-v|--verbose] [-h|--help]"
-    echo "       vernemq clean remove every declared device from all of its bridge groups"
+    echo "       broker clean remove every declared device from all of its bridge groups"
     exit 2
     ;;
   *)

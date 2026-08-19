@@ -104,8 +104,6 @@ rows() {
 }
 
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
-SCHEMA_ACTION=${SCHEMA_ACTION:-Describe}
-SCHEMA_TARGET=${SCHEMA_TARGET:-}
 SCHEMA_LABEL=${SCHEMA_LABEL:-}
 
 statements() {
@@ -118,14 +116,13 @@ query_block() {
   statement="$(printf '%s\n' "${block}" | sed -e 's/--.*$//' | tr '\n' ' ' |
     sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*;*[[:space:]]*$//')"
   [ -z "${statement}" ] && return 0
-  if [ -n "${SCHEMA_LABEL}" ]; then
-    printf -- '-- %s\n' "${SCHEMA_LABEL}"
+  label="${SCHEMA_LABEL}"
+  if [ -z "${label}" ]; then
+    label="$(printf '%s\n' "${block}" | sed -n -e 's/^-- //p' | head -1)"
   fi
+  printf -- '\n-- %s\n\n' "${label}"
   if [ "${SCHEMA_ECHO}" = true ]; then
     printf '%s\n\n' "${block}"
-  else
-    label="$(printf '%s\n' "${block}" | sed -n -e 's/^-- //p' | head -1)"
-    printf '%s [%s] against [%s]:\n\n' "${SCHEMA_ACTION}" "${label}" "${SCHEMA_TARGET}"
   fi
   if ! result="$(query "${statement}")"; then
     fail "${statement}" "${result}"
@@ -166,7 +163,7 @@ query_sql() {
   [ "${faults}" = 0 ]
 }
 
-printf '\nSchema query [%s] against [%s]\n\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
+printf '\nSchema query [%s] against [%s]\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
 FAULTS=0
 for SQL_FILE in "${ROOT_DIR}"/query/*.sql; do
   SCHEMA_LABEL="$(basename "${SQL_FILE}")"

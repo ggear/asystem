@@ -123,7 +123,7 @@ class Discover:
         self.token = token or self._named("DATABASE_TOKEN", "INFLUXDB3_TOKEN_ADMIN", module_root)
         if not self.target or not self.database:
             raise ValueError("Build generate script [{}] influxdb3 discovery found no target [{}] or database [{}] "
-                             "in the module env file [{}]".format(module, self.target, self.database, ENV))
+                             "in the module env file [{}]".format(self.module, self.target, self.database, ENV))
 
     def document(self):
         try:
@@ -168,10 +168,18 @@ class Discover:
             "WHERE table_schema = '{}' ORDER BY table_name".format(SCHEMA))]
 
     def columns(self, table):
-        return [(row["column_name"], kind(row["data_type"]), DIMENSION in row["data_type"]) for row in self.query(
-            "SELECT column_name, data_type FROM information_schema.columns "
-            "WHERE table_schema = '{}' AND table_name = '{}' AND column_name != '{}' "
-            "ORDER BY column_name".format(SCHEMA, table, TIME))]
+        return [(row["column_name"], self.kind(row["data_type"]), DIMENSION in row["data_type"])
+                for row in self.query(
+                    "SELECT column_name, data_type FROM information_schema.columns "
+                    "WHERE table_schema = '{}' AND table_name = '{}' AND column_name != '{}' "
+                    "ORDER BY column_name".format(SCHEMA, table, TIME))]
+
+    def kind(self, data_type):
+        for pattern, declared in ARROW:
+            if pattern in data_type:
+                return declared
+        raise ValueError("Build generate script [{}] influxdb3 discovery found unmappable arrow type [{}]"
+                         .format(self.module, data_type))
 
     def holds(self, table, columns):
         if not self.module:
@@ -215,13 +223,6 @@ class Discover:
     @staticmethod
     def _env(name, module_root):
         return load_bootstrap_env_value(name, filename=ENV, module_root=module_root)
-
-
-def kind(data_type):
-    for pattern, declared in ARROW:
-        if pattern in data_type:
-            return declared
-    raise ValueError("Build generate script influxdb3 discovery found unmappable arrow type [{}]".format(data_type))
 
 
 def named(relation):

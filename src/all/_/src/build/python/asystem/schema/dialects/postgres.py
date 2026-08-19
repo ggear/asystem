@@ -20,6 +20,7 @@ from asystem.schema.query import (
 from asystem.schema.runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
 
 DIALECT = "postgres"
+SHIPPED = "database"
 KINDS = ("float", "int", "bool")
 TARGET = "POSTGRES_SERVICE_PROD"
 
@@ -58,11 +59,17 @@ def artifacts(document, module_name, options):
 
 
 def ship(document, module_name, module_root, schemas_dir, options):
-    image_dir = abspath(join(module_root, "src/main/resources/image/database"))
+    image_dir = abspath(join(module_root, "src/main/resources/image", SHIPPED))
+    applier_path = abspath(join(module_root, "src/main/resources/image", SHIPPED + ".sh"))
     if exists(image_dir):
         shutil.rmtree(image_dir)
+    if exists(applier_path):
+        os.remove(applier_path)
+    tables = sorted(_tabled(document))
+    if not tables:
+        return
     os.makedirs(image_dir, exist_ok=True)
-    for table in sorted(_tabled(document)):
+    for table in tables:
         source_path = abspath(join(schemas_dir, DIALECT, "model", "{}.sql".format(table)))
         target_path = join(image_dir, "{}.sql".format(table))
         shutil.copyfile(source_path, target_path)
@@ -71,7 +78,6 @@ def ship(document, module_name, module_root, schemas_dir, options):
             columns_file.write(json.dumps(columns(table, options.time_column), indent=2) + "\n")
         print("Build generate script [{}] database table [{}] shipped to [{}] and [{}]"
               .format(module_name, table, target_path, columns_path))
-    applier_path = abspath(join(module_root, "src/main/resources/image/database.sh"))
     with open(applier_path, 'w') as applier_file:
         applier_file.write(applier_script(module_name))
     os.chmod(applier_path, 0o750)
@@ -164,21 +170,21 @@ def verify(document):
 def applier_script(module_name):
     return """
 #!/usr/bin/env bash
-{}
+{banner}
 
 set -euo pipefail
 
-ROOT_DIR="$(dirname "$(readlink -f "$0")")/database"
+ROOT_DIR="$(dirname "$(readlink -f "$0")")/{shipped}"
 
 PSQL=(psql -h "${{DATABASE_HOST}}" -p "${{DATABASE_PORT}}" -U "${{DATABASE_USER}}" -d "${{DATABASE_NAME}}")
 export PGPASSWORD="${{DATABASE_PASSWORD}}"
 
-printf '\\nSchema apply [%s] against [%s]\\n\\n' "{}" "${{DATABASE_HOST}}"
+printf '\\nSchema apply [%s] against [%s]\\n' "{module}" "${{DATABASE_HOST}}"
 for SQL_FILE in "${{ROOT_DIR}}"/*.sql; do
-  printf '%s\\n' "$(basename "${{SQL_FILE}}")"
+  printf -- '\\n-- %s\\n\\n' "$(basename "${{SQL_FILE}}")"
   "${{PSQL[@]}}" -v ON_ERROR_STOP=1 -f "${{SQL_FILE}}"
 done
-""".format(banner(), module_name).strip() + "\n"
+""".format(banner=banner(), shipped=SHIPPED, module=module_name).strip() + "\n"
 
 
 def _dialect(time_column, zone=""):

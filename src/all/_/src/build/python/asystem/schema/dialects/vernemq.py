@@ -18,6 +18,7 @@ from asystem.schema.query import banner
 from asystem.schema.runner import REPORT, TABLE, resolved, script
 
 DIALECT = "vernemq"
+SHIPPED = "broker"
 TARGET = "VERNEMQ_SERVICE_PROD"
 
 ENV = ".env"
@@ -124,13 +125,16 @@ def artifacts(source, module_name, options):
 
 
 def ship(source, module_name, module_root, schemas_dir, options):
-    if isinstance(source, SchemaDocument):
-        return
-    metadata_df = source
     working_root = options.working_root
-    working_dir = join(str(working_root), DIALECT)
+    working_dir = join(str(working_root), SHIPPED)
+    publish_path = abspath(join(str(working_root), SHIPPED + ".sh"))
     if exists(working_dir):
         shutil.rmtree(working_dir)
+    if exists(publish_path):
+        os.remove(publish_path)
+    if isinstance(source, SchemaDocument) or len(source) == 0:
+        return
+    metadata_df = source
     for _, row in metadata_df.iterrows():
         discovery_dir = abspath(join(working_dir, str(row["discovery_topic"])))
         os.makedirs(discovery_dir)
@@ -139,7 +143,6 @@ def ship(source, module_name, module_root, schemas_dir, options):
             discovery_file.write(discovery(row))
         print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
               .format(module_name, row["unique_id"], discovery_path))
-    publish_path = abspath(join(str(working_root), DIALECT + ".sh"))
     with open(publish_path, 'w') as publish_file:
         publish_file.write(publish_script(module_name, options.topic_glob_discovery, options.topic_glob_data))
     os.chmod(publish_path, 0o750)
@@ -183,48 +186,46 @@ def publish_script(module_name, topic_glob_discovery, topic_glob_data):
     topic_find_discovery = ("*/" + topic_glob_discovery.replace("+", "*").replace("#", "*") + "/*" if topic_glob_discovery else "*")
     return """
 #!/usr/bin/env bash
-{}
+{banner}
 
-ROOT_DIR="$(dirname "$(readlink -f "$0")")/vernemq"
+ROOT_DIR="$(dirname "$(readlink -f "$0")")/{shipped}"
 
 ENV_DIR="$ROOT_DIR"
 while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "$ENV_DIR")"; done
 # shellcheck disable=SC1091
 [ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
 
-printf "\\nEntity Metadata publish script [{}] dropping discovery topics on [$VERNEMQ_SERVICE]:\\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -F '%t' -t "{}" -W 5 2>/dev/null | sort -u | \\
-  while read topic; do
-    echo "$topic"
-    mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$topic" -r -n
+BROKER_ARGS=(-h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT")
+
+printf '\\nEntity Metadata publish script [{module}] dropping discovery topics on [%s]:\\n' "$VERNEMQ_SERVICE"
+mosquitto_sub "${{BROKER_ARGS[@]}}" -F '%t' -t "{glob_discovery}" -W 5 2>/dev/null | sort -u | \\
+  while read -r TOPIC; do
+    printf '%s\\n' "$TOPIC"
+    mosquitto_pub "${{BROKER_ARGS[@]}}" -t "$TOPIC" -r -n
   done
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 5 2>/dev/null
+mosquitto_sub "${{BROKER_ARGS[@]}}" --remove-retained -F '%t' -t "{glob_discovery}" -W 5 2>/dev/null
 
-printf "\\nEntity Metadata publish script [{}] sleeping before dropping data topics ... " && sleep 2 && printf "done\\n\\n"
+printf '\\nEntity Metadata publish script [{module}] sleeping before dropping data topics ... ' && sleep 2 && printf 'done\\n\\n'
 
-printf "Entity Metadata publish script [{}] dropping data topics on [$VERNEMQ_SERVICE]:\\n"
-mosquitto_sub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT --remove-retained -F '%t' -t "{}" -W 1 2>/dev/null
+printf 'Entity Metadata publish script [{module}] dropping data topics on [%s]:\\n' "$VERNEMQ_SERVICE"
+mosquitto_sub "${{BROKER_ARGS[@]}}" --remove-retained -F '%t' -t "{glob_data}" -W 1 2>/dev/null
 
-printf "\\nEntity Metadata publish script [{}] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\\n\\n"
+printf '\\nEntity Metadata publish script [{module}] sleeping before publishing discovery topics ... ' && sleep 2 && printf 'done\\n\\n'
 
-printf "Entity Metadata publish script [{}] publishing discovery topics on [$VERNEMQ_SERVICE]:\\n"
-find "$ROOT_DIR" -path "{}" -name "*.json" -print0 | sort -z | while read -d $'\\0' METADATA_FILE; do
+printf 'Entity Metadata publish script [{module}] publishing discovery topics on [%s]:\\n' "$VERNEMQ_SERVICE"
+find "$ROOT_DIR" -path "{find_discovery}" -name "*.json" -print0 | sort -z | while read -r -d $'\\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${{METADATA_FILE/$ROOT_DIR\\//}}")
-  mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t "$METADATA_TOPIC" -f "$METADATA_FILE" -r
-  printf "%s\\n" "$METADATA_TOPIC"
+  mosquitto_pub "${{BROKER_ARGS[@]}}" -t "$METADATA_TOPIC" -f "$METADATA_FILE" -r
+  printf '%s\\n' "$METADATA_TOPIC"
 done
-printf "\\n"
+printf '\\n'
             """.format(
-        banner(),
-        module_name,
-        topic_glob_discovery,
-        topic_glob_discovery,
-        module_name,
-        module_name,
-        topic_glob_data,
-        module_name,
-        module_name,
-        topic_find_discovery,
+        banner=banner(),
+        shipped=SHIPPED,
+        module=module_name,
+        glob_discovery=topic_glob_discovery,
+        glob_data=topic_glob_data,
+        find_discovery=topic_find_discovery,
     ).strip()
 
 
@@ -363,8 +364,9 @@ class Discover:
         return load_bootstrap_env_value(name, filename=ENV, module_root=module_root)
 
 
-def config_script(module_name, name, summary, health_topic, health_filter, commands):
-    return script(module_name, DIALECT, name, summary, resolve(module_name, ("VERNEMQ_SERVICE",)) + CONFIG, """
+def config_script(module_name, name, summary, health_topic, health_filter, commands, preamble=""):
+    return script(module_name, SHIPPED, name, summary,
+                  resolve(module_name, ("VERNEMQ_SERVICE",)) + CONFIG + preamble, """
 printf '\\nBroker {} [%s] against [%s]\\n\\n' "{}" "${{BROKER_SERVICE}}"
 
 awaited "{}" '{}' "{}" || exit 1
@@ -554,7 +556,7 @@ def _specs(module_name, options):
         for column, role in ROLE_COLUMNS.items():
             if column in specs and any(payload.role == role for payload in document.payloads):
                 raise ValueError(
-                    "Build generate script [{}] role [{}] is declared in code and also passed as a literal [{}]: "
+                    "Build generate script [{}] role [{}] is declared in code and also passed as a literal [{}], "
                     "supply one or the other, never both".format(module_name, role, column))
     return specs
 

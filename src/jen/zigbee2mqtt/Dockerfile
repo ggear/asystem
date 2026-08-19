@@ -8,27 +8,14 @@ RUN apk update && \
     apk add --upgrade --no-cache curl=8.21.0-r0 && \
     apk add --upgrade --no-cache vim=9.2.0854-r0 && \
     apk add --upgrade --no-cache jq=1.8.1-r0 && \
-    apk add --upgrade --no-cache py3-pip=26.1.2-r0 && \
-    apk add --upgrade --no-cache python3=3.14.5-r0 && \
     apk add --upgrade --no-cache mosquitto-clients=2.1.2-r1 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
 FROM image_upstream AS image_base
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-RUN set -eux; \
-    pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade pip; \
-    pip3 cache purge
-
-FROM image_base AS image_build
-COPY src/main/python/. /asystem/bin/python
 COPY target/package/main/resources/image/. /asystem/etc
-RUN set -eux; \
-    if [ -f /asystem/bin/python/.py_deps.txt ]; then pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; fi; \
-    pip3 cache purge
 
-FROM image_build AS image_runtime
+FROM image_base AS image_runtime
 WORKDIR /asystem/etc
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD [ "/sbin/tini", "--", "node", "/app/index.js"]

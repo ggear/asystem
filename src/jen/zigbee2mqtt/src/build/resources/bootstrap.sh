@@ -1,1 +1,1 @@
-/asystem/etc/vernemq/broker_config.sh
+/asystem/etc/broker_config.sh
