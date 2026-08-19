@@ -504,7 +504,7 @@ class InternetTest(unittest.TestCase):
         self._test_refresh(dir_test, library_paths, sonarr_resources=resources(), sonarr_error="series",
                            return_value=refresh.Exit.FAIL_SONARR_CONNECT)
         self._test_refresh(dir_test, library_paths, sonarr_resources=resources(False), sonarr_error="series/7",
-                           return_value=refresh.Exit.FAIL_SONARR_MONITOR)
+                           return_value=refresh.Exit.FAIL_SONARR_CONFIGURE)
         self._test_refresh(dir_test, library_paths, sonarr_resources=resources(),
                            sonarr_error="RefreshMonitoredDownloads",
                            return_value=refresh.Exit.FAIL_SONARR_ACTIVITY)
@@ -546,6 +546,51 @@ class InternetTest(unittest.TestCase):
         self._test_refresh(dir_test, library_paths, sonarr_command_status="failed",
                            sonarr_resources={"series": [series(False, 10, 10)], "queue": []},
                            return_value=refresh.Exit.FAIL_SONARR_ACTIVITY)
+
+    def test_refresh_sonarr_defaults(self):
+        dir_test = self._test_prepare_dir("share_media_example", 2)
+        library_paths = {
+            "Docos Movies": [
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
+                "/share/30/media/docos/movies",
+            ]
+        }
+
+        def resources(_seasons, _profile_id=4):
+            return {
+                "series": [{"id": 7, "title": "Ted Lasso", "monitored": True, "qualityProfileId": _profile_id,
+                            "seasons": _seasons}],
+                "qualityProfile": [{"id": 4, "name": "HD-1080p"}, {"id": 1, "name": "Any"}],
+                "queue": [],
+            }
+
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(
+            [{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": True}]))
+        self.assertEqual([], sonarr.puts)
+
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(
+            [{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": False}]))
+        self.assertEqual(["series/7"], [resource for resource, _ in sonarr.puts])
+        self.assertEqual([{"seasonNumber": 0, "monitored": False}, {"seasonNumber": 1, "monitored": True}],
+                         sonarr.puts[0][1]["seasons"])
+
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(
+            [{"seasonNumber": 1, "monitored": True}], _profile_id=1))
+        self.assertEqual(["series/7"], [resource for resource, _ in sonarr.puts])
+        self.assertEqual(4, sonarr.puts[0][1]["qualityProfileId"])
+
+    def test_refresh_plex_matches(self):
+        dir_test = self._test_prepare_dir("share_media_example", 2)
+        library_paths = {
+            "Docos Movies": [
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
+                "/share/30/media/docos/movies",
+            ]
+        }
+        self._test_refresh(dir_test, library_paths, plex_items=[("Some Film (2019)", "plex://movie/abc")])
+        self._test_refresh(dir_test, library_paths, plex_items=[("Some Film (2019)", "local://12345")])
 
     def test_refresh_sabnzbd_queue(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
@@ -677,13 +722,19 @@ class InternetTest(unittest.TestCase):
         sabnzbd = MockRequests(history_slots, sonarr_resources)
         plex_server_class = refresh.PlexServer
         requests_module = refresh.requests
+        settle_seconds = refresh.PLEX_SETTLE_SECONDS
+        settle_poll_seconds = refresh.PLEX_SETTLE_POLL_SECONDS
         refresh.PlexServer = lambda _plex_url, _plex_token, **_parameters: plex_server
         refresh.requests = sabnzbd
+        refresh.PLEX_SETTLE_SECONDS = 0
+        refresh.PLEX_SETTLE_POLL_SECONDS = 0
         try:
             self.assertEqual(return_value, refresh._refresh(dir_test))
         finally:
             refresh.PlexServer = plex_server_class
             refresh.requests = requests_module
+            refresh.PLEX_SETTLE_SECONDS = settle_seconds
+            refresh.PLEX_SETTLE_POLL_SECONDS = settle_poll_seconds
         if locations_expected is not None:
             self.assertEqual(locations_expected, {
                 section.title: sorted(section.locations) for section in plex_server.library.sections()})

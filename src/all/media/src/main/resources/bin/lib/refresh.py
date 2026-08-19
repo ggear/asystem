@@ -24,6 +24,8 @@ PLEX_SETTLE_TIMEOUT_SECONDS = 120
 PLEX_SETTLE_SECONDS = 15
 PLEX_SETTLE_POLL_SECONDS = 5
 
+SONARR_QUALITY_PROFILE = "HD-1080p"
+
 
 class Exit(IntEnum):
     PASS = 0
@@ -36,7 +38,7 @@ class Exit(IntEnum):
     FAIL_SABNZBD_DOWNLOAD = 22
 
     FAIL_SONARR_CONNECT = 30
-    FAIL_SONARR_MONITOR = 31
+    FAIL_SONARR_CONFIGURE = 31
     FAIL_SONARR_ACTIVITY = 32
     FAIL_SONARR_REFRESH = 33
     FAIL_SONARR_MISSING = 34
@@ -265,18 +267,30 @@ def _refresh_sonarr(_share_paths):
         sonarr_api = f"{_get_env('SONARR_URL')}/api/v3"
         sonarr_api_key = _get_env("SONARR_API_KEY")
         sonarr_series = get_sonarr("series")
+        sonarr_profiles = {profile["id"]: profile["name"] for profile in get_sonarr("qualityProfile")}
     except Exception as exception:
         _print_error("could not connect to sonarr", exception)
         return Exit.FAIL_SONARR_CONNECT
-    unmonitored_series = [series for series in sonarr_series if not series.get("monitored")]
-    if unmonitored_series:
+    quality_profile_id = next(
+        (profile_id for profile_id, name in sonarr_profiles.items() if name == SONARR_QUALITY_PROFILE), None)
+    if quality_profile_id is None:
+        _print_messages([f"Warning: quality profile [{SONARR_QUALITY_PROFILE}] not found in sonarr"])
+    unconfigured_series = [series for series in sonarr_series if not series.get("monitored") or any(
+        not season.get("monitored") for season in series.get("seasons", []) if season.get("seasonNumber"))
+        or (quality_profile_id is not None and series.get("qualityProfileId") != quality_profile_id)]
+    if unconfigured_series:
         try:
-            for series in unmonitored_series:
+            for series in unconfigured_series:
                 series["monitored"] = True
+                if quality_profile_id is not None:
+                    series["qualityProfileId"] = quality_profile_id
+                for season in series.get("seasons", []):
+                    if season.get("seasonNumber"):
+                        season["monitored"] = True
                 put_sonarr(f"series/{series['id']}", series)
         except Exception as exception:
-            _print_error("could not monitor sonarr series", exception)
-            return Exit.FAIL_SONARR_MONITOR
+            _print_error("could not configure sonarr series", exception)
+            return Exit.FAIL_SONARR_CONFIGURE
     try:
         wait_sonarr_command(name="RefreshMonitoredDownloads")
         sonarr_queue = get_sonarr_queue()
@@ -313,7 +327,7 @@ def _refresh(_share_root):
         print(f"Starting [{_name}] refresh")
         started = time.perf_counter()
         exit_value = _refresh_function(share_paths)
-        print(f"Finished [{_name}] refresh in [{round((time.perf_counter() - started) * 1000)}] ms")
+        print(f"Finished [{_name}] refresh in [{round(time.perf_counter() - started, 1)}] seconds")
         return exit_value
 
     print(BANNER)
