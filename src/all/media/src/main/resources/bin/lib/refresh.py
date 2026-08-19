@@ -14,11 +14,11 @@ PLEX_SHARE_ROOT = "/share"
 
 
 def _refresh_plex_libraries(_plex_server):
+    print("Refreshing Plex libraries ... ", end='')
     for section in sorted(_plex_server.library.sections(), key=lambda _section: _section.title):
-        print(f"Refreshing library [{section.title}] ... ", end='')
         section.update()
         section.analyze()
-        print("done")
+    print("done")
 
 
 def _get_plex_paths(_plex_server):
@@ -28,14 +28,17 @@ def _get_plex_paths(_plex_server):
     return sections
 
 
-def _set_paths_plex(_plex_server, _library_name, _library_paths):
-    section = next((s for s in _plex_server.library.sections() if s.title == _library_name), None)
-    if section:
-        print(f"Updating library [{_library_name}] paths {_library_paths} ... ", end='')
-        section.edit(location=_library_paths)
-        print("done")
-    else:
-        raise Exception(f"Library [{_library_name}] not found in plex")
+def _set_paths_plex(_plex_server, _library_paths):
+    if not _library_paths:
+        return
+    sections = {section.title: section for section in _plex_server.library.sections()}
+    for library_name in _library_paths:
+        if library_name not in sections:
+            raise Exception(f"Library [{library_name}] not found in plex")
+    print("Updating Plex library paths ... ", end='')
+    for library_name, library_paths in _library_paths.items():
+        sections[library_name].edit(location=library_paths)
+    print("done")
 
 
 def _get_filesystem_paths(_share_root, _plex_share_root=PLEX_SHARE_ROOT,
@@ -86,6 +89,7 @@ def _refresh(_plex_server, _share_root, _plex_share_root=PLEX_SHARE_ROOT):
     try:
         plex_paths = _get_plex_paths(_plex_server)
         filesystem_paths = _get_filesystem_paths(_share_root, _plex_share_root)
+        updated_paths = {}
         for library_name, library_paths in filesystem_paths.items():
             if library_name not in plex_paths:
                 raise Exception(f"Library [{library_name}] not found in plex")
@@ -95,7 +99,8 @@ def _refresh(_plex_server, _share_root, _plex_share_root=PLEX_SHARE_ROOT):
             if unmatched_paths:
                 print(f"Warning: library [{library_name}] has plex paths absent from disk {unmatched_paths}")
             if missing_paths:
-                _set_paths_plex(_plex_server, library_name, sorted(existing_paths + missing_paths))
+                updated_paths[library_name] = sorted(existing_paths + missing_paths)
+        _set_paths_plex(_plex_server, updated_paths)
         _refresh_plex_libraries(_plex_server)
     except Exception as exception:
         print(f"Error: {exception}")
