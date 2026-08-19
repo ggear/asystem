@@ -3,6 +3,8 @@ import glob
 import os
 import sys
 import time
+import traceback
+from datetime import datetime, timezone
 from enum import IntEnum
 from pathlib import Path
 
@@ -14,6 +16,9 @@ BANNER = "#" * 126
 API_TIMEOUT_SECONDS = 10
 API_COMMAND_TIMEOUT_SECONDS = 120
 API_COMMAND_POLL_SECONDS = 0.2
+PLEX_SETTLE_TIMEOUT_SECONDS = 120
+PLEX_SETTLE_SECONDS = 15
+PLEX_SETTLE_POLL_SECONDS = 5
 
 
 class Exit(IntEnum):
@@ -36,6 +41,22 @@ class Exit(IntEnum):
     FAIL_PLEX_LIBRARY = 41
     FAIL_PLEX_PATHS = 42
     FAIL_PLEX_REFRESH = 43
+
+
+def _print_error(_message, _exception=None):
+    print(f"\nError: {_message}, processing interrupted")
+    if _exception is not None:
+        for detail in "".join(traceback.format_exception(_exception)).rstrip().split("\n"):
+            print(f"    {detail}")
+    print()
+
+
+def _print_messages(_messages):
+    if _messages:
+        print()
+        for message in _messages:
+            print(message)
+        print()
 
 
 def _get_env(_name):
@@ -88,37 +109,66 @@ def _get_share_paths(_share_root: str, _min_depth=2, _max_depth=2, _excludes=fro
 
 
 def _refresh_plex(_share_paths):
+    def wait_plex_idle():
+        deadline = time.perf_counter() + PLEX_SETTLE_TIMEOUT_SECONDS
+        idle_since = None
+        while time.perf_counter() < deadline:
+            if plex_server.activities:
+                idle_since = None
+            elif idle_since is None:
+                idle_since = time.perf_counter()
+            elif time.perf_counter() - idle_since >= PLEX_SETTLE_SECONDS:
+                return True
+            time.sleep(PLEX_SETTLE_POLL_SECONDS)
+        return False
+
     try:
         plex_server = PlexServer(_get_env("PLEX_URL"), _get_env("PLEX_TOKEN"), timeout=API_TIMEOUT_SECONDS)
         plex_sections = {section.title: section for section in plex_server.library.sections()}
     except Exception as exception:
-        print(f"\nError: could not connect to plex [{exception}], processing interrupted\n")
+        _print_error("could not connect to plex", exception)
         return Exit.FAIL_PLEX_CONNECT
     updated_paths = {}
+    library_messages = []
     for library_name, library_paths in _share_paths.items():
         if library_name not in plex_sections:
-            print(f"\nError: library [{library_name}] not found in plex, processing interrupted\n")
+            _print_error(f"library [{library_name}] not found in plex")
             return Exit.FAIL_PLEX_LIBRARY
         existing_paths = sorted(plex_sections[library_name].locations)
         missing_paths = [path for path in library_paths if path not in existing_paths]
         unmatched_paths = [path for path in existing_paths if path not in library_paths]
         if unmatched_paths:
-            print(f"\nWarning: library [{library_name}] has plex paths absent from disk {unmatched_paths}, processing continued\n")
+            library_messages.append(
+                f"Warning: library [{library_name}] has plex paths absent from disk {unmatched_paths}")
         if missing_paths:
             updated_paths[library_name] = sorted(existing_paths + missing_paths)
+    _print_messages(library_messages)
     if updated_paths:
         try:
             for library_name, library_paths in updated_paths.items():
                 plex_sections[library_name].edit(location=library_paths)
         except Exception as exception:
-            print(f"\nError: could not update plex library paths [{exception}], processing interrupted\n")
+            _print_error("could not update plex library paths", exception)
             return Exit.FAIL_PLEX_PATHS
+    refresh_started = datetime.now(timezone.utc)
     try:
         for library_name in sorted(plex_sections):
             plex_sections[library_name].update()
     except Exception as exception:
-        print(f"\nError: could not refresh plex libraries [{exception}], processing interrupted\n")
+        _print_error("could not refresh plex libraries", exception)
         return Exit.FAIL_PLEX_REFRESH
+    item_messages = []
+    try:
+        if not wait_plex_idle():
+            item_messages.append(
+                f"Warning: plex was still busy after [{PLEX_SETTLE_TIMEOUT_SECONDS}] seconds, match check inconclusive")
+        for library_name in sorted(plex_sections):
+            for item in plex_sections[library_name].search(filters={"addedAt>>": refresh_started}):
+                if not str(getattr(item, "guid", "")).startswith("plex://"):
+                    item_messages.append(f"Warning: item [{item.title}] in library [{library_name}] not matched by plex")
+    except Exception as exception:
+        item_messages.append(f"Warning: could not check plex matches, {exception}")
+    _print_messages(item_messages)
     return Exit.PASS
 
 
@@ -146,23 +196,23 @@ def _refresh_sabnzbd(_share_paths):
         failed_slots = get_sabnzbd_slots(failed_only=1)
         queue_slots = get_sabnzbd(mode="queue")["queue"]["slots"]
     except Exception as exception:
-        print(f"\nError: could not connect to sabnzbd [{exception}], processing interrupted\n")
+        _print_error("could not connect to sabnzbd", exception)
         return Exit.FAIL_SABNZBD_CONNECT
     if completed_count:
         try:
             get_sabnzbd(mode="history", name="delete", value="completed", archive=1)
         except Exception as exception:
-            print(f"\nError: could not archive completed sabnzbd downloads [{exception}], processing interrupted\n")
+            _print_error("could not archive completed sabnzbd downloads", exception)
             return Exit.FAIL_SABNZBD_ARCHIVE
     for slot in queue_slots:
-        print(f"\nInfo: downloading [{slot['filename']}] at [{slot['percentage']}%] with [{slot['timeleft']}] remaining, processing continued\n")
-    for slot in failed_slots:
-        print(f"\nError: download [{slot['name']}] failed [{slot['fail_message']}], processing continued\n")
+        print(f"Download [sabnzbd] of [{slot['filename']}] at [{slot['percentage']}%] with [{slot['timeleft']}] remaining")
+    _print_messages([f"Error: download [{slot['name']}] failed [{slot['fail_message']}]"
+                     for slot in failed_slots])
     if failed_slots:
         try:
             get_sabnzbd(mode="history", name="delete", value="failed", archive=1)
         except Exception as exception:
-            print(f"\nError: could not archive failed sabnzbd downloads [{exception}], processing interrupted\n")
+            _print_error("could not archive failed sabnzbd downloads", exception)
             return Exit.FAIL_SABNZBD_ARCHIVE
         return Exit.FAIL_SABNZBD_DOWNLOAD
     return Exit.PASS
@@ -194,7 +244,7 @@ def _refresh_sonarr(_share_paths):
             if command.get("status") in ("queued", "started"):
                 time.sleep(API_COMMAND_POLL_SECONDS)
         if command.get("status") != "completed" or command.get("result") not in (None, "successful"):
-            raise Exception(f"command [{_command['name']}] ended with status [{command.get('status')}] result [{command.get('result')}]")
+            raise Exception(f"command [{_command['name']}] ended with status [{command.get('status')}] result [{command.get('result')}] message [{command.get('message')}]")
         return command
 
     def get_sonarr_queue():
@@ -212,7 +262,7 @@ def _refresh_sonarr(_share_paths):
         sonarr_api_key = _get_env("SONARR_API_KEY")
         sonarr_series = get_sonarr("series")
     except Exception as exception:
-        print(f"\nError: could not connect to sonarr [{exception}], processing interrupted\n")
+        _print_error("could not connect to sonarr", exception)
         return Exit.FAIL_SONARR_CONNECT
     unmonitored_series = [series for series in sonarr_series if not series.get("monitored")]
     if unmonitored_series:
@@ -221,16 +271,16 @@ def _refresh_sonarr(_share_paths):
                 series["monitored"] = True
                 put_sonarr(f"series/{series['id']}", series)
         except Exception as exception:
-            print(f"\nError: could not monitor sonarr series [{exception}], processing interrupted\n")
+            _print_error("could not monitor sonarr series", exception)
             return Exit.FAIL_SONARR_MONITOR
     try:
         wait_sonarr_command(name="RefreshMonitoredDownloads")
-        wait_sonarr_command(name="DownloadedEpisodesScan", path="/downloads")
         sonarr_queue = get_sonarr_queue()
     except Exception as exception:
-        print(f"\nError: could not refresh sonarr activity [{exception}], processing interrupted\n")
+        _print_error("could not refresh sonarr activity", exception)
         return Exit.FAIL_SONARR_ACTIVITY
     queued_series_ids = {record.get("seriesId") for record in sonarr_queue}
+    series_messages = []
     missing_series = []
     for series in sonarr_series:
         try:
@@ -238,15 +288,17 @@ def _refresh_sonarr(_share_paths):
             wait_sonarr_command(name="RefreshSeries", seriesId=series["id"])
             series = get_sonarr(f"series/{series['id']}")
         except Exception as exception:
-            print(f"\nError: could not refresh sonarr series [{series['title']}] [{exception}], processing interrupted\n")
+            _print_error(f"could not refresh sonarr series [{series['title']}]", exception)
             return Exit.FAIL_SONARR_REFRESH
         statistics = series.get("statistics", {})
         missing_episodes = statistics.get("episodeCount", 0) - statistics.get("episodeFileCount", 0)
         if series.get("ended") and statistics.get("percentOfEpisodes") == 100:
-            print(f"\nWarning: series [{series['title']}] is complete and ended, processing continued\n")
+            series_messages.append(f"Warning: series [{series['title']}] is complete and ended")
         if missing_episodes > 0 and series["id"] not in queued_series_ids:
             missing_series.append(series)
-            print(f"\nError: series [{series['title']}] is missing [{missing_episodes}] episodes with no download queued, processing continued\n")
+            series_messages.append(
+                f"Error: series [{series['title']}] is missing [{missing_episodes}] episodes with no download queued")
+    _print_messages(series_messages)
     if missing_series:
         return Exit.FAIL_SONARR_MISSING
     return Exit.PASS
@@ -254,26 +306,27 @@ def _refresh_sonarr(_share_paths):
 
 def _refresh(_share_root):
     def refresh_service(_name, _refresh_function):
-        print(BANNER)
-        print(_name.title())
-        print(BANNER)
         print(f"Starting [{_name}] refresh")
         started = time.perf_counter()
         exit_value = _refresh_function(share_paths)
         print(f"Finished [{_name}] refresh in [{round((time.perf_counter() - started) * 1000)}] ms")
-        print(BANNER)
         return exit_value
 
+    print(BANNER)
+    print("Refresh")
+    print(BANNER)
     try:
         share_paths = _get_share_paths(_share_root)
     except Exception as exception:
-        print(f"\nError: {exception}, all refresh processing interrupted\n")
+        _print_error(f"{exception}", exception)
+        print(BANNER)
         return Exit.FAIL_FILESYSTEM
     exit_values = [
         refresh_service("sabnzbd", _refresh_sabnzbd),
         refresh_service("sonarr", _refresh_sonarr),
         refresh_service("plex", _refresh_plex),
     ]
+    print(BANNER)
     return next(filter(None, exit_values), Exit.PASS)
 
 
@@ -282,6 +335,6 @@ if __name__ == "__main__":
     argument_parser.add_argument("share_root", nargs="?", default=os.environ.get("SHARE_ROOT"))
     arguments = argument_parser.parse_args()
     if not arguments.share_root:
-        print("\nError: no share root argument or [SHARE_ROOT] environment variable set, all refresh processing interrupted\n")
+        _print_error("no share root argument or [SHARE_ROOT] environment variable set")
         sys.exit(Exit.FAIL_ARGUMENTS)
     sys.exit(_refresh(Path(arguments.share_root).absolute().as_posix()))

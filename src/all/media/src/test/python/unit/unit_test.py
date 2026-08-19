@@ -487,7 +487,6 @@ class InternetTest(unittest.TestCase):
         self.assertEqual([], sonarr.puts)
         self.assertEqual([
             ("command", {"name": "RefreshMonitoredDownloads"}),
-            ("command", {"name": "DownloadedEpisodesScan", "path": "/downloads"}),
             ("command", {"name": "RescanSeries", "seriesId": 7}),
             ("command", {"name": "RefreshSeries", "seriesId": 7}),
         ], sonarr.posts)
@@ -496,7 +495,6 @@ class InternetTest(unittest.TestCase):
         self.assertEqual([], sonarr.puts)
         self.assertEqual([
             ("command", {"name": "RefreshMonitoredDownloads"}),
-            ("command", {"name": "DownloadedEpisodesScan", "path": "/downloads"}),
         ], sonarr.posts)
 
         sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(False))
@@ -543,7 +541,7 @@ class InternetTest(unittest.TestCase):
 
         sonarr = self._test_refresh(dir_test, library_paths, sonarr_command_status="queued",
                                     sonarr_resources={"series": [series(False, 10, 10)], "queue": []})
-        self.assertEqual(4, len([resource for resource, _ in sonarr.posts if resource == "command"]))
+        self.assertEqual(3, len([resource for resource, _ in sonarr.posts if resource == "command"]))
 
         self._test_refresh(dir_test, library_paths, sonarr_command_status="failed",
                            sonarr_resources={"series": [series(False, 10, 10)], "queue": []},
@@ -565,7 +563,8 @@ class InternetTest(unittest.TestCase):
 
     def _test_refresh(self, dir_test, library_paths=None, return_value=0, locations_expected=None,
                       history_slots=None, queue_slots=None, connect_error=False, archive_error=False,
-                      sonarr_resources=None, sonarr_error=None, sonarr_command_status="completed"):
+                      sonarr_resources=None, sonarr_error=None, sonarr_command_status="completed",
+                      plex_items=None):
         library_paths = {} if library_paths is None else library_paths
 
         class MockSabnzbdResponse:
@@ -635,10 +634,19 @@ class InternetTest(unittest.TestCase):
                 limit = parameters.get("limit", len(slots))
                 return MockSabnzbdResponse({"history": {"noofslots": len(slots), "slots": slots[start:start + limit]}})
 
+        class MockPlexItem:
+            def __init__(self, title, guid):
+                self.title = title
+                self.guid = guid
+
         class MockPlexLibrarySection:
             def __init__(self, title, locations):
                 self.title = title
                 self.locations = locations
+                self.items = [MockPlexItem(title, guid) for title, guid in (plex_items or [])]
+
+            def search(self, filters=None):
+                return self.items
 
             def update(self):
                 pass
@@ -663,6 +671,7 @@ class InternetTest(unittest.TestCase):
             def __init__(self, base_url, library_paths):
                 self._baseurl = base_url
                 self.library = MockPlexLibrary(library_paths)
+                self.activities = []
 
         plex_server = MockPlexServer("http://mocked.plex.com", library_paths)
         sabnzbd = MockRequests(history_slots, sonarr_resources)
