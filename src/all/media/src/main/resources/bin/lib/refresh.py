@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import traceback
+from datetime import datetime, timezone
 from enum import IntEnum
 from pathlib import Path
 
@@ -19,6 +20,9 @@ BANNER = "#" * 126
 API_TIMEOUT_SECONDS = 10
 API_COMMAND_TIMEOUT_SECONDS = 120
 API_COMMAND_POLL_SECONDS = 0.2
+PLEX_SETTLE_TIMEOUT_SECONDS = 120
+PLEX_SETTLE_SECONDS = 15
+PLEX_SETTLE_POLL_SECONDS = 5
 
 
 class Exit(IntEnum):
@@ -109,6 +113,19 @@ def _get_share_paths(_share_root: str, _min_depth=2, _max_depth=2, _excludes=fro
 
 
 def _refresh_plex(_share_paths):
+    def wait_plex_idle():
+        deadline = time.perf_counter() + PLEX_SETTLE_TIMEOUT_SECONDS
+        idle_since = None
+        while time.perf_counter() < deadline:
+            if plex_server.activities:
+                idle_since = None
+            elif idle_since is None:
+                idle_since = time.perf_counter()
+            elif time.perf_counter() - idle_since >= PLEX_SETTLE_SECONDS:
+                return True
+            time.sleep(PLEX_SETTLE_POLL_SECONDS)
+        return False
+
     try:
         plex_server = PlexServer(_get_env("PLEX_URL"), _get_env("PLEX_TOKEN"), timeout=API_TIMEOUT_SECONDS)
         plex_sections = {section.title: section for section in plex_server.library.sections()}
@@ -137,12 +154,25 @@ def _refresh_plex(_share_paths):
         except Exception as exception:
             _print_error("could not update plex library paths", exception)
             return Exit.FAIL_PLEX_PATHS
+    refresh_started = datetime.now(timezone.utc)
     try:
         for library_name in sorted(plex_sections):
             plex_sections[library_name].update()
     except Exception as exception:
         _print_error("could not refresh plex libraries", exception)
         return Exit.FAIL_PLEX_REFRESH
+    item_messages = []
+    try:
+        if not wait_plex_idle():
+            item_messages.append(
+                f"Warning: plex was still busy after [{PLEX_SETTLE_TIMEOUT_SECONDS}] seconds, match check inconclusive")
+        for library_name in sorted(plex_sections):
+            for item in plex_sections[library_name].search(filters={"addedAt>>": refresh_started}):
+                if not str(getattr(item, "guid", "")).startswith("plex://"):
+                    item_messages.append(f"Warning: item [{item.title}] in library [{library_name}] not matched by plex")
+    except Exception as exception:
+        item_messages.append(f"Warning: could not check plex matches, {exception}")
+    _print_messages(item_messages)
     return Exit.PASS
 
 
