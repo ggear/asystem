@@ -306,7 +306,7 @@ def _refresh_sonarr(_share_paths):
 
 def _refresh(_share_root):
     def refresh_service(_name, _refresh_function):
-        print(f"Starting [{_name}] refresh")
+        print(f"Starting [{_name}] refresh ... ")
         started = time.perf_counter()
         exit_value = _refresh_function(share_paths)
         print(f"Finished [{_name}] refresh in [{round(time.perf_counter() - started, 1)}] seconds")

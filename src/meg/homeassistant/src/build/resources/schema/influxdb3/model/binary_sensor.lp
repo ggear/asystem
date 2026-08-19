@@ -22,8 +22,10 @@
 #     template_back_door_state,
 #     template_bathroom_rails_plug_proxy,
 #     template_deck_festoons_plug_proxy,
+#     template_dining_air_purifier_proxy,
 #     template_kitchen_coffee_machine_plug_proxy,
 #     template_landing_festoons_plug_proxy,
+#     template_lounge_air_purifier_proxy,
 #     workday_sensor]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]

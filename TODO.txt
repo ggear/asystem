@@ -33,21 +33,7 @@ retire nginx and use cloudflared for homeasistant?
 
 
 
-have refresh.py do sonnar refresh too, including dropping from sabnzdb? maybe, refresh sab in sonnar, and full series refresh
-
-
-
-
-
-
-
-
-
-
-
-
 resinstate BACKUP_RETAIN_DAYS for HOT, maybe rename and create new ones for WARM that are both available as defaults in script but passed as params into python write too, which will be tuned on a module by module basis - implications for success? write an hard link copy? not worth it?
-
 go through each module and inspect or implement close out 6 with results, prune backup aggresively, offload metatadata outside of backup in slow moving, single copy backups
 
 
@@ -136,12 +122,21 @@ check all sheet references added to repo structs, eq equity indexes etc
 Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
 Build health wrangle/dashboards, add Streaks
 Optimise indexes, have a single composite index (entity, period, type - no unit) rather than individual, consider compression 10y segment after batch insert and dropping all index entirely - cost is have to decompress on upsert on current 10y segment
+❯ fix /usr/local/lib/python3.12/site-packages/yfinance/utils.py:667: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    last_rows_same_interval = (dt2 - dt1) < _pd.Timedelta(interval)
+  /usr/local/lib/python3.12/site-packages/yfinance/scrapers/quote.py:254: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    shares = self._tkr.get_shares_full(start=pd.Timestamp.now('UTC').date()-pd.Timedelta(days=548))
+  /usr/local/lib/python3.12/site-packages/yfinance/utils.py:667: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    last_rows_same_interval = (dt2 - dt1) < _pd.Timedelta(interval)
+  /usr/local/lib/python3.12/site-packages/yfinance/scrapers/quote.py:254: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    shares = self._tkr.get_shares_full(start=pd.Timestamp.now('UTC').date()-pd.Timedelta(days=548))
 
 bank:
 implement balances
 implement transactions
 
 equity:
+added new mio statement, ran normal run through web ui, hung with lots of cpu, on reboot was fine?
 add cash into bank portfolio?
 move sheets to delta like database? perhaps brek aout sheet/database upload timings, keeping rollup for html display but good for profiling?
 add dividend to create a new total return, bring in from manual data in sheets or another source?

@@ -1,4 +1,6 @@
 {
+  "action": "<text>",
+  "action_source": <number>,
   "action_source_name": "<text>",
   "action_user": "<text>",
   "auto_relock_time": "<text>",

@@ -296,7 +296,7 @@ UNION ALL
 SELECT
     'fan'                      AS relation,
     'entity_id*'               AS dimension,
-    4                          AS measures,
+    5                          AS measures,
     '<on-change>'              AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -1080,6 +1080,19 @@ WHERE
     module = 'homeassistant'
 UNION ALL
 SELECT
+    'fan'                                                                AS relation,
+    'percentage_str'                                                     AS measure,
+    'str'                                                                AS kind,
+    '-'                                                                  AS unit,
+    '<on-change>'                                                        AS period,
+    count(percentage_str)                                                AS rows,
+    CAST(min(time) FILTER (WHERE percentage_str IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE percentage_str IS NOT NULL) AS VARCHAR) AS newest
+FROM fan
+WHERE
+    module = 'homeassistant'
+UNION ALL
+SELECT
     'fan'                                                       AS relation,
     'state'                                                     AS measure,
     'str'                                                       AS kind,
@@ -1117,7 +1130,10 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'fan'
-    AND column_name NOT IN ('direction_str', 'entity_id', 'module', 'percentage', 'state', 'time', 'value')
+    AND column_name NOT IN (
+        'direction_str', 'entity_id', 'module', 'percentage', 'percentage_str', 'state',
+        'time', 'value'
+    )
 UNION ALL
 SELECT
     'light'                                                     AS relation,
