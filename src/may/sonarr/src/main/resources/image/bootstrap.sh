@@ -108,63 +108,78 @@ fi
 CF_SCORE=100
 CF_NAMEFILE_SIZE_MIN_GB=1
 CF_NAME="HEVC + Size >= ${CF_NAMEFILE_SIZE_MIN_GB} GB"
-auth_header=(-H "X-Api-Key: $SONARR_API_KEY")
-cf_id=$(curl -s "$SONARR_URL/api/v3/customformat" "${auth_header[@]}" | jq -r '.[] | select(.name=="'"$CF_NAME"'") | .id')
-if [[ -n "$cf_id" ]]; then
-  status=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$SONARR_URL/api/v3/customformat/$cf_id" "${auth_header[@]}")
-  if [[ "$status" == 2* ]]; then
-    echo "✅ Deleted existing custom format"
+CF_PROJECTION='{ name, includeCustomFormatWhenRenaming, specifications: [ .specifications[] | { name, implementation, negate, required, fields: [ .fields[] | { name: .name, value: (.value | tostring) } ] } ] }'
+auth_header=(-H "X-Api-Key: ${SONARR_API_KEY}")
+cf_declared=$(jq -n --arg name "${CF_NAME}" --arg min "${CF_NAMEFILE_SIZE_MIN_GB}" '{
+  name: $name,
+  includeCustomFormatWhenRenaming: true,
+  specifications: [
+    {
+      name: "265 in Title",
+      implementation: "ReleaseTitleSpecification",
+      negate: false,
+      required: true,
+      fields: [ { name: "value", value: "265" } ]
+    },
+    {
+      name: ("Size >= " + $min + " GB"),
+      implementation: "SizeSpecification",
+      negate: false,
+      required: true,
+      fields: [ { name: "min", value: $min }, { name: "max", value: "10" } ]
+    }
+  ]
+}')
+cf_existing=$(curl -s "${SONARR_URL}/api/v3/customformat" "${auth_header[@]}" | jq -c '[ .[] | select(.name=="'"${CF_NAME}"'") ]')
+cf_count=$(echo "${cf_existing}" | jq 'length')
+cf_id=""
+if [[ "${cf_count}" -gt 1 ]]; then
+  echo "❌ Found [${cf_count}] custom formats named '${CF_NAME}', remove the duplicates by hand" >&2
+elif [[ "${cf_count}" -eq 0 ]]; then
+  response=$(curl -s -w "%{http_code}" -o /dev/null -X POST "${SONARR_URL}/api/v3/customformat" \
+    "${auth_header[@]}" -H "Content-Type: application/json" -d "${cf_declared}")
+  if [[ "${response}" != 2* ]]; then
+    echo "❌ Failed to create custom format (HTTP ${response})"
   else
-    echo "❌ Failed to delete custom format (HTTP $status)"
+    cf_id=$(curl -s "${SONARR_URL}/api/v3/customformat" "${auth_header[@]}" | jq -r '.[] | select(.name=="'"${CF_NAME}"'") | .id')
+    echo "✅ Created custom format with ID ${cf_id}"
+  fi
+else
+  cf_id=$(echo "${cf_existing}" | jq -r '.[0].id')
+  if [[ "$(echo "${cf_existing}" | jq -cS ".[0] | ${CF_PROJECTION}")" == "$(echo "${cf_declared}" | jq -cS "${CF_PROJECTION}")" ]]; then
+    echo "✅ Custom format already configured with ID ${cf_id}"
+  else
+    cf_updated=$(echo "${cf_declared}" | jq --argjson id "${cf_id}" '. + { id: $id }')
+    status=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "${SONARR_URL}/api/v3/customformat/${cf_id}" \
+      "${auth_header[@]}" -H "Content-Type: application/json" -d "${cf_updated}")
+    if [[ "${status}" == 2* ]]; then
+      echo "✅ Updated drifted custom format with ID ${cf_id}"
+    else
+      echo "❌ Failed to update custom format with ID ${cf_id} (HTTP ${status})"
+    fi
   fi
 fi
-response=$(curl -s -w "%{http_code}" -o /dev/null -X POST "$SONARR_URL/api/v3/customformat" \
-  "${auth_header[@]}" -H "Content-Type: application/json" \
-  -d '{
-        "name": "'"$CF_NAME"'",
-        "includeCustomFormatWhenRenaming": true,
-        "specifications": [
-          {
-            "name": "265 in Title",
-            "implementation": "ReleaseTitleSpecification",
-            "negate": false,
-            "required": true,
-            "fields": [
-              { "name": "value", "value": "265" }
-            ]
-          },
-          {
-            "name": "Size >= '"$CF_NAMEFILE_SIZE_MIN_GB"' GB",
-            "implementation": "SizeSpecification",
-            "negate": false,
-            "required": true,
-            "fields": [
-              { "name": "min", "value": "'"$CF_NAMEFILE_SIZE_MIN_GB"'" },
-              { "name": "max", "value": "10" }
-            ]
-          }
-        ]
-      }')
-if [[ "$response" != 2* ]]; then
-  echo "❌ Failed to create custom format (HTTP $response)"
-else
-  cf_id=$(curl -s "$SONARR_URL/api/v3/customformat" "${auth_header[@]}" | jq -r '.[] | select(.name=="'"$CF_NAME"'") | .id')
-  echo "✅ Created new custom format with ID $cf_id"
-  profiles=$(curl -s "$SONARR_URL/api/v3/qualityProfile" "${auth_header[@]}")
-  for row in $(echo "$profiles" | jq -r '.[] | @base64'); do
-    _jq() { echo "$row" | base64 --decode | jq -r "$1"; }
-    profile_id=$(_jq '.id')
-    profile_name=$(_jq '.name')
-    full_profile=$(curl -s "$SONARR_URL/api/v3/qualityProfile/$profile_id" "${auth_header[@]}")
-    updated_profile=$(echo "$full_profile" | jq '.formatItems[0].score = 100')
-    status=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$SONARR_URL/api/v3/qualityProfile/$profile_id" \
-      "${auth_header[@]}" -H "Content-Type: application/json" -d "$updated_profile")
-    if [[ "$status" != 2* ]]; then
-      curl -s -X PUT "$SONARR_URL/api/v3/qualityProfile/$profile_id" \
-        "${auth_header[@]}" -H "Content-Type: application/json" -d "$updated_profile"
-      echo "❌ Failed to update $profile_name (HTTP $status)"
+if [[ -n "${cf_id}" ]]; then
+  for profile_id in $(curl -s "${SONARR_URL}/api/v3/qualityProfile" "${auth_header[@]}" | jq -r '.[].id'); do
+    profile=$(curl -s "${SONARR_URL}/api/v3/qualityProfile/${profile_id}" "${auth_header[@]}")
+    profile_name=$(echo "${profile}" | jq -r '.name')
+    profile_score=$(echo "${profile}" | jq -r '.formatItems[] | select(.format=='"${cf_id}"') | .score')
+    if [[ -z "${profile_score}" ]]; then
+      echo "❌ Custom format ID ${cf_id} absent from quality profile ${profile_name}" >&2
+      continue
     fi
-    echo "✅ Applied to: $profile_name"
+    if [[ "${profile_score}" == "${CF_SCORE}" ]]; then
+      echo "✅ Score already applied to ${profile_name}"
+      continue
+    fi
+    updated_profile=$(echo "${profile}" | jq '(.formatItems[] | select(.format=='"${cf_id}"') | .score) = '"${CF_SCORE}"'')
+    status=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "${SONARR_URL}/api/v3/qualityProfile/${profile_id}" \
+      "${auth_header[@]}" -H "Content-Type: application/json" -d "${updated_profile}")
+    if [[ "${status}" == 2* ]]; then
+      echo "✅ Applied score to ${profile_name}"
+    else
+      echo "❌ Failed to update ${profile_name} (HTTP ${status})"
+    fi
   done
 fi
 ###############################################################################
@@ -174,25 +189,23 @@ fi
 ###############################################################################
 MEDIA_SERIES_DIR="/library"
 rootfolders=$(curl -s "${SONARR_URL}/api/v3/rootfolder" -H "X-Api-Key: ${SONARR_API_KEY}")
-echo "${rootfolders}" | jq -c '.[]' | while read -r folder; do
-  id=$(echo "${folder}" | jq -r '.id')
-  status=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${SONARR_URL}/api/v3/rootfolder/${id}" \
-    -H "X-Api-Key: ${SONARR_API_KEY}")
-  if [[ "${status}" == 2* ]]; then
-    echo "✅ Deleted root folder ID ${id}"
-  else
-    echo "❌ Failed to delete root folder ID ${id}, HTTP ${status}" >&2
-  fi
-done
-payload=$(jq -n --arg path "${MEDIA_SERIES_DIR}" '{ path: $path, accessible: true }')
-status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${SONARR_URL}/api/v3/rootfolder" \
-  -H "X-Api-Key: ${SONARR_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "${payload}")
-if [[ "${status}" == 2* ]]; then
-  echo "✅ Successfully added root folder '${MEDIA_SERIES_DIR}'"
+if echo "${rootfolders}" | jq -e '.[] | select(.path=="'"${MEDIA_SERIES_DIR}"'")' >/dev/null 2>&1; then
+  echo "✅ Root folder '${MEDIA_SERIES_DIR}' already exists"
 else
-  echo "❌ Failed to add root folder '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
+  payload=$(jq -n --arg path "${MEDIA_SERIES_DIR}" '{ path: $path, accessible: true }')
+  status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${SONARR_URL}/api/v3/rootfolder" \
+    -H "X-Api-Key: ${SONARR_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "${payload}")
+  if [[ "${status}" == 2* ]]; then
+    echo "✅ Added root folder '${MEDIA_SERIES_DIR}'"
+  else
+    echo "❌ Failed to add root folder '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
+  fi
+fi
+unexpected_folders=$(echo "${rootfolders}" | jq -r '.[] | select(.path!="'"${MEDIA_SERIES_DIR}"'") | .path' | tr '\n' ' ')
+if [[ -n "${unexpected_folders// /}" ]]; then
+  echo "⚠️ Unexpected root folders present, remove by hand if unwanted [${unexpected_folders% }]"
 fi
 ###############################################################################
 
@@ -202,89 +215,22 @@ fi
 GRAB_DELAY_MIN=30
 auth_header=(-H "X-Api-Key: ${SONARR_API_KEY}")
 profile=$(curl -s "${SONARR_URL}/api/v3/delayprofile" "${auth_header[@]}" | jq '.[0]')
-profile_id=$(echo "$profile" | jq -r '.id')
-updated_profile=$(echo "$profile" | jq '.usenetDelay = '"${GRAB_DELAY_MIN}"'')
-status=$(curl -s -o /dev/null -w "%{http_code}" \
-  -X PUT "${SONARR_URL}/api/v3/delayprofile/${profile_id}" \
-  "${auth_header[@]}" -H "Content-Type: application/json" \
-  -d "$updated_profile")
-if [[ "$status" == 2* ]]; then
-  echo "✅ Usenet delay updated to ${GRAB_DELAY_MIN} min"
+profile_id=$(echo "${profile}" | jq -r '.id')
+profile_delay=$(echo "${profile}" | jq -r '.usenetDelay')
+if [[ "${profile_delay}" == "${GRAB_DELAY_MIN}" ]]; then
+  echo "✅ Usenet delay already ${GRAB_DELAY_MIN} min"
 else
-  echo "❌ Failed to update usenet delay (HTTP $status)"
-fi
-###############################################################################
-
-###############################################################################
-# Configure series monitoring
-###############################################################################
-auth_header=(-H "X-Api-Key: ${SONARR_API_KEY}")
-series=$(curl -s "${SONARR_URL}/api/v3/series" "${auth_header[@]}")
-for row in $(echo "${series}" | jq -r '.[] | @base64'); do
-  _jq() { echo "${row}" | base64 --decode | jq -r "${1}"; }
-  series_id=$(_jq '.id')
-  series_title=$(_jq '.title')
-  updated_series=$(echo "${row}" | base64 --decode | jq '.monitored = true | .episodeFileCount = 0')
+  updated_profile=$(echo "${profile}" | jq '.usenetDelay = '"${GRAB_DELAY_MIN}"'')
   status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X PUT "${SONARR_URL}/api/v3/series/${series_id}" \
+    -X PUT "${SONARR_URL}/api/v3/delayprofile/${profile_id}" \
     "${auth_header[@]}" -H "Content-Type: application/json" \
-    -d "${updated_series}")
+    -d "${updated_profile}")
   if [[ "${status}" == 2* ]]; then
-    echo "✅ Updated monitoring for ${series_title}"
+    echo "✅ Usenet delay updated to ${GRAB_DELAY_MIN} min"
   else
-    echo "❌ Failed to update monitoring for ${series_title} (HTTP ${status})"
+    echo "❌ Failed to update usenet delay (HTTP ${status})"
   fi
-done
-###############################################################################
-
-###############################################################################
-# Refresh library
-###############################################################################
-auth_header=(-H "X-Api-Key: ${SONARR_API_KEY}")
-payload='{"name": "DownloadedEpisodesScan", "path": "/downloads"}'
-status=$(curl -s -o /dev/null -w "%{http_code}" \
-  -X POST "${SONARR_URL}/api/v3/command" \
-  -H "X-Api-Key: ${SONARR_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "${payload}")
-if [[ "$status" == 2* ]]; then
-  echo "✅ Downloaded files scan triggered successfully"
-else
-  echo "failed"
-  curl -s \
-    -X POST "${SONARR_URL}/api/v3/command" \
-    -H "X-Api-Key: ${SONARR_API_KEY}" \
-    -H "Content-Type: application/json" \
-    -d "${payload}" | fold -s -w 250 | pr -to 4
-  echo "" && echo "❌ Failed to trigger downloaded files scan (HTTP $status)"
 fi
-series_ids=$(curl -s "${SONARR_URL}/api/v3/series" "${auth_header[@]}" | jq -r '.[].id')
-for series_id in $series_ids; do
-  payload='{"name": "RescanSeries", "seriesId": '"${series_id}"'}'
-  status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X POST "${SONARR_URL}/api/v3/command" "${auth_header[@]}" -H "Content-Type: application/json" \
-    -d "${payload}")
-  if [[ "$status" == 2* ]]; then
-    echo "✅ Rescan started for series $series_id"
-  else
-    curl -s \
-      -X POST "${SONARR_URL}/api/v3/command" "${auth_header[@]}" -H "Content-Type: application/json" \
-      -d "${payload}" | fold -s -w 250 | pr -to 4
-    echo "" && echo "❌ Failed to start rescan for series $series_id (HTTP $status)"
-  fi
-  payload='{"name": "RefreshSeries", "seriesId": '"${series_id}"'}'
-  status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X POST "${SONARR_URL}/api/v3/command" "${auth_header[@]}" -H "Content-Type: application/json" \
-    -d "${payload}")
-  if [[ "$status" == 2* ]]; then
-    echo "✅ Refresh started for series $series_id"
-  else
-    curl -s \
-      -X POST "${SONARR_URL}/api/v3/command" "${auth_header[@]}" -H "Content-Type: application/json" \
-      -d "${payload}" | fold -s -w 250 | pr -to 4
-    echo "" && echo "❌ Failed to start refresh for series $series_id (HTTP $status)"
-  fi
-done
 ###############################################################################
 
 echo "--------------------------------------------------------------------------------"

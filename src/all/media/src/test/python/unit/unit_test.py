@@ -426,8 +426,214 @@ class InternetTest(unittest.TestCase):
             "Kids Movies": ["/share/10/media/kids/movies", ]
         }, return_value=refresh.Exit.FAIL_PLEX_LIBRARY)
 
-    def _test_refresh(self, dir_test, library_paths=None, return_value=0, locations_expected=None):
+    def test_refresh_sabnzbd(self):
+        dir_test = self._test_prepare_dir("share_media_example", 2)
+        library_paths = {
+            "Docos Movies": [
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
+                "/share/30/media/docos/movies",
+            ]
+        }
+        completed_slot = {"status": "Completed", "name": "Some.Movie.2026", "fail_message": ""}
+        failed_slot = {"status": "Failed", "name": "Broken.Movie.2026", "fail_message": "Unpack failed"}
+        running_slot = {"status": "Extracting", "name": "Busy.Movie.2026", "fail_message": ""}
+
+        def archives(_sabnzbd):
+            return [call for call in _sabnzbd.calls if call.get("name") == "delete"]
+
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[])
+        self.assertEqual([], archives(sabnzbd))
+        self.assertEqual({"mode": "history", "limit": 1, "status": "Completed"}, sabnzbd.calls[0])
+
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[completed_slot])
+        self.assertEqual([{"mode": "history", "name": "delete", "value": "completed", "archive": 1}], archives(sabnzbd))
+
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[running_slot])
+        self.assertEqual([], archives(sabnzbd))
+
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[failed_slot],
+                                     return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
+        self.assertEqual(["failed"], [call["value"] for call in archives(sabnzbd)])
+
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[completed_slot, failed_slot],
+                                     return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
+        self.assertEqual(["completed", "failed"], [call["value"] for call in archives(sabnzbd)])
+
+        sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[failed_slot] * 250,
+                                     return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
+        self.assertEqual(["failed"], [call["value"] for call in archives(sabnzbd)])
+        self.assertEqual([0, 100, 200], [call["start"] for call in sabnzbd.calls if "start" in call])
+
+        self._test_refresh(dir_test, library_paths, connect_error=True,
+                           return_value=refresh.Exit.FAIL_SABNZBD_CONNECT)
+
+        self._test_refresh(dir_test, library_paths, history_slots=[completed_slot], archive_error=True,
+                           return_value=refresh.Exit.FAIL_SABNZBD_ARCHIVE)
+
+    def test_refresh_sonarr(self):
+        dir_test = self._test_prepare_dir("share_media_example", 2)
+        library_paths = {
+            "Docos Movies": [
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
+                "/share/30/media/docos/movies",
+            ]
+        }
+        def resources(monitored=True):
+            return {"series": [{"id": 7, "title": "Ted Lasso", "monitored": monitored}]}
+
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources())
+        self.assertEqual([], sonarr.puts)
+        self.assertEqual([
+            ("command", {"name": "RefreshMonitoredDownloads"}),
+            ("command", {"name": "DownloadedEpisodesScan", "path": "/downloads"}),
+            ("command", {"name": "RescanSeries", "seriesId": 7}),
+            ("command", {"name": "RefreshSeries", "seriesId": 7}),
+        ], sonarr.posts)
+
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources={"series": []})
+        self.assertEqual([], sonarr.puts)
+        self.assertEqual([
+            ("command", {"name": "RefreshMonitoredDownloads"}),
+            ("command", {"name": "DownloadedEpisodesScan", "path": "/downloads"}),
+        ], sonarr.posts)
+
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources(False))
+        self.assertEqual(["series/7"], [resource for resource, _ in sonarr.puts])
+        self.assertEqual(True, sonarr.puts[0][1]["monitored"])
+
+        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(), sonarr_error="series",
+                           return_value=refresh.Exit.FAIL_SONARR_CONNECT)
+        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(False), sonarr_error="series/7",
+                           return_value=refresh.Exit.FAIL_SONARR_MONITOR)
+        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(),
+                           sonarr_error="RefreshMonitoredDownloads",
+                           return_value=refresh.Exit.FAIL_SONARR_ACTIVITY)
+        self._test_refresh(dir_test, library_paths, sonarr_resources=resources(), sonarr_error="RescanSeries",
+                           return_value=refresh.Exit.FAIL_SONARR_REFRESH)
+
+    def test_refresh_sonarr_series_state(self):
+        dir_test = self._test_prepare_dir("share_media_example", 2)
+        library_paths = {
+            "Docos Movies": [
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
+                "/share/30/media/docos/movies",
+            ]
+        }
+
+        def series(_ended, _episodes, _files):
+            return {"id": 7, "title": "Ted Lasso", "monitored": True, "ended": _ended,
+                    "statistics": {"episodeCount": _episodes, "episodeFileCount": _files,
+                                   "percentOfEpisodes": _files * 100 // _episodes}}
+
+        self._test_refresh(dir_test, library_paths,
+                           sonarr_resources={"series": [series(False, 10, 10)], "queue": []})
+
+        self._test_refresh(dir_test, library_paths,
+                           sonarr_resources={"series": [series(True, 10, 10)], "queue": []})
+
+        self._test_refresh(dir_test, library_paths,
+                           sonarr_resources={"series": [series(False, 10, 8)], "queue": []},
+                           return_value=refresh.Exit.FAIL_SONARR_MISSING)
+
+        self._test_refresh(dir_test, library_paths,
+                           sonarr_resources={"series": [series(False, 10, 8)], "queue": [{"seriesId": 7}]})
+
+        sonarr = self._test_refresh(dir_test, library_paths, sonarr_command_status="queued",
+                                    sonarr_resources={"series": [series(False, 10, 10)], "queue": []})
+        self.assertEqual(4, len([resource for resource, _ in sonarr.posts if resource == "command"]))
+
+        self._test_refresh(dir_test, library_paths, sonarr_command_status="failed",
+                           sonarr_resources={"series": [series(False, 10, 10)], "queue": []},
+                           return_value=refresh.Exit.FAIL_SONARR_ACTIVITY)
+
+    def test_refresh_sabnzbd_queue(self):
+        dir_test = self._test_prepare_dir("share_media_example", 2)
+        library_paths = {
+            "Docos Movies": [
+                "/share/10/media/docos/movies",
+                "/share/20/media/docos/movies",
+                "/share/30/media/docos/movies",
+            ]
+        }
+        sabnzbd = self._test_refresh(dir_test, library_paths, queue_slots=[
+            {"filename": "Rose.of.Nevada.2025", "status": "Downloading", "percentage": "35", "timeleft": "0:46:09"},
+        ])
+        self.assertEqual({"mode": "queue"}, sabnzbd.calls[-1])
+
+    def _test_refresh(self, dir_test, library_paths=None, return_value=0, locations_expected=None,
+                      history_slots=None, queue_slots=None, connect_error=False, archive_error=False,
+                      sonarr_resources=None, sonarr_error=None, sonarr_command_status="completed"):
         library_paths = {} if library_paths is None else library_paths
+
+        class MockSabnzbdResponse:
+            def __init__(self, payload):
+                self.payload = payload
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return self.payload
+
+        class MockRequests:
+            def __init__(self, slots, resources):
+                self.slots = [] if slots is None else slots
+                self.resources = {} if resources is None else resources
+                self.queue = [] if queue_slots is None else queue_slots
+                self.calls = []
+                self.posts = []
+                self.puts = []
+
+            def _sonarr(self, _url, _payload=None):
+                resource = _url.rsplit("/api/v3/", 1)[1]
+                resource = resource.split("?", 1)[0]
+                if sonarr_error is not None and sonarr_error in (resource, (_payload or {}).get("name")):
+                    raise Exception(f"mocked sonarr [{sonarr_error}] failure")
+                if _payload is not None:
+                    return MockSabnzbdResponse({"id": 1, "status": sonarr_command_status, "result": "successful"})
+                if resource.startswith("command/"):
+                    return MockSabnzbdResponse({"id": 1, "status": "completed", "result": "successful"})
+                if resource.startswith("series/"):
+                    series_id = int(resource.split("/", 1)[1])
+                    return MockSabnzbdResponse(
+                        next(item for item in self.resources.get("series", []) if item["id"] == series_id))
+                if resource == "queue":
+                    records = self.resources.get("queue", [])
+                    return MockSabnzbdResponse({"records": records, "totalRecords": len(records)})
+                return MockSabnzbdResponse(self.resources.get(resource, []))
+
+            def post(self, _url, timeout=None, headers=None, json=None):
+                self.posts.append((_url.rsplit("/api/v3/", 1)[1].split("?", 1)[0], json))
+                return self._sonarr(_url, json)
+
+            def put(self, _url, timeout=None, headers=None, json=None):
+                self.puts.append((_url.rsplit("/api/v3/", 1)[1].split("?", 1)[0], json))
+                return self._sonarr(_url, json)
+
+            def get(self, _url, timeout=None, params=None, headers=None):
+                if "/api/v3/" in _url:
+                    return self._sonarr(_url)
+                parameters = {key: value for key, value in params.items() if key not in ("output", "apikey")}
+                self.calls.append(parameters)
+                if parameters.get("name") == "delete":
+                    if archive_error:
+                        raise Exception("mocked sabnzbd archive failure")
+                    return MockSabnzbdResponse({"status": True})
+                if connect_error:
+                    raise Exception("mocked sabnzbd connect failure")
+                if parameters.get("mode") == "queue":
+                    return MockSabnzbdResponse({"queue": {"slots": self.queue}})
+                slots = self.slots
+                if parameters.get("failed_only"):
+                    slots = [slot for slot in slots if slot["status"] == "Failed"]
+                if parameters.get("status"):
+                    slots = [slot for slot in slots if slot["status"] == parameters["status"]]
+                start = parameters.get("start", 0)
+                limit = parameters.get("limit", len(slots))
+                return MockSabnzbdResponse({"history": {"noofslots": len(slots), "slots": slots[start:start + limit]}})
 
         class MockPlexLibrarySection:
             def __init__(self, title, locations):
@@ -459,15 +665,20 @@ class InternetTest(unittest.TestCase):
                 self.library = MockPlexLibrary(library_paths)
 
         plex_server = MockPlexServer("http://mocked.plex.com", library_paths)
+        sabnzbd = MockRequests(history_slots, sonarr_resources)
         plex_server_class = refresh.PlexServer
-        refresh.PlexServer = lambda _plex_url, _plex_token: plex_server
+        requests_module = refresh.requests
+        refresh.PlexServer = lambda _plex_url, _plex_token, **_parameters: plex_server
+        refresh.requests = sabnzbd
         try:
             self.assertEqual(return_value, refresh._refresh(dir_test))
         finally:
             refresh.PlexServer = plex_server_class
+            refresh.requests = requests_module
         if locations_expected is not None:
             self.assertEqual(locations_expected, {
                 section.title: sorted(section.locations) for section in plex_server.library.sections()})
+        return sabnzbd
 
     def _test_prepare_dir(self, label, index):
         dir_test = join(DIR_ROOT, "target/runtime-unit/{}_{}/share".format(label, index))

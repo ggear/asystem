@@ -3,6 +3,7 @@ pyyaml
 pandas
 polars
 pyarrow
+requests
 plexapi
 gspread
 gspread-pandas
