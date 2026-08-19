@@ -722,19 +722,13 @@ class InternetTest(unittest.TestCase):
         sabnzbd = MockRequests(history_slots, sonarr_resources)
         plex_server_class = refresh.PlexServer
         requests_module = refresh.requests
-        settle_seconds = refresh.PLEX_SETTLE_SECONDS
-        settle_poll_seconds = refresh.PLEX_SETTLE_POLL_SECONDS
         refresh.PlexServer = lambda _plex_url, _plex_token, **_parameters: plex_server
         refresh.requests = sabnzbd
-        refresh.PLEX_SETTLE_SECONDS = 0
-        refresh.PLEX_SETTLE_POLL_SECONDS = 0
         try:
             self.assertEqual(return_value, refresh._refresh(dir_test))
         finally:
             refresh.PlexServer = plex_server_class
             refresh.requests = requests_module
-            refresh.PLEX_SETTLE_SECONDS = settle_seconds
-            refresh.PLEX_SETTLE_POLL_SECONDS = settle_poll_seconds
         if locations_expected is not None:
             self.assertEqual(locations_expected, {
                 section.title: sorted(section.locations) for section in plex_server.library.sections()})
