@@ -120,7 +120,7 @@ syncart.py
     and prefix match in both directions, which is depth agnostic and reuses the SHARE_ROOT to /share
     mapping refresh.py pinned down:
 
-        target = PLEX_SHARE_ROOT + directory.removeprefix(share_root)
+        target = "/share" + directory.removeprefix(share_root)
 
         for section in plex_server.library.sections():
             if not any(loc.startswith(target) or target.startswith(loc)

@@ -410,21 +410,21 @@ class InternetTest(unittest.TestCase):
 
     def test_refresh_sad(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
-        self._test_refresh("/invalid/shares", return_value=1)
-        self._test_refresh("/invalid/shares", {}, return_value=1)
+        self._test_refresh("/invalid/shares", return_value=refresh.Exit.FAIL_FILESYSTEM)
+        self._test_refresh("/invalid/shares", {}, return_value=refresh.Exit.FAIL_FILESYSTEM)
         self._test_refresh("/invalid/shares", {
             "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
             "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
-        }, return_value=1)
-        self._test_refresh("/tmp", return_value=1)
-        self._test_refresh("/tmp", {}, return_value=1)
+        }, return_value=refresh.Exit.FAIL_FILESYSTEM)
+        self._test_refresh("/tmp", return_value=refresh.Exit.FAIL_FILESYSTEM)
+        self._test_refresh("/tmp", {}, return_value=refresh.Exit.FAIL_FILESYSTEM)
         self._test_refresh("/tmp", {
             "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
             "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
-        }, return_value=1)
+        }, return_value=refresh.Exit.FAIL_FILESYSTEM)
         self._test_refresh(dir_test, {
             "Kids Movies": ["/share/10/media/kids/movies", ]
-        }, return_value=1)
+        }, return_value=refresh.Exit.FAIL_PLEX_LIBRARY)
 
     def _test_refresh(self, dir_test, library_paths=None, return_value=0, locations_expected=None):
         library_paths = {} if library_paths is None else library_paths
@@ -459,7 +459,12 @@ class InternetTest(unittest.TestCase):
                 self.library = MockPlexLibrary(library_paths)
 
         plex_server = MockPlexServer("http://mocked.plex.com", library_paths)
-        self.assertEqual(return_value, refresh._refresh(plex_server, dir_test))
+        plex_server_class = refresh.PlexServer
+        refresh.PlexServer = lambda _plex_url, _plex_token: plex_server
+        try:
+            self.assertEqual(return_value, refresh._refresh(dir_test))
+        finally:
+            refresh.PlexServer = plex_server_class
         if locations_expected is not None:
             self.assertEqual(locations_expected, {
                 section.title: sorted(section.locations) for section in plex_server.library.sections()})

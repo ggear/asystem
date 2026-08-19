@@ -30,11 +30,21 @@ retire nginx and use cloudflared for homeasistant?
 
 
 
-make sure 1h on portfolio works, seed timestamp into requests? seems to do a lot of others hourly and not gold?
 
 
-implement artwork - maybe not, seems too much work?
+
 have refresh.py do sonnar refresh too, including dropping from sabnzdb? maybe, refresh sab in sonnar, and full series refresh
+
+
+
+
+
+
+
+
+
+
+
 
 resinstate BACKUP_RETAIN_DAYS for HOT, maybe rename and create new ones for WARM that are both available as defaults in script but passed as params into python write too, which will be tuned on a module by module basis - implications for success? write an hard link copy? not worth it?
 
@@ -83,6 +93,8 @@ Define process by which schema can be updated, what is additive and safe, what i
 # Media
 ###############################################################################################################################################################
 Implement syncart.py to store artwork in /shares and save download after failure
+Formalise subtitle download and sync, add missing subtitles to common series
+Drop closed captioning [] sounds from subtitles, just have text of spoken words
 
 
 ###############################################################################################################################################################
