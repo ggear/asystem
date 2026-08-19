@@ -17,7 +17,6 @@ def _refresh_plex_libraries(_plex_server):
     print("Refreshing Plex libraries ... ", end='')
     for section in sorted(_plex_server.library.sections(), key=lambda _section: _section.title):
         section.update()
-        section.analyze()
     print("done")
 
 
