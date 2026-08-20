@@ -1,10 +1,14 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"supervisor/internal/config"
+	"supervisor/internal/metric"
+	"supervisor/internal/schema"
 	"supervisor/internal/scribe"
 	"time"
 
@@ -15,6 +19,78 @@ type databaseClient struct {
 	configPath string
 	url        string
 	client     *influxdb3.Client
+}
+
+type databaseKey struct {
+	host    string
+	service string
+}
+
+type databaseBatch struct {
+	protocol bytes.Buffer
+	groups   map[databaseKey]map[string]schema.Field
+	host     schema.Relation
+	service  schema.Relation
+}
+
+func newDatabaseBatch() *databaseBatch {
+	return &databaseBatch{
+		groups:  make(map[databaseKey]map[string]schema.Field),
+		host:    metric.HostRelation(),
+		service: metric.ServiceRelation(),
+	}
+}
+
+func (b *databaseBatch) reset() {
+	b.protocol.Reset()
+	clear(b.groups)
+}
+
+func (b *databaseBatch) add(guid metric.RecordGUID, record *metric.Record) {
+	if record.Value.Pulse == nil || len(record.Tags) == 0 {
+		return
+	}
+	field, ok := record.Tags["metric"]
+	if !ok {
+		return
+	}
+	key := databaseKey{host: guid.Host, service: guid.ServiceName}
+	b.field(key, field, "", record.Value.Pulse)
+	if record.Value.Trend != nil {
+		b.field(key, field, "_trend", record.Value.Trend)
+	}
+}
+
+func (b *databaseBatch) field(key databaseKey, field, suffix string, detail *metric.ValueDataDetail) {
+	fields := b.groups[key]
+	if fields == nil {
+		fields = map[string]schema.Field{}
+		b.groups[key] = fields
+	}
+	fields[field+suffix] = schema.Field{Text: detail.Value(), Flag: detail.OK}
+}
+
+func (b *databaseBatch) render(timestamp string) int {
+	order := make([]databaseKey, 0, len(b.groups))
+	for key := range b.groups {
+		order = append(order, key)
+	}
+	sort.Slice(order, func(i, j int) bool {
+		if order[i].host != order[j].host {
+			return order[i].host < order[j].host
+		}
+		return order[i].service < order[j].service
+	})
+	for _, key := range order {
+		relation := b.host
+		tags := [][2]string{{"host", key.host}}
+		if key.service != "" {
+			relation = b.service
+			tags = append(tags, [2]string{"service", key.service})
+		}
+		schema.AppendLineProtocol(&b.protocol, "supervisor", relation, tags, b.groups[key], timestamp)
+	}
+	return b.protocol.Len()
 }
 
 func newInfluxClient(configPath string) (*influxdb3.Client, string, error) {

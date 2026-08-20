@@ -63,6 +63,7 @@ func TestScribe_Stdout(t *testing.T) {
 }
 
 func TestScribe_File(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	tests := []struct {
 		name     string
 		setup    func(string) error
@@ -94,10 +95,7 @@ func TestScribe_File(t *testing.T) {
 			expected: false,
 		},
 	}
-	logDir := logDirUser
-	if os.Geteuid() == 0 {
-		logDir = logDirRoot
-	}
+	logDir := logDir()
 	for index, testCase := range tests {
 		testCase := testCase
 		message := fmt.Sprintf("Expected log message %d", index)

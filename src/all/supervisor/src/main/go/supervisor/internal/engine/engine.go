@@ -1,17 +1,14 @@
 package engine
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"sort"
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
-	"supervisor/internal/schema"
 	"supervisor/internal/scribe"
 	"sync"
 	"sync/atomic"
@@ -480,7 +477,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	}
 }
 
-type lpKey struct {
+type serviceKey struct {
 	host    string
 	service string
 }
@@ -603,12 +600,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			defer db.close()
 		}
 	}
-	var lineProtocol bytes.Buffer
-	groups := make(map[lpKey]map[string]schema.Field)
-	hostRelation := metric.HostRelation()
-	serviceRelation := metric.ServiceRelation()
-	var toDelete []lpKey
-	deleted := make(map[lpKey]bool)
+	batch := newDatabaseBatch()
+	var toDelete []serviceKey
+	deleted := make(map[serviceKey]bool)
 	publishStart := time.Now()
 	err = probe.Run(ctx, func(isHeartbeat bool) {
 		pulseStart := time.Now()
@@ -625,18 +619,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		}
 		txCount := 0
 		txBytes := 0
-		lineProtocol.Reset()
-		clear(groups)
+		batch.reset()
 		toDelete = toDelete[:0]
 		clear(deleted)
-		addToGroup := func(key lpKey, field, suffix string, d *metric.ValueDataDetail) {
-			fields := groups[key]
-			if fields == nil {
-				fields = map[string]schema.Field{}
-				groups[key] = fields
-			}
-			fields[field+suffix] = schema.Field{Text: d.Value(), Flag: d.OK}
-		}
 		process := func(guid metric.RecordGUID, record *metric.Record) {
 			processStart := time.Now()
 			if record.Topic != "" {
@@ -656,21 +641,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 					}
 					client.Publish(record.Topic, 0, true, "")
 					txCount++
-					toDelete = append(toDelete, lpKey{host: guid.Host, service: guid.ServiceName})
+					toDelete = append(toDelete, serviceKey{host: guid.Host, service: guid.ServiceName})
 				}
 			}
-			if record.Value.Pulse == nil || len(record.Tags) == 0 {
-				return
-			}
-			field, ok := record.Tags["metric"]
-			if !ok {
-				return
-			}
-			key := lpKey{host: guid.Host, service: guid.ServiceName}
-			addToGroup(key, field, "", record.Value.Pulse)
-			if record.Value.Trend != nil {
-				addToGroup(key, field, "_trend", record.Value.Trend)
-			}
+			batch.add(guid, record)
 		}
 		brokerStart := time.Now()
 		if isHeartbeat {
@@ -697,30 +671,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 		}
 		brokerDuration := time.Since(brokerStart)
-		ts := strconv.FormatInt(time.Now().UnixNano(), 10)
-		order := make([]lpKey, 0, len(groups))
-		for key := range groups {
-			order = append(order, key)
-		}
-		sort.Slice(order, func(i, j int) bool {
-			if order[i].host != order[j].host {
-				return order[i].host < order[j].host
-			}
-			return order[i].service < order[j].service
-		})
-		for _, key := range order {
-			relation := hostRelation
-			tags := [][2]string{{"host", key.host}}
-			if key.service != "" {
-				relation = serviceRelation
-				tags = append(tags, [2]string{"service", key.service})
-			}
-			schema.AppendLineProtocol(&lineProtocol, "supervisor", relation, tags, groups[key], ts)
-		}
-		lineBytes := lineProtocol.Len()
+		lineBytes := batch.render(strconv.FormatInt(time.Now().UnixNano(), 10))
 		dbStart := time.Now()
-		if lineProtocol.Len() > 0 && db != nil {
-			db.write(ctx, lineProtocol.Bytes())
+		if lineBytes > 0 && db != nil {
+			db.write(ctx, batch.protocol.Bytes())
 		}
 		dbDuration := time.Since(dbStart)
 		phase := "pulse"

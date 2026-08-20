@@ -562,6 +562,11 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				d.refresh("wake")
 			}
 			ticked = time.Now()
+			updateStart := time.Now()
+			dirtyIndexes := d.takeDirtyIndexes()
+			if len(dirtyIndexes) > 0 {
+				scribe.Engine("profiling", "display").Debug("update", updateStart, "received [%d] updates", len(dirtyIndexes))
+			}
 			if d.logOverlay {
 				if d.logBuffer != nil {
 					v := d.logBuffer.Version()
@@ -575,7 +580,6 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				d.force = false
 				continue
 			}
-			dirtyIndexes := d.takeDirtyIndexes()
 			if !d.force && len(dirtyIndexes) == 0 {
 				continue
 			}
@@ -594,7 +598,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 			d.terminal.show()
-			scribe.Engine("state", "display").Info("draw", drawStart, "drawn [%d] boxes", drawnCount)
+			scribe.Engine("profiling", "display").Debug("draw", drawStart, "drawn [%d] boxes", drawnCount)
 			d.force = false
 		}
 	}
@@ -629,6 +633,10 @@ func (d *Display) refresh(trigger string) {
 	}
 	d.terminal.show()
 	d.force = true
+	if trigger == "period" {
+		scribe.Engine("profiling", "display").Debug("refresh", refreshStart, "trigger [%s] refreshed [%d] boxes", trigger, len(d.boxes))
+		return
+	}
 	scribe.Engine("state", "display").Info("refresh", refreshStart, "trigger [%s] refreshed [%d] boxes", trigger, len(d.boxes))
 }
 

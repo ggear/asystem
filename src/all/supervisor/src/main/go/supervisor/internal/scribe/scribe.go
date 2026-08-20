@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -16,9 +17,10 @@ import (
 )
 
 const (
-	logDirUser = "/tmp/supervisor"
-	logDirRoot = "/var/log/supervisor"
-	timeLayout = "2006-01-02 15:04:05"
+	logDirUser    = "/tmp/supervisor"
+	logDirUserMac = "Library/Logs/supervisor"
+	logDirRoot    = "/var/log/supervisor"
+	timeLayout    = "2006-01-02 15:04:05"
 )
 
 func EnableStdout(level slog.Level) {
@@ -31,40 +33,28 @@ func EnableStdout(level slog.Level) {
 }
 
 func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	file := fmt.Sprintf("%s-pid-%d.log", cmd, os.Getpid())
-	dir := logDirUser
-	if os.Geteuid() == 0 {
-		dir = logDirRoot
-	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	writer, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+	if err != nil {
 		return err
 	}
-	path := filepath.Join(dir, file)
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "file"
-	writer := &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}
 	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: writer})
 	slog.SetDefault(scribeLoggerInstance)
 	return nil
 }
 
 func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	file := fmt.Sprintf("%s-pid-%d.log", cmd, os.Getpid())
-	dir := logDirUser
-	if os.Geteuid() == 0 {
-		dir = logDirRoot
-	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	writer, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+	if err != nil {
 		return err
 	}
-	path := filepath.Join(dir, file)
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout+file"
-	writer := &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}
 	multi := io.MultiWriter(os.Stdout, writer)
 	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: multi})
 	slog.SetDefault(scribeLoggerInstance)
@@ -88,6 +78,24 @@ func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
 	scribeLoggerInstance = slog.New(&bufferHandler{level: level, buffer: buf})
 	slog.SetDefault(scribeLoggerInstance)
 	return buf
+}
+
+func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxBackups, maxAgeDays int) (*LogBuffer, error) {
+	writer, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+	if err != nil {
+		return nil, err
+	}
+	scribeLoggerMutex.Lock()
+	defer scribeLoggerMutex.Unlock()
+	scribeLoggerLevel = level
+	scribeLoggerMode = "buffer+file"
+	buf := &LogBuffer{lines: make([]LogLine, capacity)}
+	scribeLoggerInstance = slog.New(&multiHandler{handlers: []slog.Handler{
+		&bufferHandler{level: level, buffer: buf},
+		&streamHandler{level: level, writer: writer},
+	}})
+	slog.SetDefault(scribeLoggerInstance)
+	return buf, nil
 }
 
 func Engine(tag, name string) Logger {
@@ -204,6 +212,35 @@ func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
 func (h *bufferHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 func (h *bufferHandler) WithGroup(_ string) slog.Handler      { return h }
 
+type multiHandler struct {
+	handlers []slog.Handler
+}
+
+func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	for _, handler := range h.handlers {
+		if handler.Enabled(ctx, level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *multiHandler) Handle(ctx context.Context, record slog.Record) error {
+	var failed error
+	for _, handler := range h.handlers {
+		if !handler.Enabled(ctx, record.Level) {
+			continue
+		}
+		if err := handler.Handle(ctx, record.Clone()); err != nil && failed == nil {
+			failed = err
+		}
+	}
+	return failed
+}
+
+func (h *multiHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+func (h *multiHandler) WithGroup(_ string) slog.Handler      { return h }
+
 type streamHandler struct {
 	level  slog.Level
 	writer io.Writer
@@ -303,3 +340,24 @@ var (
 	scribeLoggerMode     string
 	scribeLoggerInstance *slog.Logger
 )
+
+func logDir() string {
+	if os.Geteuid() == 0 {
+		return logDirRoot
+	}
+	if runtime.GOOS == "darwin" {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, logDirUserMac)
+		}
+	}
+	return logDirUser
+}
+
+func fileWriter(cmd string, maxSizeMB, maxBackups, maxAgeDays int) (io.Writer, error) {
+	dir := logDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("create log directory failed [%s] [%w]", dir, err)
+	}
+	path := filepath.Join(dir, fmt.Sprintf("%s-pid-%d.log", cmd, os.Getpid()))
+	return &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}, nil
+}

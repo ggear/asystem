@@ -24,9 +24,6 @@ func (b *brokerDeletesListener) MarkDelete(topic string) {
 	b.client.Unsubscribe(topic)
 }
 
-// brokerWakeListener carries the display's stall detector back to the session. A suspend leaves paho believing a dead
-// session is open, and nothing notices until the keepalive expires, so the screen holds the values it stopped at. The
-// display cannot know that, and this engine cannot see the screen, so the cache they share passes the signal between.
 type brokerWakeListener struct {
 	onWake func()
 }
@@ -48,14 +45,6 @@ func (b *brokerPublishDeletesListener) MarkDelete(topic string) {
 	b.client.Publish(topic, 0, true, "")
 }
 
-// brokerConnect dials the broker and keeps the session up for the life of the caller.
-//
-// Notes:
-//   - Paho starts its reconnect goroutine before its connection lost goroutine, so the two callbacks race and the reason
-//     for an outage would print after the first attempt to recover from it. The first attempt therefore waits briefly on
-//     the lost signal, which orders the pair without trusting the scheduler, and falls through if it never arrives.
-//   - The connection is logged before the caller's own subscriptions, so a connect reads top down.
-//   - Every line carries the outage as its duration, which is the only number worth having when reading a recovery.
 func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
 	broker := config.Load(configPath).Broker()
 	if broker == "" {
@@ -160,11 +149,6 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 	}()
 }
 
-// Two quantities govern every wait here. The timeout is how long anything is waited on once, being the ping, the
-// connect, the subscribe, the unsubscribe, the publish, the first gap before a revive retries, and the moment the
-// reconnect handler allows the connection lost handler to report the reason first. The interval is the longest the
-// client ever goes between acting, being the keepalive while idle and the cap on the reconnect backoff. Raising the
-// timeout delays every detection that rests on the broker failing to answer, so it is not the knob for a slow link.
 const (
 	brokerProbeTopic = "supervisor/probe/wake"
 	brokerTimeout    = 3 * time.Second

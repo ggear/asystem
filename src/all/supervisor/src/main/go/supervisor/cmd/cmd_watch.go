@@ -89,7 +89,10 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if opts.consoleHeight > 0 && opts.consoleHeight < height {
 		height = opts.consoleHeight
 	}
-	logBuffer := scribe.EnableBuffer(slog.LevelDebug, height)
+	logBuffer, err := scribe.EnableBufferAndFile(slog.LevelDebug, "watch", height, 10, 3, 7)
+	if err != nil {
+		return fmt.Errorf("enable file logging: %w", err)
+	}
 	mode := opts.mode
 	var isRemote bool
 	var hosts []string
