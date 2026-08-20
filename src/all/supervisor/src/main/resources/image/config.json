@@ -58,6 +58,7 @@
           "mariadb",
           "nginx",
           "supervisor",
+          "tasmota",
           "vernemq"
         ]
       },

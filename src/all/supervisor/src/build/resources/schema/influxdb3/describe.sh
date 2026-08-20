@@ -1040,7 +1040,8 @@ SELECT
     CASE WHEN service IN (
         'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
         'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
-        'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt'
+        'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle',
+        'zigbee2mqtt'
     ) THEN 'yes' ELSE 'no' END AS declared,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -1053,7 +1054,8 @@ WHERE
 GROUP BY concat(host, '/', service), CASE WHEN service IN (
     'cloudflare', 'grafana', 'homeassistant', 'influxdb3', 'letsencrypt', 'mariadb',
     'mlflow', 'mlserver', 'network', 'nginx', 'openra', 'plex', 'postgres', 'sabnzbd',
-    'sonarr', 'supervisor', 'tempstat', 'vernemq', 'weewx', 'wrangle', 'zigbee2mqtt'
+    'sonarr', 'supervisor', 'tasmota', 'tempstat', 'vernemq', 'weewx', 'wrangle',
+    'zigbee2mqtt'
 ) THEN 'yes' ELSE 'no' END
 ORDER BY rows DESC;
 SCHEMA_SQL

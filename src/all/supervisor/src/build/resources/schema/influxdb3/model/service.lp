@@ -29,6 +29,7 @@
 #     sabnzbd,
 #     sonarr,
 #     supervisor,
+#     tasmota,
 #     tempstat,
 #     vernemq,
 #     weewx,

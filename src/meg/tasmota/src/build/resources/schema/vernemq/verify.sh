@@ -119,7 +119,7 @@ faulted() {
 printf '\nSchema verify [%s] against [%s]\n' "tasmota" "${BROKER_SERVICE}"
 printf -- '\n-- %s\n\n' "verify"
 
-COMMAND_TOPICS=("tasmota/device/ceiling_network_switch_plug/cmnd/POWER" "tasmota/device/ceiling_water_booster_plug/cmnd/POWER" "tasmota/device/deck_festoons_plug/cmnd/POWER" "tasmota/device/garden_pool_filter_plug/cmnd/POWER" "tasmota/device/kitchen_bench_lights_plug/cmnd/POWER" "tasmota/device/kitchen_fan_plug/cmnd/POWER" "tasmota/device/landing_festoons_plug/cmnd/POWER" "tasmota/device/rack_backup_plug/cmnd/POWER" "tasmota/device/rack_fans_plug/cmnd/POWER" "tasmota/device/rack_outlet_plug/cmnd/POWER" "tasmota/device/rack_printer_plug/cmnd/POWER" "tasmota/device/rack_screen_plug/cmnd/POWER")
+COMMAND_TOPICS=("tasmota/device/ceiling_network_switch_plug/cmnd/POWER" "tasmota/device/deck_festoons_plug/cmnd/POWER" "tasmota/device/kitchen_bench_lights_plug/cmnd/POWER" "tasmota/device/kitchen_fan_plug/cmnd/POWER" "tasmota/device/landing_festoons_plug/cmnd/POWER" "tasmota/device/rack_backup_plug/cmnd/POWER" "tasmota/device/rack_fans_plug/cmnd/POWER" "tasmota/device/rack_outlet_plug/cmnd/POWER" "tasmota/device/rack_screen_plug/cmnd/POWER")
 
 FAULTS=0
 FAULT_FILE="$(mktemp)"

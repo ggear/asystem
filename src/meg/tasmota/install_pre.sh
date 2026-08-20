@@ -12,4 +12,3 @@ fi
 
 "${ROOT_DIR}/image/broker.sh"
 
-"${ROOT_DIR}/image/restart.sh"

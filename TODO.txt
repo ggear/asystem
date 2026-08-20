@@ -37,7 +37,15 @@ resinstate BACKUP_RETAIN_DAYS for HOT, maybe rename and create new ones for WARM
 go through each module and inspect or implement close out 6 with results, prune backup aggresively, offload metatadata outside of backup in slow moving, single copy backups
 
 
-
+do a mqtt release, checking mqtt describe etc
+vernemq     30   ← wipe + sweep
+supervisor  25   ← before vernemq
+weewx       31   ┐
+tempstat    31   │
+network     31   ├ after vernemq
+tasmota     32
+zigbee2mqtt 31   ┘
+vernemq again to test it running all broker.sh scripts
 
 add restore.sh and test 
 implement plan
@@ -55,6 +63,7 @@ add explorer module for influxdb, call is influxdb3ui or explorer?
 
 
 
+how to deal with vernemq redploy and run all mqtt publish, also make install.sh start not run broker, and others. 
 doesnt seem worth it? is it possible to have postgress/influxdb3/vernemq discover their schemas and then have verify.sh diff with the agrgegate of the modules to check missing and extra elements in the schema without too much code? worthwhile?
 tune influxdb compactor given real world inputs
 validate all database modules - supervisor/network/wrangle/homeassistant, test whats on file and describe/query/verify

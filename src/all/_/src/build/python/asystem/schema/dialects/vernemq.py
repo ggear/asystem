@@ -132,10 +132,11 @@ def ship(source, module_name, module_root, schemas_dir, options):
         shutil.rmtree(working_dir)
     if exists(publish_path):
         os.remove(publish_path)
-    if isinstance(source, SchemaDocument) or len(source) == 0:
+    recovery = _recovery(module_root)
+    metadata_df = None if isinstance(source, SchemaDocument) or len(source) == 0 else source
+    if metadata_df is None and not recovery:
         return
-    metadata_df = source
-    for _, row in metadata_df.iterrows():
+    for _, row in [] if metadata_df is None else metadata_df.iterrows():
         discovery_dir = abspath(join(working_dir, str(row["discovery_topic"])))
         os.makedirs(discovery_dir)
         discovery_path = abspath(join(discovery_dir, str(row["unique_id"]) + ".json"))
@@ -144,10 +145,11 @@ def ship(source, module_name, module_root, schemas_dir, options):
         print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
               .format(module_name, row["unique_id"], discovery_path))
     with open(publish_path, 'w') as publish_file:
-        publish_file.write(publish_script(module_name, options.topic_glob_discovery, options.topic_glob_data))
+        publish_file.write(publish_script(module_name, options.topic_glob_discovery, options.topic_glob_data,
+                                          published=metadata_df is not None, recovery=recovery))
     os.chmod(publish_path, 0o750)
-    print("Build generate script [{}] entity metadata publish script persisted to [{}]"
-          .format(module_name, publish_path))
+    print("Build generate script [{}] entity metadata publish script persisted to [{}]{}"
+          .format(module_name, publish_path, " with a recovery fragment" if recovery else ""))
 
 
 def leaf(topic, spec=None, document=None, role=""):
@@ -182,9 +184,16 @@ def discovery(row):
     return json.dumps(discovery_dict, ensure_ascii=False, indent=2) + "\n"
 
 
-def publish_script(module_name, topic_glob_discovery, topic_glob_data):
+def _recovery(module_root):
+    recovery_path = join(str(module_root), "src/build/resources", SHIPPED + ".sh")
+    if not exists(recovery_path):
+        return ""
+    return "\n".join(line.rstrip() for line in open(recovery_path).read().splitlines()).strip()
+
+
+def publish_script(module_name, topic_glob_discovery, topic_glob_data, published=True, recovery=""):
     topic_find_discovery = ("*/" + topic_glob_discovery.replace("+", "*").replace("#", "*") + "/*" if topic_glob_discovery else "*")
-    return """
+    header = """
 #!/usr/bin/env bash
 {banner}
 
@@ -196,7 +205,8 @@ while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "
 [ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
 
 BROKER_ARGS=(-h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT")
-
+""".format(banner=banner(), shipped=SHIPPED)
+    publish = """
 printf '\\nEntity Metadata publish script [{module}] dropping discovery topics on [%s]:\\n' "$VERNEMQ_SERVICE"
 mosquitto_sub "${{BROKER_ARGS[@]}}" -F '%t' -t "{glob_discovery}" -W 5 2>/dev/null | sort -u | \\
   while read -r TOPIC; do
@@ -219,14 +229,13 @@ find "$ROOT_DIR" -path "{find_discovery}" -name "*.json" -print0 | sort -z | whi
   printf '%s\\n' "$METADATA_TOPIC"
 done
 printf '\\n'
-            """.format(
-        banner=banner(),
-        shipped=SHIPPED,
+""".format(
         module=module_name,
         glob_discovery=topic_glob_discovery,
         glob_data=topic_glob_data,
         find_discovery=topic_find_discovery,
-    ).strip()
+    ) if published else ""
+    return "\n\n".join(part for part in (header.strip(), publish.strip(), recovery) if part) + "\n"
 
 
 def describe_script(module_name, globs):

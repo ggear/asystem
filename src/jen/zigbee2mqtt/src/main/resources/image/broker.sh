@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+ROOT_DIR="$(dirname "$(readlink -f "$0")")/broker"
+
+ENV_DIR="$ROOT_DIR"
+while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "$ENV_DIR")"; done
+# shellcheck disable=SC1091
+[ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
+
+BROKER_ARGS=(-h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT")
+printf 'Entity Metadata publish script [zigbee2mqtt] restarting the service to republish its discovery topics:\n'
+if docker restart zigbee2mqtt >/dev/null 2>&1; then
+  printf 'zigbee2mqtt\n\nEntity Metadata publish script [zigbee2mqtt] waiting for the service to come up ... ' && sleep 30 && printf 'done\n'
+else
+  printf '\nEntity Metadata publish script [zigbee2mqtt] restart failed, the service is not running on this host\n' >&2
+fi
+
+DISCOVERED=$(mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t 'homeassistant/#' -W 5 2>/dev/null | grep -c '/0x' || true)
+printf '\nEntity Metadata publish script [zigbee2mqtt] rediscovered [%s] devices\n\n' "${DISCOVERED}"
