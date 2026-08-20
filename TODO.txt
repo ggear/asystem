@@ -38,14 +38,28 @@ go through each module and inspect or implement close out 6 with results, prune 
 
 
 do a mqtt release, checking mqtt describe etc
-vernemq     30   ← wipe + sweep
-supervisor  25   ← before vernemq
-weewx       31   ┐
-tempstat    31   │
-network     31   ├ after vernemq
-tasmota     32
-zigbee2mqtt 31   ┘
-vernemq again to test it running all broker.sh scripts
+┌─────┬─────────────┬───────┬─────────────────────────────────────────────────────────────────────────────────────────┐
+│  #  │   Module    │ Group │                                      What it does                                       │
+├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 1   │ supervisor  │ 31    │ new image/broker.sh on all 6 hosts; engine work; group change                           │
+├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 2   │ weewx       │ 31    │ replaces the deployed vernemq.sh                                                        │
+├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 3   │ tempstat    │ 31    │ replaces the deployed vernemq.sh                                                        │
+├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 4   │ zigbee2mqtt │ 31    │ first broker.sh — recovery fragment only                                                │
+├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 5   │ network     │ 32    │ replaces the deployed vernemq.sh; group change                                          │
+├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 6   │ tasmota     │ 32    │ first release; fragment restarts the 12 devices                                         │
+├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 7   │ nginx       │ 33    │ regenerates the tasmota vhost for /ws + port 32419 — fixes the mqtt.min.js 502          │
+├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 8   │ vernemq     │ 30    │ run separately, last — wipes the broker, then the sweep restores everything in one pass │
+└─────┴─────────────┴───────┴─────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+
 
 add restore.sh and test 
 implement plan
