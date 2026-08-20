@@ -6,6 +6,7 @@ sabnzbd
 grafana
 vernemq
 wrangle
+tasmota
 mlserver
 unpoller
 postgres
