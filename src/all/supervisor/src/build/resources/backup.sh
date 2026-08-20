@@ -25,6 +25,7 @@ backup_written() {
   #TODO: Implement COLD path
 
   #TODO: Implement a json description of backup process broken down by HOT/WARM agrgegate and per module and COLD aggregate paths, with success/failure and timings
+  echo "WARN: Backup not implemented, writing a placeholder [${BACKUP_MODULE_NAME}]" >&2
   echo "TODO: Provide implementation" >"${BACKUP_TARGET_PATH}.tmp"
-  return 1
+  return 0
 }

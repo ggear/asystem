@@ -3,6 +3,9 @@
 # Generic module install script, to be invoked by the Fabric management script
 ###############################################################################
 
+# SERVICE_NAME and the other SERVICE_* variables are injected into the environment by the deploy
+# shellcheck disable=SC2153
+
 set -Eeuo pipefail
 
 IFS=$'\n\t'
@@ -41,10 +44,8 @@ run_backup() {
   fi
   chmod +x "${backup_script}"
   BACKUP_SOURCE_PATH="${backup_source}" BACKUP_SKIP_HOURS=24 BACKUP_SERVICE_RESTART=false \
-    timeout 1800 "${backup_script}" || {
-    start_service
-    log_error "Backup failed before upgrade [${backup_script}] source [${backup_source}]"
-  }
+    timeout 1800 "${backup_script}" ||
+    log_error "Backup failed, abandoning the install of [${SERVICE_VERSION_ABSOLUTE}] with [${backup_source}] still running [${backup_script}]"
 }
 
 SERVICE_WAIT_EXECUTING_SECONDS=300
@@ -88,10 +89,12 @@ retire_home() {
 }
 
 stop_service() {
-  docker stop "${SERVICE_NAME}" >/dev/null 2>&1 || true
-  docker stop "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
-  docker wait "${SERVICE_NAME}" >/dev/null 2>&1 || true
-  docker wait "${SERVICE_NAME}_bootstrap" >/dev/null 2>&1 || true
+  local container
+  for container in "${SERVICE_NAME}" "${SERVICE_NAME}_bootstrap"; do
+    docker stop "${container}" >/dev/null 2>&1 || true
+    docker wait "${container}" >/dev/null 2>&1 || true
+    docker rm -f "${container}" >/dev/null 2>&1 || true
+  done
 }
 
 start_service() {
@@ -128,6 +131,8 @@ run_hook "./install_prep.sh"
 cd "${SERVICE_INSTALL}"
 touch .env
 chmod 600 .env
+# The env file is written at package time and is not available to static analysis
+# shellcheck disable=SC1091
 source .env
 if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
