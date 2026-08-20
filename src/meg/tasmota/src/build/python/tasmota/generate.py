@@ -6,6 +6,7 @@ import pandas as pd
 
 from asystem import load_bootstrap_entities
 from asystem import load_bootstrap_env
+from asystem import write_container_healthchecks
 from asystem import write_schema_broker
 
 pd.options.mode.chained_assignment = None
@@ -14,6 +15,7 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
     env = load_bootstrap_env(DIR_ROOT)
+    write_container_healthchecks()
     metadata_df = load_bootstrap_entities()
 
     metadata_tasmota_df = metadata_df[
@@ -28,7 +30,6 @@ if __name__ == "__main__":
         ].sort_values("connection_ip")
 
     write_schema_broker(metadata_tasmota_df,
-                        working_root=join(DIR_ROOT, "src/main/resources/config"),
                         topic_glob_discovery="homeassistant/+/tasmota/#",
                         topic_glob_data="tasmota/#",
                         schema_state={
@@ -175,3 +176,48 @@ echo ''
                     ))
                 tasmota_config_file.write("fi\necho ''\n")
     print("Build generate script [tasmota] entity metadata persisted to [{}]".format(tasmota_config_path))
+
+    tasmota_devices = {}
+    for metadata_tasmota_dict in metadata_tasmota_dicts:
+        if metadata_tasmota_dict["entity_namespace"] != "sensor" and "connection_ip" in metadata_tasmota_dict:
+            tasmota_devices[metadata_tasmota_dict["unique_id"]] = (
+                metadata_tasmota_dict["device_name"], metadata_tasmota_dict["connection_ip"])
+    tasmota_html_path = join(DIR_ROOT, "src/main/resources/image/html/index.html")
+    os.makedirs(dirname(tasmota_html_path), exist_ok=True)
+    with open(tasmota_html_path, "wt") as tasmota_html_file:
+        tasmota_html_file.write("""
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tasmota</title>
+<style>
+body { font-family: sans-serif; margin: 2rem; }
+li { margin: 0.3rem 0; }
+.status { font-family: monospace; }
+</style>
+</head>
+<body>
+<h1>Tasmota</h1>
+<ul>
+        """.strip() + "\n")
+        for tasmota_device_id in sorted(tasmota_devices, key=lambda id: tasmota_devices[id][0]):
+            tasmota_device_name, tasmota_device_ip = tasmota_devices[tasmota_device_id]
+            tasmota_html_file.write('<li><span class="status" id="{}">[unknown]</span> <a href="http://{}/">{}</a> [{}]</li>\n'.format(
+                tasmota_device_id, tasmota_device_ip, tasmota_device_name, tasmota_device_ip))
+        tasmota_html_file.write("""
+</ul>
+<script src="mqtt.min.js"></script>
+<script>
+const client = mqtt.connect((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/mqtt");
+client.on("connect", () => client.subscribe("tasmota/device/+/tele/LWT"));
+client.on("message", (topic, payload) => {
+  const status = document.getElementById(topic.split("/")[2]);
+  if (status) status.textContent = "[" + payload.toString().toLowerCase() + "]";
+});
+client.on("error", () => document.querySelectorAll(".status").forEach((status) => status.textContent = "[unknown]"));
+</script>
+</body>
+</html>
+        """.strip() + "\n")
+    print("Build generate script [tasmota] device index persisted to [{}]".format(tasmota_html_path))

@@ -1,0 +1,3 @@
+../install.sh
+../install_pre.sh
+main/resources/image/nginx.conf

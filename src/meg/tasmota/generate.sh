@@ -17,3 +17,9 @@ if [ ! -f ${ROOT_DIR}/src/build/resources/firmware/tasmota-${VERSION}.bin.gz ] |
     wget -q -O ${ROOT_DIR}/src/build/resources/firmware/tasmota-minimal-${VERSION}.bin.gz http://ota.tasmota.com/tasmota/release-${VERSION}/tasmota-minimal.bin.gz &&
     wget -q -O ${ROOT_DIR}/src/build/resources/firmware/tasmota32-${VERSION}.bin http://ota.tasmota.com/tasmota32/release/tasmota32.bin
 fi
+
+MQTT_VERSION=5.10.1
+if [ ! -f ${ROOT_DIR}/src/main/resources/image/html/mqtt.min.js ]; then
+  mkdir -p ${ROOT_DIR}/src/main/resources/image/html &&
+    wget -q -O ${ROOT_DIR}/src/main/resources/image/html/mqtt.min.js https://unpkg.com/mqtt@${MQTT_VERSION}/dist/mqtt.min.js
+fi

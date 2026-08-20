@@ -9,6 +9,7 @@ x-common: &common
     - DOCKER_VERNEMQ_ACCEPT_EULA=yes
     - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
     - DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD=off
+    - DOCKER_VERNEMQ_LISTENER__WS__DEFAULT=0.0.0.0:8080
   logging:
     driver: "json-file"
     options:
@@ -19,11 +20,10 @@ services:
     container_name: vernemq
     <<: *common
     restart: ${SERVICE_RESTART}
-    volumes:
-      - ${SERVICE_DATA_DIR}:/vernemq/data
     ports:
       - ${VERNEMQ_HTTP_PORT}:8888
       - ${VERNEMQ_API_PORT}:1883
+      - ${VERNEMQ_WS_PORT}:8080
     healthcheck:
       test: /asystem/etc/checkhealthy.sh
       interval: 2m

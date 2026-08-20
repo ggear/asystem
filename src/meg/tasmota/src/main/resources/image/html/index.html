@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tasmota</title>
+<style>
+body { font-family: sans-serif; margin: 2rem; }
+li { margin: 0.3rem 0; }
+.status { font-family: monospace; }
+</style>
+</head>
+<body>
+<h1>Tasmota</h1>
+<ul>
+<li><span class="status" id="ceiling_network_switch_plug">[unknown]</span> <a href="http://10.0.4.105/">Ceiling Network Switch</a> [10.0.4.105]</li>
+<li><span class="status" id="ceiling_water_booster_plug">[unknown]</span> <a href="http://10.0.4.100/">Ceiling Water Booster</a> [10.0.4.100]</li>
+<li><span class="status" id="deck_festoons_plug">[unknown]</span> <a href="http://10.0.4.107/">Deck Festoons</a> [10.0.4.107]</li>
+<li><span class="status" id="garden_pool_filter_plug">[unknown]</span> <a href="http://10.0.4.106/">Garden Pool Filter</a> [10.0.4.106]</li>
+<li><span class="status" id="kitchen_bench_lights_plug">[unknown]</span> <a href="http://10.0.4.103/">Kitchen Bench Lights</a> [10.0.4.103]</li>
+<li><span class="status" id="kitchen_fan_plug">[unknown]</span> <a href="http://10.0.4.104/">Kitchen Fan</a> [10.0.4.104]</li>
+<li><span class="status" id="landing_festoons_plug">[unknown]</span> <a href="http://10.0.4.108/">Landing Festoons</a> [10.0.4.108]</li>
+<li><span class="status" id="rack_backup_plug">[unknown]</span> <a href="http://10.0.4.110/">Rack Backup</a> [10.0.4.110]</li>
+<li><span class="status" id="rack_fans_plug">[unknown]</span> <a href="http://10.0.4.101/">Rack Fans</a> [10.0.4.101]</li>
+<li><span class="status" id="rack_outlet_plug">[unknown]</span> <a href="http://10.0.4.102/">Rack Outlet</a> [10.0.4.102]</li>
+<li><span class="status" id="rack_printer_plug">[unknown]</span> <a href="http://10.0.4.111/">Rack Printer</a> [10.0.4.111]</li>
+<li><span class="status" id="rack_screen_plug">[unknown]</span> <a href="http://10.0.4.109/">Rack Screen</a> [10.0.4.109]</li>
+</ul>
+<script src="mqtt.min.js"></script>
+<script>
+const client = mqtt.connect((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/mqtt");
+client.on("connect", () => client.subscribe("tasmota/device/+/tele/LWT"));
+client.on("message", (topic, payload) => {
+  const status = document.getElementById(topic.split("/")[2]);
+  if (status) status.textContent = "[" + payload.toString().toLowerCase() + "]";
+});
+client.on("error", () => document.querySelectorAll(".status").forEach((status) => status.textContent = "[unknown]"));
+</script>
+</body>
+</html>

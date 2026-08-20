@@ -110,6 +110,9 @@ install | start | stop | sleep) ;;
 *) log_error "Unknown command [${COMMAND}] expected [install] [start] [stop] or [sleep]" ;;
 esac
 
+export SERVICE_COMMAND="${COMMAND}"
+export SERVICE_VERSION_CHANGED="false"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_INSTALL="/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
 [[ -d "${SERVICE_INSTALL}" ]] || log_error "Install directory does not exist: ${SERVICE_INSTALL}"
@@ -139,6 +142,9 @@ source .env
 if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
   SERVICE_PARENT="$(dirname "${SERVICE_HOME}")"
+  if [[ "$(readlink -f "${SERVICE_PARENT}/latest" 2>/dev/null || true)" != "${SERVICE_HOME}" ]]; then
+    export SERVICE_VERSION_CHANGED="true"
+  fi
   mapfile -t EXISTING_HOMES < <(find "${SERVICE_PARENT}" -maxdepth 1 -mindepth 1 -type d ! -name latest 2>/dev/null |
     grep -E '/[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?$' | sort)
   SERVICE_HOME_OLD=""

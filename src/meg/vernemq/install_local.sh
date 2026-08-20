@@ -1,17 +1,32 @@
 #!/bin/bash
 
-ROOT_DIR="$(dirname "$(readlink -f "$0")")"
+set -Eeuo pipefail
 
-echo ""
-for MODULE_DIR in $(find "${ROOT_DIR}/../.." -name mqtt.sh -type f -path "*/src/*" ! -path "*/target/*" | sed 's/\/src\/main\// /' | cut -d ' ' -f1); do
-  echo "----------------------------------------------------------------------------------------------------" &&
-    echo "Executing deploy script for module [$(basename ${MODULE_DIR})] starting ... " &&
-    echo "----------------------------------------------------------------------------------------------------" &&
-    echo ""
-  [ -f "${MODULE_DIR}/generate.sh" ] && "${MODULE_DIR}/generate.sh"
-  [ -f "${MODULE_DIR}/deploy.sh" ] && "${MODULE_DIR}/deploy.sh"
-  echo "" && echo "----------------------------------------------------------------------------------------------------" &&
-    echo "Executing deploy script for module [$(basename ${MODULE_DIR})] finished" &&
-    echo "----------------------------------------------------------------------------------------------------" &&
-    echo ""
-done
+IFS=$'\n\t'
+
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
+LINE="----------------------------------------------------------------------------------------------------"
+FAILED=0
+
+while IFS= read -r BROKER_SCRIPT; do
+  MODULE_NAME="$(basename "${BROKER_SCRIPT%%/src/main/*}")"
+  echo ""
+  echo "${LINE}"
+  echo "Executing broker script for module [${MODULE_NAME}] starting ... "
+  echo "${LINE}"
+  echo ""
+  if ! "${BROKER_SCRIPT}"; then
+    FAILED=$((FAILED + 1))
+    echo "WARN: Broker script failed for module [${MODULE_NAME}]" >&2
+  fi
+  echo ""
+  echo "${LINE}"
+  echo "Executing broker script for module [${MODULE_NAME}] finished"
+  echo "${LINE}"
+  echo ""
+done < <(find "${ROOT_DIR}/../.." -name broker.sh -type f -path "*/src/main/*" ! -path "*/target/*" | sort)
+
+if [[ "${FAILED}" -gt 0 ]]; then
+  echo "ERROR: Broker scripts failed for [${FAILED}] modules" >&2
+  exit 1
+fi
