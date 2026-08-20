@@ -44,8 +44,10 @@ run_backup() {
   fi
   chmod +x "${backup_script}"
   BACKUP_SOURCE_PATH="${backup_source}" BACKUP_SKIP_HOURS=24 BACKUP_SERVICE_RESTART=false \
-    timeout 1800 "${backup_script}" ||
-    log_error "Backup failed, abandoning the install of [${SERVICE_VERSION_ABSOLUTE}] with [${backup_source}] still running [${backup_script}]"
+    timeout 1800 "${backup_script}" || {
+    docker start "${SERVICE_NAME}" >/dev/null 2>&1 || true
+    log_error "Backup failed, abandoning the install of [${SERVICE_VERSION_ABSOLUTE}] and restoring [${backup_source}] [${backup_script}]"
+  }
 }
 
 SERVICE_WAIT_EXECUTING_SECONDS=300
