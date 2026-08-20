@@ -415,7 +415,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if secs := int64(purgeInterval.Seconds()); secs > 0 {
 				rate = rx / secs
 			}
-			scribe.Engine("profiling", "subscribe").Debug("purge", purgeStart, "received [%d] msgs at [%d] msg/s dropped [%d] msgs evicted [%d] deleted [%d] records", rx, rate, drops, evicted, deleted)
+			scribe.Engine("profiling", "subscribe").Debug("purge", purgeStart, "received [%4d] msgs at [%3d] msg/s dropped [%4d] msgs evicted [%3d] deleted [%3d] records", rx, rate, drops, evicted, deleted)
 			censusStart := time.Now()
 			online := 0
 			services := 0
@@ -436,7 +436,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 			}
 			reconcileMutex.Unlock()
-			scribe.Engine("profiling", "subscribe").Debug("census", censusStart, "hosts [%d] online [%d] services [%d] subscribed [%d] topics reconciling [%d] hosts holding [%d] records", len(cache.Hosts()), online, services, topics, pending, cache.Size())
+			scribe.Engine("profiling", "subscribe").Debug("census", censusStart, "hosts [%2d] online [%2d] services [%3d] subscribed [%4d] topics reconciling [%2d] hosts holding [%4d] records", len(cache.Hosts()), online, services, topics, pending, cache.Size())
 		}
 	}
 }

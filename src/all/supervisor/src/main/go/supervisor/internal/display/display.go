@@ -562,11 +562,9 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				d.refresh("wake")
 			}
 			ticked = time.Now()
-			updateStart := time.Now()
+			drawStart := time.Now()
 			dirtyIndexes := d.takeDirtyIndexes()
-			if len(dirtyIndexes) > 0 {
-				scribe.Engine("profiling", "display").Debug("update", updateStart, "received [%d] updates", len(dirtyIndexes))
-			}
+			drawnCount := 0
 			if d.logOverlay {
 				if d.logBuffer != nil {
 					v := d.logBuffer.Version()
@@ -577,28 +575,25 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 						d.terminal.show()
 					}
 				}
-				d.force = false
-				continue
-			}
-			if !d.force && len(dirtyIndexes) == 0 {
-				continue
-			}
-			drawStart := time.Now()
-			drawnCount := len(dirtyIndexes)
-			if d.force {
-				drawnCount = len(d.boxes)
-				for i := range d.boxes {
-					d.boxes[i].drawValue(d)
-				}
-			} else {
-				for _, index := range dirtyIndexes {
-					if index < len(d.boxes) {
-						d.boxes[index].drawValue(d)
+			} else if d.force || len(dirtyIndexes) > 0 {
+				drawnCount = len(dirtyIndexes)
+				if d.force {
+					drawnCount = len(d.boxes)
+					for i := range d.boxes {
+						d.boxes[i].drawValue(d)
+					}
+				} else {
+					for _, index := range dirtyIndexes {
+						if index < len(d.boxes) {
+							d.boxes[index].drawValue(d)
+						}
 					}
 				}
+				d.terminal.show()
 			}
-			d.terminal.show()
-			scribe.Engine("profiling", "display").Debug("draw", drawStart, "drawn [%d] boxes", drawnCount)
+			if len(dirtyIndexes) > 0 || drawnCount > 0 {
+				scribe.Engine("profiling", "display").Debug("draw", drawStart, "received [%3d] updates, drawn [%3d] boxes", len(dirtyIndexes), drawnCount)
+			}
 			d.force = false
 		}
 	}
