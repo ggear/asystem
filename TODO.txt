@@ -187,6 +187,7 @@ Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-N
 ###############################################################################################################################################################
 # Supervisor
 ###############################################################################################################################################################
+Why a reconcile in 10s detail=observed [raspbpi-jen], status [online], trigger [restart], resubscribed [47] topics, reconcile in [10000] ms?
 implement commands to restart services, to work through ui when selected with popup and through HASS, add install restart CLI option that manages a .restart, flushed on install start and read into RST fields
 Add a go linter to pickup IntelliJ style warnings?
 when maximise host, update update freq to 1s
