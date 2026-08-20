@@ -331,17 +331,39 @@ func TestScribe_FormatDuration(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_seconds_stay_milliseconds",
+			name:          "happy_milliseconds_hold_to_the_ladder",
+			value:         9999 * time.Millisecond,
+			expected:      "9999ms",
+			expectedError: false,
+		},
+		{
+			name:          "happy_seconds_past_the_ladder",
 			value:         90 * time.Second,
-			expected:      "90000ms",
+			expected:      "90s",
+			expectedError: false,
+		},
+		{
+			name:          "happy_minutes_past_the_ladder",
+			value:         5 * time.Hour,
+			expected:      "300m",
+			expectedError: false,
+		},
+		{
+			name:          "happy_hours_past_the_ladder",
+			value:         200 * time.Hour,
+			expected:      "200h",
 			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			got := duration(slog.DurationValue(testCase.value))
-			if len(got) != widthDuration {
-				t.Errorf("width: got %d want %d", len(got), widthDuration)
+			wantWidth := widthDuration
+			if size := len(keyDuration) + len("=") + len(testCase.expected); size > wantWidth {
+				wantWidth = size
+			}
+			if len(got) != wantWidth {
+				t.Errorf("width: got %d want %d", len(got), wantWidth)
 			}
 			if !strings.HasSuffix(got, testCase.expected) {
 				t.Errorf("value: got %q want suffix %q", got, testCase.expected)

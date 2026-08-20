@@ -300,13 +300,26 @@ func format(record slog.Record) string {
 func duration(value slog.Value) string {
 	text := value.String()
 	if value.Kind() == slog.KindDuration {
-		text = fmt.Sprintf("%dms", value.Duration().Milliseconds())
+		text = elapsed(value.Duration())
 	}
 	prefix := keyDuration + "="
 	if space := widthDuration - len(prefix) - len(text); space > 0 {
 		return prefix + strings.Repeat(" ", space) + text
 	}
 	return prefix + text
+}
+
+func elapsed(value time.Duration) string {
+	if millis := value.Milliseconds(); millis < durationCoarser {
+		return fmt.Sprintf("%dms", millis)
+	}
+	if seconds := int64(value.Seconds()); seconds < durationCoarser {
+		return fmt.Sprintf("%ds", seconds)
+	}
+	if minutes := int64(value.Minutes()); minutes < durationCoarser {
+		return fmt.Sprintf("%dm", minutes)
+	}
+	return fmt.Sprintf("%dh", int64(value.Hours()))
 }
 
 func pad(text string, width int) string {
@@ -329,10 +342,11 @@ const (
 )
 
 const (
-	widthTag      = 9
-	widthEngine   = 18
-	widthPhase    = 16
-	widthDuration = 18
+	durationCoarser = 10000
+	widthTag        = 9
+	widthEngine     = 18
+	widthPhase      = 16
+	widthDuration   = 15
 )
 
 var (
