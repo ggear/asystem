@@ -24,6 +24,22 @@ func (b *brokerDeletesListener) MarkDelete(topic string) {
 	b.client.Unsubscribe(topic)
 }
 
+// brokerWakeListener carries the display's stall detector back to the session. A suspend leaves paho believing a dead
+// session is open, and nothing notices until the keepalive expires, so the screen holds the values it stopped at. The
+// display cannot know that, and this engine cannot see the screen, so the cache they share passes the signal between.
+type brokerWakeListener struct {
+	onWake func()
+}
+
+func (b *brokerWakeListener) MarkWake() {
+	wakeStart := time.Now()
+	if b.onWake == nil {
+		return
+	}
+	b.onWake()
+	scribe.Engine("state", "broker").Info("wake", wakeStart, "revive requested by the display stall detector")
+}
+
 type brokerPublishDeletesListener struct {
 	client mqtt.Client
 }
@@ -32,36 +48,70 @@ func (b *brokerPublishDeletesListener) MarkDelete(topic string) {
 	b.client.Publish(topic, 0, true, "")
 }
 
+// brokerConnect dials the broker and keeps the session up for the life of the caller.
+//
+// Notes:
+//   - Paho starts its reconnect goroutine before its connection lost goroutine, so the two callbacks race and the reason
+//     for an outage would print after the first attempt to recover from it. The first attempt therefore waits briefly on
+//     the lost signal, which orders the pair without trusting the scheduler, and falls through if it never arrives.
+//   - The connection is logged before the caller's own subscriptions, so a connect reads top down.
+//   - Every line carries the outage as its duration, which is the only number worth having when reading a recovery.
 func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, willPayload string) (mqtt.Client, error) {
 	broker := config.Load(configPath).Broker()
 	if broker == "" {
 		return nil, errors.New("broker address is empty")
 	}
 	brokerURL := fmt.Sprintf("tcp://%s", broker)
+	var attempts atomic.Int64
+	var lostAt atomic.Int64
+	var connectedOnce atomic.Bool
+	lostSignal := make(chan struct{}, 1)
+	lostAt.Store(time.Now().UnixNano())
+	lostSince := func() time.Time {
+		return time.Unix(0, lostAt.Load())
+	}
 	opts := mqtt.NewClientOptions().
 		AddBroker(brokerURL).
 		SetClientID(fmt.Sprintf("supervisor-subscriber-%d", time.Now().UnixNano())).
 		SetCleanSession(true).
-		SetConnectTimeout(brokerConnectTimeout).
-		SetKeepAlive(brokerKeepAlive).
-		SetPingTimeout(brokerPingTimeout).
-		SetMaxReconnectInterval(brokerReconnectMax).
+		SetConnectTimeout(brokerTimeout).
+		SetKeepAlive(brokerInterval).
+		SetPingTimeout(brokerTimeout).
+		SetMaxReconnectInterval(brokerInterval).
 		SetAutoReconnect(true).
 		SetPassword(config.Load(configPath).BrokerToken()).
 		SetOnConnectHandler(func(client mqtt.Client) {
-			connectStart := time.Now()
+			retries := attempts.Swap(0)
+			state := "connected"
+			since := time.Now()
+			if !connectedOnce.Swap(true) || retries > 0 {
+				since = lostSince()
+			}
+			if retries > 0 {
+				state = "reconnected"
+			}
+			scribe.Engine("state", "broker").Info("connect", since, "broker [%s] %s after [%d] attempts", brokerURL, state, retries)
 			if onConnect != nil {
 				onConnect(client)
 			}
-			scribe.Engine("state", "broker").Info("connect", connectStart, "broker [%s]", brokerURL)
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-			lostStart := time.Now()
-			scribe.Engine("state", "broker").Warn("disconnect", lostStart, "broker [%s] failed with [%v]", brokerURL, err)
+			lostAt.Store(time.Now().UnixNano())
+			scribe.Engine("state", "broker").Warn("disconnect", time.Now(), "broker [%s] connection lost with [%v]", brokerURL, err)
+			select {
+			case lostSignal <- struct{}{}:
+			default:
+			}
 		}).
 		SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
-			reconnectStart := time.Now()
-			scribe.Engine("state", "broker").Warn("reconnect", reconnectStart, "broker [%s]", brokerURL)
+			attempt := attempts.Add(1)
+			if attempt == 1 {
+				select {
+				case <-lostSignal:
+				case <-time.After(brokerTimeout):
+				}
+			}
+			scribe.Engine("state", "broker").Debug("reconnect", lostSince(), "broker [%s] attempt [%d] while offline", brokerURL, attempt)
 		})
 	if willTopic != "" {
 		opts.SetWill(willTopic, willPayload, 1, true)
@@ -83,7 +133,7 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 		defer brokerReviving.Store(false)
 		probeStart := time.Now()
 		token := client.Unsubscribe(brokerProbeTopic)
-		if token.WaitTimeout(brokerProbeTimeout) && token.Error() == nil {
+		if token.WaitTimeout(brokerTimeout) && token.Error() == nil {
 			scribe.Engine("profiling", "broker").Debug("probe", probeStart, "alive [true] session responded, no revive needed")
 			return
 		}
@@ -94,9 +144,9 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 		reviveStart := time.Now()
 		scribe.Engine("state", "broker").Warn("revive", probeStart, "alive [false] session unresponsive, disconnecting to force reconnect")
 		client.Disconnect(0)
-		for backoff := brokerReviveBackoff; ; backoff = min(2*backoff, brokerReconnectMax) {
+		for backoff := brokerTimeout; ; backoff = min(2*backoff, brokerInterval) {
 			token := client.Connect()
-			if token.WaitTimeout(brokerConnectTimeout) && token.Error() == nil {
+			if token.WaitTimeout(brokerTimeout) && token.Error() == nil {
 				scribe.Engine("state", "broker").Info("revive", reviveStart, "alive [true] session revived")
 				return
 			}
@@ -110,14 +160,15 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 	}()
 }
 
+// Two quantities govern every wait here. The timeout is how long anything is waited on once, being the ping, the
+// connect, the subscribe, the unsubscribe, the publish, the first gap before a revive retries, and the moment the
+// reconnect handler allows the connection lost handler to report the reason first. The interval is the longest the
+// client ever goes between acting, being the keepalive while idle and the cap on the reconnect backoff. Raising the
+// timeout delays every detection that rests on the broker failing to answer, so it is not the knob for a slow link.
 const (
-	brokerProbeTopic     = "supervisor/probe/wake"
-	brokerProbeTimeout   = 2 * time.Second
-	brokerConnectTimeout = 5 * time.Second
-	brokerKeepAlive      = 10 * time.Second
-	brokerPingTimeout    = 3 * time.Second
-	brokerReconnectMax   = 10 * time.Second
-	brokerReviveBackoff  = 1 * time.Second
+	brokerProbeTopic = "supervisor/probe/wake"
+	brokerTimeout    = 3 * time.Second
+	brokerInterval   = 10 * time.Second
 )
 
 var brokerReviving atomic.Bool

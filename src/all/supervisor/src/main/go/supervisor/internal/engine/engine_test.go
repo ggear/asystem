@@ -479,6 +479,77 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 				t.Fatalf("Got record still present after reconcile grace, expected service absent since the transition reaped")
 			},
 		},
+		{
+			name: "happy_online_heartbeat_does_not_resubscribe",
+			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
+				return nonNilPayload
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				mqttClient.Publish(b.Topic, 0, true, nonNilPayload)
+				defer mqttClient.Publish(b.Topic, 0, true, []byte{})
+				time.Sleep(500 * time.Millisecond)
+				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
+				time.Sleep(2 * time.Second)
+				cache.Evict(b.GUID.Host, b.GUID.ServiceName)
+				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
+				time.Sleep(2 * time.Second)
+				record, ok := cache.Load(b.GUID)
+				if !ok {
+					t.Fatalf("Got record deleted after a heartbeat, expected the evicted record left alone")
+				}
+				if record != nil && record.Value.Pulse != nil {
+					t.Fatalf("Got record repopulated after a heartbeat, expected no redelivery without a status transition")
+				}
+			},
+		},
+		{
+			name:  "happy_offline_host_revived_by_later_data",
+			topic: "supervisor/alpha/status",
+			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
+				return []byte(hostStatusOffline)
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				time.Sleep(time.Second)
+				fresh := nonNilValue
+				fresh.Timestamp = time.Now().Unix()
+				payload, marshalErr := json.Marshal(fresh)
+				if marshalErr != nil {
+					t.Fatalf("marshal fresh value failed: %v", marshalErr)
+				}
+				mqttClient.Publish(b.Topic, 0, false, payload)
+				deadline := time.Now().Add(3 * time.Second)
+				for time.Now().Before(deadline) {
+					record, ok := cache.Load(b.GUID)
+					if ok && record != nil && record.Value.Pulse != nil {
+						return
+					}
+					time.Sleep(50 * time.Millisecond)
+				}
+				t.Fatalf("Got nil pulse after data published later than the offline, expected the host revived and the record stored")
+			},
+		},
+		{
+			name:  "sad_offline_host_ignores_earlier_data",
+			topic: "supervisor/alpha/status",
+			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
+				return []byte(hostStatusOffline)
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				time.Sleep(time.Second)
+				stale := nonNilValue
+				stale.Timestamp = time.Now().Add(-time.Hour).Unix()
+				payload, marshalErr := json.Marshal(stale)
+				if marshalErr != nil {
+					t.Fatalf("marshal stale value failed: %v", marshalErr)
+				}
+				mqttClient.Publish(b.Topic, 0, false, payload)
+				time.Sleep(2 * time.Second)
+				record, ok := cache.Load(b.GUID)
+				if ok && record != nil && record.Value.Pulse != nil {
+					t.Fatalf("Got record stored from data published before the offline, expected the offline host left evicted")
+				}
+			},
+		},
 	}
 	periods := config.Periods{PulseMillis: 1000, HeartbeatSecs: 30}
 	for _, tt := range tests {

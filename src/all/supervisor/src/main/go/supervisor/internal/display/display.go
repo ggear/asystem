@@ -558,7 +558,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 		case <-ticker.C:
 			if elapsed := time.Since(ticked); elapsed > d.tickStall {
 				scribe.Engine("state", "display").Warn("stall", ticked, "draw tick gap exceeded [%d] ms", d.tickStall.Milliseconds())
-				engine.Wake()
+				d.cache.Wake()
 				d.refresh("wake")
 			}
 			ticked = time.Now()
