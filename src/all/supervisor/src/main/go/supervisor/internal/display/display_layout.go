@@ -403,7 +403,7 @@ type text struct {
 }
 
 func logRemainder(started time.Time, rem, hostCount int) {
-	scribe.Engine("state", "display").Error("layout", started, "invalid remainder [%d] for hosts [%d]", rem, hostCount)
+	scribe.Engine("state", "display").Error("layout", started, "invalid  [%d] remainder for [%d] hosts", rem, hostCount)
 }
 
 func (t text) pick(useUnicode bool) string {

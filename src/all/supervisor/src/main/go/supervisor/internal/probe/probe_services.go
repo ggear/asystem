@@ -139,7 +139,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		}
 	}
 	if len(tombstoned) > 0 {
-		scribe.Probe("state", "services").Info("tombstone", tombstoneStart, "host [%s] removed [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
+		scribe.Probe("state", "services").Info("tombstone", tombstoneStart, "removed  [%d] services, host [%s], [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
 	}
 	newBool := func() *stats.BoolStats {
 		return stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
@@ -400,11 +400,11 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			continue
 		}
 		if name == "" {
-			scribe.Probe("state", "services").Error("docker", servicesStart, "empty container name reported, excluding from the service list")
+			scribe.Probe("state", "services").Error("docker", servicesStart, "rejected [container] empty name, excluding from the service list")
 			continue
 		}
 		if _, exists := seenNames[name]; exists {
-			scribe.Probe("state", "services").Error("docker", servicesStart, "non-unique container name [%s] reported, excluding from the service list", name)
+			scribe.Probe("state", "services").Error("docker", servicesStart, "rejected [%s] non-unique container name, excluding from the service list", name)
 			continue
 		}
 		seenNames[name] = struct{}{}
@@ -786,9 +786,9 @@ func (p *servicesProbe) version(containerInfo container.InspectResponse) (string
 			image = containerInfo.Config.Image
 		}
 		for _, candidateErr := range candidateErrs {
-			scribe.Probe("state", "services").Error("version", versionStart, "%s", candidateErr)
+			scribe.Probe("state", "services").Error("version", versionStart, "failed   [%v] version candidate", candidateErr)
 		}
-		scribe.Probe("state", "services").Error("version", versionStart, "not available from docker for image [%s]", image)
+		scribe.Probe("state", "services").Error("version", versionStart, "missing  [%s] version not available from docker", image)
 		return "-", nil
 	}
 	return version, nil

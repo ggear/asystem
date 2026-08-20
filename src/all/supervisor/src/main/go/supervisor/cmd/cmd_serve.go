@@ -62,9 +62,9 @@ func executeServe(configPath string, opts *serveOptions) error {
 	defer cancel()
 	serveStart := time.Now()
 	loaded := config.Load(configPath)
-	scribe.Engine("state", "serve").Info("start", serveStart, "version [%s] host [%s] config [%s] configured [%d] services poll [%d] ms pulse [%d] ms heartbeat [%d] s", loaded.Version(), loaded.Host(), configPath, len(loaded.Services(loaded.Host())), periods.PollMillis, periods.PulseMillis, periods.HeartbeatSecs)
+	scribe.Engine("state", "serve").Info("start", serveStart, "version  [%s], host [%s], config [%s], configured [%d] services, poll [%d] ms, pulse [%d] ms, heartbeat [%d] s", loaded.Version(), loaded.Host(), configPath, len(loaded.Services(loaded.Host())), periods.PollMillis, periods.PulseMillis, periods.HeartbeatSecs)
 	engine.RunAllProbesPublishLoop(ctx, configPath, metric.NewRecordCache(), periods)
-	scribe.Engine("state", "serve").Info("stop", serveStart, "version [%s] host [%s] exited gracefully", loaded.Version(), loaded.Host())
+	scribe.Engine("state", "serve").Info("stop", serveStart, "version  [%s], host [%s], exited gracefully", loaded.Version(), loaded.Host())
 	return nil
 }
 

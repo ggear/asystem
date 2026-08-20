@@ -59,13 +59,13 @@ func load(path string) *Config {
 	loadStart := time.Now()
 	result := &Config{asystem: configData{Schema: []configServices{}}}
 	if path == "" {
-		scribe.Engine("config", "config").Warn("load", loadStart, "no path provided, using defaults")
+		scribe.Engine("config", "config").Warn("load", loadStart, "defaults [config] no path provided")
 	} else if data, err := os.ReadFile(path); err != nil {
-		scribe.Engine("config", "config").Warn("load", loadStart, "file not found at [%s], using defaults", path)
+		scribe.Engine("config", "config").Warn("load", loadStart, "defaults [%s] file not found", path)
 	} else {
 		var raw struct{ Asystem configData }
 		if err := json.Unmarshal(data, &raw); err != nil {
-			scribe.Engine("config", "config").Warn("parse", loadStart, "failed for [%s] with [%v], using defaults", path, err)
+			scribe.Engine("config", "config").Warn("parse", loadStart, "defaults [%s] parse failed with [%v]", path, err)
 		} else {
 			result.asystem = raw.Asystem
 			if result.asystem.Schema == nil {
@@ -75,11 +75,11 @@ func load(path string) *Config {
 			validSchema := make([]configServices, 0, len(result.asystem.Schema))
 			for _, hostSchema := range result.asystem.Schema {
 				if hostSchema.Host == "" {
-					scribe.Engine("config", "config").Warn("schema", loadStart, "empty host, skipping")
+					scribe.Engine("config", "config").Warn("schema", loadStart, "rejected [host] empty, skipping")
 					continue
 				}
 				if seenHosts[hostSchema.Host] {
-					scribe.Engine("config", "config").Warn("schema", loadStart, "host [%s] duplicate, skipping", hostSchema.Host)
+					scribe.Engine("config", "config").Warn("schema", loadStart, "rejected [%s] duplicate host, skipping", hostSchema.Host)
 					continue
 				}
 				seenHosts[hostSchema.Host] = true
@@ -87,11 +87,11 @@ func load(path string) *Config {
 				validServices := make([]string, 0, len(hostSchema.Services))
 				for _, service := range hostSchema.Services {
 					if service == "" {
-						scribe.Engine("config", "config").Warn("schema", loadStart, "host [%s] empty service, skipping", hostSchema.Host)
+						scribe.Engine("config", "config").Warn("schema", loadStart, "rejected [%s] empty service, skipping", hostSchema.Host)
 						continue
 					}
 					if seenServices[service] {
-						scribe.Engine("config", "config").Warn("schema", loadStart, "host [%s] duplicate service [%s], skipping", hostSchema.Host, service)
+						scribe.Engine("config", "config").Warn("schema", loadStart, "rejected [%s] duplicate service [%s], skipping", hostSchema.Host, service)
 						continue
 					}
 					seenServices[service] = true
@@ -133,7 +133,7 @@ func (c *Config) Host() string {
 		hostnameStart := time.Now()
 		hostName, err := os.Hostname()
 		if err != nil {
-			scribe.Engine("config", "config").Error("hostname", hostnameStart, "failed with [%v]", err)
+			scribe.Engine("config", "config").Error("hostname", hostnameStart, "failed   [%v] hostname lookup", err)
 			return
 		}
 		cachedHostName = hostName
@@ -216,22 +216,22 @@ func (c *Config) Services(host string) []string {
 func resolve(field, env, key string) string {
 	resolveStart := time.Now()
 	if value := os.Getenv(env); value != "" {
-		scribe.Engine("config", "config").Info("resolve", resolveStart, "status [resolved] field [%s] value [%s] from [env]", field, mask(field, value))
+		scribe.Engine("config", "config").Info("resolve", resolveStart, "resolved [%s] value [%s] from [env]", field, mask(field, value))
 		return value
 	}
 	if strings.HasPrefix(key, "$") {
 		name := key[1:]
 		if val := os.Getenv(name); val != "" {
-			scribe.Engine("config", "config").Info("resolve", resolveStart, "status [resolved] field [%s] value [%s] from [env] referenced by [file]", field, mask(field, val))
+			scribe.Engine("config", "config").Info("resolve", resolveStart, "resolved [%s] value [%s] from [env] referenced by [file]", field, mask(field, val))
 			return val
 		}
-		scribe.Engine("config", "config").Warn("resolve", resolveStart, "status [unresolved] field [%s] referenced by [file] but unset in [env]", field)
+		scribe.Engine("config", "config").Warn("resolve", resolveStart, "unfilled [%s] referenced by [file] but unset in [env]", field)
 		return ""
 	}
 	if key != "" {
-		scribe.Engine("config", "config").Info("resolve", resolveStart, "status [resolved] field [%s] value [%s] from [file]", field, mask(field, key))
+		scribe.Engine("config", "config").Info("resolve", resolveStart, "resolved [%s] value [%s] from [file]", field, mask(field, key))
 	} else {
-		scribe.Engine("config", "config").Info("resolve", resolveStart, "status [unresolved] field [%s] unset in [env] and [file]", field)
+		scribe.Engine("config", "config").Info("resolve", resolveStart, "unfilled [%s] unset in [env] and [file]", field)
 	}
 	return key
 }

@@ -98,6 +98,12 @@ func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxB
 	return buf, nil
 }
 
+// Engine and Probe are the only producers of a log line, so the layout is defined once here rather than at each call
+// site. A line is four fixed-width columns, being the tag, the engine or probe, the phase and the duration, then the
+// detail. Every value interpolated into the detail is bracketed with its unit outside the brackets, and clauses are
+// separated by commas. The detail opens with an eight-character word naming what the line reports, padded with spaces
+// where the word is shorter, so the first bracket falls in the same column on every line and a stream of them can be
+// read down the page.
 func Engine(tag, name string) Logger {
 	return Logger{tag: tag, key: "engine", name: name}
 }
@@ -285,7 +291,7 @@ func format(record slog.Record) string {
 		builder.WriteString(pad(columns[index], width))
 	}
 	if detail != "" {
-		builder.WriteString(" " + keyDetail + "=")
+		builder.WriteString("  " + keyDetail + "=")
 		builder.WriteString(detail)
 	}
 	return strings.TrimRight(builder.String(), " ")
