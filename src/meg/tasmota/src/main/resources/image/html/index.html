@@ -1,29 +1,43 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="ares">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tasmota</title>
+<link rel="stylesheet" href="ares.css">
 <style>
-body { font-family: sans-serif; margin: 2rem; }
-li { margin: 0.3rem 0; }
-.status { font-family: monospace; }
+:root { --background: oklch(0.14 0.02 250); --foreground: oklch(0.94 0.01 250); }
+body { background: var(--background); color: var(--foreground); margin: 0; padding: 2rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; }
+h1 { margin: 0 0 1.5rem; font-size: 1.1rem; font-weight: 500; letter-spacing: 0.35em;
+  text-transform: uppercase; color: var(--primary); text-shadow: 0 0 12px var(--glow-muted); }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); }
+li { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.9rem;
+  background: var(--input); border: 1px solid var(--border); border-radius: 2px; }
+a { color: var(--foreground); text-decoration: none; flex: 1; }
+a:hover { color: var(--primary); text-shadow: 0 0 10px var(--glow-muted); }
+.ip { color: var(--muted-foreground); font-size: 0.8rem; }
+.status { color: var(--muted-foreground); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.status[data-state="online"] { color: var(--primary); text-shadow: 0 0 10px var(--glow); }
+.status[data-state="offline"] { color: var(--secondary); }
 </style>
 </head>
 <body>
 <h1>Tasmota</h1>
 <ul>
-<li><span class="status" id="ceiling_network_switch_plug">[unknown]</span> <a href="http://10.0.4.105/">Ceiling Network Switch</a> [10.0.4.105]</li>
-<li><span class="status" id="ceiling_water_booster_plug">[unknown]</span> <a href="http://10.0.4.100/">Ceiling Water Booster</a> [10.0.4.100]</li>
-<li><span class="status" id="deck_festoons_plug">[unknown]</span> <a href="http://10.0.4.107/">Deck Festoons</a> [10.0.4.107]</li>
-<li><span class="status" id="garden_pool_filter_plug">[unknown]</span> <a href="http://10.0.4.106/">Garden Pool Filter</a> [10.0.4.106]</li>
-<li><span class="status" id="kitchen_bench_lights_plug">[unknown]</span> <a href="http://10.0.4.103/">Kitchen Bench Lights</a> [10.0.4.103]</li>
-<li><span class="status" id="kitchen_fan_plug">[unknown]</span> <a href="http://10.0.4.104/">Kitchen Fan</a> [10.0.4.104]</li>
-<li><span class="status" id="landing_festoons_plug">[unknown]</span> <a href="http://10.0.4.108/">Landing Festoons</a> [10.0.4.108]</li>
-<li><span class="status" id="rack_backup_plug">[unknown]</span> <a href="http://10.0.4.110/">Rack Backup</a> [10.0.4.110]</li>
-<li><span class="status" id="rack_fans_plug">[unknown]</span> <a href="http://10.0.4.101/">Rack Fans</a> [10.0.4.101]</li>
-<li><span class="status" id="rack_outlet_plug">[unknown]</span> <a href="http://10.0.4.102/">Rack Outlet</a> [10.0.4.102]</li>
-<li><span class="status" id="rack_printer_plug">[unknown]</span> <a href="http://10.0.4.111/">Rack Printer</a> [10.0.4.111]</li>
-<li><span class="status" id="rack_screen_plug">[unknown]</span> <a href="http://10.0.4.109/">Rack Screen</a> [10.0.4.109]</li>
+<li><span class="status" id="ceiling_network_switch_plug">unknown</span><a href="http://10.0.4.105/">Ceiling Network Switch</a><span class="ip">10.0.4.105</span></li>
+<li><span class="status" id="ceiling_water_booster_plug">unknown</span><a href="http://10.0.4.100/">Ceiling Water Booster</a><span class="ip">10.0.4.100</span></li>
+<li><span class="status" id="deck_festoons_plug">unknown</span><a href="http://10.0.4.107/">Deck Festoons</a><span class="ip">10.0.4.107</span></li>
+<li><span class="status" id="garden_pool_filter_plug">unknown</span><a href="http://10.0.4.106/">Garden Pool Filter</a><span class="ip">10.0.4.106</span></li>
+<li><span class="status" id="kitchen_bench_lights_plug">unknown</span><a href="http://10.0.4.103/">Kitchen Bench Lights</a><span class="ip">10.0.4.103</span></li>
+<li><span class="status" id="kitchen_fan_plug">unknown</span><a href="http://10.0.4.104/">Kitchen Fan</a><span class="ip">10.0.4.104</span></li>
+<li><span class="status" id="landing_festoons_plug">unknown</span><a href="http://10.0.4.108/">Landing Festoons</a><span class="ip">10.0.4.108</span></li>
+<li><span class="status" id="rack_backup_plug">unknown</span><a href="http://10.0.4.110/">Rack Backup</a><span class="ip">10.0.4.110</span></li>
+<li><span class="status" id="rack_fans_plug">unknown</span><a href="http://10.0.4.101/">Rack Fans</a><span class="ip">10.0.4.101</span></li>
+<li><span class="status" id="rack_outlet_plug">unknown</span><a href="http://10.0.4.102/">Rack Outlet</a><span class="ip">10.0.4.102</span></li>
+<li><span class="status" id="rack_printer_plug">unknown</span><a href="http://10.0.4.111/">Rack Printer</a><span class="ip">10.0.4.111</span></li>
+<li><span class="status" id="rack_screen_plug">unknown</span><a href="http://10.0.4.109/">Rack Screen</a><span class="ip">10.0.4.109</span></li>
 </ul>
 <script src="mqtt.min.js"></script>
 <script>
@@ -31,9 +45,14 @@ const client = mqtt.connect((location.protocol === "https:" ? "wss://" : "ws://"
 client.on("connect", () => client.subscribe("tasmota/device/+/tele/LWT"));
 client.on("message", (topic, payload) => {
   const status = document.getElementById(topic.split("/")[2]);
-  if (status) status.textContent = "[" + payload.toString().toLowerCase() + "]";
+  if (!status) return;
+  status.textContent = payload.toString().toLowerCase();
+  status.dataset.state = payload.toString().toLowerCase();
 });
-client.on("error", () => document.querySelectorAll(".status").forEach((status) => status.textContent = "[unknown]"));
+client.on("error", () => document.querySelectorAll(".status").forEach((status) => {
+  status.textContent = "unknown";
+  delete status.dataset.state;
+}));
 </script>
 </body>
 </html>

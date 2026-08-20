@@ -187,14 +187,28 @@ echo ''
     with open(tasmota_html_path, "wt") as tasmota_html_file:
         tasmota_html_file.write("""
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="ares">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tasmota</title>
+<link rel="stylesheet" href="ares.css">
 <style>
-body { font-family: sans-serif; margin: 2rem; }
-li { margin: 0.3rem 0; }
-.status { font-family: monospace; }
+:root { --background: oklch(0.14 0.02 250); --foreground: oklch(0.94 0.01 250); }
+body { background: var(--background); color: var(--foreground); margin: 0; padding: 2rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; }
+h1 { margin: 0 0 1.5rem; font-size: 1.1rem; font-weight: 500; letter-spacing: 0.35em;
+  text-transform: uppercase; color: var(--primary); text-shadow: 0 0 12px var(--glow-muted); }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); }
+li { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.9rem;
+  background: var(--input); border: 1px solid var(--border); border-radius: 2px; }
+a { color: var(--foreground); text-decoration: none; flex: 1; }
+a:hover { color: var(--primary); text-shadow: 0 0 10px var(--glow-muted); }
+.ip { color: var(--muted-foreground); font-size: 0.8rem; }
+.status { color: var(--muted-foreground); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.status[data-state="online"] { color: var(--primary); text-shadow: 0 0 10px var(--glow); }
+.status[data-state="offline"] { color: var(--secondary); }
 </style>
 </head>
 <body>
@@ -203,7 +217,8 @@ li { margin: 0.3rem 0; }
         """.strip() + "\n")
         for tasmota_device_id in sorted(tasmota_devices, key=lambda id: tasmota_devices[id][0]):
             tasmota_device_name, tasmota_device_ip = tasmota_devices[tasmota_device_id]
-            tasmota_html_file.write('<li><span class="status" id="{}">[unknown]</span> <a href="http://{}/">{}</a> [{}]</li>\n'.format(
+            tasmota_html_file.write('<li><span class="status" id="{}">unknown</span>'
+                                    '<a href="http://{}/">{}</a><span class="ip">{}</span></li>\n'.format(
                 tasmota_device_id, tasmota_device_ip, tasmota_device_name, tasmota_device_ip))
         tasmota_html_file.write("""
 </ul>
@@ -213,9 +228,14 @@ const client = mqtt.connect((location.protocol === "https:" ? "wss://" : "ws://"
 client.on("connect", () => client.subscribe("tasmota/device/+/tele/LWT"));
 client.on("message", (topic, payload) => {
   const status = document.getElementById(topic.split("/")[2]);
-  if (status) status.textContent = "[" + payload.toString().toLowerCase() + "]";
+  if (!status) return;
+  status.textContent = payload.toString().toLowerCase();
+  status.dataset.state = payload.toString().toLowerCase();
 });
-client.on("error", () => document.querySelectorAll(".status").forEach((status) => status.textContent = "[unknown]"));
+client.on("error", () => document.querySelectorAll(".status").forEach((status) => {
+  status.textContent = "unknown";
+  delete status.dataset.state;
+}));
 </script>
 </body>
 </html>

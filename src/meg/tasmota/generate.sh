@@ -23,3 +23,9 @@ if [ ! -f ${ROOT_DIR}/src/main/resources/image/html/mqtt.min.js ]; then
   mkdir -p ${ROOT_DIR}/src/main/resources/image/html &&
     wget -q -O ${ROOT_DIR}/src/main/resources/image/html/mqtt.min.js https://unpkg.com/mqtt@${MQTT_VERSION}/dist/mqtt.min.js
 fi
+
+# NOTES: https://github.com/educlopez/thegridcn-ui (MIT), themes are data-theme attributes on <html>
+if [ ! -f ${ROOT_DIR}/src/main/resources/image/html/ares.css ]; then
+  mkdir -p ${ROOT_DIR}/src/main/resources/image/html &&
+    wget -q -O ${ROOT_DIR}/src/main/resources/image/html/ares.css https://thegridcn.com/tokens/ares.css
+fi
