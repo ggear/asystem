@@ -19,11 +19,8 @@ services:
     container_name: vernemq
     <<: *common
     restart: ${SERVICE_RESTART}
-
-    # TODO: Get permission denied?
-    #    volumes:
-    #      - ${SERVICE_DATA_DIR}:/var/lib/vernemq
-
+    volumes:
+      - ${SERVICE_DATA_DIR}:/vernemq/data
     ports:
       - ${VERNEMQ_HTTP_PORT}:8888
       - ${VERNEMQ_API_PORT}:1883
