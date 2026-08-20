@@ -11,3 +11,5 @@ if [ "${SERVICE_VERSION_CHANGED:-true}" != "true" ]; then
 fi
 
 "${ROOT_DIR}/image/broker.sh"
+
+"${ROOT_DIR}/image/restart.sh"

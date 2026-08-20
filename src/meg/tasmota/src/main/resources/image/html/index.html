@@ -41,7 +41,7 @@ a:hover { color: var(--primary); text-shadow: 0 0 10px var(--glow-muted); }
 </ul>
 <script src="mqtt.min.js"></script>
 <script>
-const client = mqtt.connect((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/mqtt");
+const client = mqtt.connect((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
 client.on("connect", () => client.subscribe("tasmota/device/+/tele/LWT"));
 client.on("message", (topic, payload) => {
   const status = document.getElementById(topic.split("/")[2]);

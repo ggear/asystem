@@ -224,7 +224,7 @@ a:hover { color: var(--primary); text-shadow: 0 0 10px var(--glow-muted); }
 </ul>
 <script src="mqtt.min.js"></script>
 <script>
-const client = mqtt.connect((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/mqtt");
+const client = mqtt.connect((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
 client.on("connect", () => client.subscribe("tasmota/device/+/tele/LWT"));
 client.on("message", (topic, payload) => {
   const status = document.getElementById(topic.split("/")[2]);
@@ -241,3 +241,42 @@ client.on("error", () => document.querySelectorAll(".status").forEach((status) =
 </html>
         """.strip() + "\n")
     print("Build generate script [tasmota] device index persisted to [{}]".format(tasmota_html_path))
+
+    tasmota_restart_path = join(DIR_ROOT, "src/main/resources/image/restart.sh")
+    with open(tasmota_restart_path, "wt") as tasmota_restart_file:
+        tasmota_restart_file.write("""
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
+
+ENV_DIR="$ROOT_DIR"
+while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "$ENV_DIR")"; done
+# shellcheck disable=SC1091
+[ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
+
+BROKER_ARGS=(-h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT")
+
+DEVICES=(
+""".strip() + "\n")
+        for tasmota_device_id in sorted(tasmota_devices):
+            tasmota_restart_file.write("  {}\n".format(tasmota_device_id))
+        tasmota_restart_file.write("""
+)
+
+printf '\\nDevice restart script [tasmota] restarting [%d] devices on [%s], each republishing its retained state on boot:\\n' "${#DEVICES[@]}" "$VERNEMQ_SERVICE"
+for DEVICE in "${DEVICES[@]}"; do
+  printf '%s\\n' "$DEVICE"
+  mosquitto_pub "${BROKER_ARGS[@]}" -t "tasmota/device/${DEVICE}/cmnd/Restart" -m "1"
+done
+
+printf '\\nDevice restart script [tasmota] waiting for devices to boot ... ' && sleep 30 && printf 'done\\n'
+
+RESTARTED=$(mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t 'tasmota/device/+/tele/LWT' -W 5 2>/dev/null | sort -u | wc -l | tr -d ' ')
+printf '\\nDevice restart script [tasmota] restarted [%s] of [%d] devices\\n\\n' "$RESTARTED" "${#DEVICES[@]}"
+[ "$RESTARTED" -ge "${#DEVICES[@]}" ]
+        """.strip() + "\n")
+    os.chmod(tasmota_restart_path, 0o750)
+    print("Build generate script [tasmota] device restart script persisted to [{}]".format(tasmota_restart_path))
