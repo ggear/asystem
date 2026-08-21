@@ -95,6 +95,13 @@ Define process by which schema can be updated, what is additive and safe, what i
 
 
 
+###############################################################################################################################################################
+# Tasmota
+###############################################################################################################################################################
+Fix web console, make status work over MQTT
+Centre col on ios portrait/landscape
+Add fields to UI
+Implement upgrade script, generarted?
 
 
 
