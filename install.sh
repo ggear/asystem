@@ -54,15 +54,21 @@ SERVICE_WAIT_EXECUTING_SECONDS=300
 SERVICE_WAIT_HEALTHY_SECONDS=900
 
 wait_service() {
-  local script="$1" label="$2" interval="$3" timeout="$4" waited=0
-  while ! docker exec "${SERVICE_NAME}" "/asystem/etc/${script}"; do
+  local script="$1" label="$2" interval="$3" timeout="$4" waited=0 ticked=0
+  ((interval > 0)) || interval=1
+  printf 'Waiting for service to %s ...' "${label}"
+  while ! docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" >/dev/null 2>&1; do
     if ((waited >= timeout)); then
+      printf ' failed\n'
       log_error "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
     fi
-    echo "Waiting for service to ${label} ... waited [${waited}] of [${timeout}] seconds"
-    sleep "${interval}"
+    for ((ticked = 0; ticked < interval; ticked++)); do
+      sleep 1
+      printf '.'
+    done
     waited=$((waited + interval))
   done
+  printf ' done\n'
 }
 
 retire_home() {
