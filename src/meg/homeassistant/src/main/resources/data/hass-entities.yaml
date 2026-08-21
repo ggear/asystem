@@ -237,14 +237,6 @@ switch.bathroom_rails_plug:
   name: Bathroom Towel Rails
   aliases: ['Towel Rails']
   room: Bathroom
-switch.ceiling_water_booster_plug:
-  name: Ceiling Hot Water Booster
-  aliases: ['Hot Water Booster']
-  room: Ceiling
-switch.garden_pool_filter_plug:
-  name: Garden Pool Filter
-  aliases: ['Pool Filter']
-  room: Garden
 sensor.compensation_sensor_landing_festoons_plug_temperature:
   name: Ceiling Temperature
   aliases: ['Temperature']

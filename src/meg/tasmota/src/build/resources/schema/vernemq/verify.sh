@@ -61,11 +61,11 @@ fail() {
 }
 
 table() {
-  jq -sr '
+  jq -sr --argjson clip 0 '
     def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
     def numeric: type == "number" or (type == "string" and test("^-?[0-9]+([.][0-9]+)?$"));
     def placeholder: . == "-" or . == "";
-    def clip: if length > 50 then .[0:47] + "..." else . end;
+    def clip: if $clip > 0 and length > $clip then .[0:($clip - 3)] + "..." else . end;
     (if length == 1 and (.[0] | type) == "array" then .[0] else . end)
     | if length == 0 then "no rows" else
       (.[0] | keys_unsorted) as $columns

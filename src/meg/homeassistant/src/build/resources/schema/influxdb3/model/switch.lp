@@ -52,6 +52,7 @@
 #     service_postgres,
 #     service_sabnzbd,
 #     service_sonarr,
+#     service_tasmota,
 #     service_tempstat,
 #     service_vernemq,
 #     service_weewx,

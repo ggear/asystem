@@ -91,6 +91,9 @@
     - entity: switch.service_nginx
       name: Nginx
       icon: mdi:heart-pulse
+    - entity: switch.service_tasmota
+      name: Tasmota
+      icon: mdi:heart-pulse
     - entity: switch.service_vernemq
       name: VerneMQ
       icon: mdi:heart-pulse
@@ -179,9 +182,6 @@
   title: Power Plugs
   show_header_toggle: false
   entities:
-    - entity: switch.rack_printer_plug
-      name: Rack Printer
-      icon: mdi:printer
     - entity: switch.rack_screen_plug
       name: Rack Screen
       icon: mdi:monitor

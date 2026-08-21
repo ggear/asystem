@@ -11,6 +11,7 @@ while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "
 [ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
 
 BROKER_ARGS=(-h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT")
+
 printf 'Entity Metadata publish script [zigbee2mqtt] restarting the service to republish its discovery topics:\n'
 if docker restart zigbee2mqtt >/dev/null 2>&1; then
   printf 'zigbee2mqtt\n\nEntity Metadata publish script [zigbee2mqtt] waiting for the service to come up ... ' && sleep 30 && printf 'done\n'

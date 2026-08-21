@@ -23,11 +23,6 @@ powercalc:
       power_sensor_id: sensor.all_standby_power
       energy_sensor_id: sensor.all_standby_energy
     ###################################################################################
-    - entity_id: switch.rack_printer_plug
-      standby_power: 0.6
-      fixed:
-        power: 16.2
-    ###################################################################################
     - entity_id: switch.rack_screen_plug
       standby_power: 0.6
       fixed:
@@ -98,9 +93,6 @@ powercalc:
                       unavailable_power: 0
                       fixed:
                         power: 2.19
-                    - entity_id: switch.ceiling_water_booster_plug
-                      power_sensor_id: sensor.ceiling_water_booster_plug_energy_power
-                      energy_sensor_id: sensor.ceiling_water_booster_plug_energy_total
                 #######################################################################
                 - create_group: Pool Filter
                   entities:
@@ -109,9 +101,6 @@ powercalc:
                       unavailable_power: 0
                       fixed:
                         power: 2.19
-                    - entity_id: switch.garden_pool_filter_plug
-                      power_sensor_id: sensor.garden_pool_filter_plug_energy_power
-                      energy_sensor_id: sensor.garden_pool_filter_plug_energy_total
         ###############################################################################
         - create_group: Home Base
           entities:
