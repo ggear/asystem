@@ -12,11 +12,11 @@ fail() {
 
 TABLE = r"""
 table() {
-  jq -sr '
+  jq -sr --argjson clip SCHEMA_TEXT_WIDTH '
     def title: split("_") | map(if length > 0 then (.[0:1] | ascii_upcase) + .[1:] else . end) | join(" ");
     def numeric: type == "number" or (type == "string" and test("^-?[0-9]+([.][0-9]+)?$"));
     def placeholder: . == "-" or . == "";
-    def clip: if length > SCHEMA_TEXT_WIDTH then .[0:SCHEMA_TEXT_TRIM] + "..." else . end;
+    def clip: if $clip > 0 and length > $clip then .[0:($clip - 3)] + "..." else . end;
     (if length == 1 and (.[0] | type) == "array" then .[0] else . end)
     | if length == 0 then "no rows" else
       (.[0] | keys_unsorted) as $columns
@@ -40,9 +40,14 @@ table() {
 rows() {
   jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | length'
 }
-""".replace("SCHEMA_TEXT_WIDTH", str(TEXT)).replace("SCHEMA_TEXT_TRIM", str(TEXT - 3))
+"""
 
-RUNNER = REPORT + TABLE + r"""
+
+def table(clip=TEXT):
+    return TABLE.replace("SCHEMA_TEXT_WIDTH", str(clip))
+
+
+RUNNER = REPORT + table() + r"""
 SCHEMA_ECHO=${SCHEMA_ECHO:-true}
 SCHEMA_LABEL=${SCHEMA_LABEL:-}
 

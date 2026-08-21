@@ -15,7 +15,7 @@ from asystem.schema.document import (
     SchemaUnreachable,
 )
 from asystem.schema.query import banner
-from asystem.schema.runner import REPORT, TABLE, resolved, script
+from asystem.schema.runner import REPORT, resolved, script, table
 
 DIALECT = "vernemq"
 SHIPPED = "broker"
@@ -53,7 +53,7 @@ DISCOVERY_COLUMNS = (
     "qos",
 )
 
-CONNECT = REPORT + TABLE + """
+CONNECT = REPORT + table(clip=0) + """
 BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
 
 topics() {
