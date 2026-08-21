@@ -48,11 +48,10 @@ do a mqtt release, checking mqtt describe etc
 │ 3   │ tempstat    │ 31    │ replaces the deployed vernemq.sh                                                        │
 ├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
 
+│ 5   │ network     │ 32    │ replaces the deployed vernemq.sh; group change                                          │
 
 
 │ 4   │ zigbee2mqtt │ 31    │ first broker.sh — recovery fragment only                                                │
-├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
-│ 5   │ network     │ 32    │ replaces the deployed vernemq.sh; group change                                          │
 ├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
 │ 6   │ tasmota     │ 32    │ first release; fragment restarts the 12 devices                                         │
 ├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
