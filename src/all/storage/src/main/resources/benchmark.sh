@@ -67,7 +67,7 @@ color_val() {
   else
     c=$'\033[31m'
   fi
-  # shellcheck disable=SC2183  # %-*.1f consumes $w as the dynamic field width, so 3 args is correct
+  # shellcheck disable=SC2183
   printf '%s%-*.1f\033[0m' "$c" "$w" "$v"
 }
 

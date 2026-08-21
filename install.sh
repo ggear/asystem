@@ -3,7 +3,6 @@
 # Generic module install script, to be invoked by the Fabric management script
 ###############################################################################
 
-# SERVICE_NAME and the other SERVICE_* variables are injected into the environment by the deploy
 # shellcheck disable=SC2153
 
 set -Eeuo pipefail
@@ -142,7 +141,6 @@ run_hook "./install_prep.sh"
 cd "${SERVICE_INSTALL}"
 touch .env
 chmod 600 .env
-# The env file is written at package time and is not available to static analysis
 # shellcheck disable=SC1091
 source .env
 if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then

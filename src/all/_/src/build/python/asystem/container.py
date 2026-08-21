@@ -32,11 +32,29 @@ echo "--------------------------------------------------------------------------
 
 ASYSTEM_HOME=${{ASYSTEM_HOME:-"/asystem/etc"}}
 
-MESSAGE="Waiting for service to come alive ... "
-echo "${{MESSAGE}}"
-while ! "${{ASYSTEM_HOME}}/checkalive.sh"; do
- echo "${{MESSAGE}}" && sleep 1
-done
+SERVICE_WAIT_ALIVE_SECONDS=900
+SERVICE_WAIT_EXECUTING_SECONDS=900
+
+wait_service() {{
+  local script="$1" label="$2" interval="$3" timeout="$4" waited=0 ticked=0
+  ((interval > 0)) || interval=1
+  printf 'Waiting for service to %s ...' "${{label}}"
+  while ! "${{ASYSTEM_HOME}}/${{script}}" >/dev/null 2>&1; do
+    if ((waited >= timeout)); then
+      printf ' failed\\n'
+      echo "ERROR: Service failed to ${{label}} within [${{timeout}}] seconds" >&2
+      exit 1
+    fi
+    for ((ticked = 0; ticked < interval; ticked++)); do
+      sleep 1
+      printf '.'
+    done
+    waited=$((waited + interval))
+  done
+  printf ' done\\n'
+}}
+
+wait_service "checkalive.sh" "come alive" 1 "${{SERVICE_WAIT_ALIVE_SECONDS}}"
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap starting ..."
@@ -48,11 +66,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap finished"
 echo "--------------------------------------------------------------------------------"
 
-MESSAGE="Waiting for service to start executing ... "
-echo "${{MESSAGE}}"
-while ! "${{ASYSTEM_HOME}}/checkexecuting.sh"; do
-  echo "${{MESSAGE}}" && sleep 1
-done
+wait_service "checkexecuting.sh" "start executing" 1 "${{SERVICE_WAIT_EXECUTING_SECONDS}}"
 echo "----------" && echo "✅ Service has started"
         """.format(
             script_bootstrap.strip(),

@@ -665,6 +665,7 @@
 #     study_lamp_bulb_1_energy_monthly,
 #     study_lamp_bulb_1_energy_weekly,
 #     study_lamp_bulb_1_energy_yearly,
+#     study_lights_energy,
 #     study_lights_energy_daily,
 #     study_lights_energy_monthly,
 #     study_lights_energy_weekly,

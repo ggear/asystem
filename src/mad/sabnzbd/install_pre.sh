@@ -2,7 +2,7 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-# shellcheck disable=SC1091 # .env is generated at build time, not available to shellcheck
+# shellcheck disable=SC1091
 . "${ROOT_DIR}/.env"
 
 SABNZBD_SHARE_ROOT_DIR="/share/$(echo "${SABNZBD_SHARE_DIR}" | awk -F'/' '{print $3}')"
