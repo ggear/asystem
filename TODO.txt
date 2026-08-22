@@ -47,9 +47,7 @@ do a mqtt release, checking mqtt describe etc
 ├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
 │ 3   │ tempstat    │ 31    │ replaces the deployed vernemq.sh                                                        │
 ├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
-
 │ 5   │ network     │ 32    │ replaces the deployed vernemq.sh; group change                                          │
-
 
 │ 4   │ zigbee2mqtt │ 31    │ first broker.sh — recovery fragment only                                                │
 ├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -57,6 +55,7 @@ do a mqtt release, checking mqtt describe etc
 ├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
 │ 7   │ nginx       │ 33    │ regenerates the tasmota vhost for /ws + port 32419 — fixes the mqtt.min.js 502          │
 ├─────┼─────────────┼───────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+
 │ 8   │ vernemq     │ 30    │ run separately, last — wipes the broker, then the sweep restores everything in one pass │
 └─────┴─────────────┴───────┴─────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -101,6 +100,7 @@ Define process by which schema can be updated, what is additive and safe, what i
 # Tasmota
 ###############################################################################################################################################################
 Fix web console, make status work over MQTT
+Fix deck_festoons_plug, temp/himmidty look dead?
 Centre col on ios portrait/landscape
 Add fields to UI
 Implement upgrade script, generarted?

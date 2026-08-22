@@ -120,6 +120,6 @@ printf '\nSchema describe [%s] against [%s]\n' "tasmota" "${BROKER_SERVICE}"
 printf -- '\n-- %s\n\n' "homeassistant/+/tasmota/#"
 topics "homeassistant/+/tasmota/#" | listed
 printf '\n'
-printf -- '\n-- %s\n\n' "tasmota/#"
-topics "tasmota/#" | listed
+printf -- '\n-- %s\n\n' "tasmota/device/#"
+topics "tasmota/device/#" | listed
 printf '\n'

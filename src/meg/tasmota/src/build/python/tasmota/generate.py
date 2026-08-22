@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     write_schema_broker(metadata_tasmota_df,
                         topic_glob_discovery="homeassistant/+/tasmota/#",
-                        topic_glob_data="tasmota/#",
+                        topic_glob_data="tasmota/device/#",
                         schema_state={
                               "*/stat/POWER": """
 <ON|OFF>

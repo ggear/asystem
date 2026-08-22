@@ -137,7 +137,7 @@ while IFS= read -r TOPIC; do
 done < <(declared)
 
 topics "homeassistant/+/tasmota/#" >> "${RETAINED_FILE}"
-topics "tasmota/#" >> "${RETAINED_FILE}"
+topics "tasmota/device/#" >> "${RETAINED_FILE}"
 while IFS= read -r TOPIC; do
   [ -z "${TOPIC}" ] && continue
   if ! declared | grep -qxF "${TOPIC}"; then

@@ -23,7 +23,7 @@ mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "homeassistant/+/
 printf '\nEntity Metadata publish script [tasmota] sleeping before dropping data topics ... ' && sleep 2 && printf 'done\n\n'
 
 printf 'Entity Metadata publish script [tasmota] dropping data topics on [%s]:\n' "$VERNEMQ_SERVICE"
-mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "tasmota/#" -W 1 2>/dev/null
+mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "tasmota/device/#" -W 1 2>/dev/null
 
 printf '\nEntity Metadata publish script [tasmota] sleeping before publishing discovery topics ... ' && sleep 2 && printf 'done\n\n'
 
