@@ -211,6 +211,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
       wait_service "checkexecuting.sh" "start executing" 1 "${SERVICE_WAIT_EXECUTING_SECONDS}"
       echo
       wait_service "checkhealthy.sh" "become healthy" 5 "${SERVICE_WAIT_HEALTHY_SECONDS}"
+      echo
       docker exec -i "${SERVICE_NAME}" bash -c 'command -v stdbuf >/dev/null 2>&1 && exec stdbuf -oL /asystem/etc/checkhealthy.sh -v || exec /asystem/etc/checkhealthy.sh -v'
       echo && echo
       sleep 1
