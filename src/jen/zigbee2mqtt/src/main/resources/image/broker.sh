@@ -10,7 +10,17 @@ while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "
 # shellcheck disable=SC1091
 [ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
 
-BROKER_ARGS=(-h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT")
+BROKER_SERVICE="${BROKER_SERVICE:-${ZIGBEE2MQTT_BROKER_SERVICE:-${VERNEMQ_SERVICE_PROD:-}}}"
+BROKER_PORT="${BROKER_PORT:-${ZIGBEE2MQTT_BROKER_PORT:-${VERNEMQ_API_PORT:-}}}"
+
+for VARIABLE in BROKER_SERVICE BROKER_PORT; do
+  if [ -z "${!VARIABLE}" ]; then
+    echo "Schema script [zigbee2mqtt] could not resolve [${VARIABLE}] from it or any fallback, declare it in the module env files" >&2
+    exit 1
+  fi
+done
+
+BROKER_ARGS=(-h "$BROKER_SERVICE" -p "$BROKER_PORT")
 
 printf 'Entity Metadata publish script [zigbee2mqtt] restarting the service to republish its discovery topics:\n'
 if docker restart zigbee2mqtt >/dev/null 2>&1; then
