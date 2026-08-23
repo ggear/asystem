@@ -851,8 +851,9 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
             host_arch = _get_host_arch(module, filter_host)
         build_args = ""
         for env_global_key, env_global_value in GLOBAL_ENV.items():
-            if env_global_key.endswith("_VERSION"):
-                build_args += "\\\n    --build-arg ASYSTEM_{}={} ".format(env_global_key, env_global_value)
+            if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
+                build_args += "\\\n    --build-arg ASYSTEM_{}={} ".format(
+                    env_global_key, env_global_value.removeprefix('"').removesuffix('"'))
         docker_image_build_start_time = time.time()
         _run_local(context,
                    "docker buildx build . --progress=plain --platform linux/{} --output type=docker --tag {}:{} {}"
