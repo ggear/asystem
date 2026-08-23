@@ -584,6 +584,9 @@ switch.network_domain:
   icon: 'mdi:archive-search-outline'
 button.google_assistant_synchronize_devices:
   friendly_name: 'Google Device Syncronise'
+switch.service_network:
+  friendly_name: 'Network'
+  icon: 'mdi:heart-pulse'
 switch.service_plex:
   friendly_name: 'Plex'
   icon: 'mdi:heart-pulse'
@@ -604,9 +607,6 @@ switch.service_mlflow:
   icon: 'mdi:heart-pulse'
 switch.service_mlserver:
   friendly_name: 'MLServer'
-  icon: 'mdi:heart-pulse'
-switch.service_network:
-  friendly_name: 'Network'
   icon: 'mdi:heart-pulse'
 switch.service_openra:
   friendly_name: 'OpenRA'

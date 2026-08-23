@@ -40,6 +40,9 @@
   title: Service Status
   show_header_toggle: false
   entities:
+    - entity: switch.service_network
+      name: Network
+      icon: mdi:heart-pulse
     - entity: switch.service_plex
       name: Plex
       icon: mdi:heart-pulse
@@ -60,9 +63,6 @@
       icon: mdi:heart-pulse
     - entity: switch.service_mlserver
       name: MLServer
-      icon: mdi:heart-pulse
-    - entity: switch.service_network
-      name: Network
       icon: mdi:heart-pulse
     - entity: switch.service_openra
       name: OpenRA
