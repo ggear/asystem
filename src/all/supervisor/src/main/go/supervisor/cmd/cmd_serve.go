@@ -10,6 +10,7 @@ import (
 	"supervisor/internal/engine"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -58,7 +59,7 @@ func executeServe(configPath string, opts *serveOptions) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	serveStart := time.Now()
 	loaded := config.Load(configPath)

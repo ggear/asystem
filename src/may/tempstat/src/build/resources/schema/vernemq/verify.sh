@@ -93,11 +93,11 @@ rows() {
 BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
 
 topics() {
-  mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "$1" -W 5 2>/dev/null | grep -E "${2:-.}" | sort -u || true
+  mosquitto_sub "${BROKER_ARGS[@]}" -F '%r %t' -t "$1" -W 5 2>/dev/null | sed -n 's/^1 //p' | grep -E "${2:-.}" | sort -u || true
 }
 
 payload() {
-  mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -C 1 -W 2 2>/dev/null || true
+  mosquitto_sub "${BROKER_ARGS[@]}" -F '%r\n%p' -t "$1" -C 1 -W 2 2>/dev/null | awk 'NR==1{if($0!="1") exit} NR>1' || true
 }
 
 declared() {

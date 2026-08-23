@@ -10,7 +10,8 @@
 #     kitchen_home,
 #     lounge_tv,
 #     nesthubfb4d,
-#     pixel_tablet]
+#     pixel_tablet,
+#     pixel_tablet_2]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 

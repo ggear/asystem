@@ -19,6 +19,6 @@ if __name__ == "__main__":
         ].copy()
     document = load_schema_document(config="src/main/resources/image/sensors.json")
     write_schema_broker(metadata_tempstat_df,
-                        topic_glob_discovery="homeassistant/+/tempstat/+/config",
-                        topic_glob_data="tempstat/#",
-                        document=document)
+                        broker_topic_glob_discovery="homeassistant/+/tempstat/+/config",
+                        broker_topic_glob_data="tempstat/#",
+                        broker_document=document)

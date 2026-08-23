@@ -27,9 +27,27 @@ Add big ass temps for deck
 retire nginx and use cloudflared for homeasistant?
 
 
+deploy.sh consolidation, only keep those that are necessary
+audit broker state setup in all situations, schema install operates on a module by module basis, via vernemq restart/release too. not via deploy.sh unless as a byprduct of other ops
 
 
+- The release 
 
+├─────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────────────────┤
+│ 1   │ src/all/supervisor  │ 31            │ deploys to all 6 hosts — biggest blast radius                     │
+├─────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────────────────┤
+│ 2   │ src/jen/weewx       │ 31            │                                                                   │
+├─────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────────────────┤
+│ 3   │ src/may/tempstat    │ 31            │                                                                   │
+├─────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────────────────┤
+│ 4   │ src/mad/network     │ 32            │                                                                   │
+├─────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────────────────┤
+│ —   │ src/jen/zigbee2mqtt │ unknown to me │ its broker.sh restarts its own container (~560 discovery configs) │
+├─────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────────────────┤
+│ —   │ src/meg/tasmota     │ unknown to me │ its broker.sh restarts the 9 Tasmota devices                      │
+└─────┴─────────────────────┴───────────────┴───────────────────────────────────────────────────────────────────┘
+homassistant
+vermemq
 
 
 

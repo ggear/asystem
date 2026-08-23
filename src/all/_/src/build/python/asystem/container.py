@@ -202,9 +202,13 @@ exit 0
           .format(module_name, script_path))
 
 
-def write_container_volumes():
+def write_container_volumes(module_name=None, working_dir=None):
     root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
-    script_path = join(root_dir, "src/main/resources/volumes.sh")
+    if module_name is None:
+        module_name = basename(root_dir)
+    if working_dir is None:
+        working_dir = join(root_dir, "src/main/resources")
+    script_path = join(working_dir, "volumes.sh")
     if not isdir(dirname(script_path)):
         os.makedirs(dirname(script_path), exist_ok=True)
     with open(script_path, 'w') as script_file:
@@ -389,7 +393,7 @@ echo
         """.strip())
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]"
-          .format(basename(root_dir), script_path))
+          .format(module_name, script_path))
 
 
 

@@ -15,14 +15,14 @@ def load_bootstrap_root() -> str:
     return abspath(join(dirname(realpath(sys.argv[0])), "../../../.."))
 
 
-def load_bootstrap_env(root_dir=None):
+def load_bootstrap_env(module_root=None):
     env_load = {}
-    if root_dir is None:
-        root_dir = load_bootstrap_root()
-    env_load_path = abspath(join(root_dir, ".env"))
+    if module_root is None:
+        module_root = load_bootstrap_root()
+    env_load_path = abspath(join(module_root, ".env"))
     env_load_path_dev = env_load_path
     if not isfile(env_load_path):
-        env_load_path = abspath(join(root_dir, "target/release/.env"))
+        env_load_path = abspath(join(module_root, "target/release/.env"))
     if not isfile(env_load_path):
         raise Exception("Could not find dev [{}] or prod [{}] env file".format(env_load_path_dev, env_load_path))
     with open(env_load_path) as env_file:
@@ -57,7 +57,7 @@ def load_bootstrap_env_value(name, default="", filename=".env_prod", module_root
     return default
 
 
-def load_bootstrap_modules(load_disabled=True, load_infrastructure=True):
+def load_bootstrap_modules(include_disabled=True, include_infrastructure=True):
     modules = {}
     hosts_path = Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts"))
     host_labels_names = {
@@ -66,8 +66,8 @@ def load_bootstrap_modules(load_disabled=True, load_infrastructure=True):
     for module in glob.glob(abspath(join(DIR_ROOT, "../../*/*"))):
         group_path = Path(join(module, ".group"))
         if basename(module) != SHARED_MODULE_NAME and \
-                (load_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and int(group_path.read_text().strip()) >= 0)) and \
-                (load_infrastructure or not basename(module).startswith("_")):
+                (include_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and int(group_path.read_text().strip()) >= 0)) and \
+                (include_infrastructure or not basename(module).startswith("_")):
             env = load_bootstrap_env(module)
             name = basename(module)
             host_labels = basename(dirname(module)).split("_")

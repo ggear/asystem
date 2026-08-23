@@ -10,6 +10,15 @@ while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "
 # shellcheck disable=SC1091
 [ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
 
+SCHEMA_PHASE="${1:-all}"
+case "${SCHEMA_PHASE}" in
+sweep | publish | all) ;;
+*)
+  echo "Usage: $(basename "$0") [sweep|publish]" >&2
+  exit 2
+  ;;
+esac
+
 BROKER_SERVICE="${BROKER_SERVICE:-${ZIGBEE2MQTT_BROKER_SERVICE:-${VERNEMQ_SERVICE_PROD:-}}}"
 BROKER_PORT="${BROKER_PORT:-${ZIGBEE2MQTT_BROKER_PORT:-${VERNEMQ_API_PORT:-}}}"
 

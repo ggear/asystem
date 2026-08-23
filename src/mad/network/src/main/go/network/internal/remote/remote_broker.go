@@ -80,6 +80,10 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 	return &Broker{client: client}, nil
 }
 
+func (b *Broker) PublishStatus() error {
+	return waitForBrokerToken(b.client.Publish(brokerStatusTopic, 1, true, brokerStatusOnline))
+}
+
 func (b *Broker) Publish(topic string, payload []byte) {
 	b.client.Publish(topic, 0, true, payload).WaitTimeout(brokerPublishTimeout)
 }

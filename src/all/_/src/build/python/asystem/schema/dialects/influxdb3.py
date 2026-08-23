@@ -76,8 +76,8 @@ query() {
 
 
 def artifacts(document, module_name, options):
-    if options.time_column != "timestamp" or options.retention:
-        raise ValueError("Build generate script [{}] time_column and retention are postgres only, "
+    if options.time_column != "timestamp" or options.retention or options.applier:
+        raise ValueError("Build generate script [{}] time_column, retention and applier are postgres only, "
                          "the influxdb3 dialect must never be wired to them".format(module_name))
     _validate(document, module_name)
     dialect = _dialect(document, options.timezone)

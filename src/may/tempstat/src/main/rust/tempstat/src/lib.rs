@@ -244,6 +244,9 @@ fn poll<P: Publisher>(
     let mut total_failures: u32 = 0;
     loop {
         iteration += 1;
+        if let Err(err) = publisher.publish(STATUS_TOPIC, b"online") {
+            warn!("failed to publish status [{STATUS_TOPIC}] [{err}]");
+        }
         let failed = poll_once(sensors, publisher, bus, state_topic)?;
         if period.is_zero() {
             return Ok(());
@@ -623,7 +626,10 @@ mod tests {
         let mut publisher = MockPublisher::new();
         let err = poll(Duration::from_millis(1), &sensors, &mut publisher, &mut bus, "state").unwrap_err();
         assert!(err.contains("consecutive"));
-        assert_eq!(publisher.messages.len(), 3);
+        assert_eq!(
+            publisher.messages.iter().filter(|(topic, _)| topic == "state").count(),
+            3
+        );
         assert!(bus.uart.reads.is_empty());
     }
 
@@ -638,7 +644,10 @@ mod tests {
         let mut publisher = MockPublisher::new();
         let err = poll(Duration::from_millis(1), &sensors, &mut publisher, &mut bus, "state").unwrap_err();
         assert!(err.contains("re-detection failed"));
-        assert_eq!(publisher.messages.len(), 1);
+        assert_eq!(
+            publisher.messages.iter().filter(|(topic, _)| topic == "state").count(),
+            1
+        );
     }
 
     #[test]
@@ -652,6 +661,17 @@ mod tests {
         }];
         let mut publisher = MockPublisher::new();
         poll(Duration::ZERO, &sensors, &mut publisher, &mut bus, "state").unwrap();
-        assert_eq!(publisher.messages.len(), 1);
+        assert_eq!(
+            publisher.messages.iter().filter(|(topic, _)| topic == "state").count(),
+            1
+        );
+        assert_eq!(
+            publisher
+                .messages
+                .iter()
+                .filter(|(topic, _)| topic == STATUS_TOPIC)
+                .count(),
+            1
+        );
     }
 }

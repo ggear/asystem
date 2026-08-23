@@ -16,5 +16,5 @@ if __name__ == "__main__":
         (metadata_df["state_topic"].str.len() > 0)
         ]
     write_schema_broker(metadata_storage_df,
-                        topic_glob_discovery="homeassistant/+/storage_${STORAGE_HOST}/+/config",
-                        topic_glob_data="storage/${STORAGE_HOST}/data/+/+/+")
+                        broker_topic_glob_discovery="homeassistant/+/storage_${STORAGE_HOST}/+/config",
+                        broker_topic_glob_data="storage/${STORAGE_HOST}/data/+/+/+")

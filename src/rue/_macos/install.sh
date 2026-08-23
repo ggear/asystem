@@ -152,7 +152,7 @@ EOF
 ################################################################################
 PYENV_ROOT="${HOME}/.pyenv"
 PYTHON_VERSION_LATEST=$(pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' ')
-PYTHON_VERSION_LATEST=3.12.8
+PYTHON_VERSION_LATEST=3.12.14
 for env in $(pyenv versions --bare); do pyenv uninstall -f "$env"; done
 for venv in $(pyenv virtualenvs --bare); do pyenv virtualenv-delete -f "$venv"; done
 pyenv install -sv "${PYTHON_VERSION_LATEST}"
@@ -175,9 +175,9 @@ echo "$("${PYTHON_HOME}/bin/python" --version) installed"
 ################################################################################
 GOENV_ROOT="${HOME}/.goenv"
 GO_VERSION_LATEST=$(goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' ')
-GO_VERSION_LATEST=1.25.8
-chmod -R u+w ${GOENV_ROOT}/versions/*
-for env in $(goenv versions --bare); do goenv uninstall -f "$env"; done
+GO_VERSION_LATEST=1.27.0
+chmod -R u+w "${GOENV_ROOT}"/versions/*
+for env in $(goenv list --bare); do rm -rf "$(goenv root)/versions/${env}"; done
 goenv install -sv "${GO_VERSION_LATEST}"
 GOROOT="${GOENV_ROOT}/versions/${GO_VERSION_LATEST}"
 goenv global "${GO_VERSION_LATEST}"

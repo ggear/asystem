@@ -29,10 +29,11 @@ while IFS= read -r HOST; do
 set -eu
 FOUND=0
 while IFS= read -r SCRIPT; do
+  [ -x "$(dirname "${SCRIPT}")/image/broker.sh" ] || continue
   FOUND=$((FOUND + 1))
   echo "Running [${SCRIPT}]"
-  "${SCRIPT}"
-done < <(find -L "$1"/*/latest -maxdepth 2 -name broker.sh 2>/dev/null | sort)
+  "${SCRIPT}" schema broker
+done < <(find -L "$1"/*/latest -maxdepth 1 -name install.sh 2>/dev/null | sort)
 echo "Republished [${FOUND}] modules"
 REMOTE
   STATUS=$?

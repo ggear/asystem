@@ -19,9 +19,9 @@ if __name__ == "__main__":
         ].copy()
     document = load_schema_document()
     write_schema_broker(metadata_network_df,
-                        topic_glob_discovery="homeassistant/+/network/+/config",
-                        topic_glob_data="network/#",
-                        document=document)
+                        broker_topic_glob_discovery="homeassistant/+/network/+/config",
+                        broker_topic_glob_data="network/#",
+                        broker_document=document)
 
     # Build database schema
-    write_schema_database(document, dialect="influxdb3")
+    write_schema_database(document, database_dialect="influxdb3")

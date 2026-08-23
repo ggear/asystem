@@ -57,11 +57,11 @@ CONNECT = REPORT + table(clip=0) + """
 BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
 
 topics() {
-  mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "$1" -W 5 2>/dev/null | grep -E "${2:-.}" | sort -u || true
+  mosquitto_sub "${BROKER_ARGS[@]}" -F '%r %t' -t "$1" -W 5 2>/dev/null | sed -n 's/^1 //p' | grep -E "${2:-.}" | sort -u || true
 }
 
 payload() {
-  mosquitto_sub "${BROKER_ARGS[@]}" -t "$1" -C 1 -W 2 2>/dev/null || true
+  mosquitto_sub "${BROKER_ARGS[@]}" -F '%r\\n%p' -t "$1" -C 1 -W 2 2>/dev/null | awk 'NR==1{if($0!="1") exit} NR>1' || true
 }
 
 declared() {
@@ -125,11 +125,11 @@ def artifacts(source, module_name, options):
 
 
 def ship(source, module_name, module_root, schemas_dir, options):
-    working_root = options.working_root
-    working_dir = join(str(working_root), SHIPPED)
-    publish_path = abspath(join(str(working_root), SHIPPED + ".sh"))
-    if exists(working_dir):
-        shutil.rmtree(working_dir)
+    working_dir = options.working_dir
+    shipped_dir = join(str(working_dir), SHIPPED)
+    publish_path = abspath(join(str(working_dir), SHIPPED + ".sh"))
+    if exists(shipped_dir):
+        shutil.rmtree(shipped_dir)
     if exists(publish_path):
         os.remove(publish_path)
     recovery = _recovery(module_root)
@@ -137,7 +137,7 @@ def ship(source, module_name, module_root, schemas_dir, options):
     if metadata_df is None and not recovery:
         return
     for _, row in [] if metadata_df is None else metadata_df.iterrows():
-        discovery_dir = abspath(join(working_dir, str(row["discovery_topic"])))
+        discovery_dir = abspath(join(shipped_dir, str(row["discovery_topic"])))
         os.makedirs(discovery_dir)
         discovery_path = abspath(join(discovery_dir, str(row["unique_id"]) + ".json"))
         with open(discovery_path, 'w') as discovery_file:
@@ -203,10 +203,21 @@ ENV_DIR="$ROOT_DIR"
 while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "$ENV_DIR")"; done
 # shellcheck disable=SC1091
 [ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
+
+SCHEMA_PHASE="${{1:-all}}"
+case "${{SCHEMA_PHASE}}" in
+sweep | publish | all) ;;
+*)
+  echo "Usage: $(basename "$0") [sweep|publish]" >&2
+  exit 2
+  ;;
+esac
 {resolve}
 BROKER_ARGS=(-h "$BROKER_SERVICE" -p "$BROKER_PORT")
 """.format(banner=banner(), shipped=SHIPPED, resolve=resolve(module_name))
     publish = """
+if [ "${{SCHEMA_PHASE}}" != "publish" ]; then
+
 printf '\\nEntity Metadata publish script [{module}] dropping discovery topics on [%s]:\\n' "$BROKER_SERVICE"
 mosquitto_sub "${{BROKER_ARGS[@]}}" -F '%t' -t "{glob_discovery}" -W 5 2>/dev/null | sort -u | \\
   while read -r TOPIC; do
@@ -222,6 +233,10 @@ mosquitto_sub "${{BROKER_ARGS[@]}}" --remove-retained -F '%t' -t "{glob_data}" -
 
 printf '\\nEntity Metadata publish script [{module}] sleeping before publishing discovery topics ... ' && sleep 2 && printf 'done\\n\\n'
 
+fi
+
+if [ "${{SCHEMA_PHASE}}" != "sweep" ]; then
+
 printf 'Entity Metadata publish script [{module}] publishing discovery topics on [%s]:\\n' "$BROKER_SERVICE"
 find "$ROOT_DIR" -path "{find_discovery}" -name "*.json" -print0 | sort -z | while read -r -d $'\\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${{METADATA_FILE/$ROOT_DIR\\//}}")
@@ -229,6 +244,8 @@ find "$ROOT_DIR" -path "{find_discovery}" -name "*.json" -print0 | sort -z | whi
   printf '%s\\n' "$METADATA_TOPIC"
 done
 printf '\\n'
+
+fi
 """.format(
         module=module_name,
         glob_discovery=topic_glob_discovery,

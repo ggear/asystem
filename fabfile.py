@@ -164,13 +164,18 @@ def _setup(context):
     _run_local(context, 'pyenv install -sv "${PYTHON_VERSION}";'
                         'pyenv virtualenv "${PYTHON_VERSION}" asystem 2>/dev/null;'
                         '"${PYENV_ROOT}/versions/asystem/bin/pip" install --upgrade pip >/dev/null;'
+                        '"${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip" install --upgrade --quiet'
+                        ' pip fabric docker varsubst requests pathlib2 packaging;'
+                        'pyenv global "${PYTHON_VERSION}";'
                         'echo "Installed python-${PYTHON_VERSION} at [${PYENV_ROOT}/versions/asystem]"')
     if _run_local(context,
                   '[[ "$(python --version)" == "Python ${PYTHON_VERSION}" ]]'
                   ' && echo true || echo false',
                   hide='out').stdout.strip() != 'true':
         raise Exception("Could not install python")
-    _run_local(context, 'goenv install -s "${GO_VERSION}" > /dev/null;'
+    _run_local(context, 'goenv install -s "${GO_VERSION}" 2>&1 >/dev/null'
+                        ' | grep -v "both GOPATH and GOROOT are the same directory" >&2 || true;'
+                        'goenv use "${GO_VERSION}" --global > /dev/null;'
                         'go install gotest.tools/gotestsum@latest;'
                         'echo "Installed go-${GO_VERSION} at [${GOROOT}]"')
     if _run_local(context,
@@ -205,8 +210,10 @@ def _purge(context):
     _run_local(context, 'pyenv virtualenv-delete -f asystem || true')
     _run_local(context, 'for env in $(pyenv versions --bare); do '
                         '[[ "$(pyenv version --bare)" != "$env" ]] && pyenv uninstall -f "$env" || true; done')
-    _run_local(context, 'for env in $(goenv versions --bare); do goenv uninstall -f "$env"; done')
-    _run_local(context, 'rm -rf "${CARGO_HOME}" "${RUSTUP_HOME}"')
+    _run_local(context, 'chmod -R u+w "$(goenv root)"/versions/* 2>/dev/null || true;'
+                        'rm -rf "$(goenv root)"/versions/* 2>/dev/null || true')
+    _run_local(context, 'chmod -R u+w "${CARGO_HOME}" "${RUSTUP_HOME}" 2>/dev/null || true;'
+                        'rm -rf "${CARGO_HOME}" "${RUSTUP_HOME}"')
     _print_footer("asystem", "purge")
 
 
@@ -268,24 +275,24 @@ def _pull(context):
                                 "{}=={}\n".format(py_mod_line.strip(), py_deps_dict[py_mod_line.strip()]))
     _print_footer("asystem", "pull dependencies")
     _print_header("asystem", "pull dependencies install")
-    _run_local(context, "pip install --ignore-requires-python --default-timeout=1000 -r {}"
-               .format(join(ROOT_DIR, ".py_deps_prod.txt")))
-    _run_local(context, "pip install --ignore-requires-python --no-deps --default-timeout=1000 -r {}"
-               .format(join(ROOT_DIR, ".py_deps_dev.txt")))
+    _run_pinned(context, "pip install --ignore-requires-python --default-timeout=1000 -r {}"
+                .format(join(ROOT_DIR, ".py_deps_prod.txt")), ".", "python")
+    _run_pinned(context, "pip install --ignore-requires-python --no-deps --default-timeout=1000 -r {}"
+                .format(join(ROOT_DIR, ".py_deps_dev.txt")), ".", "python")
     _print_footer("asystem", "pull dependencies install")
     _print_header("asystem", "pull dependencies update")
     for module in _get_modules(context, filter_changes=False):
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
         if isdir(module_go_main_path):
-            _run_local(context, "go get -u ./...", module_go_main_path)
-            _run_local(context, "go mod tidy", module_go_main_path)
+            _run_pinned(context, "go get -u ./...", module_go_main_path, "go")
+            _run_pinned(context, "go mod tidy", module_go_main_path, "go")
         module_go_test_path = join(ROOT_MODULE_DIR, module, "src/test/go", _get_service(module) + "_test")
         if isdir(module_go_test_path):
-            _run_local(context, "go get -u ./...", module_go_test_path)
-            _run_local(context, "go mod tidy", module_go_test_path)
+            _run_pinned(context, "go get -u ./...", module_go_test_path, "go")
+            _run_pinned(context, "go mod tidy", module_go_test_path, "go")
         module_rust_main_path = join(ROOT_MODULE_DIR, module, "src/main/rust", _get_service(module))
         if isfile(join(module_rust_main_path, "Cargo.toml")):
-            _run_local(context, "cargo update", module_rust_main_path)
+            _run_pinned(context, "cargo update", module_rust_main_path, "rust")
     _print_footer("asystem", "pull dependencies update")
     _generate(context, filter_changes=False, is_pull=True)
     _print_header("asystem", "pull package versions to update")
@@ -685,8 +692,8 @@ docker rm -vf "$CONTAINER_NAME"
                         module + ":" + str(docker_image_metadata.get("repository", "unknown")),
                         "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
         for lang, version in {
-            "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' '",
-            "go": r"goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' '",
+            "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 | tr -d ' '",
+            "go": r"goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 | tr -d ' '",
             "rust": r"""curl -s https://static.rust-lang.org/dist/channel-rust-stable.toml | awk -F'"' '/^\[pkg\.rust\]$/{f=1} f&&/version/{split($2,v," "); print v[1]; exit}'""",
         }.items():
             lang_version_installed = GLOBAL_ENV["{}_VERSION".format(lang.upper())]
@@ -1270,7 +1277,7 @@ def _get_env(env_path):
     if isfile(env_path):
         with open(env_path, 'r') as env_file:
             for env_line in env_file:
-                env_line = env_line.replace("export ", "").rstrip()
+                env_line = env_line.strip().replace("export ", "").rstrip()
                 if "=" in env_line and not env_line.startswith("#"):
                     env_key, env_value = env_line.split("=", 1)
                     env[env_key] = env_value.strip('"')
@@ -1376,6 +1383,27 @@ def _down_module(context, module, down_this=True):
 def _run_local(context, command, working=".", **kwargs):
     with context.cd(join("./" if working == "." else ROOT_MODULE_DIR, working)):
         return context.run(". {} && {}".format(GLOBAL_ENV_PATH, command), **kwargs)
+
+
+def _run_pinned(context, command, working, toolchain):
+    try:
+        return _run_local(context, command, working)
+    except Exception:
+        variable, releases = TOOLCHAINS[toolchain]
+        _print_line(HALTED.format(toolchain.upper(), _get_versions()[0]))
+        _print_line(
+            "The [{}] command [{}] failed in [{}]\n"
+            "The pinned toolchain is [{}] version [{}] declared as [{}] in [.env_fab]\n"
+            "A dependency that now requires a newer toolchain than the pinned version will fail exactly here, "
+            "look above for a line naming a version higher than [{}]\n"
+            "The pull was halted at this point, no later module was updated, "
+            "nothing was generated and no outdated package report was printed\n"
+            "To upgrade, take the latest release from [{}], set [{}] in [.env_fab], "
+            "run [fab setup] and re-run [fab pull]\n"
+            "The upgrade process is documented under [Upgrading a pinned toolchain] in [CLAUDE.md]"
+            .format(toolchain, command, working, toolchain, GLOBAL_ENV.get(variable, "unknown"),
+                    variable, GLOBAL_ENV.get(variable, "unknown"), releases, variable))
+        raise
 
 
 def _run_external(_context, command, working=".", env_overrides=None):
@@ -1489,6 +1517,12 @@ SHARED_MODULE_NAME = "_"
 GLOBAL_ENV_PATH = join(dirname(abspath(__file__)), ".env_fab")
 GLOBAL_ENV = _get_env(GLOBAL_ENV_PATH)
 
+TOOLCHAINS = {
+    "python": ("PYTHON_VERSION", "https://www.python.org/doc/versions"),
+    "go": ("GO_VERSION", "https://go.dev/doc/devel/release"),
+    "rust": ("RUST_VERSION", "https://doc.rust-lang.org/beta/releases.html"),
+}
+
 HOSTS = {line.split("=")[0]: line.split("=")[-1].split(",")
          for line in Path(join(dirname(abspath(__file__)), ".hosts")).read_text().strip().split("\n")}
 
@@ -1499,6 +1533,10 @@ HEADER = \
 FOOTER = \
     "------------------------------------------------------------\n" \
     "\033[32m{} SUCCESSFUL: {}-{}\033[00m\n" \
+    "------------------------------------------------------------"
+HALTED = \
+    "------------------------------------------------------------\n" \
+    "\033[31mPULL HALTED BY {} TOOLCHAIN: asystem-{}\033[00m\n" \
     "------------------------------------------------------------"
 
 

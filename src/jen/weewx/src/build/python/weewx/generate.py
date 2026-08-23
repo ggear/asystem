@@ -43,8 +43,8 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
     write_schema_broker(metadata_publish_df,
-                        topic_glob_discovery="homeassistant/+/weewx/#",
-                        topic_glob_data="weewx/#",
-                        schema_state="""
+                        broker_topic_glob_discovery="homeassistant/+/weewx/#",
+                        broker_topic_glob_data="weewx/#",
+                        broker_state="""
 <number>
                           """)

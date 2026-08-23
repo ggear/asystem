@@ -118,6 +118,7 @@ func (e *Engine) Run(ctx context.Context) error {
 			polls++
 			if polls == pollsPerAggregate {
 				polls = 0
+				e.publishStatus()
 				for _, v := range e.AggregateSamples(ctx, e.Plugins) {
 					e.publishAggregate(ctx, v)
 				}
@@ -219,6 +220,16 @@ func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plug
 	}
 	return aggregate
 }
+
+func (e *Engine) publishStatus() {
+	if e.broker == nil {
+		return
+	}
+	if err := e.broker.PublishStatus(); err != nil {
+		scribe.LogWarn(scribe.Global, "publishing online status to broker failed [%v]", err)
+	}
+}
+
 func (e *Engine) publishAggregate(ctx context.Context, m plugin.Aggregate) {
 	if e.broker != nil {
 		if payload, err := m.MarshalJSON(); err != nil {

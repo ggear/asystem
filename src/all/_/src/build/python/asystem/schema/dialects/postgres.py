@@ -78,6 +78,8 @@ def ship(document, module_name, module_root, schemas_dir, options):
             columns_file.write(json.dumps(columns(table, options.time_column), indent=2) + "\n")
         print("Build generate script [{}] database table [{}] shipped to [{}] and [{}]"
               .format(module_name, table, target_path, columns_path))
+    if not options.applier:
+        return
     with open(applier_path, 'w') as applier_file:
         applier_file.write(applier_script(module_name))
     os.chmod(applier_path, 0o750)

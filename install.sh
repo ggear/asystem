@@ -111,8 +111,14 @@ start_service() {
 COMMAND="start"
 [[ "$#" -ge 1 ]] && COMMAND="$1"
 case "${COMMAND}" in
-install | start | stop | sleep) ;;
-*) log_error "Unknown command [${COMMAND}] expected [install] [start] [stop] or [sleep]" ;;
+install | start | stop | sleep | schema) ;;
+*) log_error "Unknown command [${COMMAND}] expected [install] [start] [stop] [sleep] or [schema]" ;;
+esac
+SCHEMA_ROLE="all"
+[[ "${COMMAND}" == "schema" && "$#" -ge 2 ]] && SCHEMA_ROLE="$2"
+case "${SCHEMA_ROLE}" in
+all | broker | database) ;;
+*) log_error "Unknown schema role [${SCHEMA_ROLE}] expected [broker] [database] or none" ;;
 esac
 
 export SERVICE_COMMAND="${COMMAND}"
@@ -143,6 +149,17 @@ touch .env
 chmod 600 .env
 # shellcheck disable=SC1091
 source .env
+
+if [[ "${COMMAND}" == "schema" ]]; then
+  if [[ "${SCHEMA_ROLE}" != "broker" && -x "image/database.sh" ]]; then
+    ./image/database.sh
+  fi
+  if [[ "${SCHEMA_ROLE}" != "database" && -x "image/broker.sh" ]]; then
+    ./image/broker.sh publish
+  fi
+  exit 0
+fi
+
 if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
   SERVICE_PARENT="$(dirname "${SERVICE_HOME}")"

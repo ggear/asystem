@@ -20,8 +20,6 @@ from asystem.schema.document import (
 
 # noinspection PyUnresolvedReferences
 from asystem.schema.emit import (
-    skip_schema_dialect,
     write_schema_broker,
     write_schema_database,
-    write_schema_dialect,
 )

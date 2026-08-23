@@ -97,11 +97,12 @@ class SchemaDatabaseOptions:
     time_column: str = "timestamp"
     retention: str = ""
     timezone: str = ""
+    applier: bool = False
 
 
 @dataclass
 class SchemaBrokerOptions:
-    working_root: str = ""
+    working_dir: str = ""
     topic_glob_discovery: str = ""
     topic_glob_data: str = ""
     state: object = None

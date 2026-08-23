@@ -10,6 +10,15 @@ while [ "$ENV_DIR" != "/" ] && [ ! -f "$ENV_DIR/.env" ]; do ENV_DIR="$(dirname "
 # shellcheck disable=SC1091
 [ -f "$ENV_DIR/.env" ] && . "$ENV_DIR/.env"
 
+SCHEMA_PHASE="${1:-all}"
+case "${SCHEMA_PHASE}" in
+sweep | publish | all) ;;
+*)
+  echo "Usage: $(basename "$0") [sweep|publish]" >&2
+  exit 2
+  ;;
+esac
+
 BROKER_SERVICE="${BROKER_SERVICE:-${NETWORK_BROKER_SERVICE:-${VERNEMQ_SERVICE_PROD:-}}}"
 BROKER_PORT="${BROKER_PORT:-${NETWORK_BROKER_PORT:-${VERNEMQ_API_PORT:-}}}"
 
@@ -21,6 +30,8 @@ for VARIABLE in BROKER_SERVICE BROKER_PORT; do
 done
 
 BROKER_ARGS=(-h "$BROKER_SERVICE" -p "$BROKER_PORT")
+
+if [ "${SCHEMA_PHASE}" != "publish" ]; then
 
 printf '\nEntity Metadata publish script [network] dropping discovery topics on [%s]:\n' "$BROKER_SERVICE"
 mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "homeassistant/+/network/+/config" -W 5 2>/dev/null | sort -u | \
@@ -37,6 +48,10 @@ mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "network/#" -W 1 
 
 printf '\nEntity Metadata publish script [network] sleeping before publishing discovery topics ... ' && sleep 2 && printf 'done\n\n'
 
+fi
+
+if [ "${SCHEMA_PHASE}" != "sweep" ]; then
+
 printf 'Entity Metadata publish script [network] publishing discovery topics on [%s]:\n' "$BROKER_SERVICE"
 find "$ROOT_DIR" -path "*/homeassistant/*/network/*/config/*" -name "*.json" -print0 | sort -z | while read -r -d $'\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${METADATA_FILE/$ROOT_DIR\//}")
@@ -44,3 +59,5 @@ find "$ROOT_DIR" -path "*/homeassistant/*/network/*/config/*" -name "*.json" -pr
   printf '%s\n' "$METADATA_TOPIC"
 done
 printf '\n'
+
+fi

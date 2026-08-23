@@ -23,7 +23,7 @@ DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
 if __name__ == "__main__":
     env = load_bootstrap_env(DIR_ROOT)
     unifi_controller_url = "https://{}:443".format(env["UNIFI_HOST_PROD"])
-    modules = load_bootstrap_modules(load_disabled=False, load_infrastructure=False)
+    modules = load_bootstrap_modules(include_disabled=False, include_infrastructure=False)
     metadata_df = load_bootstrap_entities()
 
     write_container_certificates("udmutilities", join(DIR_ROOT, "src/main/resources/image/udm-certificates"))
