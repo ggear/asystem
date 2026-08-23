@@ -136,3 +136,32 @@ func serviceNameFor(id ID) string {
 	}
 	return ServiceNameUnset
 }
+
+func TestMetric_Topics(t *testing.T) {
+	topics := Topics()
+	if len(topics) == 0 {
+		t.Fatalf("topics: got none want one per templated metric")
+	}
+	seen := map[string]bool{}
+	for _, topic := range topics {
+		if topic.Role != schema.RoleState {
+			t.Errorf("role: got %v want %v for %s", topic.Role, schema.RoleState, topic.Template)
+		}
+		if strings.Contains(topic.Template, "$SCOPE") {
+			t.Errorf("template: got %s want $SCOPE resolved to %s", topic.Template, ScopeData)
+		}
+		if seen[topic.Template] {
+			t.Errorf("template: got duplicate %s want each declared once", topic.Template)
+		}
+		seen[topic.Template] = true
+	}
+	for _, id := range GetIDs() {
+		template := metricBuildersByID[id].template
+		if template == "" {
+			continue
+		}
+		if !seen[strings.ReplaceAll(template, "$SCOPE", ScopeData)] {
+			t.Errorf("template: got none want one declared for %s", template)
+		}
+	}
+}

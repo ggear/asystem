@@ -115,6 +115,21 @@ func GetIDKindSchema(id ID) schema.Kind {
 	}
 }
 
+func Topics() []schema.Topic {
+	topics := make([]schema.Topic, 0, len(metricBuildersByID))
+	for _, id := range GetIDs() {
+		builder := metricBuildersByID[id]
+		if builder.template == "" {
+			continue
+		}
+		topics = append(topics, schema.Topic{
+			Template: strings.ReplaceAll(builder.template, "$SCOPE", ScopeData),
+			Role:     schema.RoleState,
+		})
+	}
+	return topics
+}
+
 func Payloads() []schema.Payload {
 	value := schema.Member{
 		Key:  "value",

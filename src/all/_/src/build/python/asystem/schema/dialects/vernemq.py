@@ -28,6 +28,8 @@ LEAF = "payload"
 
 PLACEHOLDER = r"\$\{[^}]+}"
 
+BINDING = re.compile(r"\$([A-Z][A-Z0-9_]*)")
+
 ROLE_COLUMNS = {"state_topic": "state", "command_topic": "command", "availability_topic": "availability"}
 
 TOPIC_COLUMNS = ("discovery_topic", "state_topic", "command_topic", "availability_topic")
@@ -285,29 +287,24 @@ printf -- '\\n-- %s\\n\\n' "verify"
 
 COMMAND_TOPICS=({})
 
-FAULTS=0
 FAULT_FILE="$(mktemp)"
 RETAINED_FILE="$(mktemp)"
-trap 'rm -f "${{FAULT_FILE}}" "${{RETAINED_FILE}}"' EXIT
+DECLARED_FILE="$(mktemp)"
+COMMAND_FILE="$(mktemp)"
+trap 'rm -f "${{FAULT_FILE}}" "${{RETAINED_FILE}}" "${{DECLARED_FILE}}" "${{COMMAND_FILE}}"' EXIT
 
-while IFS= read -r TOPIC; do
-  for COMMAND_TOPIC in ${{COMMAND_TOPICS[@]+"${{COMMAND_TOPICS[@]}}"}}; do
-    [ "${{TOPIC}}" == "${{COMMAND_TOPIC}}" ] && continue 2
-  done
-  if [ -z "$(payload "${{TOPIC}}")" ]; then
-    FAULTS=$((FAULTS + 1))
-    faulted "${{TOPIC}}" missing >> "${{FAULT_FILE}}"
-  fi
-done < <(declared)
+declared > "${{DECLARED_FILE}}"
+printf '%s\\n' ${{COMMAND_TOPICS[@]+"${{COMMAND_TOPICS[@]}}"}} | sed '/^$/d' | sort -u > "${{COMMAND_FILE}}"
 
 {}
-while IFS= read -r TOPIC; do
-  [ -z "${{TOPIC}}" ] && continue
-  if ! declared | grep -qxF "${{TOPIC}}"; then
-    FAULTS=$((FAULTS + 1))
-    faulted "${{TOPIC}}" undeclared >> "${{FAULT_FILE}}"
-  fi
-done < "${{RETAINED_FILE}}"
+sort -u -o "${{RETAINED_FILE}}" "${{RETAINED_FILE}}"
+sort -u -o "${{DECLARED_FILE}}" "${{DECLARED_FILE}}"
+
+comm -23 "${{DECLARED_FILE}}" "${{COMMAND_FILE}}" | comm -23 - "${{RETAINED_FILE}}" |
+  while IFS= read -r TOPIC; do faulted "${{TOPIC}}" missing; done >> "${{FAULT_FILE}}"
+comm -13 "${{DECLARED_FILE}}" "${{RETAINED_FILE}}" |
+  while IFS= read -r TOPIC; do faulted "${{TOPIC}}" undeclared; done >> "${{FAULT_FILE}}"
+FAULTS="$(grep -c . "${{FAULT_FILE}}" || true)"
 
 if [ "${{FAULTS}}" != "0" ]; then
   table < "${{FAULT_FILE}}"
@@ -489,6 +486,60 @@ def _coerce_identifiers(value):
     return [str(value)]
 
 
+def _declared_topics(module_name, options):
+    document = options.document
+    if document is None or not getattr(document, "topics", None):
+        return []
+    bindings = _bindings(module_name, options.entities)
+    declared = {}
+    for topic in document.topics:
+        expanded = _expanded(module_name, topic.template, bindings)
+        if not expanded:
+            raise ValueError(
+                "Build generate script [{}] topic template [{}] expanded to nothing, supply broker_entities "
+                "binding every placeholder it names".format(module_name, topic.template))
+        for value in expanded:
+            if options.topic_glob_data and not _glob_match(options.topic_glob_data, value):
+                raise ValueError(
+                    "Build generate script [{}] topic_glob_data [{}] does not match declared topic [{}] from "
+                    "template [{}]: update the glob or the declaration so they agree"
+                    .format(module_name, options.topic_glob_data, value, topic.template))
+            declared[value] = topic.role
+    return sorted(declared.items())
+
+
+def _bindings(module_name, entities):
+    if entities is None:
+        return [{}]
+    if isinstance(entities, dict):
+        entities = [entities]
+    bindings = []
+    for entity in entities:
+        if not isinstance(entity, dict):
+            raise ValueError("Build generate script [{}] broker_entities must be a mapping or a list of mappings, "
+                             "got [{}]".format(module_name, type(entity).__name__))
+        bindings.append({str(name): ([str(value)] if isinstance(value, str) else [str(each) for each in value])
+                         for name, value in entity.items()})
+    return bindings
+
+
+def _expanded(module_name, template, bindings):
+    expanded = []
+    for binding in bindings:
+        names = sorted(set(BINDING.findall(template)))
+        missing = [name for name in names if name not in binding]
+        if missing:
+            raise ValueError(
+                "Build generate script [{}] topic template [{}] names placeholder(s) {} that broker_entities "
+                "does not bind".format(module_name, template, missing))
+        rendered = [template]
+        for name in names:
+            rendered = [candidate.replace("$" + name, value)
+                        for candidate in rendered for value in binding[name]]
+        expanded.extend(rendered)
+    return sorted(set(expanded))
+
+
 def _validate_globs(metadata_df, module_name, topic_glob_discovery, topic_glob_data):
     for topic_glob, topic_glob_name, topic_glob_columns in (
             (topic_glob_discovery, "topic_glob_discovery", ("discovery_topic",)),
@@ -535,7 +586,8 @@ def _artifacts_declared(metadata_df, module_name, options):
     _validate_globs(metadata_df, module_name, options.topic_glob_discovery, options.topic_glob_data)
     topics = _topics(metadata_df)
     specs = _specs(module_name, options)
-    if not topics:
+    declared = _declared_topics(module_name, options)
+    if not topics and not declared:
         return {}
     document = options.document
     globs = [glob for glob in (options.topic_glob_discovery, options.topic_glob_data) if glob]
@@ -547,6 +599,11 @@ def _artifacts_declared(metadata_df, module_name, options):
             payload = (discovery(discoveries[topic]) if column == "discovery_topic" and topic in discoveries
                        else leaf(topic, specs.get(column, ""), document, role))
             generated["model/{}/{}".format(topic, LEAF)] = (payload, False)
+    for topic, role in declared:
+        path = "model/{}/{}".format(topic, LEAF)
+        if path in generated:
+            continue
+        generated[path] = (leaf(topic, None, document, role), False)
     generated["describe.sh"] = (describe_script(module_name, globs), True)
     generated["query.sh"] = (query_script(module_name), True)
     generated["verify.sh"] = (

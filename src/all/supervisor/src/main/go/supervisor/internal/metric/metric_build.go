@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+const (
+	ScopeData = "data"
+	ScopeMeta = "meta"
+)
+
 type builder struct {
 	id           ID
 	valueKind    ValueKind
@@ -270,7 +275,7 @@ func buildFromID(id ID, hostName string, serviceName string, scope string) (stri
 	if !patternToken.MatchString(hostName) {
 		return "", nil, fmt.Errorf("cannot build metric ID [%d] with invalid host [%s]", id, hostName)
 	}
-	if scope != "data" && scope != "meta" {
+	if scope != ScopeData && scope != ScopeMeta {
 		return "", nil, fmt.Errorf("cannot build metric ID [%d] with invalid scope [%s]", id, scope)
 	}
 	metricBuilder := metricBuildersByID[id]

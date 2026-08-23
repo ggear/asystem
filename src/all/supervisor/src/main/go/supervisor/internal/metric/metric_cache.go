@@ -852,7 +852,7 @@ func (c *RecordCache) reindex() {
 		if GetIDKind(guid.ID) == MetricKindService && (guid.ServiceName == ServiceNameUnset || strings.HasPrefix(guid.ServiceName, ServiceNameSchema)) {
 			continue
 		}
-		topic, tags, err := buildFromID(guid.ID, guid.Host, guid.ServiceName, "data")
+		topic, tags, err := buildFromID(guid.ID, guid.Host, guid.ServiceName, ScopeData)
 		if err != nil {
 			continue
 		}

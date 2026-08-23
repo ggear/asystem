@@ -22,17 +22,19 @@ if __name__ == "__main__":
         (metadata_df["state_topic"].str.len() > 0)
         ]
     document = load_schema_document()
-    write_schema_broker(metadata_supervisor_df,
-                        broker_topic_glob_discovery="homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
-                        broker_topic_glob_data="supervisor/${SUPERVISOR_HOST}/#",
-                        broker_document=document)
-
-    # Build config and database schema
     modules_all = _get_modules_by_hosts("docker-compose.yml")
     modules_server = {}
     for host, services in modules_all.items():
         if HOSTS[_get_host_label(host)][4] == "edge" or HOSTS[_get_host_label(host)][4] == "server":
             modules_server[host] = sorted(modules_all[host])
+    write_schema_broker(metadata_supervisor_df,
+                        broker_topic_glob_discovery="homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
+                        broker_topic_glob_data="supervisor/${SUPERVISOR_HOST}/#",
+                        broker_document=document,
+                        broker_entities=[{"HOST": host, "SERVICE": services}
+                                         for host, services in sorted(modules_server.items())])
+
+    # Build config and database schema
     write_schema_database(document, database_dialect="influxdb3", database_entities={
         "supervisor/host": sorted(modules_server.keys()),
         "supervisor/service": sorted({service for services in modules_server.values() for service in services}),

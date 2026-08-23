@@ -84,10 +84,17 @@ class SchemaBrokerPayload:
 
 
 @dataclass
+class SchemaBrokerTopic:
+    template: str
+    role: str = "state"
+
+
+@dataclass
 class SchemaDocument:
     module: str
     relations: list = field(default_factory=list)
     payloads: list = field(default_factory=list)
+    topics: list = field(default_factory=list)
     discovered: bool = False
     glob: str = ""
 
@@ -109,6 +116,7 @@ class SchemaBrokerOptions:
     command: object = None
     availability: object = None
     document: object = None
+    entities: object = None
 
 
 def load_schema_document(module_root=None, config=None, args=None):
@@ -161,6 +169,13 @@ def load_schema_document(module_root=None, config=None, args=None):
             "role":        "<role>",        REQUIRED  [state|command|availability], the xlsx topic column filled
             "match":       "<topic-glob>",  OPTIONAL  Picks between payloads sharing a role, matched by fnmatch
             "root":        <member>         OPTIONAL  Payload shape rendered to the topic leaf
+          }],
+          "topics":      [{                 OPTIONAL  One per retained topic the service publishes that the xlsx
+                                                      does not declare, the xlsx being the Home Assistant entities
+                                                      alone while a service may retain far more
+            "template":    "<topic>",       REQUIRED  MQTT topic, [$NAME] placeholders bound by [broker_entities]
+            "role":        "<role>"         OPTIONAL  [state|command|availability], picks the payload, defaults
+                                                      to [state]
           }]
         }
     }
@@ -172,6 +187,13 @@ def load_schema_document(module_root=None, config=None, args=None):
     it is reported like any other measure declared and not written.
 
     A [<duration>] is an unsigned integer and a unit suffix, one of [s] [m] [h] [d], e.g. [30s] [15m] [1d].
+
+    A [<topic>] template names its variable levels with [$NAME] placeholders, which the caller binds by passing
+    [write_schema_broker(broker_entities=...)] one mapping per independent binding, or a list of them where the
+    values are not a free cross product, e.g. [[{"HOST": host, "SERVICE": services} for host, services in ...]]
+    expands [supervisor/$HOST/data/service/$SERVICE/up_time] to each host's own services and no others. A value
+    may be a string or a list, lists cross-producing within their mapping. A placeholder no mapping binds, or a
+    topic no [topic_glob_data] matches, raises rather than silently emitting a partial declaration.
 
     A [<member>], nesting arbitrarily deep through its own [members]:
 
@@ -199,8 +221,8 @@ def load_schema_document(module_root=None, config=None, args=None):
     else:
         raise ValueError("Build generate script [{}] declares no schema reflector, expected one of [{}] [{}] [{}]"
                          .format(module_name, python_path, go_path, rust_path))
-    print("Build generate script [{}] schema reflected with relations [{}] payloads [{}]"
-          .format(module_name, len(document.relations), len(document.payloads)))
+    print("Build generate script [{}] schema reflected with relations [{}] payloads [{}] topics [{}]"
+          .format(module_name, len(document.relations), len(document.payloads), len(document.topics)))
     sys.stdout.flush()
     return document
 
@@ -215,11 +237,12 @@ def parse_schema_document(text, module_name):
     database = _mapping(module_name, "document", parsed, "database")
     broker = _mapping(module_name, "document", parsed, "broker")
     _reject_unknown(module_name, "database", database, ("relations",))
-    _reject_unknown(module_name, "broker", broker, ("payloads",))
+    _reject_unknown(module_name, "broker", broker, ("payloads", "topics"))
     document = SchemaDocument(
         module=_text(module_name, "document", parsed, "module", module_name),
         relations=[_parse_relation(module_name, relation) for relation in _mappings(module_name, "database", database, "relations")],
-        payloads=[_parse_payload(module_name, payload) for payload in _mappings(module_name, "broker", broker, "payloads")])
+        payloads=[_parse_payload(module_name, payload) for payload in _mappings(module_name, "broker", broker, "payloads")],
+        topics=[_parse_topic(module_name, topic) for topic in _mappings(module_name, "broker", broker, "topics")])
     _validate(document)
     return document
 
@@ -356,6 +379,14 @@ def _parse_payload(module_name, payload):
         root=_parse_member(module_name, scope, _mapping(module_name, scope, payload, "root")))
 
 
+def _parse_topic(module_name, topic):
+    scope = _scope("", "topic", topic, "template")
+    _reject_unknown(module_name, scope, topic, SchemaBrokerTopic)
+    return SchemaBrokerTopic(
+        template=_text(module_name, scope, topic, "template"),
+        role=_text(module_name, scope, topic, "role", "state"))
+
+
 def _parse_member(module_name, scope, member):
     scope = _scope(scope, "member", member)
     _reject_unknown(module_name, scope, member, SchemaBrokerMember)
@@ -441,6 +472,18 @@ def _validate(document):
             raise ValueError("Build generate script [{}] payload declares unknown role [{}]"
                              .format(document.module, payload.role))
         _validate_member(document, payload.root)
+    templates = set()
+    for topic in document.topics:
+        if topic.role not in ROLES:
+            raise ValueError("Build generate script [{}] topic [{}] declares unknown role [{}]"
+                             .format(document.module, topic.template, topic.role))
+        if not topic.template or topic.template.startswith("/") or topic.template.endswith("/"):
+            raise ValueError("Build generate script [{}] topic template must be a non-empty MQTT topic [{}]"
+                             .format(document.module, topic.template))
+        if topic.template in templates:
+            raise ValueError("Build generate script [{}] duplicate topic template [{}]"
+                             .format(document.module, topic.template))
+        templates.add(topic.template)
 
 
 def _validate_member(document, member):

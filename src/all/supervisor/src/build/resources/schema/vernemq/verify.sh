@@ -121,30 +121,25 @@ printf -- '\n-- %s\n\n' "verify"
 
 COMMAND_TOPICS=("supervisor/macmini-mad/command/service/network" "supervisor/macmini-mad/command/service/plex" "supervisor/macmini-mad/command/service/postgres" "supervisor/macmini-mad/command/service/sabnzbd" "supervisor/macmini-mad/command/service/wrangle" "supervisor/macmini-max/command/service/influxdb3" "supervisor/macmini-max/command/service/mlflow" "supervisor/macmini-max/command/service/mlserver" "supervisor/macmini-max/command/service/openra" "supervisor/macmini-may/command/service/cloudflare" "supervisor/macmini-may/command/service/grafana" "supervisor/macmini-may/command/service/letsencrypt" "supervisor/macmini-may/command/service/sonarr" "supervisor/macmini-may/command/service/tempstat" "supervisor/macmini-meg/command/service/homeassistant" "supervisor/macmini-meg/command/service/mariadb" "supervisor/macmini-meg/command/service/nginx" "supervisor/macmini-meg/command/service/tasmota" "supervisor/macmini-meg/command/service/vernemq" "supervisor/raspbpi-jen/command/service/weewx" "supervisor/raspbpi-jen/command/service/zigbee2mqtt")
 
-FAULTS=0
 FAULT_FILE="$(mktemp)"
 RETAINED_FILE="$(mktemp)"
-trap 'rm -f "${FAULT_FILE}" "${RETAINED_FILE}"' EXIT
+DECLARED_FILE="$(mktemp)"
+COMMAND_FILE="$(mktemp)"
+trap 'rm -f "${FAULT_FILE}" "${RETAINED_FILE}" "${DECLARED_FILE}" "${COMMAND_FILE}"' EXIT
 
-while IFS= read -r TOPIC; do
-  for COMMAND_TOPIC in ${COMMAND_TOPICS[@]+"${COMMAND_TOPICS[@]}"}; do
-    [ "${TOPIC}" == "${COMMAND_TOPIC}" ] && continue 2
-  done
-  if [ -z "$(payload "${TOPIC}")" ]; then
-    FAULTS=$((FAULTS + 1))
-    faulted "${TOPIC}" missing >> "${FAULT_FILE}"
-  fi
-done < <(declared)
+declared > "${DECLARED_FILE}"
+printf '%s\n' ${COMMAND_TOPICS[@]+"${COMMAND_TOPICS[@]}"} | sed '/^$/d' | sort -u > "${COMMAND_FILE}"
 
 topics "homeassistant/+/+/+/config" "^homeassistant/[^/]+/supervisor_[^/]+/[^/]+/config$" >> "${RETAINED_FILE}"
 topics "supervisor/+/#" >> "${RETAINED_FILE}"
-while IFS= read -r TOPIC; do
-  [ -z "${TOPIC}" ] && continue
-  if ! declared | grep -qxF "${TOPIC}"; then
-    FAULTS=$((FAULTS + 1))
-    faulted "${TOPIC}" undeclared >> "${FAULT_FILE}"
-  fi
-done < "${RETAINED_FILE}"
+sort -u -o "${RETAINED_FILE}" "${RETAINED_FILE}"
+sort -u -o "${DECLARED_FILE}" "${DECLARED_FILE}"
+
+comm -23 "${DECLARED_FILE}" "${COMMAND_FILE}" | comm -23 - "${RETAINED_FILE}" |
+  while IFS= read -r TOPIC; do faulted "${TOPIC}" missing; done >> "${FAULT_FILE}"
+comm -13 "${DECLARED_FILE}" "${RETAINED_FILE}" |
+  while IFS= read -r TOPIC; do faulted "${TOPIC}" undeclared; done >> "${FAULT_FILE}"
+FAULTS="$(grep -c . "${FAULT_FILE}" || true)"
 
 if [ "${FAULTS}" != "0" ]; then
   table < "${FAULT_FILE}"

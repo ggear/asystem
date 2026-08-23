@@ -24,7 +24,7 @@ func main() {
 	}
 	cadence := metric.Cadence(*pollPeriod, factor)
 	database := schema.Database(metric.Relations(nil, nil, cadence))
-	if err := schema.Reflect(os.Stdout, "supervisor", database, schema.Broker(metric.Payloads())); err != nil {
+	if err := schema.Reflect(os.Stdout, "supervisor", database, schema.Broker{Payload: metric.Payloads(), Topic: metric.Topics()}); err != nil {
 		fmt.Fprintf(os.Stderr, "reflect failed [%v]\n", err)
 		os.Exit(1)
 	}

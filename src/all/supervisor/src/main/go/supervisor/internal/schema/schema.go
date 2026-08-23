@@ -65,21 +65,32 @@ type Payload struct {
 	Root  Member `json:"root"`
 }
 
+type Topic struct {
+	Template string `json:"template"`
+	Role     Role   `json:"role"`
+}
+
 type DatabaseSchema interface {
 	Relations() []Relation
 }
 
 type BrokerSchema interface {
 	Payloads() []Payload
+	Topics() []Topic
 }
 
 type Database []Relation
 
 func (d Database) Relations() []Relation { return d }
 
-type Broker []Payload
+type Broker struct {
+	Payload []Payload
+	Topic   []Topic
+}
 
-func (b Broker) Payloads() []Payload { return b }
+func (b Broker) Payloads() []Payload { return b.Payload }
+
+func (b Broker) Topics() []Topic { return b.Topic }
 
 type Document struct {
 	Module   string           `json:"module"`
@@ -93,6 +104,7 @@ type DatabaseSection struct {
 
 type BrokerSection struct {
 	Payloads []Payload `json:"payloads"`
+	Topics   []Topic   `json:"topics,omitempty"`
 }
 
 func Module() string {
@@ -105,7 +117,7 @@ func Reflect(w io.Writer, module string, database DatabaseSchema, broker BrokerS
 		document.Database = &DatabaseSection{Relations: database.Relations()}
 	}
 	if broker != nil {
-		document.Broker = &BrokerSection{Payloads: broker.Payloads()}
+		document.Broker = &BrokerSection{Payloads: broker.Payloads(), Topics: broker.Topics()}
 	}
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")

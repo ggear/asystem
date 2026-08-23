@@ -85,4 +85,15 @@ func TestSchema_Reflect(t *testing.T) {
 	if bytes.Contains(buf.Bytes(), []byte(`"broker"`)) {
 		t.Errorf("broker: got a section want it omitted when no broker schema is supplied")
 	}
+	buf.Reset()
+	broker := Broker{
+		Payload: []Payload{{Role: RoleState, Root: Member{Key: "value", Kind: KindInt}}},
+		Topic:   []Topic{{Template: "supervisor/$HOST/data/host", Role: RoleState}},
+	}
+	if err := Reflect(&buf, "supervisor", Database{relation}, broker); err != nil {
+		t.Fatalf("reflect: unexpected error %v", err)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte(`"template": "supervisor/$HOST/data/host"`)) {
+		t.Errorf("broker: got %s want the declared topic template", buf.String())
+	}
 }

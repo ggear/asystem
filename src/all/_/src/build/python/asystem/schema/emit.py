@@ -54,7 +54,7 @@ def write_schema_database(document, module_name=None, schemas_dir=None,
 def write_schema_broker(source, module_name=None, schemas_dir=None,
                         broker_working_dir=None, broker_topic_glob_discovery=None,
                         broker_topic_glob_data=None, broker_state=None, broker_command=None,
-                        broker_availability=None, broker_document=None):
+                        broker_availability=None, broker_document=None, broker_entities=None):
     module_root = load_bootstrap_root()
     if module_name is None:
         module_name = basename(module_root)
@@ -69,8 +69,11 @@ def write_schema_broker(source, module_name=None, schemas_dir=None,
         topic_glob_discovery=broker_topic_glob_discovery or "",
         topic_glob_data=broker_topic_glob_data or "",
         state=broker_state, command=broker_command,
-        availability=broker_availability, document=broker_document)
-    empty = not source.payloads if isinstance(source, SchemaDocument) else len(source) == 0
+        availability=broker_availability, document=broker_document,
+        entities=broker_entities)
+    declared = broker_document is not None and bool(getattr(broker_document, "topics", None))
+    empty = (not source.payloads if isinstance(source, SchemaDocument)
+             else len(source) == 0 and not declared)
     try:
         artifacts = {} if empty else vernemq.artifacts(source, module_name, options)
     except SchemaUnreachable as unreachable:
