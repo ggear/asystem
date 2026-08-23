@@ -876,11 +876,15 @@ def _schema(context, filter_module=None):
         schema_dir = join("src/build/resources/schema", dialect)
         for module in _get_modules(context, join(schema_dir, "describe.sh"), filter_module=filter_module):
             _print_header(module, "schema")
-            for script in ("describe", "verify", "query"):
+            for script in ("describe", "verify"):
                 if not isfile(join(ROOT_MODULE_DIR, module, schema_dir, "{}.sh".format(script))):
                     continue
                 _print_line("Running [{}] {} ...".format(dialect, script))
-                _run_local(context, "./{}.sh".format(script), join(module, schema_dir))
+                try:
+                    _run_local(context, "./{}.sh".format(script), join(module, schema_dir))
+                except Exception:
+                    _print_failure(module, "schema")
+                    raise
             _print_footer(module, "schema")
 
 
@@ -1508,6 +1512,17 @@ def _print_footer(module, stage, host=None):
     _print_line(FOOTER.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
 
 
+def _print_failure(module, stage, host=None):
+    if host is None:
+        label = module
+    else:
+        label = module.replace(
+            "all" if module.split("/")[0] == "all" else _get_host_label(host),
+            "[" + _get_host_label(host) + "]"
+        )
+    _print_line(FAILED.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
+
+
 HOME_DIR = "/home/asystem"
 INSTALL_DIR = "/var/lib/asystem/install"
 ROOT_DIR = dirname(abspath(__file__))
@@ -1537,6 +1552,10 @@ FOOTER = \
 HALTED = \
     "------------------------------------------------------------\n" \
     "\033[31mPULL HALTED BY {} TOOLCHAIN: asystem-{}\033[00m\n" \
+    "------------------------------------------------------------"
+FAILED = \
+    "------------------------------------------------------------\n" \
+    "\033[31m{} FAILED: {}-{}\033[00m\n" \
     "------------------------------------------------------------"
 
 

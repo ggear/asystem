@@ -180,6 +180,44 @@ func TestProbeHost_Temperature(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		{
+			name: "happy_soc_hwmon_raspberry_pi",
+			sensors: []sensors.TemperatureStat{
+				{SensorKey: "cpu_thermal", Temperature: 50.464},
+			},
+			expectedMin:   50.464,
+			expectedMax:   50.464,
+			expectedError: false,
+		},
+		{
+			name: "happy_soc_thermal_zone_raspberry_pi",
+			sensors: []sensors.TemperatureStat{
+				{SensorKey: "cpu-thermal", Temperature: 47.0},
+			},
+			expectedMin:   47.0,
+			expectedMax:   47.0,
+			expectedError: false,
+		},
+		{
+			name: "happy_choose_package_over_soc",
+			sensors: []sensors.TemperatureStat{
+				{SensorKey: "cpu_thermal", Temperature: 70.0},
+				{SensorKey: "package_id_0", Temperature: 55.0},
+			},
+			expectedMin:   55.0,
+			expectedMax:   55.0,
+			expectedError: false,
+		},
+		{
+			name: "happy_choose_soc_over_composite",
+			sensors: []sensors.TemperatureStat{
+				{SensorKey: "Composite", Temperature: 31.9},
+				{SensorKey: "soc_thermal", Temperature: 44.0},
+			},
+			expectedMin:   44.0,
+			expectedMax:   44.0,
+			expectedError: false,
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -666,5 +704,34 @@ func TestProbeHost_RunningTime(t *testing.T) {
 				t.Fatalf("expected %f, got %f", testCase.expectedValue, value)
 			}
 		})
+	}
+}
+
+func TestProbeHost_TemperatureCompositeWarnsOnce(t *testing.T) {
+	probe := newHostProbe()
+	probe.sensorsTemps = func() ([]sensors.TemperatureStat, error) {
+		return []sensors.TemperatureStat{{SensorKey: "Composite", Temperature: 31.9}}, nil
+	}
+	for index := range 3 {
+		value, err := probe.temperature()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if value != 41.9 {
+			t.Errorf("temperature: got %v want %v", value, 41.9)
+		}
+		if !probe.compositeWarn {
+			t.Errorf("compositeWarn: got false want true after call %d", index+1)
+		}
+	}
+	probe.sensorsTemps = func() ([]sensors.TemperatureStat, error) {
+		return []sensors.TemperatureStat{{SensorKey: "cpu_thermal", Temperature: 50.0}}, nil
+	}
+	value, err := probe.temperature()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if value != 50.0 {
+		t.Errorf("temperature: got %v want %v", value, 50.0)
 	}
 }

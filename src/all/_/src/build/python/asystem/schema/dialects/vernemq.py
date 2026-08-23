@@ -25,6 +25,8 @@ ENV = ".env"
 TIMEOUT = 15
 DISCOVERED = "discovered"
 LEAF = "payload"
+WINDOW = 2
+AWAIT = 1
 
 PLACEHOLDER = r"\$\{[^}]+}"
 
@@ -57,13 +59,15 @@ DISCOVERY_COLUMNS = (
 
 CONNECT = REPORT + table(clip=0) + """
 BROKER_ARGS=(-h "${BROKER_SERVICE}" -p "${BROKER_PORT}")
+SCHEMA_WINDOW="${SCHEMA_WINDOW:-SCHEMA_WINDOW_DEFAULT}"
+SCHEMA_AWAIT="${SCHEMA_AWAIT:-SCHEMA_AWAIT_DEFAULT}"
 
 topics() {
-  mosquitto_sub "${BROKER_ARGS[@]}" -F '%r %t' -t "$1" -W 5 2>/dev/null | sed -n 's/^1 //p' | grep -E "${2:-.}" | sort -u || true
+  mosquitto_sub "${BROKER_ARGS[@]}" -F '%r %t' -t "$1" -W "${SCHEMA_WINDOW}" 2>/dev/null | sed -n 's/^1 //p' | grep -E "${2:-.}" | sort -u || true
 }
 
 payload() {
-  mosquitto_sub "${BROKER_ARGS[@]}" -F '%r\\n%p' -t "$1" -C 1 -W 2 2>/dev/null | awk 'NR==1{if($0!="1") exit} NR>1' || true
+  mosquitto_sub "${BROKER_ARGS[@]}" -F '%r\\n%p' -t "$1" -C 1 -W "${SCHEMA_AWAIT}" 2>/dev/null | awk 'NR==1{if($0!="1") exit} NR>1' || true
 }
 
 declared() {
@@ -81,7 +85,8 @@ listed() {
 faulted() {
   jq -nc --arg topic "$1" --arg fault "$2" '{topic: $topic, fault: $fault}'
 }
-""".replace("SCHEMA_LEAF", LEAF)
+""".replace("SCHEMA_LEAF", LEAF).replace(
+    "SCHEMA_WINDOW_DEFAULT", str(WINDOW)).replace("SCHEMA_AWAIT_DEFAULT", str(AWAIT))
 
 
 AWAITED = 300

@@ -7,7 +7,9 @@ import (
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 	"supervisor/internal/stats"
+	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
@@ -43,6 +45,7 @@ type hostProbe struct {
 	cpuTimes      func(bool) ([]cpu.TimesStat, error)
 	virtualMemory func() (*mem.VirtualMemoryStat, error)
 	sensorsTemps  func() ([]sensors.TemperatureStat, error)
+	compositeWarn bool
 }
 
 func newHostProbe() *hostProbe {
@@ -402,6 +405,7 @@ func (p *hostProbe) runningTime() (float64, error) {
 }
 
 func (p *hostProbe) temperature() (float64, error) {
+	temperatureStart := time.Now()
 	if p.sensorsTemps == nil {
 		return 0, errors.New("temperature sensors unavailable")
 	}
@@ -415,6 +419,8 @@ func (p *hostProbe) temperature() (float64, error) {
 	)
 	packageTemp := 0.0
 	packageFound := false
+	socTemp := 0.0
+	socFound := false
 	compositeTemp := 0.0
 	compositeFound := false
 	for _, entry := range temperatures {
@@ -427,6 +433,13 @@ func (p *hostProbe) temperature() (float64, error) {
 				packageTemp = entry.Temperature
 			}
 			packageFound = true
+			continue
+		}
+		if isSocSensor(zoneKey) {
+			if !socFound || entry.Temperature > socTemp {
+				socTemp = entry.Temperature
+			}
+			socFound = true
 			continue
 		}
 		if strings.Contains(zoneKey, "composite") {
@@ -443,11 +456,30 @@ func (p *hostProbe) temperature() (float64, error) {
 	if packageFound {
 		return packageTemp, nil
 	}
+	if socFound {
+		return socTemp, nil
+	}
 	if compositeFound {
+		if !p.compositeWarn {
+			p.compositeWarn = true
+			scribe.Probe("state", "host").Warn("metric", temperatureStart,
+				"no package or soc sensor found doing my best to derive it from a drive composite sensor")
+		}
 		return compositeTemp, nil
 	}
 	return 0, errors.New("no suitable temperature sensors found")
 }
+
+func isSocSensor(zoneKey string) bool {
+	for _, prefix := range socSensorKeys {
+		if strings.Contains(zoneKey, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+var socSensorKeys = []string{"cpu_therm", "cpu-therm", "soc_therm", "soc-therm"}
 
 type cpuUsageSampler struct {
 	hasSample  bool
