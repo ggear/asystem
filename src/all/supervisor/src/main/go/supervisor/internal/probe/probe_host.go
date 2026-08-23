@@ -197,8 +197,8 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			p.warnTemperatureInt,
 			func() int8 { return p.warnTemperatureInt.PulseMax() },
 			func() int8 { return p.warnTemperatureInt.TrendMax() },
-			func(p int8) bool { return p <= 80 },
-			func(t int8) bool { return t <= 70 },
+			func(p int8) bool { return p <= 65 },
+			func(t int8) bool { return t <= 55 },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
@@ -365,7 +365,11 @@ func (p *hostProbe) failedBackups() (int8, error) {
 }
 
 func (p *hostProbe) warnTemperature() (int8, error) {
-	return 0, nil
+	temperatureCelsius, err := p.temperature()
+	if err != nil {
+		return 0, err
+	}
+	return stats.ConvertToInt(warnTemperatureOfMax(temperatureCelsius)), nil
 }
 
 func (p *hostProbe) spinFanSpeed() (int8, error) {
@@ -468,6 +472,14 @@ func (p *hostProbe) temperature() (float64, error) {
 		return compositeTemp, nil
 	}
 	return 0, errors.New("no suitable temperature sensors found")
+}
+
+func warnTemperatureOfMax(celsius float64) float64 {
+	const (
+		floorCelsius    = 40.0
+		ofMaxPerCelsius = 5.0
+	)
+	return ofMaxPerCelsius * (celsius - floorCelsius)
 }
 
 func isSocSensor(zoneKey string) bool {

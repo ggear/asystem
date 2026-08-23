@@ -400,20 +400,63 @@ func TestProbeHost_FailedBackups(t *testing.T) {
 func TestProbeHost_WarnTemperature(t *testing.T) {
 	tests := []struct {
 		name          string
+		sensors       []sensors.TemperatureStat
+		sensorsErr    error
 		expectedValue int8
-		expectedOK    bool
 		expectedError bool
 	}{
 		{
-			name:          "happy",
+			name:          "sad_sensor_error",
+			sensorsErr:    errors.New("boom"),
+			expectedError: true,
+		},
+		{
+			name:          "sad_no_sensor",
+			sensors:       []sensors.TemperatureStat{},
+			expectedError: true,
+		},
+		{
+			name:          "happy_below_floor_clamps_to_zero",
+			sensors:       []sensors.TemperatureStat{{SensorKey: "package_id_0", Temperature: 30.0}},
 			expectedValue: 0,
-			expectedOK:    true,
-			expectedError: false,
+		},
+		{
+			name:          "happy_floor",
+			sensors:       []sensors.TemperatureStat{{SensorKey: "package_id_0", Temperature: 40.0}},
+			expectedValue: 0,
+		},
+		{
+			name:          "happy_midpoint",
+			sensors:       []sensors.TemperatureStat{{SensorKey: "package_id_0", Temperature: 45.0}},
+			expectedValue: 25,
+		},
+		{
+			name:          "happy_high_anchor",
+			sensors:       []sensors.TemperatureStat{{SensorKey: "package_id_0", Temperature: 50.0}},
+			expectedValue: 50,
+		},
+		{
+			name:          "happy_warn_threshold",
+			sensors:       []sensors.TemperatureStat{{SensorKey: "package_id_0", Temperature: 51.0}},
+			expectedValue: 55,
+		},
+		{
+			name:          "happy_alert_threshold",
+			sensors:       []sensors.TemperatureStat{{SensorKey: "package_id_0", Temperature: 53.0}},
+			expectedValue: 65,
+		},
+		{
+			name:          "happy_above_ceiling_clamps_to_full",
+			sensors:       []sensors.TemperatureStat{{SensorKey: "package_id_0", Temperature: 70.0}},
+			expectedValue: 100,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
+			probe.sensorsTemps = func() ([]sensors.TemperatureStat, error) {
+				return testCase.sensors, testCase.sensorsErr
+			}
 			value, err := probe.warnTemperature()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
@@ -421,8 +464,8 @@ func TestProbeHost_WarnTemperature(t *testing.T) {
 			if !testCase.expectedError && err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if testCase.expectedOK && value != testCase.expectedValue {
-				t.Fatalf("expected %d, got %d", testCase.expectedValue, value)
+			if !testCase.expectedError && value != testCase.expectedValue {
+				t.Fatalf("warnTemperature: got %d want %d", value, testCase.expectedValue)
 			}
 		})
 	}
