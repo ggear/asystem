@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -40,6 +41,8 @@ pub struct MqttPublisher {
     client: Client,
     shutdown: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
+    status_topic: String,
+    retained: Arc<Mutex<HashMap<String, Vec<u8>>>>,
 }
 
 impl MqttPublisher {
@@ -53,7 +56,9 @@ impl MqttPublisher {
         let (client, mut connection) = Client::new(options, CHANNEL_CAPACITY);
         let shutdown = Arc::new(AtomicBool::new(false));
         let (ready_sender, ready_receiver) = mpsc::channel();
+        let retained: Arc<Mutex<HashMap<String, Vec<u8>>>> = Arc::new(Mutex::new(HashMap::new()));
         let thread_shutdown = Arc::clone(&shutdown);
+        let thread_retained = Arc::clone(&retained);
         let thread_client = client.clone();
         let thread_status_topic = status_topic.to_string();
         let address = format!("{}:{}", host, port);
@@ -71,7 +76,27 @@ impl MqttPublisher {
                         if let Err(err) =
                             thread_client.try_publish(&thread_status_topic, QoS::AtLeastOnce, true, "online")
                         {
-                            warn!("broker status publish failed [{address}]: {err}");
+                            warn!("broker status publish failed [{address}] [{err}]");
+                        }
+                        let replay: Vec<(String, Vec<u8>)> = match thread_retained.lock() {
+                            Ok(cache) => cache
+                                .iter()
+                                .map(|(topic, payload)| (topic.clone(), payload.clone()))
+                                .collect(),
+                            Err(err) => {
+                                warn!("broker retained cache unreadable [{address}] [{err}]");
+                                Vec::new()
+                            }
+                        };
+                        if !replay.is_empty() {
+                            for (topic, payload) in &replay {
+                                if let Err(err) =
+                                    thread_client.try_publish(topic, QoS::AtLeastOnce, true, payload.clone())
+                                {
+                                    warn!("broker retained republish failed [{topic}] [{err}]");
+                                }
+                            }
+                            info!("broker republished [{}] retained topic(s) [{address}]", replay.len());
                         }
                     }
                     Ok(Event::Incoming(Packet::PubAck(ack))) => {
@@ -101,6 +126,8 @@ impl MqttPublisher {
                 client,
                 shutdown,
                 handle: Some(handle),
+                status_topic: status_topic.to_string(),
+                retained,
             }),
             Err(err) => {
                 shutdown.store(true, Ordering::SeqCst);
@@ -133,6 +160,14 @@ impl Publisher for MqttPublisher {
         match std::str::from_utf8(payload) {
             Ok(text) => debug!("publish [{topic}] -> {text}"),
             Err(_) => debug!("publish [{topic}] -> ({} bytes)", payload.len()),
+        }
+        if topic != self.status_topic {
+            match self.retained.lock() {
+                Ok(mut cache) => {
+                    cache.insert(topic.to_string(), payload.to_vec());
+                }
+                Err(err) => warn!("broker retained cache unwritable [{topic}] [{err}]"),
+            }
         }
         self.client
             .try_publish(topic, QoS::AtLeastOnce, true, payload.to_vec())

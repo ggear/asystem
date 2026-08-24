@@ -51,15 +51,21 @@ run_backup() {
 
 SERVICE_WAIT_EXECUTING_SECONDS=300
 SERVICE_WAIT_HEALTHY_SECONDS=900
+SERVICE_WAIT_RESTART_SECONDS=120
+SERVICE_SETTLE_RESTART_SECONDS=30
 
 wait_service() {
-  local script="$1" label="$2" interval="$3" timeout="$4" waited=0 ticked=0
+  local script="$1" label="$2" interval="$3" timeout="$4" fatal="${5:-true}" waited=0 ticked=0
   ((interval > 0)) || interval=1
   printf 'Waiting for service to %s ...' "${label}"
   while ! docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" >/dev/null 2>&1; do
     if ((waited >= timeout)); then
       printf ' failed\n'
-      log_error "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
+      if [[ "${fatal}" == "true" ]]; then
+        log_error "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
+      fi
+      log_warn "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
+      return 1
     fi
     for ((ticked = 0; ticked < interval; ticked++)); do
       sleep 1
@@ -106,6 +112,23 @@ stop_service() {
 
 start_service() {
   docker compose --compatibility --ansi never up --force-recreate -d
+}
+
+restart_service() {
+  if ! docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE_NAME}"; then
+    log_warn "Restart skipped, container is not running [${SERVICE_NAME}]"
+    return 0
+  fi
+  log_info "Restarting service to republish its retained topics [${SERVICE_NAME}]"
+  if ! docker restart "${SERVICE_NAME}" >/dev/null 2>&1; then
+    log_warn "Restart failed [${SERVICE_NAME}]"
+    return 0
+  fi
+  if [[ -f "image/checkexecuting.sh" ]]; then
+    wait_service "checkexecuting.sh" "start executing" 1 "${SERVICE_WAIT_RESTART_SECONDS}" false || true
+  else
+    sleep "${SERVICE_SETTLE_RESTART_SECONDS}"
+  fi
 }
 
 COMMAND="start"
@@ -157,6 +180,7 @@ if [[ "${COMMAND}" == "schema" ]]; then
     ./image/database.sh
   fi
   if [[ "${SCHEMA_ROLE}" != "database" && -x "image/broker.sh" ]]; then
+    restart_service
     ./image/broker.sh publish
   fi
   exit 0

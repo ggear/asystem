@@ -1,0 +1,241 @@
+package probe
+
+import (
+	"bytes"
+	"errors"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
+	"supervisor/internal/scribe"
+)
+
+type logSet struct {
+	mu        sync.Mutex
+	roots     []string
+	path      string
+	file      *os.File
+	boot      time.Time
+	carry     []byte
+	buffer    []byte
+	stamps    []time.Time
+	opened    bool
+	available bool
+	drained   bool
+}
+
+func loadLogs(mount string) *logSet {
+	logCacheMu.RLock()
+	if cached, ok := logCache[mount]; ok {
+		logCacheMu.RUnlock()
+		return cached
+	}
+	logCacheMu.RUnlock()
+	logCacheMu.Lock()
+	defer logCacheMu.Unlock()
+	if cached, ok := logCache[mount]; ok {
+		return cached
+	}
+	created := &logSet{roots: logRoots(mount), buffer: make([]byte, logBufferBytes)}
+	logCache[mount] = created
+	return created
+}
+
+func resetLogs() {
+	logCacheMu.Lock()
+	defer logCacheMu.Unlock()
+	for _, set := range logCache {
+		set.close()
+	}
+	clear(logCache)
+}
+
+func (s *logSet) errorsWithin(window time.Duration) (int, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.open() {
+		return 0, false
+	}
+	s.consume()
+	s.drained = true
+	s.evict(time.Now().Add(-window))
+	return len(s.stamps), true
+}
+
+func (s *logSet) open() bool {
+	if s.opened {
+		return s.available
+	}
+	s.opened = true
+	for _, root := range s.roots {
+		path := filepath.Join(root, logDevicePath)
+		file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+		if err != nil {
+			continue
+		}
+		s.path = path
+		s.file = file
+		s.boot = bootTime(root)
+		s.available = true
+		scribe.Probe("state", "host").Info("logs", time.Now(), "following [%s] for kernel errors", path)
+		return true
+	}
+	scribe.Probe("state", "host").Warn("logs", time.Now(), "unreadable [%s] kernel log, reporting [0] errors, needs [CAP_SYSLOG]", strings.Join(s.roots, ","))
+	return false
+}
+
+func (s *logSet) consume() {
+	shouts := 0
+	for reads := 0; reads < logReadsMax; reads++ {
+		count, err := s.file.Read(s.buffer)
+		if count > 0 {
+			s.carry = append(s.carry, s.buffer[:count]...)
+			shouts = s.scan(shouts)
+		}
+		if err != nil {
+			if errors.Is(err, syscall.EPIPE) {
+				continue
+			}
+			return
+		}
+		if count == 0 {
+			return
+		}
+	}
+}
+
+func (s *logSet) scan(shouts int) int {
+	for {
+		end := bytes.IndexByte(s.carry, '\n')
+		if end < 0 {
+			return shouts
+		}
+		line := string(s.carry[:end])
+		s.carry = s.carry[end+1:]
+		stamp, message, ok := parseLogRecord(line, s.boot)
+		if !ok {
+			continue
+		}
+		if len(s.stamps) >= logStampsMax {
+			continue
+		}
+		s.stamps = append(s.stamps, stamp)
+		if s.drained && shouts < logShoutsMax {
+			shouts++
+			scribe.Probe("state", "host").Warn("logs", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipLogMessage(message))
+		}
+	}
+}
+
+func (s *logSet) evict(cutoff time.Time) {
+	keep := 0
+	for keep < len(s.stamps) && s.stamps[keep].Before(cutoff) {
+		keep++
+	}
+	if keep > 0 {
+		s.stamps = append(s.stamps[:0], s.stamps[keep:]...)
+	}
+}
+
+func (s *logSet) close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.file != nil {
+		_ = s.file.Close()
+		s.file = nil
+	}
+	s.opened = false
+	s.available = false
+	s.drained = false
+	s.stamps = nil
+	s.carry = nil
+}
+
+func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
+	if line == "" || line[0] == ' ' || line[0] == '\t' {
+		return time.Time{}, "", false
+	}
+	split := strings.IndexByte(line, ';')
+	if split < 0 {
+		return time.Time{}, "", false
+	}
+	fields := strings.Split(line[:split], ",")
+	if len(fields) < 3 {
+		return time.Time{}, "", false
+	}
+	priority, err := strconv.Atoi(fields[0])
+	if err != nil {
+		return time.Time{}, "", false
+	}
+	micros, err := strconv.ParseInt(fields[2], 10, 64)
+	if err != nil {
+		return time.Time{}, "", false
+	}
+	message := line[split+1:]
+	if !isLogError(priority, message) {
+		return time.Time{}, "", false
+	}
+	return boot.Add(time.Duration(micros) * time.Microsecond), message, true
+}
+
+func isLogError(priority int, message string) bool {
+	if priority&logLevelMask <= logLevelError {
+		return true
+	}
+	return strings.Contains(strings.ToLower(message), logErrorText)
+}
+
+func clipLogMessage(message string) string {
+	trimmed := strings.TrimSpace(message)
+	if len(trimmed) <= logMessageMax {
+		return trimmed
+	}
+	return trimmed[:logMessageMax-3] + "..."
+}
+
+func bootTime(root string) time.Time {
+	data, err := os.ReadFile(filepath.Join(root, logUptimePath))
+	if err != nil {
+		return time.Now()
+	}
+	fields := strings.Fields(string(data))
+	if len(fields) == 0 {
+		return time.Now()
+	}
+	seconds, err := strconv.ParseFloat(fields[0], 64)
+	if err != nil {
+		return time.Now()
+	}
+	return time.Now().Add(-time.Duration(seconds * float64(time.Second)))
+}
+
+func logRoots(mount string) []string {
+	if mount == "" {
+		return []string{""}
+	}
+	return []string{mount, ""}
+}
+
+const (
+	logDevicePath    = "dev/kmsg"
+	logUptimePath    = "proc/uptime"
+	logErrorText     = "error"
+	logLevelMask     = 7
+	logLevelError    = 3
+	logBufferBytes   = 8192
+	logReadsMax      = 4096
+	logStampsMax     = 4096
+	logShoutsMax     = 5
+	logMessageMax    = 120
+	logErrorBudget   = 10.0
+	logWindowDefault = 24 * time.Hour
+)
+
+var (
+	logCache   = map[string]*logSet{}
+	logCacheMu sync.RWMutex
+)

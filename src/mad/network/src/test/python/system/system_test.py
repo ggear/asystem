@@ -21,6 +21,7 @@ TRIAD = {"fit", "sick", "dead"}
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 DIR_SCHEMA = join(DIR_ROOT, "src/build/resources/schema/vernemq")
+SCHEMA_LEAF = "payload"
 
 
 def _client():
@@ -89,8 +90,8 @@ def test_declares_every_published_topic():
 def _schema_topics():
     topics_dir = join(DIR_SCHEMA, "model")
     for directory, _, files in os.walk(topics_dir):
-        for name in files:
-            yield os.path.relpath(join(directory, name), topics_dir)
+        if SCHEMA_LEAF in files:
+            yield os.path.relpath(directory, topics_dir)
 
 
 if __name__ == '__main__':

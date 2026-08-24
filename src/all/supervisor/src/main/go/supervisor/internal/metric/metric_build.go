@@ -56,8 +56,8 @@ var metricBuildersByID = []builder{
 	MetricHostFailedLogs: {
 		id:          MetricHostFailedLogs,
 		valueKind:   ValueInt,
-		unit:        "",
-		description: "log messages logged at error level",
+		unit:        "%",
+		description: "kernel log messages at error level over the trend window, as a share of a ten message budget",
 		template:    "supervisor/$HOST/$SCOPE/host/failed_log_messages",
 	},
 	MetricHostFailedShares: {

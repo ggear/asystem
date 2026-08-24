@@ -26,7 +26,7 @@ type hostProbe struct {
 	usedProcessorInt   *stats.IntStats
 	usedMemoryInt      *stats.IntStats
 	allocatedMemoryInt *stats.IntStats
-	failedServicesInt  *stats.IntStats
+	failedLogsInt      *stats.IntStats
 	failedSharesInt    *stats.IntStats
 	failedBackupsInt   *stats.IntStats
 	warnTemperatureInt *stats.IntStats
@@ -93,7 +93,7 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.usedProcessorInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedMemoryInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.allocatedMemoryInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.failedServicesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+	p.failedLogsInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.failedSharesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.failedBackupsInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.warnTemperatureInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
@@ -161,11 +161,11 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			metric.ValueInt,
 			metric.MetricHostFailedLogs,
 			metric.ServiceNameUnset,
-			p.failedServices,
-			p.failedServicesInt,
-			func() int8 { return p.failedServicesInt.PulseMax() },
-			func() int8 { return p.failedServicesInt.TrendMax() },
-			func(p int8) bool { return p == 0 },
+			p.failedLogs,
+			p.failedLogsInt,
+			func() int8 { return p.failedLogsInt.PulseMax() },
+			func() int8 { return p.failedLogsInt.TrendMax() },
+			func(p int8) bool { return p <= logErrorBudget },
 			func(t int8) bool { return t == 0 },
 		),
 		newCacheMetricTask(
@@ -209,8 +209,8 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			p.spinFanSpeedInt,
 			func() int8 { return p.spinFanSpeedInt.PulseMax() },
 			func() int8 { return p.spinFanSpeedInt.TrendMax() },
-			func(int8) bool { return true },
-			func(int8) bool { return true },
+			func(fan int8) bool { return p.spinFanRespondingOK(fan, p.warnTemperatureInt.PulseMax(), 65, 80) },
+			func(fan int8) bool { return p.spinFanRespondingOK(fan, p.warnTemperatureInt.TrendMax(), 55, 50) },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
@@ -377,8 +377,16 @@ func (p *hostProbe) allocatedMemory() (int8, error) {
 	return stats.ConvertToInt(allocatedPercent), nil
 }
 
-func (p *hostProbe) failedServices() (int8, error) {
-	return 0, nil
+func (p *hostProbe) failedLogs() (int8, error) {
+	window := time.Duration(p.periods.TrendHours) * time.Hour
+	if window <= 0 {
+		window = logWindowDefault
+	}
+	count, available := loadLogs(config.Load(p.configPath).Mount()).errorsWithin(window)
+	if !available {
+		return 0, nil
+	}
+	return stats.ConvertToInt(float64(count) / logErrorBudget * 100.0), nil
 }
 
 func (p *hostProbe) failedShares() (int8, error) {
@@ -395,6 +403,13 @@ func (p *hostProbe) warnTemperature() (int8, error) {
 		return 0, err
 	}
 	return stats.ConvertToInt(warnTemperatureOfMax(temperatureCelsius)), nil
+}
+
+func (p *hostProbe) spinFanRespondingOK(fan int8, temperature int8, temperatureMax int8, fanMin int8) bool {
+	if !loadSensors(p.sysRoot).hasFans() {
+		return true
+	}
+	return temperature <= temperatureMax || fan > fanMin
 }
 
 func (p *hostProbe) spinFanSpeed() (int8, error) {

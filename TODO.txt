@@ -68,8 +68,6 @@ implement Fail LOG by dmesg|grep -i error and bounding by time (1d?) converting 
 
 move rue/kasa to max and refactor to be like tasmota including html site. remove deploy and build instead into release like tasmota. use tron theme from https://github.com/educlopez/thegridcn-ui not ares
 
-i rename Revs Fan to Revs FAN check. make fan revs yellow if fan revs not >50% and Warn TEM is yellow, make fan revs red when when warn tem is red and not fan revs not 100%. do simply, you can chnage the threasholds to make it simpler
-
 
 resinstate BACKUP_RETAIN_DAYS for HOT, maybe rename and create new ones for WARM that are both available as defaults in script but passed as params into python write too, which will be tuned on a module by module basis - implications for success? write an hard link copy? not worth it?
 go through each module and inspect or implement close out 6 with results, prune backup aggresively, offload metatadata outside of backup in slow moving, single copy backups

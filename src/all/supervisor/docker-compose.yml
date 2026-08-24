@@ -12,6 +12,8 @@ x-common: &common
     - DATABASE_PORT
     - DATABASE_NAME
     - DATABASE_TOKEN
+  cap_add:
+    - SYSLOG
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
     - /:/${SUPERVISOR_MOUNT}:ro

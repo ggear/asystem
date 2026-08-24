@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"network/internal/scribe"
 	"strings"
+	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -22,7 +23,10 @@ const (
 )
 
 type Broker struct {
-	client mqtt.Client
+	client   mqtt.Client
+	address  string
+	mu       sync.Mutex
+	retained map[string][]byte
 }
 
 func DataTopic(name string) string { return brokerDataTopicPrefix + name }
@@ -35,6 +39,7 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 		return nil, errors.New("broker command handler is nil")
 	}
 	brokerURL := fmt.Sprintf("tcp://%s", address)
+	broker := &Broker{address: address, retained: make(map[string][]byte)}
 	options := mqtt.NewClientOptions().
 		AddBroker(brokerURL).
 		SetClientID(fmt.Sprintf("network-publisher-%d", time.Now().UnixNano())).
@@ -48,6 +53,7 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 			if err := waitForBrokerToken(client.Publish(brokerStatusTopic, 1, true, brokerStatusOnline)); err != nil {
 				scribe.LogWarn(scribe.Global, "publishing online status to broker [%s] failed [%v]", address, err)
 			}
+			broker.republish(client)
 			commandToken := client.Subscribe(brokerCommandFilter, 1, func(_ mqtt.Client, msg mqtt.Message) {
 				topic := msg.Topic()
 				if !strings.HasPrefix(topic, brokerCommandPrefix+"/") {
@@ -71,13 +77,14 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 	}
 	options.SetWill(brokerStatusTopic, brokerStatusOffline, 1, true)
 	client := mqtt.NewClient(options)
+	broker.client = client
 	tk := client.Connect()
 	if !tk.WaitTimeout(brokerConnectTimeout) {
 		scribe.LogInfo(scribe.Global, "connecting to broker [%s]", address)
 	} else if tk.Error() != nil {
 		return nil, fmt.Errorf("connect failed [%s] [%w]", brokerURL, tk.Error())
 	}
-	return &Broker{client: client}, nil
+	return broker, nil
 }
 
 func (b *Broker) PublishStatus() error {
@@ -85,6 +92,9 @@ func (b *Broker) PublishStatus() error {
 }
 
 func (b *Broker) Publish(topic string, payload []byte) {
+	b.mu.Lock()
+	b.retained[topic] = append([]byte(nil), payload...)
+	b.mu.Unlock()
 	b.client.Publish(topic, 0, true, payload).WaitTimeout(brokerPublishTimeout)
 }
 
@@ -93,6 +103,24 @@ func (b *Broker) Close() error {
 	err := waitForBrokerToken(tk)
 	b.client.Disconnect(2500)
 	return err
+}
+
+func (b *Broker) republish(client mqtt.Client) {
+	b.mu.Lock()
+	replay := make(map[string][]byte, len(b.retained))
+	for topic, payload := range b.retained {
+		replay[topic] = payload
+	}
+	b.mu.Unlock()
+	if len(replay) == 0 {
+		return
+	}
+	for topic, payload := range replay {
+		if err := waitForBrokerToken(client.Publish(topic, 0, true, payload)); err != nil {
+			scribe.LogWarn(scribe.Global, "republishing retained topic [%s] to broker [%s] failed [%v]", topic, b.address, err)
+		}
+	}
+	scribe.LogInfo(scribe.Global, "republished [%d] retained topic(s) to broker [%s]", len(replay), b.address)
 }
 
 func waitForBrokerToken(token mqtt.Token) error {

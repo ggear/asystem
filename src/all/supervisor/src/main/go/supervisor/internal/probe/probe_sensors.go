@@ -75,6 +75,10 @@ func (s *sensorSet) celsius() (float64, error) {
 	return hottest, nil
 }
 
+func (s *sensorSet) hasFans() bool {
+	return s != nil && len(s.fans) > 0
+}
+
 func (s *sensorSet) fanSpeedOfMax() (float64, error) {
 	if s == nil || len(s.fans) == 0 {
 		return 0, nil

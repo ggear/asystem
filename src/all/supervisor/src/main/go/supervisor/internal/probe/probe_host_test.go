@@ -392,34 +392,11 @@ func TestProbeHost_AllocatedMemory(t *testing.T) {
 	}
 }
 
-func TestProbeHost_FailedServices(t *testing.T) {
-	tests := []struct {
-		name          string
-		expectedValue int8
-		expectedOK    bool
-		expectedError bool
-	}{
-		{
-			name:          "happy",
-			expectedValue: 0,
-			expectedOK:    true,
-			expectedError: false,
-		},
-	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			probe := newHostProbe()
-			value, err := probe.failedServices()
-			if testCase.expectedError && err == nil {
-				t.Fatalf("expected error but got nil")
-			}
-			if !testCase.expectedError && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if testCase.expectedOK && value != testCase.expectedValue {
-				t.Fatalf("expected %d, got %d", testCase.expectedValue, value)
-			}
-		})
+func TestProbeHost_FailedLogs(t *testing.T) {
+	t.Cleanup(resetLogs)
+	probe := newHostProbe()
+	if _, err := probe.failedLogs(); err != nil {
+		t.Fatalf("failedLogs: unexpected error: %v", err)
 	}
 }
 
@@ -628,6 +605,84 @@ func TestProbeHost_SpinFanSpeed(t *testing.T) {
 			}
 			if value != testCase.expectedValue {
 				t.Fatalf("spinFanSpeed: got %d want %d", value, testCase.expectedValue)
+			}
+		})
+	}
+}
+
+func TestProbeHost_SpinFanRespondingOK(t *testing.T) {
+	tests := []struct {
+		name           string
+		fans           map[string][2]float64
+		fan            int8
+		temperature    int8
+		temperatureMax int8
+		fanMin         int8
+		expectedOK     bool
+	}{
+		{
+			name:           "happy_cool_host",
+			fans:           map[string][2]float64{"Exhaust": {1799, 4800}},
+			fan:            37,
+			temperature:    40,
+			temperatureMax: 65,
+			fanMin:         80,
+			expectedOK:     true,
+		},
+		{
+			name:           "happy_hot_host_fan_idle",
+			fans:           map[string][2]float64{"Exhaust": {1799, 4800}},
+			fan:            37,
+			temperature:    90,
+			temperatureMax: 65,
+			fanMin:         80,
+			expectedOK:     false,
+		},
+		{
+			name:           "happy_hot_host_fan_ramped",
+			fans:           map[string][2]float64{"Exhaust": {4080, 4800}},
+			fan:            85,
+			temperature:    90,
+			temperatureMax: 65,
+			fanMin:         80,
+			expectedOK:     true,
+		},
+		{
+			name:           "happy_warm_trend_fan_idle",
+			fans:           map[string][2]float64{"Exhaust": {1799, 4800}},
+			fan:            37,
+			temperature:    60,
+			temperatureMax: 55,
+			fanMin:         50,
+			expectedOK:     false,
+		},
+		{
+			name:           "happy_warm_trend_fan_ramped",
+			fans:           map[string][2]float64{"Exhaust": {2880, 4800}},
+			fan:            60,
+			temperature:    60,
+			temperatureMax: 55,
+			fanMin:         50,
+			expectedOK:     true,
+		},
+		{
+			name:           "happy_fanless_host_exempt",
+			fans:           nil,
+			fan:            0,
+			temperature:    90,
+			temperatureMax: 65,
+			fanMin:         80,
+			expectedOK:     true,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(resetSensors)
+			probe := newHostProbe()
+			probe.sysRoot = writeSensorTree(t, nil, nil, testCase.fans)
+			ok := probe.spinFanRespondingOK(testCase.fan, testCase.temperature, testCase.temperatureMax, testCase.fanMin)
+			if ok != testCase.expectedOK {
+				t.Fatalf("spinFanRespondingOK: got %v want %v", ok, testCase.expectedOK)
 			}
 		})
 	}
