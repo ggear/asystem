@@ -47,8 +47,8 @@
 #   field version - 6s [service version, from the container image tag or the installed environment] (not persisted)
 #   field used_processor % 6s [processor time used by the service across all cores of the host]
 #   field used_processor_trend % 6s [processor time used by the service across all cores of the host, smoothed across the trend window]
-#   field used_memory % 6s [memory in use by the service, excluding page cache, as a share of its ceiling]
-#   field used_memory_trend % 6s [memory in use by the service, excluding page cache, as a share of its ceiling, smoothed across the trend window]
+#   field used_memory % 6s [memory in use by the service, excluding page cache, as a percentage of its ceiling]
+#   field used_memory_trend % 6s [memory in use by the service, excluding page cache, as a percentage of its ceiling, smoothed across the trend window]
 #   field used_disk_ops % 6s [disk operations used by the service, not yet implemented and always zero]
 #   field used_disk_ops_trend % 6s [disk operations used by the service, not yet implemented and always zero, smoothed across the trend window]
 #   field used_network % 6s [network throughput used by the service, not yet implemented and always zero]

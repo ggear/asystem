@@ -160,9 +160,6 @@ backup_written() {
   return 1
 }
 
-# Defines the entire ASystem backup process accross all modules intalled on this host,
-# through the HOT, WARM and COLD paths, as implemented in backup_written.
-#
 # Defines backup_written for this module, naming its backup with backup_target (or letting
 # backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". Read the wrapper variables below,
 # never assign one, and prefix this snippet's own state with the module name.
@@ -175,22 +172,21 @@ backup_written() {
 # BACKUP_FULL_SUFFIX      the file suffix marking a full backup
 # BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
 # BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
-# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this
+# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this and came from the same version
+# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
+
+# TODO: Provide implementation
 
 backup_written() {
-  backup_target "${BACKUP_FULL_SUFFIX}" "log" || return 1
-
-  #TODO: Implement HOT path
-
-  #TODO: Implement WARM path
-
-  #TODO: Implement COLD path
-
-  #TODO: Implement a json description of backup process broken down by HOT/WARM agrgegate and per module and COLD aggregate paths, with success/failure and timings
-  echo "WARN: Backup not implemented, writing a placeholder [${BACKUP_MODULE_NAME}]" >&2
-  echo "TODO: Provide implementation" >"${BACKUP_TARGET_PATH}.tmp"
-  return 0
+  backup_files "relative/path:another/path"
 }
+
+# A module with its own backup mechanism names its backup, then writes it:
+#
+# backup_written() {
+#   backup_target "${BACKUP_FULL_SUFFIX}" "sql.gz" || return 1
+#   docker exec --user root "${BACKUP_MODULE_NAME}" bash -c 'dump | gzip' >"${BACKUP_TARGET_PATH}.tmp"
+# }
 
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
 
