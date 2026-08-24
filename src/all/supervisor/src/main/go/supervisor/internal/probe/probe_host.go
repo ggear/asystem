@@ -378,11 +378,7 @@ func (p *hostProbe) allocatedMemory() (int8, error) {
 }
 
 func (p *hostProbe) failedLogs() (int8, error) {
-	window := time.Duration(p.periods.TrendHours) * time.Hour
-	if window <= 0 {
-		window = logWindowDefault
-	}
-	count, available := loadLogs(config.Load(p.configPath).Mount()).errorsWithin(window)
+	count, available := loadLogs(config.Load(p.configPath).Mount()).errorsWithin(config.TrendWindow(p.periods.TrendHours))
 	if !available {
 		return 0, nil
 	}

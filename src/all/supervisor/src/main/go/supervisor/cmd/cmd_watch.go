@@ -55,13 +55,13 @@ func newWatchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.format, "format", "f", "auto", "output format based on grid cell width: auto, compact or relaxed")
 	cmd.Flags().StringVarP(&opts.symbols, "symbols", "s", "auto", "define output character set: auto, ascii or unicode")
 	cmd.Flags().StringVarP(&opts.theme, "theme", "t", "auto", "colour theme: auto, dark or light")
-	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "P", "1s", "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]. (default: 1s)")
-	cmd.Flags().StringVarP(&opts.pulseFactor, "pulse-factor", "F", "5", "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics (default: 5)")
-	cmd.Flags().StringVarP(&opts.heartbeatFactor, "heartbeat-period", "B", "5m", "period by which metrics are published even if they have not changed, rounded up to nearest pulse boundary, uses unit suffixes [s, m, h] (default: 5m)")
-	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", "24h", "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h] (default: 24h)")
-	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", "1h", "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h] (default: 1h)")
-	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h] (default: 5m)")
-	cmd.Flags().StringVarP(&opts.refreshPeriod, "refresh-period", "R", "15m", "period for performing a full screen refresh, uses unit suffixes [s, m, h] (default: 15m)")
+	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "P", "1s", "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&opts.pulseFactor, "pulse-factor", "F", "5", "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics")
+	cmd.Flags().StringVarP(&opts.heartbeatFactor, "heartbeat-period", "B", "5m", "period by which metrics are published even if they have not changed, rounded up to nearest pulse boundary, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", "1h", "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&opts.refreshPeriod, "refresh-period", "R", "15m", "period for performing a full screen refresh, uses unit suffixes [s, m, h]")
 	cmd.Flags().IntVarP(&opts.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
 	cmd.Flags().IntVarP(&opts.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
 	cmd.Flags().BoolVarP(&opts.json, "json", "J", false, "output JSON instead of the default text format. Assumes local mode, respects poll and bin period options and ignores all formating options")
@@ -70,7 +70,6 @@ func newWatchCmd() *cobra.Command {
 	cobra.AddTemplateFunc("trimLeadingWhitespaces", func(value string) string {
 		return strings.TrimLeftFunc(value, unicode.IsSpace)
 	})
-	cmd.SetUsageTemplate(watchUsageTemplate)
 	return cmd
 }
 
@@ -216,26 +215,3 @@ func init() {
 }
 
 const watchDescription = "Show real-time system stats"
-
-const watchUsageTemplate = `Usage:
-   {{trimLeadingWhitespaces .UseLine}}{{if gt (len .Aliases) 0}}
-
-Aliases:
-   {{join .Aliases ", "}}{{end}}{{if .HasExample}}
-
-Examples:
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
-
-Available Commands:
-{{range .Commands}}{{if (or .IsAvailableCommand .IsHelpCommand)}}  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-
-Flags:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-Global Flags:
-{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
-
-Additional help topics:
-{{range .Commands}}{{if .IsHelpCommand}}  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}
-
-`

@@ -31,40 +31,106 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-Implement Used SYS as a percentage used of all non /share/* standard / mounted filesystems sum / total available in those fs. How to do this effciently with some sort of caching perhaps using cache-period cli?
-root@macmini-mad:~$  df -h | grep -v udev | grep -v tmpfs | grep -v docker | grep -v firmware | grep -v /share/ | grep -v /boot
-Filesystem              Size  Used Avail Use% Mounted on
-/dev/nvme0n1p6          395G   51G  341G  13% /
-/dev/nvme0n1p6          395G   51G  341G  13% /home
-/dev/nvme0n1p6          395G   51G  341G  13% /var
-root@raspbpi-jen:~$ df -h | grep -v udev | grep -v tmpfs | grep -v docker | grep -v firmware
-Filesystem      Size  Used Avail Use% Mounted on
-/dev/sda2       118G  9.4G  102G   9% /
-root@macmini-max:~$ df -h | grep -v udev | grep -v tmpfs | grep -v docker | grep -v firmware | grep -v /share/ | grep -v /boot
-Filesystem                                Size  Used Avail Use% Mounted on
-/dev/mapper/fedora_macmini--max-root       25G  7.1G   17G  31% /
-/dev/mapper/fedora_macmini--max-tmp       974M  336K  906M   1% /tmp
-/dev/mapper/fedora_macmini--max-home      329G  339M  312G   1% /home
-/dev/mapper/fedora_macmini--max-var        30G   11G   18G  38% /var
-i want the same for Used SHR, cached the same, but for each locally mounted share
-root@macmini-max:~$ df -h | grep -v udev | grep /share | grep -v //
-/dev/sda1                                 466G  279G  188G  60% /share/21
-/dev/mapper/fedora_macmini--max-share_06  1.4T  716G  696G  51% /share/20
-root@macmini-max:~$ df -h | grep -v udev | grep /share
-/dev/sda1                                 466G  279G  188G  60% /share/21
-/dev/mapper/fedora_macmini--max-share_06  1.4T  716G  696G  51% /share/20
-//macmini-may/share-31                    3.7T  2.2T  1.5T  60% /share/31
-//macmini-may/share-32                    447G  331G  116G  75% /share/32
-//macmini-meg/share-40                    1.3T  1.1T  265G  80% /share/40
-//macmini-meg/share-41                    3.6T  2.8T  878G  77% /share/41
-//macmini-meg/share-42                    440G  326G  115G  75% /share/42
-//macmini-mad/share-10                    3.8T  2.6T  1.2T  69% /share/10
-//macmini-mad/share-11                    3.7T  2.3T  1.4T  63% /share/11
-//macmini-mad/share-12                    3.7T  2.4T  1.4T  64% /share/12
-//macmini-may/share-30                    3.1T  1.8T  1.4T  55% /share/30
-Shares and standard / file systems should be identified nicely and effciently but dont mind slowish reporting since these dont chnage rapidly. show design before implementing.
 
-implement Fail LOG by dmesg|grep -i error and bounding by time (1d?) converting to a percentage somehow, highlighting errors and having 1 error being yellow, >1 red. suggest how to do this best so that errors are shouted about? do it effciently, caching using cache-period cli potentially?
+
+check vernemq really does drop all topics on restart? doesnt seem to?
+and on vernemq release getting 127.0.0.1 where dont expect that? would want prod server there?
+
+----------------------------------------------------------------------------------------------------
+Executing broker script for module [network] starting ... 
+----------------------------------------------------------------------------------------------------
+
+
+Entity Metadata publish script [network] dropping discovery topics on [127.0.0.1]:
+
+Entity Metadata publish script [network] sleeping before dropping data topics ... done
+
+Entity Metadata publish script [network] dropping data topics on [127.0.0.1]:
+
+Entity Metadata publish script [network] sleeping before publishing discovery topics ... done
+
+Entity Metadata publish script [network] publishing discovery topics on [127.0.0.1]:
+homeassistant/switch/network/network_certificate/config
+homeassistant/switch/network/network_domain/config
+homeassistant/switch/network/network_ethernet/config
+homeassistant/switch/network/network_internet/config
+homeassistant/switch/network/network_weewx/config
+homeassistant/switch/network/network_wireless/config
+homeassistant/switch/network/network_zigbee/config
+
+
+----------------------------------------------------------------------------------------------------
+Executing broker script for module [network] finished
+----------------------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------------------------
+Executing broker script for module [tempstat] starting ... 
+----------------------------------------------------------------------------------------------------
+
+
+Entity Metadata publish script [tempstat] dropping discovery topics on [127.0.0.1]:
+
+Entity Metadata publish script [tempstat] sleeping before dropping data topics ... done
+
+Entity Metadata publish script [tempstat] dropping data topics on [127.0.0.1]:
+
+Entity Metadata publish script [tempstat] sleeping before publishing discovery topics ... done
+
+Entity Metadata publish script [tempstat] publishing discovery topics on [127.0.0.1]:
+homeassistant/sensor/tempstat/rack_bottom_temperature/config
+homeassistant/sensor/tempstat/rack_top_temperature/config
+homeassistant/sensor/tempstat/utility_temperature/config
+
+
+----------------------------------------------------------------------------------------------------
+Executing broker script for module [tempstat] finished
+----------------------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------------------------
+Executing broker script for module [tasmota] starting ... 
+----------------------------------------------------------------------------------------------------
+
+
+Entity Metadata publish script [tasmota] dropping discovery topics on [127.0.0.1]:
+
+Entity Metadata publish script [tasmota] sleeping before dropping data topics ... done
+
+Entity Metadata publish script [tasmota] dropping data topics on [127.0.0.1]:
+
+Entity Metadata publish script [tasmota] sleeping before publishing discovery topics ... 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Implement PLAN and then delete it
+
+
+
+
+Implement Life SSD - port from script
+Check all host level metrics, check serve logs
+
+
+
+Implement Fail BKP/Used BKP/Service BKP - await backup implementation
 
 move rue/kasa to max and refactor to be like tasmota including html site. remove deploy and build instead into release like tasmota. use tron theme from https://github.com/educlopez/thegridcn-ui not ares
 

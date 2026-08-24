@@ -15,6 +15,7 @@ require (
 	github.com/sergi/go-diff v1.4.0
 	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.10
 	github.com/testcontainers/testcontainers-go v0.44.0
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/exp v0.0.0-20260820142414-ca536658362e
@@ -70,7 +71,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20260805114148-88456608a4f6 // indirect
 	github.com/sirupsen/logrus v1.10.1 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect

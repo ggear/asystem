@@ -17,7 +17,15 @@ const defaultVersion = "10.100.1000-SNAPSHOT"
 const (
 	DefaultPollPeriod  = "3s"
 	DefaultPulseFactor = "2"
+	DefaultTrendPeriod = "24h"
 )
+
+func TrendWindow(trendHours int) time.Duration {
+	if trendHours > 0 {
+		return time.Duration(trendHours) * time.Hour
+	}
+	return defaultTrendWindow
+}
 
 var DefaultConfigPath = "/var/lib/asystem/install/supervisor/latest/image/config.json"
 
@@ -274,7 +282,16 @@ type configDatabaseEndpoint struct {
 	Token string
 }
 
+func parsedTrendPeriod() time.Duration {
+	parsed, err := time.ParseDuration(DefaultTrendPeriod)
+	if err != nil {
+		panic(fmt.Sprintf("invalid default trend period [%s] with [%v]", DefaultTrendPeriod, err))
+	}
+	return parsed
+}
+
 var (
-	cachedHostName   string
-	cachedHostOnceMu sync.Once
+	defaultTrendWindow = parsedTrendPeriod()
+	cachedHostName     string
+	cachedHostOnceMu   sync.Once
 )

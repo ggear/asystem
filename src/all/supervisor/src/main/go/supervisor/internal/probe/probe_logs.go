@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,21 +92,33 @@ func (s *logSet) open() bool {
 func (s *logSet) consume() {
 	shouts := 0
 	for reads := 0; reads < logReadsMax; reads++ {
-		count, err := s.file.Read(s.buffer)
+		count, err := s.read()
 		if count > 0 {
 			s.carry = append(s.carry, s.buffer[:count]...)
 			shouts = s.scan(shouts)
+			continue
 		}
-		if err != nil {
-			if errors.Is(err, syscall.EPIPE) {
-				continue
-			}
-			return
+		if errors.Is(err, syscall.EINTR) || errors.Is(err, syscall.EPIPE) {
+			continue
 		}
-		if count == 0 {
-			return
-		}
+		return
 	}
+}
+
+func (s *logSet) read() (int, error) {
+	raw, err := s.file.SyscallConn()
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	var readErr error
+	if err := raw.Read(func(fd uintptr) bool {
+		count, readErr = syscall.Read(int(fd), s.buffer)
+		return true
+	}); err != nil {
+		return 0, err
+	}
+	return count, readErr
 }
 
 func (s *logSet) scan(shouts int) int {
@@ -183,10 +196,38 @@ func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
 }
 
 func isLogError(priority int, message string) bool {
+	if matchedLog(logIgnore, message) {
+		return false
+	}
 	if priority&logLevelMask <= logLevelError {
 		return true
 	}
 	return strings.Contains(strings.ToLower(message), logErrorText)
+}
+
+func matchedLog(patterns []*regexp.Regexp, message string) bool {
+	for _, pattern := range patterns {
+		if pattern.MatchString(message) {
+			return true
+		}
+	}
+	return false
+}
+
+func compileLog(patterns string) []*regexp.Regexp {
+	compiled := []*regexp.Regexp{}
+	for _, pattern := range strings.Split(patterns, "\n") {
+		pattern = strings.TrimSpace(pattern)
+		if pattern == "" {
+			continue
+		}
+		expression, err := regexp.Compile(pattern)
+		if err != nil {
+			continue
+		}
+		compiled = append(compiled, expression)
+	}
+	return compiled
 }
 
 func clipLogMessage(message string) string {
@@ -220,22 +261,25 @@ func logRoots(mount string) []string {
 	return []string{mount, ""}
 }
 
+const logIgnorePatterns = `
+`
+
 const (
-	logDevicePath    = "dev/kmsg"
-	logUptimePath    = "proc/uptime"
-	logErrorText     = "error"
-	logLevelMask     = 7
-	logLevelError    = 3
-	logBufferBytes   = 8192
-	logReadsMax      = 4096
-	logStampsMax     = 4096
-	logShoutsMax     = 5
-	logMessageMax    = 120
-	logErrorBudget   = 10.0
-	logWindowDefault = 24 * time.Hour
+	logDevicePath  = "dev/kmsg"
+	logUptimePath  = "proc/uptime"
+	logErrorText   = "error"
+	logLevelMask   = 7
+	logLevelError  = 3
+	logBufferBytes = 8192
+	logReadsMax    = 4096
+	logStampsMax   = 4096
+	logShoutsMax   = 5
+	logMessageMax  = 120
+	logErrorBudget = 10.0
 )
 
 var (
+	logIgnore  = compileLog(logIgnorePatterns)
 	logCache   = map[string]*logSet{}
 	logCacheMu sync.RWMutex
 )

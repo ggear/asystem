@@ -5,7 +5,40 @@ import (
 	"reflect"
 	"supervisor/internal/testutil"
 	"testing"
+	"time"
 )
+
+func TestConfig_TrendWindow(t *testing.T) {
+	tests := []struct {
+		name           string
+		trendHours     int
+		expectedWindow time.Duration
+	}{
+		{
+			name:           "happy_configured_trend",
+			trendHours:     6,
+			expectedWindow: 6 * time.Hour,
+		},
+		{
+			name:           "happy_trend_disabled_falls_back_to_the_flag_default",
+			trendHours:     0,
+			expectedWindow: 24 * time.Hour,
+		},
+		{
+			name:           "happy_negative_trend_falls_back_to_the_flag_default",
+			trendHours:     -1,
+			expectedWindow: 24 * time.Hour,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			window := TrendWindow(testCase.trendHours)
+			if window != testCase.expectedWindow {
+				t.Fatalf("TrendWindow: got %v want %v", window, testCase.expectedWindow)
+			}
+		})
+	}
+}
 
 func TestConfig_Version(t *testing.T) {
 	tests := []struct {

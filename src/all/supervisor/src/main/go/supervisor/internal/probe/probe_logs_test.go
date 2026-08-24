@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -53,6 +55,69 @@ func TestProbeLogs_IsLogError(t *testing.T) {
 				t.Fatalf("isLogError: got %v want %v", ok, testCase.expectedOK)
 			}
 		})
+	}
+}
+
+func TestProbeLogs_IgnorePatternsAllCompile(t *testing.T) {
+	declared := 0
+	for _, pattern := range strings.Split(logIgnorePatterns, "\n") {
+		if strings.TrimSpace(pattern) == "" {
+			continue
+		}
+		declared++
+		if _, err := regexp.Compile(strings.TrimSpace(pattern)); err != nil {
+			t.Fatalf("logIgnorePatterns %q: %v", pattern, err)
+		}
+	}
+	if len(logIgnore) != declared {
+		t.Fatalf("logIgnore compiled: got %d want %d", len(logIgnore), declared)
+	}
+}
+
+func TestProbeLogs_IgnoredMessages(t *testing.T) {
+	patterns := compileLog(`
+pl2303 ttyUSB\d+: pl2303_get_line_request - failed
+usb \d+-\d+: device descriptor read
+`)
+	tests := []struct {
+		name       string
+		message    string
+		expectedOK bool
+	}{
+		{
+			name:       "happy_first_pattern_matches",
+			message:    "pl2303 ttyUSB0: pl2303_get_line_request - failed with -32",
+			expectedOK: true,
+		},
+		{
+			name:       "happy_second_pattern_matches",
+			message:    "usb 1-1: device descriptor read/64, error -71",
+			expectedOK: true,
+		},
+		{
+			name:       "happy_unrelated_error_kept",
+			message:    "ata1.00: failed command: READ FPDMA QUEUED",
+			expectedOK: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if matchedLog(patterns, testCase.message) != testCase.expectedOK {
+				t.Fatalf("matchedLog: got %v want %v", !testCase.expectedOK, testCase.expectedOK)
+			}
+		})
+	}
+}
+
+func TestProbeLogs_IgnoredMessagesAreNotErrors(t *testing.T) {
+	original := logIgnore
+	t.Cleanup(func() { logIgnore = original })
+	logIgnore = compileLog("pl2303 ttyUSB\\d+: pl2303_get_line_request - failed")
+	if isLogError(3, "pl2303 ttyUSB0: pl2303_get_line_request - failed with -32") {
+		t.Fatalf("isLogError on an ignored message: got true want false")
+	}
+	if !isLogError(3, "ata1.00: failed command") {
+		t.Fatalf("isLogError on a kept message: got false want true")
 	}
 }
 

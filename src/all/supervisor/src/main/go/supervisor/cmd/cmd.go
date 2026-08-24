@@ -3,11 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	"supervisor/internal/config"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func Execute() {
@@ -18,12 +21,24 @@ func Execute() {
 }
 
 func init() {
+	cobra.AddTemplateFunc("bracketed", bracketed)
+	rootCmd.SetUsageTemplate(usageTemplate)
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "display version information and exit")
 	rootCmd.PersistentFlags().StringP("config", "c", config.DefaultConfigPath, "path to config file")
 	rootCmd.Flags().SortFlags = false
 	rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.InheritedFlags().SortFlags = false
 }
+
+func bracketed(flags *pflag.FlagSet) string {
+	lines := strings.Split(strings.TrimRight(flags.FlagUsages(), "\n"), "\n")
+	for index, line := range lines {
+		lines[index] = defaultPattern.ReplaceAllString(line, "(default [$1])")
+	}
+	return strings.Join(lines, "\n")
+}
+
+var defaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)
 
 var rootCmd = &cobra.Command{
 	Short:         rootDescription,
@@ -106,3 +121,28 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 }
 
 const rootDescription = "Run supervisor processes"
+
+const usageTemplate = `Usage:{{if .Runnable}}
+  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
+
+Aliases:
+  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{bracketed .LocalFlags}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{bracketed .InheritedFlags}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
