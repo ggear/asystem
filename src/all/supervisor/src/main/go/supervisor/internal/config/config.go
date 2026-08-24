@@ -145,7 +145,7 @@ func (c *Config) Mount() string {
 	if c == nil {
 		return ""
 	}
-	return resolve("mount", "SUPERVISOR_MOUNT", c.asystem.Mount)
+	return c.asystem.Mount
 }
 
 func (c *Config) Broker() string {

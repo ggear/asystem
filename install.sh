@@ -124,24 +124,26 @@ esac
 export SERVICE_COMMAND="${COMMAND}"
 export SERVICE_VERSION_CHANGED="false"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_INSTALL="/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
+SERVICE_SLEEP="/var/lib/asystem/install/${SERVICE_NAME}/.sleep"
 [[ -d "${SERVICE_INSTALL}" ]] || log_error "Install directory does not exist: ${SERVICE_INSTALL}"
 cd "${SERVICE_INSTALL}"
+
+if [[ -f "${SERVICE_INSTALL}/.sleep" ]]; then
+  mv -f "${SERVICE_INSTALL}/.sleep" "${SERVICE_SLEEP}"
+fi
 
 if [[ "${COMMAND}" == "stop" || "${COMMAND}" == "sleep" ]]; then
   stop_service
   if [[ "${COMMAND}" == "sleep" ]]; then
-    touch "${SCRIPT_DIR}/.sleep"
+    touch "${SERVICE_SLEEP}"
     log_info "Service put to sleep"
   else
-    rm -f "${SCRIPT_DIR}/.sleep"
+    rm -f "${SERVICE_SLEEP}"
     log_info "Service stopped"
   fi
   exit 0
 fi
-
-rm -f "${SCRIPT_DIR}/.sleep"
 
 run_hook "./install_prep.sh"
 cd "${SERVICE_INSTALL}"
@@ -159,6 +161,8 @@ if [[ "${COMMAND}" == "schema" ]]; then
   fi
   exit 0
 fi
+
+rm -f "${SERVICE_SLEEP}"
 
 if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"

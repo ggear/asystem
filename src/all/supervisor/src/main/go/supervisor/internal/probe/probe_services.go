@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -41,6 +42,7 @@ type servicesProbe struct {
 	restartCountFloat      map[string]*stats.FloatStats
 
 	configuredServiceNames []string
+	installMissingLogged   string
 	prevCPUStats           map[string]container.CPUStats
 
 	dockerClient     *client.Client
@@ -121,7 +123,8 @@ func (p *servicesProbe) create(configPath string, cache *metric.RecordCache, mas
 }
 
 func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
-	servicesByName, err := p.services(ctx)
+	snapshot := p.installs().snapshot()
+	servicesByName, err := p.services(ctx, snapshot)
 	if err != nil {
 		return fmt.Errorf("get services: %w", err)
 	}
@@ -334,7 +337,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 			metric.ValueFloat,
 			metric.MetricHostServicesMaxMemory,
 			metric.ServiceNameUnset,
-			func() (float64, error) { return p.servicesMaxMemory() },
+			func() (float64, error) { return p.servicesMaxMemory(snapshot) },
 			p.servicesMaxMemoryFloat,
 			func() float64 { return p.servicesMaxMemoryFloat.PulseLast() },
 			nil,
@@ -354,7 +357,7 @@ func (p *servicesProbe) hasMetric(id metric.ID) bool {
 	return p.mask[id]
 }
 
-func (p *servicesProbe) services(ctx context.Context) (map[string]service, error) {
+func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot) (map[string]service, error) {
 	if p.newDockerClient == nil || p.listContainers == nil || p.statsOneShot == nil || p.inspectContainer == nil {
 		return nil, errors.New("docker client not initialised")
 	}
@@ -459,7 +462,7 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			} else {
 				service.restartCountValue = restartCountValue
 			}
-			versionValue, versionErr := p.version(fetchedInspect)
+			versionValue, versionErr := p.version(snapshot, fetchedInspect)
 			if versionErr != nil {
 				service.versionErr = versionErr
 			} else {
@@ -472,7 +475,7 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 		} else {
 			service.configuredStatusValue = configuredStatusValue
 		}
-		sleepStatusValue, sleepErr := p.sleep(container.InspectResponse{
+		sleepStatusValue, sleepErr := p.sleep(snapshot, container.InspectResponse{
 			ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + name},
 		})
 		if sleepErr != nil {
@@ -480,6 +483,7 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 		} else {
 			service.sleepStatusValue = sleepStatusValue
 		}
+		service.maxMemoryValue, service.maxMemoryErr = p.maxMemory(snapshot, name)
 		backupStatusValue, backupErr := p.backupStatus()
 		if backupErr != nil {
 			service.backupStatusErr = backupErr
@@ -488,6 +492,7 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 		}
 		services[name] = service
 	}
+	p.logInstallMissing(snapshot, services)
 	for _, configuredServiceName := range p.configuredServiceNames {
 		if existingService, exists := services[configuredServiceName]; exists {
 			existingService.configuredStatusValue = true
@@ -497,13 +502,16 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 				ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + configuredServiceName},
 				Config:            &container.Config{Image: configuredServiceName},
 			}
-			ghostVersion, _ := p.version(ghostInspect)
-			ghostSleep, _ := p.sleep(ghostInspect)
+			ghostVersion, _ := p.version(snapshot, ghostInspect)
+			ghostSleep, _ := p.sleep(snapshot, ghostInspect)
+			ghostMaxMemory, ghostMaxMemoryErr := p.maxMemory(snapshot, configuredServiceName)
 			services[configuredServiceName] = service{
 				nameValue:             configuredServiceName,
 				configuredStatusValue: true,
 				sleepStatusValue:      ghostSleep,
 				versionValue:          ghostVersion,
+				maxMemoryValue:        ghostMaxMemory,
+				maxMemoryErr:          ghostMaxMemoryErr,
 			}
 		}
 	}
@@ -536,6 +544,8 @@ type service struct {
 	nameValue             string
 	versionValue          string
 	versionErr            error
+	maxMemoryValue        float64
+	maxMemoryErr          error
 	usedProcessorValue    int8
 	usedProcessorErr      error
 	usedMemoryValue       int8
@@ -550,8 +560,12 @@ func (p *servicesProbe) servicesStatus() (bool, error) {
 	return true, nil
 }
 
-func (p *servicesProbe) servicesMaxMemory() (float64, error) {
-	return 0, nil
+func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, error) {
+	allocatedBytes, err := snapshot.allocation(p.configuredServiceNames)
+	if err != nil {
+		return 0, err
+	}
+	return float64(allocatedBytes) / bytesPerMiB, nil
 }
 
 func (s *service) isUp() (bool, error) {
@@ -603,7 +617,7 @@ func (s *service) upTime() (float64, error) {
 }
 
 func (s *service) maxMemory() (float64, error) {
-	return 0, nil
+	return s.maxMemoryValue, s.maxMemoryErr
 }
 
 func (s *service) restartCount() (float64, error) {
@@ -713,117 +727,42 @@ func (p *servicesProbe) restartCount(containerInfo container.InspectResponse) (f
 	return float64(containerInfo.RestartCount), nil
 }
 
-func (p *servicesProbe) version(containerInfo container.InspectResponse) (string, error) {
-	versionStart := time.Now()
-	version := ""
-	var candidateErrs []string
+func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo container.InspectResponse) (string, error) {
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
 		tokens := strings.Split(containerInfo.Config.Image, ":")
-		if len(tokens) > 1 && tokens[1] != "" {
-			if config.VersionPattern.MatchString(tokens[1]) {
-				version = tokens[1]
-			} else {
-				candidateErrs = append(candidateErrs, fmt.Sprintf("[%s] from image [%s] could not be parsed", tokens[1], containerInfo.Config.Image))
-			}
-		}
-		// TODO: Cache this at least for each pulse, if not for longer eg cmd.cache-period
-		if version == "" {
-			name := ""
-			if containerInfo.ContainerJSONBase != nil {
-				name = strings.TrimPrefix(containerInfo.Name, "/")
-			}
-			if name == "" {
-				tokens = strings.Split(tokens[0], "/")
-				name = tokens[0]
-			}
-			if name == "" {
-				candidateErrs = append(candidateErrs, fmt.Sprintf("not available from image [%s] carrying no container name", containerInfo.Config.Image))
-			} else {
-				mount := config.Load(p.configPath).Mount()
-				candidates := []string{""}
-				if mount != "" {
-					candidates = []string{mount, ""}
-				}
-				for _, installBase := range candidates {
-					installDir := installBase + "/var/lib/asystem/install/"
-					latestDir := installDir + name + "/latest"
-					if installBase != "" {
-						if target, linkErr := os.Readlink(latestDir); linkErr == nil && strings.HasPrefix(target, "/") {
-							latestDir = installBase + target
-						}
-					}
-					installPath := latestDir + "/.env"
-					data, err := os.ReadFile(installPath)
-					if err != nil {
-						candidateErrs = append(candidateErrs, fmt.Sprintf("not available from install dir [%s] with [%v]", installPath, err))
-						continue
-					}
-					found := false
-					for _, line := range strings.Split(string(data), "\n") {
-						if v, ok := strings.CutPrefix(line, "SERVICE_VERSION_ABSOLUTE="); ok {
-							found = true
-							if config.VersionPattern.MatchString(v) {
-								version = v
-							} else {
-								candidateErrs = append(candidateErrs, fmt.Sprintf("[%s] from install dir [%s] could not be parsed", v, installPath))
-							}
-							break
-						}
-					}
-					if !found {
-						candidateErrs = append(candidateErrs, fmt.Sprintf("not declared in install dir [%s]", installPath))
-					}
-					if version != "" {
-						break
-					}
-				}
-			}
+		if len(tokens) > 1 && config.VersionPattern.MatchString(tokens[1]) {
+			return tokens[1], nil
 		}
 	}
-	if version == "" {
-		image := ""
-		if containerInfo.Config != nil {
-			image = containerInfo.Config.Image
-		}
-		for _, candidateErr := range candidateErrs {
-			scribe.Probe("state", "services").Error("version", versionStart, "failed   [%v] version candidate", candidateErr)
-		}
-		scribe.Probe("state", "services").Error("version", versionStart, "missing  [%s] version not available from docker", image)
-		return "-", nil
+	name := containerServiceName(containerInfo)
+	if name == "" {
+		return versionUnknown, nil
 	}
-	return version, nil
+	installed, _ := snapshot.service(name)
+	if installed.version != "" {
+		return installed.version, nil
+	}
+	return versionUnknown, nil
 }
 
-func (p *servicesProbe) sleep(containerInfo container.InspectResponse) (bool, error) {
-	name := ""
-	if containerInfo.ContainerJSONBase != nil {
-		name = strings.TrimPrefix(containerInfo.Name, "/")
-	}
-	if name == "" && containerInfo.Config != nil && containerInfo.Config.Image != "" {
-		tokens := strings.Split(strings.Split(containerInfo.Config.Image, ":")[0], "/")
-		name = tokens[0]
-	}
+func (p *servicesProbe) sleep(snapshot *installSnapshot, containerInfo container.InspectResponse) (bool, error) {
+	name := containerServiceName(containerInfo)
 	if name == "" {
 		return false, nil
 	}
-	mount := config.Load(p.configPath).Mount()
-	candidates := []string{""}
-	if mount != "" {
-		candidates = []string{mount, ""}
+	installed, _ := snapshot.service(name)
+	return installed.sleepEnabled, nil
+}
+
+func (p *servicesProbe) maxMemory(snapshot *installSnapshot, name string) (float64, error) {
+	if name == "" {
+		return 0, errors.New("memory ceiling not available")
 	}
-	for _, installBase := range candidates {
-		installDir := installBase + "/var/lib/asystem/install/"
-		latestDir := installDir + name + "/latest"
-		if installBase != "" {
-			if target, linkErr := os.Readlink(latestDir); linkErr == nil && strings.HasPrefix(target, "/") {
-				latestDir = installBase + target
-			}
-		}
-		if _, err := os.Stat(latestDir + "/.sleep"); err == nil {
-			return true, nil
-		}
+	installed, _ := snapshot.service(name)
+	if installed.maxMemoryBytes <= 0 {
+		return 0, fmt.Errorf("memory ceiling not declared for [%s]", name)
 	}
-	return false, nil
+	return float64(installed.maxMemoryBytes) / bytesPerMiB, nil
 }
 
 func (p *servicesProbe) upTime(containerInfo container.InspectResponse) (float64, error) {
@@ -841,7 +780,44 @@ func (p *servicesProbe) upTime(containerInfo container.InspectResponse) (float64
 	return upTime, nil
 }
 
+func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services map[string]service) {
+	missingStart := time.Now()
+	var missing []string
+	for name := range services {
+		if _, found := snapshot.service(name); !found {
+			missing = append(missing, name)
+		}
+	}
+	sort.Strings(missing)
+	joined := strings.Join(missing, ",")
+	if joined == p.installMissingLogged {
+		return
+	}
+	p.installMissingLogged = joined
+	if len(missing) == 0 {
+		return
+	}
+	scribe.Probe("state", "services").Error("install", missingStart, "missing  [%d] containers with no install directory [%s]", len(missing), joined)
+}
+
+func (p *servicesProbe) installs() installReader {
+	return newInstallReader(p.configPath, p.hostName)
+}
+
+func containerServiceName(containerInfo container.InspectResponse) string {
+	if containerInfo.ContainerJSONBase != nil {
+		if name := strings.TrimPrefix(containerInfo.Name, "/"); name != "" {
+			return name
+		}
+	}
+	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
+		return strings.Split(strings.Split(containerInfo.Config.Image, ":")[0], "/")[0]
+	}
+	return ""
+}
+
 const (
 	servicesDockerTimeoutSecs            = 2
 	servicesDockerContainerIgnorePattern = "reaper_"
+	versionUnknown                       = "-"
 )

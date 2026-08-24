@@ -13,7 +13,6 @@ import (
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
-	"github.com/shirou/gopsutil/v4/sensors"
 )
 
 type hostProbe struct {
@@ -21,6 +20,7 @@ type hostProbe struct {
 	mask       [metric.MetricMax]bool
 	periods    config.Periods
 	configPath string
+	hostName   string
 
 	hostBool           *stats.BoolStats
 	usedProcessorInt   *stats.IntStats
@@ -41,19 +41,19 @@ type hostProbe struct {
 	runningTimeFloat   *stats.FloatStats
 	temperatureFloat   *stats.FloatStats
 
-	cpuSampler    *cpuUsageSampler
-	cpuTimes      func(bool) ([]cpu.TimesStat, error)
-	virtualMemory func() (*mem.VirtualMemoryStat, error)
-	sensorsTemps  func() ([]sensors.TemperatureStat, error)
-	compositeWarn bool
+	sysRoot               string
+	allocatedMemoryLogged int64
+	cpuSampler            *cpuUsageSampler
+	cpuTimes              func(bool) ([]cpu.TimesStat, error)
+	virtualMemory         func() (*mem.VirtualMemoryStat, error)
 }
 
 func newHostProbe() *hostProbe {
 	return &hostProbe{
+		sysRoot:       sensorSysRoot,
 		cpuSampler:    &cpuUsageSampler{},
 		cpuTimes:      cpu.Times,
 		virtualMemory: mem.VirtualMemory,
-		sensorsTemps:  sensors.SensorsTemperatures,
 	}
 }
 
@@ -87,6 +87,7 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.mask = mask
 	p.periods = periods
 	p.configPath = configPath
+	p.hostName = config.Load(configPath).Host()
 
 	p.hostBool = stats.NewBoolStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedProcessorInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
@@ -349,7 +350,31 @@ func (p *hostProbe) usedMemory() (int8, error) {
 }
 
 func (p *hostProbe) allocatedMemory() (int8, error) {
-	return 0, nil
+	if p.virtualMemory == nil {
+		return 0, errors.New("host memory unavailable")
+	}
+	memoryStat, err := p.virtualMemory()
+	if err != nil {
+		return 0, fmt.Errorf("virtual memory stats: %w", err)
+	}
+	if memoryStat.Total == 0 {
+		return 0, errors.New("total memory must be > 0")
+	}
+	allocatedStart := time.Now()
+	allocatedBytes, err := p.installs().allocation()
+	if err != nil {
+		return 0, err
+	}
+	allocatedPercent := (float64(allocatedBytes) / float64(memoryStat.Total)) * 100.0
+	allocatedMemoryExceeded := allocatedPercent > 100.0
+	if allocatedMemoryExceeded {
+		if allocatedBytes != p.allocatedMemoryLogged {
+			p.allocatedMemoryLogged = allocatedBytes
+			scribe.Probe("state", "host").Error("allocated", allocatedStart, "exceeded [%d] MiB allocated of [%d] MiB total at [%.1f] pct", allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, allocatedPercent)
+		}
+		allocatedPercent = 100.0
+	}
+	return stats.ConvertToInt(allocatedPercent), nil
 }
 
 func (p *hostProbe) failedServices() (int8, error) {
@@ -373,7 +398,11 @@ func (p *hostProbe) warnTemperature() (int8, error) {
 }
 
 func (p *hostProbe) spinFanSpeed() (int8, error) {
-	return 0, nil
+	speedOfMax, err := loadSensors(p.sysRoot).fanSpeedOfMax()
+	if err != nil {
+		return 0, err
+	}
+	return stats.ConvertToInt(speedOfMax), nil
 }
 
 func (p *hostProbe) lifeUsedDrives() (int8, error) {
@@ -409,69 +438,11 @@ func (p *hostProbe) runningTime() (float64, error) {
 }
 
 func (p *hostProbe) temperature() (float64, error) {
-	temperatureStart := time.Now()
-	if p.sensorsTemps == nil {
-		return 0, errors.New("temperature sensors unavailable")
-	}
-	temperatures, err := p.sensorsTemps()
-	if err != nil {
-		return 0, fmt.Errorf("temperature sensors unavailable: %w", err)
-	}
-	const (
-		minTemp = 10.0
-		maxTemp = 150.0
-	)
-	packageTemp := 0.0
-	packageFound := false
-	socTemp := 0.0
-	socFound := false
-	compositeTemp := 0.0
-	compositeFound := false
-	for _, entry := range temperatures {
-		zoneKey := strings.ToLower(entry.SensorKey)
-		if entry.Temperature < minTemp || entry.Temperature > maxTemp {
-			continue
-		}
-		if strings.Contains(zoneKey, "package") {
-			if !packageFound || entry.Temperature > packageTemp {
-				packageTemp = entry.Temperature
-			}
-			packageFound = true
-			continue
-		}
-		if isSocSensor(zoneKey) {
-			if !socFound || entry.Temperature > socTemp {
-				socTemp = entry.Temperature
-			}
-			socFound = true
-			continue
-		}
-		if strings.Contains(zoneKey, "composite") {
-			adjusted := entry.Temperature + 10.0
-			if adjusted < minTemp || adjusted > maxTemp {
-				continue
-			}
-			if !compositeFound || adjusted > compositeTemp {
-				compositeTemp = adjusted
-			}
-			compositeFound = true
-		}
-	}
-	if packageFound {
-		return packageTemp, nil
-	}
-	if socFound {
-		return socTemp, nil
-	}
-	if compositeFound {
-		if !p.compositeWarn {
-			p.compositeWarn = true
-			scribe.Probe("state", "host").Warn("metric", temperatureStart,
-				"no package or soc sensor found doing my best to derive it from a drive composite sensor")
-		}
-		return compositeTemp, nil
-	}
-	return 0, errors.New("no suitable temperature sensors found")
+	return loadSensors(p.sysRoot).celsius()
+}
+
+func (p *hostProbe) installs() installReader {
+	return newInstallReader(p.configPath, p.hostName)
 }
 
 func warnTemperatureOfMax(celsius float64) float64 {

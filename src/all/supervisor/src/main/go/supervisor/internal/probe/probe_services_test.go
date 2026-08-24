@@ -229,6 +229,11 @@ func TestProbeServices_Services(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(config.Reset)
+			t.Cleanup(resetInstallTrees)
+			t.Setenv("SUPERVISOR_MOUNT", writeInstallTree(t, "c1", "c2", "c3", "dup", "ghost"))
+			config.Reset()
+			resetInstallTrees()
 			probe := newServicesProbe()
 			if tt.newDockerClient != nil {
 				probe.newDockerClient = tt.newDockerClient
@@ -248,7 +253,7 @@ func TestProbeServices_Services(t *testing.T) {
 			var err error
 			var services map[string]service
 			for i := 0; i < 2; i++ {
-				services, err = probe.services(context.Background())
+				services, err = probe.services(context.Background(), probe.installs().snapshot())
 				if tt.expectedError {
 					if err == nil {
 						t.Fatalf("expected error but got nil")
@@ -396,7 +401,7 @@ func TestProbeServices_Health(t *testing.T) {
 				t.Fatalf("setup sleep container failed: %v", err)
 			}
 			services := newServicesProbe()
-			serviceMap, err := services.services(context.Background())
+			serviceMap, err := services.services(context.Background(), services.installs().snapshot())
 			if err != nil {
 				t.Fatalf("Services failed: %v", err)
 			}
@@ -777,11 +782,14 @@ func TestProbe_Version(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(config.Reset)
+			t.Cleanup(resetInstallTrees)
 			if tt.mountSubDir != "" {
 				t.Setenv("SUPERVISOR_MOUNT", testutil.FindDir(t, "src", "test", "resources", "mount", tt.mountSubDir))
 			}
+			config.Reset()
+			resetInstallTrees()
 			p := newServicesProbe()
-			got, err := p.version(tt.containerInfo)
+			got, err := p.version(p.installs().snapshot(), tt.containerInfo)
 			if tt.expectedError {
 				if err == nil {
 					t.Fatalf("Got no error, expected error")
@@ -799,8 +807,9 @@ func TestProbe_Version(t *testing.T) {
 }
 
 func TestProbe_Sleep(t *testing.T) {
-	writeSleepMarker := func(t *testing.T, dir string) {
+	writeSleepMarker := func(t *testing.T, mount, name string) {
 		t.Helper()
+		dir := filepath.Join(mount, "var/lib/asystem/install", name)
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatalf("mkdir %s failed: %v", dir, err)
 		}
@@ -821,18 +830,21 @@ func TestProbe_Sleep(t *testing.T) {
 				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
 			},
 			setup: func(t *testing.T, mount string) {
-				writeSleepMarker(t, filepath.Join(mount, "var/lib/asystem/install/myservice/latest"))
+				writeSleepMarker(t, mount, "myservice")
 			},
 			expected:      true,
 			expectedError: false,
 		},
 		{
-			name: "happy_sleep_marker_via_absolute_symlink",
+			name: "happy_sleep_marker_independent_of_installed_version",
 			containerInfo: container.InspectResponse{
 				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
 			},
 			setup: func(t *testing.T, mount string) {
-				writeSleepMarker(t, filepath.Join(mount, "var/lib/asystem/install/myservice/10.100.5678"))
+				writeSleepMarker(t, mount, "myservice")
+				if err := os.MkdirAll(filepath.Join(mount, "var/lib/asystem/install/myservice/10.100.5678"), 0o755); err != nil {
+					t.Fatalf("mkdir failed: %v", err)
+				}
 				if err := os.Symlink("/var/lib/asystem/install/myservice/10.100.5678", filepath.Join(mount, "var/lib/asystem/install/myservice/latest")); err != nil {
 					t.Fatalf("symlink failed: %v", err)
 				}
@@ -846,9 +858,26 @@ func TestProbe_Sleep(t *testing.T) {
 				Config: &container.Config{Image: "myservice"},
 			},
 			setup: func(t *testing.T, mount string) {
-				writeSleepMarker(t, filepath.Join(mount, "var/lib/asystem/install/myservice/latest"))
+				writeSleepMarker(t, mount, "myservice")
 			},
 			expected:      true,
+			expectedError: false,
+		},
+		{
+			name: "sad_legacy_sleep_marker_in_version_dir_ignored",
+			containerInfo: container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{Name: "/myservice"},
+			},
+			setup: func(t *testing.T, mount string) {
+				dir := filepath.Join(mount, "var/lib/asystem/install/myservice/latest")
+				if err := os.MkdirAll(dir, 0o755); err != nil {
+					t.Fatalf("mkdir failed: %v", err)
+				}
+				if err := os.WriteFile(filepath.Join(dir, ".sleep"), nil, 0o644); err != nil {
+					t.Fatalf("write .sleep failed: %v", err)
+				}
+			},
+			expected:      false,
 			expectedError: false,
 		},
 		{
@@ -884,11 +913,14 @@ func TestProbe_Sleep(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(config.Reset)
+			t.Cleanup(resetInstallTrees)
 			mount := t.TempDir()
 			t.Setenv("SUPERVISOR_MOUNT", mount)
 			tt.setup(t, mount)
+			config.Reset()
+			resetInstallTrees()
 			p := newServicesProbe()
-			got, err := p.sleep(tt.containerInfo)
+			got, err := p.sleep(p.installs().snapshot(), tt.containerInfo)
 			if tt.expectedError {
 				if err == nil {
 					t.Fatalf("Got no error, expected error")
@@ -903,6 +935,28 @@ func TestProbe_Sleep(t *testing.T) {
 			}
 		})
 	}
+}
+
+func writeInstallTree(t *testing.T, names ...string) string {
+	t.Helper()
+	mount := t.TempDir()
+	for _, name := range names {
+		home := filepath.Join(mount, "var/lib/asystem/install", name, "latest")
+		if err := os.MkdirAll(home, 0o755); err != nil {
+			t.Fatalf("mkdir %s failed: %v", home, err)
+		}
+		environment := "SERVICE_NAME=" + name + "\nSERVICE_VERSION_ABSOLUTE=10.100.1234\n"
+		if err := os.WriteFile(filepath.Join(home, ".env"), []byte(environment), 0o644); err != nil {
+			t.Fatalf("write .env failed: %v", err)
+		}
+		compose := "services:\n  " + name + ":\n    container_name: " + name +
+			"\n    deploy:\n      resources:\n        limits:\n          memory: 256M\n" +
+			"  " + name + "_bootstrap:\n    container_name: " + name + "_bootstrap\n    restart: 'no'\n"
+		if err := os.WriteFile(filepath.Join(home, "docker-compose.yml"), []byte(compose), 0o644); err != nil {
+			t.Fatalf("write docker-compose.yml failed: %v", err)
+		}
+	}
+	return mount
 }
 
 func makeStatsMock(containerCount int) func(context.Context, *client.Client, string) (container.StatsResponseReader, error) {

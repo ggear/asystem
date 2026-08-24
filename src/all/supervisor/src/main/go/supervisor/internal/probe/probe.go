@@ -128,6 +128,8 @@ var probesByMetricMask [metric.MetricMax]probe
 
 var errProbeWarmingUp = errors.New("probe is still warming up")
 
+const bytesPerMiB = 1 << 20
+
 func init() {
 	registerProbes(
 		func() probe { return newServicesProbe() },
