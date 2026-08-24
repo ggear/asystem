@@ -55,7 +55,7 @@ SERVICE_WAIT_RESTART_SECONDS=120
 SERVICE_SETTLE_RESTART_SECONDS=30
 
 wait_service() {
-  local script="$1" label="$2" interval="$3" timeout="$4" fatal="${5:-true}" waited=0 ticked=0
+  local script="$1" label="$2" interval="$3" timeout="$4" fatal="$5" waited=0 ticked=0
   ((interval > 0)) || interval=1
   printf 'Waiting for service to %s ...' "${label}"
   while ! docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" >/dev/null 2>&1; do
@@ -253,9 +253,9 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
     echo "--------------------------------------------------------------------------------"
     if find "${SERVICE_INSTALL}" -name checkexecuting.sh | grep -q . && find "${SERVICE_INSTALL}" -name checkhealthy.sh | grep -q .; then
       echo
-      wait_service "checkexecuting.sh" "start executing" 1 "${SERVICE_WAIT_EXECUTING_SECONDS}"
+      wait_service "checkexecuting.sh" "start executing" 1 "${SERVICE_WAIT_EXECUTING_SECONDS}" true
       echo
-      wait_service "checkhealthy.sh" "become healthy" 5 "${SERVICE_WAIT_HEALTHY_SECONDS}"
+      wait_service "checkhealthy.sh" "become healthy" 5 "${SERVICE_WAIT_HEALTHY_SECONDS}" true
       echo
       docker exec -i "${SERVICE_NAME}" bash -c 'command -v stdbuf >/dev/null 2>&1 && exec stdbuf -oL /asystem/etc/checkhealthy.sh -v || exec /asystem/etc/checkhealthy.sh -v'
       echo && echo

@@ -126,7 +126,7 @@ func (s *logSet) scan(shouts int) int {
 		s.stamps = append(s.stamps, stamp)
 		if s.drained && shouts < logShoutsMax {
 			shouts++
-			scribe.Probe("state", "host").Warn("logs", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipLogMessage(message))
+			scribe.Probe("state", "host").Error("logs", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipLogMessage(message))
 		}
 	}
 }
