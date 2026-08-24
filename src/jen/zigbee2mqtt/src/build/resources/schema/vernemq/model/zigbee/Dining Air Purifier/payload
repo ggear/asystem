@@ -14,8 +14,6 @@
   "replace_filter": <true|false>,
   "update": {
     "installed_version": <number>,
-    "latest_release_notes": "<text>",
-    "latest_source": "<text>",
     "latest_version": <number>,
     "state": "<text>"
   }
