@@ -3,6 +3,7 @@ package probe
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -72,10 +73,12 @@ func (s *logSet) open() bool {
 		return s.available
 	}
 	s.opened = true
+	failures := []string{}
 	for _, root := range s.roots {
 		path := filepath.Join(root, logDevicePath)
 		file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 		if err != nil {
+			failures = append(failures, fmt.Sprintf("[%s] with [%v]", path, err))
 			continue
 		}
 		s.path = path
@@ -85,7 +88,7 @@ func (s *logSet) open() bool {
 		scribe.Probe("state", "host").Info("logs", time.Now(), "following [%s] for kernel errors", path)
 		return true
 	}
-	scribe.Probe("state", "host").Warn("logs", time.Now(), "unreadable [%s] kernel log, reporting [0] errors, needs [CAP_SYSLOG]", strings.Join(s.roots, ","))
+	scribe.Probe("state", "host").Warn("logs", time.Now(), "unreadable kernel log %s, reporting [0] errors, needs [CAP_SYSLOG] and device [%s]", strings.Join(failures, " and "), logDeviceNode)
 	return false
 }
 
@@ -256,16 +259,18 @@ func bootTime(root string) time.Time {
 
 func logRoots(mount string) []string {
 	if mount == "" {
-		return []string{""}
+		return []string{logHostRoot}
 	}
-	return []string{mount, ""}
+	return []string{mount, logHostRoot}
 }
 
 const logIgnorePatterns = `
 `
 
 const (
+	logHostRoot    = "/"
 	logDevicePath  = "dev/kmsg"
+	logDeviceNode  = "/dev/kmsg"
 	logUptimePath  = "proc/uptime"
 	logErrorText   = "error"
 	logLevelMask   = 7

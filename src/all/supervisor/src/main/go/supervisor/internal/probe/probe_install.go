@@ -34,6 +34,7 @@ func (r installReader) allocation() (int64, error) {
 }
 
 type installService struct {
+	serviceModule  bool
 	version        string
 	sleepEnabled   bool
 	backupEnabled  bool
@@ -119,7 +120,7 @@ func (s *installSnapshot) allocation(names []string) (int64, error) {
 	installed := 0
 	for _, name := range names {
 		entry, found := s.service(name)
-		if !found {
+		if !found || !entry.serviceModule {
 			continue
 		}
 		installed++
@@ -129,7 +130,7 @@ func (s *installSnapshot) allocation(names []string) (int64, error) {
 		total += entry.maxMemoryBytes
 	}
 	if installed == 0 {
-		return 0, fmt.Errorf("none of the [%d] configured services are installed under [%s]", len(names), installRoot)
+		return 0, fmt.Errorf("none of the [%d] configured services are installed as service modules under [%s]", len(names), installRoot)
 	}
 	return total, nil
 }
@@ -208,7 +209,10 @@ func (t *installTree) parse() *installSnapshot {
 			installed.sleepEnabled = installSleepEnabled(root, name)
 			installed.backupEnabled = installBackupEnabled(home)
 			installed.version = installVersion(home, name)
-			installed.maxMemoryBytes = installMaxMemory(home, name)
+			installed.serviceModule = installServiceModule(home)
+			if installed.serviceModule {
+				installed.maxMemoryBytes = installMaxMemory(home, name)
+			}
 			snapshot.services[name] = installed
 		}
 	}
@@ -217,6 +221,11 @@ func (t *installTree) parse() *installSnapshot {
 
 func installSleepEnabled(root, name string) bool {
 	_, err := os.Lstat(root + "/" + name + "/" + installSleepMarker)
+	return err == nil
+}
+
+func installServiceModule(home string) bool {
+	_, err := os.Lstat(home + "/" + installComposeFile)
 	return err == nil
 }
 

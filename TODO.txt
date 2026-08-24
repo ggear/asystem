@@ -33,85 +33,14 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-check vernemq really does drop all topics on restart? doesnt seem to?
-and on vernemq release getting 127.0.0.1 where dont expect that? would want prod server there?
-
-----------------------------------------------------------------------------------------------------
-Executing broker script for module [network] starting ... 
-----------------------------------------------------------------------------------------------------
 
 
-Entity Metadata publish script [network] dropping discovery topics on [127.0.0.1]:
-
-Entity Metadata publish script [network] sleeping before dropping data topics ... done
-
-Entity Metadata publish script [network] dropping data topics on [127.0.0.1]:
-
-Entity Metadata publish script [network] sleeping before publishing discovery topics ... done
-
-Entity Metadata publish script [network] publishing discovery topics on [127.0.0.1]:
-homeassistant/switch/network/network_certificate/config
-homeassistant/switch/network/network_domain/config
-homeassistant/switch/network/network_ethernet/config
-homeassistant/switch/network/network_internet/config
-homeassistant/switch/network/network_weewx/config
-homeassistant/switch/network/network_wireless/config
-homeassistant/switch/network/network_zigbee/config
-
-
-----------------------------------------------------------------------------------------------------
-Executing broker script for module [network] finished
-----------------------------------------------------------------------------------------------------
-
-
-----------------------------------------------------------------------------------------------------
-Executing broker script for module [tempstat] starting ... 
-----------------------------------------------------------------------------------------------------
-
-
-Entity Metadata publish script [tempstat] dropping discovery topics on [127.0.0.1]:
-
-Entity Metadata publish script [tempstat] sleeping before dropping data topics ... done
-
-Entity Metadata publish script [tempstat] dropping data topics on [127.0.0.1]:
-
-Entity Metadata publish script [tempstat] sleeping before publishing discovery topics ... done
-
-Entity Metadata publish script [tempstat] publishing discovery topics on [127.0.0.1]:
-homeassistant/sensor/tempstat/rack_bottom_temperature/config
-homeassistant/sensor/tempstat/rack_top_temperature/config
-homeassistant/sensor/tempstat/utility_temperature/config
-
-
-----------------------------------------------------------------------------------------------------
-Executing broker script for module [tempstat] finished
-----------------------------------------------------------------------------------------------------
-
-
-----------------------------------------------------------------------------------------------------
-Executing broker script for module [tasmota] starting ... 
-----------------------------------------------------------------------------------------------------
-
-
-Entity Metadata publish script [tasmota] dropping discovery topics on [127.0.0.1]:
-
-Entity Metadata publish script [tasmota] sleeping before dropping data topics ... done
-
-Entity Metadata publish script [tasmota] dropping data topics on [127.0.0.1]:
-
-Entity Metadata publish script [tasmota] sleeping before publishing discovery topics ... 
-
-
-
-
-
-
-
-
-
-
-
-
+mv influxdb3/mlflow/mlserver from max to may, cloudflare/tempstat/letsencrupt to max
+adjust memeory allocs
+tune fan/tem, rename Warn TEM to High TEM
+Add host status to ha, combine backup temp etc
+add debug (or other) to each grunular metric that helps to show what is driving ui - eg which SSD has poor life, hidden in serve (? maybe only info?) but visible in watch when local
+Vlaidate metric descriptions are all good
 
 
 

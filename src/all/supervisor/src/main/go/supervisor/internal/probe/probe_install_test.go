@@ -19,6 +19,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 		expectedSleepEnabled   bool
 		expectedBackupEnabled  bool
 		expectedMaxMemoryBytes int64
+		expectedServiceModule  bool
 		expectedError          bool
 	}{
 		{
@@ -27,6 +28,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			compose:                installComposeWith("256M"),
 			expectedVersion:        "10.100.1234",
 			expectedMaxMemoryBytes: 256 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -35,6 +37,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			compose:                installComposeWith("16M"),
 			expectedVersion:        "10.100.1234-SNAPSHOT",
 			expectedMaxMemoryBytes: 16 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -45,6 +48,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			expectedVersion:        "10.100.1234",
 			expectedSleepEnabled:   true,
 			expectedMaxMemoryBytes: 2 << 30,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -55,6 +59,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			expectedVersion:        "10.100.1234",
 			expectedBackupEnabled:  true,
 			expectedMaxMemoryBytes: 256 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -64,6 +69,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 				"  myservice_bootstrap:\n    restart: 'no'\n",
 			expectedVersion:        "10.100.1234",
 			expectedMaxMemoryBytes: 256 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -73,6 +79,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 				"services:\n  myservice:\n    <<: *common\n",
 			expectedVersion:        "10.100.1234",
 			expectedMaxMemoryBytes: 512 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -82,6 +89,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 				"  two:\n    deploy:\n      resources:\n        limits:\n          memory: 768M\n",
 			expectedVersion:        "10.100.1234",
 			expectedMaxMemoryBytes: 1024 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -90,6 +98,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			compose:                installComposeWith("256M"),
 			expectedVersion:        "",
 			expectedMaxMemoryBytes: 256 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -98,6 +107,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			compose:                installComposeWith("256M"),
 			expectedVersion:        "",
 			expectedMaxMemoryBytes: 256 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -106,14 +116,16 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			compose:                installComposeWith("256M"),
 			expectedVersion:        "",
 			expectedMaxMemoryBytes: 256 << 20,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
-			name:                   "sad_compose_missing",
+			name:                   "happy_host_module_no_compose",
 			environment:            "SERVICE_VERSION_ABSOLUTE=10.100.1234\n",
 			omitCompose:            true,
 			expectedVersion:        "10.100.1234",
 			expectedMaxMemoryBytes: 0,
+			expectedServiceModule:  false,
 			expectedError:          false,
 		},
 		{
@@ -122,6 +134,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			compose:                "services:\n  myservice:\n    container_name: myservice\n",
 			expectedVersion:        "10.100.1234",
 			expectedMaxMemoryBytes: 0,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -130,6 +143,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			compose:                installComposeWith("plenty"),
 			expectedVersion:        "10.100.1234",
 			expectedMaxMemoryBytes: 0,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 		{
@@ -138,6 +152,7 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			compose:                "services: [this is not: a mapping\n",
 			expectedVersion:        "10.100.1234",
 			expectedMaxMemoryBytes: 0,
+			expectedServiceModule:  true,
 			expectedError:          false,
 		},
 	}
@@ -171,6 +186,9 @@ func TestProbeInstall_Snapshot(t *testing.T) {
 			}
 			if service.maxMemoryBytes != testCase.expectedMaxMemoryBytes {
 				t.Errorf("allocatedBytes: got %d want %d", service.maxMemoryBytes, testCase.expectedMaxMemoryBytes)
+			}
+			if service.serviceModule != testCase.expectedServiceModule {
+				t.Errorf("serviceModule: got %v want %v", service.serviceModule, testCase.expectedServiceModule)
 			}
 		})
 	}
@@ -227,6 +245,18 @@ func TestProbeInstall_Allocation(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name:          "happy_host_module_ignored",
+			names:         []string{"one", "four"},
+			expectedBytes: 256 << 20,
+			expectedError: false,
+		},
+		{
+			name:          "sad_only_host_modules_configured",
+			names:         []string{"four"},
+			expectedBytes: 0,
+			expectedError: true,
+		},
+		{
 			name:          "sad_no_names_configured",
 			names:         nil,
 			expectedBytes: 0,
@@ -250,6 +280,10 @@ func TestProbeInstall_Allocation(t *testing.T) {
 				writeInstallFile(t, filepath.Join(home, "docker-compose.yml"), installComposeWith(limit))
 			}
 			home := filepath.Join(mount, "var/lib/asystem/install/three/latest")
+			writeInstallDir(t, home)
+			writeInstallFile(t, filepath.Join(home, ".env"), "SERVICE_VERSION_ABSOLUTE=10.100.1234\n")
+			writeInstallFile(t, filepath.Join(home, "docker-compose.yml"), "services:\n  three:\n    container_name: three\n")
+			home = filepath.Join(mount, "var/lib/asystem/install/four/latest")
 			writeInstallDir(t, home)
 			writeInstallFile(t, filepath.Join(home, ".env"), "SERVICE_VERSION_ABSOLUTE=10.100.1234\n")
 			got, err := loadInstallTree(mount).snapshot().allocation(testCase.names)

@@ -14,6 +14,8 @@ x-common: &common
     - DATABASE_TOKEN
   cap_add:
     - SYSLOG
+  device_cgroup_rules:
+    - "c 1:11 r"
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
     - /:/${SUPERVISOR_MOUNT}:ro
