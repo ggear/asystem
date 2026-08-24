@@ -8,6 +8,7 @@
 #   tag entity_id* [Home Assistant entity_id:
 #     dining_air_purifier_replace_filter,
 #     ipad_graham_focus,
+#     iphone_graham_camera_motion,
 #     iphone_graham_focus,
 #     iphone_graham_kiosk_mode,
 #     janes_ipad_focus,
