@@ -284,7 +284,7 @@ SELECT
     'supervisor/host' AS relation,
     'failed_shares'   AS measure,
     '6s'              AS period,
-    '-'               AS unit,
+    '%'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -295,7 +295,7 @@ SELECT
     'supervisor/host'     AS relation,
     'failed_shares_trend' AS measure,
     '6s'                  AS period,
-    '-'                   AS unit,
+    '%'                   AS unit,
     'missing'             AS fault
 FROM information_schema.columns
 WHERE

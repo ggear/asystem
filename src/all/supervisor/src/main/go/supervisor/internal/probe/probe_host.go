@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
@@ -165,8 +164,8 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			p.failedLogsInt,
 			func() int8 { return p.failedLogsInt.PulseMax() },
 			func() int8 { return p.failedLogsInt.TrendMax() },
-			func(p int8) bool { return p <= logErrorBudget },
-			func(t int8) bool { return t == 0 },
+			func(pulse int8) bool { return pulse <= logErrorPulseOfMax },
+			func(trend int8) bool { return trend == 0 },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
@@ -198,8 +197,8 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			p.warnTemperatureInt,
 			func() int8 { return p.warnTemperatureInt.PulseMax() },
 			func() int8 { return p.warnTemperatureInt.TrendMax() },
-			func(p int8) bool { return p <= 65 },
-			func(t int8) bool { return t <= 55 },
+			func(pulse int8) bool { return pulse <= sensorWarnPulseOfMax },
+			func(trend int8) bool { return trend <= sensorWarnTrendOfMax },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
@@ -209,8 +208,12 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			p.spinFanSpeedInt,
 			func() int8 { return p.spinFanSpeedInt.PulseMax() },
 			func() int8 { return p.spinFanSpeedInt.TrendMax() },
-			func(fan int8) bool { return p.spinFanRespondingOK(fan, p.warnTemperatureInt.PulseMax(), 65, 80) },
-			func(fan int8) bool { return p.spinFanRespondingOK(fan, p.warnTemperatureInt.TrendMax(), 55, 50) },
+			func(fan int8) bool {
+				return p.spinFanRespondingOK(fan, p.warnTemperatureInt.PulseMax(), sensorWarnPulseOfMax, sensorFanPulseOfMax)
+			},
+			func(fan int8) bool {
+				return p.spinFanRespondingOK(fan, p.warnTemperatureInt.TrendMax(), sensorWarnTrendOfMax, sensorFanTrendOfMax)
+			},
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
@@ -220,8 +223,8 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			p.lifeUsedDrivesInt,
 			func() int8 { return p.lifeUsedDrivesInt.PulseMax() },
 			func() int8 { return p.lifeUsedDrivesInt.TrendMax() },
-			func(p int8) bool { return p <= 90 },
-			func(t int8) bool { return t <= 80 },
+			func(pulse int8) bool { return pulse <= 90 && !p.mounts().drivesErrored() },
+			func(trend int8) bool { return trend <= 80 && !p.mounts().drivesErrored() },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
@@ -386,7 +389,7 @@ func (p *hostProbe) failedLogs() (int8, error) {
 }
 
 func (p *hostProbe) failedShares() (int8, error) {
-	return 0, nil
+	return p.mounts().failedShares()
 }
 
 func (p *hostProbe) failedBackups() (int8, error) {
@@ -398,7 +401,7 @@ func (p *hostProbe) warnTemperature() (int8, error) {
 	if err != nil {
 		return 0, err
 	}
-	return stats.ConvertToInt(warnTemperatureOfMax(temperatureCelsius)), nil
+	return stats.ConvertToInt(sensorWarnPerCelsius * (temperatureCelsius - sensorWarnFloorCelsius)), nil
 }
 
 func (p *hostProbe) spinFanRespondingOK(fan int8, temperature int8, temperatureMax int8, fanMin int8) bool {
@@ -417,15 +420,15 @@ func (p *hostProbe) spinFanSpeed() (int8, error) {
 }
 
 func (p *hostProbe) lifeUsedDrives() (int8, error) {
-	return 0, nil
+	return p.mounts().lifeUsedDrives()
 }
 
 func (p *hostProbe) usedSystemSpace() (int8, error) {
-	return 0, nil
+	return p.mounts().usedSystemSpace()
 }
 
 func (p *hostProbe) usedShareSpace() (int8, error) {
-	return 0, nil
+	return p.mounts().usedShareSpace()
 }
 
 func (p *hostProbe) usedBackupSpace() (int8, error) {
@@ -456,24 +459,9 @@ func (p *hostProbe) installs() installReader {
 	return newInstallReader(p.configPath, p.hostName)
 }
 
-func warnTemperatureOfMax(celsius float64) float64 {
-	const (
-		floorCelsius    = 40.0
-		ofMaxPerCelsius = 5.0
-	)
-	return ofMaxPerCelsius * (celsius - floorCelsius)
+func (p *hostProbe) mounts() *mountSet {
+	return loadMounts(config.Load(p.configPath).Mount(), config.CacheWindow(p.periods.CacheMins))
 }
-
-func isSocSensor(zoneKey string) bool {
-	for _, prefix := range socSensorKeys {
-		if strings.Contains(zoneKey, prefix) {
-			return true
-		}
-	}
-	return false
-}
-
-var socSensorKeys = []string{"cpu_therm", "cpu-therm", "soc_therm", "soc-therm"}
 
 type cpuUsageSampler struct {
 	hasSample  bool

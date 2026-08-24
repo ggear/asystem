@@ -549,7 +549,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 		PollMillis:   500,
 		PulseMillis:  1000,
 		TrendHours:   0,
-		CacheHours:   0,
+		CacheMins:    0,
 		SnapshotMins: 0,
 	}
 	createStart := time.Now()

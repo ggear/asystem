@@ -45,7 +45,7 @@ func newServeCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.pulseFactor, "pulse-factor", "F", config.DefaultPulseFactor, "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics")
 	cmd.Flags().StringVarP(&opts.heartbeatFactor, "heartbeat-period", "B", "5m", "period by which metrics are published even if they have not changed, rounded up to nearest pulse boundary, uses unit suffixes [s, m, h]")
 	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", "1h", "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", config.DefaultCachePeriod, "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
 	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
 	cmd.Flags().SortFlags = false
 	return cmd

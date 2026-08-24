@@ -3,6 +3,7 @@ package stats
 import (
 	"fmt"
 	"math"
+	"sync"
 
 	"golang.org/x/exp/constraints"
 )
@@ -56,6 +57,7 @@ const (
 )
 
 type IntStats struct {
+	mutex sync.RWMutex
 	trend *trendWindow
 	pulse *pulseWindow
 }
@@ -105,6 +107,8 @@ func ConvertToInt[T constraints.Integer | constraints.Float](value T) int8 {
 }
 
 func (v *IntStats) Tick() {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 	if v.trend != nil {
 		v.trend.tick()
 	}
@@ -112,6 +116,8 @@ func (v *IntStats) Tick() {
 }
 
 func (v *IntStats) Push(value int8) {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 	if v.trend != nil {
 		v.trend.push(value)
 	}
@@ -123,45 +129,51 @@ func (v *IntStats) PushAndTick(value int8) {
 	v.Tick()
 }
 
-func (v *IntStats) PulseLast() int8   { return v.pulse.last() }
-func (v *IntStats) PulseMean() int8   { return v.pulse.mean() }
-func (v *IntStats) PulseMedian() int8 { return v.pulse.median() }
-func (v *IntStats) PulseMax() int8    { return v.pulse.max() }
-func (v *IntStats) PulseMin() int8    { return v.pulse.min() }
+func (v *IntStats) read(reader func() int8) int8 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
+	return reader()
+}
+
+func (v *IntStats) PulseLast() int8   { return v.read(v.pulse.last) }
+func (v *IntStats) PulseMean() int8   { return v.read(v.pulse.mean) }
+func (v *IntStats) PulseMedian() int8 { return v.read(v.pulse.median) }
+func (v *IntStats) PulseMax() int8    { return v.read(v.pulse.max) }
+func (v *IntStats) PulseMin() int8    { return v.read(v.pulse.min) }
 
 func (v *IntStats) TrendMean() int8 {
 	if v.trend == nil {
 		return 0
 	}
-	return v.trend.mean()
+	return v.read(v.trend.mean)
 }
 
 func (v *IntStats) TrendMedian() int8 {
 	if v.trend == nil {
 		return 0
 	}
-	return v.trend.median()
+	return v.read(v.trend.median)
 }
 
 func (v *IntStats) TrendMax() int8 {
 	if v.trend == nil {
 		return 0
 	}
-	return v.trend.max()
+	return v.read(v.trend.max)
 }
 
 func (v *IntStats) TrendMin() int8 {
 	if v.trend == nil {
 		return 0
 	}
-	return v.trend.min()
+	return v.read(v.trend.min)
 }
 
 func (v *IntStats) TrendP95() int8 {
 	if v.trend == nil {
 		return 0
 	}
-	return v.trend.p95()
+	return v.read(v.trend.p95)
 }
 
 type compactHistogram struct {

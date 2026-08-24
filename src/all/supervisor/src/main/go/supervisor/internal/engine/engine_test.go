@@ -135,7 +135,7 @@ func TestEngine_RunListeningProbesLoop(t *testing.T) {
 				PollMillis:   500,
 				PulseMillis:  1000,
 				TrendHours:   0,
-				CacheHours:   0,
+				CacheMins:    0,
 				SnapshotMins: 0,
 			}
 			timeout := time.Duration(4*periods.PollMillis) * time.Millisecond

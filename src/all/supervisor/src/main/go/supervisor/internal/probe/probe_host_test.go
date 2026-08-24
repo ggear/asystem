@@ -416,6 +416,8 @@ func TestProbeHost_FailedShares(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(resetMounts)
+			seedHostMounts(t)
 			probe := newHostProbe()
 			value, err := probe.failedShares()
 			if testCase.expectedError && err == nil {
@@ -704,6 +706,8 @@ func TestProbeHost_LifeUsedDrives(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(resetMounts)
+			seedHostMounts(t)
 			probe := newHostProbe()
 			value, err := probe.lifeUsedDrives()
 			if testCase.expectedError && err == nil {
@@ -728,13 +732,15 @@ func TestProbeHost_UsedSystemSpace(t *testing.T) {
 	}{
 		{
 			name:          "happy",
-			expectedValue: 0,
+			expectedValue: 38,
 			expectedOK:    true,
 			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(resetMounts)
+			seedHostMounts(t)
 			probe := newHostProbe()
 			value, err := probe.usedSystemSpace()
 			if testCase.expectedError && err == nil {
@@ -759,13 +765,15 @@ func TestProbeHost_UsedShareSpace(t *testing.T) {
 	}{
 		{
 			name:          "happy",
-			expectedValue: 0,
+			expectedValue: 20,
 			expectedOK:    true,
 			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(resetMounts)
+			seedHostMounts(t)
 			probe := newHostProbe()
 			value, err := probe.usedShareSpace()
 			if testCase.expectedError && err == nil {
@@ -956,4 +964,25 @@ func TestProbeHost_TemperatureDiscoversOnce(t *testing.T) {
 			t.Fatalf("sensors: got a re-discovery on call %d, want the cached set", index+1)
 		}
 	}
+}
+
+func seedHostMounts(t *testing.T) {
+	t.Helper()
+	mounts := "/dev/nvme0n1p6 / btrfs rw 0 0\n" +
+		"/dev/nvme0n1p5 /var ext4 rw 0 0\n" +
+		"/dev/sdb1 /share/10 ext4 rw 0 0\n" +
+		"/dev/sdc1 /share/11 ext4 rw 0 0\n"
+	fstab := "PARTLABEL=share_08 /share/10 ext4 noatime 0 2\n" +
+		"PARTLABEL=share_09 /share/11 ext4 noatime 0 2\n"
+	sizes := map[string][2]uint64{
+		"/":         {1000, 48},
+		"/var":      {1000, 380},
+		"/share/10": {1000, 500},
+		"/share/11": {3000, 300},
+	}
+	set := newMountFixture(t, writeMountTree(t, mounts, fstab, nil), sizes, nil)
+	set.current = set.collect()
+	mountCacheMu.Lock()
+	mountCache[""] = set
+	mountCacheMu.Unlock()
 }

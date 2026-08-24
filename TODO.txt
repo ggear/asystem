@@ -37,13 +37,13 @@ deploy.sh consolidation, only keep those that are necessary
 
 mv influxdb3/mlflow/mlserver from max to may, cloudflare/tempstat/letsencrupt to max
 adjust memeory allocs
-tune fan/tem, rename Warn TEM to High TEM
+tune fan/tem
 Add host status to ha, combine backup temp etc
 add debug (or other) to each grunular metric that helps to show what is driving ui - eg which SSD has poor life, hidden in serve (? maybe only info?) but visible in watch when local
 Validate metric descriptions are all good
+
 make cache-eriod=1h and daily 24h and 3s and 1s intervals well specified and daily useful for backups too - maybe have to add a timestart? so if daily goes to 12 hours, it starts at time and 12/6 + time
-
-
+add host USED BKP and FAIL BKP and Service BKP into backup plan, remove backup phases and add as shared probe that runs daily from a time (above).
 
 
 

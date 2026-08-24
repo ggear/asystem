@@ -1266,28 +1266,28 @@ func TestIntStats_Concurrency(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			window := newTrendWindow(24, 1)
+			window := NewIntStats(24, 5, 1)
 			done := make(chan bool)
 			for index := 0; index < 10; index++ {
 				go func(val int8) {
 					for innerIndex := 0; innerIndex < 100; innerIndex++ {
-						window.push(val)
+						window.Push(val)
 					}
 					done <- true
 				}(int8(index * 10))
 			}
 			go func() {
 				for index := 0; index < 100; index++ {
-					_ = window.mean()
-					_ = window.max()
-					_ = window.p95()
+					_ = window.TrendMean()
+					_ = window.TrendMax()
+					_ = window.TrendP95()
 				}
 				done <- true
 			}()
 			for index := 0; index < 11; index++ {
 				<-done
 			}
-			mean := window.mean()
+			mean := window.TrendMean()
 			if mean < 0 || mean > 100 {
 				t.Fatalf("Got mean = %d, expected between 0 and 100", mean)
 			}

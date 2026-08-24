@@ -40,6 +40,38 @@ func TestConfig_TrendWindow(t *testing.T) {
 	}
 }
 
+func TestConfig_CacheWindow(t *testing.T) {
+	tests := []struct {
+		name           string
+		cacheMins      int
+		expectedWindow time.Duration
+	}{
+		{
+			name:           "happy_configured_cache",
+			cacheMins:      5,
+			expectedWindow: 5 * time.Minute,
+		},
+		{
+			name:           "happy_cache_disabled_falls_back_to_the_flag_default",
+			cacheMins:      0,
+			expectedWindow: time.Hour,
+		},
+		{
+			name:           "happy_negative_cache_falls_back_to_the_flag_default",
+			cacheMins:      -1,
+			expectedWindow: time.Hour,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			window := CacheWindow(testCase.cacheMins)
+			if window != testCase.expectedWindow {
+				t.Fatalf("CacheWindow: got %v want %v", window, testCase.expectedWindow)
+			}
+		})
+	}
+}
+
 func TestConfig_Version(t *testing.T) {
 	tests := []struct {
 		name          string

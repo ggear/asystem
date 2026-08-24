@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"sync"
 )
 
 // FloatStats tracks pulseWindow values over a fixed window and trend values using
@@ -14,6 +15,7 @@ import (
 //   - Approx bytes for pulseWindow storage: N * 8 (plus ~24 bytes slice header on 64-bit).
 //   - Trend uses O(1) scalars; memory does not scale with trendHours (only affects decay).
 type FloatStats struct {
+	mutex         sync.RWMutex
 	pulseIndex    int
 	pulseFilled   int
 	pulseWindow   []float64
@@ -71,6 +73,8 @@ func NewFloatStats(trendHours int, pulseSecs float64, tickFreqSecs float64) *Flo
 }
 
 func (v *FloatStats) Tick() {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 	v.pulseIndex = (v.pulseIndex + 1) % len(v.pulseWindow)
 	if !math.IsNaN(v.pulseWindow[v.pulseIndex]) {
 		v.pulseFilled--
@@ -79,6 +83,8 @@ func (v *FloatStats) Tick() {
 }
 
 func (v *FloatStats) Push(value float64) {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 	if math.IsNaN(v.pulseWindow[v.pulseIndex]) && !math.IsNaN(value) {
 		v.pulseFilled++
 	}
@@ -109,6 +115,8 @@ func (v *FloatStats) PushAndTick(value float64) {
 }
 
 func (v *FloatStats) PulseLast() float64 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	if math.IsNaN(v.lastValue) {
 		return 0
 	}
@@ -116,22 +124,32 @@ func (v *FloatStats) PulseLast() float64 {
 }
 
 func (v *FloatStats) PulseMean() float64 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return meanOfValues(v.pulseWindow, v.pulseFilled)
 }
 
 func (v *FloatStats) PulseMedian() float64 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return medianOfValues(v.pulseWindow, v.pulseFilled)
 }
 
 func (v *FloatStats) PulseMax() float64 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return maxOfValues(v.pulseWindow, v.pulseFilled)
 }
 
 func (v *FloatStats) PulseMin() float64 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return minOfValues(v.pulseWindow, v.pulseFilled)
 }
 
 func (v *FloatStats) TrendMean() float64 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	if v.trendOff || v.trendWeight == 0 {
 		return 0
 	}
@@ -139,6 +157,8 @@ func (v *FloatStats) TrendMean() float64 {
 }
 
 func (v *FloatStats) TrendMax() float64 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	if v.trendOff || !v.trendHasValue {
 		return 0
 	}
@@ -146,6 +166,8 @@ func (v *FloatStats) TrendMax() float64 {
 }
 
 func (v *FloatStats) TrendMin() float64 {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	if v.trendOff || !v.trendHasValue {
 		return 0
 	}

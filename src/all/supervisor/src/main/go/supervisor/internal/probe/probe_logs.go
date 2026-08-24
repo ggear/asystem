@@ -268,19 +268,20 @@ const logIgnorePatterns = `
 `
 
 const (
-	logHostRoot    = "/"
-	logDevicePath  = "dev/kmsg"
-	logDeviceNode  = "/dev/kmsg"
-	logUptimePath  = "proc/uptime"
-	logErrorText   = "error"
-	logLevelMask   = 7
-	logLevelError  = 3
-	logBufferBytes = 8192
-	logReadsMax    = 4096
-	logStampsMax   = 4096
-	logShoutsMax   = 5
-	logMessageMax  = 120
-	logErrorBudget = 10.0
+	logHostRoot        = "/"
+	logDevicePath      = "dev/kmsg"
+	logDeviceNode      = "/dev/kmsg"
+	logUptimePath      = "proc/uptime"
+	logErrorText       = "error"
+	logLevelMask       = 7
+	logLevelError      = 3
+	logBufferBytes     = 8192
+	logReadsMax        = 4096
+	logStampsMax       = 4096
+	logShoutsMax       = 5
+	logMessageMax      = 120
+	logErrorBudget     = 10.0
+	logErrorPulseOfMax = 100.0 / logErrorBudget
 )
 
 var (

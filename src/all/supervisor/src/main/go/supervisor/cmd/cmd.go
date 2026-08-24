@@ -93,7 +93,7 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 	if err != nil {
 		return config.Periods{}, err
 	}
-	cacheHours, err := toDuration(cachePeriod, time.Hour, "cache")
+	cacheMins, err := toDuration(cachePeriod, time.Minute, "cache")
 	if err != nil {
 		return config.Periods{}, err
 	}
@@ -114,7 +114,7 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 		PollMillis:    pollMillis,
 		PulseMillis:   pulseMillis,
 		TrendHours:    trendHours,
-		CacheHours:    cacheHours,
+		CacheMins:     cacheMins,
 		SnapshotMins:  snapshotMins,
 		HeartbeatSecs: heartbeatSecs,
 	}, nil

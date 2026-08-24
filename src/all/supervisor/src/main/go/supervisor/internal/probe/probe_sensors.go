@@ -108,6 +108,14 @@ func (s *sensorSet) fanSpeedOfMax() (float64, error) {
 func discoverSensors(sysRoot string) *sensorSet {
 	discoverStart := time.Now()
 	discovered := &sensorSet{}
+	isSocSensor := func(zoneKey string) bool {
+		for _, prefix := range socSensorKeys {
+			if strings.Contains(zoneKey, prefix) {
+				return true
+			}
+		}
+		return false
+	}
 	var packageInputs, socInputs, compositeInputs []string
 	devices, _ := filepath.Glob(filepath.Join(sysRoot, "class", "hwmon", "hwmon*"))
 	sort.Strings(devices)
@@ -196,17 +204,27 @@ func readSensorValue(path string) (float64, error) {
 }
 
 const (
-	sensorSysRoot         = "/sys"
-	sensorNestedDir       = "device"
-	sensorTierPackage     = "package"
-	sensorTierSoc         = "soc"
-	sensorTierComposite   = "composite"
-	sensorTierZone        = "zone"
-	sensorTierNone        = "none"
-	sensorCompositeOffset = 10.0
-	sensorMinCelsius      = 10.0
-	sensorMaxCelsius      = 150.0
+	sensorSysRoot          = "/sys"
+	sensorNestedDir        = "device"
+	sensorTierPackage      = "package"
+	sensorTierSoc          = "soc"
+	sensorTierComposite    = "composite"
+	sensorTierZone         = "zone"
+	sensorTierNone         = "none"
+	sensorCompositeOffset  = 10.0
+	sensorMinCelsius       = 10.0
+	sensorMaxCelsius       = 150.0
+	sensorWarnFloorCelsius = 40.0
+	sensorWarnPerCelsius   = 5.0
+	sensorWarnPulseCelsius = 53.0
+	sensorWarnTrendCelsius = 51.0
+	sensorWarnPulseOfMax   = sensorWarnPerCelsius * (sensorWarnPulseCelsius - sensorWarnFloorCelsius)
+	sensorWarnTrendOfMax   = sensorWarnPerCelsius * (sensorWarnTrendCelsius - sensorWarnFloorCelsius)
+	sensorFanPulseOfMax    = 80
+	sensorFanTrendOfMax    = 50
 )
+
+var socSensorKeys = []string{"cpu_therm", "cpu-therm", "soc_therm", "soc-therm"}
 
 var (
 	sensorCache   = map[string]*sensorSet{}

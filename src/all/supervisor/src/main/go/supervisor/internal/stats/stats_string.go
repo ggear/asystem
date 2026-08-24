@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"sync"
 )
 
 // StringStats tracks pulse values over a fixed window and trend values using
 // constant-memory exponential decay (time constant = trendHours). Trend stats
 // report the dominant recent value (decayed mode).
 type StringStats struct {
+	mutex         sync.RWMutex
 	pulseIndex    int
 	pulseFilled   int
 	pulsePresent  []bool
@@ -62,6 +64,8 @@ func NewStringStats(trendHours int, pulseSecs float64, tickFreqSecs float64) *St
 }
 
 func (v *StringStats) Tick() {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 	v.pulseIndex = (v.pulseIndex + 1) % len(v.pulseWindow)
 	if v.pulsePresent[v.pulseIndex] {
 		v.pulsePresent[v.pulseIndex] = false
@@ -71,6 +75,8 @@ func (v *StringStats) Tick() {
 }
 
 func (v *StringStats) Push(value string) {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 	if !v.pulsePresent[v.pulseIndex] {
 		v.pulsePresent[v.pulseIndex] = true
 		v.pulseFilled++
@@ -106,6 +112,8 @@ func (v *StringStats) PushAndTick(value string) {
 }
 
 func (v *StringStats) PulseLast() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	if !v.lastHasValue {
 		return ""
 	}
@@ -113,22 +121,32 @@ func (v *StringStats) PulseLast() string {
 }
 
 func (v *StringStats) PulseDominant() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return pulseMode(v.pulseWindow, v.pulsePresent)
 }
 
 func (v *StringStats) PulseMedian() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return pulseMedian(v.pulseWindow, v.pulsePresent)
 }
 
 func (v *StringStats) PulseMax() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return pulseMax(v.pulseWindow, v.pulsePresent)
 }
 
 func (v *StringStats) PulseMin() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return pulseMin(v.pulseWindow, v.pulsePresent)
 }
 
 func (v *StringStats) PulseHasChanged() bool {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	seen := ""
 	seenSet := false
 	for i, present := range v.pulsePresent {
@@ -148,6 +166,8 @@ func (v *StringStats) PulseHasChanged() bool {
 }
 
 func (v *StringStats) TrendDominant() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	if v.trendOff || !v.trendHasValue {
 		return ""
 	}
@@ -155,14 +175,20 @@ func (v *StringStats) TrendDominant() string {
 }
 
 func (v *StringStats) TrendMax() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return v.TrendDominant()
 }
 
 func (v *StringStats) TrendMin() string {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return v.TrendDominant()
 }
 
 func (v *StringStats) TrendHasChanged() bool {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return !v.trendOff && v.trendWeight > 0 && v.trendOther > 0
 }
 

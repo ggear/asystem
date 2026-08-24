@@ -18,6 +18,7 @@ const (
 	DefaultPollPeriod  = "3s"
 	DefaultPulseFactor = "2"
 	DefaultTrendPeriod = "24h"
+	DefaultCachePeriod = "1h"
 )
 
 func TrendWindow(trendHours int) time.Duration {
@@ -27,13 +28,20 @@ func TrendWindow(trendHours int) time.Duration {
 	return defaultTrendWindow
 }
 
+func CacheWindow(cacheMins int) time.Duration {
+	if cacheMins > 0 {
+		return time.Duration(cacheMins) * time.Minute
+	}
+	return defaultCacheWindow
+}
+
 var DefaultConfigPath = "/var/lib/asystem/install/supervisor/latest/image/config.json"
 
 type Periods struct {
 	PollMillis    int
 	PulseMillis   int
 	TrendHours    int
-	CacheHours    int
+	CacheMins     int
 	SnapshotMins  int
 	HeartbeatSecs int
 }
@@ -290,8 +298,17 @@ func parsedTrendPeriod() time.Duration {
 	return parsed
 }
 
+func parsedCachePeriod() time.Duration {
+	parsed, err := time.ParseDuration(DefaultCachePeriod)
+	if err != nil {
+		panic(fmt.Sprintf("invalid default cache period [%s] with [%v]", DefaultCachePeriod, err))
+	}
+	return parsed
+}
+
 var (
 	defaultTrendWindow = parsedTrendPeriod()
+	defaultCacheWindow = parsedCachePeriod()
 	cachedHostName     string
 	cachedHostOnceMu   sync.Once
 )
