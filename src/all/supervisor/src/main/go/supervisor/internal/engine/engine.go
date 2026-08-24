@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
@@ -57,7 +59,7 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 // On connect:
 //  1. Forget the host status, the subscribed topics and any pending reconcile, none of which survive a new session.
 //  2. Subscribe to every topic the cache already holds, in one packet.
-//  3. Subscribe to service discovery and to host status.
+//  3. Subscribe to service discovery and to host status, tracking both so a refused subscribe is retried by the resync.
 //  4. Refresh the display, so a reconnect cannot leave the screen on the nils it slept with.
 //
 // On a data message:
@@ -78,7 +80,10 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //  1. Evict the records of a silent host to nil, then delete a service whose records have stayed nil.
 //  2. Run any reconcile whose grace has expired, removing only the services nothing has refreshed since its cutoff.
 //  3. Resync the subscribed topics against the cache, subscribing what is missing and dropping what no longer exists.
-//  4. Report the traffic and the census, being the two lines that make a steady state auditable without a debugger.
+//  4. Restore either wildcard subscription the connect failed to establish, without which nothing is ever discovered.
+//  5. Revive a client paho has abandoned, being a session neither connected nor reconnecting.
+//  6. Resubscribe everything after five silent ticks, being a session the broker acknowledged but never feeds.
+//  7. Report the traffic and the census, being the two lines that make a steady state auditable without a debugger.
 //
 // Notes:
 //   - The reconcile cutoff is the connect for the first transition and the transition itself later, because the retained
@@ -87,8 +92,11 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //     the connect. Without one, a service that simply had nothing to publish inside the grace would be reaped alive.
 //   - Discovery proves a host alive exactly as data does, so a service that appears while its host is wrongly offline
 //     registers immediately instead of waiting for the next heartbeat to carry its name again.
+//   - A reconcile that would reap every service of a host holds them once instead, resubscribes the host and reschedules,
+//     because nothing refreshing at all is evidence the redelivery was lost rather than that every service departed.
 //   - Reaping is keyed by service name, never by slot, so a service that moves slot between scheduling and running is safe.
-//   - A subscribe that fails rolls its topics back out of the map, which the resync then retries.
+//   - A subscribe is refused either by its token failing or by a SUBACK return code above the maximum QoS, which paho
+//     reports through Result rather than through Error, so both are read and both roll their topics back out of the map.
 //   - The display is refreshed on connect and after a reconcile that reaped, never per host and never per heartbeat.
 //   - An unknown host counts as online, so a watch started before its first status message still renders.
 func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
@@ -102,6 +110,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	var dropCount atomic.Int64
 	var subscribedMutex sync.Mutex
 	subscribed := make(map[string]metric.RecordGUID)
+	var wildcardMutex sync.Mutex
+	wildcards := make(map[string]struct{})
 	var reconcileMutex sync.Mutex
 	reconciles := make(map[string]hostReconcile)
 	connected := time.Now()
@@ -110,6 +120,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		reconcileMutex.Lock()
 		pending := reconciles[hostName]
 		pending.host = hostName
+		pending.retried = false
 		pending.started = time.Now()
 		if fromConnect {
 			pending.started = connected
@@ -126,6 +137,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 	}
 	var resubscribeHost func(client mqtt.Client, hostName string) int
+	var resubscribeAll func(client mqtt.Client) (int, int)
 	proveOnline := func(client mqtt.Client, hostName string, value metric.ValueData) bool {
 		if isHostOnline(hostName) {
 			return true
@@ -195,15 +207,16 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		subscribeStart := time.Now()
 		token := client.SubscribeMultiple(filters, onData)
 		go func() {
-			if token.WaitTimeout(brokerTimeout) && token.Error() == nil {
+			refused, reason := subscribeRefused(token, filters)
+			if len(refused) == 0 {
 				return
 			}
 			subscribedMutex.Lock()
-			for topic := range filters {
+			for _, topic := range refused {
 				delete(subscribed, topic)
 			}
 			subscribedMutex.Unlock()
-			scribe.Engine("state", "subscribe").Error("subscribe", subscribeStart, "dropped  [%d] topics, failed with [%v], retrying on the next resync", len(filters), token.Error())
+			scribe.Engine("state", "subscribe").Error("subscribe", subscribeStart, "dropped  [%d] topics of [%d], %s, retrying on the next resync", len(refused), len(filters), reason)
 		}()
 		return len(filters)
 	}
@@ -252,6 +265,131 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		return subscribeTopics(client, bindings)
 	}
+	onDiscovery := func(client mqtt.Client, msg mqtt.Message) {
+		var value metric.ValueData
+		if err := json.Unmarshal(msg.Payload(), &value); err != nil || value.Pulse == nil {
+			return
+		}
+		serviceName := value.Pulse.ValueString
+		if serviceName == "" {
+			return
+		}
+		tokens := strings.Split(msg.Topic(), "/")
+		if len(tokens) < 6 || tokens[1] == "" {
+			return
+		}
+		hostName := tokens[1]
+		if !proveOnline(client, hostName, value) {
+			dropCount.Add(1)
+			return
+		}
+		rxCount.Add(1)
+		registerStart := time.Now()
+		if bindings := cache.RegisterService(hostName, serviceName, false); len(bindings) > 0 {
+			subscribeTopics(client, bindings)
+			scribe.Engine("state", "subscribe").Info("register", registerStart, "register [%s], service [%s], subscribed [%d] topics", hostName, serviceName, len(bindings))
+		}
+		value.Timestamp = time.Now().Unix()
+		record := metric.NewRecord(value)
+		cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, hostName, serviceName), &record)
+	}
+	onStatus := func(client mqtt.Client, msg mqtt.Message) {
+		tokens := strings.Split(msg.Topic(), "/")
+		if len(tokens) < 3 || tokens[1] == "" {
+			return
+		}
+		hostName := tokens[1]
+		statusStart := time.Now()
+		payload := strings.TrimSpace(string(msg.Payload()))
+		rxCount.Add(1)
+		hostStatusMutex.RLock()
+		wasOnline, known := hostStatus[hostName]
+		hostStatusMutex.RUnlock()
+		switch payload {
+		case hostStatusOnline:
+			storeHostStatus(hostName, true)
+			if known && wasOnline {
+				scribe.Engine("state", "broker").Debug("status", statusStart, "observed [%s], status [online], heartbeat [no-op]", hostName)
+				return
+			}
+			reconcileMutex.Lock()
+			_, restarted := reconciles[hostName]
+			reconcileMutex.Unlock()
+			trigger := "connect"
+			topics := 0
+			if restarted {
+				trigger = "restart"
+			}
+			scheduleReconcile(hostName, !restarted)
+			if restarted {
+				topics = resubscribeHost(client, hostName)
+			}
+			scribe.Engine("state", "broker").Info("status", statusStart, "observed [%s], status [online], trigger [%s], resubscribed [%d] topics, reconcile in [%d] ms", hostName, trigger, topics, reconcileDelay.Milliseconds())
+		case hostStatusOffline, "":
+			storeHostStatus(hostName, false)
+			if known && !wasOnline {
+				scribe.Engine("state", "broker").Debug("status", statusStart, "observed [%s], status [offline], heartbeat [no-op]", hostName)
+				return
+			}
+			evicted := cache.Services(hostName)
+			for _, svc := range evicted {
+				cache.Evict(hostName, svc)
+			}
+			reconcileMutex.Lock()
+			pending := reconciles[hostName]
+			pending.deadline = time.Time{}
+			reconciles[hostName] = pending
+			reconcileMutex.Unlock()
+			for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
+				record := metric.NewRecord(metric.NewNilValue())
+				cache.Store(metric.NewRecordGUID(id, hostName), &record)
+			}
+			scribe.Engine("state", "broker").Warn("status", statusStart, "observed [%s], status [offline], evicted [%d] services", hostName, len(evicted))
+		default:
+			scribe.Engine("state", "broker").Error("status", statusStart, "observed [%s], payload [%s] unknown", hostName, payload)
+		}
+	}
+	wildcardHandlers := map[string]mqtt.MessageHandler{
+		topicDiscovery: onDiscovery,
+		topicStatus:    onStatus,
+	}
+	subscribeWildcards := func(client mqtt.Client) int {
+		var pending []string
+		wildcardMutex.Lock()
+		for topic := range wildcardHandlers {
+			if _, exists := wildcards[topic]; exists {
+				continue
+			}
+			wildcards[topic] = struct{}{}
+			pending = append(pending, topic)
+		}
+		wildcardMutex.Unlock()
+		sort.Strings(pending)
+		for _, topic := range pending {
+			subscribeStart := time.Now()
+			token := client.Subscribe(topic, 1, wildcardHandlers[topic])
+			go func(topic string, token mqtt.Token) {
+				refused, reason := subscribeRefused(token, map[string]byte{topic: 1})
+				if len(refused) == 0 {
+					return
+				}
+				wildcardMutex.Lock()
+				delete(wildcards, topic)
+				wildcardMutex.Unlock()
+				scribe.Engine("state", "subscribe").Error("subscribe", subscribeStart, "dropped  [1] wildcard [%s], %s, retrying on the next resync", topic, reason)
+			}(topic, token)
+		}
+		return len(pending)
+	}
+	resubscribeAll = func(client mqtt.Client) (int, int) {
+		subscribedMutex.Lock()
+		clear(subscribed)
+		subscribedMutex.Unlock()
+		wildcardMutex.Lock()
+		clear(wildcards)
+		wildcardMutex.Unlock()
+		return subscribeTopics(client, cache.Topics()), subscribeWildcards(client)
+	}
 	onConnect := func(client mqtt.Client) {
 		connectStart := time.Now()
 		hostStatusMutex.Lock()
@@ -261,97 +399,17 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		subscribedMutex.Lock()
 		clear(subscribed)
 		subscribedMutex.Unlock()
+		wildcardMutex.Lock()
+		clear(wildcards)
+		wildcardMutex.Unlock()
 		reconcileMutex.Lock()
 		clear(reconciles)
 		connected = time.Now()
 		reconcileMutex.Unlock()
 		topics := subscribeTopics(client, cache.Topics())
-		client.Subscribe("supervisor/+/data/service/+/name", 1, func(client mqtt.Client, msg mqtt.Message) {
-			var value metric.ValueData
-			if err := json.Unmarshal(msg.Payload(), &value); err != nil || value.Pulse == nil {
-				return
-			}
-			serviceName := value.Pulse.ValueString
-			if serviceName == "" {
-				return
-			}
-			tokens := strings.Split(msg.Topic(), "/")
-			if len(tokens) < 6 || tokens[1] == "" {
-				return
-			}
-			hostName := tokens[1]
-			if !proveOnline(client, hostName, value) {
-				dropCount.Add(1)
-				return
-			}
-			rxCount.Add(1)
-			registerStart := time.Now()
-			if bindings := cache.RegisterService(hostName, serviceName, false); len(bindings) > 0 {
-				subscribeTopics(client, bindings)
-				scribe.Engine("state", "subscribe").Info("register", registerStart, "register [%s], service [%s], subscribed [%d] topics", hostName, serviceName, len(bindings))
-			}
-			value.Timestamp = time.Now().Unix()
-			record := metric.NewRecord(value)
-			cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, hostName, serviceName), &record)
-		})
-		client.Subscribe("supervisor/+/status", 1, func(_ mqtt.Client, msg mqtt.Message) {
-			tokens := strings.Split(msg.Topic(), "/")
-			if len(tokens) < 3 || tokens[1] == "" {
-				return
-			}
-			hostName := tokens[1]
-			statusStart := time.Now()
-			payload := strings.TrimSpace(string(msg.Payload()))
-			rxCount.Add(1)
-			hostStatusMutex.RLock()
-			wasOnline, known := hostStatus[hostName]
-			hostStatusMutex.RUnlock()
-			switch payload {
-			case hostStatusOnline:
-				storeHostStatus(hostName, true)
-				if known && wasOnline {
-					scribe.Engine("state", "broker").Debug("status", statusStart, "observed [%s], status [online], heartbeat [no-op]", hostName)
-					return
-				}
-				reconcileMutex.Lock()
-				_, restarted := reconciles[hostName]
-				reconcileMutex.Unlock()
-				trigger := "connect"
-				topics := 0
-				if restarted {
-					trigger = "restart"
-				}
-				scheduleReconcile(hostName, !restarted)
-				if restarted {
-					topics = resubscribeHost(client, hostName)
-				}
-				scribe.Engine("state", "broker").Info("status", statusStart, "observed [%s], status [online], trigger [%s], resubscribed [%d] topics, reconcile in [%d] ms", hostName, trigger, topics, reconcileDelay.Milliseconds())
-			case hostStatusOffline, "":
-				storeHostStatus(hostName, false)
-				if known && !wasOnline {
-					scribe.Engine("state", "broker").Debug("status", statusStart, "observed [%s], status [offline], heartbeat [no-op]", hostName)
-					return
-				}
-				evicted := cache.Services(hostName)
-				for _, svc := range evicted {
-					cache.Evict(hostName, svc)
-				}
-				reconcileMutex.Lock()
-				pending := reconciles[hostName]
-				pending.deadline = time.Time{}
-				reconciles[hostName] = pending
-				reconcileMutex.Unlock()
-				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
-					record := metric.NewRecord(metric.NewNilValue())
-					cache.Store(metric.NewRecordGUID(id, hostName), &record)
-				}
-				scribe.Engine("state", "broker").Warn("status", statusStart, "observed [%s], status [offline], evicted [%d] services", hostName, len(evicted))
-			default:
-				scribe.Engine("state", "broker").Error("status", statusStart, "observed [%s], payload [%s] unknown", hostName, payload)
-			}
-		})
+		listens := subscribeWildcards(client)
 		cache.Refresh()
-		scribe.Engine("state", "subscribe").Info("connect", connectStart, "attached [%d] topics across [%d] hosts, holding [%d] records", topics, len(cache.Hosts()), cache.Size())
+		scribe.Engine("state", "subscribe").Info("connect", connectStart, "attached [%d] topics and [%d] wildcards across [%d] hosts, holding [%d] records", topics, listens, len(cache.Hosts()), cache.Size())
 	}
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
@@ -370,6 +428,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		},
 	})
 	purgeInterval := time.Duration(max(periods.PulseMillis+1000, 2000)) * time.Millisecond
+	silent := 0
 	purgeTicker := time.NewTicker(purgeInterval)
 	defer purgeTicker.Stop()
 	for {
@@ -394,6 +453,16 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			for _, pending := range due {
 				reconcileStart := time.Now()
 				services := cache.ServicesBefore(pending.host, pending.started.Unix())
+				if len(services) > 0 && len(services) == len(cache.Services(pending.host)) && !pending.retried {
+					reconcileMutex.Lock()
+					pending.retried = true
+					pending.deadline = time.Now().Add(reconcileDelay)
+					reconciles[pending.host] = pending
+					reconcileMutex.Unlock()
+					topics := resubscribeHost(client, pending.host)
+					scribe.Engine("state", "subscribe").Warn("reconcile", reconcileStart, "held     [%d] services, host [%s], after [%d] ms, nothing refreshed so the redelivery was lost, resubscribed [%d] topics", len(services), pending.host, time.Since(pending.started).Milliseconds(), topics)
+					continue
+				}
 				for _, service := range services {
 					cache.Evict(pending.host, service)
 					cache.Delete(pending.host, service)
@@ -409,11 +478,32 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
 				scribe.Engine("state", "subscribe").Info("resync", resyncStart, "resynced [%d] topics subscribed, [%d] unsubscribed, to match the cache", added, dropped)
 			}
+			if restored := subscribeWildcards(client); restored > 0 {
+				scribe.Engine("state", "subscribe").Warn("resync", resyncStart, "restored [%d] wildcards lost since the connect, without which nothing is ever discovered", restored)
+			}
+			if !client.IsConnected() {
+				scribe.Engine("state", "broker").Warn("revive", purgeStart, "alive    [false] client neither connected nor reconnecting, forcing a revive")
+				brokerRevive(ctx, client)
+			}
 			rx := rxCount.Swap(0)
 			drops := dropCount.Swap(0)
 			rate := int64(0)
 			if secs := int64(purgeInterval.Seconds()); secs > 0 {
 				rate = rx / secs
+			}
+			subscribedMutex.Lock()
+			attached := len(subscribed)
+			subscribedMutex.Unlock()
+			if rx == 0 && attached > 0 && client.IsConnectionOpen() {
+				silent++
+			} else {
+				silent = 0
+			}
+			if silent >= silenceTicks {
+				silent = 0
+				silenceStart := time.Now()
+				restored, listens := resubscribeAll(client)
+				scribe.Engine("state", "subscribe").Warn("silence", silenceStart, "received [%3d] msgs across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
 			}
 			scribe.Engine("profiling", "subscribe").Debug("purge", purgeStart, "received [%3d] msgs at [%d] msg/s, dropped [%d] msgs, evicted [%d] records, deleted [%d] records", rx, rate, drops, evicted, deleted)
 			censusStart := time.Now()
@@ -524,7 +614,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	var hasConnected atomic.Bool
 	var forceRepublish atomic.Bool
 	onConnect := func(client mqtt.Client) {
-		client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		names := client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
 			var value metric.ValueData
 			if err := json.Unmarshal(msg.Payload(), &value); err != nil || value.Pulse == nil {
 				return
@@ -536,7 +626,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				}
 			}
 		})
-		client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		commands := client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
 			commandStart := time.Now()
 			tokens := strings.Split(msg.Topic(), "/")
 			if len(tokens) < 5 || tokens[1] == "" || tokens[4] == "" {
@@ -547,6 +637,12 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 
 			scribe.Engine("command", "broker").Debug("command", commandStart, "observed [%s], service [%s], command [%s]", tokens[1], tokens[4], string(msg.Payload()))
 		})
+		subscribeStart := time.Now()
+		for topic, token := range map[string]mqtt.Token{serviceNameTopic: names, commandTopic: commands} {
+			if refused, reason := subscribeRefused(token, map[string]byte{topic: 1}); len(refused) > 0 {
+				scribe.Engine("state", "publish").Error("subscribe", subscribeStart, "dropped  [1] topic [%s], %s, rediscovery and commands are lost until the next connect", topic, reason)
+			}
+		}
 		if hasConnected.Swap(true) {
 			reconnectStart := time.Now()
 			statusReadback := make(chan string, 1)
@@ -688,15 +784,47 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	}
 }
 
+func subscribeRefused(token mqtt.Token, filters map[string]byte) ([]string, string) {
+	if !token.WaitTimeout(brokerTimeout) || token.Error() != nil {
+		refused := make([]string, 0, len(filters))
+		for topic := range filters {
+			refused = append(refused, topic)
+		}
+		sort.Strings(refused)
+		return refused, fmt.Sprintf("failed with [%v]", token.Error())
+	}
+	granted, ok := token.(*mqtt.SubscribeToken)
+	if !ok {
+		return nil, ""
+	}
+	var refused []string
+	for topic, code := range granted.Result() {
+		if code <= subscribeQosMax {
+			continue
+		}
+		refused = append(refused, topic)
+	}
+	if len(refused) == 0 {
+		return nil, ""
+	}
+	sort.Strings(refused)
+	return refused, fmt.Sprintf("refused by the broker with [%s]", refused[0])
+}
+
 type hostReconcile struct {
 	host     string
 	started  time.Time
 	deadline time.Time
+	retried  bool
 }
 
 const (
 	hostStatusOnline  = "online"
 	hostStatusOffline = "offline"
+	topicDiscovery    = "supervisor/+/data/service/+/name"
+	subscribeQosMax   = 2
+	silenceTicks      = 5
+	topicStatus       = "supervisor/+/status"
 )
 
 var (

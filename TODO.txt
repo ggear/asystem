@@ -40,8 +40,8 @@ adjust memeory allocs
 tune fan/tem, rename Warn TEM to High TEM
 Add host status to ha, combine backup temp etc
 add debug (or other) to each grunular metric that helps to show what is driving ui - eg which SSD has poor life, hidden in serve (? maybe only info?) but visible in watch when local
-Vlaidate metric descriptions are all good
-
+Validate metric descriptions are all good
+make cache-eriod=1h and daily 24h and 3s and 1s intervals well specified and daily useful for backups too - maybe have to add a timestart? so if daily goes to 12 hours, it starts at time and 12/6 + time
 
 
 

@@ -12,6 +12,7 @@ import (
 
 	"network/internal/config"
 	"network/internal/plugin"
+	"network/internal/remote"
 	"network/internal/schema"
 	"network/internal/scribe"
 
@@ -95,17 +96,23 @@ func probeWeewx(ctx context.Context) (float64, bool, bool, error) {
 		return 0, false, false, fmt.Errorf("connect failed [%s] [%w]", broker, token.Error())
 	}
 	defer client.Disconnect(250)
-	client.Subscribe(weewxSignalTopic, 0, func(_ mqtt.Client, msg mqtt.Message) {
+	signalToken := client.Subscribe(weewxSignalTopic, 0, func(_ mqtt.Client, msg mqtt.Message) {
 		mu.Lock()
 		signal = append([]byte(nil), msg.Payload()...)
 		mu.Unlock()
 	})
+	if err := remote.SubscribeGranted(signalToken, weewxConnectWait); err != nil {
+		return 0, false, false, fmt.Errorf("subscribe failed [%s] [%w]", weewxSignalTopic, err)
+	}
 	statusTopic := "supervisor/" + cfg.WeewxHost() + "/data/service/weewx"
-	client.Subscribe(statusTopic, 0, func(_ mqtt.Client, msg mqtt.Message) {
+	statusToken := client.Subscribe(statusTopic, 0, func(_ mqtt.Client, msg mqtt.Message) {
 		mu.Lock()
 		status = append([]byte(nil), msg.Payload()...)
 		mu.Unlock()
 	})
+	if err := remote.SubscribeGranted(statusToken, weewxConnectWait); err != nil {
+		return 0, false, false, fmt.Errorf("subscribe failed [%s] [%w]", statusTopic, err)
+	}
 	select {
 	case <-ctx.Done():
 	case <-time.After(weewxCollectWait):

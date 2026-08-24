@@ -12,14 +12,17 @@ import (
 )
 
 const (
-	brokerStatusTopic     = "network/status"
-	brokerDataTopicPrefix = "network/data/"
-	brokerCommandFilter   = "network/command/#"
-	brokerCommandPrefix   = "network/command"
-	brokerStatusOnline    = "online"
-	brokerStatusOffline   = "offline"
-	brokerPublishTimeout  = 2 * time.Second
-	brokerConnectTimeout  = 6 * time.Second
+	brokerStatusTopic       = "network/status"
+	brokerDataTopicPrefix   = "network/data/"
+	brokerCommandFilter     = "network/command/#"
+	brokerCommandPrefix     = "network/command"
+	brokerStatusOnline      = "online"
+	brokerStatusOffline     = "offline"
+	brokerPublishTimeout    = 2 * time.Second
+	brokerSubscribeQosMax   = 2
+	brokerSubscribeAttempts = 5
+	brokerSubscribeBackoff  = 2 * time.Second
+	brokerConnectTimeout    = 6 * time.Second
 )
 
 type Broker struct {
@@ -54,15 +57,24 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 				scribe.LogWarn(scribe.Global, "publishing online status to broker [%s] failed [%v]", address, err)
 			}
 			broker.republish(client)
-			commandToken := client.Subscribe(brokerCommandFilter, 1, func(_ mqtt.Client, msg mqtt.Message) {
+			commandHandler := func(_ mqtt.Client, msg mqtt.Message) {
 				topic := msg.Topic()
 				if !strings.HasPrefix(topic, brokerCommandPrefix+"/") {
 					return
 				}
 				onCommand(strings.TrimPrefix(topic, brokerCommandPrefix+"/"), msg.Payload())
-			})
-			if err := waitForBrokerToken(commandToken); err != nil {
-				scribe.LogWarn(scribe.Global, "subscribing to broker commands [%s] failed [%v]", address, err)
+			}
+			for attempt := 1; ; attempt++ {
+				err := SubscribeGranted(client.Subscribe(brokerCommandFilter, 1, commandHandler), brokerPublishTimeout)
+				if err == nil {
+					break
+				}
+				if attempt >= brokerSubscribeAttempts {
+					scribe.LogWarn(scribe.Global, "subscribing to broker commands [%s] failed [%v] after [%d] attempts, commands are lost until the next reconnect", address, err, attempt)
+					break
+				}
+				scribe.LogWarn(scribe.Global, "subscribing to broker commands [%s] failed [%v] on attempt [%d], retrying after [%d] ms", address, err, attempt, brokerSubscribeBackoff.Milliseconds())
+				time.Sleep(brokerSubscribeBackoff)
 			}
 			scribe.LogInfo(scribe.Global, "connected to broker [%s]", address)
 		}).
@@ -103,6 +115,25 @@ func (b *Broker) Close() error {
 	err := waitForBrokerToken(tk)
 	b.client.Disconnect(2500)
 	return err
+}
+
+func SubscribeGranted(token mqtt.Token, timeout time.Duration) error {
+	if !token.WaitTimeout(timeout) {
+		return errors.New("broker subscribe timed out")
+	}
+	if err := token.Error(); err != nil {
+		return err
+	}
+	granted, ok := token.(*mqtt.SubscribeToken)
+	if !ok {
+		return nil
+	}
+	for topic, code := range granted.Result() {
+		if code > brokerSubscribeQosMax {
+			return fmt.Errorf("broker refused topic [%s] with code [%d]", topic, code)
+		}
+	}
+	return nil
 }
 
 func (b *Broker) republish(client mqtt.Client) {

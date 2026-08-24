@@ -11,6 +11,7 @@ import (
 
 	"network/internal/config"
 	"network/internal/plugin"
+	"network/internal/remote"
 	"network/internal/schema"
 	"network/internal/scribe"
 
@@ -119,7 +120,9 @@ func probeZigbee(ctx context.Context) (bool, bool, []zigbeeReading, error) {
 		return false, false, nil, fmt.Errorf("connect failed [%s] [%w]", broker, token.Error())
 	}
 	defer client.Disconnect(250)
-	client.Subscribe(zigbeeBaseTopic+"/#", 0, handler)
+	if err := remote.SubscribeGranted(client.Subscribe(zigbeeBaseTopic+"/#", 0, handler), connectWait); err != nil {
+		return false, false, nil, fmt.Errorf("subscribe failed [%s] [%w]", zigbeeBaseTopic+"/#", err)
+	}
 	select {
 	case <-ctx.Done():
 	case <-time.After(collectDelay):

@@ -456,6 +456,22 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			},
 		},
 		{
+			name:  "happy_reconcile_holds_the_whole_service_set_once",
+			topic: "supervisor/alpha/status",
+			setupFunc: func(_ *testing.T, cache *metric.RecordCache, b metric.TopicBinding) []byte {
+				stale := nonNilValue
+				stale.Timestamp = time.Now().Add(-time.Hour).Unix()
+				cache.Store(b.GUID, &metric.Record{Value: stale})
+				return []byte(hostStatusOnline)
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				time.Sleep(3 * time.Second)
+				if _, ok := cache.Load(b.GUID); !ok {
+					t.Fatalf("Got record reaped on the first reconcile, expected the whole service set held for a resubscribe")
+				}
+			},
+		},
+		{
 			name:  "happy_reconcile_reaps_service_absent_since_transition",
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, cache *metric.RecordCache, b metric.TopicBinding) []byte {
@@ -466,7 +482,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 				return []byte(hostStatusOnline)
 			},
 			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
-				deadline := time.Now().Add(6 * time.Second)
+				deadline := time.Now().Add(14 * time.Second)
 				for time.Now().Before(deadline) {
 					if _, ok := cache.Load(b.GUID); !ok {
 						if got := reconciles.count(); got != 1 {
@@ -476,7 +492,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 					}
 					time.Sleep(50 * time.Millisecond)
 				}
-				t.Fatalf("Got record still present after reconcile grace, expected service absent since the transition reaped")
+				t.Fatalf("Got record still present after reconcile grace, expected service absent since the transition reaped on the retry")
 			},
 		},
 		{
@@ -573,7 +589,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			if binding.Topic == "" {
 				t.Fatalf("Got no binding for svc-a, expected topic to be set after store")
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			done := make(chan struct{})
 			go func() {
