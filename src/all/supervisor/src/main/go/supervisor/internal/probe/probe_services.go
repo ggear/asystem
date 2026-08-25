@@ -119,6 +119,7 @@ func (p *servicesProbe) create(configPath string, cache *metric.RecordCache, mas
 	c := config.Load(configPath)
 	p.hostName = c.Host()
 	p.configuredServiceNames = c.Services(p.hostName)
+	reportMetricInert(p)
 	return nil
 }
 
@@ -624,11 +625,11 @@ func (s *service) usedMemory() (int8, error) {
 }
 
 func (s *service) usedDiskOps() (int8, error) {
-	return 0, nil
+	return inertInt(metric.MetricServiceUsedDiskOps)
 }
 
 func (s *service) usedNetwork() (int8, error) {
-	return 0, nil
+	return inertInt(metric.MetricServiceUsedNetwork)
 }
 
 func (s *service) upTime() (float64, error) {
@@ -729,8 +730,7 @@ func (p *servicesProbe) healthStatus(containerInfo container.InspectResponse) (b
 }
 
 func (p *servicesProbe) backupStatus() (bool, error) {
-	// TODO: Provide implementation
-	return true, nil
+	return inertBool(metric.MetricServiceBackupStatus)
 }
 
 func (p *servicesProbe) configuredStatus() (bool, error) {

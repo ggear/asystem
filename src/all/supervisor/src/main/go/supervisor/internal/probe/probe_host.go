@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
@@ -83,7 +82,6 @@ func (p *hostProbe) metrics() []metric.ID {
 }
 
 func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
-	createStart := time.Now()
 	p.cache = cache
 	p.mask = mask
 	p.periods = periods
@@ -108,8 +106,7 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.usedNetworkInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.runningTimeFloat = stats.NewFloatStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.temperatureFloat = stats.NewFloatStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	scribe.Probe("state", "host").Debug("create", createStart, "inert    [%d] metrics report a fixed zero and are always green [%s]",
-		len(hostInertMetrics), strings.Join(hostInertMetrics, " "))
+	reportMetricInert(p)
 	return nil
 }
 
@@ -406,7 +403,7 @@ func (p *hostProbe) failedShares() (int8, error) {
 }
 
 func (p *hostProbe) failedBackups() (int8, error) {
-	return 0, nil
+	return inertInt(metric.MetricHostFailedBackups)
 }
 
 func (p *hostProbe) warnTemperature() (int8, error) {
@@ -454,23 +451,23 @@ func (p *hostProbe) usedShareSpace() (int8, error) {
 }
 
 func (p *hostProbe) usedBackupSpace() (int8, error) {
-	return 0, nil
+	return inertInt(metric.MetricHostUsedBackupSpace)
 }
 
 func (p *hostProbe) usedSwapSpace() (int8, error) {
-	return 0, nil
+	return inertInt(metric.MetricHostUsedSwapSpace)
 }
 
 func (p *hostProbe) usedDiskOps() (int8, error) {
-	return 0, nil
+	return inertInt(metric.MetricHostUsedDiskOps)
 }
 
 func (p *hostProbe) usedNetwork() (int8, error) {
-	return 0, nil
+	return inertInt(metric.MetricHostUsedNetwork)
 }
 
 func (p *hostProbe) runningTime() (float64, error) {
-	return 0, nil
+	return inertFloat(metric.MetricHostRunningTime)
 }
 
 func (p *hostProbe) temperature() (float64, error) {
@@ -483,15 +480,6 @@ func (p *hostProbe) installs() installReader {
 
 func (p *hostProbe) mounts() *mountSet {
 	return loadMounts(config.Load(p.configPath).Mount(), config.CacheWindow(p.periods.CacheMins))
-}
-
-var hostInertMetrics = []string{
-	metric.GetIDName(metric.MetricHostFailedBackups),
-	metric.GetIDName(metric.MetricHostUsedBackupSpace),
-	metric.GetIDName(metric.MetricHostUsedSwapSpace),
-	metric.GetIDName(metric.MetricHostUsedDiskOps),
-	metric.GetIDName(metric.MetricHostUsedNetwork),
-	metric.GetIDName(metric.MetricHostRunningTime),
 }
 
 type cpuUsageSampler struct {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -257,8 +258,8 @@ func runMetricCacheTasks(p probe, isPulse bool, tasks []cacheMetricTask) {
 	if !isPulse || census.total == 0 {
 		return
 	}
-	scribe.Probe("profiling", p.name()).Debug("census", tasksStart, "reported [%3d] metrics%s, green [%d] amber [%d] red [%d] unknown [%d]%s",
-		census.total, census.subject(), census.green, census.amber, census.red, census.unknown, census.faults())
+	scribe.Probe("profiling", p.name()).Debug("census", tasksStart, "reported [%3d] metrics%s, green [%d] amber [%d] red [%d] unknown [%d] inert [%d]%s",
+		census.total, census.subject(), census.green, census.amber, census.red, census.unknown, census.inert, census.faults())
 }
 
 func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) string {
@@ -382,6 +383,43 @@ func reportMetricStatus(p probe, task cacheMetricTask, taskStart time.Time, stat
 		metric.GetIDName(task.metricID), metricSubject(task), status, metricStatusPrevious(seen, previous), metricValue(pulse), pulseOK, metricValue(trend), metricFlag(trendOK), metricError(err))
 }
 
+func inertInt(id metric.ID) (int8, error) {
+	reportMetricInertValue(id)
+	return 0, nil
+}
+
+func inertFloat(id metric.ID) (float64, error) {
+	reportMetricInertValue(id)
+	return 0, nil
+}
+
+func inertBool(id metric.ID) (bool, error) {
+	reportMetricInertValue(id)
+	return true, nil
+}
+
+func reportMetricInertValue(id metric.ID) {
+	inertStart := time.Now()
+	derive(probesByMetricMask[id].name(), "inert", inertStart, "computed [%s] fixed, metric [%s] is unimplemented so it never varies and is always ok",
+		metricInert[id], metric.GetIDName(id))
+}
+
+func reportMetricInert(p probe) {
+	inertStart := time.Now()
+	declared := make([]string, 0, len(metricInert))
+	for _, id := range p.metrics() {
+		if value, inert := metricInert[id]; inert {
+			declared = append(declared, metric.GetIDName(id)+"="+value)
+		}
+	}
+	if len(declared) == 0 {
+		return
+	}
+	sort.Strings(declared)
+	scribe.Probe("state", p.name()).Info("create", inertStart, "inert    [%d] metrics are unimplemented, reporting a fixed value and always ok [%s]",
+		len(declared), strings.Join(declared, " "))
+}
+
 func metricStatusOf(pulseOK bool, trendOK *bool) string {
 	if !pulseOK {
 		return metricStatusRed
@@ -441,6 +479,7 @@ type metricFault struct {
 
 type metricCensus struct {
 	total   int
+	inert   int
 	green   int
 	amber   int
 	red     int
@@ -452,6 +491,9 @@ type metricCensus struct {
 func (c *metricCensus) count(status string, task cacheMetricTask) {
 	c.total++
 	c.service = task.serviceName
+	if _, inert := metricInert[task.metricID]; inert {
+		c.inert++
+	}
 	switch status {
 	case metricStatusGreen:
 		c.green++
@@ -490,6 +532,18 @@ const (
 	metricStatusRed     = "red"
 	metricStatusUnknown = "unknown"
 )
+
+var metricInert = map[metric.ID]string{
+	metric.MetricHostFailedBackups:   "0",
+	metric.MetricHostUsedBackupSpace: "0",
+	metric.MetricHostUsedSwapSpace:   "0",
+	metric.MetricHostUsedDiskOps:     "0",
+	metric.MetricHostUsedNetwork:     "0",
+	metric.MetricHostRunningTime:     "0",
+	metric.MetricServiceBackupStatus: "true",
+	metric.MetricServiceUsedDiskOps:  "0",
+	metric.MetricServiceUsedNetwork:  "0",
+}
 
 var (
 	metricFaults        = map[metricFaultKey]*metricFault{}
