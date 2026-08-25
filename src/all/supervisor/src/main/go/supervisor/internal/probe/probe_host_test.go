@@ -627,18 +627,12 @@ func TestProbeHost_SpinFanRule(t *testing.T) {
 		{name: "happy_hot_host_fan_ramped_pulse", fans: map[string][2]float64{"Exhaust": {4080, 4800}}, fan: 85, temperature: 90, window: "pulse", expectedOK: true},
 		{name: "happy_warm_trend_fan_idle", fans: map[string][2]float64{"Exhaust": {1799, 4800}}, fan: 37, temperature: 60, window: "trend", expectedOK: false},
 		{name: "happy_warm_trend_fan_ramped", fans: map[string][2]float64{"Exhaust": {2880, 4800}}, fan: 60, temperature: 60, window: "trend", expectedOK: true},
-		{name: "happy_fanless_host_exempt", fans: nil, fan: 0, temperature: 90, window: "pulse", expectedOK: true},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(resetSensors)
-			sysRoot := writeSensorTree(t, nil, nil, testCase.fans)
-			gates := metric.GateResolver(func(gate metric.GateID) (bool, bool) {
-				if gate == metric.GateFansAbsent {
-					return !loadSensors(sysRoot).hasFans(), true
-				}
-				return false, false
-			})
+			writeSensorTree(t, nil, nil, testCase.fans)
+			gates := metric.GateResolver(func(metric.GateID) (bool, bool) { return false, false })
 			values := metric.ValueResolver(func(id metric.ID) (float64, bool) {
 				if id == metric.MetricHostWarnTemperature {
 					return float64(testCase.temperature), true
@@ -655,6 +649,13 @@ func TestProbeHost_SpinFanRule(t *testing.T) {
 			}
 		})
 	}
+	t.Run("happy_fanless_host_is_inert", func(t *testing.T) {
+		t.Cleanup(resetSensors)
+		_, derived, err := loadSensors(writeSensorTree(t, nil, nil, nil)).fanSpeedOfMax()
+		if err != nil || !derived.inert {
+			t.Errorf("fanSpeedOfMax: got err %v inert %v want nil true", err, derived.inert)
+		}
+	})
 }
 
 func TestProbeHost_LifeUsedDrives(t *testing.T) {

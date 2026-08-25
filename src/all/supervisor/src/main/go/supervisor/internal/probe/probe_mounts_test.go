@@ -345,8 +345,12 @@ func TestProbeMounts_Wear(t *testing.T) {
 			if life != testCase.expectedLife {
 				t.Errorf("lifeUsedDrives: got %d want %d", life, testCase.expectedLife)
 			}
-			if errored := set.drivesErrored(); errored == testCase.expectedOK {
-				t.Errorf("drivesErrored: got %v want %v", errored, !testCase.expectedOK)
+			failed, _, failedErr := set.failedDrives()
+			if failedErr != nil {
+				t.Fatalf("failedDrives: unexpected error %v", failedErr)
+			}
+			if (failed == 0) != testCase.expectedOK {
+				t.Errorf("failedDrives: got %d pct want ok %v", failed, testCase.expectedOK)
 			}
 		})
 	}

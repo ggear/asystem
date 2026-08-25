@@ -84,16 +84,12 @@ func (s *sensorSet) celsius() (float64, derivation, error) {
 		hottest, s.tier, len(s.temperatureInputs), s.temperatureOffset, sensorMinCelsius, sensorMaxCelsius), nil
 }
 
-func (s *sensorSet) hasFans() bool {
-	return s != nil && len(s.fans) > 0
-}
-
 func (s *sensorSet) fanSpeedOfMax() (float64, derivation, error) {
 	if s == nil {
-		return 0, derived(scribe.ActionSample, "computed [0.0] pct of max, discovery found no fan input so the metric is inert and always ok"), nil
+		return 0, derivedInert(scribe.ActionSample, "computed [0.0] pct of max, discovery found no fan input so the metric is inert and always ok"), nil
 	}
 	if len(s.fans) == 0 {
-		return 0, derived(scribe.ActionSample, "computed [0.0] pct of max, discovery found no fan input under [%s] so the metric is inert and always ok", s.sysRoot), nil
+		return 0, derivedInert(scribe.ActionSample, "computed [0.0] pct of max, discovery found no fan input under [%s] so the metric is inert and always ok", s.sysRoot), nil
 	}
 	fastest := 0.0
 	found := false

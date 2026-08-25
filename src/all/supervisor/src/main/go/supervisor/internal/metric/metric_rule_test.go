@@ -13,10 +13,8 @@ func TestRule_Evaluate(t *testing.T) {
 	}
 	gates := func(gate GateID) (bool, bool) {
 		switch gate {
-		case GateDrivesHealthy:
+		case GateServiceAggregate:
 			return true, true
-		case GateFansAbsent:
-			return false, true
 		default:
 			return false, false
 		}
@@ -70,28 +68,44 @@ func TestRule_Evaluate(t *testing.T) {
 			expectedOK: false, expectedDetails: []string{"host/used_memory", "not within"},
 		},
 		{
-			name: "a bound gate reports its value", rule: Gated(GateDrivesHealthy), self: 0, selfNumeric: true,
-			expectedOK: true, expectedDetails: []string{"gate [drives healthy] is [true]"},
+			name: "a bound gate reports its value", rule: Gated(GateServiceAggregate), self: 0, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"gate [service aggregate] is [true]"},
 		},
 		{
-			name: "an unbound gate is not ok", rule: Gated(GateServiceHealthy), self: 0, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"gate [service healthy] is unbound"},
+			name: "an unbound gate is not ok", rule: Gated(GateID(99)), self: 0, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"is unbound"},
 		},
 		{
-			name: "all requires every term", rule: All(Bounded(Self, AtMost, 90), Gated(GateDrivesHealthy)), self: 12, selfNumeric: true,
-			expectedOK: true, expectedDetails: []string{"value [12]", "gate [drives healthy] is [true]"},
+			name: "all requires every term", rule: All(Bounded(Self, AtMost, 90), Gated(GateServiceAggregate)), self: 12, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"value [12]", "gate [service aggregate] is [true]"},
 		},
 		{
-			name: "all fails on one term", rule: All(Bounded(Self, AtMost, 90), Gated(GateFansAbsent)), self: 12, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"value [12]", "gate [fans absent] is [false]"},
+			name: "all fails on one term", rule: All(Bounded(Self, AtMost, 90), Gated(GateID(99))), self: 12, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"value [12]", "is unbound"},
 		},
 		{
-			name: "any passes on one term", rule: Any(Gated(GateFansAbsent), Bounded(Self, Above, 80)), self: 90, selfNumeric: true,
-			expectedOK: true, expectedDetails: []string{"gate [fans absent] is [false]", "value [90]"},
+			name: "any passes on one term", rule: Any(Gated(GateID(99)), Bounded(Self, Above, 80)), self: 90, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"is unbound", "value [90]"},
 		},
 		{
-			name: "any fails when no term passes", rule: Any(Gated(GateFansAbsent), Bounded(Self, Above, 80)), self: 10, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"gate [fans absent] is [false]", "not within"},
+			name: "any fails when no term passes", rule: Any(Gated(GateID(99)), Bounded(Self, Above, 80)), self: 10, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"is unbound", "not within"},
+		},
+		{
+			name: "truthy is ok on a true value", rule: Truthy(), self: 1, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"value is [true]"},
+		},
+		{
+			name: "truthy is not ok on a false value", rule: Truthy(), self: 0, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"value is [false]"},
+		},
+		{
+			name: "healthy follows a readable sibling", rule: Healthy(MetricHostWarnTemperature), self: 0, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"host/warn_temperature is [ok]"},
+		},
+		{
+			name: "healthy fails an unreadable sibling", rule: Healthy(MetricHostUsedMemory), self: 0, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"host/used_memory is [not ok]"},
 		},
 		{
 			name: "an undeclared rule is never ok", rule: Rule{}, self: 0, selfNumeric: true,
@@ -114,14 +128,20 @@ func TestRule_Evaluate(t *testing.T) {
 }
 
 func TestRule_TargetsAndGates(t *testing.T) {
-	rule := Any(Gated(GateFansAbsent), Bounded(MetricHostWarnTemperature, AtMost, 65), Bounded(Self, Above, 80))
+	rule := Any(Gated(GateServiceAggregate), Bounded(MetricHostWarnTemperature, AtMost, 65), Bounded(Self, Above, 80))
+	if siblings := rule.Siblings(); len(siblings) != 1 || siblings[0] != MetricHostWarnTemperature {
+		t.Errorf("siblings: got %v want [%v]", siblings, MetricHostWarnTemperature)
+	}
+	if siblings := Healthy(MetricHostUsedMemory).Siblings(); len(siblings) != 1 || siblings[0] != MetricHostUsedMemory {
+		t.Errorf("healthy siblings: got %v want [%v]", siblings, MetricHostUsedMemory)
+	}
 	targets := rule.Targets()
 	if len(targets) != 2 || targets[0] != MetricHostWarnTemperature || targets[1] != Self {
 		t.Errorf("targets: got %v want [%v %v]", targets, MetricHostWarnTemperature, Self)
 	}
 	gates := rule.Gates()
-	if len(gates) != 1 || gates[0] != GateFansAbsent {
-		t.Errorf("gates: got %v want [%v]", gates, GateFansAbsent)
+	if len(gates) != 1 || gates[0] != GateServiceAggregate {
+		t.Errorf("gates: got %v want [%v]", gates, GateServiceAggregate)
 	}
 	if !(Rule{}).IsZero() || Always().IsZero() {
 		t.Errorf("isZero: got %v %v want true false", (Rule{}).IsZero(), Always().IsZero())

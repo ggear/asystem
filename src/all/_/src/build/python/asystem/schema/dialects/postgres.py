@@ -159,7 +159,7 @@ def leaf(relations, table, options):
 
 def verify(document, renamed=None):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
-    observed = ["type NOT IN ({})".format(literals(sorted(renamed)))] if renamed else []
+    observed = [literals("type", sorted(renamed))] if renamed else []
     for table, relations in _tabled(document).items():
         declared = [(relation.path,) + tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
         values = ",\n".join("    ('{}', '{}', '{}', '{}')".format(*tuple_) for tuple_ in declared)

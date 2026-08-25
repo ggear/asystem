@@ -47,25 +47,13 @@ func (c Comparator) satisfies(value, limit float64) bool {
 type GateID uint8
 
 const (
-	GateDrivesHealthy GateID = iota
-	GateFansAbsent
-	GateServiceAggregate
-	GateServiceHealthy
-	GateServiceConfigured
+	GateServiceAggregate GateID = iota
 )
 
 func (g GateID) String() string {
 	switch g {
-	case GateDrivesHealthy:
-		return "drives healthy"
-	case GateFansAbsent:
-		return "fans absent"
 	case GateServiceAggregate:
 		return "service aggregate"
-	case GateServiceHealthy:
-		return "service healthy"
-	case GateServiceConfigured:
-		return "service configured"
 	default:
 		return unknownValue
 	}
@@ -80,6 +68,8 @@ const (
 	ruleAlways
 	ruleBounded
 	ruleGated
+	ruleTruthy
+	ruleHealthy
 	ruleAll
 	ruleAny
 )
@@ -101,6 +91,10 @@ func Bounded(target ID, compare Comparator, limit float64) Rule {
 
 func Gated(gate GateID) Rule { return Rule{kind: ruleGated, gate: gate} }
 
+func Truthy() Rule { return Rule{kind: ruleTruthy} }
+
+func Healthy(target ID) Rule { return Rule{kind: ruleHealthy, target: target} }
+
 func All(rules ...Rule) Rule { return Rule{kind: ruleAll, children: rules} }
 
 func Any(rules ...Rule) Rule { return Rule{kind: ruleAny, children: rules} }
@@ -115,6 +109,16 @@ func (r Rule) Targets() []ID {
 		}
 	})
 	return targets
+}
+
+func (r Rule) Siblings() []ID {
+	var siblings []ID
+	r.walk(func(term Rule) {
+		if (term.kind == ruleBounded || term.kind == ruleHealthy) && term.target != Self {
+			siblings = append(siblings, term.target)
+		}
+	})
+	return siblings
 }
 
 func (r Rule) Gates() []GateID {
@@ -142,6 +146,11 @@ func (r Rule) Evaluate(unit string, self float64, selfNumeric bool, values Value
 		return RuleResult{OK: true, Detail: "always ok"}
 	case ruleBounded:
 		return r.evaluateBounded(unit, self, selfNumeric, values)
+	case ruleTruthy:
+		return RuleResult{OK: selfNumeric && self != 0, Detail: fmt.Sprintf("value is [%v]", selfNumeric && self != 0)}
+	case ruleHealthy:
+		_, healthy := values(r.target)
+		return RuleResult{OK: healthy, Detail: fmt.Sprintf("%s is [%s]", GetIDName(r.target), okWord(healthy))}
 	case ruleGated:
 		value, bound := gates(r.gate)
 		if !bound {
@@ -190,6 +199,13 @@ func (r Rule) combine(unit string, self float64, selfNumeric bool, values ValueR
 		}
 	}
 	return RuleResult{OK: ok, Detail: strings.Join(details, ", ")}
+}
+
+func okWord(ok bool) string {
+	if ok {
+		return "ok"
+	}
+	return "not ok"
 }
 
 const unknownValue = "-"

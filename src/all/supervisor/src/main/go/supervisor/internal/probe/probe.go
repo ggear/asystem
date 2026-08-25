@@ -188,10 +188,15 @@ type derivation struct {
 	action scribe.Action
 	detail string
 	args   []any
+	inert  bool
 }
 
 func derived(action scribe.Action, detail string, args ...any) derivation {
 	return derivation{action: action, detail: detail, args: args}
+}
+
+func derivedInert(action scribe.Action, detail string, args ...any) derivation {
+	return derivation{action: action, detail: detail, args: args, inert: true}
 }
 
 func (d derivation) empty() bool {
@@ -299,9 +304,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 		return metricStatusUnknown
 	}
 	unit := metric.GetIDUnit(task.metricID)
-	pulseValue, pulseNumeric := numericValue(pulse)
-	pulseResult := metric.GetIDPulseRule(task.metricID).Evaluate(unit, pulseValue, pulseNumeric,
-		siblingResolver(p, hostName, false), gates.resolve)
+	pulseResult := evaluateRule(metric.GetIDPulseRule(task.metricID), derivation.inert, unit, pulse, siblingResolver(p, hostName, false), gates)
 	pulseOK := pulseResult.OK && !errored
 	var valueErr error
 	var value *metric.ValueData
@@ -315,9 +318,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	if trendRule.IsZero() || trend == nil {
 		value, valueErr = metric.NewDataPulseValue(pulseOK, pulse)
 	} else {
-		trendValue, trendNumeric := numericValue(trend)
-		trendResult = trendRule.Evaluate(unit, trendValue, trendNumeric,
-			siblingResolver(p, hostName, true), gates.resolve)
+		trendResult = evaluateRule(trendRule, derivation.inert, unit, trend, siblingResolver(p, hostName, true), gates)
 		trended := trendResult.OK && !errored
 		trendOK = &trended
 		value, valueErr = metric.NewDataValue(pulseOK, pulse, trended, trend)
@@ -412,12 +413,25 @@ func reportMetricRule(metricID metric.ID, taskStart time.Time, pulseOK bool, pul
 	derivePulse(logger, "computed", taskStart, "ok pulse [%v] %s, ok trend [%v] %s", pulseOK, pulseText, *trendOK, trendText)
 }
 
+func evaluateRule(rule metric.Rule, inert bool, unit string, value any, siblings metric.ValueResolver, gates gateSet) metric.RuleResult {
+	if inert {
+		return metric.RuleResult{OK: true, Detail: "nothing to measure on this host"}
+	}
+	number, numeric := numericValue(value)
+	return rule.Evaluate(unit, number, numeric, siblings, gates.resolve)
+}
+
 func numericValue(value any) (float64, bool) {
 	switch typed := value.(type) {
 	case int8:
 		return float64(typed), true
 	case float64:
 		return typed, true
+	case bool:
+		if typed {
+			return 1, true
+		}
+		return 0, true
 	default:
 		return 0, false
 	}

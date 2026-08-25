@@ -178,7 +178,7 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	if taken.locals == 0 {
-		return 0, derived(scribe.ActionSample, "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok"), nil
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok"), nil
 	}
 	total := uint64(0)
 	used := uint64(0)
@@ -205,7 +205,7 @@ func (s *mountSet) failedShares() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	if taken.shares == 0 {
-		return 0, derived(scribe.ActionSample, "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
 			filepath.Join(s.root, mountFstabPath)), nil
 	}
 	return int8Percent(float64(taken.failed) / float64(taken.shares) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
@@ -235,24 +235,31 @@ func (s *mountSet) lifeUsedDrives() (int8, derivation, error) {
 		}
 	}
 	if rated == 0 {
-		return 0, derived(scribe.ActionSample, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok, unrated [%s]",
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok, unrated [%s]",
 			len(taken.drives), mountDrives(taken.drives)), nil
 	}
 	return int8Percent(worst), derived(scribe.ActionSample, "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
 		int8Percent(worst), rated, worstAt, errored), nil
 }
 
-func (s *mountSet) drivesErrored() bool {
+func (s *mountSet) failedDrives() (int8, derivation, error) {
 	taken, err := s.snapshot()
 	if err != nil {
-		return false
+		return 0, derivation{}, err
 	}
+	if len(taken.drives) == 0 {
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed drive, host reports no drive so the metric is inert and always ok"), nil
+	}
+	errored := 0
+	var failed []string
 	for _, drive := range taken.drives {
 		if drive.errored {
-			return true
+			errored++
+			failed = append(failed, drive.kernel+"="+drive.model)
 		}
 	}
-	return false
+	return int8Percent(float64(errored) / float64(len(taken.drives)) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed drive, errored [%d] of [%d] drives, ok only at [0] pct, failed [%s]",
+		int8Percent(float64(errored)/float64(len(taken.drives))*100.0), errored, len(taken.drives), strings.Join(failed, ", ")), nil
 }
 
 func (s *mountSet) collect() *mountSnapshot {

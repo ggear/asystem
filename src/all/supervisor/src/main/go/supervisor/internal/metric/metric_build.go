@@ -25,6 +25,21 @@ type builder struct {
 	dependencies []ID
 }
 
+const (
+	FailedLogsBudget     = 10.0
+	FailedLogsPulseLimit = 100.0 / FailedLogsBudget
+)
+
+const (
+	WarnTemperatureBaseCelsius  = 40.0
+	WarnTemperaturePerCelsius   = 5.0
+	WarnTemperaturePulseCelsius = 53.0
+	WarnTemperatureTrendCelsius = 51.0
+	WarnTemperaturePulseLimit   = WarnTemperaturePerCelsius * (WarnTemperaturePulseCelsius - WarnTemperatureBaseCelsius)
+	WarnTemperatureTrendLimit   = WarnTemperaturePerCelsius * (WarnTemperatureTrendCelsius - WarnTemperatureBaseCelsius)
+	WarnTemperatureFullCelsius  = WarnTemperatureBaseCelsius + 100.0/WarnTemperaturePerCelsius
+)
+
 var metricBuildersByID = []builder{
 	MetricHost: {
 		id:          MetricHost,
@@ -40,7 +55,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedProcessor,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "processor time used across all cores of the host",
+		description: "processor time used across all cores",
 		template:    "supervisor/$HOST/$SCOPE/host/used_processor",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
@@ -50,7 +65,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedMemory,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "memory in use as a percentage of the total memory of the host",
+		description: "memory in use against the total fitted",
 		template:    "supervisor/$HOST/$SCOPE/host/used_memory",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 95),
@@ -60,7 +75,7 @@ var metricBuildersByID = []builder{
 		id:           MetricHostAllocatedMemory,
 		valueKind:    ValueInt,
 		unit:         "%",
-		description:  "memory ceilings of the installed services as a percentage of the total memory of the host, capped at one hundred",
+		description:  "memory ceilings of the installed services against the total fitted, capped at 100",
 		template:     "supervisor/$HOST/$SCOPE/host/allocated_memory",
 		persisted:    true,
 		dependencies: []ID{MetricHostServicesMaxMemory},
@@ -71,17 +86,17 @@ var metricBuildersByID = []builder{
 		id:          MetricHostFailedLogs,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "kernel log messages at error level within the trend window, as a percentage of a ten message budget",
+		description: fmt.Sprintf("kernel errors in the trend window against a %v message budget", FailedLogsBudget),
 		template:    "supervisor/$HOST/$SCOPE/host/failed_log_messages",
 		persisted:   true,
-		pulseRule:   Bounded(Self, AtMost, logPulseOfMax),
+		pulseRule:   Bounded(Self, AtMost, FailedLogsPulseLimit),
 		trendRule:   Bounded(Self, Exactly, 0),
 	},
 	MetricHostFailedShares: {
 		id:          MetricHostFailedShares,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "declared shares failing to mount or report, as a percentage of those defined",
+		description: "declared shares failing to mount or report, against those declared",
 		template:    "supervisor/$HOST/$SCOPE/host/failed_shares",
 		persisted:   true,
 		pulseRule:   Bounded(Self, Exactly, 0),
@@ -91,7 +106,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostFailedBackups,
 		valueKind:   ValueInt,
 		unit:        "",
-		description: "backups failing to complete, not yet implemented and always zero",
+		description: "backups failing to complete, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/host/failed_backups",
 		persisted:   true,
 		pulseRule:   Bounded(Self, Exactly, 0),
@@ -101,37 +116,39 @@ var metricBuildersByID = []builder{
 		id:          MetricHostWarnTemperature,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "hottest processor temperature as a percentage of its warning ceiling, zero at forty degrees and full at sixty degrees",
+		description: fmt.Sprintf("hottest processor temperature against its warning ceiling, zero at %v and full at %v degrees", WarnTemperatureBaseCelsius, WarnTemperatureFullCelsius),
 		template:    "supervisor/$HOST/$SCOPE/host/warn_temperature",
 		persisted:   true,
-		pulseRule:   Bounded(Self, AtMost, warnPulseOfMax),
-		trendRule:   Bounded(Self, AtMost, warnTrendOfMax),
+		pulseRule:   Bounded(Self, AtMost, WarnTemperaturePulseLimit),
+		trendRule:   Bounded(Self, AtMost, WarnTemperatureTrendLimit),
 	},
 	MetricHostSpinFanSpeed: {
 		id:           MetricHostSpinFanSpeed,
 		valueKind:    ValueInt,
 		unit:         "%",
-		description:  "fastest fan speed as a percentage of its rated maximum speed",
+		description:  "fastest fan speed against its rated maximum",
 		template:     "supervisor/$HOST/$SCOPE/host/spin_fan_speed",
 		persisted:    true,
 		dependencies: []ID{MetricHostWarnTemperature},
-		pulseRule:    Any(Gated(GateFansAbsent), Bounded(MetricHostWarnTemperature, AtMost, warnPulseOfMax), Bounded(Self, Above, fanPulseOfMax)),
-		trendRule:    Any(Gated(GateFansAbsent), Bounded(MetricHostWarnTemperature, AtMost, warnTrendOfMax), Bounded(Self, Above, fanTrendOfMax)),
+		pulseRule:    Any(Bounded(MetricHostWarnTemperature, AtMost, WarnTemperaturePulseLimit), Bounded(Self, Above, 80)),
+		trendRule:    Any(Bounded(MetricHostWarnTemperature, AtMost, WarnTemperatureTrendLimit), Bounded(Self, Above, 50)),
 	},
 	MetricHostLifeUsedDrives: {
-		id:          MetricHostLifeUsedDrives,
-		valueKind:   ValueInt,
-		unit:        "%",
-		description: "rated endurance consumed by the most worn drive, not ok when any drive reports new errors",
-		template:    "supervisor/$HOST/$SCOPE/host/life_used_drives",
-		persisted:   true,
-		pulseRule:   All(Bounded(Self, AtMost, 90), Gated(GateDrivesHealthy)), trendRule: All(Bounded(Self, AtMost, 80), Gated(GateDrivesHealthy)),
+		id:           MetricHostLifeUsedDrives,
+		valueKind:    ValueInt,
+		unit:         "%",
+		description:  "rated endurance consumed by the most worn drive",
+		template:     "supervisor/$HOST/$SCOPE/host/life_used_drives",
+		persisted:    true,
+		dependencies: []ID{MetricHostFailedDrives},
+		pulseRule:    All(Bounded(Self, AtMost, 90), Healthy(MetricHostFailedDrives)),
+		trendRule:    All(Bounded(Self, AtMost, 80), Healthy(MetricHostFailedDrives)),
 	},
 	MetricHostUsedSystemSpace: {
 		id:          MetricHostUsedSystemSpace,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "space used by the fullest system volume of the host",
+		description: "space used by the fullest system volume",
 		template:    "supervisor/$HOST/$SCOPE/host/used_system_space",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
@@ -141,7 +158,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedShareSpace,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "space used across the local share volumes of the host, summed as one pool",
+		description: "space used across the local share volumes, summed as one pool",
 		template:    "supervisor/$HOST/$SCOPE/host/used_share_space",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
@@ -151,7 +168,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedBackupSpace,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "backup volume space used, not yet implemented and always zero",
+		description: "backup volume space used, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/host/used_backup_space",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
@@ -161,7 +178,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedSwapSpace,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "swap space used, not yet implemented and always zero",
+		description: "swap space used, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/host/used_swap_space",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 80),
@@ -171,7 +188,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedDiskOps,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "disk operations used against capacity, not yet implemented and always zero",
+		description: "disk operations used against capacity, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/host/used_disk_ops",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
@@ -181,7 +198,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedNetwork,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "network throughput used against capacity, not yet implemented and always zero",
+		description: "network throughput used against capacity, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/host/used_network",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
@@ -191,7 +208,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostRunningTime,
 		valueKind:   ValueFloat,
 		unit:        "s",
-		description: "time the host has been up, not yet implemented and always zero",
+		description: "time the host has been up, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/host/running_time",
 		persisted:   false,
 		pulseRule:   Always(),
@@ -200,7 +217,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostTemperature,
 		valueKind:   ValueFloat,
 		unit:        "°C",
-		description: "hottest processor temperature, from the package sensor, the system on chip sensor or a drive sensor offset upwards",
+		description: "hottest processor temperature, from the package, system on chip or offset drive sensor",
 		template:    "supervisor/$HOST/$SCOPE/host/temperature",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 80),
@@ -210,17 +227,17 @@ var metricBuildersByID = []builder{
 		id:          MetricHostServices,
 		valueKind:   ValueBool,
 		unit:        "",
-		description: "every service configured for the host is running and healthy",
+		description: "every configured service is running and healthy",
 		template:    "supervisor/$HOST/$SCOPE/host/services",
 		persisted:   false,
-		pulseRule:   Always(),
-		trendRule:   Always(),
+		pulseRule:   Truthy(),
+		trendRule:   Truthy(),
 	},
 	MetricHostServicesMaxMemory: {
 		id:          MetricHostServicesMaxMemory,
 		valueKind:   ValueFloat,
 		unit:        "MiB",
-		description: "memory ceilings summed across the installed services configured for the host",
+		description: "memory ceilings summed across the configured services",
 		template:    "supervisor/$HOST/$SCOPE/host/services_max_memory",
 		persisted:   false,
 		pulseRule:   Always(),
@@ -239,7 +256,7 @@ var metricBuildersByID = []builder{
 		id:          MetricServiceBackupStatus,
 		valueKind:   ValueBool,
 		unit:        "",
-		description: "service backup completed, not yet implemented and always false",
+		description: "service backup completed, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/backup_status",
 		persisted:   true,
 		pulseRule:   Always(),
@@ -252,18 +269,18 @@ var metricBuildersByID = []builder{
 		description: "service container healthcheck reported healthy",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/health_status",
 		persisted:   true,
-		pulseRule:   Gated(GateServiceHealthy),
-		trendRule:   Gated(GateServiceHealthy),
+		pulseRule:   Truthy(),
+		trendRule:   Truthy(),
 	},
 	MetricServiceConfiguredStatus: {
 		id:          MetricServiceConfiguredStatus,
 		valueKind:   ValueBool,
 		unit:        "",
-		description: "service is configured as expected, not yet implemented and always false",
+		description: "service is configured as expected, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/configured_status",
 		persisted:   true,
-		pulseRule:   Gated(GateServiceConfigured),
-		trendRule:   Gated(GateServiceConfigured),
+		pulseRule:   Truthy(),
+		trendRule:   Truthy(),
 	},
 	MetricServiceName: {
 		id:          MetricServiceName,
@@ -289,7 +306,7 @@ var metricBuildersByID = []builder{
 		id:          MetricServiceUsedProcessor,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "processor time used by the service across all cores of the host",
+		description: "processor time used by the service across all cores",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_processor",
 		persisted:   true,
 		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 90)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 70)),
@@ -298,7 +315,7 @@ var metricBuildersByID = []builder{
 		id:          MetricServiceUsedMemory,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "memory in use by the service, excluding page cache, as a percentage of its ceiling",
+		description: "memory in use by the service, excluding page cache, against its ceiling",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_memory",
 		persisted:   true,
 		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 90)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 75)),
@@ -307,7 +324,7 @@ var metricBuildersByID = []builder{
 		id:          MetricServiceUsedDiskOps,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "disk operations used by the service, not yet implemented and always zero",
+		description: "disk operations used by the service, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_disk_ops",
 		persisted:   true,
 		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 90)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 80)),
@@ -316,7 +333,7 @@ var metricBuildersByID = []builder{
 		id:          MetricServiceUsedNetwork,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "network throughput used by the service, not yet implemented and always zero",
+		description: "network throughput used by the service, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_network",
 		persisted:   true,
 		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 90)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 80)),
@@ -339,6 +356,16 @@ var metricBuildersByID = []builder{
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/max_memory",
 		persisted:   false,
 		pulseRule:   Always(),
+	},
+	MetricHostFailedDrives: {
+		id:          MetricHostFailedDrives,
+		valueKind:   ValueInt,
+		unit:        "%",
+		description: "drives reporting new errors since discovery, against those fitted",
+		template:    "supervisor/$HOST/$SCOPE/host/failed_drives",
+		persisted:   true,
+		pulseRule:   Bounded(Self, Exactly, 0),
+		trendRule:   Bounded(Self, Exactly, 0),
 	},
 	MetricServiceRestartCount: {
 		id:          MetricServiceRestartCount,
@@ -501,15 +528,17 @@ func validateRule(owner builder, rule Rule) {
 		}
 		deps[dep] = true
 	}
+	for _, target := range rule.Siblings() {
+		if target < 0 || target >= MetricMax {
+			panic(fmt.Sprintf("error: metric ID [%d] rule reads unknown metric ID [%d]", owner.id, target))
+		}
+		if !deps[target] {
+			panic(fmt.Sprintf("error: metric ID [%d] rule reads metric ID [%d] which is not listed in dependencies", owner.id, target))
+		}
+	}
 	for _, target := range rule.Targets() {
 		kind := owner.valueKind
 		if target != Self {
-			if target < 0 || target >= MetricMax {
-				panic(fmt.Sprintf("error: metric ID [%d] rule reads unknown metric ID [%d]", owner.id, target))
-			}
-			if !deps[target] {
-				panic(fmt.Sprintf("error: metric ID [%d] rule reads metric ID [%d] which is not listed in dependencies", owner.id, target))
-			}
 			kind = metricBuildersByID[target].valueKind
 		}
 		if kind == ValueBool || kind == ValueString {
@@ -517,22 +546,6 @@ func validateRule(owner builder, rule Rule) {
 		}
 	}
 }
-
-const (
-	WarnFloorCelsius = 40.0
-	WarnPerCelsius   = 5.0
-	LogErrorBudget   = 10.0
-)
-
-const (
-	warnPulseCelsius = 53.0
-	warnTrendCelsius = 51.0
-	warnPulseOfMax   = WarnPerCelsius * (warnPulseCelsius - WarnFloorCelsius)
-	warnTrendOfMax   = WarnPerCelsius * (warnTrendCelsius - WarnFloorCelsius)
-	fanPulseOfMax    = 80
-	fanTrendOfMax    = 50
-	logPulseOfMax    = 100.0 / LogErrorBudget
-)
 
 var (
 	templateCommand  = "supervisor/$HOST/command"

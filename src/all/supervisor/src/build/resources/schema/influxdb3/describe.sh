@@ -187,7 +187,7 @@ describe_sql() {
 SELECT
     'supervisor/host'          AS relation,
     'host*'                    AS dimension,
-    37                         AS measures,
+    39                         AS measures,
     '6s'                       AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -725,6 +725,36 @@ WHERE
     AND service IS NULL
 UNION ALL
 SELECT
+    'supervisor/host'                                                   AS relation,
+    'failed_drives'                                                     AS measure,
+    'int'                                                               AS kind,
+    '%'                                                                 AS unit,
+    '6s'                                                                AS period,
+    count(failed_drives)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_drives IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_drives IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                         AS relation,
+    'failed_drives_trend'                                                     AS measure,
+    'int'                                                                     AS kind,
+    '%'                                                                       AS unit,
+    '6s'                                                                      AS period,
+    count(failed_drives_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE failed_drives_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE failed_drives_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
     'supervisor/service'                                         AS relation,
     'status'                                                     AS measure,
     'bool'                                                       AS kind,
@@ -1009,18 +1039,19 @@ WHERE
     AND column_name NOT IN (
         'allocated_memory', 'allocated_memory_trend', 'backup_status',
         'backup_status_trend', 'configured_status', 'configured_status_trend',
-        'failed_backups', 'failed_backups_trend', 'failed_log_messages',
-        'failed_log_messages_trend', 'failed_shares', 'failed_shares_trend',
-        'health_status', 'health_status_trend', 'host', 'life_used_drives',
-        'life_used_drives_trend', 'max_memory', 'module', 'name', 'restart_count',
-        'restart_count_trend', 'running_time', 'service', 'services', 'services_max_memory',
-        'spin_fan_speed', 'spin_fan_speed_trend', 'status', 'status_trend', 'temperature',
-        'temperature_trend', 'time', 'up_time', 'used_backup_space',
-        'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend', 'used_memory',
-        'used_memory_trend', 'used_network', 'used_network_trend', 'used_processor',
-        'used_processor_trend', 'used_share_space', 'used_share_space_trend',
-        'used_swap_space', 'used_swap_space_trend', 'used_system_space',
-        'used_system_space_trend', 'version', 'warn_temperature', 'warn_temperature_trend'
+        'failed_backups', 'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
+        'failed_log_messages', 'failed_log_messages_trend', 'failed_shares',
+        'failed_shares_trend', 'health_status', 'health_status_trend', 'host',
+        'life_used_drives', 'life_used_drives_trend', 'max_memory', 'module', 'name',
+        'restart_count', 'restart_count_trend', 'running_time', 'service', 'services',
+        'services_max_memory', 'spin_fan_speed', 'spin_fan_speed_trend', 'status',
+        'status_trend', 'temperature', 'temperature_trend', 'time', 'up_time',
+        'used_backup_space', 'used_backup_space_trend', 'used_disk_ops',
+        'used_disk_ops_trend', 'used_memory', 'used_memory_trend', 'used_network',
+        'used_network_trend', 'used_processor', 'used_processor_trend', 'used_share_space',
+        'used_share_space_trend', 'used_swap_space', 'used_swap_space_trend',
+        'used_system_space', 'used_system_space_trend', 'version', 'warn_temperature',
+        'warn_temperature_trend'
     )
 ORDER BY rows DESC NULLS LAST;
 

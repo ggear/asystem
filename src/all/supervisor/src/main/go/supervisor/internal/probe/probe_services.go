@@ -123,11 +123,7 @@ func (p *servicesProbe) create(configPath string, cache *metric.RecordCache, mas
 }
 
 func (p *servicesProbe) gates() []metric.GateID {
-	return []metric.GateID{
-		metric.GateServiceAggregate,
-		metric.GateServiceHealthy,
-		metric.GateServiceConfigured,
-	}
+	return []metric.GateID{metric.GateServiceAggregate}
 }
 
 func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
@@ -187,11 +183,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		derivePulse(scribe.Log(scribe.SourceProbe, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
 			"[%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
 			aggregateStatus, polledServiceName, healthStatus, configuredStatus, sleepStatus)
-		gates := gateSet{
-			metric.GateServiceAggregate:  func() bool { return aggregateStatus },
-			metric.GateServiceHealthy:    func() bool { return healthStatus },
-			metric.GateServiceConfigured: func() bool { return configuredStatus },
-		}
+		gates := gateSet{metric.GateServiceAggregate: func() bool { return aggregateStatus }}
 		runMetricCacheTasks(p, isPulse, gates, []cacheMetricTask{
 			newCacheMetricTask(
 				metric.ValueBool,

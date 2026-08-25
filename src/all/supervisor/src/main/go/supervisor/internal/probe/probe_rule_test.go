@@ -92,10 +92,7 @@ func TestProbe_SiblingRuleIsProbedEarlier(t *testing.T) {
 	}
 	for _, id := range metric.GetIDs() {
 		for _, rule := range []metric.Rule{metric.GetIDPulseRule(id), metric.GetIDTrendRule(id)} {
-			for _, target := range rule.Targets() {
-				if target == metric.Self {
-					continue
-				}
+			for _, target := range rule.Siblings() {
 				reader, readerFound := order[id.String()]
 				read, readFound := order[target.String()]
 				if !readerFound || !readFound {

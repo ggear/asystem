@@ -30,6 +30,7 @@ type hostProbe struct {
 	failedBackupsInt   *stats.IntStats
 	warnTemperatureInt *stats.IntStats
 	spinFanSpeedInt    *stats.IntStats
+	failedDrivesInt    *stats.IntStats
 	lifeUsedDrivesInt  *stats.IntStats
 	usedSystemSpaceInt *stats.IntStats
 	usedShareSpaceInt  *stats.IntStats
@@ -69,6 +70,7 @@ func (p *hostProbe) metrics() []metric.ID {
 		metric.MetricHostFailedBackups,
 		metric.MetricHostWarnTemperature,
 		metric.MetricHostSpinFanSpeed,
+		metric.MetricHostFailedDrives,
 		metric.MetricHostLifeUsedDrives,
 		metric.MetricHostUsedSystemSpace,
 		metric.MetricHostUsedShareSpace,
@@ -97,6 +99,7 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.failedBackupsInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.warnTemperatureInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.spinFanSpeedInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+	p.failedDrivesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.lifeUsedDrivesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedSystemSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedShareSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
@@ -109,19 +112,10 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	return nil
 }
 
-func (p *hostProbe) gates() []metric.GateID {
-	return []metric.GateID{
-		metric.GateDrivesHealthy,
-		metric.GateFansAbsent,
-	}
-}
+func (p *hostProbe) gates() []metric.GateID { return nil }
 
 func (p *hostProbe) run(_ context.Context, isPulse bool) error {
-	gates := gateSet{
-		metric.GateDrivesHealthy: func() bool { return !p.mounts().drivesErrored() },
-		metric.GateFansAbsent:    func() bool { return !loadSensors(p.sysRoot).hasFans() },
-	}
-	runMetricCacheTasks(p, isPulse, gates, []cacheMetricTask{
+	runMetricCacheTasks(p, isPulse, nil, []cacheMetricTask{
 		newCacheMetricTask(
 			metric.ValueBool,
 			metric.MetricHost,
@@ -202,6 +196,15 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			p.spinFanSpeedInt,
 			func() int8 { return p.spinFanSpeedInt.PulseMax() },
 			func() int8 { return p.spinFanSpeedInt.TrendMax() },
+		),
+		newCacheMetricTask(
+			metric.ValueInt,
+			metric.MetricHostFailedDrives,
+			metric.ServiceNameUnset,
+			p.failedDrives,
+			p.failedDrivesInt,
+			func() int8 { return p.failedDrivesInt.PulseMax() },
+			func() int8 { return p.failedDrivesInt.TrendMax() },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
@@ -358,10 +361,10 @@ func (p *hostProbe) failedLogs() (int8, derivation, error) {
 	logs := loadLogs(config.Load(p.configPath).Mount())
 	count, available := logs.errorsWithin(window)
 	if !available {
-		return 0, derived(scribe.ActionSample, "computed [  0] pct failed, kernel log unreadable at [%s] so the metric is inert and always ok", logs.attempted()), nil
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed, kernel log unreadable at [%s] so the metric is inert and always ok", logs.attempted()), nil
 	}
-	return stats.ConvertToInt(float64(count) / metric.LogErrorBudget * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], following [%s]",
-		stats.ConvertToInt(float64(count)/metric.LogErrorBudget*100.0), count, int(metric.LogErrorBudget), window, logs.path), nil
+	return stats.ConvertToInt(float64(count) / metric.FailedLogsBudget * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], following [%s]",
+		stats.ConvertToInt(float64(count)/metric.FailedLogsBudget*100.0), count, int(metric.FailedLogsBudget), window, logs.path), nil
 }
 
 func (p *hostProbe) failedShares() (int8, derivation, error) {
@@ -378,9 +381,9 @@ func (p *hostProbe) warnTemperature() (int8, derivation, error) {
 	if err != nil {
 		return 0, derivation{}, err
 	}
-	warnOfMax := stats.ConvertToInt(metric.WarnPerCelsius * (temperatureCelsius - metric.WarnFloorCelsius))
+	warnOfMax := stats.ConvertToInt(metric.WarnTemperaturePerCelsius * (temperatureCelsius - metric.WarnTemperatureBaseCelsius))
 	return warnOfMax, derived(scribe.ActionCompute, "computed [%3d] pct of warn, celsius [%.1f] above floor [%.1f] at [%.1f] pct per celsius",
-		warnOfMax, temperatureCelsius, metric.WarnFloorCelsius, metric.WarnPerCelsius), nil
+		warnOfMax, temperatureCelsius, metric.WarnTemperatureBaseCelsius, metric.WarnTemperaturePerCelsius), nil
 }
 
 func (p *hostProbe) spinFanSpeed() (int8, derivation, error) {
@@ -389,6 +392,10 @@ func (p *hostProbe) spinFanSpeed() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	return stats.ConvertToInt(speedOfMax), sampled, nil
+}
+
+func (p *hostProbe) failedDrives() (int8, derivation, error) {
+	return p.mounts().failedDrives()
 }
 
 func (p *hostProbe) lifeUsedDrives() (int8, derivation, error) {
