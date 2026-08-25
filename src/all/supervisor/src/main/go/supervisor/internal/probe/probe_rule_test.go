@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestProbe_GatesCarryNoThreshold(t *testing.T) {
+func TestProbeRule_GatesCarryNoThreshold(t *testing.T) {
 	files, err := filepath.Glob("probe_*.go")
 	if err != nil {
 		t.Fatalf("glob: %v", err)
@@ -56,7 +56,7 @@ func TestProbe_GatesCarryNoThreshold(t *testing.T) {
 	}
 }
 
-func TestProbe_SiblingRuleIsProbedEarlier(t *testing.T) {
+func TestProbeRule_SiblingIsProbedEarlier(t *testing.T) {
 	order := map[string]int{}
 	files, err := filepath.Glob("probe_*.go")
 	if err != nil {

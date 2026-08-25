@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestIntStats_NewTrendWindow(t *testing.T) {
+func TestStatsInt_NewTrendWindow(t *testing.T) {
 	tests := []struct {
 		name          string
 		durationHours int
@@ -88,7 +88,7 @@ func TestIntStats_NewTrendWindow(t *testing.T) {
 	}
 }
 
-func TestIntStats_NewPulseWindow(t *testing.T) {
+func TestStatsInt_NewPulseWindow(t *testing.T) {
 	tests := []struct {
 		name         string
 		pulseSec     float64
@@ -133,7 +133,7 @@ func TestIntStats_NewPulseWindow(t *testing.T) {
 	}
 }
 
-func TestIntStats_NewWindow(t *testing.T) {
+func TestStatsInt_NewWindow(t *testing.T) {
 	tests := []struct {
 		name             string
 		trendHours       int
@@ -210,7 +210,7 @@ func TestIntStats_NewWindow(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_PushOutOfRange(t *testing.T) {
+func TestStatsInt_TrendWindow_PushOutOfRange(t *testing.T) {
 	tests := []struct {
 		name  string
 		value int8
@@ -254,7 +254,7 @@ func TestIntStats_TrendWindow_PushOutOfRange(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_SingleValue(t *testing.T) {
+func TestStatsInt_TrendWindow_SingleValue(t *testing.T) {
 	tests := []struct {
 		name  string
 		value int8
@@ -300,7 +300,7 @@ func TestIntStats_TrendWindow_SingleValue(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_PushAndStats(t *testing.T) {
+func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 	tests := []struct {
 		name         string
 		values       []int8
@@ -388,7 +388,7 @@ func TestIntStats_TrendWindow_PushAndStats(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_ExtremeFrequency(t *testing.T) {
+func TestStatsInt_TrendWindow_ExtremeFrequency(t *testing.T) {
 	tests := []struct {
 		name            string
 		value           int8
@@ -452,7 +452,7 @@ func TestIntStats_TrendWindow_ExtremeFrequency(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_Percentiles(t *testing.T) {
+func TestStatsInt_TrendWindow_Percentiles(t *testing.T) {
 	tests := []struct {
 		name        string
 		values      []int8
@@ -498,7 +498,7 @@ func TestIntStats_TrendWindow_Percentiles(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_Median(t *testing.T) {
+func TestStatsInt_TrendWindow_Median(t *testing.T) {
 	tests := []struct {
 		name           string
 		values         []int8
@@ -534,7 +534,7 @@ func TestIntStats_TrendWindow_Median(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_OverlappingValues(t *testing.T) {
+func TestStatsInt_TrendWindow_OverlappingValues(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(*trendWindow) []int8
@@ -582,7 +582,7 @@ func TestIntStats_TrendWindow_OverlappingValues(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
+func TestStatsInt_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(*trendWindow) []int8
@@ -625,7 +625,7 @@ func TestIntStats_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_SparseTraffic(t *testing.T) {
+func TestStatsInt_TrendWindow_SparseTraffic(t *testing.T) {
 	tests := []struct {
 		name         string
 		idleTicks    int
@@ -667,7 +667,7 @@ func TestIntStats_TrendWindow_SparseTraffic(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_EvictionOrder(t *testing.T) {
+func TestStatsInt_TrendWindow_EvictionOrder(t *testing.T) {
 	tests := []struct {
 		name       string
 		extraTicks int
@@ -721,7 +721,7 @@ func TestIntStats_TrendWindow_EvictionOrder(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_RandomPushTickSequences(t *testing.T) {
+func TestStatsInt_TrendWindow_RandomPushTickSequences(t *testing.T) {
 	tests := []struct {
 		name      string
 		seed      int64
@@ -769,7 +769,7 @@ func TestIntStats_TrendWindow_RandomPushTickSequences(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_OverflowProtection(t *testing.T) {
+func TestStatsInt_TrendWindow_OverflowProtection(t *testing.T) {
 	tests := []struct {
 		name      string
 		value     int8
@@ -818,7 +818,7 @@ func TestIntStats_TrendWindow_OverflowProtection(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_TickFrequencyVariations(t *testing.T) {
+func TestStatsInt_TrendWindow_TickFrequencyVariations(t *testing.T) {
 	tests := []struct {
 		name          string
 		tickFreqSec   int
@@ -865,7 +865,7 @@ func TestIntStats_TrendWindow_TickFrequencyVariations(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_StartupPhase(t *testing.T) {
+func TestStatsInt_TrendWindow_StartupPhase(t *testing.T) {
 	tests := []struct {
 		name         string
 		ticks        int
@@ -919,7 +919,7 @@ func TestIntStats_TrendWindow_StartupPhase(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendWindow_TickAndAggregation(t *testing.T) {
+func TestStatsInt_TrendWindow_TickAndAggregation(t *testing.T) {
 	tests := []struct {
 		name         string
 		setupFunc    func(*trendWindow)
@@ -999,7 +999,7 @@ func TestIntStats_TrendWindow_TickAndAggregation(t *testing.T) {
 	}
 }
 
-func TestIntStats_PulseWindow_Basic(t *testing.T) {
+func TestStatsInt_PulseWindow_Basic(t *testing.T) {
 	tests := []struct {
 		name         string
 		pushAndTick  func(*pulseWindow)
@@ -1079,7 +1079,7 @@ func TestIntStats_PulseWindow_Basic(t *testing.T) {
 	}
 }
 
-func TestIntStats_PulseWindow_Median(t *testing.T) {
+func TestStatsInt_PulseWindow_Median(t *testing.T) {
 	tests := []struct {
 		name           string
 		windowSize     float64
@@ -1129,7 +1129,7 @@ func TestIntStats_PulseWindow_Median(t *testing.T) {
 	}
 }
 
-func TestIntStats_Coordination(t *testing.T) {
+func TestStatsInt_Coordination(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -1154,7 +1154,7 @@ func TestIntStats_Coordination(t *testing.T) {
 	}
 }
 
-func TestIntStats_EmptyWindow(t *testing.T) {
+func TestStatsInt_EmptyWindow(t *testing.T) {
 	tests := []struct {
 		name         string
 		setupFunc    func(*trendWindow)
@@ -1206,7 +1206,7 @@ func TestIntStats_EmptyWindow(t *testing.T) {
 	}
 }
 
-func TestIntStats_MultipleWindows_Concurrency(t *testing.T) {
+func TestStatsInt_MultipleWindows_Concurrency(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -1256,7 +1256,7 @@ func TestIntStats_MultipleWindows_Concurrency(t *testing.T) {
 	}
 }
 
-func TestIntStats_Concurrency(t *testing.T) {
+func TestStatsInt_Concurrency(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -1295,7 +1295,7 @@ func TestIntStats_Concurrency(t *testing.T) {
 	}
 }
 
-func TestIntStats_TrendOff(t *testing.T) {
+func TestStatsInt_TrendOff(t *testing.T) {
 	tests := []struct {
 		name                string
 		setupFunc           func(*IntStats)

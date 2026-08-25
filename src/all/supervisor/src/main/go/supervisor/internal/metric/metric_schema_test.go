@@ -7,7 +7,7 @@ import (
 	"supervisor/internal/schema"
 )
 
-func TestMetric_SchemaMatchesPublishedFields(t *testing.T) {
+func TestMetricSchema_MatchesPublishedFields(t *testing.T) {
 	host := HostRelation()
 	service := ServiceRelation()
 	declared := map[string]map[string]bool{
@@ -49,7 +49,7 @@ func TestMetric_SchemaMatchesPublishedFields(t *testing.T) {
 	}
 }
 
-func TestMetric_SchemaPersistMirrorsSkipHist(t *testing.T) {
+func TestMetricSchema_PersistMirrorsSkipHist(t *testing.T) {
 	for _, relation := range Relations(nil, nil, "1m") {
 		for _, measure := range relation.Measures {
 			if measure.Key == "" {
@@ -81,7 +81,7 @@ func TestMetric_SchemaPersistMirrorsSkipHist(t *testing.T) {
 	}
 }
 
-func TestMetric_Cadence(t *testing.T) {
+func TestMetricSchema_Cadence(t *testing.T) {
 	tests := []struct {
 		name        string
 		pollPeriod  string
@@ -137,7 +137,7 @@ func serviceNameFor(id ID) string {
 	return ServiceNameUnset
 }
 
-func TestMetric_Topics(t *testing.T) {
+func TestMetricSchema_Topics(t *testing.T) {
 	topics := Topics()
 	if len(topics) == 0 {
 		t.Fatalf("topics: got none want one per templated metric")
@@ -166,7 +166,7 @@ func TestMetric_Topics(t *testing.T) {
 	}
 }
 
-func TestMetric_GetIDName(t *testing.T) {
+func TestMetricSchema_GetIDName(t *testing.T) {
 	testCases := []struct {
 		name          string
 		id            ID
@@ -188,7 +188,7 @@ func TestMetric_GetIDName(t *testing.T) {
 	}
 }
 
-func TestMetric_GetIDNameIsUniqueAndTemplated(t *testing.T) {
+func TestMetricSchema_GetIDNameIsUniqueAndTemplated(t *testing.T) {
 	names := map[string]ID{}
 	for _, id := range GetIDs() {
 		name := GetIDName(id)

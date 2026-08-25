@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestRule_Evaluate(t *testing.T) {
+func TestMetricRule_Evaluate(t *testing.T) {
 	values := map[ID]float64{MetricHostWarnTemperature: 70}
 	resolve := func(id ID) (float64, bool) {
 		value, found := values[id]
@@ -127,7 +127,7 @@ func TestRule_Evaluate(t *testing.T) {
 	}
 }
 
-func TestRule_TargetsAndGates(t *testing.T) {
+func TestMetricRule_TargetsAndGates(t *testing.T) {
 	rule := Any(Gated(GateServiceAggregate), Bounded(MetricHostWarnTemperature, AtMost, 65), Bounded(Self, Above, 80))
 	if siblings := rule.Siblings(); len(siblings) != 1 || siblings[0] != MetricHostWarnTemperature {
 		t.Errorf("siblings: got %v want [%v]", siblings, MetricHostWarnTemperature)
@@ -148,7 +148,7 @@ func TestRule_TargetsAndGates(t *testing.T) {
 	}
 }
 
-func TestRule_DeclaredByEveryMetric(t *testing.T) {
+func TestMetricRule_DeclaredByEveryMetric(t *testing.T) {
 	for _, id := range GetIDs() {
 		builder := metricBuildersByID[id]
 		if GetIDPulseRule(id).IsZero() {

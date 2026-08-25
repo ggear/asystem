@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestValueData_UnmarshalJSON(t *testing.T) {
+func TestMetricValue_DataUnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		json          string
@@ -163,7 +163,7 @@ func TestValueData_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestValueData_MarshalJSON(t *testing.T) {
+func TestMetricValue_DataMarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		value         *ValueData
@@ -279,7 +279,7 @@ func TestValueData_MarshalJSON(t *testing.T) {
 	}
 }
 
-func TestValueDataDetail_UnmarshalJSON(t *testing.T) {
+func TestMetricValue_DataDetailUnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		json          string
@@ -451,7 +451,7 @@ func TestValueDataDetail_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestValueDataDetail_MarshalJSON(t *testing.T) {
+func TestMetricValue_DataDetailMarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		value         ValueDataDetail
@@ -529,7 +529,7 @@ func TestValueDataDetail_MarshalJSON(t *testing.T) {
 	}
 }
 
-func TestValueMeta_UnmarshalJSON(t *testing.T) {
+func TestMetricValue_MetaUnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		json          string
@@ -631,7 +631,7 @@ func TestValueMeta_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestValueMeta_MarshalJSON(t *testing.T) {
+func TestMetricValue_MetaMarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
 		value         ValueMeta

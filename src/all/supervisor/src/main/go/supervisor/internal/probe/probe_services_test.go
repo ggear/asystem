@@ -508,7 +508,7 @@ func TestProbeServices_Run(t *testing.T) {
 	}
 }
 
-func TestProbe_Version(t *testing.T) {
+func TestProbeServices_Version(t *testing.T) {
 	tests := []struct {
 		name          string
 		containerInfo container.InspectResponse
@@ -806,7 +806,7 @@ func TestProbe_Version(t *testing.T) {
 	}
 }
 
-func TestProbe_Sleep(t *testing.T) {
+func TestProbeServices_Sleep(t *testing.T) {
 	writeSleepMarker := func(t *testing.T, mount, name string) {
 		t.Helper()
 		dir := filepath.Join(mount, "var/lib/asystem/install", name)

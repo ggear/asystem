@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestRecordCache_Hosts(t *testing.T) {
+func TestMetricCache_Hosts(t *testing.T) {
 	tests := []struct {
 		name     string
 		records  []RecordGUID
@@ -56,7 +56,7 @@ func TestRecordCache_Hosts(t *testing.T) {
 	})
 }
 
-func TestRecordCache_ServicesForHost(t *testing.T) {
+func TestMetricCache_ServicesForHost(t *testing.T) {
 	tests := []struct {
 		name     string
 		records  []RecordGUID
@@ -127,7 +127,7 @@ func TestRecordCache_ServicesForHost(t *testing.T) {
 	})
 }
 
-func TestRecordCache_ServicesBefore(t *testing.T) {
+func TestMetricCache_ServicesBefore(t *testing.T) {
 	type stamped struct {
 		guid      RecordGUID
 		timestamp int64
@@ -229,7 +229,7 @@ func TestRecordCache_ServicesBefore(t *testing.T) {
 	})
 }
 
-func TestRecordCache_Records(t *testing.T) {
+func TestMetricCache_Records(t *testing.T) {
 	tests := []struct {
 		name      string
 		setupFunc func(*RecordCache)
@@ -333,7 +333,7 @@ func TestRecordCache_Records(t *testing.T) {
 	})
 }
 
-func TestRecordCache_IDs(t *testing.T) {
+func TestMetricCache_IDs(t *testing.T) {
 	t.Run("happy_nil_cache_returns_nil", func(t *testing.T) {
 		var c *RecordCache
 		if c.IDs() != nil {
@@ -351,7 +351,7 @@ func TestRecordCache_IDs(t *testing.T) {
 	})
 }
 
-func TestRecordCache_StoreLoad(t *testing.T) {
+func TestMetricCache_StoreLoad(t *testing.T) {
 	tests := []struct {
 		name      string
 		setupFunc func(*RecordCache)
@@ -533,7 +533,7 @@ func TestRecordCache_StoreLoad(t *testing.T) {
 	}
 }
 
-func TestRecordCache_Delete(t *testing.T) {
+func TestMetricCache_Delete(t *testing.T) {
 	evicted := func(cache *RecordCache, host, serviceName string) {
 		cache.Evict(host, serviceName)
 	}
@@ -804,7 +804,7 @@ func TestRecordCache_Delete(t *testing.T) {
 	}
 }
 
-func TestRecordCache_SubscribeUpdates(t *testing.T) {
+func TestMetricCache_SubscribeUpdates(t *testing.T) {
 	tests := []struct {
 		name          string
 		setupFunc     func(*RecordCache, *mockListener)
@@ -867,7 +867,7 @@ func TestRecordCache_SubscribeUpdates(t *testing.T) {
 	}
 }
 
-func TestRecordCache_Reindex(t *testing.T) {
+func TestMetricCache_Reindex(t *testing.T) {
 	tests := []struct {
 		name      string
 		setupFunc func(*RecordCache)
@@ -995,7 +995,7 @@ func TestRecordCache_Reindex(t *testing.T) {
 	}
 }
 
-func TestRecordCache_Evict(t *testing.T) {
+func TestMetricCache_Evict(t *testing.T) {
 	tests := []struct {
 		name      string
 		setupFunc func(*RecordCache)
@@ -1210,7 +1210,7 @@ func TestRecordCache_Evict(t *testing.T) {
 	}
 }
 
-func TestRecordCache_LoadByIndex(t *testing.T) {
+func TestMetricCache_LoadByIndex(t *testing.T) {
 	tests := []struct {
 		name      string
 		setupFunc func(*RecordCache)
@@ -1273,7 +1273,7 @@ func TestRecordCache_LoadByIndex(t *testing.T) {
 	}
 }
 
-func TestRecordCache_Purge(t *testing.T) {
+func TestMetricCache_Purge(t *testing.T) {
 	now := time.Now().Unix()
 	oldTimestamp := now - 200
 	freshTimestamp := now
@@ -1752,7 +1752,7 @@ func TestRecordCache_Purge(t *testing.T) {
 	}
 }
 
-func TestRecordCache_SchemaListeners(t *testing.T) {
+func TestMetricCache_SchemaListeners(t *testing.T) {
 	value := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "v"}}
 	value2 := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "w"}}
 	tests := []struct {
@@ -1923,7 +1923,7 @@ func TestRecordCache_SchemaListeners(t *testing.T) {
 	}
 }
 
-func TestRecordCache_RegisterService(t *testing.T) {
+func TestMetricCache_RegisterService(t *testing.T) {
 	value := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "v"}}
 	tests := []struct {
 		name      string
@@ -2122,7 +2122,7 @@ func TestRecordCache_RegisterService(t *testing.T) {
 	}
 }
 
-func TestRecordCache_Topics(t *testing.T) {
+func TestMetricCache_Topics(t *testing.T) {
 	tests := []struct {
 		name           string
 		setupFunc      func(*RecordCache)
@@ -2194,7 +2194,7 @@ func TestRecordCache_Topics(t *testing.T) {
 	})
 }
 
-func TestRecordCache_ListenerIDs(t *testing.T) {
+func TestMetricCache_ListenerIDs(t *testing.T) {
 	tests := []struct {
 		name     string
 		setup    func(*RecordCache)
@@ -2239,7 +2239,7 @@ func TestRecordCache_ListenerIDs(t *testing.T) {
 	}
 }
 
-func TestRecordCache_SubscribeDeletes(t *testing.T) {
+func TestMetricCache_SubscribeDeletes(t *testing.T) {
 	tests := []struct {
 		name      string
 		setupFunc func(*RecordCache)
@@ -2347,7 +2347,7 @@ func guidSliceToSet(guids []RecordGUID) map[guidKey]struct{} {
 	return s
 }
 
-func TestRecordCache_Take(t *testing.T) {
+func TestMetricCache_Take(t *testing.T) {
 	value1 := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "first"}}
 	value2 := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "second"}}
 	tests := []struct {
@@ -2629,5 +2629,22 @@ func TestRecordCache_Take(t *testing.T) {
 			tt.setupFunc(cache)
 			tt.checkFunc(t, cache)
 		})
+	}
+}
+
+func TestMetricCache_StatusTagging(t *testing.T) {
+	cache := NewRecordCache()
+	host := NewRecord(*NewBoolValue(true, true))
+	cache.Store(NewRecordGUID(MetricHost, "macmini-mad"), &host)
+	service := NewRecord(*NewBoolValue(true, true))
+	cache.Store(NewServiceRecordGUID(MetricService, "macmini-mad", "plex"), &service)
+	memory := NewRecord(*NewIntValue(true, 42, true, 41))
+	cache.Store(NewRecordGUID(MetricHostUsedMemory, "macmini-mad"), &memory)
+	for _, guid := range cache.Take() {
+		record, ok := cache.Load(guid)
+		if !ok {
+			t.Fatalf("guid %v: not loadable", guid)
+		}
+		t.Logf("id=%v service=%q topic=%q tags=%v pulse=%v", guid.ID, guid.ServiceName, record.Topic, record.Tags, record.Value.Pulse != nil)
 	}
 }

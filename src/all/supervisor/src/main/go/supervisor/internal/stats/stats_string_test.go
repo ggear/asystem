@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestStringStats_NewStringStats(t *testing.T) {
+func TestStatsString_NewStringStats(t *testing.T) {
 	tests := []struct {
 		name          string
 		trendHours    int
@@ -119,7 +119,7 @@ func TestStringStats_NewStringStats(t *testing.T) {
 	}
 }
 
-func TestStringStats_PulseWindowStats(t *testing.T) {
+func TestStatsString_PulseWindowStats(t *testing.T) {
 	tests := []struct {
 		name               string
 		windowSize         float64
@@ -266,7 +266,7 @@ func TestStringStats_PulseWindowStats(t *testing.T) {
 	}
 }
 
-func TestStringStats_TrendDecay(t *testing.T) {
+func TestStatsString_TrendDecay(t *testing.T) {
 	tests := []struct {
 		name      string
 		setupFunc func(*StringStats, float64)
@@ -357,7 +357,7 @@ func TestStringStats_TrendDecay(t *testing.T) {
 	}
 }
 
-func TestStringStats_TrendOff(t *testing.T) {
+func TestStatsString_TrendOff(t *testing.T) {
 	tests := []struct {
 		name                    string
 		setupFunc               func(*StringStats)
