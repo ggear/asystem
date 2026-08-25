@@ -22,9 +22,8 @@ DIALECTS = {
 
 
 def write_schema_database(document, module_name=None, schemas_dir=None,
-                          database_dialect="influxdb3", database_time_column="timestamp",
-                          database_retention=None, database_timezone=None,
-                          database_entities=None, database_applier=False):
+                          database_dialect="influxdb3", database_time_column="timestamp", database_retention=None,
+                          database_timezone=None, database_entities=None, database_applier=False, database_renamed_measures=None):
     module_root = load_bootstrap_root()
     if module_name is None:
         module_name = basename(module_root)
@@ -40,7 +39,8 @@ def write_schema_database(document, module_name=None, schemas_dir=None,
     if database_timezone is None:
         database_timezone = load_bootstrap_env_value("TZ", "UTC", filename=ENV, module_root=module_root)
     options = SchemaDatabaseOptions(time_column=database_time_column, retention=database_retention or "",
-                                    timezone=database_timezone, applier=database_applier)
+                                    timezone=database_timezone, applier=database_applier,
+                                    renamed=_renamed_measures(database_renamed_measures))
     try:
         artifacts = emitter.artifacts(document, module_name, options)
     except SchemaUnreachable as unreachable:
@@ -49,6 +49,14 @@ def write_schema_database(document, module_name=None, schemas_dir=None,
         return _skip_schema_dialect(module_name, schemas_dir, database_dialect)
     _write_schema_dialect(module_name, schemas_dir, database_dialect, artifacts)
     emitter.ship(document, module_name, module_root, schemas_dir, options)
+
+
+def _renamed_measures(renamed):
+    expanded = {}
+    for old, new in (renamed or {}).items():
+        expanded[old] = new or ""
+        expanded["{}_trend".format(old)] = "{}_trend".format(new) if new else ""
+    return expanded
 
 
 def write_schema_broker(source, module_name=None, schemas_dir=None,

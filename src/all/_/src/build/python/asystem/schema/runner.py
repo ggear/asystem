@@ -248,3 +248,8 @@ if [ "${{FAULTS}}" != "0" ]; then
 fi
 printf '\\nSchema verify [%s] found no drift\\n' "{module}"
 """.format(target=target, module=module_name, sql=sql.strip()))
+
+
+def migrate_runner(module_name, dialect, target, connect, body):
+    return script(module_name, dialect, "migrate", "rewrite renamed measures, run by hand and never by fab",
+                  connect, body)

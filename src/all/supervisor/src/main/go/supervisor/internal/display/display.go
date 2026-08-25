@@ -60,7 +60,7 @@ type Display struct {
 	maxServices     int
 	dirty           dirtyBoxes
 	terminal        Terminal
-	factory         terminalFactory
+	factory         TerminalFactory
 	cache           *metric.RecordCache
 	singleHostIndex int
 	refreshPeriod   time.Duration
@@ -82,7 +82,7 @@ type dirtyBoxes struct {
 
 func NewDisplay(
 	cache *metric.RecordCache,
-	factory terminalFactory,
+	factory TerminalFactory,
 	hosts []string,
 	width, height int,
 	maxWidth, maxHeight int,
@@ -114,7 +114,7 @@ func NewDisplay(
 		tickStall:       tickStall,
 		singleHostIndex: singleHostIndex(hosts),
 	}
-	scribe.Engine("config", "display").Info("init", initStart, "format   [%v], rows [%d], cols [%d]", format, height, width)
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("terminal", initStart, "[%v], rows [%d], cols [%d]", format, height, width)
 	return display, nil
 }
 
@@ -379,14 +379,14 @@ func (d *Display) Compile() (Format, error) {
 					}
 				}
 			}
-			scribe.Engine("config", "display").Info("render", compileStart, "format   [%v], rows [%d], cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("terminal", compileStart, "[%v], rows [%d], cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			scribe.Engine("state", "display").Warn("compile", compileStart, "fallback [compact], relaxed layout failed with [%v]", err)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Warn("fallback", compileStart, "[compact], relaxed layout failed with [%v]", err)
 		}
 		d.format = FormatCompact
 	}
@@ -451,19 +451,21 @@ func (d *Display) Logging() {
 	d.terminal.draw(padLen, 0, arrow, colourChat)
 	d.terminal.draw(padLen+arrowWidth, 0, esc, colourShout)
 	d.terminal.draw(padLen+arrowWidth+escWidth, 0, suffix, colourChat)
-	lines := d.logBuffer.Tail(maxLines - 1)
-	for row, line := range lines {
-		row++
-		ts := line.Time.Format("15:04:05")
-		lvl := line.Level.String()
-		text := fmt.Sprintf("%s %-5s %s", ts, lvl, line.Message)
-		if runewidth.StringWidth(text) > d.dimsInit.cols {
-			tail := ""
-			if d.dimsInit.cols >= 2 {
-				tail = "~"
-			}
-			text = runewidth.Truncate(text, d.dimsInit.cols, tail)
+	clip := func(text string) string {
+		if runewidth.StringWidth(text) <= d.dimsInit.cols {
+			return text
 		}
+		tail := ""
+		if d.dimsInit.cols >= 2 {
+			tail = "~"
+		}
+		return runewidth.Truncate(text, d.dimsInit.cols, tail)
+	}
+	d.terminal.draw(0, 1, clip(scribe.OverlayHeader()), colourChat)
+	lines := d.logBuffer.Tail(maxLines - 2)
+	for row, line := range lines {
+		row += 2
+		text := clip(scribe.OverlayLine(line))
 		c := colourChat
 		switch {
 		case line.Level >= slog.LevelError:
@@ -518,7 +520,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 				d.dimsInit = dims
 				d.rebuild("resize")
-				scribe.Engine("state", "display").Info("resize", resizeStart, "resized  [%d] cols, [%d] rows", cols, rows)
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("geometry", resizeStart, "[%d] cols, [%d] rows", cols, rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
@@ -557,7 +559,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 		case <-ticker.C:
 			if elapsed := time.Since(ticked); elapsed > d.tickStall {
-				scribe.Engine("state", "display").Warn("stall", ticked, "exceeded [%d] ms since the last draw tick", d.tickStall.Milliseconds())
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDisconnect).Warn("exceeded", ticked, "[%d] ms since the last draw tick", d.tickStall.Milliseconds())
 				d.cache.Wake()
 				d.refresh("wake")
 			}
@@ -592,7 +594,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				d.terminal.show()
 			}
 			if len(dirtyIndexes) > 0 || drawnCount > 0 {
-				scribe.Engine("profiling", "display").Debug("draw", drawStart, "received [%3d] updates, drawn [%3d] boxes", len(dirtyIndexes), drawnCount)
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Debug("received", drawStart, "[%3d] updates, drawn [%3d] boxes", len(dirtyIndexes), drawnCount)
 			}
 			d.force = false
 		}
@@ -604,7 +606,7 @@ func (d *Display) rebuild(trigger string) {
 	d.format = d.formatInit
 	d.boxes = nil
 	if _, err := d.Compile(); err != nil {
-		scribe.Engine("state", "display").Error("rebuild", rebuildStart, "failed   [%v] rebuilding the display", err)
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Error("faulting", rebuildStart, "[%v] rebuilding the display", err)
 		d.logOverlay = true
 		d.logOverlayAuto = true
 	} else if d.logOverlayAuto {
@@ -629,10 +631,10 @@ func (d *Display) refresh(trigger string) {
 	d.terminal.show()
 	d.force = true
 	if trigger == "period" {
-		scribe.Engine("profiling", "display").Debug("refresh", refreshStart, "trigger  [%s], refreshed [%d] boxes", trigger, len(d.boxes))
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Debug("triggers", refreshStart, "[%s], refreshed [%d] boxes", trigger, len(d.boxes))
 		return
 	}
-	scribe.Engine("state", "display").Info("refresh", refreshStart, "trigger  [%s], refreshed [%d] boxes", trigger, len(d.boxes))
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("triggers", refreshStart, "[%s], refreshed [%d] boxes", trigger, len(d.boxes))
 }
 
 func (d *Display) subscribeUpdates() {

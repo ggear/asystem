@@ -87,7 +87,7 @@ func (t *installTree) snapshot() *installSnapshot {
 	t.stamp = stamp
 	t.generation++
 	t.cached = t.parse()
-	scribe.Probe("state", "install").Debug("scan", scanStart, "parsed   [%d] services generation [%d]", len(t.cached.services), t.generation)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionDiscover).Debug("snapshot", scanStart, "install tree services [%d] generation [%d]", len(t.cached.services), t.generation)
 	return t.cached
 }
 
@@ -113,7 +113,7 @@ func (s *installSnapshot) names() []string {
 
 func (s *installSnapshot) allocation(names []string) (int64, int, error) {
 	if len(names) == 0 {
-		return 0, 0, fmt.Errorf("no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [%s]", installRoot)
+		return 0, 0, fmt.Errorf("no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [%s] [%w]", installRoot, errEnvironment)
 	}
 	total := int64(0)
 	installed := 0
@@ -241,7 +241,7 @@ func installVersion(home, name string) string {
 	path := home + "/" + installEnvironmentFile
 	data, err := os.ReadFile(path)
 	if err != nil {
-		scribe.Probe("state", "install").Error("version", versionStart, "missing  [%s] version not readable from [%s] with [%v]", name, path, err)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", versionStart, "version not readable from [%s] with [%v]", path, err)
 		return ""
 	}
 	for _, line := range strings.Split(string(data), "\n") {
@@ -250,12 +250,12 @@ func installVersion(home, name string) string {
 			continue
 		}
 		if !config.VersionPattern.MatchString(value) {
-			scribe.Probe("state", "install").Error("version", versionStart, "invalid  [%s] version [%s] from [%s] could not be parsed", name, value, path)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Warn("unusable", versionStart, "version [%s] from [%s] could not be parsed", value, path)
 			return ""
 		}
 		return value
 	}
-	scribe.Probe("state", "install").Error("version", versionStart, "missing  [%s] version not declared in [%s]", name, path)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", versionStart, "version not declared in [%s]", path)
 	return ""
 }
 
@@ -264,12 +264,12 @@ func installMaxMemory(home, name string) int64 {
 	path := home + "/" + installComposeFile
 	data, err := os.ReadFile(path)
 	if err != nil {
-		scribe.Probe("state", "install").Error("memory", memoryStart, "missing  [%s] compose not readable from [%s] with [%v]", name, path, err)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", memoryStart, "compose not readable from [%s] with [%v]", path, err)
 		return 0
 	}
 	var compose installCompose
 	if err := yaml.Unmarshal(data, &compose); err != nil {
-		scribe.Probe("state", "install").Error("memory", memoryStart, "invalid  [%s] compose [%s] could not be parsed with [%v]", name, path, err)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Warn("unusable", memoryStart, "compose [%s] could not be parsed with [%v]", path, err)
 		return 0
 	}
 	keys := make([]string, 0, len(compose.Services))
@@ -285,12 +285,12 @@ func installMaxMemory(home, name string) int64 {
 		}
 		limit := composed.Deploy.Resources.Limits.Memory
 		if limit == "" {
-			scribe.Probe("state", "install").Error("memory", memoryStart, "missing  [%s] service [%s] declares no memory limit in [%s]", name, key, path)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", memoryStart, "service [%s] declares no memory limit in [%s]", key, path)
 			continue
 		}
 		limitBytes, limitErr := units.RAMInBytes(limit)
 		if limitErr != nil {
-			scribe.Probe("state", "install").Error("memory", memoryStart, "invalid  [%s] service [%s] memory [%s] in [%s] with [%v]", name, key, limit, path, limitErr)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Warn("unusable", memoryStart, "service [%s] memory [%s] in [%s] with [%v]", key, limit, path, limitErr)
 			continue
 		}
 		total += limitBytes

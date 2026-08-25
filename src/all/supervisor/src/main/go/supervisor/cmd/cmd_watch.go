@@ -30,8 +30,8 @@ type watchOptions struct {
 	refreshPeriod   string
 	consoleWidth    int
 	consoleHeight   int
-	logLevel        string
-	json            bool
+	logOptions
+	json bool
 }
 
 // noinspection DuplicatedCode
@@ -64,7 +64,7 @@ func newWatchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.refreshPeriod, "refresh-period", "R", "15m", "period for performing a full screen refresh, uses unit suffixes [s, m, h]")
 	cmd.Flags().IntVarP(&opts.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
 	cmd.Flags().IntVarP(&opts.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
-	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", "debug", "lowest log level written to the log overlay and the log file, one of debug, info, warn or error")
+	addLogFlags(cmd, &opts.logOptions, "debug", "the log overlay and the log file")
 	cmd.Flags().BoolVarP(&opts.json, "json", "J", false, "output JSON instead of the default text format. Assumes local mode, respects poll and bin period options and ignores all formating options")
 	cmd.Flags().SortFlags = false
 	cobra.AddTemplateFunc("join", strings.Join)
@@ -96,6 +96,9 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	logBuffer, err := scribe.EnableBufferAndFile(level, "watch", height, 10, 3, 7)
 	if err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
+	}
+	if err := setLogFilters(&opts.logOptions); err != nil {
+		return err
 	}
 	mode := opts.mode
 	var isRemote bool
@@ -184,7 +187,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	defer cancel()
 	d, err := display.NewDisplay(
 		metric.NewRecordCache(),
-		display.TerminalFactory(theme),
+		display.NewTerminalFactory(theme),
 		hosts,
 		width,
 		height,

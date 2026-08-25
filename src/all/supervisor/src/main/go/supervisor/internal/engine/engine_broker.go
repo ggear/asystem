@@ -34,7 +34,7 @@ func (b *brokerWakeListener) MarkWake() {
 		return
 	}
 	b.onWake()
-	scribe.Engine("state", "broker").Info("wake", wakeStart, "detected [wake] revive requested by the display stall detector")
+	scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Info("detected", wakeStart, "[wake] revive requested by the display stall detector")
 }
 
 type brokerPublishDeletesListener struct {
@@ -79,14 +79,14 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 			if retries > 0 {
 				state = "reconnected"
 			}
-			scribe.Engine("state", "broker").Info("connect", since, "broker   [%s] %s after [%d] attempts", brokerURL, state, retries)
+			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Info("endpoint", since, "[%s] %s after [%d] attempts", brokerURL, state, retries)
 			if onConnect != nil {
 				onConnect(client)
 			}
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
 			lostAt.Store(time.Now().UnixNano())
-			scribe.Engine("state", "broker").Warn("disconnect", time.Now(), "broker   [%s] connection lost with [%v]", brokerURL, err)
+			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionDisconnect).Warn("endpoint", time.Now(), "[%s] connection lost with [%v]", brokerURL, err)
 			select {
 			case lostSignal <- struct{}{}:
 			default:
@@ -100,7 +100,7 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 				case <-time.After(brokerTimeout):
 				}
 			}
-			scribe.Engine("state", "broker").Debug("reconnect", lostSince(), "broker   [%s] attempt [%d] while offline", brokerURL, attempt)
+			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Debug("endpoint", lostSince(), "[%s] attempt [%d] while offline", brokerURL, attempt)
 		})
 	if willTopic != "" {
 		opts.SetWill(willTopic, willPayload, 1, true)
@@ -123,24 +123,24 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 		probeStart := time.Now()
 		if !client.IsConnectionOpen() {
 			if client.IsConnected() {
-				scribe.Engine("profiling", "broker").Debug("probe", probeStart, "alive    [false] connection closed, paho is reconnecting")
+				scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Debug("liveness", probeStart, "[false] connection closed, paho is reconnecting")
 				return
 			}
-			scribe.Engine("state", "broker").Warn("revive", probeStart, "alive    [false] session abandoned by paho, reconnecting")
+			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Warn("liveness", probeStart, "[false] session abandoned by paho, reconnecting")
 			brokerReconnect(ctx, client, probeStart)
 			return
 		}
 		token := client.Unsubscribe(brokerProbeTopic)
 		if token.WaitTimeout(brokerTimeout) && token.Error() == nil {
-			scribe.Engine("profiling", "broker").Debug("probe", probeStart, "alive    [true] session responded, no revive needed")
+			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Debug("liveness", probeStart, "[true] session responded, no revive needed")
 			return
 		}
 		if !client.IsConnectionOpen() {
-			scribe.Engine("profiling", "broker").Debug("probe", probeStart, "alive    [false] connection already closed, paho is reconnecting")
+			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Debug("liveness", probeStart, "[false] connection already closed, paho is reconnecting")
 			return
 		}
 		reviveStart := time.Now()
-		scribe.Engine("state", "broker").Warn("revive", probeStart, "alive    [false] session unresponsive, disconnecting to force reconnect")
+		scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Warn("liveness", probeStart, "[false] session unresponsive, disconnecting to force reconnect")
 		client.Disconnect(0)
 		brokerReconnect(ctx, client, reviveStart)
 	}()
@@ -149,15 +149,15 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 func brokerReconnect(ctx context.Context, client mqtt.Client, reviveStart time.Time) {
 	for backoff := brokerTimeout; ; backoff = min(2*backoff, brokerInterval) {
 		if client.IsConnectionOpen() {
-			scribe.Engine("state", "broker").Info("revive", reviveStart, "alive    [true] session revived")
+			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Info("liveness", reviveStart, "[true] session revived")
 			return
 		}
 		token := client.Connect()
 		if token.WaitTimeout(brokerTimeout) && token.Error() == nil {
-			scribe.Engine("state", "broker").Info("revive", reviveStart, "alive    [true] session revived")
+			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Info("liveness", reviveStart, "[true] session revived")
 			return
 		}
-		scribe.Engine("state", "broker").Warn("revive", reviveStart, "alive    [false] failed with [%v], retrying after [%d] ms", token.Error(), backoff.Milliseconds())
+		scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Warn("liveness", reviveStart, "[false] failed with [%v], retrying after [%d] ms", token.Error(), backoff.Milliseconds())
 		select {
 		case <-ctx.Done():
 			return

@@ -25,7 +25,7 @@ from asystem.schema.query import (
     unioned,
     vocabulary,
 )
-from asystem.schema.runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
+from asystem.schema.runner import RUNNER, describe_runner, migrate_runner, query_runner, resolved, verify_runner
 
 DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
@@ -72,6 +72,20 @@ query() {
   printf '%s' "${response%$'\\n'*}"
   [ "${status}" = "200" ]
 }
+
+write_lp() {
+  local response status
+  response="$(curl -sS -w '\\n%{http_code}' -X POST \\
+    "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/write_lp?db=${DATABASE_NAME}&precision=nanosecond" \\
+    -H "Authorization: Bearer ${DATABASE_TOKEN}" \\
+    -H "Content-Type: text/plain" \\
+    --data-binary @-)"
+  status="${response##*$'\\n'}"
+  if [ "${status}" != "204" ] && [ "${status}" != "200" ]; then
+    printf 'write failed with status [%s] body [%s]\\n' "${status}" "${response%$'\\n'*}" >&2
+    return 1
+  fi
+}
 """ + RUNNER
 
 
@@ -94,7 +108,11 @@ def artifacts(document, module_name, options):
     if document.discovered:
         return written
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                          verify(document)), True)
+                                          verify(document, options.renamed)), True)
+    for measurement, statements in migrate(document, options.renamed).items():
+        written["migrate/{}.sql".format(measurement)] = (statements, False)
+    written["migrate.sh"] = (migrate_runner(module_name, DIALECT, TARGET, connect(module_name),
+                                            _migrate_body(module_name)), True)
     return written
 
 
@@ -275,10 +293,10 @@ def measurements(document):
     return sorted({relation.plugin for relation in document.relations})
 
 
-def verify(document):
+def verify(document, renamed=None):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
     for measurement in measurements(document):
-        columns = {TIME, MODULE}
+        columns = {TIME, MODULE} | set(renamed or {})
         arms = []
         for relation in measured(document, measurement):
             columns.update(dimension.key for dimension in relation.dimensions)
@@ -293,6 +311,81 @@ def verify(document):
         arms.append(_undeclared(measurement, sorted(columns)))
         statements.append(unioned(arms, order_by=["fault", "measure"]))
     return render_statements(statements)
+
+
+def migrate(document, renamed):
+    written = {}
+    sources = {new: old for old, new in (renamed or {}).items() if new}
+    for measurement in measurements(document):
+        statements = []
+        for relation in measured(document, measurement):
+            for measure in relation.carried(KINDS):
+                source = sources.get(measure.key)
+                if source is None:
+                    continue
+                statements.append("-- backfill [{}] from the renamed [{}], one line of protocol per row".format(
+                    measure.key, source))
+                statements.append(select(
+                    [(_protocol(measurement, relation, measure, source), "line")], measurement,
+                    where(relation, document) + ["{} IS NOT NULL".format(column(source))],
+                    order_by=[TIME]))
+        if statements:
+            written[measurement] = render_statements(statements)
+    return written
+
+
+def _protocol(measurement, relation, measure, source):
+    tags = ["'{}'".format(measurement), "',{}=' || {}".format(MODULE, column(MODULE))]
+    for dimension in sorted(dimension.key for dimension in relation.dimensions):
+        tags.append("',{}=' || {}".format(dimension, column(dimension)))
+    tags.append("' {}=' || {}".format(measure.key, _protocol_value(measure, source)))
+    tags.append("' ' || CAST(CAST({} AS BIGINT) AS VARCHAR)".format(TIME))
+    return " ||\n        ".join(tags)
+
+
+def _protocol_value(measure, source):
+    if measure.kind == "str":
+        return "'\"' || {} || '\"'".format(column(source))
+    if measure.kind in ("int", "bool"):
+        return "CAST(CAST({} AS BIGINT) AS VARCHAR) || 'i'".format(column(source))
+    return "CAST({} AS VARCHAR)".format(column(source))
+
+
+def _migrate_body(module_name):
+    return """
+printf '\\nSchema migrate [%s] against [%s]\\n' "{module}" "${{{target}}}"
+FAULTS=0
+POINTS=0
+for SQL_FILE in "${{ROOT_DIR}}"/migrate/*.sql; do
+  [ -e "${{SQL_FILE}}" ] || continue
+  while IFS= read -r STATEMENT; do
+    [ -z "${{STATEMENT}}" ] && continue
+    if ! RESULT="$(query "${{STATEMENT}}")"; then
+      fail "${{STATEMENT}}" "${{RESULT}}"
+      FAULTS=$((FAULTS + 1))
+      continue
+    fi
+    COUNT="$(printf '%s' "${{RESULT}}" | rows)"
+    printf -- '\\n-- %s\\n\\n' "$(basename "${{SQL_FILE}}")"
+    if [ "${{COUNT}}" = "0" ]; then
+      printf 'read [0] points, nothing to backfill\\n'
+      continue
+    fi
+    if ! printf '%s' "${{RESULT}}" | jq -r '.[].line' | write_lp; then
+      FAULTS=$((FAULTS + 1))
+      continue
+    fi
+    POINTS=$((POINTS + COUNT))
+    printf 'backfilled [%s] points\\n' "${{COUNT}}"
+  done < <(statements < "${{SQL_FILE}}")
+done
+
+if [ "${{FAULTS}}" != "0" ]; then
+  printf '\\nSchema migrate [%s] failed [%s] statement(s)\\n' "{module}" "${{FAULTS}}" >&2
+  exit 1
+fi
+printf '\\nSchema migrate [%s] backfilled [%s] points with no faults\\n' "{module}" "${{POINTS}}"
+""".format(target=TARGET, module=module_name)
 
 
 def _dialect(document, zone=""):

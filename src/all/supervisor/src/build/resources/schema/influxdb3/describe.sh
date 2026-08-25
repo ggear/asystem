@@ -65,6 +65,20 @@ query() {
   [ "${status}" = "200" ]
 }
 
+write_lp() {
+  local response status
+  response="$(curl -sS -w '\n%{http_code}' -X POST \
+    "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/write_lp?db=${DATABASE_NAME}&precision=nanosecond" \
+    -H "Authorization: Bearer ${DATABASE_TOKEN}" \
+    -H "Content-Type: text/plain" \
+    --data-binary @-)"
+  status="${response##*$'\n'}"
+  if [ "${status}" != "204" ] && [ "${status}" != "200" ]; then
+    printf 'write failed with status [%s] body [%s]\n' "${status}" "${response%$'\n'*}" >&2
+    return 1
+  fi
+}
+
 fail() {
   printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
     "################################################################################" \
@@ -411,14 +425,14 @@ WHERE
     AND service IS NULL
 UNION ALL
 SELECT
-    'supervisor/host'                                                             AS relation,
-    'warn_temperature_of_max'                                                     AS measure,
-    'int'                                                                         AS kind,
-    '%'                                                                           AS unit,
-    '6s'                                                                          AS period,
-    count(warn_temperature_of_max)                                                AS rows,
-    CAST(min(time) FILTER (WHERE warn_temperature_of_max IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE warn_temperature_of_max IS NOT NULL) AS VARCHAR) AS newest
+    'supervisor/host'                                                      AS relation,
+    'warn_temperature'                                                     AS measure,
+    'int'                                                                  AS kind,
+    '%'                                                                    AS unit,
+    '6s'                                                                   AS period,
+    count(warn_temperature)                                                AS rows,
+    CAST(min(time) FILTER (WHERE warn_temperature IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE warn_temperature IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -426,14 +440,14 @@ WHERE
     AND service IS NULL
 UNION ALL
 SELECT
-    'supervisor/host'                                                                   AS relation,
-    'warn_temperature_of_max_trend'                                                     AS measure,
-    'int'                                                                               AS kind,
-    '%'                                                                                 AS unit,
-    '6s'                                                                                AS period,
-    count(warn_temperature_of_max_trend)                                                AS rows,
-    CAST(min(time) FILTER (WHERE warn_temperature_of_max_trend IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE warn_temperature_of_max_trend IS NOT NULL) AS VARCHAR) AS newest
+    'supervisor/host'                                                            AS relation,
+    'warn_temperature_trend'                                                     AS measure,
+    'int'                                                                        AS kind,
+    '%'                                                                          AS unit,
+    '6s'                                                                         AS period,
+    count(warn_temperature_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE warn_temperature_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE warn_temperature_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -441,14 +455,14 @@ WHERE
     AND service IS NULL
 UNION ALL
 SELECT
-    'supervisor/host'                                                           AS relation,
-    'spin_fan_speed_of_max'                                                     AS measure,
-    'int'                                                                       AS kind,
-    '%'                                                                         AS unit,
-    '6s'                                                                        AS period,
-    count(spin_fan_speed_of_max)                                                AS rows,
-    CAST(min(time) FILTER (WHERE spin_fan_speed_of_max IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE spin_fan_speed_of_max IS NOT NULL) AS VARCHAR) AS newest
+    'supervisor/host'                                                    AS relation,
+    'spin_fan_speed'                                                     AS measure,
+    'int'                                                                AS kind,
+    '%'                                                                  AS unit,
+    '6s'                                                                 AS period,
+    count(spin_fan_speed)                                                AS rows,
+    CAST(min(time) FILTER (WHERE spin_fan_speed IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE spin_fan_speed IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -456,14 +470,14 @@ WHERE
     AND service IS NULL
 UNION ALL
 SELECT
-    'supervisor/host'                                                                 AS relation,
-    'spin_fan_speed_of_max_trend'                                                     AS measure,
-    'int'                                                                             AS kind,
-    '%'                                                                               AS unit,
-    '6s'                                                                              AS period,
-    count(spin_fan_speed_of_max_trend)                                                AS rows,
-    CAST(min(time) FILTER (WHERE spin_fan_speed_of_max_trend IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE spin_fan_speed_of_max_trend IS NOT NULL) AS VARCHAR) AS newest
+    'supervisor/host'                                                          AS relation,
+    'spin_fan_speed_trend'                                                     AS measure,
+    'int'                                                                      AS kind,
+    '%'                                                                        AS unit,
+    '6s'                                                                       AS period,
+    count(spin_fan_speed_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE spin_fan_speed_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE spin_fan_speed_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -1000,14 +1014,13 @@ WHERE
         'health_status', 'health_status_trend', 'host', 'life_used_drives',
         'life_used_drives_trend', 'max_memory', 'module', 'name', 'restart_count',
         'restart_count_trend', 'running_time', 'service', 'services', 'services_max_memory',
-        'spin_fan_speed_of_max', 'spin_fan_speed_of_max_trend', 'status', 'status_trend',
-        'temperature', 'temperature_trend', 'time', 'up_time', 'used_backup_space',
+        'spin_fan_speed', 'spin_fan_speed_trend', 'status', 'status_trend', 'temperature',
+        'temperature_trend', 'time', 'up_time', 'used_backup_space',
         'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend', 'used_memory',
         'used_memory_trend', 'used_network', 'used_network_trend', 'used_processor',
         'used_processor_trend', 'used_share_space', 'used_share_space_trend',
         'used_swap_space', 'used_swap_space_trend', 'used_system_space',
-        'used_system_space_trend', 'version', 'warn_temperature_of_max',
-        'warn_temperature_of_max_trend'
+        'used_system_space_trend', 'version', 'warn_temperature', 'warn_temperature_trend'
     )
 ORDER BY rows DESC NULLS LAST;
 

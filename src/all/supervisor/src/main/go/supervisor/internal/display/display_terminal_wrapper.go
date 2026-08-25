@@ -12,10 +12,13 @@ type terminalWrapper struct {
 	palette *colourPalette
 }
 
-func newTerminalWrapper(theme Theme) terminalFactory {
+func newTerminalWrapper(theme Theme) TerminalFactory {
 	return func(useUnicode bool) (Terminal, error) {
 		if os.Getenv("TERM_PROGRAM") == "" {
-			os.Setenv("TERM_PROGRAM", "Apple_Terminal")
+			err := os.Setenv("TERM_PROGRAM", "Apple_Terminal")
+			if err != nil {
+				return nil, err
+			}
 		}
 		screen, err := tcell.NewScreen()
 		if err != nil {

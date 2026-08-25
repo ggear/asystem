@@ -121,29 +121,29 @@ func databaseConnect(configPath string) (*databaseClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect failed: %w", err)
 	}
-	scribe.Engine("state", "database").Info("connect", connectStart, "database [%s]", databaseURL)
+	scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionConnect).Info("database", connectStart, "[%s]", databaseURL)
 	return &databaseClient{configPath: configPath, url: databaseURL, client: client}, nil
 }
 
 func (d *databaseClient) write(ctx context.Context, data []byte) {
 	writeStart := time.Now()
 	if err := d.client.Write(ctx, data); err != nil {
-		scribe.Engine("state", "database").Warn("write", writeStart, "database [%s] failed with [%v]", d.url, err)
+		scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionPublish).Warn("database", writeStart, "[%s] failed with [%v]", d.url, err)
 		reconnectStart := time.Now()
-		newClient, _, reconnErr := newInfluxClient(d.configPath)
-		if reconnErr != nil {
-			scribe.Engine("state", "database").Warn("reconnect", reconnectStart, "database [%s] failed with [%v]", d.url, reconnErr)
+		newClient, _, reconnectErr := newInfluxClient(d.configPath)
+		if reconnectErr != nil {
+			scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionConnect).Warn("database", reconnectStart, "[%s] failed with [%v]", d.url, reconnectErr)
 			return
 		}
 		_ = d.client.Close()
 		d.client = newClient
-		scribe.Engine("state", "database").Info("reconnect", reconnectStart, "database [%s]", d.url)
+		scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionConnect).Info("database", reconnectStart, "[%s]", d.url)
 	}
 }
 
 func (d *databaseClient) close() {
 	closeStart := time.Now()
 	if err := d.client.Close(); err != nil {
-		scribe.Engine("state", "database").Warn("disconnect", closeStart, "database [%s] failed with [%v]", d.url, err)
+		scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionDisconnect).Warn("database", closeStart, "[%s] failed with [%v]", d.url, err)
 	}
 }

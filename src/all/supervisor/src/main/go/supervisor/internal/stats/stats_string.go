@@ -51,10 +51,7 @@ func NewStringStats(trendHours int, pulseSecs float64, tickFreqSecs float64) *St
 		pulseSecs = pulseSecsRounded
 		tickFreqSecs = tickFreqSecsRounded
 	}
-	pulseSize := int(math.Round(pulseSecs / tickFreqSecs))
-	if pulseSize < 2 {
-		pulseSize = 2
-	}
+	pulseSize := max(int(math.Round(pulseSecs/tickFreqSecs)), 2)
 	return &StringStats{
 		pulseWindow:  make([]string, pulseSize),
 		pulsePresent: make([]bool, pulseSize),

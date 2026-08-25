@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     ;;
   -h | --help | -*)
     echo "Usage: ${0} [-v|--verbose] [-h|--help]"
-    echo "       influxdb3 query run the generated query for every declared relation"
+    echo "       influxdb3 migrate rewrite renamed measures, run by hand and never by fab"
     exit 2
     ;;
   *)
@@ -177,10 +177,35 @@ query_sql() {
   [ "${faults}" = 0 ]
 }
 
-printf '\nSchema query [%s] against [%s]\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
+printf '\nSchema migrate [%s] against [%s]\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
 FAULTS=0
-for SQL_FILE in "${ROOT_DIR}"/query/*.sql; do
-  SCHEMA_LABEL="$(basename "${SQL_FILE}")"
-  query_sql < "${SQL_FILE}" || FAULTS=$((FAULTS + 1))
+POINTS=0
+for SQL_FILE in "${ROOT_DIR}"/migrate/*.sql; do
+  [ -e "${SQL_FILE}" ] || continue
+  while IFS= read -r STATEMENT; do
+    [ -z "${STATEMENT}" ] && continue
+    if ! RESULT="$(query "${STATEMENT}")"; then
+      fail "${STATEMENT}" "${RESULT}"
+      FAULTS=$((FAULTS + 1))
+      continue
+    fi
+    COUNT="$(printf '%s' "${RESULT}" | rows)"
+    printf -- '\n-- %s\n\n' "$(basename "${SQL_FILE}")"
+    if [ "${COUNT}" = "0" ]; then
+      printf 'read [0] points, nothing to backfill\n'
+      continue
+    fi
+    if ! printf '%s' "${RESULT}" | jq -r '.[].line' | write_lp; then
+      FAULTS=$((FAULTS + 1))
+      continue
+    fi
+    POINTS=$((POINTS + COUNT))
+    printf 'backfilled [%s] points\n' "${COUNT}"
+  done < <(statements < "${SQL_FILE}")
 done
-[ "${FAULTS}" = 0 ]
+
+if [ "${FAULTS}" != "0" ]; then
+  printf '\nSchema migrate [%s] failed [%s] statement(s)\n' "supervisor" "${FAULTS}" >&2
+  exit 1
+fi
+printf '\nSchema migrate [%s] backfilled [%s] points with no faults\n' "supervisor" "${POINTS}"

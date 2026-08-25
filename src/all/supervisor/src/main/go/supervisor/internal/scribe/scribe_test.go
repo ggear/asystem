@@ -98,9 +98,9 @@ func TestScribe_File(t *testing.T) {
 	logDir := logDir()
 	for index, testCase := range tests {
 		testCase := testCase
-		message := fmt.Sprintf("Expected log message %d", index)
+		message := fmt.Sprintf("exp%d", index)
 		if !testCase.expected {
-			message = fmt.Sprintf("UNEXPECTED LOG MESSAGE %d!!!!", index)
+			message = fmt.Sprintf("bad%d", index)
 		}
 		cmdName := fmt.Sprintf("supervisor-test-%d", index)
 		logPath := filepath.Join(logDir, fmt.Sprintf("%s-pid-%d.log", cmdName, os.Getpid()))
@@ -256,7 +256,7 @@ func TestScribe_BufferHandler(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			buf := EnableBuffer(testCase.level, 50)
-			msg := fmt.Sprintf("test-%s", testCase.name)
+			msg := "marker"
 			testCase.logFunc(msg)
 			tail := buf.Tail(1)
 			found := len(tail) > 0 && bytes.Contains([]byte(tail[0].Message), []byte(msg))
@@ -268,44 +268,47 @@ func TestScribe_BufferHandler(t *testing.T) {
 }
 
 func TestScribe_FormatColumns(t *testing.T) {
+	sourceOffset := 0
+	subjectOffset := widthSource + 1
+	actionOffset := subjectOffset + widthSubject + 1
+	durationOffset := actionOffset + widthAction + 1
+	verbOffset := durationOffset + widthDuration + 1
 	tests := []struct {
-		name          string
-		attrs         []slog.Attr
-		expectedError bool
+		name    string
+		source  string
+		subject string
+		action  string
+		verb    string
 	}{
-		{
-			name:          "happy_short_values",
-			attrs:         []slog.Attr{slog.String("engine", "a"), slog.String("phase", "b"), slog.Duration("duration", 0)},
-			expectedError: false,
-		},
-		{
-			name:          "happy_long_values",
-			attrs:         []slog.Attr{slog.String("engine", "aaaaaaaaa"), slog.String("phase", "bbbbbbbbb"), slog.Duration("duration", time.Hour)},
-			expectedError: false,
-		},
-		{
-			name:          "happy_probe_shares_engine_column",
-			attrs:         []slog.Attr{slog.String("probe", "a"), slog.String("phase", "b"), slog.Duration("duration", time.Millisecond)},
-			expectedError: false,
-		},
-	}
-	offsets := []struct {
-		key      string
-		expected int
-	}{
-		{"phase=", widthTag + 1 + widthEngine + 1},
-		{"duration=", widthTag + 1 + widthEngine + 1 + widthPhase + 1},
+		{name: "happy_short_values", source: "probe", subject: "host/x", action: "compute", verb: "computed"},
+		{name: "happy_long_values", source: "database", subject: "service/configured_status", action: "disconnect", verb: "faulting"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			record := slog.NewRecord(time.Now(), slog.LevelInfo, "state", 0)
-			record.AddAttrs(testCase.attrs...)
+			record := slog.NewRecord(time.Now(), slog.LevelInfo, testCase.verb, 0)
+			record.AddAttrs(
+				slog.String(keySource, testCase.source),
+				slog.String(keySubject, testCase.subject),
+				slog.String(keyAction, testCase.action),
+				slog.Duration(keyDuration, time.Millisecond),
+				slog.String(keyDetail, "[1] example"),
+			)
 			line := format(record)
-			for _, offset := range offsets {
-				got := strings.Index(line, offset.key)
-				if got >= 0 && got != offset.expected {
-					t.Errorf("%s column: got %d want %d", offset.key, got, offset.expected)
-				}
+			if got := line[sourceOffset : sourceOffset+len(testCase.source)]; got != testCase.source {
+				t.Errorf("source: got %q want %q at %d", got, testCase.source, sourceOffset)
+			}
+			if got := line[subjectOffset : subjectOffset+len(testCase.subject)]; got != testCase.subject {
+				t.Errorf("subject: got %q want %q at %d", got, testCase.subject, subjectOffset)
+			}
+			if got := line[actionOffset : actionOffset+len(testCase.action)]; got != testCase.action {
+				t.Errorf("action: got %q want %q at %d", got, testCase.action, actionOffset)
+			}
+			if got := line[verbOffset : verbOffset+len(testCase.verb)]; got != testCase.verb {
+				t.Errorf("verb: got %q want %q at %d", got, testCase.verb, verbOffset)
+			}
+			wantDuration := durationText(slog.DurationValue(time.Millisecond))
+			if got := line[durationOffset : durationOffset+widthDuration]; got != wantDuration {
+				t.Errorf("duration: got %q want %q at %d", got, wantDuration, durationOffset)
 			}
 		})
 	}
@@ -357,9 +360,9 @@ func TestScribe_FormatDuration(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := duration(slog.DurationValue(testCase.value))
+			got := durationText(slog.DurationValue(testCase.value))
 			wantWidth := widthDuration
-			if size := len(keyDuration) + len("=") + len(testCase.expected); size > wantWidth {
+			if size := len(testCase.expected); size > wantWidth {
 				wantWidth = size
 			}
 			if len(got) != wantWidth {
@@ -380,26 +383,26 @@ func TestScribe_FormatDetailIsLast(t *testing.T) {
 	}{
 		{
 			name:          "happy_detail_only",
-			attrs:         []slog.Attr{slog.String("detail", "a [1] b")},
+			attrs:         []slog.Attr{slog.String(keyDetail, "a [1] b")},
 			expectedError: false,
 		},
 		{
 			name:          "happy_detail_after_columns",
-			attrs:         []slog.Attr{slog.String("detail", "a [1] b"), slog.String("engine", "c"), slog.Duration("duration", 0)},
+			attrs:         []slog.Attr{slog.String(keyDetail, "a [1] b"), slog.String(keySource, "c"), slog.Duration(keyDuration, 0)},
 			expectedError: false,
 		},
 		{
 			name:          "happy_detail_after_unknown_key",
-			attrs:         []slog.Attr{slog.String("detail", "a [1] b"), slog.Int("unknown", 1)},
+			attrs:         []slog.Attr{slog.String(keyDetail, "a [1] b"), slog.Int("unknown", 1)},
 			expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			record := slog.NewRecord(time.Now(), slog.LevelInfo, "state", 0)
+			record := slog.NewRecord(time.Now(), slog.LevelInfo, "computed", 0)
 			record.AddAttrs(testCase.attrs...)
 			line := format(record)
-			if !strings.HasSuffix(line, " detail=a [1] b") {
+			if !strings.HasSuffix(line, " a [1] b") {
 				t.Errorf("detail: got %q want it to end the line", line)
 			}
 		})
@@ -422,7 +425,7 @@ func TestScribe_NoDirectLogging(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			calls := logCalls(t, testCase.root)
 			for _, call := range calls {
-				t.Errorf("%s: got a direct slog.%s call, want a scribe.Engine or scribe.Probe logger", call.position, call.level)
+				t.Errorf("%s: got a direct slog.%s call, want a scribe.Log logger", call.position, call.level)
 			}
 		})
 	}

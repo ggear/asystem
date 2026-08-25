@@ -16,8 +16,8 @@ type Terminal interface {
 	events() chan tcell.Event
 }
 
-func TerminalFactory(theme Theme) terminalFactory {
+func NewTerminalFactory(theme Theme) TerminalFactory {
 	return newTerminalWrapper(theme)
 }
 
-type terminalFactory func(useUnicode bool) (Terminal, error)
+type TerminalFactory func(useUnicode bool) (Terminal, error)

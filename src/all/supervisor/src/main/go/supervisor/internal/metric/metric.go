@@ -13,8 +13,8 @@ const (
 	MetricHostFailedLogs
 	MetricHostFailedShares
 	MetricHostFailedBackups
-	MetricHostWarnTemperatureOfMax
-	MetricHostSpinFanSpeedOfMax
+	MetricHostWarnTemperature
+	MetricHostSpinFanSpeed
 	MetricHostLifeUsedDrives
 	MetricHostUsedSystemSpace
 	MetricHostUsedShareSpace
@@ -62,7 +62,7 @@ const (
 
 func GetIDs() []ID {
 	ids := make([]ID, MetricMax)
-	for id := ID(0); id < MetricMax; id++ {
+	for id := range MetricMax {
 		ids[id] = id
 	}
 	return ids
@@ -80,6 +80,27 @@ func GetIDKind(id ID) MetricKind {
 		return MetricKindUnset
 	}
 	return metricBuildersByID[id].metricKind
+}
+
+func GetIDUnit(id ID) string {
+	if id < 0 || id >= MetricMax {
+		return ""
+	}
+	return metricBuildersByID[id].unit
+}
+
+func GetIDPulseRule(id ID) Rule {
+	if id < 0 || id >= MetricMax {
+		return Rule{}
+	}
+	return metricBuildersByID[id].pulseRule
+}
+
+func GetIDTrendRule(id ID) Rule {
+	if id < 0 || id >= MetricMax {
+		return Rule{}
+	}
+	return metricBuildersByID[id].trendRule
 }
 
 func GetIDsByKind(types []MetricKind) []ID {

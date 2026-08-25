@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"supervisor/internal/config"
+	"supervisor/internal/metric"
 	"testing"
 	"time"
 
@@ -612,79 +613,45 @@ func TestProbeHost_SpinFanSpeed(t *testing.T) {
 	}
 }
 
-func TestProbeHost_SpinFanRespondingOK(t *testing.T) {
+func TestProbeHost_SpinFanRule(t *testing.T) {
 	tests := []struct {
-		name           string
-		fans           map[string][2]float64
-		fan            int8
-		temperature    int8
-		temperatureMax int8
-		fanMin         int8
-		expectedOK     bool
+		name        string
+		fans        map[string][2]float64
+		fan         int8
+		temperature int8
+		window      string
+		expectedOK  bool
 	}{
-		{
-			name:           "happy_cool_host",
-			fans:           map[string][2]float64{"Exhaust": {1799, 4800}},
-			fan:            37,
-			temperature:    40,
-			temperatureMax: 65,
-			fanMin:         80,
-			expectedOK:     true,
-		},
-		{
-			name:           "happy_hot_host_fan_idle",
-			fans:           map[string][2]float64{"Exhaust": {1799, 4800}},
-			fan:            37,
-			temperature:    90,
-			temperatureMax: 65,
-			fanMin:         80,
-			expectedOK:     false,
-		},
-		{
-			name:           "happy_hot_host_fan_ramped",
-			fans:           map[string][2]float64{"Exhaust": {4080, 4800}},
-			fan:            85,
-			temperature:    90,
-			temperatureMax: 65,
-			fanMin:         80,
-			expectedOK:     true,
-		},
-		{
-			name:           "happy_warm_trend_fan_idle",
-			fans:           map[string][2]float64{"Exhaust": {1799, 4800}},
-			fan:            37,
-			temperature:    60,
-			temperatureMax: 55,
-			fanMin:         50,
-			expectedOK:     false,
-		},
-		{
-			name:           "happy_warm_trend_fan_ramped",
-			fans:           map[string][2]float64{"Exhaust": {2880, 4800}},
-			fan:            60,
-			temperature:    60,
-			temperatureMax: 55,
-			fanMin:         50,
-			expectedOK:     true,
-		},
-		{
-			name:           "happy_fanless_host_exempt",
-			fans:           nil,
-			fan:            0,
-			temperature:    90,
-			temperatureMax: 65,
-			fanMin:         80,
-			expectedOK:     true,
-		},
+		{name: "happy_cool_host_pulse", fans: map[string][2]float64{"Exhaust": {1799, 4800}}, fan: 37, temperature: 40, window: "pulse", expectedOK: true},
+		{name: "happy_hot_host_fan_idle_pulse", fans: map[string][2]float64{"Exhaust": {1799, 4800}}, fan: 37, temperature: 90, window: "pulse", expectedOK: false},
+		{name: "happy_hot_host_fan_ramped_pulse", fans: map[string][2]float64{"Exhaust": {4080, 4800}}, fan: 85, temperature: 90, window: "pulse", expectedOK: true},
+		{name: "happy_warm_trend_fan_idle", fans: map[string][2]float64{"Exhaust": {1799, 4800}}, fan: 37, temperature: 60, window: "trend", expectedOK: false},
+		{name: "happy_warm_trend_fan_ramped", fans: map[string][2]float64{"Exhaust": {2880, 4800}}, fan: 60, temperature: 60, window: "trend", expectedOK: true},
+		{name: "happy_fanless_host_exempt", fans: nil, fan: 0, temperature: 90, window: "pulse", expectedOK: true},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Cleanup(resetSensors)
-			probe := newHostProbe()
-			probe.sysRoot = writeSensorTree(t, nil, nil, testCase.fans)
-			ok := probe.spinFanRespondingOK("pulse", testCase.fan, testCase.temperature, testCase.temperatureMax, testCase.fanMin)
-			if ok != testCase.expectedOK {
-				t.Fatalf("spinFanRespondingOK: got %v want %v", ok, testCase.expectedOK)
+			sysRoot := writeSensorTree(t, nil, nil, testCase.fans)
+			gates := metric.GateResolver(func(gate metric.GateID) (bool, bool) {
+				if gate == metric.GateFansAbsent {
+					return !loadSensors(sysRoot).hasFans(), true
+				}
+				return false, false
+			})
+			values := metric.ValueResolver(func(id metric.ID) (float64, bool) {
+				if id == metric.MetricHostWarnTemperature {
+					return float64(testCase.temperature), true
+				}
+				return 0, false
+			})
+			rule := metric.GetIDPulseRule(metric.MetricHostSpinFanSpeed)
+			if testCase.window == "trend" {
+				rule = metric.GetIDTrendRule(metric.MetricHostSpinFanSpeed)
+			}
+			result := rule.Evaluate("%", float64(testCase.fan), true, values, gates)
+			if result.OK != testCase.expectedOK {
+				t.Fatalf("evaluate: got %v want %v detail %s", result.OK, testCase.expectedOK, result.Detail)
 			}
 		})
 	}

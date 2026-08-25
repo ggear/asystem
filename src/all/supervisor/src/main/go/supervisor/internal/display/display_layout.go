@@ -178,12 +178,12 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 
 	d_1_0 := box{lblMid: text{ascii: "Used CPU "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedProcessor}
 	d_1_1 := box{lblMid: text{ascii: "Fail LOG "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncSpacer}
-	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostWarnTemperatureOfMax}
+	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostWarnTemperature}
 	d_1_3 := box{lblMid: text{ascii: "Used SYS "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeIncSpacer}
 
 	d_2_0 := box{lblMid: text{ascii: "Used RAM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedMemory}
 	d_2_1 := box{lblMid: text{ascii: "Fail SHR "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncSpacer}
-	d_2_2 := box{lblMid: text{ascii: "Revs FAN "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostSpinFanSpeedOfMax}
+	d_2_2 := box{lblMid: text{ascii: "Revs FAN "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostSpinFanSpeed}
 	d_2_3 := box{lblMid: text{ascii: "Used SHR "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncSpacer}
 
 	d_3_0 := box{lblMid: text{ascii: "Aloc RAM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostAllocatedMemory}
@@ -332,12 +332,12 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 
 	d_1_0 := box{lblMid: text{ascii: "Used CPU "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedProcessor, resizeInc: resizeIncHistVal}
 	d_1_1 := box{lblMid: text{ascii: "Fail LOG "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncHistVal}
-	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostWarnTemperatureOfMax, resizeInc: resizeIncHistVal}
+	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostWarnTemperature, resizeInc: resizeIncHistVal}
 	d_1_3 := box{lblMid: text{ascii: "Used SYS "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeIncHistVal}
 
 	d_2_0 := box{lblMid: text{ascii: "Used RAM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedMemory, resizeInc: resizeIncHistVal}
 	d_2_1 := box{lblMid: text{ascii: "Fail SHR "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncHistVal}
-	d_2_2 := box{lblMid: text{ascii: "Revs FAN "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostSpinFanSpeedOfMax, resizeInc: resizeIncHistVal}
+	d_2_2 := box{lblMid: text{ascii: "Revs FAN "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostSpinFanSpeed, resizeInc: resizeIncHistVal}
 	d_2_3 := box{lblMid: text{ascii: "Used SHR "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncHistVal}
 
 	d_3_0 := box{lblMid: text{ascii: "Aloc RAM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostAllocatedMemory, resizeInc: resizeIncHistVal}
@@ -403,7 +403,7 @@ type text struct {
 }
 
 func logRemainder(started time.Time, rem, hostCount int) {
-	scribe.Engine("state", "display").Error("layout", started, "invalid  [%d] remainder for [%d] hosts", rem, hostCount)
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Error("unusable", started, "[%d] remainder for [%d] hosts", rem, hostCount)
 }
 
 func (t text) pick(useUnicode bool) string {

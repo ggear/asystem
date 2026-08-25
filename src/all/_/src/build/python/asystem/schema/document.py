@@ -105,6 +105,7 @@ class SchemaDatabaseOptions:
     retention: str = ""
     timezone: str = ""
     applier: bool = False
+    renamed: dict = field(default_factory=dict)
 
 
 @dataclass

@@ -1,7 +1,7 @@
 from operator import itemgetter
 
-from fabfile import _get_modules_by_hosts, _get_host_label, _get_host_index, HOSTS
 from asystem import *
+from fabfile import _get_modules_by_hosts, _get_host_label, _get_host_index, HOSTS
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
@@ -37,6 +37,9 @@ if __name__ == "__main__":
     write_schema_database(document, database_dialect="influxdb3", database_entities={
         "supervisor/host": sorted(modules_server.keys()),
         "supervisor/service": sorted({service for services in modules_server.values() for service in services}),
+    }, database_renamed_measures={
+        "warn_temperature_of_max": "warn_temperature",
+        "spin_fan_speed_of_max": "spin_fan_speed",
     })
     metadata_supervisor_schema = []
     for host, services in sorted(modules_server.items(), key=itemgetter(0)):

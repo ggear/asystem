@@ -56,10 +56,7 @@ func NewFloatStats(trendHours int, pulseSecs float64, tickFreqSecs float64) *Flo
 		pulseSecs = pulseSecsRounded
 		tickFreqSecs = tickFreqSecsRounded
 	}
-	pulseSize := int(math.Round(pulseSecs / tickFreqSecs))
-	if pulseSize < 2 {
-		pulseSize = 2
-	}
+	pulseSize := max(int(math.Round(pulseSecs/tickFreqSecs)), 2)
 	pulse := make([]float64, pulseSize)
 	for i := range pulse {
 		pulse[i] = math.NaN()

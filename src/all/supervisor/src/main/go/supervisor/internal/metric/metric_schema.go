@@ -62,9 +62,9 @@ func Relations(hosts []string, services []string, cadence string) []schema.Relat
 			Kind:        GetIDKindSchema(id),
 			Unit:        builder.unit,
 			Description: builder.description,
-			Persist:     !builder.skipDatabase,
+			Persist:     builder.persisted,
 		})
-		if !builder.skipDatabase {
+		if builder.persisted {
 			relation.Measures = append(relation.Measures, schema.Measure{
 				Key:         GetIDField(id) + "_trend",
 				Kind:        GetIDKindSchema(id),

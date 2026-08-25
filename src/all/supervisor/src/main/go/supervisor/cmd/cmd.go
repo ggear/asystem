@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
+	"supervisor/internal/scribe"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -16,7 +17,10 @@ import (
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_, err := fmt.Fprintln(os.Stderr, err)
+		if err != nil {
+			return
+		}
 		os.Exit(1)
 	}
 }
@@ -73,6 +77,24 @@ func makeLevel(logLevel string) (slog.Level, error) {
 	default:
 		return slog.LevelInfo, fmt.Errorf("invalid log level [%s], must be one of [debug, info, warn, error]", logLevel)
 	}
+}
+
+type logOptions struct {
+	logLevel   string
+	logSource  string
+	logSubject string
+	logAction  string
+}
+
+func addLogFlags(cmd *cobra.Command, opts *logOptions, level, sink string) {
+	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", level, "lowest log level written to "+sink+", one of debug, info, warn or error")
+	cmd.Flags().StringVar(&opts.logSource, "log-source", "", "comma-separated source prefixes to log, e.g. probe,broker; empty logs every source")
+	cmd.Flags().StringVar(&opts.logSubject, "log-subject", "", "comma-separated subject prefixes to log, e.g. host/used; empty logs every subject")
+	cmd.Flags().StringVar(&opts.logAction, "log-action", "", "comma-separated action prefixes to log, e.g. compute,census; empty logs every action")
+}
+
+func setLogFilters(opts *logOptions) error {
+	return scribe.SetFilters(opts.logSource, opts.logSubject, opts.logAction)
 }
 
 func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeriod, heartbeatPeriod string) (config.Periods, error) {

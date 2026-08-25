@@ -197,6 +197,10 @@ func (m *mockProbe) metrics() []metric.ID {
 	return m.metricsList
 }
 
+func (m *mockProbe) gates() []metric.GateID {
+	return nil
+}
+
 func (m *mockProbe) create(_ string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
 	m.mutex.Lock()
 	m.createCalls++
@@ -255,26 +259,5 @@ func TestProbe_MetricStatusOf(t *testing.T) {
 				t.Errorf("status: got %v want %v", status, testCase.expectedStatus)
 			}
 		})
-	}
-}
-
-func TestProbe_MetricInertIsOwnedByAProbe(t *testing.T) {
-	owned := map[metric.ID]bool{}
-	for _, probe := range []probe{newHostProbe(), newServicesProbe()} {
-		for _, id := range probe.metrics() {
-			owned[id] = true
-		}
-	}
-	for id, value := range metricInert {
-		if id < 0 || id >= metric.MetricMax {
-			t.Errorf("id: got %v want a metric below %v", id, metric.MetricMax)
-			continue
-		}
-		if value == "" {
-			t.Errorf("%v: fixed value must be stated", metric.GetIDName(id))
-		}
-		if !owned[id] {
-			t.Errorf("%v: no probe registers the metric", metric.GetIDName(id))
-		}
 	}
 }

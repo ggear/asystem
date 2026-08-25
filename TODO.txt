@@ -34,6 +34,22 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
+make supervisor clean in INtelliJ
+update all schema main.go to use unique err's like supervisor/tools/schema/main.go
+validate mutex use in stats and elsewhere is minimal and appropriate
+roll probe_order_test.go into probe_rule_test.go. Make sure test func name standard is observed in all test files. 
+merge all scribe_*_test.go into scribe_test.go rename scribe_dimension.go to something better that comes before scribe_test.go or roll into scribe_filter.go
+should metric_rule.go use stringer like metric_string.go given precedence? other candidates to use stringer and be consistent?
+is this well named? rationalised? GateDrives and GateFansAbsent seem out of place and or misnamed? Possible to generalise GateFansAbsent? rename GateDrivesHealthy const (
+  GateDrivesHealthy GateID = iota
+  GateServiceAggregate
+  GateServiceHealthy
+  GateServiceConfigured
+  GateFansAbsent
+)
+rename database migrate to mutate, update all references derived and literal
+audit code changes, ensure it macthes current coding style, faily wide lines, funcs in correct files, var/func named well and consistent, inline or make inner closures of functions that should be as in other parts of the codebase. any areas of simplifation possible. i do not
+  want --log-format=json
 
 mv influxdb3/mlflow/mlserver from max to may, cloudflare/tempstat/letsencrupt to max
 adjust memeory allocs

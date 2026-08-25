@@ -26,10 +26,10 @@
 #   field failed_shares_trend % 6s [declared shares failing to mount or report, as a percentage of those defined, smoothed across the trend window]
 #   field failed_backups - 6s [backups failing to complete, not yet implemented and always zero]
 #   field failed_backups_trend - 6s [backups failing to complete, not yet implemented and always zero, smoothed across the trend window]
-#   field warn_temperature_of_max % 6s [hottest processor temperature as a percentage of its warning ceiling, zero at forty degrees and full at sixty degrees]
-#   field warn_temperature_of_max_trend % 6s [hottest processor temperature as a percentage of its warning ceiling, zero at forty degrees and full at sixty degrees, smoothed across the trend window]
-#   field spin_fan_speed_of_max % 6s [fastest fan speed as a percentage of its rated maximum speed]
-#   field spin_fan_speed_of_max_trend % 6s [fastest fan speed as a percentage of its rated maximum speed, smoothed across the trend window]
+#   field warn_temperature % 6s [hottest processor temperature as a percentage of its warning ceiling, zero at forty degrees and full at sixty degrees]
+#   field warn_temperature_trend % 6s [hottest processor temperature as a percentage of its warning ceiling, zero at forty degrees and full at sixty degrees, smoothed across the trend window]
+#   field spin_fan_speed % 6s [fastest fan speed as a percentage of its rated maximum speed]
+#   field spin_fan_speed_trend % 6s [fastest fan speed as a percentage of its rated maximum speed, smoothed across the trend window]
 #   field life_used_drives % 6s [rated endurance consumed by the most worn drive, not ok when any drive reports new errors]
 #   field life_used_drives_trend % 6s [rated endurance consumed by the most worn drive, not ok when any drive reports new errors, smoothed across the trend window]
 #   field used_system_space % 6s [space used by the fullest system volume of the host]
@@ -67,10 +67,10 @@ supervisor,
     failed_shares_trend=<int>,
     failed_backups=<int>,
     failed_backups_trend=<int>,
-    warn_temperature_of_max=<int>,
-    warn_temperature_of_max_trend=<int>,
-    spin_fan_speed_of_max=<int>,
-    spin_fan_speed_of_max_trend=<int>,
+    warn_temperature=<int>,
+    warn_temperature_trend=<int>,
+    spin_fan_speed=<int>,
+    spin_fan_speed_trend=<int>,
     life_used_drives=<int>,
     life_used_drives_trend=<int>,
     used_system_space=<int>,

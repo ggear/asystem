@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 )
 
@@ -93,10 +94,10 @@ func (s *logSet) open() bool {
 		s.file = file
 		s.boot = bootTime(root)
 		s.available = true
-		scribe.Probe("state", "host").Info("logs", time.Now(), "following [%s] for kernel errors", path)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Info("followed", time.Now(), "[%s] for kernel errors", path)
 		return true
 	}
-	scribe.Probe("state", "host").Warn("logs", time.Now(), "unreadable kernel log %s, reporting [0] errors, needs [CAP_SYSLOG] and device [%s]", strings.Join(failures, " and "), logDeviceNode)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("noaccess", time.Now(), "kernel log %s, reporting [0] errors, needs [CAP_SYSLOG] and device [%s]", strings.Join(failures, " and "), logDeviceNode)
 	return false
 }
 
@@ -150,7 +151,7 @@ func (s *logSet) scan(shouts int) int {
 		s.stamps = append(s.stamps, stamp)
 		if s.drained && shouts < logShoutsMax {
 			shouts++
-			scribe.Probe("state", "host").Error("logs", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipLogMessage(message))
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("observed", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipLogMessage(message))
 		}
 	}
 }
@@ -276,20 +277,18 @@ const logIgnorePatterns = `
 `
 
 const (
-	logHostRoot        = "/"
-	logDevicePath      = "dev/kmsg"
-	logDeviceNode      = "/dev/kmsg"
-	logUptimePath      = "proc/uptime"
-	logErrorText       = "error"
-	logLevelMask       = 7
-	logLevelError      = 3
-	logBufferBytes     = 8192
-	logReadsMax        = 4096
-	logStampsMax       = 4096
-	logShoutsMax       = 5
-	logMessageMax      = 120
-	logErrorBudget     = 10.0
-	logErrorPulseOfMax = 100.0 / logErrorBudget
+	logHostRoot    = "/"
+	logDevicePath  = "dev/kmsg"
+	logDeviceNode  = "/dev/kmsg"
+	logUptimePath  = "proc/uptime"
+	logErrorText   = "error"
+	logLevelMask   = 7
+	logLevelError  = 3
+	logBufferBytes = 8192
+	logReadsMax    = 4096
+	logStampsMax   = 4096
+	logShoutsMax   = 5
+	logMessageMax  = 120
 )
 
 var (

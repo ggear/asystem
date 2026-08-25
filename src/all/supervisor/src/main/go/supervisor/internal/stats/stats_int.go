@@ -11,16 +11,16 @@ import (
 // Performance-optimised rolling window implementation for monitoring int values 0-100.
 //
 // MEMORY USAGE (per IntStats with default config):
-//   - Trend window:  ~920 KB (3-tier: 1h@1s + 6h@1min + 18h@1hour = 25 hours total)
+//   - Trend window: ~920 KB (3-tier: 1h@1s + 6h@1min + 18h@1hour = 25 hours total)
 //   - Pulse window: ~1.1 KB (5 samples @ 1s)
 //   - Total per IntStats: ~921 KB
 //   - 50 PercentageWindows: ~46 MB
 //
 // CPU USAGE (per IntStats):
-//   - Push(): O(1) ~10-20ns per call (array increment + bounds check)
-//   - Tick(): O(1) ~100ns (moves deque pointer, periodic aggregation)
-//   - Query (Mean/Max/Min): O(window_count) ~0.1ms for trend window
-//   - Query (P95/P80): O((young + middle + geriatric) * 101) ~0.3ms for trend window
+//   - Push(): O(1) ~10-20ns per call (array increment and bound check)
+//   - Tick(): O(1) ~100ns (moves a deque pointer, periodic aggregation)
+//   - Query (Mean/Max/Min): O(window_count) ~0.1ms for a trend window
+//   - Query (P95/P80): O((young + middle + geriatric) * 101) ~0.3ms for a trend window
 //   - 50 windows @ 100 Push/sec: <0.1% CPU baseline, 1-3% with frequent queries
 //
 // ACCURACY:
@@ -239,10 +239,7 @@ func newTrendWindow(durationHours int, tickFreqSecs int) *trendWindow {
 	targetMiddleSecs := defaultMiddleCapacity * ticksPerMinute
 	middleCapacity := atLeast1(targetMiddleSecs / middleSlotSecs)
 	middleSecs := middleCapacity * middleSlotSecs
-	remainingSecs := totalSecs - youngSecs - middleSecs
-	if remainingSecs < 0 {
-		remainingSecs = 0
-	}
+	remainingSecs := max(totalSecs-youngSecs-middleSecs, 0)
 	middleAggBatchSize := atLeast1(ticksPerHour / ticksPerMinute)
 	geriatricSlotSecs := middleSlotSecs * middleAggBatchSize
 	geriatricCapacity := atLeast1(remainingSecs / geriatricSlotSecs)
@@ -305,7 +302,7 @@ func (w *trendWindow) enqueueYoung(histogram compactHistogram) bool {
 }
 
 func (w *trendWindow) drainTier(
-	sourceSlice interface{},
+	sourceSlice any,
 	sourceHead, sourceCount *int,
 	sourceCapacity int,
 	batchSize int,

@@ -176,13 +176,13 @@ func (c *RecordCache) Store(guid RecordGUID, record *Record) {
 }
 
 func (c *RecordCache) RegisterService(hostName, serviceName string, all bool) []TopicBinding {
-	if c == nil || hostName == "" || serviceName == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
+	if c == nil || hostName == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
 		return nil
 	}
 	c.mutex.Lock()
 	added := false
 	if all {
-		for id := ID(0); id < MetricMax; id++ {
+		for id := range MetricMax {
 			if GetIDKind(id) != MetricKindService {
 				continue
 			}
@@ -779,7 +779,7 @@ func (c *RecordCache) String() string {
 	}
 	var stringBuilder strings.Builder
 	for index, entry := range entries {
-		fmt.Fprintf(&stringBuilder, format,
+		_, err := fmt.Fprintf(&stringBuilder, format,
 			index,
 			entry.guid.ID,
 			entry.guid.ServiceIndex,
@@ -790,6 +790,9 @@ func (c *RecordCache) String() string {
 			truncate(orNil(entry.topic), topicWidth),
 			tagsString(entry.tags),
 		)
+		if err != nil {
+			return ""
+		}
 	}
 	return stringBuilder.String()
 }

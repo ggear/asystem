@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 	"sync"
 	"time"
@@ -50,8 +51,11 @@ func resetSensors() {
 }
 
 func (s *sensorSet) celsius() (float64, derivation, error) {
-	if s == nil || len(s.temperatureInputs) == 0 {
-		return 0, derivation{}, fmt.Errorf("no temperature read, discovery found no package, soc, composite or thermal zone sensor under [%s], so this host exposes none this probe knows how to read", s.sysRoot)
+	if s == nil {
+		return 0, derivation{}, fmt.Errorf("no temperature read, discovery found no package, soc, composite or thermal zone sensor, so this host exposes none this probe knows how to read [%w]", errEnvironment)
+	}
+	if len(s.temperatureInputs) == 0 {
+		return 0, derivation{}, fmt.Errorf("no temperature read, discovery found no package, soc, composite or thermal zone sensor under [%s], so this host exposes none this probe knows how to read [%w]", s.sysRoot, errEnvironment)
 	}
 	hottest := 0.0
 	found := false
@@ -76,7 +80,7 @@ func (s *sensorSet) celsius() (float64, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no temperature read, none of the [%d] discovered [%s] tier sensors answered sanely, rejected [%s]",
 			len(s.temperatureInputs), s.tier, strings.Join(rejected, ", "))
 	}
-	return hottest, derived("sensors", "computed [%.1f] celsius hottest, tier [%s], inputs [%d], offset [%.1f] celsius, sane between [%.0f] and [%.0f] celsius",
+	return hottest, derived(scribe.ActionSample, "computed [%.1f] °C hottest, tier [%s], inputs [%d], offset [%.1f] °C, sane between [%.0f] and [%.0f] °C",
 		hottest, s.tier, len(s.temperatureInputs), s.temperatureOffset, sensorMinCelsius, sensorMaxCelsius), nil
 }
 
@@ -85,8 +89,11 @@ func (s *sensorSet) hasFans() bool {
 }
 
 func (s *sensorSet) fanSpeedOfMax() (float64, derivation, error) {
-	if s == nil || len(s.fans) == 0 {
-		return 0, derived("sensors", "computed [0.0] pct of max, discovery found no fan input under [%s] so the metric is inert and always ok", s.sysRoot), nil
+	if s == nil {
+		return 0, derived(scribe.ActionSample, "computed [0.0] pct of max, discovery found no fan input so the metric is inert and always ok"), nil
+	}
+	if len(s.fans) == 0 {
+		return 0, derived(scribe.ActionSample, "computed [0.0] pct of max, discovery found no fan input under [%s] so the metric is inert and always ok", s.sysRoot), nil
 	}
 	fastest := 0.0
 	found := false
@@ -112,7 +119,7 @@ func (s *sensorSet) fanSpeedOfMax() (float64, derivation, error) {
 	if !found {
 		return 0, derivation{}, fmt.Errorf("no fan speed read, none of the [%d] discovered fans answered, rejected [%s]", len(s.fans), strings.Join(rejected, ", "))
 	}
-	return fastest, derived("sensors", "computed [%.1f] pct of max fastest, fans [%d], readings [%s]",
+	return fastest, derived(scribe.ActionSample, "computed [%.1f] pct of max fastest, fans [%d], readings [%s]",
 		fastest, len(s.fans), strings.Join(fastestDetail, " ")), nil
 }
 
@@ -150,7 +157,7 @@ func discoverSensors(sysRoot string) *sensorSet {
 			for _, input := range fans {
 				maxRPM, err := readSensorValue(strings.TrimSuffix(input, "_input") + "_max")
 				if err != nil || maxRPM <= 0 {
-					scribe.Probe("state", "sensors").Warn("discover", discoverStart, "skipped  [%s] fan declares no maximum speed", input)
+					scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostSpinFanSpeed), scribe.ActionDiscover).Info("bypassed", discoverStart, "[%s] fan declares no maximum speed", input)
 					continue
 				}
 				discovered.fans = append(discovered.fans, sensorFan{
@@ -180,9 +187,9 @@ func discoverSensors(sysRoot string) *sensorSet {
 		}
 	}
 	if discovered.tier == sensorTierComposite {
-		scribe.Probe("state", "sensors").Warn("discover", discoverStart, "derived  [composite] no package or soc sensor found, deriving from a drive sensor offset by [%.0f] C", sensorCompositeOffset)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Info("fallback", discoverStart, "[composite] no package or soc sensor found, deriving from a drive sensor offset by [%.0f] C", sensorCompositeOffset)
 	}
-	scribe.Probe("state", "sensors").Info("discover", discoverStart, "sensors  [%s] tier with [%d] temperature and [%d] fan inputs under [%s]", discovered.tier, len(discovered.temperatureInputs), len(discovered.fans), sysRoot)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Info("topology", discoverStart, "[%s] tier with [%d] temperature and [%d] fan inputs under [%s]", discovered.tier, len(discovered.temperatureInputs), len(discovered.fans), sysRoot)
 	return discovered
 }
 
@@ -215,24 +222,16 @@ func readSensorValue(path string) (float64, error) {
 }
 
 const (
-	sensorSysRoot          = "/sys"
-	sensorNestedDir        = "device"
-	sensorTierPackage      = "package"
-	sensorTierSoc          = "soc"
-	sensorTierComposite    = "composite"
-	sensorTierZone         = "zone"
-	sensorTierNone         = "none"
-	sensorCompositeOffset  = 10.0
-	sensorMinCelsius       = 10.0
-	sensorMaxCelsius       = 150.0
-	sensorWarnFloorCelsius = 40.0
-	sensorWarnPerCelsius   = 5.0
-	sensorWarnPulseCelsius = 53.0
-	sensorWarnTrendCelsius = 51.0
-	sensorWarnPulseOfMax   = sensorWarnPerCelsius * (sensorWarnPulseCelsius - sensorWarnFloorCelsius)
-	sensorWarnTrendOfMax   = sensorWarnPerCelsius * (sensorWarnTrendCelsius - sensorWarnFloorCelsius)
-	sensorFanPulseOfMax    = 80
-	sensorFanTrendOfMax    = 50
+	sensorSysRoot         = "/sys"
+	sensorNestedDir       = "device"
+	sensorTierPackage     = "package"
+	sensorTierSoc         = "soc"
+	sensorTierComposite   = "composite"
+	sensorTierZone        = "zone"
+	sensorTierNone        = "none"
+	sensorCompositeOffset = 10.0
+	sensorMinCelsius      = 10.0
+	sensorMaxCelsius      = 150.0
 )
 
 var socSensorKeys = []string{"cpu_therm", "cpu-therm", "soc_therm", "soc-therm"}

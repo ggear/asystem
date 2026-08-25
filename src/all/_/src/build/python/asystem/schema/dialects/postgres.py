@@ -17,7 +17,7 @@ from asystem.schema.query import (
     select,
     vocabulary,
 )
-from asystem.schema.runner import RUNNER, describe_runner, query_runner, resolved, verify_runner
+from asystem.schema.runner import RUNNER, describe_runner, migrate_runner, query_runner, resolved, verify_runner
 
 DIALECT = "postgres"
 SHIPPED = "database"
@@ -54,7 +54,11 @@ def artifacts(document, module_name, options):
                                               describe_statements(document, dialect)), True)
     written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                          verify(document)), True)
+                                          verify(document, options.renamed)), True)
+    for table, statements in migrate(document, options.renamed).items():
+        written["migrate/{}.sql".format(table)] = (statements, False)
+    written["migrate.sh"] = (migrate_runner(module_name, DIALECT, TARGET, connect(module_name),
+                                            _migrate_body(module_name)), True)
     return written
 
 
@@ -153,8 +157,9 @@ def leaf(relations, table, options):
     return "\n".join(lines) + "\n"
 
 
-def verify(document):
+def verify(document, renamed=None):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
+    observed = ["type NOT IN ({})".format(literals(sorted(renamed)))] if renamed else []
     for table, relations in _tabled(document).items():
         declared = [(relation.path,) + tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
         values = ",\n".join("    ('{}', '{}', '{}', '{}')".format(*tuple_) for tuple_ in declared)
@@ -163,8 +168,9 @@ def verify(document):
              ("coalesce(d.period, o.period)", "period"), ("coalesce(d.unit, o.unit)", "unit"),
              ("CASE WHEN d.type IS NULL THEN 'undeclared' ELSE 'missing' END", "fault")],
             "(VALUES\n{}\n) AS d(relation, type, period, unit)\n"
-            "FULL OUTER JOIN (SELECT DISTINCT type, period, unit FROM {}) AS o\n"
-            "    ON d.type = o.type AND d.period = o.period AND d.unit = o.unit".format(values, table),
+            "FULL OUTER JOIN (SELECT DISTINCT type, period, unit FROM {}{}) AS o\n"
+            "    ON d.type = o.type AND d.period = o.period AND d.unit = o.unit".format(
+                values, table, " WHERE " + " AND ".join(observed) if observed else ""),
             ["d.type IS NULL OR o.type IS NULL"], order_by=["fault", "measure"]))
     return render_statements(statements)
 
@@ -187,6 +193,44 @@ for SQL_FILE in "${{ROOT_DIR}}"/*.sql; do
   "${{PSQL[@]}}" -v ON_ERROR_STOP=1 -f "${{SQL_FILE}}"
 done
 """.format(banner=banner(), shipped=SHIPPED, module=module_name).strip() + "\n"
+
+
+def migrate(document, renamed):
+    written = {}
+    sources = {new: old for old, new in (renamed or {}).items() if new}
+    for table, relations in _tabled(document).items():
+        statements = []
+        for relation in relations:
+            for measure in relation.carried(KINDS):
+                source = sources.get(measure.key)
+                if source is None:
+                    continue
+                statements.append(
+                    "-- rewrite the renamed [{}] as [{}], idempotent and touching no rows once run".format(
+                        source, measure.key))
+                statements.append("UPDATE {}\nSET type = '{}'\nWHERE type = '{}'".format(
+                    table, measure.key, source))
+        if statements:
+            written[table] = render_statements(statements)
+    return written
+
+
+def _migrate_body(module_name):
+    return """
+printf '\\nSchema migrate [%s] against [%s]\\n' "{module}" "${{{target}}}"
+FAULTS=0
+for SQL_FILE in "${{ROOT_DIR}}"/migrate/*.sql; do
+  [ -e "${{SQL_FILE}}" ] || continue
+  SCHEMA_LABEL="$(basename "${{SQL_FILE}}")"
+  query_sql < "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
+done
+
+if [ "${{FAULTS}}" != "0" ]; then
+  printf '\\nSchema migrate [%s] failed [%s] statement(s)\\n' "{module}" "${{FAULTS}}" >&2
+  exit 1
+fi
+printf '\\nSchema migrate [%s] rewrote with no faults\\n' "{module}"
+""".format(target=TARGET, module=module_name)
 
 
 def _dialect(time_column, zone=""):

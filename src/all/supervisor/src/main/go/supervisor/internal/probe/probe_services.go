@@ -119,8 +119,15 @@ func (p *servicesProbe) create(configPath string, cache *metric.RecordCache, mas
 	c := config.Load(configPath)
 	p.hostName = c.Host()
 	p.configuredServiceNames = c.Services(p.hostName)
-	reportMetricInert(p)
 	return nil
+}
+
+func (p *servicesProbe) gates() []metric.GateID {
+	return []metric.GateID{
+		metric.GateServiceAggregate,
+		metric.GateServiceHealthy,
+		metric.GateServiceConfigured,
+	}
 }
 
 func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
@@ -143,7 +150,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		}
 	}
 	if len(tombstoned) > 0 {
-		scribe.Probe("state", "services").Info("tombstone", tombstoneStart, "removed  [%d] services, host [%s], services [%s]", len(tombstoned), p.hostName, strings.Join(tombstoned, ","))
+		scribe.Log(scribe.SourceProbe, scribe.SubjectHost(p.hostName), scribe.ActionRemove).Info("removals", tombstoneStart, "[%d] services, host [%s], services [%s]", len(tombstoned), p.hostName, strings.Join(tombstoned, ","))
 	}
 	newBool := func() *stats.BoolStats {
 		return stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
@@ -177,9 +184,15 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		configuredStatus, _, _ := polledService.configuredStatus()
 		sleepStatus, _, _ := polledService.sleepStatus()
 		aggregateStatus := sleepStatus || (healthStatus && configuredStatus)
-		derive("services", "service", serviceStart, "computed [%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
+		derivePulse(scribe.Log(scribe.SourceProbe, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
+			"[%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
 			aggregateStatus, polledServiceName, healthStatus, configuredStatus, sleepStatus)
-		runMetricCacheTasks(p, isPulse, []cacheMetricTask{
+		gates := gateSet{
+			metric.GateServiceAggregate:  func() bool { return aggregateStatus },
+			metric.GateServiceHealthy:    func() bool { return healthStatus },
+			metric.GateServiceConfigured: func() bool { return configuredStatus },
+		}
+		runMetricCacheTasks(p, isPulse, gates, []cacheMetricTask{
 			newCacheMetricTask(
 				metric.ValueBool,
 				metric.MetricService,
@@ -188,8 +201,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				serviceBools[polledServiceName],
 				func() bool { return serviceBools[polledServiceName].PulseLast() },
 				func() bool { return serviceBools[polledServiceName].TrendMean() },
-				func(bool) bool { return aggregateStatus },
-				func(bool) bool { return aggregateStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueBool,
@@ -199,8 +210,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				backupStatusBools[polledServiceName],
 				func() bool { return backupStatusBools[polledServiceName].PulseLast() },
 				func() bool { return backupStatusBools[polledServiceName].TrendMean() },
-				func(v bool) bool { return v },
-				func(v bool) bool { return v },
 			),
 			newCacheMetricTask(
 				metric.ValueBool,
@@ -210,8 +219,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				healthStatusBools[polledServiceName],
 				func() bool { return healthStatusBools[polledServiceName].PulseLast() },
 				func() bool { return healthStatusBools[polledServiceName].TrendMean() },
-				func(bool) bool { return healthStatus },
-				func(bool) bool { return healthStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueBool,
@@ -221,21 +228,17 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				configuredStatusBools[polledServiceName],
 				func() bool { return configuredStatusBools[polledServiceName].PulseLast() },
 				func() bool { return configuredStatusBools[polledServiceName].TrendMean() },
-				func(bool) bool { return configuredStatus },
-				func(bool) bool { return configuredStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueString,
 				metric.MetricServiceName,
 				polledService.name(),
 				func() (string, derivation, error) {
-					return polledService.name(), derived("service", "computed [%s] name, read from the container name docker reports", polledService.name()), nil
+					return polledService.name(), derived(scribe.ActionSample, "computed [%s] name, read from the container name docker reports", polledService.name()), nil
 				},
 				nameStrings[polledServiceName],
 				func() string { return nameStrings[polledServiceName].PulseLast() },
 				func() string { return nameStrings[polledServiceName].TrendDominant() },
-				func(string) bool { return aggregateStatus },
-				func(string) bool { return aggregateStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueString,
@@ -245,8 +248,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				versionStrings[polledServiceName],
 				func() string { return versionStrings[polledServiceName].PulseLast() },
 				func() string { return versionStrings[polledServiceName].TrendDominant() },
-				func(string) bool { return aggregateStatus },
-				func(string) bool { return aggregateStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -256,8 +257,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedProcessorInts[polledServiceName],
 				func() int8 { return usedProcessorInts[polledServiceName].PulseMax() },
 				func() int8 { return usedProcessorInts[polledServiceName].TrendP95() },
-				func(p int8) bool { return aggregateStatus && p <= 90 },
-				func(t int8) bool { return aggregateStatus && t <= 70 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -267,8 +266,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedMemoryInts[polledServiceName],
 				func() int8 { return usedMemoryInts[polledServiceName].PulseMax() },
 				func() int8 { return usedMemoryInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return aggregateStatus && p <= 90 },
-				func(t int8) bool { return aggregateStatus && t <= 75 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -278,8 +275,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedDiskOpsInts[polledServiceName],
 				func() int8 { return usedDiskOpsInts[polledServiceName].PulseMax() },
 				func() int8 { return usedDiskOpsInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return aggregateStatus && p <= 90 },
-				func(t int8) bool { return aggregateStatus && t <= 80 },
 			),
 			newCacheMetricTask(
 				metric.ValueInt,
@@ -289,8 +284,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				usedNetworkInts[polledServiceName],
 				func() int8 { return usedNetworkInts[polledServiceName].PulseMax() },
 				func() int8 { return usedNetworkInts[polledServiceName].TrendMax() },
-				func(p int8) bool { return aggregateStatus && p <= 90 },
-				func(t int8) bool { return aggregateStatus && t <= 80 },
 			),
 			newCacheMetricTask(
 				metric.ValueFloat,
@@ -300,8 +293,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				upTimeFloats[polledServiceName],
 				func() float64 { return upTimeFloats[polledServiceName].PulseLast() },
 				func() float64 { return upTimeFloats[polledServiceName].TrendMax() },
-				func(float64) bool { return aggregateStatus },
-				func(float64) bool { return aggregateStatus },
 			),
 			newCacheMetricTask(
 				metric.ValueFloat,
@@ -310,8 +301,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				polledService.maxMemory,
 				maxMemoryFloats[polledServiceName],
 				func() float64 { return maxMemoryFloats[polledServiceName].PulseLast() },
-				nil,
-				func(float64) bool { return true },
 				nil,
 			),
 			newCacheMetricTask(
@@ -322,12 +311,10 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				restartCountFloats[polledServiceName],
 				func() float64 { return restartCountFloats[polledServiceName].PulseLast() },
 				func() float64 { return restartCountFloats[polledServiceName].TrendMax() },
-				func(p float64) bool { return aggregateStatus && p <= 80 },
-				func(t float64) bool { return aggregateStatus && t <= 70 },
 			),
 		})
 	}
-	runMetricCacheTasks(p, isPulse, []cacheMetricTask{
+	runMetricCacheTasks(p, isPulse, nil, []cacheMetricTask{
 		newCacheMetricTask(
 			metric.ValueBool,
 			metric.MetricHostServices,
@@ -336,8 +323,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 			p.servicesBool,
 			func() bool { return p.servicesBool.PulseLast() },
 			func() bool { return p.servicesBool.TrendMean() },
-			func(bool) bool { return true },
-			func(bool) bool { return true },
 		),
 		newCacheMetricTask(
 			metric.ValueFloat,
@@ -346,8 +331,6 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 			func() (float64, derivation, error) { return p.servicesMaxMemory(snapshot) },
 			p.servicesMaxMemoryFloat,
 			func() float64 { return p.servicesMaxMemoryFloat.PulseLast() },
-			nil,
-			func(float64) bool { return true },
 			nil,
 		),
 	})
@@ -409,11 +392,11 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			continue
 		}
 		if name == "" {
-			scribe.Probe("state", "services").Error("docker", servicesStart, "rejected [container] empty name, excluding from the service list")
+			scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionDiscover).Error("rejected", servicesStart, "[container] empty name, excluding from the service list")
 			continue
 		}
 		if _, exists := seenNames[name]; exists {
-			scribe.Probe("state", "services").Error("docker", servicesStart, "rejected [%s] non-unique container name, excluding from the service list", name)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Error("rejected", servicesStart, "non-unique container name, excluding from the service list")
 			continue
 		}
 		seenNames[name] = struct{}{}
@@ -531,7 +514,8 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			}
 		}
 	}
-	derive("services", "docker", servicesStart, "reported [%3d] containers, services [%d], configured [%d], ghosts [%d] configured but not running",
+	derivePulse(scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionDiscover), "reported", servicesStart,
+		"[%3d] containers, services [%d], configured [%d], ghosts [%d] configured but not running",
 		len(containers), len(services)-ghosts, len(p.configuredServiceNames), ghosts)
 	return services, nil
 }
@@ -589,7 +573,7 @@ type service struct {
 }
 
 func (p *servicesProbe) servicesStatus() (bool, derivation, error) {
-	return true, derived("services", "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
+	return true, derived(scribe.ActionSample, "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
 }
 
 func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, derivation, error) {
@@ -597,16 +581,17 @@ func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, d
 	if err != nil {
 		return 0, derivation{}, err
 	}
-	return float64(allocatedBytes) / bytesPerMiB, derived("allocation", "computed [%.0f] MiB of ceilings, installed [%d] of configured [%d] services",
+	return float64(allocatedBytes) / bytesPerMiB, derived(scribe.ActionCompute, "computed [%.0f] MiB of ceilings, installed [%d] of configured [%d] services",
 		float64(allocatedBytes)/bytesPerMiB, installed, len(p.configuredServiceNames)), nil
 }
 
 func (s *service) isUp() (bool, derivation, error) {
-	return true, derived("service", "computed [true] reporting, service [%s] publishes this beacon every pulse and its ok flag is the service aggregate", s.nameValue), nil
+	return true, derived(scribe.ActionSample, "computed [true] reporting, service [%s] publishes this beacon every pulse and its ok flag is the service aggregate", s.nameValue), nil
 }
 
 func (s *service) backupStatus() (bool, derivation, error) {
-	return s.backupStatusValue, inertDerivation(metric.MetricServiceBackupStatus), s.backupStatusErr
+	// TODO: Provide implementation
+	return s.backupStatusValue, stubDerivation(metric.MetricServiceBackupStatus, s.backupStatusValue), s.backupStatusErr
 }
 
 func (s *service) healthStatus() (bool, derivation, error) {
@@ -614,12 +599,12 @@ func (s *service) healthStatus() (bool, derivation, error) {
 }
 
 func (s *service) configuredStatus() (bool, derivation, error) {
-	return s.configuredStatusValue, derived("service", "computed [%v] configured, service [%s] is %s named in the config file schema for this host",
+	return s.configuredStatusValue, derived(scribe.ActionSample, "computed [%v] configured, service [%s] is %s named in the config file schema for this host",
 		s.configuredStatusValue, s.nameValue, configuredWord(s.configuredStatusValue)), s.configuredStatusErr
 }
 
 func (s *service) sleepStatus() (bool, derivation, error) {
-	return s.sleepStatusValue, derived("service", "computed [%v] sleeping, service [%s] holds %s marker in its install tree",
+	return s.sleepStatusValue, derived(scribe.ActionSample, "computed [%v] sleeping, service [%s] holds %s marker in its install tree",
 		s.sleepStatusValue, s.nameValue, configuredWord(s.sleepStatusValue)), s.sleepStatusErr
 }
 
@@ -640,11 +625,13 @@ func (s *service) usedMemory() (int8, derivation, error) {
 }
 
 func (s *service) usedDiskOps() (int8, derivation, error) {
-	return inertInt(metric.MetricServiceUsedDiskOps)
+	// TODO: Provide implementation
+	return stub[int8](metric.MetricServiceUsedDiskOps)
 }
 
 func (s *service) usedNetwork() (int8, derivation, error) {
-	return inertInt(metric.MetricServiceUsedNetwork)
+	// TODO: Provide implementation
+	return stub[int8](metric.MetricServiceUsedNetwork)
 }
 
 func (s *service) upTime() (float64, derivation, error) {
@@ -713,7 +700,7 @@ func (p *servicesProbe) processorUsed(name string, response container.StatsRespo
 		onlineCPUs = float64(len(response.CPUStats.CPUUsage.PercpuUsage))
 	}
 	usedPercent := (cpuDelta / systemDelta) * onlineCPUs * 100.0
-	return stats.ConvertToInt(usedPercent), derived("service", "computed [%3d] pct used processor, service [%s] delta [%.0f] of system [%.0f] ns across [%.0f] cpus",
+	return stats.ConvertToInt(usedPercent), derived(scribe.ActionSample, "computed [%3d] pct used processor, service [%s] delta [%.0f] of system [%.0f] ns across [%.0f] cpus",
 		stats.ConvertToInt(usedPercent), name, cpuDelta, systemDelta, onlineCPUs), nil
 }
 
@@ -730,21 +717,22 @@ func (p *servicesProbe) memoryUsed(name string, response container.StatsResponse
 		used = 0
 	}
 	usedPercent := (used / float64(response.MemoryStats.Limit)) * 100.0
-	return stats.ConvertToInt(usedPercent), derived("service", "computed [%3d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
+	return stats.ConvertToInt(usedPercent), derived(scribe.ActionSample, "computed [%3d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
 		stats.ConvertToInt(usedPercent), name, int64(used)/bytesPerMiB, int64(response.MemoryStats.Limit)/bytesPerMiB, int64(cache)/bytesPerMiB), nil
 }
 
 func (p *servicesProbe) healthStatus(name string, containerInfo container.InspectResponse) (bool, derivation, error) {
 	if containerInfo.ContainerJSONBase == nil || containerInfo.State == nil || containerInfo.State.Health == nil {
-		return false, derived("service", "computed [false] healthy, service [%s] declares no docker health check so docker reports no health state", name), nil
+		return false, derived(scribe.ActionSample, "computed [false] healthy, service [%s] declares no docker health check so docker reports no health state", name), nil
 	}
 	healthy := containerInfo.State.Health.Status == container.Healthy
-	return healthy, derived("service", "computed [%v] healthy, service [%s] docker health [%s] after [%d] failing streak",
+	return healthy, derived(scribe.ActionSample, "computed [%v] healthy, service [%s] docker health [%s] after [%d] failing streak",
 		healthy, name, containerInfo.State.Health.Status, containerInfo.State.Health.FailingStreak), nil
 }
 
 func (p *servicesProbe) backupStatus() (bool, error) {
-	value, _, err := inertBool(metric.MetricServiceBackupStatus)
+	// TODO: Provide implementation
+	value, _, err := stub[bool](metric.MetricServiceBackupStatus)
 	return value, err
 }
 
@@ -757,7 +745,7 @@ func (p *servicesProbe) restartCount(name string, containerInfo container.Inspec
 	if containerInfo.ContainerJSONBase == nil {
 		return 0, derivation{}, fmt.Errorf("no restart count read, docker returned an inspect response for service [%s] with no base section", name)
 	}
-	return float64(containerInfo.RestartCount), derived("service", "computed [%d] restarts, service [%s] as counted by docker since the container was created",
+	return float64(containerInfo.RestartCount), derived(scribe.ActionSample, "computed [%d] restarts, service [%s] as counted by docker since the container was created",
 		containerInfo.RestartCount, name), nil
 }
 
@@ -765,18 +753,18 @@ func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo contain
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
 		tokens := strings.Split(containerInfo.Config.Image, ":")
 		if len(tokens) > 1 && config.VersionPattern.MatchString(tokens[1]) {
-			return tokens[1], derived("service", "computed [%s] version, read from the image tag [%s] docker reports", tokens[1], containerInfo.Config.Image), nil
+			return tokens[1], derived(scribe.ActionSample, "computed [%s] version, read from the image tag [%s] docker reports", tokens[1], containerInfo.Config.Image), nil
 		}
 	}
 	name := containerServiceName(containerInfo)
 	if name == "" {
-		return versionUnknown, derived("service", "computed [%s] version, docker reports no usable image tag and the container carries no service name to look up in the install tree", versionUnknown), nil
+		return versionUnknown, derived(scribe.ActionSample, "computed [%s] version, docker reports no usable image tag and the container carries no service name to look up in the install tree", versionUnknown), nil
 	}
 	installed, _ := snapshot.service(name)
 	if installed.version != "" {
-		return installed.version, derived("service", "computed [%s] version, service [%s] read from the install tree since the image tag carries none", installed.version, name), nil
+		return installed.version, derived(scribe.ActionSample, "computed [%s] version, service [%s] read from the install tree since the image tag carries none", installed.version, name), nil
 	}
-	return versionUnknown, derived("service", "computed [%s] version, service [%s] has no image tag and no version in the install tree under [%s]",
+	return versionUnknown, derived(scribe.ActionSample, "computed [%s] version, service [%s] has no image tag and no version in the install tree under [%s]",
 		versionUnknown, name, installRoot), nil
 }
 
@@ -797,7 +785,7 @@ func (p *servicesProbe) maxMemory(snapshot *installSnapshot, name string) (float
 	if installed.maxMemoryBytes <= 0 {
 		return 0, derivation{}, fmt.Errorf("no memory ceiling read, service [%s] declares no [deploy.resources.limits.memory] in its compose file under [%s]", name, installRoot)
 	}
-	return float64(installed.maxMemoryBytes) / bytesPerMiB, derived("service", "computed [%.0f] MiB ceiling, service [%s] read from [deploy.resources.limits.memory] in its compose file",
+	return float64(installed.maxMemoryBytes) / bytesPerMiB, derived(scribe.ActionSample, "computed [%.0f] MiB ceiling, service [%s] read from [deploy.resources.limits.memory] in its compose file",
 		float64(installed.maxMemoryBytes)/bytesPerMiB, name), nil
 }
 
@@ -813,7 +801,7 @@ func (p *servicesProbe) upTime(name string, containerInfo container.InspectRespo
 	if upTime < 0 {
 		return 0, derivation{}, fmt.Errorf("no up time read, service [%s] reports a start time [%s] in the future", name, containerInfo.State.StartedAt)
 	}
-	return upTime, derived("service", "computed [%.0f] s up, service [%s] started at [%s]", upTime, name, startedAt.Format(time.RFC3339)), nil
+	return upTime, derived(scribe.ActionSample, "computed [%.0f] s up, service [%s] started at [%s]", upTime, name, startedAt.Format(time.RFC3339)), nil
 }
 
 func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services map[string]service) {
@@ -833,7 +821,7 @@ func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services ma
 	if len(missing) == 0 {
 		return
 	}
-	scribe.Probe("state", "services").Error("install", missingStart, "missing  [%d] containers with no install directory [%s]", len(missing), joined)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionDiscover).Warn("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
 }
 
 func (p *servicesProbe) installs() installReader {

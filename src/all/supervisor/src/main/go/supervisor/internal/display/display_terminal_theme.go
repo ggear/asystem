@@ -80,7 +80,7 @@ var palettes = [themeMax][modeMax]colourPalette{
 			colourCheer:   {color.XTerm38, "\033[38;5;38m"},   // aqua
 			colourWarn:    {color.XTerm178, "\033[38;5;178m"}, // mustard
 			colourAlert:   {color.XTerm9, "\033[91m"},         // bright red
-			colourWhisper: {color.XTerm188, "\033[38;5;188m"}, // light gray
+			colourWhisper: {color.XTerm188, "\033[38;5;188m"}, // light grey
 			colourMurmur:  {color.XTerm13, "\033[95m"},        // bright magenta
 			colourGrowl:   {color.XTerm235, "\033[38;5;235m"}, // very dark grey
 			colourShout:   {color.XTerm9, "\033[91m"},         // bright red
@@ -90,7 +90,7 @@ var palettes = [themeMax][modeMax]colourPalette{
 			colourCheer:   {color.XTerm38, "\033[38;5;38m"},   // aqua
 			colourWarn:    {color.XTerm178, "\033[38;5;178m"}, // mustard
 			colourAlert:   {color.XTerm9, "\033[91m"},         // bright red
-			colourWhisper: {color.XTerm188, "\033[38;5;188m"}, // light gray
+			colourWhisper: {color.XTerm188, "\033[38;5;188m"}, // light grey
 			colourMurmur:  {color.XTerm13, "\033[95m"},        // bright magenta
 			colourGrowl:   {color.XTerm67, "\033[38;5;67m"},   // steel gray-blue
 			colourShout:   {color.XTerm9, "\033[91m"},         // bright red

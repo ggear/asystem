@@ -8,19 +8,21 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"supervisor/internal/metric"
 )
 
 const (
-	logDirUser    = "/tmp/supervisor"
-	logDirUserMac = "Library/Logs/supervisor"
-	logDirRoot    = "/var/log/supervisor"
-	timeLayout    = "2006-01-02 15:04:05"
+	logDirUser        = "/tmp/supervisor"
+	logDirUserMac     = "Library/Logs/supervisor"
+	logDirRoot        = "/var/log/supervisor"
+	timeLayout        = "01-02T15:04:05"
+	overlayTimeLayout = "15:04:05"
 )
 
 func EnableStdout(level slog.Level) {
@@ -98,47 +100,38 @@ func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxB
 	return buf, nil
 }
 
-// Engine and Probe are the only producers of a log line, so the layout is defined once here rather than at each call
-// site. A line is four fixed-width columns, being the tag, the engine or probe, the phase and the duration, then the
-// detail. Every value interpolated into the detail is bracketed with its unit outside the brackets, and clauses are
-// separated by commas. The detail opens with an eight-character word naming what the line reports, padded with spaces
-// where the word is shorter, so the first bracket falls in the same column on every line and a stream of them can be
-// read down the page.
-func Engine(tag, name string) Logger {
-	return Logger{tag: tag, key: "engine", name: name}
-}
-
-func Probe(tag, name string) Logger {
-	return Logger{tag: tag, key: "probe", name: name}
+func Log(source Source, subject Subject, action Action) Logger {
+	return Logger{source: source, subject: subject, action: action}
 }
 
 type Logger struct {
-	tag  string
-	key  string
-	name string
+	source  Source
+	subject Subject
+	action  Action
 }
 
-func (l Logger) Debug(phase string, started time.Time, detail string, args ...any) {
-	l.log(slog.LevelDebug, phase, started, detail, args...)
+func (l Logger) Debug(verb string, started time.Time, detail string, args ...any) {
+	l.log(slog.LevelDebug, verb, started, detail, args...)
 }
 
-func (l Logger) Info(phase string, started time.Time, detail string, args ...any) {
-	l.log(slog.LevelInfo, phase, started, detail, args...)
+func (l Logger) Info(verb string, started time.Time, detail string, args ...any) {
+	l.log(slog.LevelInfo, verb, started, detail, args...)
 }
 
-func (l Logger) Warn(phase string, started time.Time, detail string, args ...any) {
-	l.log(slog.LevelWarn, phase, started, detail, args...)
+func (l Logger) Warn(verb string, started time.Time, detail string, args ...any) {
+	l.log(slog.LevelWarn, verb, started, detail, args...)
 }
 
-func (l Logger) Error(phase string, started time.Time, detail string, args ...any) {
-	l.log(slog.LevelError, phase, started, detail, args...)
+func (l Logger) Error(verb string, started time.Time, detail string, args ...any) {
+	l.log(slog.LevelError, verb, started, detail, args...)
 }
 
-func (l Logger) log(level slog.Level, phase string, started time.Time, detail string, args ...any) {
+func (l Logger) log(level slog.Level, verb string, started time.Time, detail string, args ...any) {
 	if len(args) > 0 {
 		detail = fmt.Sprintf(detail, args...)
 	}
-	slog.Log(context.Background(), level, l.tag, l.key, l.name, keyPhase, phase, keyDuration, time.Since(started), keyDetail, detail)
+	slog.Log(context.Background(), level, verb, keySource, l.source.String(), keySubject, l.subject.String(),
+		keyAction, l.action.String(), keyDuration, time.Since(started), keyDetail, detail)
 }
 
 func Level() slog.Level {
@@ -211,6 +204,10 @@ func (h *bufferHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
+	source, subject, action, _, _ := dimensions(record)
+	if !allowed(source, subject, action) {
+		return nil
+	}
 	h.buffer.Push(LogLine{Time: record.Time, Level: record.Level, Message: format(record)})
 	return nil
 }
@@ -248,9 +245,10 @@ func (h *multiHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 func (h *multiHandler) WithGroup(_ string) slog.Handler      { return h }
 
 type streamHandler struct {
-	level  slog.Level
-	writer io.Writer
-	mutex  sync.Mutex
+	level      slog.Level
+	writer     io.Writer
+	mutex      sync.Mutex
+	headerOnce sync.Once
 }
 
 func (h *streamHandler) Enabled(_ context.Context, level slog.Level) bool {
@@ -258,9 +256,16 @@ func (h *streamHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *streamHandler) Handle(_ context.Context, record slog.Record) error {
-	line := fmt.Sprintf("%s %-5s %s\n", record.Time.Format(timeLayout), record.Level.String(), format(record))
+	source, subject, action, _, _ := dimensions(record)
+	if !allowed(source, subject, action) {
+		return nil
+	}
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
+	h.headerOnce.Do(func() {
+		_, _ = io.WriteString(h.writer, headerLine()+"\n")
+	})
+	line := fmt.Sprintf("%s %-5s %s\n", record.Time.Format(timeLayout), record.Level.String(), format(record))
 	_, err := io.WriteString(h.writer, line)
 	return err
 }
@@ -268,45 +273,80 @@ func (h *streamHandler) Handle(_ context.Context, record slog.Record) error {
 func (h *streamHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 func (h *streamHandler) WithGroup(_ string) slog.Handler      { return h }
 
-func format(record slog.Record) string {
-	columns := make([]string, len(columnWidths))
-	detail := ""
+// OverlayHeader OverlayLine and OverlayHeader render the watch overlay's own prefix, so the whole line's geometry is owned here
+// rather than split between scribe and display. The overlay carries a shorter time than the file and stdout, since it
+// is read live and the date is never in question, but every column after it is the same width in all three sinks.
+func OverlayHeader() string {
+	return pad("TIME", len(overlayTimeLayout)) + " " + pad("LEVEL", widthLevel) + " " +
+		columnLine("SOURCE", "SUBJECT", "ACTION", "DURATION", "DETAIL")
+}
+
+func OverlayLine(line LogLine) string {
+	return line.Time.Format(overlayTimeLayout) + " " + pad(line.Level.String(), widthLevel) + " " + line.Message
+}
+
+func headerLine() string {
+	return pad("TIME", widthTime) + " " + pad("LEVEL", widthLevel) + " " +
+		columnLine("SOURCE", "SUBJECT", "ACTION", "DURATION", "DETAIL")
+}
+
+func dimensions(record slog.Record) (source, subject, action, duration, detail string) {
 	record.Attrs(func(a slog.Attr) bool {
-		switch {
-		case a.Key == keyDetail:
+		switch a.Key {
+		case keySource:
+			source = a.Value.String()
+		case keySubject:
+			subject = a.Value.String()
+		case keyAction:
+			action = a.Value.String()
+		case keyDuration:
+			duration = durationText(a.Value)
+		case keyDetail:
 			detail = a.Value.String()
-		case a.Key == keyDuration:
-			columns[columnDuration] = duration(a.Value)
-		case a.Key == keyPhase:
-			columns[columnPhase] = a.Key + "=" + a.Value.String()
-		case slices.Contains(keysEngine, a.Key):
-			columns[columnEngine] = a.Key + "=" + a.Value.String()
 		}
 		return true
 	})
-	var builder strings.Builder
-	builder.WriteString(pad(record.Message, widthTag))
-	for index, width := range columnWidths {
-		builder.WriteByte(' ')
-		builder.WriteString(pad(columns[index], width))
-	}
+	return
+}
+
+func format(record slog.Record) string {
+	source, subject, action, duration, detail := dimensions(record)
 	if detail != "" {
-		builder.WriteString("  " + keyDetail + "=")
-		builder.WriteString(detail)
+		detail = " " + detail
 	}
+	return columnLine(source, subject, action, duration, verb(record.Message)+detail)
+}
+
+func columnLine(source, subject, action, duration, detail string) string {
+	var builder strings.Builder
+	builder.WriteString(pad(source, widthSource))
+	builder.WriteByte(' ')
+	builder.WriteString(pad(subject, widthSubject))
+	builder.WriteByte(' ')
+	builder.WriteString(pad(action, widthAction))
+	builder.WriteByte(' ')
+	builder.WriteString(pad(duration, widthDuration))
+	builder.WriteByte(' ')
+	builder.WriteString(detail)
 	return strings.TrimRight(builder.String(), " ")
 }
 
-func duration(value slog.Value) string {
+func verb(word string) string {
+	if len(word) >= widthVerb {
+		return word[:widthVerb]
+	}
+	return word + strings.Repeat(" ", widthVerb-len(word))
+}
+
+func durationText(value slog.Value) string {
 	text := value.String()
 	if value.Kind() == slog.KindDuration {
 		text = elapsed(value.Duration())
 	}
-	prefix := keyDuration + "="
-	if space := widthDuration - len(prefix) - len(text); space > 0 {
-		return prefix + strings.Repeat(" ", space) + text
+	if space := widthDuration - len(text); space > 0 {
+		return strings.Repeat(" ", space) + text
 	}
-	return prefix + text
+	return text
 }
 
 func elapsed(value time.Duration) string {
@@ -330,29 +370,25 @@ func pad(text string, width int) string {
 }
 
 const (
-	columnEngine = iota
-	columnPhase
-	columnDuration
-)
-
-const (
 	keyDetail   = "detail"
 	keyDuration = "duration"
-	keyPhase    = "phase"
+	keySource   = "source"
+	keySubject  = "subject"
+	keyAction   = "action"
 )
 
 const (
 	durationCoarser = 10000
-	widthTag        = 9
-	widthEngine     = 18
-	widthPhase      = 16
-	widthDuration   = 15
+	widthTime       = 14
+	widthLevel      = 5
+	widthSource     = 8
+	widthAction     = 10
+	widthDuration   = 6
+	widthVerb       = 8
+	widthSubjectMin = 24
 )
 
-var (
-	columnWidths = []int{widthEngine, widthPhase, widthDuration}
-	keysEngine   = []string{"engine", "probe"}
-)
+var widthSubject = widthSubjectMin
 
 var (
 	scribeLoggerMutex    sync.Mutex
@@ -360,6 +396,44 @@ var (
 	scribeLoggerMode     string
 	scribeLoggerInstance *slog.Logger
 )
+
+func init() {
+	for _, id := range metric.GetIDs() {
+		if length := len(metric.GetIDName(id)); length > widthSubject {
+			widthSubject = length
+		}
+	}
+	for _, source := range AllSources {
+		if length := len(source.String()); length > widthSource {
+			panic(fmt.Sprintf("error: source [%s] is [%d] characters, wider than the [%d] column", source, length, widthSource))
+		}
+	}
+	for _, action := range AllActions {
+		if length := len(action.String()); length > widthAction {
+			panic(fmt.Sprintf("error: action [%s] is [%d] characters, wider than the [%d] column", action, length, widthAction))
+		}
+	}
+	verifyVocabularies()
+}
+
+func verifyVocabularies() {
+	claimed := map[string]string{}
+	claim := func(vocabulary, value string) {
+		if owner, taken := claimed[value]; taken {
+			panic(fmt.Sprintf("error: [%s] is declared by both the [%s] and [%s] vocabularies, so a bare column value would be ambiguous", value, owner, vocabulary))
+		}
+		claimed[value] = vocabulary
+	}
+	for _, source := range AllSources {
+		claim("source", source.String())
+	}
+	for _, action := range AllActions {
+		claim("action", action.String())
+	}
+	for _, id := range metric.GetIDs() {
+		claim("subject", metric.GetIDName(id))
+	}
+}
 
 func logDir() string {
 	if os.Geteuid() == 0 {

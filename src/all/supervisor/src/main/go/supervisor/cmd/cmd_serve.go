@@ -22,7 +22,7 @@ type serveOptions struct {
 	cachePeriod     string
 	snapshotPeriod  string
 	heartbeatFactor string
-	logLevel        string
+	logOptions
 }
 
 // noinspection DuplicatedCode
@@ -47,7 +47,7 @@ func newServeCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
 	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", config.DefaultCachePeriod, "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
 	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
-	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", "info", "lowest log level written to stdout and the log file, one of debug, info, warn or error")
+	addLogFlags(cmd, &opts.logOptions, "info", "stdout and the log file")
 	cmd.Flags().SortFlags = false
 	return cmd
 }
@@ -60,6 +60,9 @@ func executeServe(configPath string, opts *serveOptions) error {
 	if err := scribe.EnableStdoutAndFile(level, "serve", 10, 3, 7); err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
 	}
+	if err := setLogFilters(&opts.logOptions); err != nil {
+		return err
+	}
 	periods, err := makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod, opts.heartbeatFactor)
 	if err != nil {
 		return err
@@ -68,9 +71,15 @@ func executeServe(configPath string, opts *serveOptions) error {
 	defer cancel()
 	serveStart := time.Now()
 	loaded := config.Load(configPath)
-	scribe.Engine("state", "serve").Info("start", serveStart, "version  [%s], host [%s], config [%s], configured [%d] services, poll [%d] ms, pulse [%d] ms, heartbeat [%d] s", loaded.Version(), loaded.Host(), configPath, len(loaded.Services(loaded.Host())), periods.PollMillis, periods.PulseMillis, periods.HeartbeatSecs)
-	engine.RunAllProbesPublishLoop(ctx, configPath, metric.NewRecordCache(), periods)
-	scribe.Engine("state", "serve").Info("stop", serveStart, "version  [%s], host [%s], exited gracefully", loaded.Version(), loaded.Host())
+	scribe.Log(scribe.SourceProcess, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", serveStart, "version [%s], config [%s], configured [%d] services, poll [%d] ms, pulse [%d] ms, heartbeat [%d] s", loaded.Version(), configPath, len(loaded.Services(loaded.Host())), periods.PollMillis, periods.PulseMillis, periods.HeartbeatSecs)
+	cache := metric.NewRecordCache()
+	defer func(cache *metric.RecordCache) {
+		err := cache.Close()
+		if err != nil {
+		}
+	}(cache)
+	engine.RunAllProbesPublishLoop(ctx, configPath, cache, periods)
+	scribe.Log(scribe.SourceProcess, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", serveStart, "version [%s], exited gracefully", loaded.Version())
 	return nil
 }
 
