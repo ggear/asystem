@@ -18,7 +18,7 @@ import (
 )
 
 type logSet struct {
-	mu        sync.Mutex
+	mutex     sync.Mutex
 	roots     []string
 	path      string
 	file      *os.File
@@ -32,14 +32,14 @@ type logSet struct {
 }
 
 func loadLogs(mount string) *logSet {
-	logCacheMu.RLock()
+	logCacheMutex.RLock()
 	if cached, ok := logCache[mount]; ok {
-		logCacheMu.RUnlock()
+		logCacheMutex.RUnlock()
 		return cached
 	}
-	logCacheMu.RUnlock()
-	logCacheMu.Lock()
-	defer logCacheMu.Unlock()
+	logCacheMutex.RUnlock()
+	logCacheMutex.Lock()
+	defer logCacheMutex.Unlock()
 	if cached, ok := logCache[mount]; ok {
 		return cached
 	}
@@ -49,8 +49,8 @@ func loadLogs(mount string) *logSet {
 }
 
 func resetLogs() {
-	logCacheMu.Lock()
-	defer logCacheMu.Unlock()
+	logCacheMutex.Lock()
+	defer logCacheMutex.Unlock()
 	for _, set := range logCache {
 		set.close()
 	}
@@ -66,8 +66,8 @@ func (s *logSet) attempted() string {
 }
 
 func (s *logSet) errorsWithin(window time.Duration) (int, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if !s.open() {
 		return 0, false
 	}
@@ -167,8 +167,8 @@ func (s *logSet) evict(cutoff time.Time) {
 }
 
 func (s *logSet) close() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if s.file != nil {
 		_ = s.file.Close()
 		s.file = nil
@@ -292,7 +292,7 @@ const (
 )
 
 var (
-	logIgnore  = compileLog(logIgnorePatterns)
-	logCache   = map[string]*logSet{}
-	logCacheMu sync.RWMutex
+	logIgnore     = compileLog(logIgnorePatterns)
+	logCache      = map[string]*logSet{}
+	logCacheMutex sync.RWMutex
 )

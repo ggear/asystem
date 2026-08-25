@@ -2,7 +2,7 @@ package metric
 
 import "testing"
 
-func TestProbeStatusTagging(t *testing.T) {
+func TestRecordCache_StatusTagging(t *testing.T) {
 	cache := NewRecordCache()
 	host := NewRecord(*NewBoolValue(true, true))
 	cache.Store(NewRecordGUID(MetricHost, "macmini-mad"), &host)

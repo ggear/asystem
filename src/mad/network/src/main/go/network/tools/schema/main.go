@@ -15,8 +15,11 @@ func main() {
 		"cadence declared for every relation, matching the running service --aggregate-period")
 	flag.Parse()
 	database := plugins.Schema().WithCadence(*cadence)
-	if err := schema.Reflect(os.Stdout, "network", database, plugins.BrokerSchema()); err != nil {
-		fmt.Fprintf(os.Stderr, "reflect failed [%v]\n", err)
+	if reflectErr := schema.Reflect(os.Stdout, "network", database, plugins.BrokerSchema()); reflectErr != nil {
+		_, reflectWriteErr := fmt.Fprintf(os.Stderr, "reflect failed [%v]\n", reflectErr)
+		if reflectWriteErr != nil {
+			return
+		}
 		os.Exit(1)
 	}
 }

@@ -46,7 +46,7 @@ type installSnapshot struct {
 
 type installTree struct {
 	mount      string
-	mu         sync.Mutex
+	mutex      sync.Mutex
 	buffer     []byte
 	cached     *installSnapshot
 	stamp      uint64
@@ -54,14 +54,14 @@ type installTree struct {
 }
 
 func loadInstallTree(mount string) *installTree {
-	installTreeCacheMu.RLock()
+	installTreeCacheMutex.RLock()
 	if cached, ok := installTreeCache[mount]; ok {
-		installTreeCacheMu.RUnlock()
+		installTreeCacheMutex.RUnlock()
 		return cached
 	}
-	installTreeCacheMu.RUnlock()
-	installTreeCacheMu.Lock()
-	defer installTreeCacheMu.Unlock()
+	installTreeCacheMutex.RUnlock()
+	installTreeCacheMutex.Lock()
+	defer installTreeCacheMutex.Unlock()
 	if cached, ok := installTreeCache[mount]; ok {
 		return cached
 	}
@@ -71,14 +71,14 @@ func loadInstallTree(mount string) *installTree {
 }
 
 func resetInstallTrees() {
-	installTreeCacheMu.Lock()
-	defer installTreeCacheMu.Unlock()
+	installTreeCacheMutex.Lock()
+	defer installTreeCacheMutex.Unlock()
 	clear(installTreeCache)
 }
 
 func (t *installTree) snapshot() *installSnapshot {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	scanStart := time.Now()
 	stamp := t.fingerprint()
 	if t.cached != nil && stamp == t.stamp {
@@ -335,6 +335,6 @@ const (
 var installAbsentMark = []byte{0xff}
 
 var (
-	installTreeCache   = map[string]*installTree{}
-	installTreeCacheMu sync.RWMutex
+	installTreeCache      = map[string]*installTree{}
+	installTreeCacheMutex sync.RWMutex
 )

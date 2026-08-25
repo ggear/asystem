@@ -361,17 +361,17 @@ func TestProbeMounts_RefreshPanicIsContained(t *testing.T) {
 	set.request(0)
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		set.mu.Lock()
+		set.mutex.Lock()
 		refreshing := set.refreshing
-		set.mu.Unlock()
+		set.mutex.Unlock()
 		if !refreshing {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	set.mu.Lock()
+	set.mutex.Lock()
 	refreshing := set.refreshing
-	set.mu.Unlock()
+	set.mutex.Unlock()
 	if refreshing {
 		t.Fatalf("Got the refresher still marked running after a panic, expected it released")
 	}
@@ -413,9 +413,9 @@ func TestProbeMounts_RetriesFasterWhileAShareIsFailed(t *testing.T) {
 			set := newMountFixture(t, root, map[string][2]uint64{"/": {1000, 100}}, nil)
 			set.current = &mountSnapshot{taken: time.Now().Add(-testCase.taken), failed: testCase.failed, shares: testCase.failed}
 			set.request(time.Hour)
-			set.mu.Lock()
+			set.mutex.Lock()
 			refreshing := set.refreshing
-			set.mu.Unlock()
+			set.mutex.Unlock()
 			if refreshing != testCase.expectedRefresh {
 				t.Errorf("request: got refreshing %v want %v", refreshing, testCase.expectedRefresh)
 			}

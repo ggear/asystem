@@ -60,7 +60,7 @@ type driveIdentity struct {
 
 type mountSet struct {
 	root       string
-	mu         sync.Mutex
+	mutex      sync.Mutex
 	current    *mountSnapshot
 	refreshing bool
 	physicals  map[string]string
@@ -71,11 +71,11 @@ type mountSet struct {
 }
 
 func loadMounts(root string, window time.Duration) *mountSet {
-	mountCacheMu.RLock()
+	mountCacheMutex.RLock()
 	cached, found := mountCache[root]
-	mountCacheMu.RUnlock()
+	mountCacheMutex.RUnlock()
 	if !found {
-		mountCacheMu.Lock()
+		mountCacheMutex.Lock()
 		if cached, found = mountCache[root]; !found {
 			cached = &mountSet{
 				root:       root,
@@ -87,30 +87,30 @@ func loadMounts(root string, window time.Duration) *mountSet {
 			}
 			mountCache[root] = cached
 		}
-		mountCacheMu.Unlock()
+		mountCacheMutex.Unlock()
 	}
 	cached.request(window)
 	return cached
 }
 
 func resetMounts() {
-	mountCacheMu.Lock()
-	defer mountCacheMu.Unlock()
+	mountCacheMutex.Lock()
+	defer mountCacheMutex.Unlock()
 	clear(mountCache)
 }
 
 func (s *mountSet) request(window time.Duration) {
-	s.mu.Lock()
+	s.mutex.Lock()
 	if s.current != nil && s.current.failed > 0 && mountRetry < window {
 		window = mountRetry
 	}
 	stale := s.current == nil || time.Since(s.current.taken) >= window
 	if !stale || s.refreshing {
-		s.mu.Unlock()
+		s.mutex.Unlock()
 		return
 	}
 	s.refreshing = true
-	s.mu.Unlock()
+	s.mutex.Unlock()
 	go func() {
 		refreshStart := time.Now()
 		defer func() {
@@ -118,22 +118,22 @@ func (s *mountSet) request(window time.Duration) {
 			if failure == nil {
 				return
 			}
-			s.mu.Lock()
+			s.mutex.Lock()
 			s.refreshing = false
-			s.mu.Unlock()
+			s.mutex.Unlock()
 			scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionSample).Error("panicked", refreshStart, "[%v] refreshing, keeping the previous snapshot", failure)
 		}()
 		taken := s.collect()
-		s.mu.Lock()
+		s.mutex.Lock()
 		s.current = taken
 		s.refreshing = false
-		s.mu.Unlock()
+		s.mutex.Unlock()
 	}()
 }
 
 func (s *mountSet) snapshot() (*mountSnapshot, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if s.current == nil {
 		return nil, errProbeWarmingUp
 	}
@@ -386,21 +386,21 @@ func (s *mountSet) measure(mountpoint string, share bool) (uint64, uint64, error
 		used  uint64
 		err   error
 	}
-	s.mu.Lock()
+	s.mutex.Lock()
 	outstanding := s.inflight[mountpoint]
 	if !outstanding {
 		s.inflight[mountpoint] = true
 	}
-	s.mu.Unlock()
+	s.mutex.Unlock()
 	if outstanding {
 		return 0, 0, fmt.Errorf("mount [%s] not measured, a probe started on an earlier refresh has still not returned", mountpoint)
 	}
 	done := make(chan measurement, 1)
 	go func() {
 		defer func() {
-			s.mu.Lock()
+			s.mutex.Lock()
 			delete(s.inflight, mountpoint)
-			s.mu.Unlock()
+			s.mutex.Unlock()
 			if failure := recover(); failure != nil {
 				done <- measurement{err: fmt.Errorf("mount [%s] panicked with [%v]", mountpoint, failure)}
 			}
@@ -449,16 +449,16 @@ func (s *mountSet) wear(mounts []mountUsage) []driveWear {
 }
 
 func (s *mountSet) physical(device string) string {
-	s.mu.Lock()
+	s.mutex.Lock()
 	cached, found := s.physicals[device]
-	s.mu.Unlock()
+	s.mutex.Unlock()
 	if found {
 		return cached
 	}
 	resolved := s.resolve(strings.TrimPrefix(device, "/dev/"), 0)
-	s.mu.Lock()
+	s.mutex.Lock()
 	s.physicals[device] = resolved
-	s.mu.Unlock()
+	s.mutex.Unlock()
 	return resolved
 }
 
@@ -547,8 +547,8 @@ func (s *mountSet) identify(identity *driveIdentity, report smartReport, identif
 }
 
 func (s *mountSet) identity(physical string) *driveIdentity {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if cached, found := s.identities[physical]; found {
 		return cached
 	}
@@ -822,6 +822,6 @@ var mountLocalTypes = map[string]bool{"ext4": true, "xfs": true, "btrfs": true, 
 var mountRemoteTypes = map[string]bool{"cifs": true, "nfs": true, "nfs4": true, "smb3": true}
 
 var (
-	mountCache   = map[string]*mountSet{}
-	mountCacheMu sync.RWMutex
+	mountCache      = map[string]*mountSet{}
+	mountCacheMutex sync.RWMutex
 )

@@ -20,7 +20,7 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
-func TestDisplay(t *testing.T) {
+func TestDisplay_Happy(t *testing.T) {
 	type dimsSpec struct {
 		layout    func(bool) [][]box
 		rowsDelta int
@@ -758,7 +758,7 @@ func TestDisplay(t *testing.T) {
 	}
 }
 
-func TestDisplaySad(t *testing.T) {
+func TestDisplay_Sad(t *testing.T) {
 	tests := []struct {
 		name       string
 		hosts      []string
@@ -895,7 +895,7 @@ func TestDisplaySad(t *testing.T) {
 	}
 }
 
-func TestFormatDurationShort(t *testing.T) {
+func TestDisplay_FormatDurationShort(t *testing.T) {
 	year := 365.0 * 24 * 60 * 60
 	tests := []struct {
 		name     string

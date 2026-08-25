@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     ;;
   -h | --help | -*)
     echo "Usage: ${0} [-v|--verbose] [-h|--help]"
-    echo "       influxdb3 migrate rewrite renamed measures, run by hand and never by fab"
+    echo "       influxdb3 mutate rewrite renamed measures, run by hand and never by fab"
     exit 2
     ;;
   *)
@@ -177,10 +177,10 @@ query_sql() {
   [ "${faults}" = 0 ]
 }
 
-printf '\nSchema migrate [%s] against [%s]\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
+printf '\nSchema mutate [%s] against [%s]\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
 FAULTS=0
 POINTS=0
-for SQL_FILE in "${ROOT_DIR}"/migrate/*.sql; do
+for SQL_FILE in "${ROOT_DIR}"/mutate/*.sql; do
   [ -e "${SQL_FILE}" ] || continue
   while IFS= read -r STATEMENT; do
     [ -z "${STATEMENT}" ] && continue
@@ -205,7 +205,7 @@ for SQL_FILE in "${ROOT_DIR}"/migrate/*.sql; do
 done
 
 if [ "${FAULTS}" != "0" ]; then
-  printf '\nSchema migrate [%s] failed [%s] statement(s)\n' "supervisor" "${FAULTS}" >&2
+  printf '\nSchema mutate [%s] failed [%s] statement(s)\n' "supervisor" "${FAULTS}" >&2
   exit 1
 fi
-printf '\nSchema migrate [%s] backfilled [%s] points with no faults\n' "supervisor" "${POINTS}"
+printf '\nSchema mutate [%s] backfilled [%s] points with no faults\n' "supervisor" "${POINTS}"

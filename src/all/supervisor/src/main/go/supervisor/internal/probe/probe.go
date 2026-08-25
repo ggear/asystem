@@ -429,8 +429,7 @@ func stub[T any](id metric.ID) (T, derivation, error) {
 }
 
 func stubDerivation(id metric.ID, value any) derivation {
-	return derived(scribe.ActionCompute, "computed [%v] fixed, metric [%s] is an unimplemented stub so it never varies and is always ok",
-		value, metric.GetIDName(id))
+	return derived(scribe.ActionCompute, "computed [%v] fixed, metric [%s] is an unimplemented stub so it never varies and is always ok", value, metric.GetIDName(id))
 }
 
 func reportMetricDerivation(p probe, task cacheMetricTask, taskStart time.Time, d derivation, err error) {

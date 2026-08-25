@@ -277,8 +277,7 @@ func (h *streamHandler) WithGroup(_ string) slog.Handler      { return h }
 // rather than split between scribe and display. The overlay carries a shorter time than the file and stdout, since it
 // is read live and the date is never in question, but every column after it is the same width in all three sinks.
 func OverlayHeader() string {
-	return pad("TIME", len(overlayTimeLayout)) + " " + pad("LEVEL", widthLevel) + " " +
-		columnLine("SOURCE", "SUBJECT", "ACTION", "DURATION", "DETAIL")
+	return pad("TIME", len(overlayTimeLayout)) + " " + pad("LEVEL", widthLevel) + " " + columnLine("SOURCE", "SUBJECT", "ACTION", "DURATION", "DETAIL")
 }
 
 func OverlayLine(line LogLine) string {
@@ -318,17 +317,7 @@ func format(record slog.Record) string {
 }
 
 func columnLine(source, subject, action, duration, detail string) string {
-	var builder strings.Builder
-	builder.WriteString(pad(source, widthSource))
-	builder.WriteByte(' ')
-	builder.WriteString(pad(subject, widthSubject))
-	builder.WriteByte(' ')
-	builder.WriteString(pad(action, widthAction))
-	builder.WriteByte(' ')
-	builder.WriteString(pad(duration, widthDuration))
-	builder.WriteByte(' ')
-	builder.WriteString(detail)
-	return strings.TrimRight(builder.String(), " ")
+	return strings.TrimRight(pad(source, widthSource)+" "+pad(subject, widthSubject)+" "+pad(action, widthAction)+" "+pad(duration, widthDuration)+" "+detail, " ")
 }
 
 func verb(word string) string {

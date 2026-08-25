@@ -107,6 +107,16 @@ func Any(rules ...Rule) Rule { return Rule{kind: ruleAny, children: rules} }
 
 func (r Rule) IsZero() bool { return r.kind == ruleUnset }
 
+func (r Rule) Targets() []ID {
+	var targets []ID
+	r.walk(func(term Rule) {
+		if term.kind == ruleBounded {
+			targets = append(targets, term.target)
+		}
+	})
+	return targets
+}
+
 func (r Rule) Gates() []GateID {
 	var gates []GateID
 	r.walk(func(term Rule) {
@@ -138,23 +148,11 @@ func (r Rule) Evaluate(unit string, self float64, selfNumeric bool, values Value
 			return RuleResult{OK: false, Detail: fmt.Sprintf("gate [%s] is unbound", r.gate)}
 		}
 		return RuleResult{OK: value, Detail: fmt.Sprintf("gate [%s] is [%v]", r.gate, value)}
-	case ruleAll:
-		return r.combine(unit, self, selfNumeric, values, gates, true)
-	case ruleAny:
-		return r.combine(unit, self, selfNumeric, values, gates, false)
+	case ruleAll, ruleAny:
+		return r.combine(unit, self, selfNumeric, values, gates)
 	default:
 		return RuleResult{OK: false, Detail: "no rule declared"}
 	}
-}
-
-func (r Rule) Targets() []ID {
-	var targets []ID
-	r.walk(func(term Rule) {
-		if term.kind == ruleBounded {
-			targets = append(targets, term.target)
-		}
-	})
-	return targets
 }
 
 func (r Rule) walk(visit func(Rule)) {
@@ -175,13 +173,11 @@ func (r Rule) evaluateBounded(unit string, self float64, selfNumeric bool, value
 	if !satisfied {
 		word = "not within"
 	}
-	return RuleResult{
-		OK:     satisfied,
-		Detail: fmt.Sprintf("%s [%v] %s %s [%s%v] %s", label, value, unit, word, r.comparator, r.limit, unit),
-	}
+	return RuleResult{OK: satisfied, Detail: fmt.Sprintf("%s [%v] %s %s [%s%v] %s", label, value, unit, word, r.comparator, r.limit, unit)}
 }
 
-func (r Rule) combine(unit string, self float64, selfNumeric bool, values ValueResolver, gates GateResolver, conjunction bool) RuleResult {
+func (r Rule) combine(unit string, self float64, selfNumeric bool, values ValueResolver, gates GateResolver) RuleResult {
+	conjunction := r.kind == ruleAll
 	ok := conjunction
 	details := make([]string, 0, len(r.children))
 	for _, child := range r.children {

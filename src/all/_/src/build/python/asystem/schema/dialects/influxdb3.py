@@ -25,7 +25,7 @@ from asystem.schema.query import (
     unioned,
     vocabulary,
 )
-from asystem.schema.runner import RUNNER, describe_runner, migrate_runner, query_runner, resolved, verify_runner
+from asystem.schema.runner import RUNNER, describe_runner, mutate_runner, query_runner, resolved, verify_runner
 
 DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
@@ -109,10 +109,10 @@ def artifacts(document, module_name, options):
         return written
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
                                           verify(document, options.renamed)), True)
-    for measurement, statements in migrate(document, options.renamed).items():
-        written["migrate/{}.sql".format(measurement)] = (statements, False)
-    written["migrate.sh"] = (migrate_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                            _migrate_body(module_name)), True)
+    for measurement, statements in mutate(document, options.renamed).items():
+        written["mutate/{}.sql".format(measurement)] = (statements, False)
+    written["mutate.sh"] = (mutate_runner(module_name, DIALECT, TARGET, connect(module_name),
+                                            _mutate_body(module_name)), True)
     return written
 
 
@@ -313,7 +313,7 @@ def verify(document, renamed=None):
     return render_statements(statements)
 
 
-def migrate(document, renamed):
+def mutate(document, renamed):
     written = {}
     sources = {new: old for old, new in (renamed or {}).items() if new}
     for measurement in measurements(document):
@@ -351,12 +351,12 @@ def _protocol_value(measure, source):
     return "CAST({} AS VARCHAR)".format(column(source))
 
 
-def _migrate_body(module_name):
+def _mutate_body(module_name):
     return """
-printf '\\nSchema migrate [%s] against [%s]\\n' "{module}" "${{{target}}}"
+printf '\\nSchema mutate [%s] against [%s]\\n' "{module}" "${{{target}}}"
 FAULTS=0
 POINTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/migrate/*.sql; do
+for SQL_FILE in "${{ROOT_DIR}}"/mutate/*.sql; do
   [ -e "${{SQL_FILE}}" ] || continue
   while IFS= read -r STATEMENT; do
     [ -z "${{STATEMENT}}" ] && continue
@@ -381,10 +381,10 @@ for SQL_FILE in "${{ROOT_DIR}}"/migrate/*.sql; do
 done
 
 if [ "${{FAULTS}}" != "0" ]; then
-  printf '\\nSchema migrate [%s] failed [%s] statement(s)\\n' "{module}" "${{FAULTS}}" >&2
+  printf '\\nSchema mutate [%s] failed [%s] statement(s)\\n' "{module}" "${{FAULTS}}" >&2
   exit 1
 fi
-printf '\\nSchema migrate [%s] backfilled [%s] points with no faults\\n' "{module}" "${{POINTS}}"
+printf '\\nSchema mutate [%s] backfilled [%s] points with no faults\\n' "{module}" "${{POINTS}}"
 """.format(target=TARGET, module=module_name)
 
 

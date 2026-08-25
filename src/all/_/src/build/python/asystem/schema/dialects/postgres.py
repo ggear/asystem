@@ -17,7 +17,7 @@ from asystem.schema.query import (
     select,
     vocabulary,
 )
-from asystem.schema.runner import RUNNER, describe_runner, migrate_runner, query_runner, resolved, verify_runner
+from asystem.schema.runner import RUNNER, describe_runner, mutate_runner, query_runner, resolved, verify_runner
 
 DIALECT = "postgres"
 SHIPPED = "database"
@@ -55,10 +55,10 @@ def artifacts(document, module_name, options):
     written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
                                           verify(document, options.renamed)), True)
-    for table, statements in migrate(document, options.renamed).items():
-        written["migrate/{}.sql".format(table)] = (statements, False)
-    written["migrate.sh"] = (migrate_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                            _migrate_body(module_name)), True)
+    for table, statements in mutate(document, options.renamed).items():
+        written["mutate/{}.sql".format(table)] = (statements, False)
+    written["mutate.sh"] = (mutate_runner(module_name, DIALECT, TARGET, connect(module_name),
+                                            _mutate_body(module_name)), True)
     return written
 
 
@@ -195,7 +195,7 @@ done
 """.format(banner=banner(), shipped=SHIPPED, module=module_name).strip() + "\n"
 
 
-def migrate(document, renamed):
+def mutate(document, renamed):
     written = {}
     sources = {new: old for old, new in (renamed or {}).items() if new}
     for table, relations in _tabled(document).items():
@@ -215,21 +215,21 @@ def migrate(document, renamed):
     return written
 
 
-def _migrate_body(module_name):
+def _mutate_body(module_name):
     return """
-printf '\\nSchema migrate [%s] against [%s]\\n' "{module}" "${{{target}}}"
+printf '\\nSchema mutate [%s] against [%s]\\n' "{module}" "${{{target}}}"
 FAULTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/migrate/*.sql; do
+for SQL_FILE in "${{ROOT_DIR}}"/mutate/*.sql; do
   [ -e "${{SQL_FILE}}" ] || continue
   SCHEMA_LABEL="$(basename "${{SQL_FILE}}")"
   query_sql < "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
 done
 
 if [ "${{FAULTS}}" != "0" ]; then
-  printf '\\nSchema migrate [%s] failed [%s] statement(s)\\n' "{module}" "${{FAULTS}}" >&2
+  printf '\\nSchema mutate [%s] failed [%s] statement(s)\\n' "{module}" "${{FAULTS}}" >&2
   exit 1
 fi
-printf '\\nSchema migrate [%s] rewrote with no faults\\n' "{module}"
+printf '\\nSchema mutate [%s] rewrote with no faults\\n' "{module}"
 """.format(target=TARGET, module=module_name)
 
 

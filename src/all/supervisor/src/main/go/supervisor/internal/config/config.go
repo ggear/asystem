@@ -47,27 +47,27 @@ type Periods struct {
 }
 
 var (
-	configCache   = map[string]*Config{}
-	configCacheMu sync.RWMutex
+	configCache      = map[string]*Config{}
+	configCacheMutex sync.RWMutex
 )
 
 func Reset() {
-	configCacheMu.Lock()
-	defer configCacheMu.Unlock()
+	configCacheMutex.Lock()
+	defer configCacheMutex.Unlock()
 	clear(configCache)
 }
 
 func Load(path string) *Config {
-	configCacheMu.RLock()
+	configCacheMutex.RLock()
 	if cached, ok := configCache[path]; ok {
-		configCacheMu.RUnlock()
+		configCacheMutex.RUnlock()
 		return cached
 	}
-	configCacheMu.RUnlock()
+	configCacheMutex.RUnlock()
 	loaded := load(path)
-	configCacheMu.Lock()
+	configCacheMutex.Lock()
 	configCache[path] = loaded
-	configCacheMu.Unlock()
+	configCacheMutex.Unlock()
 	return loaded
 }
 
