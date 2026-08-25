@@ -97,6 +97,9 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 				phase = "pulse"
 			}
 			execPulsing.Store(isPulse)
+			if isPulse {
+				execPulses.Add(1)
+			}
 			for p := range execProbes {
 				probeStart := time.Now()
 				if err := p.run(ctx, isPulse); err != nil {
@@ -400,8 +403,26 @@ func inertBool(id metric.ID) (bool, error) {
 
 func reportMetricInertValue(id metric.ID) {
 	inertStart := time.Now()
-	derive(probesByMetricMask[id].name(), "inert", inertStart, "computed [%s] fixed, metric [%s] is unimplemented so it never varies and is always ok",
+	if !execPulsing.Load() {
+		return
+	}
+	pulse := execPulses.Load()
+	metricInertMutex.Lock()
+	reported := metricInertPulses[id] == pulse
+	metricInertPulses[id] = pulse
+	metricInertMutex.Unlock()
+	if reported {
+		return
+	}
+	derive(metricProbeName(id), "inert", inertStart, "computed [%s] fixed, metric [%s] is unimplemented so it never varies and is always ok",
 		metricInert[id], metric.GetIDName(id))
+}
+
+func metricProbeName(id metric.ID) string {
+	if id < 0 || id >= metric.MetricMax || probesByMetricMask[id] == nil {
+		return "*"
+	}
+	return probesByMetricMask[id].name()
 }
 
 func reportMetricInert(p probe) {
@@ -546,6 +567,8 @@ var metricInert = map[metric.ID]string{
 }
 
 var (
+	metricInertPulses   = map[metric.ID]int64{}
+	metricInertMutex    sync.Mutex
 	metricFaults        = map[metricFaultKey]*metricFault{}
 	metricFaultsMutex   sync.Mutex
 	metricStatuses      = map[metricFaultKey]string{}
@@ -553,6 +576,8 @@ var (
 )
 
 var execPulsing atomic.Bool
+
+var execPulses atomic.Int64
 
 var execPeriods config.Periods
 var execProbes map[probe][metric.MetricMax]bool

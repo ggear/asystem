@@ -27,6 +27,7 @@ type mountUsage struct {
 	used       uint64
 	measured   bool
 	failed     bool
+	reason     string
 }
 
 type driveWear struct {
@@ -164,8 +165,8 @@ func (s *mountSet) usedSystemSpace() (int8, error) {
 		found = true
 	}
 	if !found {
-		return 0, fmt.Errorf("no system filesystems measured of [%d] classed system and [%d] mounts scanned from [%s]",
-			systems, len(taken.mounts), filepath.Join(s.root, mountTablePath))
+		return 0, fmt.Errorf("no system filesystems measured of [%d] classed system and [%d] mounts scanned from [%s], failures [%s]",
+			systems, len(taken.mounts), filepath.Join(s.root, mountTablePath), mountReasons(taken.mounts, false))
 	}
 	derive("host", "mounts", taken.taken, "computed [%3d] pct used system, fullest of [%d] filesystems [%s]",
 		int8Percent(worst), systems, worstAt)
@@ -193,7 +194,8 @@ func (s *mountSet) usedShareSpace() (int8, error) {
 		used += mount.used
 	}
 	if total == 0 {
-		return 0, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared", taken.locals, taken.shares)
+		return 0, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared, failures [%s]",
+			taken.locals, taken.shares, mountReasons(taken.mounts, true))
 	}
 	derive("host", "mounts", taken.taken, "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
 		int8Percent(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals)
@@ -268,6 +270,7 @@ func (s *mountSet) collect() *mountSnapshot {
 		total, used, err := s.measure(mounts[index].mountpoint, mounts[index].share)
 		if err != nil {
 			mounts[index].failed = true
+			mounts[index].reason = err.Error()
 			scribe.Probe("state", "host").Debug("mounts", measureStart, "measured [%s] mount device [%s] fstype [%s] class [%s] failed with [%v]",
 				mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), err)
 			continue
@@ -643,6 +646,27 @@ func mountStatfs(path string) (uint64, uint64, error) {
 	return total, used, nil
 }
 
+func mountReasons(mounts []mountUsage, share bool) string {
+	reasons := make([]string, 0, len(mounts))
+	for _, mount := range mounts {
+		if mount.share != share || mount.measured {
+			continue
+		}
+		reason := mount.reason
+		if reason == "" {
+			reason = fmt.Sprintf("mount [%s] reported [%d] total bytes", mount.mountpoint, mount.total)
+		}
+		reasons = append(reasons, reason)
+		if len(reasons) == mountReasonsMax {
+			break
+		}
+	}
+	if len(reasons) == 0 {
+		return "none"
+	}
+	return strings.Join(reasons, ", ")
+}
+
 func mountClassOf(mount mountUsage) string {
 	switch {
 	case mount.share && mount.remote:
@@ -759,6 +783,7 @@ const (
 	mountDeadline            = 5 * time.Second
 	mountRetry               = time.Minute
 	mountResolveMax          = 8
+	mountReasonsMax          = 3
 	bytesPerSector           = 512.0
 	bytesPerDataUnit         = 512000.0
 	bytesPerGiB              = 1073741824.0

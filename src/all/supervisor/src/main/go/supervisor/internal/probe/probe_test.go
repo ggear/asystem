@@ -257,3 +257,24 @@ func TestProbe_MetricStatusOf(t *testing.T) {
 		})
 	}
 }
+
+func TestProbe_MetricInertIsOwnedByAProbe(t *testing.T) {
+	owned := map[metric.ID]bool{}
+	for _, probe := range []probe{newHostProbe(), newServicesProbe()} {
+		for _, id := range probe.metrics() {
+			owned[id] = true
+		}
+	}
+	for id, value := range metricInert {
+		if id < 0 || id >= metric.MetricMax {
+			t.Errorf("id: got %v want a metric below %v", id, metric.MetricMax)
+			continue
+		}
+		if value == "" {
+			t.Errorf("%v: fixed value must be stated", metric.GetIDName(id))
+		}
+		if !owned[id] {
+			t.Errorf("%v: no probe registers the metric", metric.GetIDName(id))
+		}
+	}
+}
