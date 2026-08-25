@@ -71,10 +71,10 @@ func TestProbeHost_UsedProcessor(t *testing.T) {
 			if testCase.overrideCpu != nil {
 				probe.cpuTimes = testCase.overrideCpu
 			}
-			value, err := probe.usedProcessor()
+			value, _, err := probe.usedProcessor()
 			if errors.Is(err, errProbeWarmingUp) {
 				time.Sleep(time.Second)
-				value, err = probe.usedProcessor()
+				value, _, err = probe.usedProcessor()
 			}
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
@@ -120,7 +120,7 @@ func TestProbeHost_UsedMemory(t *testing.T) {
 			if testCase.overrideMemory != nil {
 				probe.virtualMemory = testCase.overrideMemory
 			}
-			value, err := probe.usedMemory()
+			value, _, err := probe.usedMemory()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -211,7 +211,7 @@ func TestProbeHost_Temperature(t *testing.T) {
 			t.Cleanup(resetSensors)
 			probe := newHostProbe()
 			probe.sysRoot = writeSensorTree(t, testCase.temps, testCase.zones, nil)
-			value, err := probe.temperature()
+			value, _, err := probe.temperature()
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
@@ -245,7 +245,7 @@ func TestProbeHost_Host(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
-			value, err := probe.host()
+			value, _, err := probe.host()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -375,7 +375,7 @@ func TestProbeHost_AllocatedMemory(t *testing.T) {
 				}
 				return &mem.VirtualMemoryStat{Total: testCase.totalBytes}, nil
 			}
-			value, err := probe.allocatedMemory()
+			value, _, err := probe.allocatedMemory()
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
@@ -395,7 +395,7 @@ func TestProbeHost_AllocatedMemory(t *testing.T) {
 func TestProbeHost_FailedLogs(t *testing.T) {
 	t.Cleanup(resetLogs)
 	probe := newHostProbe()
-	if _, err := probe.failedLogs(); err != nil {
+	if _, _, err := probe.failedLogs(); err != nil {
 		t.Fatalf("failedLogs: unexpected error: %v", err)
 	}
 }
@@ -419,7 +419,7 @@ func TestProbeHost_FailedShares(t *testing.T) {
 			t.Cleanup(resetMounts)
 			seedHostMounts(t)
 			probe := newHostProbe()
-			value, err := probe.failedShares()
+			value, _, err := probe.failedShares()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -450,7 +450,7 @@ func TestProbeHost_FailedBackups(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
-			value, err := probe.failedBackups()
+			value, _, err := probe.failedBackups()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -523,7 +523,7 @@ func TestProbeHost_WarnTemperature(t *testing.T) {
 			t.Cleanup(resetSensors)
 			probe := newHostProbe()
 			probe.sysRoot = writeSensorTree(t, testCase.temps, nil, nil)
-			value, err := probe.warnTemperature()
+			value, _, err := probe.warnTemperature()
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
@@ -595,7 +595,7 @@ func TestProbeHost_SpinFanSpeed(t *testing.T) {
 			t.Cleanup(resetSensors)
 			probe := newHostProbe()
 			probe.sysRoot = writeSensorTree(t, nil, nil, testCase.fans)
-			value, err := probe.spinFanSpeed()
+			value, _, err := probe.spinFanSpeed()
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
@@ -709,7 +709,7 @@ func TestProbeHost_LifeUsedDrives(t *testing.T) {
 			t.Cleanup(resetMounts)
 			seedHostMounts(t)
 			probe := newHostProbe()
-			value, err := probe.lifeUsedDrives()
+			value, _, err := probe.lifeUsedDrives()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -742,7 +742,7 @@ func TestProbeHost_UsedSystemSpace(t *testing.T) {
 			t.Cleanup(resetMounts)
 			seedHostMounts(t)
 			probe := newHostProbe()
-			value, err := probe.usedSystemSpace()
+			value, _, err := probe.usedSystemSpace()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -775,7 +775,7 @@ func TestProbeHost_UsedShareSpace(t *testing.T) {
 			t.Cleanup(resetMounts)
 			seedHostMounts(t)
 			probe := newHostProbe()
-			value, err := probe.usedShareSpace()
+			value, _, err := probe.usedShareSpace()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -806,7 +806,7 @@ func TestProbeHost_UsedBackupSpace(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
-			value, err := probe.usedBackupSpace()
+			value, _, err := probe.usedBackupSpace()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -837,7 +837,7 @@ func TestProbeHost_UsedSwapSpace(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
-			value, err := probe.usedSwapSpace()
+			value, _, err := probe.usedSwapSpace()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -868,7 +868,7 @@ func TestProbeHost_UsedDiskOps(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
-			value, err := probe.usedDiskOps()
+			value, _, err := probe.usedDiskOps()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -899,7 +899,7 @@ func TestProbeHost_UsedNetwork(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
-			value, err := probe.usedNetwork()
+			value, _, err := probe.usedNetwork()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -930,7 +930,7 @@ func TestProbeHost_RunningTime(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
-			value, err := probe.runningTime()
+			value, _, err := probe.runningTime()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}
@@ -953,7 +953,7 @@ func TestProbeHost_TemperatureDiscoversOnce(t *testing.T) {
 		t.Fatalf("tier: got %q want %q", discovered.tier, sensorTierComposite)
 	}
 	for index := range 3 {
-		value, err := probe.temperature()
+		value, _, err := probe.temperature()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

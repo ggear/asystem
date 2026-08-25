@@ -185,11 +185,25 @@ func verifyProbes() {
 	}
 }
 
+type derivation struct {
+	phase  string
+	detail string
+	args   []any
+}
+
+func derived(phase, detail string, args ...any) derivation {
+	return derivation{phase: phase, detail: detail, args: args}
+}
+
+func (d derivation) empty() bool {
+	return d.detail == ""
+}
+
 type cacheMetricTask struct {
 	valueKind   metric.ValueKind
 	metricID    metric.ID
 	serviceName string
-	sampleFunc  func() (any, error)
+	sampleFunc  func() (any, derivation, error)
 	statsFunc   func(any)
 	pulseFunc   func() any
 	trendFunc   func() any
@@ -201,7 +215,7 @@ func newCacheMetricTask[T any](
 	valueKind metric.ValueKind,
 	metricID metric.ID,
 	serviceName string,
-	sampleFunc func() (T, error),
+	sampleFunc func() (T, derivation, error),
 	statsField stats.Stats[T],
 	pulseFunc func() T,
 	trendFunc func() T,
@@ -212,7 +226,7 @@ func newCacheMetricTask[T any](
 		valueKind:   valueKind,
 		metricID:    metricID,
 		serviceName: serviceName,
-		sampleFunc: func() (any, error) {
+		sampleFunc: func() (any, derivation, error) {
 			return sampleFunc()
 		},
 		statsFunc: func(value any) {
@@ -284,13 +298,14 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) string {
 		scribe.Probe("state", p.name()).Error("metric", taskStart, "invalid  [%s] metric missing required fields [%s]", metric.GetIDName(task.metricID), strings.Join(missing, ","))
 		return metricStatusUnknown
 	}
-	sample, err := task.sampleFunc()
+	sample, derivation, err := task.sampleFunc()
 	errored := err != nil && !errors.Is(err, errProbeWarmingUp)
 	trackMetricFault(p, task, err, errored)
 	task.statsFunc(sample)
 	if !isPulse {
 		return metricStatusUnknown
 	}
+	reportMetricDerivation(p, task, taskStart, derivation, err)
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
 		scribe.Probe("state", p.name()).Error("metric", taskStart, "invalid  [%s] metric missing the host name", metric.GetIDName(task.metricID))
@@ -386,36 +401,32 @@ func reportMetricStatus(p probe, task cacheMetricTask, taskStart time.Time, stat
 		metric.GetIDName(task.metricID), metricSubject(task), status, metricStatusPrevious(seen, previous), metricValue(pulse), pulseOK, metricValue(trend), metricFlag(trendOK), metricError(err))
 }
 
-func inertInt(id metric.ID) (int8, error) {
-	reportMetricInertValue(id)
-	return 0, nil
+func inertInt(id metric.ID) (int8, derivation, error) {
+	return 0, inertDerivation(id), nil
 }
 
-func inertFloat(id metric.ID) (float64, error) {
-	reportMetricInertValue(id)
-	return 0, nil
+func inertFloat(id metric.ID) (float64, derivation, error) {
+	return 0, inertDerivation(id), nil
 }
 
-func inertBool(id metric.ID) (bool, error) {
-	reportMetricInertValue(id)
-	return true, nil
+func inertBool(id metric.ID) (bool, derivation, error) {
+	return true, inertDerivation(id), nil
 }
 
-func reportMetricInertValue(id metric.ID) {
-	inertStart := time.Now()
-	if !execPulsing.Load() {
-		return
-	}
-	pulse := execPulses.Load()
-	metricInertMutex.Lock()
-	reported := metricInertPulses[id] == pulse
-	metricInertPulses[id] = pulse
-	metricInertMutex.Unlock()
-	if reported {
-		return
-	}
-	derive(metricProbeName(id), "inert", inertStart, "computed [%s] fixed, metric [%s] is unimplemented so it never varies and is always ok",
+func inertDerivation(id metric.ID) derivation {
+	return derived("inert", "computed [%s] fixed, metric [%s] is unimplemented so it never varies and is always ok",
 		metricInert[id], metric.GetIDName(id))
+}
+
+func reportMetricDerivation(p probe, task cacheMetricTask, taskStart time.Time, d derivation, err error) {
+	if d.empty() {
+		if err == nil {
+			scribe.Probe("state", p.name()).Error("metric", taskStart, "undeclared [%s] metric%s published a value stating no derivation, so nothing explains how it was arrived at",
+				metric.GetIDName(task.metricID), metricSubject(task))
+		}
+		return
+	}
+	scribe.Probe("state", p.name()).Debug(d.phase, taskStart, d.detail, d.args...)
 }
 
 func metricProbeName(id metric.ID) string {
@@ -567,8 +578,6 @@ var metricInert = map[metric.ID]string{
 }
 
 var (
-	metricInertPulses   = map[metric.ID]int64{}
-	metricInertMutex    sync.Mutex
 	metricFaults        = map[metricFaultKey]*metricFault{}
 	metricFaultsMutex   sync.Mutex
 	metricStatuses      = map[metricFaultKey]string{}

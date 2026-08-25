@@ -286,7 +286,7 @@ func TestProbeInstall_Allocation(t *testing.T) {
 			home = filepath.Join(mount, "var/lib/asystem/install/four/latest")
 			writeInstallDir(t, home)
 			writeInstallFile(t, filepath.Join(home, ".env"), "SERVICE_VERSION_ABSOLUTE=10.100.1234\n")
-			got, err := loadInstallTree(mount).snapshot().allocation(testCase.names)
+			got, _, err := loadInstallTree(mount).snapshot().allocation(testCase.names)
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")

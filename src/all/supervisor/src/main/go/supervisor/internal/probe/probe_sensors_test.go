@@ -205,7 +205,7 @@ func TestProbeSensors_Celsius(t *testing.T) {
 					}
 				}
 			}
-			value, err := discovered.celsius()
+			value, _, err := discovered.celsius()
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
@@ -290,7 +290,7 @@ func TestProbeSensors_FanSpeedOfMax(t *testing.T) {
 					}
 				}
 			}
-			value, err := discovered.fanSpeedOfMax()
+			value, _, err := discovered.fanSpeedOfMax()
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
@@ -334,7 +334,7 @@ func TestProbeSensors_DiscoveryIsNeverRepeated(t *testing.T) {
 	if loadSensors(sysRoot) != discovered {
 		t.Fatalf("load: got a re-discovery after a sensor appeared, want the cached set until restart")
 	}
-	speed, err := loadSensors(sysRoot).fanSpeedOfMax()
+	speed, _, err := loadSensors(sysRoot).fanSpeedOfMax()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

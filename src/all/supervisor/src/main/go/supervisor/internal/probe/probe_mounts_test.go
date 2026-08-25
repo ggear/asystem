@@ -99,14 +99,14 @@ func TestProbeMounts_Usage(t *testing.T) {
 	}
 	set := newMountFixture(t, root, sizes, nil)
 	set.current = set.collect()
-	system, err := set.usedSystemSpace()
+	system, _, err := set.usedSystemSpace()
 	if err != nil {
 		t.Fatalf("usedSystemSpace: unexpected error %v", err)
 	}
 	if system != 38 {
 		t.Errorf("usedSystemSpace: got %d want %d", system, 38)
 	}
-	share, err := set.usedShareSpace()
+	share, _, err := set.usedShareSpace()
 	if err != nil {
 		t.Fatalf("usedShareSpace: unexpected error %v", err)
 	}
@@ -202,7 +202,7 @@ func TestProbeMounts_FailedShares(t *testing.T) {
 			sizes := map[string][2]uint64{"/share/10": {1000, 100}, "/share/20": {1000, 100}}
 			set := newMountFixture(t, root, sizes, testCase.hung)
 			set.current = set.collect()
-			failed, err := set.failedShares()
+			failed, _, err := set.failedShares()
 			if err != nil {
 				t.Fatalf("failedShares: unexpected error %v", err)
 			}
@@ -332,7 +332,7 @@ func TestProbeMounts_Wear(t *testing.T) {
 				reports = *testCase.second
 				set.current = set.collect()
 			}
-			life, err := set.lifeUsedDrives()
+			life, _, err := set.lifeUsedDrives()
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("lifeUsedDrives: expected error but got nil")
@@ -375,7 +375,7 @@ func TestProbeMounts_RefreshPanicIsContained(t *testing.T) {
 	if refreshing {
 		t.Fatalf("Got the refresher still marked running after a panic, expected it released")
 	}
-	if _, err := set.usedSystemSpace(); err == nil {
+	if _, _, err := set.usedSystemSpace(); err == nil {
 		t.Fatalf("usedSystemSpace: expected the panicking mount to read not ok rather than crash the process")
 	}
 }
@@ -427,7 +427,7 @@ func TestProbeMounts_WarmingUp(t *testing.T) {
 	t.Cleanup(resetMounts)
 	root := writeMountTree(t, "/dev/sda2 / ext4 rw 0 0\n", "", nil)
 	set := newMountFixture(t, root, nil, nil)
-	if _, err := set.usedSystemSpace(); err == nil {
+	if _, _, err := set.usedSystemSpace(); err == nil {
 		t.Fatalf("usedSystemSpace: expected the warming up error before the first snapshot")
 	}
 }
@@ -437,7 +437,7 @@ func TestProbeMounts_UnreadableMountTable(t *testing.T) {
 	root := t.TempDir()
 	set := newMountFixture(t, root, nil, nil)
 	set.current = set.collect()
-	if _, err := set.usedSystemSpace(); err == nil {
+	if _, _, err := set.usedSystemSpace(); err == nil {
 		t.Fatalf("usedSystemSpace: expected an error when the mount table cannot be read")
 	}
 }

@@ -56,8 +56,15 @@ func resetLogs() {
 	clear(logCache)
 }
 
+func (s *logSet) attempted() string {
+	paths := make([]string, 0, len(s.roots))
+	for _, root := range s.roots {
+		paths = append(paths, filepath.Join(root, logDevicePath))
+	}
+	return strings.Join(paths, " ")
+}
+
 func (s *logSet) errorsWithin(window time.Duration) (int, bool) {
-	errorsStart := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.open() {
@@ -66,8 +73,6 @@ func (s *logSet) errorsWithin(window time.Duration) (int, bool) {
 	s.consume()
 	s.drained = true
 	s.evict(time.Now().Add(-window))
-	derive("host", "logs", errorsStart, "computed [%3d] errors, following [%s] within window [%s], ignore patterns [%d]",
-		len(s.stamps), s.path, window, len(logIgnore))
 	return len(s.stamps), true
 }
 

@@ -127,7 +127,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	snapshot := p.installs().snapshot()
 	servicesByName, err := p.services(ctx, snapshot)
 	if err != nil {
-		return fmt.Errorf("get services: %w", err)
+		return fmt.Errorf("no service metrics sampled, listing services from docker failed with [%w]", err)
 	}
 	polledServiceNames := make(map[string]struct{}, len(servicesByName))
 	for name := range servicesByName {
@@ -173,15 +173,12 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 
 	for polledServiceName, polledService := range servicesByName {
 		serviceStart := time.Now()
-		healthStatus, _ := polledService.healthStatus()
-		configuredStatus, _ := polledService.configuredStatus()
-		sleepStatus, _ := polledService.sleepStatus()
+		healthStatus, _, _ := polledService.healthStatus()
+		configuredStatus, _, _ := polledService.configuredStatus()
+		sleepStatus, _, _ := polledService.sleepStatus()
 		aggregateStatus := sleepStatus || (healthStatus && configuredStatus)
 		derive("services", "service", serviceStart, "computed [%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
 			aggregateStatus, polledServiceName, healthStatus, configuredStatus, sleepStatus)
-		derive("services", "service", serviceStart, "sampled  [%s] service, processor [%d] pct, memory [%d] pct of ceiling [%.0f] MiB, up [%.0f] s, restarts [%.0f], version [%s]",
-			polledServiceName, serviceValue(polledService.usedProcessor()), serviceValue(polledService.usedMemory()),
-			serviceValue(polledService.maxMemory()), serviceValue(polledService.upTime()), serviceValue(polledService.restartCount()), polledService.versionValue)
 		runMetricCacheTasks(p, isPulse, []cacheMetricTask{
 			newCacheMetricTask(
 				metric.ValueBool,
@@ -231,7 +228,9 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				metric.ValueString,
 				metric.MetricServiceName,
 				polledService.name(),
-				func() (string, error) { return polledService.name(), nil },
+				func() (string, derivation, error) {
+					return polledService.name(), derived("service", "computed [%s] name, read from the container name docker reports", polledService.name()), nil
+				},
 				nameStrings[polledServiceName],
 				func() string { return nameStrings[polledServiceName].PulseLast() },
 				func() string { return nameStrings[polledServiceName].TrendDominant() },
@@ -333,7 +332,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 			metric.ValueBool,
 			metric.MetricHostServices,
 			metric.ServiceNameUnset,
-			func() (bool, error) { return p.servicesStatus() },
+			func() (bool, derivation, error) { return p.servicesStatus() },
 			p.servicesBool,
 			func() bool { return p.servicesBool.PulseLast() },
 			func() bool { return p.servicesBool.TrendMean() },
@@ -344,7 +343,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 			metric.ValueFloat,
 			metric.MetricHostServicesMaxMemory,
 			metric.ServiceNameUnset,
-			func() (float64, error) { return p.servicesMaxMemory(snapshot) },
+			func() (float64, derivation, error) { return p.servicesMaxMemory(snapshot) },
 			p.servicesMaxMemoryFloat,
 			func() float64 { return p.servicesMaxMemoryFloat.PulseLast() },
 			nil,
@@ -366,11 +365,11 @@ func (p *servicesProbe) hasMetric(id metric.ID) bool {
 
 func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot) (map[string]service, error) {
 	if p.newDockerClient == nil || p.listContainers == nil || p.statsOneShot == nil || p.inspectContainer == nil {
-		return nil, errors.New("docker client not initialised")
+		return nil, errors.New("no services listed, the probe was created without a docker client, container lister, stats reader or inspector")
 	}
 	dockerClient, err := p.ensureDockerClient()
 	if err != nil {
-		return nil, fmt.Errorf("ensure docker client: %w", err)
+		return nil, fmt.Errorf("no services listed, connecting to the docker socket failed with [%w]", err)
 	}
 	ctx, cancel := context.WithTimeout(ctx, servicesDockerTimeoutSecs*time.Second)
 	defer cancel()
@@ -378,11 +377,11 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 	if err != nil {
 		dockerClient, err = p.reconnectDockerClient()
 		if err != nil {
-			return nil, fmt.Errorf("reconnect docker client: %w", err)
+			return nil, fmt.Errorf("no services listed, listing containers failed and reconnecting to the docker socket failed with [%w]", err)
 		}
 		containers, err = p.listContainers(ctx, dockerClient)
 		if err != nil {
-			return nil, fmt.Errorf("list containers after reconnect: %w", err)
+			return nil, fmt.Errorf("no services listed, listing containers failed again after a docker socket reconnect with [%w]", err)
 		}
 	}
 	services := make(map[string]service, len(containers))
@@ -430,18 +429,20 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 				service.usedProcessorErr = errProbeWarmingUp
 			} else {
 				fetchedStats.PreCPUStats = prev
-				usedProcessor, processorErr := p.processorUsed(fetchedStats)
+				usedProcessor, processorDerived, processorErr := p.processorUsed(name, fetchedStats)
 				if processorErr != nil {
 					service.usedProcessorErr = processorErr
 				} else {
 					service.usedProcessorValue = usedProcessor
+					service.usedProcessorDerived = processorDerived
 				}
 			}
-			usedMemory, memoryErr := p.memoryUsed(fetchedStats)
+			usedMemory, memoryDerived, memoryErr := p.memoryUsed(name, fetchedStats)
 			if memoryErr != nil {
 				service.usedMemoryErr = memoryErr
 			} else {
 				service.usedMemoryValue = usedMemory
+				service.usedMemoryDerived = memoryDerived
 			}
 		}
 		fetchedInspect, err := p.fetchInspect(ctx, dockerClient, serviceContainer.ID)
@@ -451,29 +452,33 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			service.restartCountErr = err
 			service.versionErr = err
 		} else {
-			healthStatusValue, healthErr := p.healthStatus(fetchedInspect)
+			healthStatusValue, healthDerived, healthErr := p.healthStatus(name, fetchedInspect)
 			if healthErr != nil {
 				service.healthStatusErr = healthErr
 			} else {
 				service.healthStatusValue = healthStatusValue
+				service.healthStatusDerived = healthDerived
 			}
-			upTimeValue, upTimeErr := p.upTime(fetchedInspect)
+			upTimeValue, upTimeDerived, upTimeErr := p.upTime(name, fetchedInspect)
 			if upTimeErr != nil {
 				service.upTimeErr = upTimeErr
 			} else {
 				service.upTimeValue = upTimeValue
+				service.upTimeDerived = upTimeDerived
 			}
-			restartCountValue, restartErr := p.restartCount(fetchedInspect)
+			restartCountValue, restartDerived, restartErr := p.restartCount(name, fetchedInspect)
 			if restartErr != nil {
 				service.restartCountErr = restartErr
 			} else {
 				service.restartCountValue = restartCountValue
+				service.restartCountDerived = restartDerived
 			}
-			versionValue, versionErr := p.version(snapshot, fetchedInspect)
+			versionValue, versionDerived, versionErr := p.version(snapshot, fetchedInspect)
 			if versionErr != nil {
 				service.versionErr = versionErr
 			} else {
 				service.versionValue = versionValue
+				service.versionDerived = versionDerived
 			}
 		}
 		configuredStatusValue, configuredErr := p.configuredStatus()
@@ -490,7 +495,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 		} else {
 			service.sleepStatusValue = sleepStatusValue
 		}
-		service.maxMemoryValue, service.maxMemoryErr = p.maxMemory(snapshot, name)
+		service.maxMemoryValue, service.maxMemoryDerived, service.maxMemoryErr = p.maxMemory(snapshot, name)
 		backupStatusValue, backupErr := p.backupStatus()
 		if backupErr != nil {
 			service.backupStatusErr = backupErr
@@ -511,15 +516,17 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 				ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + configuredServiceName},
 				Config:            &container.Config{Image: configuredServiceName},
 			}
-			ghostVersion, _ := p.version(snapshot, ghostInspect)
+			ghostVersion, ghostVersionDerived, _ := p.version(snapshot, ghostInspect)
 			ghostSleep, _ := p.sleep(snapshot, ghostInspect)
-			ghostMaxMemory, ghostMaxMemoryErr := p.maxMemory(snapshot, configuredServiceName)
+			ghostMaxMemory, ghostMaxMemoryDerived, ghostMaxMemoryErr := p.maxMemory(snapshot, configuredServiceName)
 			services[configuredServiceName] = service{
 				nameValue:             configuredServiceName,
 				configuredStatusValue: true,
 				sleepStatusValue:      ghostSleep,
 				versionValue:          ghostVersion,
+				versionDerived:        ghostVersionDerived,
 				maxMemoryValue:        ghostMaxMemory,
+				maxMemoryDerived:      ghostMaxMemoryDerived,
 				maxMemoryErr:          ghostMaxMemoryErr,
 			}
 		}
@@ -527,6 +534,13 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 	derive("services", "docker", servicesStart, "reported [%3d] containers, services [%d], configured [%d], ghosts [%d] configured but not running",
 		len(containers), len(services)-ghosts, len(p.configuredServiceNames), ghosts)
 	return services, nil
+}
+
+func configuredWord(value bool) string {
+	if value {
+		return "a"
+	}
+	return "no"
 }
 
 func syncStatsFields[V any](statsNames map[string]V, polledNames map[string]struct{}, newValue func() V) map[string]V {
@@ -544,6 +558,13 @@ func syncStatsFields[V any](statsNames map[string]V, polledNames map[string]stru
 }
 
 type service struct {
+	usedProcessorDerived  derivation
+	usedMemoryDerived     derivation
+	healthStatusDerived   derivation
+	versionDerived        derivation
+	upTimeDerived         derivation
+	restartCountDerived   derivation
+	maxMemoryDerived      derivation
 	backupStatusValue     bool
 	backupStatusErr       error
 	healthStatusValue     bool
@@ -567,81 +588,75 @@ type service struct {
 	restartCountErr       error
 }
 
-func (p *servicesProbe) servicesStatus() (bool, error) {
-	return true, nil
+func (p *servicesProbe) servicesStatus() (bool, derivation, error) {
+	return true, derived("services", "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
 }
 
-func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, error) {
-	maxMemoryStart := time.Now()
-	allocatedBytes, err := snapshot.allocation(p.configuredServiceNames)
+func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, derivation, error) {
+	allocatedBytes, installed, err := snapshot.allocation(p.configuredServiceNames)
 	if err != nil {
-		return 0, err
+		return 0, derivation{}, err
 	}
-	derive("services", "allocation", maxMemoryStart, "computed [%.0f] MiB of ceilings across configured [%d] services", float64(allocatedBytes)/bytesPerMiB, len(p.configuredServiceNames))
-	return float64(allocatedBytes) / bytesPerMiB, nil
+	return float64(allocatedBytes) / bytesPerMiB, derived("allocation", "computed [%.0f] MiB of ceilings, installed [%d] of configured [%d] services",
+		float64(allocatedBytes)/bytesPerMiB, installed, len(p.configuredServiceNames)), nil
 }
 
-func serviceValue[T int8 | float64](value T, err error) T {
-	if err != nil {
-		return 0
-	}
-	return value
+func (s *service) isUp() (bool, derivation, error) {
+	return true, derived("service", "computed [true] reporting, service [%s] publishes this beacon every pulse and its ok flag is the service aggregate", s.nameValue), nil
 }
 
-func (s *service) isUp() (bool, error) {
-	return true, nil
+func (s *service) backupStatus() (bool, derivation, error) {
+	return s.backupStatusValue, inertDerivation(metric.MetricServiceBackupStatus), s.backupStatusErr
 }
 
-func (s *service) backupStatus() (bool, error) {
-	return s.backupStatusValue, s.backupStatusErr
+func (s *service) healthStatus() (bool, derivation, error) {
+	return s.healthStatusValue, s.healthStatusDerived, s.healthStatusErr
 }
 
-func (s *service) healthStatus() (bool, error) {
-	return s.healthStatusValue, s.healthStatusErr
+func (s *service) configuredStatus() (bool, derivation, error) {
+	return s.configuredStatusValue, derived("service", "computed [%v] configured, service [%s] is %s named in the config file schema for this host",
+		s.configuredStatusValue, s.nameValue, configuredWord(s.configuredStatusValue)), s.configuredStatusErr
 }
 
-func (s *service) configuredStatus() (bool, error) {
-	return s.configuredStatusValue, s.configuredStatusErr
-}
-
-func (s *service) sleepStatus() (bool, error) {
-	return s.sleepStatusValue, s.sleepStatusErr
+func (s *service) sleepStatus() (bool, derivation, error) {
+	return s.sleepStatusValue, derived("service", "computed [%v] sleeping, service [%s] holds %s marker in its install tree",
+		s.sleepStatusValue, s.nameValue, configuredWord(s.sleepStatusValue)), s.sleepStatusErr
 }
 
 func (s *service) name() string {
 	return s.nameValue
 }
 
-func (s *service) version() (string, error) {
-	return s.versionValue, s.versionErr
+func (s *service) version() (string, derivation, error) {
+	return s.versionValue, s.versionDerived, s.versionErr
 }
 
-func (s *service) usedProcessor() (int8, error) {
-	return s.usedProcessorValue, s.usedProcessorErr
+func (s *service) usedProcessor() (int8, derivation, error) {
+	return s.usedProcessorValue, s.usedProcessorDerived, s.usedProcessorErr
 }
 
-func (s *service) usedMemory() (int8, error) {
-	return s.usedMemoryValue, s.usedMemoryErr
+func (s *service) usedMemory() (int8, derivation, error) {
+	return s.usedMemoryValue, s.usedMemoryDerived, s.usedMemoryErr
 }
 
-func (s *service) usedDiskOps() (int8, error) {
+func (s *service) usedDiskOps() (int8, derivation, error) {
 	return inertInt(metric.MetricServiceUsedDiskOps)
 }
 
-func (s *service) usedNetwork() (int8, error) {
+func (s *service) usedNetwork() (int8, derivation, error) {
 	return inertInt(metric.MetricServiceUsedNetwork)
 }
 
-func (s *service) upTime() (float64, error) {
-	return s.upTimeValue, s.upTimeErr
+func (s *service) upTime() (float64, derivation, error) {
+	return s.upTimeValue, s.upTimeDerived, s.upTimeErr
 }
 
-func (s *service) maxMemory() (float64, error) {
-	return s.maxMemoryValue, s.maxMemoryErr
+func (s *service) maxMemory() (float64, derivation, error) {
+	return s.maxMemoryValue, s.maxMemoryDerived, s.maxMemoryErr
 }
 
-func (s *service) restartCount() (float64, error) {
-	return s.restartCountValue, s.restartCountErr
+func (s *service) restartCount() (float64, derivation, error) {
+	return s.restartCountValue, s.restartCountDerived, s.restartCountErr
 }
 
 func (p *servicesProbe) ensureDockerClient() (*client.Client, error) {
@@ -650,7 +665,7 @@ func (p *servicesProbe) ensureDockerClient() (*client.Client, error) {
 	}
 	dockerClient, err := p.newDockerClient()
 	if err != nil {
-		return nil, fmt.Errorf("create docker client: %w", err)
+		return nil, fmt.Errorf("no docker client created from the environment with [%w]", err)
 	}
 	p.dockerClient = dockerClient
 	return dockerClient, nil
@@ -667,14 +682,14 @@ func (p *servicesProbe) reconnectDockerClient() (*client.Client, error) {
 func (p *servicesProbe) fetchStats(ctx context.Context, dockerClient *client.Client, id string) (container.StatsResponse, error) {
 	statsReader, err := p.statsOneShot(ctx, dockerClient, id)
 	if err != nil {
-		return container.StatsResponse{}, fmt.Errorf("fetch container statsResponse for id [%s]: %w", id, err)
+		return container.StatsResponse{}, fmt.Errorf("no processor or memory sample taken, fetching docker stats for container [%s] failed with [%w]", id, err)
 	}
 	defer func(reader container.StatsResponseReader) {
 		_ = reader.Body.Close()
 	}(statsReader)
 	var statsResponse container.StatsResponse
 	if decodeErr := json.NewDecoder(statsReader.Body).Decode(&statsResponse); decodeErr != nil {
-		return container.StatsResponse{}, fmt.Errorf("decode container statsResponse for id [%s]: %w", id, decodeErr)
+		return container.StatsResponse{}, fmt.Errorf("no processor or memory sample taken, decoding docker stats for container [%s] failed with [%w]", id, decodeErr)
 	}
 	return statsResponse, nil
 }
@@ -682,28 +697,29 @@ func (p *servicesProbe) fetchStats(ctx context.Context, dockerClient *client.Cli
 func (p *servicesProbe) fetchInspect(ctx context.Context, dockerClient *client.Client, id string) (container.InspectResponse, error) {
 	info, err := p.inspectContainer(ctx, dockerClient, id)
 	if err != nil {
-		return container.InspectResponse{}, fmt.Errorf("inspect container for id [%s]: %w", id, err)
+		return container.InspectResponse{}, fmt.Errorf("no health, up time, restart or version sample taken, inspecting container [%s] failed with [%w]", id, err)
 	}
 	return info, nil
 }
 
-func (p *servicesProbe) processorUsed(response container.StatsResponse) (int8, error) {
+func (p *servicesProbe) processorUsed(name string, response container.StatsResponse) (int8, derivation, error) {
 	cpuDelta := float64(response.CPUStats.CPUUsage.TotalUsage - response.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(response.CPUStats.SystemUsage - response.PreCPUStats.SystemUsage)
 	if systemDelta <= 0 {
-		return 0, errors.New("cpu usage unavailable, non-monotonic counters")
+		return 0, derivation{}, fmt.Errorf("no processor sample taken, service [%s] reports system cpu moving by [%.0f] ns between polls so the counters are not monotonic", name, systemDelta)
 	}
 	onlineCPUs := float64(response.CPUStats.OnlineCPUs)
 	if onlineCPUs == 0 {
 		onlineCPUs = float64(len(response.CPUStats.CPUUsage.PercpuUsage))
 	}
 	usedPercent := (cpuDelta / systemDelta) * onlineCPUs * 100.0
-	return stats.ConvertToInt(usedPercent), nil
+	return stats.ConvertToInt(usedPercent), derived("service", "computed [%3d] pct used processor, service [%s] delta [%.0f] of system [%.0f] ns across [%.0f] cpus",
+		stats.ConvertToInt(usedPercent), name, cpuDelta, systemDelta, onlineCPUs), nil
 }
 
-func (p *servicesProbe) memoryUsed(response container.StatsResponse) (int8, error) {
+func (p *servicesProbe) memoryUsed(name string, response container.StatsResponse) (int8, derivation, error) {
 	if response.MemoryStats.Limit == 0 {
-		return 0, errors.New("memory limit must be > 0")
+		return 0, derivation{}, fmt.Errorf("no memory sample taken, service [%s] reports a [0] byte memory limit so a share of it cannot be computed", name)
 	}
 	cache := response.MemoryStats.Stats["inactive_file"]
 	if cache == 0 {
@@ -714,23 +730,22 @@ func (p *servicesProbe) memoryUsed(response container.StatsResponse) (int8, erro
 		used = 0
 	}
 	usedPercent := (used / float64(response.MemoryStats.Limit)) * 100.0
-	return stats.ConvertToInt(usedPercent), nil
+	return stats.ConvertToInt(usedPercent), derived("service", "computed [%3d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
+		stats.ConvertToInt(usedPercent), name, int64(used)/bytesPerMiB, int64(response.MemoryStats.Limit)/bytesPerMiB, int64(cache)/bytesPerMiB), nil
 }
 
-func (p *servicesProbe) healthStatus(containerInfo container.InspectResponse) (bool, error) {
+func (p *servicesProbe) healthStatus(name string, containerInfo container.InspectResponse) (bool, derivation, error) {
 	if containerInfo.ContainerJSONBase == nil || containerInfo.State == nil || containerInfo.State.Health == nil {
-		return false, nil
+		return false, derived("service", "computed [false] healthy, service [%s] declares no docker health check so docker reports no health state", name), nil
 	}
-	switch containerInfo.State.Health.Status {
-	case container.Healthy:
-		return true, nil
-	default:
-		return false, nil
-	}
+	healthy := containerInfo.State.Health.Status == container.Healthy
+	return healthy, derived("service", "computed [%v] healthy, service [%s] docker health [%s] after [%d] failing streak",
+		healthy, name, containerInfo.State.Health.Status, containerInfo.State.Health.FailingStreak), nil
 }
 
 func (p *servicesProbe) backupStatus() (bool, error) {
-	return inertBool(metric.MetricServiceBackupStatus)
+	value, _, err := inertBool(metric.MetricServiceBackupStatus)
+	return value, err
 }
 
 func (p *servicesProbe) configuredStatus() (bool, error) {
@@ -738,30 +753,31 @@ func (p *servicesProbe) configuredStatus() (bool, error) {
 	return false, nil
 }
 
-func (p *servicesProbe) restartCount(containerInfo container.InspectResponse) (float64, error) {
+func (p *servicesProbe) restartCount(name string, containerInfo container.InspectResponse) (float64, derivation, error) {
 	if containerInfo.ContainerJSONBase == nil {
-		return 0, errors.New("restart count not available")
+		return 0, derivation{}, fmt.Errorf("no restart count read, docker returned an inspect response for service [%s] with no base section", name)
 	}
-	// TODO: Provide implementation
-	return float64(containerInfo.RestartCount), nil
+	return float64(containerInfo.RestartCount), derived("service", "computed [%d] restarts, service [%s] as counted by docker since the container was created",
+		containerInfo.RestartCount, name), nil
 }
 
-func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo container.InspectResponse) (string, error) {
+func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo container.InspectResponse) (string, derivation, error) {
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
 		tokens := strings.Split(containerInfo.Config.Image, ":")
 		if len(tokens) > 1 && config.VersionPattern.MatchString(tokens[1]) {
-			return tokens[1], nil
+			return tokens[1], derived("service", "computed [%s] version, read from the image tag [%s] docker reports", tokens[1], containerInfo.Config.Image), nil
 		}
 	}
 	name := containerServiceName(containerInfo)
 	if name == "" {
-		return versionUnknown, nil
+		return versionUnknown, derived("service", "computed [%s] version, docker reports no usable image tag and the container carries no service name to look up in the install tree", versionUnknown), nil
 	}
 	installed, _ := snapshot.service(name)
 	if installed.version != "" {
-		return installed.version, nil
+		return installed.version, derived("service", "computed [%s] version, service [%s] read from the install tree since the image tag carries none", installed.version, name), nil
 	}
-	return versionUnknown, nil
+	return versionUnknown, derived("service", "computed [%s] version, service [%s] has no image tag and no version in the install tree under [%s]",
+		versionUnknown, name, installRoot), nil
 }
 
 func (p *servicesProbe) sleep(snapshot *installSnapshot, containerInfo container.InspectResponse) (bool, error) {
@@ -773,30 +789,31 @@ func (p *servicesProbe) sleep(snapshot *installSnapshot, containerInfo container
 	return installed.sleepEnabled, nil
 }
 
-func (p *servicesProbe) maxMemory(snapshot *installSnapshot, name string) (float64, error) {
+func (p *servicesProbe) maxMemory(snapshot *installSnapshot, name string) (float64, derivation, error) {
 	if name == "" {
-		return 0, errors.New("memory ceiling not available")
+		return 0, derivation{}, errors.New("no memory ceiling read, the container carries no service name to look up in the install tree")
 	}
 	installed, _ := snapshot.service(name)
 	if installed.maxMemoryBytes <= 0 {
-		return 0, fmt.Errorf("memory ceiling not declared for [%s]", name)
+		return 0, derivation{}, fmt.Errorf("no memory ceiling read, service [%s] declares no [deploy.resources.limits.memory] in its compose file under [%s]", name, installRoot)
 	}
-	return float64(installed.maxMemoryBytes) / bytesPerMiB, nil
+	return float64(installed.maxMemoryBytes) / bytesPerMiB, derived("service", "computed [%.0f] MiB ceiling, service [%s] read from [deploy.resources.limits.memory] in its compose file",
+		float64(installed.maxMemoryBytes)/bytesPerMiB, name), nil
 }
 
-func (p *servicesProbe) upTime(containerInfo container.InspectResponse) (float64, error) {
+func (p *servicesProbe) upTime(name string, containerInfo container.InspectResponse) (float64, derivation, error) {
 	if containerInfo.ContainerJSONBase == nil || containerInfo.State == nil || containerInfo.State.StartedAt == "" {
-		return 0, errors.New("started at time not available")
+		return 0, derivation{}, fmt.Errorf("no up time read, docker reports no start time for service [%s]", name)
 	}
 	startedAt, err := time.Parse(time.RFC3339Nano, containerInfo.State.StartedAt)
 	if err != nil {
-		return 0, fmt.Errorf("parse start at time [%s] failed: %w", containerInfo.State.StartedAt, err)
+		return 0, derivation{}, fmt.Errorf("no up time read, service [%s] start time [%s] did not parse with [%w]", name, containerInfo.State.StartedAt, err)
 	}
 	upTime := time.Since(startedAt).Seconds()
 	if upTime < 0 {
-		return 0, errors.New("running time not available")
+		return 0, derivation{}, fmt.Errorf("no up time read, service [%s] reports a start time [%s] in the future", name, containerInfo.State.StartedAt)
 	}
-	return upTime, nil
+	return upTime, derived("service", "computed [%.0f] s up, service [%s] started at [%s]", upTime, name, startedAt.Format(time.RFC3339)), nil
 }
 
 func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services map[string]service) {

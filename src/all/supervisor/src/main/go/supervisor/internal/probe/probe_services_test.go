@@ -270,24 +270,24 @@ func TestProbeServices_Services(t *testing.T) {
 				tt.validateFunc(t, services)
 			} else {
 				for _, service := range services {
-					isUp, err := service.isUp()
+					isUp, _, err := service.isUp()
 					if err != nil {
 						t.Fatalf("unexpected isUp error: %v", err)
 					}
 					if !isUp {
 						t.Fatalf("isUp out of range [%v]", isUp)
 					}
-					backupStatus, err := service.backupStatus()
+					backupStatus, _, err := service.backupStatus()
 					if err != nil && err.Error() != "backup status not available" {
 						t.Fatalf("unexpected backup status error: %v", err)
 					}
 					_ = backupStatus
-					healthStatus, err := service.healthStatus()
+					healthStatus, _, err := service.healthStatus()
 					if err != nil {
 						t.Fatalf("unexpected health status error: %v", err)
 					}
 					_ = healthStatus
-					configuredStatus, err := service.configuredStatus()
+					configuredStatus, _, err := service.configuredStatus()
 					if err != nil {
 						t.Fatalf("unexpected configured status error: %v", err)
 					}
@@ -296,17 +296,17 @@ func TestProbeServices_Services(t *testing.T) {
 					if name == "" {
 						t.Fatalf("expected service name")
 					}
-					version, err := service.version()
+					version, _, err := service.version()
 					if err != nil {
 						t.Fatalf("unexpected version error: %v", err)
 					}
 					if version == "" {
 						t.Fatalf("expected version value")
 					}
-					usedProcessor, err := service.usedProcessor()
+					usedProcessor, _, err := service.usedProcessor()
 					if errors.Is(err, errProbeWarmingUp) {
 						time.Sleep(1 * time.Second)
-						usedProcessor, err = service.usedProcessor()
+						usedProcessor, _, err = service.usedProcessor()
 					}
 					if err != nil {
 						t.Fatalf("unexpected processor error: %v", err)
@@ -314,42 +314,42 @@ func TestProbeServices_Services(t *testing.T) {
 					if usedProcessor < 0 || usedProcessor > 100 {
 						t.Fatalf("usedProcessor out of range [%d]", usedProcessor)
 					}
-					usedMemory, err := service.usedMemory()
+					usedMemory, _, err := service.usedMemory()
 					if err != nil {
 						t.Fatalf("unexpected memory error: %v", err)
 					}
 					if usedMemory < 0 || usedMemory > 100 {
 						t.Fatalf("usedMemory out of range [%d]", usedMemory)
 					}
-					usedDiskOps, err := service.usedDiskOps()
+					usedDiskOps, _, err := service.usedDiskOps()
 					if err != nil {
 						t.Fatalf("unexpected usedDiskOps error: %v", err)
 					}
 					if usedDiskOps < 0 || usedDiskOps > 100 {
 						t.Fatalf("usedDiskOps out of range [%d]", usedDiskOps)
 					}
-					usedNetwork, err := service.usedNetwork()
+					usedNetwork, _, err := service.usedNetwork()
 					if err != nil {
 						t.Fatalf("unexpected usedNetwork error: %v", err)
 					}
 					if usedNetwork < 0 || usedNetwork > 100 {
 						t.Fatalf("usedNetwork out of range [%d]", usedNetwork)
 					}
-					upTime, err := service.upTime()
+					upTime, _, err := service.upTime()
 					if err != nil {
 						t.Fatalf("unexpected runningTime error: %v", err)
 					}
 					if upTime < 0 {
 						t.Fatalf("upTime out of range: %v", upTime)
 					}
-					maxMemory, err := service.maxMemory()
+					maxMemory, _, err := service.maxMemory()
 					if err != nil {
 						t.Fatalf("unexpected maxMemory error: %v", err)
 					}
 					if maxMemory < 0 {
 						t.Fatalf("maxMemory out of range: %v", maxMemory)
 					}
-					restartCount, err := service.restartCount()
+					restartCount, _, err := service.restartCount()
 					if err != nil {
 						t.Fatalf("unexpected restart count error: %v", err)
 					}
@@ -409,7 +409,7 @@ func TestProbeServices_Health(t *testing.T) {
 			if !exists {
 				t.Fatalf("sleep-health-1 not found in %d services", len(serviceMap))
 			}
-			_, healthErr := sleepService.healthStatus()
+			_, _, healthErr := sleepService.healthStatus()
 			if testCase.expectedError {
 				if healthErr == nil {
 					t.Fatalf("expected health status error")
@@ -789,7 +789,7 @@ func TestProbe_Version(t *testing.T) {
 			config.Reset()
 			resetInstallTrees()
 			p := newServicesProbe()
-			got, err := p.version(p.installs().snapshot(), tt.containerInfo)
+			got, _, err := p.version(p.installs().snapshot(), tt.containerInfo)
 			if tt.expectedError {
 				if err == nil {
 					t.Fatalf("Got no error, expected error")
@@ -1015,7 +1015,7 @@ func assertConfiguredStatus(t *testing.T, services map[string]service, name stri
 	if !exists {
 		t.Fatalf("Got service %q = not found", name)
 	}
-	got, err := s.configuredStatus()
+	got, _, err := s.configuredStatus()
 	if err != nil {
 		t.Fatalf("Got configuredStatus error = %v, expected none", err)
 	}

@@ -1,7 +1,6 @@
 package probe
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 )
 
 type sensorSet struct {
+	sysRoot           string
 	tier              string
 	temperatureInputs []string
 	temperatureOffset float64
@@ -49,20 +49,22 @@ func resetSensors() {
 	clear(sensorCache)
 }
 
-func (s *sensorSet) celsius() (float64, error) {
-	celsiusStart := time.Now()
+func (s *sensorSet) celsius() (float64, derivation, error) {
 	if s == nil || len(s.temperatureInputs) == 0 {
-		return 0, errors.New("no suitable temperature sensors found")
+		return 0, derivation{}, fmt.Errorf("no temperature read, discovery found no package, soc, composite or thermal zone sensor under [%s], so this host exposes none this probe knows how to read", s.sysRoot)
 	}
 	hottest := 0.0
 	found := false
+	var rejected []string
 	for _, input := range s.temperatureInputs {
 		milli, err := readSensorValue(input)
 		if err != nil {
+			rejected = append(rejected, fmt.Sprintf("%s unreadable with [%v]", input, err))
 			continue
 		}
 		celsius := milli/1000.0 + s.temperatureOffset
 		if celsius < sensorMinCelsius || celsius > sensorMaxCelsius {
+			rejected = append(rejected, fmt.Sprintf("%s read [%.1f] celsius outside [%.0f] to [%.0f]", input, celsius, sensorMinCelsius, sensorMaxCelsius))
 			continue
 		}
 		if !found || celsius > hottest {
@@ -71,32 +73,33 @@ func (s *sensorSet) celsius() (float64, error) {
 		found = true
 	}
 	if !found {
-		return 0, fmt.Errorf("no readable [%s] temperature sensors", s.tier)
+		return 0, derivation{}, fmt.Errorf("no temperature read, none of the [%d] discovered [%s] tier sensors answered sanely, rejected [%s]",
+			len(s.temperatureInputs), s.tier, strings.Join(rejected, ", "))
 	}
-	derive("host", "sensors", celsiusStart, "computed [%.1f] celsius hottest, tier [%s], inputs [%d], offset [%.1f] celsius, sane between [%.0f] and [%.0f] celsius",
-		hottest, s.tier, len(s.temperatureInputs), s.temperatureOffset, sensorMinCelsius, sensorMaxCelsius)
-	return hottest, nil
+	return hottest, derived("sensors", "computed [%.1f] celsius hottest, tier [%s], inputs [%d], offset [%.1f] celsius, sane between [%.0f] and [%.0f] celsius",
+		hottest, s.tier, len(s.temperatureInputs), s.temperatureOffset, sensorMinCelsius, sensorMaxCelsius), nil
 }
 
 func (s *sensorSet) hasFans() bool {
 	return s != nil && len(s.fans) > 0
 }
 
-func (s *sensorSet) fanSpeedOfMax() (float64, error) {
-	fanStart := time.Now()
+func (s *sensorSet) fanSpeedOfMax() (float64, derivation, error) {
 	if s == nil || len(s.fans) == 0 {
-		derive("host", "sensors", fanStart, "computed [0.0] pct of max, host reports no fans so the metric is inert and always ok")
-		return 0, nil
+		return 0, derived("sensors", "computed [0.0] pct of max, discovery found no fan input under [%s] so the metric is inert and always ok", s.sysRoot), nil
 	}
 	fastest := 0.0
 	found := false
 	var fastestDetail []string
+	var rejected []string
 	for _, fan := range s.fans {
 		rpm, err := readSensorValue(fan.input)
 		if err != nil {
+			rejected = append(rejected, fmt.Sprintf("%s unreadable with [%v]", fan.input, err))
 			continue
 		}
 		if rpm < 0 {
+			rejected = append(rejected, fmt.Sprintf("%s read [%.0f] rpm below zero", fan.input, rpm))
 			continue
 		}
 		ofMax := rpm / fan.maxRPM * 100.0
@@ -107,15 +110,15 @@ func (s *sensorSet) fanSpeedOfMax() (float64, error) {
 		found = true
 	}
 	if !found {
-		return 0, errors.New("no readable fan sensors")
+		return 0, derivation{}, fmt.Errorf("no fan speed read, none of the [%d] discovered fans answered, rejected [%s]", len(s.fans), strings.Join(rejected, ", "))
 	}
-	derive("host", "sensors", fanStart, "computed [%.1f] pct of max fastest, fans [%d], readings [%s]", fastest, len(s.fans), strings.Join(fastestDetail, " "))
-	return fastest, nil
+	return fastest, derived("sensors", "computed [%.1f] pct of max fastest, fans [%d], readings [%s]",
+		fastest, len(s.fans), strings.Join(fastestDetail, " ")), nil
 }
 
 func discoverSensors(sysRoot string) *sensorSet {
 	discoverStart := time.Now()
-	discovered := &sensorSet{}
+	discovered := &sensorSet{sysRoot: sysRoot}
 	isSocSensor := func(zoneKey string) bool {
 		for _, prefix := range socSensorKeys {
 			if strings.Contains(zoneKey, prefix) {

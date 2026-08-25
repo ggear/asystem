@@ -1,7 +1,6 @@
 package probe
 
 import (
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -29,7 +28,7 @@ func (r installReader) snapshot() *installSnapshot {
 	return loadInstallTree(config.Load(r.configPath).Mount()).snapshot()
 }
 
-func (r installReader) allocation() (int64, error) {
+func (r installReader) allocation() (int64, int, error) {
 	return r.snapshot().allocation(config.Load(r.configPath).Services(r.hostName))
 }
 
@@ -112,16 +111,17 @@ func (s *installSnapshot) names() []string {
 	return names
 }
 
-func (s *installSnapshot) allocation(names []string) (int64, error) {
-	allocationStart := time.Now()
+func (s *installSnapshot) allocation(names []string) (int64, int, error) {
 	if len(names) == 0 {
-		return 0, errors.New("no services configured for the host")
+		return 0, 0, fmt.Errorf("no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [%s]", installRoot)
 	}
 	total := int64(0)
 	installed := 0
+	var missing []string
 	for _, name := range names {
 		entry, found := s.service(name)
 		if !found || !entry.serviceModule {
+			missing = append(missing, name)
 			continue
 		}
 		installed++
@@ -131,11 +131,10 @@ func (s *installSnapshot) allocation(names []string) (int64, error) {
 		total += entry.maxMemoryBytes
 	}
 	if installed == 0 {
-		return 0, fmt.Errorf("none of the [%d] configured services are installed as service modules under [%s]", len(names), installRoot)
+		return 0, 0, fmt.Errorf("no memory ceiling summed, none of the [%d] configured services are installed as service modules under [%s], absent [%s]",
+			len(names), installRoot, strings.Join(missing, ","))
 	}
-	derive("install", "allocation", allocationStart, "computed [%d] MiB of ceilings, installed [%d] of configured [%d] services, tree [%s]",
-		total/bytesPerMiB, installed, len(names), installRoot)
-	return total, nil
+	return total, installed, nil
 }
 
 func (t *installTree) bases() []string {

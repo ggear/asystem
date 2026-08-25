@@ -326,96 +326,90 @@ func (p *hostProbe) hasMetric(id metric.ID) bool {
 	return p.mask[id]
 }
 
-func (p *hostProbe) host() (bool, error) {
-	return true, nil
+func (p *hostProbe) host() (bool, derivation, error) {
+	return true, derived("host", "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
 }
 
-func (p *hostProbe) usedProcessor() (int8, error) {
+func (p *hostProbe) usedProcessor() (int8, derivation, error) {
 	if p.cpuSampler == nil || p.cpuTimes == nil {
-		return 0, errors.New("cpu sampler not initialized")
+		return 0, derivation{}, errors.New("no processor sample taken, the probe was created without a cpu sampler or a times reader")
 	}
 	return p.cpuSampler.sample(p.cpuTimes)
 }
 
-func (p *hostProbe) usedMemory() (int8, error) {
+func (p *hostProbe) usedMemory() (int8, derivation, error) {
 	if p.virtualMemory == nil {
-		return 0, errors.New("host memory unavailable")
+		return 0, derivation{}, errors.New("no memory reading taken, the probe was created without a virtual memory reader")
 	}
-	memoryStart := time.Now()
 	memoryStat, err := p.virtualMemory()
 	if err != nil {
-		return 0, fmt.Errorf("virtual memory stats: %w", err)
+		return 0, derivation{}, fmt.Errorf("no memory reading taken, virtual memory stats failed with [%w]", err)
 	}
 	if memoryStat.Total == 0 {
-		return 0, errors.New("total memory must be > 0")
+		return 0, derivation{}, errors.New("no memory reading taken, the host reports [0] bytes of total memory so a share of it cannot be computed")
 	}
 	usedPercent := (float64(memoryStat.Used) / float64(memoryStat.Total)) * 100.0
-	derive("host", "memory", memoryStart, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, available [%d] MiB",
-		stats.ConvertToInt(usedPercent), memoryStat.Used/bytesPerMiB, memoryStat.Total/bytesPerMiB, memoryStat.Available/bytesPerMiB)
-	return stats.ConvertToInt(usedPercent), nil
+	return stats.ConvertToInt(usedPercent), derived("memory", "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, available [%d] MiB",
+		stats.ConvertToInt(usedPercent), memoryStat.Used/bytesPerMiB, memoryStat.Total/bytesPerMiB, memoryStat.Available/bytesPerMiB), nil
 }
 
-func (p *hostProbe) allocatedMemory() (int8, error) {
+func (p *hostProbe) allocatedMemory() (int8, derivation, error) {
 	if p.virtualMemory == nil {
-		return 0, errors.New("host memory unavailable")
+		return 0, derivation{}, errors.New("no memory ceiling computed, the probe was created without a virtual memory reader")
 	}
 	memoryStat, err := p.virtualMemory()
 	if err != nil {
-		return 0, fmt.Errorf("virtual memory stats: %w", err)
+		return 0, derivation{}, fmt.Errorf("no memory ceiling computed, virtual memory stats failed with [%w]", err)
 	}
 	if memoryStat.Total == 0 {
-		return 0, errors.New("total memory must be > 0")
+		return 0, derivation{}, errors.New("no memory ceiling computed, the host reports [0] bytes of total memory so a share of it cannot be computed")
 	}
 	allocatedStart := time.Now()
-	allocatedBytes, err := p.installs().allocation()
+	allocatedBytes, installed, err := p.installs().allocation()
 	if err != nil {
-		return 0, err
+		return 0, derivation{}, err
 	}
 	allocatedPercent := (float64(allocatedBytes) / float64(memoryStat.Total)) * 100.0
-	derive("host", "allocated", allocatedStart, "computed [%3d] pct allocated, ceilings [%d] MiB of total [%d] MiB, configured [%d] services",
-		stats.ConvertToInt(allocatedPercent), allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, len(config.Load(p.configPath).Services(p.hostName)))
-	allocatedMemoryExceeded := allocatedPercent > 100.0
-	if allocatedMemoryExceeded {
+	sampled := derived("allocated", "computed [%3d] pct allocated, ceilings [%d] MiB of total [%d] MiB, installed [%d] of configured [%d] services",
+		stats.ConvertToInt(allocatedPercent), allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, installed, len(config.Load(p.configPath).Services(p.hostName)))
+	if allocatedPercent > 100.0 {
 		if allocatedBytes != p.allocatedMemoryLogged {
 			p.allocatedMemoryLogged = allocatedBytes
-			scribe.Probe("state", "host").Error("allocated", allocatedStart, "exceeded [%d] MiB allocated of [%d] MiB total at [%.1f] pct", allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, allocatedPercent)
+			scribe.Probe("state", "host").Error("allocated", allocatedStart, "exceeded [%d] MiB allocated of [%d] MiB total at [%.1f] pct across [%d] installed services, capping the metric at [100] pct",
+				allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, allocatedPercent, installed)
 		}
 		allocatedPercent = 100.0
 	}
-	return stats.ConvertToInt(allocatedPercent), nil
+	return stats.ConvertToInt(allocatedPercent), sampled, nil
 }
 
-func (p *hostProbe) failedLogs() (int8, error) {
-	logsStart := time.Now()
+func (p *hostProbe) failedLogs() (int8, derivation, error) {
 	window := config.TrendWindow(p.periods.TrendHours)
-	count, available := loadLogs(config.Load(p.configPath).Mount()).errorsWithin(window)
+	logs := loadLogs(config.Load(p.configPath).Mount())
+	count, available := logs.errorsWithin(window)
 	if !available {
-		derive("host", "logs", logsStart, "computed [  0] pct failed, kernel log unreadable so the metric is inert and always ok")
-		return 0, nil
+		return 0, derived("logs", "computed [  0] pct failed, kernel log unreadable at [%s] so the metric is inert and always ok", logs.attempted()), nil
 	}
-	derive("host", "logs", logsStart, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], ok pulse at [<=%d] pct trend at [0] pct",
-		stats.ConvertToInt(float64(count)/logErrorBudget*100.0), count, int(logErrorBudget), window, logErrorPulseOfMax)
-	return stats.ConvertToInt(float64(count) / logErrorBudget * 100.0), nil
+	return stats.ConvertToInt(float64(count) / logErrorBudget * 100.0), derived("logs", "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], following [%s], ok pulse at [<=%d] pct trend at [0] pct",
+		stats.ConvertToInt(float64(count)/logErrorBudget*100.0), count, int(logErrorBudget), window, logs.path, logErrorPulseOfMax), nil
 }
 
-func (p *hostProbe) failedShares() (int8, error) {
+func (p *hostProbe) failedShares() (int8, derivation, error) {
 	return p.mounts().failedShares()
 }
 
-func (p *hostProbe) failedBackups() (int8, error) {
+func (p *hostProbe) failedBackups() (int8, derivation, error) {
 	return inertInt(metric.MetricHostFailedBackups)
 }
 
-func (p *hostProbe) warnTemperature() (int8, error) {
-	temperatureCelsius, err := p.temperature()
+func (p *hostProbe) warnTemperature() (int8, derivation, error) {
+	temperatureCelsius, _, err := p.temperature()
 	if err != nil {
-		return 0, err
+		return 0, derivation{}, err
 	}
-	warnStart := time.Now()
 	warnOfMax := stats.ConvertToInt(sensorWarnPerCelsius * (temperatureCelsius - sensorWarnFloorCelsius))
-	derive("host", "temperature", warnStart, "computed [%3d] pct of warn, celsius [%.1f] above floor [%.1f] at [%.1f] pct per celsius, ok pulse at [<=%d] pct trend at [<=%d] pct",
-		warnOfMax, temperatureCelsius, sensorWarnFloorCelsius, sensorWarnPerCelsius, sensorWarnPulseOfMax, sensorWarnTrendOfMax)
-	return warnOfMax, nil
+	return warnOfMax, derived("temperature", "computed [%3d] pct of warn, celsius [%.1f] above floor [%.1f] at [%.1f] pct per celsius, ok pulse at [<=%d] pct trend at [<=%d] pct",
+		warnOfMax, temperatureCelsius, sensorWarnFloorCelsius, sensorWarnPerCelsius, sensorWarnPulseOfMax, sensorWarnTrendOfMax), nil
 }
 
 func (p *hostProbe) spinFanRespondingOK(window string, fan int8, temperature int8, temperatureMax int8, fanMin int8) bool {
@@ -430,47 +424,47 @@ func (p *hostProbe) spinFanRespondingOK(window string, fan int8, temperature int
 	return responding
 }
 
-func (p *hostProbe) spinFanSpeed() (int8, error) {
-	speedOfMax, err := loadSensors(p.sysRoot).fanSpeedOfMax()
+func (p *hostProbe) spinFanSpeed() (int8, derivation, error) {
+	speedOfMax, sampled, err := loadSensors(p.sysRoot).fanSpeedOfMax()
 	if err != nil {
-		return 0, err
+		return 0, derivation{}, err
 	}
-	return stats.ConvertToInt(speedOfMax), nil
+	return stats.ConvertToInt(speedOfMax), sampled, nil
 }
 
-func (p *hostProbe) lifeUsedDrives() (int8, error) {
+func (p *hostProbe) lifeUsedDrives() (int8, derivation, error) {
 	return p.mounts().lifeUsedDrives()
 }
 
-func (p *hostProbe) usedSystemSpace() (int8, error) {
+func (p *hostProbe) usedSystemSpace() (int8, derivation, error) {
 	return p.mounts().usedSystemSpace()
 }
 
-func (p *hostProbe) usedShareSpace() (int8, error) {
+func (p *hostProbe) usedShareSpace() (int8, derivation, error) {
 	return p.mounts().usedShareSpace()
 }
 
-func (p *hostProbe) usedBackupSpace() (int8, error) {
+func (p *hostProbe) usedBackupSpace() (int8, derivation, error) {
 	return inertInt(metric.MetricHostUsedBackupSpace)
 }
 
-func (p *hostProbe) usedSwapSpace() (int8, error) {
+func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
 	return inertInt(metric.MetricHostUsedSwapSpace)
 }
 
-func (p *hostProbe) usedDiskOps() (int8, error) {
+func (p *hostProbe) usedDiskOps() (int8, derivation, error) {
 	return inertInt(metric.MetricHostUsedDiskOps)
 }
 
-func (p *hostProbe) usedNetwork() (int8, error) {
+func (p *hostProbe) usedNetwork() (int8, derivation, error) {
 	return inertInt(metric.MetricHostUsedNetwork)
 }
 
-func (p *hostProbe) runningTime() (float64, error) {
+func (p *hostProbe) runningTime() (float64, derivation, error) {
 	return inertFloat(metric.MetricHostRunningTime)
 }
 
-func (p *hostProbe) temperature() (float64, error) {
+func (p *hostProbe) temperature() (float64, derivation, error) {
 	return loadSensors(p.sysRoot).celsius()
 }
 
@@ -488,19 +482,18 @@ type cpuUsageSampler struct {
 }
 
 //goland:noinspection GoDeprecation
-func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (int8, error) {
-	sampleStart := time.Now()
+func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (int8, derivation, error) {
 	currentTimes, err := cpuTimes(false)
 	if err != nil {
-		return 0, fmt.Errorf("cpu times: %w", err)
+		return 0, derivation{}, fmt.Errorf("no processor sample taken, reading cpu times failed with [%w]", err)
 	}
 	if len(currentTimes) == 0 {
-		return 0, errors.New("failed to sampleFunc processor usage")
+		return 0, derivation{}, errors.New("no processor sample taken, the host returned an empty set of cpu times")
 	}
 	if !s.hasSample {
 		s.lastSample = currentTimes[0]
 		s.hasSample = true
-		return 0, errProbeWarmingUp
+		return 0, derivation{}, errProbeWarmingUp
 	}
 	previousIdleTime := s.lastSample.Idle
 	previousTotalTime := s.lastSample.Total()
@@ -510,10 +503,9 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 	totalDelta := currentTotalTime - previousTotalTime
 	s.lastSample = currentTimes[0]
 	if totalDelta <= 0 {
-		return 0, errors.New("cpu usage unavailable, non-monotonic counters")
+		return 0, derivation{}, fmt.Errorf("no processor sample taken, cpu counters moved by [%.1f] ticks between polls so they are not monotonic", totalDelta)
 	}
 	usedPercent := (1.0 - idleDelta/totalDelta) * 100.0
-	derive("host", "processor", sampleStart, "computed [%3d] pct used, idle delta [%.1f] of total delta [%.1f] ticks",
-		stats.ConvertToInt(usedPercent), idleDelta, totalDelta)
-	return stats.ConvertToInt(usedPercent), nil
+	return stats.ConvertToInt(usedPercent), derived("processor", "computed [%3d] pct used, idle delta [%.1f] of total delta [%.1f] ticks",
+		stats.ConvertToInt(usedPercent), idleDelta, totalDelta), nil
 }

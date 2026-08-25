@@ -3,7 +3,6 @@ package probe
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -140,10 +139,10 @@ func (s *mountSet) snapshot() (*mountSnapshot, error) {
 	return s.current, nil
 }
 
-func (s *mountSet) usedSystemSpace() (int8, error) {
+func (s *mountSet) usedSystemSpace() (int8, derivation, error) {
 	taken, err := s.snapshot()
 	if err != nil {
-		return 0, err
+		return 0, derivation{}, err
 	}
 	worst := 0.0
 	worstAt := ""
@@ -165,22 +164,20 @@ func (s *mountSet) usedSystemSpace() (int8, error) {
 		found = true
 	}
 	if !found {
-		return 0, fmt.Errorf("no system filesystems measured of [%d] classed system and [%d] mounts scanned from [%s], failures [%s]",
+		return 0, derivation{}, fmt.Errorf("no system filesystems measured of [%d] classed system and [%d] mounts scanned from [%s], failures [%s]",
 			systems, len(taken.mounts), filepath.Join(s.root, mountTablePath), mountReasons(taken.mounts, false))
 	}
-	derive("host", "mounts", taken.taken, "computed [%3d] pct used system, fullest of [%d] filesystems [%s]",
-		int8Percent(worst), systems, worstAt)
-	return int8Percent(worst), nil
+	return int8Percent(worst), derived("mounts", "computed [%3d] pct used system, fullest of [%d] filesystems [%s], snapshot taken [%s] ago",
+		int8Percent(worst), systems, worstAt, time.Since(taken.taken).Truncate(time.Second)), nil
 }
 
-func (s *mountSet) usedShareSpace() (int8, error) {
+func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 	taken, err := s.snapshot()
 	if err != nil {
-		return 0, err
+		return 0, derivation{}, err
 	}
 	if taken.locals == 0 {
-		derive("host", "mounts", taken.taken, "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok")
-		return 0, nil
+		return 0, derived("mounts", "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok"), nil
 	}
 	total := uint64(0)
 	used := uint64(0)
@@ -194,32 +191,30 @@ func (s *mountSet) usedShareSpace() (int8, error) {
 		used += mount.used
 	}
 	if total == 0 {
-		return 0, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared, failures [%s]",
+		return 0, derivation{}, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared, failures [%s]",
 			taken.locals, taken.shares, mountReasons(taken.mounts, true))
 	}
-	derive("host", "mounts", taken.taken, "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
-		int8Percent(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals)
-	return int8Percent(float64(used) / float64(total) * 100.0), nil
+	return int8Percent(float64(used) / float64(total) * 100.0), derived("mounts", "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
+		int8Percent(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals), nil
 }
 
-func (s *mountSet) failedShares() (int8, error) {
+func (s *mountSet) failedShares() (int8, derivation, error) {
 	taken, err := s.snapshot()
 	if err != nil {
-		return 0, err
+		return 0, derivation{}, err
 	}
 	if taken.shares == 0 {
-		derive("host", "mounts", taken.taken, "computed [  0] pct failed share, fstab declares no share so the metric is inert and always ok")
-		return 0, nil
+		return 0, derived("mounts", "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
+			filepath.Join(s.root, mountFstabPath)), nil
 	}
-	derive("host", "mounts", taken.taken, "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], ok only at [0] pct",
-		int8Percent(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath))
-	return int8Percent(float64(taken.failed) / float64(taken.shares) * 100.0), nil
+	return int8Percent(float64(taken.failed) / float64(taken.shares) * 100.0), derived("mounts", "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
+		int8Percent(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath), mountReasons(taken.mounts, true)), nil
 }
 
-func (s *mountSet) lifeUsedDrives() (int8, error) {
+func (s *mountSet) lifeUsedDrives() (int8, derivation, error) {
 	taken, err := s.snapshot()
 	if err != nil {
-		return 0, err
+		return 0, derivation{}, err
 	}
 	worst := 0.0
 	worstAt := ""
@@ -239,12 +234,11 @@ func (s *mountSet) lifeUsedDrives() (int8, error) {
 		}
 	}
 	if rated == 0 {
-		derive("host", "drives", taken.taken, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok", len(taken.drives))
-		return 0, nil
+		return 0, derived("drives", "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok, unrated [%s]",
+			len(taken.drives), mountDrives(taken.drives)), nil
 	}
-	derive("host", "drives", taken.taken, "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
-		int8Percent(worst), rated, worstAt, errored)
-	return int8Percent(worst), nil
+	return int8Percent(worst), derived("drives", "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
+		int8Percent(worst), rated, worstAt, errored), nil
 }
 
 func (s *mountSet) drivesErrored() bool {
@@ -399,7 +393,7 @@ func (s *mountSet) measure(mountpoint string, share bool) (uint64, uint64, error
 	}
 	s.mu.Unlock()
 	if outstanding {
-		return 0, 0, fmt.Errorf("mount [%s] has not answered a probe still outstanding", mountpoint)
+		return 0, 0, fmt.Errorf("mount [%s] not measured, a probe started on an earlier refresh has still not returned", mountpoint)
 	}
 	done := make(chan measurement, 1)
 	go func() {
@@ -421,7 +415,7 @@ func (s *mountSet) measure(mountpoint string, share bool) (uint64, uint64, error
 	case taken := <-done:
 		return taken.total, taken.used, taken.err
 	case <-time.After(mountDeadline):
-		return 0, 0, fmt.Errorf("mount [%s] did not answer within [%d] ms", mountpoint, mountDeadline.Milliseconds())
+		return 0, 0, fmt.Errorf("mount [%s] not measured, statfs did not answer within [%d] ms which is what a wedged mount looks like", mountpoint, mountDeadline.Milliseconds())
 	}
 }
 
@@ -576,7 +570,7 @@ func mountSmart(node string) (smartReport, error) {
 	output, err := exec.CommandContext(ctx, mountSmartCommand, "--json", "-a", node).Output()
 	if len(output) == 0 {
 		if err == nil {
-			err = errors.New("smart returned no output")
+			err = fmt.Errorf("smartctl returned no output for node [%s]", node)
 		}
 		return smartReport{}, err
 	}
@@ -600,7 +594,7 @@ func mountSmart(node string) (smartReport, error) {
 		} `json:"ata_smart_attributes"`
 	}
 	if err := json.Unmarshal(output, &decoded); err != nil {
-		return smartReport{}, fmt.Errorf("smart output not parseable with [%w]", err)
+		return smartReport{}, fmt.Errorf("smartctl output for node [%s] not parseable with [%w]", node, err)
 	}
 	report := smartReport{model: strings.TrimSpace(decoded.ModelName)}
 	report.supported = report.model != ""
@@ -638,12 +632,27 @@ func driveWritten(id int, name string, raw float64) float64 {
 func mountStatfs(path string) (uint64, uint64, error) {
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(path, &stat); err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("statfs of [%s] failed with [%w]", path, err)
 	}
 	size := uint64(stat.Bsize)
 	total := stat.Blocks * size
 	used := (stat.Blocks - stat.Bfree) * size
 	return total, used, nil
+}
+
+func mountDrives(drives []driveWear) string {
+	if len(drives) == 0 {
+		return "none"
+	}
+	named := make([]string, 0, len(drives))
+	for _, drive := range drives {
+		model := drive.model
+		if model == "" {
+			model = "unreadable"
+		}
+		named = append(named, drive.kernel+"="+model)
+	}
+	return strings.Join(named, " ")
 }
 
 func mountReasons(mounts []mountUsage, share bool) string {
