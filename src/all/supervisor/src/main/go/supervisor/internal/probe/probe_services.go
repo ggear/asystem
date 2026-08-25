@@ -142,7 +142,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		}
 	}
 	if len(tombstoned) > 0 {
-		scribe.Probe("state", "services").Info("tombstone", tombstoneStart, "removed  [%d] services, host [%s], [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
+		scribe.Probe("state", "services").Info("tombstone", tombstoneStart, "removed  [%d] services, host [%s], services [%s]", len(tombstoned), p.hostName, strings.Join(tombstoned, ","))
 	}
 	newBool := func() *stats.BoolStats {
 		return stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)

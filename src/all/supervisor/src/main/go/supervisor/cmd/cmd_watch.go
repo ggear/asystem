@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 	"supervisor/internal/config"
@@ -31,6 +30,7 @@ type watchOptions struct {
 	refreshPeriod   string
 	consoleWidth    int
 	consoleHeight   int
+	logLevel        string
 	json            bool
 }
 
@@ -64,6 +64,7 @@ func newWatchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.refreshPeriod, "refresh-period", "R", "15m", "period for performing a full screen refresh, uses unit suffixes [s, m, h]")
 	cmd.Flags().IntVarP(&opts.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
 	cmd.Flags().IntVarP(&opts.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
+	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", "debug", "lowest log level written to the log overlay and the log file, one of debug, info, warn or error")
 	cmd.Flags().BoolVarP(&opts.json, "json", "J", false, "output JSON instead of the default text format. Assumes local mode, respects poll and bin period options and ignores all formating options")
 	cmd.Flags().SortFlags = false
 	cobra.AddTemplateFunc("join", strings.Join)
@@ -88,7 +89,11 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if opts.consoleHeight > 0 && opts.consoleHeight < height {
 		height = opts.consoleHeight
 	}
-	logBuffer, err := scribe.EnableBufferAndFile(slog.LevelDebug, "watch", height, 10, 3, 7)
+	level, err := makeLevel(opts.logLevel)
+	if err != nil {
+		return err
+	}
+	logBuffer, err := scribe.EnableBufferAndFile(level, "watch", height, 10, 3, 7)
 	if err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
 	}

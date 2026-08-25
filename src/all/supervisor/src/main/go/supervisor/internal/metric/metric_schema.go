@@ -95,6 +95,17 @@ func GetIDField(id ID) string {
 	}
 }
 
+func GetIDName(id ID) string {
+	if id < 0 || id >= MetricMax {
+		return ""
+	}
+	name := metricBuildersByID[id].template
+	if _, suffix, found := strings.Cut(name, "$SCOPE/"); found {
+		name = suffix
+	}
+	return strings.TrimSuffix(strings.ReplaceAll(name, "$SERVICE/", ""), "/$SERVICE")
+}
+
 func GetIDValueKind(id ID) ValueKind {
 	if id < 0 || id >= MetricMax {
 		return ValueNone

@@ -234,3 +234,26 @@ func (m *mockProbe) snapshot() (createCalls, executeCalls int) {
 	defer m.mutex.Unlock()
 	return m.createCalls, m.runCalls
 }
+
+func TestProbe_MetricStatusOf(t *testing.T) {
+	trended := func(value bool) *bool { return &value }
+	testCases := []struct {
+		name           string
+		pulseOK        bool
+		trendOK        *bool
+		expectedStatus string
+		expectedError  bool
+	}{
+		{name: "pulse and trend ok", pulseOK: true, trendOK: trended(true), expectedStatus: metricStatusGreen, expectedError: false},
+		{name: "pulse ok trend not ok", pulseOK: true, trendOK: trended(false), expectedStatus: metricStatusAmber, expectedError: false},
+		{name: "pulse ok trend absent", pulseOK: true, trendOK: nil, expectedStatus: metricStatusAmber, expectedError: false},
+		{name: "pulse not ok", pulseOK: false, trendOK: trended(true), expectedStatus: metricStatusRed, expectedError: false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if status := metricStatusOf(testCase.pulseOK, testCase.trendOK); status != testCase.expectedStatus {
+				t.Errorf("status: got %v want %v", status, testCase.expectedStatus)
+			}
+		})
+	}
+}

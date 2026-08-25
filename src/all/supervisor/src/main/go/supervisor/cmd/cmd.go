@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
@@ -57,6 +58,21 @@ var rootCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+func makeLevel(logLevel string) (slog.Level, error) {
+	switch strings.ToLower(strings.TrimSpace(logLevel)) {
+	case "debug":
+		return slog.LevelDebug, nil
+	case "info":
+		return slog.LevelInfo, nil
+	case "warn":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
+		return slog.LevelInfo, fmt.Errorf("invalid log level [%s], must be one of [debug, info, warn, error]", logLevel)
+	}
 }
 
 func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeriod, heartbeatPeriod string) (config.Periods, error) {

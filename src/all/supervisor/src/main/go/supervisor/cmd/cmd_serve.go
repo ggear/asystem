@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"supervisor/internal/config"
@@ -23,6 +22,7 @@ type serveOptions struct {
 	cachePeriod     string
 	snapshotPeriod  string
 	heartbeatFactor string
+	logLevel        string
 }
 
 // noinspection DuplicatedCode
@@ -47,12 +47,17 @@ func newServeCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
 	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", config.DefaultCachePeriod, "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
 	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
+	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", "info", "lowest log level written to stdout and the log file, one of debug, info, warn or error")
 	cmd.Flags().SortFlags = false
 	return cmd
 }
 
 func executeServe(configPath string, opts *serveOptions) error {
-	if err := scribe.EnableStdoutAndFile(slog.LevelDebug, "serve", 10, 3, 7); err != nil {
+	level, err := makeLevel(opts.logLevel)
+	if err != nil {
+		return err
+	}
+	if err := scribe.EnableStdoutAndFile(level, "serve", 10, 3, 7); err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
 	}
 	periods, err := makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod, opts.heartbeatFactor)

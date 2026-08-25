@@ -146,8 +146,13 @@ func (s *mountSet) usedSystemSpace() (int8, error) {
 	}
 	worst := 0.0
 	found := false
+	systems := 0
 	for _, mount := range taken.mounts {
-		if mount.share || !mount.measured || mount.total == 0 {
+		if mount.share {
+			continue
+		}
+		systems++
+		if !mount.measured || mount.total == 0 {
 			continue
 		}
 		used := float64(mount.used) / float64(mount.total) * 100.0
@@ -157,7 +162,8 @@ func (s *mountSet) usedSystemSpace() (int8, error) {
 		found = true
 	}
 	if !found {
-		return 0, errors.New("no system filesystems measured")
+		return 0, fmt.Errorf("no system filesystems measured of [%d] classed system and [%d] mounts scanned from [%s]",
+			systems, len(taken.mounts), filepath.Join(s.root, mountTablePath))
 	}
 	return int8Percent(worst), nil
 }
@@ -180,7 +186,7 @@ func (s *mountSet) usedShareSpace() (int8, error) {
 		used += mount.used
 	}
 	if total == 0 {
-		return 0, errors.New("no local shares measured")
+		return 0, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared", taken.locals, taken.shares)
 	}
 	return int8Percent(float64(used) / float64(total) * 100.0), nil
 }
@@ -237,14 +243,19 @@ func (s *mountSet) collect() *mountSnapshot {
 	mounts := s.parseMounts()
 	expected := s.parseFstab()
 	for index := range mounts {
+		measureStart := time.Now()
 		total, used, err := s.measure(mounts[index].mountpoint, mounts[index].share)
 		if err != nil {
 			mounts[index].failed = true
+			scribe.Probe("state", "host").Debug("mounts", measureStart, "measured [%s] mount device [%s] fstype [%s] class [%s] failed with [%v]",
+				mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), err)
 			continue
 		}
 		mounts[index].total = total
 		mounts[index].used = used
 		mounts[index].measured = true
+		scribe.Probe("state", "host").Debug("mounts", measureStart, "measured [%s] mount device [%s] fstype [%s] class [%s] used [%d] of [%d] MiB",
+			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), used/bytesPerMiB, total/bytesPerMiB)
 	}
 	mounted := map[string]mountUsage{}
 	for index := range mounts {
@@ -265,13 +276,17 @@ func (s *mountSet) collect() *mountSnapshot {
 			}
 			continue
 		}
+		absentStart := time.Now()
 		if _, _, err := s.measure(mountpoint, true); err != nil {
 			taken.failed++
+			scribe.Probe("state", "host").Debug("mounts", absentStart, "declared [%s] share is absent from the mount table and failed with [%v]", mountpoint, err)
+			continue
 		}
+		scribe.Probe("state", "host").Debug("mounts", absentStart, "declared [%s] share is absent from the mount table but answered a probe", mountpoint)
 	}
 	taken.drives = s.wear(mounts)
-	scribe.Probe("state", "host").Debug("mounts", collectStart, "scanned  [%d] mounts, shares [%d], failed [%d], drives [%d]",
-		len(mounts), taken.shares, taken.failed, len(taken.drives))
+	scribe.Probe("state", "host").Debug("mounts", collectStart, "scanned  [%3d] mounts, system [%d], shares local [%d] declared [%d] failed [%d], drives [%d]",
+		len(mounts), len(mounts)-taken.locals-mountRemotes(mounts), taken.locals, taken.shares, taken.failed, len(taken.drives))
 	return taken
 }
 
@@ -284,15 +299,19 @@ func (s *mountSet) parseMounts() []mountUsage {
 		return nil
 	}
 	devices := map[string]string{}
+	dropped := map[string]int{}
+	lines := 0
 	var mounts []mountUsage
 	for _, line := range strings.Split(string(data), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 3 {
 			continue
 		}
+		lines++
 		device, mountpoint, fstype := fields[0], mountUnescape(fields[1]), fields[2]
 		share, remote, keep := mountClass(fstype, mountpoint)
 		if !keep {
+			dropped[fstype]++
 			continue
 		}
 		if !share {
@@ -311,6 +330,8 @@ func (s *mountSet) parseMounts() []mountUsage {
 		deduped = append(deduped, mount)
 	}
 	sort.Slice(deduped, func(first, second int) bool { return deduped[first].mountpoint < deduped[second].mountpoint })
+	scribe.Probe("state", "host").Debug("mounts", parseStart, "examined [%3d] lines of [%s], kept [%d] as [%s], dropped [%d] as [%s]",
+		lines, filepath.Join(s.root, mountTablePath), len(deduped), mountSummary(deduped), lines-len(deduped), mountDropped(dropped))
 	return deduped
 }
 
@@ -599,6 +620,54 @@ func mountStatfs(path string) (uint64, uint64, error) {
 	total := stat.Blocks * size
 	used := (stat.Blocks - stat.Bfree) * size
 	return total, used, nil
+}
+
+func mountClassOf(mount mountUsage) string {
+	switch {
+	case mount.share && mount.remote:
+		return "share remote"
+	case mount.share:
+		return "share local"
+	default:
+		return "system"
+	}
+}
+
+func mountSummary(mounts []mountUsage) string {
+	summarised := make([]string, 0, len(mounts))
+	for _, mount := range mounts {
+		summarised = append(summarised, fmt.Sprintf("%s=%s/%s", mount.mountpoint, mount.fstype, strings.ReplaceAll(mountClassOf(mount), " ", "-")))
+	}
+	if len(summarised) == 0 {
+		return "none"
+	}
+	return strings.Join(summarised, " ")
+}
+
+func mountDropped(dropped map[string]int) string {
+	if len(dropped) == 0 {
+		return "none"
+	}
+	fstypes := make([]string, 0, len(dropped))
+	for fstype := range dropped {
+		fstypes = append(fstypes, fstype)
+	}
+	sort.Strings(fstypes)
+	summarised := make([]string, 0, len(fstypes))
+	for _, fstype := range fstypes {
+		summarised = append(summarised, fmt.Sprintf("%s=%d", fstype, dropped[fstype]))
+	}
+	return strings.Join(summarised, " ")
+}
+
+func mountRemotes(mounts []mountUsage) int {
+	remotes := 0
+	for _, mount := range mounts {
+		if mount.remote {
+			remotes++
+		}
+	}
+	return remotes
 }
 
 func mountClass(fstype, mountpoint string) (bool, bool, bool) {

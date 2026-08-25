@@ -10,6 +10,7 @@ import (
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 	"supervisor/internal/stats"
+	"sync"
 	"time"
 )
 
@@ -239,20 +240,26 @@ func newCacheMetricTask[T any](
 
 func runMetricCacheTasks(p probe, isPulse bool, tasks []cacheMetricTask) {
 	tasksStart := time.Now()
+	census := metricCensus{}
 	for _, task := range tasks {
 		cache := p.records()
 		if cache == nil {
-			scribe.Probe("state", p.name()).Error("metric", tasksStart, "invalid  [%d] metric missing the required cache", task.metricID)
+			scribe.Probe("state", p.name()).Error("metric", tasksStart, "invalid  [%s] metric missing the required cache", metric.GetIDName(task.metricID))
 			continue
 		}
 		if !p.hasMetric(task.metricID) {
 			continue
 		}
-		runMetricCacheTask(p, isPulse, task)
+		census.count(runMetricCacheTask(p, isPulse, task), task)
 	}
+	if !isPulse || census.total == 0 {
+		return
+	}
+	scribe.Probe("profiling", p.name()).Debug("census", tasksStart, "reported [%3d] metrics%s, green [%d] amber [%d] red [%d] unknown [%d]%s",
+		census.total, census.subject(), census.green, census.amber, census.red, census.unknown, census.faults())
 }
 
-func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
+func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) string {
 	taskStart := time.Now()
 	var missing []string
 	if task.sampleFunc == nil {
@@ -268,31 +275,31 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 		missing = append(missing, "pulseOKFunc")
 	}
 	if len(missing) > 0 {
-		scribe.Probe("state", p.name()).Error("metric", taskStart, "invalid  [%d] metric missing required fields [%s]", task.metricID, strings.Join(missing, ","))
-		return
+		scribe.Probe("state", p.name()).Error("metric", taskStart, "invalid  [%s] metric missing required fields [%s]", metric.GetIDName(task.metricID), strings.Join(missing, ","))
+		return metricStatusUnknown
 	}
 	sample, err := task.sampleFunc()
 	errored := err != nil && !errors.Is(err, errProbeWarmingUp)
-	if errored {
-		scribe.Probe("state", p.name()).Error("metric", taskStart, "failed   [%d] metric with [%v]", task.metricID, err)
-	}
+	trackMetricFault(p, task, err, errored)
 	task.statsFunc(sample)
 	if !isPulse {
-		return
+		return metricStatusUnknown
 	}
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
-		scribe.Probe("state", p.name()).Error("metric", taskStart, "invalid  [%d] metric missing the host name", task.metricID)
-		return
+		scribe.Probe("state", p.name()).Error("metric", taskStart, "invalid  [%s] metric missing the host name", metric.GetIDName(task.metricID))
+		return metricStatusUnknown
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
 	pulse := task.pulseFunc()
 	if pulse == nil {
-		return
+		reportMetricStatus(p, task, taskStart, metricStatusUnknown, nil, false, nil, nil, err)
+		return metricStatusUnknown
 	}
 	pulseOK := task.pulseOKFunc(pulse) && !errored
 	var valueErr error
 	var value *metric.ValueData
+	var trendOK *bool
 	trend := any(nil)
 	if task.trendFunc != nil {
 		trend = task.trendFunc()
@@ -300,16 +307,187 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) {
 	if task.trendOKFunc == nil || trend == nil {
 		value, valueErr = metric.NewDataPulseValue(pulseOK, pulse)
 	} else {
-		trendOK := task.trendOKFunc(trend) && !errored
-		value, valueErr = metric.NewDataValue(pulseOK, pulse, trendOK, trend)
+		trended := task.trendOKFunc(trend) && !errored
+		trendOK = &trended
+		value, valueErr = metric.NewDataValue(pulseOK, pulse, trended, trend)
 	}
 	if valueErr != nil {
-		scribe.Probe("state", p.name()).Error("metric", taskStart, "failed   [%d] metric value builder with [%v]", task.metricID, valueErr)
-		return
+		scribe.Probe("state", p.name()).Error("metric", taskStart, "failed   [%s] metric value builder with [%v]", metric.GetIDName(task.metricID), valueErr)
+		return metricStatusUnknown
 	}
 	record := metric.NewRecord(*value)
 	p.records().Store(guid, &record)
+	status := metricStatusOf(pulseOK, trendOK)
+	reportMetricStatus(p, task, taskStart, status, pulse, pulseOK, trend, trendOK, err)
+	return status
 }
+
+func trackMetricFault(p probe, task cacheMetricTask, err error, errored bool) {
+	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
+	message := ""
+	if err != nil {
+		message = err.Error()
+	}
+	metricFaultsMutex.Lock()
+	tracked, faulting := metricFaults[key]
+	switch {
+	case errored && (!faulting || tracked.message != message):
+		tracked = &metricFault{message: message, since: time.Now(), logged: time.Now(), polls: 1}
+		metricFaults[key] = tracked
+	case errored:
+		tracked.polls++
+	case faulting:
+		delete(metricFaults, key)
+	}
+	fault := metricFault{}
+	repeat := false
+	if tracked != nil {
+		if errored && fault.polls != 1 && time.Since(tracked.logged) >= metricFaultRepeat {
+			tracked.logged = time.Now()
+			repeat = true
+		}
+		fault = *tracked
+	}
+	metricFaultsMutex.Unlock()
+	name := metric.GetIDName(task.metricID)
+	switch {
+	case errored && fault.polls == 1:
+		scribe.Probe("state", p.name()).Error("metric", fault.since, "failed   [%s] metric%s with [%v]", name, metricSubject(task), err)
+	case errored && repeat:
+		scribe.Probe("state", p.name()).Debug("metric", fault.since, "failing  [%s] metric%s for [%d] polls with [%v]", name, metricSubject(task), fault.polls, err)
+	case !errored && faulting:
+		scribe.Probe("state", p.name()).Info("metric", fault.since, "restored [%s] metric%s after [%d] failed polls with [%s]", name, metricSubject(task), fault.polls, fault.message)
+	}
+}
+
+func reportMetricStatus(p probe, task cacheMetricTask, taskStart time.Time, status string, pulse any, pulseOK bool, trend any, trendOK *bool, err error) {
+	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
+	metricStatusesMutex.Lock()
+	previous, seen := metricStatuses[key]
+	metricStatuses[key] = status
+	metricStatusesMutex.Unlock()
+	if seen && previous == status {
+		return
+	}
+	scribe.Probe("state", p.name()).Debug("metric", taskStart, "observed [%s] metric%s status [%s] was [%s] pulse [%v] ok [%v] trend [%v] ok [%v] error [%v]",
+		metric.GetIDName(task.metricID), metricSubject(task), status, metricStatusPrevious(seen, previous), metricValue(pulse), pulseOK, metricValue(trend), metricFlag(trendOK), metricError(err))
+}
+
+func metricStatusOf(pulseOK bool, trendOK *bool) string {
+	if !pulseOK {
+		return metricStatusRed
+	}
+	if trendOK != nil && *trendOK {
+		return metricStatusGreen
+	}
+	return metricStatusAmber
+}
+
+func metricStatusPrevious(seen bool, previous string) string {
+	if !seen {
+		return "none"
+	}
+	return previous
+}
+
+func metricSubject(task cacheMetricTask) string {
+	if task.serviceName == metric.ServiceNameUnset {
+		return ""
+	}
+	return fmt.Sprintf(" service [%s]", task.serviceName)
+}
+
+func metricValue(value any) any {
+	if value == nil {
+		return "none"
+	}
+	return value
+}
+
+func metricError(err error) any {
+	if err == nil {
+		return "none"
+	}
+	return err
+}
+
+func metricFlag(value *bool) any {
+	if value == nil {
+		return "none"
+	}
+	return *value
+}
+
+type metricFaultKey struct {
+	metricID    metric.ID
+	serviceName string
+}
+
+type metricFault struct {
+	message string
+	since   time.Time
+	logged  time.Time
+	polls   int
+}
+
+type metricCensus struct {
+	total   int
+	green   int
+	amber   int
+	red     int
+	unknown int
+	service string
+	faulted []string
+}
+
+func (c *metricCensus) count(status string, task cacheMetricTask) {
+	c.total++
+	c.service = task.serviceName
+	switch status {
+	case metricStatusGreen:
+		c.green++
+	case metricStatusAmber:
+		c.amber++
+		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status)
+	case metricStatusRed:
+		c.red++
+		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status)
+	default:
+		c.unknown++
+	}
+}
+
+func (c *metricCensus) subject() string {
+	if c.service == metric.ServiceNameUnset {
+		return ""
+	}
+	return fmt.Sprintf(" of service [%s]", c.service)
+}
+
+func (c *metricCensus) faults() string {
+	if len(c.faulted) == 0 {
+		return ""
+	}
+	return fmt.Sprintf(", not green [%s]", strings.Join(c.faulted, " "))
+}
+
+const (
+	metricFaultRepeat = time.Minute
+)
+
+const (
+	metricStatusGreen   = "green"
+	metricStatusAmber   = "amber"
+	metricStatusRed     = "red"
+	metricStatusUnknown = "unknown"
+)
+
+var (
+	metricFaults        = map[metricFaultKey]*metricFault{}
+	metricFaultsMutex   sync.Mutex
+	metricStatuses      = map[metricFaultKey]string{}
+	metricStatusesMutex sync.Mutex
+)
 
 var execPeriods config.Periods
 var execProbes map[probe][metric.MetricMax]bool
