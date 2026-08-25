@@ -171,10 +171,16 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	restartCountFloats := syncStatsFields(p.restartCountFloat, polledServiceNames, newFloat)
 
 	for polledServiceName, polledService := range servicesByName {
+		serviceStart := time.Now()
 		healthStatus, _ := polledService.healthStatus()
 		configuredStatus, _ := polledService.configuredStatus()
 		sleepStatus, _ := polledService.sleepStatus()
 		aggregateStatus := sleepStatus || (healthStatus && configuredStatus)
+		derive("services", "service", serviceStart, "computed [%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
+			aggregateStatus, polledServiceName, healthStatus, configuredStatus, sleepStatus)
+		derive("services", "service", serviceStart, "sampled  [%s] service, processor [%d] pct, memory [%d] pct of ceiling [%.0f] MiB, up [%.0f] s, restarts [%.0f], version [%s]",
+			polledServiceName, serviceValue(polledService.usedProcessor()), serviceValue(polledService.usedMemory()),
+			serviceValue(polledService.maxMemory()), serviceValue(polledService.upTime()), serviceValue(polledService.restartCount()), polledService.versionValue)
 		runMetricCacheTasks(p, isPulse, []cacheMetricTask{
 			newCacheMetricTask(
 				metric.ValueBool,
@@ -493,11 +499,13 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 		services[name] = service
 	}
 	p.logInstallMissing(snapshot, services)
+	ghosts := 0
 	for _, configuredServiceName := range p.configuredServiceNames {
 		if existingService, exists := services[configuredServiceName]; exists {
 			existingService.configuredStatusValue = true
 			services[configuredServiceName] = existingService
 		} else {
+			ghosts++
 			ghostInspect := container.InspectResponse{
 				ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + configuredServiceName},
 				Config:            &container.Config{Image: configuredServiceName},
@@ -515,6 +523,8 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			}
 		}
 	}
+	derive("services", "docker", servicesStart, "reported [%3d] containers, services [%d], configured [%d], ghosts [%d] configured but not running",
+		len(containers), len(services)-ghosts, len(p.configuredServiceNames), ghosts)
 	return services, nil
 }
 
@@ -561,11 +571,20 @@ func (p *servicesProbe) servicesStatus() (bool, error) {
 }
 
 func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, error) {
+	maxMemoryStart := time.Now()
 	allocatedBytes, err := snapshot.allocation(p.configuredServiceNames)
 	if err != nil {
 		return 0, err
 	}
+	derive("services", "allocation", maxMemoryStart, "computed [%.0f] MiB of ceilings across configured [%d] services", float64(allocatedBytes)/bytesPerMiB, len(p.configuredServiceNames))
 	return float64(allocatedBytes) / bytesPerMiB, nil
+}
+
+func serviceValue[T int8 | float64](value T, err error) T {
+	if err != nil {
+		return 0
+	}
+	return value
 }
 
 func (s *service) isUp() (bool, error) {

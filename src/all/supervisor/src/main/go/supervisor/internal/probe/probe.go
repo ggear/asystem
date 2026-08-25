@@ -11,6 +11,7 @@ import (
 	"supervisor/internal/scribe"
 	"supervisor/internal/stats"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -94,6 +95,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 			if isPulse {
 				phase = "pulse"
 			}
+			execPulsing.Store(isPulse)
 			for p := range execProbes {
 				probeStart := time.Now()
 				if err := p.run(ctx, isPulse); err != nil {
@@ -322,6 +324,13 @@ func runMetricCacheTask(p probe, isPulse bool, task cacheMetricTask) string {
 	return status
 }
 
+func derive(name, phase string, started time.Time, detail string, args ...any) {
+	if !execPulsing.Load() {
+		return
+	}
+	scribe.Probe("state", name).Debug(phase, started, detail, args...)
+}
+
 func trackMetricFault(p probe, task cacheMetricTask, err error, errored bool) {
 	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
 	message := ""
@@ -488,6 +497,8 @@ var (
 	metricStatuses      = map[metricFaultKey]string{}
 	metricStatusesMutex sync.Mutex
 )
+
+var execPulsing atomic.Bool
 
 var execPeriods config.Periods
 var execProbes map[probe][metric.MetricMax]bool

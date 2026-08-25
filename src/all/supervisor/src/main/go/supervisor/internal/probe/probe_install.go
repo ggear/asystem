@@ -113,6 +113,7 @@ func (s *installSnapshot) names() []string {
 }
 
 func (s *installSnapshot) allocation(names []string) (int64, error) {
+	allocationStart := time.Now()
 	if len(names) == 0 {
 		return 0, errors.New("no services configured for the host")
 	}
@@ -132,6 +133,8 @@ func (s *installSnapshot) allocation(names []string) (int64, error) {
 	if installed == 0 {
 		return 0, fmt.Errorf("none of the [%d] configured services are installed as service modules under [%s]", len(names), installRoot)
 	}
+	derive("install", "allocation", allocationStart, "computed [%d] MiB of ceilings, installed [%d] of configured [%d] services, tree [%s]",
+		total/bytesPerMiB, installed, len(names), installRoot)
 	return total, nil
 }
 

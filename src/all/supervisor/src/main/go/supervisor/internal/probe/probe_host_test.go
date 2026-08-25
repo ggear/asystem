@@ -682,7 +682,7 @@ func TestProbeHost_SpinFanRespondingOK(t *testing.T) {
 			t.Cleanup(resetSensors)
 			probe := newHostProbe()
 			probe.sysRoot = writeSensorTree(t, nil, nil, testCase.fans)
-			ok := probe.spinFanRespondingOK(testCase.fan, testCase.temperature, testCase.temperatureMax, testCase.fanMin)
+			ok := probe.spinFanRespondingOK("pulse", testCase.fan, testCase.temperature, testCase.temperatureMax, testCase.fanMin)
 			if ok != testCase.expectedOK {
 				t.Fatalf("spinFanRespondingOK: got %v want %v", ok, testCase.expectedOK)
 			}

@@ -145,6 +145,7 @@ func (s *mountSet) usedSystemSpace() (int8, error) {
 		return 0, err
 	}
 	worst := 0.0
+	worstAt := ""
 	found := false
 	systems := 0
 	for _, mount := range taken.mounts {
@@ -158,6 +159,7 @@ func (s *mountSet) usedSystemSpace() (int8, error) {
 		used := float64(mount.used) / float64(mount.total) * 100.0
 		if !found || used > worst {
 			worst = used
+			worstAt = mount.mountpoint
 		}
 		found = true
 	}
@@ -165,6 +167,8 @@ func (s *mountSet) usedSystemSpace() (int8, error) {
 		return 0, fmt.Errorf("no system filesystems measured of [%d] classed system and [%d] mounts scanned from [%s]",
 			systems, len(taken.mounts), filepath.Join(s.root, mountTablePath))
 	}
+	derive("host", "mounts", taken.taken, "computed [%3d] pct used system, fullest of [%d] filesystems [%s]",
+		int8Percent(worst), systems, worstAt)
 	return int8Percent(worst), nil
 }
 
@@ -174,20 +178,25 @@ func (s *mountSet) usedShareSpace() (int8, error) {
 		return 0, err
 	}
 	if taken.locals == 0 {
+		derive("host", "mounts", taken.taken, "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok")
 		return 0, nil
 	}
 	total := uint64(0)
 	used := uint64(0)
+	measured := 0
 	for _, mount := range taken.mounts {
 		if !mount.share || mount.remote || !mount.measured {
 			continue
 		}
+		measured++
 		total += mount.total
 		used += mount.used
 	}
 	if total == 0 {
 		return 0, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared", taken.locals, taken.shares)
 	}
+	derive("host", "mounts", taken.taken, "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
+		int8Percent(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals)
 	return int8Percent(float64(used) / float64(total) * 100.0), nil
 }
 
@@ -197,8 +206,11 @@ func (s *mountSet) failedShares() (int8, error) {
 		return 0, err
 	}
 	if taken.shares == 0 {
+		derive("host", "mounts", taken.taken, "computed [  0] pct failed share, fstab declares no share so the metric is inert and always ok")
 		return 0, nil
 	}
+	derive("host", "mounts", taken.taken, "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], ok only at [0] pct",
+		int8Percent(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath))
 	return int8Percent(float64(taken.failed) / float64(taken.shares) * 100.0), nil
 }
 
@@ -208,19 +220,28 @@ func (s *mountSet) lifeUsedDrives() (int8, error) {
 		return 0, err
 	}
 	worst := 0.0
+	worstAt := ""
 	rated := 0
+	errored := 0
 	for _, drive := range taken.drives {
+		if drive.errored {
+			errored++
+		}
 		if !drive.rated {
 			continue
 		}
 		rated++
 		if drive.life > worst {
 			worst = drive.life
+			worstAt = drive.kernel + "=" + drive.model
 		}
 	}
 	if rated == 0 {
+		derive("host", "drives", taken.taken, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok", len(taken.drives))
 		return 0, nil
 	}
+	derive("host", "drives", taken.taken, "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
+		int8Percent(worst), rated, worstAt, errored)
 	return int8Percent(worst), nil
 }
 

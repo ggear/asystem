@@ -50,6 +50,7 @@ func resetSensors() {
 }
 
 func (s *sensorSet) celsius() (float64, error) {
+	celsiusStart := time.Now()
 	if s == nil || len(s.temperatureInputs) == 0 {
 		return 0, errors.New("no suitable temperature sensors found")
 	}
@@ -72,6 +73,8 @@ func (s *sensorSet) celsius() (float64, error) {
 	if !found {
 		return 0, fmt.Errorf("no readable [%s] temperature sensors", s.tier)
 	}
+	derive("host", "sensors", celsiusStart, "computed [%.1f] celsius hottest, tier [%s], inputs [%d], offset [%.1f] celsius, sane between [%.0f] and [%.0f] celsius",
+		hottest, s.tier, len(s.temperatureInputs), s.temperatureOffset, sensorMinCelsius, sensorMaxCelsius)
 	return hottest, nil
 }
 
@@ -80,11 +83,14 @@ func (s *sensorSet) hasFans() bool {
 }
 
 func (s *sensorSet) fanSpeedOfMax() (float64, error) {
+	fanStart := time.Now()
 	if s == nil || len(s.fans) == 0 {
+		derive("host", "sensors", fanStart, "computed [0.0] pct of max, host reports no fans so the metric is inert and always ok")
 		return 0, nil
 	}
 	fastest := 0.0
 	found := false
+	var fastestDetail []string
 	for _, fan := range s.fans {
 		rpm, err := readSensorValue(fan.input)
 		if err != nil {
@@ -94,6 +100,7 @@ func (s *sensorSet) fanSpeedOfMax() (float64, error) {
 			continue
 		}
 		ofMax := rpm / fan.maxRPM * 100.0
+		fastestDetail = append(fastestDetail, fmt.Sprintf("%s=%.0f/%.0f rpm", fan.label, rpm, fan.maxRPM))
 		if !found || ofMax > fastest {
 			fastest = ofMax
 		}
@@ -102,6 +109,7 @@ func (s *sensorSet) fanSpeedOfMax() (float64, error) {
 	if !found {
 		return 0, errors.New("no readable fan sensors")
 	}
+	derive("host", "sensors", fanStart, "computed [%.1f] pct of max fastest, fans [%d], readings [%s]", fastest, len(s.fans), strings.Join(fastestDetail, " "))
 	return fastest, nil
 }
 

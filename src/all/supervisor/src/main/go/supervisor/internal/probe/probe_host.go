@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
@@ -82,6 +83,7 @@ func (p *hostProbe) metrics() []metric.ID {
 }
 
 func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
+	createStart := time.Now()
 	p.cache = cache
 	p.mask = mask
 	p.periods = periods
@@ -106,7 +108,8 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.usedNetworkInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.runningTimeFloat = stats.NewFloatStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.temperatureFloat = stats.NewFloatStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-
+	scribe.Probe("state", "host").Debug("create", createStart, "inert    [%d] metrics report a fixed zero and are always green [%s]",
+		len(hostInertMetrics), strings.Join(hostInertMetrics, " "))
 	return nil
 }
 
@@ -209,10 +212,10 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 			func() int8 { return p.spinFanSpeedInt.PulseMax() },
 			func() int8 { return p.spinFanSpeedInt.TrendMax() },
 			func(fan int8) bool {
-				return p.spinFanRespondingOK(fan, p.warnTemperatureInt.PulseMax(), sensorWarnPulseOfMax, sensorFanPulseOfMax)
+				return p.spinFanRespondingOK("pulse", fan, p.warnTemperatureInt.PulseMax(), sensorWarnPulseOfMax, sensorFanPulseOfMax)
 			},
 			func(fan int8) bool {
-				return p.spinFanRespondingOK(fan, p.warnTemperatureInt.TrendMax(), sensorWarnTrendOfMax, sensorFanTrendOfMax)
+				return p.spinFanRespondingOK("trend", fan, p.warnTemperatureInt.TrendMax(), sensorWarnTrendOfMax, sensorFanTrendOfMax)
 			},
 		),
 		newCacheMetricTask(
@@ -341,6 +344,7 @@ func (p *hostProbe) usedMemory() (int8, error) {
 	if p.virtualMemory == nil {
 		return 0, errors.New("host memory unavailable")
 	}
+	memoryStart := time.Now()
 	memoryStat, err := p.virtualMemory()
 	if err != nil {
 		return 0, fmt.Errorf("virtual memory stats: %w", err)
@@ -349,6 +353,8 @@ func (p *hostProbe) usedMemory() (int8, error) {
 		return 0, errors.New("total memory must be > 0")
 	}
 	usedPercent := (float64(memoryStat.Used) / float64(memoryStat.Total)) * 100.0
+	derive("host", "memory", memoryStart, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, available [%d] MiB",
+		stats.ConvertToInt(usedPercent), memoryStat.Used/bytesPerMiB, memoryStat.Total/bytesPerMiB, memoryStat.Available/bytesPerMiB)
 	return stats.ConvertToInt(usedPercent), nil
 }
 
@@ -369,6 +375,8 @@ func (p *hostProbe) allocatedMemory() (int8, error) {
 		return 0, err
 	}
 	allocatedPercent := (float64(allocatedBytes) / float64(memoryStat.Total)) * 100.0
+	derive("host", "allocated", allocatedStart, "computed [%3d] pct allocated, ceilings [%d] MiB of total [%d] MiB, configured [%d] services",
+		stats.ConvertToInt(allocatedPercent), allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, len(config.Load(p.configPath).Services(p.hostName)))
 	allocatedMemoryExceeded := allocatedPercent > 100.0
 	if allocatedMemoryExceeded {
 		if allocatedBytes != p.allocatedMemoryLogged {
@@ -381,10 +389,15 @@ func (p *hostProbe) allocatedMemory() (int8, error) {
 }
 
 func (p *hostProbe) failedLogs() (int8, error) {
-	count, available := loadLogs(config.Load(p.configPath).Mount()).errorsWithin(config.TrendWindow(p.periods.TrendHours))
+	logsStart := time.Now()
+	window := config.TrendWindow(p.periods.TrendHours)
+	count, available := loadLogs(config.Load(p.configPath).Mount()).errorsWithin(window)
 	if !available {
+		derive("host", "logs", logsStart, "computed [  0] pct failed, kernel log unreadable so the metric is inert and always ok")
 		return 0, nil
 	}
+	derive("host", "logs", logsStart, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], ok pulse at [<=%d] pct trend at [0] pct",
+		stats.ConvertToInt(float64(count)/logErrorBudget*100.0), count, int(logErrorBudget), window, logErrorPulseOfMax)
 	return stats.ConvertToInt(float64(count) / logErrorBudget * 100.0), nil
 }
 
@@ -401,14 +414,23 @@ func (p *hostProbe) warnTemperature() (int8, error) {
 	if err != nil {
 		return 0, err
 	}
-	return stats.ConvertToInt(sensorWarnPerCelsius * (temperatureCelsius - sensorWarnFloorCelsius)), nil
+	warnStart := time.Now()
+	warnOfMax := stats.ConvertToInt(sensorWarnPerCelsius * (temperatureCelsius - sensorWarnFloorCelsius))
+	derive("host", "temperature", warnStart, "computed [%3d] pct of warn, celsius [%.1f] above floor [%.1f] at [%.1f] pct per celsius, ok pulse at [<=%d] pct trend at [<=%d] pct",
+		warnOfMax, temperatureCelsius, sensorWarnFloorCelsius, sensorWarnPerCelsius, sensorWarnPulseOfMax, sensorWarnTrendOfMax)
+	return warnOfMax, nil
 }
 
-func (p *hostProbe) spinFanRespondingOK(fan int8, temperature int8, temperatureMax int8, fanMin int8) bool {
+func (p *hostProbe) spinFanRespondingOK(window string, fan int8, temperature int8, temperatureMax int8, fanMin int8) bool {
+	respondingStart := time.Now()
 	if !loadSensors(p.sysRoot).hasFans() {
+		derive("host", "fan", respondingStart, "computed [true] responding over [%s], host reports no fans so the metric is inert and always ok", window)
 		return true
 	}
-	return temperature <= temperatureMax || fan > fanMin
+	responding := temperature <= temperatureMax || fan > fanMin
+	derive("host", "fan", respondingStart, "computed [%v] responding over [%s], speed [%d] pct of max, temperature [%d] pct of warn, ok while temperature [<=%d] pct or speed [>%d] pct",
+		responding, window, fan, temperature, temperatureMax, fanMin)
+	return responding
 }
 
 func (p *hostProbe) spinFanSpeed() (int8, error) {
@@ -463,6 +485,15 @@ func (p *hostProbe) mounts() *mountSet {
 	return loadMounts(config.Load(p.configPath).Mount(), config.CacheWindow(p.periods.CacheMins))
 }
 
+var hostInertMetrics = []string{
+	metric.GetIDName(metric.MetricHostFailedBackups),
+	metric.GetIDName(metric.MetricHostUsedBackupSpace),
+	metric.GetIDName(metric.MetricHostUsedSwapSpace),
+	metric.GetIDName(metric.MetricHostUsedDiskOps),
+	metric.GetIDName(metric.MetricHostUsedNetwork),
+	metric.GetIDName(metric.MetricHostRunningTime),
+}
+
 type cpuUsageSampler struct {
 	hasSample  bool
 	lastSample cpu.TimesStat
@@ -470,6 +501,7 @@ type cpuUsageSampler struct {
 
 //goland:noinspection GoDeprecation
 func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (int8, error) {
+	sampleStart := time.Now()
 	currentTimes, err := cpuTimes(false)
 	if err != nil {
 		return 0, fmt.Errorf("cpu times: %w", err)
@@ -493,5 +525,7 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 		return 0, errors.New("cpu usage unavailable, non-monotonic counters")
 	}
 	usedPercent := (1.0 - idleDelta/totalDelta) * 100.0
+	derive("host", "processor", sampleStart, "computed [%3d] pct used, idle delta [%.1f] of total delta [%.1f] ticks",
+		stats.ConvertToInt(usedPercent), idleDelta, totalDelta)
 	return stats.ConvertToInt(usedPercent), nil
 }
