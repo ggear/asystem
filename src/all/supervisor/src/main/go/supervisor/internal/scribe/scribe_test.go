@@ -483,3 +483,240 @@ func logCalls(t *testing.T, root string) []logCall {
 	}
 	return calls
 }
+
+func TestScribe_SetFilters(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        string
+		subject       string
+		action        string
+		expectedError bool
+	}{
+		{
+			name:          "happy_empty_means_no_filter",
+			expectedError: false,
+		},
+		{
+			name:          "happy_valid_source_prefix",
+			source:        "probe,broker",
+			expectedError: false,
+		},
+		{
+			name:          "happy_valid_action_prefix",
+			action:        "compute,census",
+			expectedError: false,
+		},
+		{
+			name:          "happy_valid_source_abbreviation",
+			source:        "d",
+			expectedError: false,
+		},
+		{
+			name:          "happy_open_subject_never_validated",
+			subject:       "host/use",
+			expectedError: false,
+		},
+		{
+			name:          "sad_unknown_source_prefix",
+			source:        "xyz",
+			expectedError: true,
+		},
+		{
+			name:          "sad_unknown_action_prefix",
+			action:        "xyz",
+			expectedError: true,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(ResetFilters)
+			err := SetFilters(testCase.source, testCase.subject, testCase.action)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("SetFilters: got err = %v, expectedError %v", err, testCase.expectedError)
+			}
+		})
+	}
+}
+
+func TestScribe_Allowed(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        string
+		subject       string
+		action        string
+		recordSource  string
+		recordSubject string
+		recordAction  string
+		expected      bool
+		expectedError bool
+	}{
+		{
+			name:          "happy_no_filters_allows_everything",
+			recordSource:  "probe",
+			recordSubject: "host/used_memory",
+			recordAction:  "compute",
+			expected:      true,
+			expectedError: false,
+		},
+		{
+			name:          "happy_source_matches",
+			source:        "probe",
+			recordSource:  "probe",
+			recordSubject: "host/used_memory",
+			recordAction:  "compute",
+			expected:      true,
+			expectedError: false,
+		},
+		{
+			name:          "happy_source_mismatches",
+			source:        "broker",
+			recordSource:  "probe",
+			recordSubject: "host/used_memory",
+			recordAction:  "compute",
+			expected:      false,
+			expectedError: false,
+		},
+		{
+			name:          "happy_subject_prefix_matches",
+			subject:       "host/use",
+			recordSource:  "probe",
+			recordSubject: "host/used_memory",
+			recordAction:  "compute",
+			expected:      true,
+			expectedError: false,
+		},
+		{
+			name:          "happy_subject_prefix_mismatches",
+			subject:       "service/",
+			recordSource:  "probe",
+			recordSubject: "host/used_memory",
+			recordAction:  "compute",
+			expected:      false,
+			expectedError: false,
+		},
+		{
+			name:          "happy_action_or_within_dimension",
+			action:        "sample,compute",
+			recordSource:  "probe",
+			recordSubject: "host/used_memory",
+			recordAction:  "compute",
+			expected:      true,
+			expectedError: false,
+		},
+		{
+			name:          "happy_and_across_dimensions",
+			source:        "probe",
+			action:        "connect",
+			recordSource:  "probe",
+			recordSubject: "host/used_memory",
+			recordAction:  "compute",
+			expected:      false,
+			expectedError: false,
+		},
+		{
+			name:          "happy_case_insensitive",
+			source:        "PROBE",
+			recordSource:  "probe",
+			recordSubject: "host/used_memory",
+			recordAction:  "compute",
+			expected:      true,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(ResetFilters)
+			if err := SetFilters(testCase.source, testCase.subject, testCase.action); (err != nil) != testCase.expectedError {
+				t.Fatalf("SetFilters: got err = %v, expectedError %v", err, testCase.expectedError)
+			}
+			if got := allowed(testCase.recordSource, testCase.recordSubject, testCase.recordAction); got != testCase.expected {
+				t.Errorf("allowed: got %v want %v", got, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestScribe_VerbsAreEightCharacters(t *testing.T) {
+	for _, found := range verbLiterals(t, "../..") {
+		if len(found.verb) != widthVerb || found.verb != strings.ToLower(found.verb) {
+			t.Errorf("%s: got verb %q of %d characters, want a lower-case word of exactly %d",
+				found.position, found.verb, len(found.verb), widthVerb)
+		}
+	}
+}
+
+type verbLiteral struct {
+	position string
+	verb     string
+}
+
+func verbLiterals(t *testing.T, root string) []verbLiteral {
+	t.Helper()
+	var found []verbLiteral
+	walkGoFiles(t, root, func(position string, node ast.Node) {
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall || len(call.Args) == 0 {
+			return
+		}
+		index := -1
+		switch function := call.Fun.(type) {
+		case *ast.SelectorExpr:
+			if slices.Contains([]string{"Debug", "Info", "Warn", "Error"}, function.Sel.Name) {
+				index = 0
+			}
+		case *ast.Ident:
+			if function.Name == "derived" && len(call.Args) > 1 {
+				index = 1
+			}
+			if function.Name == "derivePulse" && len(call.Args) > 1 {
+				index = 1
+			}
+		}
+		if index < 0 {
+			return
+		}
+		literal, isLiteral := call.Args[index].(*ast.BasicLit)
+		if !isLiteral || literal.Kind != token.STRING {
+			return
+		}
+		word := strings.Trim(literal.Value, `"`)
+		if index == 1 {
+			word, _, _ = strings.Cut(word, " ")
+		}
+		found = append(found, verbLiteral{position: position, verb: word})
+	})
+	return found
+}
+
+func walkGoFiles(t *testing.T, root string, visit func(position string, node ast.Node)) {
+	t.Helper()
+	fileSet := token.NewFileSet()
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			if entry.Name() == "target" || entry.Name() == ".go" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			if node != nil {
+				visit(fileSet.Position(node.Pos()).String(), node)
+			}
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", root, err)
+	}
+}

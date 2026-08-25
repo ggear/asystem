@@ -36,18 +36,8 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-should metric_rule.go use stringer like metric_string.go given precedence? other candidates to use stringer and be consistent?
-is this well named? rationalised? GateDrives and GateFansAbsent seem out of place and or misnamed? Possible to generalise GateFansAbsent? rename GateDrivesHealthy const (
-  GateDrivesHealthy GateID = iota
-  GateServiceAggregate
-  GateServiceHealthy
-  GateServiceConfigured
-  GateFansAbsent
-)
-merge all scribe_*_test.go into scribe_test.go rename scribe_dimension.go to something better that comes before scribe_test.go or roll into scribe_filter.go
 
-audit code changes, ensure it macthes current coding style, faily wide lines, funcs in correct files, var/func named well and consistent, inline or make inner closures of functions that should be as in other parts of the codebase. any areas of simplifation possible. i do not
-  want --log-format=json
+
 
 
 

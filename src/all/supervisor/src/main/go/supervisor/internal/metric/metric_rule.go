@@ -25,7 +25,7 @@ func (c Comparator) String() string {
 	case Exactly:
 		return "=="
 	default:
-		return "?"
+		return unknownValue
 	}
 }
 
@@ -48,26 +48,26 @@ type GateID uint8
 
 const (
 	GateDrivesHealthy GateID = iota
+	GateFansAbsent
 	GateServiceAggregate
 	GateServiceHealthy
 	GateServiceConfigured
-	GateFansAbsent
 )
 
 func (g GateID) String() string {
 	switch g {
 	case GateDrivesHealthy:
 		return "drives healthy"
+	case GateFansAbsent:
+		return "fans absent"
 	case GateServiceAggregate:
 		return "service aggregate"
 	case GateServiceHealthy:
 		return "service healthy"
 	case GateServiceConfigured:
 		return "service configured"
-	case GateFansAbsent:
-		return "fans absent"
 	default:
-		return "?"
+		return unknownValue
 	}
 }
 
@@ -191,3 +191,5 @@ func (r Rule) combine(unit string, self float64, selfNumeric bool, values ValueR
 	}
 	return RuleResult{OK: ok, Detail: strings.Join(details, ", ")}
 }
+
+const unknownValue = "-"
