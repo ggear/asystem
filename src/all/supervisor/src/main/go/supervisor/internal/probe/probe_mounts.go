@@ -689,7 +689,7 @@ func (s *mountSet) topology(physical string) (bool, bool, string, string) {
 	removable := s.flagged(physical, mountRemovablePath)
 	transport := driveTransportInternal
 	if target, err := os.Readlink(filepath.Join(s.root, mountBlockPath, physical)); err == nil {
-		for _, segment := range strings.Split(target, "/") {
+		for segment := range strings.SplitSeq(target, "/") {
 			if strings.HasPrefix(segment, driveTransportUSB) {
 				transport = driveTransportUSB
 				break
