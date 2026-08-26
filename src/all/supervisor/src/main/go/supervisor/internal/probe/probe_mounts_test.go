@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -374,7 +375,7 @@ func TestProbeMounts_Wear(t *testing.T) {
 			writeBlockTree(t, root)
 			set := newMountFixture(t, root, map[string][2]uint64{"/share/10": {1000, 100}}, nil)
 			reports := testCase.report
-			set.smart = func(string) (smartReport, error) { return reports, testCase.reportErr }
+			set.smart = func(string, []string) (smartReport, error) { return reports, testCase.reportErr }
 			set.current = set.collect()
 			if testCase.second != nil {
 				reports = *testCase.second
@@ -519,7 +520,7 @@ func newMountFixture(t *testing.T, root string, sizes map[string][2]uint64, hung
 		physicals:  map[string]string{},
 		identities: map[string]*driveIdentity{},
 		inflight:   map[string]bool{},
-		smart:      func(string) (smartReport, error) { return smartReport{}, fmt.Errorf("no smart in fixtures") },
+		smart:      func(string, []string) (smartReport, error) { return smartReport{}, fmt.Errorf("no smart in fixtures") },
 	}
 	set.statfs = func(path string) (uint64, uint64, error) {
 		if hanging[path] {
@@ -678,5 +679,56 @@ func assertMountpoints(t *testing.T, label string, got, want []string) {
 		if got[index] != want[index] {
 			t.Fatalf("%s: got %v want %v", label, got, want)
 		}
+	}
+}
+
+func TestProbeMounts_DriveKinds(t *testing.T) {
+	tests := []struct {
+		name          string
+		physical      string
+		expectedKinds []string
+		expectedError bool
+	}{
+		{name: "happy nvme asks for the nvme protocol", physical: "nvme0", expectedKinds: []string{driveKindNVME}, expectedError: false},
+		{name: "happy sata tries ata pass through then scsi", physical: "sda", expectedKinds: []string{driveKindSAT, driveKindSCSI}, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := driveKinds(testCase.physical); !slices.Equal(got, testCase.expectedKinds) {
+				t.Errorf("kinds: got %v want %v", got, testCase.expectedKinds)
+			}
+		})
+	}
+}
+
+func TestProbeMounts_DriveNamespace(t *testing.T) {
+	root := t.TempDir()
+	blocks := filepath.Join(root, mountBlockPath)
+	if err := os.MkdirAll(blocks, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	for _, name := range []string{"nvme0n2", "nvme0n1", "nvme1n1", "sda"} {
+		if err := os.MkdirAll(filepath.Join(blocks, name), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", name, err)
+		}
+	}
+	tests := []struct {
+		name          string
+		physical      string
+		expectedNode  string
+		expectedError bool
+	}{
+		{name: "happy controller resolves to its lowest namespace", physical: "nvme0", expectedNode: "nvme0n1", expectedError: false},
+		{name: "happy namespace is left alone", physical: "nvme0n2", expectedNode: "nvme0n2", expectedError: false},
+		{name: "happy sata is left alone", physical: "sda", expectedNode: "sda", expectedError: false},
+		{name: "sad unknown controller falls back to its first namespace", physical: "nvme9", expectedNode: "nvme9n1", expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			set := &mountSet{root: root}
+			if got := set.namespace(testCase.physical); got != testCase.expectedNode {
+				t.Errorf("namespace: got %q want %q", got, testCase.expectedNode)
+			}
+		})
 	}
 }

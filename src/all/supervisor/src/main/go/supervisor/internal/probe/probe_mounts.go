@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -51,6 +52,7 @@ type mountSnapshot struct {
 type driveIdentity struct {
 	kernel     string
 	node       string
+	kinds      []string
 	model      string
 	rating     float64
 	baseline   int64
@@ -68,7 +70,7 @@ type mountSet struct {
 	identities map[string]*driveIdentity
 	inflight   map[string]bool
 	statfs     func(path string) (uint64, uint64, error)
-	smart      func(node string) (smartReport, error)
+	smart      func(node string, kinds []string) (smartReport, error)
 }
 
 func loadMounts(root string, window time.Duration) *mountSet {
@@ -517,6 +519,34 @@ func (s *mountSet) resolve(kernel string, depth int) string {
 	return kernel
 }
 
+func (s *mountSet) namespace(physical string) string {
+	if !driveController.MatchString(physical) {
+		return physical
+	}
+	entries, err := os.ReadDir(filepath.Join(s.root, mountBlockPath))
+	if err != nil {
+		return physical + driveNamespaceFirst
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if driveNamespace.MatchString(entry.Name()) && strings.HasPrefix(entry.Name(), physical+"n") {
+			names = append(names, entry.Name())
+		}
+	}
+	if len(names) == 0 {
+		return physical + driveNamespaceFirst
+	}
+	sort.Strings(names)
+	return names[0]
+}
+
+func driveKinds(physical string) []string {
+	if strings.HasPrefix(physical, drivePrefixNVME) {
+		return []string{driveKindNVME}
+	}
+	return []string{driveKindSAT, driveKindSCSI}
+}
+
 func (s *mountSet) mapper(name string) string {
 	entries, err := os.ReadDir(filepath.Join(s.root, mountBlockPath))
 	if err != nil {
@@ -540,11 +570,11 @@ func (s *mountSet) mapper(name string) string {
 func (s *mountSet) reading(physical string) driveWear {
 	identity := s.identity(physical)
 	readingStart := time.Now()
-	report, err := s.smart(identity.node)
+	report, err := s.smart(identity.node, identity.kinds)
 	if err != nil {
 		if !identity.warned {
 			identity.warned = true
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", readingStart, "[%s] unreadable with [%v], not counted in wear", physical, err)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Warn("excluded", readingStart, "[%s] unreadable at [%s] with [%v], not counted in wear", physical, identity.node, err)
 		}
 		return driveWear{kernel: physical, model: identity.model}
 	}
@@ -568,7 +598,7 @@ func (s *mountSet) identify(identity *driveIdentity, report smartReport, identif
 	identity.baseline = report.errors
 	switch {
 	case !report.supported:
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", identifyStart, "[%s] reports no smart support, not counted in wear", identity.kernel)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", identifyStart, "[%s] at [%s] reports no smart support with [%s], not counted in wear", identity.kernel, identity.node, report.reason)
 	case driveRatings[report.model] > 0:
 		identity.rating = driveRatings[report.model]
 		identity.rated = true
@@ -583,30 +613,49 @@ func (s *mountSet) identity(physical string) *driveIdentity {
 	if cached, found := s.identities[physical]; found {
 		return cached
 	}
-	identity := &driveIdentity{kernel: physical, node: filepath.Join(s.root, "dev", physical)}
+	identity := &driveIdentity{kernel: physical, node: filepath.Join(s.root, "dev", s.namespace(physical)), kinds: driveKinds(physical)}
 	s.identities[physical] = identity
 	return identity
 }
 
 type smartReport struct {
 	model     string
+	reason    string
 	written   float64
 	errors    int64
 	supported bool
 }
 
-func mountSmart(node string) (smartReport, error) {
+func mountSmart(node string, kinds []string) (smartReport, error) {
+	var report smartReport
+	var err error
+	for _, kind := range kinds {
+		report, err = mountSmartKind(node, kind)
+		if err == nil {
+			return report, nil
+		}
+	}
+	return report, err
+}
+
+func mountSmartKind(node, kind string) (smartReport, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mountDeadline)
 	defer cancel()
-	output, err := exec.CommandContext(ctx, mountSmartCommand, "--json", "-a", node).Output()
+	output, err := exec.CommandContext(ctx, mountSmartCommand, "--json", "-d", kind, "-a", node).Output()
 	if len(output) == 0 {
 		if err == nil {
-			err = fmt.Errorf("smartctl returned no output for node [%s]", node)
+			err = fmt.Errorf("smartctl returned no output for node [%s] as [%s]", node, kind)
 		}
 		return smartReport{}, err
 	}
 	var decoded struct {
-		ModelName    string `json:"model_name"`
+		ModelName string `json:"model_name"`
+		Smartctl  struct {
+			ExitStatus int `json:"exit_status"`
+			Messages   []struct {
+				String string `json:"string"`
+			} `json:"messages"`
+		} `json:"smartctl"`
 		SmartSupport struct {
 			Available bool `json:"available"`
 		} `json:"smart_support"`
@@ -627,8 +676,11 @@ func mountSmart(node string) (smartReport, error) {
 	if err := json.Unmarshal(output, &decoded); err != nil {
 		return smartReport{}, fmt.Errorf("smartctl output for node [%s] not parseable with [%w]", node, err)
 	}
+	if decoded.Smartctl.ExitStatus&smartExitUnreadable != 0 {
+		return smartReport{}, fmt.Errorf("smartctl could not read node [%s] as [%s] with [%s]", node, kind, smartMessages(decoded.Smartctl.Messages))
+	}
 	report := smartReport{model: strings.TrimSpace(decoded.ModelName)}
-	report.supported = report.model != ""
+	report.supported = decoded.SmartSupport.Available || report.model != ""
 	if decoded.NvmeLog.DataUnitsWritten > 0 {
 		report.written = decoded.NvmeLog.DataUnitsWritten * bytesPerDataUnit
 		report.errors = decoded.NvmeLog.ErrorLogEntries
@@ -646,8 +698,24 @@ func mountSmart(node string) (smartReport, error) {
 	}
 	if len(decoded.AtaAttributes.Table) == 0 && decoded.NvmeLog.DataUnitsWritten == 0 {
 		report.supported = false
+		report.reason = smartMessages(decoded.Smartctl.Messages)
 	}
 	return report, nil
+}
+
+func smartMessages(messages []struct {
+	String string `json:"string"`
+}) string {
+	texts := make([]string, 0, len(messages))
+	for _, message := range messages {
+		if text := strings.TrimSpace(message.String); text != "" {
+			texts = append(texts, text)
+		}
+	}
+	if len(texts) == 0 {
+		return "no message"
+	}
+	return strings.Join(texts, ", ")
 }
 
 func driveWritten(id int, name string, raw float64) float64 {
@@ -848,6 +916,12 @@ const (
 	mountBootRoot            = "/boot"
 	mountNoAuto              = "noauto"
 	mountSmartCommand        = "smartctl"
+	smartExitUnreadable      = 0b11
+	drivePrefixNVME          = "nvme"
+	driveNamespaceFirst      = "n1"
+	driveKindNVME            = "nvme"
+	driveKindSAT             = "sat"
+	driveKindSCSI            = "scsi"
 	mountDeadline            = 5 * time.Second
 	mountRetry               = time.Minute
 	mountResolveMax          = 8
@@ -885,4 +959,9 @@ var mountRemoteTypes = map[string]bool{"cifs": true, "nfs": true, "nfs4": true, 
 var (
 	mountCache      = map[string]*mountSet{}
 	mountCacheMutex sync.RWMutex
+)
+
+var (
+	driveController = regexp.MustCompile(`^nvme[0-9]+$`)
+	driveNamespace  = regexp.MustCompile(`^nvme[0-9]+n[0-9]+$`)
 )
