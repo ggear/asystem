@@ -71,6 +71,7 @@ func newWatchCmd() *cobra.Command {
 	cobra.AddTemplateFunc("trimLeadingWhitespaces", func(value string) string {
 		return strings.TrimLeftFunc(value, unicode.IsSpace)
 	})
+	addAdvancedFlags(cmd, watchAdvancedFlags)
 	return cmd
 }
 
@@ -219,6 +220,11 @@ func executeWatch(configPath string, opts *watchOptions) error {
 
 func init() {
 	rootCmd.AddCommand(newWatchCmd())
+}
+
+var watchAdvancedFlags = []string{
+	"poll-period", "pulse-factor", "heartbeat-period", "trend-period", "cache-period", "snapshot-period",
+	"refresh-period", "log-level", "log-source", "log-subject", "log-action", "json",
 }
 
 const watchDescription = "Show real-time system stats"

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -37,17 +38,49 @@ func init() {
 	rootCmd.InheritedFlags().SortFlags = false
 }
 
+func addAdvancedFlags(cmd *cobra.Command, advanced []string) {
+	cmd.Flags().Bool(helpAllFlag, false, "show every flag, including the advanced ones, and the log vocabularies")
+	for _, name := range advanced {
+		_ = cmd.Flags().MarkHidden(name)
+	}
+	cmd.PreRun = func(command *cobra.Command, _ []string) {
+		if all, _ := command.Flags().GetBool(helpAllFlag); !all {
+			return
+		}
+		for _, name := range advanced {
+			if flag := command.Flags().Lookup(name); flag != nil {
+				flag.Hidden = false
+			}
+		}
+		_ = command.Help()
+		os.Exit(0)
+	}
+}
+
 func vocabularies() string {
 	path := config.DefaultConfigPath
 	if flag := rootCmd.PersistentFlags().Lookup("config"); flag != nil && flag.Value.String() != "" {
 		path = flag.Value.String()
 	}
-	loaded := config.Load(path)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return scribe.Vocabularies(nil)
+	}
+	var document struct {
+		Asystem struct {
+			Schema []struct {
+				Services []string `json:"services"`
+			} `json:"schema"`
+		} `json:"asystem"`
+	}
+	if json.Unmarshal(data, &document) != nil {
+		return scribe.Vocabularies(nil)
+	}
 	seen := map[string]bool{}
 	var modules []string
-	for _, host := range loaded.Hosts() {
-		for _, service := range loaded.Services(host) {
-			if seen[service] {
+	for _, entry := range document.Asystem.Schema {
+		for _, service := range entry.Services {
+			if service == "" || seen[service] {
 				continue
 			}
 			seen[service] = true
@@ -65,6 +98,8 @@ func bracketed(flags *pflag.FlagSet) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+const helpAllFlag = "help-all"
 
 var defaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)
 
@@ -111,9 +146,9 @@ type logOptions struct {
 
 func addLogFlags(cmd *cobra.Command, opts *logOptions, level string) {
 	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
-	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source prefixes (see below)")
-	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject prefixes (see below)")
-	cmd.Flags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action prefixes (see below)")
+	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source comma-separated prefixes (see below)")
+	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject comma-separated prefixes (see below)")
+	cmd.Flags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action comma-separated prefixes (see below)")
 }
 
 func setLogFilters(opts *logOptions) error {
@@ -200,9 +235,9 @@ Flags:
 {{bracketed .LocalFlags}}{{end}}{{if .HasAvailableInheritedFlags}}
 
 Global Flags:
-{{bracketed .InheritedFlags}}{{end}}{{if .Flags.Lookup "log-source"}}
+{{bracketed .InheritedFlags}}{{end}}{{with .Flags.Lookup "log-source"}}{{if not .Hidden}}
 
-{{vocabularies}}{{end}}{{if .HasHelpSubCommands}}
+{{vocabularies}}{{end}}{{end}}{{if .HasHelpSubCommands}}
 
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
