@@ -170,32 +170,66 @@ var (
 	AllActions = declaredActions()
 )
 
-func Vocabularies() string {
+func Vocabularies(modules []string) string {
 	subjects := make([]string, 0, len(metric.GetIDs()))
 	for _, id := range metric.GetIDs() {
 		subjects = append(subjects, metric.GetIDName(id))
 	}
 	sort.Strings(subjects)
+	var hosts, services []string
+	for _, subject := range subjects {
+		if strings.HasPrefix(subject, subjectServices) {
+			services = append(services, subject)
+			continue
+		}
+		hosts = append(hosts, subject)
+	}
+	cell := max(widest(hosts), widest(services), widest(modules), subjectSplit*widest(sourceStrings()), subjectSplit*widest(actionStrings()))
+	if cell%subjectSplit != 0 {
+		cell += subjectSplit - cell%subjectSplit
+	}
 	var builder strings.Builder
-	builder.WriteString("LOG SOURCES:\n")
-	builder.WriteString(columned(sourceStrings()))
-	builder.WriteString("\nLOG SUBJECTS:\n")
-	builder.WriteString(columned(subjects))
-	builder.WriteString("  plus any name the subject column carries, such as [macmini-mad], [plex] or [vernemq]\n")
-	builder.WriteString("\nLOG ACTIONS:\n")
-	builder.WriteString(columned(actionStrings()))
+	builder.WriteString("Log Sources:\n")
+	builder.WriteString(columned(sourceStrings(), cell/subjectSplit))
+	builder.WriteString("\nLog Subjects (examples):\n")
+	builder.WriteString(grouped(cell, hosts, services, modules))
+	builder.WriteString("\nLog Actions:\n")
+	builder.WriteString(columned(actionStrings(), cell/subjectSplit))
 	return builder.String()
 }
 
-func columned(values []string) string {
+func grouped(cell int, columns ...[]string) string {
+	rows := 0
+	for _, column := range columns {
+		rows = max(rows, len(column))
+	}
+	var builder strings.Builder
+	for row := range rows {
+		line := strings.Repeat(" ", widthHelpIndent)
+		for _, column := range columns {
+			if row < len(column) {
+				line += pad(column[row], cell)
+				continue
+			}
+			line += strings.Repeat(" ", cell)
+		}
+		builder.WriteString(strings.TrimRight(line, " ") + "\n")
+	}
+	return builder.String()
+}
+
+func widest(values []string) int {
 	longest := 0
 	for _, value := range values {
 		if length := utf8.RuneCountInString(value); length > longest {
 			longest = length
 		}
 	}
-	cell := longest + widthHelpGap
-	columns := max(1, (widthHelp-widthHelpIndent)/cell)
+	return longest + widthHelpGap
+}
+
+func columned(values []string, cell int) string {
+	columns := subjectColumns * subjectSplit
 	var builder strings.Builder
 	for index := 0; index < len(values); index += columns {
 		var row strings.Builder

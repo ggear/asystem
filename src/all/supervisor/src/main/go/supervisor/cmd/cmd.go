@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
@@ -27,13 +28,34 @@ func Execute() {
 
 func init() {
 	cobra.AddTemplateFunc("bracketed", bracketed)
-	cobra.AddTemplateFunc("vocabularies", scribe.Vocabularies)
+	cobra.AddTemplateFunc("vocabularies", vocabularies)
 	rootCmd.SetUsageTemplate(usageTemplate)
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "display version information and exit")
 	rootCmd.PersistentFlags().StringP("config", "c", config.DefaultConfigPath, "path to config file")
 	rootCmd.Flags().SortFlags = false
 	rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.InheritedFlags().SortFlags = false
+}
+
+func vocabularies() string {
+	path := config.DefaultConfigPath
+	if flag := rootCmd.PersistentFlags().Lookup("config"); flag != nil && flag.Value.String() != "" {
+		path = flag.Value.String()
+	}
+	loaded := config.Load(path)
+	seen := map[string]bool{}
+	var modules []string
+	for _, host := range loaded.Hosts() {
+		for _, service := range loaded.Services(host) {
+			if seen[service] {
+				continue
+			}
+			seen[service] = true
+			modules = append(modules, service)
+		}
+	}
+	sort.Strings(modules)
+	return scribe.Vocabularies(modules)
 }
 
 func bracketed(flags *pflag.FlagSet) string {
@@ -89,9 +111,9 @@ type logOptions struct {
 
 func addLogFlags(cmd *cobra.Command, opts *logOptions, level string) {
 	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
-	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source prefixes (see below for full set)")
-	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject prefixes (see below for full set)")
-	cmd.Flags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action prefixes (see below for full set)")
+	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source prefixes (see below)")
+	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject prefixes (see below)")
+	cmd.Flags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action prefixes (see below)")
 }
 
 func setLogFilters(opts *logOptions) error {
