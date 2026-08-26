@@ -766,12 +766,19 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if lineBytes > 0 && db != nil {
 			db.write(ctx, batch.protocol.Bytes())
 		}
-		scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionCensus).Info("gathered", pulseStart, "[%3d] metrics, persisted broker/database [%4d]/[%4d] bytes, heartbeat [%v]",
-			collected, txBytes, lineBytes, isHeartbeat)
+		scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionCensus).Info("gathered", pulseStart, "[%3d] metrics, published [%5d] bytes, persisted [%5d] bytes, period [%s]",
+			collected, txBytes, lineBytes, publishPeriod(isHeartbeat))
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", publishStart, "[%v]", err)
 	}
+}
+
+func publishPeriod(isHeartbeat bool) string {
+	if isHeartbeat {
+		return periodHeartbeat
+	}
+	return periodPulse
 }
 
 func subscribeRefused(token mqtt.Token, filters map[string]byte) ([]string, string) {
@@ -820,6 +827,9 @@ const (
 	loopListeningStream  = "listening stream"
 	loopAllProbesOnce    = "all probes once"
 	loopAllProbesPublish = "all probes publish"
+
+	periodHeartbeat = "heartbeat"
+	periodPulse     = "pulse"
 )
 
 var (
