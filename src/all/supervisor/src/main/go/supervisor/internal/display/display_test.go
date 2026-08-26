@@ -1654,3 +1654,187 @@ var hosts = func() []string {
 	}
 	return result
 }()
+
+func TestDisplay_Failed(t *testing.T) {
+	services := []string{
+		"homeassistant",
+		"influxdb3",
+		"internet",
+		"mariadb",
+		"mylongnamedservice",
+		"mlflow",
+		"mlserver",
+		"nginx",
+		"openra",
+		"plex",
+		"postgres",
+		"wrangle",
+		"zigbee2mqtt",
+	}
+	tests := []struct {
+		name              string
+		failedHostID      metric.ID
+		failedServices    []int
+		expectedName      string
+		expectedColour    colour
+		expectedOverflows int
+		expectedError     bool
+	}{
+		{
+			name:              "happy_failed_visible_service_beside_overflow",
+			failedHostID:      metric.MetricHostUsedHomeSpace,
+			failedServices:    []int{0},
+			expectedName:      "homeassistant",
+			expectedColour:    colourAlert,
+			expectedOverflows: 5,
+			expectedError:     false,
+		},
+		{
+			name:              "happy_failed_offgrid_service_keeps_overflow",
+			failedHostID:      metric.MetricHostUsedHomeSpace,
+			failedServices:    []int{7, 8},
+			expectedName:      "",
+			expectedColour:    colourAlert,
+			expectedOverflows: 5,
+			expectedError:     false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			terminalDims := dimensions{rows(layout, 1), columns(layout, false, 1) + resizes(layout, 1)*10}
+			cache := metric.NewRecordCache()
+			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.cols, ThemeLight, false)
+			display, newErr := NewDisplay(
+				cache,
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				[]string{"labnode-one"},
+				terminalDims.cols,
+				terminalDims.rows,
+				0,
+				0,
+				FormatCompact,
+				false,
+				config.Periods{},
+				true,
+				"",
+				nil,
+				0,
+			)
+			if newErr != nil {
+				t.Fatalf("NewDisplay: got %v want nil", newErr)
+			}
+			if _, compileErr := display.Compile(); compileErr != nil {
+				t.Fatalf("Compile: got %v want nil", compileErr)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if loadErr := display.Load(); loadErr != nil {
+				t.Fatalf("Load: got %v want nil", loadErr)
+			}
+			failedService := map[int]bool{}
+			for _, index := range testCase.failedServices {
+				failedService[index] = true
+			}
+			record := func(id metric.ID, i int) metric.Record {
+				switch id {
+				case metric.MetricServiceName:
+					return metric.NewRecord(*metric.NewStringValue(true, services[i], true, services[i]))
+				case metric.MetricServiceVersion:
+					return metric.NewRecord(*metric.NewStringValue(true, fmt.Sprintf("10.100.%d", 1001+i), true, fmt.Sprintf("10.100.%d", 1001+i)))
+				case metric.MetricServiceBackupStatus:
+					return metric.NewRecord(*metric.NewBoolValue(false, true))
+				case metric.MetricServiceHealthStatus, metric.MetricServiceConfiguredStatus, metric.MetricService:
+					return metric.NewRecord(*metric.NewBoolValue(true, true))
+				case metric.MetricServiceRestartCount:
+					return metric.NewRecord(*metric.NewIntValue(true, 0, true, 0))
+				case metric.MetricServiceUpTime:
+					return metric.NewRecord(*metric.NewFloatValue(true, float64((i+1)*2000000), false, float64((i+1)*2000000)))
+				default:
+					value := []int8{100, 50, 0}[i%3]
+					return metric.NewRecord(*metric.NewIntValue(true, value, true, value))
+				}
+			}
+			for host, ids := range cache.ListenerIDs() {
+				slices.Sort(ids)
+				for _, id := range ids {
+					if metric.GetIDKind(id) != metric.MetricKindService {
+						value := []int8{0, 100, 50}[int(id)%3]
+						hostRecord := metric.NewRecord(*metric.NewIntValue(true, value, true, value))
+						hostRecord.Value.Failed = id == testCase.failedHostID
+						cache.Store(metric.NewRecordGUID(id, host), &hostRecord)
+					}
+				}
+				for i := 0; i < len(services); i++ {
+					for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindService}) {
+						serviceRecord := record(id, i)
+						serviceRecord.Value.Failed = failedService[i]
+						cache.Store(metric.NewServiceRecordGUID(id, host, fmt.Sprintf("test-svc-%02d", i)), &serviceRecord)
+					}
+				}
+			}
+			drawn := make(chan struct{})
+			go func() {
+				display.Draw(ctx, cancel)
+				close(drawn)
+			}()
+			display.Close()
+			<-drawn
+			fmt.Printf("Terminal [%dx%d]:\n%s", terminalDims.cols, terminalDims.rows, terminal.string(true))
+			find := func(needle string) (int, int) {
+				for y := 0; y < terminalDims.rows; y++ {
+					line := make([]rune, 0, terminalDims.cols)
+					for x := 0; x < terminalDims.cols; x++ {
+						char, _, _ := terminal.cell(x, y)
+						line = append(line, char)
+					}
+					if index := strings.Index(string(line), needle); index >= 0 {
+						return index, y
+					}
+				}
+				return -1, -1
+			}
+			label := "Used HME "
+			labelCols, labelRows := find(label)
+			if labelCols < 0 {
+				t.Fatalf("label [%s]: got no match want the failed host box", label)
+			}
+			if _, got, _ := terminal.cell(labelCols, labelRows); got != testCase.expectedColour {
+				t.Errorf("label colour: got %v want %v", got, testCase.expectedColour)
+			}
+			for offset := 0; offset < 4; offset++ {
+				char, _, _ := terminal.cell(labelCols+len(label)+offset, labelRows)
+				if char != ' ' {
+					t.Errorf("value cell %d: got %q want a blank", offset, char)
+				}
+			}
+			overflows := 0
+			for y := 0; y < terminalDims.rows; y++ {
+				for x := 0; x < terminalDims.cols; x++ {
+					if char, _, _ := terminal.cell(x, y); char == '~' {
+						overflows++
+					}
+				}
+			}
+			if overflows != testCase.expectedOverflows {
+				t.Errorf("overflow markers: got %v want %v", overflows, testCase.expectedOverflows)
+			}
+			if testCase.expectedName == "" {
+				return
+			}
+			nameCols, nameRows := find(testCase.expectedName)
+			if nameCols < 0 {
+				t.Fatalf("service [%s]: got no match want the failed service row still named", testCase.expectedName)
+			}
+			if _, got, _ := terminal.cell(nameCols, nameRows); got != testCase.expectedColour {
+				t.Errorf("service name colour: got %v want %v", got, testCase.expectedColour)
+			}
+			for offset := len(testCase.expectedName); offset < 24; offset++ {
+				char, _, _ := terminal.cell(nameCols+offset, nameRows)
+				if char != ' ' {
+					t.Errorf("service cell %d: got %q want a blank on a failed row", offset, char)
+				}
+			}
+		})
+	}
+}

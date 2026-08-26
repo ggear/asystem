@@ -359,3 +359,45 @@ func expectApprox(t *testing.T, name string, got float64, want float64, toleranc
 		t.Fatalf("%s: got %v, expected %v (tol %v)", name, got, want, tolerance)
 	}
 }
+
+func TestStatsFloat_MissedPushIsHole(t *testing.T) {
+	tests := []struct {
+		name           string
+		ticks          int
+		pushEveryTick  bool
+		pushZeroOnMiss bool
+		tolerance      float64
+		expectedMean   float64
+		expectedMin    float64
+		expectedMax    float64
+		expectedError  bool
+	}{
+		{name: "pushed every tick", ticks: 100, pushEveryTick: true, pushZeroOnMiss: false, tolerance: 0.001, expectedMean: 50, expectedMin: 50, expectedMax: 50, expectedError: false},
+		{name: "pushed once then ticked", ticks: 100, pushEveryTick: false, pushZeroOnMiss: false, tolerance: 0.001, expectedMean: 50, expectedMin: 50, expectedMax: 50, expectedError: false},
+		{name: "pushed once then zeroed", ticks: 100, pushEveryTick: false, pushZeroOnMiss: true, tolerance: 2, expectedMean: 0.5, expectedMin: 0, expectedMax: 48, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			window := NewFloatStats(1, 6, 3)
+			window.PushAndTick(50)
+			for tick := 1; tick < testCase.ticks; tick++ {
+				switch {
+				case testCase.pushEveryTick:
+					window.PushAndTick(50)
+				case testCase.pushZeroOnMiss:
+					window.PushAndTick(0)
+				default:
+					window.Tick()
+				}
+			}
+			near := func(name string, got, want float64) {
+				if math.Abs(got-want) > testCase.tolerance {
+					t.Errorf("%s: got %v want %v", name, got, want)
+				}
+			}
+			near("TrendMean", window.TrendMean(), testCase.expectedMean)
+			near("TrendMin", window.TrendMin(), testCase.expectedMin)
+			near("TrendMax", window.TrendMax(), testCase.expectedMax)
+		})
+	}
+}

@@ -130,6 +130,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		reconcileMutex.Unlock()
 	}
 	removeService := func(guid metric.RecordGUID) {
+		if guid.ServiceName == metric.ServiceNameUnset {
+			return
+		}
 		removeStart := time.Now()
 		cache.Evict(guid.Host, guid.ServiceName)
 		if cache.Delete(guid.Host, guid.ServiceName) {

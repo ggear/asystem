@@ -408,6 +408,47 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			},
 		},
 		{
+			name: "happy_failed_mqtt_value_keeps_service",
+			setupFunc: func(t *testing.T, cache *metric.RecordCache, _ metric.TopicBinding) []byte {
+				sibling := nonNilValue
+				sibling.Timestamp = time.Now().Unix()
+				sibling.Pulse = &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-b"}
+				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-b"), &metric.Record{Value: sibling})
+				failed := nonNilValue
+				failed.Timestamp = time.Now().Unix()
+				failed.Failed = true
+				failed.Pulse = &metric.ValueDataDetail{OK: false, Kind: metric.ValueInt, ValueInt: 42}
+				payload, marshalErr := json.Marshal(failed)
+				if marshalErr != nil {
+					t.Fatalf("marshal failed value failed: %v", marshalErr)
+				}
+				return payload
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				time.Sleep(4 * time.Second)
+				record, ok := cache.Load(b.GUID)
+				if !ok || record == nil {
+					t.Fatalf("Got record removed after a failed publish, expected the service kept")
+				}
+				if !record.Value.Failed || record.Value.Pulse == nil {
+					t.Fatalf("Got failed = %v pulse = %v, expected a failed record keeping its pulse", record.Value.Failed, record.Value.Pulse)
+				}
+				sibling, siblingOK := cache.LoadByID(metric.MetricServiceName, "alpha", 1)
+				if !siblingOK || sibling == nil || sibling.Value.Pulse == nil || sibling.Value.Pulse.ValueString != "svc-b" {
+					t.Fatalf("Got slot 1 = %v, expected svc-b to keep its service index across a failure", sibling)
+				}
+				mqttClient.Publish(b.Topic, 0, false, []byte(`{}`))
+				deadline := time.Now().Add(3 * time.Second)
+				for time.Now().Before(deadline) {
+					if _, present := cache.Load(b.GUID); !present {
+						return
+					}
+					time.Sleep(50 * time.Millisecond)
+				}
+				t.Fatalf("Got record still present after a nil publish following a failure, expected service deleted")
+			},
+		},
+		{
 			name: "happy_non_nil_mqtt_value_stores_evicted_service",
 			setupFunc: func(_ *testing.T, cache *metric.RecordCache, b metric.TopicBinding) []byte {
 				cache.Evict(b.GUID.Host, b.GUID.ServiceName)

@@ -2378,6 +2378,28 @@ func TestMetricCache_Take(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name: "happy_store_failed_transition_marks_dirty",
+			setupFunc: func(cache *RecordCache) {
+				guid := NewRecordGUID(MetricHost, "alpha")
+				cache.Store(guid, &Record{Value: value1})
+				cache.Take()
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				guid := NewRecordGUID(MetricHost, "alpha")
+				failed := value1
+				failed.Failed = true
+				cache.Store(guid, &Record{Value: failed})
+				if got := cache.Take(); len(got) != 1 || got[0] != guid {
+					t.Fatalf("Got %+v dirty entering failure, expected alpha/MetricHost", got)
+				}
+				cache.Store(guid, &Record{Value: value1})
+				if got := cache.Take(); len(got) != 1 || got[0] != guid {
+					t.Fatalf("Got %+v dirty leaving failure, expected alpha/MetricHost", got)
+				}
+			},
+			expectedError: false,
+		},
+		{
 			name: "happy_store_new_value_marks_dirty",
 			setupFunc: func(cache *RecordCache) {
 				guid := NewRecordGUID(MetricHost, "alpha")

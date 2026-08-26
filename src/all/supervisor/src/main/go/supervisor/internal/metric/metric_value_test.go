@@ -262,6 +262,17 @@ func TestMetricValue_DataMarshalJSON(t *testing.T) {
 			expected:      `{"timestamp":8,"pulse":{"ok":true,"value":80},"trend":{"ok":false,"value":55}}`,
 			expectedError: false,
 		},
+		{
+			name: "happy_pulse_trend_perc_failed",
+			value: func() *ValueData {
+				value := NewIntValue(false, 80, false, 55)
+				value.Timestamp = 9
+				value.Failed = true
+				return value
+			}(),
+			expected:      `{"timestamp":9,"failed":true,"pulse":{"ok":false,"value":80},"trend":{"ok":false,"value":55}}`,
+			expectedError: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -722,5 +733,54 @@ func TestMetricValue_MetaMarshalJSON(t *testing.T) {
 				t.Fatalf("Got json = %s, expected %s", raw, tt.expected)
 			}
 		})
+	}
+}
+
+func TestMetricValue_DataFailedSkew(t *testing.T) {
+	type legacyValueData struct {
+		Timestamp int64            `json:"timestamp"`
+		Pulse     *ValueDataDetail `json:"pulse,omitempty"`
+		Trend     *ValueDataDetail `json:"trend,omitempty"`
+	}
+	healthy := NewIntValue(true, 42, true, 42)
+	healthy.Timestamp = 1
+	raw, err := json.Marshal(healthy)
+	if err != nil {
+		t.Fatalf("marshal: got %v want nil", err)
+	}
+	if string(raw) != `{"timestamp":1,"pulse":{"ok":true,"value":42},"trend":{"ok":true,"value":42}}` {
+		t.Fatalf("healthy json: got %s want the payload an older watch already reads", raw)
+	}
+	var legacy legacyValueData
+	if err := json.Unmarshal([]byte(`{"timestamp":2,"failed":true,"pulse":{"ok":false,"value":42}}`), &legacy); err != nil {
+		t.Fatalf("legacy unmarshal: got %v want nil", err)
+	}
+	if legacy.Pulse == nil || legacy.Pulse.ValueInt != 42 || legacy.Pulse.OK {
+		t.Fatalf("legacy pulse: got %v want a not ok pulse of 42", legacy.Pulse)
+	}
+	var absent ValueData
+	if err := json.Unmarshal([]byte(`{"timestamp":3,"pulse":{"ok":true,"value":42}}`), &absent); err != nil {
+		t.Fatalf("absent unmarshal: got %v want nil", err)
+	}
+	if absent.Failed {
+		t.Fatalf("absent failed: got %v want false", absent.Failed)
+	}
+	var failed ValueData
+	if err := json.Unmarshal([]byte(`{"timestamp":4,"failed":true,"pulse":{"ok":false,"value":42}}`), &failed); err != nil {
+		t.Fatalf("failed unmarshal: got %v want nil", err)
+	}
+	if !failed.Failed || failed.Pulse == nil {
+		t.Fatalf("failed value: got failed %v pulse %v want true and a pulse", failed.Failed, failed.Pulse)
+	}
+	healthyAgain := NewIntValue(false, 42, false, 42)
+	healthyAgain.Timestamp = 1
+	failedTwin := NewIntValue(false, 42, false, 42)
+	failedTwin.Timestamp = 1
+	failedTwin.Failed = true
+	if healthyAgain.Equal(failedTwin) {
+		t.Fatalf("equal: got true want false for values differing only in failed")
+	}
+	if !failedTwin.Equal(failedTwin) {
+		t.Fatalf("equal: got false want true for the same value")
 	}
 }

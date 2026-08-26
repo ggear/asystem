@@ -47,7 +47,7 @@ func (b *databaseBatch) reset() {
 }
 
 func (b *databaseBatch) add(guid metric.RecordGUID, record *metric.Record) {
-	if record.Value.Pulse == nil || len(record.Tags) == 0 {
+	if record.Value.Failed || record.Value.Pulse == nil || len(record.Tags) == 0 {
 		return
 	}
 	field, ok := record.Tags["metric"]

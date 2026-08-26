@@ -1434,3 +1434,45 @@ func expectedStatsFromCounts(counts [maxValidValue + 1]int, count int, sum int64
 	mean := int8((sum + int64(count/2)) / int64(count))
 	return mean, minimumValue, maximumValue, pct
 }
+
+func TestStatsInt_MissedPushIsHole(t *testing.T) {
+	tests := []struct {
+		name           string
+		ticks          int
+		pushEveryTick  bool
+		pushZeroOnMiss bool
+		expectedMean   int8
+		expectedMin    int8
+		expectedMax    int8
+		expectedError  bool
+	}{
+		{name: "pushed every tick", ticks: 100, pushEveryTick: true, pushZeroOnMiss: false, expectedMean: 50, expectedMin: 50, expectedMax: 50, expectedError: false},
+		{name: "pushed once then ticked", ticks: 100, pushEveryTick: false, pushZeroOnMiss: false, expectedMean: 50, expectedMin: 50, expectedMax: 50, expectedError: false},
+		{name: "pushed once then zeroed", ticks: 100, pushEveryTick: false, pushZeroOnMiss: true, expectedMean: 1, expectedMin: 0, expectedMax: 50, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			window := NewIntStats(1, 6, 3)
+			window.PushAndTick(50)
+			for tick := 1; tick < testCase.ticks; tick++ {
+				switch {
+				case testCase.pushEveryTick:
+					window.PushAndTick(50)
+				case testCase.pushZeroOnMiss:
+					window.PushAndTick(0)
+				default:
+					window.Tick()
+				}
+			}
+			if got := window.TrendMean(); got != testCase.expectedMean {
+				t.Errorf("TrendMean: got %v want %v", got, testCase.expectedMean)
+			}
+			if got := window.TrendMin(); got != testCase.expectedMin {
+				t.Errorf("TrendMin: got %v want %v", got, testCase.expectedMin)
+			}
+			if got := window.TrendMax(); got != testCase.expectedMax {
+				t.Errorf("TrendMax: got %v want %v", got, testCase.expectedMax)
+			}
+		})
+	}
+}

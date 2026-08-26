@@ -11,6 +11,7 @@ import (
 
 type ValueData struct {
 	Timestamp int64            `json:"timestamp"`
+	Failed    bool             `json:"failed,omitempty"`
 	Pulse     *ValueDataDetail `json:"pulse,omitempty"`
 	Trend     *ValueDataDetail `json:"trend,omitempty"`
 }
@@ -61,7 +62,7 @@ func (v *ValueData) Equal(that *ValueData) bool {
 	if v == nil || that == nil {
 		return v == that
 	}
-	return valueDataDetailEqual(v.Pulse, that.Pulse) && valueDataDetailEqual(v.Trend, that.Trend)
+	return v.Failed == that.Failed && valueDataDetailEqual(v.Pulse, that.Pulse) && valueDataDetailEqual(v.Trend, that.Trend)
 }
 
 type ValueDataDetail struct {

@@ -9,6 +9,7 @@ import (
 
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 )
 
 func TestProbe_RunProbes(t *testing.T) {
@@ -239,23 +240,96 @@ func (m *mockProbe) snapshot() (createCalls, executeCalls int) {
 	return m.createCalls, m.runCalls
 }
 
+func TestProbe_FailedSampleBlanks(t *testing.T) {
+	tests := []struct {
+		name           string
+		sampleErr      error
+		metricID       metric.ID
+		serviceName    string
+		expectedStored bool
+		expectedFailed bool
+		expectedPushes int
+		expectedTicks  int
+		expectedStatus string
+		expectedError  bool
+	}{
+		{name: "healthy sample stores a reading", sampleErr: nil, metricID: metric.MetricHostUsedProcessor, serviceName: metric.ServiceNameUnset, expectedStored: true, expectedFailed: false, expectedPushes: 1, expectedTicks: 0, expectedStatus: metricStatusAmber, expectedError: false},
+		{name: "failed sample stores a failure", sampleErr: errors.New("expected error during unit test"), metricID: metric.MetricHostUsedProcessor, serviceName: metric.ServiceNameUnset, expectedStored: true, expectedFailed: true, expectedPushes: 0, expectedTicks: 1, expectedStatus: metricStatusUnknown, expectedError: false},
+		{name: "warming up declared host metric stores nothing", sampleErr: errProbeWarmingUp, metricID: metric.MetricHostUsedHomeSpace, serviceName: metric.ServiceNameUnset, expectedStored: false, expectedFailed: false, expectedPushes: 0, expectedTicks: 1, expectedStatus: metricStatusUnknown, expectedError: false},
+		{name: "warming up undeclared host metric stores a failure", sampleErr: errProbeWarmingUp, metricID: metric.MetricHostUsedProcessor, serviceName: metric.ServiceNameUnset, expectedStored: true, expectedFailed: true, expectedPushes: 0, expectedTicks: 1, expectedStatus: metricStatusUnknown, expectedError: false},
+		{name: "warming up undeclared service metric stores a failure", sampleErr: errProbeWarmingUp, metricID: metric.MetricServiceUsedProcessor, serviceName: "svc-a", expectedStored: true, expectedFailed: true, expectedPushes: 0, expectedTicks: 1, expectedStatus: metricStatusUnknown, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			cache := metric.NewRecordCache()
+			mock := &mockProbe{metricsList: []metric.ID{testCase.metricID}, cache: cache}
+			mock.mask[testCase.metricID] = true
+			execConfigPath = ""
+			hostName := config.Load(execConfigPath).Host()
+			pushes := 0
+			ticks := 0
+			task := cacheMetricTask{
+				valueKind:   metric.ValueInt,
+				metricID:    testCase.metricID,
+				serviceName: testCase.serviceName,
+				sampleFunc: func() (any, derivation, error) {
+					return int8(42), derived(scribe.ActionSample, "computed [42] pct for the test"), testCase.sampleErr
+				},
+				statsFunc: func(any) { pushes++ },
+				tickFunc:  func() { ticks++ },
+				pulseFunc: func() any { return int8(42) },
+			}
+			gates := gateSet{metric.GateServiceAggregate: func() bool { return true }}
+			status := runMetricCacheTask(mock, true, gates, task)
+			if status != testCase.expectedStatus {
+				t.Errorf("status: got %v want %v", status, testCase.expectedStatus)
+			}
+			if pushes != testCase.expectedPushes {
+				t.Errorf("pushes: got %v want %v", pushes, testCase.expectedPushes)
+			}
+			if ticks != testCase.expectedTicks {
+				t.Errorf("ticks: got %v want %v", ticks, testCase.expectedTicks)
+			}
+			record, found := cache.Load(metric.NewServiceRecordGUID(testCase.metricID, hostName, testCase.serviceName))
+			if found != testCase.expectedStored {
+				t.Fatalf("stored: got %v want %v", found, testCase.expectedStored)
+			}
+			if !found {
+				return
+			}
+			if record.Value.Failed != testCase.expectedFailed {
+				t.Errorf("failed: got %v want %v", record.Value.Failed, testCase.expectedFailed)
+			}
+			if record.Value.Pulse == nil {
+				t.Fatalf("pulse: got nil want a pulse carrying the last computed value")
+			}
+			if record.Value.Pulse.ValueInt != 42 {
+				t.Errorf("pulse value: got %v want 42", record.Value.Pulse.ValueInt)
+			}
+		})
+	}
+}
+
 func TestProbe_MetricStatusOf(t *testing.T) {
 	trended := func(value bool) *bool { return &value }
 	testCases := []struct {
 		name           string
+		failed         bool
 		pulseOK        bool
 		trendOK        *bool
 		expectedStatus string
 		expectedError  bool
 	}{
-		{name: "pulse and trend ok", pulseOK: true, trendOK: trended(true), expectedStatus: metricStatusGreen, expectedError: false},
-		{name: "pulse ok trend not ok", pulseOK: true, trendOK: trended(false), expectedStatus: metricStatusAmber, expectedError: false},
-		{name: "pulse ok trend absent", pulseOK: true, trendOK: nil, expectedStatus: metricStatusAmber, expectedError: false},
-		{name: "pulse not ok", pulseOK: false, trendOK: trended(true), expectedStatus: metricStatusRed, expectedError: false},
+		{name: "pulse and trend ok", failed: false, pulseOK: true, trendOK: trended(true), expectedStatus: metricStatusGreen, expectedError: false},
+		{name: "pulse ok trend not ok", failed: false, pulseOK: true, trendOK: trended(false), expectedStatus: metricStatusAmber, expectedError: false},
+		{name: "pulse ok trend absent", failed: false, pulseOK: true, trendOK: nil, expectedStatus: metricStatusAmber, expectedError: false},
+		{name: "pulse not ok", failed: false, pulseOK: false, trendOK: trended(true), expectedStatus: metricStatusRed, expectedError: false},
+		{name: "failed with pulse and trend ok", failed: true, pulseOK: true, trendOK: trended(true), expectedStatus: metricStatusUnknown, expectedError: false},
+		{name: "failed with pulse not ok", failed: true, pulseOK: false, trendOK: trended(false), expectedStatus: metricStatusUnknown, expectedError: false},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			if status := metricStatusOf(testCase.pulseOK, testCase.trendOK); status != testCase.expectedStatus {
+			if status := metricStatusOf(testCase.failed, testCase.pulseOK, testCase.trendOK); status != testCase.expectedStatus {
 				t.Errorf("status: got %v want %v", status, testCase.expectedStatus)
 			}
 		})

@@ -612,27 +612,34 @@ func (b *box) drawValue(display *Display) {
 	} else {
 		record, ok = display.cache.Load(*b.recordGUID)
 	}
-	if !ok || record == nil || record.Value.Pulse == nil || record.Value.Pulse.IsZero() {
+	failed := ok && record != nil && record.Value.Failed
+	named := b.recordGUID.ID == metric.MetricServiceName
+	overflow := false
+	if b.isLast {
+		nextRecord, nextOk := display.cache.LoadByID(b.recordGUID.ID, b.recordGUID.Host, display.maxServices)
+		overflow = nextOk && nextRecord != nil && nextRecord.Value.Pulse != nil && !nextRecord.Value.Pulse.IsZero()
+	}
+	if !ok || record == nil || record.Value.Pulse == nil || record.Value.Pulse.IsZero() || failed && !named && !overflow {
 		display.terminal.draw(
 			b.position.cols+b.compiled.valOffset,
 			b.position.rows,
 			strings.Repeat(" ", b.valLen+b.compiled.valSfxLen),
 			colourChat,
 		)
+		if label := b.lblMid.pick(display.useUnicode); failed && label != "" {
+			display.terminal.draw(b.position.cols+b.compiled.lblLhsLen, b.position.rows, label, colourAlert)
+		}
 		return
 	}
-	if b.isLast {
-		nextRecord, nextOk := display.cache.LoadByID(b.recordGUID.ID, b.recordGUID.Host, display.maxServices)
-		if nextOk && nextRecord != nil && nextRecord.Value.Pulse != nil && !nextRecord.Value.Pulse.IsZero() {
-			b.draw(display, true)
-			display.terminal.draw(
-				b.position.cols+b.compiled.valOffset+b.compiled.valSfxLen,
-				b.position.rows,
-				pad("~", b.valAln, b.valLen)+strings.Repeat(" ", b.compiled.valSfxLen),
-				colourChat,
-			)
-			return
-		}
+	if overflow {
+		b.draw(display, true)
+		display.terminal.draw(
+			b.position.cols+b.compiled.valOffset+b.compiled.valSfxLen,
+			b.position.rows,
+			pad("~", b.valAln, b.valLen)+strings.Repeat(" ", b.compiled.valSfxLen),
+			colourChat,
+		)
+		return
 	}
 	location := dimensions{b.position.rows, b.position.cols + b.compiled.valOffset}
 	b.draw(display, true)
@@ -641,7 +648,8 @@ func (b *box) drawValue(display *Display) {
 		trendOK = &record.Value.Trend.OK
 	}
 	c := highlight(&record.Value.Pulse.OK, trendOK)
-	if metric.GetIDKind(b.recordGUID.ID) == metric.MetricKindService && resolveServiceRunState(display, b.recordGUID) == serviceRunStateSleeping {
+	sleeping := metric.GetIDKind(b.recordGUID.ID) == metric.MetricKindService && resolveServiceRunState(display, b.recordGUID) == serviceRunStateSleeping
+	if sleeping {
 		c = colourChat
 	}
 	valueString := ""
@@ -729,6 +737,15 @@ func (b *box) drawValue(display *Display) {
 	} else if display.useUnicode && isServiceLabel {
 		if c == colourCheer {
 			c = colourChat
+		}
+	}
+	if named && !sleeping {
+		for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindService}) {
+			sibling, siblingOK := display.cache.LoadByID(id, b.recordGUID.Host, b.recordGUID.ServiceIndex)
+			if siblingOK && sibling != nil && sibling.Value.Failed {
+				c = colourAlert
+				break
+			}
 		}
 	}
 	display.terminal.draw(

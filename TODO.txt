@@ -35,10 +35,15 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-if metric fails, nice way to show that in UI? blank number?
 
-add a drop as well as mutate, previous supervisor 
-implement all stub metrics and remove TODOs and stub code
+
+
+refactor database_renamed_measures to database_rename_measures and dir under mutate/rename to store script. add database_drop_measures and add mutate/drop dir with script to drop those measures. mutate.sh to call both. verify to ignore drop/rename measures.
+check all metrics working except for backup
+implement backup so metrics can work - module by modeule first then cron'd backup to /share and to /backup impl
+
+
+implement all stub metrics and remove TODOs and stub code - gates on Backup impl
 
 
 

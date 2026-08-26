@@ -20,6 +20,7 @@ type builder struct {
 	description  string
 	template     string
 	persisted    bool
+	warming      bool
 	pulseRule    Rule
 	trendRule    Rule
 	dependencies []ID
@@ -99,6 +100,7 @@ var metricBuildersByID = []builder{
 		description: "declared shares failing to mount or report, against those declared",
 		template:    "supervisor/$HOST/$SCOPE/host/failed_shares",
 		persisted:   true,
+		warming:     true,
 		pulseRule:   Bounded(Self, Exactly, 0),
 		trendRule:   Bounded(Self, Exactly, 0),
 	},
@@ -140,6 +142,7 @@ var metricBuildersByID = []builder{
 		description:  "rated endurance consumed by the most worn drive",
 		template:     "supervisor/$HOST/$SCOPE/host/life_used_drives",
 		persisted:    true,
+		warming:      true,
 		dependencies: []ID{MetricHostFailedDrives},
 		pulseRule:    All(Bounded(Self, AtMost, 90), Healthy(MetricHostFailedDrives)),
 		trendRule:    All(Bounded(Self, AtMost, 80), Healthy(MetricHostFailedDrives)),
@@ -151,6 +154,7 @@ var metricBuildersByID = []builder{
 		description: "space used by the volume holding the module homes",
 		template:    "supervisor/$HOST/$SCOPE/host/used_home_space",
 		persisted:   true,
+		warming:     true,
 		pulseRule:   Bounded(Self, AtMost, 90),
 		trendRule:   Bounded(Self, AtMost, 80),
 	},
@@ -161,6 +165,7 @@ var metricBuildersByID = []builder{
 		description: "space used across the local share volumes, summed as one pool",
 		template:    "supervisor/$HOST/$SCOPE/host/used_share_space",
 		persisted:   true,
+		warming:     true,
 		pulseRule:   Bounded(Self, AtMost, 90),
 		trendRule:   Bounded(Self, AtMost, 80),
 	},
@@ -507,6 +512,9 @@ var metricBuildersByTemplate = func() map[string]builder {
 			metricBuildersByID[id].metricKind = MetricKindHost
 		default:
 			panic(fmt.Sprintf("error: could not determine metric type from template [%s] for ID [%d]", metricBuildersByID[id].template, id))
+		}
+		if metricBuildersByID[id].warming && metricBuildersByID[id].metricKind == MetricKindService {
+			panic(fmt.Sprintf("error: metric ID [%d] is service scoped and declares warming, which would stop the service refreshing", id))
 		}
 		if metricBuildersByID[id].pulseRule.IsZero() {
 			panic(fmt.Sprintf("error: metric ID [%d] declares no pulseRule", id))

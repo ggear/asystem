@@ -106,3 +106,51 @@ func TestProbeRule_SiblingIsProbedEarlier(t *testing.T) {
 		}
 	}
 }
+
+func TestProbeRule_TrendFuncMatchesTrendRule(t *testing.T) {
+	trended := map[string]bool{}
+	files, err := filepath.Glob("probe_*.go")
+	if err != nil {
+		t.Fatalf("glob: %v", err)
+	}
+	for _, file := range files {
+		if strings.HasSuffix(file, "_test.go") {
+			continue
+		}
+		parsed, parseErr := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+		if parseErr != nil {
+			t.Fatalf("parse %s: %v", file, parseErr)
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			call, isCall := node.(*ast.CallExpr)
+			if !isCall {
+				return true
+			}
+			name, isName := call.Fun.(*ast.Ident)
+			if !isName || name.Name != "newCacheMetricTask" || len(call.Args) < 7 {
+				return true
+			}
+			selector, isSelector := call.Args[1].(*ast.SelectorExpr)
+			if !isSelector {
+				return true
+			}
+			last, isIdent := call.Args[len(call.Args)-1].(*ast.Ident)
+			trended[selector.Sel.Name] = !isIdent || last.Name != "nil"
+			return true
+		})
+	}
+	if len(trended) == 0 {
+		t.Fatal("found no newCacheMetricTask calls to read a trendFunc from")
+	}
+	for _, id := range metric.GetIDs() {
+		probed, found := trended[id.String()]
+		if !found {
+			continue
+		}
+		declared := !metric.GetIDTrendRule(id).IsZero()
+		if probed != declared {
+			t.Errorf("%v: probed with a trendFunc %v but declares a trendRule %v, so the trend is silently dropped",
+				metric.GetIDName(id), probed, declared)
+		}
+	}
+}

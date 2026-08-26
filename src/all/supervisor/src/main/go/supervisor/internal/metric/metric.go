@@ -90,6 +90,13 @@ func GetIDUnit(id ID) string {
 	return metricBuildersByID[id].unit
 }
 
+func GetIDWarming(id ID) bool {
+	if id < 0 || id >= MetricMax {
+		return false
+	}
+	return metricBuildersByID[id].warming
+}
+
 func GetIDPulseRule(id ID) Rule {
 	if id < 0 || id >= MetricMax {
 		return Rule{}

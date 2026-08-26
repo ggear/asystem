@@ -209,6 +209,7 @@ type cacheMetricTask struct {
 	serviceName string
 	sampleFunc  func() (any, derivation, error)
 	statsFunc   func(any)
+	tickFunc    func()
 	pulseFunc   func() any
 	trendFunc   func() any
 }
@@ -231,6 +232,9 @@ func newCacheMetricTask[T any](
 		},
 		statsFunc: func(value any) {
 			statsField.PushAndTick(value.(T))
+		},
+		tickFunc: func() {
+			statsField.Tick()
 		},
 		pulseFunc: func() any {
 			return pulseFunc()
@@ -285,9 +289,14 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 		return metricStatusUnknown
 	}
 	sample, derivation, err := task.sampleFunc()
-	errored := err != nil && !errors.Is(err, errProbeWarmingUp)
+	warming := errors.Is(err, errProbeWarmingUp) && metric.GetIDWarming(task.metricID)
+	errored := err != nil && !warming
 	trackMetricFault(p, task, err, errored)
-	task.statsFunc(sample)
+	if err == nil {
+		task.statsFunc(sample)
+	} else if task.tickFunc != nil {
+		task.tickFunc()
+	}
 	if !isPulse {
 		return metricStatusUnknown
 	}
@@ -299,6 +308,10 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
 	pulse := task.pulseFunc()
+	if warming {
+		reportMetricStatus(p, task, taskStart, metricStatusUnknown, pulse, false, nil, nil, err)
+		return metricStatusUnknown
+	}
 	if pulse == nil {
 		reportMetricStatus(p, task, taskStart, metricStatusUnknown, nil, false, nil, nil, err)
 		return metricStatusUnknown
@@ -328,9 +341,10 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("faulting", taskStart, "metric value builder with [%v]", valueErr)
 		return metricStatusUnknown
 	}
+	value.Failed = errored && !derivation.inert
 	record := metric.NewRecord(*value)
 	p.records().Store(guid, &record)
-	status := metricStatusOf(pulseOK, trendOK)
+	status := metricStatusOf(value.Failed, pulseOK, trendOK)
 	reportMetricStatus(p, task, taskStart, status, pulse, pulseOK, trend, trendOK, err)
 	return status
 }
@@ -469,7 +483,10 @@ func metricProbeName(id metric.ID) string {
 	return probesByMetricMask[id].name()
 }
 
-func metricStatusOf(pulseOK bool, trendOK *bool) string {
+func metricStatusOf(failed bool, pulseOK bool, trendOK *bool) string {
+	if failed {
+		return metricStatusUnknown
+	}
 	if !pulseOK {
 		return metricStatusRed
 	}
@@ -550,6 +567,7 @@ func (c *metricCensus) count(status string, task cacheMetricTask) {
 		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status)
 	default:
 		c.unknown++
+		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status)
 	}
 }
 

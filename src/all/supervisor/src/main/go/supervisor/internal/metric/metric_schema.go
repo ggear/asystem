@@ -157,6 +157,7 @@ func Payloads() []schema.Payload {
 			Role: schema.RoleState,
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "timestamp", Kind: schema.KindInt},
+				{Key: "failed", Kind: schema.KindBool},
 				detail("pulse"),
 				detail("trend"),
 			}},
