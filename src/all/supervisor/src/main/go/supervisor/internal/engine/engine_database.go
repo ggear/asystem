@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -19,6 +20,9 @@ type databaseClient struct {
 	configPath string
 	endpoint   string
 	client     *influxdb3.Client
+	online     bool
+	attempts   int
+	lostAt     time.Time
 }
 
 type databaseKey struct {
@@ -115,30 +119,104 @@ func newInfluxClient(configPath string) (*influxdb3.Client, string, error) {
 	return client, database, nil
 }
 
-func databaseConnect(configPath string) (*databaseClient, error) {
+func databaseConnect(ctx context.Context, configPath string) (*databaseClient, error) {
 	connectStart := time.Now()
 	client, endpoint, err := newInfluxClient(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("connect failed [%w]", err)
 	}
-	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(endpoint), scribe.ActionConnect).Info("sessions", connectStart, "[connected]")
-	return &databaseClient{configPath: configPath, endpoint: endpoint, client: client}, nil
+	database := &databaseClient{configPath: configPath, endpoint: endpoint, client: client, lostAt: connectStart}
+	for attempt := 0; ; attempt++ {
+		reachErr := databaseReachable(ctx, endpoint)
+		if reachErr == nil {
+			database.online = true
+			database.connected(connectStart, "connected", attempt)
+			return database, nil
+		}
+		database.attempts = attempt + 1
+		if attempt >= databaseAttempts {
+			database.lost(connectStart, reachErr)
+			return database, nil
+		}
+		database.offline(connectStart)
+		select {
+		case <-ctx.Done():
+			return database, nil
+		case <-time.After(databaseBackoff(attempt)):
+		}
+	}
+}
+
+func databaseReachable(ctx context.Context, endpoint string) error {
+	requestCtx, cancel := context.WithTimeout(ctx, databaseTimeout)
+	defer cancel()
+	request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, fmt.Sprintf("http://%s/health", endpoint), nil)
+	if err != nil {
+		return err
+	}
+	response, err := (&http.Client{Timeout: databaseTimeout}).Do(request)
+	if err != nil {
+		return err
+	}
+	_ = response.Body.Close()
+	return nil
+}
+
+func databaseBackoff(attempt int) time.Duration {
+	backoff := databaseRetry << attempt
+	return min(backoff, databaseInterval)
 }
 
 func (d *databaseClient) write(ctx context.Context, data []byte) {
 	writeStart := time.Now()
-	if err := d.client.Write(ctx, data); err != nil {
-		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionPublish).Warn("rejected", writeStart, "write failed with [%v]", err)
-		reconnectStart := time.Now()
-		newClient, _, reconnectErr := newInfluxClient(d.configPath)
-		if reconnectErr != nil {
-			scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Warn("sessions", reconnectStart, "[failed] reconnect with [%v]", reconnectErr)
-			return
+	err := d.client.Write(ctx, data)
+	for attempt := range databaseRetries {
+		if err == nil {
+			break
 		}
-		_ = d.client.Close()
-		d.client = newClient
-		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Info("sessions", reconnectStart, "[reconnected]")
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(databaseBackoff(attempt)):
+		}
+		err = d.client.Write(ctx, data)
 	}
+	if err == nil {
+		if !d.online {
+			d.online = true
+			d.connected(d.lostAt, "reconnected", d.attempts)
+			d.attempts = 0
+		}
+		return
+	}
+	d.attempts++
+	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionPublish).Warn("rejected", writeStart, "[%d] bytes dropped with [%v]", len(data), err)
+	if !d.online {
+		d.offline(d.lostAt)
+		return
+	}
+	d.online = false
+	d.lostAt = writeStart
+	d.lost(writeStart, err)
+	newClient, _, rebuildErr := newInfluxClient(d.configPath)
+	if rebuildErr != nil {
+		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Warn("sessions", writeStart, "[failed] rebuild with [%v]", rebuildErr)
+		return
+	}
+	_ = d.client.Close()
+	d.client = newClient
+}
+
+func (d *databaseClient) connected(since time.Time, state string, attempts int) {
+	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Info("sessions", since, "[%s] after [%d] attempts", state, attempts)
+}
+
+func (d *databaseClient) offline(since time.Time) {
+	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Debug("sessions", since, "[offline] attempt [%d]", d.attempts)
+}
+
+func (d *databaseClient) lost(since time.Time, err error) {
+	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionDisconnect).Warn("sessions", since, "[lost] connection with [%v]", err)
 }
 
 func (d *databaseClient) close() {
@@ -147,3 +225,11 @@ func (d *databaseClient) close() {
 		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionDisconnect).Warn("sessions", closeStart, "[failed] close with [%v]", err)
 	}
 }
+
+const (
+	databaseTimeout  = 3 * time.Second
+	databaseInterval = 10 * time.Second
+	databaseRetry    = 500 * time.Millisecond
+	databaseAttempts = 3
+	databaseRetries  = 2
+)

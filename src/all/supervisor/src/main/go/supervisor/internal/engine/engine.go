@@ -689,7 +689,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	if config.Load(configPath).Database() != "" {
 		var dbErr error
 		databaseStart := time.Now()
-		db, dbErr = databaseConnect(configPath)
+		db, dbErr = databaseConnect(ctx, configPath)
 		if dbErr != nil {
 			scribe.Log(scribe.SourceDatabase, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", databaseStart, "[%v]", dbErr)
 		} else {
@@ -714,7 +714,6 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			})
 		}
 		collected := 0
-		txCount := 0
 		txBytes := 0
 		batch.reset()
 		toDelete = toDelete[:0]
@@ -726,7 +725,6 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				if record.Value.Pulse != nil {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
 						client.Publish(record.Topic, 0, true, payload)
-						txCount++
 						txBytes += len(payload)
 					} else {
 						scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Error("faulting", processStart, "marshal with [%v]", jsonErr)
@@ -734,20 +732,16 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				} else if guid.ServiceName != metric.ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, metric.ServiceNameSchema) {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
 						client.Publish(record.Topic, 0, true, payload)
-						txCount++
 						txBytes += len(payload)
 					}
 					client.Publish(record.Topic, 0, true, "")
-					txCount++
 					toDelete = append(toDelete, serviceKey{host: guid.Host, service: guid.ServiceName})
 				}
 			}
 			batch.add(guid, record)
 		}
-		brokerStart := time.Now()
 		if isHeartbeat {
 			client.Publish(statusTopic, 1, true, hostStatusOnline)
-			txCount++
 			txBytes += len(hostStatusOnline)
 			cache.Records(func(guid metric.RecordGUID, record *metric.Record) {
 				process(guid, record)
@@ -768,15 +762,12 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				cache.Delete(k.host, k.service)
 			}
 		}
-		brokerDuration := time.Since(brokerStart)
 		lineBytes := batch.render(strconv.FormatInt(time.Now().UnixNano(), 10))
-		dbStart := time.Now()
 		if lineBytes > 0 && db != nil {
 			db.write(ctx, batch.protocol.Bytes())
 		}
-		dbDuration := time.Since(dbStart)
-		scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionCensus).Info("gathered", pulseStart, "[%3d] metrics, broker [%3d] msgs [%6d] bytes in [%4d] ms, database [%6d] bytes in [%4d] ms, heartbeat [%v]",
-			collected, txCount, txBytes, brokerDuration.Milliseconds(), lineBytes, dbDuration.Milliseconds(), isHeartbeat)
+		scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionCensus).Info("gathered", pulseStart, "[%3d] metrics, persisted broker/database [%4d]/[%4d] bytes, heartbeat [%v]",
+			collected, txBytes, lineBytes, isHeartbeat)
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", publishStart, "[%v]", err)
