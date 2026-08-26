@@ -32,11 +32,13 @@ type mountUsage struct {
 }
 
 type driveWear struct {
-	kernel  string
-	model   string
-	life    float64
-	rated   bool
-	errored bool
+	kernel     string
+	model      string
+	reason     string
+	life       float64
+	rated      bool
+	errored    bool
+	unreadable bool
 }
 
 type mountSnapshot struct {
@@ -241,6 +243,10 @@ func (s *mountSet) lifeUsedDrives() (int8, derivation, error) {
 			worstAt = drive.kernel + "=" + drive.model
 		}
 	}
+	if unreadable := mountUnreadable(taken.drives); len(unreadable) > 0 {
+		return 0, derivation{}, fmt.Errorf("no drive wear read, [%d] of [%d] drives unreadable [%s]%w",
+			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
+	}
 	if rated == 0 {
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok, unrated [%s]",
 			len(taken.drives), mountDrives(taken.drives)), nil
@@ -253,6 +259,10 @@ func (s *mountSet) failedDrives() (int8, derivation, error) {
 	taken, err := s.snapshot()
 	if err != nil {
 		return 0, derivation{}, err
+	}
+	if unreadable := mountUnreadable(taken.drives); len(unreadable) > 0 {
+		return 0, derivation{}, fmt.Errorf("no drive errors read, [%d] of [%d] drives unreadable [%s]%w",
+			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
 	}
 	if len(taken.drives) == 0 {
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed drive, host reports no drive so the metric is inert and always ok"), nil
@@ -519,6 +529,17 @@ func (s *mountSet) resolve(kernel string, depth int) string {
 	return kernel
 }
 
+func mountUnreadable(drives []driveWear) []string {
+	var unreadable []string
+	for _, drive := range drives {
+		if drive.unreadable {
+			unreadable = append(unreadable, drive.kernel+"="+drive.reason)
+		}
+	}
+	sort.Strings(unreadable)
+	return unreadable
+}
+
 func (s *mountSet) namespace(physical string) string {
 	if !driveController.MatchString(physical) {
 		return physical
@@ -576,7 +597,7 @@ func (s *mountSet) reading(physical string) driveWear {
 			identity.warned = true
 			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Warn("excluded", readingStart, "[%s] unreadable at [%s] with [%v], not counted in wear", physical, identity.node, err)
 		}
-		return driveWear{kernel: physical, model: identity.model}
+		return driveWear{kernel: physical, model: identity.model, unreadable: true, reason: err.Error()}
 	}
 	s.identify(identity, report, readingStart)
 	wear := driveWear{kernel: physical, model: identity.model, rated: identity.rated}
@@ -697,8 +718,11 @@ func mountSmartKind(node, kind string) (smartReport, error) {
 		}
 	}
 	if len(decoded.AtaAttributes.Table) == 0 && decoded.NvmeLog.DataUnitsWritten == 0 {
+		if decoded.Smartctl.ExitStatus != 0 || len(decoded.Smartctl.Messages) > 0 {
+			return smartReport{}, fmt.Errorf("smartctl read no data from node [%s] as [%s] with status [%d] and [%s]",
+				node, kind, decoded.Smartctl.ExitStatus, smartMessages(decoded.Smartctl.Messages))
+		}
 		report.supported = false
-		report.reason = smartMessages(decoded.Smartctl.Messages)
 	}
 	return report, nil
 }
