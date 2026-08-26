@@ -384,7 +384,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			continue
 		}
 		if name == "" {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionDiscover).Error("rejected", servicesStart, "[container] empty name, excluding from the service list")
+			scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionDiscover).Error("rejected", servicesStart, "[container] empty name, excluding from the service list")
 			continue
 		}
 		if _, exists := seenNames[name]; exists {

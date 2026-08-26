@@ -62,7 +62,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		}
 		scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionStart).Debug("prepared", probeCreateStart, "metrics [%d]", len(p.metrics()))
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionStart).Debug("prepared", createStart, "probes [%d]", len(probeMap))
+	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(configPath).Host()), scribe.ActionStart).Debug("prepared", createStart, "[%d] probes", len(probeMap))
 	verifyGates(probeMap)
 	execProbes = probeMap
 	execPeriods = periods
@@ -113,7 +113,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 					onPulse(isHeartbeat)
 				}
 			}
-			scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionSample).Debug("reported", tickStart, "pulse [%v] probes [%d]", isPulse, len(execProbes))
+			scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debug("reported", tickStart, "[%d] probes, pulse [%v]", len(execProbes), isPulse)
 		}
 	}
 }
@@ -375,7 +375,7 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	tracked, faulting := metricFaults[key]
 	switch {
 	case errored && (!faulting || tracked.message != message):
-		tracked = &metricFault{message: message, since: time.Now(), logged: time.Now(), polls: 1}
+		tracked = &metricFault{message: message, since: time.Now(), logged: time.Now(), polls: 1, warming: errors.Is(err, errProbeWarmingUp)}
 		metricFaults[key] = tracked
 	case errored:
 		tracked.polls++
@@ -394,12 +394,16 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	metricFaultsMutex.Unlock()
 	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample)
 	switch {
+	case errored && fault.polls == 1 && fault.warming:
+		logger.Debug("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
 	case errored && fault.polls == 1 && errors.Is(err, errEnvironment):
 		logger.Warn("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
 	case errored && fault.polls == 1:
 		logger.Error("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
 	case errored && repeat:
 		logger.Debug("faulting", fault.since, "metric%s for [%d] polls with [%v]", metricSubject(task), fault.polls, err)
+	case !errored && faulting && fault.warming:
+		logger.Debug("restored", fault.since, "metric%s after [%d] failed polls with [%s]", metricSubject(task), fault.polls, fault.message)
 	case !errored && faulting:
 		logger.Info("restored", fault.since, "metric%s after [%d] failed polls with [%s]", metricSubject(task), fault.polls, fault.message)
 	}
@@ -534,6 +538,7 @@ type metricFault struct {
 	since   time.Time
 	logged  time.Time
 	polls   int
+	warming bool
 }
 
 type metricCensus struct {

@@ -38,11 +38,47 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-refactor database_renamed_measures to database_rename_measures and dir under mutate/rename to store script. add database_drop_measures and add mutate/drop dir with script to drop those measures. mutate.sh to call both. verify to ignore drop/rename measures.
+
+
+Add subject to all log messages, chose $$SOMETHING$$ for example below and all others. Also drop port on vernemq and influxdb to go from vernemq.local:32404 to vernemq. Update broker remove action to something better, reconcile? Also update logs to be:
+
+FROM
+
+11:54:04 DEBUG display  grid                      render          0ms received [ 14] updates, drawn [  0] boxes
+11:54:04 DEBUG broker   vernemq.local:32404       remove          0ms received [ 37] msgs at [6] msg/s, dropped [0] msgs, evicted [0] records, deleted [0] records
+11:54:04 DEBUG broker   -                         census          0ms reported [  6] hosts, online [6], services [26], subscribed [306] topics, reconciling [0] hosts, holding [306] records
+11:54:06 DEBUG display  grid                      render          0ms received [ 15] updates, drawn [  0] boxes
+12:03:03 INFO  display  grid                      render          4ms triggers [manual], refreshed [777] boxes
+12:03:03 INFO  display  grid                      render          4ms triggers [toggle], refreshed [777] boxes
+
+TO
+
+11:54:04 DEBUG display  grid                      render          0ms received [ 14] updates, drawn [  0] boxes
+11:37:46 DEBUG broker   vernemq                   reconcile       0ms received [ 37] msgs at [6] msg/s, dropped [0] msgs, evicted [0] records, deleted [0] records
+11:37:46 DEBUG broker   $$SOMETHING$$             census          0ms reported [  6] hosts, [6] online, [0] reconciling, with [26] services, holding [306] records
+11:54:06 DEBUG display  grid                      render          0ms received [ 15] updates, drawn [  0] boxes
+12:03:03 INFO  display  grid                      render          4ms triggers [manual], refreshed [ 777] boxes
+12:03:03 INFO  display  grid                      render          4ms triggers [toggle], refreshed [ 777] boxes
+
+
+move to debug, easy? drop entirely if hard to do. and all others like this. 08-26T11:02:56 ERROR probe    host/used_processor       sample          0ms faulting metric with [probe is still warming up] align with these messages too 08-26T11:04:25 INFO  probe    service/used_processor    sample       2992ms restored metric service [supervisor] after [1] failed polls with [probe is still warming up]
+08-26T11:04:25 INFO  probe    service/used_processor    sample       2992ms restored metric service [network] after [1] failed polls with [probe is still warming up]
+08-26T11:04:25 INFO  probe    service/used_processor    sample       2995ms restored metric service [plex] after [1] failed polls with [probe is still warming up]
+08-26T11:04:25 INFO  probe    service/used_processor    sample       2995ms restored metric service [wrangle] after [1] failed polls with [probe is still warming up]
+08-26T11:04:25 INFO  probe    service/used_processor    sample       2994ms restored metric service [postgres] after [1] failed polls with [probe is still warming up]
+08-26T11:04:25 INFO  probe    service/used_processor    sample       2994ms restored metric service [sabnzbd] after [1] failed polls with [probe is still warming up]
+
+
+
+
+
+
+refactor database_renamed_measures to database_rename_measures and dir under mutate/rename to store script. add database_drop_measures and add mutate/drop dir with script to drop those measures. mutate.sh to call both. verify to ignore drop/rename measures. convert previous rename cols to drop
 check all metrics working except for backup
 implement backup so metrics can work - module by modeule first then cron'd backup to /share and to /backup impl
 
 
+verify caching hour and all metrics performance
 implement all stub metrics and remove TODOs and stub code - gates on Backup impl
 
 

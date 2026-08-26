@@ -636,10 +636,10 @@ func (d *Display) refresh(trigger string) {
 	d.terminal.show()
 	d.force = true
 	if trigger == "period" {
-		scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Debug("triggers", refreshStart, "[%s], refreshed [%d] boxes", trigger, len(d.boxes))
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Debug("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
 		return
 	}
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Info("triggers", refreshStart, "[%s], refreshed [%d] boxes", trigger, len(d.boxes))
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Info("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
 }
 
 func (d *Display) subscribeUpdates() {

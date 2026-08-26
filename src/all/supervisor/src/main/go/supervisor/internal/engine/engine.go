@@ -44,12 +44,12 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		scribe.Log(scribe.SourceProcess, scribe.SubjectNone, scribe.ActionStart).Error("faulting", createStart, "[%v] listening probes loop", err)
+		scribe.Log(scribe.SourceProcess, scribe.SubjectLoop(loopListeningProbes), scribe.ActionStart).Error("faulting", createStart, "[%v]", err)
 		return
 	}
 	runStart := time.Now()
 	if err := probe.Run(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		scribe.Log(scribe.SourceProcess, scribe.SubjectNone, scribe.ActionStop).Error("faulting", runStart, "[%v] listening probes loop", err)
+		scribe.Log(scribe.SourceProcess, scribe.SubjectLoop(loopListeningProbes), scribe.ActionStop).Error("faulting", runStart, "[%v]", err)
 	}
 }
 
@@ -417,7 +417,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
 	if err != nil {
-		scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionStop).Error("faulting", clientStart, "[%v] listening stream loop", err)
+		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopListeningStream), scribe.ActionStop).Error("faulting", clientStart, "[%v]", err)
 		return
 	}
 	defer client.Disconnect(250)
@@ -508,7 +508,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				restored, listens := resubscribeAll(client)
 				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] msgs across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
 			}
-			scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionRemove).Debug("received", purgeStart, "[%3d] msgs at [%d] msg/s, dropped [%d] msgs, evicted [%d] records, deleted [%d] records", rx, rate, drops, evicted, deleted)
+			scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] msgs at [%d] msg/s, dropped [%d] msgs, evicted [%d] records, deleted [%d] records", rx, rate, drops, evicted, deleted)
 			censusStart := time.Now()
 			online := 0
 			services := 0
@@ -518,9 +518,6 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 				services += len(cache.Services(hostName))
 			}
-			subscribedMutex.Lock()
-			topics := len(subscribed)
-			subscribedMutex.Unlock()
 			reconcileMutex.Lock()
 			pending := 0
 			for _, reconcile := range reconciles {
@@ -529,7 +526,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 			}
 			reconcileMutex.Unlock()
-			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts, online [%d], services [%d], subscribed [%d] topics, reconciling [%d] hosts, holding [%d] records", len(cache.Hosts()), online, services, topics, pending, cache.Size())
+			scribe.Log(scribe.SourceBroker, scribe.SubjectEstate(), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts, [%d] online, [%d] reconciling, with [%d] services, holding [%d] records", len(cache.Hosts()), online, pending, services, cache.Size())
 		}
 	}
 }
@@ -557,7 +554,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		scribe.Log(scribe.SourceProcess, scribe.SubjectNone, scribe.ActionStart).Error("faulting", createStart, "[%v] all probes once", err)
+		scribe.Log(scribe.SourceProcess, scribe.SubjectLoop(loopAllProbesOnce), scribe.ActionStart).Error("faulting", createStart, "[%v]", err)
 		return
 	}
 	timeout := time.Duration(3*periods.PulseMillis) * time.Millisecond
@@ -566,7 +563,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	runStart := time.Now()
 	err := probe.Run(ctx, nil)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		scribe.Log(scribe.SourceProcess, scribe.SubjectNone, scribe.ActionStop).Error("faulting", runStart, "[%v] all probes once", err)
+		scribe.Log(scribe.SourceProcess, scribe.SubjectLoop(loopAllProbesOnce), scribe.ActionStop).Error("faulting", runStart, "[%v]", err)
 	}
 }
 
@@ -607,7 +604,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionStart).Error("faulting", createStart, "[%v] publish loop", err)
+		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStart).Error("faulting", createStart, "[%v]", err)
 		return
 	}
 	hostName := config.Load(configPath).Host()
@@ -671,7 +668,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, statusTopic, hostStatusOffline)
 	if err != nil {
-		scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionStop).Error("faulting", clientStart, "[%v] publish loop", err)
+		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", clientStart, "[%v]", err)
 		return
 	}
 	defer func() {
@@ -694,7 +691,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		databaseStart := time.Now()
 		db, dbErr = databaseConnect(configPath)
 		if dbErr != nil {
-			scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionStop).Error("faulting", databaseStart, "[%v] publish loop", dbErr)
+			scribe.Log(scribe.SourceDatabase, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", databaseStart, "[%v]", dbErr)
 		} else {
 			defer db.close()
 		}
@@ -716,6 +713,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				}
 			})
 		}
+		collected := 0
 		txCount := 0
 		txBytes := 0
 		batch.reset()
@@ -723,6 +721,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		clear(deleted)
 		process := func(guid metric.RecordGUID, record *metric.Record) {
 			processStart := time.Now()
+			collected++
 			if record.Topic != "" {
 				if record.Value.Pulse != nil {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
@@ -776,11 +775,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			db.write(ctx, batch.protocol.Bytes())
 		}
 		dbDuration := time.Since(dbStart)
-		scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionCensus).Debug("reported", pulseStart, "heartbeat [%v], broker [%d] msgs [%d] bytes in [%d] ms, database [%d] bytes in [%d] ms",
-			isHeartbeat, txCount, txBytes, brokerDuration.Milliseconds(), lineBytes, dbDuration.Milliseconds())
+		scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionCensus).Info("gathered", pulseStart, "[%3d] metrics, broker [%3d] msgs [%6d] bytes in [%4d] ms, database [%6d] bytes in [%4d] ms, heartbeat [%v]",
+			collected, txCount, txBytes, brokerDuration.Milliseconds(), lineBytes, dbDuration.Milliseconds(), isHeartbeat)
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionStop).Error("faulting", publishStart, "[%v] publish loop", err)
+		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", publishStart, "[%v]", err)
 	}
 }
 
@@ -825,6 +824,11 @@ const (
 	subscribeQosMax   = 2
 	silenceTicks      = 5
 	topicStatus       = "supervisor/+/status"
+
+	loopListeningProbes  = "listening probes"
+	loopListeningStream  = "listening stream"
+	loopAllProbesOnce    = "all probes once"
+	loopAllProbesPublish = "all probes publish"
 )
 
 var (

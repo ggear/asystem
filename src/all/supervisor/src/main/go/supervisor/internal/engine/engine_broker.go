@@ -34,7 +34,7 @@ func (b *brokerWakeListener) MarkWake() {
 		return
 	}
 	b.onWake()
-	scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Info("detected", wakeStart, "[wake] revive requested by the display stall detector")
+	scribe.Log(scribe.SourceBroker, scribe.SubjectSurface("terminal"), scribe.ActionConnect).Info("detected", wakeStart, "[wake] revive requested by the stall detector")
 }
 
 type brokerPublishDeletesListener struct {

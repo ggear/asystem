@@ -117,22 +117,23 @@ func SubjectHost(name string) Subject {
 	return Subject{text: name}
 }
 
-// SubjectEndpoint names a broker or database by its host and port, with the registered domain dropped — every estate
-// name ends in the same one, so it identifies nothing and only pushes every column of the line right. A host of three
-// or more labels loses its last two (vernemq.local.janeandgraham.com becomes vernemq.local); anything shorter, and any
-// literal IP, is left alone.
 func SubjectEndpoint(endpoint string) Subject {
-	host, port, err := net.SplitHostPort(endpoint)
+	host, _, err := net.SplitHostPort(endpoint)
 	if err != nil {
-		host, port = endpoint, ""
+		host = endpoint
 	}
-	if labels := strings.Split(host, "."); len(labels) > 2 && net.ParseIP(host) == nil {
-		host = strings.Join(labels[:len(labels)-2], ".")
+	if labels := strings.Split(host, "."); len(labels) > 1 && net.ParseIP(host) == nil {
+		host = labels[0]
 	}
-	if port == "" {
-		return Subject{text: host}
-	}
-	return Subject{text: host + ":" + port}
+	return Subject{text: host}
+}
+
+func SubjectEstate() Subject {
+	return Subject{text: estateName}
+}
+
+func SubjectLoop(name string) Subject {
+	return Subject{text: name}
 }
 
 func SubjectSurface(name string) Subject {
@@ -271,7 +272,10 @@ func actionStrings() []string {
 	return values
 }
 
-const unknownValue = "-"
+const (
+	estateName   = "estate"
+	unknownValue = "-"
+)
 
 type logFilter struct {
 	source  []string

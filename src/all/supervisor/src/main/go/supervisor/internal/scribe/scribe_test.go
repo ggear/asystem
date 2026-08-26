@@ -319,11 +319,11 @@ func TestScribe_SubjectEndpoint(t *testing.T) {
 		endpoint        string
 		expectedSubject string
 	}{
-		{name: "happy_fqdn_loses_its_domain", endpoint: "vernemq.local.janeandgraham.com:32404", expectedSubject: "vernemq.local:32404"},
-		{name: "happy_short_name_is_kept", endpoint: "macmini-max:1883", expectedSubject: "macmini-max:1883"},
-		{name: "happy_two_labels_are_kept", endpoint: "vernemq.local:32404", expectedSubject: "vernemq.local:32404"},
-		{name: "happy_address_is_kept", endpoint: "10.0.0.5:32420", expectedSubject: "10.0.0.5:32420"},
-		{name: "happy_portless_host_is_kept", endpoint: "influxdb3.local.janeandgraham.com", expectedSubject: "influxdb3.local"},
+		{name: "happy_fqdn_loses_its_domain_and_port", endpoint: "vernemq.local.janeandgraham.com:32404", expectedSubject: "vernemq"},
+		{name: "happy_short_name_loses_its_port", endpoint: "macmini-max:1883", expectedSubject: "macmini-max"},
+		{name: "happy_two_labels_lose_the_second", endpoint: "vernemq.local:32404", expectedSubject: "vernemq"},
+		{name: "happy_address_is_kept_whole", endpoint: "10.0.0.5:32420", expectedSubject: "10.0.0.5"},
+		{name: "happy_portless_host_loses_its_domain", endpoint: "influxdb3.local.janeandgraham.com", expectedSubject: "influxdb3"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
