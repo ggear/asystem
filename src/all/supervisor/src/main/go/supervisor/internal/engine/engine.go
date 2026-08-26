@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"supervisor/internal/clock"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
@@ -114,14 +115,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	wildcards := make(map[string]struct{})
 	var reconcileMutex sync.Mutex
 	reconciles := make(map[string]hostReconcile)
-	connected := time.Now()
+	connected := clock.NowIncludingSuspend()
 	reconcileDelay := max(time.Duration(2*periods.PulseMillis)*time.Millisecond, reconcileGrace)
 	scheduleReconcile := func(hostName string, fromConnect bool) {
 		reconcileMutex.Lock()
 		pending := reconciles[hostName]
 		pending.host = hostName
 		pending.retried = false
-		pending.started = time.Now()
+		pending.started = clock.NowIncludingSuspend()
 		if fromConnect {
 			pending.started = connected
 		}
@@ -407,7 +408,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		wildcardMutex.Unlock()
 		reconcileMutex.Lock()
 		clear(reconciles)
-		connected = time.Now()
+		connected = clock.NowIncludingSuspend()
 		reconcileMutex.Unlock()
 		topics := subscribeTopics(client, cache.Topics())
 		listens := subscribeWildcards(client)
@@ -463,7 +464,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					reconciles[pending.host] = pending
 					reconcileMutex.Unlock()
 					topics := resubscribeHost(client, pending.host)
-					scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%d] services, after [%d] ms, nothing refreshed so the redelivery was lost, resubscribed [%d] topics", len(services), time.Since(pending.started).Milliseconds(), topics)
+					scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%d] services, after [%d] ms, nothing refreshed so the redelivery was lost, resubscribed [%d] topics", len(services), clock.SinceIncludingSuspend(pending.started).Milliseconds(), topics)
 					continue
 				}
 				for _, service := range services {
@@ -471,11 +472,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Delete(pending.host, service)
 				}
 				if len(services) == 0 {
-					scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[0] services, after [%d] ms, every service refreshed itself", time.Since(pending.started).Milliseconds())
+					scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[0] services, after [%d] ms, every service refreshed itself", clock.SinceIncludingSuspend(pending.started).Milliseconds())
 					continue
 				}
 				cache.Refresh()
-				scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Info("reclaims", reconcileStart, "[%d] services, after [%d] ms, [%s]", len(services), time.Since(pending.started).Milliseconds(), strings.Join(services, ","))
+				scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Info("reclaims", reconcileStart, "[%d] services, after [%d] ms, [%s]", len(services), clock.SinceIncludingSuspend(pending.started).Milliseconds(), strings.Join(services, ","))
 			}
 			resyncStart := time.Now()
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {

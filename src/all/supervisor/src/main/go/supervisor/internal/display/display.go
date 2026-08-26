@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"supervisor/internal/clock"
 	"supervisor/internal/config"
 	"supervisor/internal/engine"
 	"supervisor/internal/metric"
@@ -145,7 +146,6 @@ func (d *Display) Compile() (Format, error) {
 	hostCount := len(compileHosts)
 	compile := func(format Format, layout [][]box) ([]box, error) {
 
-		// Assert and resize layout box rows
 		displayRowMin := 0
 		if len(layout) < 2 || len(layout[0]) < 2 {
 			return nil, fmt.Errorf("cannot compile display: layout is empty")
@@ -175,7 +175,6 @@ func (d *Display) Compile() (Format, error) {
 			layout = append(layout[:len(layout)-1], newRow, lastRow)
 		}
 
-		// Assert and resize layout box columns
 		displayColMin := 0
 		displayResizeCount := 0
 		displayBoxSkip := func(i int, b box) bool { return (hostCount == 1 || (i+1)%2 == 0) && b.kind == boxDivdr }
@@ -222,7 +221,6 @@ func (d *Display) Compile() (Format, error) {
 		displayResizeIncrement := (d.dimsInit.cols - displayColMin) / displayResizeCount
 		displayResizeRemainder := (d.dimsInit.cols - displayColMin) % displayResizeCount
 
-		// Build, resize, assert and compile display boxes
 		boxesColsCount := 0
 		boxes := make([]box, 0, hostCount*50)
 		hostServiceIndex := make([]int, len(compileHosts))
@@ -315,7 +313,6 @@ func (d *Display) Compile() (Format, error) {
 			}
 		}
 
-		// Assert display boxes positions and lengths
 		if len(boxes) > 0 {
 			rowWidth := 0
 			expectedCol := 0
@@ -492,7 +489,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 	}
 	ticker := time.NewTicker(d.tickPeriod)
 	defer ticker.Stop()
-	ticked := time.Now()
+	ticked := clock.NowIncludingSuspend()
 	var refreshC <-chan time.Time
 	if d.refreshPeriod > 0 {
 		refreshTicker := time.NewTicker(d.refreshPeriod)
@@ -565,12 +562,12 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 		case <-ticker.C:
-			if elapsed := time.Since(ticked); elapsed > d.tickStall {
+			if elapsed := clock.SinceIncludingSuspend(ticked); elapsed > d.tickStall {
 				scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionDisconnect).Warn("exceeded", ticked, "[%d] ms since the last draw tick", d.tickStall.Milliseconds())
 				d.cache.Wake()
 				d.refresh("wake")
 			}
-			ticked = time.Now()
+			ticked = clock.NowIncludingSuspend()
 			drawStart := time.Now()
 			dirtyIndexes := d.takeDirtyIndexes()
 			drawnCount := 0

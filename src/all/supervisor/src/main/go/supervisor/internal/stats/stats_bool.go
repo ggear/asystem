@@ -6,18 +6,6 @@ import (
 	"sync"
 )
 
-// BoolStats keeps a fixed pulse window and decayed true and false weights.
-//
-// MEMORY:
-//   - the pulse window of max(round(pulseSecs/tickFreqSecs), 2) int8s, with running true and false counts
-//   - the trend is two float64 weights, sharing FloatStats' decay
-//
-// CPU:
-//   - push, tick and every read O(1)
-//
-// ACCURACY:
-//   - the trend reports the greater weight, and whether either is non-zero, so one flip inside it shows as changed
-//   - decay is applied per sample; trendHours 0 disables the trend
 type BoolStats struct {
 	mutex            sync.RWMutex
 	pulseIndex       int

@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"supervisor/internal/clock"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 	"sync"
@@ -112,7 +113,7 @@ func (s *mountSet) request(window time.Duration) {
 	if s.current != nil && s.current.failed > 0 && mountRetry < window {
 		window = mountRetry
 	}
-	stale := s.current == nil || time.Since(s.current.taken) >= window
+	stale := s.current == nil || clock.SinceIncludingSuspend(s.current.taken) >= window
 	if !stale || s.refreshing {
 		s.mutex.Unlock()
 		return
@@ -181,7 +182,7 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 	}
 	used := float64(home.used) / float64(home.total) * 100.0
 	return int8Percent(used), derived(scribe.ActionSample, "computed [%3d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
-		int8Percent(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, time.Since(taken.taken).Truncate(time.Second)), nil
+		int8Percent(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, clock.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
 }
 
 func (s *mountSet) usedShareSpace() (int8, derivation, error) {
@@ -292,7 +293,7 @@ func (s *mountSet) failedDrives() (int8, derivation, error) {
 
 func (s *mountSet) collect() *mountSnapshot {
 	collectStart := time.Now()
-	taken := &mountSnapshot{taken: time.Now()}
+	taken := &mountSnapshot{taken: clock.NowIncludingSuspend()}
 	mounts, tableErr := s.parseMounts()
 	taken.table = tableErr
 	expected := s.parseFstab()

@@ -275,17 +275,17 @@ func (h *streamHandler) Handle(_ context.Context, record slog.Record) error {
 	h.headerOnce.Do(func() {
 		_, _ = io.WriteString(h.writer, headerLine()+"\n")
 	})
-	line := fmt.Sprintf("%s %-5s %s\n", record.Time.Format(timeLayout), record.Level.String(), format(record))
-	_, err := io.WriteString(h.writer, line)
-	return err
+	for _, line := range streamLines(record) {
+		if _, err := io.WriteString(h.writer, line+"\n"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (h *streamHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 func (h *streamHandler) WithGroup(_ string) slog.Handler      { return h }
 
-// OverlayHeader OverlayLine and OverlayHeader render the watch overlay's own prefix, so the whole line's geometry is owned here
-// rather than split between scribe and display. The overlay carries a shorter time than the file and stdout, since it
-// is read live and the date is never in question, but every column after it is the same width in all three sinks.
 func OverlayHeader() string {
 	return pad("TIME", len(overlayTimeLayout)) + " " + pad("LEVEL", widthLevel) + " " + columnLine("SOURCE", "SUBJECT", "ACTION", "DURATION", "DETAIL")
 }
@@ -294,14 +294,18 @@ func OverlayLine(line LogLine) string {
 	return line.Time.Format(overlayTimeLayout) + " " + pad(line.Level.String(), widthLevel) + " " + line.Message
 }
 
-// OverlayLines renders one buffered line as the rows the watch overlay draws, wrapping a detail too wide for the
-// terminal onto further rows that repeat every column but the verb. Wrapping belongs to the overlay alone — the file
-// and stdout carry the whole detail on one line, since they are read with a pager and grepped by position — so the
-// width is the terminal's rather than a constant, and a terminal too narrow to hold a readable detail column falls
-// back to the single line the caller clips.
 func OverlayLines(line LogLine, width int) []string {
-	rendered := []rune(OverlayLine(line))
-	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
+	return wrapped(OverlayLine(line), len(overlayTimeLayout), width)
+}
+
+func streamLines(record slog.Record) []string {
+	line := record.Time.Format(timeLayout) + " " + pad(record.Level.String(), widthLevel) + " " + format(record)
+	return wrapped(line, widthTime, widthStream)
+}
+
+func wrapped(line string, timeWidth, width int) []string {
+	rendered := []rune(line)
+	prefix := timeWidth + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
 	budget := width - prefix - widthVerb - 1
 	if len(rendered) <= width || budget < widthWrapMin || len(rendered) <= prefix+widthVerb+1 {
 		return []string{string(rendered)}
@@ -350,8 +354,6 @@ func format(record slog.Record) string {
 	return columnLine(source, subject, action, duration, verb(record.Message)+detail)
 }
 
-// chunked splits a detail too long for the budget, cutting at a space where there is one and mid-token where there is
-// not, and ending every continuing chunk with wrapEllipsis.
 func chunked(detail string, budget int) []string {
 	runes := []rune(detail)
 	if budget < widthWrapMin || len(runes) <= budget {
@@ -448,6 +450,7 @@ const (
 	widthDuration   = 8
 	widthVerb       = 8
 	widthWrapMin    = 40
+	widthStream     = 250
 	wrapEllipsis    = "..."
 	widthSubjectMin = 24
 )

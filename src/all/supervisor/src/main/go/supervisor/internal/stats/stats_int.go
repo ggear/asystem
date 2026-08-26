@@ -23,20 +23,6 @@ const (
 	defaultMiddleCapacity = 360
 )
 
-// IntStats keeps int8 values 0-100 as fixed 101-bucket histograms, pulse and trend.
-//
-// MEMORY (24h trend, 3s tick, 6s pulse):
-//   - young 1200 slots of 3s covering 1h at 224 bytes, middle 360 of 60s covering 6h and geriatric 17 of 1h at 432
-//   - 421 KiB of trend and 448 bytes of pulse per IntStats
-//   - tiers are sized from trendHours by newTrendWindow, geriatric taking the remainder; trendHours 0 drops the trend
-//
-// CPU:
-//   - push and tick O(1), amortised over the aggregation every youngAggBatchSize ticks
-//   - mean, min and max read every slot they span; a percentile merges those slots' buckets first
-//
-// ACCURACY:
-//   - aggregation coarsens time, never value: buckets are summed, so every tier keeps the full 0-100 distribution
-//   - buckets, counts and sums saturate rather than wrap, int16 in young and int32 once aggregated
 type IntStats struct {
 	mutex sync.RWMutex
 	trend *trendWindow
