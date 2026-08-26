@@ -515,14 +515,14 @@ WHERE
     AND service IS NULL
 UNION ALL
 SELECT
-    'supervisor/host'                                                       AS relation,
-    'used_system_space'                                                     AS measure,
-    'int'                                                                   AS kind,
-    '%'                                                                     AS unit,
-    '6s'                                                                    AS period,
-    count(used_system_space)                                                AS rows,
-    CAST(min(time) FILTER (WHERE used_system_space IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE used_system_space IS NOT NULL) AS VARCHAR) AS newest
+    'supervisor/host'                                                     AS relation,
+    'used_home_space'                                                     AS measure,
+    'int'                                                                 AS kind,
+    '%'                                                                   AS unit,
+    '6s'                                                                  AS period,
+    count(used_home_space)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_home_space IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_home_space IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -530,14 +530,14 @@ WHERE
     AND service IS NULL
 UNION ALL
 SELECT
-    'supervisor/host'                                                             AS relation,
-    'used_system_space_trend'                                                     AS measure,
-    'int'                                                                         AS kind,
-    '%'                                                                           AS unit,
-    '6s'                                                                          AS period,
-    count(used_system_space_trend)                                                AS rows,
-    CAST(min(time) FILTER (WHERE used_system_space_trend IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE used_system_space_trend IS NOT NULL) AS VARCHAR) AS newest
+    'supervisor/host'                                                           AS relation,
+    'used_home_space_trend'                                                     AS measure,
+    'int'                                                                       AS kind,
+    '%'                                                                         AS unit,
+    '6s'                                                                        AS period,
+    count(used_home_space_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE used_home_space_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE used_home_space_trend IS NOT NULL) AS VARCHAR) AS newest
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -1047,10 +1047,10 @@ WHERE
         'services_max_memory', 'spin_fan_speed', 'spin_fan_speed_trend', 'status',
         'status_trend', 'temperature', 'temperature_trend', 'time', 'up_time',
         'used_backup_space', 'used_backup_space_trend', 'used_disk_ops',
-        'used_disk_ops_trend', 'used_memory', 'used_memory_trend', 'used_network',
-        'used_network_trend', 'used_processor', 'used_processor_trend', 'used_share_space',
-        'used_share_space_trend', 'used_swap_space', 'used_swap_space_trend',
-        'used_system_space', 'used_system_space_trend', 'version', 'warn_temperature',
+        'used_disk_ops_trend', 'used_home_space', 'used_home_space_trend', 'used_memory',
+        'used_memory_trend', 'used_network', 'used_network_trend', 'used_processor',
+        'used_processor_trend', 'used_share_space', 'used_share_space_trend',
+        'used_swap_space', 'used_swap_space_trend', 'version', 'warn_temperature',
         'warn_temperature_trend'
     )
 ORDER BY rows DESC NULLS LAST;

@@ -405,26 +405,26 @@ WHERE
 HAVING count(*) FILTER (WHERE column_name = 'life_used_drives_trend') = 0
 UNION ALL
 SELECT
-    'supervisor/host'   AS relation,
-    'used_system_space' AS measure,
-    '6s'                AS period,
-    '%'                 AS unit,
-    'missing'           AS fault
+    'supervisor/host' AS relation,
+    'used_home_space' AS measure,
+    '6s'              AS period,
+    '%'               AS unit,
+    'missing'         AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'used_system_space') = 0
+HAVING count(*) FILTER (WHERE column_name = 'used_home_space') = 0
 UNION ALL
 SELECT
-    'supervisor/host'         AS relation,
-    'used_system_space_trend' AS measure,
-    '6s'                      AS period,
-    '%'                       AS unit,
-    'missing'                 AS fault
+    'supervisor/host'       AS relation,
+    'used_home_space_trend' AS measure,
+    '6s'                    AS period,
+    '%'                     AS unit,
+    'missing'               AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'used_system_space_trend') = 0
+HAVING count(*) FILTER (WHERE column_name = 'used_home_space_trend') = 0
 UNION ALL
 SELECT
     'supervisor/host'  AS relation,
@@ -797,12 +797,13 @@ WHERE
         'restart_count_trend', 'service', 'spin_fan_speed', 'spin_fan_speed_of_max',
         'spin_fan_speed_of_max_trend', 'spin_fan_speed_trend', 'status', 'status_trend',
         'temperature', 'temperature_trend', 'time', 'used_backup_space',
-        'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend', 'used_memory',
-        'used_memory_trend', 'used_network', 'used_network_trend', 'used_processor',
-        'used_processor_trend', 'used_share_space', 'used_share_space_trend',
-        'used_swap_space', 'used_swap_space_trend', 'used_system_space',
-        'used_system_space_trend', 'warn_temperature', 'warn_temperature_of_max',
-        'warn_temperature_of_max_trend', 'warn_temperature_trend'
+        'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend',
+        'used_home_space', 'used_home_space_trend', 'used_memory', 'used_memory_trend',
+        'used_network', 'used_network_trend', 'used_processor', 'used_processor_trend',
+        'used_share_space', 'used_share_space_trend', 'used_swap_space',
+        'used_swap_space_trend', 'used_system_space', 'used_system_space_trend',
+        'warn_temperature', 'warn_temperature_of_max', 'warn_temperature_of_max_trend',
+        'warn_temperature_trend'
     )
 ORDER BY fault, measure;
 SCHEMA_SQL

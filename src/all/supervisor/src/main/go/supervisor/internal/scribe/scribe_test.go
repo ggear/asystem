@@ -336,19 +336,22 @@ func TestScribe_SubjectEndpoint(t *testing.T) {
 }
 
 func TestScribe_WrapsLongDetail(t *testing.T) {
-	budget := widthLine - widthPrefix()
+	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
 	tests := []struct {
 		name          string
+		width         int
 		spaced        bool
 		budgets       int
 		expectedLines int
 	}{
-		{name: "happy_short_detail_is_one_chunk", spaced: true, budgets: 0, expectedLines: 1},
-		{name: "happy_spaced_detail_wraps", spaced: true, budgets: 2, expectedLines: 3},
-		{name: "happy_unbroken_detail_wraps", spaced: false, budgets: 2, expectedLines: 3},
+		{name: "happy_short_detail_is_one_row", width: 250, spaced: true, budgets: 0, expectedLines: 1},
+		{name: "happy_spaced_detail_wraps", width: 250, spaced: true, budgets: 2, expectedLines: 3},
+		{name: "happy_unbroken_detail_wraps", width: 250, spaced: false, budgets: 2, expectedLines: 3},
+		{name: "happy_narrow_terminal_keeps_one_row", width: prefix + widthVerb + 1, spaced: true, budgets: 2, expectedLines: 1},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
+			budget := testCase.width - prefix - widthVerb - 1
 			detail := "[1] example"
 			if testCase.budgets > 0 {
 				length := budget*testCase.budgets + 10
@@ -357,20 +360,32 @@ func TestScribe_WrapsLongDetail(t *testing.T) {
 					detail = strings.TrimSpace(strings.Repeat("word ", length/5))
 				}
 			}
-			chunks := chunked(detail)
-			if len(chunks) != testCase.expectedLines {
-				t.Errorf("chunks: got %d want %d", len(chunks), testCase.expectedLines)
+			record := slog.NewRecord(time.Now(), slog.LevelWarn, "faulting", 0)
+			record.AddAttrs(
+				slog.String(keySource, "probe"),
+				slog.String(keySubject, "host/used_home_space"),
+				slog.String(keyAction, "sample"),
+				slog.Duration(keyDuration, time.Millisecond),
+				slog.String(keyDetail, detail),
+			)
+			rows := OverlayLines(LogLine{Time: record.Time, Level: record.Level, Message: format(record)}, testCase.width)
+			if len(rows) != testCase.expectedLines {
+				t.Fatalf("rows: got %d want %d", len(rows), testCase.expectedLines)
 			}
 			carried := ""
-			for index, chunk := range chunks {
-				if len(chunk) > budget {
-					t.Errorf("width: got %d want at most %d for chunk %d", len(chunk), budget, index)
+			for index, row := range rows {
+				if len(rows) > 1 && len(row) > testCase.width {
+					t.Errorf("width: got %d want at most %d for row %d", len(row), testCase.width, index)
 				}
-				continues := index < len(chunks)-1
-				if got := strings.HasSuffix(chunk, wrapEllipsis); got != continues {
-					t.Errorf("ellipsis: got %v want %v for chunk %d", got, continues, index)
+				if index > 0 {
+					if got := row[:prefix]; got != rows[0][:prefix] {
+						t.Errorf("prefix: got %q want %q for row %d", got, rows[0][:prefix], index)
+					}
+					if got := row[prefix : prefix+widthVerb]; strings.TrimSpace(got) != "" {
+						t.Errorf("verb: got %q want blank for row %d", got, index)
+					}
 				}
-				carried += strings.TrimSuffix(chunk, wrapEllipsis)
+				carried += strings.TrimSuffix(row[prefix+widthVerb+1:], wrapEllipsis)
 			}
 			if got := strings.Join(strings.Fields(carried), " "); got != strings.Join(strings.Fields(detail), " ") {
 				t.Errorf("detail: got %q want %q", got, detail)

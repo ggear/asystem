@@ -16,7 +16,7 @@ const (
 	MetricHostWarnTemperature
 	MetricHostSpinFanSpeed
 	MetricHostLifeUsedDrives
-	MetricHostUsedSystemSpace
+	MetricHostUsedHomeSpace
 	MetricHostUsedShareSpace
 	MetricHostUsedBackupSpace
 	MetricHostUsedSwapSpace

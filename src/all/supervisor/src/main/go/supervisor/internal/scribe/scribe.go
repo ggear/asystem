@@ -130,15 +130,8 @@ func (l Logger) log(level slog.Level, verb string, started time.Time, detail str
 	if len(args) > 0 {
 		detail = fmt.Sprintf(detail, args...)
 	}
-	elapsed := time.Since(started)
-	for index, chunk := range chunked(detail) {
-		message := verb
-		if index > 0 {
-			message = ""
-		}
-		slog.Log(context.Background(), level, message, keySource, l.source.String(), keySubject, l.subject.String(),
-			keyAction, l.action.String(), keyDuration, elapsed, keyDetail, chunk)
-	}
+	slog.Log(context.Background(), level, verb, keySource, l.source.String(), keySubject, l.subject.String(),
+		keyAction, l.action.String(), keyDuration, time.Since(started), keyDetail, detail)
 }
 
 func Level() slog.Level {
@@ -291,6 +284,30 @@ func OverlayLine(line LogLine) string {
 	return line.Time.Format(overlayTimeLayout) + " " + pad(line.Level.String(), widthLevel) + " " + line.Message
 }
 
+// OverlayLines renders one buffered line as the rows the watch overlay draws, wrapping a detail too wide for the
+// terminal onto further rows that repeat every column but the verb. Wrapping belongs to the overlay alone — the file
+// and stdout carry the whole detail on one line, since they are read with a pager and grepped by position — so the
+// width is the terminal's rather than a constant, and a terminal too narrow to hold a readable detail column falls
+// back to the single line the caller clips.
+func OverlayLines(line LogLine, width int) []string {
+	rendered := OverlayLine(line)
+	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
+	budget := width - prefix - widthVerb - 1
+	if len(rendered) <= width || budget < widthWrapMin || len(rendered) <= prefix+widthVerb+1 {
+		return []string{rendered}
+	}
+	head, verbText, detail := rendered[:prefix], rendered[prefix:prefix+widthVerb], rendered[prefix+widthVerb+1:]
+	var lines []string
+	for index, chunk := range chunked(detail, budget) {
+		slot := verbText
+		if index > 0 {
+			slot = strings.Repeat(" ", widthVerb)
+		}
+		lines = append(lines, strings.TrimRight(head+slot+" "+chunk, " "))
+	}
+	return lines
+}
+
 func headerLine() string {
 	return pad("TIME", widthTime) + " " + pad("LEVEL", widthLevel) + " " +
 		columnLine("SOURCE", "SUBJECT", "ACTION", "DURATION", "DETAIL")
@@ -323,12 +340,9 @@ func format(record slog.Record) string {
 	return columnLine(source, subject, action, duration, verb(record.Message)+detail)
 }
 
-// chunked splits a detail too long for widthLine into the records a line each sink writes, cutting at a space where
-// there is one and mid-token where there is not, and ending every continuing chunk with wrapEllipsis. Every chunk is
-// logged as its own record carrying the same columns, so a wrapped line stays parseable by position and greppable by
-// subject, with only the verb blanked to mark it as a continuation.
-func chunked(detail string) []string {
-	budget := widthLine - widthPrefix()
+// chunked splits a detail too long for the budget, cutting at a space where there is one and mid-token where there is
+// not, and ending every continuing chunk with wrapEllipsis.
+func chunked(detail string, budget int) []string {
 	if budget < widthWrapMin || len(detail) <= budget {
 		return []string{detail}
 	}
@@ -351,10 +365,6 @@ func split(detail string, limit int) (string, string, bool) {
 		return detail[:limit], detail[limit:], false
 	}
 	return strings.TrimRight(detail[:cut], " "), strings.TrimLeft(detail[cut:], " "), true
-}
-
-func widthPrefix() int {
-	return widthTime + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1 + widthVerb + 1
 }
 
 func columnLine(source, subject, action, duration, detail string) string {
@@ -415,7 +425,6 @@ const (
 	widthAction     = 10
 	widthDuration   = 8
 	widthVerb       = 8
-	widthLine       = 250
 	widthWrapMin    = 40
 	wrapEllipsis    = "..."
 	widthSubjectMin = 24

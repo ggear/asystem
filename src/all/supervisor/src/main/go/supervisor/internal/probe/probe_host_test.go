@@ -691,7 +691,7 @@ func TestProbeHost_LifeUsedDrives(t *testing.T) {
 	}
 }
 
-func TestProbeHost_UsedSystemSpace(t *testing.T) {
+func TestProbeHost_UsedHomeSpace(t *testing.T) {
 	tests := []struct {
 		name          string
 		expectedValue int8
@@ -710,7 +710,7 @@ func TestProbeHost_UsedSystemSpace(t *testing.T) {
 			t.Cleanup(resetMounts)
 			seedHostMounts(t)
 			probe := newHostProbe()
-			value, _, err := probe.usedSystemSpace()
+			value, _, err := probe.usedHomeSpace()
 			if testCase.expectedError && err == nil {
 				t.Fatalf("expected error but got nil")
 			}

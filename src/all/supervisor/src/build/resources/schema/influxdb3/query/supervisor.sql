@@ -232,9 +232,9 @@ SELECT
     round(last_value(life_used_drives_trend ORDER BY time), 1)   AS "Life Used Drives Trend",
     count(life_used_drives_trend)                                AS "Life Used Drives Trend Count",
     count(DISTINCT life_used_drives_trend)                       AS "Life Used Drives Trend Distinct",
-    round(last_value(used_system_space ORDER BY time), 1)        AS "Used System Space",
-    count(used_system_space)                                     AS "Used System Space Count",
-    count(DISTINCT used_system_space)                            AS "Used System Space Distinct"
+    round(last_value(used_home_space ORDER BY time), 1)          AS "Used Home Space",
+    count(used_home_space)                                       AS "Used Home Space Count",
+    count(DISTINCT used_home_space)                              AS "Used Home Space Distinct"
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -253,9 +253,9 @@ SELECT
     count(*)                                                     AS "Rows",
     min(time) + INTERVAL '480 minute'                            AS "Oldest",
     max(time) + INTERVAL '480 minute'                            AS "Newest",
-    round(last_value(used_system_space_trend ORDER BY time), 1)  AS "Used System Space Trend",
-    count(used_system_space_trend)                               AS "Used System Space Trend Count",
-    count(DISTINCT used_system_space_trend)                      AS "Used System Space Trend Distinct",
+    round(last_value(used_home_space_trend ORDER BY time), 1)    AS "Used Home Space Trend",
+    count(used_home_space_trend)                                 AS "Used Home Space Trend Count",
+    count(DISTINCT used_home_space_trend)                        AS "Used Home Space Trend Distinct",
     round(last_value(used_share_space ORDER BY time), 1)         AS "Used Share Space",
     count(used_share_space)                                      AS "Used Share Space Count",
     count(DISTINCT used_share_space)                             AS "Used Share Space Distinct"

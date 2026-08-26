@@ -179,7 +179,7 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 	d_1_0 := box{lblMid: text{ascii: "Used CPU "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedProcessor}
 	d_1_1 := box{lblMid: text{ascii: "Fail LOG "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncSpacer}
 	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostWarnTemperature}
-	d_1_3 := box{lblMid: text{ascii: "Used SYS "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeIncSpacer}
+	d_1_3 := box{lblMid: text{ascii: "Used HME "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedHomeSpace, resizeInc: resizeIncSpacer}
 
 	d_2_0 := box{lblMid: text{ascii: "Used RAM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedMemory}
 	d_2_1 := box{lblMid: text{ascii: "Fail SHR "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncSpacer}
@@ -333,7 +333,7 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 	d_1_0 := box{lblMid: text{ascii: "Used CPU "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedProcessor, resizeInc: resizeIncHistVal}
 	d_1_1 := box{lblMid: text{ascii: "Fail LOG "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedLogs, resizeInc: resizeIncHistVal}
 	d_1_2 := box{lblMid: text{ascii: "Warn TEM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostWarnTemperature, resizeInc: resizeIncHistVal}
-	d_1_3 := box{lblMid: text{ascii: "Used SYS "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeIncHistVal}
+	d_1_3 := box{lblMid: text{ascii: "Used HME "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedHomeSpace, resizeInc: resizeIncHistVal}
 
 	d_2_0 := box{lblMid: text{ascii: "Used RAM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedMemory, resizeInc: resizeIncHistVal}
 	d_2_1 := box{lblMid: text{ascii: "Fail SHR "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedShares, resizeInc: resizeIncHistVal}

@@ -18,7 +18,7 @@ func _() {
 	_ = x[MetricHostWarnTemperature-7]
 	_ = x[MetricHostSpinFanSpeed-8]
 	_ = x[MetricHostLifeUsedDrives-9]
-	_ = x[MetricHostUsedSystemSpace-10]
+	_ = x[MetricHostUsedHomeSpace-10]
 	_ = x[MetricHostUsedShareSpace-11]
 	_ = x[MetricHostUsedBackupSpace-12]
 	_ = x[MetricHostUsedSwapSpace-13]
@@ -46,9 +46,9 @@ func _() {
 	_ = x[Self - -1]
 }
 
-const _ID_name = "SelfMetricHostMetricHostUsedProcessorMetricHostUsedMemoryMetricHostAllocatedMemoryMetricHostFailedLogsMetricHostFailedSharesMetricHostFailedBackupsMetricHostWarnTemperatureMetricHostSpinFanSpeedMetricHostLifeUsedDrivesMetricHostUsedSystemSpaceMetricHostUsedShareSpaceMetricHostUsedBackupSpaceMetricHostUsedSwapSpaceMetricHostUsedDiskOpsMetricHostUsedNetworkMetricHostRunningTimeMetricHostTemperatureMetricHostServicesMetricHostServicesMaxMemoryMetricServiceMetricServiceBackupStatusMetricServiceHealthStatusMetricServiceConfiguredStatusMetricServiceNameMetricServiceVersionMetricServiceUsedProcessorMetricServiceUsedMemoryMetricServiceUsedDiskOpsMetricServiceUsedNetworkMetricServiceUpTimeMetricServiceMaxMemoryMetricServiceRestartCountMetricHostFailedDrivesMetricMax"
+const _ID_name = "SelfMetricHostMetricHostUsedProcessorMetricHostUsedMemoryMetricHostAllocatedMemoryMetricHostFailedLogsMetricHostFailedSharesMetricHostFailedBackupsMetricHostWarnTemperatureMetricHostSpinFanSpeedMetricHostLifeUsedDrivesMetricHostUsedHomeSpaceMetricHostUsedShareSpaceMetricHostUsedBackupSpaceMetricHostUsedSwapSpaceMetricHostUsedDiskOpsMetricHostUsedNetworkMetricHostRunningTimeMetricHostTemperatureMetricHostServicesMetricHostServicesMaxMemoryMetricServiceMetricServiceBackupStatusMetricServiceHealthStatusMetricServiceConfiguredStatusMetricServiceNameMetricServiceVersionMetricServiceUsedProcessorMetricServiceUsedMemoryMetricServiceUsedDiskOpsMetricServiceUsedNetworkMetricServiceUpTimeMetricServiceMaxMemoryMetricServiceRestartCountMetricHostFailedDrivesMetricMax"
 
-var _ID_index = [...]uint16{0, 4, 14, 37, 57, 82, 102, 124, 147, 172, 194, 218, 243, 267, 292, 315, 336, 357, 378, 399, 417, 444, 457, 482, 507, 536, 553, 573, 599, 622, 646, 670, 689, 711, 736, 758, 767}
+var _ID_index = [...]uint16{0, 4, 14, 37, 57, 82, 102, 124, 147, 172, 194, 218, 241, 265, 290, 313, 334, 355, 376, 397, 415, 442, 455, 480, 505, 534, 551, 571, 597, 620, 644, 668, 687, 709, 734, 756, 765}
 
 func (i ID) String() string {
 	idx := int(i) - -1

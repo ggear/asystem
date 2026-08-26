@@ -321,7 +321,7 @@ type installComposeService struct {
 }
 
 const (
-	installRoot            = "/var/lib/asystem/install"
+	installRoot            = mountHomeRoot + "/install"
 	installLatestLink      = "latest"
 	installSleepMarker     = ".sleep"
 	installEnvironmentFile = ".env"

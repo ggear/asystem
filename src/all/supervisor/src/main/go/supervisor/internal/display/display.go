@@ -462,20 +462,28 @@ func (d *Display) Logging() {
 		return runewidth.Truncate(text, d.dimsInit.cols, tail)
 	}
 	d.terminal.draw(0, 1, clip(scribe.OverlayHeader()), colourChat)
-	lines := d.logBuffer.Tail(maxLines - 2)
-	for row, line := range lines {
+	capacity := maxLines - 2
+	var rows []overlayRow
+	for _, line := range d.logBuffer.Tail(capacity) {
+		for _, text := range scribe.OverlayLines(line, d.dimsInit.cols) {
+			rows = append(rows, overlayRow{text: text, level: line.Level})
+		}
+	}
+	if len(rows) > capacity {
+		rows = rows[len(rows)-capacity:]
+	}
+	for row, line := range rows {
 		row += 2
-		text := clip(scribe.OverlayLine(line))
 		c := colourChat
 		switch {
-		case line.Level >= slog.LevelError:
+		case line.level >= slog.LevelError:
 			c = colourAlert
-		case line.Level >= slog.LevelWarn:
+		case line.level >= slog.LevelWarn:
 			c = colourWarn
-		case line.Level >= slog.LevelInfo:
+		case line.level >= slog.LevelInfo:
 			c = colourCheer
 		}
-		d.terminal.draw(0, row, text, c)
+		d.terminal.draw(0, row, clip(line.text), c)
 	}
 }
 
@@ -702,6 +710,11 @@ const (
 	tickPeriod = 250 * time.Millisecond
 	tickStall  = 5 * time.Second
 )
+
+type overlayRow struct {
+	text  string
+	level slog.Level
+}
 
 const (
 	surfaceTerminal = "terminal"

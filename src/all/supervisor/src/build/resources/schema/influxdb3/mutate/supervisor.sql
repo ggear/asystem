@@ -61,3 +61,33 @@ WHERE
     AND service IS NULL
     AND spin_fan_speed_of_max_trend IS NOT NULL
 ORDER BY time;
+
+-- backfill [used_home_space] from the renamed [used_system_space], one line of protocol per row
+SELECT
+    'supervisor' ||
+            ',module=' || module ||
+            ',host=' || host ||
+            ' used_home_space=' || CAST(CAST(used_system_space AS BIGINT) AS VARCHAR) || 'i' ||
+            ' ' || CAST(CAST(time AS BIGINT) AS VARCHAR) AS line
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+    AND used_system_space IS NOT NULL
+ORDER BY time;
+
+-- backfill [used_home_space_trend] from the renamed [used_system_space_trend], one line of protocol per row
+SELECT
+    'supervisor' ||
+            ',module=' || module ||
+            ',host=' || host ||
+            ' used_home_space_trend=' || CAST(CAST(used_system_space_trend AS BIGINT) AS VARCHAR) || 'i' ||
+            ' ' || CAST(CAST(time AS BIGINT) AS VARCHAR) AS line
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+    AND used_system_space_trend IS NOT NULL
+ORDER BY time;

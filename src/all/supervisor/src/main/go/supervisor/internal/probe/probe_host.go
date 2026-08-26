@@ -32,7 +32,7 @@ type hostProbe struct {
 	spinFanSpeedInt    *stats.IntStats
 	failedDrivesInt    *stats.IntStats
 	lifeUsedDrivesInt  *stats.IntStats
-	usedSystemSpaceInt *stats.IntStats
+	usedHomeSpaceInt   *stats.IntStats
 	usedShareSpaceInt  *stats.IntStats
 	usedBackupSpaceInt *stats.IntStats
 	usedSwapSpaceInt   *stats.IntStats
@@ -72,7 +72,7 @@ func (p *hostProbe) metrics() []metric.ID {
 		metric.MetricHostSpinFanSpeed,
 		metric.MetricHostFailedDrives,
 		metric.MetricHostLifeUsedDrives,
-		metric.MetricHostUsedSystemSpace,
+		metric.MetricHostUsedHomeSpace,
 		metric.MetricHostUsedShareSpace,
 		metric.MetricHostUsedBackupSpace,
 		metric.MetricHostUsedSwapSpace,
@@ -101,7 +101,7 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.spinFanSpeedInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.failedDrivesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.lifeUsedDrivesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	p.usedSystemSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+	p.usedHomeSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedShareSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedBackupSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedSwapSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
@@ -217,12 +217,12 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
-			metric.MetricHostUsedSystemSpace,
+			metric.MetricHostUsedHomeSpace,
 			metric.ServiceNameUnset,
-			p.usedSystemSpace,
-			p.usedSystemSpaceInt,
-			func() int8 { return p.usedSystemSpaceInt.PulseMax() },
-			func() int8 { return p.usedSystemSpaceInt.TrendMax() },
+			p.usedHomeSpace,
+			p.usedHomeSpaceInt,
+			func() int8 { return p.usedHomeSpaceInt.PulseMax() },
+			func() int8 { return p.usedHomeSpaceInt.TrendMax() },
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
@@ -402,8 +402,8 @@ func (p *hostProbe) lifeUsedDrives() (int8, derivation, error) {
 	return p.mounts().lifeUsedDrives()
 }
 
-func (p *hostProbe) usedSystemSpace() (int8, derivation, error) {
-	return p.mounts().usedSystemSpace()
+func (p *hostProbe) usedHomeSpace() (int8, derivation, error) {
+	return p.mounts().usedHomeSpace()
 }
 
 func (p *hostProbe) usedShareSpace() (int8, derivation, error) {

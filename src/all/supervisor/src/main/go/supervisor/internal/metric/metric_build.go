@@ -144,12 +144,12 @@ var metricBuildersByID = []builder{
 		pulseRule:    All(Bounded(Self, AtMost, 90), Healthy(MetricHostFailedDrives)),
 		trendRule:    All(Bounded(Self, AtMost, 80), Healthy(MetricHostFailedDrives)),
 	},
-	MetricHostUsedSystemSpace: {
-		id:          MetricHostUsedSystemSpace,
+	MetricHostUsedHomeSpace: {
+		id:          MetricHostUsedHomeSpace,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "space used by the fullest system volume",
-		template:    "supervisor/$HOST/$SCOPE/host/used_system_space",
+		description: "space used by the volume holding the module homes",
+		template:    "supervisor/$HOST/$SCOPE/host/used_home_space",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
 		trendRule:   Bounded(Self, AtMost, 80),

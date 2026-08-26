@@ -32,8 +32,8 @@
 #   field spin_fan_speed_trend % 6s [fastest fan speed against its rated maximum, smoothed across the trend window]
 #   field life_used_drives % 6s [rated endurance consumed by the most worn drive]
 #   field life_used_drives_trend % 6s [rated endurance consumed by the most worn drive, smoothed across the trend window]
-#   field used_system_space % 6s [space used by the fullest system volume]
-#   field used_system_space_trend % 6s [space used by the fullest system volume, smoothed across the trend window]
+#   field used_home_space % 6s [space used by the volume holding the asystem home]
+#   field used_home_space_trend % 6s [space used by the volume holding the asystem home, smoothed across the trend window]
 #   field used_share_space % 6s [space used across the local share volumes, summed as one pool]
 #   field used_share_space_trend % 6s [space used across the local share volumes, summed as one pool, smoothed across the trend window]
 #   field used_backup_space % 6s [backup volume space used, not yet implemented]
@@ -75,8 +75,8 @@ supervisor,
     spin_fan_speed_trend=<int>,
     life_used_drives=<int>,
     life_used_drives_trend=<int>,
-    used_system_space=<int>,
-    used_system_space_trend=<int>,
+    used_home_space=<int>,
+    used_home_space_trend=<int>,
     used_share_space=<int>,
     used_share_space_trend=<int>,
     used_backup_space=<int>,

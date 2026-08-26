@@ -40,6 +40,7 @@ if __name__ == "__main__":
     }, database_renamed_measures={
         "warn_temperature_of_max": "warn_temperature",
         "spin_fan_speed_of_max": "spin_fan_speed",
+        "used_system_space": "used_home_space",
     })
     metadata_supervisor_schema = []
     for host, services in sorted(modules_server.items(), key=itemgetter(0)):

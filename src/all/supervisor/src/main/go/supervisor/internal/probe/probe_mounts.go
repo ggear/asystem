@@ -40,6 +40,7 @@ type driveWear struct {
 
 type mountSnapshot struct {
 	taken  time.Time
+	table  error
 	mounts []mountUsage
 	drives []driveWear
 	shares int
@@ -140,36 +141,40 @@ func (s *mountSet) snapshot() (*mountSnapshot, error) {
 	return s.current, nil
 }
 
-func (s *mountSet) usedSystemSpace() (int8, derivation, error) {
+func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 	taken, err := s.snapshot()
 	if err != nil {
 		return 0, derivation{}, err
 	}
-	worst := 0.0
-	worstAt := ""
-	found := false
+	if taken.table != nil {
+		return 0, derivation{}, fmt.Errorf("no home filesystem read, mount table [%s] unreadable with [%v] [%w]",
+			filepath.Join(s.root, mountTablePath), taken.table, errEnvironment)
+	}
 	systems := 0
-	for _, mount := range taken.mounts {
+	var home *mountUsage
+	for index, mount := range taken.mounts {
 		if mount.share {
 			continue
 		}
 		systems++
-		if !mount.measured || mount.total == 0 {
+		if !mountHolds(mount.mountpoint, mountHomeRoot) {
 			continue
 		}
-		used := float64(mount.used) / float64(mount.total) * 100.0
-		if !found || used > worst {
-			worst = used
-			worstAt = mount.mountpoint
+		if home == nil || len(mount.mountpoint) > len(home.mountpoint) {
+			home = &taken.mounts[index]
 		}
-		found = true
 	}
-	if !found {
-		return 0, derivation{}, fmt.Errorf("no system filesystems measured of [%d] classed system and [%d] mounts scanned from [%s], failures [%s] [%w]",
-			systems, len(taken.mounts), filepath.Join(s.root, mountTablePath), mountReasons(taken.mounts, false), errEnvironment)
+	if home == nil {
+		return 0, derivation{}, fmt.Errorf("no home filesystem found holding [%s] of [%d] classed system and [%d] mounts scanned from [%s] [%w]",
+			mountHomeRoot, systems, len(taken.mounts), filepath.Join(s.root, mountTablePath), errEnvironment)
 	}
-	return int8Percent(worst), derived(scribe.ActionSample, "computed [%3d] pct used system, fullest of [%d] filesystems [%s], snapshot taken [%s] ago",
-		int8Percent(worst), systems, worstAt, time.Since(taken.taken).Truncate(time.Second)), nil
+	if !home.measured || home.total == 0 {
+		return 0, derivation{}, fmt.Errorf("no home filesystem measured of [%s] holding [%s], failures [%s] [%w]",
+			home.mountpoint, mountHomeRoot, mountReasons(taken.mounts, false), errEnvironment)
+	}
+	used := float64(home.used) / float64(home.total) * 100.0
+	return int8Percent(used), derived(scribe.ActionSample, "computed [%3d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
+		int8Percent(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, time.Since(taken.taken).Truncate(time.Second)), nil
 }
 
 func (s *mountSet) usedShareSpace() (int8, derivation, error) {
@@ -265,7 +270,8 @@ func (s *mountSet) failedDrives() (int8, derivation, error) {
 func (s *mountSet) collect() *mountSnapshot {
 	collectStart := time.Now()
 	taken := &mountSnapshot{taken: time.Now()}
-	mounts := s.parseMounts()
+	mounts, tableErr := s.parseMounts()
+	taken.table = tableErr
 	expected := s.parseFstab()
 	for index := range mounts {
 		measureStart := time.Now()
@@ -316,12 +322,12 @@ func (s *mountSet) collect() *mountSnapshot {
 	return taken
 }
 
-func (s *mountSet) parseMounts() []mountUsage {
+func (s *mountSet) parseMounts() ([]mountUsage, error) {
 	parseStart := time.Now()
 	data, err := os.ReadFile(filepath.Join(s.root, mountTablePath))
 	if err != nil {
 		scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Warn("noaccess", parseStart, "mount table with [%v], reporting no filesystems", err)
-		return nil
+		return nil, err
 	}
 	devices := map[string]string{}
 	dropped := map[string]int{}
@@ -362,7 +368,7 @@ func (s *mountSet) parseMounts() []mountUsage {
 	sort.Slice(deduped, func(first, second int) bool { return deduped[first].mountpoint < deduped[second].mountpoint })
 	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Debug("examined", parseStart, "lines [%3d], kept [%d] as [%s], dropped [%d] as [%s]",
 		lines, len(deduped), mountSummary(deduped), lines-len(deduped), mountDropped(dropped))
-	return deduped
+	return deduped, nil
 }
 
 // hosted maps a mountpoint as the table spells it onto the host-absolute path the rest of the probe reasons about.
@@ -754,6 +760,13 @@ func mountRemotes(mounts []mountUsage) int {
 	return remotes
 }
 
+func mountHolds(mountpoint, path string) bool {
+	if mountpoint == "/" {
+		return true
+	}
+	return path == mountpoint || strings.HasPrefix(path, mountpoint+"/")
+}
+
 func mountClass(fstype, mountpoint string) (bool, bool, bool) {
 	if mountRemoteTypes[fstype] {
 		return true, true, strings.HasPrefix(mountpoint, mountShareRoot+"/")
@@ -815,6 +828,7 @@ const (
 	mountFstabPath           = "etc/fstab"
 	mountBlockPath           = "sys/class/block"
 	mountShareRoot           = "/share"
+	mountHomeRoot            = "/var/lib/asystem"
 	mountOutsideRoot         = "outside-root"
 	mountContentDir          = "media"
 	mountBootRoot            = "/boot"

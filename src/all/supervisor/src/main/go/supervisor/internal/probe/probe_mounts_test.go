@@ -67,7 +67,8 @@ func TestProbeMounts_Classification(t *testing.T) {
 			root := writeMountTree(t, testCase.mounts, "", nil)
 			set := newMountFixture(t, root, nil, nil)
 			var system, local, remote []string
-			for _, mount := range set.parseMounts() {
+			parsed, _ := set.parseMounts()
+			for _, mount := range parsed {
 				switch {
 				case mount.remote:
 					remote = append(remote, mount.mountpoint)
@@ -99,12 +100,12 @@ func TestProbeMounts_Usage(t *testing.T) {
 	}
 	set := newMountFixture(t, root, sizes, nil)
 	set.current = set.collect()
-	system, _, err := set.usedSystemSpace()
+	system, _, err := set.usedHomeSpace()
 	if err != nil {
-		t.Fatalf("usedSystemSpace: unexpected error %v", err)
+		t.Fatalf("usedHomeSpace: unexpected error %v", err)
 	}
 	if system != 38 {
-		t.Errorf("usedSystemSpace: got %d want %d", system, 38)
+		t.Errorf("usedHomeSpace: got %d want %d", system, 38)
 	}
 	share, _, err := set.usedShareSpace()
 	if err != nil {
@@ -112,6 +113,53 @@ func TestProbeMounts_Usage(t *testing.T) {
 	}
 	if share != 20 {
 		t.Errorf("usedShareSpace: got %d want %d", share, 20)
+	}
+}
+
+func TestProbeMounts_HomeVolume(t *testing.T) {
+	tests := []struct {
+		name          string
+		mounts        string
+		sizes         map[string][2]uint64
+		expectedValue int8
+		expectedError bool
+	}{
+		{
+			name: "happy_deepest_volume_holding_the_home_wins",
+			mounts: "/dev/mapper/vg-root / ext4 rw 0 0\n" +
+				"/dev/mapper/vg-var /var ext4 rw 0 0\n",
+			sizes:         map[string][2]uint64{"/": {1000, 900}, "/var": {1000, 380}},
+			expectedValue: 38,
+			expectedError: false,
+		},
+		{
+			name:          "happy_root_holds_the_home_when_nothing_deeper_is_mounted",
+			mounts:        "/dev/nvme0n1p6 / btrfs rw 0 0\n",
+			sizes:         map[string][2]uint64{"/": {1000, 140}},
+			expectedValue: 14,
+			expectedError: false,
+		},
+		{
+			name:          "sad_unmeasurable_home_volume_errors",
+			mounts:        "/dev/nvme0n1p6 / btrfs rw 0 0\n",
+			sizes:         map[string][2]uint64{},
+			expectedValue: 0,
+			expectedError: true,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Cleanup(resetMounts)
+			set := newMountFixture(t, writeMountTree(t, testCase.mounts, "", nil), testCase.sizes, nil)
+			set.current = set.collect()
+			value, _, err := set.usedHomeSpace()
+			if testCase.expectedError != (err != nil) {
+				t.Fatalf("error: got %v want error %v", err, testCase.expectedError)
+			}
+			if !testCase.expectedError && value != testCase.expectedValue {
+				t.Errorf("value: got %d want %d", value, testCase.expectedValue)
+			}
+		})
 	}
 }
 
@@ -379,8 +427,8 @@ func TestProbeMounts_RefreshPanicIsContained(t *testing.T) {
 	if refreshing {
 		t.Fatalf("Got the refresher still marked running after a panic, expected it released")
 	}
-	if _, _, err := set.usedSystemSpace(); err == nil {
-		t.Fatalf("usedSystemSpace: expected the panicking mount to read not ok rather than crash the process")
+	if _, _, err := set.usedHomeSpace(); err == nil {
+		t.Fatalf("usedHomeSpace: expected the panicking mount to read not ok rather than crash the process")
 	}
 }
 
@@ -431,8 +479,8 @@ func TestProbeMounts_WarmingUp(t *testing.T) {
 	t.Cleanup(resetMounts)
 	root := writeMountTree(t, "/dev/sda2 / ext4 rw 0 0\n", "", nil)
 	set := newMountFixture(t, root, nil, nil)
-	if _, _, err := set.usedSystemSpace(); err == nil {
-		t.Fatalf("usedSystemSpace: expected the warming up error before the first snapshot")
+	if _, _, err := set.usedHomeSpace(); err == nil {
+		t.Fatalf("usedHomeSpace: expected the warming up error before the first snapshot")
 	}
 }
 
@@ -441,8 +489,8 @@ func TestProbeMounts_UnreadableMountTable(t *testing.T) {
 	root := t.TempDir()
 	set := newMountFixture(t, root, nil, nil)
 	set.current = set.collect()
-	if _, _, err := set.usedSystemSpace(); err == nil {
-		t.Fatalf("usedSystemSpace: expected an error when the mount table cannot be read")
+	if _, _, err := set.usedHomeSpace(); err == nil {
+		t.Fatalf("usedHomeSpace: expected an error when the mount table cannot be read")
 	}
 }
 
@@ -477,7 +525,11 @@ func newMountFixture(t *testing.T, root string, sizes map[string][2]uint64, hung
 		if hanging[path] {
 			return 0, 0, fmt.Errorf("mount hung")
 		}
-		size, found := sizes[strings.TrimPrefix(path, root)]
+		mountpoint := strings.TrimPrefix(path, root)
+		if mountpoint == "" {
+			mountpoint = "/"
+		}
+		size, found := sizes[mountpoint]
 		if !found {
 			return 0, 0, fmt.Errorf("no fixture for [%s]", path)
 		}
@@ -498,7 +550,8 @@ func TestProbeMounts_ContainerMountsAreDropped(t *testing.T) {
 			"/dev/sdb1 "+filepath.Join(root, "/share/10")+" ext4 rw 0 0\n")
 	set := newMountFixture(t, root, nil, nil)
 	var kept []string
-	for _, mount := range set.parseMounts() {
+	parsed, _ := set.parseMounts()
+	for _, mount := range parsed {
 		kept = append(kept, mount.mountpoint)
 	}
 	expected := []string{"/", "/share/10"}
