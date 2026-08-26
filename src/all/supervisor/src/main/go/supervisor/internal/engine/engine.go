@@ -727,6 +727,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
 						client.Publish(record.Topic, 0, true, payload)
 						txBytes += len(payload)
+						scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debug("retained", processStart, "[%d] bytes at qos [0]", len(payload))
 					} else {
 						scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Error("faulting", processStart, "marshal with [%v]", jsonErr)
 					}
@@ -736,6 +737,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 						txBytes += len(payload)
 					}
 					client.Publish(record.Topic, 0, true, "")
+					scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debug("removals", processStart, "cleared with an empty payload at qos [0]")
 					toDelete = append(toDelete, serviceKey{host: guid.Host, service: guid.ServiceName})
 				}
 			}

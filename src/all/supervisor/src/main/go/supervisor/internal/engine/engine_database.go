@@ -171,6 +171,7 @@ func databaseBackoff(attempt int) time.Duration {
 func (d *databaseClient) write(ctx context.Context, data []byte) {
 	writeStart := time.Now()
 	err := d.client.Write(ctx, data)
+	retries := 0
 	for attempt := range databaseRetries {
 		if err == nil {
 			break
@@ -181,8 +182,10 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 		case <-time.After(databaseBackoff(attempt)):
 		}
 		err = d.client.Write(ctx, data)
+		retries = attempt + 1
 	}
 	if err == nil {
+		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionPublish).Debug("accepted", writeStart, "[%d] bytes of line protocol after [%d] retries", len(data), retries)
 		if !d.online {
 			d.online = true
 			d.connected(d.lostAt, "reconnected", d.attempts)
