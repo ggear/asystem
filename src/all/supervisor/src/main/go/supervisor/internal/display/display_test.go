@@ -1837,3 +1837,75 @@ func TestDisplay_Failed(t *testing.T) {
 		})
 	}
 }
+
+func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
+	tests := []struct {
+		name           string
+		failedHostID   metric.ID
+		expectedFailed colour
+		expectedClear  colour
+		expectedError  bool
+	}{
+		{name: "happy_life_used_drives_recovers", failedHostID: metric.MetricHostLifeUsedDrives, expectedFailed: colourAlert, expectedClear: colourChat, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			terminalDims := dimensions{rows(layout, 1), columns(layout, false, 1) + resizes(layout, 1)*10}
+			cache := metric.NewRecordCache()
+			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.cols, ThemeLight, false)
+			display, newErr := NewDisplay(cache, func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				[]string{"labnode-one"}, terminalDims.cols, terminalDims.rows, 0, 0, FormatCompact, false, config.Periods{}, true, "", nil, 0)
+			if newErr != nil {
+				t.Fatalf("NewDisplay: got %v want nil", newErr)
+			}
+			if _, compileErr := display.Compile(); compileErr != nil {
+				t.Fatalf("Compile: got %v want nil", compileErr)
+			}
+			if loadErr := display.Load(); loadErr != nil {
+				t.Fatalf("Load: got %v want nil", loadErr)
+			}
+			store := func(failed bool) {
+				for host, ids := range cache.ListenerIDs() {
+					for _, id := range ids {
+						if metric.GetIDKind(id) == metric.MetricKindService {
+							continue
+						}
+						hostRecord := metric.NewRecord(*metric.NewIntValue(true, 0, true, 0))
+						hostRecord.Value.Failed = failed && id == testCase.failedHostID
+						cache.Store(metric.NewRecordGUID(id, host), &hostRecord)
+					}
+				}
+			}
+			labelColour := func() colour {
+				for y := 0; y < terminalDims.rows; y++ {
+					line := make([]rune, 0, terminalDims.cols)
+					for x := 0; x < terminalDims.cols; x++ {
+						char, _, _ := terminal.cell(x, y)
+						line = append(line, char)
+					}
+					if index := strings.Index(string(line), "Hlth SSD"); index >= 0 {
+						_, found, _ := terminal.cell(index, y)
+						return found
+					}
+				}
+				t.Fatalf("label [Hlth SSD]: got no match want the host box")
+				return colourChat
+			}
+			store(true)
+			for index := range display.boxes {
+				display.boxes[index].drawLabels(display)
+			}
+			if got := labelColour(); got != testCase.expectedFailed {
+				t.Errorf("failed label colour: got %v want %v", got, testCase.expectedFailed)
+			}
+			store(false)
+			for index := range display.boxes {
+				display.boxes[index].drawValue(display)
+			}
+			if got := labelColour(); got != testCase.expectedClear {
+				t.Errorf("recovered label colour: got %v want %v", got, testCase.expectedClear)
+			}
+		})
+	}
+}

@@ -604,7 +604,7 @@ func driveKinds(physical string) []string {
 	if strings.HasPrefix(physical, drivePrefixNVME) {
 		return []string{driveKindNVME}
 	}
-	return []string{driveKindSAT, driveKindSCSI}
+	return []string{driveKindSAT, driveKindRealtek, driveKindJMicron, driveKindASMedia, driveKindSCSI}
 }
 
 func (s *mountSet) mapper(name string) string {
@@ -1083,6 +1083,9 @@ const (
 	driveNamespaceFirst      = "n1"
 	driveKindNVME            = "nvme"
 	driveKindSAT             = "sat"
+	driveKindRealtek         = "sntrealtek"
+	driveKindJMicron         = "sntjmicron"
+	driveKindASMedia         = "sntasmedia"
 	driveKindSCSI            = "scsi"
 	mountDeadline            = 5 * time.Second
 	mountRetry               = time.Minute

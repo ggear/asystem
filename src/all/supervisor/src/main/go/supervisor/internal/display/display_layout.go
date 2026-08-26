@@ -631,6 +631,9 @@ func (b *box) drawValue(display *Display) {
 		}
 		return
 	}
+	if label := b.lblMid.pick(display.useUnicode); !b.valOpt && label != "" {
+		display.terminal.draw(b.position.cols+b.compiled.lblLhsLen, b.position.rows, label, colourChat)
+	}
 	if overflow {
 		b.draw(display, true)
 		display.terminal.draw(
