@@ -55,12 +55,12 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		probeCreateStart := time.Now()
 		err := p.create(configPath, cache, mask, periods)
 		if err != nil {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionStart).Error("faulting", probeCreateStart, "probe [%s] with [%v]", p.name(), err)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionStart).Error("faulting", probeCreateStart, "create failed with [%v]", err)
 			delete(probeMap, p)
-			scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionStart).Debug("removals", probeCreateStart, "probe [%s] removed from the poll set", p.name())
+			scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionStart).Debug("removals", probeCreateStart, "removed from the poll set")
 			continue
 		}
-		scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionStart).Debug("prepared", probeCreateStart, "probe [%s] metrics [%d]", p.name(), len(p.metrics()))
+		scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionStart).Debug("prepared", probeCreateStart, "metrics [%d]", len(p.metrics()))
 	}
 	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionStart).Debug("prepared", createStart, "probes [%d]", len(probeMap))
 	verifyGates(probeMap)
@@ -99,9 +99,9 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 			for p := range execProbes {
 				probeStart := time.Now()
 				if err := p.run(ctx, isPulse); err != nil {
-					scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionSample).Error("faulting", probeStart, "probe [%s] pulse [%v] with [%v]", p.name(), isPulse, err)
+					scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionSample).Error("faulting", probeStart, "pulse [%v] with [%v]", isPulse, err)
 				}
-				scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionSample).Debug("reported", probeStart, "probe [%s] pulse [%v] metrics [%d]", p.name(), isPulse, len(p.metrics()))
+				scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionSample).Debug("reported", probeStart, "pulse [%v] metrics [%d]", isPulse, len(p.metrics()))
 			}
 			if isPulse {
 				heartbeatPulseCount--
@@ -261,8 +261,8 @@ func runMetricCacheTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetr
 	if !isPulse || census.total == 0 {
 		return
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionCensus).Debug("reported", tasksStart, "probe [%s] metrics [%3d]%s, green [%d] amber [%d] red [%d] unknown [%d]%s",
-		p.name(), census.total, census.subject(), census.green, census.amber, census.red, census.unknown, census.faults())
+	scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionCensus).Debug("reported", tasksStart, "metrics [%3d]%s, green [%d] amber [%d] red [%d] unknown [%d]%s",
+		census.total, census.subject(), census.green, census.amber, census.red, census.unknown, census.faults())
 }
 
 func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTask) string {

@@ -314,6 +314,41 @@ func TestScribe_FormatColumns(t *testing.T) {
 	}
 }
 
+func TestScribe_WrapsLongDetail(t *testing.T) {
+	budget := widthLine - widthPrefix()
+	tests := []struct {
+		name          string
+		detail        string
+		expectedLines int
+	}{
+		{name: "happy_short_detail_is_one_chunk", detail: "[1] example", expectedLines: 1},
+		{name: "happy_spaced_detail_wraps", detail: strings.Repeat("word ", 60), expectedLines: 3},
+		{name: "happy_unbroken_detail_wraps", detail: strings.Repeat("x", 300), expectedLines: 3},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			chunks := chunked(testCase.detail)
+			if len(chunks) != testCase.expectedLines {
+				t.Errorf("chunks: got %d want %d", len(chunks), testCase.expectedLines)
+			}
+			carried := ""
+			for index, chunk := range chunks {
+				if len(chunk) > budget {
+					t.Errorf("width: got %d want at most %d for chunk %d", len(chunk), budget, index)
+				}
+				continues := index < len(chunks)-1
+				if got := strings.HasSuffix(chunk, wrapEllipsis); got != continues {
+					t.Errorf("ellipsis: got %v want %v for chunk %d", got, continues, index)
+				}
+				carried += strings.TrimSuffix(chunk, wrapEllipsis)
+			}
+			if got := strings.Join(strings.Fields(carried), " "); got != strings.Join(strings.Fields(testCase.detail), " ") {
+				t.Errorf("detail: got %q want %q", got, testCase.detail)
+			}
+		})
+	}
+}
+
 func TestScribe_FormatDuration(t *testing.T) {
 	tests := []struct {
 		name          string

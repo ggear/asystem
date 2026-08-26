@@ -75,13 +75,13 @@ func load(path string) *Config {
 	loadStart := time.Now()
 	result := &Config{asystem: configData{Schema: []configServices{}}}
 	if path == "" {
-		scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("defaults", loadStart, "[config] no path provided")
+		scribe.Log(scribe.SourceConfig, scribe.SubjectField("config"), scribe.ActionResolve).Warn("defaults", loadStart, "no path provided")
 	} else if data, err := os.ReadFile(path); err != nil {
-		scribe.Log(scribe.SourceConfig, scribe.SubjectPath(path), scribe.ActionResolve).Warn("defaults", loadStart, "[%s] file not found", path)
+		scribe.Log(scribe.SourceConfig, scribe.SubjectPath(path), scribe.ActionResolve).Warn("defaults", loadStart, "file not found")
 	} else {
 		var raw struct{ Asystem configData }
 		if err := json.Unmarshal(data, &raw); err != nil {
-			scribe.Log(scribe.SourceConfig, scribe.SubjectPath(path), scribe.ActionResolve).Warn("defaults", loadStart, "[%s] parse failed with [%v]", path, err)
+			scribe.Log(scribe.SourceConfig, scribe.SubjectPath(path), scribe.ActionResolve).Warn("defaults", loadStart, "parse failed with [%v]", err)
 		} else {
 			result.asystem = raw.Asystem
 			if result.asystem.Schema == nil {
@@ -91,7 +91,7 @@ func load(path string) *Config {
 			validSchema := make([]configServices, 0, len(result.asystem.Schema))
 			for _, hostSchema := range result.asystem.Schema {
 				if hostSchema.Host == "" {
-					scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("rejected", loadStart, "[host] empty, skipping")
+					scribe.Log(scribe.SourceConfig, scribe.SubjectField("schema"), scribe.ActionResolve).Warn("rejected", loadStart, "[host] empty, skipping")
 					continue
 				}
 				if seenHosts[hostSchema.Host] {
@@ -149,7 +149,7 @@ func (c *Config) Host() string {
 		hostnameStart := time.Now()
 		hostName, err := os.Hostname()
 		if err != nil {
-			scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Error("faulting", hostnameStart, "[%v] hostname lookup", err)
+			scribe.Log(scribe.SourceConfig, scribe.SubjectField("host"), scribe.ActionResolve).Error("faulting", hostnameStart, "hostname lookup failed with [%v]", err)
 			return
 		}
 		cachedHostName = hostName

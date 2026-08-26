@@ -506,7 +506,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			}
 		}
 	}
-	derivePulse(scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionDiscover), "reported", servicesStart,
+	derivePulse(scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionDiscover), "reported", servicesStart,
 		"[%3d] containers, services [%d], configured [%d], ghosts [%d] configured but not running",
 		len(containers), len(services)-ghosts, len(p.configuredServiceNames), ghosts)
 	return services, nil
@@ -813,7 +813,7 @@ func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services ma
 	if len(missing) == 0 {
 		return
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionDiscover).Warn("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(p.hostName), scribe.ActionDiscover).Warn("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
 }
 
 func (p *servicesProbe) installs() installReader {

@@ -403,7 +403,7 @@ type text struct {
 }
 
 func logRemainder(started time.Time, rem, hostCount int) {
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Error("unusable", started, "[%d] remainder for [%d] hosts", rem, hostCount)
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceLayout), scribe.ActionDiscover).Error("unusable", started, "[%d] remainder for [%d] hosts", rem, hostCount)
 }
 
 func (t text) pick(useUnicode bool) string {

@@ -35,8 +35,12 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-
-
+align duration, rename to time to fit?
+TIME           LEVEL SOURCE   SUBJECT                   ACTION     DURATION DETAIL
+08-25T20:48:18 INFO  config   version                   resolve       0ms resolved value [10.200.1398] from [file]
+08-25T20:48:18 INFO  config   host                      resolve       0ms resolved value [macmini-max] from [env]
+08-25T20:48:18 INFO  config   mount                     resolve       0ms resolved value [/host] from [env]
+add a drop as well as mutate
 
 
 
@@ -46,7 +50,6 @@ adjust memeory allocs
 tune fan/tem
 Add host status to ha, combine backup temp etc
 add debug (or other) to each grunular metric that helps to show what is driving ui - eg which SSD has poor life, hidden in serve (? maybe only info?) but visible in watch when local
-Validate metric descriptions are all good
 
 make cache-eriod=1h and daily 24h and 3s and 1s intervals well specified and daily useful for backups too - maybe have to add a timestart? so if daily goes to 12 hours, it starts at time and 12/6 + time
 add host USED BKP and FAIL BKP and Service BKP into backup plan, remove backup phases and add as shared probe that runs daily from a time (above).

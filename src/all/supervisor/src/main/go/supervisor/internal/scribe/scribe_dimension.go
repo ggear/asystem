@@ -116,6 +116,18 @@ func SubjectHost(name string) Subject {
 	return Subject{text: name}
 }
 
+func SubjectEndpoint(endpoint string) Subject {
+	return Subject{text: endpoint}
+}
+
+func SubjectSurface(name string) Subject {
+	return Subject{text: name}
+}
+
+func SubjectProbe(name string) Subject {
+	return Subject{text: name}
+}
+
 func SubjectField(name string) Subject {
 	return Subject{text: name}
 }

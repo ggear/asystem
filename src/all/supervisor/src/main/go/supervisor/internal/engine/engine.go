@@ -216,7 +216,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				delete(subscribed, topic)
 			}
 			subscribedMutex.Unlock()
-			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%d] topics of [%d], %s, retrying on the next resync", len(refused), len(filters), reason)
+			scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%d] topics of [%d], %s, retrying on the next resync", len(refused), len(filters), reason)
 		}()
 		return len(filters)
 	}
@@ -409,7 +409,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		topics := subscribeTopics(client, cache.Topics())
 		listens := subscribeWildcards(client)
 		cache.Refresh()
-		scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionSubscribe).Info("attached", connectStart, "[%d] topics and [%d] wildcards across [%d] hosts, holding [%d] records", topics, listens, len(cache.Hosts()), cache.Size())
+		scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionSubscribe).Info("attached", connectStart, "[%d] topics and [%d] wildcards across [%d] hosts, holding [%d] records", topics, listens, len(cache.Hosts()), cache.Size())
 	}
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
@@ -476,13 +476,13 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			resyncStart := time.Now()
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
-				scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionSubscribe).Info("resynced", resyncStart, "[%d] topics subscribed, [%d] unsubscribed, to match the cache", added, dropped)
+				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionSubscribe).Info("resynced", resyncStart, "[%d] topics subscribed, [%d] unsubscribed, to match the cache", added, dropped)
 			}
 			if restored := subscribeWildcards(client); restored > 0 {
-				scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionSubscribe).Warn("restored", resyncStart, "[%d] wildcards lost since the connect, without which nothing is ever discovered", restored)
+				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionSubscribe).Warn("restored", resyncStart, "[%d] wildcards lost since the connect, without which nothing is ever discovered", restored)
 			}
 			if !client.IsConnected() {
-				scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionConnect).Warn("liveness", purgeStart, "[false] client neither connected nor reconnecting, forcing a revive")
+				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionConnect).Warn("liveness", purgeStart, "[false] client neither connected nor reconnecting, forcing a revive")
 				brokerRevive(ctx, client)
 			}
 			rx := rxCount.Swap(0)
@@ -503,9 +503,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				silent = 0
 				silenceStart := time.Now()
 				restored, listens := resubscribeAll(client)
-				scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] msgs across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
+				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] msgs across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
 			}
-			scribe.Log(scribe.SourceBroker, scribe.SubjectNone, scribe.ActionRemove).Debug("received", purgeStart, "[%3d] msgs at [%d] msg/s, dropped [%d] msgs, evicted [%d] records, deleted [%d] records", rx, rate, drops, evicted, deleted)
+			scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionRemove).Debug("received", purgeStart, "[%3d] msgs at [%d] msg/s, dropped [%d] msgs, evicted [%d] records, deleted [%d] records", rx, rate, drops, evicted, deleted)
 			censusStart := time.Now()
 			online := 0
 			services := 0

@@ -87,7 +87,7 @@ func (t *installTree) snapshot() *installSnapshot {
 	t.stamp = stamp
 	t.generation++
 	t.cached = t.parse()
-	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionDiscover).Debug("snapshot", scanStart, "install tree services [%d] generation [%d]", len(t.cached.services), t.generation)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(t.mount+installRoot), scribe.ActionDiscover).Debug("snapshot", scanStart, "services [%d], generation [%d]", len(t.cached.services), t.generation)
 	return t.cached
 }
 

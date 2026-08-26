@@ -17,7 +17,7 @@ import (
 
 type databaseClient struct {
 	configPath string
-	url        string
+	endpoint   string
 	client     *influxdb3.Client
 }
 
@@ -110,40 +110,40 @@ func newInfluxClient(configPath string) (*influxdb3.Client, string, error) {
 		Database: cfg.DatabaseName(),
 	})
 	if err != nil {
-		return nil, databaseURL, fmt.Errorf("new client failed [%s]: %w", databaseURL, err)
+		return nil, database, fmt.Errorf("new client failed [%s] [%w]", databaseURL, err)
 	}
-	return client, databaseURL, nil
+	return client, database, nil
 }
 
 func databaseConnect(configPath string) (*databaseClient, error) {
 	connectStart := time.Now()
-	client, databaseURL, err := newInfluxClient(configPath)
+	client, endpoint, err := newInfluxClient(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("connect failed: %w", err)
+		return nil, fmt.Errorf("connect failed [%w]", err)
 	}
-	scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionConnect).Info("database", connectStart, "[%s]", databaseURL)
-	return &databaseClient{configPath: configPath, url: databaseURL, client: client}, nil
+	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(endpoint), scribe.ActionConnect).Info("sessions", connectStart, "[connected]")
+	return &databaseClient{configPath: configPath, endpoint: endpoint, client: client}, nil
 }
 
 func (d *databaseClient) write(ctx context.Context, data []byte) {
 	writeStart := time.Now()
 	if err := d.client.Write(ctx, data); err != nil {
-		scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionPublish).Warn("database", writeStart, "[%s] failed with [%v]", d.url, err)
+		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionPublish).Warn("rejected", writeStart, "write failed with [%v]", err)
 		reconnectStart := time.Now()
 		newClient, _, reconnectErr := newInfluxClient(d.configPath)
 		if reconnectErr != nil {
-			scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionConnect).Warn("database", reconnectStart, "[%s] failed with [%v]", d.url, reconnectErr)
+			scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Warn("sessions", reconnectStart, "[failed] reconnect with [%v]", reconnectErr)
 			return
 		}
 		_ = d.client.Close()
 		d.client = newClient
-		scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionConnect).Info("database", reconnectStart, "[%s]", d.url)
+		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Info("sessions", reconnectStart, "[reconnected]")
 	}
 }
 
 func (d *databaseClient) close() {
 	closeStart := time.Now()
 	if err := d.client.Close(); err != nil {
-		scribe.Log(scribe.SourceDatabase, scribe.SubjectNone, scribe.ActionDisconnect).Warn("database", closeStart, "[%s] failed with [%v]", d.url, err)
+		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionDisconnect).Warn("sessions", closeStart, "[failed] close with [%v]", err)
 	}
 }

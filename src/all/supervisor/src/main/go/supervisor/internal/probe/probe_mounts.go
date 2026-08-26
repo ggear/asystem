@@ -121,7 +121,7 @@ func (s *mountSet) request(window time.Duration) {
 			s.mutex.Lock()
 			s.refreshing = false
 			s.mutex.Unlock()
-			scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionSample).Error("panicked", refreshStart, "[%v] refreshing, keeping the previous snapshot", failure)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Error("panicked", refreshStart, "[%v] refreshing, keeping the previous snapshot", failure)
 		}()
 		taken := s.collect()
 		s.mutex.Lock()
@@ -311,7 +311,7 @@ func (s *mountSet) collect() *mountSnapshot {
 		scribe.Log(scribe.SourceProbe, scribe.SubjectPath(mountpoint), scribe.ActionSample).Debug("declared", absentStart, "share is absent from the mount table but answered a probe")
 	}
 	taken.drives = s.wear(mounts)
-	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionSample).Debug("surveyed", collectStart, "mounts [%3d], system [%d], shares local [%d] declared [%d] failed [%d], drives [%d]",
+	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Debug("surveyed", collectStart, "mounts [%3d], system [%d], shares local [%d] declared [%d] failed [%d], drives [%d]",
 		len(mounts), len(mounts)-taken.locals-mountRemotes(mounts), taken.locals, taken.shares, taken.failed, len(taken.drives))
 	return taken
 }
@@ -520,7 +520,7 @@ func (s *mountSet) reading(physical string) driveWear {
 	if err != nil {
 		if !identity.warned {
 			identity.warned = true
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", readingStart, "[%s] drive with [%v], excluding from wear", physical, err)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", readingStart, "[%s] unreadable with [%v], not counted in wear", physical, err)
 		}
 		return driveWear{kernel: physical, model: identity.model}
 	}
@@ -544,12 +544,12 @@ func (s *mountSet) identify(identity *driveIdentity, report smartReport, identif
 	identity.baseline = report.errors
 	switch {
 	case !report.supported:
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", identifyStart, "[%s] drive reports no smart support, excluding from wear", identity.kernel)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", identifyStart, "[%s] reports no smart support, not counted in wear", identity.kernel)
 	case driveRatings[report.model] > 0:
 		identity.rating = driveRatings[report.model]
 		identity.rated = true
 	default:
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("unlisted", identifyStart, "[%s] drive model [%s] absent from the ratings, excluding from wear", identity.kernel, report.model)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("unlisted", identifyStart, "[%s] model [%s] absent from the ratings, not counted in wear", identity.kernel, report.model)
 	}
 }
 

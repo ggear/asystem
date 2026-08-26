@@ -130,8 +130,15 @@ func (l Logger) log(level slog.Level, verb string, started time.Time, detail str
 	if len(args) > 0 {
 		detail = fmt.Sprintf(detail, args...)
 	}
-	slog.Log(context.Background(), level, verb, keySource, l.source.String(), keySubject, l.subject.String(),
-		keyAction, l.action.String(), keyDuration, time.Since(started), keyDetail, detail)
+	elapsed := time.Since(started)
+	for index, chunk := range chunked(detail) {
+		message := verb
+		if index > 0 {
+			message = ""
+		}
+		slog.Log(context.Background(), level, message, keySource, l.source.String(), keySubject, l.subject.String(),
+			keyAction, l.action.String(), keyDuration, elapsed, keyDetail, chunk)
+	}
 }
 
 func Level() slog.Level {
@@ -316,6 +323,40 @@ func format(record slog.Record) string {
 	return columnLine(source, subject, action, duration, verb(record.Message)+detail)
 }
 
+// chunked splits a detail too long for widthLine into the records a line each sink writes, cutting at a space where
+// there is one and mid-token where there is not, and ending every continuing chunk with wrapEllipsis. Every chunk is
+// logged as its own record carrying the same columns, so a wrapped line stays parseable by position and greppable by
+// subject, with only the verb blanked to mark it as a continuation.
+func chunked(detail string) []string {
+	budget := widthLine - widthPrefix()
+	if budget < widthWrapMin || len(detail) <= budget {
+		return []string{detail}
+	}
+	limit := budget - len(wrapEllipsis) - 1
+	var chunks []string
+	for len(detail) > budget {
+		chunk, rest, spaced := split(detail, limit)
+		if spaced {
+			chunk += " "
+		}
+		chunks = append(chunks, chunk+wrapEllipsis)
+		detail = rest
+	}
+	return append(chunks, detail)
+}
+
+func split(detail string, limit int) (string, string, bool) {
+	cut := strings.LastIndex(detail[:limit+1], " ")
+	if cut <= 0 {
+		return detail[:limit], detail[limit:], false
+	}
+	return strings.TrimRight(detail[:cut], " "), strings.TrimLeft(detail[cut:], " "), true
+}
+
+func widthPrefix() int {
+	return widthTime + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1 + widthVerb + 1
+}
+
 func columnLine(source, subject, action, duration, detail string) string {
 	return strings.TrimRight(pad(source, widthSource)+" "+pad(subject, widthSubject)+" "+pad(action, widthAction)+" "+pad(duration, widthDuration)+" "+detail, " ")
 }
@@ -372,8 +413,11 @@ const (
 	widthLevel      = 5
 	widthSource     = 8
 	widthAction     = 10
-	widthDuration   = 6
+	widthDuration   = 8
 	widthVerb       = 8
+	widthLine       = 200
+	widthWrapMin    = 40
+	wrapEllipsis    = "..."
 	widthSubjectMin = 24
 )
 
