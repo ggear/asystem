@@ -15,6 +15,7 @@ x-common: &common
   cap_add:
     - SYSLOG
     - SYS_RAWIO
+    - SYS_ADMIN
   device_cgroup_rules:
     - "c 1:11 r"
     - "b 8:* r"

@@ -244,7 +244,7 @@ func (s *mountSet) lifeUsedDrives() (int8, derivation, error) {
 		}
 	}
 	if unreadable := mountUnreadable(taken.drives); len(unreadable) > 0 {
-		return 0, derivation{}, fmt.Errorf("no drive wear read, [%d] of [%d] drives unreadable [%s]%w",
+		return 0, derivation{}, fmt.Errorf("no drive wear read, [%d] of [%d] drives unreadable [%s] [%w]",
 			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
 	}
 	if rated == 0 {
@@ -261,7 +261,7 @@ func (s *mountSet) failedDrives() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	if unreadable := mountUnreadable(taken.drives); len(unreadable) > 0 {
-		return 0, derivation{}, fmt.Errorf("no drive errors read, [%d] of [%d] drives unreadable [%s]%w",
+		return 0, derivation{}, fmt.Errorf("no drive errors read, [%d] of [%d] drives unreadable [%s] [%w]",
 			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
 	}
 	if len(taken.drives) == 0 {

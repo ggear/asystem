@@ -361,11 +361,11 @@ func TestProbeMounts_Wear(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_unreadable_drive_is_excluded_rather_than_faulted",
+			name:          "sad_unreadable_drive_faults_rather_than_reading_zero",
 			reportErr:     fmt.Errorf("smart unavailable"),
 			expectedLife:  0,
-			expectedOK:    true,
-			expectedError: false,
+			expectedOK:    false,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {
