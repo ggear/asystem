@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"supervisor/internal/metric"
 )
@@ -170,24 +171,39 @@ var (
 )
 
 func Vocabularies() string {
-	var builder strings.Builder
-	builder.WriteString("LOG SOURCES:\n")
-	for _, source := range AllSources {
-		builder.WriteString("  " + source.String() + "\n")
-	}
-	builder.WriteString("\nLOG SUBJECTS:\n")
 	subjects := make([]string, 0, len(metric.GetIDs()))
 	for _, id := range metric.GetIDs() {
 		subjects = append(subjects, metric.GetIDName(id))
 	}
 	sort.Strings(subjects)
-	for _, subject := range subjects {
-		builder.WriteString("  " + subject + "\n")
-	}
-	builder.WriteString("  and any service, host, topic, path, field, endpoint, surface, probe or loop name\n")
+	var builder strings.Builder
+	builder.WriteString("LOG SOURCES:\n")
+	builder.WriteString(columned(sourceStrings()))
+	builder.WriteString("\nLOG SUBJECTS:\n")
+	builder.WriteString(columned(subjects))
+	builder.WriteString("  plus any name the subject column carries, such as [macmini-mad], [plex] or [vernemq]\n")
 	builder.WriteString("\nLOG ACTIONS:\n")
-	for _, action := range AllActions {
-		builder.WriteString("  " + action.String() + "\n")
+	builder.WriteString(columned(actionStrings()))
+	return builder.String()
+}
+
+func columned(values []string) string {
+	longest := 0
+	for _, value := range values {
+		if length := utf8.RuneCountInString(value); length > longest {
+			longest = length
+		}
+	}
+	cell := longest + widthHelpGap
+	columns := max(1, (widthHelp-widthHelpIndent)/cell)
+	var builder strings.Builder
+	for index := 0; index < len(values); index += columns {
+		var row strings.Builder
+		row.WriteString(strings.Repeat(" ", widthHelpIndent))
+		for _, value := range values[index:min(index+columns, len(values))] {
+			row.WriteString(pad(value, cell))
+		}
+		builder.WriteString(strings.TrimRight(row.String(), " ") + "\n")
 	}
 	return builder.String()
 }

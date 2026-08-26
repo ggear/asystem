@@ -460,6 +460,9 @@ const (
 	widthVerb       = 8
 	widthWrapMin    = 40
 	widthStream     = 250
+	widthHelp       = 84
+	widthHelpIndent = 2
+	widthHelpGap    = 2
 	wrapEllipsis    = "..."
 	widthSubjectMin = 24
 )
