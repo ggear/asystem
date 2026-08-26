@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"supervisor/internal/config"
+	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 	"sync"
 	"time"
@@ -88,6 +89,7 @@ func (t *installTree) snapshot() *installSnapshot {
 	t.generation++
 	t.cached = t.parse()
 	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(t.mount+installRoot), scribe.ActionDiscover).Debug("snapshot", scanStart, "services [%d], generation [%d]", len(t.cached.services), t.generation)
+	t.cached.report(scanStart)
 	return t.cached
 }
 
@@ -135,6 +137,26 @@ func (s *installSnapshot) allocation(names []string) (int64, int, error) {
 			len(names), installRoot, strings.Join(missing, ","))
 	}
 	return total, installed, nil
+}
+
+func (s *installSnapshot) report(scanStart time.Time) {
+	names := make([]string, 0, len(s.services))
+	for name := range s.services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		entry := s.services[name]
+		if !entry.serviceModule {
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] is a host module with no compose file, not counted in the allocation", name)
+			continue
+		}
+		if entry.maxMemoryBytes <= 0 {
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] version [%s] declares no memory ceiling, contributing [0] MiB to the allocation", name, entry.version)
+			continue
+		}
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] version [%s] contributes [%d] MiB to the allocation, sleeping [%v]", name, entry.version, entry.maxMemoryBytes/bytesPerMiB, entry.sleepEnabled)
+	}
 }
 
 func (t *installTree) bases() []string {

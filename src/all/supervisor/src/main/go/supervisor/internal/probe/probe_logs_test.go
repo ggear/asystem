@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 )
@@ -58,27 +57,13 @@ func TestProbeLogs_IsLogError(t *testing.T) {
 	}
 }
 
-func TestProbeLogs_IgnorePatternsAllCompile(t *testing.T) {
-	declared := 0
-	for pattern := range strings.SplitSeq(logIgnorePatterns, "\n") {
-		if strings.TrimSpace(pattern) == "" {
-			continue
-		}
-		declared++
-		if _, err := regexp.Compile(strings.TrimSpace(pattern)); err != nil {
-			t.Fatalf("logIgnorePatterns %q: %v", pattern, err)
-		}
-	}
-	if len(logIgnore) != declared {
-		t.Fatalf("logIgnore compiled: got %d want %d", len(logIgnore), declared)
-	}
-}
-
 func TestProbeLogs_IgnoredMessages(t *testing.T) {
-	patterns := compileLog(`
-pl2303 ttyUSB\d+: pl2303_get_line_request - failed
-usb \d+-\d+: device descriptor read
-`)
+	original := logIgnore
+	t.Cleanup(func() { logIgnore = original })
+	logIgnore = []*regexp.Regexp{
+		regexp.MustCompile(`pl2303 ttyUSB\d+: pl2303_get_line_request - failed`),
+		regexp.MustCompile(`usb \d+-\d+: device descriptor read`),
+	}
 	tests := []struct {
 		name       string
 		message    string
@@ -102,8 +87,8 @@ usb \d+-\d+: device descriptor read
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			if matchedLog(patterns, testCase.message) != testCase.expectedOK {
-				t.Fatalf("matchedLog: got %v want %v", !testCase.expectedOK, testCase.expectedOK)
+			if logIgnoring(testCase.message) != testCase.expectedOK {
+				t.Fatalf("logIgnoring: got %v want %v", !testCase.expectedOK, testCase.expectedOK)
 			}
 		})
 	}
@@ -112,7 +97,7 @@ usb \d+-\d+: device descriptor read
 func TestProbeLogs_IgnoredMessagesAreNotErrors(t *testing.T) {
 	original := logIgnore
 	t.Cleanup(func() { logIgnore = original })
-	logIgnore = compileLog("pl2303 ttyUSB\\d+: pl2303_get_line_request - failed")
+	logIgnore = []*regexp.Regexp{regexp.MustCompile(`pl2303 ttyUSB\d+: pl2303_get_line_request - failed`)}
 	if isLogError(3, "pl2303 ttyUSB0: pl2303_get_line_request - failed with -32") {
 		t.Fatalf("isLogError on an ignored message: got true want false")
 	}

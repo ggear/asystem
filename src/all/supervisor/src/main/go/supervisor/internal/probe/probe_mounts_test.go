@@ -740,3 +740,59 @@ func TestProbeMounts_DriveNamespace(t *testing.T) {
 		})
 	}
 }
+
+func TestProbeMounts_IgnoresFlashButNotSolidState(t *testing.T) {
+	tests := []struct {
+		name            string
+		hardware        string
+		expectedIgnored bool
+		expectedError   bool
+	}{
+		{name: "happy_lexar_flash_drive_is_ignored", hardware: "Lexar USB Flash Drive", expectedIgnored: true, expectedError: false},
+		{name: "happy_generic_flash_drive_is_ignored", hardware: "SanDisk Ultra Flash Drive", expectedIgnored: true, expectedError: false},
+		{name: "happy_bridged_ssd_is_kept", hardware: "Realtek RTL9210B-CG", expectedIgnored: false, expectedError: false},
+		{name: "happy_crucial_p3_is_kept", hardware: "CT4000P3 PSSD8", expectedIgnored: false, expectedError: false},
+		{name: "happy_crucial_mx500_is_kept", hardware: "CT4000MX 500SSD1", expectedIgnored: false, expectedError: false},
+		{name: "happy_apple_internal_is_kept", hardware: "APPLE SSD AP0512Z", expectedIgnored: false, expectedError: false},
+		{name: "happy_unknown_hardware_is_kept", hardware: mountUnknownHardware, expectedIgnored: false, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if ignored := driveIgnoring(testCase.hardware); ignored != testCase.expectedIgnored {
+				t.Errorf("ignored: got %v want %v for %q", ignored, testCase.expectedIgnored, testCase.hardware)
+			}
+		})
+	}
+}
+
+func TestProbeMounts_HardwareFromInquiryFields(t *testing.T) {
+	tests := []struct {
+		name             string
+		vendor           string
+		model            string
+		expectedHardware string
+		expectedRated    bool
+		expectedError    bool
+	}{
+		{name: "happy_nvme_carries_no_vendor", vendor: "", model: "CT2000P2SSD8                            ", expectedHardware: "CT2000P2SSD8", expectedRated: true, expectedError: false},
+		{name: "happy_apple_nvme_carries_no_vendor", vendor: "", model: "APPLE SSD AP0512Z                       ", expectedHardware: "APPLE SSD AP0512Z", expectedRated: true, expectedError: false},
+		{name: "happy_sata_vendor_placeholder_is_dropped", vendor: "ATA     ", model: "CT4000MX500SSD1 ", expectedHardware: "CT4000MX500SSD1", expectedRated: true, expectedError: false},
+		{name: "happy_usb_model_spills_into_vendor", vendor: "CT4000P3", model: "PSSD8           ", expectedHardware: "CT4000P3PSSD8", expectedRated: true, expectedError: false},
+		{name: "happy_usb_model_spills_across_both_fields", vendor: "CT480BX5", model: "00SSD1          ", expectedHardware: "CT480BX500SSD1", expectedRated: true, expectedError: false},
+		{name: "happy_full_width_vendor_keeps_its_space", vendor: "KINGSTON", model: " SA400S37480G   ", expectedHardware: "KINGSTON SA400S37480G", expectedRated: true, expectedError: false},
+		{name: "happy_bridge_reports_its_own_chip", vendor: "Realtek ", model: "RTL9210B-CG     ", expectedHardware: "Realtek RTL9210B-CG", expectedRated: false, expectedError: false},
+		{name: "happy_flash_drive_names_its_vendor", vendor: "Lexar   ", model: "USB Flash Drive ", expectedHardware: "Lexar USB Flash Drive", expectedRated: false, expectedError: false},
+		{name: "happy_absent_fields_are_unknown", vendor: "", model: "", expectedHardware: mountUnknownHardware, expectedRated: false, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			hardware := driveHardware(testCase.vendor, testCase.model)
+			if hardware != testCase.expectedHardware {
+				t.Errorf("hardware: got %q want %q", hardware, testCase.expectedHardware)
+			}
+			if rated := driveRatings[hardware] > 0; rated != testCase.expectedRated {
+				t.Errorf("rated: got %v want %v for %q", rated, testCase.expectedRated, hardware)
+			}
+		})
+	}
+}

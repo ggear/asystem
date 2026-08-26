@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"supervisor/internal/metric"
 )
 
 func TestScribe_Stdout(t *testing.T) {
@@ -894,5 +896,86 @@ func TestScribe_PurgeLogFiles(t *testing.T) {
 		if !expected[file] && err == nil {
 			t.Errorf("purged: %s got kept", filepath.Base(file))
 		}
+	}
+}
+
+func TestScribe_FlattensDetailLineBreaks(t *testing.T) {
+	tests := []struct {
+		name          string
+		detail        string
+		expectedRows  int
+		expectedError bool
+	}{
+		{name: "happy_joined_error_newlines_flatten", detail: "read failed [sdb]\nread failed [sdc]", expectedRows: 1, expectedError: false},
+		{name: "happy_carriage_returns_and_tabs_flatten", detail: "read failed [sdb]\r\n\tread failed [sdc]", expectedRows: 1, expectedError: false},
+		{name: "happy_long_joined_error_wraps_without_breaks", detail: strings.TrimSpace(strings.Repeat("read failed at node [/dev/sdb] with status [4]\n", 12)), expectedRows: 4, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			buffer := &bytes.Buffer{}
+			restore := slog.Default()
+			slog.SetDefault(slog.New(&streamHandler{level: slog.LevelDebug, writer: buffer}))
+			defer slog.SetDefault(restore)
+			Log(SourceProbe, SubjectMetric(metric.MetricHostLifeUsedDrives), ActionSample).Warn("excluded", time.Now(), "%s", testCase.detail)
+			rows := strings.Split(strings.TrimSuffix(buffer.String(), "\n"), "\n")[1:]
+			if len(rows) != testCase.expectedRows {
+				t.Fatalf("rows: got %d want %d", len(rows), testCase.expectedRows)
+			}
+			for index, row := range rows {
+				if strings.ContainsAny(row, "\r\t") {
+					t.Errorf("breaks: got %q with a control character for row %d", row, index)
+				}
+				if utf8.RuneCountInString(row) > widthStream {
+					t.Errorf("width: got %d want at most %d for row %d", utf8.RuneCountInString(row), widthStream, index)
+				}
+			}
+		})
+	}
+}
+
+func TestScribe_ClipsSubjectToColumn(t *testing.T) {
+	tests := []struct {
+		name            string
+		subject         string
+		expectedSubject string
+		expectedError   bool
+	}{
+		{name: "happy_short_subject_is_untouched", subject: "host/used_memory", expectedSubject: "host/used_memory", expectedError: false},
+		{name: "happy_long_path_keeps_its_tail", subject: "/host/var/lib/asystem/install", expectedSubject: "...ar/lib/asystem/install", expectedError: false},
+		{name: "happy_long_topic_keeps_its_tail", subject: "supervisor/macmini-mad/data/service/plex/up_time", expectedSubject: "...a/service/plex/up_time", expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			record := slog.NewRecord(time.Now(), slog.LevelDebug, "snapshot", 0)
+			record.AddAttrs(
+				slog.String(keySource, "probe"),
+				slog.String(keySubject, testCase.subject),
+				slog.String(keyAction, "discover"),
+				slog.Duration(keyDuration, 6*time.Millisecond),
+				slog.String(keyDetail, strings.Repeat("detail ", 60)),
+			)
+			line := format(record)
+			subject := strings.TrimRight(string([]rune(line)[widthSource+1:widthSource+1+widthSubject]), " ")
+			if subject != testCase.expectedSubject {
+				t.Errorf("subject: got %q want %q", subject, testCase.expectedSubject)
+			}
+			rows := streamLines(record)
+			if len(rows) < 2 {
+				t.Fatalf("rows: got %d want at least 2", len(rows))
+			}
+			prefix := widthTime + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration
+			for index, row := range rows {
+				column := string([]rune(row)[widthTime+1+widthLevel+1+widthSource+1 : widthTime+1+widthLevel+1+widthSource+1+widthSubject])
+				if strings.TrimRight(column, " ") != testCase.expectedSubject {
+					t.Errorf("column: got %q want %q for row %d", column, testCase.expectedSubject, index)
+				}
+				if utf8.RuneCountInString(row) > widthStream {
+					t.Errorf("width: got %d want at most %d for row %d", utf8.RuneCountInString(row), widthStream, index)
+				}
+				if index > 0 && strings.TrimSpace(string([]rune(row)[prefix:prefix+1+widthVerb])) != "" {
+					t.Errorf("verb: got %q want blank for continuation row %d", string([]rune(row)[prefix:prefix+1+widthVerb]), index)
+				}
+			}
+		})
 	}
 }

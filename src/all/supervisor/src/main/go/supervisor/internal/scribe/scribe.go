@@ -140,6 +140,7 @@ func (l Logger) log(level slog.Level, verb string, started time.Time, detail str
 	if len(args) > 0 {
 		detail = fmt.Sprintf(detail, args...)
 	}
+	detail = flattened.Replace(detail)
 	slog.Log(context.Background(), level, verb, keySource, l.source.String(), keySubject, l.subject.String(),
 		keyAction, l.action.String(), keyDuration, time.Since(started), keyDetail, detail)
 }
@@ -351,7 +352,7 @@ func format(record slog.Record) string {
 	if detail != "" {
 		detail = " " + detail
 	}
-	return columnLine(source, subject, action, duration, verb(record.Message)+detail)
+	return columnLine(source, clipped(subject, widthSubject), action, duration, verb(record.Message)+detail)
 }
 
 func chunked(detail string, budget int) []string {
@@ -387,6 +388,14 @@ func spaced(runes []rune) int {
 		}
 	}
 	return -1
+}
+
+func clipped(text string, width int) string {
+	runes := []rune(text)
+	if len(runes) <= width || width <= len(wrapEllipsis) {
+		return text
+	}
+	return wrapEllipsis + string(runes[len(runes)-width+len(wrapEllipsis):])
 }
 
 func columnLine(source, subject, action, duration, detail string) string {
@@ -456,6 +465,8 @@ const (
 )
 
 var widthSubject = widthSubjectMin
+
+var flattened = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ", "\t", " ")
 
 var (
 	scribeLoggerMutex    sync.Mutex

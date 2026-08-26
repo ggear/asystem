@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,7 +27,7 @@ type logSet struct {
 	boot      time.Time
 	carry     []byte
 	buffer    []byte
-	stamps    []time.Time
+	records   []logRecord
 	opened    bool
 	available bool
 	drained   bool
@@ -67,15 +68,64 @@ func (s *logSet) attempted() string {
 }
 
 func (s *logSet) errorsWithin(window time.Duration) (int, bool) {
+	censusStart := time.Now()
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if !s.open() {
 		return 0, false
 	}
+	drain := !s.drained
 	s.consume()
 	s.drained = true
 	s.evict(clock.NowIncludingSuspend().Add(-window))
-	return len(s.stamps), true
+	if drain {
+		s.report(censusStart, window)
+	}
+	return len(s.records), true
+}
+
+func (s *logSet) report(censusStart time.Time, window time.Duration) {
+	counted := s.census()
+	if len(counted) == 0 {
+		return
+	}
+	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample)
+	logger.Debug("examined", censusStart, "kernel [%d] errors already in the ring across [%d] distinct messages within window [%s], showing the most frequent [%d]",
+		len(s.records), len(counted), window, min(len(counted), logCensusMax))
+	for index, entry := range counted {
+		if index >= logCensusMax {
+			return
+		}
+		logger.Debug("examined", censusStart, "kernel [%d] errors logged [%s]", entry.count, entry.message)
+	}
+}
+
+func (s *logSet) census() []logCount {
+	counts := map[string]int{}
+	for _, record := range s.records {
+		counts[record.message]++
+	}
+	counted := make([]logCount, 0, len(counts))
+	for message, count := range counts {
+		counted = append(counted, logCount{message: message, count: count})
+	}
+	sort.Slice(counted, func(first, second int) bool {
+		if counted[first].count != counted[second].count {
+			return counted[first].count > counted[second].count
+		}
+		return counted[first].message < counted[second].message
+	})
+	return counted
+}
+
+func (s *logSet) leading() (string, int) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	counted := s.census()
+	if len(counted) == 0 {
+		return logNoMessage, 0
+	}
+	return counted[0].message, counted[0].count
 }
 
 func (s *logSet) open() bool {
@@ -118,6 +168,16 @@ func (s *logSet) consume() {
 	}
 }
 
+type logRecord struct {
+	stamp   time.Time
+	message string
+}
+
+type logCount struct {
+	message string
+	count   int
+}
+
 func (s *logSet) read() (int, error) {
 	raw, err := s.file.SyscallConn()
 	if err != nil {
@@ -146,24 +206,25 @@ func (s *logSet) scan(shouts int) int {
 		if !ok {
 			continue
 		}
-		if len(s.stamps) >= logStampsMax {
+		if len(s.records) >= logStampsMax {
 			continue
 		}
-		s.stamps = append(s.stamps, stamp)
+		clipped := clipLogMessage(message)
+		s.records = append(s.records, logRecord{stamp: stamp, message: clipped})
 		if s.drained && shouts < logShoutsMax {
 			shouts++
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("observed", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipLogMessage(message))
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("observed", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipped)
 		}
 	}
 }
 
 func (s *logSet) evict(cutoff time.Time) {
 	keep := 0
-	for keep < len(s.stamps) && s.stamps[keep].Before(cutoff) {
+	for keep < len(s.records) && s.records[keep].stamp.Before(cutoff) {
 		keep++
 	}
 	if keep > 0 {
-		s.stamps = append(s.stamps[:0], s.stamps[keep:]...)
+		s.records = append(s.records[:0], s.records[keep:]...)
 	}
 }
 
@@ -177,7 +238,7 @@ func (s *logSet) close() {
 	s.opened = false
 	s.available = false
 	s.drained = false
-	s.stamps = nil
+	s.records = nil
 	s.carry = nil
 }
 
@@ -208,7 +269,7 @@ func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
 }
 
 func isLogError(priority int, message string) bool {
-	if matchedLog(logIgnore, message) {
+	if logIgnoring(message) {
 		return false
 	}
 	if priority&logLevelMask <= logLevelError {
@@ -217,29 +278,13 @@ func isLogError(priority int, message string) bool {
 	return strings.Contains(strings.ToLower(message), logErrorText)
 }
 
-func matchedLog(patterns []*regexp.Regexp, message string) bool {
-	for _, pattern := range patterns {
+func logIgnoring(message string) bool {
+	for _, pattern := range logIgnore {
 		if pattern.MatchString(message) {
 			return true
 		}
 	}
 	return false
-}
-
-func compileLog(patterns string) []*regexp.Regexp {
-	var compiled []*regexp.Regexp
-	for pattern := range strings.SplitSeq(patterns, "\n") {
-		pattern = strings.TrimSpace(pattern)
-		if pattern == "" {
-			continue
-		}
-		expression, err := regexp.Compile(pattern)
-		if err != nil {
-			continue
-		}
-		compiled = append(compiled, expression)
-	}
-	return compiled
 }
 
 func clipLogMessage(message string) string {
@@ -273,9 +318,6 @@ func logRoots(mount string) []string {
 	return []string{mount, logHostRoot}
 }
 
-const logIgnorePatterns = `
-`
-
 const (
 	logHostRoot    = "/"
 	logDevicePath  = "dev/kmsg"
@@ -288,11 +330,14 @@ const (
 	logReadsMax    = 4096
 	logStampsMax   = 4096
 	logShoutsMax   = 5
+	logCensusMax   = 10
+	logNoMessage   = "no message"
 	logMessageMax  = 120
 )
 
+var logIgnore = []*regexp.Regexp{}
+
 var (
-	logIgnore     = compileLog(logIgnorePatterns)
 	logCache      = map[string]*logSet{}
 	logCacheMutex sync.RWMutex
 )

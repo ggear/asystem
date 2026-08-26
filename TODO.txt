@@ -40,33 +40,43 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-Add subject to all log messages, chose $$SOMETHING$$ for example below and all others. Also drop port on vernemq and influxdb to go from vernemq.local:32404 to vernemq. Update broker remove action to something better, reconcile? Also update logs to be:
-
-FROM
-
-11:54:04 DEBUG display  grid                      render          0ms received [ 14] updates, drawn [  0] boxes
-11:54:04 DEBUG broker   vernemq.local:32404       remove          0ms received [ 37] msgs at [6] msg/s, dropped [0] msgs, evicted [0] records, deleted [0] records
-11:54:04 DEBUG broker   -                         census          0ms reported [  6] hosts, online [6], services [26], subscribed [306] topics, reconciling [0] hosts, holding [306] records
-11:54:06 DEBUG display  grid                      render          0ms received [ 15] updates, drawn [  0] boxes
-12:03:03 INFO  display  grid                      render          4ms triggers [manual], refreshed [777] boxes
-12:03:03 INFO  display  grid                      render          4ms triggers [toggle], refreshed [777] boxes
-
-TO
-
-11:54:04 DEBUG display  grid                      render          0ms received [ 14] updates, drawn [  0] boxes
-11:37:46 DEBUG broker   vernemq                   reconcile       0ms received [ 37] msgs at [6] msg/s, dropped [0] msgs, evicted [0] records, deleted [0] records
-11:37:46 DEBUG broker   $$SOMETHING$$             census          0ms reported [  6] hosts, [6] online, [0] reconciling, with [26] services, holding [306] records
-11:54:06 DEBUG display  grid                      render          0ms received [ 15] updates, drawn [  0] boxes
-12:03:03 INFO  display  grid                      render          4ms triggers [manual], refreshed [ 777] boxes
-12:03:03 INFO  display  grid                      render          4ms triggers [toggle], refreshed [ 777] boxes
+why did all services go red breifly after release for each host?
 
 
-move to debug, easy? drop entirely if hard to do. and all others like this. 08-26T11:02:56 ERROR probe    host/used_processor       sample          0ms faulting metric with [probe is still warming up] align with these messages too 08-26T11:04:25 INFO  probe    service/used_processor    sample       2992ms restored metric service [supervisor] after [1] failed polls with [probe is still warming up]
-08-26T11:04:25 INFO  probe    service/used_processor    sample       2992ms restored metric service [network] after [1] failed polls with [probe is still warming up]
-08-26T11:04:25 INFO  probe    service/used_processor    sample       2995ms restored metric service [plex] after [1] failed polls with [probe is still warming up]
-08-26T11:04:25 INFO  probe    service/used_processor    sample       2995ms restored metric service [wrangle] after [1] failed polls with [probe is still warming up]
-08-26T11:04:25 INFO  probe    service/used_processor    sample       2994ms restored metric service [postgres] after [1] failed polls with [probe is still warming up]
-08-26T11:04:25 INFO  probe    service/used_processor    sample       2994ms restored metric service [sabnzbd] after [1] failed polls with [probe is still warming up]
+
+
+Unimplemented metrics
+
+┌───┬──────────────────────────────┬─────────┬─────┬──────────────────────────────────────┬──────────────┐
+│ # │ Metric                       │ Scope   │ Box │ Probe returns                        │ UI           │
+├───┼──────────────────────────────┼─────────┼─────┼──────────────────────────────────────┼──────────────┤
+│ 1 │ host/failed_backups          │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
+│ 2 │ host/used_backup_space       │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
+│ 3 │ host/used_swap_space         │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
+│ 4 │ host/used_disk_ops           │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
+│ 5 │ host/used_network            │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
+│ 6 │ host/running_time            │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
+│ 7 │ service/used_disk_ops        │ service │ no  │ 0, derivation{}, errUnimplemented  │ not shown    │
+│ 8 │ service/used_network         │ service │ no  │ 0, derivation{}, errUnimplemented  │ not shown    │
+│ 9 │ service/backup_status        │ service │ yes │ true + derivation                  │ green        │
+└───┴──────────────────────────────┴─────────┴─────┴──────────────────────────────────────┴──────────────┘
+
+service/backup_status is the one exception: it returns a real true because its rules are Always() and its box is on the service row, where a fault would redden the service name.
+
+Remaining code that supports this
+
+┌────────────────────────────────────────────────┬──────────────────────────────────────────────────────────┐
+│ Code                                           │ Why it exists                                            │
+├────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+│ errUnimplemented in probe.go's var block   │ the sentinel itself                                      │
+│ one case in trackMetricFault               │ logs it at DEBUG, so 8 permanent faults aren't 8 ERRORs  │
+│ display.serviceShown + shownServiceMetrics │ red service name summarises visible cells — not stub-specific │
+└────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┘
+
+Only the first two are stub machinery, and both are one line each. The third is a general display rule that happens to make 7 and 8 harmless.
+
+Two more TODOs exist that aren't unimplemented metrics, worth knowing about since they'll show up in the same grep: servicesProbe.configuredStatus() returns false, nil as the fallback — the real value is set per service at probe_services.go:463/486/499 from the config list — and servicesProbe.backupStatus() returns the true above. Both feed metrics that carry real data or a deliberate constant, so grep -rn "TODO: Provide implementation" returns 11 hits for 9 metrics.
+
 
 
 
@@ -249,6 +259,7 @@ Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-N
 ###############################################################################################################################################################
 # Supervisor
 ###############################################################################################################################################################
+Make database persistance off-loop so not using loop budget on database
 Why a reconcile in 10s detail=observed [raspbpi-jen], status [online], trigger [restart], resubscribed [47] topics, reconcile in [10000] ms?
 implement commands to restart services, to work through ui when selected with popup and through HASS, add install restart CLI option that manages a .restart, flushed on install start and read into RST fields
 Add a go linter to pickup IntelliJ style warnings?

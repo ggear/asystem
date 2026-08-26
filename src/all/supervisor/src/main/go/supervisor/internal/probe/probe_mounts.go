@@ -58,7 +58,12 @@ type mountSnapshot struct {
 type driveIdentity struct {
 	kernel     string
 	node       string
+	transport  string
 	kinds      []string
+	hardware   string
+	excluded   string
+	rotational bool
+	removable  bool
 	model      string
 	rating     float64
 	baseline   int64
@@ -256,7 +261,7 @@ func (s *mountSet) lifeUsedDrives() (int8, derivation, error) {
 		}
 	}
 	if unreadable := mountUnreadable(taken.drives); len(unreadable) > 0 {
-		return 0, derivation{}, fmt.Errorf("no drive wear read, [%d] of [%d] drives failed to answer smartctl so the wear is unknown, unreadable [%s] [%w]",
+		return 0, derivation{}, fmt.Errorf("no drive wear read, [%d] of [%d] drives unreadable by smartctl [%s] [%w]",
 			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
 	}
 	if rated == 0 {
@@ -304,15 +309,15 @@ func (s *mountSet) collect() *mountSnapshot {
 			mounts[index].failed = true
 			mounts[index].answered = errors.Is(err, errMountContent)
 			mounts[index].reason = err.Error()
-			scribe.Log(scribe.SourceProbe, scribe.SubjectPath(mounts[index].mountpoint), scribe.ActionSample).Debug("measured", measureStart, "mount device [%s] fstype [%s] class [%s] failed with [%v]",
-				mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), err)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] not counted, failed with [%v]",
+				mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), err)
 			continue
 		}
 		mounts[index].total = total
 		mounts[index].used = used
 		mounts[index].measured = true
-		scribe.Log(scribe.SourceProbe, scribe.SubjectPath(mounts[index].mountpoint), scribe.ActionSample).Debug("measured", measureStart, "mount device [%s] fstype [%s] class [%s] used [%d] of [%d] MiB",
-			mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), used/bytesPerMiB, total/bytesPerMiB)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%d] of [%d] MiB at [%3d] pct",
+			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), used/bytesPerMiB, total/bytesPerMiB, int8Percent(mountShare(used, total)))
 	}
 	mounted := map[string]mountUsage{}
 	for index := range mounts {
@@ -339,10 +344,10 @@ func (s *mountSet) collect() *mountSnapshot {
 		absentStart := time.Now()
 		if _, _, err := s.measure(mountpoint, true); err != nil {
 			taken.failed++
-			scribe.Log(scribe.SourceProbe, scribe.SubjectPath(mountpoint), scribe.ActionSample).Debug("declared", absentStart, "share is absent from the mount table and failed with [%v]", err)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table and counted failed with [%v]", mountpoint, err)
 			continue
 		}
-		scribe.Log(scribe.SourceProbe, scribe.SubjectPath(mountpoint), scribe.ActionSample).Debug("declared", absentStart, "share is absent from the mount table but answered a probe")
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
 	}
 	taken.drives = s.wear(mounts)
 	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Debug("surveyed", collectStart, "mounts [%3d], system [%d], shares local [%d] declared [%d] failed [%d], drives [%d]",
@@ -489,6 +494,24 @@ func (s *mountSet) content(mountpoint string) error {
 	return nil
 }
 
+func mountFeeding(mount mountUsage) metric.ID {
+	switch {
+	case !mount.share:
+		return metric.MetricHostUsedHomeSpace
+	case mount.remote:
+		return metric.MetricHostFailedShares
+	default:
+		return metric.MetricHostUsedShareSpace
+	}
+}
+
+func mountShare(used, total uint64) float64 {
+	if total == 0 {
+		return 0
+	}
+	return float64(used) / float64(total) * 100.0
+}
+
 func (s *mountSet) wear(mounts []mountUsage) []driveWear {
 	seen := map[string]bool{}
 	var drives []driveWear
@@ -607,12 +630,21 @@ func (s *mountSet) mapper(name string) string {
 func (s *mountSet) reading(physical string) driveWear {
 	identity := s.identity(physical)
 	readingStart := time.Now()
+	if driveIgnoring(identity.hardware) {
+		if !identity.warned {
+			identity.warned = true
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", readingStart, "[%s] at [%s] over [%s] as [%s] is declared not solid state, no wear rating applies so it is not counted in wear", physical, identity.node, identity.transport, identity.hardware)
+		}
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] not considered, declared not solid state with rotational [%v] removable [%v]", physical, identity.hardware, identity.transport, identity.rotational, identity.removable)
+		return driveWear{kernel: physical}
+	}
 	report, err := s.smart(identity.node, identity.kinds)
 	if err != nil {
 		if !identity.warned {
 			identity.warned = true
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Warn("excluded", readingStart, "[%s] unreadable at [%s] with [%v], not counted in wear", physical, identity.node, err)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Warn("excluded", readingStart, "[%s] unreadable at [%s] over [%s] as [%s] with rotational [%v] removable [%v], not counted in wear, with [%v]", physical, identity.node, identity.transport, identity.hardware, identity.rotational, identity.removable, err)
 		}
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] not considered, unreadable by smartctl", physical, identity.hardware, identity.transport)
 		return driveWear{kernel: physical, model: identity.model, unreadable: true, reason: err.Error()}
 	}
 	s.identify(identity, report, readingStart)
@@ -620,9 +652,15 @@ func (s *mountSet) reading(physical string) driveWear {
 	if report.errors > identity.baseline {
 		wear.errored = true
 	}
-	if identity.rated && report.written > 0 {
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] logs [%d] errors against a baseline of [%d] taken at discovery, increased [%v]", physical, identity.hardware, identity.transport, report.errors, identity.baseline, wear.errored)
+	if !identity.rated {
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] not considered, %s", physical, identity.hardware, identity.transport, identity.excluded)
+		return wear
+	}
+	if report.written > 0 {
 		wear.life = report.written / (identity.rating * bytesPerTB) * 100.0
 	}
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] life [%3d] pct, written [%.1f] TB of [%.0f] TB rated as [%s]", physical, identity.hardware, identity.transport, int8Percent(wear.life), report.written/bytesPerTB, identity.rating, identity.model)
 	return wear
 }
 
@@ -635,13 +673,66 @@ func (s *mountSet) identify(identity *driveIdentity, report smartReport, identif
 	identity.baseline = report.errors
 	switch {
 	case !report.supported:
+		identity.excluded = "reports no smart support"
 		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", identifyStart, "[%s] at [%s] reports no smart support with [%s], not counted in wear", identity.kernel, identity.node, report.reason)
 	case driveRatings[report.model] > 0:
 		identity.rating = driveRatings[report.model]
 		identity.rated = true
 	default:
+		identity.excluded = "model absent from the ratings"
 		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("unlisted", identifyStart, "[%s] model [%s] absent from the ratings, not counted in wear", identity.kernel, report.model)
 	}
+}
+
+func (s *mountSet) topology(physical string) (bool, bool, string, string) {
+	rotational := s.flagged(physical, mountRotationalPath)
+	removable := s.flagged(physical, mountRemovablePath)
+	transport := driveTransportInternal
+	if target, err := os.Readlink(filepath.Join(s.root, mountBlockPath, physical)); err == nil {
+		for _, segment := range strings.Split(target, "/") {
+			if strings.HasPrefix(segment, driveTransportUSB) {
+				transport = driveTransportUSB
+				break
+			}
+		}
+	}
+	hardware := driveHardware(s.described(physical, mountVendorPath), s.described(physical, mountModelPath))
+	return rotational, removable, transport, hardware
+}
+
+func (s *mountSet) described(physical, path string) string {
+	data, err := os.ReadFile(filepath.Join(s.root, mountBlockPath, physical, path))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimRight(string(data), "\n")
+}
+
+func driveHardware(vendor, model string) string {
+	spilled := len(vendor) == driveVendorWidth && !strings.HasSuffix(vendor, " ") && !strings.HasPrefix(model, " ")
+	vendor = strings.TrimSpace(vendor)
+	model = strings.TrimSpace(model)
+	switch {
+	case spilled:
+		return vendor + model
+	case vendor == "" || vendor == driveVendorPlaceholder:
+		if model == "" {
+			return mountUnknownHardware
+		}
+		return model
+	case model == "":
+		return vendor
+	default:
+		return vendor + " " + model
+	}
+}
+
+func (s *mountSet) flagged(physical, path string) bool {
+	data, err := os.ReadFile(filepath.Join(s.root, mountBlockPath, physical, path))
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(data)) == mountFlagSet
 }
 
 func (s *mountSet) identity(physical string) *driveIdentity {
@@ -651,6 +742,7 @@ func (s *mountSet) identity(physical string) *driveIdentity {
 		return cached
 	}
 	identity := &driveIdentity{kernel: physical, node: filepath.Join(s.root, "dev", s.namespace(physical)), kinds: driveKinds(physical)}
+	identity.rotational, identity.removable, identity.transport, identity.hardware = s.topology(physical)
 	s.identities[physical] = identity
 	return identity
 }
@@ -664,15 +756,36 @@ type smartReport struct {
 }
 
 func mountSmart(node string, kinds []string) (smartReport, error) {
-	var failures []error
+	tried := map[string][]string{}
+	var reasons []string
 	for _, kind := range kinds {
 		report, err := mountSmartKind(node, kind)
 		if err == nil {
 			return report, nil
 		}
-		failures = append(failures, err)
+		failure := smartFailure{}
+		if !errors.As(err, &failure) {
+			failure = smartFailure{kind: kind, reason: err.Error()}
+		}
+		if _, seen := tried[failure.reason]; !seen {
+			reasons = append(reasons, failure.reason)
+		}
+		tried[failure.reason] = append(tried[failure.reason], failure.kind)
 	}
-	return smartReport{}, errors.Join(failures...)
+	folded := make([]string, 0, len(reasons))
+	for _, reason := range reasons {
+		folded = append(folded, fmt.Sprintf("%s as [%s]", reason, strings.Join(tried[reason], "] or [")))
+	}
+	return smartReport{}, errors.New(strings.Join(folded, ", "))
+}
+
+type smartFailure struct {
+	kind   string
+	reason string
+}
+
+func (e smartFailure) Error() string {
+	return fmt.Sprintf("%s as [%s]", e.reason, e.kind)
 }
 
 func mountSmartKind(node, kind string) (smartReport, error) {
@@ -681,9 +794,9 @@ func mountSmartKind(node, kind string) (smartReport, error) {
 	output, err := exec.CommandContext(ctx, mountSmartCommand, "--json", "-d", kind, "-a", node).Output()
 	if len(output) == 0 {
 		if err == nil {
-			err = fmt.Errorf("smartctl returned no output for node [%s] as [%s]", node, kind)
+			return smartReport{}, smartFailure{kind: kind, reason: "returned no output"}
 		}
-		return smartReport{}, err
+		return smartReport{}, smartFailure{kind: kind, reason: fmt.Sprintf("failed with [%v]", err)}
 	}
 	var decoded struct {
 		ModelName string `json:"model_name"`
@@ -711,10 +824,10 @@ func mountSmartKind(node, kind string) (smartReport, error) {
 		} `json:"ata_smart_attributes"`
 	}
 	if err := json.Unmarshal(output, &decoded); err != nil {
-		return smartReport{}, fmt.Errorf("smartctl output for node [%s] not parseable with [%w]", node, err)
+		return smartReport{}, smartFailure{kind: kind, reason: fmt.Sprintf("returned output that is not parseable with [%v]", err)}
 	}
 	if decoded.Smartctl.ExitStatus&smartExitUnreadable != 0 {
-		return smartReport{}, fmt.Errorf("smartctl could not read node [%s] as [%s] with [%s]", node, kind, smartMessages(decoded.Smartctl.Messages))
+		return smartReport{}, smartFailure{kind: kind, reason: fmt.Sprintf("could not open the node with status [%d] and [%s]", decoded.Smartctl.ExitStatus, smartMessages(decoded.Smartctl.Messages))}
 	}
 	report := smartReport{model: strings.TrimSpace(decoded.ModelName)}
 	report.supported = decoded.SmartSupport.Available || report.model != ""
@@ -735,8 +848,7 @@ func mountSmartKind(node, kind string) (smartReport, error) {
 	}
 	if len(decoded.AtaAttributes.Table) == 0 && decoded.NvmeLog.DataUnitsWritten == 0 {
 		if decoded.Smartctl.ExitStatus != 0 || len(decoded.Smartctl.Messages) > 0 {
-			return smartReport{}, fmt.Errorf("smartctl read no data from node [%s] as [%s] with status [%d] and [%s]",
-				node, kind, decoded.Smartctl.ExitStatus, smartMessages(decoded.Smartctl.Messages))
+			return smartReport{}, smartFailure{kind: kind, reason: fmt.Sprintf("read no data with status [%d] and [%s]", decoded.Smartctl.ExitStatus, smartMessages(decoded.Smartctl.Messages))}
 		}
 		report.supported = false
 	}
@@ -949,6 +1061,16 @@ const (
 	mountTablePath           = "proc/mounts"
 	mountFstabPath           = "etc/fstab"
 	mountBlockPath           = "sys/class/block"
+	mountRotationalPath      = "queue/rotational"
+	mountRemovablePath       = "removable"
+	mountVendorPath          = "device/vendor"
+	mountModelPath           = "device/model"
+	mountUnknownHardware     = "unknown hardware"
+	driveVendorWidth         = 8
+	driveVendorPlaceholder   = "ATA"
+	mountFlagSet             = "1"
+	driveTransportUSB        = "usb"
+	driveTransportInternal   = "internal"
 	mountShareRoot           = "/share"
 	mountHomeRoot            = "/var/lib/asystem"
 	mountOutsideRoot         = "outside-root"
@@ -974,6 +1096,18 @@ const (
 	driveAttributeWritten    = 241
 	driveAttributeWrittenAlt = 246
 )
+
+func driveIgnoring(hardware string) bool {
+	lowered := strings.ToLower(hardware)
+	for _, ignored := range driveIgnored {
+		if strings.Contains(lowered, ignored) {
+			return true
+		}
+	}
+	return false
+}
+
+var driveIgnored = []string{"flash drive"}
 
 var driveRatings = map[string]float64{
 	"Lexar SSD NM790 4TB":   3000,

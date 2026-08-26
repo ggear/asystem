@@ -3,6 +3,7 @@ package scribe
 import (
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 
@@ -167,6 +168,29 @@ var (
 	AllSources = declaredSources()
 	AllActions = declaredActions()
 )
+
+func Vocabularies() string {
+	var builder strings.Builder
+	builder.WriteString("LOG SOURCES:\n")
+	for _, source := range AllSources {
+		builder.WriteString("  " + source.String() + "\n")
+	}
+	builder.WriteString("\nLOG SUBJECTS:\n")
+	subjects := make([]string, 0, len(metric.GetIDs()))
+	for _, id := range metric.GetIDs() {
+		subjects = append(subjects, metric.GetIDName(id))
+	}
+	sort.Strings(subjects)
+	for _, subject := range subjects {
+		builder.WriteString("  " + subject + "\n")
+	}
+	builder.WriteString("  and any service, host, topic, path, field, endpoint, surface, probe or loop name\n")
+	builder.WriteString("\nLOG ACTIONS:\n")
+	for _, action := range AllActions {
+		builder.WriteString("  " + action.String() + "\n")
+	}
+	return builder.String()
+}
 
 func SetFilters(source, subject, action string) error {
 	sourcePrefixes, err := closedPrefixes("source", source, sourceStrings())

@@ -363,8 +363,9 @@ func (p *hostProbe) failedLogs() (int8, derivation, error) {
 	if !available {
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed, kernel log unreadable at [%s] so the metric is inert and always ok", logs.attempted()), nil
 	}
-	return stats.ConvertToInt(float64(count) / metric.FailedLogsBudget * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], following [%s]",
-		stats.ConvertToInt(float64(count)/metric.FailedLogsBudget*100.0), count, int(metric.FailedLogsBudget), window, logs.path), nil
+	message, leading := logs.leading()
+	return stats.ConvertToInt(float64(count) / metric.FailedLogsBudget * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], most frequent [%d] of them logged [%s], following [%s]",
+		stats.ConvertToInt(float64(count)/metric.FailedLogsBudget*100.0), count, int(metric.FailedLogsBudget), window, leading, message, logs.path), nil
 }
 
 func (p *hostProbe) failedShares() (int8, derivation, error) {

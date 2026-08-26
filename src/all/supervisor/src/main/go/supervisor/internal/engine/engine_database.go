@@ -110,9 +110,10 @@ func newInfluxClient(configPath string) (*influxdb3.Client, string, error) {
 	}
 	databaseURL := fmt.Sprintf("http://%s", database)
 	client, err := influxdb3.New(influxdb3.ClientConfig{
-		Host:     databaseURL,
-		Token:    token,
-		Database: cfg.DatabaseName(),
+		Host:       databaseURL,
+		Token:      token,
+		Database:   cfg.DatabaseName(),
+		HTTPClient: &http.Client{Timeout: databaseTimeout},
 	})
 	if err != nil {
 		return nil, database, fmt.Errorf("new client failed [%s] [%w]", databaseURL, err)
@@ -235,5 +236,5 @@ const (
 	databaseInterval = 10 * time.Second
 	databaseRetry    = 500 * time.Millisecond
 	databaseAttempts = 3
-	databaseRetries  = 2
+	databaseRetries  = 1
 )

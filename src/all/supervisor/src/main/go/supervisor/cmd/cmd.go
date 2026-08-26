@@ -27,6 +27,7 @@ func Execute() {
 
 func init() {
 	cobra.AddTemplateFunc("bracketed", bracketed)
+	cobra.AddTemplateFunc("vocabularies", scribe.Vocabularies)
 	rootCmd.SetUsageTemplate(usageTemplate)
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "display version information and exit")
 	rootCmd.PersistentFlags().StringP("config", "c", config.DefaultConfigPath, "path to config file")
@@ -88,9 +89,9 @@ type logOptions struct {
 
 func addLogFlags(cmd *cobra.Command, opts *logOptions, level string) {
 	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
-	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source prefixes e.g. [probe,broker]")
-	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject prefixes e.g. [host/used]")
-	cmd.Flags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action prefixes e.g. [compute,census]")
+	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source prefixes (see below for full set)")
+	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject prefixes (see below for full set)")
+	cmd.Flags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action prefixes (see below for full set)")
 }
 
 func setLogFilters(opts *logOptions) error {
@@ -177,7 +178,9 @@ Flags:
 {{bracketed .LocalFlags}}{{end}}{{if .HasAvailableInheritedFlags}}
 
 Global Flags:
-{{bracketed .InheritedFlags}}{{end}}{{if .HasHelpSubCommands}}
+{{bracketed .InheritedFlags}}{{end}}{{if .Flags.Lookup "log-source"}}
+
+{{vocabularies}}{{end}}{{if .HasHelpSubCommands}}
 
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
