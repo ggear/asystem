@@ -635,7 +635,7 @@ func (s *mountSet) reading(physical string) driveWear {
 			identity.warned = true
 			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", readingStart, "[%s] at [%s] over [%s] as [%s] is declared not solid state, no wear rating applies so it is not counted in wear", physical, identity.node, identity.transport, identity.hardware)
 		}
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] not considered, declared not solid state with rotational [%v] removable [%v]", physical, identity.hardware, identity.transport, identity.rotational, identity.removable)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, declared not solid state, as [%s] over [%s]", physical, identity.hardware, identity.transport)
 		return driveWear{kernel: physical}
 	}
 	report, err := s.smart(identity.node, identity.kinds)
@@ -644,7 +644,7 @@ func (s *mountSet) reading(physical string) driveWear {
 			identity.warned = true
 			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Warn("excluded", readingStart, "[%s] unreadable at [%s] over [%s] as [%s] with rotational [%v] removable [%v], not counted in wear, with [%v]", physical, identity.node, identity.transport, identity.hardware, identity.rotational, identity.removable, err)
 		}
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] not considered, unreadable by smartctl", physical, identity.hardware, identity.transport)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, unreadable by smartctl, as [%s] over [%s]", physical, identity.hardware, identity.transport)
 		return driveWear{kernel: physical, model: identity.model, unreadable: true, reason: err.Error()}
 	}
 	s.identify(identity, report, readingStart)
@@ -652,16 +652,33 @@ func (s *mountSet) reading(physical string) driveWear {
 	if report.errors > identity.baseline {
 		wear.errored = true
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] logs [%d] errors against a baseline of [%d] taken at discovery, increased [%v]", physical, identity.hardware, identity.transport, report.errors, identity.baseline, wear.errored)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] errors [%d] baseline [%d] increased [%v], as [%s]", physical, report.errors, identity.baseline, wear.errored, identity.named())
 	if !identity.rated {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] not considered, %s", physical, identity.hardware, identity.transport, identity.excluded)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, %s, as [%s]", physical, identity.excluded, identity.named())
 		return wear
 	}
-	if report.written > 0 {
-		wear.life = report.written / (identity.rating * bytesPerTB) * 100.0
+	computed := driveComputed(report.written, identity.rating)
+	wear.life = driveLife(computed, report.estimate, report.estimated)
+	estimate := "none"
+	if report.estimated {
+		estimate = fmt.Sprintf("%.1f", report.estimate)
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] as [%s] over [%s] life [%3d] pct, written [%.1f] TB of [%.0f] TB rated as [%s]", physical, identity.hardware, identity.transport, int8Percent(wear.life), report.written/bytesPerTB, identity.rating, identity.model)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] life [%3d] pct, computed [%.1f] drive [%s] pct, written [%.1f] of [%.0f] TB, as [%s]", physical, int8Percent(wear.life), computed, estimate, report.written/bytesPerTB, identity.rating, identity.named())
 	return wear
+}
+
+func driveComputed(written, rating float64) float64 {
+	if written <= 0 || rating <= 0 {
+		return 0
+	}
+	return written / (rating * bytesPerTB) * 100.0
+}
+
+func driveLife(computed, estimate float64, estimated bool) float64 {
+	if estimated && estimate > computed {
+		return estimate
+	}
+	return computed
 }
 
 func (s *mountSet) identify(identity *driveIdentity, report smartReport, identifyStart time.Time) {
@@ -735,19 +752,32 @@ func (s *mountSet) flagged(physical, path string) bool {
 	return strings.TrimSpace(string(data)) == mountFlagSet
 }
 
+func (i *driveIdentity) named() string {
+	if i.model != "" {
+		return i.model
+	}
+	return i.hardware
+}
+
 func (s *mountSet) identity(physical string) *driveIdentity {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if cached, found := s.identities[physical]; found {
 		return cached
 	}
+	topologyStart := time.Now()
 	identity := &driveIdentity{kernel: physical, node: filepath.Join(s.root, "dev", s.namespace(physical)), kinds: driveKinds(physical)}
 	identity.rotational, identity.removable, identity.transport, identity.hardware = s.topology(physical)
 	s.identities[physical] = identity
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionDiscover).Debug("topology", topologyStart, "[%s] as [%s] over [%s], rotational [%v] removable [%v], node [%s], probing as [%s]",
+		physical, identity.hardware, identity.transport, identity.rotational, identity.removable, identity.node, strings.Join(identity.kinds, ","))
 	return identity
 }
 
 type smartReport struct {
+	data      bool
+	estimated bool
+	estimate  float64
 	model     string
 	reason    string
 	written   float64
@@ -758,10 +788,17 @@ type smartReport struct {
 func mountSmart(node string, kinds []string) (smartReport, error) {
 	tried := map[string][]string{}
 	var reasons []string
+	var barren *smartReport
 	for _, kind := range kinds {
 		report, err := mountSmartKind(node, kind)
 		if err == nil {
-			return report, nil
+			if report.data {
+				return report, nil
+			}
+			if barren == nil {
+				barren = &report
+			}
+			continue
 		}
 		failure := smartFailure{}
 		if !errors.As(err, &failure) {
@@ -771,6 +808,9 @@ func mountSmart(node string, kinds []string) (smartReport, error) {
 			reasons = append(reasons, failure.reason)
 		}
 		tried[failure.reason] = append(tried[failure.reason], failure.kind)
+	}
+	if barren != nil {
+		return *barren, nil
 	}
 	folded := make([]string, 0, len(reasons))
 	for _, reason := range reasons {
@@ -812,6 +852,7 @@ func mountSmartKind(node, kind string) (smartReport, error) {
 		NvmeLog struct {
 			DataUnitsWritten float64 `json:"data_units_written"`
 			ErrorLogEntries  int64   `json:"num_err_log_entries"`
+			PercentageUsed   float64 `json:"percentage_used"`
 		} `json:"nvme_smart_health_information_log"`
 		AtaAttributes struct {
 			Table []struct {
@@ -832,10 +873,14 @@ func mountSmartKind(node, kind string) (smartReport, error) {
 	report := smartReport{model: strings.TrimSpace(decoded.ModelName)}
 	report.supported = decoded.SmartSupport.Available || report.model != ""
 	if decoded.NvmeLog.DataUnitsWritten > 0 {
+		report.data = true
 		report.written = decoded.NvmeLog.DataUnitsWritten * bytesPerDataUnit
 		report.errors = decoded.NvmeLog.ErrorLogEntries
+		report.estimated = true
+		report.estimate = decoded.NvmeLog.PercentageUsed
 		return report, nil
 	}
+	report.data = len(decoded.AtaAttributes.Table) > 0
 	for _, attribute := range decoded.AtaAttributes.Table {
 		switch attribute.ID {
 		case driveAttributeErrors:

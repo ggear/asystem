@@ -2,6 +2,7 @@ package probe
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -698,7 +699,7 @@ func TestProbeMounts_DriveKinds(t *testing.T) {
 		expectedError bool
 	}{
 		{name: "happy nvme asks for the nvme protocol", physical: "nvme0", expectedKinds: []string{driveKindNVME}, expectedError: false},
-		{name: "happy sata tries ata pass through then scsi", physical: "sda", expectedKinds: []string{driveKindSAT, driveKindSCSI}, expectedError: false},
+		{name: "happy sata tries ata pass through then the bridges then scsi", physical: "sda", expectedKinds: []string{driveKindSAT, driveKindRealtek, driveKindJMicron, driveKindASMedia, driveKindSCSI}, expectedError: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -792,6 +793,33 @@ func TestProbeMounts_HardwareFromInquiryFields(t *testing.T) {
 			}
 			if rated := driveRatings[hardware] > 0; rated != testCase.expectedRated {
 				t.Errorf("rated: got %v want %v for %q", rated, testCase.expectedRated, hardware)
+			}
+		})
+	}
+}
+
+func TestProbeMounts_DriveLifeTakesTheHigher(t *testing.T) {
+	tests := []struct {
+		name          string
+		written       float64
+		rating        float64
+		estimate      float64
+		estimated     bool
+		expectedLife  float64
+		expectedError bool
+	}{
+		{name: "happy_mad_lexar_computed_beats_the_drive", written: 26.4 * bytesPerTB, rating: 3000, estimate: 0, estimated: true, expectedLife: 0.88, expectedError: false},
+		{name: "happy_mad_crucial_computed_beats_the_drive", written: 3.6 * bytesPerTB, rating: 800, estimate: 0, estimated: true, expectedLife: 0.45, expectedError: false},
+		{name: "happy_drive_estimate_beats_the_computed", written: 26.4 * bytesPerTB, rating: 3000, estimate: 12, estimated: true, expectedLife: 12, expectedError: false},
+		{name: "happy_no_estimate_keeps_the_computed", written: 500 * bytesPerTB, rating: 1000, estimate: 0, estimated: false, expectedLife: 50, expectedError: false},
+		{name: "happy_unwritten_drive_reads_zero", written: 0, rating: 1000, estimate: 0, estimated: false, expectedLife: 0, expectedError: false},
+		{name: "happy_unrated_drive_falls_back_to_the_estimate", written: 26.4 * bytesPerTB, rating: 0, estimate: 7, estimated: true, expectedLife: 7, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			computed := driveComputed(testCase.written, testCase.rating)
+			if life := driveLife(computed, testCase.estimate, testCase.estimated); math.Abs(life-testCase.expectedLife) > 0.01 {
+				t.Errorf("life: got %.2f want %.2f", life, testCase.expectedLife)
 			}
 		})
 	}
