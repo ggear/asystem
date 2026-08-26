@@ -564,7 +564,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 		case <-ticker.C:
 			if elapsed := clock.SinceIncludingSuspend(ticked); elapsed > d.tickStall {
 				scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionDisconnect).Warn("exceeded", ticked, "[%d] ms since the last draw tick", d.tickStall.Milliseconds())
-				d.cache.Wake()
+				d.cache.Wake(elapsed)
 				d.refresh("wake")
 			}
 			ticked = clock.NowIncludingSuspend()

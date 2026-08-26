@@ -25,16 +25,16 @@ func (b *brokerDeletesListener) MarkDelete(topic string) {
 }
 
 type brokerWakeListener struct {
-	onWake func()
+	onWake func(time.Duration)
 }
 
-func (b *brokerWakeListener) MarkWake() {
+func (b *brokerWakeListener) MarkWake(frozen time.Duration) {
 	wakeStart := time.Now()
 	if b.onWake == nil {
 		return
 	}
-	b.onWake()
-	scribe.Log(scribe.SourceBroker, scribe.SubjectSurface("terminal"), scribe.ActionConnect).Info("detected", wakeStart, "[wake] revive requested by the stall detector")
+	b.onWake(frozen)
+	scribe.Log(scribe.SourceBroker, scribe.SubjectSurface("terminal"), scribe.ActionConnect).Info("detected", wakeStart, "[wake] revive requested by the stall detector, frozen for [%d] ms", frozen.Milliseconds())
 }
 
 type brokerPublishDeletesListener struct {
@@ -114,7 +114,7 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 	return client, nil
 }
 
-func brokerRevive(ctx context.Context, client mqtt.Client) {
+func brokerRevive(ctx context.Context, client mqtt.Client, frozen time.Duration) {
 	if client == nil || !brokerReviving.CompareAndSwap(false, true) {
 		return
 	}
@@ -128,6 +128,13 @@ func brokerRevive(ctx context.Context, client mqtt.Client) {
 			}
 			scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionConnect).Warn("liveness", probeStart, "[false] session abandoned by paho, reconnecting")
 			brokerReconnect(ctx, client, probeStart)
+			return
+		}
+		if frozen > brokerExpiry {
+			reviveStart := time.Now()
+			scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionConnect).Warn("liveness", probeStart, "[false] frozen for [%d] ms beyond the broker keepalive of [%d] ms, reconnecting without probing", frozen.Milliseconds(), brokerExpiry.Milliseconds())
+			client.Disconnect(0)
+			brokerReconnect(ctx, client, reviveStart)
 			return
 		}
 		token := client.Unsubscribe(brokerProbeTopic)
@@ -182,6 +189,7 @@ const (
 	brokerProbeTopic = "supervisor/probe/wake"
 	brokerTimeout    = 3 * time.Second
 	brokerInterval   = 10 * time.Second
+	brokerExpiry     = brokerInterval * 3 / 2
 )
 
 var brokerReviving atomic.Bool

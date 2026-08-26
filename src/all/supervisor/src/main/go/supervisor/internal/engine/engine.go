@@ -422,7 +422,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		return
 	}
 	defer client.Disconnect(250)
-	cache.SubscribeWake(&brokerWakeListener{onWake: func() { brokerRevive(ctx, client) }})
+	cache.SubscribeWake(&brokerWakeListener{onWake: func(frozen time.Duration) { brokerRevive(ctx, client, frozen) }})
 	cache.SubscribeDeletes(&brokerDeletesListener{
 		client: client,
 		onDelete: func(topic string) {
@@ -487,7 +487,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			if !client.IsConnected() {
 				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionConnect).Warn("liveness", purgeStart, "[false] client neither connected nor reconnecting, forcing a revive")
-				brokerRevive(ctx, client)
+				brokerRevive(ctx, client, 0)
 			}
 			rx := rxCount.Swap(0)
 			drops := dropCount.Swap(0)

@@ -95,7 +95,7 @@ type RefreshListener interface {
 }
 
 type WakeListener interface {
-	MarkWake()
+	MarkWake(frozen time.Duration)
 }
 
 type RecordCache struct {
@@ -640,7 +640,7 @@ func (c *RecordCache) Refresh() {
 	}
 }
 
-func (c *RecordCache) Wake() {
+func (c *RecordCache) Wake(frozen time.Duration) {
 	if c == nil {
 		return
 	}
@@ -648,7 +648,7 @@ func (c *RecordCache) Wake() {
 	listener := c.wakeListener
 	c.mutex.RUnlock()
 	if listener != nil {
-		listener.MarkWake()
+		listener.MarkWake(frozen)
 	}
 }
 

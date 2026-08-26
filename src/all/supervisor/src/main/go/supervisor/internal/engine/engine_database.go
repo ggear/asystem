@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"supervisor/internal/clock"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/schema"
@@ -125,7 +126,7 @@ func databaseConnect(ctx context.Context, configPath string) (*databaseClient, e
 	if err != nil {
 		return nil, fmt.Errorf("connect failed [%w]", err)
 	}
-	database := &databaseClient{configPath: configPath, endpoint: endpoint, client: client, lostAt: connectStart}
+	database := &databaseClient{configPath: configPath, endpoint: endpoint, client: client, lostAt: clock.NowIncludingSuspend()}
 	for attempt := 0; ; attempt++ {
 		reachErr := databaseReachable(ctx, endpoint)
 		if reachErr == nil {
@@ -196,7 +197,7 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 		return
 	}
 	d.online = false
-	d.lostAt = writeStart
+	d.lostAt = clock.NowIncludingSuspend()
 	d.lost(writeStart, err)
 	newClient, _, rebuildErr := newInfluxClient(d.configPath)
 	if rebuildErr != nil {

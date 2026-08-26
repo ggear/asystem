@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"supervisor/internal/clock"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
@@ -379,7 +380,7 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	tracked, faulting := metricFaults[key]
 	switch {
 	case errored && (!faulting || tracked.message != message):
-		tracked = &metricFault{message: message, since: time.Now(), logged: time.Now(), polls: 1, warming: errors.Is(err, errProbeWarmingUp)}
+		tracked = &metricFault{message: message, since: clock.NowIncludingSuspend(), logged: time.Now(), polls: 1, warming: errors.Is(err, errProbeWarmingUp)}
 		metricFaults[key] = tracked
 	case errored:
 		tracked.polls++
@@ -389,7 +390,7 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	fault := metricFault{}
 	repeat := false
 	if tracked != nil {
-		if errored && fault.polls != 1 && time.Since(tracked.logged) >= metricFaultRepeat {
+		if errored && tracked.polls != 1 && time.Since(tracked.logged) >= metricFaultRepeat {
 			tracked.logged = time.Now()
 			repeat = true
 		}
