@@ -824,3 +824,53 @@ func TestProbeMounts_DriveLifeTakesTheHigher(t *testing.T) {
 		})
 	}
 }
+
+func TestProbeMounts_DrivesHonourTheCacheWindow(t *testing.T) {
+	tests := []struct {
+		name          string
+		window        time.Duration
+		remount       string
+		expectedReads int
+		expectedError bool
+	}{
+		{name: "happy_unchanged_drives_within_the_window_are_reused", window: time.Hour, remount: "", expectedReads: 1, expectedError: false},
+		{name: "happy_expired_window_re_reads", window: time.Nanosecond, remount: "", expectedReads: 2, expectedError: false},
+		{name: "happy_a_new_drive_re_reads_within_the_window", window: time.Hour, remount: "/dev/sdc1 /share/12 ext4 rw 0 0\n", expectedReads: 2, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Cleanup(resetMounts)
+		t.Run(testCase.name, func(t *testing.T) {
+			mounts := "/dev/nvme0n1p6 / btrfs rw 0 0\n/dev/sdb1 /share/10 ext4 rw 0 0\n"
+			root := writeMountTree(t, mounts, "", nil)
+			set := newMountFixture(t, root, map[string][2]uint64{"/": {1000, 100}, "/share/10": {1000, 100}, "/share/12": {1000, 100}}, nil)
+			set.window = testCase.window
+			set.physicals["/dev/nvme0n1p6"] = "nvme0"
+			set.physicals["/dev/sdb1"] = "sdb"
+			set.physicals["/dev/sdc1"] = "sdc"
+			reads := 0
+			set.smart = func(string, []string) (smartReport, error) {
+				reads++
+				return smartReport{data: true, model: "CT4000P3PSSD8", supported: true, written: bytesPerTB}, nil
+			}
+			set.current = set.collect()
+			if testCase.remount != "" {
+				writeMountFile(t, filepath.Join(root, mountTablePath), mountTableAt(root, mounts+testCase.remount))
+				if err := os.MkdirAll(filepath.Join(root, "/share/12", mountContentDir), 0o755); err != nil {
+					t.Fatalf("remount content: got %v want nil", err)
+				}
+			}
+			before := reads
+			set.current = set.collect()
+			if got := len(set.current.drives); got == 0 {
+				t.Fatalf("drives: got %d want at least one", got)
+			}
+			passes := 1
+			if reads > before {
+				passes = 2
+			}
+			if passes != testCase.expectedReads {
+				t.Errorf("reads: got %d passes want %d, smart called [%d] times", passes, testCase.expectedReads, reads)
+			}
+		})
+	}
+}

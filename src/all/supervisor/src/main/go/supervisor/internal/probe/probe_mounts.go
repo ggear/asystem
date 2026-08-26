@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -46,6 +47,7 @@ type driveWear struct {
 
 type mountSnapshot struct {
 	taken  time.Time
+	read   time.Time
 	table  error
 	mounts []mountUsage
 	drives []driveWear
@@ -74,6 +76,7 @@ type driveIdentity struct {
 
 type mountSet struct {
 	root       string
+	window     time.Duration
 	mutex      sync.Mutex
 	current    *mountSnapshot
 	refreshing bool
@@ -103,6 +106,9 @@ func loadMounts(root string, window time.Duration) *mountSet {
 		}
 		mountCacheMutex.Unlock()
 	}
+	cached.mutex.Lock()
+	cached.window = window
+	cached.mutex.Unlock()
 	cached.request(window)
 	return cached
 }
@@ -349,7 +355,7 @@ func (s *mountSet) collect() *mountSnapshot {
 		}
 		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
 	}
-	taken.drives = s.wear(mounts)
+	taken.drives, taken.read = s.worn(mounts, collectStart)
 	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Debug("surveyed", collectStart, "mounts [%3d], system [%d], shares local [%d] declared [%d] failed [%d], drives [%d]",
 		len(mounts), len(mounts)-taken.locals-mountRemotes(mounts), taken.locals, taken.shares, taken.failed, len(taken.drives))
 	return taken
@@ -512,9 +518,25 @@ func mountShare(used, total uint64) float64 {
 	return float64(used) / float64(total) * 100.0
 }
 
-func (s *mountSet) wear(mounts []mountUsage) []driveWear {
+func (s *mountSet) worn(mounts []mountUsage, collectStart time.Time) ([]driveWear, time.Time) {
+	physicals := s.attached(mounts)
+	s.mutex.Lock()
+	previous, window := s.current, s.window
+	s.mutex.Unlock()
+	if previous != nil && clock.SinceIncludingSuspend(previous.read) < window && slices.Equal(physicals, mountKernels(previous.drives)) {
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("retained", collectStart, "[%d] drive readings aged [%s] within [%s], not re-read", len(previous.drives), clock.SinceIncludingSuspend(previous.read).Truncate(time.Second), window)
+		return previous.drives, previous.read
+	}
+	drives := make([]driveWear, 0, len(physicals))
+	for _, physical := range physicals {
+		drives = append(drives, s.reading(physical))
+	}
+	return drives, clock.NowIncludingSuspend()
+}
+
+func (s *mountSet) attached(mounts []mountUsage) []string {
 	seen := map[string]bool{}
-	var drives []driveWear
+	var physicals []string
 	for _, mount := range mounts {
 		if mount.remote || !strings.HasPrefix(mount.device, "/dev/") {
 			continue
@@ -524,10 +546,18 @@ func (s *mountSet) wear(mounts []mountUsage) []driveWear {
 			continue
 		}
 		seen[physical] = true
-		drives = append(drives, s.reading(physical))
+		physicals = append(physicals, physical)
 	}
-	sort.Slice(drives, func(first, second int) bool { return drives[first].kernel < drives[second].kernel })
-	return drives
+	sort.Strings(physicals)
+	return physicals
+}
+
+func mountKernels(drives []driveWear) []string {
+	kernels := make([]string, 0, len(drives))
+	for _, drive := range drives {
+		kernels = append(kernels, drive.kernel)
+	}
+	return kernels
 }
 
 func (s *mountSet) physical(device string) string {
