@@ -2,6 +2,7 @@ package scribe
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 
@@ -116,8 +117,22 @@ func SubjectHost(name string) Subject {
 	return Subject{text: name}
 }
 
+// SubjectEndpoint names a broker or database by its host and port, with the registered domain dropped — every estate
+// name ends in the same one, so it identifies nothing and only pushes every column of the line right. A host of three
+// or more labels loses its last two (vernemq.local.janeandgraham.com becomes vernemq.local); anything shorter, and any
+// literal IP, is left alone.
 func SubjectEndpoint(endpoint string) Subject {
-	return Subject{text: endpoint}
+	host, port, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		host, port = endpoint, ""
+	}
+	if labels := strings.Split(host, "."); len(labels) > 2 && net.ParseIP(host) == nil {
+		host = strings.Join(labels[:len(labels)-2], ".")
+	}
+	if port == "" {
+		return Subject{text: host}
+	}
+	return Subject{text: host + ":" + port}
 }
 
 func SubjectSurface(name string) Subject {

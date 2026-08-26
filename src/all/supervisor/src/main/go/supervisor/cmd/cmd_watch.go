@@ -64,7 +64,7 @@ func newWatchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.refreshPeriod, "refresh-period", "R", "15m", "period for performing a full screen refresh, uses unit suffixes [s, m, h]")
 	cmd.Flags().IntVarP(&opts.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
 	cmd.Flags().IntVarP(&opts.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
-	addLogFlags(cmd, &opts.logOptions, "debug", "the log overlay and the log file")
+	addLogFlags(cmd, &opts.logOptions, "debug")
 	cmd.Flags().BoolVarP(&opts.json, "json", "J", false, "output JSON instead of the default text format. Assumes local mode, respects poll and bin period options and ignores all formating options")
 	cmd.Flags().SortFlags = false
 	cobra.AddTemplateFunc("join", strings.Join)

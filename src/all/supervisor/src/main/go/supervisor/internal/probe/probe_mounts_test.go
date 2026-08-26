@@ -446,6 +446,20 @@ func TestProbeMounts_UnreadableMountTable(t *testing.T) {
 	}
 }
 
+func mountTableAt(root, mounts string) string {
+	var lines []string
+	for _, line := range strings.Split(mounts, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			lines = append(lines, line)
+			continue
+		}
+		fields[1] = filepath.Join(root, fields[1])
+		lines = append(lines, strings.Join(fields, " "))
+	}
+	return strings.Join(lines, "\n")
+}
+
 func newMountFixture(t *testing.T, root string, sizes map[string][2]uint64, hung []string) *mountSet {
 	t.Helper()
 	hanging := map[string]bool{}
@@ -472,11 +486,32 @@ func newMountFixture(t *testing.T, root string, sizes map[string][2]uint64, hung
 	return set
 }
 
+func TestProbeMounts_ContainerMountsAreDropped(t *testing.T) {
+	t.Cleanup(resetMounts)
+	root := t.TempDir()
+	writeMountFile(t, filepath.Join(root, mountTablePath),
+		"overlay / overlay rw 0 0\n"+
+			"/dev/nvme0n1p6 /etc/hosts btrfs rw 0 0\n"+
+			"/dev/nvme0n1p6 /etc/resolv.conf btrfs rw 0 0\n"+
+			"/dev/nvme0n1p6 "+root+" btrfs rw 0 0\n"+
+			"/dev/nvme0n1p5 "+filepath.Join(root, "/boot")+" ext4 rw 0 0\n"+
+			"/dev/sdb1 "+filepath.Join(root, "/share/10")+" ext4 rw 0 0\n")
+	set := newMountFixture(t, root, nil, nil)
+	var kept []string
+	for _, mount := range set.parseMounts() {
+		kept = append(kept, mount.mountpoint)
+	}
+	expected := []string{"/", "/share/10"}
+	if strings.Join(kept, ",") != strings.Join(expected, ",") {
+		t.Errorf("mountpoints: got %v want %v", kept, expected)
+	}
+}
+
 func writeMountTree(t *testing.T, mounts, fstab string, extra map[string]string) string {
 	t.Helper()
 	root := t.TempDir()
 	if mounts != "" {
-		writeMountFile(t, filepath.Join(root, mountTablePath), mounts)
+		writeMountFile(t, filepath.Join(root, mountTablePath), mountTableAt(root, mounts))
 		for _, line := range strings.Split(mounts, "\n") {
 			fields := strings.Fields(line)
 			if len(fields) < 3 || !strings.HasPrefix(fields[1], mountShareRoot+"/") || fields[2] == "autofs" {

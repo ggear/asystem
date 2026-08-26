@@ -333,7 +333,12 @@ func (s *mountSet) parseMounts() []mountUsage {
 			continue
 		}
 		lines++
-		device, mountpoint, fstype := fields[0], mountUnescape(fields[1]), fields[2]
+		device, fstype := fields[0], fields[2]
+		mountpoint, hosted := s.hosted(mountUnescape(fields[1]))
+		if !hosted {
+			dropped[mountOutsideRoot]++
+			continue
+		}
 		share, remote, keep := mountClass(fstype, mountpoint)
 		if !keep {
 			dropped[fstype]++
@@ -358,6 +363,24 @@ func (s *mountSet) parseMounts() []mountUsage {
 	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Debug("examined", parseStart, "lines [%3d], kept [%d] as [%s], dropped [%d] as [%s]",
 		lines, len(deduped), mountSummary(deduped), lines-len(deduped), mountDropped(dropped))
 	return deduped
+}
+
+// hosted maps a mountpoint as the table spells it onto the host-absolute path the rest of the probe reasons about.
+// procfs generates /proc/mounts for the reading process, so reading it through the mount root still yields the
+// container's own table, in which every host filesystem appears under that root — the host's / is /host, its /boot is
+// /host/boot. Stripping the root is what lets mountClass see /share and /boot, and what stops measure joining the root
+// on a second time; a mount outside the root is the container's own and is dropped.
+func (s *mountSet) hosted(mountpoint string) (string, bool) {
+	if s.root == "" {
+		return mountpoint, true
+	}
+	if mountpoint == s.root {
+		return "/", true
+	}
+	if strings.HasPrefix(mountpoint, s.root+"/") {
+		return strings.TrimPrefix(mountpoint, s.root), true
+	}
+	return "", false
 }
 
 func (s *mountSet) parseFstab() []string {
@@ -792,6 +815,7 @@ const (
 	mountFstabPath           = "etc/fstab"
 	mountBlockPath           = "sys/class/block"
 	mountShareRoot           = "/share"
+	mountOutsideRoot         = "outside-root"
 	mountContentDir          = "media"
 	mountBootRoot            = "/boot"
 	mountNoAuto              = "noauto"

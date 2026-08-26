@@ -314,20 +314,50 @@ func TestScribe_FormatColumns(t *testing.T) {
 	}
 }
 
+func TestScribe_SubjectEndpoint(t *testing.T) {
+	tests := []struct {
+		name            string
+		endpoint        string
+		expectedSubject string
+	}{
+		{name: "happy_fqdn_loses_its_domain", endpoint: "vernemq.local.janeandgraham.com:32404", expectedSubject: "vernemq.local:32404"},
+		{name: "happy_short_name_is_kept", endpoint: "macmini-max:1883", expectedSubject: "macmini-max:1883"},
+		{name: "happy_two_labels_are_kept", endpoint: "vernemq.local:32404", expectedSubject: "vernemq.local:32404"},
+		{name: "happy_address_is_kept", endpoint: "10.0.0.5:32420", expectedSubject: "10.0.0.5:32420"},
+		{name: "happy_portless_host_is_kept", endpoint: "influxdb3.local.janeandgraham.com", expectedSubject: "influxdb3.local"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := SubjectEndpoint(testCase.endpoint).String(); got != testCase.expectedSubject {
+				t.Errorf("subject: got %q want %q", got, testCase.expectedSubject)
+			}
+		})
+	}
+}
+
 func TestScribe_WrapsLongDetail(t *testing.T) {
 	budget := widthLine - widthPrefix()
 	tests := []struct {
 		name          string
-		detail        string
+		spaced        bool
+		budgets       int
 		expectedLines int
 	}{
-		{name: "happy_short_detail_is_one_chunk", detail: "[1] example", expectedLines: 1},
-		{name: "happy_spaced_detail_wraps", detail: strings.Repeat("word ", 60), expectedLines: 3},
-		{name: "happy_unbroken_detail_wraps", detail: strings.Repeat("x", 300), expectedLines: 3},
+		{name: "happy_short_detail_is_one_chunk", spaced: true, budgets: 0, expectedLines: 1},
+		{name: "happy_spaced_detail_wraps", spaced: true, budgets: 2, expectedLines: 3},
+		{name: "happy_unbroken_detail_wraps", spaced: false, budgets: 2, expectedLines: 3},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			chunks := chunked(testCase.detail)
+			detail := "[1] example"
+			if testCase.budgets > 0 {
+				length := budget*testCase.budgets + 10
+				detail = strings.Repeat("x", length)
+				if testCase.spaced {
+					detail = strings.TrimSpace(strings.Repeat("word ", length/5))
+				}
+			}
+			chunks := chunked(detail)
 			if len(chunks) != testCase.expectedLines {
 				t.Errorf("chunks: got %d want %d", len(chunks), testCase.expectedLines)
 			}
@@ -342,8 +372,8 @@ func TestScribe_WrapsLongDetail(t *testing.T) {
 				}
 				carried += strings.TrimSuffix(chunk, wrapEllipsis)
 			}
-			if got := strings.Join(strings.Fields(carried), " "); got != strings.Join(strings.Fields(testCase.detail), " ") {
-				t.Errorf("detail: got %q want %q", got, testCase.detail)
+			if got := strings.Join(strings.Fields(carried), " "); got != strings.Join(strings.Fields(detail), " ") {
+				t.Errorf("detail: got %q want %q", got, detail)
 			}
 		})
 	}

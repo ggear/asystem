@@ -415,7 +415,7 @@ const (
 	widthAction     = 10
 	widthDuration   = 8
 	widthVerb       = 8
-	widthLine       = 200
+	widthLine       = 250
 	widthWrapMin    = 40
 	wrapEllipsis    = "..."
 	widthSubjectMin = 24

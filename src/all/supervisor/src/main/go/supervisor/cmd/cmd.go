@@ -86,11 +86,11 @@ type logOptions struct {
 	logAction  string
 }
 
-func addLogFlags(cmd *cobra.Command, opts *logOptions, level, sink string) {
-	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", level, "lowest log level written to "+sink+", one of debug, info, warn or error")
-	cmd.Flags().StringVar(&opts.logSource, "log-source", "", "comma-separated source prefixes to log, e.g. probe,broker; empty logs every source")
-	cmd.Flags().StringVar(&opts.logSubject, "log-subject", "", "comma-separated subject prefixes to log, e.g. host/used; empty logs every subject")
-	cmd.Flags().StringVar(&opts.logAction, "log-action", "", "comma-separated action prefixes to log, e.g. compute,census; empty logs every action")
+func addLogFlags(cmd *cobra.Command, opts *logOptions, level string) {
+	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
+	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source prefixes e.g. [probe,broker]")
+	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject prefixes e.g. [host/used]")
+	cmd.Flags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action prefixes e.g. [compute,census]")
 }
 
 func setLogFilters(opts *logOptions) error {

@@ -47,7 +47,7 @@ func newServeCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", config.DefaultTrendPeriod, "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h]")
 	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", config.DefaultCachePeriod, "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h]")
 	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h]")
-	addLogFlags(cmd, &opts.logOptions, "info", "stdout and the log file")
+	addLogFlags(cmd, &opts.logOptions, "info")
 	cmd.Flags().SortFlags = false
 	return cmd
 }
