@@ -7,13 +7,19 @@ import (
 	"sync"
 )
 
-// FloatStats tracks pulseWindow values over a fixed window and trend values using
-// constant-memory exponential decay (time constant = trendHours). Trend mean is
-// an EWMA; trend min/max are decayed toward recent values and updated by new samples.
-// Memory usage:
-//   - Pulse window stores N float64 values where N = max(1, pulseSecs/tickFreqSecs).
-//   - Approx bytes for pulseWindow storage: N * 8 (plus ~24 bytes slice header on 64-bit).
-//   - Trend uses O(1) scalars; memory does not scale with trendHours (only affects decay).
+// FloatStats keeps a fixed pulse window and a decayed trend.
+//
+// MEMORY:
+//   - the pulse window of max(round(pulseSecs/tickFreqSecs), 2) float64s, and nothing else
+//   - trendHours sizes the decay, exp(-tickFreqSecs/(trendHours*3600)), never the footprint
+//
+// CPU:
+//   - push, tick and every trend read O(1); pulse mean O(window), median sorts a copy
+//
+// ACCURACY:
+//   - the trend mean is an EWMA; min and max decay toward the recent value, so one old extreme cannot pin them
+//   - decay is applied per sample, so it is a true time constant only at one sample per tick
+//   - NaN and Inf are kept in the pulse window but excluded from the trend; trendHours 0 disables the trend
 type FloatStats struct {
 	mutex         sync.RWMutex
 	pulseIndex    int
@@ -29,8 +35,6 @@ type FloatStats struct {
 	trendOff      bool
 }
 
-// NewFloatStats creates a FloatStats with a fixed pulseWindow window and decayed trend stats.
-// Trend decay uses alpha = exp(-tickFreqSecs / (trendHours * 3600)).
 func NewFloatStats(trendHours int, pulseSecs float64, tickFreqSecs float64) *FloatStats {
 	if trendHours < 0 {
 		panic(fmt.Sprintf("trendHours must be >= 0, got [%d]", trendHours))

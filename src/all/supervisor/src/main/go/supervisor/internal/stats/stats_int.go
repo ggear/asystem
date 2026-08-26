@@ -8,39 +8,6 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// Performance-optimised rolling window implementation for monitoring int values 0-100.
-//
-// MEMORY USAGE (per IntStats with default config):
-//   - Trend window: ~920 KB (3-tier: 1h@1s + 6h@1min + 18h@1hour = 25 hours total)
-//   - Pulse window: ~1.1 KB (5 samples @ 1s)
-//   - Total per IntStats: ~921 KB
-//   - 50 PercentageWindows: ~46 MB
-//
-// CPU USAGE (per IntStats):
-//   - Push(): O(1) ~10-20ns per call (array increment and bound check)
-//   - Tick(): O(1) ~100ns (moves a deque pointer, periodic aggregation)
-//   - Query (Mean/Max/Min): O(window_count) ~0.1ms for a trend window
-//   - Query (P95/P80): O((young + middle + geriatric) * 101) ~0.3ms for a trend window
-//   - 50 windows @ 100 Push/sec: <0.1% CPU baseline, 1-3% with frequent queries
-//
-// ACCURACY:
-//   - Mean/Max/Min/Last: 100% accurate across all time ranges (exact values preserved)
-//   - Percentiles (P95/P80):
-//   - Young tier (0-1 hour): 100% exact (full 1-second resolution histograms)
-//   - Middle tier (1-7 hours): ~99% accurate (60-second aggregated histograms)
-//   - Geriatric tier (7-25 hours): ~95-98% accurate (1-hour aggregated histograms)
-//   - Typical error: ±0-2% for P95/P80, negligible for 0-100% monitoring values
-//
-// DESIGN RATIONALE:
-//   - Fixed histogram (101 buckets for values 0-100): O(1) inserts, no sorting for percentiles
-//   - int16 buckets for young data: handles up to 32K samples/bucket/second (no overflow risk)
-//   - 3-tier progressive aggregation: keeps high precision young, coarse-grained historical
-//   - Histogram aggregation preserves value distribution even when downsampling time resolution
-//
-// OVERFLOW PROTECTION:
-//   - Young tier uses int16 buckets (max 32,767) - supports 32K identical values per second
-//   - Middle/Geriatric tiers use int32 buckets - supports millions of aggregated samples
-//   - Explicit overflow checks on count and sum fields with saturation behaviour
 const (
 	minValidValue         = 0
 	maxValidValue         = 100
@@ -56,6 +23,20 @@ const (
 	defaultMiddleCapacity = 360
 )
 
+// IntStats keeps int8 values 0-100 as fixed 101-bucket histograms, pulse and trend.
+//
+// MEMORY (24h trend, 3s tick, 6s pulse):
+//   - young 1200 slots of 3s covering 1h at 224 bytes, middle 360 of 60s covering 6h and geriatric 17 of 1h at 432
+//   - 421 KiB of trend and 448 bytes of pulse per IntStats
+//   - tiers are sized from trendHours by newTrendWindow, geriatric taking the remainder; trendHours 0 drops the trend
+//
+// CPU:
+//   - push and tick O(1), amortised over the aggregation every youngAggBatchSize ticks
+//   - mean, min and max read every slot they span; a percentile merges those slots' buckets first
+//
+// ACCURACY:
+//   - aggregation coarsens time, never value: buckets are summed, so every tier keeps the full 0-100 distribution
+//   - buckets, counts and sums saturate rather than wrap, int16 in young and int32 once aggregated
 type IntStats struct {
 	mutex sync.RWMutex
 	trend *trendWindow

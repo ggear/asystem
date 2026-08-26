@@ -7,9 +7,19 @@ import (
 	"sync"
 )
 
-// StringStats tracks pulse values over a fixed window and trend values using
-// constant-memory exponential decay (time constant = trendHours). Trend stats
-// report the dominant recent value (decayed mode).
+// StringStats keeps a fixed pulse window and one decayed dominant value.
+//
+// MEMORY:
+//   - the pulse window of max(round(pulseSecs/tickFreqSecs), 2) strings
+//   - the trend is the dominant value and two float64 weights, sharing FloatStats' decay
+//
+// CPU:
+//   - push and every trend read O(1); pulse mode counts the window through a map
+//
+// ACCURACY:
+//   - dominant and challenger swap when the challenger overtakes, and TrendHasChanged is a challenger holding weight
+//   - min, max and dominant are the same value, since ordering these strings would mean nothing
+//   - decay is applied per sample; trendHours 0 disables the trend
 type StringStats struct {
 	mutex         sync.RWMutex
 	pulseIndex    int

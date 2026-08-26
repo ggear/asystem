@@ -86,7 +86,6 @@ func (v *terminalVirtual) draw(x int, y int, str string, colour colour) {
 			break
 		}
 		v.cells[y*v.width+x] = terminalVirtualCell{char: char, colour: colour, written: true}
-		// Reserve trailing cells for wide glyphs to keep virtual x-positions in sync.
 		for i := 1; i < tokenWidth; i++ {
 			v.cells[y*v.width+x+i] = terminalVirtualCell{char: ' ', colour: colour, written: true}
 		}
