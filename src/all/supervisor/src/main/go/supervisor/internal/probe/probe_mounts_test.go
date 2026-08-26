@@ -538,6 +538,40 @@ func newMountFixture(t *testing.T, root string, sizes map[string][2]uint64, hung
 	return set
 }
 
+func TestProbeMounts_BaseFallsBackOutsideTheContainer(t *testing.T) {
+	tests := []struct {
+		name        string
+		rootedTable bool
+		bareTable   bool
+		expectedTop bool
+	}{
+		{name: "happy_configured_root_wins_when_it_holds_a_table", rootedTable: true, bareTable: true, expectedTop: true},
+		{name: "happy_bare_root_is_used_when_the_root_holds_none", rootedTable: false, bareTable: true, expectedTop: false},
+		{name: "sad_configured_root_is_kept_when_neither_holds_one", rootedTable: false, bareTable: false, expectedTop: true},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root, bare := t.TempDir(), t.TempDir()
+			if testCase.rootedTable {
+				writeMountFile(t, filepath.Join(root, mountTablePath), "/dev/sda1 / ext4 rw 0 0\n")
+			}
+			if testCase.bareTable {
+				writeMountFile(t, filepath.Join(bare, mountTablePath), "/dev/sda1 / ext4 rw 0 0\n")
+			}
+			previous := mountBareRoot
+			mountBareRoot = bare
+			t.Cleanup(func() { mountBareRoot = previous })
+			expected := bare
+			if testCase.expectedTop {
+				expected = root
+			}
+			if got := mountBase(root); got != expected {
+				t.Errorf("base: got %q want %q", got, expected)
+			}
+		})
+	}
+}
+
 func TestProbeMounts_ContainerMountsAreDropped(t *testing.T) {
 	t.Cleanup(resetMounts)
 	root := t.TempDir()

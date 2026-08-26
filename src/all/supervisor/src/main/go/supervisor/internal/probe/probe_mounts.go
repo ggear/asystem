@@ -79,7 +79,7 @@ func loadMounts(root string, window time.Duration) *mountSet {
 		mountCacheMutex.Lock()
 		if cached, found = mountCache[root]; !found {
 			cached = &mountSet{
-				root:       root,
+				root:       mountBase(root),
 				physicals:  map[string]string{},
 				identities: map[string]*driveIdentity{},
 				inflight:   map[string]bool{},
@@ -371,13 +371,8 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 	return deduped, nil
 }
 
-// hosted maps a mountpoint as the table spells it onto the host-absolute path the rest of the probe reasons about.
-// procfs generates /proc/mounts for the reading process, so reading it through the mount root still yields the
-// container's own table, in which every host filesystem appears under that root — the host's / is /host, its /boot is
-// /host/boot. Stripping the root is what lets mountClass see /share and /boot, and what stops measure joining the root
-// on a second time; a mount outside the root is the container's own and is dropped.
 func (s *mountSet) hosted(mountpoint string) (string, bool) {
-	if s.root == "" {
+	if s.root == "" || s.root == mountBareRoot {
 		return mountpoint, true
 	}
 	if mountpoint == s.root {
@@ -760,6 +755,25 @@ func mountRemotes(mounts []mountUsage) int {
 	return remotes
 }
 
+func mountBase(root string) string {
+	baseStart := time.Now()
+	for _, base := range []string{root, mountBareRoot} {
+		if base == "" {
+			continue
+		}
+		table := filepath.Join(base, mountTablePath)
+		if _, err := os.Stat(table); err != nil {
+			continue
+		}
+		if base != root {
+			scribe.Log(scribe.SourceProbe, scribe.SubjectPath(table), scribe.ActionDiscover).Info("resolved", baseStart,
+				"mount table read outside the container, configured root [%s] holds none", root)
+		}
+		return base
+	}
+	return root
+}
+
 func mountHolds(mountpoint, path string) bool {
 	if mountpoint == "/" {
 		return true
@@ -861,6 +875,8 @@ var driveRatings = map[string]float64{
 	"CT480BX500SSD1":        120,
 	"ST2000LM007-1R8174":    0,
 }
+
+var mountBareRoot = "/"
 
 var mountLocalTypes = map[string]bool{"ext4": true, "xfs": true, "btrfs": true, "f2fs": true, "vfat": true}
 
