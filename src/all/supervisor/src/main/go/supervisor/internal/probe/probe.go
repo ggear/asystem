@@ -162,11 +162,11 @@ func registerProbe(probe probe) {
 		if id >= 0 && id < metric.MetricMax {
 			if probesByMetricMask[id] != nil && probesByMetricMask[id] != probe {
 				thisType := reflect.TypeOf(probe)
-				if thisType.Kind() == reflect.Ptr {
+				if thisType.Kind() == reflect.Pointer {
 					thisType = thisType.Elem()
 				}
 				thatType := reflect.TypeOf(probesByMetricMask[id])
-				if thatType.Kind() == reflect.Ptr {
+				if thatType.Kind() == reflect.Pointer {
 					thatType = thatType.Elem()
 				}
 				panic(fmt.Sprintf("multiple execProbes [%s,%s] registering metric ID [%d]", thisType.Name(), thatType.Name(), id))
@@ -291,7 +291,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	sample, derivation, err := task.sampleFunc()
 	warming := errors.Is(err, errProbeWarmingUp) && metric.GetIDWarming(task.metricID)
 	errored := err != nil && !warming
-	trackMetricFault(p, task, err, errored)
+	trackMetricFault(task, err, errored)
 	if err == nil {
 		task.statsFunc(sample)
 	} else if task.tickFunc != nil {
@@ -300,7 +300,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	if !isPulse {
 		return metricStatusUnknown
 	}
-	reportMetricDerivation(p, task, taskStart, derivation, err)
+	reportMetricDerivation(task, taskStart, derivation, err)
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
 		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", taskStart, "metric missing the host name")
@@ -309,11 +309,11 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
 	pulse := task.pulseFunc()
 	if warming {
-		reportMetricStatus(p, task, taskStart, metricStatusUnknown, pulse, false, nil, nil, err)
+		reportMetricStatus(task, taskStart, metricStatusUnknown, pulse, false, nil, nil, err)
 		return metricStatusUnknown
 	}
 	if pulse == nil {
-		reportMetricStatus(p, task, taskStart, metricStatusUnknown, nil, false, nil, nil, err)
+		reportMetricStatus(task, taskStart, metricStatusUnknown, nil, false, nil, nil, err)
 		return metricStatusUnknown
 	}
 	unit := metric.GetIDUnit(task.metricID)
@@ -345,7 +345,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	record := metric.NewRecord(*value)
 	p.records().Store(guid, &record)
 	status := metricStatusOf(value.Failed, pulseOK, trendOK)
-	reportMetricStatus(p, task, taskStart, status, pulse, pulseOK, trend, trendOK, err)
+	reportMetricStatus(task, taskStart, status, pulse, pulseOK, trend, trendOK, err)
 	return status
 }
 
@@ -365,7 +365,7 @@ func splitVerb(text string) (string, string) {
 	return trimmed[:index], strings.TrimLeft(trimmed[index:], " ")
 }
 
-func trackMetricFault(p probe, task cacheMetricTask, err error, errored bool) {
+func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
 	message := ""
 	if err != nil {
@@ -405,7 +405,7 @@ func trackMetricFault(p probe, task cacheMetricTask, err error, errored bool) {
 	}
 }
 
-func reportMetricStatus(p probe, task cacheMetricTask, taskStart time.Time, status string, pulse any, pulseOK bool, trend any, trendOK *bool, err error) {
+func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status string, pulse any, pulseOK bool, trend any, trendOK *bool, err error) {
 	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
 	metricStatusesMutex.Lock()
 	previous, seen := metricStatuses[key]
@@ -460,7 +460,7 @@ func stubDerivation(id metric.ID, value any) derivation {
 	return derived(scribe.ActionCompute, "computed [%v] fixed, metric [%s] is an unimplemented stub so it never varies and is always ok", value, metric.GetIDName(id))
 }
 
-func reportMetricDerivation(p probe, task cacheMetricTask, taskStart time.Time, d derivation, err error) {
+func reportMetricDerivation(task cacheMetricTask, taskStart time.Time, d derivation, err error) {
 	if d.empty() {
 		if err == nil {
 			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("unstated", taskStart,
@@ -474,13 +474,6 @@ func reportMetricDerivation(p probe, task cacheMetricTask, taskStart time.Time, 
 	}
 	verb, detail := splitVerb(rendered)
 	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), d.action).Debug(verb, taskStart, detail)
-}
-
-func metricProbeName(id metric.ID) string {
-	if id < 0 || id >= metric.MetricMax || probesByMetricMask[id] == nil {
-		return "*"
-	}
-	return probesByMetricMask[id].name()
 }
 
 func metricStatusOf(failed bool, pulseOK bool, trendOK *bool) string {

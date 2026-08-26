@@ -177,7 +177,7 @@ func TestStatsFloat_PulseWindowStats(t *testing.T) {
 			name:       "happy_same_values",
 			windowSize: 5,
 			setupFunc: func(w *FloatStats) {
-				for i := 0; i < 5; i++ {
+				for range 5 {
 					w.PushAndTick(10.0)
 				}
 			},

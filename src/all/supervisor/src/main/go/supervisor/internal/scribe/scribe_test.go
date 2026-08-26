@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestScribe_Stdout(t *testing.T) {
@@ -49,7 +50,6 @@ func TestScribe_Stdout(t *testing.T) {
 		},
 	}
 	for index, testCase := range tests {
-		testCase := testCase
 		message := fmt.Sprintf("Expected log message %d", index)
 		if !testCase.expected {
 			message = fmt.Sprintf("UNEXPECTED LOG MESSAGE %d!!!!", index)
@@ -97,7 +97,6 @@ func TestScribe_File(t *testing.T) {
 	}
 	logDir := logDir()
 	for index, testCase := range tests {
-		testCase := testCase
 		message := fmt.Sprintf("exp%d", index)
 		if !testCase.expected {
 			message = fmt.Sprintf("bad%d", index)
@@ -389,6 +388,46 @@ func TestScribe_WrapsLongDetail(t *testing.T) {
 			}
 			if got := strings.Join(strings.Fields(carried), " "); got != strings.Join(strings.Fields(detail), " ") {
 				t.Errorf("detail: got %q want %q", got, detail)
+			}
+		})
+	}
+}
+
+func TestScribe_WrapsMultibyteDetail(t *testing.T) {
+	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
+	tests := []struct {
+		name          string
+		width         int
+		detail        string
+		expectedError bool
+	}{
+		{name: "happy_unbroken_multibyte_detail_wraps", width: 250, detail: strings.Repeat("\u00b0", 400), expectedError: false},
+		{name: "happy_spaced_multibyte_detail_wraps", width: 250, detail: strings.TrimSpace(strings.Repeat("\u00b0C \u00b0C ", 200)), expectedError: false},
+		{name: "happy_wide_multibyte_detail_wraps", width: 250, detail: strings.Repeat("\u4e16\u754c", 300), expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			record := slog.NewRecord(time.Now(), slog.LevelWarn, "computed", 0)
+			record.AddAttrs(
+				slog.String(keySource, "probe"),
+				slog.String(keySubject, "host/warn_temperature"),
+				slog.String(keyAction, "compute"),
+				slog.Duration(keyDuration, time.Millisecond),
+				slog.String(keyDetail, testCase.detail),
+			)
+			rows := OverlayLines(LogLine{Time: record.Time, Level: record.Level, Message: format(record)}, testCase.width)
+			if len(rows) < 2 {
+				t.Fatalf("rows: got %d want at least 2", len(rows))
+			}
+			carried := ""
+			for index, row := range rows {
+				if !utf8.ValidString(row) {
+					t.Errorf("encoding: got invalid utf8 %q for row %d", row, index)
+				}
+				carried += strings.TrimSuffix(row[prefix+widthVerb+1:], wrapEllipsis)
+			}
+			if got := strings.Join(strings.Fields(carried), " "); got != strings.Join(strings.Fields(testCase.detail), " ") {
+				t.Errorf("detail: got %q want %q", got, testCase.detail)
 			}
 		})
 	}

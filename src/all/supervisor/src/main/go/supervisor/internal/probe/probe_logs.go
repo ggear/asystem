@@ -82,7 +82,7 @@ func (s *logSet) open() bool {
 		return s.available
 	}
 	s.opened = true
-	failures := []string{}
+	var failures []string
 	for _, root := range s.roots {
 		path := filepath.Join(root, logDevicePath)
 		file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
@@ -103,7 +103,7 @@ func (s *logSet) open() bool {
 
 func (s *logSet) consume() {
 	shouts := 0
-	for reads := 0; reads < logReadsMax; reads++ {
+	for range logReadsMax {
 		count, err := s.read()
 		if count > 0 {
 			s.carry = append(s.carry, s.buffer[:count]...)
@@ -184,11 +184,11 @@ func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
 	if line == "" || line[0] == ' ' || line[0] == '\t' {
 		return time.Time{}, "", false
 	}
-	split := strings.IndexByte(line, ';')
-	if split < 0 {
+	before, after, ok := strings.Cut(line, ";")
+	if !ok {
 		return time.Time{}, "", false
 	}
-	fields := strings.Split(line[:split], ",")
+	fields := strings.Split(before, ",")
 	if len(fields) < 3 {
 		return time.Time{}, "", false
 	}
@@ -200,11 +200,10 @@ func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
 	if err != nil {
 		return time.Time{}, "", false
 	}
-	message := line[split+1:]
-	if !isLogError(priority, message) {
+	if !isLogError(priority, after) {
 		return time.Time{}, "", false
 	}
-	return boot.Add(time.Duration(micros) * time.Microsecond), message, true
+	return boot.Add(time.Duration(micros) * time.Microsecond), after, true
 }
 
 func isLogError(priority int, message string) bool {
@@ -227,8 +226,8 @@ func matchedLog(patterns []*regexp.Regexp, message string) bool {
 }
 
 func compileLog(patterns string) []*regexp.Regexp {
-	compiled := []*regexp.Regexp{}
-	for _, pattern := range strings.Split(patterns, "\n") {
+	var compiled []*regexp.Regexp
+	for pattern := range strings.SplitSeq(patterns, "\n") {
 		pattern = strings.TrimSpace(pattern)
 		if pattern == "" {
 			continue

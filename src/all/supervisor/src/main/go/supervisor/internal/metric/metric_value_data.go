@@ -41,6 +41,7 @@ func (k ValueKind) String() string {
 	}
 }
 
+//goland:noinspection GoUnusedExportedFunction
 func ParseValueKind(value string) (ValueKind, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "bool":
@@ -232,10 +233,10 @@ func (d ValueDataDetail) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 	type Alias struct {
-		OK    bool        `json:"ok"`
-		Value interface{} `json:"value,omitempty"`
+		OK    bool `json:"ok"`
+		Value any  `json:"value,omitempty"`
 	}
-	var v interface{}
+	var v any
 	switch d.Kind {
 	case ValueFloat:
 		v = d.ValueFloat

@@ -80,7 +80,7 @@ func (s *sensorSet) celsius() (float64, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no temperature read, none of the [%d] discovered [%s] tier sensors answered sanely, rejected [%s]",
 			len(s.temperatureInputs), s.tier, strings.Join(rejected, ", "))
 	}
-	return hottest, derived(scribe.ActionSample, "computed [%.1f] °C hottest, tier [%s], inputs [%d], offset [%.1f] °C, sane between [%.0f] and [%.0f] °C",
+	return hottest, derived(scribe.ActionSample, "computed [%.1f] C hottest, tier [%s], inputs [%d], offset [%.1f] C, sane between [%.0f] and [%.0f] C",
 		hottest, s.tier, len(s.temperatureInputs), s.temperatureOffset, sensorMinCelsius, sensorMaxCelsius), nil
 }
 

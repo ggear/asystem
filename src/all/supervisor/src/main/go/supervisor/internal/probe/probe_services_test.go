@@ -252,7 +252,7 @@ func TestProbeServices_Services(t *testing.T) {
 			}
 			var err error
 			var services map[string]service
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				services, err = probe.services(context.Background(), probe.installs().snapshot())
 				if tt.expectedError {
 					if err == nil {

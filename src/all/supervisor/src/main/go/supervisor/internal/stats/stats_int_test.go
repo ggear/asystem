@@ -429,7 +429,7 @@ func TestStatsInt_TrendWindow_ExtremeFrequency(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			window := newTrendWindow(24, 1)
 			totalPushes := testCase.pushesPerSecond * testCase.seconds
-			for index := 0; index < totalPushes; index++ {
+			for range totalPushes {
 				window.push(testCase.value)
 			}
 			mean := window.mean()
@@ -543,12 +543,12 @@ func TestStatsInt_TrendWindow_OverlappingValues(t *testing.T) {
 			name: "happy_overlapping_values_across_tiers",
 			run: func(window *trendWindow) []int8 {
 				values := make([]int8, 0, 200)
-				for index := 0; index < ticksPerMinute; index++ {
+				for range ticksPerMinute {
 					window.push(10)
 					values = append(values, 10)
 					window.tick()
 				}
-				for index := 0; index < ticksPerMinute/2; index++ {
+				for range ticksPerMinute / 2 {
 					window.push(90)
 					window.push(10)
 					values = append(values, 90, 10)
@@ -591,7 +591,7 @@ func TestStatsInt_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
 			name: "happy_partial_aggregation_across_tiers",
 			run: func(window *trendWindow) []int8 {
 				values := make([]int8, 0, ticksPerMinute*2+10)
-				for index := 0; index < ticksPerMinute*2+10; index++ {
+				for range ticksPerMinute*2 + 10 {
 					window.push(20)
 					values = append(values, 20)
 					window.tick()
@@ -687,7 +687,7 @@ func TestStatsInt_TrendWindow_EvictionOrder(t *testing.T) {
 			count := 0
 			var sum int64
 			var counts [maxValidValue + 1]int
-			for index := 0; index < runTicks; index++ {
+			for index := range runTicks {
 				value := int8(index % (maxValidValue + 1))
 				window.push(value)
 				window.tick()
@@ -742,7 +742,7 @@ func TestStatsInt_TrendWindow_RandomPushTickSequences(t *testing.T) {
 			values := make([]int8, 0, 1000)
 			for index := 0; index < testCase.ticks; index++ {
 				pushes := 1 + rng.Intn(testCase.maxPushes)
-				for innerIndex := 0; innerIndex < pushes; innerIndex++ {
+				for range pushes {
 					value := int8(rng.Intn(maxValidValue + 1))
 					window.push(value)
 					values = append(values, value)
@@ -938,7 +938,7 @@ func TestStatsInt_TrendWindow_TickAndAggregation(t *testing.T) {
 		{
 			name: "happy_multiple_ticks",
 			setupFunc: func(window *trendWindow) {
-				for index := 0; index < 10; index++ {
+				for index := range 10 {
 					window.push(int8(10 * (index + 1)))
 					window.tick()
 				}
@@ -948,7 +948,7 @@ func TestStatsInt_TrendWindow_TickAndAggregation(t *testing.T) {
 		{
 			name: "happy_aggregation_after_60_ticks",
 			setupFunc: func(window *trendWindow) {
-				for index := 0; index < 70; index++ {
+				for range 70 {
 					window.push(50)
 					window.tick()
 				}
@@ -958,7 +958,7 @@ func TestStatsInt_TrendWindow_TickAndAggregation(t *testing.T) {
 		{
 			name: "happy_aggregation_after_3600_ticks",
 			setupFunc: func(window *trendWindow) {
-				for index := 0; index < 3650; index++ {
+				for range 3650 {
 					window.push(85)
 					window.tick()
 				}
@@ -968,7 +968,7 @@ func TestStatsInt_TrendWindow_TickAndAggregation(t *testing.T) {
 		{
 			name: "happy_empty_ticks",
 			setupFunc: func(window *trendWindow) {
-				for index := 0; index < 10; index++ {
+				for range 10 {
 					window.tick()
 				}
 			},
@@ -977,7 +977,7 @@ func TestStatsInt_TrendWindow_TickAndAggregation(t *testing.T) {
 		{
 			name: "happy_mixed_empty_and_filled_ticks",
 			setupFunc: func(window *trendWindow) {
-				for index := 0; index < 20; index++ {
+				for index := range 20 {
 					if index%2 == 0 {
 						window.push(50)
 					}
@@ -1048,7 +1048,7 @@ func TestStatsInt_PulseWindow_Basic(t *testing.T) {
 		{
 			name: "happy_single_value_repeated",
 			pushAndTick: func(window *pulseWindow) {
-				for index := 0; index < 5; index++ {
+				for index := range 5 {
 					window.push(85)
 					window.push(85)
 					if index < 4 {
@@ -1176,7 +1176,7 @@ func TestStatsInt_EmptyWindow(t *testing.T) {
 			name: "happy_pushed_then_idle",
 			setupFunc: func(window *trendWindow) {
 				window.push(50)
-				for index := 0; index < 4000; index++ {
+				for range 4000 {
 					window.tick()
 				}
 			},
@@ -1220,17 +1220,17 @@ func TestStatsInt_MultipleWindows_Concurrency(t *testing.T) {
 			const numberOfGoroutinesPerWindow = 5
 			const operationsPerGoroutine = 100
 			windows := make([]*IntStats, numberOfWindows)
-			for index := 0; index < numberOfWindows; index++ {
+			for index := range numberOfWindows {
 				windows[index] = NewIntStats(24, 5, 1)
 			}
 			var waitGroup sync.WaitGroup
-			for windowIndex := 0; windowIndex < numberOfWindows; windowIndex++ {
-				for goroutineIndex := 0; goroutineIndex < numberOfGoroutinesPerWindow; goroutineIndex++ {
+			for windowIndex := range numberOfWindows {
+				for goroutineIndex := range numberOfGoroutinesPerWindow {
 					waitGroup.Add(1)
 					go func(window *IntStats, windowIndex, goroutineIndex int) {
 						defer waitGroup.Done()
 						value := int8((windowIndex*numberOfGoroutinesPerWindow + goroutineIndex) % 101)
-						for index := 0; index < operationsPerGoroutine; index++ {
+						for index := range operationsPerGoroutine {
 							window.Push(value)
 							if index%10 == 0 {
 								window.Tick()
@@ -1268,23 +1268,23 @@ func TestStatsInt_Concurrency(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			window := NewIntStats(24, 5, 1)
 			done := make(chan bool)
-			for index := 0; index < 10; index++ {
+			for index := range 10 {
 				go func(val int8) {
-					for innerIndex := 0; innerIndex < 100; innerIndex++ {
+					for range 100 {
 						window.Push(val)
 					}
 					done <- true
 				}(int8(index * 10))
 			}
 			go func() {
-				for index := 0; index < 100; index++ {
+				for range 100 {
 					_ = window.TrendMean()
 					_ = window.TrendMax()
 					_ = window.TrendP95()
 				}
 				done <- true
 			}()
-			for index := 0; index < 11; index++ {
+			for range 11 {
 				<-done
 			}
 			mean := window.TrendMean()

@@ -13,11 +13,3 @@ func MapToString(tags map[string]string) string {
 	sort.Strings(tagStrings)
 	return strings.Join(tagStrings, ", ")
 }
-
-func BoolToPtr(value bool) *bool {
-	return &value
-}
-
-func StringToPtr(value string) *string {
-	return &value
-}

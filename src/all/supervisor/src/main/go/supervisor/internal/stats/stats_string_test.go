@@ -220,7 +220,7 @@ func TestStatsString_PulseWindowStats(t *testing.T) {
 			name:       "happy_all_same_no_change",
 			windowSize: 5,
 			setupFunc: func(w *StringStats) {
-				for i := 0; i < 5; i++ {
+				for range 5 {
 					w.PushAndTick("same")
 				}
 			},
@@ -334,7 +334,7 @@ func TestStatsString_TrendDecay(t *testing.T) {
 		{
 			name: "happy_aggressive_decay_beta_overtakes",
 			setupFunc: func(w *StringStats, alpha float64) {
-				for i := 0; i < 10; i++ {
+				for range 10 {
 					w.Push("alpha")
 				}
 				w.Push("beta")

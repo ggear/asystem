@@ -382,7 +382,7 @@ func (p *hostProbe) warnTemperature() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	warnOfMax := stats.ConvertToInt(metric.WarnTemperaturePerCelsius * (temperatureCelsius - metric.WarnTemperatureBaseCelsius))
-	return warnOfMax, derived(scribe.ActionCompute, "computed [%3d] pct of warn, celsius [%.1f] above floor [%.1f] at [%.1f] pct per celsius",
+	return warnOfMax, derived(scribe.ActionCompute, "computed [%3d] pct of warn, [%.1f] C above floor [%.1f] C at [%.1f] pct/C",
 		warnOfMax, temperatureCelsius, metric.WarnTemperatureBaseCelsius, metric.WarnTemperaturePerCelsius), nil
 }
 

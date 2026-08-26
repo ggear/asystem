@@ -473,12 +473,12 @@ func resizes(layout [][]box, hostCount int) int {
 func compile(useUnicode bool, layout [][]box) [][]box {
 	result := make([][]box, 0, len(layout))
 	for row := range layout {
-		rowLabels := ""
+		var rowLabels strings.Builder
 		for col := range layout[row] {
 			layout[row][col].compile(false, true)
-			rowLabels += layout[row][col].trim(useUnicode)
+			rowLabels.WriteString(layout[row][col].trim(useUnicode))
 		}
-		if rowLabels != "" {
+		if rowLabels.Len() > 0 {
 			result = append(result, layout[row])
 		}
 	}
@@ -699,19 +699,8 @@ func (b *box) drawValue(display *Display) {
 		if percent > 0 && filled == 0 {
 			filled = 1
 		}
-		if filled < 0 {
-			filled = 0
-		}
-		if filled > barWidth {
-			filled = barWidth
-		}
-		percentInt := int(math.Round(percent))
-		if percentInt < 0 {
-			percentInt = 0
-		}
-		if percentInt > 100 {
-			percentInt = 100
-		}
+		filled = min(max(filled, 0), barWidth)
+		percentInt := min(max(int(math.Round(percent)), 0), 100)
 		col := location.cols
 		if !display.useUnicode {
 			display.terminal.draw(col, location.rows, "|", c)

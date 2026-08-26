@@ -65,7 +65,7 @@ func SetupBrokerContainer(t *testing.T) (testcontainers.Container, mqtt.Client, 
 		SetConnectTimeout(2 * time.Second)
 	mqttClient := mqtt.NewClient(mqttClientOptions)
 	var connectError error
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		connectToken := mqttClient.Connect()
 		connectToken.Wait()
 		if connectToken.Error() == nil && mqttClient.IsConnected() {

@@ -112,8 +112,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		isRemote = true
 		inner := mode[len("remote[") : len(mode)-1]
 		if inner != "" {
-			parts := strings.Split(inner, ",")
-			for _, h := range parts {
+			for h := range strings.SplitSeq(inner, ",") {
 				if h = strings.TrimSpace(h); h != "" {
 					hosts = append(hosts, h)
 				}

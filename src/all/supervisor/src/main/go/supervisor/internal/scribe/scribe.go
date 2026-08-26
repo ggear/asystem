@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -290,13 +292,13 @@ func OverlayLine(line LogLine) string {
 // width is the terminal's rather than a constant, and a terminal too narrow to hold a readable detail column falls
 // back to the single line the caller clips.
 func OverlayLines(line LogLine, width int) []string {
-	rendered := OverlayLine(line)
+	rendered := []rune(OverlayLine(line))
 	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
 	budget := width - prefix - widthVerb - 1
 	if len(rendered) <= width || budget < widthWrapMin || len(rendered) <= prefix+widthVerb+1 {
-		return []string{rendered}
+		return []string{string(rendered)}
 	}
-	head, verbText, detail := rendered[:prefix], rendered[prefix:prefix+widthVerb], rendered[prefix+widthVerb+1:]
+	head, verbText, detail := string(rendered[:prefix]), string(rendered[prefix:prefix+widthVerb]), string(rendered[prefix+widthVerb+1:])
 	var lines []string
 	for index, chunk := range chunked(detail, budget) {
 		slot := verbText
@@ -343,28 +345,38 @@ func format(record slog.Record) string {
 // chunked splits a detail too long for the budget, cutting at a space where there is one and mid-token where there is
 // not, and ending every continuing chunk with wrapEllipsis.
 func chunked(detail string, budget int) []string {
-	if budget < widthWrapMin || len(detail) <= budget {
+	runes := []rune(detail)
+	if budget < widthWrapMin || len(runes) <= budget {
 		return []string{detail}
 	}
 	limit := budget - len(wrapEllipsis) - 1
 	var chunks []string
-	for len(detail) > budget {
-		chunk, rest, spaced := split(detail, limit)
+	for len(runes) > budget {
+		chunk, rest, spaced := split(runes, limit)
 		if spaced {
 			chunk += " "
 		}
 		chunks = append(chunks, chunk+wrapEllipsis)
-		detail = rest
+		runes = rest
 	}
-	return append(chunks, detail)
+	return append(chunks, string(runes))
 }
 
-func split(detail string, limit int) (string, string, bool) {
-	cut := strings.LastIndex(detail[:limit+1], " ")
+func split(detail []rune, limit int) (string, []rune, bool) {
+	cut := spaced(detail[:limit+1])
 	if cut <= 0 {
-		return detail[:limit], detail[limit:], false
+		return string(detail[:limit]), detail[limit:], false
 	}
-	return strings.TrimRight(detail[:cut], " "), strings.TrimLeft(detail[cut:], " "), true
+	return strings.TrimRight(string(detail[:cut]), " "), []rune(strings.TrimLeft(string(detail[cut:]), " ")), true
+}
+
+func spaced(runes []rune) int {
+	for index, value := range slices.Backward(runes) {
+		if value == ' ' {
+			return index
+		}
+	}
+	return -1
 }
 
 func columnLine(source, subject, action, duration, detail string) string {
@@ -372,10 +384,11 @@ func columnLine(source, subject, action, duration, detail string) string {
 }
 
 func verb(word string) string {
-	if len(word) >= widthVerb {
-		return word[:widthVerb]
+	runes := []rune(word)
+	if len(runes) >= widthVerb {
+		return string(runes[:widthVerb])
 	}
-	return word + strings.Repeat(" ", widthVerb-len(word))
+	return word + strings.Repeat(" ", widthVerb-len(runes))
 }
 
 func durationText(value slog.Value) string {
@@ -383,7 +396,7 @@ func durationText(value slog.Value) string {
 	if value.Kind() == slog.KindDuration {
 		text = elapsed(value.Duration())
 	}
-	if space := widthDuration - len(text); space > 0 {
+	if space := widthDuration - utf8.RuneCountInString(text); space > 0 {
 		return strings.Repeat(" ", space) + text
 	}
 	return text
@@ -403,10 +416,11 @@ func elapsed(value time.Duration) string {
 }
 
 func pad(text string, width int) string {
-	if len(text) >= width {
+	count := utf8.RuneCountInString(text)
+	if count >= width {
 		return text
 	}
-	return text + strings.Repeat(" ", width-len(text))
+	return text + strings.Repeat(" ", width-count)
 }
 
 const (

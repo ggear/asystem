@@ -177,6 +177,7 @@ def _setup(context):
                         ' | grep -v "both GOPATH and GOROOT are the same directory" >&2 || true;'
                         'goenv use "${GO_VERSION}" --global > /dev/null;'
                         'go install gotest.tools/gotestsum@latest;'
+                        'go install golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest;'
                         'echo "Installed go-${GO_VERSION} at [${GOROOT}]"')
     if _run_local(context,
                   '[[ "$(go version)" == *"go${GO_VERSION}"* ]]'
@@ -777,6 +778,10 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _run_local(context, "go mod tidy", module_go_main_path)
             _run_local(context, "go mod download", module_go_main_path)
             _run_local(context, "go generate ./...", module_go_main_path)
+            _print_line("Linting sources ...")
+            _run_local(context, "gofmt -l -w .", module_go_main_path)
+            _run_local(context, "modernize -fix ./...", module_go_main_path)
+            _run_local(context, "go vet ./...", module_go_main_path)
             _run_local(context, "GOCACHE={} GOBIN={} go build -o {}".format(
                 join(ROOT_MODULE_DIR, module, "target/go/cache"),
                 join(ROOT_MODULE_DIR, module, "target/go/bin"),

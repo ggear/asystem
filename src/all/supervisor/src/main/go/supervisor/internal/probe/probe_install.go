@@ -158,13 +158,18 @@ func (t *installTree) home(base, name string) string {
 
 func (t *installTree) fingerprint() uint64 {
 	hash := fnv.New64a()
+	writeHash := func(data []byte) {
+		if _, err := hash.Write(data); err != nil {
+			panic(fmt.Sprintf("write install fingerprint: %v", err))
+		}
+	}
 	stamp := make([]byte, 0, 16)
 	for _, base := range t.bases() {
 		root := base + installRoot
 		entries, err := os.ReadDir(root)
 		if err != nil {
-			hash.Write([]byte(root))
-			hash.Write(installAbsentMark)
+			writeHash([]byte(root))
+			writeHash(installAbsentMark)
 			continue
 		}
 		for _, entry := range entries {
@@ -174,16 +179,16 @@ func (t *installTree) fingerprint() uint64 {
 				t.buffer = append(t.buffer, '/')
 				t.buffer = append(t.buffer, entry.Name()...)
 				t.buffer = append(t.buffer, suffix...)
-				hash.Write(t.buffer)
+				writeHash(t.buffer)
 				info, statErr := os.Lstat(string(t.buffer))
 				if statErr != nil {
-					hash.Write(installAbsentMark)
+					writeHash(installAbsentMark)
 					continue
 				}
 				stamp = stamp[:0]
 				stamp = installAppendInt64(stamp, info.ModTime().UnixNano())
 				stamp = installAppendInt64(stamp, info.Size())
-				hash.Write(stamp)
+				writeHash(stamp)
 			}
 		}
 	}
@@ -244,7 +249,7 @@ func installVersion(home, name string) string {
 		scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", versionStart, "version not readable from [%s] with [%v]", path, err)
 		return ""
 	}
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		value, found := strings.CutPrefix(line, installVersionKey)
 		if !found {
 			continue

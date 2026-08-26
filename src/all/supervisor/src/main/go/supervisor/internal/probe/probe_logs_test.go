@@ -60,7 +60,7 @@ func TestProbeLogs_IsLogError(t *testing.T) {
 
 func TestProbeLogs_IgnorePatternsAllCompile(t *testing.T) {
 	declared := 0
-	for _, pattern := range strings.Split(logIgnorePatterns, "\n") {
+	for pattern := range strings.SplitSeq(logIgnorePatterns, "\n") {
 		if strings.TrimSpace(pattern) == "" {
 			continue
 		}

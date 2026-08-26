@@ -496,7 +496,7 @@ func TestProbeMounts_UnreadableMountTable(t *testing.T) {
 
 func mountTableAt(root, mounts string) string {
 	var lines []string
-	for _, line := range strings.Split(mounts, "\n") {
+	for line := range strings.SplitSeq(mounts, "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 3 {
 			lines = append(lines, line)
@@ -599,7 +599,7 @@ func writeMountTree(t *testing.T, mounts, fstab string, extra map[string]string)
 	root := t.TempDir()
 	if mounts != "" {
 		writeMountFile(t, filepath.Join(root, mountTablePath), mountTableAt(root, mounts))
-		for _, line := range strings.Split(mounts, "\n") {
+		for line := range strings.SplitSeq(mounts, "\n") {
 			fields := strings.Fields(line)
 			if len(fields) < 3 || !strings.HasPrefix(fields[1], mountShareRoot+"/") || fields[2] == "autofs" {
 				continue

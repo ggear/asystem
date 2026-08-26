@@ -165,7 +165,7 @@ func (d *Display) Compile() (Format, error) {
 		}
 		addLayoutRowsCount := (d.dimsInit.rows - displayRowMin) / ((hostCount + 1) / 2)
 		penultimateRow := layout[len(layout)-2]
-		for i := 0; i < addLayoutRowsCount; i++ {
+		for range addLayoutRowsCount {
 			newRow := make([]box, len(penultimateRow))
 			for j := range penultimateRow {
 				newRow[j] = *penultimateRow[j].clone()
@@ -242,7 +242,7 @@ func (d *Display) Compile() (Format, error) {
 						"row is not terminated by at least one [cline] in zero-indexed row [%d] of layout [%v]",
 						layoutRowIndex, format)
 				}
-				for hostColIndex := 0; hostColIndex < 2; hostColIndex++ {
+				for hostColIndex := range 2 {
 					hostIndex := hostRowIndex*2 + hostColIndex
 					if hostIndex >= hostCount {
 						continue
@@ -443,10 +443,7 @@ func (d *Display) Logging() {
 	arrowWidth := runewidth.StringWidth(arrow)
 	escWidth := runewidth.StringWidth(esc)
 	suffixWidth := runewidth.StringWidth(suffix)
-	padLen := d.dimsInit.cols - arrowWidth - escWidth - suffixWidth
-	if padLen < 0 {
-		padLen = 0
-	}
+	padLen := max(d.dimsInit.cols-arrowWidth-escWidth-suffixWidth, 0)
 	d.terminal.draw(0, 0, strings.Repeat("=", padLen), colourChat)
 	d.terminal.draw(padLen, 0, arrow, colourChat)
 	d.terminal.draw(padLen+arrowWidth, 0, esc, colourShout)

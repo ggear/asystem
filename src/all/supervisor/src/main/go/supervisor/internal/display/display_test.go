@@ -11,7 +11,6 @@ import (
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
-	"supervisor/internal/testutil"
 	"testing"
 	"time"
 
@@ -713,7 +712,7 @@ func TestDisplay_Happy(t *testing.T) {
 							cache.Store(metric.NewRecordGUID(id, host), &record)
 						}
 					}
-					for i := 0; i < len(services); i++ {
+					for i := range services {
 						for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindService}) {
 							record := record(id, i)
 							cache.Store(metric.NewServiceRecordGUID(id, host, fmt.Sprintf("test-svc-%02d", i)), &record)
@@ -1482,37 +1481,37 @@ func TestDisplay_Highlight(t *testing.T) {
 	}{
 		{
 			name:     "happy_pulse_trend",
-			pulse:    testutil.BoolToPtr(true),
-			trend:    testutil.BoolToPtr(true),
+			pulse:    new(true),
+			trend:    new(true),
 			expected: colourCheer,
 		},
 		{
 			name:     "happy_pulse_only",
-			pulse:    testutil.BoolToPtr(true),
-			trend:    testutil.BoolToPtr(false),
+			pulse:    new(true),
+			trend:    new(false),
 			expected: colourWarn,
 		},
 		{
 			name:     "happy_no_pulse",
-			pulse:    testutil.BoolToPtr(false),
-			trend:    testutil.BoolToPtr(true),
+			pulse:    new(false),
+			trend:    new(true),
 			expected: colourAlert,
 		},
 		{
 			name:     "happy_no_pulse_no_trend",
-			pulse:    testutil.BoolToPtr(false),
-			trend:    testutil.BoolToPtr(false),
+			pulse:    new(false),
+			trend:    new(false),
 			expected: colourAlert,
 		},
 		{
 			name:     "happy_nil_pulse",
 			pulse:    nil,
-			trend:    testutil.BoolToPtr(true),
+			trend:    new(true),
 			expected: colourChat,
 		},
 		{
 			name:     "happy_nil_trend",
-			pulse:    testutil.BoolToPtr(true),
+			pulse:    new(true),
 			trend:    nil,
 			expected: colourWarn,
 		},
@@ -1765,7 +1764,7 @@ func TestDisplay_Failed(t *testing.T) {
 						cache.Store(metric.NewRecordGUID(id, host), &hostRecord)
 					}
 				}
-				for i := 0; i < len(services); i++ {
+				for i := range services {
 					for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindService}) {
 						serviceRecord := record(id, i)
 						serviceRecord.Value.Failed = failedService[i]
@@ -1802,7 +1801,7 @@ func TestDisplay_Failed(t *testing.T) {
 			if _, got, _ := terminal.cell(labelCols, labelRows); got != testCase.expectedColour {
 				t.Errorf("label colour: got %v want %v", got, testCase.expectedColour)
 			}
-			for offset := 0; offset < 4; offset++ {
+			for offset := range 4 {
 				char, _, _ := terminal.cell(labelCols+len(label)+offset, labelRows)
 				if char != ' ' {
 					t.Errorf("value cell %d: got %q want a blank", offset, char)

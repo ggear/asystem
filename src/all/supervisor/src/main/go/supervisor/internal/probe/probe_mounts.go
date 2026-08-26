@@ -333,7 +333,7 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 	dropped := map[string]int{}
 	lines := 0
 	var mounts []mountUsage
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 3 {
 			continue
@@ -390,7 +390,7 @@ func (s *mountSet) parseFstab() []string {
 		return nil
 	}
 	var expected []string
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		if trimmed := strings.TrimSpace(line); trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
 		}
@@ -497,8 +497,8 @@ func (s *mountSet) resolve(kernel string, depth int) string {
 	if kernel == "" || depth > mountResolveMax {
 		return ""
 	}
-	if strings.HasPrefix(kernel, "mapper/") {
-		return s.resolve(s.mapper(strings.TrimPrefix(kernel, "mapper/")), depth+1)
+	if after, ok := strings.CutPrefix(kernel, "mapper/"); ok {
+		return s.resolve(s.mapper(after), depth+1)
 	}
 	block := filepath.Join(s.root, mountBlockPath, kernel)
 	target, err := os.Readlink(block)

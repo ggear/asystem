@@ -350,7 +350,7 @@ func TestStatsBool_TrendDecay(t *testing.T) {
 		{
 			name: "happy_aggressive_decay_false_overtakes",
 			setupFunc: func(w *BoolStats, alpha float64) {
-				for i := 0; i < 10; i++ {
+				for range 10 {
 					w.Push(true)
 				}
 				w.Push(false)
