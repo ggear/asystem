@@ -289,7 +289,8 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 		return metricStatusUnknown
 	}
 	sample, derivation, err := task.sampleFunc()
-	warming := errors.Is(err, errProbeWarmingUp) && metric.GetIDWarming(task.metricID)
+	warming := errors.Is(err, errProbeWarmingUp)
+	seeding := warming && metric.GetIDWarming(task.metricID)
 	errored := err != nil && !warming
 	trackMetricFault(task, err, errored)
 	if err == nil {
@@ -308,7 +309,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
 	pulse := task.pulseFunc()
-	if warming {
+	if seeding {
 		reportMetricStatus(task, taskStart, metricStatusUnknown, pulse, false, nil, nil, err)
 		return metricStatusUnknown
 	}

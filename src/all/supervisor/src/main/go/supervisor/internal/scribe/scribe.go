@@ -9,8 +9,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -23,6 +25,9 @@ const (
 	logDirUser        = "/tmp/supervisor"
 	logDirUserMac     = "Library/Logs/supervisor"
 	logDirRoot        = "/var/log/supervisor"
+	logFileSuffix     = ".log"
+	logFileArchive    = ".gz"
+	logFilePIDMarker  = "-pid-"
 	timeLayout        = "01-02T15:04:05"
 	overlayTimeLayout = "15:04:05"
 )
@@ -37,7 +42,7 @@ func EnableStdout(level slog.Level) {
 }
 
 func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+	writer, path, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
 	}
@@ -47,11 +52,12 @@ func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays 
 	scribeLoggerMode = "file"
 	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: writer})
 	slog.SetDefault(scribeLoggerInstance)
+	purgeLogFiles(path)
 	return nil
 }
 
 func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+	writer, path, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
 	}
@@ -62,6 +68,7 @@ func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, ma
 	multi := io.MultiWriter(os.Stdout, writer)
 	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: multi})
 	slog.SetDefault(scribeLoggerInstance)
+	purgeLogFiles(path)
 	return nil
 }
 
@@ -85,7 +92,7 @@ func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
 }
 
 func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxBackups, maxAgeDays int) (*LogBuffer, error) {
-	writer, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+	writer, path, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +106,7 @@ func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxB
 		&streamHandler{level: level, writer: writer},
 	}})
 	slog.SetDefault(scribeLoggerInstance)
+	purgeLogFiles(path)
 	return buf, nil
 }
 
@@ -503,11 +511,71 @@ func logDir() string {
 	return logDirUser
 }
 
-func fileWriter(cmd string, maxSizeMB, maxBackups, maxAgeDays int) (io.Writer, error) {
+func fileWriter(cmd string, maxSizeMB, maxBackups, maxAgeDays int) (io.Writer, string, error) {
 	dir := logDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, fmt.Errorf("create log directory failed [%s] [%w]", dir, err)
+		return nil, "", fmt.Errorf("create log directory failed [%s] [%w]", dir, err)
 	}
-	path := filepath.Join(dir, fmt.Sprintf("%s-pid-%d.log", cmd, os.Getpid()))
-	return &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}, nil
+	path := filepath.Join(dir, fmt.Sprintf("%s-pid-%d%s", cmd, os.Getpid(), logFileSuffix))
+	return &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}, path, nil
+}
+
+func purgeLogFiles(keep string) {
+	purgeStart := time.Now()
+	dir := filepath.Dir(keep)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		Log(SourceProcess, SubjectPath(dir), ActionRemove).Warn("faulting", purgeStart, "log directory unreadable with [%v]", err)
+		return
+	}
+	removed := 0
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, logFileSuffix) && !strings.HasSuffix(name, logFileSuffix+logFileArchive) {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		if path == keep {
+			continue
+		}
+		if pid, ok := logFilePID(name); ok && pid != os.Getpid() && logProcessAlive(pid) {
+			continue
+		}
+		if removeErr := os.Remove(path); removeErr != nil {
+			Log(SourceProcess, SubjectPath(path), ActionRemove).Warn("faulting", purgeStart, "stale log file with [%v]", removeErr)
+			continue
+		}
+		removed++
+	}
+	if removed > 0 {
+		Log(SourceProcess, SubjectPath(dir), ActionRemove).Info("removals", purgeStart, "[%d] stale log files, kept [%s]", removed, filepath.Base(keep))
+	}
+}
+
+func logFilePID(name string) (int, bool) {
+	index := strings.LastIndex(name, logFilePIDMarker)
+	if index < 0 {
+		return 0, false
+	}
+	digits := name[index+len(logFilePIDMarker):]
+	end := strings.IndexFunc(digits, func(value rune) bool { return value < '0' || value > '9' })
+	if end == 0 {
+		return 0, false
+	}
+	if end > 0 {
+		digits = digits[:end]
+	}
+	pid, err := strconv.Atoi(digits)
+	if err != nil {
+		return 0, false
+	}
+	return pid, true
+}
+
+func logProcessAlive(pid int) bool {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	return process.Signal(syscall.Signal(0)) == nil
 }

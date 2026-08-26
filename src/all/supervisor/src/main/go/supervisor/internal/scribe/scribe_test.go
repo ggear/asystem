@@ -839,3 +839,53 @@ func walkGoFiles(t *testing.T, root string, visit func(position string, node ast
 		t.Fatalf("walk %s: %v", root, err)
 	}
 }
+
+func TestScribe_LogFilePID(t *testing.T) {
+	tests := []struct {
+		name        string
+		file        string
+		expectedPID int
+		expectedOK  bool
+	}{
+		{name: "happy current log carries its pid", file: "serve-pid-4321.log", expectedPID: 4321, expectedOK: true},
+		{name: "happy rotated log carries its pid", file: "watch-pid-77-2026-08-26T14-00-00.000.log.gz", expectedPID: 77, expectedOK: true},
+		{name: "sad marker missing", file: "serve.log", expectedPID: 0, expectedOK: false},
+		{name: "sad marker carries no digits", file: "serve-pid-.log", expectedPID: 0, expectedOK: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			pid, ok := logFilePID(testCase.file)
+			if pid != testCase.expectedPID || ok != testCase.expectedOK {
+				t.Errorf("pid: got %d,%v want %d,%v", pid, ok, testCase.expectedPID, testCase.expectedOK)
+			}
+		})
+	}
+}
+
+func TestScribe_PurgeLogFiles(t *testing.T) {
+	dir := t.TempDir()
+	keep := filepath.Join(dir, fmt.Sprintf("serve-pid-%d.log", os.Getpid()))
+	files := []string{
+		keep,
+		filepath.Join(dir, fmt.Sprintf("serve-pid-%d-2026-08-26T14-00-00.000.log.gz", os.Getpid())),
+		filepath.Join(dir, "serve-pid-999999.log"),
+		filepath.Join(dir, "watch-pid-999998.log.gz"),
+		filepath.Join(dir, "notes.txt"),
+	}
+	for _, file := range files {
+		if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+			t.Fatalf("write %s: %v", file, err)
+		}
+	}
+	purgeLogFiles(keep)
+	expected := map[string]bool{keep: true, filepath.Join(dir, "notes.txt"): true}
+	for _, file := range files {
+		_, err := os.Stat(file)
+		if expected[file] && err != nil {
+			t.Errorf("kept: %s got removed", filepath.Base(file))
+		}
+		if !expected[file] && err == nil {
+			t.Errorf("purged: %s got kept", filepath.Base(file))
+		}
+	}
+}
