@@ -205,15 +205,16 @@ func grouped(cell int, columns ...[]string) string {
 	}
 	var builder strings.Builder
 	for row := range rows {
-		line := strings.Repeat(" ", widthHelpIndent)
+		var line strings.Builder
+		line.WriteString(strings.Repeat(" ", widthHelpIndent))
 		for _, column := range columns {
 			if row < len(column) {
-				line += pad(column[row], cell)
+				line.WriteString(pad(column[row], cell))
 				continue
 			}
-			line += strings.Repeat(" ", cell)
+			line.WriteString(strings.Repeat(" ", cell))
 		}
-		builder.WriteString(strings.TrimRight(line, " ") + "\n")
+		builder.WriteString(strings.TrimRight(line.String(), " ") + "\n")
 	}
 	return builder.String()
 }
