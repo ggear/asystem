@@ -848,7 +848,7 @@ func TestScribe_LogFilePID(t *testing.T) {
 		expectedOK  bool
 	}{
 		{name: "happy current log carries its pid", file: "serve-pid-4321.log", expectedPID: 4321, expectedOK: true},
-		{name: "happy rotated log carries its pid", file: "watch-pid-77-2026-08-26T14-00-00.000.log.gz", expectedPID: 77, expectedOK: true},
+		{name: "happy rotated log carries the pid of the run that wrote it", file: "watch-pid-77-2026-08-26T14-00-00.000.log.gz", expectedPID: 77, expectedOK: true},
 		{name: "sad marker missing", file: "serve.log", expectedPID: 0, expectedOK: false},
 		{name: "sad marker carries no digits", file: "serve-pid-.log", expectedPID: 0, expectedOK: false},
 	}
@@ -870,6 +870,8 @@ func TestScribe_PurgeLogFiles(t *testing.T) {
 		filepath.Join(dir, fmt.Sprintf("serve-pid-%d-2026-08-26T14-00-00.000.log.gz", os.Getpid())),
 		filepath.Join(dir, "serve-pid-999999.log"),
 		filepath.Join(dir, "watch-pid-999998.log.gz"),
+		filepath.Join(dir, fmt.Sprintf("watch-pid-%d-2026-08-26T02-26-08.340.log.gz", os.Getppid())),
+		filepath.Join(dir, fmt.Sprintf("watch-pid-%d.log", os.Getppid())),
 		filepath.Join(dir, "notes.txt"),
 	}
 	for _, file := range files {
@@ -878,7 +880,12 @@ func TestScribe_PurgeLogFiles(t *testing.T) {
 		}
 	}
 	purgeLogFiles(keep)
-	expected := map[string]bool{keep: true, filepath.Join(dir, "notes.txt"): true}
+	expected := map[string]bool{
+		keep:                            true,
+		filepath.Join(dir, "notes.txt"): true,
+		filepath.Join(dir, fmt.Sprintf("watch-pid-%d-2026-08-26T02-26-08.340.log.gz", os.Getppid())): true,
+		filepath.Join(dir, fmt.Sprintf("watch-pid-%d.log", os.Getppid())):                            true,
+	}
 	for _, file := range files {
 		_, err := os.Stat(file)
 		if expected[file] && err != nil {

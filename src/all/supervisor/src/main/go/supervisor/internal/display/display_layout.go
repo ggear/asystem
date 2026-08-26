@@ -729,7 +729,7 @@ func (b *box) drawValue(display *Display) {
 		}
 	}
 	if named && !sleeping {
-		for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindService}) {
+		for _, id := range display.serviceShown {
 			sibling, siblingOK := display.cache.LoadByID(id, b.recordGUID.Host, b.recordGUID.ServiceIndex)
 			if siblingOK && sibling != nil && sibling.Value.Failed {
 				c = colourAlert
@@ -991,4 +991,17 @@ func tokens(value string) []string {
 		tokens = append(tokens, string(r))
 	}
 	return tokens
+}
+
+func shownServiceMetrics(boxes []box) []metric.ID {
+	seen := map[metric.ID]bool{}
+	var shown []metric.ID
+	for _, b := range boxes {
+		if metric.GetIDKind(b.metricID) != metric.MetricKindService || seen[b.metricID] {
+			continue
+		}
+		seen[b.metricID] = true
+		shown = append(shown, b.metricID)
+	}
+	return shown
 }

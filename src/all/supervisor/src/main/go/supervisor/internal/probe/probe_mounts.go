@@ -3,6 +3,7 @@ package probe
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -28,6 +29,7 @@ type mountUsage struct {
 	used       uint64
 	measured   bool
 	failed     bool
+	answered   bool
 	reason     string
 }
 
@@ -49,6 +51,7 @@ type mountSnapshot struct {
 	shares int
 	locals int
 	failed int
+	unread int
 }
 
 type driveIdentity struct {
@@ -186,6 +189,10 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 	if err != nil {
 		return 0, derivation{}, err
 	}
+	if taken.unread > 0 {
+		return 0, derivation{}, fmt.Errorf("no share space read, [%d] of [%d] declared shares failed to answer a probe so the pool is unknown, failures [%s] [%w]",
+			taken.unread, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
+	}
 	if taken.locals == 0 {
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok"), nil
 	}
@@ -212,6 +219,10 @@ func (s *mountSet) failedShares() (int8, derivation, error) {
 	taken, err := s.snapshot()
 	if err != nil {
 		return 0, derivation{}, err
+	}
+	if taken.unread > 0 {
+		return 0, derivation{}, fmt.Errorf("no share failures counted, [%d] of [%d] declared shares are mounted but failed to answer a probe, failures [%s] [%w]",
+			taken.unread, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
 	}
 	if taken.shares == 0 {
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
@@ -244,15 +255,15 @@ func (s *mountSet) lifeUsedDrives() (int8, derivation, error) {
 		}
 	}
 	if unreadable := mountUnreadable(taken.drives); len(unreadable) > 0 {
-		return 0, derivation{}, fmt.Errorf("no drive wear read, [%d] of [%d] drives unreadable [%s] [%w]",
+		return 0, derivation{}, fmt.Errorf("no drive wear read, [%d] of [%d] drives failed to answer smartctl so the wear is unknown, unreadable [%s] [%w]",
 			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
 	}
 	if rated == 0 {
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok, unrated [%s]",
 			len(taken.drives), mountDrives(taken.drives)), nil
 	}
-	return int8Percent(worst), derived(scribe.ActionSample, "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
-		int8Percent(worst), rated, worstAt, errored), nil
+	return int8Percent(worst), derived(scribe.ActionSample, "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, unreadable [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
+		int8Percent(worst), rated, worstAt, errored, len(mountUnreadable(taken.drives))), nil
 }
 
 func (s *mountSet) failedDrives() (int8, derivation, error) {
@@ -290,6 +301,7 @@ func (s *mountSet) collect() *mountSnapshot {
 		total, used, err := s.measure(mounts[index].mountpoint, mounts[index].share)
 		if err != nil {
 			mounts[index].failed = true
+			mounts[index].answered = errors.Is(err, errMountContent)
 			mounts[index].reason = err.Error()
 			scribe.Log(scribe.SourceProbe, scribe.SubjectPath(mounts[index].mountpoint), scribe.ActionSample).Debug("measured", measureStart, "mount device [%s] fstype [%s] class [%s] failed with [%v]",
 				mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), err)
@@ -317,6 +329,9 @@ func (s *mountSet) collect() *mountSnapshot {
 		if live {
 			if mount.failed {
 				taken.failed++
+				if !mount.answered {
+					taken.unread++
+				}
 			}
 			continue
 		}
@@ -465,10 +480,10 @@ func (s *mountSet) measure(mountpoint string, share bool) (uint64, uint64, error
 func (s *mountSet) content(mountpoint string) error {
 	entry, err := os.Stat(filepath.Join(s.root, mountpoint, mountContentDir))
 	if err != nil {
-		return fmt.Errorf("share [%s] holds no [%s] directory with [%w]", mountpoint, mountContentDir, err)
+		return fmt.Errorf("share [%s] holds no [%s] directory with [%v] [%w]", mountpoint, mountContentDir, err, errMountContent)
 	}
 	if !entry.IsDir() {
-		return fmt.Errorf("share [%s] holds a [%s] that is not a directory", mountpoint, mountContentDir)
+		return fmt.Errorf("share [%s] holds a [%s] that is not a directory [%w]", mountpoint, mountContentDir, errMountContent)
 	}
 	return nil
 }
@@ -648,15 +663,15 @@ type smartReport struct {
 }
 
 func mountSmart(node string, kinds []string) (smartReport, error) {
-	var report smartReport
-	var err error
+	var failures []error
 	for _, kind := range kinds {
-		report, err = mountSmartKind(node, kind)
+		report, err := mountSmartKind(node, kind)
 		if err == nil {
 			return report, nil
 		}
+		failures = append(failures, err)
 	}
-	return report, err
+	return smartReport{}, errors.Join(failures...)
 }
 
 func mountSmartKind(node, kind string) (smartReport, error) {

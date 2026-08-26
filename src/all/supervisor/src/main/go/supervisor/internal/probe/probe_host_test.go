@@ -442,10 +442,10 @@ func TestProbeHost_FailedBackups(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "happy",
+			name:          "sad_unimplemented_metric_faults",
 			expectedValue: 0,
-			expectedOK:    true,
-			expectedError: false,
+			expectedOK:    false,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {
@@ -765,10 +765,10 @@ func TestProbeHost_UsedBackupSpace(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "happy",
+			name:          "sad_unimplemented_metric_faults",
 			expectedValue: 0,
-			expectedOK:    true,
-			expectedError: false,
+			expectedOK:    false,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {
@@ -796,10 +796,10 @@ func TestProbeHost_UsedSwapSpace(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "happy",
+			name:          "sad_unimplemented_metric_faults",
 			expectedValue: 0,
-			expectedOK:    true,
-			expectedError: false,
+			expectedOK:    false,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {
@@ -827,10 +827,10 @@ func TestProbeHost_UsedDiskOps(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "happy",
+			name:          "sad_unimplemented_metric_faults",
 			expectedValue: 0,
-			expectedOK:    true,
-			expectedError: false,
+			expectedOK:    false,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {
@@ -858,10 +858,10 @@ func TestProbeHost_UsedNetwork(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "happy",
+			name:          "sad_unimplemented_metric_faults",
 			expectedValue: 0,
-			expectedOK:    true,
-			expectedError: false,
+			expectedOK:    false,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {
@@ -889,10 +889,10 @@ func TestProbeHost_RunningTime(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "happy",
+			name:          "sad_unimplemented_metric_faults",
 			expectedValue: 0,
-			expectedOK:    true,
-			expectedError: false,
+			expectedOK:    false,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {

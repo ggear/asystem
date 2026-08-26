@@ -57,6 +57,7 @@ type Display struct {
 	dimsInit        dimensions
 	dimsTerminal    dimensions
 	boxes           []box
+	serviceShown    []metric.ID
 	maxServices     int
 	dirty           dirtyBoxes
 	terminal        Terminal
@@ -362,6 +363,7 @@ func (d *Display) Compile() (Format, error) {
 		boxes, err := compile(attemptedFormat, layout)
 		if err == nil {
 			d.boxes = boxes
+			d.serviceShown = shownServiceMetrics(boxes)
 			serviceSlots := 0
 			if len(compileHosts) > 0 {
 				for _, b := range boxes {
@@ -610,6 +612,7 @@ func (d *Display) rebuild(trigger string) {
 	rebuildStart := time.Now()
 	d.format = d.formatInit
 	d.boxes = nil
+	d.serviceShown = nil
 	if _, err := d.Compile(); err != nil {
 		scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Error("faulting", rebuildStart, "[%v] rebuilding the display", err)
 		d.logOverlay = true

@@ -130,9 +130,12 @@ type probe interface {
 
 var probesByMetricMask [metric.MetricMax]probe
 
-var errProbeWarmingUp = errors.New("probe is still warming up")
-
-var errEnvironment = errors.New("environment cannot supply this reading")
+var (
+	errProbeWarmingUp = errors.New("probe is still warming up")
+	errEnvironment    = errors.New("environment cannot supply this reading")
+	errUnimplemented  = errors.New("metric has no implementation yet")
+	errMountContent   = errors.New("mount answered but is not a healthy share")
+)
 
 const bytesPerMiB = 1 << 20
 
@@ -395,6 +398,8 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	metricFaultsMutex.Unlock()
 	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample)
 	switch {
+	case errored && errors.Is(err, errUnimplemented):
+		logger.Debug("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
 	case errored && fault.polls == 1 && fault.warming:
 		logger.Debug("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
 	case errored && fault.polls == 1 && errors.Is(err, errEnvironment):
@@ -454,15 +459,6 @@ func numericValue(value any) (float64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-func stub[T any](id metric.ID) (T, derivation, error) {
-	var value T
-	return value, stubDerivation(id, value), nil
-}
-
-func stubDerivation(id metric.ID, value any) derivation {
-	return derived(scribe.ActionCompute, "computed [%v] fixed, metric [%s] is an unimplemented stub so it never varies and is always ok", value, metric.GetIDName(id))
 }
 
 func reportMetricDerivation(task cacheMetricTask, taskStart time.Time, d derivation, err error) {

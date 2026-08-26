@@ -583,7 +583,7 @@ func (s *service) isUp() (bool, derivation, error) {
 
 func (s *service) backupStatus() (bool, derivation, error) {
 	// TODO: Provide implementation
-	return s.backupStatusValue, stubDerivation(metric.MetricServiceBackupStatus, s.backupStatusValue), s.backupStatusErr
+	return s.backupStatusValue, derived(scribe.ActionSample, "computed [%v] backed up, service [%s] reports no backup of its own yet so this is assumed until implemented", s.backupStatusValue, s.nameValue), s.backupStatusErr
 }
 
 func (s *service) healthStatus() (bool, derivation, error) {
@@ -618,12 +618,12 @@ func (s *service) usedMemory() (int8, derivation, error) {
 
 func (s *service) usedDiskOps() (int8, derivation, error) {
 	// TODO: Provide implementation
-	return stub[int8](metric.MetricServiceUsedDiskOps)
+	return 0, derivation{}, errUnimplemented
 }
 
 func (s *service) usedNetwork() (int8, derivation, error) {
 	// TODO: Provide implementation
-	return stub[int8](metric.MetricServiceUsedNetwork)
+	return 0, derivation{}, errUnimplemented
 }
 
 func (s *service) upTime() (float64, derivation, error) {
@@ -724,8 +724,7 @@ func (p *servicesProbe) healthStatus(name string, containerInfo container.Inspec
 
 func (p *servicesProbe) backupStatus() (bool, error) {
 	// TODO: Provide implementation
-	value, _, err := stub[bool](metric.MetricServiceBackupStatus)
-	return value, err
+	return true, nil
 }
 
 func (p *servicesProbe) configuredStatus() (bool, error) {

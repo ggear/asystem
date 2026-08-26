@@ -208,13 +208,13 @@ func TestProbeMounts_FailedShares(t *testing.T) {
 			expectedError:  false,
 		},
 		{
-			name:   "sad_hung_share_is_failed_and_excluded_from_usage",
+			name:   "sad_hung_share_faults_rather_than_counting_as_failed",
 			mounts: "/dev/sdb1 /share/10 ext4 rw 0 0\n//macmini-max/share-20 /share/20 cifs rw 0 0\n",
 			fstab: "PARTLABEL=share_08 /share/10 ext4 noatime 0 2\n" +
 				"//macmini-max/share-20 /share/20 cifs guest,nofail,x-systemd.automount 0 0\n",
 			hung:           []string{"/share/20"},
-			expectedFailed: 50,
-			expectedError:  false,
+			expectedFailed: 0,
+			expectedError:  true,
 		},
 		{
 			name:   "sad_mounted_share_without_its_content_directory_is_failed",
@@ -252,8 +252,11 @@ func TestProbeMounts_FailedShares(t *testing.T) {
 			set := newMountFixture(t, root, sizes, testCase.hung)
 			set.current = set.collect()
 			failed, _, err := set.failedShares()
-			if err != nil {
-				t.Fatalf("failedShares: unexpected error %v", err)
+			if (err != nil) != testCase.expectedError {
+				t.Fatalf("failedShares: got error %v want error %v", err, testCase.expectedError)
+			}
+			if testCase.expectedError {
+				return
 			}
 			if failed != testCase.expectedFailed {
 				t.Errorf("failedShares: got %d want %d", failed, testCase.expectedFailed)
@@ -315,6 +318,7 @@ func TestProbeMounts_Wear(t *testing.T) {
 		second        *smartReport
 		expectedLife  int8
 		expectedOK    bool
+		expectedFault bool
 		expectedError bool
 	}{
 		{
@@ -361,10 +365,11 @@ func TestProbeMounts_Wear(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "sad_unreadable_drive_faults_rather_than_reading_zero",
+			name:          "sad_unreadable_drive_faults_rather_than_reading_zero_wear",
 			reportErr:     fmt.Errorf("smart unavailable"),
 			expectedLife:  0,
 			expectedOK:    false,
+			expectedFault: true,
 			expectedError: true,
 		},
 	}
@@ -395,8 +400,11 @@ func TestProbeMounts_Wear(t *testing.T) {
 				t.Errorf("lifeUsedDrives: got %d want %d", life, testCase.expectedLife)
 			}
 			failed, _, failedErr := set.failedDrives()
-			if failedErr != nil {
-				t.Fatalf("failedDrives: unexpected error %v", failedErr)
+			if (failedErr != nil) != testCase.expectedFault {
+				t.Fatalf("failedDrives: got error %v want fault %v", failedErr, testCase.expectedFault)
+			}
+			if testCase.expectedFault {
+				return
 			}
 			if (failed == 0) != testCase.expectedOK {
 				t.Errorf("failedDrives: got %d pct want ok %v", failed, testCase.expectedOK)

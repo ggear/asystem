@@ -373,7 +373,7 @@ func (p *hostProbe) failedShares() (int8, derivation, error) {
 
 func (p *hostProbe) failedBackups() (int8, derivation, error) {
 	// TODO: Provide implementation
-	return stub[int8](metric.MetricHostFailedBackups)
+	return 0, derivation{}, errUnimplemented
 }
 
 func (p *hostProbe) warnTemperature() (int8, derivation, error) {
@@ -412,27 +412,27 @@ func (p *hostProbe) usedShareSpace() (int8, derivation, error) {
 
 func (p *hostProbe) usedBackupSpace() (int8, derivation, error) {
 	// TODO: Provide implementation
-	return stub[int8](metric.MetricHostUsedBackupSpace)
+	return 0, derivation{}, errUnimplemented
 }
 
 func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
 	// TODO: Provide implementation
-	return stub[int8](metric.MetricHostUsedSwapSpace)
+	return 0, derivation{}, errUnimplemented
 }
 
 func (p *hostProbe) usedDiskOps() (int8, derivation, error) {
 	// TODO: Provide implementation
-	return stub[int8](metric.MetricHostUsedDiskOps)
+	return 0, derivation{}, errUnimplemented
 }
 
 func (p *hostProbe) usedNetwork() (int8, derivation, error) {
 	// TODO: Provide implementation
-	return stub[int8](metric.MetricHostUsedNetwork)
+	return 0, derivation{}, errUnimplemented
 }
 
 func (p *hostProbe) runningTime() (float64, derivation, error) {
 	// TODO: Provide implementation
-	return stub[float64](metric.MetricHostRunningTime)
+	return 0, derivation{}, errUnimplemented
 }
 
 func (p *hostProbe) temperature() (float64, derivation, error) {

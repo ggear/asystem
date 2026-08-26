@@ -261,7 +261,7 @@ var metricBuildersByID = []builder{
 		id:          MetricServiceBackupStatus,
 		valueKind:   ValueBool,
 		unit:        "",
-		description: "service backup completed, not yet implemented",
+		description: "service backup completed, always true until implemented",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/backup_status",
 		persisted:   true,
 		pulseRule:   Always(),
