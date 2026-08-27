@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -23,15 +22,15 @@ import (
 )
 
 const (
-	bufferScreens     = 40
-	logDirUser        = "/tmp/supervisor"
-	logDirUserMac     = "Library/Logs/supervisor"
-	logDirRoot        = "/var/log/supervisor"
-	logFileSuffix     = ".log"
-	logFileArchive    = ".gz"
-	logFilePIDMarker  = "-pid-"
-	timeLayout        = "01-02T15:04:05"
-	overlayTimeLayout = "15:04:05"
+	bufferScreens    = 40
+	logDirUser       = "/tmp/supervisor"
+	logDirUserMac    = "Library/Logs/supervisor"
+	logDirRoot       = "/var/log/supervisor"
+	logFileSuffix    = ".log"
+	logFileArchive   = ".gz"
+	logFilePIDMarker = "-pid-"
+	stampFile        = "01-02T15:04:05"
+	stampOverlay     = "15:04:05"
 )
 
 func EnableStdout(level slog.Level) {
@@ -39,7 +38,7 @@ func EnableStdout(level slog.Level) {
 	defer scribeLoggerMutex.Unlock()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout"
-	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: os.Stdout})
+	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: os.Stdout, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
 }
 
@@ -52,7 +51,7 @@ func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays 
 	defer scribeLoggerMutex.Unlock()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "file"
-	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: writer})
+	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: writer, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
 	return nil
@@ -68,7 +67,7 @@ func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, ma
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout+file"
 	multi := io.MultiWriter(os.Stdout, writer)
-	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: multi})
+	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: multi, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
 	return nil
@@ -78,7 +77,7 @@ func Disable() {
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()
 	scribeLoggerMode = "disabled"
-	scribeLoggerInstance = slog.New(&streamHandler{level: slog.LevelError + 1, writer: io.Discard})
+	scribeLoggerInstance = slog.New(&streamHandler{level: slog.LevelError + 1, writer: io.Discard, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
 }
 
@@ -105,7 +104,7 @@ func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxB
 	buf := &LogBuffer{lines: make([]LogLine, capacity)}
 	scribeLoggerInstance = slog.New(&multiHandler{handlers: []slog.Handler{
 		&bufferHandler{level: level, buffer: buf},
-		&streamHandler{level: level, writer: writer},
+		&streamHandler{level: level, writer: writer, sink: sinkFile()},
 	}})
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
@@ -167,9 +166,14 @@ func Mode() string {
 }
 
 type LogLine struct {
-	Time    time.Time
-	Level   slog.Level
-	Message string
+	Time     time.Time
+	Level    slog.Level
+	Source   string
+	Subject  string
+	Action   string
+	Duration string
+	Verb     string
+	Detail   string
 }
 
 type LogBuffer struct {
@@ -266,11 +270,11 @@ func (h *bufferHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
-	source, subject, action, _, _ := dimensions(record)
-	if !allowed(source, subject, action) {
+	line := lineOf(record)
+	if !allowed(line.Source, line.Subject, line.Action) {
 		return nil
 	}
-	h.buffer.Push(LogLine{Time: record.Time, Level: record.Level, Message: format(record)})
+	h.buffer.Push(line)
 	return nil
 }
 
@@ -309,6 +313,7 @@ func (h *multiHandler) WithGroup(_ string) slog.Handler      { return h }
 type streamHandler struct {
 	level      slog.Level
 	writer     io.Writer
+	sink       sink
 	mutex      sync.Mutex
 	headerOnce sync.Once
 }
@@ -325,9 +330,9 @@ func (h *streamHandler) Handle(_ context.Context, record slog.Record) error {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 	h.headerOnce.Do(func() {
-		_, _ = io.WriteString(h.writer, headerLine()+"\n")
+		_, _ = io.WriteString(h.writer, headerFor(layoutFor(h.sink))+"\n")
 	})
-	for _, line := range streamLines(record) {
+	for _, line := range wrapped(lineOf(record), layoutFor(h.sink)) {
 		if _, err := io.WriteString(h.writer, line+"\n"); err != nil {
 			return err
 		}
@@ -338,45 +343,48 @@ func (h *streamHandler) Handle(_ context.Context, record slog.Record) error {
 func (h *streamHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 func (h *streamHandler) WithGroup(_ string) slog.Handler      { return h }
 
-func OverlayHeader() string {
-	return pad("TIME", len(overlayTimeLayout)) + " " + pad("LEVEL", widthLevel) + " " + columnLine("SOURCE", "SUBJECT", "ACTION", "DURATION", "DETAIL")
-}
-
-func OverlayLine(line LogLine) string {
-	return line.Time.Format(overlayTimeLayout) + " " + pad(line.Level.String(), widthLevel) + " " + line.Message
+func OverlayHeader(width int) string {
+	return headerFor(layoutFor(sinkOverlay(width)))
 }
 
 func OverlayLines(line LogLine, width int) []string {
-	return wrapped(OverlayLine(line), len(overlayTimeLayout), width)
+	return wrapped(line, layoutFor(sinkOverlay(width)))
 }
 
-func streamLines(record slog.Record) []string {
-	line := record.Time.Format(timeLayout) + " " + pad(record.Level.String(), widthLevel) + " " + format(record)
-	return wrapped(line, widthTime, widthStream)
+func headerFor(l layout) string {
+	return render(LogLine{Source: "SOURCE", Subject: "SUBJECT", Action: "ACTION", Duration: "DURATION", Verb: "VERB", Detail: "DETAIL"},
+		l, pad("TIME", l.time), "LEVEL")
 }
 
-func wrapped(line string, timeWidth, width int) []string {
-	rendered := []rune(line)
-	prefix := timeWidth + 1 + widthLevel + 1 + widthSource + 1 + subjectWidth() + 1 + widthAction + 1 + widthDuration + 1
-	budget := width - prefix - widthVerb - 1
-	if len(rendered) <= width || budget < widthWrapMin || len(rendered) <= prefix+widthVerb+1 {
-		return []string{string(rendered)}
+func render(line LogLine, l layout, stamp, level string) string {
+	detail := line.Detail
+	if detail != "" {
+		detail = " " + detail
 	}
-	head, verbText, detail := string(rendered[:prefix]), string(rendered[prefix:prefix+widthVerb]), string(rendered[prefix+widthVerb+1:])
+	return strings.TrimRight(stamp+" "+pad(level, l.level)+" "+
+		pad(stemmed(line.Source, l.source), l.source)+" "+
+		pad(tokened(line.Subject, l.subject), l.subject)+" "+
+		pad(head(line.Action, l.action), l.action)+" "+
+		pad(line.Duration, l.duration)+" "+
+		pad(line.Verb, l.verb)+detail, " ")
+}
+
+func wrapped(line LogLine, l layout) []string {
+	stamp, level := line.Time.Format(l.stamp), line.Level.String()
+	single := render(line, l, stamp, level)
+	if l.detail < spanDetail.min || utf8.RuneCountInString(line.Detail) <= l.detail {
+		return []string{single}
+	}
 	var lines []string
-	for index, chunk := range chunked(detail, budget) {
-		slot := verbText
+	for index, chunk := range chunked(line.Detail, l.detail) {
+		part := line
+		part.Detail = chunk
 		if index > 0 {
-			slot = strings.Repeat(" ", widthVerb)
+			part.Verb = ""
 		}
-		lines = append(lines, strings.TrimRight(head+slot+" "+chunk, " "))
+		lines = append(lines, render(part, l, stamp, level))
 	}
 	return lines
-}
-
-func headerLine() string {
-	return pad("TIME", widthTime) + " " + pad("LEVEL", widthLevel) + " " +
-		columnLine("SOURCE", "SUBJECT", "ACTION", "DURATION", "DETAIL")
 }
 
 func dimensions(record slog.Record) (source, subject, action, duration, detail string) {
@@ -398,27 +406,25 @@ func dimensions(record slog.Record) (source, subject, action, duration, detail s
 	return
 }
 
-func format(record slog.Record) string {
+func lineOf(record slog.Record) LogLine {
 	source, subject, action, duration, detail := dimensions(record)
-	if detail != "" {
-		detail = " " + detail
-	}
-	return columnLine(source, clipped(subject, subjectWidth()), action, duration, verb(record.Message)+detail)
+	return LogLine{Time: record.Time, Level: record.Level, Source: source, Subject: subject,
+		Action: action, Duration: duration, Verb: verb(record.Message), Detail: detail}
 }
 
 func chunked(detail string, budget int) []string {
 	runes := []rune(detail)
-	if budget < widthWrapMin || len(runes) <= budget {
+	if budget < spanDetail.min || len(runes) <= budget {
 		return []string{detail}
 	}
-	limit := budget - len(wrapEllipsis) - 1
+	limit := budget - len(clipMarker) - 1
 	var chunks []string
 	for len(runes) > budget {
 		chunk, rest, spaced := split(runes, limit)
 		if spaced {
 			chunk += " "
 		}
-		chunks = append(chunks, chunk+wrapEllipsis)
+		chunks = append(chunks, chunk+clipMarker)
 		runes = rest
 	}
 	return append(chunks, string(runes))
@@ -441,24 +447,50 @@ func spaced(runes []rune) int {
 	return -1
 }
 
-func clipped(text string, width int) string {
-	runes := []rune(text)
-	if len(runes) <= width || width <= len(wrapEllipsis) {
-		return text
+func stemmed(text string, width int) string {
+	if cut := strings.IndexByte(text, '['); len(text) > width && cut > 0 && cut < width {
+		return text[:cut] + clipMarker
 	}
-	return wrapEllipsis + string(runes[len(runes)-width+len(wrapEllipsis):])
+	return head(text, width)
 }
 
-func columnLine(source, subject, action, duration, detail string) string {
-	return strings.TrimRight(pad(source, widthSource)+" "+pad(subject, subjectWidth())+" "+pad(action, widthAction)+" "+pad(duration, widthDuration)+" "+detail, " ")
+func head(text string, width int) string {
+	runes := []rune(text)
+	if len(runes) <= width {
+		return text
+	}
+	if width <= len(clipMarker) {
+		return string([]rune(clipMarker)[:max(width, 0)])
+	}
+	return string(runes[:width-len(clipMarker)]) + clipMarker
+}
+
+func tokened(text string, width int) string {
+	if cut := strings.LastIndexAny(text, clipTokens); len(text) > width && cut >= 0 && cut+1 < len(text) {
+		if token := clipMarker + text[cut+1:]; utf8.RuneCountInString(token) <= width {
+			return token
+		}
+	}
+	return tail(text, width)
+}
+
+func tail(text string, width int) string {
+	runes := []rune(text)
+	if len(runes) <= width {
+		return text
+	}
+	if width <= len(clipMarker) {
+		return string([]rune(clipMarker)[:max(width, 0)])
+	}
+	return clipMarker + string(runes[len(runes)-width+len(clipMarker):])
 }
 
 func verb(word string) string {
 	runes := []rune(word)
-	if len(runes) >= widthVerb {
-		return string(runes[:widthVerb])
+	if len(runes) >= spanVerb.ideal {
+		return string(runes[:spanVerb.ideal])
 	}
-	return word + strings.Repeat(" ", widthVerb-len(runes))
+	return word + strings.Repeat(" ", spanVerb.ideal-len(runes))
 }
 
 func durationText(value slog.Value) string {
@@ -466,7 +498,7 @@ func durationText(value slog.Value) string {
 	if value.Kind() == slog.KindDuration {
 		text = elapsed(value.Duration())
 	}
-	if space := widthDuration - utf8.RuneCountInString(text); space > 0 {
+	if space := spanDuration.ideal - utf8.RuneCountInString(text); space > 0 {
 		return strings.Repeat(" ", space) + text
 	}
 	return text
@@ -503,28 +535,74 @@ const (
 
 const (
 	durationCoarser = 10000
-	widthTime       = 14
-	widthLevel      = 5
-	widthSource     = 17
-	widthAction     = 10
-	widthDuration   = 8
-	widthVerb       = 8
-	widthWrapMin    = 40
-	widthStream     = 250
+	widthFile       = 250
 	widthHelpIndent = 2
 	widthHelpGap    = 2
 	subjectColumns  = 4
 	subjectSplit    = 2
 	subjectHosts    = "host"
 	subjectServices = "service"
-	wrapEllipsis    = "..."
-	widthSubjectMin = 24
+	clipMarker      = "~"
+	clipTokens      = "-_"
 )
 
-var widthSubject atomic.Int32
+type span struct {
+	ideal int
+	min   int
+}
 
-func subjectWidth() int {
-	return int(widthSubject.Load())
+var (
+	spanLevel    = span{ideal: 5, min: 5}
+	spanSource   = span{ideal: 17}
+	spanSubject  = span{ideal: 24, min: 8}
+	spanAction   = span{ideal: 10, min: 9}
+	spanDuration = span{ideal: 8, min: 8}
+	spanVerb     = span{ideal: 8, min: 8}
+	spanDetail   = span{ideal: 60, min: 40}
+)
+
+type sink struct {
+	stamp string
+	width int
+}
+
+func sinkFile() sink             { return sink{stamp: stampFile, width: widthFile} }
+func sinkOverlay(width int) sink { return sink{stamp: stampOverlay, width: width} }
+
+type layout struct {
+	stamp                                          string
+	time, level, source, subject, action, duration int
+	verb, detail                                   int
+}
+
+func (l layout) prefix() int {
+	return l.time + 1 + l.level + 1 + l.source + 1 + l.subject + 1 + l.action + 1 + l.duration + 1 + l.verb + 1
+}
+
+func (l layout) width() int {
+	return l.prefix() + l.detail
+}
+
+func layoutFor(s sink) layout {
+	if s.stamp == "" || s.width <= 0 {
+		s = sinkFile()
+	}
+	l := layout{stamp: s.stamp, time: len(s.stamp), level: spanLevel.ideal, source: spanSource.min,
+		subject: spanSubject.min, action: spanAction.min, duration: spanDuration.ideal, verb: spanVerb.ideal}
+	for _, rung := range []struct {
+		column *int
+		upto   int
+	}{
+		{column: &l.detail, upto: spanDetail.min},
+		{column: &l.detail, upto: spanDetail.ideal},
+		{column: &l.action, upto: spanAction.ideal},
+		{column: &l.subject, upto: spanSubject.ideal},
+		{column: &l.source, upto: spanSource.ideal},
+	} {
+		*rung.column += max(min(rung.upto-*rung.column, s.width-l.width()), 0)
+	}
+	l.detail += max(s.width-l.width(), 0)
+	return l
 }
 
 var flattened = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ", "\t", " ")
@@ -537,21 +615,24 @@ var (
 )
 
 func init() {
-	widthSubject.Store(widthSubjectMin)
 	for _, id := range metric.GetIDs() {
-		if length := len(metric.GetIDName(id)); length > subjectWidth() {
-			widthSubject.Store(int32(length))
-		}
+		spanSubject.ideal = max(spanSubject.ideal, len(metric.GetIDName(id)))
 	}
 	for _, source := range AllSources {
-		if length := len(source.String()); length > widthSource {
-			panic(fmt.Sprintf("error: source [%s] is [%d] characters, wider than the [%d] column", source, length, widthSource))
+		if length := len(source.String()); length > spanSource.ideal {
+			panic(fmt.Sprintf("error: source [%s] is [%d] characters, wider than the [%d] column", source, length, spanSource.ideal))
 		}
 	}
 	for _, action := range AllActions {
-		if length := len(action.String()); length > widthAction {
-			panic(fmt.Sprintf("error: action [%s] is [%d] characters, wider than the [%d] column", action, length, widthAction))
+		if length := len(action.String()); length > spanAction.ideal {
+			panic(fmt.Sprintf("error: action [%s] is [%d] characters, wider than the [%d] column", action, length, spanAction.ideal))
 		}
+	}
+	for _, source := range sourceStrings() {
+		if bracket := strings.IndexByte(source, '['); bracket > 0 {
+			source = source[:bracket]
+		}
+		spanSource.min = max(spanSource.min, len(source))
 	}
 	verifyVocabularies()
 }

@@ -457,7 +457,7 @@ func (d *Display) Logging() {
 	d.logNext = anchor + uint64(consumed)
 	d.logPaused = d.logBuffer.Version() > d.logNext
 	d.drawOverlayBar()
-	d.terminal.draw(0, 1, clip(scribe.OverlayHeader()), colourChat)
+	d.terminal.draw(0, 1, clip(scribe.OverlayHeader(d.dimsInit.cols)), colourChat)
 	for row, line := range rows {
 		row += 2
 		c := colourChat

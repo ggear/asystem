@@ -174,15 +174,14 @@ func Attribute(source Source, ids ...metric.ID) {
 }
 
 func Widen(hosts, services []string) {
+	if Mode() != "" {
+		panic(fmt.Sprintf("error: widen called after logging was enabled as [%s], so a written header cannot match its rows", Mode()))
+	}
 	for _, name := range prefixed(subjectHosts, hosts) {
-		if len(name) > subjectWidth() {
-			widthSubject.Store(int32(len(name)))
-		}
+		spanSubject.ideal = max(spanSubject.ideal, len(name))
 	}
 	for _, name := range prefixed(subjectServices, services) {
-		if len(name) > subjectWidth() {
-			widthSubject.Store(int32(len(name)))
-		}
+		spanSubject.ideal = max(spanSubject.ideal, len(name))
 	}
 }
 

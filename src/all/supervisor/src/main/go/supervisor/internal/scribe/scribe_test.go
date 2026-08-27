@@ -193,9 +193,9 @@ func TestScribe_Buffer(t *testing.T) {
 			buf := &LogBuffer{lines: make([]LogLine, 50)}
 			for i := range testCase.pushCount {
 				buf.Push(LogLine{
-					Time:    time.Now(),
-					Level:   slog.LevelInfo,
-					Message: fmt.Sprintf("message %d", i),
+					Time:   time.Now(),
+					Level:  slog.LevelInfo,
+					Detail: fmt.Sprintf("message %d", i),
 				})
 			}
 			tail := buf.Tail(testCase.tailN)
@@ -203,7 +203,7 @@ func TestScribe_Buffer(t *testing.T) {
 				t.Fatalf("Got tail length = %d, expected %d", len(tail), testCase.expectedCount)
 			}
 			if testCase.pushCount > 0 && testCase.expectedCount > 0 {
-				lastMsg := tail[len(tail)-1].Message
+				lastMsg := tail[len(tail)-1].Detail
 				expectedMsg := fmt.Sprintf("message %d", testCase.pushCount-1)
 				if lastMsg != expectedMsg {
 					t.Fatalf("Got last message = %q, expected %q", lastMsg, expectedMsg)
@@ -260,7 +260,7 @@ func TestScribe_BufferHandler(t *testing.T) {
 			msg := "marker"
 			testCase.logFunc(msg)
 			tail := buf.Tail(1)
-			found := len(tail) > 0 && bytes.Contains([]byte(tail[0].Message), []byte(msg))
+			found := len(tail) > 0 && bytes.Contains([]byte(tail[0].Verb), []byte(msg))
 			if found != testCase.expected {
 				t.Fatalf("Got message found = %v, expected %v", found, testCase.expected)
 			}
@@ -269,20 +269,19 @@ func TestScribe_BufferHandler(t *testing.T) {
 }
 
 func TestScribe_FormatColumns(t *testing.T) {
-	sourceOffset := 0
-	subjectOffset := widthSource + 1
-	actionOffset := subjectOffset + subjectWidth() + 1
-	durationOffset := actionOffset + widthAction + 1
-	verbOffset := durationOffset + widthDuration + 1
 	tests := []struct {
-		name    string
-		source  string
-		subject string
-		action  string
-		verb    string
+		name          string
+		width         int
+		source        string
+		subject       string
+		action        string
+		verb          string
+		expectedError bool
 	}{
-		{name: "happy_short_values", source: "probe", subject: "host/x", action: "compute", verb: "computed"},
-		{name: "happy_long_values", source: "database", subject: "service/configured_status", action: "disconnect", verb: "faulting"},
+		{name: "happy_short_values", width: widthFile, source: "probe", subject: "host/x", action: "compute", verb: "computed", expectedError: false},
+		{name: "happy_long_values", width: widthFile, source: "engine[database]", subject: "service/configured_status", action: "disconnect", verb: "faulting", expectedError: false},
+		{name: "happy_narrow_shrinks_subject", width: 116, source: "engine[database]", subject: "service/configured_status", action: "disconnect", verb: "faulting", expectedError: false},
+		{name: "happy_narrower_shrinks_every_column", width: 100, source: "engine[database]", subject: "service/configured_status", action: "disconnect", verb: "faulting", expectedError: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -294,22 +293,30 @@ func TestScribe_FormatColumns(t *testing.T) {
 				slog.Duration(keyDuration, time.Millisecond),
 				slog.String(keyDetail, "[1] example"),
 			)
-			line := format(record)
-			if got := line[sourceOffset : sourceOffset+len(testCase.source)]; got != testCase.source {
-				t.Errorf("source: got %q want %q at %d", got, testCase.source, sourceOffset)
+			l := layoutFor(sinkOverlay(testCase.width))
+			line := wrapped(lineOf(record), l)[0]
+			sourceOffset := l.time + 1 + l.level + 1
+			subjectOffset := sourceOffset + l.source + 1
+			actionOffset := subjectOffset + l.subject + 1
+			durationOffset := actionOffset + l.action + 1
+			verbOffset := durationOffset + l.duration + 1
+			for _, column := range []struct {
+				name   string
+				offset int
+				want   string
+			}{
+				{name: "source", offset: sourceOffset, want: head(testCase.source, l.source)},
+				{name: "subject", offset: subjectOffset, want: tokened(testCase.subject, l.subject)},
+				{name: "action", offset: actionOffset, want: head(testCase.action, l.action)},
+				{name: "duration", offset: durationOffset, want: durationText(slog.DurationValue(time.Millisecond))},
+				{name: "verb", offset: verbOffset, want: testCase.verb},
+			} {
+				if got := line[column.offset : column.offset+len(column.want)]; got != column.want {
+					t.Errorf("%s: got %q want %q at %d", column.name, got, column.want, column.offset)
+				}
 			}
-			if got := line[subjectOffset : subjectOffset+len(testCase.subject)]; got != testCase.subject {
-				t.Errorf("subject: got %q want %q at %d", got, testCase.subject, subjectOffset)
-			}
-			if got := line[actionOffset : actionOffset+len(testCase.action)]; got != testCase.action {
-				t.Errorf("action: got %q want %q at %d", got, testCase.action, actionOffset)
-			}
-			if got := line[verbOffset : verbOffset+len(testCase.verb)]; got != testCase.verb {
-				t.Errorf("verb: got %q want %q at %d", got, testCase.verb, verbOffset)
-			}
-			wantDuration := durationText(slog.DurationValue(time.Millisecond))
-			if got := line[durationOffset : durationOffset+widthDuration]; got != wantDuration {
-				t.Errorf("duration: got %q want %q at %d", got, wantDuration, durationOffset)
+			if got := line[verbOffset+l.verb:]; got != " [1] example" {
+				t.Errorf("detail: got %q want %q", got, " [1] example")
 			}
 		})
 	}
@@ -344,7 +351,6 @@ func TestScribe_SubjectNamespace(t *testing.T) {
 }
 
 func TestScribe_WrapsLongDetail(t *testing.T) {
-	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + subjectWidth() + 1 + widthAction + 1 + widthDuration + 1
 	tests := []struct {
 		name          string
 		width         int
@@ -355,11 +361,13 @@ func TestScribe_WrapsLongDetail(t *testing.T) {
 		{name: "happy_short_detail_is_one_row", width: 250, spaced: true, budgets: 0, expectedLines: 1},
 		{name: "happy_spaced_detail_wraps", width: 250, spaced: true, budgets: 2, expectedLines: 3},
 		{name: "happy_unbroken_detail_wraps", width: 250, spaced: false, budgets: 2, expectedLines: 3},
-		{name: "happy_narrow_terminal_keeps_one_row", width: prefix + widthVerb + 1, spaced: true, budgets: 2, expectedLines: 1},
+		{name: "happy_narrow_terminal_keeps_one_row", width: 60, spaced: true, budgets: 2, expectedLines: 1},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			budget := testCase.width - prefix - widthVerb - 1
+			l := layoutFor(sinkOverlay(testCase.width))
+			prefix := l.prefix() - l.verb - 1
+			budget := max(l.detail, 1)
 			detail := "[1] example"
 			if testCase.budgets > 0 {
 				length := budget*testCase.budgets + 10
@@ -376,7 +384,7 @@ func TestScribe_WrapsLongDetail(t *testing.T) {
 				slog.Duration(keyDuration, time.Millisecond),
 				slog.String(keyDetail, detail),
 			)
-			rows := OverlayLines(LogLine{Time: record.Time, Level: record.Level, Message: format(record)}, testCase.width)
+			rows := OverlayLines(lineOf(record), testCase.width)
 			if len(rows) != testCase.expectedLines {
 				t.Fatalf("rows: got %d want %d", len(rows), testCase.expectedLines)
 			}
@@ -389,11 +397,11 @@ func TestScribe_WrapsLongDetail(t *testing.T) {
 					if got := row[:prefix]; got != rows[0][:prefix] {
 						t.Errorf("prefix: got %q want %q for row %d", got, rows[0][:prefix], index)
 					}
-					if got := row[prefix : prefix+widthVerb]; strings.TrimSpace(got) != "" {
+					if got := row[prefix : prefix+spanVerb.ideal]; strings.TrimSpace(got) != "" {
 						t.Errorf("verb: got %q want blank for row %d", got, index)
 					}
 				}
-				carried += strings.TrimSuffix(row[prefix+widthVerb+1:], wrapEllipsis)
+				carried += strings.TrimSuffix(row[prefix+spanVerb.ideal+1:], clipMarker)
 			}
 			if got := strings.Join(strings.Fields(carried), " "); got != strings.Join(strings.Fields(detail), " ") {
 				t.Errorf("detail: got %q want %q", got, detail)
@@ -403,7 +411,6 @@ func TestScribe_WrapsLongDetail(t *testing.T) {
 }
 
 func TestScribe_WrapsMultibyteDetail(t *testing.T) {
-	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + subjectWidth() + 1 + widthAction + 1 + widthDuration + 1
 	tests := []struct {
 		name          string
 		width         int
@@ -424,7 +431,9 @@ func TestScribe_WrapsMultibyteDetail(t *testing.T) {
 				slog.Duration(keyDuration, time.Millisecond),
 				slog.String(keyDetail, testCase.detail),
 			)
-			rows := OverlayLines(LogLine{Time: record.Time, Level: record.Level, Message: format(record)}, testCase.width)
+			l := layoutFor(sinkOverlay(testCase.width))
+			prefix := l.prefix() - l.verb - 1
+			rows := OverlayLines(lineOf(record), testCase.width)
 			if len(rows) < 2 {
 				t.Fatalf("rows: got %d want at least 2", len(rows))
 			}
@@ -433,7 +442,7 @@ func TestScribe_WrapsMultibyteDetail(t *testing.T) {
 				if !utf8.ValidString(row) {
 					t.Errorf("encoding: got invalid utf8 %q for row %d", row, index)
 				}
-				carried += strings.TrimSuffix(row[prefix+widthVerb+1:], wrapEllipsis)
+				carried += strings.TrimSuffix(row[prefix+spanVerb.ideal+1:], clipMarker)
 			}
 			if got := strings.Join(strings.Fields(carried), " "); got != strings.Join(strings.Fields(testCase.detail), " ") {
 				t.Errorf("detail: got %q want %q", got, testCase.detail)
@@ -489,7 +498,7 @@ func TestScribe_FormatDuration(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			got := durationText(slog.DurationValue(testCase.value))
-			wantWidth := widthDuration
+			wantWidth := spanDuration.ideal
 			if size := len(testCase.expected); size > wantWidth {
 				wantWidth = size
 			}
@@ -529,7 +538,7 @@ func TestScribe_FormatDetailIsLast(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			record := slog.NewRecord(time.Now(), slog.LevelInfo, "computed", 0)
 			record.AddAttrs(testCase.attrs...)
-			line := format(record)
+			line := wrapped(lineOf(record), layoutFor(sinkFile()))[0]
 			if !strings.HasSuffix(line, " a [1] b") {
 				t.Errorf("detail: got %q want it to end the line", line)
 			}
@@ -766,9 +775,9 @@ func TestScribe_Allowed(t *testing.T) {
 
 func TestScribe_VerbsAreEightCharacters(t *testing.T) {
 	for _, found := range verbLiterals(t, "../..") {
-		if len(found.verb) != widthVerb || found.verb != strings.ToLower(found.verb) {
+		if len(found.verb) != spanVerb.ideal || found.verb != strings.ToLower(found.verb) {
 			t.Errorf("%s: got verb %q of %d characters, want a lower-case word of exactly %d",
-				found.position, found.verb, len(found.verb), widthVerb)
+				found.position, found.verb, len(found.verb), spanVerb.ideal)
 		}
 	}
 }
@@ -921,7 +930,7 @@ func TestScribe_FlattensDetailLineBreaks(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			buffer := &bytes.Buffer{}
 			restore := slog.Default()
-			slog.SetDefault(slog.New(&streamHandler{level: slog.LevelDebug, writer: buffer}))
+			slog.SetDefault(slog.New(&streamHandler{level: slog.LevelDebug, writer: buffer, sink: sinkFile()}))
 			defer slog.SetDefault(restore)
 			Log(SourceProbe, SubjectMetric(metric.MetricHostLifeUsedDrives), ActionSample).Warn("excluded", time.Now(), "%s", testCase.detail)
 			rows := strings.Split(strings.TrimSuffix(buffer.String(), "\n"), "\n")[1:]
@@ -932,8 +941,8 @@ func TestScribe_FlattensDetailLineBreaks(t *testing.T) {
 				if strings.ContainsAny(row, "\r\t") {
 					t.Errorf("breaks: got %q with a control character for row %d", row, index)
 				}
-				if utf8.RuneCountInString(row) > widthStream {
-					t.Errorf("width: got %d want at most %d for row %d", utf8.RuneCountInString(row), widthStream, index)
+				if utf8.RuneCountInString(row) > widthFile {
+					t.Errorf("width: got %d want at most %d for row %d", utf8.RuneCountInString(row), widthFile, index)
 				}
 			}
 		})
@@ -948,7 +957,9 @@ func TestScribe_ClipsSubjectToColumn(t *testing.T) {
 		expectedError   bool
 	}{
 		{name: "happy_short_subject_is_untouched", subject: "host/used_memory", expectedSubject: "host/used_memory", expectedError: false},
-		{name: "happy_long_subject_keeps_its_tail", subject: "supervisor/macmini-mad/data/service/plex/backup_status", expectedSubject: "...ice/plex/backup_status", expectedError: false},
+		{name: "happy_long_subject_keeps_its_underscored_token", subject: "supervisor/macmini-mad/data/service/plex/backup_status", expectedSubject: "~status", expectedError: false},
+		{name: "happy_long_subject_keeps_its_hyphenated_token", subject: "supervisor/data/host/raspberrypi-jen", expectedSubject: "~jen", expectedError: false},
+		{name: "happy_long_subject_without_a_token_keeps_its_tail", subject: "supervisorsupervisorsupervisor/temperature", expectedSubject: "~orsupervisor/temperature", expectedError: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -960,26 +971,23 @@ func TestScribe_ClipsSubjectToColumn(t *testing.T) {
 				slog.Duration(keyDuration, 6*time.Millisecond),
 				slog.String(keyDetail, strings.Repeat("detail ", 60)),
 			)
-			line := format(record)
-			subject := strings.TrimRight(string([]rune(line)[widthSource+1:widthSource+1+subjectWidth()]), " ")
-			if subject != testCase.expectedSubject {
-				t.Errorf("subject: got %q want %q", subject, testCase.expectedSubject)
-			}
-			rows := streamLines(record)
+			l := layoutFor(sinkFile())
+			rows := wrapped(lineOf(record), l)
 			if len(rows) < 2 {
 				t.Fatalf("rows: got %d want at least 2", len(rows))
 			}
-			prefix := widthTime + 1 + widthLevel + 1 + widthSource + 1 + subjectWidth() + 1 + widthAction + 1 + widthDuration
+			subjectOffset := l.time + 1 + l.level + 1 + l.source + 1
+			prefix := subjectOffset + l.subject + 1 + l.action + 1 + l.duration
 			for index, row := range rows {
-				column := string([]rune(row)[widthTime+1+widthLevel+1+widthSource+1 : widthTime+1+widthLevel+1+widthSource+1+subjectWidth()])
+				column := string([]rune(row)[subjectOffset : subjectOffset+l.subject])
 				if strings.TrimRight(column, " ") != testCase.expectedSubject {
 					t.Errorf("column: got %q want %q for row %d", column, testCase.expectedSubject, index)
 				}
-				if utf8.RuneCountInString(row) > widthStream {
-					t.Errorf("width: got %d want at most %d for row %d", utf8.RuneCountInString(row), widthStream, index)
+				if utf8.RuneCountInString(row) > widthFile {
+					t.Errorf("width: got %d want at most %d for row %d", utf8.RuneCountInString(row), widthFile, index)
 				}
-				if index > 0 && strings.TrimSpace(string([]rune(row)[prefix:prefix+1+widthVerb])) != "" {
-					t.Errorf("verb: got %q want blank for continuation row %d", string([]rune(row)[prefix:prefix+1+widthVerb]), index)
+				if index > 0 && strings.TrimSpace(string([]rune(row)[prefix:prefix+1+spanVerb.ideal])) != "" {
+					t.Errorf("verb: got %q want blank for continuation row %d", string([]rune(row)[prefix:prefix+1+spanVerb.ideal]), index)
 				}
 			}
 		})
@@ -1070,7 +1078,7 @@ func TestScribe_BufferFrom(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			buf := &LogBuffer{lines: make([]LogLine, testCase.capacity)}
 			for i := range testCase.pushCount {
-				buf.Push(LogLine{Time: time.Now(), Level: slog.LevelInfo, Message: fmt.Sprintf("message %d", i)})
+				buf.Push(LogLine{Time: time.Now(), Level: slog.LevelInfo, Detail: fmt.Sprintf("message %d", i)})
 			}
 			lines, anchor := buf.From(testCase.sequence, testCase.window)
 			if len(lines) != testCase.expectedCount {
@@ -1079,8 +1087,8 @@ func TestScribe_BufferFrom(t *testing.T) {
 			if anchor != testCase.expectedAnchor {
 				t.Errorf("From() anchor: got %d want %d", anchor, testCase.expectedAnchor)
 			}
-			if len(lines) > 0 && lines[0].Message != testCase.expectedFirst {
-				t.Errorf("From() first: got %q want %q", lines[0].Message, testCase.expectedFirst)
+			if len(lines) > 0 && lines[0].Detail != testCase.expectedFirst {
+				t.Errorf("From() first: got %q want %q", lines[0].Detail, testCase.expectedFirst)
 			}
 			if buf.Oldest() != testCase.expectedOldest {
 				t.Errorf("Oldest(): got %d want %d", buf.Oldest(), testCase.expectedOldest)

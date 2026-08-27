@@ -126,6 +126,7 @@ var (
 |mylongna~  50%  50%  -   +  mlflow      0%   0%  -   + | |mylongna~  50%  50%  -   +  mlflow      0%   0%  -   + |
 |mlserver  100% 100%  -   +  ~            ~    ~  ~   ~ | |mlserver  100% 100%  -   +  ~            ~    ~  ~   ~ |
 `
+	// NOTE: This is macmini-mad native display width and height 33
 	displayCompactASCIIMultiHost_116x30_2_6 = `
 += labnode-one ================================== ^1/6 =+  += labnode-two ================================== ^2/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|  |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
