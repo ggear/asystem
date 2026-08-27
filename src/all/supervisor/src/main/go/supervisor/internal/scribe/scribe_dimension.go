@@ -197,7 +197,7 @@ func Vocabularies(hosts, services []string) string {
 		declared = append(declared, metric.GetIDName(id))
 	}
 	sort.Strings(declared)
-	hostMetrics, serviceMetrics := []string{subjectHosts}, []string{subjectServices}
+	hostMetrics, serviceMetrics := []string{}, []string{}
 	for _, subject := range declared {
 		if strings.HasPrefix(subject, subjectServices+"/") {
 			serviceMetrics = append(serviceMetrics, subject)
@@ -218,6 +218,8 @@ func Vocabularies(hosts, services []string) string {
 	builder.WriteString("Log Sources:\n")
 	builder.WriteString(columned(sourceStrings(), cell/subjectSplit))
 	builder.WriteString("\nLog Subjects:\n")
+	builder.WriteString(grouped(cell, []string{subjectHosts}, nil, []string{subjectServices}, nil))
+	builder.WriteString("\n")
 	builder.WriteString(grouped(cell, hostMetrics, hostNames, serviceMetrics, serviceNames))
 	builder.WriteString("\nLog Actions:\n")
 	builder.WriteString(columned(actionStrings(), cell/subjectSplit))
