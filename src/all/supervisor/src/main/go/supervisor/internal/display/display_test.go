@@ -2007,6 +2007,93 @@ func TestDisplay_LogScrolling(t *testing.T) {
 	}
 }
 
+func TestDisplay_LogPagination(t *testing.T) {
+	tests := []struct {
+		name          string
+		arriving      int
+		expectedPage  int
+		expectedPages int
+		expectedError bool
+	}{
+		{
+			name:          "happy_pausing_holds_the_page",
+			arriving:      0,
+			expectedPage:  5,
+			expectedPages: 5,
+			expectedError: false,
+		},
+		{
+			name:          "happy_one_line_raises_the_total",
+			arriving:      1,
+			expectedPage:  5,
+			expectedPages: 6,
+			expectedError: false,
+		},
+		{
+			name:          "happy_a_page_raises_the_total_once",
+			arriving:      8,
+			expectedPage:  5,
+			expectedPages: 6,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			capacity := caseRows - 2
+			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(caseRows))
+			t.Cleanup(scribe.Disable)
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				metric.NewRecordCache(),
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
+				config.Periods{}, true, "", buffer, 0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			display.logOverlay = true
+			emit := func(count int) {
+				for range count {
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "pagination fodder")
+				}
+			}
+			emit(capacity * 4)
+			display.logRewind()
+			display.Logging()
+			livePage, livePages := display.logPagination()
+			live, _ := display.overlayStatus()
+			display.logFollow = false
+			display.Logging()
+			heldPage, heldPages := display.logPagination()
+			held, _ := display.overlayStatus()
+			if heldPage != livePage || heldPages != livePages {
+				t.Errorf("pausing: got %d/%d want %d/%d", heldPage, heldPages, livePage, livePages)
+			}
+			if runewidth.StringWidth(live) != runewidth.StringWidth(held) {
+				t.Errorf("width: got live %d held %d, want equal", runewidth.StringWidth(live), runewidth.StringWidth(held))
+			}
+			emit(testCase.arriving)
+			page, pages := display.logPagination()
+			if page != testCase.expectedPage {
+				t.Errorf("page: got %d want %d", page, testCase.expectedPage)
+			}
+			if pages != testCase.expectedPages {
+				t.Errorf("pages: got %d want %d", pages, testCase.expectedPages)
+			}
+		})
+	}
+}
+
 func TestDisplay_LogFollowing(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -2019,7 +2106,7 @@ func TestDisplay_LogFollowing(t *testing.T) {
 			name:           "happy_following_is_live",
 			emitted:        3,
 			paused:         false,
-			expectedStatus: " LIVE 2/2 SPACE=PAUSE",
+			expectedStatus: "  LIVE 2/2 UP/DOWN=PAGE SPACE=PAUSE",
 			expectedError:  false,
 		},
 		{
@@ -2030,10 +2117,10 @@ func TestDisplay_LogFollowing(t *testing.T) {
 			expectedError:  false,
 		},
 		{
-			name:           "happy_paused_counts_behind",
+			name:           "happy_paused_counts_pages_ahead",
 			emitted:        4,
 			paused:         true,
-			expectedStatus: " PAUSED 1/2 UP/DOWN=PAGE SPACE=LIVE",
+			expectedStatus: " PAUSED 2/3 UP/DOWN=PAGE SPACE=LIVE",
 			expectedError:  false,
 		},
 	}

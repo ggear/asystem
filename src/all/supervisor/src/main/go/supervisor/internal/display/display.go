@@ -775,14 +775,15 @@ func (d *Display) drawOverlayBar() {
 
 func (d *Display) overlayStatus() (string, colour) {
 	page, pages := d.logPagination()
-	long := fmt.Sprintf(" LIVE %d/%d SPACE=PAUSE", page, pages)
-	short := fmt.Sprintf(" LIVE %d/%d", page, pages)
-	colour := colourCheer
-	if !d.logFollow {
-		long = fmt.Sprintf(" PAUSED %d/%d %s=PAGE SPACE=LIVE", page, pages, textPaged.pick(d.useUnicode))
-		short = fmt.Sprintf(" PAUSED %d/%d", page, pages)
-		colour = colourWarn
-	}
+	paged := textPaged.pick(d.useUnicode)
+	long, colour := aligned(
+		fmt.Sprintf(" LIVE %d/%d %s=PAGE SPACE=PAUSE", page, pages, paged),
+		fmt.Sprintf(" PAUSED %d/%d %s=PAGE SPACE=LIVE", page, pages, paged),
+		d.logFollow)
+	short, _ := aligned(
+		fmt.Sprintf(" LIVE %d/%d", page, pages),
+		fmt.Sprintf(" PAUSED %d/%d", page, pages),
+		d.logFollow)
 	if d.logDropped > 0 {
 		long = fmt.Sprintf(" MISSED %d%s", d.logDropped, long)
 		short = fmt.Sprintf(" MISSED %d%s", d.logDropped, short)
@@ -791,6 +792,15 @@ func (d *Display) overlayStatus() (string, colour) {
 		return long, colour
 	}
 	return short, colour
+}
+
+func aligned(live, held string, following bool) (string, colour) {
+	width := max(runewidth.StringWidth(live), runewidth.StringWidth(held))
+	chosen, picked := held, colourWarn
+	if following {
+		chosen, picked = live, colourCheer
+	}
+	return strings.Repeat(" ", width-runewidth.StringWidth(chosen)) + chosen, picked
 }
 
 func (d *Display) logRewind() {
@@ -840,25 +850,48 @@ func (d *Display) logPageStart(end uint64) uint64 {
 }
 
 func (d *Display) logPagination() (int, int) {
-	oldest := d.logBuffer.Oldest()
-	if len(d.logHeights) > 2*int(d.logBuffer.Version()-oldest)+64 {
+	oldest, newest := d.logBuffer.Oldest(), d.logBuffer.Version()
+	if len(d.logHeights) > 2*int(newest-oldest)+64 {
 		for sequence := range d.logHeights {
 			if sequence < oldest {
 				delete(d.logHeights, sequence)
 			}
 		}
 	}
-	starts := []uint64{d.logPageStart(d.logBuffer.Version())}
-	for starts[len(starts)-1] > oldest {
-		starts = append(starts, d.logPageStart(starts[len(starts)-1]))
+	before, after := 0, 0
+	for cursor := d.logAnchor; cursor > oldest; before++ {
+		previous := d.logPageStart(cursor)
+		if previous >= cursor {
+			break
+		}
+		cursor = previous
 	}
-	pages := len(starts)
-	for index, start := range starts {
-		if start <= d.logAnchor {
-			return pages - index, pages
+	for cursor := d.logNext; cursor < newest; after++ {
+		next := d.logPageEnd(cursor)
+		if next <= cursor {
+			break
+		}
+		cursor = next
+	}
+	return before + 1, before + 1 + after
+}
+
+func (d *Display) logPageEnd(start uint64) uint64 {
+	capacity := max(d.dimsInit.rows-2, 1)
+	lines, anchor := d.logBuffer.From(start, capacity)
+	used, consumed := 0, 0
+	for index, line := range lines {
+		height := d.logHeight(anchor+uint64(index), line)
+		if consumed > 0 && used+height > capacity {
+			break
+		}
+		used += height
+		consumed++
+		if used >= capacity {
+			break
 		}
 	}
-	return pages, pages
+	return anchor + uint64(consumed)
 }
 
 func (d *Display) logHeight(sequence uint64, line scribe.LogLine) int {
