@@ -553,7 +553,7 @@ type span struct {
 
 var (
 	spanLevel    = span{ideal: 5, min: 5}
-	spanSource   = span{ideal: 17}
+	spanSource   = span{ideal: 16}
 	spanSubject  = span{ideal: 24, min: 8}
 	spanAction   = span{ideal: 10, min: 9}
 	spanDuration = span{ideal: 8, min: 8}
