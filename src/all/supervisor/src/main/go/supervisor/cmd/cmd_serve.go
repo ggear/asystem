@@ -57,6 +57,7 @@ func executeServe(configPath string, opts *serveOptions) error {
 	if err != nil {
 		return err
 	}
+	scribe.Widen(configuredServices(configPath))
 	if err := scribe.EnableStdoutAndFile(level, "serve", 10, 3, 7); err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
 	}
@@ -71,7 +72,7 @@ func executeServe(configPath string, opts *serveOptions) error {
 	defer cancel()
 	serveStart := time.Now()
 	loaded := config.Load(configPath)
-	scribe.Log(scribe.SourceProcess, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", serveStart, "version [%s], config [%s], configured [%d] services, poll [%d] ms, pulse [%d] ms, heartbeat [%d] s", loaded.Version(), configPath, len(loaded.Services(loaded.Host())), periods.PollMillis, periods.PulseMillis, periods.HeartbeatSecs)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectNone, scribe.ActionStart).Info("identity", serveStart, "host [%s] version [%s], config [%s], configured [%d] services, poll [%d] ms, pulse [%d] ms, heartbeat [%d] s", loaded.Host(), loaded.Version(), configPath, len(loaded.Services(loaded.Host())), periods.PollMillis, periods.PulseMillis, periods.HeartbeatSecs)
 	cache := metric.NewRecordCache()
 	defer func(cache *metric.RecordCache) {
 		err := cache.Close()
@@ -79,7 +80,7 @@ func executeServe(configPath string, opts *serveOptions) error {
 		}
 	}(cache)
 	engine.RunAllProbesPublishLoop(ctx, configPath, cache, periods)
-	scribe.Log(scribe.SourceProcess, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", serveStart, "version [%s], exited gracefully", loaded.Version())
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectNone, scribe.ActionStop).Info("identity", serveStart, "host [%s] version [%s], exited gracefully", loaded.Host(), loaded.Version())
 	return nil
 }
 

@@ -13,6 +13,13 @@ import (
 	"time"
 )
 
+func init() {
+	scribe.Attribute(scribe.SourceProbeSensors,
+		metric.MetricHostTemperature,
+		metric.MetricHostWarnTemperature,
+		metric.MetricHostSpinFanSpeed)
+}
+
 type sensorSet struct {
 	sysRoot           string
 	tier              string
@@ -153,7 +160,7 @@ func discoverSensors(sysRoot string) *sensorSet {
 			for _, input := range fans {
 				maxRPM, err := readSensorValue(strings.TrimSuffix(input, "_input") + "_max")
 				if err != nil || maxRPM <= 0 {
-					scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostSpinFanSpeed), scribe.ActionDiscover).Info("bypassed", discoverStart, "[%s] fan declares no maximum speed", input)
+					scribe.Log(scribe.SourceProbeSensors, scribe.SubjectMetric(metric.MetricHostSpinFanSpeed), scribe.ActionDiscover).Info("bypassed", discoverStart, "[%s] fan declares no maximum speed", input)
 					continue
 				}
 				discovered.fans = append(discovered.fans, sensorFan{
@@ -183,9 +190,9 @@ func discoverSensors(sysRoot string) *sensorSet {
 		}
 	}
 	if discovered.tier == sensorTierComposite {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Info("fallback", discoverStart, "[composite] no package or soc sensor found, deriving from a drive sensor offset by [%.0f] C", sensorCompositeOffset)
+		scribe.Log(scribe.SourceProbeSensors, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Info("fallback", discoverStart, "[composite] no package or soc sensor found, deriving from a drive sensor offset by [%.0f] C", sensorCompositeOffset)
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Info("topology", discoverStart, "[%s] tier with [%d] temperature and [%d] fan inputs under [%s]", discovered.tier, len(discovered.temperatureInputs), len(discovered.fans), sysRoot)
+	scribe.Log(scribe.SourceProbeSensors, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Info("topology", discoverStart, "[%s] tier with [%d] temperature and [%d] fan inputs under [%s]", discovered.tier, len(discovered.temperatureInputs), len(discovered.fans), sysRoot)
 	return discovered
 }
 

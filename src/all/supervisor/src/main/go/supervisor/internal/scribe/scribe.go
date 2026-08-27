@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -306,7 +307,7 @@ func streamLines(record slog.Record) []string {
 
 func wrapped(line string, timeWidth, width int) []string {
 	rendered := []rune(line)
-	prefix := timeWidth + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
+	prefix := timeWidth + 1 + widthLevel + 1 + widthSource + 1 + subjectWidth() + 1 + widthAction + 1 + widthDuration + 1
 	budget := width - prefix - widthVerb - 1
 	if len(rendered) <= width || budget < widthWrapMin || len(rendered) <= prefix+widthVerb+1 {
 		return []string{string(rendered)}
@@ -352,7 +353,7 @@ func format(record slog.Record) string {
 	if detail != "" {
 		detail = " " + detail
 	}
-	return columnLine(source, clipped(subject, widthSubject), action, duration, verb(record.Message)+detail)
+	return columnLine(source, clipped(subject, subjectWidth()), action, duration, verb(record.Message)+detail)
 }
 
 func chunked(detail string, budget int) []string {
@@ -399,7 +400,7 @@ func clipped(text string, width int) string {
 }
 
 func columnLine(source, subject, action, duration, detail string) string {
-	return strings.TrimRight(pad(source, widthSource)+" "+pad(subject, widthSubject)+" "+pad(action, widthAction)+" "+pad(duration, widthDuration)+" "+detail, " ")
+	return strings.TrimRight(pad(source, widthSource)+" "+pad(subject, subjectWidth())+" "+pad(action, widthAction)+" "+pad(duration, widthDuration)+" "+detail, " ")
 }
 
 func verb(word string) string {
@@ -454,7 +455,7 @@ const (
 	durationCoarser = 10000
 	widthTime       = 14
 	widthLevel      = 5
-	widthSource     = 8
+	widthSource     = 17
 	widthAction     = 10
 	widthDuration   = 8
 	widthVerb       = 8
@@ -464,12 +465,17 @@ const (
 	widthHelpGap    = 2
 	subjectColumns  = 3
 	subjectSplit    = 2
+	subjectHosts    = "host"
 	subjectServices = "service"
 	wrapEllipsis    = "..."
 	widthSubjectMin = 24
 )
 
-var widthSubject = widthSubjectMin
+var widthSubject atomic.Int32
+
+func subjectWidth() int {
+	return int(widthSubject.Load())
+}
 
 var flattened = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ", "\t", " ")
 
@@ -481,9 +487,10 @@ var (
 )
 
 func init() {
+	widthSubject.Store(widthSubjectMin)
 	for _, id := range metric.GetIDs() {
-		if length := len(metric.GetIDName(id)); length > widthSubject {
-			widthSubject = length
+		if length := len(metric.GetIDName(id)); length > subjectWidth() {
+			widthSubject.Store(int32(length))
 		}
 	}
 	for _, source := range AllSources {
@@ -544,7 +551,7 @@ func purgeLogFiles(keep string) {
 	dir := filepath.Dir(keep)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		Log(SourceProcess, SubjectPath(dir), ActionRemove).Warn("faulting", purgeStart, "log directory unreadable with [%v]", err)
+		Log(SourceScribe, SubjectNone, ActionRemove).Warn("faulting", purgeStart, "log directory [%s] unreadable with [%v]", dir, err)
 		return
 	}
 	removed := 0
@@ -561,13 +568,13 @@ func purgeLogFiles(keep string) {
 			continue
 		}
 		if removeErr := os.Remove(path); removeErr != nil {
-			Log(SourceProcess, SubjectPath(path), ActionRemove).Warn("faulting", purgeStart, "stale log file with [%v]", removeErr)
+			Log(SourceScribe, SubjectNone, ActionRemove).Warn("faulting", purgeStart, "stale log file [%s] with [%v]", name, removeErr)
 			continue
 		}
 		removed++
 	}
 	if removed > 0 {
-		Log(SourceProcess, SubjectPath(dir), ActionRemove).Info("removals", purgeStart, "[%d] stale log files, kept [%s]", removed, filepath.Base(keep))
+		Log(SourceScribe, SubjectNone, ActionRemove).Info("removals", purgeStart, "[%d] stale log files, kept [%s]", removed, filepath.Base(keep))
 	}
 }
 

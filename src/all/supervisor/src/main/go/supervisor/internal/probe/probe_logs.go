@@ -19,6 +19,11 @@ import (
 	"supervisor/internal/scribe"
 )
 
+func init() {
+	scribe.Attribute(scribe.SourceProbeLogs,
+		metric.MetricHostFailedLogs)
+}
+
 type logSet struct {
 	mutex     sync.Mutex
 	roots     []string
@@ -89,7 +94,7 @@ func (s *logSet) report(censusStart time.Time, window time.Duration) {
 	if len(counted) == 0 {
 		return
 	}
-	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample)
+	logger := scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample)
 	logger.Debug("examined", censusStart, "kernel [%d] errors already in the ring across [%d] distinct messages within window [%s], showing the most frequent [%d]",
 		len(s.records), len(counted), window, min(len(counted), logCensusMax))
 	for index, entry := range counted {
@@ -145,10 +150,10 @@ func (s *logSet) open() bool {
 		s.file = file
 		s.boot = bootTime(root)
 		s.available = true
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Info("followed", time.Now(), "[%s] for kernel errors", path)
+		scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Info("followed", time.Now(), "[%s] for kernel errors", path)
 		return true
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("noaccess", time.Now(), "kernel log %s, reporting [0] errors, needs [CAP_SYSLOG] and device [%s]", strings.Join(failures, " and "), logDeviceNode)
+	scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("noaccess", time.Now(), "kernel log %s, reporting [0] errors, needs [CAP_SYSLOG] and device [%s]", strings.Join(failures, " and "), logDeviceNode)
 	return false
 }
 
@@ -213,7 +218,7 @@ func (s *logSet) scan(shouts int) int {
 		s.records = append(s.records, logRecord{stamp: stamp, message: clipped})
 		if s.drained && shouts < logShoutsMax {
 			shouts++
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("observed", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipped)
+			scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("observed", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipped)
 		}
 	}
 }

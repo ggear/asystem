@@ -271,7 +271,7 @@ func TestScribe_BufferHandler(t *testing.T) {
 func TestScribe_FormatColumns(t *testing.T) {
 	sourceOffset := 0
 	subjectOffset := widthSource + 1
-	actionOffset := subjectOffset + widthSubject + 1
+	actionOffset := subjectOffset + subjectWidth() + 1
 	durationOffset := actionOffset + widthAction + 1
 	verbOffset := durationOffset + widthDuration + 1
 	tests := []struct {
@@ -315,21 +315,25 @@ func TestScribe_FormatColumns(t *testing.T) {
 	}
 }
 
-func TestScribe_SubjectEndpoint(t *testing.T) {
+func TestScribe_SubjectNamespace(t *testing.T) {
 	tests := []struct {
 		name            string
-		endpoint        string
+		subject         Subject
 		expectedSubject string
 	}{
-		{name: "happy_fqdn_loses_its_domain_and_port", endpoint: "vernemq.local.janeandgraham.com:32404", expectedSubject: "vernemq"},
-		{name: "happy_short_name_loses_its_port", endpoint: "macmini-max:1883", expectedSubject: "macmini-max"},
-		{name: "happy_two_labels_lose_the_second", endpoint: "vernemq.local:32404", expectedSubject: "vernemq"},
-		{name: "happy_address_is_kept_whole", endpoint: "10.0.0.5:32420", expectedSubject: "10.0.0.5"},
-		{name: "happy_portless_host_loses_its_domain", endpoint: "influxdb3.local.janeandgraham.com", expectedSubject: "influxdb3"},
+		{name: "happy_host_rollup", subject: SubjectHost(), expectedSubject: "host"},
+		{name: "happy_service_rollup", subject: SubjectService(""), expectedSubject: "service"},
+		{name: "happy_named_service", subject: SubjectService("letsencrypt"), expectedSubject: "service/letsencrypt"},
+		{name: "happy_host_metric", subject: SubjectMetric(metric.MetricHostUsedMemory), expectedSubject: "host/used_memory"},
+		{name: "happy_service_metric", subject: SubjectMetric(metric.MetricServiceUpTime), expectedSubject: "service/up_time"},
+		{name: "happy_host_topic_keeps_its_tail", subject: SubjectTopic("supervisor/macmini-mad/data/host/used_memory"), expectedSubject: "host/used_memory"},
+		{name: "happy_service_topic_keeps_its_tail", subject: SubjectTopic("supervisor/macmini-mad/data/service/plex/up_time"), expectedSubject: "service/plex/up_time"},
+		{name: "happy_status_topic_has_no_subject", subject: SubjectTopic("supervisor/macmini-mad/status"), expectedSubject: ""},
+		{name: "happy_none_renders_blank", subject: SubjectNone, expectedSubject: ""},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			if got := SubjectEndpoint(testCase.endpoint).String(); got != testCase.expectedSubject {
+			if got := testCase.subject.String(); got != testCase.expectedSubject {
 				t.Errorf("subject: got %q want %q", got, testCase.expectedSubject)
 			}
 		})
@@ -337,7 +341,7 @@ func TestScribe_SubjectEndpoint(t *testing.T) {
 }
 
 func TestScribe_WrapsLongDetail(t *testing.T) {
-	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
+	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + subjectWidth() + 1 + widthAction + 1 + widthDuration + 1
 	tests := []struct {
 		name          string
 		width         int
@@ -396,7 +400,7 @@ func TestScribe_WrapsLongDetail(t *testing.T) {
 }
 
 func TestScribe_WrapsMultibyteDetail(t *testing.T) {
-	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration + 1
+	prefix := len(overlayTimeLayout) + 1 + widthLevel + 1 + widthSource + 1 + subjectWidth() + 1 + widthAction + 1 + widthDuration + 1
 	tests := []struct {
 		name          string
 		width         int
@@ -619,7 +623,7 @@ func TestScribe_SetFilters(t *testing.T) {
 		},
 		{
 			name:          "happy_valid_source_prefix",
-			source:        "probe,broker",
+			source:        "probe,engine",
 			expectedError: false,
 		},
 		{
@@ -690,7 +694,7 @@ func TestScribe_Allowed(t *testing.T) {
 		},
 		{
 			name:          "happy_source_mismatches",
-			source:        "broker",
+			source:        "engine",
 			recordSource:  "probe",
 			recordSubject: "host/used_memory",
 			recordAction:  "compute",
@@ -941,8 +945,7 @@ func TestScribe_ClipsSubjectToColumn(t *testing.T) {
 		expectedError   bool
 	}{
 		{name: "happy_short_subject_is_untouched", subject: "host/used_memory", expectedSubject: "host/used_memory", expectedError: false},
-		{name: "happy_long_path_keeps_its_tail", subject: "/host/var/lib/asystem/install", expectedSubject: "...ar/lib/asystem/install", expectedError: false},
-		{name: "happy_long_topic_keeps_its_tail", subject: "supervisor/macmini-mad/data/service/plex/up_time", expectedSubject: "...a/service/plex/up_time", expectedError: false},
+		{name: "happy_long_subject_keeps_its_tail", subject: "supervisor/macmini-mad/data/service/plex/backup_status", expectedSubject: "...ice/plex/backup_status", expectedError: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -955,7 +958,7 @@ func TestScribe_ClipsSubjectToColumn(t *testing.T) {
 				slog.String(keyDetail, strings.Repeat("detail ", 60)),
 			)
 			line := format(record)
-			subject := strings.TrimRight(string([]rune(line)[widthSource+1:widthSource+1+widthSubject]), " ")
+			subject := strings.TrimRight(string([]rune(line)[widthSource+1:widthSource+1+subjectWidth()]), " ")
 			if subject != testCase.expectedSubject {
 				t.Errorf("subject: got %q want %q", subject, testCase.expectedSubject)
 			}
@@ -963,9 +966,9 @@ func TestScribe_ClipsSubjectToColumn(t *testing.T) {
 			if len(rows) < 2 {
 				t.Fatalf("rows: got %d want at least 2", len(rows))
 			}
-			prefix := widthTime + 1 + widthLevel + 1 + widthSource + 1 + widthSubject + 1 + widthAction + 1 + widthDuration
+			prefix := widthTime + 1 + widthLevel + 1 + widthSource + 1 + subjectWidth() + 1 + widthAction + 1 + widthDuration
 			for index, row := range rows {
-				column := string([]rune(row)[widthTime+1+widthLevel+1+widthSource+1 : widthTime+1+widthLevel+1+widthSource+1+widthSubject])
+				column := string([]rune(row)[widthTime+1+widthLevel+1+widthSource+1 : widthTime+1+widthLevel+1+widthSource+1+subjectWidth()])
 				if strings.TrimRight(column, " ") != testCase.expectedSubject {
 					t.Errorf("column: got %q want %q for row %d", column, testCase.expectedSubject, index)
 				}

@@ -57,7 +57,7 @@ func newHostProbe() *hostProbe {
 	}
 }
 
-func (*hostProbe) name() string { return "host" }
+func (*hostProbe) subject() scribe.Subject { return scribe.SubjectHost() }
 
 func (p *hostProbe) metrics() []metric.ID {
 	return []metric.ID{
@@ -348,7 +348,7 @@ func (p *hostProbe) allocatedMemory() (int8, derivation, error) {
 	if allocatedPercent > 100.0 {
 		if allocatedBytes != p.allocatedMemoryLogged {
 			p.allocatedMemoryLogged = allocatedBytes
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionCompute).Warn("exceeded", allocatedStart, "[%d] MiB allocated of [%d] MiB total at [%.1f] pct across [%d] installed services, capping the metric at [100] pct",
+			scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionCompute).Warn("exceeded", allocatedStart, "[%d] MiB allocated of [%d] MiB total at [%.1f] pct across [%d] installed services, capping the metric at [100] pct",
 				allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, allocatedPercent, installed)
 		}
 		allocatedPercent = 100.0

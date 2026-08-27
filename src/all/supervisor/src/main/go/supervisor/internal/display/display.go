@@ -116,7 +116,7 @@ func NewDisplay(
 		tickStall:       tickStall,
 		singleHostIndex: singleHostIndex(hosts),
 	}
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceTerminal), scribe.ActionDiscover).Info("geometry", initStart, "layout [%v], rows [%d], cols [%d]", format, height, width)
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("geometry", initStart, "layout [%v], rows [%d], cols [%d]", format, height, width)
 	return display, nil
 }
 
@@ -378,14 +378,14 @@ func (d *Display) Compile() (Format, error) {
 					}
 				}
 			}
-			scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceTerminal), scribe.ActionDiscover).Info("geometry", compileStart, "layout [%v], rows [%d], cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("geometry", compileStart, "layout [%v], rows [%d], cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceTerminal), scribe.ActionDiscover).Warn("fallback", compileStart, "[compact], relaxed layout failed with [%v]", err)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Warn("fallback", compileStart, "[compact], relaxed layout failed with [%v]", err)
 		}
 		d.format = FormatCompact
 	}
@@ -524,7 +524,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 				d.dimsInit = dims
 				d.rebuild("resize")
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceTerminal), scribe.ActionRender).Info("geometry", resizeStart, "[%d] cols, [%d] rows", cols, rows)
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("geometry", resizeStart, "[%d] cols, [%d] rows", cols, rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
@@ -563,7 +563,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 		case <-ticker.C:
 			if elapsed := clock.SinceIncludingSuspend(ticked); elapsed > d.tickStall {
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionDisconnect).Warn("exceeded", ticked, "[%d] ms since the last draw tick", d.tickStall.Milliseconds())
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDisconnect).Warn("exceeded", ticked, "[%d] ms since the last draw tick", d.tickStall.Milliseconds())
 				d.cache.Wake(elapsed)
 				d.refresh("wake")
 			}
@@ -598,7 +598,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				d.terminal.show()
 			}
 			if len(dirtyIndexes) > 0 || drawnCount > 0 {
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Debug("received", drawStart, "[%3d] updates, drawn [%3d] boxes", len(dirtyIndexes), drawnCount)
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Debug("received", drawStart, "[%3d] updates, drawn [%3d] boxes", len(dirtyIndexes), drawnCount)
 			}
 			d.force = false
 		}
@@ -611,7 +611,7 @@ func (d *Display) rebuild(trigger string) {
 	d.boxes = nil
 	d.serviceShown = nil
 	if _, err := d.Compile(); err != nil {
-		scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Error("faulting", rebuildStart, "[%v] rebuilding the display", err)
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Error("faulting", rebuildStart, "[%v] rebuilding the display", err)
 		d.logOverlay = true
 		d.logOverlayAuto = true
 	} else if d.logOverlayAuto {
@@ -636,10 +636,10 @@ func (d *Display) refresh(trigger string) {
 	d.terminal.show()
 	d.force = true
 	if trigger == "period" {
-		scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Debug("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Debug("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
 		return
 	}
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectSurface(surfaceGrid), scribe.ActionRender).Info("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
 }
 
 func (d *Display) subscribeUpdates() {

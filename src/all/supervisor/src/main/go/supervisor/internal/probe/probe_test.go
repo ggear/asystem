@@ -192,7 +192,7 @@ type mockProbe struct {
 	runCalls    int
 }
 
-func (m *mockProbe) name() string { return "mock" }
+func (m *mockProbe) subject() scribe.Subject { return scribe.SubjectHost() }
 
 func (m *mockProbe) metrics() []metric.ID {
 	return m.metricsList

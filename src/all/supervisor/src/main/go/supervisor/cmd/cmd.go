@@ -62,9 +62,13 @@ func vocabularies() string {
 	if flag := rootCmd.PersistentFlags().Lookup("config"); flag != nil && flag.Value.String() != "" {
 		path = flag.Value.String()
 	}
+	return scribe.Vocabularies(configuredServices(path))
+}
+
+func configuredServices(path string) []string {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return scribe.Vocabularies(nil)
+		return nil
 	}
 	var document struct {
 		Asystem struct {
@@ -74,7 +78,7 @@ func vocabularies() string {
 		} `json:"asystem"`
 	}
 	if json.Unmarshal(data, &document) != nil {
-		return scribe.Vocabularies(nil)
+		return nil
 	}
 	seen := map[string]bool{}
 	var modules []string
@@ -88,7 +92,7 @@ func vocabularies() string {
 		}
 	}
 	sort.Strings(modules)
-	return scribe.Vocabularies(modules)
+	return modules
 }
 
 func bracketed(flags *pflag.FlagSet) string {

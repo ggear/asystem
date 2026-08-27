@@ -45,12 +45,12 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		scribe.Log(scribe.SourceProcess, scribe.SubjectLoop(loopListeningProbes), scribe.ActionStart).Error("faulting", createStart, "[%v]", err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStart).Error("faulting", createStart, "loop [%s] with [%v]", loopListeningProbes, err)
 		return
 	}
 	runStart := time.Now()
 	if err := probe.Run(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		scribe.Log(scribe.SourceProcess, scribe.SubjectLoop(loopListeningProbes), scribe.ActionStop).Error("faulting", runStart, "[%v]", err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", runStart, "loop [%s] with [%v]", loopListeningProbes, err)
 	}
 }
 
@@ -137,7 +137,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		removeStart := time.Now()
 		cache.Evict(guid.Host, guid.ServiceName)
 		if cache.Delete(guid.Host, guid.ServiceName) {
-			scribe.Log(scribe.SourceBroker, scribe.SubjectService(guid.ServiceName), scribe.ActionRemove).Info("removals", removeStart, "host [%s] by an empty payload", guid.Host)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionRemove).Info("removals", removeStart, "host [%s] by an empty payload", guid.Host)
 		}
 	}
 	var resubscribeHost func(client mqtt.Client, hostName string) int
@@ -153,7 +153,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		storeHostStatus(hostName, true)
 		scheduleReconcile(hostName, false)
 		topics := resubscribeHost(client, hostName)
-		scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", reviveStart, "status [online], revived by later data, resubscribed [%d] topics, reconcile in [%d] ms", topics, reconcileDelay.Milliseconds())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Info("observed", reviveStart, "host [%s] status [online], revived by later data, resubscribed [%d] topics, reconcile in [%d] ms", hostName, topics, reconcileDelay.Milliseconds())
 		return true
 	}
 	onData := func(client mqtt.Client, msg mqtt.Message) {
@@ -178,7 +178,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		streamStart := time.Now()
 		if err := json.Unmarshal(msg.Payload(), &value); err != nil {
 			dropCount.Add(1)
-			scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Error("received", streamStart, "unmarshal failed with [%v]", err)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Error("received", streamStart, "unmarshal failed with [%v]", err)
 			return
 		}
 		if !online && !proveOnline(client, guid.Host, value) {
@@ -220,7 +220,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				delete(subscribed, topic)
 			}
 			subscribedMutex.Unlock()
-			scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%d] topics of [%d], %s, retrying on the next resync", len(refused), len(filters), reason)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%d] topics of [%d], %s, retrying on the next resync", len(refused), len(filters), reason)
 		}()
 		return len(filters)
 	}
@@ -291,7 +291,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		registerStart := time.Now()
 		if bindings := cache.RegisterService(hostName, serviceName, false); len(bindings) > 0 {
 			subscribeTopics(client, bindings)
-			scribe.Log(scribe.SourceBroker, scribe.SubjectService(serviceName), scribe.ActionRegister).Info("register", registerStart, "host [%s], subscribed [%d] topics", hostName, len(bindings))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Info("register", registerStart, "host [%s], subscribed [%d] topics", hostName, len(bindings))
 		}
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)
@@ -313,7 +313,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		case hostStatusOnline:
 			storeHostStatus(hostName, true)
 			if known && wasOnline {
-				scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "status [online], heartbeat [no-op]")
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionCensus).Debug("observed", statusStart, "host [%s] status [online], heartbeat [no-op]", hostName)
 				return
 			}
 			reconcileMutex.Lock()
@@ -328,11 +328,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if restarted {
 				topics = resubscribeHost(client, hostName)
 			}
-			scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", statusStart, "status [online], trigger [%s], resubscribed [%d] topics, reconcile in [%d] ms", trigger, topics, reconcileDelay.Milliseconds())
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Info("observed", statusStart, "host [%s] status [online], trigger [%s], resubscribed [%d] topics, reconcile in [%d] ms", hostName, trigger, topics, reconcileDelay.Milliseconds())
 		case hostStatusOffline, "":
 			storeHostStatus(hostName, false)
 			if known && !wasOnline {
-				scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "status [offline], heartbeat [no-op]")
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionCensus).Debug("observed", statusStart, "host [%s] status [offline], heartbeat [no-op]", hostName)
 				return
 			}
 			evicted := cache.Services(hostName)
@@ -348,9 +348,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				record := metric.NewRecord(metric.NewNilValue())
 				cache.Store(metric.NewRecordGUID(id, hostName), &record)
 			}
-			scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionDisconnect).Warn("observed", statusStart, "status [offline], evicted [%d] services", len(evicted))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionDisconnect).Warn("observed", statusStart, "host [%s] status [offline], evicted [%d] services", hostName, len(evicted))
 		default:
-			scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionSubscribe).Error("observed", statusStart, "payload [%s] unknown", payload)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Error("observed", statusStart, "host [%s] payload [%s] unknown", hostName, payload)
 		}
 	}
 	wildcardHandlers := map[string]mqtt.MessageHandler{
@@ -380,7 +380,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				wildcardMutex.Lock()
 				delete(wildcards, topic)
 				wildcardMutex.Unlock()
-				scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Error("rollback", subscribeStart, "wildcard [%s], %s, retrying on the next resync", topic, reason)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Error("rollback", subscribeStart, "wildcard [%s], %s, retrying on the next resync", topic, reason)
 			}(topic, token)
 		}
 		return len(pending)
@@ -413,12 +413,12 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		topics := subscribeTopics(client, cache.Topics())
 		listens := subscribeWildcards(client)
 		cache.Refresh()
-		scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionSubscribe).Info("attached", connectStart, "[%d] topics and [%d] wildcards across [%d] hosts, holding [%d] records", topics, listens, len(cache.Hosts()), cache.Size())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Info("attached", connectStart, "[%d] topics and [%d] wildcards across [%d] hosts, holding [%d] records", topics, listens, len(cache.Hosts()), cache.Size())
 	}
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
 	if err != nil {
-		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopListeningStream), scribe.ActionStop).Error("faulting", clientStart, "[%v]", err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", clientStart, "loop [%s] with [%v]", loopListeningStream, err)
 		return
 	}
 	defer client.Disconnect(250)
@@ -464,7 +464,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					reconciles[pending.host] = pending
 					reconcileMutex.Unlock()
 					topics := resubscribeHost(client, pending.host)
-					scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%d] services, after [%d] ms, nothing refreshed so the redelivery was lost, resubscribed [%d] topics", len(services), clock.SinceIncludingSuspend(pending.started).Milliseconds(), topics)
+					scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionReconcile).Warn("deferred", reconcileStart, "host [%s] [%d] services, after [%d] ms, nothing refreshed so the redelivery was lost, resubscribed [%d] topics", pending.host, len(services), clock.SinceIncludingSuspend(pending.started).Milliseconds(), topics)
 					continue
 				}
 				for _, service := range services {
@@ -472,21 +472,21 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Delete(pending.host, service)
 				}
 				if len(services) == 0 {
-					scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[0] services, after [%d] ms, every service refreshed itself", clock.SinceIncludingSuspend(pending.started).Milliseconds())
+					scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionReconcile).Debug("reclaims", reconcileStart, "host [%s] [0] services, after [%d] ms, every service refreshed itself", pending.host, clock.SinceIncludingSuspend(pending.started).Milliseconds())
 					continue
 				}
 				cache.Refresh()
-				scribe.Log(scribe.SourceBroker, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Info("reclaims", reconcileStart, "[%d] services, after [%d] ms, [%s]", len(services), clock.SinceIncludingSuspend(pending.started).Milliseconds(), strings.Join(services, ","))
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionReconcile).Info("reclaims", reconcileStart, "host [%s] [%d] services, after [%d] ms, [%s]", pending.host, len(services), clock.SinceIncludingSuspend(pending.started).Milliseconds(), strings.Join(services, ","))
 			}
 			resyncStart := time.Now()
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
-				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionSubscribe).Info("resynced", resyncStart, "[%d] topics subscribed, [%d] unsubscribed, to match the cache", added, dropped)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Info("resynced", resyncStart, "[%d] topics subscribed, [%d] unsubscribed, to match the cache", added, dropped)
 			}
 			if restored := subscribeWildcards(client); restored > 0 {
-				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionSubscribe).Warn("restored", resyncStart, "[%d] wildcards lost since the connect, without which nothing is ever discovered", restored)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Warn("restored", resyncStart, "[%d] wildcards lost since the connect, without which nothing is ever discovered", restored)
 			}
 			if !client.IsConnected() {
-				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionConnect).Warn("liveness", purgeStart, "[false] client neither connected nor reconnecting, forcing a revive")
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Warn("liveness", purgeStart, "[false] client neither connected nor reconnecting, forcing a revive")
 				brokerRevive(ctx, client, 0)
 			}
 			rx := rxCount.Swap(0)
@@ -507,9 +507,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				silent = 0
 				silenceStart := time.Now()
 				restored, listens := resubscribeAll(client)
-				scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] msgs across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] msgs across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
 			}
-			scribe.Log(scribe.SourceBroker, brokerSubject(client), scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] msgs at [%d] msg/s, dropped [%d] msgs, evicted [%d] records, deleted [%d] records", rx, rate, drops, evicted, deleted)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] msgs at [%d] msg/s, dropped [%d] msgs, evicted [%d] records, deleted [%d] records", rx, rate, drops, evicted, deleted)
 			censusStart := time.Now()
 			online := 0
 			services := 0
@@ -527,7 +527,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 			}
 			reconcileMutex.Unlock()
-			scribe.Log(scribe.SourceBroker, scribe.SubjectEstate(), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts, [%d] online, [%d] reconciling, with [%d] services, holding [%d] records", len(cache.Hosts()), online, pending, services, cache.Size())
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts, [%d] online, [%d] reconciling, with [%d] services, holding [%d] records", len(cache.Hosts()), online, pending, services, cache.Size())
 		}
 	}
 }
@@ -555,7 +555,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		scribe.Log(scribe.SourceProcess, scribe.SubjectLoop(loopAllProbesOnce), scribe.ActionStart).Error("faulting", createStart, "[%v]", err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStart).Error("faulting", createStart, "loop [%s] with [%v]", loopAllProbesOnce, err)
 		return
 	}
 	timeout := time.Duration(3*periods.PulseMillis) * time.Millisecond
@@ -564,7 +564,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	runStart := time.Now()
 	err := probe.Run(ctx, nil)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		scribe.Log(scribe.SourceProcess, scribe.SubjectLoop(loopAllProbesOnce), scribe.ActionStop).Error("faulting", runStart, "[%v]", err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", runStart, "loop [%s] with [%v]", loopAllProbesOnce, err)
 	}
 }
 
@@ -605,7 +605,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStart).Error("faulting", createStart, "[%v]", err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStart).Error("faulting", createStart, "loop [%s] with [%v]", loopAllProbesPublish, err)
 		return
 	}
 	hostName := config.Load(configPath).Host()
@@ -623,7 +623,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			if serviceName := value.Pulse.ValueString; serviceName != "" {
 				registerStart := time.Now()
 				if bindings := cache.RegisterService(hostName, serviceName, true); len(bindings) > 0 {
-					scribe.Log(scribe.SourceBroker, scribe.SubjectService(serviceName), scribe.ActionRegister).Info("register", registerStart, "host [%s], rediscovered [%d] topics", hostName, len(bindings))
+					scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Info("register", registerStart, "host [%s], rediscovered [%d] topics", hostName, len(bindings))
 				}
 			}
 		})
@@ -636,12 +636,12 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 
 			// TODO: Implement command handling
 
-			scribe.Log(scribe.SourceBroker, scribe.SubjectService(tokens[4]), scribe.ActionSubscribe).Debug("observed", commandStart, "host [%s], command [%s]", tokens[1], string(msg.Payload()))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(tokens[4]), scribe.ActionSubscribe).Debug("observed", commandStart, "host [%s], command [%s]", tokens[1], string(msg.Payload()))
 		})
 		subscribeStart := time.Now()
 		for topic, token := range map[string]mqtt.Token{serviceNameTopic: names, commandTopic: commands} {
 			if refused, reason := subscribeRefused(token, map[string]byte{topic: 1}); len(refused) > 0 {
-				scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Error("rollback", subscribeStart, "topic [%s], %s, rediscovery and commands are lost until the next connect", topic, reason)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Error("rollback", subscribeStart, "topic [%s], %s, rediscovery and commands are lost until the next connect", topic, reason)
 			}
 		}
 		if hasConnected.Swap(true) {
@@ -663,13 +663,13 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				forceRepublish.Store(true)
 			}
 			client.Publish(statusTopic, 1, true, hostStatusOnline).WaitTimeout(brokerTimeout)
-			scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", reconnectStart, "status [online], re-asserted after reading back [%s], republish [%v]", seen, forceRepublish.Load())
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Info("observed", reconnectStart, "host [%s] status [online], re-asserted after reading back [%s], republish [%v]", hostName, seen, forceRepublish.Load())
 		}
 	}
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, statusTopic, hostStatusOffline)
 	if err != nil {
-		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", clientStart, "[%v]", err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", clientStart, "loop [%s] with [%v]", loopAllProbesPublish, err)
 		return
 	}
 	defer func() {
@@ -683,7 +683,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 		})
 		client.Disconnect(2500)
-		scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionStop).Info("shutdown", shutdownStart, "status [%s], tombstoned [%d] topics", hostStatusOffline, tombstoned)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Info("shutdown", shutdownStart, "host [%s] status [%s], tombstoned [%d] topics", hostName, hostStatusOffline, tombstoned)
 	}()
 	cache.SubscribeDeletes(&brokerPublishDeletesListener{client: client})
 	var db *databaseClient
@@ -692,7 +692,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		databaseStart := time.Now()
 		db, dbErr = databaseConnect(ctx, configPath)
 		if dbErr != nil {
-			scribe.Log(scribe.SourceDatabase, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", databaseStart, "[%v]", dbErr)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", databaseStart, "loop [%s] with [%v]", loopAllProbesPublish, dbErr)
 		} else {
 			defer db.close()
 		}
@@ -727,9 +727,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
 						client.Publish(record.Topic, 0, true, payload)
 						txBytes += len(payload)
-						scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debug("retained", processStart, "[%d] bytes at qos [0]", len(payload))
+						scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debug("retained", processStart, "[%d] bytes at qos [0]", len(payload))
 					} else {
-						scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Error("faulting", processStart, "marshal with [%v]", jsonErr)
+						scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Error("faulting", processStart, "marshal with [%v]", jsonErr)
 					}
 				} else if guid.ServiceName != metric.ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, metric.ServiceNameSchema) {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
@@ -737,7 +737,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 						txBytes += len(payload)
 					}
 					client.Publish(record.Topic, 0, true, "")
-					scribe.Log(scribe.SourceBroker, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debug("removals", processStart, "cleared with an empty payload at qos [0]")
+					scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debug("removals", processStart, "cleared with an empty payload at qos [0]")
 					toDelete = append(toDelete, serviceKey{host: guid.Host, service: guid.ServiceName})
 				}
 			}
@@ -769,11 +769,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if lineBytes > 0 && db != nil {
 			db.write(ctx, batch.protocol.Bytes())
 		}
-		scribe.Log(scribe.SourceBroker, scribe.SubjectHost(hostName), scribe.ActionCensus).Info("gathered", pulseStart, "[%3d] metrics, published [%5d] bytes, persisted [%5d] bytes, period [%s]",
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionCensus).Info("gathered", pulseStart, "host [%s] [%3d] metrics, published [%5d] bytes, persisted [%5d] bytes, period [%s]", hostName,
 			collected, txBytes, lineBytes, publishPeriod(isHeartbeat))
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		scribe.Log(scribe.SourceBroker, scribe.SubjectLoop(loopAllProbesPublish), scribe.ActionStop).Error("faulting", publishStart, "[%v]", err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", publishStart, "loop [%s] with [%v]", loopAllProbesPublish, err)
 	}
 }
 

@@ -31,7 +31,6 @@ type watchOptions struct {
 	consoleWidth    int
 	consoleHeight   int
 	logOptions
-	json bool
 }
 
 // noinspection DuplicatedCode
@@ -65,7 +64,6 @@ func newWatchCmd() *cobra.Command {
 	cmd.Flags().IntVarP(&opts.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
 	cmd.Flags().IntVarP(&opts.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
 	addLogFlags(cmd, &opts.logOptions, "debug")
-	cmd.Flags().BoolVarP(&opts.json, "json", "J", false, "output JSON instead of the default text format. Assumes local mode, respects poll and bin period options and ignores all formating options")
 	cmd.Flags().SortFlags = false
 	cobra.AddTemplateFunc("join", strings.Join)
 	cobra.AddTemplateFunc("trimLeadingWhitespaces", func(value string) string {
@@ -76,10 +74,6 @@ func newWatchCmd() *cobra.Command {
 }
 
 func executeWatch(configPath string, opts *watchOptions) error {
-
-	// TODO: START
-	//  - Implement JSON
-
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		return err
@@ -94,6 +88,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if err != nil {
 		return err
 	}
+	scribe.Widen(configuredServices(configPath))
 	logBuffer, err := scribe.EnableBufferAndFile(level, "watch", height, 10, 3, 7)
 	if err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
@@ -224,7 +219,7 @@ func init() {
 
 var watchAdvancedFlags = []string{
 	"poll-period", "pulse-factor", "heartbeat-period", "trend-period", "cache-period", "snapshot-period",
-	"refresh-period", "log-level", "log-source", "log-subject", "log-action", "json",
+	"refresh-period", "log-level", "log-source", "log-subject", "log-action",
 }
 
 const watchDescription = "Show real-time system stats"

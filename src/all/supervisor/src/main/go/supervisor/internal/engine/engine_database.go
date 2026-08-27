@@ -186,7 +186,7 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 		retries = attempt + 1
 	}
 	if err == nil {
-		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionPublish).Debug("accepted", writeStart, "[%d] bytes of line protocol after [%d] retries", len(data), retries)
+		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionPublish).Debug("accepted", writeStart, "[%d] bytes of line protocol after [%d] retries at [%s]", len(data), retries, d.endpoint)
 		if !d.online {
 			d.online = true
 			d.connected(d.lostAt, "reconnected", d.attempts)
@@ -195,7 +195,7 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 		return
 	}
 	d.attempts++
-	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionPublish).Warn("rejected", writeStart, "[%d] bytes dropped with [%v]", len(data), err)
+	scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionPublish).Warn("rejected", writeStart, "[%d] bytes dropped at [%s] with [%v]", len(data), d.endpoint, err)
 	if !d.online {
 		d.offline(d.lostAt)
 		return
@@ -205,7 +205,7 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 	d.lost(writeStart, err)
 	newClient, _, rebuildErr := newInfluxClient(d.configPath)
 	if rebuildErr != nil {
-		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Warn("sessions", writeStart, "[failed] rebuild with [%v]", rebuildErr)
+		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionConnect).Warn("sessions", writeStart, "[failed] rebuild at [%s] with [%v]", d.endpoint, rebuildErr)
 		return
 	}
 	_ = d.client.Close()
@@ -213,21 +213,21 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 }
 
 func (d *databaseClient) connected(since time.Time, state string, attempts int) {
-	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Info("sessions", since, "[%s] after [%d] attempts", state, attempts)
+	scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionConnect).Info("sessions", since, "[%s] after [%d] attempts at [%s]", state, attempts, d.endpoint)
 }
 
 func (d *databaseClient) offline(since time.Time) {
-	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionConnect).Debug("sessions", since, "[offline] attempt [%d]", d.attempts)
+	scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionConnect).Debug("sessions", since, "[offline] attempt [%d] at [%s]", d.attempts, d.endpoint)
 }
 
 func (d *databaseClient) lost(since time.Time, err error) {
-	scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionDisconnect).Warn("sessions", since, "[lost] connection with [%v]", err)
+	scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionDisconnect).Warn("sessions", since, "[lost] connection at [%s] with [%v]", d.endpoint, err)
 }
 
 func (d *databaseClient) close() {
 	closeStart := time.Now()
 	if err := d.client.Close(); err != nil {
-		scribe.Log(scribe.SourceDatabase, scribe.SubjectEndpoint(d.endpoint), scribe.ActionDisconnect).Warn("sessions", closeStart, "[failed] close with [%v]", err)
+		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionDisconnect).Warn("sessions", closeStart, "[failed] close at [%s] with [%v]", d.endpoint, err)
 	}
 }
 

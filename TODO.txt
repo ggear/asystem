@@ -39,10 +39,28 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-
-why did all services go red breifly after release for each host?
-
-
+improve loggin subject so get traceability - eg ssd_life should show all all derived logs and verdict 
+shorten ...ibrary/Logs/supervisor to just logs or better from TIME     LEVEL SOURCE   SUBJECT                   ACTION     DURATION DETAIL                                                                                                                                                                                                               
+21:14:24 INFO  process  ...ibrary/Logs/supervisor remove          0ms removals [1] stale log files, kept [watch-pid-22368.log]                                                                                                                                                             
+21:14:25 DEBUG probe    host/life_used_drives     compute         0ms observed metric status [unknown] was [none] pulse [0] ok [false] trend [none] ok [none] error [probe is still warming up]                                                                                            
+21:14:26 DEBUG probe    host/life_used_drives     sample          0ms computed [  0] pct life used, none of [0] drives are rated and
+make atop work on macos: =================================================================================================================================================================================================================================================================================== vESC =+
+TIME     LEVEL SOURCE   SUBJECT                   ACTION     DURATION DETAIL                                                                                                                                                                                                               
+21:15:11 WARN  probe    storage                   discover        0ms notfound version not readable from [/var/lib/asystem/install/storage/latest/.env] with [open /var/lib/asystem/install/storage/latest/.env: permission denied]                                                        
+21:15:11 WARN  probe    supervisor                discover        0ms notfound version not readable from [/var/lib/asystem/install/supervisor/latest/.env] with [open /var/lib/asystem/install/supervisor/latest/.env: permission denied]                                                  
+21:15:11 WARN  probe    host/allocated_memory     sample          0ms faulting metric with [no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [/var/lib/asystem/install] [environment cannot supply this ...     
+21:15:11 WARN  probe    host/allocated_memory     sample          0ms          reading]]                                                                                                                                                                                                   
+21:15:11 WARN  probe    host/failed_log_messages  sample          0ms noaccess kernel log [/host/dev/kmsg] with [open /host/dev/kmsg: no such file or directory] and [/dev/kmsg] with [open /dev/kmsg: no such file or directory], reporting [0] errors, needs [CAP_SYSLOG] and device ... 
+21:15:11 WARN  probe    host/failed_log_messages  sample          0ms          [/dev/kmsg]                                                                                                                                                                                                 
+21:15:11 WARN  probe    host/warn_temperature     sample          0ms faulting metric with [no temperature read, discovery found no package, soc, composite or thermal zone sensor under [/sys], so this host exposes none this probe knows how to read [environment cannot supply this ...
+21:15:11 WARN  probe    host/warn_temperature     sample          0ms          reading]]                                                                                                                                                                                                   
+21:15:11 WARN  probe    /host/proc/mounts         sample          0ms noaccess mount table with [open /host/proc/mounts: no such file or directory], reporting no filesystems                                                                                                              
+21:15:11 WARN  probe    host/services_max_memory  sample          0ms faulting metric with [no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [/var/lib/asystem/install] [environment cannot supply this ...     
+21:15:11 WARN  probe    host/services_max_memory  sample          0ms          reading]]                                                                                                                                                                                                   
+21:15:12 WARN  probe    host/used_home_space      sample          0ms faulting metric with [no home filesystem read, mount table [/host/proc/mounts] unreadable with [open /host/proc/mounts: no such file or directory] [environment cannot supply this reading]]                         
+                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                           
+   
 
 
 Unimplemented metrics
@@ -267,6 +285,7 @@ when maximise host, update update freq to 1s
 Add a host level metric for network/internet usage? maybe only later?
 Convert from influxdb to postgres?
 Add sys test?
+Impl a tab option expander for bash
 
 
 ###############################################################################################################################################################

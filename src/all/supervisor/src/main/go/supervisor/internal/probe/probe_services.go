@@ -87,7 +87,7 @@ func newServicesProbe() *servicesProbe {
 	}
 }
 
-func (*servicesProbe) name() string { return "services" }
+func (*servicesProbe) subject() scribe.Subject { return scribe.SubjectService(metric.ServiceNameUnset) }
 
 func (p *servicesProbe) metrics() []metric.ID {
 	return []metric.ID{
@@ -146,7 +146,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		}
 	}
 	if len(tombstoned) > 0 {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectHost(p.hostName), scribe.ActionRemove).Info("removals", tombstoneStart, "[%d] services, host [%s], services [%s]", len(tombstoned), p.hostName, strings.Join(tombstoned, ","))
+		scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionRemove).Info("removals", tombstoneStart, "host [%s], [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
 	}
 	newBool := func() *stats.BoolStats {
 		return stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
@@ -180,7 +180,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		configuredStatus, _, _ := polledService.configuredStatus()
 		sleepStatus, _, _ := polledService.sleepStatus()
 		aggregateStatus := sleepStatus || (healthStatus && configuredStatus)
-		derivePulse(scribe.Log(scribe.SourceProbe, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
+		derivePulse(scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
 			"[%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
 			aggregateStatus, polledServiceName, healthStatus, configuredStatus, sleepStatus)
 		gates := gateSet{metric.GateServiceAggregate: func() bool { return aggregateStatus }}
@@ -384,11 +384,11 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			continue
 		}
 		if name == "" {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionDiscover).Error("rejected", servicesStart, "[container] empty name, excluding from the service list")
+			scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover).Error("rejected", servicesStart, "[container] empty name, excluding from the service list")
 			continue
 		}
 		if _, exists := seenNames[name]; exists {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectService(name), scribe.ActionDiscover).Error("rejected", servicesStart, "non-unique container name, excluding from the service list")
+			scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(name), scribe.ActionDiscover).Error("rejected", servicesStart, "non-unique container name, excluding from the service list")
 			continue
 		}
 		seenNames[name] = struct{}{}
@@ -506,7 +506,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			}
 		}
 	}
-	derivePulse(scribe.Log(scribe.SourceProbe, scribe.SubjectProbe(p.name()), scribe.ActionDiscover), "reported", servicesStart,
+	derivePulse(scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover), "reported", servicesStart,
 		"[%3d] containers, services [%d], configured [%d], ghosts [%d] configured but not running",
 		len(containers), len(services)-ghosts, len(p.configuredServiceNames), ghosts)
 	return services, nil
@@ -812,7 +812,7 @@ func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services ma
 	if len(missing) == 0 {
 		return
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(p.hostName), scribe.ActionDiscover).Warn("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
+	scribe.Log(scribe.SourceProbeServices, scribe.SubjectNone, scribe.ActionDiscover).Warn("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
 }
 
 func (p *servicesProbe) installs() installReader {

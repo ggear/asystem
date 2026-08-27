@@ -2,7 +2,6 @@ package scribe
 
 import (
 	"fmt"
-	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -14,31 +13,55 @@ import (
 type Source uint8
 
 const (
-	SourceProcess Source = iota
-	SourceProbe
-	SourceBroker
-	SourceDatabase
-	SourceDisplay
+	SourceScribe Source = iota
+	SourceCmdServe
 	SourceConfig
-	SourceSchema
+	SourceProbe
+	SourceProbeHost
+	SourceProbeInstall
+	SourceProbeLogs
+	SourceProbeMounts
+	SourceProbeSensors
+	SourceProbeServices
+	SourceEngine
+	SourceEngineBroker
+	SourceEngineDatabase
+	SourceDisplay
+	SourceDisplayLayout
 )
 
 func (s Source) String() string {
 	switch s {
-	case SourceProcess:
-		return "process"
-	case SourceProbe:
-		return "probe"
-	case SourceBroker:
-		return "broker"
-	case SourceDatabase:
-		return "database"
-	case SourceDisplay:
-		return "display"
+	case SourceScribe:
+		return "scribe"
+	case SourceCmdServe:
+		return "cmd[serve]"
 	case SourceConfig:
 		return "config"
-	case SourceSchema:
-		return "schema"
+	case SourceProbe:
+		return "probe"
+	case SourceProbeHost:
+		return "probe[host]"
+	case SourceProbeInstall:
+		return "probe[install]"
+	case SourceProbeLogs:
+		return "probe[logs]"
+	case SourceProbeMounts:
+		return "probe[mounts]"
+	case SourceProbeSensors:
+		return "probe[sensors]"
+	case SourceProbeServices:
+		return "probe[services]"
+	case SourceEngine:
+		return "engine"
+	case SourceEngineBroker:
+		return "engine[broker]"
+	case SourceEngineDatabase:
+		return "engine[database]"
+	case SourceDisplay:
+		return "display"
+	case SourceDisplayLayout:
+		return "display[layout]"
 	default:
 		return unknownValue
 	}
@@ -111,58 +134,47 @@ func SubjectMetric(id metric.ID) Subject {
 	return Subject{text: metric.GetIDName(id)}
 }
 
+func SubjectHost() Subject {
+	return Subject{text: subjectHosts}
+}
+
 func SubjectService(name string) Subject {
-	return Subject{text: name}
-}
-
-func SubjectHost(name string) Subject {
-	return Subject{text: name}
-}
-
-func SubjectEndpoint(endpoint string) Subject {
-	host, _, err := net.SplitHostPort(endpoint)
-	if err != nil {
-		host = endpoint
+	if name == metric.ServiceNameUnset {
+		return Subject{text: subjectServices}
 	}
-	if labels := strings.Split(host, "."); len(labels) > 1 && net.ParseIP(host) == nil {
-		host = labels[0]
-	}
-	return Subject{text: host}
-}
-
-func SubjectEstate() Subject {
-	return Subject{text: estateName}
-}
-
-func SubjectLoop(name string) Subject {
-	return Subject{text: name}
-}
-
-func SubjectSurface(name string) Subject {
-	return Subject{text: name}
-}
-
-func SubjectProbe(name string) Subject {
-	return Subject{text: name}
-}
-
-func SubjectField(name string) Subject {
-	return Subject{text: name}
+	return Subject{text: subjectServices + "/" + name}
 }
 
 func SubjectTopic(topic string) Subject {
-	return Subject{text: topic}
-}
-
-func SubjectPath(path string) Subject {
-	return Subject{text: path}
+	levels := strings.Split(topic, "/")
+	for index, level := range levels {
+		if index > 0 && (level == subjectHosts || level == subjectServices) {
+			return Subject{text: strings.Join(levels[index:], "/")}
+		}
+	}
+	return SubjectNone
 }
 
 func (s Subject) String() string {
-	if s.text == "" {
-		return unknownValue
-	}
 	return s.text
+}
+
+func Attribute(source Source, ids ...metric.ID) {
+	names := make([]string, 0, len(ids))
+	for _, id := range ids {
+		names = append(names, strings.ToLower(metric.GetIDName(id)))
+	}
+	attributionMutex.Lock()
+	attributions[source.String()] = names
+	attributionMutex.Unlock()
+}
+
+func Widen(services []string) {
+	for _, service := range services {
+		if width := len(subjectServices) + 1 + len(service); width > subjectWidth() {
+			widthSubject.Store(int32(width))
+		}
+	}
 }
 
 var (
@@ -184,7 +196,11 @@ func Vocabularies(modules []string) string {
 		}
 		hosts = append(hosts, subject)
 	}
-	cell := max(widest(hosts), widest(services), widest(modules), subjectSplit*widest(sourceStrings()), subjectSplit*widest(actionStrings()))
+	entities := make([]string, 0, len(modules))
+	for _, module := range modules {
+		entities = append(entities, subjectServices+"/"+module)
+	}
+	cell := max(widest(hosts), widest(services), widest(entities), subjectSplit*widest(sourceStrings()), subjectSplit*widest(actionStrings()))
 	if cell%subjectSplit != 0 {
 		cell += subjectSplit - cell%subjectSplit
 	}
@@ -192,7 +208,7 @@ func Vocabularies(modules []string) string {
 	builder.WriteString("Log Sources:\n")
 	builder.WriteString(columned(sourceStrings(), cell/subjectSplit))
 	builder.WriteString("\nLog Subjects (examples):\n")
-	builder.WriteString(grouped(cell, hosts, services, modules))
+	builder.WriteString(grouped(cell, hosts, services, entities))
 	builder.WriteString("\nLog Actions:\n")
 	builder.WriteString(columned(actionStrings(), cell/subjectSplit))
 	return builder.String()
@@ -269,7 +285,22 @@ func allowed(source, subject, action string) bool {
 	filterMutex.Lock()
 	filter := activeFilter
 	filterMutex.Unlock()
-	return matches(source, filter.source) && matches(subject, filter.subject) && matches(action, filter.action)
+	return matches(source, filter.source) && subjected(source, subject, filter.subject) && matches(action, filter.action)
+}
+
+func subjected(source, subject string, prefixes []string) bool {
+	if matches(subject, prefixes) {
+		return true
+	}
+	attributionMutex.Lock()
+	attributed := attributions[source]
+	attributionMutex.Unlock()
+	for _, name := range attributed {
+		if matches(name, prefixes) {
+			return true
+		}
+	}
+	return false
 }
 
 func declaredSources() []Source {
@@ -348,8 +379,12 @@ func actionStrings() []string {
 }
 
 const (
-	estateName   = "estate"
 	unknownValue = "-"
+)
+
+var (
+	attributionMutex sync.Mutex
+	attributions     = map[string][]string{}
 )
 
 type logFilter struct {

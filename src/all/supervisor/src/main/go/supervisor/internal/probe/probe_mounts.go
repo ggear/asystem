@@ -21,6 +21,16 @@ import (
 	"time"
 )
 
+func init() {
+	scribe.Attribute(scribe.SourceProbeMounts,
+		metric.MetricHostUsedHomeSpace,
+		metric.MetricHostUsedShareSpace,
+		metric.MetricHostUsedBackupSpace,
+		metric.MetricHostFailedShares,
+		metric.MetricHostLifeUsedDrives,
+		metric.MetricHostFailedDrives)
+}
+
 type mountUsage struct {
 	device     string
 	mountpoint string
@@ -141,7 +151,7 @@ func (s *mountSet) request(window time.Duration) {
 			s.mutex.Lock()
 			s.refreshing = false
 			s.mutex.Unlock()
-			scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Error("panicked", refreshStart, "[%v] refreshing, keeping the previous snapshot", failure)
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Error("panicked", refreshStart, "[%v] refreshing [%s], keeping the previous snapshot", failure, filepath.Join(s.root, mountTablePath))
 		}()
 		taken := s.collect()
 		s.mutex.Lock()
@@ -315,14 +325,14 @@ func (s *mountSet) collect() *mountSnapshot {
 			mounts[index].failed = true
 			mounts[index].answered = errors.Is(err, errMountContent)
 			mounts[index].reason = err.Error()
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] not counted, failed with [%v]",
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] not counted, failed with [%v]",
 				mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), err)
 			continue
 		}
 		mounts[index].total = total
 		mounts[index].used = used
 		mounts[index].measured = true
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%d] of [%d] MiB at [%3d] pct",
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%d] of [%d] MiB at [%3d] pct",
 			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassOf(mounts[index]), used/bytesPerMiB, total/bytesPerMiB, int8Percent(mountShare(used, total)))
 	}
 	mounted := map[string]mountUsage{}
@@ -350,13 +360,13 @@ func (s *mountSet) collect() *mountSnapshot {
 		absentStart := time.Now()
 		if _, _, err := s.measure(mountpoint, true); err != nil {
 			taken.failed++
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table and counted failed with [%v]", mountpoint, err)
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table and counted failed with [%v]", mountpoint, err)
 			continue
 		}
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
 	}
 	taken.drives, taken.read = s.worn(mounts, collectStart)
-	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Debug("surveyed", collectStart, "mounts [%3d], system [%d], shares local [%d] declared [%d] failed [%d], drives [%d]",
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debug("surveyed", collectStart, "mounts [%3d], system [%d], shares local [%d] declared [%d] failed [%d], drives [%d]",
 		len(mounts), len(mounts)-taken.locals-mountRemotes(mounts), taken.locals, taken.shares, taken.failed, len(taken.drives))
 	return taken
 }
@@ -365,7 +375,7 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 	parseStart := time.Now()
 	data, err := os.ReadFile(filepath.Join(s.root, mountTablePath))
 	if err != nil {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Warn("noaccess", parseStart, "mount table with [%v], reporting no filesystems", err)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Warn("noaccess", parseStart, "mount table [%s] with [%v], reporting no filesystems", filepath.Join(s.root, mountTablePath), err)
 		return nil, err
 	}
 	devices := map[string]string{}
@@ -405,7 +415,7 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 		deduped = append(deduped, mount)
 	}
 	sort.Slice(deduped, func(first, second int) bool { return deduped[first].mountpoint < deduped[second].mountpoint })
-	scribe.Log(scribe.SourceProbe, scribe.SubjectPath(filepath.Join(s.root, mountTablePath)), scribe.ActionSample).Debug("examined", parseStart, "lines [%3d], kept [%d] as [%s], dropped [%d] as [%s]",
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debug("examined", parseStart, "lines [%3d], kept [%d] as [%s], dropped [%d] as [%s]",
 		lines, len(deduped), mountSummary(deduped), lines-len(deduped), mountDropped(dropped))
 	return deduped, nil
 }
@@ -524,7 +534,7 @@ func (s *mountSet) worn(mounts []mountUsage, collectStart time.Time) ([]driveWea
 	previous, window := s.current, s.window
 	s.mutex.Unlock()
 	if previous != nil && clock.SinceIncludingSuspend(previous.read) < window && slices.Equal(physicals, mountKernels(previous.drives)) {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("retained", collectStart, "[%d] drive readings aged [%s] within [%s], not re-read", len(previous.drives), clock.SinceIncludingSuspend(previous.read).Truncate(time.Second), window)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("retained", collectStart, "[%d] drive readings aged [%s] within [%s], not re-read", len(previous.drives), clock.SinceIncludingSuspend(previous.read).Truncate(time.Second), window)
 		return previous.drives, previous.read
 	}
 	drives := make([]driveWear, 0, len(physicals))
@@ -663,18 +673,18 @@ func (s *mountSet) reading(physical string) driveWear {
 	if driveIgnoring(identity.hardware) {
 		if !identity.warned {
 			identity.warned = true
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", readingStart, "[%s] at [%s] over [%s] as [%s] is declared not solid state, no wear rating applies so it is not counted in wear", physical, identity.node, identity.transport, identity.hardware)
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", readingStart, "[%s] at [%s] over [%s] as [%s] is declared not solid state, no wear rating applies so it is not counted in wear", physical, identity.node, identity.transport, identity.hardware)
 		}
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, declared not solid state, as [%s] over [%s]", physical, identity.hardware, identity.transport)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, declared not solid state, as [%s] over [%s]", physical, identity.hardware, identity.transport)
 		return driveWear{kernel: physical}
 	}
 	report, err := s.smart(identity.node, identity.kinds)
 	if err != nil {
 		if !identity.warned {
 			identity.warned = true
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Warn("excluded", readingStart, "[%s] unreadable at [%s] over [%s] as [%s] with rotational [%v] removable [%v], not counted in wear, with [%v]", physical, identity.node, identity.transport, identity.hardware, identity.rotational, identity.removable, err)
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Warn("excluded", readingStart, "[%s] unreadable at [%s] over [%s] as [%s] with rotational [%v] removable [%v], not counted in wear, with [%v]", physical, identity.node, identity.transport, identity.hardware, identity.rotational, identity.removable, err)
 		}
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, unreadable by smartctl, as [%s] over [%s]", physical, identity.hardware, identity.transport)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, unreadable by smartctl, as [%s] over [%s]", physical, identity.hardware, identity.transport)
 		return driveWear{kernel: physical, model: identity.model, unreadable: true, reason: err.Error()}
 	}
 	s.identify(identity, report, readingStart)
@@ -682,9 +692,9 @@ func (s *mountSet) reading(physical string) driveWear {
 	if report.errors > identity.baseline {
 		wear.errored = true
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] errors [%d] baseline [%d] increased [%v], as [%s]", physical, report.errors, identity.baseline, wear.errored, identity.named())
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] errors [%d] baseline [%d] increased [%v], as [%s]", physical, report.errors, identity.baseline, wear.errored, identity.named())
 	if !identity.rated {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, %s, as [%s]", physical, identity.excluded, identity.named())
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] not considered, %s, as [%s]", physical, identity.excluded, identity.named())
 		return wear
 	}
 	computed := driveComputed(report.written, identity.rating)
@@ -693,7 +703,7 @@ func (s *mountSet) reading(physical string) driveWear {
 	if report.estimated {
 		estimate = fmt.Sprintf("%.1f", report.estimate)
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] life [%3d] pct, computed [%.1f] drive [%s] pct, written [%.1f] of [%.0f] TB, as [%s]", physical, int8Percent(wear.life), computed, estimate, report.written/bytesPerTB, identity.rating, identity.named())
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] life [%3d] pct, computed [%.1f] drive [%s] pct, written [%.1f] of [%.0f] TB, as [%s]", physical, int8Percent(wear.life), computed, estimate, report.written/bytesPerTB, identity.rating, identity.named())
 	return wear
 }
 
@@ -721,13 +731,13 @@ func (s *mountSet) identify(identity *driveIdentity, report smartReport, identif
 	switch {
 	case !report.supported:
 		identity.excluded = "reports no smart support"
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", identifyStart, "[%s] at [%s] reports no smart support with [%s], not counted in wear", identity.kernel, identity.node, report.reason)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", identifyStart, "[%s] at [%s] reports no smart support with [%s], not counted in wear", identity.kernel, identity.node, report.reason)
 	case driveRatings[report.model] > 0:
 		identity.rating = driveRatings[report.model]
 		identity.rated = true
 	default:
 		identity.excluded = "model absent from the ratings"
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("unlisted", identifyStart, "[%s] model [%s] absent from the ratings, not counted in wear", identity.kernel, report.model)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("unlisted", identifyStart, "[%s] model [%s] absent from the ratings, not counted in wear", identity.kernel, report.model)
 	}
 }
 
@@ -799,7 +809,7 @@ func (s *mountSet) identity(physical string) *driveIdentity {
 	identity := &driveIdentity{kernel: physical, node: filepath.Join(s.root, "dev", s.namespace(physical)), kinds: driveKinds(physical)}
 	identity.rotational, identity.removable, identity.transport, identity.hardware = s.topology(physical)
 	s.identities[physical] = identity
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionDiscover).Debug("topology", topologyStart, "[%s] as [%s] over [%s], rotational [%v] removable [%v], node [%s], probing as [%s]",
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionDiscover).Debug("topology", topologyStart, "[%s] as [%s] over [%s], rotational [%v] removable [%v], node [%s], probing as [%s]",
 		physical, identity.hardware, identity.transport, identity.rotational, identity.removable, identity.node, strings.Join(identity.kinds, ","))
 	return identity
 }
@@ -1061,8 +1071,8 @@ func mountBase(root string) string {
 			continue
 		}
 		if base != root {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectPath(table), scribe.ActionDiscover).Info("resolved", baseStart,
-				"mount table read outside the container, configured root [%s] holds none", root)
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionDiscover).Info("resolved", baseStart,
+				"mount table [%s] read outside the container, configured root [%s] holds none", table, root)
 		}
 		return base
 	}
