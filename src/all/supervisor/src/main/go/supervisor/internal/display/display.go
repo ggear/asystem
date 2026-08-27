@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/engine"
@@ -725,9 +726,11 @@ func (l *boxListener) MarkDirty() {
 }
 
 const (
-	tickPeriod     = 250 * time.Millisecond
-	tickStall      = 5 * time.Second
-	overlayBarKeys = 8
+	tickPeriod       = 250 * time.Millisecond
+	tickStall        = 5 * time.Second
+	overlayBarKeys   = 8
+	overlayBarState  = 6
+	overlayBarAction = 5
 )
 
 func (d *Display) paged(capacity int) ([]overlayRow, int, uint64) {
@@ -775,15 +778,13 @@ func (d *Display) drawOverlayBar() {
 
 func (d *Display) overlayStatus() (string, colour) {
 	page, pages := d.logPagination()
-	paged := textPaged.pick(d.useUnicode)
-	long, colour := aligned(
-		fmt.Sprintf(" LIVE %d/%d %s=PAGE SPACE=PAUSE", page, pages, paged),
-		fmt.Sprintf(" PAUSED %d/%d %s=PAGE SPACE=LIVE", page, pages, paged),
-		d.logFollow)
-	short, _ := aligned(
-		fmt.Sprintf(" LIVE %d/%d", page, pages),
-		fmt.Sprintf(" PAUSED %d/%d", page, pages),
-		d.logFollow)
+	state, action, colour := "PAUSED", "LIVE", colourWarn
+	if d.logFollow {
+		state, action, colour = "LIVE", "PAUSE", colourCheer
+	}
+	counter := fmt.Sprintf("%*d/%d", len(strconv.Itoa(pages)), page, pages)
+	long := fmt.Sprintf(" %-*s %s %s=PAGE SPACE=%-*s", overlayBarState, state, counter, textPaged.pick(d.useUnicode), overlayBarAction, action)
+	short := fmt.Sprintf(" %-*s %s", overlayBarState, state, counter)
 	if d.logDropped > 0 {
 		long = fmt.Sprintf(" MISSED %d%s", d.logDropped, long)
 		short = fmt.Sprintf(" MISSED %d%s", d.logDropped, short)
@@ -792,15 +793,6 @@ func (d *Display) overlayStatus() (string, colour) {
 		return long, colour
 	}
 	return short, colour
-}
-
-func aligned(live, held string, following bool) (string, colour) {
-	width := max(runewidth.StringWidth(live), runewidth.StringWidth(held))
-	chosen, picked := held, colourWarn
-	if following {
-		chosen, picked = live, colourCheer
-	}
-	return strings.Repeat(" ", width-runewidth.StringWidth(chosen)) + chosen, picked
 }
 
 func (d *Display) logRewind() {
