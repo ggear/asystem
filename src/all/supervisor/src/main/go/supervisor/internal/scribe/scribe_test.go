@@ -321,14 +321,17 @@ func TestScribe_SubjectNamespace(t *testing.T) {
 		subject         Subject
 		expectedSubject string
 	}{
-		{name: "happy_host_rollup", subject: SubjectHost(), expectedSubject: "host"},
+		{name: "happy_host_rollup", subject: SubjectHost(""), expectedSubject: "host"},
+		{name: "happy_named_host", subject: SubjectHost("macmini-may"), expectedSubject: "host/macmini-may"},
 		{name: "happy_service_rollup", subject: SubjectService(""), expectedSubject: "service"},
 		{name: "happy_named_service", subject: SubjectService("letsencrypt"), expectedSubject: "service/letsencrypt"},
 		{name: "happy_host_metric", subject: SubjectMetric(metric.MetricHostUsedMemory), expectedSubject: "host/used_memory"},
 		{name: "happy_service_metric", subject: SubjectMetric(metric.MetricServiceUpTime), expectedSubject: "service/up_time"},
-		{name: "happy_host_topic_keeps_its_tail", subject: SubjectTopic("supervisor/macmini-mad/data/host/used_memory"), expectedSubject: "host/used_memory"},
-		{name: "happy_service_topic_keeps_its_tail", subject: SubjectTopic("supervisor/macmini-mad/data/service/plex/up_time"), expectedSubject: "service/plex/up_time"},
+		{name: "happy_host_topic_resolves_to_its_metric", subject: SubjectTopic("supervisor/macmini-mad/data/host/used_memory"), expectedSubject: "host/used_memory"},
+		{name: "happy_service_topic_drops_the_service_name", subject: SubjectTopic("supervisor/macmini-mad/data/service/plex/up_time"), expectedSubject: "service/up_time"},
+		{name: "happy_service_wildcard_resolves_to_its_metric", subject: SubjectTopic("supervisor/+/data/service/+/name"), expectedSubject: "service/name"},
 		{name: "happy_status_topic_has_no_subject", subject: SubjectTopic("supervisor/macmini-mad/status"), expectedSubject: ""},
+		{name: "happy_foreign_topic_has_no_subject", subject: SubjectTopic("homeassistant/switch/plex/config"), expectedSubject: ""},
 		{name: "happy_none_renders_blank", subject: SubjectNone, expectedSubject: ""},
 	}
 	for _, testCase := range tests {

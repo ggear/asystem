@@ -28,6 +28,14 @@ func TrendWindow(trendHours int) time.Duration {
 	return defaultTrendWindow
 }
 
+func NowIncludingSuspend() time.Time {
+	return time.Now().Round(0)
+}
+
+func SinceIncludingSuspend(instant time.Time) time.Duration {
+	return time.Since(instant.Round(0))
+}
+
 func CacheWindow(cacheMins int) time.Duration {
 	if cacheMins > 0 {
 		return time.Duration(cacheMins) * time.Minute
@@ -95,7 +103,7 @@ func load(path string) *Config {
 					continue
 				}
 				if seenHosts[hostSchema.Host] {
-					scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("rejected", loadStart, "duplicate host [%s], skipping", hostSchema.Host)
+					scribe.Log(scribe.SourceConfig, scribe.SubjectHost(hostSchema.Host), scribe.ActionResolve).Warn("rejected", loadStart, "duplicate, skipping")
 					continue
 				}
 				seenHosts[hostSchema.Host] = true
@@ -103,11 +111,11 @@ func load(path string) *Config {
 				validServices := make([]string, 0, len(hostSchema.Services))
 				for _, service := range hostSchema.Services {
 					if service == "" {
-						scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("rejected", loadStart, "empty service for host [%s], skipping", hostSchema.Host)
+						scribe.Log(scribe.SourceConfig, scribe.SubjectHost(hostSchema.Host), scribe.ActionResolve).Warn("rejected", loadStart, "empty service, skipping")
 						continue
 					}
 					if seenServices[service] {
-						scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("rejected", loadStart, "duplicate service [%s] for host [%s], skipping", service, hostSchema.Host)
+						scribe.Log(scribe.SourceConfig, scribe.SubjectService(service), scribe.ActionResolve).Warn("rejected", loadStart, "duplicate on host [%s], skipping", hostSchema.Host)
 						continue
 					}
 					seenServices[service] = true
@@ -149,7 +157,7 @@ func (c *Config) Host() string {
 		hostnameStart := time.Now()
 		hostName, err := os.Hostname()
 		if err != nil {
-			scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Error("faulting", hostnameStart, "hostname lookup failed with [%v]", err)
+			scribe.Log(scribe.SourceConfig, scribe.SubjectHost(""), scribe.ActionResolve).Error("faulting", hostnameStart, "hostname lookup failed with [%v]", err)
 			return
 		}
 		cachedHostName = hostName

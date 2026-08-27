@@ -15,6 +15,7 @@ type Source uint8
 const (
 	SourceScribe Source = iota
 	SourceCmdServe
+	SourceCmdWatch
 	SourceConfig
 	SourceProbe
 	SourceProbeHost
@@ -36,6 +37,8 @@ func (s Source) String() string {
 		return "scribe"
 	case SourceCmdServe:
 		return "cmd[serve]"
+	case SourceCmdWatch:
+		return "cmd[watch]"
 	case SourceConfig:
 		return "config"
 	case SourceProbe:
@@ -134,8 +137,11 @@ func SubjectMetric(id metric.ID) Subject {
 	return Subject{text: metric.GetIDName(id)}
 }
 
-func SubjectHost() Subject {
-	return Subject{text: subjectHosts}
+func SubjectHost(name string) Subject {
+	if name == "" {
+		return Subject{text: subjectHosts}
+	}
+	return Subject{text: subjectHosts + "/" + name}
 }
 
 func SubjectService(name string) Subject {
@@ -146,13 +152,11 @@ func SubjectService(name string) Subject {
 }
 
 func SubjectTopic(topic string) Subject {
-	levels := strings.Split(topic, "/")
-	for index, level := range levels {
-		if index > 0 && (level == subjectHosts || level == subjectServices) {
-			return Subject{text: strings.Join(levels[index:], "/")}
-		}
+	id, ok := metric.IDFromTopic(topic)
+	if !ok {
+		return SubjectNone
 	}
-	return SubjectNone
+	return SubjectMetric(id)
 }
 
 func (s Subject) String() string {
@@ -169,10 +173,15 @@ func Attribute(source Source, ids ...metric.ID) {
 	attributionMutex.Unlock()
 }
 
-func Widen(services []string) {
-	for _, service := range services {
-		if width := len(subjectServices) + 1 + len(service); width > subjectWidth() {
-			widthSubject.Store(int32(width))
+func Widen(hosts, services []string) {
+	for _, name := range prefixed(subjectHosts, hosts) {
+		if len(name) > subjectWidth() {
+			widthSubject.Store(int32(len(name)))
+		}
+	}
+	for _, name := range prefixed(subjectServices, services) {
+		if len(name) > subjectWidth() {
+			widthSubject.Store(int32(len(name)))
 		}
 	}
 }
@@ -182,36 +191,45 @@ var (
 	AllActions = declaredActions()
 )
 
-func Vocabularies(modules []string) string {
-	subjects := make([]string, 0, len(metric.GetIDs()))
+func Vocabularies(hosts, services []string) string {
+	declared := make([]string, 0, len(metric.GetIDs()))
 	for _, id := range metric.GetIDs() {
-		subjects = append(subjects, metric.GetIDName(id))
+		declared = append(declared, metric.GetIDName(id))
 	}
-	sort.Strings(subjects)
-	var hosts, services []string
-	for _, subject := range subjects {
-		if strings.HasPrefix(subject, subjectServices) {
-			services = append(services, subject)
+	sort.Strings(declared)
+	hostMetrics, serviceMetrics := []string{subjectHosts}, []string{subjectServices}
+	for _, subject := range declared {
+		if strings.HasPrefix(subject, subjectServices+"/") {
+			serviceMetrics = append(serviceMetrics, subject)
 			continue
 		}
-		hosts = append(hosts, subject)
+		if strings.HasPrefix(subject, subjectHosts+"/") {
+			hostMetrics = append(hostMetrics, subject)
+		}
 	}
-	entities := make([]string, 0, len(modules))
-	for _, module := range modules {
-		entities = append(entities, subjectServices+"/"+module)
-	}
-	cell := max(widest(hosts), widest(services), widest(entities), subjectSplit*widest(sourceStrings()), subjectSplit*widest(actionStrings()))
+	hostNames := prefixed(subjectHosts, hosts)
+	serviceNames := prefixed(subjectServices, services)
+	cell := max(widest(hostMetrics), widest(serviceMetrics), widest(hostNames), widest(serviceNames),
+		subjectSplit*widest(sourceStrings()), subjectSplit*widest(actionStrings()))
 	if cell%subjectSplit != 0 {
 		cell += subjectSplit - cell%subjectSplit
 	}
 	var builder strings.Builder
 	builder.WriteString("Log Sources:\n")
 	builder.WriteString(columned(sourceStrings(), cell/subjectSplit))
-	builder.WriteString("\nLog Subjects (examples):\n")
-	builder.WriteString(grouped(cell, hosts, services, entities))
+	builder.WriteString("\nLog Subjects:\n")
+	builder.WriteString(grouped(cell, hostMetrics, hostNames, serviceMetrics, serviceNames))
 	builder.WriteString("\nLog Actions:\n")
 	builder.WriteString(columned(actionStrings(), cell/subjectSplit))
 	return builder.String()
+}
+
+func prefixed(branch string, names []string) []string {
+	values := make([]string, 0, len(names))
+	for _, name := range names {
+		values = append(values, branch+"/"+name)
+	}
+	return values
 }
 
 func grouped(cell int, columns ...[]string) string {

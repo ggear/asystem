@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"supervisor/internal/clock"
+	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 )
@@ -82,7 +82,7 @@ func (s *logSet) errorsWithin(window time.Duration) (int, bool) {
 	drain := !s.drained
 	s.consume()
 	s.drained = true
-	s.evict(clock.NowIncludingSuspend().Add(-window))
+	s.evict(config.NowIncludingSuspend().Add(-window))
 	if drain {
 		s.report(censusStart, window)
 	}
@@ -303,17 +303,17 @@ func clipLogMessage(message string) string {
 func bootTime(root string) time.Time {
 	data, err := os.ReadFile(filepath.Join(root, logUptimePath))
 	if err != nil {
-		return clock.NowIncludingSuspend()
+		return config.NowIncludingSuspend()
 	}
 	fields := strings.Fields(string(data))
 	if len(fields) == 0 {
-		return clock.NowIncludingSuspend()
+		return config.NowIncludingSuspend()
 	}
 	seconds, err := strconv.ParseFloat(fields[0], 64)
 	if err != nil {
-		return clock.NowIncludingSuspend()
+		return config.NowIncludingSuspend()
 	}
-	return clock.NowIncludingSuspend().Add(-time.Duration(seconds * float64(time.Second)))
+	return config.NowIncludingSuspend().Add(-time.Duration(seconds * float64(time.Second)))
 }
 
 func logRoots(mount string) []string {

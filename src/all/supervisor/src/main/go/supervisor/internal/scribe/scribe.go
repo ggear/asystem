@@ -463,7 +463,7 @@ const (
 	widthStream     = 250
 	widthHelpIndent = 2
 	widthHelpGap    = 2
-	subjectColumns  = 3
+	subjectColumns  = 4
 	subjectSplit    = 2
 	subjectHosts    = "host"
 	subjectServices = "service"

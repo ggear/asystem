@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"supervisor/internal/clock"
 	"supervisor/internal/config"
 	"supervisor/internal/engine"
 	"supervisor/internal/metric"
@@ -489,7 +488,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 	}
 	ticker := time.NewTicker(d.tickPeriod)
 	defer ticker.Stop()
-	ticked := clock.NowIncludingSuspend()
+	ticked := config.NowIncludingSuspend()
 	var refreshC <-chan time.Time
 	if d.refreshPeriod > 0 {
 		refreshTicker := time.NewTicker(d.refreshPeriod)
@@ -562,12 +561,12 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				}
 			}
 		case <-ticker.C:
-			if elapsed := clock.SinceIncludingSuspend(ticked); elapsed > d.tickStall {
+			if elapsed := config.SinceIncludingSuspend(ticked); elapsed > d.tickStall {
 				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDisconnect).Warn("exceeded", ticked, "[%d] ms since the last draw tick", d.tickStall.Milliseconds())
 				d.cache.Wake(elapsed)
 				d.refresh("wake")
 			}
-			ticked = clock.NowIncludingSuspend()
+			ticked = config.NowIncludingSuspend()
 			drawStart := time.Now()
 			dirtyIndexes := d.takeDirtyIndexes()
 			drawnCount := 0

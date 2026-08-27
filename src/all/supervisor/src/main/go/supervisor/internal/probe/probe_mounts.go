@@ -13,7 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"supervisor/internal/clock"
+	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 	"sync"
@@ -134,7 +134,7 @@ func (s *mountSet) request(window time.Duration) {
 	if s.current != nil && s.current.failed > 0 && mountRetry < window {
 		window = mountRetry
 	}
-	stale := s.current == nil || clock.SinceIncludingSuspend(s.current.taken) >= window
+	stale := s.current == nil || config.SinceIncludingSuspend(s.current.taken) >= window
 	if !stale || s.refreshing {
 		s.mutex.Unlock()
 		return
@@ -203,7 +203,7 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 	}
 	used := float64(home.used) / float64(home.total) * 100.0
 	return int8Percent(used), derived(scribe.ActionSample, "computed [%3d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
-		int8Percent(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, clock.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
+		int8Percent(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
 }
 
 func (s *mountSet) usedShareSpace() (int8, derivation, error) {
@@ -314,7 +314,7 @@ func (s *mountSet) failedDrives() (int8, derivation, error) {
 
 func (s *mountSet) collect() *mountSnapshot {
 	collectStart := time.Now()
-	taken := &mountSnapshot{taken: clock.NowIncludingSuspend()}
+	taken := &mountSnapshot{taken: config.NowIncludingSuspend()}
 	mounts, tableErr := s.parseMounts()
 	taken.table = tableErr
 	expected := s.parseFstab()
@@ -533,15 +533,15 @@ func (s *mountSet) worn(mounts []mountUsage, collectStart time.Time) ([]driveWea
 	s.mutex.Lock()
 	previous, window := s.current, s.window
 	s.mutex.Unlock()
-	if previous != nil && clock.SinceIncludingSuspend(previous.read) < window && slices.Equal(physicals, mountKernels(previous.drives)) {
-		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("retained", collectStart, "[%d] drive readings aged [%s] within [%s], not re-read", len(previous.drives), clock.SinceIncludingSuspend(previous.read).Truncate(time.Second), window)
+	if previous != nil && config.SinceIncludingSuspend(previous.read) < window && slices.Equal(physicals, mountKernels(previous.drives)) {
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("retained", collectStart, "[%d] drive readings aged [%s] within [%s], not re-read", len(previous.drives), config.SinceIncludingSuspend(previous.read).Truncate(time.Second), window)
 		return previous.drives, previous.read
 	}
 	drives := make([]driveWear, 0, len(physicals))
 	for _, physical := range physicals {
 		drives = append(drives, s.reading(physical))
 	}
-	return drives, clock.NowIncludingSuspend()
+	return drives, config.NowIncludingSuspend()
 }
 
 func (s *mountSet) attached(mounts []mountUsage) []string {

@@ -74,6 +74,7 @@ func newWatchCmd() *cobra.Command {
 }
 
 func executeWatch(configPath string, opts *watchOptions) error {
+	watchStart := time.Now()
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		return err
@@ -88,7 +89,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if err != nil {
 		return err
 	}
-	scribe.Widen(configuredServices(configPath))
+	scribe.Widen(configuredHosts(configPath), configuredServices(configPath))
 	logBuffer, err := scribe.EnableBufferAndFile(level, "watch", height, 10, 3, 7)
 	if err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
@@ -208,8 +209,11 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	if err != nil {
 		return err
 	}
+	loaded := config.Load(configPath)
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", watchStart, "version [%s], config [%s], mode [%s], watching [%d] hosts [%s], poll [%d] ms, pulse [%d] ms", loaded.Version(), configPath, mode, len(hosts), strings.Join(hosts, ","), periods.PollMillis, periods.PulseMillis)
 	go d.Run(ctx)
 	d.Draw(ctx, cancel)
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", watchStart, "version [%s], exited gracefully", loaded.Version())
 	return nil
 }
 

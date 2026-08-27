@@ -812,7 +812,7 @@ func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services ma
 	if len(missing) == 0 {
 		return
 	}
-	scribe.Log(scribe.SourceProbeServices, scribe.SubjectNone, scribe.ActionDiscover).Warn("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
+	scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover).Warn("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
 }
 
 func (p *servicesProbe) installs() installReader {

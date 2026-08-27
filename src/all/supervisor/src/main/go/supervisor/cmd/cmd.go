@@ -62,37 +62,53 @@ func vocabularies() string {
 	if flag := rootCmd.PersistentFlags().Lookup("config"); flag != nil && flag.Value.String() != "" {
 		path = flag.Value.String()
 	}
-	return scribe.Vocabularies(configuredServices(path))
+	return scribe.Vocabularies(configuredHosts(path), configuredServices(path))
+}
+
+func configuredHosts(path string) []string {
+	hosts, _ := configuredNames(path)
+	return hosts
 }
 
 func configuredServices(path string) []string {
+	_, services := configuredNames(path)
+	return services
+}
+
+func configuredNames(path string) ([]string, []string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	var document struct {
 		Asystem struct {
 			Schema []struct {
+				Host     string   `json:"host"`
 				Services []string `json:"services"`
 			} `json:"schema"`
 		} `json:"asystem"`
 	}
 	if json.Unmarshal(data, &document) != nil {
-		return nil
+		return nil, nil
 	}
-	seen := map[string]bool{}
-	var modules []string
+	seenHosts, seenServices := map[string]bool{}, map[string]bool{}
+	var hosts, services []string
 	for _, entry := range document.Asystem.Schema {
+		if entry.Host != "" && !seenHosts[entry.Host] {
+			seenHosts[entry.Host] = true
+			hosts = append(hosts, entry.Host)
+		}
 		for _, service := range entry.Services {
-			if service == "" || seen[service] {
+			if service == "" || seenServices[service] {
 				continue
 			}
-			seen[service] = true
-			modules = append(modules, service)
+			seenServices[service] = true
+			services = append(services, service)
 		}
 	}
-	sort.Strings(modules)
-	return modules
+	sort.Strings(hosts)
+	sort.Strings(services)
+	return hosts, services
 }
 
 func bracketed(flags *pflag.FlagSet) string {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"supervisor/internal/clock"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
@@ -63,7 +62,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		}
 		scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Debug("prepared", probeCreateStart, "metrics [%d]", len(p.metrics()))
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionStart).Debug("prepared", createStart, "[%d] probes", len(probeMap))
+	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(configPath).Host()), scribe.ActionStart).Debug("prepared", createStart, "[%d] probes", len(probeMap))
 	verifyGates(probeMap)
 	execProbes = probeMap
 	execPeriods = periods
@@ -114,7 +113,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 					onPulse(isHeartbeat)
 				}
 			}
-			scribe.Log(scribe.SourceProbe, scribe.SubjectNone, scribe.ActionSample).Debug("reported", tickStart, "host [%s], [%d] probes, pulse [%v]", config.Load(execConfigPath).Host(), len(execProbes), isPulse)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debug("reported", tickStart, "[%d] probes, pulse [%v]", len(execProbes), isPulse)
 		}
 	}
 }
@@ -380,7 +379,7 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	tracked, faulting := metricFaults[key]
 	switch {
 	case errored && (!faulting || tracked.message != message):
-		tracked = &metricFault{message: message, since: clock.NowIncludingSuspend(), logged: time.Now(), polls: 1, warming: errors.Is(err, errProbeWarmingUp)}
+		tracked = &metricFault{message: message, since: config.NowIncludingSuspend(), logged: time.Now(), polls: 1, warming: errors.Is(err, errProbeWarmingUp)}
 		metricFaults[key] = tracked
 	case errored:
 		tracked.polls++

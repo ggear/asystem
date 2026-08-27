@@ -41,7 +41,7 @@
   double_tap_action:
     action: none
 - type: custom:bom-radar-card
-  basemap_provider: carto
+  basemap_provider: bom
   basemap_style: theme
   chrome_style: auto
   zoom_level: 8
@@ -143,43 +143,3 @@
     action: none
   double_tap_action:
     action: none
-
-#################################################################################
-#- type: custom:mini-graph-card
-#  name: Rain
-#  icon: mdi:weather-pouring
-#  font_size_header: 19
-#  aggregate_func: max
-#  hours_to_show: 48
-#  points_per_hour: 6
-#  line_width: 2
-#  tap_action: none
-#  show_state: true
-#  show_indicator: true
-#  show:
-#    extrema: true
-#    fill: false
-#  entities:
-#    - entity: sensor.roof_rain_rate
-#      name: Rate
-#################################################################################
-#- type: entities
-#  entities:
-#    - entity: sensor.roof_rain_rate
-#      name: Rate
-#      icon: mdi:weather-pouring
-#################################################################################
-#- type: entities
-#  entities:
-#    - entity: sensor.roof_hourly_rain
-#      name: Hourly
-#      icon: mdi:weather-pouring
-#    - entity: sensor.roof_daily_rain
-#      name: Daily
-#      icon: mdi:weather-pouring
-#    - entity: sensor.roof_monthly_rain
-#      name: Monthly
-#      icon: mdi:weather-pouring
-#    - entity: sensor.roof_yearly_rain
-#      name: Yearly
-#      icon: mdi:weather-pouring

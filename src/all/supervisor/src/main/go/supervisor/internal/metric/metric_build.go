@@ -421,6 +421,14 @@ func buildFromID(id ID, hostName string, serviceName string, scope string) (stri
 	return topic, tags, nil
 }
 
+func IDFromTopic(topic string) (ID, bool) {
+	id, _, err := buildFromTopic(topic)
+	if err != nil {
+		return MetricMax, false
+	}
+	return id, true
+}
+
 func buildFromTopic(topic string) (ID, map[string]string, error) {
 	if topic == "" {
 		return MetricMax, nil, errors.New("invalid topic, empty string")

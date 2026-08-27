@@ -57,7 +57,7 @@ func newHostProbe() *hostProbe {
 	}
 }
 
-func (*hostProbe) subject() scribe.Subject { return scribe.SubjectHost() }
+func (*hostProbe) subject() scribe.Subject { return scribe.SubjectHost("") }
 
 func (p *hostProbe) metrics() []metric.ID {
 	return []metric.ID{
