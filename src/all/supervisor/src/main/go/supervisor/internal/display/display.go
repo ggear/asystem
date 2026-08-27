@@ -74,6 +74,7 @@ type Display struct {
 	logNext         uint64
 	logDropped      uint64
 	logPaused       bool
+	logFollow       bool
 	refreshSignal   chan struct{}
 	force           bool
 	tickPeriod      time.Duration
@@ -543,8 +544,13 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					}
 				}
 				if d.logOverlay && ev.Str() == " " {
-					if d.logPaused {
+					switch {
+					case d.logFollow:
+						d.logFollow = false
+					case d.logPaused:
 						d.logAnchor = d.logNext
+					default:
+						d.logRewind()
 					}
 					d.logRepaint()
 				}
@@ -577,8 +583,13 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			dirtyIndexes := d.takeDirtyIndexes()
 			drawnCount := 0
 			if d.logOverlay {
-				if d.logBuffer != nil && !d.logPaused && d.logBuffer.Version() != d.logGeneration {
-					d.logRepaint()
+				if d.logBuffer != nil && d.logBuffer.Version() != d.logGeneration {
+					if d.logFollow {
+						d.logRewind()
+					}
+					if d.logFollow || !d.logPaused {
+						d.logRepaint()
+					}
 				}
 			} else if d.force || len(dirtyIndexes) > 0 {
 				drawnCount = len(dirtyIndexes)
@@ -707,8 +718,9 @@ func (l *boxListener) MarkDirty() {
 }
 
 const (
-	tickPeriod = 250 * time.Millisecond
-	tickStall  = 5 * time.Second
+	tickPeriod     = 250 * time.Millisecond
+	tickStall      = 5 * time.Second
+	overlayBarKeys = 8
 )
 
 func (d *Display) paged(capacity int) ([]overlayRow, int, uint64) {
@@ -741,23 +753,39 @@ func (d *Display) drawOverlayBar() {
 	arrow := " " + textDown.ascii
 	esc := "ESC"
 	suffix := " =+"
-	status := ""
-	if d.logPaused {
-		status = fmt.Sprintf(" PAUSED %d/%d SPACE", d.logNext-d.logBuffer.Oldest(), d.logBuffer.Version()-d.logBuffer.Oldest())
-	}
-	if d.logDropped > 0 {
-		status = fmt.Sprintf(" DROPPED %d%s", d.logDropped, status)
-	}
+	status, colour := d.overlayStatus()
 	statusWidth := runewidth.StringWidth(status)
 	arrowWidth := runewidth.StringWidth(arrow)
 	escWidth := runewidth.StringWidth(esc)
 	suffixWidth := runewidth.StringWidth(suffix)
 	padLen := max(d.dimsInit.cols-statusWidth-arrowWidth-escWidth-suffixWidth, 0)
 	d.terminal.draw(0, 0, strings.Repeat("=", padLen), colourChat)
-	d.terminal.draw(padLen, 0, status, colourWarn)
+	d.terminal.draw(padLen, 0, status, colour)
 	d.terminal.draw(padLen+statusWidth, 0, arrow, colourChat)
 	d.terminal.draw(padLen+statusWidth+arrowWidth, 0, esc, colourShout)
 	d.terminal.draw(padLen+statusWidth+arrowWidth+escWidth, 0, suffix, colourChat)
+}
+
+func (d *Display) overlayStatus() (string, colour) {
+	pending := d.logBuffer.Version() - min(d.logBuffer.Version(), d.logNext)
+	long, short, colour := " LIVE SPACE=PAUSE", " LIVE", colourCheer
+	if !d.logFollow {
+		colour = colourWarn
+		if pending > 0 {
+			long = fmt.Sprintf(" PAUSED %d BEHIND SPACE=NEXT", pending)
+			short = fmt.Sprintf(" PAUSED %d", pending)
+		} else {
+			long, short = " PAUSED SPACE=LIVE", " PAUSED"
+		}
+	}
+	if d.logDropped > 0 {
+		long = fmt.Sprintf(" MISSED %d%s", d.logDropped, long)
+		short = fmt.Sprintf(" MISSED %d%s", d.logDropped, short)
+	}
+	if runewidth.StringWidth(long)+overlayBarKeys <= d.dimsInit.cols {
+		return long, colour
+	}
+	return short, colour
 }
 
 func (d *Display) logRewind() {
@@ -778,6 +806,7 @@ func (d *Display) logRewind() {
 	d.logAnchor = start + uint64(len(lines)-kept)
 	d.logDropped = 0
 	d.logPaused = false
+	d.logFollow = true
 }
 
 func (d *Display) logRepaint() {

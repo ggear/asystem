@@ -1910,6 +1910,90 @@ func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
 	}
 }
 
+func TestDisplay_LogFollowing(t *testing.T) {
+	tests := []struct {
+		name           string
+		emitted        int
+		paused         bool
+		expectedStatus string
+		expectedError  bool
+	}{
+		{
+			name:           "happy_following_is_live",
+			emitted:        3,
+			paused:         false,
+			expectedStatus: " LIVE SPACE=PAUSE",
+			expectedError:  false,
+		},
+		{
+			name:           "happy_paused_at_the_newest",
+			emitted:        0,
+			paused:         true,
+			expectedStatus: " PAUSED SPACE=LIVE",
+			expectedError:  false,
+		},
+		{
+			name:           "happy_paused_counts_behind",
+			emitted:        4,
+			paused:         true,
+			expectedStatus: " PAUSED 4 BEHIND SPACE=NEXT",
+			expectedError:  false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(caseRows))
+			t.Cleanup(scribe.Disable)
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				metric.NewRecordCache(),
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
+				config.Periods{}, true, "", buffer, 0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			display.logOverlay = true
+			emit := func(count int) {
+				for range count {
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "follow fodder")
+				}
+			}
+			emit(caseRows - 2)
+			display.logRewind()
+			display.Logging()
+			if !display.logFollow {
+				t.Errorf("rewind follow: got %v want %v", display.logFollow, true)
+			}
+			if testCase.paused {
+				display.logFollow = false
+			}
+			emit(testCase.emitted)
+			if display.logFollow {
+				display.logRewind()
+			}
+			display.Logging()
+			status, _ := display.overlayStatus()
+			if status != testCase.expectedStatus {
+				t.Errorf("status: got %q want %q", status, testCase.expectedStatus)
+			}
+			if display.logFollow && display.logBuffer.Version() != display.logNext {
+				t.Errorf("following end: got %d want %d", display.logNext, display.logBuffer.Version())
+			}
+		})
+	}
+}
+
 func TestDisplay_LogPaging(t *testing.T) {
 	tests := []struct {
 		name          string
