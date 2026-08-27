@@ -421,6 +421,12 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	defer client.Disconnect(250)
 	cache.SubscribeWake(&watchWakeListener{onWake: func(frozen time.Duration) { brokerRevive(ctx, client, frozen) }})
+	cache.SubscribeAttach(&watchAttachListener{onAttach: func() {
+		attachStart := time.Now()
+		if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("attached", attachStart, "[%d] topics subscribed, [%d] unsubscribed, for metrics the display newly renders", added, dropped)
+		}
+	}})
 	cache.SubscribeDeletes(&watchDeletesListener{
 		client: client,
 		onDelete: func(topic string) {
@@ -794,6 +800,19 @@ func (b *watchDeletesListener) MarkDelete(topic string) {
 	}
 	b.client.Unsubscribe(topic)
 	scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionRemove).Debug("removals", deleteStart, "unsubscribed [%s], dropped from the subscribed topics", topic)
+}
+
+type watchAttachListener struct {
+	onAttach func()
+}
+
+func (b *watchAttachListener) MarkAttach() {
+	attachStart := time.Now()
+	if b.onAttach == nil {
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Error("unusable", attachStart, "[attach] requested by the display with no resync bound, so newly rendered metrics stay unsubscribed")
+		return
+	}
+	go b.onAttach()
 }
 
 type watchWakeListener struct {

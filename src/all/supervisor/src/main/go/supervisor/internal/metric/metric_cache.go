@@ -98,6 +98,10 @@ type WakeListener interface {
 	MarkWake(frozen time.Duration)
 }
 
+type AttachListener interface {
+	MarkAttach()
+}
+
 type RecordCache struct {
 	mutex           sync.RWMutex
 	guids           []RecordGUID
@@ -107,6 +111,7 @@ type RecordCache struct {
 	deletesListener DeletesListener
 	refreshListener RefreshListener
 	wakeListener    WakeListener
+	attachListener  AttachListener
 	dirty           map[guidKey]RecordGUID
 	hostLastSeen    map[string]int64
 }
@@ -628,6 +633,15 @@ func (c *RecordCache) SubscribeWake(listener WakeListener) {
 	c.wakeListener = listener
 }
 
+func (c *RecordCache) SubscribeAttach(listener AttachListener) {
+	if c == nil || listener == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.attachListener = listener
+}
+
 func (c *RecordCache) Refresh() {
 	if c == nil {
 		return
@@ -649,6 +663,29 @@ func (c *RecordCache) Wake(frozen time.Duration) {
 	c.mutex.RUnlock()
 	if listener != nil {
 		listener.MarkWake(frozen)
+	}
+}
+
+func (c *RecordCache) Attach() {
+	if c == nil {
+		return
+	}
+	seeded := false
+	for hostName := range c.Hosts() {
+		for _, serviceName := range c.Services(hostName) {
+			if len(c.RegisterService(hostName, serviceName, false)) > 0 {
+				seeded = true
+			}
+		}
+	}
+	if !seeded {
+		return
+	}
+	c.mutex.RLock()
+	listener := c.attachListener
+	c.mutex.RUnlock()
+	if listener != nil {
+		listener.MarkAttach()
 	}
 }
 

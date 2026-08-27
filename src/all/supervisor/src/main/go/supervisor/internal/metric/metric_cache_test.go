@@ -2323,6 +2323,59 @@ func TestMetricCache_SubscribeDeletes(t *testing.T) {
 	}
 }
 
+func TestMetricCache_AttachSeedsNewlyListenedMetrics(t *testing.T) {
+	tests := []struct {
+		name           string
+		attached       []ID
+		expectedTopics []string
+		expectedNotify int
+		expectedAbsent []string
+	}{
+		{
+			name:           "happy_seeds_and_notifies_for_a_widened_layout",
+			attached:       []ID{MetricServiceVersion, MetricServiceUpTime},
+			expectedTopics: []string{"supervisor/alpha/data/service/plex/version", "supervisor/alpha/data/service/plex/up_time"},
+			expectedNotify: 1,
+		},
+		{
+			name:           "happy_silent_when_the_layout_adds_nothing",
+			attached:       []ID{MetricServiceName},
+			expectedNotify: 0,
+			expectedAbsent: []string{"supervisor/alpha/data/service/plex/version"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewRecordCache()
+			cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &mockListener{})
+			cache.RegisterService("alpha", "plex", false)
+			notifier := &mockAttachListener{}
+			cache.SubscribeAttach(notifier)
+			for _, id := range tt.attached {
+				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(id, "alpha", 0), &mockListener{})
+			}
+			cache.Attach()
+			if notifier.attachCount != tt.expectedNotify {
+				t.Errorf("attachCount: got %v want %v", notifier.attachCount, tt.expectedNotify)
+			}
+			topics := make(map[string]struct{})
+			for _, binding := range cache.Topics() {
+				topics[binding.Topic] = struct{}{}
+			}
+			for _, topic := range tt.expectedTopics {
+				if _, exists := topics[topic]; !exists {
+					t.Errorf("topic %q: got absent want present", topic)
+				}
+			}
+			for _, topic := range tt.expectedAbsent {
+				if _, exists := topics[topic]; exists {
+					t.Errorf("topic %q: got present want absent", topic)
+				}
+			}
+		})
+	}
+}
+
 type mockListener struct {
 	dirtyCount int
 }
@@ -2669,4 +2722,12 @@ func TestMetricCache_StatusTagging(t *testing.T) {
 		}
 		t.Logf("id=%v service=%q topic=%q tags=%v pulse=%v", guid.ID, guid.ServiceName, record.Topic, record.Tags, record.Value.Pulse != nil)
 	}
+}
+
+type mockAttachListener struct {
+	attachCount int
+}
+
+func (m *mockAttachListener) MarkAttach() {
+	m.attachCount++
 }

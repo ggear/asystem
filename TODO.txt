@@ -40,10 +40,10 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 improve loggin subject so get traceability - eg ssd_life should show all all derived logs and verdict 
-shorten ...ibrary/Logs/supervisor to just logs or better from TIME     LEVEL SOURCE   SUBJECT                   ACTION     DURATION DETAIL                                                                                                                                                                                                               
-21:14:24 INFO  process  ...ibrary/Logs/supervisor remove          0ms removals [1] stale log files, kept [watch-pid-22368.log]                                                                                                                                                             
-21:14:25 DEBUG probe    host/life_used_drives     compute         0ms observed metric status [unknown] was [none] pulse [0] ok [false] trend [none] ok [none] error [probe is still warming up]                                                                                            
-21:14:26 DEBUG probe    host/life_used_drives     sample          0ms computed [  0] pct life used, none of [0] drives are rated and
+
+maybe make watch remote more compact SUBJECT etc than logs or local?
+when on mad watch remote, if i maximise a host, the version/rst/uptime take tick to refresh in the ui. this is only when going from multi host compact to single host relaxed. compact multi-host to compact single host works. do not see this issu on large display on rue. only on mad with low res, ascii, compact to relaxed and wdith/height set on cli 116/33
+
 make atop work on macos: =================================================================================================================================================================================================================================================================================== vESC =+
 TIME     LEVEL SOURCE   SUBJECT                   ACTION     DURATION DETAIL                                                                                                                                                                                                               
 21:15:11 WARN  probe    storage                   discover        0ms notfound version not readable from [/var/lib/asystem/install/storage/latest/.env] with [open /var/lib/asystem/install/storage/latest/.env: permission denied]                                                        
@@ -70,12 +70,6 @@ Unimplemented metrics
 ├───┼──────────────────────────────┼─────────┼─────┼──────────────────────────────────────┼──────────────┤
 │ 1 │ host/failed_backups          │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
 │ 2 │ host/used_backup_space       │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
-│ 3 │ host/used_swap_space         │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
-│ 4 │ host/used_disk_ops           │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
-│ 5 │ host/used_network            │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
-│ 6 │ host/running_time            │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
-│ 7 │ service/used_disk_ops        │ service │ no  │ 0, derivation{}, errUnimplemented  │ not shown    │
-│ 8 │ service/used_network         │ service │ no  │ 0, derivation{}, errUnimplemented  │ not shown    │
 │ 9 │ service/backup_status        │ service │ yes │ true + derivation                  │ green        │
 └───┴──────────────────────────────┴─────────┴─────┴──────────────────────────────────────┴──────────────┘
 
@@ -101,7 +95,6 @@ Two more TODOs exist that aren't unimplemented metrics, worth knowing about sinc
 
 
 
-refactor database_renamed_measures to database_rename_measures and dir under mutate/rename to store script. add database_drop_measures and add mutate/drop dir with script to drop those measures. mutate.sh to call both. verify to ignore drop/rename measures. convert previous rename cols to drop
 check all metrics working except for backup
 implement backup so metrics can work - module by modeule first then cron'd backup to /share and to /backup impl
 

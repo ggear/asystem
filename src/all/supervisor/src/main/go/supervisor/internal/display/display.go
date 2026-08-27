@@ -670,6 +670,7 @@ func (d *Display) subscribeUpdates() {
 			}
 		}
 	}
+	d.cache.Attach()
 }
 
 func (d *Display) markDirty(index int, generation uint64) {
