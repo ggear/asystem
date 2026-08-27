@@ -43,7 +43,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		}
 		p := probesByMetricMask[id]
 		if p == nil {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(id), scribe.ActionStart).Error("rejected", registerStart, "no probe registered for the metric")
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(id), scribe.ActionStart).Error("rejected", registerStart, "no probe registered")
 			continue
 		}
 		mask := probeMap[p]
@@ -257,7 +257,7 @@ func runMetricCacheTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetr
 	for _, task := range tasks {
 		cache := p.records()
 		if cache == nil {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", tasksStart, "metric missing the required cache")
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", tasksStart, "missing the required cache")
 			continue
 		}
 		if !p.hasMetric(task.metricID) {
@@ -288,7 +288,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 		missing = append(missing, "pulseRule")
 	}
 	if len(missing) > 0 {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", taskStart, "metric missing required fields [%s]", strings.Join(missing, ","))
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", taskStart, "missing required fields [%s]", strings.Join(missing, ","))
 		return metricStatusUnknown
 	}
 	sample, derivation, err := task.sampleFunc()
@@ -307,7 +307,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	reportMetricDerivation(task, taskStart, derivation, err)
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", taskStart, "metric missing the host name")
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", taskStart, "missing the host name")
 		return metricStatusUnknown
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
@@ -342,7 +342,7 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	}
 	reportMetricRule(task.metricID, taskStart, pulseOK, pulseResult.Detail, trendOK, trendResult.Detail)
 	if valueErr != nil {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("faulting", taskStart, "metric value builder with [%v]", valueErr)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("faulting", taskStart, "value builder failed with [%v]", valueErr)
 		return metricStatusUnknown
 	}
 	value.Failed = errored && !derivation.inert
@@ -399,19 +399,19 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample)
 	switch {
 	case errored && errors.Is(err, errUnimplemented):
-		logger.Debug("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
+		logger.Debug("faulting", fault.since, "%swith [%v]", metricScope(task), err)
 	case errored && fault.polls == 1 && fault.warming:
-		logger.Debug("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
+		logger.Debug("faulting", fault.since, "%swith [%v]", metricScope(task), err)
 	case errored && fault.polls == 1 && errors.Is(err, errEnvironment):
-		logger.Warn("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
+		logger.Warn("faulting", fault.since, "%swith [%v]", metricScope(task), err)
 	case errored && fault.polls == 1:
-		logger.Error("faulting", fault.since, "metric%s with [%v]", metricSubject(task), err)
+		logger.Error("faulting", fault.since, "%swith [%v]", metricScope(task), err)
 	case errored && repeat:
-		logger.Debug("faulting", fault.since, "metric%s for [%d] polls with [%v]", metricSubject(task), fault.polls, err)
+		logger.Debug("faulting", fault.since, "%sfor [%d] polls with [%v]", metricScope(task), fault.polls, err)
 	case !errored && faulting && fault.warming:
-		logger.Debug("restored", fault.since, "metric%s after [%d] failed polls with [%s]", metricSubject(task), fault.polls, fault.message)
+		logger.Debug("restored", fault.since, "%safter [%d] failed polls with [%s]", metricScope(task), fault.polls, fault.message)
 	case !errored && faulting:
-		logger.Info("restored", fault.since, "metric%s after [%d] failed polls with [%s]", metricSubject(task), fault.polls, fault.message)
+		logger.Info("restored", fault.since, "%safter [%d] failed polls with [%s]", metricScope(task), fault.polls, fault.message)
 	}
 }
 
@@ -424,8 +424,8 @@ func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status string
 	if seen && previous == status {
 		return
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Debug("observed", taskStart, "metric%s status [%s] was [%s] pulse [%v] ok [%v] trend [%v] ok [%v] error [%v]",
-		metricSubject(task), status, metricStatusPrevious(seen, previous), metricValue(pulse), pulseOK, metricValue(trend), metricFlag(trendOK), metricError(err))
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Debug("observed", taskStart, "%sstatus [%s] was [%s] pulse [%v] ok [%v] trend [%v] ok [%v] error [%v]",
+		metricScope(task), status, metricStatusPrevious(seen, previous), metricValue(pulse), pulseOK, metricValue(trend), metricFlag(trendOK), metricError(err))
 }
 
 func reportMetricRule(metricID metric.ID, taskStart time.Time, pulseOK bool, pulseText string, trendOK *bool, trendText string) {
@@ -465,7 +465,7 @@ func reportMetricDerivation(task cacheMetricTask, taskStart time.Time, d derivat
 	if d.empty() {
 		if err == nil {
 			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("unstated", taskStart,
-				"metric%s published a value stating no derivation, so nothing explains how it was arrived at", metricSubject(task))
+				"%spublished a value stating no derivation, so nothing explains how it was arrived at", metricScope(task))
 		}
 		return
 	}
@@ -497,11 +497,11 @@ func metricStatusPrevious(seen bool, previous string) string {
 	return previous
 }
 
-func metricSubject(task cacheMetricTask) string {
+func metricScope(task cacheMetricTask) string {
 	if task.serviceName == metric.ServiceNameUnset {
 		return ""
 	}
-	return fmt.Sprintf(" service [%s]", task.serviceName)
+	return fmt.Sprintf("service [%s] ", task.serviceName)
 }
 
 func metricValue(value any) any {
