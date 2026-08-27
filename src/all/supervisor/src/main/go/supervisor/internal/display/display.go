@@ -69,6 +69,10 @@ type Display struct {
 	logOverlay      bool
 	logOverlayAuto  bool
 	logGeneration   uint64
+	logAnchor       uint64
+	logNext         uint64
+	logDropped      uint64
+	logPaused       bool
 	refreshSignal   chan struct{}
 	force           bool
 	tickPeriod      time.Duration
@@ -435,17 +439,6 @@ func (d *Display) Logging() {
 	if maxLines < 1 {
 		return
 	}
-	arrow := " " + textDown.ascii
-	esc := "ESC"
-	suffix := " =+"
-	arrowWidth := runewidth.StringWidth(arrow)
-	escWidth := runewidth.StringWidth(esc)
-	suffixWidth := runewidth.StringWidth(suffix)
-	padLen := max(d.dimsInit.cols-arrowWidth-escWidth-suffixWidth, 0)
-	d.terminal.draw(0, 0, strings.Repeat("=", padLen), colourChat)
-	d.terminal.draw(padLen, 0, arrow, colourChat)
-	d.terminal.draw(padLen+arrowWidth, 0, esc, colourShout)
-	d.terminal.draw(padLen+arrowWidth+escWidth, 0, suffix, colourChat)
 	clip := func(text string) string {
 		if runewidth.StringWidth(text) <= d.dimsInit.cols {
 			return text
@@ -456,17 +449,14 @@ func (d *Display) Logging() {
 		}
 		return runewidth.Truncate(text, d.dimsInit.cols, tail)
 	}
-	d.terminal.draw(0, 1, clip(scribe.OverlayHeader()), colourChat)
 	capacity := maxLines - 2
-	var rows []overlayRow
-	for _, line := range d.logBuffer.Tail(capacity) {
-		for _, text := range scribe.OverlayLines(line, d.dimsInit.cols) {
-			rows = append(rows, overlayRow{text: text, level: line.Level})
-		}
-	}
-	if len(rows) > capacity {
-		rows = rows[len(rows)-capacity:]
-	}
+	rows, consumed, anchor := d.paged(capacity)
+	d.logDropped = anchor - min(anchor, d.logAnchor)
+	d.logAnchor = anchor
+	d.logNext = anchor + uint64(consumed)
+	d.logPaused = d.logBuffer.Version() > d.logNext
+	d.drawOverlayBar()
+	d.terminal.draw(0, 1, clip(scribe.OverlayHeader()), colourChat)
 	for row, line := range rows {
 		row += 2
 		c := colourChat
@@ -522,6 +512,9 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					continue
 				}
 				d.dimsInit = dims
+				if d.logOverlay {
+					d.logRewind()
+				}
 				d.rebuild("resize")
 				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("geometry", resizeStart, "[%d] cols, [%d] rows", cols, rows)
 			case *tcell.EventKey:
@@ -530,6 +523,9 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					return
 				}
 				if ev.Key() == tcell.KeyCtrlR {
+					if d.logOverlay {
+						d.logRewind()
+					}
 					d.refresh("manual")
 				}
 				if ev.Key() == tcell.KeyEscape {
@@ -539,8 +535,17 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					} else if d.logBuffer != nil {
 						d.logOverlay = !d.logOverlay
 						d.logOverlayAuto = false
+						if d.logOverlay {
+							d.logRewind()
+						}
 						d.refresh("toggle")
 					}
+				}
+				if d.logOverlay && ev.Str() == " " {
+					if d.logPaused {
+						d.logAnchor = d.logNext
+					}
+					d.logRepaint()
 				}
 				if !d.logOverlay && len(d.hosts) > 1 && ev.Key() == tcell.KeyRune {
 					hostIndex := -1
@@ -571,14 +576,8 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			dirtyIndexes := d.takeDirtyIndexes()
 			drawnCount := 0
 			if d.logOverlay {
-				if d.logBuffer != nil {
-					v := d.logBuffer.Version()
-					if v != d.logGeneration {
-						d.logGeneration = v
-						d.terminal.clear()
-						d.Logging()
-						d.terminal.show()
-					}
+				if d.logBuffer != nil && !d.logPaused && d.logBuffer.Version() != d.logGeneration {
+					d.logRepaint()
 				}
 			} else if d.force || len(dirtyIndexes) > 0 {
 				drawnCount = len(dirtyIndexes)
@@ -611,6 +610,9 @@ func (d *Display) rebuild(trigger string) {
 	d.serviceShown = nil
 	if _, err := d.Compile(); err != nil {
 		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Error("faulting", rebuildStart, "[%v] rebuilding the display", err)
+		if !d.logOverlay {
+			d.logRewind()
+		}
 		d.logOverlay = true
 		d.logOverlayAuto = true
 	} else if d.logOverlayAuto {
@@ -706,6 +708,85 @@ const (
 	tickPeriod = 250 * time.Millisecond
 	tickStall  = 5 * time.Second
 )
+
+func (d *Display) paged(capacity int) ([]overlayRow, int, uint64) {
+	if capacity < 1 {
+		return nil, 0, d.logBuffer.Version()
+	}
+	lines, anchor := d.logBuffer.From(d.logAnchor, capacity)
+	var rows []overlayRow
+	consumed := 0
+	for _, line := range lines {
+		texts := scribe.OverlayLines(line, d.dimsInit.cols)
+		if len(rows) > 0 && len(rows)+len(texts) > capacity {
+			break
+		}
+		for _, text := range texts {
+			rows = append(rows, overlayRow{text: text, level: line.Level})
+		}
+		consumed++
+		if len(rows) >= capacity {
+			break
+		}
+	}
+	if len(rows) > capacity {
+		rows = rows[:capacity]
+	}
+	return rows, consumed, anchor
+}
+
+func (d *Display) drawOverlayBar() {
+	arrow := " " + textDown.ascii
+	esc := "ESC"
+	suffix := " =+"
+	status := ""
+	if d.logPaused {
+		status = fmt.Sprintf(" PAUSED %d/%d SPACE", d.logNext-d.logBuffer.Oldest(), d.logBuffer.Version()-d.logBuffer.Oldest())
+	}
+	if d.logDropped > 0 {
+		status = fmt.Sprintf(" DROPPED %d%s", d.logDropped, status)
+	}
+	statusWidth := runewidth.StringWidth(status)
+	arrowWidth := runewidth.StringWidth(arrow)
+	escWidth := runewidth.StringWidth(esc)
+	suffixWidth := runewidth.StringWidth(suffix)
+	padLen := max(d.dimsInit.cols-statusWidth-arrowWidth-escWidth-suffixWidth, 0)
+	d.terminal.draw(0, 0, strings.Repeat("=", padLen), colourChat)
+	d.terminal.draw(padLen, 0, status, colourWarn)
+	d.terminal.draw(padLen+statusWidth, 0, arrow, colourChat)
+	d.terminal.draw(padLen+statusWidth+arrowWidth, 0, esc, colourShout)
+	d.terminal.draw(padLen+statusWidth+arrowWidth+escWidth, 0, suffix, colourChat)
+}
+
+func (d *Display) logRewind() {
+	if d.logBuffer == nil {
+		return
+	}
+	capacity := max(d.dimsInit.rows-2, 1)
+	lines, start := d.logBuffer.From(d.logBuffer.Rewind(capacity), capacity)
+	used, kept := 0, 0
+	for index := len(lines) - 1; index >= 0; index-- {
+		height := len(scribe.OverlayLines(lines[index], d.dimsInit.cols))
+		if kept > 0 && used+height > capacity {
+			break
+		}
+		used += height
+		kept++
+	}
+	d.logAnchor = start + uint64(len(lines)-kept)
+	d.logDropped = 0
+	d.logPaused = false
+}
+
+func (d *Display) logRepaint() {
+	if d.logBuffer == nil || d.terminal == nil {
+		return
+	}
+	d.logGeneration = d.logBuffer.Version()
+	d.terminal.clear()
+	d.Logging()
+	d.terminal.show()
+}
 
 type overlayRow struct {
 	text  string

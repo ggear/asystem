@@ -985,3 +985,112 @@ func TestScribe_ClipsSubjectToColumn(t *testing.T) {
 		})
 	}
 }
+
+func TestScribe_BufferFrom(t *testing.T) {
+	tests := []struct {
+		name            string
+		capacity        int
+		pushCount       int
+		sequence        uint64
+		window          int
+		expectedFirst   string
+		expectedCount   int
+		expectedAnchor  uint64
+		expectedOldest  uint64
+		expectedDropped bool
+		expectedError   bool
+	}{
+		{
+			name:            "happy_page_from_the_oldest",
+			capacity:        50,
+			pushCount:       10,
+			sequence:        0,
+			window:          4,
+			expectedFirst:   "message 0",
+			expectedCount:   4,
+			expectedAnchor:  0,
+			expectedOldest:  0,
+			expectedDropped: false,
+			expectedError:   false,
+		},
+		{
+			name:            "happy_page_from_the_middle",
+			capacity:        50,
+			pushCount:       10,
+			sequence:        4,
+			window:          4,
+			expectedFirst:   "message 4",
+			expectedCount:   4,
+			expectedAnchor:  4,
+			expectedOldest:  0,
+			expectedDropped: false,
+			expectedError:   false,
+		},
+		{
+			name:            "happy_window_clipped_by_the_newest",
+			capacity:        50,
+			pushCount:       10,
+			sequence:        8,
+			window:          4,
+			expectedFirst:   "message 8",
+			expectedCount:   2,
+			expectedAnchor:  8,
+			expectedOldest:  0,
+			expectedDropped: false,
+			expectedError:   false,
+		},
+		{
+			name:            "happy_caught_up_returns_nothing",
+			capacity:        50,
+			pushCount:       10,
+			sequence:        10,
+			window:          4,
+			expectedFirst:   "",
+			expectedCount:   0,
+			expectedAnchor:  10,
+			expectedOldest:  0,
+			expectedDropped: false,
+			expectedError:   false,
+		},
+		{
+			name:            "happy_rolled_past_the_anchor",
+			capacity:        4,
+			pushCount:       10,
+			sequence:        0,
+			window:          4,
+			expectedFirst:   "message 6",
+			expectedCount:   4,
+			expectedAnchor:  6,
+			expectedOldest:  6,
+			expectedDropped: true,
+			expectedError:   false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			buf := &LogBuffer{lines: make([]LogLine, testCase.capacity)}
+			for i := range testCase.pushCount {
+				buf.Push(LogLine{Time: time.Now(), Level: slog.LevelInfo, Message: fmt.Sprintf("message %d", i)})
+			}
+			lines, anchor := buf.From(testCase.sequence, testCase.window)
+			if len(lines) != testCase.expectedCount {
+				t.Fatalf("From() count: got %d want %d", len(lines), testCase.expectedCount)
+			}
+			if anchor != testCase.expectedAnchor {
+				t.Errorf("From() anchor: got %d want %d", anchor, testCase.expectedAnchor)
+			}
+			if len(lines) > 0 && lines[0].Message != testCase.expectedFirst {
+				t.Errorf("From() first: got %q want %q", lines[0].Message, testCase.expectedFirst)
+			}
+			if buf.Oldest() != testCase.expectedOldest {
+				t.Errorf("Oldest(): got %d want %d", buf.Oldest(), testCase.expectedOldest)
+			}
+			if dropped := anchor > testCase.sequence; dropped != testCase.expectedDropped {
+				t.Errorf("dropped: got %v want %v", dropped, testCase.expectedDropped)
+			}
+			if buf.Version() != uint64(testCase.pushCount) {
+				t.Errorf("Version(): got %d want %d", buf.Version(), testCase.pushCount)
+			}
+		})
+	}
+}

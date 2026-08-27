@@ -1909,3 +1909,85 @@ func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
 		})
 	}
 }
+
+func TestDisplay_LogPaging(t *testing.T) {
+	tests := []struct {
+		name          string
+		pages         int
+		expectedError bool
+	}{
+		{
+			name:          "happy_short_of_a_screen",
+			pages:         1,
+			expectedError: false,
+		},
+		{
+			name:          "happy_fills_and_pauses",
+			pages:         2,
+			expectedError: false,
+		},
+		{
+			name:          "happy_pages_to_the_newest",
+			pages:         4,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			capacity := caseRows - 2
+			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(caseRows))
+			t.Cleanup(scribe.Disable)
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				metric.NewRecordCache(),
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
+				config.Periods{}, true, "", buffer, 0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			display.logOverlay = true
+			emit := func(count int) {
+				for range count {
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "page fodder")
+				}
+			}
+			emit(capacity)
+			display.logRewind()
+			previous := uint64(0)
+			for page := range testCase.pages {
+				pending := page < testCase.pages-1
+				if pending {
+					emit(capacity)
+				}
+				display.Logging()
+				if display.logNext <= display.logAnchor {
+					t.Errorf("page %d rendered: got %d lines, want at least 1", page, display.logNext-display.logAnchor)
+				}
+				if page > 0 && display.logAnchor != previous {
+					t.Errorf("page %d anchor: got %d want %d", page, display.logAnchor, previous)
+				}
+				if display.logPaused != pending {
+					t.Errorf("page %d paused: got %v want %v", page, display.logPaused, pending)
+				}
+				previous = display.logNext
+				if display.logPaused {
+					display.logAnchor = display.logNext
+				}
+			}
+			if previous != buffer.Version() {
+				t.Errorf("final page end: got %d want %d", previous, buffer.Version())
+			}
+		})
+	}
+}

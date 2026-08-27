@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	bufferScreens     = 40
 	logDirUser        = "/tmp/supervisor"
 	logDirUserMac     = "Library/Logs/supervisor"
 	logDirRoot        = "/var/log/supervisor"
@@ -109,6 +110,13 @@ func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxB
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
 	return buf, nil
+}
+
+func BufferLines(rows int) int {
+	if rows < 1 {
+		rows = 1
+	}
+	return rows * bufferScreens
 }
 
 func Log(source Source, subject Subject, action Action) Logger {
@@ -198,6 +206,48 @@ func (b *LogBuffer) Tail(n int) []LogLine {
 		result[i] = b.lines[(start+i)%len(b.lines)]
 	}
 	return result
+}
+
+func (b *LogBuffer) From(sequence uint64, n int) ([]LogLine, uint64) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	if b.count == 0 || n <= 0 {
+		return nil, b.version
+	}
+	oldest := b.version - uint64(b.count)
+	if sequence < oldest {
+		sequence = oldest
+	}
+	if sequence >= b.version {
+		return nil, b.version
+	}
+	if behind := int(b.version - sequence); n > behind {
+		n = behind
+	}
+	result := make([]LogLine, n)
+	start := ((b.head-int(b.version-sequence))%len(b.lines) + len(b.lines)) % len(b.lines)
+	for i := range n {
+		result[i] = b.lines[(start+i)%len(b.lines)]
+	}
+	return result, sequence
+}
+
+func (b *LogBuffer) Rewind(n int) uint64 {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	if n < 0 {
+		n = 0
+	}
+	if n > b.count {
+		n = b.count
+	}
+	return b.version - uint64(n)
+}
+
+func (b *LogBuffer) Oldest() uint64 {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	return b.version - uint64(b.count)
 }
 
 func (b *LogBuffer) Version() uint64 {

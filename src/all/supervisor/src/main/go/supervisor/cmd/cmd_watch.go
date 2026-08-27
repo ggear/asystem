@@ -90,7 +90,7 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		return err
 	}
 	scribe.Widen(configuredHosts(configPath), configuredServices(configPath))
-	logBuffer, err := scribe.EnableBufferAndFile(level, "watch", height, 10, 3, 7)
+	logBuffer, err := scribe.EnableBufferAndFile(level, "watch", scribe.BufferLines(height), 10, 3, 7)
 	if err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
 	}

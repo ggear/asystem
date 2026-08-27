@@ -219,7 +219,6 @@ func Vocabularies(hosts, services []string) string {
 	builder.WriteString(columned(sourceStrings(), cell/subjectSplit))
 	builder.WriteString("\nLog Subjects:\n")
 	builder.WriteString(grouped(cell, []string{subjectHosts}, nil, []string{subjectServices}, nil))
-	builder.WriteString("\n")
 	builder.WriteString(grouped(cell, hostMetrics, hostNames, serviceMetrics, serviceNames))
 	builder.WriteString("\nLog Actions:\n")
 	builder.WriteString(columned(actionStrings(), cell/subjectSplit))
