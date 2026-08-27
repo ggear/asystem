@@ -220,6 +220,9 @@ def indent(text, pad="    "):
     return [pad + line for line in text.split("\n")]
 
 
+PENDING = "pending"
+
+
 def literals(column, values, negate=True, width: int | None = 92, pad="        "):
     quoted = ["'{}'".format(str(value).replace("'", "''")) for value in values]
     wrap = float("inf") if width is None else width

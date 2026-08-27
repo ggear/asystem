@@ -37,11 +37,11 @@ if __name__ == "__main__":
     write_schema_database(document, database_dialect="influxdb3", database_entities={
         "supervisor/host": sorted(modules_server.keys()),
         "supervisor/service": sorted({service for services in modules_server.values() for service in services}),
-    }, database_renamed_measures={
-        "warn_temperature_of_max": "warn_temperature",
-        "spin_fan_speed_of_max": "spin_fan_speed",
-        "used_system_space": "used_home_space",
-    })
+    }, database_drop_measures=[
+        "warn_temperature_of_max",
+        "spin_fan_speed_of_max",
+        "used_system_space",
+    ])
     metadata_supervisor_schema = []
     for host, services in sorted(modules_server.items(), key=itemgetter(0)):
         host_index = _get_host_index(_get_host_label(host))

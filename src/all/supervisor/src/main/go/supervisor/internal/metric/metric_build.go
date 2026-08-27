@@ -32,6 +32,16 @@ const (
 )
 
 const (
+	UsedDiskOpsBudgetMiB   = 100.0
+	UsedDiskOpsBudgetBytes = UsedDiskOpsBudgetMiB * 1024 * 1024
+)
+
+const (
+	UsedNetworkBudgetMbit = 1000.0
+	UsedNetworkBudgetBits = UsedNetworkBudgetMbit * 1000 * 1000
+)
+
+const (
 	WarnTemperatureBaseCelsius  = 40.0
 	WarnTemperaturePerCelsius   = 5.0
 	WarnTemperaturePulseCelsius = 53.0
@@ -183,7 +193,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedSwapSpace,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "swap space used, not yet implemented",
+		description: "swap space in use against the total configured",
 		template:    "supervisor/$HOST/$SCOPE/host/used_swap_space",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 80),
@@ -193,7 +203,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedDiskOps,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "disk operations used against capacity, not yet implemented",
+		description: "busiest drive's time spent servicing operations",
 		template:    "supervisor/$HOST/$SCOPE/host/used_disk_ops",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
@@ -203,7 +213,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostUsedNetwork,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "network throughput used against capacity, not yet implemented",
+		description: "busiest physical interface's throughput against its rated link speed",
 		template:    "supervisor/$HOST/$SCOPE/host/used_network",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, 90),
@@ -213,7 +223,7 @@ var metricBuildersByID = []builder{
 		id:          MetricHostRunningTime,
 		valueKind:   ValueFloat,
 		unit:        "s",
-		description: "time the host has been up, not yet implemented",
+		description: "time the host has been up",
 		template:    "supervisor/$HOST/$SCOPE/host/running_time",
 		persisted:   false,
 		pulseRule:   Always(),
@@ -329,7 +339,7 @@ var metricBuildersByID = []builder{
 		id:          MetricServiceUsedDiskOps,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "disk operations used by the service, not yet implemented",
+		description: fmt.Sprintf("block device throughput used by the service against a %v MiB per second budget", UsedDiskOpsBudgetMiB),
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_disk_ops",
 		persisted:   true,
 		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 90)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 80)),
@@ -338,7 +348,7 @@ var metricBuildersByID = []builder{
 		id:          MetricServiceUsedNetwork,
 		valueKind:   ValueInt,
 		unit:        "%",
-		description: "network throughput used by the service, not yet implemented",
+		description: fmt.Sprintf("network throughput used by the service against a %v Mbit per second budget", UsedNetworkBudgetMbit),
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_network",
 		persisted:   true,
 		pulseRule:   All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 90)), trendRule: All(Gated(GateServiceAggregate), Bounded(Self, AtMost, 80)),

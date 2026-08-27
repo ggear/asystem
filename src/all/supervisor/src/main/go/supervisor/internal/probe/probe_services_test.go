@@ -321,11 +321,19 @@ func TestProbeServices_Services(t *testing.T) {
 					if usedMemory < 0 || usedMemory > 100 {
 						t.Fatalf("usedMemory out of range [%d]", usedMemory)
 					}
-					if _, _, err := service.usedDiskOps(); !errors.Is(err, errUnimplemented) {
-						t.Fatalf("usedDiskOps: got %v want errUnimplemented", err)
+					usedDiskOps, _, err := service.usedDiskOps()
+					if err != nil {
+						t.Fatalf("unexpected disk ops error: %v", err)
 					}
-					if _, _, err := service.usedNetwork(); !errors.Is(err, errUnimplemented) {
-						t.Fatalf("usedNetwork: got %v want errUnimplemented", err)
+					if usedDiskOps < 0 || usedDiskOps > 100 {
+						t.Fatalf("usedDiskOps out of range [%d]", usedDiskOps)
+					}
+					usedNetwork, _, err := service.usedNetwork()
+					if err != nil {
+						t.Fatalf("unexpected network error: %v", err)
+					}
+					if usedNetwork < 0 || usedNetwork > 100 {
+						t.Fatalf("usedNetwork out of range [%d]", usedNetwork)
 					}
 					upTime, _, err := service.upTime()
 					if err != nil {
@@ -971,6 +979,15 @@ func makeStatsMock(containerCount int) func(context.Context, *client.Client, str
 			MemoryStats: container.MemoryStats{
 				Limit: 100,
 				Usage: 1,
+			},
+			BlkioStats: container.BlkioStats{
+				IoServiceBytesRecursive: []container.BlkioStatEntry{
+					{Op: "read", Value: uint64(call) * 1024},
+					{Op: "write", Value: uint64(call) * 2048},
+				},
+			},
+			Networks: map[string]container.NetworkStats{
+				"eth0": {RxBytes: uint64(call) * 512, TxBytes: uint64(call) * 256},
 			},
 		})
 		if err != nil {

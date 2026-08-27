@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
@@ -11,6 +15,8 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
@@ -44,16 +50,25 @@ type hostProbe struct {
 	sysRoot               string
 	allocatedMemoryLogged int64
 	cpuSampler            *cpuUsageSampler
+	diskSampler           *diskUsageSampler
+	networkSampler        *networkUsageSampler
 	cpuTimes              func(bool) ([]cpu.TimesStat, error)
 	virtualMemory         func() (*mem.VirtualMemoryStat, error)
+	swapMemory            func() (*mem.SwapMemoryStat, error)
+	diskCounters          func(...string) (map[string]disk.IOCountersStat, error)
+	upTime                func() (uint64, error)
 }
 
 func newHostProbe() *hostProbe {
 	return &hostProbe{
 		sysRoot:       sensorSysRoot,
 		cpuSampler:    &cpuUsageSampler{},
+		diskSampler:   &diskUsageSampler{},
 		cpuTimes:      cpu.Times,
 		virtualMemory: mem.VirtualMemory,
+		swapMemory:    mem.SwapMemory,
+		diskCounters:  disk.IOCounters,
+		upTime:        host.Uptime,
 	}
 }
 
@@ -417,23 +432,46 @@ func (p *hostProbe) usedBackupSpace() (int8, derivation, error) {
 }
 
 func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
-	// TODO: Provide implementation
-	return 0, derivation{}, errUnimplemented
+	if p.swapMemory == nil {
+		return 0, derivation{}, errors.New("no swap reading taken, the probe was created without a swap memory reader")
+	}
+	swapStat, err := p.swapMemory()
+	if err != nil {
+		return 0, derivation{}, fmt.Errorf("no swap reading taken, swap memory stats failed with [%w]", err)
+	}
+	if swapStat.Total == 0 {
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used, the host configures no swap so the metric is inert and always ok"), nil
+	}
+	usedPercent := (float64(swapStat.Used) / float64(swapStat.Total)) * 100.0
+	return int8Percent(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, free [%d] MiB",
+		int8Percent(usedPercent), swapStat.Used/bytesPerMiB, swapStat.Total/bytesPerMiB, swapStat.Free/bytesPerMiB), nil
 }
 
 func (p *hostProbe) usedDiskOps() (int8, derivation, error) {
-	// TODO: Provide implementation
-	return 0, derivation{}, errUnimplemented
+	if p.diskSampler == nil || p.diskCounters == nil {
+		return 0, derivation{}, errors.New("no disk operations sample taken, the probe was created without a disk sampler or an io counter reader")
+	}
+	return p.diskSampler.sample(p.diskCounters)
 }
 
 func (p *hostProbe) usedNetwork() (int8, derivation, error) {
-	// TODO: Provide implementation
-	return 0, derivation{}, errUnimplemented
+	if p.networkSampler == nil {
+		return 0, derivation{}, errors.New("no network sample taken, the probe was created without a network sampler")
+	}
+	return p.networkSampler.sample(hostRoots(config.Load(p.configPath).Mount()))
 }
 
 func (p *hostProbe) runningTime() (float64, derivation, error) {
-	// TODO: Provide implementation
-	return 0, derivation{}, errUnimplemented
+	if p.upTime == nil {
+		return 0, derivation{}, errors.New("no running time read, the probe was created without an up time reader")
+	}
+	seconds, err := p.upTime()
+	if err != nil {
+		return 0, derivation{}, fmt.Errorf("no running time read, host up time failed with [%w] [%w]", err, errEnvironment)
+	}
+	running := time.Duration(seconds) * time.Second
+	return float64(seconds), derived(scribe.ActionSample, "computed [%d] s running, the host booted [%s] ago at [%s]",
+		seconds, running, config.NowIncludingSuspend().Add(-running).Format(time.RFC3339)), nil
 }
 
 func (p *hostProbe) temperature() (float64, derivation, error) {
@@ -481,3 +519,201 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 	return stats.ConvertToInt(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, idle delta [%.1f] of total delta [%.1f] ticks",
 		stats.ConvertToInt(usedPercent), idleDelta, totalDelta), nil
 }
+
+type diskUsageSampler struct {
+	hasSample bool
+	taken     time.Time
+	samples   map[string]uint64
+}
+
+func (s *diskUsageSampler) sample(ioCounters func(...string) (map[string]disk.IOCountersStat, error)) (int8, derivation, error) {
+	counters, err := ioCounters()
+	if err != nil {
+		return 0, derivation{}, fmt.Errorf("no disk operations sample taken, reading device counters failed with [%w] [%w]", err, errEnvironment)
+	}
+	current := make(map[string]uint64, len(counters))
+	for name, counter := range counters {
+		if diskNamed(name) {
+			current[name] = counter.IoTime
+		}
+	}
+	if len(current) == 0 {
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used, none of the [%d] devices the host reports is named [%s] so the metric is inert and always ok", len(counters), strings.Join(diskDevices, "] or [")), nil
+	}
+	taken := config.NowIncludingSuspend()
+	previous, previousTaken, hadSample := s.samples, s.taken, s.hasSample
+	s.samples, s.taken, s.hasSample = current, taken, true
+	if !hadSample {
+		return 0, derivation{}, errProbeWarmingUp
+	}
+	elapsed := taken.Sub(previousTaken).Seconds()
+	if elapsed <= 0 {
+		return 0, derivation{}, fmt.Errorf("no disk operations sample taken, [%.3f] seconds elapsed between polls so a share of them cannot be computed", elapsed)
+	}
+	busiest, busiestPercent, busiestMillis := "", 0.0, 0.0
+	for name, now := range current {
+		then, had := previous[name]
+		if !had || now < then {
+			continue
+		}
+		millis := float64(now - then)
+		percent := millis / (elapsed * 1000.0) * 100.0
+		if busiest == "" || percent > busiestPercent {
+			busiest, busiestPercent, busiestMillis = name, percent, millis
+		}
+	}
+	if busiest == "" {
+		return 0, derivation{}, errProbeWarmingUp
+	}
+	return int8Percent(busiestPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] serviced operations for [%.0f] ms of [%.0f] ms elapsed across [%d] devices",
+		int8Percent(busiestPercent), busiest, busiestMillis, elapsed*1000.0, len(current)), nil
+}
+
+type networkLink struct {
+	name       string
+	statistics string
+	ratedBits  float64
+}
+
+type networkUsageSampler struct {
+	discovered bool
+	root       string
+	links      []networkLink
+	hasSample  bool
+	taken      time.Time
+	samples    map[string]uint64
+}
+
+func (s *networkUsageSampler) sample(roots []string) (int8, derivation, error) {
+	s.discover(roots)
+	if len(s.links) == 0 {
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used, discovery found no physical interface carrying a rated link speed under [%s] so the metric is inert and always ok", s.root), nil
+	}
+	current := make(map[string]uint64, len(s.links))
+	var rejected []string
+	for _, link := range s.links {
+		received, receivedErr := networkCounter(filepath.Join(link.statistics, networkReceivedFile))
+		transmitted, transmittedErr := networkCounter(filepath.Join(link.statistics, networkTransmittedFile))
+		if receivedErr != nil || transmittedErr != nil {
+			rejected = append(rejected, fmt.Sprintf("%s unreadable with [%v] and [%v]", link.name, receivedErr, transmittedErr))
+			continue
+		}
+		current[link.name] = received + transmitted
+	}
+	if len(current) == 0 {
+		return 0, derivation{}, fmt.Errorf("no network sample taken, none of the [%d] discovered interfaces under [%s] answered, rejected [%s] [%w]",
+			len(s.links), s.root, strings.Join(rejected, ", "), errEnvironment)
+	}
+	taken := config.NowIncludingSuspend()
+	previous, previousTaken, hadSample := s.samples, s.taken, s.hasSample
+	s.samples, s.taken, s.hasSample = current, taken, true
+	if !hadSample {
+		return 0, derivation{}, errProbeWarmingUp
+	}
+	elapsed := taken.Sub(previousTaken).Seconds()
+	if elapsed <= 0 {
+		return 0, derivation{}, fmt.Errorf("no network sample taken, [%.3f] seconds elapsed between polls so a rate cannot be computed", elapsed)
+	}
+	busiest, busiestPercent, busiestBits, busiestRated := "", 0.0, 0.0, 0.0
+	for _, link := range s.links {
+		now, read := current[link.name]
+		then, had := previous[link.name]
+		if !read || !had || now < then {
+			continue
+		}
+		bits := float64(now-then) * networkBitsPerByte / elapsed
+		percent := bits / link.ratedBits * 100.0
+		if busiest == "" || percent > busiestPercent {
+			busiest, busiestPercent, busiestBits, busiestRated = link.name, percent, bits, link.ratedBits
+		}
+	}
+	if busiest == "" {
+		return 0, derivation{}, errProbeWarmingUp
+	}
+	return int8Percent(busiestPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] moved [%.1f] Mbit per second of its rated [%.0f] Mbit across [%d] interfaces over [%.1f] s",
+		int8Percent(busiestPercent), busiest, busiestBits/networkBitsPerMbit, busiestRated/networkBitsPerMbit, len(current), elapsed), nil
+}
+
+func (s *networkUsageSampler) discover(roots []string) {
+	if s.discovered {
+		return
+	}
+	s.discovered = true
+	discoverStart := time.Now()
+	s.root = strings.Join(roots, ", ")
+	for _, root := range roots {
+		classDir := filepath.Join(root, networkClassPath)
+		entries, err := os.ReadDir(classDir)
+		if err != nil {
+			continue
+		}
+		s.root = classDir
+		var virtual []string
+		for _, entry := range entries {
+			name := entry.Name()
+			if _, deviceErr := os.Stat(filepath.Join(classDir, name, networkDeviceDir)); deviceErr != nil {
+				virtual = append(virtual, name)
+				continue
+			}
+			rated, ratedErr := networkCounter(filepath.Join(classDir, name, networkSpeedFile))
+			if ratedErr != nil || rated == 0 {
+				virtual = append(virtual, name)
+				continue
+			}
+			s.links = append(s.links, networkLink{
+				name:       name,
+				statistics: filepath.Join(classDir, name, networkStatisticsDir),
+				ratedBits:  float64(rated) * networkBitsPerMbit,
+			})
+		}
+		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "rated [%d] physical interfaces of [%d] under [%s], not rated [%s]",
+			len(s.links), len(entries), classDir, strings.Join(virtual, ", "))
+		return
+	}
+	scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "rated [0] physical interfaces, no interface directory exists under [%s]", s.root)
+}
+
+func hostRoots(mount string) []string {
+	if mount == "" {
+		return []string{networkBareRoot}
+	}
+	return []string{mount, networkBareRoot}
+}
+
+func networkCounter(path string) (uint64, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	value, err := strconv.ParseInt(strings.TrimSpace(string(data)), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	if value < 0 {
+		return 0, fmt.Errorf("read [%d] which is not a counter", value)
+	}
+	return uint64(value), nil
+}
+
+func diskNamed(name string) bool {
+	for _, device := range diskDevices {
+		if strings.HasPrefix(name, device) {
+			return true
+		}
+	}
+	return false
+}
+
+const (
+	networkBareRoot        = "/"
+	networkClassPath       = "sys/class/net"
+	networkStatisticsDir   = "statistics"
+	networkDeviceDir       = "device"
+	networkReceivedFile    = "rx_bytes"
+	networkTransmittedFile = "tx_bytes"
+	networkSpeedFile       = "speed"
+	networkBitsPerByte     = 8.0
+	networkBitsPerMbit     = 1000000.0
+)
+
+var diskDevices = []string{"sd", "nvme"}

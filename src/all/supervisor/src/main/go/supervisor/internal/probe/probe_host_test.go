@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
@@ -791,29 +793,45 @@ func TestProbeHost_UsedBackupSpace(t *testing.T) {
 func TestProbeHost_UsedSwapSpace(t *testing.T) {
 	tests := []struct {
 		name          string
+		total         uint64
+		used          uint64
+		free          uint64
+		readerErr     error
+		noReader      bool
 		expectedValue int8
-		expectedOK    bool
+		expectedInert bool
 		expectedError bool
 	}{
-		{
-			name:          "sad_unimplemented_metric_faults",
-			expectedValue: 0,
-			expectedOK:    false,
-			expectedError: true,
-		},
+		{name: "happy half of the swap used", total: 8 << 30, used: 4 << 30, free: 4 << 30, expectedValue: 50, expectedInert: false, expectedError: false},
+		{name: "happy rounds to the nearest percent", total: 1000, used: 335, free: 665, expectedValue: 34, expectedInert: false, expectedError: false},
+		{name: "happy no swap configured is inert", total: 0, used: 0, free: 0, expectedValue: 0, expectedInert: true, expectedError: false},
+		{name: "sad reader fails", total: 0, used: 0, free: 0, readerErr: errors.New("expected error during unit test"), expectedValue: 0, expectedInert: false, expectedError: true},
+		{name: "sad probe built without a reader", noReader: true, expectedValue: 0, expectedInert: false, expectedError: true},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
-			value, _, err := probe.usedSwapSpace()
-			if testCase.expectedError && err == nil {
-				t.Fatalf("expected error but got nil")
+			probe.swapMemory = func() (*mem.SwapMemoryStat, error) {
+				if testCase.readerErr != nil {
+					return nil, testCase.readerErr
+				}
+				return &mem.SwapMemoryStat{Total: testCase.total, Used: testCase.used, Free: testCase.free}, nil
 			}
-			if !testCase.expectedError && err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			if testCase.noReader {
+				probe.swapMemory = nil
 			}
-			if testCase.expectedOK && value != testCase.expectedValue {
-				t.Fatalf("expected %d, got %d", testCase.expectedValue, value)
+			value, derived, err := probe.usedSwapSpace()
+			if testCase.expectedError != (err != nil) {
+				t.Fatalf("error: got %v want %v", err, testCase.expectedError)
+			}
+			if err != nil {
+				return
+			}
+			if value != testCase.expectedValue {
+				t.Errorf("value: got %d want %d", value, testCase.expectedValue)
+			}
+			if derived.inert != testCase.expectedInert {
+				t.Errorf("inert: got %v want %v", derived.inert, testCase.expectedInert)
 			}
 		})
 	}
@@ -822,91 +840,202 @@ func TestProbeHost_UsedSwapSpace(t *testing.T) {
 func TestProbeHost_UsedDiskOps(t *testing.T) {
 	tests := []struct {
 		name          string
+		previous      map[string]uint64
+		counters      map[string]disk.IOCountersStat
+		readerErr     error
+		elapsed       time.Duration
 		expectedValue int8
-		expectedOK    bool
+		expectedInert bool
+		expectedWarm  bool
 		expectedError bool
 	}{
-		{
-			name:          "sad_unimplemented_metric_faults",
-			expectedValue: 0,
-			expectedOK:    false,
-			expectedError: true,
-		},
+		{name: "happy busiest drive of several", previous: map[string]uint64{"sda": 1000, "nvme0n1": 1000}, counters: map[string]disk.IOCountersStat{"sda": {IoTime: 1500}, "nvme0n1": {IoTime: 2000}}, elapsed: 2 * time.Second, expectedValue: 50, expectedInert: false, expectedWarm: false, expectedError: false},
+		{name: "happy idle drive reads zero", previous: map[string]uint64{"sda": 1000}, counters: map[string]disk.IOCountersStat{"sda": {IoTime: 1000}}, elapsed: 2 * time.Second, expectedValue: 0, expectedInert: false, expectedWarm: false, expectedError: false},
+		{name: "happy saturated drive caps at a hundred", previous: map[string]uint64{"sda": 0}, counters: map[string]disk.IOCountersStat{"sda": {IoTime: 4000}}, elapsed: 2 * time.Second, expectedValue: 100, expectedInert: false, expectedWarm: false, expectedError: false},
+		{name: "happy unnamed devices are inert", previous: nil, counters: map[string]disk.IOCountersStat{"loop0": {IoTime: 10}, "dm-0": {IoTime: 20}}, elapsed: 2 * time.Second, expectedValue: 0, expectedInert: true, expectedWarm: false, expectedError: false},
+		{name: "happy first poll warms up", previous: nil, counters: map[string]disk.IOCountersStat{"sda": {IoTime: 1000}}, elapsed: 0, expectedValue: 0, expectedInert: false, expectedWarm: true, expectedError: true},
+		{name: "happy counter reset warms up", previous: map[string]uint64{"sda": 9000}, counters: map[string]disk.IOCountersStat{"sda": {IoTime: 10}}, elapsed: 2 * time.Second, expectedValue: 0, expectedInert: false, expectedWarm: true, expectedError: true},
+		{name: "sad reader fails", readerErr: errors.New("expected error during unit test"), expectedValue: 0, expectedInert: false, expectedWarm: false, expectedError: true},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			probe := newHostProbe()
-			value, _, err := probe.usedDiskOps()
-			if testCase.expectedError && err == nil {
-				t.Fatalf("expected error but got nil")
+			sampler := &diskUsageSampler{}
+			if testCase.previous != nil {
+				sampler.hasSample = true
+				sampler.samples = testCase.previous
+				sampler.taken = config.NowIncludingSuspend().Add(-testCase.elapsed)
 			}
-			if !testCase.expectedError && err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			value, derived, err := sampler.sample(func(...string) (map[string]disk.IOCountersStat, error) {
+				return testCase.counters, testCase.readerErr
+			})
+			if testCase.expectedError != (err != nil) {
+				t.Fatalf("error: got %v want %v", err, testCase.expectedError)
 			}
-			if testCase.expectedOK && value != testCase.expectedValue {
-				t.Fatalf("expected %d, got %d", testCase.expectedValue, value)
+			if testCase.expectedWarm != errors.Is(err, errProbeWarmingUp) {
+				t.Fatalf("warming: got %v want %v", err, testCase.expectedWarm)
+			}
+			if err != nil {
+				return
+			}
+			if value != testCase.expectedValue {
+				t.Errorf("value: got %d want %d", value, testCase.expectedValue)
+			}
+			if derived.inert != testCase.expectedInert {
+				t.Errorf("inert: got %v want %v", derived.inert, testCase.expectedInert)
 			}
 		})
 	}
 }
 
 func TestProbeHost_UsedNetwork(t *testing.T) {
+	gigabitBytesPerSecond := uint64(1000 * networkBitsPerMbit / networkBitsPerByte)
 	tests := []struct {
 		name          string
+		links         map[string]networkInterfaceFixture
+		previous      map[string]uint64
+		elapsed       time.Duration
 		expectedValue int8
-		expectedOK    bool
+		expectedInert bool
+		expectedWarm  bool
 		expectedError bool
 	}{
 		{
-			name:          "sad_unimplemented_metric_faults",
-			expectedValue: 0,
-			expectedOK:    false,
-			expectedError: true,
+			name: "happy busiest physical interface against its link speed",
+			links: map[string]networkInterfaceFixture{
+				"end0": {physical: true, speed: 1000, bytes: gigabitBytesPerSecond / 4},
+				"enp1": {physical: true, speed: 1000, bytes: gigabitBytesPerSecond / 2},
+			},
+			previous: map[string]uint64{"end0": 0, "enp1": 0}, elapsed: time.Second, expectedValue: 50, expectedInert: false, expectedWarm: false, expectedError: false,
+		},
+		{
+			name: "happy bridges veths and loopback are not rated",
+			links: map[string]networkInterfaceFixture{
+				"end0":     {physical: true, speed: 1000, bytes: gigabitBytesPerSecond / 10},
+				"docker0":  {physical: false, bytes: gigabitBytesPerSecond},
+				"veth0d4d": {physical: false, bytes: gigabitBytesPerSecond},
+				"lo":       {physical: false, bytes: gigabitBytesPerSecond},
+			},
+			previous: map[string]uint64{"end0": 0}, elapsed: time.Second, expectedValue: 10, expectedInert: false, expectedWarm: false, expectedError: false,
+		},
+		{
+			name:    "happy an unrated physical interface is skipped",
+			links:   map[string]networkInterfaceFixture{"wlp1s0f0": {physical: true, speed: 0, bytes: 10}},
+			elapsed: time.Second, expectedValue: 0, expectedInert: true, expectedWarm: false, expectedError: false,
+		},
+		{
+			name:    "happy only virtual interfaces is inert",
+			links:   map[string]networkInterfaceFixture{"eth0": {physical: false, bytes: 10}},
+			elapsed: time.Second, expectedValue: 0, expectedInert: true, expectedWarm: false, expectedError: false,
+		},
+		{
+			name:    "happy first poll warms up",
+			links:   map[string]networkInterfaceFixture{"end0": {physical: true, speed: 1000, bytes: 10}},
+			elapsed: 0, expectedValue: 0, expectedInert: false, expectedWarm: true, expectedError: true,
+		},
+		{
+			name:     "happy counter reset warms up",
+			links:    map[string]networkInterfaceFixture{"end0": {physical: true, speed: 1000, bytes: 10}},
+			previous: map[string]uint64{"end0": 9000}, elapsed: time.Second, expectedValue: 0, expectedInert: false, expectedWarm: true, expectedError: true,
+		},
+		{
+			name:    "sad no interface directory is inert",
+			elapsed: time.Second, expectedValue: 0, expectedInert: true, expectedWarm: false, expectedError: false,
 		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			probe := newHostProbe()
-			value, _, err := probe.usedNetwork()
-			if testCase.expectedError && err == nil {
-				t.Fatalf("expected error but got nil")
+			sampler := &networkUsageSampler{}
+			if testCase.previous != nil {
+				sampler.hasSample = true
+				sampler.samples = testCase.previous
+				sampler.taken = config.NowIncludingSuspend().Add(-testCase.elapsed)
 			}
-			if !testCase.expectedError && err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			value, derived, err := sampler.sample([]string{writeNetworkTree(t, testCase.links)})
+			if testCase.expectedError != (err != nil) {
+				t.Fatalf("error: got %v want %v", err, testCase.expectedError)
 			}
-			if testCase.expectedOK && value != testCase.expectedValue {
-				t.Fatalf("expected %d, got %d", testCase.expectedValue, value)
+			if testCase.expectedWarm != errors.Is(err, errProbeWarmingUp) {
+				t.Fatalf("warming: got %v want %v", err, testCase.expectedWarm)
+			}
+			if err != nil {
+				return
+			}
+			if value != testCase.expectedValue {
+				t.Errorf("value: got %d want %d", value, testCase.expectedValue)
+			}
+			if derived.inert != testCase.expectedInert {
+				t.Errorf("inert: got %v want %v", derived.inert, testCase.expectedInert)
 			}
 		})
+	}
+}
+
+type networkInterfaceFixture struct {
+	physical bool
+	speed    int
+	bytes    uint64
+}
+
+func writeNetworkTree(t *testing.T, links map[string]networkInterfaceFixture) string {
+	t.Helper()
+	root := t.TempDir()
+	if len(links) == 0 {
+		return root
+	}
+	for name, link := range links {
+		dir := filepath.Join(root, networkClassPath, name)
+		if err := os.MkdirAll(filepath.Join(dir, networkStatisticsDir), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+		if link.physical {
+			if err := os.MkdirAll(filepath.Join(dir, networkDeviceDir), 0o755); err != nil {
+				t.Fatalf("mkdir %s: %v", dir, err)
+			}
+			writeNetworkFile(t, filepath.Join(dir, networkSpeedFile), strconv.Itoa(link.speed))
+		}
+		writeNetworkFile(t, filepath.Join(dir, networkStatisticsDir, networkReceivedFile), strconv.FormatUint(link.bytes, 10))
+		writeNetworkFile(t, filepath.Join(dir, networkStatisticsDir, networkTransmittedFile), "0")
+	}
+	return root
+}
+
+func writeNetworkFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content+"\n"), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
 	}
 }
 
 func TestProbeHost_RunningTime(t *testing.T) {
 	tests := []struct {
 		name          string
+		seconds       uint64
+		readerErr     error
+		noReader      bool
 		expectedValue float64
-		expectedOK    bool
 		expectedError bool
 	}{
-		{
-			name:          "sad_unimplemented_metric_faults",
-			expectedValue: 0,
-			expectedOK:    false,
-			expectedError: true,
-		},
+		{name: "happy reports the seconds since boot", seconds: 93600, expectedValue: 93600, expectedError: false},
+		{name: "happy a host just booted reports zero", seconds: 0, expectedValue: 0, expectedError: false},
+		{name: "sad reader fails", readerErr: errors.New("expected error during unit test"), expectedValue: 0, expectedError: true},
+		{name: "sad probe built without a reader", noReader: true, expectedValue: 0, expectedError: true},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			probe := newHostProbe()
+			probe.upTime = func() (uint64, error) { return testCase.seconds, testCase.readerErr }
+			if testCase.noReader {
+				probe.upTime = nil
+			}
 			value, _, err := probe.runningTime()
-			if testCase.expectedError && err == nil {
-				t.Fatalf("expected error but got nil")
+			if testCase.expectedError != (err != nil) {
+				t.Fatalf("error: got %v want %v", err, testCase.expectedError)
 			}
-			if !testCase.expectedError && err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			if err != nil {
+				return
 			}
-			if testCase.expectedOK && value != testCase.expectedValue {
-				t.Fatalf("expected %f, got %f", testCase.expectedValue, value)
+			if value != testCase.expectedValue {
+				t.Errorf("value: got %f want %f", value, testCase.expectedValue)
 			}
 		})
 	}

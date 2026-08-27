@@ -44,6 +44,7 @@ type servicesProbe struct {
 	configuredServiceNames []string
 	installMissingLogged   string
 	prevCPUStats           map[string]container.CPUStats
+	prevIOStats            map[string]serviceIOSample
 
 	dockerClient     *client.Client
 	newDockerClient  func() (*client.Client, error)
@@ -71,6 +72,7 @@ func newServicesProbe() *servicesProbe {
 		restartCountFloat:    make(map[string]*stats.FloatStats),
 
 		prevCPUStats: make(map[string]container.CPUStats),
+		prevIOStats:  make(map[string]serviceIOSample),
 
 		newDockerClient: func() (*client.Client, error) {
 			return client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -371,6 +373,11 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			delete(p.prevCPUStats, prevID)
 		}
 	}
+	for prevID := range p.prevIOStats {
+		if _, exists := activeIDs[prevID]; !exists {
+			delete(p.prevIOStats, prevID)
+		}
+	}
 	for _, serviceContainer := range containers {
 		name := ""
 		for _, rawName := range serviceContainer.Names {
@@ -397,6 +404,8 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 		if err != nil {
 			service.usedProcessorErr = err
 			service.usedMemoryErr = err
+			service.usedDiskOpsErr = err
+			service.usedNetworkErr = err
 		} else {
 			prev, hasPrev := p.prevCPUStats[serviceContainer.ID]
 			p.prevCPUStats[serviceContainer.ID] = fetchedStats.CPUStats
@@ -418,6 +427,21 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			} else {
 				service.usedMemoryValue = usedMemory
 				service.usedMemoryDerived = memoryDerived
+			}
+			fetchedRates := p.ioRates(name, serviceContainer.ID, fetchedStats)
+			usedDiskOps, diskOpsDerived, diskOpsErr := p.diskOpsUsed(name, fetchedRates)
+			if diskOpsErr != nil {
+				service.usedDiskOpsErr = diskOpsErr
+			} else {
+				service.usedDiskOpsValue = usedDiskOps
+				service.usedDiskOpsDerived = diskOpsDerived
+			}
+			usedNetwork, networkDerived, networkErr := p.networkUsed(name, fetchedRates)
+			if networkErr != nil {
+				service.usedNetworkErr = networkErr
+			} else {
+				service.usedNetworkValue = usedNetwork
+				service.usedNetworkDerived = networkDerived
 			}
 		}
 		fetchedInspect, err := p.fetchInspect(ctx, dockerClient, serviceContainer.ID)
@@ -536,6 +560,8 @@ func syncStatsFields[V any](statsNames map[string]V, polledNames map[string]stru
 type service struct {
 	usedProcessorDerived  derivation
 	usedMemoryDerived     derivation
+	usedDiskOpsDerived    derivation
+	usedNetworkDerived    derivation
 	healthStatusDerived   derivation
 	versionDerived        derivation
 	upTimeDerived         derivation
@@ -558,6 +584,10 @@ type service struct {
 	usedProcessorErr      error
 	usedMemoryValue       int8
 	usedMemoryErr         error
+	usedDiskOpsValue      int8
+	usedDiskOpsErr        error
+	usedNetworkValue      int8
+	usedNetworkErr        error
 	upTimeValue           float64
 	upTimeErr             error
 	restartCountValue     float64
@@ -617,13 +647,11 @@ func (s *service) usedMemory() (int8, derivation, error) {
 }
 
 func (s *service) usedDiskOps() (int8, derivation, error) {
-	// TODO: Provide implementation
-	return 0, derivation{}, errUnimplemented
+	return s.usedDiskOpsValue, s.usedDiskOpsDerived, s.usedDiskOpsErr
 }
 
 func (s *service) usedNetwork() (int8, derivation, error) {
-	// TODO: Provide implementation
-	return 0, derivation{}, errUnimplemented
+	return s.usedNetworkValue, s.usedNetworkDerived, s.usedNetworkErr
 }
 
 func (s *service) upTime() (float64, derivation, error) {
@@ -711,6 +739,79 @@ func (p *servicesProbe) memoryUsed(name string, response container.StatsResponse
 	usedPercent := (used / float64(response.MemoryStats.Limit)) * 100.0
 	return stats.ConvertToInt(usedPercent), derived(scribe.ActionSample, "computed [%3d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
 		stats.ConvertToInt(usedPercent), name, int64(used)/bytesPerMiB, int64(response.MemoryStats.Limit)/bytesPerMiB, int64(cache)/bytesPerMiB), nil
+}
+
+func (p *servicesProbe) diskOpsUsed(name string, rates serviceIORates) (int8, derivation, error) {
+	if rates.blockEntries == 0 {
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used disk ops, service [%s] reports no block device counters so the metric is inert and always ok", name), nil
+	}
+	if rates.err != nil {
+		return 0, derivation{}, rates.err
+	}
+	usedPercent := rates.blockBytes / metric.UsedDiskOpsBudgetBytes * 100.0
+	return int8Percent(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used disk ops, service [%s] moved [%.1f] MiB per second of the [%.0f] MiB budget across [%d] devices over [%.1f] s",
+		int8Percent(usedPercent), name, rates.blockBytes/bytesPerMiB, metric.UsedDiskOpsBudgetMiB, rates.blockEntries, rates.elapsed), nil
+}
+
+func (p *servicesProbe) networkUsed(name string, rates serviceIORates) (int8, derivation, error) {
+	if rates.networkInterfaces == 0 {
+		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used network, service [%s] shares another network namespace so docker reports no interface counters and the metric is inert and always ok", name), nil
+	}
+	if rates.err != nil {
+		return 0, derivation{}, rates.err
+	}
+	usedPercent := rates.networkBytes * serviceBitsPerByte / metric.UsedNetworkBudgetBits * 100.0
+	return int8Percent(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used network, service [%s] moved [%.1f] Mbit per second of the [%.0f] Mbit budget across [%d] interfaces over [%.1f] s",
+		int8Percent(usedPercent), name, rates.networkBytes*serviceBitsPerByte/serviceBitsPerMbit, metric.UsedNetworkBudgetMbit, rates.networkInterfaces, rates.elapsed), nil
+}
+
+func (p *servicesProbe) ioRates(name, id string, response container.StatsResponse) serviceIORates {
+	blockMoved, blockEntries := serviceBlockBytes(response)
+	networkMoved, networkInterfaces := serviceNetworkBytes(response)
+	rates := serviceIORates{blockEntries: blockEntries, networkInterfaces: networkInterfaces}
+	taken := response.Read
+	if taken.IsZero() {
+		taken = config.NowIncludingSuspend()
+	}
+	previous, hadSample := p.prevIOStats[id]
+	p.prevIOStats[id] = serviceIOSample{taken: taken, blockBytes: blockMoved, networkBytes: networkMoved}
+	if !hadSample {
+		rates.err = errProbeWarmingUp
+		return rates
+	}
+	rates.elapsed = taken.Sub(previous.taken).Seconds()
+	if rates.elapsed <= 0 {
+		rates.err = fmt.Errorf("no throughput sample taken, service [%s] reports [%.3f] seconds elapsed between polls so a rate cannot be computed", name, rates.elapsed)
+		return rates
+	}
+	if blockMoved < previous.blockBytes || networkMoved < previous.networkBytes {
+		rates.err = errProbeWarmingUp
+		return rates
+	}
+	rates.blockBytes = float64(blockMoved-previous.blockBytes) / rates.elapsed
+	rates.networkBytes = float64(networkMoved-previous.networkBytes) / rates.elapsed
+	return rates
+}
+
+func serviceBlockBytes(response container.StatsResponse) (uint64, int) {
+	moved, entries := uint64(0), 0
+	for _, entry := range response.BlkioStats.IoServiceBytesRecursive {
+		operation := strings.ToLower(entry.Op)
+		if operation != serviceBlockRead && operation != serviceBlockWrite {
+			continue
+		}
+		moved += entry.Value
+		entries++
+	}
+	return moved, entries
+}
+
+func serviceNetworkBytes(response container.StatsResponse) (uint64, int) {
+	moved := uint64(0)
+	for _, network := range response.Networks {
+		moved += network.RxBytes + network.TxBytes
+	}
+	return moved, len(response.Networks)
 }
 
 func (p *servicesProbe) healthStatus(name string, containerInfo container.InspectResponse) (bool, derivation, error) {
@@ -835,4 +936,26 @@ const (
 	servicesDockerTimeoutSecs            = 2
 	servicesDockerContainerIgnorePattern = "reaper_"
 	versionUnknown                       = "-"
+)
+
+type serviceIOSample struct {
+	taken        time.Time
+	blockBytes   uint64
+	networkBytes uint64
+}
+
+type serviceIORates struct {
+	blockBytes        float64
+	networkBytes      float64
+	elapsed           float64
+	blockEntries      int
+	networkInterfaces int
+	err               error
+}
+
+const (
+	serviceBlockRead   = "read"
+	serviceBlockWrite  = "write"
+	serviceBitsPerByte = 8.0
+	serviceBitsPerMbit = 1000000.0
 )

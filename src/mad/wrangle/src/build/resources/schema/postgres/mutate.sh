@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     ;;
   -h | --help | -*)
     echo "Usage: ${0} [-v|--verbose] [-h|--help]"
-    echo "       influxdb3 mutate rewrite renamed and delete dropped measures, run by hand and never by fab"
+    echo "       postgres mutate rewrite renamed and delete dropped measures, run by hand and never by fab"
     exit 2
     ;;
   *)
@@ -30,7 +30,7 @@ while [ "${MODULE_DIR}" != "/" ] && [ ! -f "${MODULE_DIR}/.env" ]; do
 done
 
 if [ ! -f "${MODULE_DIR}/.env" ]; then
-  echo "Schema script [supervisor] could not find env file [.env] searching up from [${ROOT_DIR}]" >&2
+  echo "Schema script [wrangle] could not find env file [.env] searching up from [${ROOT_DIR}]" >&2
   exit 1
 fi
 set -a
@@ -42,41 +42,23 @@ if [ "${SCHEMA_VERBOSE}" == true ]; then
   set -x
 fi
 
-DATABASE_NAME="${DATABASE_NAME:-${SUPERVISOR_DATABASE_NAME:-${INFLUXDB3_DATABASE_HOME:-}}}"
-DATABASE_TOKEN="${DATABASE_TOKEN:-${SUPERVISOR_DATABASE_TOKEN:-${INFLUXDB3_TOKEN_ADMIN:-}}}"
+DATABASE_USER="${DATABASE_USER:-${WRANGLE_DATABASE_USER:-${POSTGRES_USER_WRANGLE:-}}}"
+DATABASE_NAME="${DATABASE_NAME:-${WRANGLE_DATABASE_NAME:-${POSTGRES_DATABASE_WRANGLE:-}}}"
+DATABASE_PASSWORD="${DATABASE_PASSWORD:-${WRANGLE_DATABASE_PASSWORD:-${POSTGRES_KEY_WRANGLE:-}}}"
 
-for VARIABLE in DATABASE_NAME DATABASE_TOKEN; do
+for VARIABLE in DATABASE_USER DATABASE_NAME DATABASE_PASSWORD; do
   if [ -z "${!VARIABLE}" ]; then
-    echo "Schema script [supervisor] could not resolve [${VARIABLE}] from it or any fallback, declare it in the module env files" >&2
+    echo "Schema script [wrangle] could not resolve [${VARIABLE}] from it or any fallback, declare it in the module env files" >&2
     exit 1
   fi
 done
 
-query() {
-  local response status
-  response="$(curl -sS -w '\n%{http_code}' -X POST \
-    "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/query_sql" \
-    -H "Authorization: Bearer ${DATABASE_TOKEN}" \
-    -H "Content-Type: application/json" \
-    --data-binary "$(jq -n --arg db "${DATABASE_NAME}" --arg q "$1" --arg format "${2:-json}" \
-      '{db: $db, q: $q, format: $format}')")"
-  status="${response##*$'\n'}"
-  printf '%s' "${response%$'\n'*}"
-  [ "${status}" = "200" ]
-}
+PSQL=(psql -h "${POSTGRES_SERVICE_PROD}" -p "${POSTGRES_API_PORT}" -U "${DATABASE_USER}" -d "${DATABASE_NAME}")
+export PGPASSWORD="${DATABASE_PASSWORD}"
+export PGTZ="${TZ:-UTC}"
 
-write_lp() {
-  local response status
-  response="$(curl -sS -w '\n%{http_code}' -X POST \
-    "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/write_lp?db=${DATABASE_NAME}&precision=nanosecond" \
-    -H "Authorization: Bearer ${DATABASE_TOKEN}" \
-    -H "Content-Type: text/plain" \
-    --data-binary @-)"
-  status="${response##*$'\n'}"
-  if [ "${status}" != "204" ] && [ "${status}" != "200" ]; then
-    printf 'write failed with status [%s] body [%s]\n' "${status}" "${response%$'\n'*}" >&2
-    return 1
-  fi
+query() {
+  "${PSQL[@]}" -q -t -A -v ON_ERROR_STOP=1 -c "SELECT row_to_json(result) FROM ($1) AS result" 2>&1
 }
 
 fail() {
@@ -177,51 +159,16 @@ query_sql() {
   [ "${faults}" = 0 ]
 }
 
-printf '\nSchema mutate [%s] against [%s]\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
+printf '\nSchema mutate [%s] against [%s]\n' "wrangle" "${POSTGRES_SERVICE_PROD}"
 FAULTS=0
-POINTS=0
-for SQL_FILE in "${ROOT_DIR}"/mutate/rename/*.sql; do
+for SQL_FILE in "${ROOT_DIR}"/mutate/rename/*.sql "${ROOT_DIR}"/mutate/drop/*.sql; do
   [ -e "${SQL_FILE}" ] || continue
-  printf -- '\n-- rename/%s\n\n' "$(basename "${SQL_FILE}")"
-  while IFS= read -r STATEMENT; do
-    [ -z "${STATEMENT}" ] && continue
-    if ! RESULT="$(query "${STATEMENT}")"; then
-      fail "${STATEMENT}" "${RESULT}"
-      FAULTS=$((FAULTS + 1))
-      continue
-    fi
-    COUNT="$(printf '%s' "${RESULT}" | rows)"
-    if [ "${COUNT}" = "0" ]; then
-      printf 'read [0] points, nothing to backfill\n'
-      continue
-    fi
-    if ! printf '%s' "${RESULT}" | jq -r '.[].line' | write_lp; then
-      FAULTS=$((FAULTS + 1))
-      continue
-    fi
-    POINTS=$((POINTS + COUNT))
-    printf 'backfilled [%s] points\n' "${COUNT}"
-  done < <(statements < "${SQL_FILE}")
-done
-
-for SQL_FILE in "${ROOT_DIR}"/mutate/drop/*.sql; do
-  [ -e "${SQL_FILE}" ] || continue
-  printf -- '\n-- drop/%s\n\n' "$(basename "${SQL_FILE}")"
-  printf 'influxdb3 has no column delete, so a dropped measure stays in the catalog and is silenced in verify only\n\n'
-  while IFS= read -r STATEMENT; do
-    [ -z "${STATEMENT}" ] && continue
-    if ! RESULT="$(query "${STATEMENT}")"; then
-      fail "${STATEMENT}" "${RESULT}"
-      FAULTS=$((FAULTS + 1))
-      continue
-    fi
-    printf '%s\n' "${RESULT}" | table
-    printf '\n'
-  done < <(statements < "${SQL_FILE}")
+  SCHEMA_LABEL="$(dirname "${SQL_FILE}" | xargs basename)/$(basename "${SQL_FILE}")"
+  query_sql < "${SQL_FILE}" || FAULTS=$((FAULTS + 1))
 done
 
 if [ "${FAULTS}" != "0" ]; then
-  printf '\nSchema mutate [%s] failed [%s] statement(s)\n' "supervisor" "${FAULTS}" >&2
+  printf '\nSchema mutate [%s] failed [%s] statement(s)\n' "wrangle" "${FAULTS}" >&2
   exit 1
 fi
-printf '\nSchema mutate [%s] backfilled [%s] points with no faults\n' "supervisor" "${POINTS}"
+printf '\nSchema mutate [%s] rewrote and deleted with no faults\n' "wrangle"

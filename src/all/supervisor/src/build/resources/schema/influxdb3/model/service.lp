@@ -49,10 +49,10 @@
 #   field used_processor_trend % 6s [processor time used by the service across all cores, smoothed across the trend window]
 #   field used_memory % 6s [memory in use by the service, excluding page cache, against its ceiling]
 #   field used_memory_trend % 6s [memory in use by the service, excluding page cache, against its ceiling, smoothed across the trend window]
-#   field used_disk_ops % 6s [disk operations used by the service, not yet implemented]
-#   field used_disk_ops_trend % 6s [disk operations used by the service, not yet implemented, smoothed across the trend window]
-#   field used_network % 6s [network throughput used by the service, not yet implemented]
-#   field used_network_trend % 6s [network throughput used by the service, not yet implemented, smoothed across the trend window]
+#   field used_disk_ops % 6s [block device throughput used by the service against a 100 MiB per second budget]
+#   field used_disk_ops_trend % 6s [block device throughput used by the service against a 100 MiB per second budget, smoothed across the trend window]
+#   field used_network % 6s [network throughput used by the service against a 1000 Mbit per second budget]
+#   field used_network_trend % 6s [network throughput used by the service against a 1000 Mbit per second budget, smoothed across the trend window]
 #   field up_time s 6s [time the service container has been running] (not persisted)
 #   field max_memory MiB 6s [memory ceiling declared for the service in its compose file] (not persisted)
 #   field restart_count - 6s [restarts of the service container since it was created]

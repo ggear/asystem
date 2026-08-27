@@ -12,6 +12,7 @@ from asystem.schema.document import SchemaDatabaseDimension, SchemaUnreachable, 
 from asystem.schema.query import (
     BUCKET,
     NULL,
+    PENDING,
     SchemaDialect,
     banner,
     declared_entity,
@@ -108,11 +109,13 @@ def artifacts(document, module_name, options):
     if document.discovered:
         return written
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                          verify(document, options.renamed)), True)
-    for measurement, statements in mutate(document, options.renamed).items():
-        written["mutate/{}.sql".format(measurement)] = (statements, False)
+                                          verify(document, options.rename, options.drop)), True)
+    for measurement, statements in mutate(document, options.rename).items():
+        written["mutate/rename/{}.sql".format(measurement)] = (statements, False)
+    for measurement, statements in retire(document, options.drop).items():
+        written["mutate/drop/{}.sql".format(measurement)] = (statements, False)
     written["mutate.sh"] = (mutate_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                            _mutate_body(module_name)), True)
+                                          _mutate_body(module_name)), True)
     return written
 
 
@@ -293,10 +296,11 @@ def measurements(document):
     return sorted({relation.plugin for relation in document.relations})
 
 
-def verify(document, renamed=None):
+def verify(document, rename=None, drop=None):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
+    retired = sorted(set(rename or {}) | set(drop or ()))
     for measurement in measurements(document):
-        columns = {TIME, MODULE} | set(renamed or {})
+        columns = {TIME, MODULE} | set(retired)
         arms = []
         for relation in measured(document, measurement):
             columns.update(dimension.key for dimension in relation.dimensions)
@@ -310,12 +314,26 @@ def verify(document, renamed=None):
                     having=["count(*) FILTER (WHERE column_name = '{}') = 0".format(measure.key)]))
         arms.append(_undeclared(measurement, sorted(columns)))
         statements.append(unioned(arms, order_by=["fault", "measure"]))
+    if retired:
+        statements.append("-- retired measures still carried, reported as [{}] and warned about rather than failing"
+                          .format(PENDING))
+        for measurement in measurements(document):
+            statements.append(unioned([_pending(measurement, name) for name in retired],
+                                      order_by=["measure"]))
     return render_statements(statements)
 
 
-def mutate(document, renamed):
+def _pending(measurement, name):
+    return select(
+        [("'{}'".format(measurement), "relation"), ("'{}'".format(name), "measure"),
+         ("'{}'".format(NULL), "period"), ("'{}'".format(NULL), "unit"), ("'{}'".format(PENDING), "fault")],
+        "information_schema.columns", ["table_name = '{}'".format(measurement)],
+        having=["count(*) FILTER (WHERE column_name = '{}') > 0".format(name)])
+
+
+def mutate(document, rename):
     written = {}
-    sources = {new: old for old, new in (renamed or {}).items() if new}
+    sources = {new: old for old, new in (rename or {}).items() if new}
     for measurement in measurements(document):
         statements = []
         for relation in measured(document, measurement):
@@ -332,6 +350,27 @@ def mutate(document, renamed):
         if statements:
             written[measurement] = render_statements(statements)
     return written
+
+
+def retire(document, drop):
+    written = {}
+    if not drop:
+        return written
+    for measurement in measurements(document):
+        written[measurement] = render_statements([
+            "-- influxdb3 has no column delete and dropping the table would take every other column with it, "
+            "so a dropped measure stays in the catalog and this reports the residue it still carries",
+            unioned([_retired(measurement, name) for name in sorted(drop)], order_by=["measure"])])
+    return written
+
+
+def _retired(measurement, name):
+    return select(
+        [("'{}'".format(measurement), "relation"), ("'{}'".format(name), "measure"),
+         ("count({})".format(column(name)), "carried"),
+         ("CAST(min({}) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(TIME, column(name)), "oldest"),
+         ("CAST(max({}) FILTER (WHERE {} IS NOT NULL) AS VARCHAR)".format(TIME, column(name)), "newest")],
+        measurement)
 
 
 def _protocol(measurement, relation, measure, source):
@@ -356,8 +395,9 @@ def _mutate_body(module_name):
 printf '\\nSchema mutate [%s] against [%s]\\n' "{module}" "${{{target}}}"
 FAULTS=0
 POINTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/mutate/*.sql; do
+for SQL_FILE in "${{ROOT_DIR}}"/mutate/rename/*.sql; do
   [ -e "${{SQL_FILE}}" ] || continue
+  printf -- '\\n-- rename/%s\\n\\n' "$(basename "${{SQL_FILE}}")"
   while IFS= read -r STATEMENT; do
     [ -z "${{STATEMENT}}" ] && continue
     if ! RESULT="$(query "${{STATEMENT}}")"; then
@@ -366,7 +406,6 @@ for SQL_FILE in "${{ROOT_DIR}}"/mutate/*.sql; do
       continue
     fi
     COUNT="$(printf '%s' "${{RESULT}}" | rows)"
-    printf -- '\\n-- %s\\n\\n' "$(basename "${{SQL_FILE}}")"
     if [ "${{COUNT}}" = "0" ]; then
       printf 'read [0] points, nothing to backfill\\n'
       continue
@@ -377,6 +416,22 @@ for SQL_FILE in "${{ROOT_DIR}}"/mutate/*.sql; do
     fi
     POINTS=$((POINTS + COUNT))
     printf 'backfilled [%s] points\\n' "${{COUNT}}"
+  done < <(statements < "${{SQL_FILE}}")
+done
+
+for SQL_FILE in "${{ROOT_DIR}}"/mutate/drop/*.sql; do
+  [ -e "${{SQL_FILE}}" ] || continue
+  printf -- '\\n-- drop/%s\\n\\n' "$(basename "${{SQL_FILE}}")"
+  printf 'influxdb3 has no column delete, so a dropped measure stays in the catalog and is silenced in verify only\\n\\n'
+  while IFS= read -r STATEMENT; do
+    [ -z "${{STATEMENT}}" ] && continue
+    if ! RESULT="$(query "${{STATEMENT}}")"; then
+      fail "${{STATEMENT}}" "${{RESULT}}"
+      FAULTS=$((FAULTS + 1))
+      continue
+    fi
+    printf '%s\\n' "${{RESULT}}" | table
+    printf '\\n'
   done < <(statements < "${{SQL_FILE}}")
 done
 

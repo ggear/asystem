@@ -6,6 +6,7 @@ from os.path import abspath, exists, join
 from asystem.schema.query import (
     BUCKET,
     NULL,
+    PENDING,
     SchemaDialect,
     banner,
     declared_entity,
@@ -54,11 +55,13 @@ def artifacts(document, module_name, options):
                                               describe_statements(document, dialect)), True)
     written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                          verify(document, options.renamed)), True)
-    for table, statements in mutate(document, options.renamed).items():
-        written["mutate/{}.sql".format(table)] = (statements, False)
+                                          verify(document, options.rename, options.drop)), True)
+    for table, statements in mutate(document, options.rename).items():
+        written["mutate/rename/{}.sql".format(table)] = (statements, False)
+    for table, statements in retire(document, options.drop).items():
+        written["mutate/drop/{}.sql".format(table)] = (statements, False)
     written["mutate.sh"] = (mutate_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                            _mutate_body(module_name)), True)
+                                          _mutate_body(module_name)), True)
     return written
 
 
@@ -157,9 +160,10 @@ def leaf(relations, table, options):
     return "\n".join(lines) + "\n"
 
 
-def verify(document, renamed=None):
+def verify(document, rename=None, drop=None):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
-    observed = [literals("type", sorted(renamed))] if renamed else []
+    retired = sorted(set(rename or {}) | set(drop or ()))
+    observed = [literals("type", retired)] if retired else []
     for table, relations in _tabled(document).items():
         declared = [(relation.path,) + tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
         values = ",\n".join("    ('{}', '{}', '{}', '{}')".format(*tuple_) for tuple_ in declared)
@@ -172,6 +176,15 @@ def verify(document, renamed=None):
             "    ON d.type = o.type AND d.period = o.period AND d.unit = o.unit".format(
                 values, table, " WHERE " + " AND ".join(observed) if observed else ""),
             ["d.type IS NULL OR o.type IS NULL"], order_by=["fault", "measure"]))
+    if retired:
+        statements.append("-- retired measures still carried, reported as [{}] and warned about rather than failing"
+                          .format(PENDING))
+        for table in sorted(_tabled(document)):
+            statements.append(select(
+                [("'{}'".format(table), "relation"), ("type", "measure"), ("period", "period"), ("unit", "unit"),
+                 ("'{}'".format(PENDING), "fault")],
+                "(SELECT DISTINCT type, period, unit FROM {}) AS o".format(table),
+                [literals("type", retired, negate=False)], order_by=["measure"]))
     return render_statements(statements)
 
 
@@ -195,9 +208,9 @@ done
 """.format(banner=banner(), shipped=SHIPPED, module=module_name).strip() + "\n"
 
 
-def mutate(document, renamed):
+def mutate(document, rename):
     written = {}
-    sources = {new: old for old, new in (renamed or {}).items() if new}
+    sources = {new: old for old, new in (rename or {}).items() if new}
     for table, relations in _tabled(document).items():
         statements = []
         for relation in relations:
@@ -215,13 +228,24 @@ def mutate(document, renamed):
     return written
 
 
+def retire(document, drop):
+    written = {}
+    if not drop:
+        return written
+    for table in sorted(_tabled(document)):
+        written[table] = render_statements([
+            "-- delete the dropped measures, idempotent and touching no rows once run",
+            "DELETE FROM {}\nWHERE {}".format(table, literals("type", sorted(drop), negate=False))])
+    return written
+
+
 def _mutate_body(module_name):
     return """
 printf '\\nSchema mutate [%s] against [%s]\\n' "{module}" "${{{target}}}"
 FAULTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/mutate/*.sql; do
+for SQL_FILE in "${{ROOT_DIR}}"/mutate/rename/*.sql "${{ROOT_DIR}}"/mutate/drop/*.sql; do
   [ -e "${{SQL_FILE}}" ] || continue
-  SCHEMA_LABEL="$(basename "${{SQL_FILE}}")"
+  SCHEMA_LABEL="$(dirname "${{SQL_FILE}}" | xargs basename)/$(basename "${{SQL_FILE}}")"
   query_sql < "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
 done
 
@@ -229,7 +253,7 @@ if [ "${{FAULTS}}" != "0" ]; then
   printf '\\nSchema mutate [%s] failed [%s] statement(s)\\n' "{module}" "${{FAULTS}}" >&2
   exit 1
 fi
-printf '\\nSchema mutate [%s] rewrote with no faults\\n' "{module}"
+printf '\\nSchema mutate [%s] rewrote and deleted with no faults\\n' "{module}"
 """.format(target=TARGET, module=module_name)
 
 

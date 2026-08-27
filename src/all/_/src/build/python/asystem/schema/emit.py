@@ -23,7 +23,8 @@ DIALECTS = {
 
 def write_schema_database(document, module_name=None, schemas_dir=None,
                           database_dialect="influxdb3", database_time_column="timestamp", database_retention=None,
-                          database_timezone=None, database_entities=None, database_applier=False, database_renamed_measures=None):
+                          database_timezone=None, database_entities=None, database_applier=False,
+                          database_rename_measures=None, database_drop_measures=None):
     module_root = load_bootstrap_root()
     if module_name is None:
         module_name = basename(module_root)
@@ -38,9 +39,12 @@ def write_schema_database(document, module_name=None, schemas_dir=None,
     emitter = DIALECTS[database_dialect]
     if database_timezone is None:
         database_timezone = load_bootstrap_env_value("TZ", "UTC", filename=ENV, module_root=module_root)
+    rename = _rename_measures(database_rename_measures)
+    drop = _drop_measures(database_drop_measures)
+    _validate_retired(document, module_name, rename, drop)
     options = SchemaDatabaseOptions(time_column=database_time_column, retention=database_retention or "",
                                     timezone=database_timezone, applier=database_applier,
-                                    renamed=_renamed_measures(database_renamed_measures))
+                                    rename=rename, drop=drop)
     try:
         artifacts = emitter.artifacts(document, module_name, options)
     except SchemaUnreachable as unreachable:
@@ -51,12 +55,31 @@ def write_schema_database(document, module_name=None, schemas_dir=None,
     emitter.ship(document, module_name, module_root, schemas_dir, options)
 
 
-def _renamed_measures(renamed):
+def _rename_measures(rename):
     expanded = {}
-    for old, new in (renamed or {}).items():
+    for old, new in (rename or {}).items():
         expanded[old] = new or ""
         expanded["{}_trend".format(old)] = "{}_trend".format(new) if new else ""
     return expanded
+
+
+def _drop_measures(drop):
+    expanded = []
+    for key in drop or ():
+        expanded.extend((key, "{}_trend".format(key)))
+    return sorted(set(expanded))
+
+
+def _validate_retired(document, module_name, rename, drop):
+    both = sorted(set(rename) & set(drop))
+    if both:
+        raise ValueError("Build generate script [{}] measures {} are declared as both renamed and dropped, "
+                         "a retired measure has one successor or none".format(module_name, both))
+    declared = {measure.key for relation in document.relations for measure in relation.measures}
+    live = sorted((set(rename) | set(drop)) & declared)
+    if live:
+        raise ValueError("Build generate script [{}] measures {} are declared as renamed or dropped but the service "
+                         "still declares them, retire the declaration first".format(module_name, live))
 
 
 def write_schema_broker(source, module_name=None, schemas_dir=None,

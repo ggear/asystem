@@ -1,4 +1,4 @@
-from asystem.schema.query import TEXT, banner
+from asystem.schema.query import PENDING, TEXT, banner
 
 REPORT = r"""
 fail() {
@@ -227,7 +227,13 @@ SCHEMA_SQL
 printf '\\nSchema verify [%s] against [%s]\\n' "{module}" "${{{target}}}"
 printf -- '\\n-- %s\\n\\n' "verify"
 
+pending() {{
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end)
+    | map(select(.fault == "{pending}")) | length'
+}}
+
 FAULTS=0
+PENDING=0
 while IFS= read -r STATEMENT; do
   [ -z "${{STATEMENT}}" ] && continue
   if ! RESULT="$(query "${{STATEMENT}}")"; then
@@ -236,20 +242,25 @@ while IFS= read -r STATEMENT; do
   fi
   COUNT="$(printf '%s' "${{RESULT}}" | rows)"
   if [ "${{COUNT}}" != "0" ]; then
-    FAULTS=$((FAULTS + COUNT))
+    WAITING="$(printf '%s' "${{RESULT}}" | pending)"
+    PENDING=$((PENDING + WAITING))
+    FAULTS=$((FAULTS + COUNT - WAITING))
     printf '%s\\n' "${{RESULT}}" | table
     printf '\\n'
   fi
 done < <(verify_sql | statements)
 
+if [ "${{PENDING}}" != "0" ]; then
+  printf '\\nSchema verify [%s] found [%s] retired measure(s) still carried, see mutate.sh\\n' "{module}" "${{PENDING}}" >&2
+fi
 if [ "${{FAULTS}}" != "0" ]; then
   printf '\\nSchema verify [%s] found [%s] fault row(s)\\n' "{module}" "${{FAULTS}}" >&2
   exit 1
 fi
 printf '\\nSchema verify [%s] found no drift\\n' "{module}"
-""".format(target=target, module=module_name, sql=sql.strip()))
+""".format(target=target, module=module_name, sql=sql.strip(), pending=PENDING))
 
 
 def mutate_runner(module_name, dialect, target, connect, body):
-    return script(module_name, dialect, "mutate", "rewrite renamed measures, run by hand and never by fab",
+    return script(module_name, dialect, "mutate", "rewrite renamed and delete dropped measures, run by hand and never by fab",
                   connect, body)

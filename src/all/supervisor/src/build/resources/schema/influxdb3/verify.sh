@@ -806,13 +806,87 @@ WHERE
         'warn_temperature_trend'
     )
 ORDER BY fault, measure;
+
+-- retired measures still carried, reported as [pending] and warned about rather than failing
+SELECT
+    'supervisor'            AS relation,
+    'spin_fan_speed_of_max' AS measure,
+    '-'                     AS period,
+    '-'                     AS unit,
+    'pending'               AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'spin_fan_speed_of_max') > 0
+UNION ALL
+SELECT
+    'supervisor'                  AS relation,
+    'spin_fan_speed_of_max_trend' AS measure,
+    '-'                           AS period,
+    '-'                           AS unit,
+    'pending'                     AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'spin_fan_speed_of_max_trend') > 0
+UNION ALL
+SELECT
+    'supervisor'        AS relation,
+    'used_system_space' AS measure,
+    '-'                 AS period,
+    '-'                 AS unit,
+    'pending'           AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'used_system_space') > 0
+UNION ALL
+SELECT
+    'supervisor'              AS relation,
+    'used_system_space_trend' AS measure,
+    '-'                       AS period,
+    '-'                       AS unit,
+    'pending'                 AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'used_system_space_trend') > 0
+UNION ALL
+SELECT
+    'supervisor'              AS relation,
+    'warn_temperature_of_max' AS measure,
+    '-'                       AS period,
+    '-'                       AS unit,
+    'pending'                 AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'warn_temperature_of_max') > 0
+UNION ALL
+SELECT
+    'supervisor'                    AS relation,
+    'warn_temperature_of_max_trend' AS measure,
+    '-'                             AS period,
+    '-'                             AS unit,
+    'pending'                       AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'warn_temperature_of_max_trend') > 0
+ORDER BY measure;
 SCHEMA_SQL
 }
 
 printf '\nSchema verify [%s] against [%s]\n' "supervisor" "${INFLUXDB3_SERVICE_PROD}"
 printf -- '\n-- %s\n\n' "verify"
 
+pending() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end)
+    | map(select(.fault == "pending")) | length'
+}
+
 FAULTS=0
+PENDING=0
 while IFS= read -r STATEMENT; do
   [ -z "${STATEMENT}" ] && continue
   if ! RESULT="$(query "${STATEMENT}")"; then
@@ -821,12 +895,17 @@ while IFS= read -r STATEMENT; do
   fi
   COUNT="$(printf '%s' "${RESULT}" | rows)"
   if [ "${COUNT}" != "0" ]; then
-    FAULTS=$((FAULTS + COUNT))
+    WAITING="$(printf '%s' "${RESULT}" | pending)"
+    PENDING=$((PENDING + WAITING))
+    FAULTS=$((FAULTS + COUNT - WAITING))
     printf '%s\n' "${RESULT}" | table
     printf '\n'
   fi
 done < <(verify_sql | statements)
 
+if [ "${PENDING}" != "0" ]; then
+  printf '\nSchema verify [%s] found [%s] retired measure(s) still carried, see mutate.sh\n' "supervisor" "${PENDING}" >&2
+fi
 if [ "${FAULTS}" != "0" ]; then
   printf '\nSchema verify [%s] found [%s] fault row(s)\n' "supervisor" "${FAULTS}" >&2
   exit 1

@@ -38,13 +38,13 @@
 #   field used_share_space_trend % 6s [space used across the local share volumes, summed as one pool, smoothed across the trend window]
 #   field used_backup_space % 6s [backup volume space used, not yet implemented]
 #   field used_backup_space_trend % 6s [backup volume space used, not yet implemented, smoothed across the trend window]
-#   field used_swap_space % 6s [swap space used, not yet implemented]
-#   field used_swap_space_trend % 6s [swap space used, not yet implemented, smoothed across the trend window]
-#   field used_disk_ops % 6s [disk operations used against capacity, not yet implemented]
-#   field used_disk_ops_trend % 6s [disk operations used against capacity, not yet implemented, smoothed across the trend window]
-#   field used_network % 6s [network throughput used against capacity, not yet implemented]
-#   field used_network_trend % 6s [network throughput used against capacity, not yet implemented, smoothed across the trend window]
-#   field running_time s 6s [time the host has been up, not yet implemented] (not persisted)
+#   field used_swap_space % 6s [swap space in use against the total configured]
+#   field used_swap_space_trend % 6s [swap space in use against the total configured, smoothed across the trend window]
+#   field used_disk_ops % 6s [busiest drive's time spent servicing operations]
+#   field used_disk_ops_trend % 6s [busiest drive's time spent servicing operations, smoothed across the trend window]
+#   field used_network % 6s [busiest physical interface's throughput against its rated link speed]
+#   field used_network_trend % 6s [busiest physical interface's throughput against its rated link speed, smoothed across the trend window]
+#   field running_time s 6s [time the host has been up] (not persisted)
 #   field temperature °C 6s [hottest processor temperature, from the package, system on chip or offset drive sensor]
 #   field temperature_trend °C 6s [hottest processor temperature, from the package, system on chip or offset drive sensor, smoothed across the trend window]
 #   field services - 6s [every configured service is running and healthy] (not persisted)
