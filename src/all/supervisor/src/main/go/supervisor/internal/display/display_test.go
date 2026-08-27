@@ -1972,6 +1972,10 @@ func TestDisplay_LogScrolling(t *testing.T) {
 			display.Logging()
 			live := display.logAnchor
 			previous := live
+			livePage, livePages := display.logPagination()
+			if livePage != livePages {
+				t.Errorf("live page: got %d want %d", livePage, livePages)
+			}
 			for up := range testCase.ups {
 				display.logPageUp()
 				display.Logging()
@@ -1980,6 +1984,13 @@ func TestDisplay_LogScrolling(t *testing.T) {
 				}
 				if display.logAnchor > previous {
 					t.Errorf("up %d anchor: got %d want at most %d", up, display.logAnchor, previous)
+				}
+				page, pages := display.logPagination()
+				if pages != livePages {
+					t.Errorf("up %d pages: got %d want %d", up, pages, livePages)
+				}
+				if wanted := max(livePages-up-1, 1); page != wanted {
+					t.Errorf("up %d page: got %d want %d", up, page, wanted)
 				}
 				previous = display.logAnchor
 			}
@@ -2007,6 +2018,307 @@ func TestDisplay_LogScrolling(t *testing.T) {
 	}
 }
 
+func TestDisplay_LogCoverage(t *testing.T) {
+	tests := []struct {
+		name          string
+		overlayRows   int
+		expectedError bool
+	}{
+		{
+			name:          "happy_covers_a_short_overlay",
+			overlayRows:   8,
+			expectedError: false,
+		},
+		{
+			name:          "happy_covers_a_usual_overlay",
+			overlayRows:   22,
+			expectedError: false,
+		},
+		{
+			name:          "happy_covers_a_tall_overlay",
+			overlayRows:   47,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(60))
+			t.Cleanup(scribe.Disable)
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				metric.NewRecordCache(),
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
+				config.Periods{}, true, "", buffer, 0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			display.logOverlay = true
+			display.dimsInit = dimensions{rows: testCase.overlayRows, cols: 200}
+			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150, 500, 9}
+			for index := range 400 {
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "%s", strings.Repeat("z", lengths[index%len(lengths)]))
+			}
+			display.logRewind()
+			display.Logging()
+			_, pages := display.logPagination()
+			seen := func(visited map[uint64]bool) {
+				for sequence := display.logAnchor; sequence < display.logNext; sequence++ {
+					visited[sequence] = true
+				}
+			}
+			absent := func(visited map[uint64]bool) int {
+				missing := 0
+				for sequence := buffer.Oldest(); sequence < buffer.Version(); sequence++ {
+					if !visited[sequence] {
+						missing++
+					}
+				}
+				return missing
+			}
+			climbed, climbing := 0, map[uint64]bool{}
+			seen(climbing)
+			for {
+				if page, _ := display.logPagination(); page == 1 {
+					break
+				}
+				display.logPageUp()
+				display.Logging()
+				seen(climbing)
+				if climbed++; climbed > pages {
+					t.Fatalf("paging up never reached the oldest page of %d", pages)
+				}
+			}
+			if climbed != pages-1 {
+				t.Errorf("ups: got %d want %d", climbed, pages-1)
+			}
+			if missing := absent(climbing); missing != 0 {
+				t.Errorf("ups missed: got %d want 0", missing)
+			}
+			fallen, falling := 0, map[uint64]bool{}
+			seen(falling)
+			for !display.logFollow {
+				display.logPageDown()
+				display.Logging()
+				seen(falling)
+				if fallen++; fallen > pages+1 {
+					t.Fatalf("paging down never reached live from %d pages", pages)
+				}
+			}
+			if fallen != pages {
+				t.Errorf("downs: got %d want %d", fallen, pages)
+			}
+			if missing := absent(falling); missing != 0 {
+				t.Errorf("downs missed: got %d want 0", missing)
+			}
+		})
+	}
+}
+
+func TestDisplay_LogArriving(t *testing.T) {
+	tests := []struct {
+		name          string
+		trickle       int
+		expectedBump  bool
+		expectedError bool
+	}{
+		{
+			name:          "happy_a_partial_page_holds_the_total",
+			trickle:       6,
+			expectedBump:  false,
+			expectedError: false,
+		},
+		{
+			name:          "happy_a_whole_page_raises_the_total",
+			trickle:       24,
+			expectedBump:  true,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(60))
+			t.Cleanup(scribe.Disable)
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				metric.NewRecordCache(),
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
+				config.Periods{}, true, "", buffer, 0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			display.logOverlay = true
+			display.dimsInit = dimensions{rows: 22, cols: 200}
+			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150}
+			emit := func(count int) {
+				for index := range count {
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "%s", strings.Repeat("z", lengths[index%len(lengths)]))
+				}
+			}
+			emit(60)
+			display.logRewind()
+			display.Logging()
+			livePage, livePages := display.logPagination()
+			if livePage != livePages {
+				t.Errorf("live: got %d/%d want equal", livePage, livePages)
+			}
+			display.logPageUp()
+			display.Logging()
+			page, pages := display.logPagination()
+			if page != livePage-1 || pages != livePages {
+				t.Errorf("up: got %d/%d want %d/%d", page, pages, livePage-1, livePages)
+			}
+			for range testCase.trickle {
+				emit(1)
+				display.logTick()
+				if held, _ := display.logPagination(); held != page {
+					t.Errorf("arriving page: got %d want %d", held, page)
+				}
+			}
+			_, arrived := display.logPagination()
+			if bumped := arrived > pages; bumped != testCase.expectedBump {
+				t.Errorf("bumped: got %v want %v, pages %d from %d", bumped, testCase.expectedBump, arrived, pages)
+			}
+			display.logPageDown()
+			display.Logging()
+			if display.logFollow {
+				t.Errorf("paged down follow: got %v want %v", display.logFollow, false)
+			}
+			if next, _ := display.logPagination(); next != page+1 {
+				t.Errorf("down page: got %d want %d", next, page+1)
+			}
+		})
+	}
+}
+
+func TestDisplay_LogWrapping(t *testing.T) {
+	tests := []struct {
+		name          string
+		screens       int
+		flooded       int
+		expectedDrop  bool
+		expectedError bool
+	}{
+		{
+			name:          "happy_holds_inside_the_ring",
+			screens:       50,
+			flooded:       40,
+			expectedDrop:  false,
+			expectedError: false,
+		},
+		{
+			name:          "happy_reanchors_when_wrapped_past",
+			screens:       4,
+			flooded:       600,
+			expectedDrop:  true,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(testCase.screens))
+			t.Cleanup(scribe.Disable)
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				metric.NewRecordCache(),
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
+				config.Periods{}, true, "", buffer, 0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			display.logOverlay = true
+			display.dimsInit = dimensions{rows: 22, cols: 200}
+			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150}
+			emit := func(count int) {
+				for index := range count {
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "%s", strings.Repeat("y", lengths[index%len(lengths)]))
+				}
+			}
+			emit(200)
+			display.logRewind()
+			display.Logging()
+			previous, _ := display.logPagination()
+			for up := range 6 {
+				display.logPageUp()
+				display.Logging()
+				page, _ := display.logPagination()
+				if page != previous-1 {
+					t.Errorf("up %d page: got %d want %d", up, page, previous-1)
+				}
+				previous = page
+			}
+			for down := range 6 {
+				display.logPageDown()
+				display.Logging()
+				page, _ := display.logPagination()
+				if page != previous+1 {
+					t.Errorf("down %d page: got %d want %d", down, page, previous+1)
+				}
+				if display.logFollow {
+					t.Errorf("down %d follow: got %v want %v", down, display.logFollow, false)
+				}
+				previous = page
+			}
+			display.logPageDown()
+			display.Logging()
+			if !display.logFollow {
+				t.Errorf("paged back to live: got %v want %v", display.logFollow, true)
+			}
+			display.logPageUp()
+			display.Logging()
+			previous, _ = display.logPagination()
+			parked := display.logAnchor
+			emit(testCase.flooded)
+			display.logTick()
+			dropped := display.logDropped > 0
+			if dropped != testCase.expectedDrop {
+				t.Errorf("dropped: got %v want %v", dropped, testCase.expectedDrop)
+			}
+			if display.logAnchor < buffer.Oldest() {
+				t.Errorf("anchor: got %d want at least %d", display.logAnchor, buffer.Oldest())
+			}
+			if !testCase.expectedDrop && display.logAnchor != parked {
+				t.Errorf("anchor: got %d want %d", display.logAnchor, parked)
+			}
+			if display.logFollow {
+				t.Errorf("still paused: got %v want %v", display.logFollow, false)
+			}
+		})
+	}
+}
+
 func TestDisplay_LogPagination(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -2023,10 +2335,10 @@ func TestDisplay_LogPagination(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_one_line_raises_the_total",
+			name:          "happy_one_line_holds_the_total",
 			arriving:      1,
 			expectedPage:  5,
-			expectedPages: 6,
+			expectedPages: 5,
 			expectedError: false,
 		},
 		{
@@ -2117,10 +2429,10 @@ func TestDisplay_LogFollowing(t *testing.T) {
 			expectedError:  false,
 		},
 		{
-			name:           "happy_paused_counts_pages_ahead",
+			name:           "happy_paused_holds_a_partial_page",
 			emitted:        4,
 			paused:         true,
-			expectedStatus: " PAUSED 2/3 UP/DOWN=PAGE SPACE=LIVE ",
+			expectedStatus: " PAUSED 2/2 UP/DOWN=PAGE SPACE=LIVE ",
 			expectedError:  false,
 		},
 	}

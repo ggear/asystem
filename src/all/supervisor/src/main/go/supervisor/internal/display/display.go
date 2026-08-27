@@ -76,6 +76,8 @@ type Display struct {
 	logDropped      uint64
 	logFollow       bool
 	logHeights      map[uint64]int
+	logGrid         []uint64
+	logGridEnd      uint64
 	refreshSignal   chan struct{}
 	force           bool
 	tickPeriod      time.Duration
@@ -589,16 +591,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			dirtyIndexes := d.takeDirtyIndexes()
 			drawnCount := 0
 			if d.logOverlay {
-				if d.logBuffer != nil && d.logBuffer.Version() != d.logGeneration {
-					if d.logFollow {
-						d.logRewind()
-						d.logRepaint()
-					} else {
-						d.logGeneration = d.logBuffer.Version()
-						d.drawOverlayBar()
-						d.terminal.show()
-					}
-				}
+				d.logTick()
 			} else if d.force || len(dirtyIndexes) > 0 {
 				drawnCount = len(dirtyIndexes)
 				if d.force {
@@ -799,9 +792,59 @@ func (d *Display) logRewind() {
 	if d.logBuffer == nil {
 		return
 	}
-	d.logAnchor = d.logPageStart(d.logBuffer.Version())
+	d.logAnchor = d.logPageStart(d.logBuffer.Version(), d.logBuffer.Oldest())
 	d.logDropped = 0
 	d.logFollow = true
+	d.logRegrid()
+}
+
+func (d *Display) logRegrid() {
+	oldest, newest := d.logBuffer.Oldest(), d.logBuffer.Version()
+	var starts []uint64
+	for cursor := newest; cursor > oldest; {
+		previous := d.logPageStart(cursor, oldest)
+		if previous >= cursor {
+			break
+		}
+		starts = append(starts, previous)
+		cursor = previous
+	}
+	slices.Reverse(starts)
+	if len(starts) == 0 {
+		starts = []uint64{oldest}
+	}
+	d.logGrid, d.logGridEnd = starts, newest
+}
+
+func (d *Display) logRegridUnless() {
+	if len(d.logGrid) == 0 {
+		d.logRegrid()
+	}
+}
+
+func (d *Display) logIndex() int {
+	for index := len(d.logGrid) - 1; index > 0; index-- {
+		if d.logGrid[index] <= d.logAnchor {
+			return index
+		}
+	}
+	return 0
+}
+
+func (d *Display) logTick() {
+	if d.logBuffer == nil || d.logBuffer.Version() == d.logGeneration {
+		return
+	}
+	if d.logFollow || d.logAnchor < d.logBuffer.Oldest() {
+		if d.logFollow {
+			d.logRewind()
+		}
+		d.logRepaint()
+		return
+	}
+	d.logGeneration = d.logBuffer.Version()
+	d.drawOverlayBar()
+	d.terminal.show()
 }
 
 func (d *Display) logPageUp() {
@@ -809,20 +852,30 @@ func (d *Display) logPageUp() {
 		return
 	}
 	d.logFollow = false
-	d.logAnchor = d.logPageStart(d.logAnchor)
+	d.logRegridUnless()
+	if index := d.logIndex(); index > 0 {
+		d.logAnchor = d.logGrid[index-1]
+	}
 }
 
 func (d *Display) logPageDown() {
 	if d.logBuffer == nil {
 		return
 	}
-	if d.logAnchor = d.logNext; d.logAnchor >= d.logPageStart(d.logBuffer.Version()) {
-		d.logRewind()
+	d.logRegridUnless()
+	if index := d.logIndex(); index+1 < len(d.logGrid) {
+		d.logAnchor = d.logGrid[index+1]
+		return
 	}
+	d.logRegrid()
+	if index := d.logIndex(); index+1 < len(d.logGrid) {
+		d.logAnchor = d.logGrid[index+1]
+		return
+	}
+	d.logRewind()
 }
 
-func (d *Display) logPageStart(end uint64) uint64 {
-	oldest := d.logBuffer.Oldest()
+func (d *Display) logPageStart(end, oldest uint64) uint64 {
 	if end <= oldest {
 		return oldest
 	}
@@ -850,40 +903,40 @@ func (d *Display) logPagination() (int, int) {
 			}
 		}
 	}
-	before, after := 0, 0
-	for cursor := d.logAnchor; cursor > oldest; before++ {
-		previous := d.logPageStart(cursor)
-		if previous >= cursor {
-			break
-		}
-		cursor = previous
+	d.logRegridUnless()
+	trimmed := 0
+	for trimmed < len(d.logGrid)-1 && d.logGrid[trimmed+1] <= oldest {
+		trimmed++
 	}
-	for cursor := d.logNext; cursor < newest; after++ {
-		next := d.logPageEnd(cursor)
-		if next <= cursor {
+	d.logGrid = d.logGrid[trimmed:]
+	beyond := 0
+	for cursor := max(d.logGridEnd, d.logNext); cursor < newest; {
+		next, filled := d.logPageEnd(cursor)
+		if next <= cursor || !filled {
 			break
 		}
 		cursor = next
+		beyond++
 	}
-	return before + 1, before + 1 + after
+	return d.logIndex() + 1, len(d.logGrid) + beyond
 }
 
-func (d *Display) logPageEnd(start uint64) uint64 {
+func (d *Display) logPageEnd(start uint64) (uint64, bool) {
 	capacity := max(d.dimsInit.rows-2, 1)
 	lines, anchor := d.logBuffer.From(start, capacity)
 	used, consumed := 0, 0
 	for index, line := range lines {
 		height := d.logHeight(anchor+uint64(index), line)
 		if consumed > 0 && used+height > capacity {
-			break
+			return anchor + uint64(consumed), true
 		}
 		used += height
 		consumed++
 		if used >= capacity {
-			break
+			return anchor + uint64(consumed), true
 		}
 	}
-	return anchor + uint64(consumed)
+	return anchor + uint64(consumed), false
 }
 
 func (d *Display) logHeight(sequence uint64, line scribe.LogLine) int {
