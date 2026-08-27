@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/engine"
@@ -765,8 +766,8 @@ func (d *Display) logRewind() {
 	capacity := max(d.dimsInit.rows-2, 1)
 	lines, start := d.logBuffer.From(d.logBuffer.Rewind(capacity), capacity)
 	used, kept := 0, 0
-	for index := len(lines) - 1; index >= 0; index-- {
-		height := len(scribe.OverlayLines(lines[index], d.dimsInit.cols))
+	for _, line := range slices.Backward(lines) {
+		height := len(scribe.OverlayLines(line, d.dimsInit.cols))
 		if kept > 0 && used+height > capacity {
 			break
 		}
