@@ -73,8 +73,8 @@ type Display struct {
 	logAnchor       uint64
 	logNext         uint64
 	logDropped      uint64
-	logPaused       bool
 	logFollow       bool
+	logHeights      map[uint64]int
 	refreshSignal   chan struct{}
 	force           bool
 	tickPeriod      time.Duration
@@ -456,7 +456,6 @@ func (d *Display) Logging() {
 	d.logDropped = anchor - min(anchor, d.logAnchor)
 	d.logAnchor = anchor
 	d.logNext = anchor + uint64(consumed)
-	d.logPaused = d.logBuffer.Version() > d.logNext
 	d.drawOverlayBar()
 	d.terminal.draw(0, 1, clip(scribe.OverlayHeader(d.dimsInit.cols)), colourChat)
 	for row, line := range rows {
@@ -514,6 +513,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					continue
 				}
 				d.dimsInit = dims
+				clear(d.logHeights)
 				if d.logOverlay {
 					d.logRewind()
 				}
@@ -544,14 +544,19 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					}
 				}
 				if d.logOverlay && ev.Str() == " " {
-					switch {
-					case d.logFollow:
+					if d.logFollow {
 						d.logFollow = false
-					case d.logPaused:
-						d.logAnchor = d.logNext
-					default:
+					} else {
 						d.logRewind()
 					}
+					d.logRepaint()
+				}
+				if d.logOverlay && ev.Key() == tcell.KeyUp {
+					d.logPageUp()
+					d.logRepaint()
+				}
+				if d.logOverlay && ev.Key() == tcell.KeyDown && !d.logFollow {
+					d.logPageDown()
 					d.logRepaint()
 				}
 				if !d.logOverlay && len(d.hosts) > 1 && ev.Key() == tcell.KeyRune {
@@ -586,9 +591,11 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				if d.logBuffer != nil && d.logBuffer.Version() != d.logGeneration {
 					if d.logFollow {
 						d.logRewind()
-					}
-					if d.logFollow || !d.logPaused {
 						d.logRepaint()
+					} else {
+						d.logGeneration = d.logBuffer.Version()
+						d.drawOverlayBar()
+						d.terminal.show()
 					}
 				}
 			} else if d.force || len(dirtyIndexes) > 0 {
@@ -750,16 +757,16 @@ func (d *Display) paged(capacity int) ([]overlayRow, int, uint64) {
 }
 
 func (d *Display) drawOverlayBar() {
-	arrow := " " + textDown.ascii
+	arrow := " " + textDown.pick(d.useUnicode)
 	esc := "ESC"
-	suffix := " =+"
+	suffix := textEdge.pick(d.useUnicode)
 	status, colour := d.overlayStatus()
 	statusWidth := runewidth.StringWidth(status)
 	arrowWidth := runewidth.StringWidth(arrow)
 	escWidth := runewidth.StringWidth(esc)
 	suffixWidth := runewidth.StringWidth(suffix)
 	padLen := max(d.dimsInit.cols-statusWidth-arrowWidth-escWidth-suffixWidth, 0)
-	d.terminal.draw(0, 0, strings.Repeat("=", padLen), colourChat)
+	d.terminal.draw(0, 0, strings.Repeat(textRule.pick(d.useUnicode), padLen), colourChat)
 	d.terminal.draw(padLen, 0, status, colour)
 	d.terminal.draw(padLen+statusWidth, 0, arrow, colourChat)
 	d.terminal.draw(padLen+statusWidth+arrowWidth, 0, esc, colourShout)
@@ -767,16 +774,14 @@ func (d *Display) drawOverlayBar() {
 }
 
 func (d *Display) overlayStatus() (string, colour) {
-	pending := d.logBuffer.Version() - min(d.logBuffer.Version(), d.logNext)
-	long, short, colour := " LIVE SPACE=PAUSE", " LIVE", colourCheer
+	page, pages := d.logPagination()
+	long := fmt.Sprintf(" LIVE %d/%d SPACE=PAUSE", page, pages)
+	short := fmt.Sprintf(" LIVE %d/%d", page, pages)
+	colour := colourCheer
 	if !d.logFollow {
+		long = fmt.Sprintf(" PAUSED %d/%d %s=PAGE SPACE=LIVE", page, pages, textPaged.pick(d.useUnicode))
+		short = fmt.Sprintf(" PAUSED %d/%d", page, pages)
 		colour = colourWarn
-		if pending > 0 {
-			long = fmt.Sprintf(" PAUSED %d BEHIND SPACE=NEXT", pending)
-			short = fmt.Sprintf(" PAUSED %d", pending)
-		} else {
-			long, short = " PAUSED SPACE=LIVE", " PAUSED"
-		}
 	}
 	if d.logDropped > 0 {
 		long = fmt.Sprintf(" MISSED %d%s", d.logDropped, long)
@@ -792,21 +797,80 @@ func (d *Display) logRewind() {
 	if d.logBuffer == nil {
 		return
 	}
+	d.logAnchor = d.logPageStart(d.logBuffer.Version())
+	d.logDropped = 0
+	d.logFollow = true
+}
+
+func (d *Display) logPageUp() {
+	if d.logBuffer == nil {
+		return
+	}
+	d.logFollow = false
+	d.logAnchor = d.logPageStart(d.logAnchor)
+}
+
+func (d *Display) logPageDown() {
+	if d.logBuffer == nil {
+		return
+	}
+	if d.logAnchor = d.logNext; d.logAnchor >= d.logPageStart(d.logBuffer.Version()) {
+		d.logRewind()
+	}
+}
+
+func (d *Display) logPageStart(end uint64) uint64 {
+	oldest := d.logBuffer.Oldest()
+	if end <= oldest {
+		return oldest
+	}
 	capacity := max(d.dimsInit.rows-2, 1)
-	lines, start := d.logBuffer.From(d.logBuffer.Rewind(capacity), capacity)
+	span := min(uint64(capacity), end-oldest)
+	lines, start := d.logBuffer.From(end-span, int(span))
 	used, kept := 0, 0
-	for _, line := range slices.Backward(lines) {
-		height := len(scribe.OverlayLines(line, d.dimsInit.cols))
+	for index, line := range slices.Backward(lines) {
+		height := d.logHeight(start+uint64(index), line)
 		if kept > 0 && used+height > capacity {
 			break
 		}
 		used += height
 		kept++
 	}
-	d.logAnchor = start + uint64(len(lines)-kept)
-	d.logDropped = 0
-	d.logPaused = false
-	d.logFollow = true
+	return start + uint64(len(lines)-kept)
+}
+
+func (d *Display) logPagination() (int, int) {
+	oldest := d.logBuffer.Oldest()
+	if len(d.logHeights) > 2*int(d.logBuffer.Version()-oldest)+64 {
+		for sequence := range d.logHeights {
+			if sequence < oldest {
+				delete(d.logHeights, sequence)
+			}
+		}
+	}
+	starts := []uint64{d.logPageStart(d.logBuffer.Version())}
+	for starts[len(starts)-1] > oldest {
+		starts = append(starts, d.logPageStart(starts[len(starts)-1]))
+	}
+	pages := len(starts)
+	for index, start := range starts {
+		if start <= d.logAnchor {
+			return pages - index, pages
+		}
+	}
+	return pages, pages
+}
+
+func (d *Display) logHeight(sequence uint64, line scribe.LogLine) int {
+	if height, found := d.logHeights[sequence]; found {
+		return height
+	}
+	height := len(scribe.OverlayLines(line, d.dimsInit.cols))
+	if d.logHeights == nil {
+		d.logHeights = make(map[uint64]int)
+	}
+	d.logHeights[sequence] = height
+	return height
 }
 
 func (d *Display) logRepaint() {

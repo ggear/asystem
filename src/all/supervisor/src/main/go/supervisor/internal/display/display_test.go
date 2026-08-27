@@ -1910,6 +1910,103 @@ func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
 	}
 }
 
+func TestDisplay_LogScrolling(t *testing.T) {
+	tests := []struct {
+		name           string
+		pages          int
+		ups            int
+		expectedOldest bool
+		expectedError  bool
+	}{
+		{
+			name:           "happy_pages_back_one",
+			pages:          4,
+			ups:            1,
+			expectedOldest: false,
+			expectedError:  false,
+		},
+		{
+			name:           "happy_pages_back_to_the_oldest",
+			pages:          3,
+			ups:            3,
+			expectedOldest: true,
+			expectedError:  false,
+		},
+		{
+			name:           "happy_clamps_at_the_oldest",
+			pages:          2,
+			ups:            9,
+			expectedOldest: true,
+			expectedError:  false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			capacity := caseRows - 2
+			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(caseRows))
+			t.Cleanup(scribe.Disable)
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				metric.NewRecordCache(),
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
+				config.Periods{}, true, "", buffer, 0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			display.logOverlay = true
+			for range testCase.pages * capacity {
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "scroll fodder")
+			}
+			display.logRewind()
+			display.Logging()
+			live := display.logAnchor
+			previous := live
+			for up := range testCase.ups {
+				display.logPageUp()
+				display.Logging()
+				if display.logFollow {
+					t.Errorf("up %d follow: got %v want %v", up, display.logFollow, false)
+				}
+				if display.logAnchor > previous {
+					t.Errorf("up %d anchor: got %d want at most %d", up, display.logAnchor, previous)
+				}
+				previous = display.logAnchor
+			}
+			if atOldest := display.logAnchor == buffer.Oldest(); atOldest != testCase.expectedOldest {
+				t.Errorf("oldest: got %v want %v", atOldest, testCase.expectedOldest)
+			}
+			for down := range testCase.ups * 2 {
+				if display.logFollow {
+					break
+				}
+				display.logPageDown()
+				display.Logging()
+				if display.logAnchor < previous {
+					t.Errorf("down %d anchor: got %d want at least %d", down, display.logAnchor, previous)
+				}
+				previous = display.logAnchor
+			}
+			if !display.logFollow {
+				t.Errorf("paged down follow: got %v want %v", display.logFollow, true)
+			}
+			if display.logAnchor != live {
+				t.Errorf("paged down anchor: got %d want %d", display.logAnchor, live)
+			}
+		})
+	}
+}
+
 func TestDisplay_LogFollowing(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -1922,21 +2019,21 @@ func TestDisplay_LogFollowing(t *testing.T) {
 			name:           "happy_following_is_live",
 			emitted:        3,
 			paused:         false,
-			expectedStatus: " LIVE SPACE=PAUSE",
+			expectedStatus: " LIVE 2/2 SPACE=PAUSE",
 			expectedError:  false,
 		},
 		{
 			name:           "happy_paused_at_the_newest",
 			emitted:        0,
 			paused:         true,
-			expectedStatus: " PAUSED SPACE=LIVE",
+			expectedStatus: " PAUSED 2/2 UP/DOWN=PAGE SPACE=LIVE",
 			expectedError:  false,
 		},
 		{
 			name:           "happy_paused_counts_behind",
 			emitted:        4,
 			paused:         true,
-			expectedStatus: " PAUSED 4 BEHIND SPACE=NEXT",
+			expectedStatus: " PAUSED 1/2 UP/DOWN=PAGE SPACE=LIVE",
 			expectedError:  false,
 		},
 	}
@@ -2061,11 +2158,12 @@ func TestDisplay_LogPaging(t *testing.T) {
 				if page > 0 && display.logAnchor != previous {
 					t.Errorf("page %d anchor: got %d want %d", page, display.logAnchor, previous)
 				}
-				if display.logPaused != pending {
-					t.Errorf("page %d paused: got %v want %v", page, display.logPaused, pending)
+				behind := display.logNext < buffer.Version()
+				if behind != pending {
+					t.Errorf("page %d behind: got %v want %v", page, behind, pending)
 				}
 				previous = display.logNext
-				if display.logPaused {
+				if behind {
 					display.logAnchor = display.logNext
 				}
 			}

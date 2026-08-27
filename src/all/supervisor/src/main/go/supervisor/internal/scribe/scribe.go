@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	bufferScreens    = 40
+	bufferScreens    = 50
 	logDirUser       = "/tmp/supervisor"
 	logDirUserMac    = "Library/Logs/supervisor"
 	logDirRoot       = "/var/log/supervisor"

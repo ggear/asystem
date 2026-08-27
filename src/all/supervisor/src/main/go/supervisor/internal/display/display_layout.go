@@ -17,6 +17,9 @@ var (
 	textCross = text{ascii: "-", unicode: "✖"}
 	textUp    = text{ascii: "^", unicode: "↑"}
 	textDown  = text{ascii: "v", unicode: "↓"}
+	textRule  = text{ascii: "=", unicode: "─"}
+	textEdge  = text{ascii: " =+", unicode: " ──"}
+	textPaged = text{ascii: "UP/DOWN", unicode: "↑↓"}
 )
 
 type boxKind int
