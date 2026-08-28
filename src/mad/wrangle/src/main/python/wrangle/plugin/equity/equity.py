@@ -5,7 +5,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-from os.path import abspath, basename, isfile
+from os.path import abspath, basename, dirname, isfile, join
 from typing import cast
 
 import polars as pl
@@ -118,12 +118,12 @@ REPOS_EQUITY = plugin.Repos(
 )
 
 
-PDF_PARSE_PROGRAM = "import json, sys, pdftotext; json.dump(list(pdftotext.PDF(open(sys.argv[1], 'rb'), physical=True)), sys.stdout)"
+PDF_PARSE_SCRIPT = join(dirname(abspath(__file__)), "pdf_parse.py")
 
 
 def _safe_pdf_parse(pdf_path, timeout=60):
     try:
-        parse_process = subprocess.run([sys.executable, "-c", PDF_PARSE_PROGRAM, pdf_path], capture_output=True, timeout=timeout)
+        parse_process = subprocess.run([sys.executable, PDF_PARSE_SCRIPT, pdf_path], capture_output=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         raise Exception(f"PDF parse timed out after [{timeout}s]") from None
     if parse_process.returncode != 0:
