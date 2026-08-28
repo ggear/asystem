@@ -511,9 +511,10 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				silent = 0
 				silenceStart := time.Now()
 				restored, listens := resubscribeAll(client)
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] msgs across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] messages across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
 			}
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] msgs at [%d] msg/s, dropped [%d] msgs, evicted [%d] records, deleted [%d] records", rx, rate, drops, evicted, deleted)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] messages at [%d] messages/s", rx, rate)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("removals", purgeStart, "[%3d] dropped, [%3d] evicted, [%3d] deleted", drops, evicted, deleted)
 			censusStart := time.Now()
 			online := 0
 			services := 0
@@ -531,7 +532,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 			}
 			reconcileMutex.Unlock()
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts, [%d] online, [%d] reconciling, with [%d] services, holding [%d] records", len(cache.Hosts()), online, pending, services, cache.Size())
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts up of [%3d], [%2d] reconciling", online, len(cache.Hosts()), pending)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] services, at [%3d] records", services, cache.Size())
 		}
 	}
 }

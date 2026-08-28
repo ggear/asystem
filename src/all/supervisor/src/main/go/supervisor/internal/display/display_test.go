@@ -2077,14 +2077,17 @@ func TestDisplay_LogCoverage(t *testing.T) {
 					visited[sequence] = true
 				}
 			}
-			absent := func(visited map[uint64]bool) int {
+			absent := func(visited map[uint64]bool, from uint64) int {
 				missing := 0
-				for sequence := buffer.Oldest(); sequence < buffer.Version(); sequence++ {
+				for sequence := from; sequence < buffer.Version(); sequence++ {
 					if !visited[sequence] {
 						missing++
 					}
 				}
 				return missing
+			}
+			if pages > logPagesMax {
+				t.Errorf("pages: got %d want at most %d", pages, logPagesMax)
 			}
 			climbed, climbing := 0, map[uint64]bool{}
 			seen(climbing)
@@ -2102,7 +2105,8 @@ func TestDisplay_LogCoverage(t *testing.T) {
 			if climbed != pages-1 {
 				t.Errorf("ups: got %d want %d", climbed, pages-1)
 			}
-			if missing := absent(climbing); missing != 0 {
+			reached := display.logAnchor
+			if missing := absent(climbing, reached); missing != 0 {
 				t.Errorf("ups missed: got %d want 0", missing)
 			}
 			fallen, falling := 0, map[uint64]bool{}
@@ -2118,7 +2122,7 @@ func TestDisplay_LogCoverage(t *testing.T) {
 			if fallen != pages {
 				t.Errorf("downs: got %d want %d", fallen, pages)
 			}
-			if missing := absent(falling); missing != 0 {
+			if missing := absent(falling, reached); missing != 0 {
 				t.Errorf("downs missed: got %d want 0", missing)
 			}
 		})
@@ -2207,6 +2211,84 @@ func TestDisplay_LogArriving(t *testing.T) {
 			}
 			if next, _ := display.logPagination(); next != page+1 {
 				t.Errorf("down page: got %d want %d", next, page+1)
+			}
+		})
+	}
+}
+
+func TestDisplay_LogParked(t *testing.T) {
+	tests := []struct {
+		name          string
+		arriving      int
+		expectedError bool
+	}{
+		{
+			name:          "happy_holds_through_a_page",
+			arriving:      100,
+			expectedError: false,
+		},
+		{
+			name:          "happy_holds_through_many_pages",
+			arriving:      400,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			const overlayRows = 40
+			layout := compactDisplayLayout(false)
+			caseRows := rows(layout, 1)
+			caseCols := columns(layout, false, 1)
+			buffer := scribe.EnableBuffer(slog.LevelDebug, scribe.BufferLines(overlayRows))
+			t.Cleanup(scribe.Disable)
+			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
+			display, err := NewDisplay(
+				metric.NewRecordCache(),
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
+				config.Periods{}, true, "", buffer, 0,
+			)
+			if err != nil {
+				t.Fatalf("New Display err = %v, expected nil", err)
+			}
+			if _, err = display.Compile(); err != nil {
+				t.Fatalf("Compile Display err = %v, expected nil", err)
+			}
+			if err = display.Load(); err != nil {
+				t.Fatalf("Load Display err = %v, expected nil", err)
+			}
+			display.logOverlay = true
+			display.dimsInit = dimensions{rows: overlayRows, cols: 200}
+			emit := func(count int) {
+				for range count {
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "%s", strings.Repeat("z", 60))
+				}
+			}
+			emit(scribe.BufferLines(overlayRows) + overlayRows*10)
+			display.logRewind()
+			display.Logging()
+			live, pages := display.logPagination()
+			if pages > logPagesMax || live != pages {
+				t.Errorf("live: got %d/%d want equal and at most %d", live, pages, logPagesMax)
+			}
+			display.logPageUp()
+			display.Logging()
+			parked, _ := display.logPagination()
+			for arrived := range testCase.arriving {
+				emit(1)
+				display.logTick()
+				page, total := display.logPagination()
+				if page != parked {
+					t.Errorf("after %d arrived page: got %d want %d", arrived+1, page, parked)
+				}
+				if total < pages {
+					t.Errorf("after %d arrived total: got %d want at least %d", arrived+1, total, pages)
+				}
+			}
+			display.logRewind()
+			display.Logging()
+			if page, total := display.logPagination(); page != total || total > logPagesMax {
+				t.Errorf("live again: got %d/%d want equal and at most %d", page, total, logPagesMax)
 			}
 		})
 	}

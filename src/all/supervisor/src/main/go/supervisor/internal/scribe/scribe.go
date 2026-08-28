@@ -22,7 +22,6 @@ import (
 )
 
 const (
-	bufferScreens    = 50
 	logDirUser       = "/tmp/supervisor"
 	logDirUserMac    = "Library/Logs/supervisor"
 	logDirRoot       = "/var/log/supervisor"
@@ -111,11 +110,13 @@ func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxB
 	return buf, nil
 }
 
+const BufferScreens = 100
+
 func BufferLines(rows int) int {
 	if rows < 1 {
 		rows = 1
 	}
-	return rows * bufferScreens
+	return rows * BufferScreens
 }
 
 func Log(source Source, subject Subject, action Action) Logger {
@@ -145,6 +146,9 @@ func (l Logger) Error(verb string, started time.Time, detail string, args ...any
 }
 
 func (l Logger) log(level slog.Level, verb string, started time.Time, detail string, args ...any) {
+	if !slog.Default().Enabled(context.Background(), level) {
+		return
+	}
 	if len(args) > 0 {
 		detail = fmt.Sprintf(detail, args...)
 	}
