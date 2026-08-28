@@ -65,6 +65,20 @@ query() {
   [ "${status}" = "200" ]
 }
 
+write_lp() {
+  local response status
+  response="$(curl -sS -w '\n%{http_code}' -X POST \
+    "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/write_lp?db=${DATABASE_NAME}&precision=nanosecond" \
+    -H "Authorization: Bearer ${DATABASE_TOKEN}" \
+    -H "Content-Type: text/plain" \
+    --data-binary @-)"
+  status="${response##*$'\n'}"
+  if [ "${status}" != "204" ] && [ "${status}" != "200" ]; then
+    printf 'write failed with status [%s] body [%s]\n' "${status}" "${response%$'\n'*}" >&2
+    return 1
+  fi
+}
+
 fail() {
   printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
     "################################################################################" \
