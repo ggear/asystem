@@ -39,26 +39,6 @@ deploy.sh consolidation, only keep those that are necessary
 
 
 
-improve loggin subject so get traceability - eg ssd_life should show all all derived logs and verdict 
-
-maybe make watch remote more compact SUBJECT etc than logs or local?
-when on mad watch remote, if i maximise a host, the version/rst/uptime take tick to refresh in the ui. this is only when going from multi host compact to single host relaxed. compact multi-host to compact single host works. do not see this issu on large display on rue. only on mad with low res, ascii, compact to relaxed and wdith/height set on cli 116/33
-
-make atop work on macos: =================================================================================================================================================================================================================================================================================== vESC =+
-TIME     LEVEL SOURCE   SUBJECT                   ACTION     DURATION DETAIL                                                                                                                                                                                                               
-21:15:11 WARN  probe    storage                   discover        0ms notfound version not readable from [/var/lib/asystem/install/storage/latest/.env] with [open /var/lib/asystem/install/storage/latest/.env: permission denied]                                                        
-21:15:11 WARN  probe    supervisor                discover        0ms notfound version not readable from [/var/lib/asystem/install/supervisor/latest/.env] with [open /var/lib/asystem/install/supervisor/latest/.env: permission denied]                                                  
-21:15:11 WARN  probe    host/allocated_memory     sample          0ms faulting metric with [no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [/var/lib/asystem/install] [environment cannot supply this ...     
-21:15:11 WARN  probe    host/allocated_memory     sample          0ms          reading]]                                                                                                                                                                                                   
-21:15:11 WARN  probe    host/failed_log_messages  sample          0ms noaccess kernel log [/host/dev/kmsg] with [open /host/dev/kmsg: no such file or directory] and [/dev/kmsg] with [open /dev/kmsg: no such file or directory], reporting [0] errors, needs [CAP_SYSLOG] and device ... 
-21:15:11 WARN  probe    host/failed_log_messages  sample          0ms          [/dev/kmsg]                                                                                                                                                                                                 
-21:15:11 WARN  probe    host/warn_temperature     sample          0ms faulting metric with [no temperature read, discovery found no package, soc, composite or thermal zone sensor under [/sys], so this host exposes none this probe knows how to read [environment cannot supply this ...
-21:15:11 WARN  probe    host/warn_temperature     sample          0ms          reading]]                                                                                                                                                                                                   
-21:15:11 WARN  probe    /host/proc/mounts         sample          0ms noaccess mount table with [open /host/proc/mounts: no such file or directory], reporting no filesystems                                                                                                              
-21:15:11 WARN  probe    host/services_max_memory  sample          0ms faulting metric with [no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [/var/lib/asystem/install] [environment cannot supply this ...     
-21:15:11 WARN  probe    host/services_max_memory  sample          0ms          reading]]                                                                                                                                                                                                   
-21:15:12 WARN  probe    host/used_home_space      sample          0ms faulting metric with [no home filesystem read, mount table [/host/proc/mounts] unreadable with [open /host/proc/mounts: no such file or directory] [environment cannot supply this reading]]                         
-                                                                                                                                                                                                                                                                                           
                                                                                                                                                                                                                                                                                            
    
 
@@ -96,6 +76,7 @@ Two more TODOs exist that aren't unimplemented metrics, worth knowing about sinc
 
 
 check all metrics working except for backup
+verify that when backup is mounted it is ignored by Hlth SSD
 implement backup so metrics can work - module by modeule first then cron'd backup to /share and to /backup impl
 
 
@@ -112,7 +93,7 @@ add debug (or other) to each grunular metric that helps to show what is driving 
 
 make cache-eriod=1h and daily 24h and 3s and 1s intervals well specified and daily useful for backups too - maybe have to add a timestart? so if daily goes to 12 hours, it starts at time and 12/6 + time
 add host USED BKP and FAIL BKP and Service BKP into backup plan, remove backup phases and add as shared probe that runs daily from a time (above).
-
+do a full manual sweep of supervisor codebase
 
 
 
