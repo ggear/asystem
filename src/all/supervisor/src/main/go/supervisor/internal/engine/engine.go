@@ -311,7 +311,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		case hostStatusOnline:
 			storeHostStatus(hostName, true)
 			if known && wasOnline {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "status [online], heartbeat [no-op]")
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "[online], with heartbeat [no-op]")
 				return
 			}
 			reconcileMutex.Lock()
@@ -330,7 +330,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		case hostStatusOffline, "":
 			storeHostStatus(hostName, false)
 			if known && !wasOnline {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "status [offline], heartbeat [no-op]")
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "[offline], with heartbeat [no-op]")
 				return
 			}
 			evicted := cache.Services(hostName)
@@ -513,8 +513,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				restored, listens := resubscribeAll(client)
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] messages across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
 			}
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] messages at [%d] messages/s", rx, rate)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("removals", purgeStart, "[%3d] dropped, [%3d] evicted, [%3d] deleted", drops, evicted, deleted)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] messages [%4d] messages/s", rx, rate)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("removals", purgeStart, "[%3d] evictions, [%3d] deletions", evicted, deleted)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("unlisted", purgeStart, "[%3d] drops, [%3d] subscriptions", drops, attached)
 			censusStart := time.Now()
 			online := 0
 			services := 0
@@ -532,7 +533,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				}
 			}
 			reconcileMutex.Unlock()
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts up of [%3d], [%2d] reconciling", online, len(cache.Hosts()), pending)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts up, [%2d] reconciling", online, pending)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] services, at [%3d] records", services, cache.Size())
 		}
 	}
@@ -733,7 +734,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
 						client.Publish(record.Topic, 0, true, payload)
 						txBytes += len(payload)
-						scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debug("retained", processStart, "[%d] bytes at qos [0]", len(payload))
+						scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debug("retained", processStart, "[%4d] bytes at qos [0]", len(payload))
 					} else {
 						scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Error("faulting", processStart, "marshal with [%v]", jsonErr)
 					}

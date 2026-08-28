@@ -81,51 +81,6 @@ func HostRelation() schema.Relation { return Relations(nil, nil, "")[0] }
 
 func ServiceRelation() schema.Relation { return Relations(nil, nil, "")[1] }
 
-func GetIDField(id ID) string {
-	if id < 0 || id >= MetricMax {
-		return ""
-	}
-	tokens := strings.Split(metricBuildersByID[id].template, "/")
-	field := tokens[len(tokens)-1]
-	switch field {
-	case "host", "service", "$SERVICE":
-		return "status"
-	default:
-		return field
-	}
-}
-
-func GetIDName(id ID) string {
-	if id < 0 || id >= MetricMax {
-		return ""
-	}
-	name := metricBuildersByID[id].template
-	if _, suffix, found := strings.Cut(name, "$SCOPE/"); found {
-		name = suffix
-	}
-	return strings.TrimSuffix(strings.ReplaceAll(name, "$SERVICE/", ""), "/$SERVICE")
-}
-
-func GetIDValueKind(id ID) ValueKind {
-	if id < 0 || id >= MetricMax {
-		return ValueNone
-	}
-	return metricBuildersByID[id].valueKind
-}
-
-func GetIDKindSchema(id ID) schema.Kind {
-	switch GetIDValueKind(id) {
-	case ValueBool:
-		return schema.KindBool
-	case ValueFloat:
-		return schema.KindFloat
-	case ValueInt:
-		return schema.KindInt
-	default:
-		return schema.KindStr
-	}
-}
-
 func Topics() []schema.Topic {
 	topics := make([]schema.Topic, 0, len(metricBuildersByID))
 	for _, id := range GetIDs() {

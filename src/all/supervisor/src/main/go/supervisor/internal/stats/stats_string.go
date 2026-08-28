@@ -117,25 +117,25 @@ func (v *StringStats) PulseLast() string {
 func (v *StringStats) PulseDominant() string {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
-	return pulseMode(v.pulseWindow, v.pulsePresent)
+	return modeOfStrings(v.pulseWindow, v.pulsePresent)
 }
 
 func (v *StringStats) PulseMedian() string {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
-	return pulseMedian(v.pulseWindow, v.pulsePresent)
+	return medianOfStrings(v.pulseWindow, v.pulsePresent)
 }
 
 func (v *StringStats) PulseMax() string {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
-	return pulseMax(v.pulseWindow, v.pulsePresent)
+	return maxOfStrings(v.pulseWindow, v.pulsePresent)
 }
 
 func (v *StringStats) PulseMin() string {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
-	return pulseMin(v.pulseWindow, v.pulsePresent)
+	return minOfStrings(v.pulseWindow, v.pulsePresent)
 }
 
 func (v *StringStats) PulseHasChanged() bool {
@@ -186,7 +186,7 @@ func (v *StringStats) TrendHasChanged() bool {
 	return !v.trendOff && v.trendWeight > 0 && v.trendOther > 0
 }
 
-func pulseMode(values []string, present []bool) string {
+func modeOfStrings(values []string, present []bool) string {
 	counts := make(map[string]int)
 	var bestValue string
 	bestCount := 0
@@ -204,7 +204,7 @@ func pulseMode(values []string, present []bool) string {
 	return bestValue
 }
 
-func pulseMedian(values []string, present []bool) string {
+func medianOfStrings(values []string, present []bool) string {
 	collected := make([]string, 0, len(values))
 	for i, ok := range present {
 		if ok {
@@ -218,7 +218,7 @@ func pulseMedian(values []string, present []bool) string {
 	return collected[len(collected)/2]
 }
 
-func pulseMax(values []string, present []bool) string {
+func maxOfStrings(values []string, present []bool) string {
 	hasValue := false
 	maxValue := ""
 	for i, ok := range present {
@@ -234,7 +234,7 @@ func pulseMax(values []string, present []bool) string {
 	return maxValue
 }
 
-func pulseMin(values []string, present []bool) string {
+func minOfStrings(values []string, present []bool) string {
 	hasValue := false
 	minValue := ""
 	for i, ok := range present {

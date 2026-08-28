@@ -182,11 +182,11 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		configuredStatus, _, _ := polledService.configuredStatus()
 		sleepStatus, _, _ := polledService.sleepStatus()
 		aggregateStatus := sleepStatus || (healthStatus && configuredStatus)
-		derivePulse(scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
+		reportPulsing(scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
 			"[%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
 			aggregateStatus, polledServiceName, healthStatus, configuredStatus, sleepStatus)
 		gates := gateSet{metric.GateServiceAggregate: func() bool { return aggregateStatus }}
-		runMetricCacheTasks(p, isPulse, gates, []cacheMetricTask{
+		runCacheMetricTasks(p, isPulse, gates, []cacheMetricTask{
 			newCacheMetricTask(
 				metric.ValueBool,
 				metric.MetricService,
@@ -308,7 +308,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 			),
 		})
 	}
-	runMetricCacheTasks(p, isPulse, nil, []cacheMetricTask{
+	runCacheMetricTasks(p, isPulse, nil, []cacheMetricTask{
 		newCacheMetricTask(
 			metric.ValueBool,
 			metric.MetricHostServices,
@@ -530,7 +530,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			}
 		}
 	}
-	derivePulse(scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover), "reported", servicesStart,
+	reportPulsing(scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover), "reported", servicesStart,
 		"[%3d] containers, services [%d], configured [%d], ghosts [%d] configured but not running",
 		len(containers), len(services)-ghosts, len(p.configuredServiceNames), ghosts)
 	return services, nil

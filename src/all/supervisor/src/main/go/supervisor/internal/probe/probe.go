@@ -101,7 +101,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 				if err := p.run(ctx, isPulse); err != nil {
 					scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Error("faulting", probeStart, "pulse [%v] with [%v]", isPulse, err)
 				}
-				scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Debug("reported", probeStart, "pulse [%v] metrics [%d]", isPulse, len(p.metrics()))
+				scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Debug("reported", probeStart, "pulse [%v] metrics [%3d]", isPulse, len(p.metrics()))
 			}
 			if isPulse {
 				heartbeatPulseCount--
@@ -113,7 +113,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 					onPulse(isHeartbeat)
 				}
 			}
-			scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debug("reported", tickStart, "[%d] probes, pulse [%v]", len(execProbes), isPulse)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debug("reported", tickStart, "[%3d] probes, pulse [%v]", len(execProbes), isPulse)
 		}
 	}
 }
@@ -251,7 +251,7 @@ func newCacheMetricTask[T any](
 	return task
 }
 
-func runMetricCacheTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetricTask) {
+func runCacheMetricTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetricTask) {
 	tasksStart := time.Now()
 	census := metricCensus{}
 	for _, task := range tasks {
@@ -263,16 +263,16 @@ func runMetricCacheTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetr
 		if !p.hasMetric(task.metricID) {
 			continue
 		}
-		census.count(runMetricCacheTask(p, isPulse, gates, task), task)
+		census.count(runCacheMetricTask(p, isPulse, gates, task), task)
 	}
 	if !isPulse || census.total == 0 {
 		return
 	}
-	scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionCensus).Debug("reported", tasksStart, "metrics [%3d]%s, green [%d] amber [%d] red [%d] unknown [%d]%s",
+	scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionCensus).Debug("reported", tasksStart, "metrics [%3d]%s, green [%3d] amber [%3d] red [%3d] unknown [%3d]%s",
 		census.total, census.subject(), census.green, census.amber, census.red, census.unknown, census.faults())
 }
 
-func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTask) string {
+func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTask) string {
 	taskStart := time.Now()
 	var missing []string
 	if task.sampleFunc == nil {
@@ -353,13 +353,6 @@ func runMetricCacheTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	return status
 }
 
-func derivePulse(logger scribe.Logger, verb string, started time.Time, detail string, args ...any) {
-	if !execPulsing.Load() {
-		return
-	}
-	logger.Debug(verb, started, detail, args...)
-}
-
 func splitVerb(text string) (string, string) {
 	trimmed := strings.TrimLeft(text, " ")
 	index := strings.IndexByte(trimmed, ' ')
@@ -415,6 +408,13 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	}
 }
 
+func reportPulsing(logger scribe.Logger, verb string, started time.Time, detail string, args ...any) {
+	if !execPulsing.Load() {
+		return
+	}
+	logger.Debug(verb, started, detail, args...)
+}
+
 func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status string, pulse any, pulseOK bool, trend any, trendOK *bool, err error) {
 	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
 	metricStatusesMutex.Lock()
@@ -431,10 +431,10 @@ func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status string
 func reportMetricRule(metricID metric.ID, taskStart time.Time, pulseOK bool, pulseText string, trendOK *bool, trendText string) {
 	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metricID), scribe.ActionCompute)
 	if trendOK == nil {
-		derivePulse(logger, "computed", taskStart, "ok pulse [%v] %s", pulseOK, pulseText)
+		reportPulsing(logger, "computed", taskStart, "ok pulse [%v] %s", pulseOK, pulseText)
 		return
 	}
-	derivePulse(logger, "computed", taskStart, "ok pulse [%v] %s, ok trend [%v] %s", pulseOK, pulseText, *trendOK, trendText)
+	reportPulsing(logger, "computed", taskStart, "ok pulse [%v] %s, ok trend [%v] %s", pulseOK, pulseText, *trendOK, trendText)
 }
 
 func evaluateRule(rule metric.Rule, inert bool, unit string, value any, siblings metric.ValueResolver, gates gateSet) metric.RuleResult {
@@ -443,6 +443,23 @@ func evaluateRule(rule metric.Rule, inert bool, unit string, value any, siblings
 	}
 	number, numeric := numericValue(value)
 	return rule.Evaluate(unit, number, numeric, siblings, gates.resolve)
+}
+
+func probeRoots(mount, bare string) []string {
+	if mount == "" {
+		return []string{bare}
+	}
+	return []string{mount, bare}
+}
+
+func int8Percent(value float64) int8 {
+	if value < 0 {
+		return 0
+	}
+	if value > 100 {
+		return 100
+	}
+	return int8(value + 0.5)
 }
 
 func numericValue(value any) (float64, bool) {

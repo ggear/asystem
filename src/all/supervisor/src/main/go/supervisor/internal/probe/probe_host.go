@@ -130,7 +130,7 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 func (p *hostProbe) gates() []metric.GateID { return nil }
 
 func (p *hostProbe) run(_ context.Context, isPulse bool) error {
-	runMetricCacheTasks(p, isPulse, nil, []cacheMetricTask{
+	runCacheMetricTasks(p, isPulse, nil, []cacheMetricTask{
 		newCacheMetricTask(
 			metric.ValueBool,
 			metric.MetricHost,
@@ -458,7 +458,7 @@ func (p *hostProbe) usedNetwork() (int8, derivation, error) {
 	if p.networkSampler == nil {
 		return 0, derivation{}, errors.New("no network sample taken, the probe was created without a network sampler")
 	}
-	return p.networkSampler.sample(hostRoots(config.Load(p.configPath).Mount()))
+	return p.networkSampler.sample(probeRoots(config.Load(p.configPath).Mount(), networkBareRoot))
 }
 
 func (p *hostProbe) runningTime() (float64, derivation, error) {
@@ -671,13 +671,6 @@ func (s *networkUsageSampler) discover(roots []string) {
 		return
 	}
 	scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "rated [0] physical interfaces, no interface directory exists under [%s]", s.root)
-}
-
-func hostRoots(mount string) []string {
-	if mount == "" {
-		return []string{networkBareRoot}
-	}
-	return []string{mount, networkBareRoot}
 }
 
 func networkCounter(path string) (uint64, error) {

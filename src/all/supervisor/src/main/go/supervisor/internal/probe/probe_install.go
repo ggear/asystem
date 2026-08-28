@@ -163,7 +163,7 @@ func (s *installSnapshot) report(scanStart time.Time) {
 			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] version [%s] declares no memory ceiling, contributing [0] MiB to the allocation", name, entry.version)
 			continue
 		}
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] version [%s] contributes [%d] MiB to the allocation, sleeping [%v]", name, entry.version, entry.maxMemoryBytes/bytesPerMiB, entry.sleepEnabled)
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] version [%s] contributes [%5d] MiB to the allocation, sleeping [%v]", name, entry.version, entry.maxMemoryBytes/bytesPerMiB, entry.sleepEnabled)
 	}
 }
 

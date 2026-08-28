@@ -114,25 +114,25 @@ func (v *FloatStats) PulseLast() float64 {
 func (v *FloatStats) PulseMean() float64 {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
-	return meanOfValues(v.pulseWindow, v.pulseFilled)
+	return meanOfFloats(v.pulseWindow, v.pulseFilled)
 }
 
 func (v *FloatStats) PulseMedian() float64 {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
-	return medianOfValues(v.pulseWindow, v.pulseFilled)
+	return medianOfFloats(v.pulseWindow, v.pulseFilled)
 }
 
 func (v *FloatStats) PulseMax() float64 {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
-	return maxOfValues(v.pulseWindow, v.pulseFilled)
+	return maxOfFloats(v.pulseWindow, v.pulseFilled)
 }
 
 func (v *FloatStats) PulseMin() float64 {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
-	return minOfValues(v.pulseWindow, v.pulseFilled)
+	return minOfFloats(v.pulseWindow, v.pulseFilled)
 }
 
 func (v *FloatStats) TrendMean() float64 {
@@ -162,7 +162,7 @@ func (v *FloatStats) TrendMin() float64 {
 	return v.trendMin
 }
 
-func meanOfValues(values []float64, filled int) float64 {
+func meanOfFloats(values []float64, filled int) float64 {
 	if filled == 0 {
 		return 0
 	}
@@ -181,7 +181,7 @@ func meanOfValues(values []float64, filled int) float64 {
 	return sum / float64(count)
 }
 
-func medianOfValues(values []float64, filled int) float64 {
+func medianOfFloats(values []float64, filled int) float64 {
 	if filled == 0 {
 		return 0
 	}
@@ -203,7 +203,7 @@ func medianOfValues(values []float64, filled int) float64 {
 	return collected[mid]
 }
 
-func maxOfValues(values []float64, filled int) float64 {
+func maxOfFloats(values []float64, filled int) float64 {
 	if filled == 0 {
 		return 0
 	}
@@ -224,7 +224,7 @@ func maxOfValues(values []float64, filled int) float64 {
 	return maxValue
 }
 
-func minOfValues(values []float64, filled int) float64 {
+func minOfFloats(values []float64, filled int) float64 {
 	if filled == 0 {
 		return 0
 	}

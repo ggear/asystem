@@ -21,6 +21,7 @@ const (
 	SourceProbeHost
 	SourceProbeInstall
 	SourceProbeLogs
+	SourceProbeDrives
 	SourceProbeMounts
 	SourceProbeSensors
 	SourceProbeServices
@@ -49,6 +50,8 @@ func (s Source) String() string {
 		return "probe[install]"
 	case SourceProbeLogs:
 		return "probe[logs]"
+	case SourceProbeDrives:
+		return "probe[drives]"
 	case SourceProbeMounts:
 		return "probe[mounts]"
 	case SourceProbeSensors:

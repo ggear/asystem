@@ -122,13 +122,13 @@ func NewDisplay(
 		refreshSignal:   make(chan struct{}, 1),
 		tickPeriod:      tickPeriod,
 		tickStall:       tickStall,
-		singleHostIndex: singleHostIndex(hosts),
+		singleHostIndex: initialHostIndex(hosts),
 	}
 	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("geometry", initStart, "layout [%v], rows [%d], cols [%d]", format, height, width)
 	return display, nil
 }
 
-func singleHostIndex(hosts []string) int {
+func initialHostIndex(hosts []string) int {
 	if len(hosts) == 1 {
 		return 0
 	}
@@ -817,14 +817,10 @@ func (d *Display) logRegrid() {
 	d.logGrid, d.logGridEnd = starts, newest
 }
 
-func (d *Display) logRegridUnless() {
+func (d *Display) logVisible() []uint64 {
 	if len(d.logGrid) == 0 {
 		d.logRegrid()
 	}
-}
-
-func (d *Display) logVisible() []uint64 {
-	d.logRegridUnless()
 	oldest, first := d.logBuffer.Oldest(), 0
 	for first < len(d.logGrid)-1 && d.logGrid[first+1] <= oldest {
 		first++

@@ -1,13 +1,13 @@
 import calendar
-import multiprocessing
+import json
 import re
+import subprocess
+import sys
 import time
-from collections.abc import Iterable
 from datetime import datetime
 from os.path import abspath, basename, isfile
 from typing import cast
 
-import pdftotext
 import polars as pl
 import polars.selectors as cs
 
@@ -118,30 +118,18 @@ REPOS_EQUITY = plugin.Repos(
 )
 
 
-def _pdf_worker(pdf_path, queue):
-    try:
-        with open(pdf_path, "rb") as f:
-            queue.put(list(cast(Iterable[str], cast(object, pdftotext.PDF(f, physical=True)))))
-    except Exception as exc:
-        queue.put(exc)
+PDF_PARSE_PROGRAM = "import json, sys, pdftotext; json.dump(list(pdftotext.PDF(open(sys.argv[1], 'rb'), physical=True)), sys.stdout)"
 
 
 def _safe_pdf_parse(pdf_path, timeout=60):
-    ctx = multiprocessing.get_context("fork")
-    queue = ctx.Queue()
-    proc = ctx.Process(target=_pdf_worker, args=(pdf_path, queue))
-    proc.start()
-    proc.join(timeout)
-    if proc.is_alive():
-        proc.kill()
-        proc.join()
-        raise Exception(f"PDF parse timed out after [{timeout}s]")
-    if proc.exitcode != 0:
-        raise Exception(f"PDF parse crashed with exit code [{proc.exitcode}]")
-    result = queue.get()
-    if isinstance(result, Exception):
-        raise result
-    return result
+    try:
+        parse_process = subprocess.run([sys.executable, "-c", PDF_PARSE_PROGRAM, pdf_path], capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise Exception(f"PDF parse timed out after [{timeout}s]") from None
+    if parse_process.returncode != 0:
+        parse_errors = parse_process.stderr.decode(errors="replace").strip().splitlines()
+        raise Exception(f"PDF parse failed with exit code [{parse_process.returncode}] and error [{parse_errors[-1] if parse_errors else ''}]")
+    return cast(list[str], json.loads(parse_process.stdout))
 
 
 class Equity(plugin.Plugin):

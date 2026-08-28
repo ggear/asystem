@@ -50,7 +50,7 @@ func loadLogs(mount string) *logSet {
 	if cached, ok := logCache[mount]; ok {
 		return cached
 	}
-	created := &logSet{roots: logRoots(mount), buffer: make([]byte, logBufferBytes)}
+	created := &logSet{roots: probeRoots(mount, logBareRoot), buffer: make([]byte, logBufferBytes)}
 	logCache[mount] = created
 	return created
 }
@@ -101,7 +101,7 @@ func (s *logSet) report(censusStart time.Time, window time.Duration) {
 		if index >= logCensusMax {
 			return
 		}
-		logger.Debug("examined", censusStart, "kernel [%d] errors logged [%s]", entry.count, entry.message)
+		logger.Debug("examined", censusStart, "kernel [%4d] errors logged [%s]", entry.count, entry.message)
 	}
 }
 
@@ -316,15 +316,8 @@ func bootTime(root string) time.Time {
 	return config.NowIncludingSuspend().Add(-time.Duration(seconds * float64(time.Second)))
 }
 
-func logRoots(mount string) []string {
-	if mount == "" {
-		return []string{logHostRoot}
-	}
-	return []string{mount, logHostRoot}
-}
-
 const (
-	logHostRoot    = "/"
+	logBareRoot    = "/"
 	logDevicePath  = "dev/kmsg"
 	logDeviceNode  = "/dev/kmsg"
 	logUptimePath  = "proc/uptime"

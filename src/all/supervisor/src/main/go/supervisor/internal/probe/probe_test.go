@@ -280,7 +280,7 @@ func TestProbe_FailedSampleBlanks(t *testing.T) {
 				pulseFunc: func() any { return int8(42) },
 			}
 			gates := gateSet{metric.GateServiceAggregate: func() bool { return true }}
-			status := runMetricCacheTask(mock, true, gates, task)
+			status := runCacheMetricTask(mock, true, gates, task)
 			if status != testCase.expectedStatus {
 				t.Errorf("status: got %v want %v", status, testCase.expectedStatus)
 			}

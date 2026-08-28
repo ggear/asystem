@@ -199,17 +199,17 @@ func newTrendWindow(durationHours int, tickFreqSecs int) *trendWindow {
 		panic(fmt.Sprintf("tickFreqSecs must be >= 1, got [%d]", tickFreqSecs))
 	}
 	totalSecs := durationHours * ticksPerHour
-	youngCapacity := atLeast1(defaultYoungCapacity / tickFreqSecs)
+	youngCapacity := max(defaultYoungCapacity/tickFreqSecs, 1)
 	youngSecs := youngCapacity * tickFreqSecs
-	youngAggBatchSize := atLeast1(ticksPerMinute / tickFreqSecs)
+	youngAggBatchSize := max(ticksPerMinute/tickFreqSecs, 1)
 	middleSlotSecs := tickFreqSecs * youngAggBatchSize
 	targetMiddleSecs := defaultMiddleCapacity * ticksPerMinute
-	middleCapacity := atLeast1(targetMiddleSecs / middleSlotSecs)
+	middleCapacity := max(targetMiddleSecs/middleSlotSecs, 1)
 	middleSecs := middleCapacity * middleSlotSecs
 	remainingSecs := max(totalSecs-youngSecs-middleSecs, 0)
-	middleAggBatchSize := atLeast1(ticksPerHour / ticksPerMinute)
+	middleAggBatchSize := max(ticksPerHour/ticksPerMinute, 1)
 	geriatricSlotSecs := middleSlotSecs * middleAggBatchSize
-	geriatricCapacity := atLeast1(remainingSecs / geriatricSlotSecs)
+	geriatricCapacity := max(remainingSecs/geriatricSlotSecs, 1)
 	return &trendWindow{
 		young:              make([]compactHistogram, youngCapacity),
 		youngCapacity:      youngCapacity,
@@ -225,7 +225,7 @@ func newTrendWindow(durationHours int, tickFreqSecs int) *trendWindow {
 }
 
 func newPulseWindow(pulseSecs float64, tickFreqSecs float64) *pulseWindow {
-	size := atLeast2(int(math.Round(pulseSecs / tickFreqSecs)))
+	size := max(int(math.Round(pulseSecs/tickFreqSecs)), 2)
 	samples := make([]compactHistogram, size)
 	for sampleIndex := range samples {
 		samples[sampleIndex] = emptyCompactHistogram()
@@ -581,20 +581,6 @@ func safeAddInt64(leftValue, rightValue int64) int64 {
 		return maxInt64Sum
 	}
 	return leftValue + rightValue
-}
-
-func atLeast1(value int) int {
-	if value < 1 {
-		return 1
-	}
-	return value
-}
-
-func atLeast2(value int) int {
-	if value < 2 {
-		return 2
-	}
-	return value
 }
 
 func emptyCompactHistogram() compactHistogram {
