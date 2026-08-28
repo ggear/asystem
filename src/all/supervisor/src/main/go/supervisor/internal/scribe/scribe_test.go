@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -619,6 +620,90 @@ func logCalls(t *testing.T, root string) []logCall {
 		t.Fatalf("walk %s: %v", root, err)
 	}
 	return calls
+}
+
+func TestScribe_DetailLeadsWithValue(t *testing.T) {
+	tests := []struct {
+		name          string
+		root          string
+		expectedError bool
+	}{
+		{
+			name:          "happy_module",
+			root:          "../..",
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			for _, detail := range detailCalls(t, testCase.root) {
+				if strings.HasPrefix(detail.text, "[") || strings.HasPrefix(detail.text, "%s") {
+					continue
+				}
+				t.Errorf("%s: got detail %q, want it to lead with a bracketed value", detail.position, detail.text)
+			}
+		})
+	}
+}
+
+type detailCall struct {
+	position string
+	text     string
+}
+
+func detailCalls(t *testing.T, root string) []detailCall {
+	t.Helper()
+	var details []detailCall
+	fileSet := token.NewFileSet()
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			if entry.Name() == "target" || entry.Name() == ".go" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok || len(call.Args) < 3 {
+				return true
+			}
+			selector, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || !slices.Contains([]string{"Debug", "Info", "Warn", "Error"}, selector.Sel.Name) {
+				return true
+			}
+			if _, ok := call.Args[0].(*ast.BasicLit); !ok {
+				return true
+			}
+			literal, ok := call.Args[2].(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
+				return true
+			}
+			text, unquoteErr := strconv.Unquote(literal.Value)
+			if unquoteErr != nil {
+				return true
+			}
+			details = append(details, detailCall{position: fileSet.Position(literal.Pos()).String(), text: text})
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", root, err)
+	}
+	if len(details) == 0 {
+		t.Fatalf("walk %s: got 0 detail literals, want the logging call sites", root)
+	}
+	return details
 }
 
 func TestScribe_SetFilters(t *testing.T) {

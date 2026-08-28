@@ -185,7 +185,7 @@ func (d *databaseClient) write(ctx context.Context, data []byte) {
 		retries = attempt + 1
 	}
 	if err == nil {
-		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionPublish).Debug("accepted", writeStart, "[%5d] bytes of line protocol after [%d] retries at [%s]", len(data), retries, d.endpoint)
+		scribe.Log(scribe.SourceEngineDatabase, scribe.SubjectNone, scribe.ActionPublish).Debug("accepted", writeStart, "[%5d] bytes after [%d] retries at [%s]", len(data), retries, d.endpoint)
 		if !d.online {
 			d.online = true
 			d.connected(d.lostAt, "reconnected", d.attempts)

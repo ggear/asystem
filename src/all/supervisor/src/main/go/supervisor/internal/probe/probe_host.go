@@ -666,11 +666,11 @@ func (s *networkUsageSampler) discover(roots []string) {
 				ratedBits:  float64(rated) * networkBitsPerMbit,
 			})
 		}
-		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "rated [%d] physical interfaces of [%d] under [%s], not rated [%s]",
+		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "[%d] rated physical interfaces of [%d] under [%s], not rated [%s]",
 			len(s.links), len(entries), classDir, strings.Join(virtual, ", "))
 		return
 	}
-	scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "rated [0] physical interfaces, no interface directory exists under [%s]", s.root)
+	scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "[0] rated physical interfaces, no directory under [%s]", s.root)
 }
 
 func networkCounter(path string) (uint64, error) {

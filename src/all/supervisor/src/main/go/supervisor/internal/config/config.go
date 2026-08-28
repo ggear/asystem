@@ -83,13 +83,13 @@ func load(path string) *Config {
 	loadStart := time.Now()
 	result := &Config{asystem: configData{Schema: []configServices{}}}
 	if path == "" {
-		scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("defaults", loadStart, "no config path provided")
+		scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("defaults", loadStart, "[none] config path provided")
 	} else if data, err := os.ReadFile(path); err != nil {
-		scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("defaults", loadStart, "config file [%s] not found", path)
+		scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("defaults", loadStart, "[%s] config file not found", path)
 	} else {
 		var raw struct{ Asystem configData }
 		if err := json.Unmarshal(data, &raw); err != nil {
-			scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("defaults", loadStart, "config file [%s] parse failed with [%v]", path, err)
+			scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("defaults", loadStart, "[%s] config file parse failed with [%v]", path, err)
 		} else {
 			result.asystem = raw.Asystem
 			if result.asystem.Schema == nil {
@@ -99,11 +99,11 @@ func load(path string) *Config {
 			validSchema := make([]configServices, 0, len(result.asystem.Schema))
 			for _, hostSchema := range result.asystem.Schema {
 				if hostSchema.Host == "" {
-					scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("rejected", loadStart, "schema [host] empty, skipping")
+					scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve).Warn("rejected", loadStart, "[empty] schema host, skipping")
 					continue
 				}
 				if seenHosts[hostSchema.Host] {
-					scribe.Log(scribe.SourceConfig, scribe.SubjectHost(hostSchema.Host), scribe.ActionResolve).Warn("rejected", loadStart, "duplicate, skipping")
+					scribe.Log(scribe.SourceConfig, scribe.SubjectHost(hostSchema.Host), scribe.ActionResolve).Warn("rejected", loadStart, "[duplicate] schema host, skipping")
 					continue
 				}
 				seenHosts[hostSchema.Host] = true
@@ -111,11 +111,11 @@ func load(path string) *Config {
 				validServices := make([]string, 0, len(hostSchema.Services))
 				for _, service := range hostSchema.Services {
 					if service == "" {
-						scribe.Log(scribe.SourceConfig, scribe.SubjectHost(hostSchema.Host), scribe.ActionResolve).Warn("rejected", loadStart, "empty service, skipping")
+						scribe.Log(scribe.SourceConfig, scribe.SubjectHost(hostSchema.Host), scribe.ActionResolve).Warn("rejected", loadStart, "[empty] service, skipping")
 						continue
 					}
 					if seenServices[service] {
-						scribe.Log(scribe.SourceConfig, scribe.SubjectService(service), scribe.ActionResolve).Warn("rejected", loadStart, "duplicate on host [%s], skipping", hostSchema.Host)
+						scribe.Log(scribe.SourceConfig, scribe.SubjectService(service), scribe.ActionResolve).Warn("rejected", loadStart, "[duplicate] service on host [%s], skipping", hostSchema.Host)
 						continue
 					}
 					seenServices[service] = true
@@ -157,7 +157,7 @@ func (c *Config) Host() string {
 		hostnameStart := time.Now()
 		hostName, err := os.Hostname()
 		if err != nil {
-			scribe.Log(scribe.SourceConfig, scribe.SubjectHost(""), scribe.ActionResolve).Error("faulting", hostnameStart, "hostname lookup failed with [%v]", err)
+			scribe.Log(scribe.SourceConfig, scribe.SubjectHost(""), scribe.ActionResolve).Error("faulting", hostnameStart, "[unknown] hostname, lookup failed with [%v]", err)
 			return
 		}
 		cachedHostName = hostName
@@ -242,22 +242,22 @@ func resolve(field, env, key string) string {
 	logger := scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve)
 	named := strings.ReplaceAll(field, "_", " ")
 	if value := os.Getenv(env); value != "" {
-		logger.Info("resolved", resolveStart, "%s [%s] from [env]", named, mask(field, value))
+		logger.Info("resolved", resolveStart, "[%s] %s from [env]", mask(field, value), named)
 		return value
 	}
 	if strings.HasPrefix(key, "$") {
 		name := key[1:]
 		if val := os.Getenv(name); val != "" {
-			logger.Info("resolved", resolveStart, "%s [%s] from [env] referenced by [file]", named, mask(field, val))
+			logger.Info("resolved", resolveStart, "[%s] %s from [env] referenced by [file]", mask(field, val), named)
 			return val
 		}
-		logger.Warn("unfilled", resolveStart, "%s referenced by [file] but unset in [env]", named)
+		logger.Warn("unfilled", resolveStart, "[unset] %s in [env], referenced by [file]", named)
 		return ""
 	}
 	if key != "" {
-		logger.Info("resolved", resolveStart, "%s [%s] from [file]", named, mask(field, key))
+		logger.Info("resolved", resolveStart, "[%s] %s from [file]", mask(field, key), named)
 	} else {
-		logger.Info("unfilled", resolveStart, "%s unset in [env] and [file]", named)
+		logger.Info("unfilled", resolveStart, "[unset] %s in [env] and [file]", named)
 	}
 	return key
 }

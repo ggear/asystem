@@ -276,7 +276,7 @@ func (s *mountSet) collect() *mountSnapshot {
 		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
 	}
 	taken.drives, taken.read = s.worn(mounts, collectStart)
-	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debug("surveyed", collectStart, "mounts [%3d], system [%3d], shares local [%3d] declared [%3d] failed [%3d], drives [%3d]",
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debug("surveyed", collectStart, "[%3d] mounts, system [%3d], shares local [%3d] declared [%3d] failed [%3d], drives [%3d]",
 		len(mounts), len(mounts)-taken.locals-mountRemotes(mounts), taken.locals, taken.shares, taken.failed, len(taken.drives))
 	return taken
 }
@@ -285,7 +285,7 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 	parseStart := time.Now()
 	data, err := os.ReadFile(filepath.Join(s.root, mountTablePath))
 	if err != nil {
-		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Warn("noaccess", parseStart, "mount table [%s] with [%v], reporting no filesystems", filepath.Join(s.root, mountTablePath), err)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Warn("noaccess", parseStart, "[%s] mount table with [%v], reporting no filesystems", filepath.Join(s.root, mountTablePath), err)
 		return nil, err
 	}
 	devices := map[string]string{}
@@ -325,7 +325,7 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 		deduped = append(deduped, mount)
 	}
 	sort.Slice(deduped, func(first, second int) bool { return deduped[first].mountpoint < deduped[second].mountpoint })
-	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debug("examined", parseStart, "lines [%3d], kept [%3d] as [%s], dropped [%3d] as [%s]",
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debug("examined", parseStart, "[%3d] lines, kept [%3d] as [%s], dropped [%3d] as [%s]",
 		lines, len(deduped), mountSummary(deduped), lines-len(deduped), mountDropped(dropped))
 	return deduped, nil
 }
@@ -530,7 +530,7 @@ func mountBase(root string) string {
 		}
 		if base != root {
 			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionDiscover).Info("resolved", baseStart,
-				"mount table [%s] read outside the container, configured root [%s] holds none", table, root)
+				"[%s] mount table read outside the container, configured root [%s] holds none", table, root)
 		}
 		return base
 	}

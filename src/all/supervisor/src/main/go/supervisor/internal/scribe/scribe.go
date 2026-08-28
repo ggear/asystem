@@ -686,7 +686,7 @@ func purgeLogFiles(keep string) {
 	dir := filepath.Dir(keep)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		Log(SourceScribe, SubjectNone, ActionRemove).Warn("faulting", purgeStart, "log directory [%s] unreadable with [%v]", dir, err)
+		Log(SourceScribe, SubjectNone, ActionRemove).Warn("faulting", purgeStart, "[%s] log directory unreadable with [%v]", dir, err)
 		return
 	}
 	removed := 0
@@ -703,7 +703,7 @@ func purgeLogFiles(keep string) {
 			continue
 		}
 		if removeErr := os.Remove(path); removeErr != nil {
-			Log(SourceScribe, SubjectNone, ActionRemove).Warn("faulting", purgeStart, "stale log file [%s] with [%v]", name, removeErr)
+			Log(SourceScribe, SubjectNone, ActionRemove).Warn("faulting", purgeStart, "[%s] stale log file with [%v]", name, removeErr)
 			continue
 		}
 		removed++

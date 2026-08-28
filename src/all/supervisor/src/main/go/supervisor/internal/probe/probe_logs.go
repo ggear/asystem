@@ -95,13 +95,13 @@ func (s *logSet) report(censusStart time.Time, window time.Duration) {
 		return
 	}
 	logger := scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample)
-	logger.Debug("examined", censusStart, "kernel [%d] errors already in the ring across [%d] distinct messages within window [%s], showing the most frequent [%d]",
+	logger.Debug("examined", censusStart, "[%d] kernel errors already in the ring across [%d] distinct messages within window [%s], showing the most frequent [%d]",
 		len(s.records), len(counted), window, min(len(counted), logCensusMax))
 	for index, entry := range counted {
 		if index >= logCensusMax {
 			return
 		}
-		logger.Debug("examined", censusStart, "kernel [%4d] errors logged [%s]", entry.count, entry.message)
+		logger.Debug("examined", censusStart, "[%4d] kernel errors logged [%s]", entry.count, entry.message)
 	}
 }
 
@@ -153,7 +153,7 @@ func (s *logSet) open() bool {
 		scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Info("followed", time.Now(), "[%s] for kernel errors", path)
 		return true
 	}
-	scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("noaccess", time.Now(), "kernel log %s, reporting [0] errors, needs [CAP_SYSLOG] and device [%s]", strings.Join(failures, " and "), logDeviceNode)
+	scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("noaccess", time.Now(), "[0] errors reported, kernel log %s, needs [CAP_SYSLOG] and device [%s]", strings.Join(failures, " and "), logDeviceNode)
 	return false
 }
 
@@ -218,7 +218,7 @@ func (s *logSet) scan(shouts int) int {
 		s.records = append(s.records, logRecord{stamp: stamp, message: clipped})
 		if s.drained && shouts < logShoutsMax {
 			shouts++
-			scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("observed", time.Now(), "kernel [%s] logged [%s]", stamp.Format(time.RFC3339), clipped)
+			scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warn("observed", time.Now(), "[%s] kernel logged [%s]", stamp.Format(time.RFC3339), clipped)
 		}
 	}
 }

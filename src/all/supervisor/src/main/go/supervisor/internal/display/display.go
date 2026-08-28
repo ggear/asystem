@@ -124,7 +124,7 @@ func NewDisplay(
 		tickStall:       tickStall,
 		singleHostIndex: initialHostIndex(hosts),
 	}
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("geometry", initStart, "layout [%v], rows [%d], cols [%d]", format, height, width)
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("geometry", initStart, "[%v] layout, rows [%d], cols [%d]", format, height, width)
 	return display, nil
 }
 
@@ -386,7 +386,7 @@ func (d *Display) Compile() (Format, error) {
 					}
 				}
 			}
-			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("geometry", compileStart, "layout [%v], rows [%d], cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("geometry", compileStart, "[%v] layout, rows [%d], cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {

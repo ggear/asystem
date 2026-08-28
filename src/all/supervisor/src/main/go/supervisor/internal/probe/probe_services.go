@@ -148,7 +148,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		}
 	}
 	if len(tombstoned) > 0 {
-		scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionRemove).Info("removals", tombstoneStart, "host [%s], [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
+		scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionRemove).Info("removals", tombstoneStart, "[%s] host, [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
 	}
 	newBool := func() *stats.BoolStats {
 		return stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
@@ -395,7 +395,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			continue
 		}
 		if _, exists := seenNames[name]; exists {
-			scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(name), scribe.ActionDiscover).Error("rejected", servicesStart, "non-unique container name, excluding from the service list")
+			scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(name), scribe.ActionDiscover).Error("rejected", servicesStart, "[duplicate] container name, excluded from the service list")
 			continue
 		}
 		seenNames[name] = struct{}{}

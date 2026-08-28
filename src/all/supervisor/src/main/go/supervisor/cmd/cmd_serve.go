@@ -72,7 +72,12 @@ func executeServe(configPath string, opts *serveOptions) error {
 	defer cancel()
 	serveStart := time.Now()
 	loaded := config.Load(configPath)
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", serveStart, "version [%s], config [%s], configured [%d] services, poll [%d] ms, pulse [%d] ms, heartbeat [%d] s", loaded.Version(), configPath, len(loaded.Services(loaded.Host())), periods.PollMillis, periods.PulseMillis, periods.HeartbeatSecs)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", serveStart, "[%s] version", loaded.Version())
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("resolved", serveStart, "[%s] config", configPath)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("watching", serveStart, "[%d] services", len(loaded.Services(loaded.Host())))
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] ms poll", periods.PollMillis)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] ms pulse", periods.PulseMillis)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] s heartbeat", periods.HeartbeatSecs)
 	cache := metric.NewRecordCache()
 	defer func(cache *metric.RecordCache) {
 		err := cache.Close()
@@ -80,7 +85,7 @@ func executeServe(configPath string, opts *serveOptions) error {
 		}
 	}(cache)
 	engine.RunAllProbesPublishLoop(ctx, configPath, cache, periods)
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", serveStart, "version [%s], exited gracefully", loaded.Version())
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", serveStart, "[%s] version, exited gracefully", loaded.Version())
 	return nil
 }
 
