@@ -18,32 +18,32 @@ import (
 
 func TestEngine_RunAllProbesOnce(t *testing.T) {
 	tests := []struct {
-		name                string
-		hostName            string
-		configPath          string
-		createServiceCount  int
-		expectedRecordCount int
+		name                 string
+		hostName             string
+		configPath           string
+		createServiceCount   int
+		expectedServiceNames []string
 	}{
 		{
-			name:                "happy_no_services",
-			hostName:            "macmini-mad",
-			configPath:          testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
-			createServiceCount:  0,
-			expectedRecordCount: metricCountHost + metricCountService*0,
+			name:                 "happy_no_services",
+			hostName:             "macmini-mad",
+			configPath:           testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
+			createServiceCount:   0,
+			expectedServiceNames: nil,
 		},
 		{
-			name:                "happy_one_service",
-			hostName:            "macmini-mad",
-			configPath:          testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
-			createServiceCount:  1,
-			expectedRecordCount: metricCountHost + metricCountService*1,
+			name:                 "happy_one_service",
+			hostName:             "macmini-mad",
+			configPath:           testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
+			createServiceCount:   1,
+			expectedServiceNames: nil,
 		},
 		{
-			name:                "happy_three_services_prod_like",
-			hostName:            "macmini-mad",
-			configPath:          testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
-			createServiceCount:  3,
-			expectedRecordCount: metricCountHost + metricCountService*6,
+			name:                 "happy_three_services_prod_like",
+			hostName:             "macmini-mad",
+			configPath:           testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			createServiceCount:   3,
+			expectedServiceNames: []string{"monitor", "plex", "sabnzbd"},
 		},
 	}
 	scribe.EnableStdout(slog.LevelDebug)
@@ -64,8 +64,10 @@ func TestEngine_RunAllProbesOnce(t *testing.T) {
 			cache := metric.NewRecordCache()
 			RunAllProbesOnce(context.Background(), tt.configPath, cache)
 			t.Logf("Cache:\n%s", cache.String())
-			if cache.Size() != tt.expectedRecordCount {
-				t.Fatalf("expected %d records, got %d", tt.expectedRecordCount, cache.Size())
+			assertServicesProbed(t, cache, tt.hostName, tt.createServiceCount, tt.expectedServiceNames)
+			expectedRecordCount := metricCountHost + metricCountService*len(cache.Services(tt.hostName))
+			if cache.Size() != expectedRecordCount {
+				t.Fatalf("records: got %d want %d", cache.Size(), expectedRecordCount)
 			}
 		})
 	}
@@ -73,40 +75,40 @@ func TestEngine_RunAllProbesOnce(t *testing.T) {
 
 func TestEngine_RunListeningProbesLoop(t *testing.T) {
 	tests := []struct {
-		name                string
-		hostName            string
-		metricIds           []metric.ID
-		serviceMetricIDs    []metric.ID
-		configPath          string
-		createServiceCount  int
-		expectedRecordCount int
+		name                 string
+		hostName             string
+		metricIds            []metric.ID
+		serviceMetricIDs     []metric.ID
+		configPath           string
+		createServiceCount   int
+		expectedServiceNames []string
 	}{
 		{
-			name:                "happy_no_services",
-			hostName:            "macmini-mad",
-			metricIds:           []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
-			serviceMetricIDs:    []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
-			configPath:          testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
-			createServiceCount:  0,
-			expectedRecordCount: 2 + 2*0,
+			name:                 "happy_no_services",
+			hostName:             "macmini-mad",
+			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
+			serviceMetricIDs:     []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
+			configPath:           testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
+			createServiceCount:   0,
+			expectedServiceNames: nil,
 		},
 		{
-			name:                "happy_one_service",
-			hostName:            "macmini-mad",
-			metricIds:           []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
-			serviceMetricIDs:    []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
-			configPath:          testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
-			createServiceCount:  1,
-			expectedRecordCount: 2 + 2*1,
+			name:                 "happy_one_service",
+			hostName:             "macmini-mad",
+			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
+			serviceMetricIDs:     []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
+			configPath:           testutil.FindTestFile(t, "config-happy-noservices-1.json", "config"),
+			createServiceCount:   1,
+			expectedServiceNames: nil,
 		},
 		{
-			name:                "happy_three_services_prod_like",
-			hostName:            "macmini-mad",
-			metricIds:           []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
-			serviceMetricIDs:    []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
-			configPath:          testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
-			createServiceCount:  3,
-			expectedRecordCount: 2 + 2*6,
+			name:                 "happy_three_services_prod_like",
+			hostName:             "macmini-mad",
+			metricIds:            []metric.ID{metric.MetricHostUsedProcessor, metric.MetricHostUsedMemory},
+			serviceMetricIDs:     []metric.ID{metric.MetricServiceUsedProcessor, metric.MetricServiceUsedMemory},
+			configPath:           testutil.FindTestFile(t, "config-happy-prodlike-1.json", "config"),
+			createServiceCount:   3,
+			expectedServiceNames: []string{"monitor", "plex", "sabnzbd"},
 		},
 	}
 	scribe.EnableStdout(slog.LevelDebug)
@@ -143,8 +145,10 @@ func TestEngine_RunListeningProbesLoop(t *testing.T) {
 			defer cancel()
 			RunListeningProbesLoop(ctx, tt.configPath, cache, periods)
 			t.Logf("Cache:\n%s", cache.String())
-			if cache.Size() != tt.expectedRecordCount {
-				t.Fatalf("expected %d records, got %d", tt.expectedRecordCount, cache.Size())
+			assertServicesProbed(t, cache, tt.hostName, tt.createServiceCount, tt.expectedServiceNames)
+			expectedRecordCount := len(tt.metricIds) + len(tt.serviceMetricIDs)*len(cache.Services(tt.hostName))
+			if cache.Size() != expectedRecordCount {
+				t.Fatalf("records: got %d want %d", cache.Size(), expectedRecordCount)
 			}
 		})
 	}
@@ -154,6 +158,23 @@ var (
 	metricCountHost    = len(metric.GetIDs()) - metricCountService
 	metricCountService = len(metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindService}))
 )
+
+func assertServicesProbed(t *testing.T, cache *metric.RecordCache, hostName string, createdCount int, configured []string) {
+	t.Helper()
+	probed := make(map[string]bool)
+	for _, name := range cache.Services(hostName) {
+		probed[name] = true
+	}
+	expected := append([]string{}, configured...)
+	for i := range createdCount {
+		expected = append(expected, fmt.Sprintf("sleep-loader-%d", i+1))
+	}
+	for _, name := range expected {
+		if !probed[name] {
+			t.Fatalf("services: got %v want service %s", cache.Services(hostName), name)
+		}
+	}
+}
 
 type mockUpdatesListener struct{}
 

@@ -280,15 +280,13 @@ func TestEngine_CycleConcurrentSafe(t *testing.T) {
 	p := &fakePlugin{name: "poller", mode: plugin.ModeWindowed}
 	e := newEngine(t, p)
 	var wg sync.WaitGroup
-	for i := 0; i < 16; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 32; j++ {
+	for range 16 {
+		wg.Go(func() {
+			for range 32 {
 				e.AggregateSamples(context.Background(), e.Plugins)
 				e.PollSamples(context.Background())
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	aggregates := e.AggregateSamples(context.Background(), e.Plugins)

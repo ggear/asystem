@@ -242,22 +242,22 @@ func resolve(field, env, key string) string {
 	logger := scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve)
 	named := strings.ReplaceAll(field, "_", " ")
 	if value := os.Getenv(env); value != "" {
-		logger.Info("resolved", resolveStart, "[%s] %s from [env]", mask(field, value), named)
+		logger.Info("resolved", resolveStart, "[%s] %s [env]", mask(field, value), named)
 		return value
 	}
 	if strings.HasPrefix(key, "$") {
 		name := key[1:]
 		if val := os.Getenv(name); val != "" {
-			logger.Info("resolved", resolveStart, "[%s] %s from [env] referenced by [file]", mask(field, val), named)
+			logger.Info("resolved", resolveStart, "[%s] %s [env/file]", mask(field, val), named)
 			return val
 		}
-		logger.Warn("unfilled", resolveStart, "[unset] %s in [env], referenced by [file]", named)
+		logger.Warn("unfilled", resolveStart, "[unset] %s in [env/file]", named)
 		return ""
 	}
 	if key != "" {
-		logger.Info("resolved", resolveStart, "[%s] %s from [file]", mask(field, key), named)
+		logger.Info("resolved", resolveStart, "[%s] %s [file]", mask(field, key), named)
 	} else {
-		logger.Info("unfilled", resolveStart, "[unset] %s in [env] and [file]", named)
+		logger.Info("unfilled", resolveStart, "[unset] %s in [env/file]", named)
 	}
 	return key
 }

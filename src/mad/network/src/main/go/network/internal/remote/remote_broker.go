@@ -3,6 +3,7 @@ package remote
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"network/internal/scribe"
 	"strings"
 	"sync"
@@ -139,9 +140,7 @@ func SubscribeGranted(token mqtt.Token, timeout time.Duration) error {
 func (b *Broker) republish(client mqtt.Client) {
 	b.mu.Lock()
 	replay := make(map[string][]byte, len(b.retained))
-	for topic, payload := range b.retained {
-		replay[topic] = payload
-	}
+	maps.Copy(replay, b.retained)
 	b.mu.Unlock()
 	if len(replay) == 0 {
 		return

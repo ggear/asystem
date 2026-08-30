@@ -31,7 +31,9 @@ deploy.sh consolidation, only keep those that are necessary
 cleanup supervisor schema, rename/drops
 
 
-
+maybe drop vernme /tmp and do a dliverrate delete on release of vernemq so restarts work OK?
+Fix logs for watch so no wrapping, what I see in watch or all?
+check metric attribution works by metric filter when multiple probe_* feed single metric
 
 
 

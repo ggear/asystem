@@ -39,22 +39,22 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 		SetPassword(config.Load(configPath).BrokerToken()).
 		SetOnConnectHandler(func(client mqtt.Client) {
 			retries := attempts.Swap(0)
-			state := "connected"
+			state := "connect"
 			since := time.Now()
 			if !connectedOnce.Swap(true) || retries > 0 {
 				since = lostSince()
 			}
 			if retries > 0 {
-				state = "reconnected"
+				state = "reconnect"
 			}
-			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Info("sessions", since, "[%s] after [%d] attempts at [%s]", state, retries, broker)
+			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Info("sessions", since, "[broker] %s after [%d] attempts", state, retries)
 			if onConnect != nil {
 				onConnect(client)
 			}
 		}).
 		SetConnectionLostHandler(func(_ mqtt.Client, err error) {
 			lostAt.Store(time.Now().UnixNano())
-			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionDisconnect).Warn("sessions", time.Now(), "[lost] connection at [%s] with [%v]", broker, err)
+			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionDisconnect).Warn("sessions", time.Now(), "[broker] disconnect with [%v]", err)
 			select {
 			case lostSignal <- struct{}{}:
 			default:
@@ -68,7 +68,7 @@ func brokerConnect(configPath string, onConnect func(mqtt.Client), willTopic, wi
 				case <-time.After(brokerTimeout):
 				}
 			}
-			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Debug("sessions", lostSince(), "[offline] attempt [%d] at [%s]", attempt, broker)
+			scribe.Log(scribe.SourceEngineBroker, scribe.SubjectNone, scribe.ActionConnect).Debug("sessions", lostSince(), "[broker] offline attempt [%d]", attempt)
 		})
 	if willTopic != "" {
 		opts.SetWill(willTopic, willPayload, 1, true)

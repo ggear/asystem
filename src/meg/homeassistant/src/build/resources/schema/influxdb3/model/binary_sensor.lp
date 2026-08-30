@@ -13,6 +13,7 @@
 #     iphone_graham_kiosk_mode,
 #     janes_ipad_focus,
 #     janes_ipad_kiosk_mode,
+#     janes_iphone_camera_motion,
 #     janes_iphone_focus,
 #     janes_iphone_focus_2,
 #     janes_iphone_kiosk_mode,

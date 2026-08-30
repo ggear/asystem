@@ -7,6 +7,7 @@
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
 #     ada_tablet,
+#     ada_tablet_2,
 #     kitchen_home,
 #     lounge_tv,
 #     nesthubfb4d,

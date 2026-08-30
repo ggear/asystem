@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     ;;
   -h | --help | -*)
     echo "Usage: ${0} [-v|--verbose] [-h|--help]"
-    echo "       influxdb3 query run the generated query for every declared relation"
+    echo "       influxdb3 mutate rewrite renamed and delete dropped measures, run by hand and never by fab"
     exit 2
     ;;
   *)
@@ -177,10 +177,51 @@ query_sql() {
   [ "${faults}" = 0 ]
 }
 
-printf '\nSchema query [%s] against [%s]\n' "network" "${INFLUXDB3_SERVICE_PROD}"
+printf '\nSchema mutate [%s] against [%s]\n' "network" "${INFLUXDB3_SERVICE_PROD}"
 FAULTS=0
-for SQL_FILE in "${ROOT_DIR}"/query/*.sql; do
-  SCHEMA_LABEL="$(basename "${SQL_FILE}")"
-  query_sql < "${SQL_FILE}" || FAULTS=$((FAULTS + 1))
+POINTS=0
+for SQL_FILE in "${ROOT_DIR}"/mutate/rename/*.sql; do
+  [ -e "${SQL_FILE}" ] || continue
+  printf -- '\n-- rename/%s\n\n' "$(basename "${SQL_FILE}")"
+  while IFS= read -r STATEMENT; do
+    [ -z "${STATEMENT}" ] && continue
+    if ! RESULT="$(query "${STATEMENT}")"; then
+      fail "${STATEMENT}" "${RESULT}"
+      FAULTS=$((FAULTS + 1))
+      continue
+    fi
+    COUNT="$(printf '%s' "${RESULT}" | rows)"
+    if [ "${COUNT}" = "0" ]; then
+      printf 'read [0] points, nothing to backfill\n'
+      continue
+    fi
+    if ! printf '%s' "${RESULT}" | jq -r '.[].line' | write_lp; then
+      FAULTS=$((FAULTS + 1))
+      continue
+    fi
+    POINTS=$((POINTS + COUNT))
+    printf 'backfilled [%s] points\n' "${COUNT}"
+  done < <(statements < "${SQL_FILE}")
 done
-[ "${FAULTS}" = 0 ]
+
+for SQL_FILE in "${ROOT_DIR}"/mutate/drop/*.sql; do
+  [ -e "${SQL_FILE}" ] || continue
+  printf -- '\n-- drop/%s\n\n' "$(basename "${SQL_FILE}")"
+  printf 'influxdb3 has no column delete, so a dropped measure stays in the catalog and is silenced in verify only\n\n'
+  while IFS= read -r STATEMENT; do
+    [ -z "${STATEMENT}" ] && continue
+    if ! RESULT="$(query "${STATEMENT}")"; then
+      fail "${STATEMENT}" "${RESULT}"
+      FAULTS=$((FAULTS + 1))
+      continue
+    fi
+    printf '%s\n' "${RESULT}" | table
+    printf '\n'
+  done < <(statements < "${SQL_FILE}")
+done
+
+if [ "${FAULTS}" != "0" ]; then
+  printf '\nSchema mutate [%s] failed [%s] statement(s)\n' "network" "${FAULTS}" >&2
+  exit 1
+fi
+printf '\nSchema mutate [%s] backfilled [%s] points with no faults\n' "network" "${POINTS}"

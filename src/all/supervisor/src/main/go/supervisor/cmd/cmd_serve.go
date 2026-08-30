@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"supervisor/internal/config"
 	"supervisor/internal/engine"
 	"supervisor/internal/metric"
@@ -73,7 +74,7 @@ func executeServe(configPath string, opts *serveOptions) error {
 	serveStart := time.Now()
 	loaded := config.Load(configPath)
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", serveStart, "[%s] version", loaded.Version())
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("resolved", serveStart, "[%s] config", configPath)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("resolved", serveStart, "[%s] config", filepath.Base(configPath))
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("watching", serveStart, "[%d] services", len(loaded.Services(loaded.Host())))
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] ms poll", periods.PollMillis)
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] ms pulse", periods.PulseMillis)

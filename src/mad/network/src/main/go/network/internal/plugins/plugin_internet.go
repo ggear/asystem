@@ -105,7 +105,7 @@ func (p *internetPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 			defer wg.Done()
 			roundTrips := make([]float64, 0, burstSize)
 			sent := 0
-			for j := 0; j < burstSize; j++ {
+			for j := range burstSize {
 				if ctx.Err() != nil {
 					break
 				}
@@ -294,17 +294,11 @@ func diagnoseInternet(samples []plugin.Sample) plugin.Aggregate {
 	default:
 		latencyPenalty := 0
 		if avgRTT > rttFitMaxMs {
-			latencyPenalty = int(math.Round((avgRTT - rttFitMaxMs) / 5))
-			if latencyPenalty > 30 {
-				latencyPenalty = 30
-			}
+			latencyPenalty = min(int(math.Round((avgRTT-rttFitMaxMs)/5)), 30)
 		}
 		jitterPenalty := 0
 		if avgJitter > jitterFitMaxMs {
-			jitterPenalty = int(math.Round((avgJitter - jitterFitMaxMs) / 2))
-			if jitterPenalty > 20 {
-				jitterPenalty = 20
-			}
+			jitterPenalty = min(int(math.Round((avgJitter-jitterFitMaxMs)/2)), 20)
 		}
 		score := plugin.Clamp(100 - int(math.Round(avgLoss)) - (len(publicIPs)-reachable)*targetDownCost - latencyPenalty - jitterPenalty)
 		switch {

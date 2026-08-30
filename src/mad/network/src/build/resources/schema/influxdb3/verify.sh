@@ -65,6 +65,20 @@ query() {
   [ "${status}" = "200" ]
 }
 
+write_lp() {
+  local response status
+  response="$(curl -sS -w '\n%{http_code}' -X POST \
+    "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/write_lp?db=${DATABASE_NAME}&precision=nanosecond" \
+    -H "Authorization: Bearer ${DATABASE_TOKEN}" \
+    -H "Content-Type: text/plain" \
+    --data-binary @-)"
+  status="${response##*$'\n'}"
+  if [ "${status}" != "204" ] && [ "${status}" != "200" ]; then
+    printf 'write failed with status [%s] body [%s]\n' "${status}" "${response%$'\n'*}" >&2
+    return 1
+  fi
+}
+
 fail() {
   printf '\n%s\n%s\n%s\n\n%s\n\n%s\n\n' \
     "################################################################################" \
@@ -557,7 +571,13 @@ SCHEMA_SQL
 printf '\nSchema verify [%s] against [%s]\n' "network" "${INFLUXDB3_SERVICE_PROD}"
 printf -- '\n-- %s\n\n' "verify"
 
+pending() {
+  jq -s '(if length == 1 and (.[0] | type) == "array" then .[0] else . end)
+    | map(select(.fault == "pending")) | length'
+}
+
 FAULTS=0
+PENDING=0
 while IFS= read -r STATEMENT; do
   [ -z "${STATEMENT}" ] && continue
   if ! RESULT="$(query "${STATEMENT}")"; then
@@ -566,12 +586,17 @@ while IFS= read -r STATEMENT; do
   fi
   COUNT="$(printf '%s' "${RESULT}" | rows)"
   if [ "${COUNT}" != "0" ]; then
-    FAULTS=$((FAULTS + COUNT))
+    WAITING="$(printf '%s' "${RESULT}" | pending)"
+    PENDING=$((PENDING + WAITING))
+    FAULTS=$((FAULTS + COUNT - WAITING))
     printf '%s\n' "${RESULT}" | table
     printf '\n'
   fi
 done < <(verify_sql | statements)
 
+if [ "${PENDING}" != "0" ]; then
+  printf '\nSchema verify [%s] found [%s] retired measure(s) still carried, see mutate.sh\n' "network" "${PENDING}" >&2
+fi
 if [ "${FAULTS}" != "0" ]; then
   printf '\nSchema verify [%s] found [%s] fault row(s)\n' "network" "${FAULTS}" >&2
   exit 1

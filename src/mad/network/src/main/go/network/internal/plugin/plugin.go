@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -222,8 +223,8 @@ func (d *DeltaTracker) Delta(key string, cumulative int64) int64 {
 
 func Latest[T any](samples []Sample) T {
 	var empty T
-	for index := len(samples) - 1; index >= 0; index-- {
-		if readings, ok := samples[index].Readings.(T); ok {
+	for _, sample := range slices.Backward(samples) {
+		if readings, ok := sample.Readings.(T); ok {
 			return readings
 		}
 	}

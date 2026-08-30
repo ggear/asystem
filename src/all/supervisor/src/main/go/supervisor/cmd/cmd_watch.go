@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/display"
@@ -211,16 +212,36 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	}
 	loaded := config.Load(configPath)
 	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", watchStart, "[%s] version", loaded.Version())
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("resolved", watchStart, "[%s] config", configPath)
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("resolved", watchStart, "[%s] config", filepath.Base(configPath))
 	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("selected", watchStart, "[%s] mode", mode)
 	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("watching", watchStart, "[%d] hosts", len(hosts))
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("included", watchStart, "[%s] hosts", strings.Join(hosts, ","))
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("included", watchStart, "[%s] hosts", includedHosts(hosts, loaded.Hosts()))
 	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", watchStart, "[%d] ms poll", periods.PollMillis)
 	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", watchStart, "[%d] ms pulse", periods.PulseMillis)
 	go d.Run(ctx)
 	d.Draw(ctx, cancel)
 	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", watchStart, "[%s] version, exited gracefully", loaded.Version())
 	return nil
+}
+
+func includedHosts(selected, configured []string) string {
+	if len(configured) > 0 && len(selected) == len(configured) {
+		known := make(map[string]bool, len(configured))
+		for _, host := range configured {
+			known[host] = true
+		}
+		matched := true
+		for _, host := range selected {
+			if !known[host] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return "*"
+		}
+	}
+	return strings.Join(selected, ",")
 }
 
 func init() {
