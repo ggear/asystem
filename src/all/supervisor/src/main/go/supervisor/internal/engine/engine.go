@@ -151,7 +151,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		storeHostStatus(hostName, true)
 		scheduleReconcile(hostName, false)
 		topics := resubscribeHost(client, hostName)
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", reviveStart, "[online] resub [%2d], retry [%2d]s", topics, reconcileDelay.Seconds())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", reviveStart, "[online] resub [%2d], retry [%2d]s", topics, int64(reconcileDelay.Seconds()))
 		return true
 	}
 	onData := func(client mqtt.Client, msg mqtt.Message) {
@@ -289,7 +289,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		registerStart := time.Now()
 		if bindings := cache.RegisterService(hostName, serviceName, false); len(bindings) > 0 {
 			subscribeTopics(client, bindings)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Info("register", registerStart, "[%s] host, [%2d] topics added", hostName, len(bindings))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Info("register", registerStart, "[%s] [%3d] topics added", hostName, len(bindings))
 		}
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)
@@ -327,7 +327,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				topics = resubscribeHost(client, hostName)
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", statusStart, "[online], triggered by [%s]", trigger)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", statusStart, "[%3d] topics, reconcile [%4d] s", topics, reconcileDelay.Seconds())
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", statusStart, "[%3d] topics, reconcile [%4d] s", topics, int64(reconcileDelay.Seconds()))
 		case hostStatusOffline, "":
 			storeHostStatus(hostName, false)
 			if known && !wasOnline {
@@ -470,7 +470,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					reconciles[pending.host] = pending
 					reconcileMu.Unlock()
 					topics := resubscribeHost(client, pending.host)
-					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%3d] services after [%7d] s", len(services), config.SinceIncludingSuspend(pending.started).Seconds())
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%3d] services after [%7d] s", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()))
 					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%5d] topics resubbed on retry", topics)
 					continue
 				}
@@ -479,11 +479,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Delete(pending.host, service)
 				}
 				if len(services) == 0 {
-					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[ 0] services, after [%7d] s", config.SinceIncludingSuspend(pending.started).Seconds())
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[ 0] services, after [%7d] s", int64(config.SinceIncludingSuspend(pending.started).Seconds()))
 					continue
 				}
 				cache.Refresh()
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Info("reclaims", reconcileStart, "[%2d] evicted after [%4d] s: %s", len(services), config.SinceIncludingSuspend(pending.started).Seconds(), strings.Join(services, ","))
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Info("reclaims", reconcileStart, "[%2d] evicted after [%4d] s: %s", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()), strings.Join(services, ","))
 			}
 			resyncStart := time.Now()
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
