@@ -426,7 +426,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	cache.SubscribeAttach(&watchAttachListener{onAttach: func() {
 		attachStart := time.Now()
 		if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("attached", attachStart, "[%4d] subscribed, [%3d] removed", added, dropped)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("attached", attachStart, "[%3d] subscribed, [%3d] removals", added, dropped)
 		}
 	}})
 	cache.SubscribeDeletes(&watchDeletesListener{
@@ -479,7 +479,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Delete(pending.host, service)
 				}
 				if len(services) == 0 {
-					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[ 0] services, after [%7d] s", int64(config.SinceIncludingSuspend(pending.started).Seconds()))
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[  0] services, after [%6d] s", int64(config.SinceIncludingSuspend(pending.started).Seconds()))
 					continue
 				}
 				cache.Refresh()
@@ -487,7 +487,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			resyncStart := time.Now()
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("resynced", resyncStart, "[%4d] subscribed, [%3d] removed", added, dropped)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("resynced", resyncStart, "[%3d] subscribed, [%3d] removals", added, dropped)
 			}
 			if restored := subscribeWildcards(client); restored > 0 {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Warn("restored", resyncStart, "[%2d] wildcards restored @ resync", restored)
