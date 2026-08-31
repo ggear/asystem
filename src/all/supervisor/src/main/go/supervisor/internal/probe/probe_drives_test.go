@@ -226,7 +226,7 @@ func TestProbeDrives_IgnoresFlashButNotSolidState(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			if ignored := driveIgnoring(testCase.hardware); ignored != testCase.expectedIgnored {
+			if ignored := driveIgnoredPattern.MatchString(testCase.hardware); ignored != testCase.expectedIgnored {
 				t.Errorf("ignored: got %v want %v for %q", ignored, testCase.expectedIgnored, testCase.hardware)
 			}
 		})

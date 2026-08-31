@@ -28,8 +28,8 @@ func Execute() {
 }
 
 func init() {
-	cobra.AddTemplateFunc("bracketed", bracketed)
-	cobra.AddTemplateFunc("vocabularies", vocabularies)
+	cobra.AddTemplateFunc("formatFlagUsages", formatFlagUsages)
+	cobra.AddTemplateFunc("helpAllVocabularies", helpAllVocabularies)
 	rootCmd.SetUsageTemplate(usageTemplate)
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "display version information and exit")
 	rootCmd.PersistentFlags().StringP("config", "c", config.DefaultConfigPath, "path to config file")
@@ -57,72 +57,6 @@ func addAdvancedFlags(cmd *cobra.Command, advanced []string) {
 	}
 }
 
-func vocabularies() string {
-	path := config.DefaultConfigPath
-	if flag := rootCmd.PersistentFlags().Lookup("config"); flag != nil && flag.Value.String() != "" {
-		path = flag.Value.String()
-	}
-	return scribe.Vocabularies(configuredHosts(path), configuredServices(path))
-}
-
-func configuredHosts(path string) []string {
-	hosts, _ := configuredNames(path)
-	return hosts
-}
-
-func configuredServices(path string) []string {
-	_, services := configuredNames(path)
-	return services
-}
-
-func configuredNames(path string) ([]string, []string) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, nil
-	}
-	var document struct {
-		Asystem struct {
-			Schema []struct {
-				Host     string   `json:"host"`
-				Services []string `json:"services"`
-			} `json:"schema"`
-		} `json:"asystem"`
-	}
-	if json.Unmarshal(data, &document) != nil {
-		return nil, nil
-	}
-	seenHosts, seenServices := map[string]bool{}, map[string]bool{}
-	var hosts, services []string
-	for _, entry := range document.Asystem.Schema {
-		if entry.Host != "" && !seenHosts[entry.Host] {
-			seenHosts[entry.Host] = true
-			hosts = append(hosts, entry.Host)
-		}
-		for _, service := range entry.Services {
-			if service == "" || seenServices[service] {
-				continue
-			}
-			seenServices[service] = true
-			services = append(services, service)
-		}
-	}
-	sort.Strings(hosts)
-	sort.Strings(services)
-	return hosts, services
-}
-
-func bracketed(flags *pflag.FlagSet) string {
-	lines := strings.Split(strings.TrimRight(flags.FlagUsages(), "\n"), "\n")
-	for index, line := range lines {
-		lines[index] = defaultPattern.ReplaceAllString(line, "(default [$1])")
-	}
-	return strings.Join(lines, "\n")
-}
-
-const helpAllFlag = "help-all"
-
-var defaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)
-
 var rootCmd = &cobra.Command{
 	Short:         rootDescription,
 	Long:          rootDescription,
@@ -142,21 +76,6 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func makeLevel(logLevel string) (slog.Level, error) {
-	switch strings.ToLower(strings.TrimSpace(logLevel)) {
-	case "debug":
-		return slog.LevelDebug, nil
-	case "info":
-		return slog.LevelInfo, nil
-	case "warn":
-		return slog.LevelWarn, nil
-	case "error":
-		return slog.LevelError, nil
-	default:
-		return slog.LevelInfo, fmt.Errorf("invalid log level [%s], must be one of [debug, info, warn, error]", logLevel)
-	}
-}
-
 type logOptions struct {
 	logLevel   string
 	logSource  string
@@ -173,6 +92,21 @@ func addLogFlags(cmd *cobra.Command, opts *logOptions, level string) {
 
 func setLogFilters(opts *logOptions) error {
 	return scribe.SetFilters(opts.logSource, opts.logSubject, opts.logAction)
+}
+
+func makeLevel(logLevel string) (slog.Level, error) {
+	switch strings.ToLower(strings.TrimSpace(logLevel)) {
+	case "debug":
+		return slog.LevelDebug, nil
+	case "info":
+		return slog.LevelInfo, nil
+	case "warn":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
+		return slog.LevelInfo, fmt.Errorf("invalid log level [%s], must be one of [debug, info, warn, error]", logLevel)
+	}
 }
 
 func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeriod, heartbeatPeriod string) (config.Periods, error) {
@@ -236,7 +170,72 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 	}, nil
 }
 
-const rootDescription = "Run supervisor processes"
+func helpAllVocabularies() string {
+	path := config.DefaultConfigPath
+	if flag := rootCmd.PersistentFlags().Lookup("config"); flag != nil && flag.Value.String() != "" {
+		path = flag.Value.String()
+	}
+	return scribe.Vocabularies(configuredHosts(path), configuredServices(path))
+}
+
+func formatFlagUsages(flags *pflag.FlagSet) string {
+	lines := strings.Split(strings.TrimRight(flags.FlagUsages(), "\n"), "\n")
+	for index, line := range lines {
+		lines[index] = flagDefaultPattern.ReplaceAllString(line, "(default [$1])")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func configuredHosts(path string) []string {
+	hosts, _ := configuredNames(path)
+	return hosts
+}
+
+func configuredServices(path string) []string {
+	_, services := configuredNames(path)
+	return services
+}
+
+func configuredNames(path string) ([]string, []string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil
+	}
+	var document struct {
+		Asystem struct {
+			Schema []struct {
+				Host     string   `json:"host"`
+				Services []string `json:"services"`
+			} `json:"schema"`
+		} `json:"asystem"`
+	}
+	if json.Unmarshal(data, &document) != nil {
+		return nil, nil
+	}
+	seenHosts, seenServices := map[string]bool{}, map[string]bool{}
+	var hosts, services []string
+	for _, entry := range document.Asystem.Schema {
+		if entry.Host != "" && !seenHosts[entry.Host] {
+			seenHosts[entry.Host] = true
+			hosts = append(hosts, entry.Host)
+		}
+		for _, service := range entry.Services {
+			if service == "" || seenServices[service] {
+				continue
+			}
+			seenServices[service] = true
+			services = append(services, service)
+		}
+	}
+	sort.Strings(hosts)
+	sort.Strings(services)
+	return hosts, services
+}
+
+const (
+	helpAllFlag     = "help-all"
+	rootDescription = "Run supervisor processes"
+)
 
 const usageTemplate = `Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
@@ -252,15 +251,17 @@ Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "he
   {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
 
 Flags:
-{{bracketed .LocalFlags}}{{end}}{{if .HasAvailableInheritedFlags}}
+{{formatFlagUsages .LocalFlags}}{{end}}{{if .HasAvailableInheritedFlags}}
 
 Global Flags:
-{{bracketed .InheritedFlags}}{{end}}{{with .Flags.Lookup "log-source"}}{{if not .Hidden}}
+{{formatFlagUsages .InheritedFlags}}{{end}}{{with .Flags.Lookup "log-source"}}{{if not .Hidden}}
 
-{{vocabularies}}{{end}}{{end}}{{if .HasHelpSubCommands}}
+{{helpAllVocabularies}}{{end}}{{end}}{{if .HasHelpSubCommands}}
 
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `
+
+var flagDefaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)

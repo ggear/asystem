@@ -107,16 +107,16 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	var rxCount atomic.Int64
 	var dropCount atomic.Int64
-	var subscribedMutex sync.Mutex
+	var subscribedMu sync.Mutex
 	subscribed := make(map[string]metric.RecordGUID)
-	var wildcardMutex sync.Mutex
+	var wildcardMu sync.Mutex
 	wildcards := make(map[string]struct{})
-	var reconcileMutex sync.Mutex
+	var reconcileMu sync.Mutex
 	reconciles := make(map[string]hostReconcile)
 	connected := config.NowIncludingSuspend()
 	reconcileDelay := max(time.Duration(2*periods.PulseMillis)*time.Millisecond, reconcileGrace)
 	scheduleReconcile := func(hostName string, fromConnect bool) {
-		reconcileMutex.Lock()
+		reconcileMu.Lock()
 		pending := reconciles[hostName]
 		pending.host = hostName
 		pending.retried = false
@@ -126,7 +126,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		pending.deadline = time.Now().Add(reconcileDelay)
 		reconciles[hostName] = pending
-		reconcileMutex.Unlock()
+		reconcileMu.Unlock()
 	}
 	removeService := func(guid metric.RecordGUID) {
 		if guid.ServiceName == metric.ServiceNameUnset {
@@ -141,7 +141,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	var resubscribeHost func(client mqtt.Client, hostName string) int
 	var resubscribeAll func(client mqtt.Client) (int, int)
 	proveOnline := func(client mqtt.Client, hostName string, value metric.ValueData) bool {
-		if isHostOnline(hostName) {
+		if assertHostOnline(hostName) {
 			return true
 		}
 		if value.Pulse == nil || value.Timestamp <= hostOfflineAt(hostName) {
@@ -155,14 +155,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		return true
 	}
 	onData := func(client mqtt.Client, msg mqtt.Message) {
-		subscribedMutex.Lock()
+		subscribedMu.Lock()
 		guid, known := subscribed[msg.Topic()]
-		subscribedMutex.Unlock()
+		subscribedMu.Unlock()
 		if !known {
 			dropCount.Add(1)
 			return
 		}
-		online := isHostOnline(guid.Host)
+		online := assertHostOnline(guid.Host)
 		if len(msg.Payload()) == 0 {
 			if !online {
 				dropCount.Add(1)
@@ -194,7 +194,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	subscribeTopics := func(client mqtt.Client, bindings []metric.TopicBinding) int {
 		filters := make(map[string]byte, len(bindings))
-		subscribedMutex.Lock()
+		subscribedMu.Lock()
 		for _, b := range bindings {
 			if _, exists := subscribed[b.Topic]; exists {
 				continue
@@ -202,7 +202,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			subscribed[b.Topic] = b.GUID
 			filters[b.Topic] = 0
 		}
-		subscribedMutex.Unlock()
+		subscribedMu.Unlock()
 		if len(filters) == 0 {
 			return 0
 		}
@@ -213,11 +213,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if len(refused) == 0 {
 				return
 			}
-			subscribedMutex.Lock()
+			subscribedMu.Lock()
 			for _, topic := range refused {
 				delete(subscribed, topic)
 			}
-			subscribedMutex.Unlock()
+			subscribedMu.Unlock()
 			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%d] topics of [%d], %s, retrying on the next resync", len(refused), len(filters), reason)
 		}()
 		return len(filters)
@@ -230,7 +230,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 		var missing []metric.TopicBinding
 		var stale []string
-		subscribedMutex.Lock()
+		subscribedMu.Lock()
 		for _, b := range bindings {
 			if _, exists := subscribed[b.Topic]; !exists {
 				missing = append(missing, b)
@@ -242,7 +242,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				delete(subscribed, topic)
 			}
 		}
-		subscribedMutex.Unlock()
+		subscribedMu.Unlock()
 		if len(stale) > 0 {
 			client.Unsubscribe(stale...)
 		}
@@ -256,12 +256,12 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 		}
 		topics := make([]string, 0, len(bindings))
-		subscribedMutex.Lock()
+		subscribedMu.Lock()
 		for _, b := range bindings {
 			delete(subscribed, b.Topic)
 			topics = append(topics, b.Topic)
 		}
-		subscribedMutex.Unlock()
+		subscribedMu.Unlock()
 		if len(topics) > 0 {
 			client.Unsubscribe(topics...)
 		}
@@ -304,9 +304,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		statusStart := time.Now()
 		payload := strings.TrimSpace(string(msg.Payload()))
 		rxCount.Add(1)
-		hostStatusMutex.RLock()
+		hostStatusMu.RLock()
 		wasOnline, known := hostStatus[hostName]
-		hostStatusMutex.RUnlock()
+		hostStatusMu.RUnlock()
 		switch payload {
 		case hostStatusOnline:
 			storeHostStatus(hostName, true)
@@ -314,9 +314,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "[online], with heartbeat [no-op]")
 				return
 			}
-			reconcileMutex.Lock()
+			reconcileMu.Lock()
 			_, restarted := reconciles[hostName]
-			reconcileMutex.Unlock()
+			reconcileMu.Unlock()
 			trigger := "connect"
 			topics := 0
 			if restarted {
@@ -338,11 +338,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			for _, svc := range evicted {
 				cache.Evict(hostName, svc)
 			}
-			reconcileMutex.Lock()
+			reconcileMu.Lock()
 			pending := reconciles[hostName]
 			pending.deadline = time.Time{}
 			reconciles[hostName] = pending
-			reconcileMutex.Unlock()
+			reconcileMu.Unlock()
 			for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
 				record := metric.NewRecord(metric.NewNilValue())
 				cache.Store(metric.NewRecordGUID(id, hostName), &record)
@@ -358,7 +358,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	subscribeWildcards := func(client mqtt.Client) int {
 		var pending []string
-		wildcardMutex.Lock()
+		wildcardMu.Lock()
 		for topic := range wildcardHandlers {
 			if _, exists := wildcards[topic]; exists {
 				continue
@@ -366,7 +366,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			wildcards[topic] = struct{}{}
 			pending = append(pending, topic)
 		}
-		wildcardMutex.Unlock()
+		wildcardMu.Unlock()
 		sort.Strings(pending)
 		for _, topic := range pending {
 			subscribeStart := time.Now()
@@ -376,39 +376,39 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				if len(refused) == 0 {
 					return
 				}
-				wildcardMutex.Lock()
+				wildcardMu.Lock()
 				delete(wildcards, topic)
-				wildcardMutex.Unlock()
+				wildcardMu.Unlock()
 				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%s] wildcard, %s, retried on the next resync", topic, reason)
 			}(topic, token)
 		}
 		return len(pending)
 	}
 	resubscribeAll = func(client mqtt.Client) (int, int) {
-		subscribedMutex.Lock()
+		subscribedMu.Lock()
 		clear(subscribed)
-		subscribedMutex.Unlock()
-		wildcardMutex.Lock()
+		subscribedMu.Unlock()
+		wildcardMu.Lock()
 		clear(wildcards)
-		wildcardMutex.Unlock()
+		wildcardMu.Unlock()
 		return subscribeTopics(client, cache.Topics()), subscribeWildcards(client)
 	}
 	onConnect := func(client mqtt.Client) {
 		connectStart := time.Now()
-		hostStatusMutex.Lock()
+		hostStatusMu.Lock()
 		clear(hostStatus)
 		clear(hostOffline)
-		hostStatusMutex.Unlock()
-		subscribedMutex.Lock()
+		hostStatusMu.Unlock()
+		subscribedMu.Lock()
 		clear(subscribed)
-		subscribedMutex.Unlock()
-		wildcardMutex.Lock()
+		subscribedMu.Unlock()
+		wildcardMu.Lock()
 		clear(wildcards)
-		wildcardMutex.Unlock()
-		reconcileMutex.Lock()
+		wildcardMu.Unlock()
+		reconcileMu.Lock()
 		clear(reconciles)
 		connected = config.NowIncludingSuspend()
-		reconcileMutex.Unlock()
+		reconcileMu.Unlock()
 		topics := subscribeTopics(client, cache.Topics())
 		listens := subscribeWildcards(client)
 		cache.Refresh()
@@ -432,9 +432,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	cache.SubscribeDeletes(&watchDeletesListener{
 		client: client,
 		onDelete: func(topic string) {
-			subscribedMutex.Lock()
+			subscribedMu.Lock()
 			delete(subscribed, topic)
-			subscribedMutex.Unlock()
+			subscribedMu.Unlock()
 		},
 	})
 	purgeInterval := time.Duration(max(periods.PulseMillis+1000, 2000)) * time.Millisecond
@@ -450,7 +450,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			evicted, deleted := cache.Purge(periods.HeartbeatSecs + 10*periods.PulseMillis/1000)
 			now := time.Now()
 			var due []hostReconcile
-			reconcileMutex.Lock()
+			reconcileMu.Lock()
 			for hostName, pending := range reconciles {
 				if pending.deadline.IsZero() || now.Before(pending.deadline) {
 					continue
@@ -459,16 +459,16 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				pending.deadline = time.Time{}
 				reconciles[hostName] = pending
 			}
-			reconcileMutex.Unlock()
+			reconcileMu.Unlock()
 			for _, pending := range due {
 				reconcileStart := time.Now()
 				services := cache.ServicesBefore(pending.host, pending.started.Unix())
 				if len(services) > 0 && len(services) == len(cache.Services(pending.host)) && !pending.retried {
-					reconcileMutex.Lock()
+					reconcileMu.Lock()
 					pending.retried = true
 					pending.deadline = time.Now().Add(reconcileDelay)
 					reconciles[pending.host] = pending
-					reconcileMutex.Unlock()
+					reconcileMu.Unlock()
 					topics := resubscribeHost(client, pending.host)
 					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%d] services, after [%d] ms, nothing refreshed so the redelivery was lost, resubscribed [%d] topics", len(services), config.SinceIncludingSuspend(pending.started).Milliseconds(), topics)
 					continue
@@ -501,19 +501,19 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if secs := int64(purgeInterval.Seconds()); secs > 0 {
 				rate = rx / secs
 			}
-			subscribedMutex.Lock()
+			subscribedMu.Lock()
 			attached := len(subscribed)
-			subscribedMutex.Unlock()
+			subscribedMu.Unlock()
 			if rx == 0 && attached > 0 && client.IsConnectionOpen() {
 				silent++
 			} else {
 				silent = 0
 			}
-			if silent >= silenceTicks {
+			if silent >= silenceTickCount {
 				silent = 0
 				silenceStart := time.Now()
 				restored, listens := resubscribeAll(client)
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] messages across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTicks, attached, restored, listens)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] messages across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTickCount, attached, restored, listens)
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] messages [%4d] messages/s", rx, rate)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("removals", purgeStart, "[%3d] evictions, [%3d] deletions", evicted, deleted)
@@ -522,19 +522,19 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			online := 0
 			services := 0
 			for hostName := range cache.Hosts() {
-				if isHostOnline(hostName) {
+				if assertHostOnline(hostName) {
 					online++
 				}
 				services += len(cache.Services(hostName))
 			}
-			reconcileMutex.Lock()
+			reconcileMu.Lock()
 			pending := 0
 			for _, reconcile := range reconciles {
 				if !reconcile.deadline.IsZero() {
 					pending++
 				}
 			}
-			reconcileMutex.Unlock()
+			reconcileMu.Unlock()
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] hosts up, [%2d] reconciling", online, pending)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionCensus).Debug("reported", censusStart, "[%3d] services, at [%3d] records", services, cache.Size())
 		}
@@ -712,6 +712,10 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	publishStart := time.Now()
 	err = probe.Run(ctx, func(isHeartbeat bool) {
 		pulseStart := time.Now()
+		publishLabel := "pulse"
+		if isHeartbeat {
+			publishLabel = "heartbeat"
+		}
 		if forceRepublish.Swap(false) && !isHeartbeat {
 			client.Publish(statusTopic, 1, true, hostStatusOnline)
 			cache.Records(func(_ metric.RecordGUID, record *metric.Record) {
@@ -779,18 +783,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			db.write(ctx, batch.protocol.Bytes())
 		}
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Info("gathered", pulseStart, "[%3d] metrics, sent [%5d] b, kept [%5d] b, [%s]",
-			collected, txBytes, lineBytes, publishPeriod(isHeartbeat))
+			collected, txBytes, lineBytes, publishLabel)
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", publishStart, "[%s] loop with [%v]", loopAllProbesPublish, err)
 	}
-}
-
-func publishPeriod(isHeartbeat bool) string {
-	if isHeartbeat {
-		return periodHeartbeat
-	}
-	return periodPulse
 }
 
 type watchDeletesListener struct {
@@ -851,53 +848,53 @@ type hostReconcile struct {
 	retried  bool
 }
 
-const (
-	hostStatusOnline  = "online"
-	hostStatusOffline = "offline"
-	topicDiscovery    = "supervisor/+/data/service/+/name"
-	silenceTicks      = 5
-	topicStatus       = "supervisor/+/status"
+func assertHostOnline(hostName string) bool {
+	hostStatusMu.RLock()
+	online, known := hostStatus[hostName]
+	hostStatusMu.RUnlock()
+	return !known || online
+}
 
-	loopListeningProbes  = "listening probes"
-	loopListeningStream  = "listening stream"
-	loopAllProbesOnce    = "all probes once"
-	loopAllProbesPublish = "all probes publish"
+func storeHostStatus(hostName string, online bool) {
+	hostStatusMu.Lock()
+	if !online {
+		hostOffline[hostName] = time.Now().Unix()
+	}
+	hostStatus[hostName] = online
+	hostStatusMu.Unlock()
+}
 
-	periodHeartbeat = "heartbeat"
-	periodPulse     = "pulse"
-)
-
-var (
-	reconcileGrace  = 10 * time.Second
-	hostStatusMutex sync.RWMutex
-	hostStatus      map[string]bool
-	hostOffline     map[string]int64
-)
+func hostOfflineAt(hostName string) int64 {
+	hostStatusMu.RLock()
+	at := hostOffline[hostName]
+	hostStatusMu.RUnlock()
+	return at
+}
 
 func init() {
 	hostStatus = make(map[string]bool)
 	hostOffline = make(map[string]int64)
 }
 
-func isHostOnline(hostName string) bool {
-	hostStatusMutex.RLock()
-	online, known := hostStatus[hostName]
-	hostStatusMutex.RUnlock()
-	return !known || online
-}
+const (
+	topicStatus    = "supervisor/+/status"
+	topicDiscovery = "supervisor/+/data/service/+/name"
 
-func storeHostStatus(hostName string, online bool) {
-	hostStatusMutex.Lock()
-	if !online {
-		hostOffline[hostName] = time.Now().Unix()
-	}
-	hostStatus[hostName] = online
-	hostStatusMutex.Unlock()
-}
+	loopListeningProbes  = "listening probes"
+	loopListeningStream  = "listening stream"
+	loopAllProbesOnce    = "all probes once"
+	loopAllProbesPublish = "all probes publish"
 
-func hostOfflineAt(hostName string) int64 {
-	hostStatusMutex.RLock()
-	at := hostOffline[hostName]
-	hostStatusMutex.RUnlock()
-	return at
-}
+	hostStatusOnline  = "online"
+	hostStatusOffline = "offline"
+
+	silenceTickCount = 5
+)
+
+var (
+	hostStatusMu sync.RWMutex
+	hostStatus   map[string]bool
+	hostOffline  map[string]int64
+
+	reconcileGrace = 10 * time.Second
+)

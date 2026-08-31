@@ -19,38 +19,6 @@ import (
 	"supervisor/internal/scribe"
 )
 
-const (
-	driveBlockPath           = "sys/class/block"
-	driveRotationalPath      = "queue/rotational"
-	driveRemovablePath       = "removable"
-	driveVendorPath          = "device/vendor"
-	driveModelPath           = "device/model"
-	driveUnknownHardware     = "unknown hardware"
-	driveVendorWidth         = 8
-	driveVendorPlaceholder   = "ATA"
-	driveFlagSet             = "1"
-	driveTransportUSB        = "usb"
-	driveTransportInternal   = "internal"
-	driveSmartCommand        = "smartctl"
-	driveSmartExitUnreadable = 0b11
-	drivePrefixNVME          = "nvme"
-	driveNamespaceFirst      = "n1"
-	driveKindNVME            = "nvme"
-	driveKindSAT             = "sat"
-	driveKindRealtek         = "sntrealtek"
-	driveKindJMicron         = "sntjmicron"
-	driveKindASMedia         = "sntasmedia"
-	driveKindSCSI            = "scsi"
-	driveResolveMax          = 8
-	bytesPerSector           = 512.0
-	bytesPerDataUnit         = 512000.0
-	bytesPerGiB              = 1073741824.0
-	bytesPerTB               = 1000000000000.0
-	driveAttributeErrors     = 1
-	driveAttributeWritten    = 241
-	driveAttributeWrittenAlt = 246
-)
-
 type driveWear struct {
 	kernel     string
 	model      string
@@ -105,11 +73,23 @@ func (s *mountSet) lifeUsedDrives() (int8, derivation, error) {
 			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
 	}
 	if rated == 0 {
+		named := make([]string, 0, len(taken.drives))
+		for _, drive := range taken.drives {
+			model := drive.model
+			if model == "" {
+				model = "unreadable"
+			}
+			named = append(named, drive.kernel+"="+model)
+		}
+		summary := "none"
+		if len(named) > 0 {
+			summary = strings.Join(named, " ")
+		}
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok, unrated [%s]",
-			len(taken.drives), driveSummary(taken.drives)), nil
+			len(taken.drives), summary), nil
 	}
-	return int8Percent(worst), derived(scribe.ActionSample, "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, unreadable [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
-		int8Percent(worst), rated, worstAt, errored, len(driveUnreadable(taken.drives))), nil
+	return percentValue(worst), derived(scribe.ActionSample, "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, unreadable [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
+		percentValue(worst), rated, worstAt, errored, len(driveUnreadable(taken.drives))), nil
 }
 
 func (s *mountSet) failedDrives() (int8, derivation, error) {
@@ -132,8 +112,8 @@ func (s *mountSet) failedDrives() (int8, derivation, error) {
 			failed = append(failed, drive.kernel+"="+drive.model)
 		}
 	}
-	return int8Percent(float64(errored) / float64(len(taken.drives)) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed drive, errored [%d] of [%d] drives, ok only at [0] pct, failed [%s]",
-		int8Percent(float64(errored)/float64(len(taken.drives))*100.0), errored, len(taken.drives), strings.Join(failed, ", ")), nil
+	return percentValue(float64(errored) / float64(len(taken.drives)) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed drive, errored [%d] of [%d] drives, ok only at [0] pct, failed [%s]",
+		percentValue(float64(errored)/float64(len(taken.drives))*100.0), errored, len(taken.drives), strings.Join(failed, ", ")), nil
 }
 
 func (s *mountSet) worn(mounts []mountUsage, collectStart time.Time) ([]driveWear, time.Time) {
@@ -210,8 +190,11 @@ func (s *mountSet) resolve(kernel string, depth int) string {
 	if _, err := os.Stat(filepath.Join(block, "partition")); err == nil {
 		return s.resolve(filepath.Base(filepath.Dir(target)), depth+1)
 	}
-	if controller := driveControllerOf(target); controller != "" {
-		return controller
+	segments := strings.Split(target, "/")
+	for index, segment := range segments {
+		if segment == "nvme" && index+1 < len(segments) {
+			return segments[index+1]
+		}
 	}
 	return kernel
 }
@@ -278,7 +261,7 @@ func (s *mountSet) mapper(name string) string {
 func (s *mountSet) reading(physical string) driveWear {
 	identity := s.identity(physical)
 	readingStart := time.Now()
-	if driveIgnoring(identity.hardware) {
+	if driveIgnoredPattern.MatchString(identity.hardware) {
 		if !identity.warned {
 			identity.warned = true
 			scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Info("excluded", readingStart, "[%s] at [%s] over [%s] as [%s] is declared not solid state, no wear rating applies so it is not counted in wear", physical, identity.node, identity.transport, identity.hardware)
@@ -311,7 +294,7 @@ func (s *mountSet) reading(physical string) driveWear {
 	if report.estimated {
 		estimate = fmt.Sprintf("%.1f", report.estimate)
 	}
-	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] life [%3d] pct, computed [%.1f] drive [%s] pct, written [%.1f] of [%.0f] TB, as [%s]", physical, int8Percent(wear.life), computed, estimate, report.written/bytesPerTB, identity.rating, identity.named())
+	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostLifeUsedDrives), scribe.ActionSample).Debug("examined", readingStart, "[%s] life [%3d] pct, computed [%.1f] drive [%s] pct, written [%.1f] of [%.0f] TB, as [%s]", physical, percentValue(wear.life), computed, estimate, report.written/bytesPerTB, identity.rating, identity.named())
 	return wear
 }
 
@@ -534,7 +517,15 @@ func driveSmartKind(node, kind string) (smartReport, error) {
 		case driveAttributeErrors:
 			report.errors = int64(attribute.Raw.Value)
 		case driveAttributeWritten, driveAttributeWrittenAlt:
-			if written := driveWritten(attribute.ID, attribute.Name, attribute.Raw.Value); written > 0 && (report.written == 0 || attribute.ID == driveAttributeWritten) {
+			lowered := strings.ToLower(attribute.Name)
+			if attribute.ID == driveAttributeWrittenAlt && strings.Contains(lowered, "erase") {
+				continue
+			}
+			written := attribute.Raw.Value * bytesPerSector
+			if strings.Contains(lowered, "gib") {
+				written = attribute.Raw.Value * bytesPerGiB
+			}
+			if written > 0 && (report.written == 0 || attribute.ID == driveAttributeWritten) {
 				report.written = written
 			}
 		}
@@ -563,52 +554,38 @@ func driveSmartMessages(messages []struct {
 	return strings.Join(texts, ", ")
 }
 
-func driveWritten(id int, name string, raw float64) float64 {
-	if id == driveAttributeWrittenAlt && strings.Contains(strings.ToLower(name), "erase") {
-		return 0
-	}
-	if strings.Contains(strings.ToLower(name), "gib") {
-		return raw * bytesPerGiB
-	}
-	return raw * bytesPerSector
-}
+const (
+	driveBlockPath           = "sys/class/block"
+	driveRotationalPath      = "queue/rotational"
+	driveRemovablePath       = "removable"
+	driveVendorPath          = "device/vendor"
+	driveModelPath           = "device/model"
+	driveUnknownHardware     = "unknown hardware"
+	driveVendorWidth         = 8
+	driveVendorPlaceholder   = "ATA"
+	driveFlagSet             = "1"
+	driveTransportUSB        = "usb"
+	driveTransportInternal   = "internal"
+	driveSmartCommand        = "smartctl"
+	driveSmartExitUnreadable = 0b11
+	drivePrefixNVME          = "nvme"
+	driveNamespaceFirst      = "n1"
+	driveKindNVME            = "nvme"
+	driveKindSAT             = "sat"
+	driveKindRealtek         = "sntrealtek"
+	driveKindJMicron         = "sntjmicron"
+	driveKindASMedia         = "sntasmedia"
+	driveKindSCSI            = "scsi"
+	driveResolveMax          = 8
+	driveAttributeErrors     = 1
+	driveAttributeWritten    = 241
+	driveAttributeWrittenAlt = 246
 
-func driveSummary(drives []driveWear) string {
-	if len(drives) == 0 {
-		return "none"
-	}
-	named := make([]string, 0, len(drives))
-	for _, drive := range drives {
-		model := drive.model
-		if model == "" {
-			model = "unreadable"
-		}
-		named = append(named, drive.kernel+"="+model)
-	}
-	return strings.Join(named, " ")
-}
-
-func driveControllerOf(target string) string {
-	segments := strings.Split(target, "/")
-	for index, segment := range segments {
-		if segment == "nvme" && index+1 < len(segments) {
-			return segments[index+1]
-		}
-	}
-	return ""
-}
-
-func driveIgnoring(hardware string) bool {
-	lowered := strings.ToLower(hardware)
-	for _, ignored := range driveIgnored {
-		if strings.Contains(lowered, ignored) {
-			return true
-		}
-	}
-	return false
-}
-
-var driveIgnored = []string{"flash drive"}
+	bytesPerSector   = 512.0
+	bytesPerDataUnit = 512000.0
+	bytesPerGiB      = 1073741824.0
+	bytesPerTB       = 1000000000000.0
+)
 
 var driveRatings = map[string]float64{
 	"Lexar SSD NM790 4TB":   3000,
@@ -626,6 +603,7 @@ var driveRatings = map[string]float64{
 }
 
 var (
+	driveIgnoredPattern    = regexp.MustCompile(`(?i)flash drive`)
 	driveControllerPattern = regexp.MustCompile(`^nvme[0-9]+$`)
 	driveNamespacePattern  = regexp.MustCompile(`^nvme[0-9]+n[0-9]+$`)
 )

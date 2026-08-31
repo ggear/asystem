@@ -7,11 +7,6 @@ import (
 	"strings"
 )
 
-const (
-	ScopeData = "data"
-	ScopeMeta = "meta"
-)
-
 type builder struct {
 	id           ID
 	valueKind    ValueKind
@@ -27,21 +22,18 @@ type builder struct {
 }
 
 const (
+	ScopeData = "data"
+	ScopeMeta = "meta"
+
 	FailedLogsBudget     = 10.0
 	FailedLogsPulseLimit = 100.0 / FailedLogsBudget
-)
 
-const (
 	UsedDiskOpsBudgetMiB   = 100.0
 	UsedDiskOpsBudgetBytes = UsedDiskOpsBudgetMiB * 1024 * 1024
-)
 
-const (
 	UsedNetworkBudgetMbit = 1000.0
 	UsedNetworkBudgetBits = UsedNetworkBudgetMbit * 1000 * 1000
-)
 
-const (
 	WarnTemperatureBaseCelsius  = 40.0
 	WarnTemperaturePerCelsius   = 5.0
 	WarnTemperaturePulseCelsius = 53.0
@@ -576,9 +568,7 @@ func validateRule(owner builder, rule Rule) {
 var (
 	templateCommand  = "supervisor/$HOST/command"
 	templateSnapshot = "supervisor/$HOST/snapshot"
-)
 
-var (
 	patternToken    = regexp.MustCompile(`^[a-z0-9-_]+$`)
 	patternTemplate = regexp.MustCompile(`^supervisor/\$HOST(/(command|snapshot)|/\$SCOPE/(host|services|service(/[^/]+)?)(/[A-Za-z0-9_]+)*)$`)
 	patternTopic    = regexp.MustCompile(`^supervisor/[a-z0-9-_]+(/(command|snapshot)|/(meta|data)/(host|services|service(/[a-z0-9-_]+)?)(/[a-z0-9-_]+)*)$`)

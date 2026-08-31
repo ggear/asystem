@@ -480,12 +480,6 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 				service.versionDerived = versionDerived
 			}
 		}
-		configuredStatusValue, configuredErr := p.configuredStatus()
-		if configuredErr != nil {
-			service.configuredStatusErr = configuredErr
-		} else {
-			service.configuredStatusValue = configuredStatusValue
-		}
 		sleepStatusValue, sleepErr := p.sleep(snapshot, container.InspectResponse{
 			ContainerJSONBase: &container.ContainerJSONBase{Name: "/" + name},
 		})
@@ -592,6 +586,21 @@ type service struct {
 	upTimeErr             error
 	restartCountValue     float64
 	restartCountErr       error
+}
+
+type serviceIOSample struct {
+	taken        time.Time
+	blockBytes   uint64
+	networkBytes uint64
+}
+
+type serviceIORates struct {
+	blockBytes        float64
+	networkBytes      float64
+	elapsed           float64
+	blockEntries      int
+	networkInterfaces int
+	err               error
 }
 
 func (p *servicesProbe) servicesStatus() (bool, derivation, error) {
@@ -749,8 +758,8 @@ func (p *servicesProbe) diskOpsUsed(name string, rates serviceIORates) (int8, de
 		return 0, derivation{}, rates.err
 	}
 	usedPercent := rates.blockBytes / metric.UsedDiskOpsBudgetBytes * 100.0
-	return int8Percent(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used disk ops, service [%s] moved [%.1f] MiB per second of the [%.0f] MiB budget across [%d] devices over [%.1f] s",
-		int8Percent(usedPercent), name, rates.blockBytes/bytesPerMiB, metric.UsedDiskOpsBudgetMiB, rates.blockEntries, rates.elapsed), nil
+	return percentValue(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used disk ops, service [%s] moved [%.1f] MiB per second of the [%.0f] MiB budget across [%d] devices over [%.1f] s",
+		percentValue(usedPercent), name, rates.blockBytes/bytesPerMiB, metric.UsedDiskOpsBudgetMiB, rates.blockEntries, rates.elapsed), nil
 }
 
 func (p *servicesProbe) networkUsed(name string, rates serviceIORates) (int8, derivation, error) {
@@ -760,9 +769,9 @@ func (p *servicesProbe) networkUsed(name string, rates serviceIORates) (int8, de
 	if rates.err != nil {
 		return 0, derivation{}, rates.err
 	}
-	usedPercent := rates.networkBytes * serviceBitsPerByte / metric.UsedNetworkBudgetBits * 100.0
-	return int8Percent(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used network, service [%s] moved [%.1f] Mbit per second of the [%.0f] Mbit budget across [%d] interfaces over [%.1f] s",
-		int8Percent(usedPercent), name, rates.networkBytes*serviceBitsPerByte/serviceBitsPerMbit, metric.UsedNetworkBudgetMbit, rates.networkInterfaces, rates.elapsed), nil
+	usedPercent := rates.networkBytes * bitsPerByte / metric.UsedNetworkBudgetBits * 100.0
+	return percentValue(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used network, service [%s] moved [%.1f] Mbit per second of the [%.0f] Mbit budget across [%d] interfaces over [%.1f] s",
+		percentValue(usedPercent), name, rates.networkBytes*bitsPerByte/bitsPerMbit, metric.UsedNetworkBudgetMbit, rates.networkInterfaces, rates.elapsed), nil
 }
 
 func (p *servicesProbe) ioRates(name, id string, response container.StatsResponse) serviceIORates {
@@ -797,7 +806,7 @@ func serviceBlockBytes(response container.StatsResponse) (uint64, int) {
 	moved, entries := uint64(0), 0
 	for _, entry := range response.BlkioStats.IoServiceBytesRecursive {
 		operation := strings.ToLower(entry.Op)
-		if operation != serviceBlockRead && operation != serviceBlockWrite {
+		if operation != "read" && operation != "write" {
 			continue
 		}
 		moved += entry.Value
@@ -828,11 +837,6 @@ func (p *servicesProbe) backupStatus() (bool, error) {
 	return true, nil
 }
 
-func (p *servicesProbe) configuredStatus() (bool, error) {
-	// TODO: Provide implementation
-	return false, nil
-}
-
 func (p *servicesProbe) restartCount(name string, containerInfo container.InspectResponse) (float64, derivation, error) {
 	if containerInfo.ContainerJSONBase == nil {
 		return 0, derivation{}, fmt.Errorf("no restart count read, docker returned an inspect response for service [%s] with no base section", name)
@@ -844,20 +848,20 @@ func (p *servicesProbe) restartCount(name string, containerInfo container.Inspec
 func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo container.InspectResponse) (string, derivation, error) {
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
 		tokens := strings.Split(containerInfo.Config.Image, ":")
-		if len(tokens) > 1 && config.VersionPattern.MatchString(tokens[1]) {
+		if len(tokens) > 1 && config.DefaultVersionPattern.MatchString(tokens[1]) {
 			return tokens[1], derived(scribe.ActionSample, "computed [%s] version, read from the image tag [%s] docker reports", tokens[1], containerInfo.Config.Image), nil
 		}
 	}
 	name := containerServiceName(containerInfo)
 	if name == "" {
-		return versionUnknown, derived(scribe.ActionSample, "computed [%s] version, docker reports no usable image tag and the container carries no service name to look up in the install tree", versionUnknown), nil
+		return servicesVersionUnknown, derived(scribe.ActionSample, "computed [%s] version, docker reports no usable image tag and the container carries no service name to look up in the install tree", servicesVersionUnknown), nil
 	}
 	installed, _ := snapshot.service(name)
 	if installed.version != "" {
 		return installed.version, derived(scribe.ActionSample, "computed [%s] version, service [%s] read from the install tree since the image tag carries none", installed.version, name), nil
 	}
-	return versionUnknown, derived(scribe.ActionSample, "computed [%s] version, service [%s] has no image tag and no version in the install tree under [%s]",
-		versionUnknown, name, installRoot), nil
+	return servicesVersionUnknown, derived(scribe.ActionSample, "computed [%s] version, service [%s] has no image tag and no version in the install tree under [%s]",
+		servicesVersionUnknown, name, installRoot), nil
 }
 
 func (p *servicesProbe) sleep(snapshot *installSnapshot, containerInfo container.InspectResponse) (bool, error) {
@@ -935,27 +939,8 @@ func containerServiceName(containerInfo container.InspectResponse) string {
 const (
 	servicesDockerTimeoutSecs            = 2
 	servicesDockerContainerIgnorePattern = "reaper_"
-	versionUnknown                       = "-"
-)
+	servicesVersionUnknown               = "-"
 
-type serviceIOSample struct {
-	taken        time.Time
-	blockBytes   uint64
-	networkBytes uint64
-}
-
-type serviceIORates struct {
-	blockBytes        float64
-	networkBytes      float64
-	elapsed           float64
-	blockEntries      int
-	networkInterfaces int
-	err               error
-}
-
-const (
-	serviceBlockRead   = "read"
-	serviceBlockWrite  = "write"
-	serviceBitsPerByte = 8.0
-	serviceBitsPerMbit = 1000000.0
+	bitsPerByte = 8.0
+	bitsPerMbit = 1000000.0
 )

@@ -1079,7 +1079,7 @@ func seedHostMounts(t *testing.T) {
 	}
 	set := newMountFixture(t, writeMountTree(t, mounts, fstab, nil), sizes, nil)
 	set.current = set.collect()
-	mountCacheMutex.Lock()
+	mountCacheMu.Lock()
 	mountCache[""] = set
-	mountCacheMutex.Unlock()
+	mountCacheMu.Unlock()
 }

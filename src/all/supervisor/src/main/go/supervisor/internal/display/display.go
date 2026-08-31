@@ -49,90 +49,91 @@ func (d dimensions) String() string {
 }
 
 type Display struct {
-	hosts           []string
-	periods         config.Periods
-	configPath      string
-	isRemote        bool
-	format          Format
-	formatInit      Format
-	useUnicode      bool
-	dimsInit        dimensions
-	dimsTerminal    dimensions
-	boxes           []box
-	serviceShown    []metric.ID
+	hosts        []string
+	periods      config.Periods
+	configPath   string
+	isRemote     bool
+	useUnicode   bool
+	format       Format
+	formatInit   Format
+	dimsInit     dimensions
+	dimsTerminal dimensions
+
 	maxServices     int
-	dirty           dirtyBoxes
-	terminal        Terminal
-	factory         TerminalFactory
-	cache           *metric.RecordCache
 	singleHostIndex int
-	refreshPeriod   time.Duration
-	logBuffer       *scribe.LogBuffer
-	logOverlay      bool
-	logOverlayAuto  bool
-	logGeneration   uint64
-	logAnchor       uint64
-	logNext         uint64
-	logDropped      uint64
-	logFollow       bool
-	logHeights      map[uint64]int
-	logGrid         []uint64
-	logGridEnd      uint64
-	refreshSignal   chan struct{}
-	force           bool
-	tickPeriod      time.Duration
-	tickStall       time.Duration
+	serviceShown    []metric.ID
+
+	tickPeriod    time.Duration
+	tickStall     time.Duration
+	refreshPeriod time.Duration
+	forceRefresh  bool
+	signalRefresh chan struct{}
+
+	boxes    []box
+	dirty    dirtyBoxes
+	terminal Terminal
+	factory  TerminalFactory
+	cache    *metric.RecordCache
+
+	logOverlay     bool
+	logOverlayAuto bool
+	logFollow      bool
+	logGeneration  uint64
+	logAnchor      uint64
+	logNext        uint64
+	logDropped     uint64
+	logGridEnd     uint64
+	logHeights     map[uint64]int
+	logGrid        []uint64
+	logBuffer      *scribe.LogBuffer
 }
 
 type dirtyBoxes struct {
-	mutex      sync.Mutex
-	indexes    map[int]struct{}
+	dirtyMu    sync.Mutex
 	generation uint64
+	indexes    map[int]struct{}
 }
 
 func NewDisplay(
-	cache *metric.RecordCache,
-	factory TerminalFactory,
 	hosts []string,
+	periods config.Periods,
+	configPath string,
+	isRemote bool,
+	useUnicode bool,
+	format Format,
 	width, height int,
 	maxWidth, maxHeight int,
-	format Format,
-	useUnicode bool,
-	periods config.Periods,
-	isRemote bool,
-	configPath string,
-	logBuffer *scribe.LogBuffer,
 	refreshPeriod time.Duration,
+	factory TerminalFactory,
+	cache *metric.RecordCache,
+	logBuffer *scribe.LogBuffer,
 ) (*Display, error) {
 	initStart := time.Now()
+	singleHostIndex := -1
+	if len(hosts) == 1 {
+		singleHostIndex = 0
+	}
 	display := &Display{
 		hosts:           hosts,
-		dimsInit:        dimensions{rows: height, cols: width},
-		dimsTerminal:    dimensions{rows: maxHeight, cols: maxWidth},
-		useUnicode:      useUnicode,
 		periods:         periods,
 		configPath:      configPath,
 		isRemote:        isRemote,
+		useUnicode:      useUnicode,
 		format:          format,
 		formatInit:      format,
+		dimsInit:        dimensions{rows: height, cols: width},
+		dimsTerminal:    dimensions{rows: maxHeight, cols: maxWidth},
+		singleHostIndex: singleHostIndex,
+		tickPeriod:      defaultTickPeriod,
+		tickStall:       defaultTickStall,
+		refreshPeriod:   refreshPeriod,
+		signalRefresh:   make(chan struct{}, 1),
 		factory:         factory,
 		cache:           cache,
 		logBuffer:       logBuffer,
-		refreshPeriod:   refreshPeriod,
-		refreshSignal:   make(chan struct{}, 1),
-		tickPeriod:      tickPeriod,
-		tickStall:       tickStall,
-		singleHostIndex: initialHostIndex(hosts),
 	}
 	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Info("geometry", initStart, "[%v] layout, rows [%d], cols [%d]", format, height, width)
 	return display, nil
-}
-
-func initialHostIndex(hosts []string) int {
-	if len(hosts) == 1 {
-		return 0
-	}
-	return -1
 }
 
 func (d *Display) Close() {
@@ -141,16 +142,12 @@ func (d *Display) Close() {
 	}
 }
 
-func (d *Display) compileHosts() []string {
-	if d.singleHostIndex >= 0 && d.singleHostIndex < len(d.hosts) {
-		return []string{d.hosts[d.singleHostIndex]}
-	}
-	return d.hosts
-}
-
 func (d *Display) Compile() (Format, error) {
 	compileStart := time.Now()
-	compileHosts := d.compileHosts()
+	compileHosts := d.hosts
+	if d.singleHostIndex >= 0 && d.singleHostIndex < len(d.hosts) {
+		compileHosts = []string{d.hosts[d.singleHostIndex]}
+	}
 	hostCount := len(compileHosts)
 	compile := func(format Format, layout [][]box) ([]box, error) {
 
@@ -368,7 +365,15 @@ func (d *Display) Compile() (Format, error) {
 		boxes, err := compile(attemptedFormat, layout)
 		if err == nil {
 			d.boxes = boxes
-			d.serviceShown = shownServiceMetrics(boxes)
+			d.serviceShown = nil
+			seenServiceMetrics := map[metric.ID]bool{}
+			for _, b := range boxes {
+				if metric.GetIDKind(b.metricID) != metric.MetricKindService || seenServiceMetrics[b.metricID] {
+					continue
+				}
+				seenServiceMetrics[b.metricID] = true
+				d.serviceShown = append(d.serviceShown, b.metricID)
+			}
 			serviceSlots := 0
 			if len(compileHosts) > 0 {
 				for _, b := range boxes {
@@ -419,11 +424,11 @@ func (d *Display) Load() error {
 }
 
 func (d *Display) MarkRefresh() {
-	if d == nil || d.refreshSignal == nil {
+	if d == nil || d.signalRefresh == nil {
 		return
 	}
 	select {
-	case d.refreshSignal <- struct{}{}:
+	case d.signalRefresh <- struct{}{}:
 	default:
 	}
 }
@@ -455,11 +460,11 @@ func (d *Display) Logging() {
 		return runewidth.Truncate(text, d.dimsInit.cols, tail)
 	}
 	capacity := maxLines - 2
-	rows, consumed, anchor := d.paged(capacity)
+	rows, consumed, anchor := d.logPaged(capacity)
 	d.logDropped = anchor - min(anchor, d.logAnchor)
 	d.logAnchor = anchor
 	d.logNext = anchor + uint64(consumed)
-	d.drawOverlayBar()
+	d.drawLogOverlayBar()
 	d.terminal.draw(0, 1, clip(scribe.OverlayHeader(d.dimsInit.cols)), colourChat)
 	for row, line := range rows {
 		row += 2
@@ -495,7 +500,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			return
 		case <-refreshC:
 			d.refresh("period")
-		case <-d.refreshSignal:
+		case <-d.signalRefresh:
 			d.refresh("stream")
 		case event, ok := <-d.terminal.events():
 			if !ok {
@@ -592,9 +597,9 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			drawnCount := 0
 			if d.logOverlay {
 				d.logTick()
-			} else if d.force || len(dirtyIndexes) > 0 {
+			} else if d.forceRefresh || len(dirtyIndexes) > 0 {
 				drawnCount = len(dirtyIndexes)
-				if d.force {
+				if d.forceRefresh {
 					drawnCount = len(d.boxes)
 					for i := range d.boxes {
 						d.boxes[i].drawValue(d)
@@ -611,7 +616,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			if len(dirtyIndexes) > 0 || drawnCount > 0 {
 				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Debug("received", drawStart, "[%3d] updates, drawn [%3d] boxes", len(dirtyIndexes), drawnCount)
 			}
-			d.force = false
+			d.forceRefresh = false
 		}
 	}
 }
@@ -648,7 +653,7 @@ func (d *Display) refresh(trigger string) {
 		}
 	}
 	d.terminal.show()
-	d.force = true
+	d.forceRefresh = true
 	if trigger == "period" {
 		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Debug("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
 		return
@@ -658,11 +663,11 @@ func (d *Display) refresh(trigger string) {
 
 func (d *Display) subscribeUpdates() {
 	d.cache.ClearUpdateListeners()
-	d.dirty.mutex.Lock()
+	d.dirty.dirtyMu.Lock()
 	d.dirty.generation++
 	d.dirty.indexes = make(map[int]struct{}, len(d.boxes))
 	gen := d.dirty.generation
-	d.dirty.mutex.Unlock()
+	d.dirty.dirtyMu.Unlock()
 	runStateInputs := []metric.ID{metric.MetricServiceName, metric.MetricServiceHealthStatus, metric.MetricServiceConfiguredStatus}
 	for i := range d.boxes {
 		guid := d.boxes[i].recordGUID
@@ -686,17 +691,17 @@ func (d *Display) subscribeUpdates() {
 }
 
 func (d *Display) markDirty(index int, generation uint64) {
-	d.dirty.mutex.Lock()
+	d.dirty.dirtyMu.Lock()
 	if generation == d.dirty.generation {
 		d.dirty.indexes[index] = struct{}{}
 	}
-	d.dirty.mutex.Unlock()
+	d.dirty.dirtyMu.Unlock()
 }
 
 func (d *Display) takeDirtyIndexes() []int {
-	d.dirty.mutex.Lock()
+	d.dirty.dirtyMu.Lock()
 	if len(d.dirty.indexes) == 0 {
-		d.dirty.mutex.Unlock()
+		d.dirty.dirtyMu.Unlock()
 		return nil
 	}
 	indexes := make([]int, 0, len(d.dirty.indexes))
@@ -704,7 +709,7 @@ func (d *Display) takeDirtyIndexes() []int {
 		indexes = append(indexes, index)
 	}
 	d.dirty.indexes = make(map[int]struct{}, len(indexes))
-	d.dirty.mutex.Unlock()
+	d.dirty.dirtyMu.Unlock()
 	return indexes
 }
 
@@ -718,21 +723,17 @@ func (l *boxListener) MarkDirty() {
 	l.display.markDirty(l.index, l.generation)
 }
 
-const (
-	tickPeriod       = 250 * time.Millisecond
-	tickStall        = 5 * time.Second
-	overlayBarKeys   = 8
-	logPagesMax      = scribe.BufferScreens / 2
-	overlayBarState  = 6
-	overlayBarAction = 5
-)
+type logOverlayRow struct {
+	text  string
+	level slog.Level
+}
 
-func (d *Display) paged(capacity int) ([]overlayRow, int, uint64) {
+func (d *Display) logPaged(capacity int) ([]logOverlayRow, int, uint64) {
 	if capacity < 1 {
 		return nil, 0, d.logBuffer.Version()
 	}
 	lines, anchor := d.logBuffer.From(d.logAnchor, capacity)
-	var rows []overlayRow
+	var rows []logOverlayRow
 	consumed := 0
 	for _, line := range lines {
 		texts := scribe.OverlayLines(line, d.dimsInit.cols)
@@ -740,7 +741,7 @@ func (d *Display) paged(capacity int) ([]overlayRow, int, uint64) {
 			break
 		}
 		for _, text := range texts {
-			rows = append(rows, overlayRow{text: text, level: line.Level})
+			rows = append(rows, logOverlayRow{text: text, level: line.Level})
 		}
 		consumed++
 		if len(rows) >= capacity {
@@ -753,11 +754,11 @@ func (d *Display) paged(capacity int) ([]overlayRow, int, uint64) {
 	return rows, consumed, anchor
 }
 
-func (d *Display) drawOverlayBar() {
+func (d *Display) drawLogOverlayBar() {
 	arrow := " " + textDown.pick(d.useUnicode)
 	esc := "ESC"
 	suffix := textEdge.pick(d.useUnicode)
-	status, colour := d.overlayStatus()
+	status, colour := d.logOverlayStatus()
 	statusWidth := runewidth.StringWidth(status)
 	arrowWidth := runewidth.StringWidth(arrow)
 	escWidth := runewidth.StringWidth(esc)
@@ -770,20 +771,20 @@ func (d *Display) drawOverlayBar() {
 	d.terminal.draw(padLen+statusWidth+arrowWidth+escWidth, 0, suffix, colourChat)
 }
 
-func (d *Display) overlayStatus() (string, colour) {
+func (d *Display) logOverlayStatus() (string, colour) {
 	page, pages := d.logPagination()
 	state, action, colour := "PAUSED", "LIVE", colourWarn
 	if d.logFollow {
 		state, action, colour = "LIVE", "PAUSE", colourCheer
 	}
 	counter := fmt.Sprintf("%*d/%d", len(strconv.Itoa(pages)), page, pages)
-	long := fmt.Sprintf(" %-*s %s %s=PAGE SPACE=%-*s", overlayBarState, state, counter, textPaged.pick(d.useUnicode), overlayBarAction, action)
-	short := fmt.Sprintf(" %-*s %s", overlayBarState, state, counter)
+	long := fmt.Sprintf(" %-*s %s %s=PAGE SPACE=%-*s", logOverlayBarState, state, counter, textPaged.pick(d.useUnicode), logOverlayBarAction, action)
+	short := fmt.Sprintf(" %-*s %s", logOverlayBarState, state, counter)
 	if d.logDropped > 0 {
 		long = fmt.Sprintf(" MISSED %d%s", d.logDropped, long)
 		short = fmt.Sprintf(" MISSED %d%s", d.logDropped, short)
 	}
-	if runewidth.StringWidth(long)+overlayBarKeys <= d.dimsInit.cols {
+	if runewidth.StringWidth(long)+logOverlayBarKeys <= d.dimsInit.cols {
 		return long, colour
 	}
 	return short, colour
@@ -849,7 +850,7 @@ func (d *Display) logTick() {
 		return
 	}
 	d.logGeneration = d.logBuffer.Version()
-	d.drawOverlayBar()
+	d.drawLogOverlayBar()
 	d.terminal.show()
 }
 
@@ -949,13 +950,12 @@ func (d *Display) logRepaint() {
 	d.terminal.show()
 }
 
-type overlayRow struct {
-	text  string
-	level slog.Level
-}
-
 const (
-	surfaceTerminal = "terminal"
-	surfaceGrid     = "grid"
-	surfaceLayout   = "layout"
+	defaultTickPeriod = 250 * time.Millisecond
+	defaultTickStall  = 5 * time.Second
+
+	logPagesMax         = scribe.BufferScreens / 2
+	logOverlayBarKeys   = 8
+	logOverlayBarState  = 6
+	logOverlayBarAction = 5
 )

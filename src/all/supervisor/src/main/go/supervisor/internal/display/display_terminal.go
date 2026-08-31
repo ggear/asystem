@@ -4,9 +4,6 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-// TODO:
-//   - hide tcell namespace completely - tcell.Event
-
 type Terminal interface {
 	close()
 	clear()

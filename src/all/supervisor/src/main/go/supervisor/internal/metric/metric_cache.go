@@ -127,12 +127,6 @@ func NewRecordCache() *RecordCache {
 	}
 }
 
-func (c *RecordCache) Close() error {
-	// TODO:
-	//  - Stop all routines
-	return nil
-}
-
 func (c *RecordCache) Store(guid RecordGUID, record *Record) {
 	if c == nil || record == nil {
 		return

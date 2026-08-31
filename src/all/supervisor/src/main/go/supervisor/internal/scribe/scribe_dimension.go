@@ -171,9 +171,9 @@ func Attribute(source Source, ids ...metric.ID) {
 	for _, id := range ids {
 		names = append(names, strings.ToLower(metric.GetIDName(id)))
 	}
-	attributionMutex.Lock()
+	attributionMu.Lock()
 	attributions[source.String()] = names
-	attributionMutex.Unlock()
+	attributionMu.Unlock()
 }
 
 func Widen(hosts, services []string) {
@@ -199,7 +199,8 @@ func Vocabularies(hosts, services []string) string {
 		declared = append(declared, metric.GetIDName(id))
 	}
 	sort.Strings(declared)
-	hostMetrics, serviceMetrics := []string{}, []string{}
+	var hostMetrics []string
+	var serviceMetrics []string
 	for _, subject := range declared {
 		if strings.HasPrefix(subject, subjectServices+"/") {
 			serviceMetrics = append(serviceMetrics, subject)
@@ -280,6 +281,12 @@ func columned(values []string, cell int) string {
 	return builder.String()
 }
 
+type logFilter struct {
+	source  []string
+	subject []string
+	action  []string
+}
+
 func SetFilters(source, subject, action string) error {
 	sourcePrefixes, err := closedPrefixes("source", source, sourceStrings())
 	if err != nil {
@@ -290,22 +297,22 @@ func SetFilters(source, subject, action string) error {
 		return err
 	}
 	subjectPrefixes := openPrefixes(subject)
-	filterMutex.Lock()
+	filterMu.Lock()
 	activeFilter = logFilter{source: sourcePrefixes, subject: subjectPrefixes, action: actionPrefixes}
-	filterMutex.Unlock()
+	filterMu.Unlock()
 	return nil
 }
 
 func ResetFilters() {
-	filterMutex.Lock()
+	filterMu.Lock()
 	activeFilter = logFilter{}
-	filterMutex.Unlock()
+	filterMu.Unlock()
 }
 
 func allowed(source, subject, action string) bool {
-	filterMutex.Lock()
+	filterMu.Lock()
 	filter := activeFilter
-	filterMutex.Unlock()
+	filterMu.Unlock()
 	return matches(source, filter.source) && subjected(source, subject, filter.subject) && matches(action, filter.action)
 }
 
@@ -313,9 +320,9 @@ func subjected(source, subject string, prefixes []string) bool {
 	if matches(subject, prefixes) {
 		return true
 	}
-	attributionMutex.Lock()
+	attributionMu.Lock()
 	attributed := attributions[source]
-	attributionMutex.Unlock()
+	attributionMu.Unlock()
 	for _, name := range attributed {
 		if matches(name, prefixes) {
 			return true
@@ -404,17 +411,11 @@ const (
 )
 
 var (
-	attributionMutex sync.Mutex
-	attributions     = map[string][]string{}
+	attributionMu sync.Mutex
+	attributions  = map[string][]string{}
 )
 
-type logFilter struct {
-	source  []string
-	subject []string
-	action  []string
-}
-
 var (
-	filterMutex  sync.Mutex
+	filterMu     sync.Mutex
 	activeFilter logFilter
 )

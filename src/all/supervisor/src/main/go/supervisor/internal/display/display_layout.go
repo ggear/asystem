@@ -649,11 +649,12 @@ func (b *box) drawValue(display *Display) {
 	}
 	location := dimensions{b.position.rows, b.position.cols + b.compiled.valOffset}
 	b.draw(display, true)
-	var trendOK *bool
-	if record.Value.Trend != nil {
-		trendOK = &record.Value.Trend.OK
+	c := colourWarn
+	if !record.Value.Pulse.OK {
+		c = colourAlert
+	} else if record.Value.Trend != nil && record.Value.Trend.OK {
+		c = colourCheer
 	}
-	c := highlight(&record.Value.Pulse.OK, trendOK)
 	sleeping := metric.GetIDKind(b.recordGUID.ID) == metric.MetricKindService && resolveServiceRunState(display, b.recordGUID) == serviceRunStateSleeping
 	if sleeping {
 		c = colourChat
@@ -798,19 +799,6 @@ func resolveServiceRunState(display *Display, guid *metric.RecordGUID) serviceRu
 		return serviceRunStateRunning
 	}
 	return serviceRunStateSleeping
-}
-
-func highlight(pulse, trend *bool) colour {
-	if pulse == nil {
-		return colourChat
-	}
-	if !*pulse {
-		return colourAlert
-	}
-	if trend != nil && *trend {
-		return colourCheer
-	}
-	return colourWarn
 }
 
 func duration(seconds float64) string {
@@ -997,17 +985,4 @@ func tokens(value string) []string {
 		tokens = append(tokens, string(r))
 	}
 	return tokens
-}
-
-func shownServiceMetrics(boxes []box) []metric.ID {
-	seen := map[metric.ID]bool{}
-	var shown []metric.ID
-	for _, b := range boxes {
-		if metric.GetIDKind(b.metricID) != metric.MetricKindService || seen[b.metricID] {
-			continue
-		}
-		seen[b.metricID] = true
-		shown = append(shown, b.metricID)
-	}
-	return shown
 }

@@ -66,11 +66,11 @@ type mountSet struct {
 }
 
 func loadMounts(root string, window time.Duration) *mountSet {
-	mountCacheMutex.RLock()
+	mountCacheMu.RLock()
 	cached, found := mountCache[root]
-	mountCacheMutex.RUnlock()
+	mountCacheMu.RUnlock()
 	if !found {
-		mountCacheMutex.Lock()
+		mountCacheMu.Lock()
 		if cached, found = mountCache[root]; !found {
 			cached = &mountSet{
 				root:       mountBase(root),
@@ -82,7 +82,7 @@ func loadMounts(root string, window time.Duration) *mountSet {
 			}
 			mountCache[root] = cached
 		}
-		mountCacheMutex.Unlock()
+		mountCacheMu.Unlock()
 	}
 	cached.mutex.Lock()
 	cached.window = window
@@ -92,8 +92,8 @@ func loadMounts(root string, window time.Duration) *mountSet {
 }
 
 func resetMounts() {
-	mountCacheMutex.Lock()
-	defer mountCacheMutex.Unlock()
+	mountCacheMu.Lock()
+	defer mountCacheMu.Unlock()
 	clear(mountCache)
 }
 
@@ -170,8 +170,8 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 			home.mountpoint, mountHomeRoot, mountReasons(taken.mounts, false), errEnvironment)
 	}
 	used := float64(home.used) / float64(home.total) * 100.0
-	return int8Percent(used), derived(scribe.ActionSample, "computed [%3d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
-		int8Percent(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
+	return percentValue(used), derived(scribe.ActionSample, "computed [%3d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
+		percentValue(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
 }
 
 func (s *mountSet) usedShareSpace() (int8, derivation, error) {
@@ -201,8 +201,8 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared, failures [%s] [%w]",
 			taken.locals, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
 	}
-	return int8Percent(float64(used) / float64(total) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
-		int8Percent(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals), nil
+	return percentValue(float64(used) / float64(total) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
+		percentValue(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals), nil
 }
 
 func (s *mountSet) failedShares() (int8, derivation, error) {
@@ -218,8 +218,8 @@ func (s *mountSet) failedShares() (int8, derivation, error) {
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
 			filepath.Join(s.root, mountFstabPath)), nil
 	}
-	return int8Percent(float64(taken.failed) / float64(taken.shares) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
-		int8Percent(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath), mountReasons(taken.mounts, true)), nil
+	return percentValue(float64(taken.failed) / float64(taken.shares) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
+		percentValue(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath), mountReasons(taken.mounts, true)), nil
 }
 
 func (s *mountSet) collect() *mountSnapshot {
@@ -243,7 +243,7 @@ func (s *mountSet) collect() *mountSnapshot {
 		mounts[index].used = used
 		mounts[index].measured = true
 		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%3d] of [%3d] MiB at [%3d] pct",
-			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassLabel(mounts[index]), used/bytesPerMiB, total/bytesPerMiB, int8Percent(mountShare(used, total)))
+			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassLabel(mounts[index]), used/bytesPerMiB, total/bytesPerMiB, percentValue(mountShare(used, total)))
 	}
 	mounted := map[string]mountUsage{}
 	for index := range mounts {
@@ -594,13 +594,11 @@ const (
 	mountReasonsMax  = 3
 )
 
-var mountBareRoot = "/"
-
-var mountLocalTypes = map[string]bool{"ext4": true, "xfs": true, "btrfs": true, "f2fs": true, "vfat": true}
-
-var mountRemoteTypes = map[string]bool{"cifs": true, "nfs": true, "nfs4": true, "smb3": true}
-
 var (
-	mountCache      = map[string]*mountSet{}
-	mountCacheMutex sync.RWMutex
+	mountBareRoot    = "/"
+	mountLocalTypes  = map[string]bool{"ext4": true, "xfs": true, "btrfs": true, "f2fs": true, "vfat": true}
+	mountRemoteTypes = map[string]bool{"cifs": true, "nfs": true, "nfs4": true, "smb3": true}
+
+	mountCache   = map[string]*mountSet{}
+	mountCacheMu sync.RWMutex
 )

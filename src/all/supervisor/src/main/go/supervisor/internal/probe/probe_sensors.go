@@ -35,14 +35,14 @@ type sensorFan struct {
 }
 
 func loadSensors(sysRoot string) *sensorSet {
-	sensorCacheMutex.RLock()
+	sensorCacheMu.RLock()
 	if cached, ok := sensorCache[sysRoot]; ok {
-		sensorCacheMutex.RUnlock()
+		sensorCacheMu.RUnlock()
 		return cached
 	}
-	sensorCacheMutex.RUnlock()
-	sensorCacheMutex.Lock()
-	defer sensorCacheMutex.Unlock()
+	sensorCacheMu.RUnlock()
+	sensorCacheMu.Lock()
+	defer sensorCacheMu.Unlock()
 	if cached, ok := sensorCache[sysRoot]; ok {
 		return cached
 	}
@@ -52,8 +52,8 @@ func loadSensors(sysRoot string) *sensorSet {
 }
 
 func resetSensors() {
-	sensorCacheMutex.Lock()
-	defer sensorCacheMutex.Unlock()
+	sensorCacheMu.Lock()
+	defer sensorCacheMu.Unlock()
 	clear(sensorCache)
 }
 
@@ -237,9 +237,9 @@ const (
 	sensorMaxCelsius      = 150.0
 )
 
-var socSensorKeys = []string{"cpu_therm", "cpu-therm", "soc_therm", "soc-therm"}
-
 var (
-	sensorCache      = map[string]*sensorSet{}
-	sensorCacheMutex sync.RWMutex
+	socSensorKeys = []string{"cpu_therm", "cpu-therm", "soc_therm", "soc-therm"}
+
+	sensorCache   = map[string]*sensorSet{}
+	sensorCacheMu sync.RWMutex
 )

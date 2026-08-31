@@ -34,8 +34,8 @@ func TestProbe_RunProbes(t *testing.T) {
 				metricsList: []metric.ID{metric.MetricHostUsedProcessor},
 				createErr:   tt.createErr,
 			}
-			for index := range probesByMetricMask {
-				probesByMetricMask[index] = nil
+			for index := range probesByMetricID {
+				probesByMetricID[index] = nil
 			}
 			execProbes = nil
 			registerProbes(func() probe { return mock })
@@ -137,8 +137,8 @@ func TestProbe_RunOnPulse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &mockProbe{metricsList: []metric.ID{metric.MetricHostUsedProcessor}}
-			for index := range probesByMetricMask {
-				probesByMetricMask[index] = nil
+			for index := range probesByMetricID {
+				probesByMetricID[index] = nil
 			}
 			execProbes = nil
 			registerProbes(func() probe { return mock })
@@ -250,7 +250,7 @@ func TestProbe_FailedSampleBlanks(t *testing.T) {
 		expectedFailed bool
 		expectedPushes int
 		expectedTicks  int
-		expectedStatus string
+		expectedStatus metricStatus
 		expectedError  bool
 	}{
 		{name: "healthy sample stores a reading", sampleErr: nil, metricID: metric.MetricHostUsedProcessor, serviceName: metric.ServiceNameUnset, expectedStored: true, expectedFailed: false, expectedPushes: 1, expectedTicks: 0, expectedStatus: metricStatusAmber, expectedError: false},
@@ -317,7 +317,7 @@ func TestProbe_MetricStatusOf(t *testing.T) {
 		failed         bool
 		pulseOK        bool
 		trendOK        *bool
-		expectedStatus string
+		expectedStatus metricStatus
 		expectedError  bool
 	}{
 		{name: "pulse and trend ok", failed: false, pulseOK: true, trendOK: trended(true), expectedStatus: metricStatusGreen, expectedError: false},

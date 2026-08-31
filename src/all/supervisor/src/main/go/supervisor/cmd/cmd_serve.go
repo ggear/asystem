@@ -16,14 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type serveOptions struct {
-	pollPeriod      string
-	pulseFactor     string
-	trendPeriod     string
-	cachePeriod     string
-	snapshotPeriod  string
-	heartbeatFactor string
-	logOptions
+func init() {
+	rootCmd.AddCommand(newServeCmd())
 }
 
 // noinspection DuplicatedCode
@@ -80,18 +74,19 @@ func executeServe(configPath string, opts *serveOptions) error {
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] ms pulse", periods.PulseMillis)
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] s heartbeat", periods.HeartbeatSecs)
 	cache := metric.NewRecordCache()
-	defer func(cache *metric.RecordCache) {
-		err := cache.Close()
-		if err != nil {
-		}
-	}(cache)
 	engine.RunAllProbesPublishLoop(ctx, configPath, cache, periods)
 	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", serveStart, "[%s] version, exited gracefully", loaded.Version())
 	return nil
 }
 
-func init() {
-	rootCmd.AddCommand(newServeCmd())
+type serveOptions struct {
+	pollPeriod      string
+	pulseFactor     string
+	trendPeriod     string
+	cachePeriod     string
+	snapshotPeriod  string
+	heartbeatFactor string
+	logOptions
 }
 
 const serveDescription = "Run the supervisor process to collect and publish system stats and perform supervisory duties"

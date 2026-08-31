@@ -637,20 +637,20 @@ func TestDisplay_Happy(t *testing.T) {
 				cache := metric.NewRecordCache()
 				terminal := newTerminalVirtual(caseTerminalDims.rows, caseTerminalDims.cols, ThemeLight, testCase.useUnicode)
 				display, newErr := NewDisplay(
-					cache,
-					func(useUnicode bool) (Terminal, error) { return terminal, nil },
 					caseHosts,
+					config.Periods{},
+					"",
+					true,
+					testCase.useUnicode,
+					attemptedFormat,
 					caseTerminalDims.cols,
 					caseTerminalDims.rows,
 					0,
 					0,
-					attemptedFormat,
-					testCase.useUnicode,
-					config.Periods{},
-					true,
-					"",
-					nil,
 					0,
+					func(useUnicode bool) (Terminal, error) { return terminal, nil },
+					cache,
+					nil,
 				)
 				if newErr != nil {
 					t.Fatalf("New Display err = %v, expected nil", newErr)
@@ -867,22 +867,22 @@ func TestDisplay_Sad(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
-				func(useUnicode bool) (Terminal, error) {
-					return newTerminalVirtual(testCase.dims.rows, testCase.dims.cols, ThemeDark, useUnicode), nil
-				},
 				testCase.hosts,
+				config.Periods{},
+				"",
+				true,
+				testCase.useUnicode,
+				testCase.format,
 				testCase.dims.cols,
 				testCase.dims.rows,
 				0,
 				0,
-				testCase.format,
-				testCase.useUnicode,
-				config.Periods{},
-				true,
-				"",
-				nil,
 				0,
+				func(useUnicode bool) (Terminal, error) {
+					return newTerminalVirtual(testCase.dims.rows, testCase.dims.cols, ThemeDark, useUnicode), nil
+				},
+				metric.NewRecordCache(),
+				nil,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -1472,60 +1472,6 @@ func TestDisplay_Pad(t *testing.T) {
 	}
 }
 
-func TestDisplay_Highlight(t *testing.T) {
-	tests := []struct {
-		name     string
-		pulse    *bool
-		trend    *bool
-		expected colour
-	}{
-		{
-			name:     "happy_pulse_trend",
-			pulse:    new(true),
-			trend:    new(true),
-			expected: colourCheer,
-		},
-		{
-			name:     "happy_pulse_only",
-			pulse:    new(true),
-			trend:    new(false),
-			expected: colourWarn,
-		},
-		{
-			name:     "happy_no_pulse",
-			pulse:    new(false),
-			trend:    new(true),
-			expected: colourAlert,
-		},
-		{
-			name:     "happy_no_pulse_no_trend",
-			pulse:    new(false),
-			trend:    new(false),
-			expected: colourAlert,
-		},
-		{
-			name:     "happy_nil_pulse",
-			pulse:    nil,
-			trend:    new(true),
-			expected: colourChat,
-		},
-		{
-			name:     "happy_nil_trend",
-			pulse:    new(true),
-			trend:    nil,
-			expected: colourWarn,
-		},
-	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			rendered := highlight(testCase.pulse, testCase.trend)
-			if rendered != testCase.expected {
-				t.Fatalf("Got render = %v, expected %v", rendered, testCase.expected)
-			}
-		})
-	}
-}
-
 func TestDisplay_Refresh(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -1537,14 +1483,14 @@ func TestDisplay_Refresh(t *testing.T) {
 		{
 			name:            "happy_refresh_signalled",
 			refresh:         true,
-			stall:           tickStall,
+			stall:           defaultTickStall,
 			expectedRefresh: true,
 			expectedError:   false,
 		},
 		{
 			name:            "happy_refresh_not_signalled",
 			refresh:         false,
-			stall:           tickStall,
+			stall:           defaultTickStall,
 			expectedRefresh: false,
 			expectedError:   false,
 		},
@@ -1564,20 +1510,20 @@ func TestDisplay_Refresh(t *testing.T) {
 			cache := metric.NewRecordCache()
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				cache,
-				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				hosts[:1],
+				config.Periods{},
+				"",
+				true,
+				false,
+				FormatCompact,
 				caseCols,
 				caseRows,
 				0,
 				0,
-				FormatCompact,
-				false,
-				config.Periods{},
-				true,
-				"",
-				nil,
 				0,
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				cache,
+				nil,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -1705,20 +1651,20 @@ func TestDisplay_Failed(t *testing.T) {
 			cache := metric.NewRecordCache()
 			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.cols, ThemeLight, false)
 			display, newErr := NewDisplay(
-				cache,
-				func(useUnicode bool) (Terminal, error) { return terminal, nil },
 				[]string{"labnode-one"},
+				config.Periods{},
+				"",
+				true,
+				false,
+				FormatCompact,
 				terminalDims.cols,
 				terminalDims.rows,
 				0,
 				0,
-				FormatCompact,
-				false,
-				config.Periods{},
-				true,
-				"",
-				nil,
 				0,
+				func(useUnicode bool) (Terminal, error) { return terminal, nil },
+				cache,
+				nil,
 			)
 			if newErr != nil {
 				t.Fatalf("NewDisplay: got %v want nil", newErr)
@@ -1854,8 +1800,11 @@ func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
 			terminalDims := dimensions{rows(layout, 1), columns(layout, false, 1) + resizes(layout, 1)*10}
 			cache := metric.NewRecordCache()
 			terminal := newTerminalVirtual(terminalDims.rows, terminalDims.cols, ThemeLight, false)
-			display, newErr := NewDisplay(cache, func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				[]string{"labnode-one"}, terminalDims.cols, terminalDims.rows, 0, 0, FormatCompact, false, config.Periods{}, true, "", nil, 0)
+			display, newErr := NewDisplay(
+				[]string{"labnode-one"}, config.Periods{}, "", true, false, FormatCompact,
+				terminalDims.cols, terminalDims.rows, 0, 0, 0,
+				func(useUnicode bool) (Terminal, error) { return terminal, nil }, cache, nil,
+			)
 			if newErr != nil {
 				t.Fatalf("NewDisplay: got %v want nil", newErr)
 			}
@@ -1950,10 +1899,10 @@ func TestDisplay_LogScrolling(t *testing.T) {
 			t.Cleanup(scribe.Disable)
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
+				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
+				caseCols, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
-				config.Periods{}, true, "", buffer, 0,
+				metric.NewRecordCache(), buffer,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -2049,10 +1998,10 @@ func TestDisplay_LogCoverage(t *testing.T) {
 			t.Cleanup(scribe.Disable)
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
+				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
+				caseCols, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
-				config.Periods{}, true, "", buffer, 0,
+				metric.NewRecordCache(), buffer,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -2158,10 +2107,10 @@ func TestDisplay_LogArriving(t *testing.T) {
 			t.Cleanup(scribe.Disable)
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
+				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
+				caseCols, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
-				config.Periods{}, true, "", buffer, 0,
+				metric.NewRecordCache(), buffer,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -2243,10 +2192,10 @@ func TestDisplay_LogParked(t *testing.T) {
 			t.Cleanup(scribe.Disable)
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
+				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
+				caseCols, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
-				config.Periods{}, true, "", buffer, 0,
+				metric.NewRecordCache(), buffer,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -2326,10 +2275,10 @@ func TestDisplay_LogWrapping(t *testing.T) {
 			t.Cleanup(scribe.Disable)
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
+				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
+				caseCols, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
-				config.Periods{}, true, "", buffer, 0,
+				metric.NewRecordCache(), buffer,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -2441,10 +2390,10 @@ func TestDisplay_LogPagination(t *testing.T) {
 			t.Cleanup(scribe.Disable)
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
+				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
+				caseCols, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
-				config.Periods{}, true, "", buffer, 0,
+				metric.NewRecordCache(), buffer,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -2465,11 +2414,11 @@ func TestDisplay_LogPagination(t *testing.T) {
 			display.logRewind()
 			display.Logging()
 			livePage, livePages := display.logPagination()
-			live, _ := display.overlayStatus()
+			live, _ := display.logOverlayStatus()
 			display.logFollow = false
 			display.Logging()
 			heldPage, heldPages := display.logPagination()
-			held, _ := display.overlayStatus()
+			held, _ := display.logOverlayStatus()
 			if heldPage != livePage || heldPages != livePages {
 				t.Errorf("pausing: got %d/%d want %d/%d", heldPage, heldPages, livePage, livePages)
 			}
@@ -2527,10 +2476,10 @@ func TestDisplay_LogFollowing(t *testing.T) {
 			t.Cleanup(scribe.Disable)
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
+				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
+				caseCols, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
-				config.Periods{}, true, "", buffer, 0,
+				metric.NewRecordCache(), buffer,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)
@@ -2561,7 +2510,7 @@ func TestDisplay_LogFollowing(t *testing.T) {
 				display.logRewind()
 			}
 			display.Logging()
-			status, _ := display.overlayStatus()
+			status, _ := display.logOverlayStatus()
 			if status != testCase.expectedStatus {
 				t.Errorf("status: got %q want %q", status, testCase.expectedStatus)
 			}
@@ -2604,10 +2553,10 @@ func TestDisplay_LogPaging(t *testing.T) {
 			t.Cleanup(scribe.Disable)
 			terminal := newTerminalVirtual(caseRows, caseCols, ThemeLight, false)
 			display, err := NewDisplay(
-				metric.NewRecordCache(),
+				hosts[:1], config.Periods{}, "", true, false, FormatCompact,
+				caseCols, caseRows, 0, 0, 0,
 				func(useUnicode bool) (Terminal, error) { return terminal, nil },
-				hosts[:1], caseCols, caseRows, 0, 0, FormatCompact, false,
-				config.Periods{}, true, "", buffer, 0,
+				metric.NewRecordCache(), buffer,
 			)
 			if err != nil {
 				t.Fatalf("New Display err = %v, expected nil", err)

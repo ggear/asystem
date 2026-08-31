@@ -63,14 +63,14 @@ type installTree struct {
 }
 
 func loadInstallTree(mount string) *installTree {
-	installTreeCacheMutex.RLock()
+	installTreeCacheMu.RLock()
 	if cached, ok := installTreeCache[mount]; ok {
-		installTreeCacheMutex.RUnlock()
+		installTreeCacheMu.RUnlock()
 		return cached
 	}
-	installTreeCacheMutex.RUnlock()
-	installTreeCacheMutex.Lock()
-	defer installTreeCacheMutex.Unlock()
+	installTreeCacheMu.RUnlock()
+	installTreeCacheMu.Lock()
+	defer installTreeCacheMu.Unlock()
 	if cached, ok := installTreeCache[mount]; ok {
 		return cached
 	}
@@ -80,8 +80,8 @@ func loadInstallTree(mount string) *installTree {
 }
 
 func resetInstallTrees() {
-	installTreeCacheMutex.Lock()
-	defer installTreeCacheMutex.Unlock()
+	installTreeCacheMu.Lock()
+	defer installTreeCacheMu.Unlock()
 	clear(installTreeCache)
 }
 
@@ -284,7 +284,7 @@ func installVersion(home, name string) string {
 		if !found {
 			continue
 		}
-		if !config.VersionPattern.MatchString(value) {
+		if !config.DefaultVersionPattern.MatchString(value) {
 			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warn("unusable", versionStart, "[%s] version from [%s] could not be parsed", value, path)
 			return ""
 		}
@@ -367,9 +367,9 @@ const (
 	installBufferBytes     = 256
 )
 
-var installAbsentMark = []byte{0xff}
-
 var (
-	installTreeCache      = map[string]*installTree{}
-	installTreeCacheMutex sync.RWMutex
+	installAbsentMark = []byte{0xff}
+
+	installTreeCache   = map[string]*installTree{}
+	installTreeCacheMu sync.RWMutex
 )

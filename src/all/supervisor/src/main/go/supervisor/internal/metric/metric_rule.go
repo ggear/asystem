@@ -150,7 +150,11 @@ func (r Rule) Evaluate(unit string, self float64, selfNumeric bool, values Value
 		return RuleResult{OK: selfNumeric && self != 0, Detail: fmt.Sprintf("value is [%v]", selfNumeric && self != 0)}
 	case ruleHealthy:
 		_, healthy := values(r.target)
-		return RuleResult{OK: healthy, Detail: fmt.Sprintf("%s is [%s]", GetIDName(r.target), okWord(healthy))}
+		okLabel := "not ok"
+		if healthy {
+			okLabel = "ok"
+		}
+		return RuleResult{OK: healthy, Detail: fmt.Sprintf("%s is [%s]", GetIDName(r.target), okLabel)}
 	case ruleGated:
 		value, bound := gates(r.gate)
 		if !bound {
@@ -199,13 +203,6 @@ func (r Rule) combine(unit string, self float64, selfNumeric bool, values ValueR
 		}
 	}
 	return RuleResult{OK: ok, Detail: strings.Join(details, ", ")}
-}
-
-func okWord(ok bool) string {
-	if ok {
-		return "ok"
-	}
-	return "not ok"
 }
 
 const unknownValue = "-"

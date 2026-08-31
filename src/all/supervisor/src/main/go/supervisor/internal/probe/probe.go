@@ -15,6 +15,16 @@ import (
 	"time"
 )
 
+type probe interface {
+	subject() scribe.Subject
+	metrics() []metric.ID
+	gates() []metric.GateID
+	create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error
+	run(ctx context.Context, isPulse bool) error
+	records() *metric.RecordCache
+	hasMetric(metric.ID) bool
+}
+
 func Create(configPath string, cache *metric.RecordCache, periods config.Periods) error {
 	if cache == nil {
 		return fmt.Errorf("cache cannot be nil")
@@ -41,7 +51,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		if id < 0 || id >= metric.MetricMax {
 			continue
 		}
-		p := probesByMetricMask[id]
+		p := probesByMetricID[id]
 		if p == nil {
 			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(id), scribe.ActionStart).Error("rejected", registerStart, "[none] probe registered")
 			continue
@@ -118,27 +128,6 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 	}
 }
 
-type probe interface {
-	subject() scribe.Subject
-	metrics() []metric.ID
-	gates() []metric.GateID
-	create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error
-	run(ctx context.Context, isPulse bool) error
-	records() *metric.RecordCache
-	hasMetric(metric.ID) bool
-}
-
-var probesByMetricMask [metric.MetricMax]probe
-
-var (
-	errProbeWarmingUp = errors.New("probe is still warming up")
-	errEnvironment    = errors.New("environment cannot supply this reading")
-	errUnimplemented  = errors.New("metric has no implementation yet")
-	errMountContent   = errors.New("mount answered but is not a healthy share")
-)
-
-const bytesPerMiB = 1 << 20
-
 func init() {
 	registerProbes(
 		func() probe { return newServicesProbe() },
@@ -163,25 +152,25 @@ func registerProbe(probe probe) {
 	}
 	for _, id := range probe.metrics() {
 		if id >= 0 && id < metric.MetricMax {
-			if probesByMetricMask[id] != nil && probesByMetricMask[id] != probe {
+			if probesByMetricID[id] != nil && probesByMetricID[id] != probe {
 				thisType := reflect.TypeOf(probe)
 				if thisType.Kind() == reflect.Pointer {
 					thisType = thisType.Elem()
 				}
-				thatType := reflect.TypeOf(probesByMetricMask[id])
+				thatType := reflect.TypeOf(probesByMetricID[id])
 				if thatType.Kind() == reflect.Pointer {
 					thatType = thatType.Elem()
 				}
 				panic(fmt.Sprintf("multiple execProbes [%s,%s] registering metric ID [%d]", thisType.Name(), thatType.Name(), id))
 			}
-			probesByMetricMask[id] = probe
+			probesByMetricID[id] = probe
 		}
 	}
 }
 
 func verifyProbes() {
 	for _, id := range metric.GetIDs() {
-		if probesByMetricMask[id] == nil {
+		if probesByMetricID[id] == nil {
 			panic(fmt.Sprintf("no probe registered for metric ID [%d]", id))
 		}
 	}
@@ -251,6 +240,103 @@ func newCacheMetricTask[T any](
 	return task
 }
 
+type metricFaultKey struct {
+	metricID    metric.ID
+	serviceName string
+}
+
+type metricFault struct {
+	message string
+	since   time.Time
+	logged  time.Time
+	polls   int
+	warming bool
+}
+
+type metricStatus uint8
+
+const (
+	metricStatusUnknown metricStatus = iota
+	metricStatusRed
+	metricStatusAmber
+	metricStatusGreen
+)
+
+func (s metricStatus) String() string {
+	switch s {
+	case metricStatusGreen:
+		return "green"
+	case metricStatusAmber:
+		return "amber"
+	case metricStatusRed:
+		return "red"
+	default:
+		return "unknown"
+	}
+}
+
+func metricStatusOf(failed bool, pulseOK bool, trendOK *bool) metricStatus {
+	if failed {
+		return metricStatusUnknown
+	}
+	if !pulseOK {
+		return metricStatusRed
+	}
+	if trendOK != nil && *trendOK {
+		return metricStatusGreen
+	}
+	return metricStatusAmber
+}
+
+func metricStatusPrevious(seen bool, previous metricStatus) string {
+	if !seen {
+		return "none"
+	}
+	return previous.String()
+}
+
+type metricCensus struct {
+	total   int
+	green   int
+	amber   int
+	red     int
+	unknown int
+	service string
+	faulted []string
+}
+
+func (c *metricCensus) count(status metricStatus, task cacheMetricTask) {
+	c.total++
+	c.service = task.serviceName
+	switch status {
+	case metricStatusGreen:
+		c.green++
+	case metricStatusAmber:
+		c.amber++
+		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status.String())
+	case metricStatusRed:
+		c.red++
+		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status.String())
+	default:
+		c.unknown++
+		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status.String())
+	}
+}
+
+func (c *metricCensus) subject() string {
+	if c.service == metric.ServiceNameUnset {
+		return ""
+	}
+	return fmt.Sprintf(" of service [%s]", c.service)
+}
+
+func (c *metricCensus) faults() string {
+	if len(c.faulted) == 0 {
+		return ""
+	}
+	return fmt.Sprintf(", not green [%s]", strings.Join(c.faulted, " "))
+}
+
 func runCacheMetricTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetricTask) {
 	tasksStart := time.Now()
 	census := metricCensus{}
@@ -272,7 +358,7 @@ func runCacheMetricTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetr
 		census.total, census.subject(), census.green, census.amber, census.red, census.unknown, census.faults())
 }
 
-func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTask) string {
+func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTask) metricStatus {
 	taskStart := time.Now()
 	var missing []string
 	if task.sampleFunc == nil {
@@ -353,22 +439,13 @@ func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	return status
 }
 
-func splitVerb(text string) (string, string) {
-	trimmed := strings.TrimLeft(text, " ")
-	index := strings.IndexByte(trimmed, ' ')
-	if index < 0 {
-		return trimmed, ""
-	}
-	return trimmed[:index], strings.TrimLeft(trimmed[index:], " ")
-}
-
 func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
 	message := ""
 	if err != nil {
 		message = err.Error()
 	}
-	metricFaultsMutex.Lock()
+	metricFaultsMu.Lock()
 	tracked, faulting := metricFaults[key]
 	switch {
 	case errored && (!faulting || tracked.message != message):
@@ -388,7 +465,7 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 		}
 		fault = *tracked
 	}
-	metricFaultsMutex.Unlock()
+	metricFaultsMu.Unlock()
 	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample)
 	switch {
 	case errored && errors.Is(err, errUnimplemented):
@@ -408,19 +485,29 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	}
 }
 
-func reportPulsing(logger scribe.Logger, verb string, started time.Time, detail string, args ...any) {
-	if !execPulsing.Load() {
+func reportMetricDerivation(task cacheMetricTask, taskStart time.Time, d derivation, err error) {
+	if d.empty() {
+		if err == nil {
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("unstated", taskStart,
+				"%spublished a value stating no derivation", metricScope(task))
+		}
 		return
 	}
-	logger.Debug(verb, started, detail, args...)
+	rendered := d.detail
+	if len(d.args) > 0 {
+		rendered = fmt.Sprintf(d.detail, d.args...)
+	}
+	verb, detail, _ := strings.Cut(strings.TrimLeft(rendered, " "), " ")
+	detail = strings.TrimLeft(detail, " ")
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), d.action).Debug(verb, taskStart, detail)
 }
 
-func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status string, pulse any, pulseOK bool, trend any, trendOK *bool, err error) {
+func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status metricStatus, pulse any, pulseOK bool, trend any, trendOK *bool, err error) {
 	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
-	metricStatusesMutex.Lock()
+	metricStatusesMu.Lock()
 	previous, seen := metricStatuses[key]
 	metricStatuses[key] = status
-	metricStatusesMutex.Unlock()
+	metricStatusesMu.Unlock()
 	if seen && previous == status {
 		return
 	}
@@ -437,6 +524,13 @@ func reportMetricRule(metricID metric.ID, taskStart time.Time, pulseOK bool, pul
 	reportPulsing(logger, "computed", taskStart, "ok pulse [%v] %s, ok trend [%v] %s", pulseOK, pulseText, *trendOK, trendText)
 }
 
+func reportPulsing(logger scribe.Logger, verb string, started time.Time, detail string, args ...any) {
+	if !execPulsing.Load() {
+		return
+	}
+	logger.Debug(verb, started, detail, args...)
+}
+
 func evaluateRule(rule metric.Rule, inert bool, unit string, value any, siblings metric.ValueResolver, gates gateSet) metric.RuleResult {
 	if inert {
 		return metric.RuleResult{OK: true, Detail: "nothing to measure on this host"}
@@ -445,14 +539,7 @@ func evaluateRule(rule metric.Rule, inert bool, unit string, value any, siblings
 	return rule.Evaluate(unit, number, numeric, siblings, gates.resolve)
 }
 
-func probeRoots(mount, bare string) []string {
-	if mount == "" {
-		return []string{bare}
-	}
-	return []string{mount, bare}
-}
-
-func int8Percent(value float64) int8 {
+func percentValue(value float64) int8 {
 	if value < 0 {
 		return 0
 	}
@@ -476,42 +563,6 @@ func numericValue(value any) (float64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-func reportMetricDerivation(task cacheMetricTask, taskStart time.Time, d derivation, err error) {
-	if d.empty() {
-		if err == nil {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("unstated", taskStart,
-				"%spublished a value stating no derivation", metricScope(task))
-		}
-		return
-	}
-	rendered := d.detail
-	if len(d.args) > 0 {
-		rendered = fmt.Sprintf(d.detail, d.args...)
-	}
-	verb, detail := splitVerb(rendered)
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), d.action).Debug(verb, taskStart, detail)
-}
-
-func metricStatusOf(failed bool, pulseOK bool, trendOK *bool) string {
-	if failed {
-		return metricStatusUnknown
-	}
-	if !pulseOK {
-		return metricStatusRed
-	}
-	if trendOK != nil && *trendOK {
-		return metricStatusGreen
-	}
-	return metricStatusAmber
-}
-
-func metricStatusPrevious(seen bool, previous string) string {
-	if !seen {
-		return "none"
-	}
-	return previous
 }
 
 func metricScope(task cacheMetricTask) string {
@@ -542,83 +593,29 @@ func metricFlag(value *bool) any {
 	return *value
 }
 
-type metricFaultKey struct {
-	metricID    metric.ID
-	serviceName string
-}
-
-type metricFault struct {
-	message string
-	since   time.Time
-	logged  time.Time
-	polls   int
-	warming bool
-}
-
-type metricCensus struct {
-	total   int
-	green   int
-	amber   int
-	red     int
-	unknown int
-	service string
-	faulted []string
-}
-
-func (c *metricCensus) count(status string, task cacheMetricTask) {
-	c.total++
-	c.service = task.serviceName
-	switch status {
-	case metricStatusGreen:
-		c.green++
-	case metricStatusAmber:
-		c.amber++
-		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status)
-	case metricStatusRed:
-		c.red++
-		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status)
-	default:
-		c.unknown++
-		c.faulted = append(c.faulted, metric.GetIDName(task.metricID)+"="+status)
-	}
-}
-
-func (c *metricCensus) subject() string {
-	if c.service == metric.ServiceNameUnset {
-		return ""
-	}
-	return fmt.Sprintf(" of service [%s]", c.service)
-}
-
-func (c *metricCensus) faults() string {
-	if len(c.faulted) == 0 {
-		return ""
-	}
-	return fmt.Sprintf(", not green [%s]", strings.Join(c.faulted, " "))
-}
-
 const (
 	metricFaultRepeat = time.Minute
-)
 
-const (
-	metricStatusGreen   = "green"
-	metricStatusAmber   = "amber"
-	metricStatusRed     = "red"
-	metricStatusUnknown = "unknown"
+	bytesPerMiB = 1 << 20
 )
 
 var (
-	metricFaults        = map[metricFaultKey]*metricFault{}
-	metricFaultsMutex   sync.Mutex
-	metricStatuses      = map[metricFaultKey]string{}
-	metricStatusesMutex sync.Mutex
+	errUnimplemented  = errors.New("metric not implemented")
+	errProbeWarmingUp = errors.New("probe is still warming up")
+	errMountContent   = errors.New("mount answered but is not healthy")
+	errEnvironment    = errors.New("environment cannot supply this reading")
+
+	execConfigPath string
+	execPeriods    config.Periods
+	execPulsing    atomic.Bool
+	execPulses     atomic.Int64
+	execProbes     map[probe][metric.MetricMax]bool
+
+	metricFaults   = map[metricFaultKey]*metricFault{}
+	metricFaultsMu sync.Mutex
+
+	metricStatuses   = map[metricFaultKey]metricStatus{}
+	metricStatusesMu sync.Mutex
+
+	probesByMetricID [metric.MetricMax]probe
 )
-
-var execPulsing atomic.Bool
-
-var execPulses atomic.Int64
-
-var execPeriods config.Periods
-var execProbes map[probe][metric.MetricMax]bool
-var execConfigPath string

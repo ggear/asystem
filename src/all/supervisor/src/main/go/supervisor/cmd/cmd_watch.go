@@ -17,21 +17,8 @@ import (
 	"golang.org/x/term"
 )
 
-type watchOptions struct {
-	mode            string
-	format          string
-	symbols         string
-	theme           string
-	pollPeriod      string
-	pulseFactor     string
-	trendPeriod     string
-	cachePeriod     string
-	snapshotPeriod  string
-	heartbeatFactor string
-	refreshPeriod   string
-	consoleWidth    int
-	consoleHeight   int
-	logOptions
+func init() {
+	rootCmd.AddCommand(newWatchCmd())
 }
 
 // noinspection DuplicatedCode
@@ -183,20 +170,20 @@ func executeWatch(configPath string, opts *watchOptions) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	d, err := display.NewDisplay(
-		metric.NewRecordCache(),
-		display.NewTerminalFactory(theme),
 		hosts,
+		periods,
+		configPath,
+		isRemote,
+		useUnicode,
+		format,
 		width,
 		height,
 		opts.consoleWidth,
 		opts.consoleHeight,
-		format,
-		useUnicode,
-		periods,
-		isRemote,
-		configPath,
-		logBuffer,
 		refreshPeriod,
+		display.NewTerminalFactory(theme),
+		metric.NewRecordCache(),
+		logBuffer,
 	)
 	if err != nil {
 		return err
@@ -244,13 +231,35 @@ func includedHosts(selected, configured []string) string {
 	return strings.Join(selected, ",")
 }
 
-func init() {
-	rootCmd.AddCommand(newWatchCmd())
+type watchOptions struct {
+	mode            string
+	format          string
+	symbols         string
+	theme           string
+	pollPeriod      string
+	pulseFactor     string
+	trendPeriod     string
+	cachePeriod     string
+	snapshotPeriod  string
+	heartbeatFactor string
+	refreshPeriod   string
+	consoleWidth    int
+	consoleHeight   int
+	logOptions
 }
 
 var watchAdvancedFlags = []string{
-	"poll-period", "pulse-factor", "heartbeat-period", "trend-period", "cache-period", "snapshot-period",
-	"refresh-period", "log-level", "log-source", "log-subject", "log-action",
+	"poll-period",
+	"pulse-factor",
+	"heartbeat-period",
+	"trend-period",
+	"cache-period",
+	"snapshot-period",
+	"refresh-period",
+	"log-level",
+	"log-source",
+	"log-subject",
+	"log-action",
 }
 
 const watchDescription = "Show real-time system stats"

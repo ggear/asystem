@@ -101,25 +101,25 @@ func TestConfig_Version(t *testing.T) {
 		{
 			name:          "happy_missing_file_defaults_version",
 			configPath:    "non-existent-file.json",
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 		{
 			name:          "happy_corrupt_invalid_json_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-1.json", "config"),
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 		{
 			name:          "happy_corrupt_empty_obj_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-2.json", "config"),
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 		{
 			name:          "happy_corrupt_empty_asystem_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-3.json", "config"),
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 		{
@@ -131,19 +131,19 @@ func TestConfig_Version(t *testing.T) {
 		{
 			name:          "happy_corrupt_invalid_semver_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-5.json", "config"),
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 		{
 			name:          "happy_corrupt_array_version_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-6.json", "config"),
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 		{
 			name:          "happy_corrupt_empty_version_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-sad-corrupt-7.json", "config"),
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 		{
@@ -180,7 +180,7 @@ func TestConfig_Version(t *testing.T) {
 		{
 			name:          "happy_envvar_unset_defaults_version",
 			configPath:    testutil.FindTestFile(t, "config-happy-envvars-1.json", "config"),
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 		{
@@ -194,7 +194,7 @@ func TestConfig_Version(t *testing.T) {
 			name:          "happy_service_version_absolute_invalid_ignored",
 			configPath:    "non-existent-file.json",
 			envVars:       map[string]string{"SERVICE_VERSION_ABSOLUTE": "notaversion"},
-			expected:      defaultVersion,
+			expected:      DefaultVersion,
 			expectedError: false,
 		},
 	}

@@ -39,25 +39,29 @@ type logSet struct {
 }
 
 func loadLogs(mount string) *logSet {
-	logCacheMutex.RLock()
+	logCacheMu.RLock()
 	if cached, ok := logCache[mount]; ok {
-		logCacheMutex.RUnlock()
+		logCacheMu.RUnlock()
 		return cached
 	}
-	logCacheMutex.RUnlock()
-	logCacheMutex.Lock()
-	defer logCacheMutex.Unlock()
+	logCacheMu.RUnlock()
+	logCacheMu.Lock()
+	defer logCacheMu.Unlock()
 	if cached, ok := logCache[mount]; ok {
 		return cached
 	}
-	created := &logSet{roots: probeRoots(mount, logBareRoot), buffer: make([]byte, logBufferBytes)}
+	roots := []string{logBareRoot}
+	if mount != "" {
+		roots = []string{mount, logBareRoot}
+	}
+	created := &logSet{roots: roots, buffer: make([]byte, logBufferBytes)}
 	logCache[mount] = created
 	return created
 }
 
 func resetLogs() {
-	logCacheMutex.Lock()
-	defer logCacheMutex.Unlock()
+	logCacheMu.Lock()
+	defer logCacheMu.Unlock()
 	for _, set := range logCache {
 		set.close()
 	}
@@ -333,9 +337,9 @@ const (
 	logMessageMax  = 120
 )
 
-var logIgnore = []*regexp.Regexp{}
-
 var (
-	logCache      = map[string]*logSet{}
-	logCacheMutex sync.RWMutex
+	logIgnore []*regexp.Regexp
+
+	logCache   = map[string]*logSet{}
+	logCacheMu sync.RWMutex
 )

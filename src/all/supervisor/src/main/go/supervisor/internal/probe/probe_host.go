@@ -443,8 +443,8 @@ func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
 		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used, the host configures no swap so the metric is inert and always ok"), nil
 	}
 	usedPercent := (float64(swapStat.Used) / float64(swapStat.Total)) * 100.0
-	return int8Percent(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, free [%d] MiB",
-		int8Percent(usedPercent), swapStat.Used/bytesPerMiB, swapStat.Total/bytesPerMiB, swapStat.Free/bytesPerMiB), nil
+	return percentValue(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, free [%d] MiB",
+		percentValue(usedPercent), swapStat.Used/bytesPerMiB, swapStat.Total/bytesPerMiB, swapStat.Free/bytesPerMiB), nil
 }
 
 func (p *hostProbe) usedDiskOps() (int8, derivation, error) {
@@ -458,7 +458,11 @@ func (p *hostProbe) usedNetwork() (int8, derivation, error) {
 	if p.networkSampler == nil {
 		return 0, derivation{}, errors.New("no network sample taken, the probe was created without a network sampler")
 	}
-	return p.networkSampler.sample(probeRoots(config.Load(p.configPath).Mount(), networkBareRoot))
+	roots := []string{networkBareRoot}
+	if mount := config.Load(p.configPath).Mount(); mount != "" {
+		roots = []string{mount, networkBareRoot}
+	}
+	return p.networkSampler.sample(roots)
 }
 
 func (p *hostProbe) runningTime() (float64, derivation, error) {
@@ -565,8 +569,8 @@ func (s *diskUsageSampler) sample(ioCounters func(...string) (map[string]disk.IO
 	if busiest == "" {
 		return 0, derivation{}, errProbeWarmingUp
 	}
-	return int8Percent(busiestPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] serviced operations for [%.0f] ms of [%.0f] ms elapsed across [%d] devices",
-		int8Percent(busiestPercent), busiest, busiestMillis, elapsed*1000.0, len(current)), nil
+	return percentValue(busiestPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] serviced operations for [%.0f] ms of [%.0f] ms elapsed across [%d] devices",
+		percentValue(busiestPercent), busiest, busiestMillis, elapsed*1000.0, len(current)), nil
 }
 
 type networkLink struct {
@@ -630,8 +634,8 @@ func (s *networkUsageSampler) sample(roots []string) (int8, derivation, error) {
 	if busiest == "" {
 		return 0, derivation{}, errProbeWarmingUp
 	}
-	return int8Percent(busiestPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] moved [%.1f] Mbit per second of its rated [%.0f] Mbit across [%d] interfaces over [%.1f] s",
-		int8Percent(busiestPercent), busiest, busiestBits/networkBitsPerMbit, busiestRated/networkBitsPerMbit, len(current), elapsed), nil
+	return percentValue(busiestPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] moved [%.1f] Mbit per second of its rated [%.0f] Mbit across [%d] interfaces over [%.1f] s",
+		percentValue(busiestPercent), busiest, busiestBits/networkBitsPerMbit, busiestRated/networkBitsPerMbit, len(current), elapsed), nil
 }
 
 func (s *networkUsageSampler) discover(roots []string) {
