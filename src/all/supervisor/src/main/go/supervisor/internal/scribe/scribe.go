@@ -51,6 +51,12 @@ type bufferHandler struct {
 	buffer *LogBuffer
 }
 
+type contextualHandler struct {
+	handler slog.Handler
+	attrs   []slog.Attr
+	groups  []string
+}
+
 type multiHandler struct {
 	handlers []slog.Handler
 }
@@ -82,6 +88,7 @@ type layout struct {
 func EnableStdout(level slog.Level) {
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout"
 	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: os.Stdout, sink: sinkFile()})
@@ -95,9 +102,11 @@ func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays 
 	}
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "file"
 	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: writer, sink: sinkFile()})
+	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
 	return nil
@@ -110,10 +119,12 @@ func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, ma
 	}
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout+file"
 	multi := io.MultiWriter(os.Stdout, writer)
 	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: multi, sink: sinkFile()})
+	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
 	return nil
@@ -122,6 +133,7 @@ func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, ma
 func Disable() {
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
 	scribeLoggerMode = "disabled"
 	scribeLoggerInstance = slog.New(&streamHandler{level: slog.LevelError + 1, writer: io.Discard, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
@@ -130,6 +142,8 @@ func Disable() {
 func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
+	capacity = max(capacity, 1)
 	scribeLoggerLevel = level
 	scribeLoggerMode = "buffer"
 	buf := &LogBuffer{lines: make([]LogLine, capacity)}
@@ -145,6 +159,8 @@ func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxB
 	}
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
+	capacity = max(capacity, 1)
 	scribeLoggerLevel = level
 	scribeLoggerMode = "buffer+file"
 	buf := &LogBuffer{lines: make([]LogLine, capacity)}
@@ -152,6 +168,7 @@ func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxB
 		&bufferHandler{level: level, buffer: buf},
 		&streamHandler{level: level, writer: writer, sink: sinkFile()},
 	}})
+	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
 	return buf, nil
@@ -305,9 +322,39 @@ func (h *bufferHandler) Handle(_ context.Context, record slog.Record) error {
 	return nil
 }
 
-func (h *bufferHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+func (h *bufferHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return (&contextualHandler{handler: h}).WithAttrs(attrs)
+}
 
-func (h *bufferHandler) WithGroup(_ string) slog.Handler { return h }
+func (h *bufferHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
+	return &contextualHandler{handler: h, groups: []string{name}}
+}
+
+func (h *contextualHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.handler.Enabled(ctx, level)
+}
+
+func (h *contextualHandler) Handle(ctx context.Context, record slog.Record) error {
+	return h.handler.Handle(ctx, recordWithAttrs(record, h.attrs, h.groups))
+}
+
+func (h *contextualHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	clone := *h
+	clone.attrs = append(slices.Clone(h.attrs), attrs...)
+	return &clone
+}
+
+func (h *contextualHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
+	clone := *h
+	clone.groups = append(slices.Clone(h.groups), name)
+	return &clone
+}
 
 func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	for _, handler := range h.handlers {
@@ -331,9 +378,24 @@ func (h *multiHandler) Handle(ctx context.Context, record slog.Record) error {
 	return failed
 }
 
-func (h *multiHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+func (h *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	clone := &multiHandler{handlers: make([]slog.Handler, len(h.handlers))}
+	for index, handler := range h.handlers {
+		clone.handlers[index] = handler.WithAttrs(attrs)
+	}
+	return clone
+}
 
-func (h *multiHandler) WithGroup(_ string) slog.Handler { return h }
+func (h *multiHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
+	clone := &multiHandler{handlers: make([]slog.Handler, len(h.handlers))}
+	for index, handler := range h.handlers {
+		clone.handlers[index] = handler.WithGroup(name)
+	}
+	return clone
+}
 
 func (h *streamHandler) Enabled(_ context.Context, level slog.Level) bool {
 	return level >= h.level
@@ -357,9 +419,37 @@ func (h *streamHandler) Handle(_ context.Context, record slog.Record) error {
 	return nil
 }
 
-func (h *streamHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+func (h *streamHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return (&contextualHandler{handler: h}).WithAttrs(attrs)
+}
 
-func (h *streamHandler) WithGroup(_ string) slog.Handler { return h }
+func (h *streamHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
+	return &contextualHandler{handler: h, groups: []string{name}}
+}
+
+func recordWithAttrs(record slog.Record, attrs []slog.Attr, groups []string) slog.Record {
+	if len(attrs) == 0 {
+		return record
+	}
+	grouped := slices.Clone(attrs)
+	for _, group := range slices.Backward(groups) {
+		grouped = []slog.Attr{slog.Group(group, attrsToAny(grouped)...)}
+	}
+	clone := record.Clone()
+	clone.AddAttrs(grouped...)
+	return clone
+}
+
+func attrsToAny(attrs []slog.Attr) []any {
+	values := make([]any, len(attrs))
+	for index := range attrs {
+		values[index] = attrs[index]
+	}
+	return values
+}
 
 func headerFor(l layout) string {
 	return render(LogLine{Source: "SOURCE", Subject: "SUBJECT", Action: "ACTION", Duration: "DURATION", Verb: "VERB", Detail: "DETAIL"},
@@ -623,13 +713,20 @@ func logDir() string {
 	return logDirUser
 }
 
-func fileWriter(cmd string, maxSizeMB, maxBackups, maxAgeDays int) (io.Writer, string, error) {
+func fileWriter(cmd string, maxSizeMB, maxBackups, maxAgeDays int) (io.WriteCloser, string, error) {
 	dir := logDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, "", fmt.Errorf("create log directory failed [%s] [%w]", dir, err)
 	}
 	path := filepath.Join(dir, fmt.Sprintf("%s-pid-%d%s", cmd, os.Getpid(), logFileSuffix))
 	return &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}, path, nil
+}
+
+func closeLoggerWriter() {
+	if scribeLoggerWriter != nil {
+		_ = scribeLoggerWriter.Close()
+		scribeLoggerWriter = nil
+	}
 }
 
 func purgeLogFiles(keep string) {
@@ -738,6 +835,7 @@ var (
 	scribeLoggerLevel    slog.Level
 	scribeLoggerMode     string
 	scribeLoggerInstance *slog.Logger
+	scribeLoggerWriter   io.Closer
 
 	flattened = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ", "\t", " ")
 )

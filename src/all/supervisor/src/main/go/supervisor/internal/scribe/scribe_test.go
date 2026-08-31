@@ -269,6 +269,44 @@ func TestScribe_BufferHandler(t *testing.T) {
 	}
 }
 
+func TestScribe_BufferMinimumCapacity(t *testing.T) {
+	buf := EnableBuffer(slog.LevelDebug, 0)
+	Log(SourceScribe, SubjectNone, ActionRemove).Info("minimum", time.Now(), "[1] line")
+	if got := len(buf.Tail(1)); got != 1 {
+		t.Fatalf("Tail() count: got %d want 1", got)
+	}
+}
+
+func TestScribe_HandlerWithAttrs(t *testing.T) {
+	buf := EnableBuffer(slog.LevelDebug, 1)
+	logger := slog.Default().With(
+		keySource, SourceScribe.String(),
+		keySubject, SubjectNone.String(),
+		keyAction, ActionRemove.String(),
+		keyDuration, time.Millisecond,
+		keyDetail, "[1] line",
+	)
+	logger.Info("derived")
+	line := buf.Tail(1)
+	if len(line) != 1 || line[0].Source != SourceScribe.String() || line[0].Action != ActionRemove.String() {
+		t.Fatalf("derived logger attributes: got %+v", line)
+	}
+}
+
+func TestScribe_ReconfigureClosesWriter(t *testing.T) {
+	EnableBuffer(slog.LevelDebug, 1)
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Pipe(): %v", err)
+	}
+	defer reader.Close()
+	scribeLoggerWriter = writer
+	EnableBuffer(slog.LevelDebug, 1)
+	if _, err = writer.Write([]byte("closed")); err == nil {
+		t.Fatal("previous writer remains open after reconfiguration")
+	}
+}
+
 func TestScribe_FormatColumns(t *testing.T) {
 	tests := []struct {
 		name          string

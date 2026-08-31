@@ -2603,3 +2603,75 @@ func TestDisplay_LogPaging(t *testing.T) {
 		})
 	}
 }
+
+func TestDisplay_LogEntryTallerThanPage(t *testing.T) {
+	buffer := scribe.EnableBuffer(slog.LevelDebug, 20)
+	t.Cleanup(scribe.Disable)
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info(
+		"oversize", time.Now(), "[%s]", strings.Repeat("wrapped detail ", 300),
+	)
+	display := &Display{
+		dimsInit:   dimensions{rows: 8, cols: 160},
+		logOverlay: true,
+		logBuffer:  buffer,
+	}
+	display.logRewind()
+	page, pages := display.logPagination()
+	if pages < 2 || page != pages {
+		t.Fatalf("live pagination: got %d/%d want multiple pages at the newest", page, pages)
+	}
+	for expected := pages - 1; expected >= 1; expected-- {
+		display.logPageUp()
+		page, _ = display.logPagination()
+		if page != expected {
+			t.Fatalf("page up: got %d want %d", page, expected)
+		}
+		rows, _, _ := display.logPaged(display.dimsInit.rows - 2)
+		if len(rows) == 0 || len(rows) > display.dimsInit.rows-2 {
+			t.Fatalf("page up rows: got %d", len(rows))
+		}
+	}
+	for expected := 2; expected <= pages; expected++ {
+		display.logPageDown()
+		page, _ = display.logPagination()
+		if page != expected {
+			t.Fatalf("page down: got %d want %d", page, expected)
+		}
+	}
+	display.logPageDown()
+	if !display.logFollow {
+		t.Fatal("page down from the newest continuation did not resume live follow")
+	}
+}
+
+func TestDisplay_LogResizePreservesPause(t *testing.T) {
+	buffer := scribe.EnableBuffer(slog.LevelDebug, 100)
+	t.Cleanup(scribe.Disable)
+	for range 40 {
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("resize", time.Now(), "[1] line")
+	}
+	display := &Display{
+		dimsInit:   dimensions{rows: 10, cols: 120},
+		logOverlay: true,
+		logBuffer:  buffer,
+	}
+	display.logRewind()
+	display.logPageUp()
+	anchor := display.logAnchor
+	display.dimsInit.cols = 80
+	display.logResize()
+	if display.logFollow {
+		t.Fatal("resize resumed live follow while paused")
+	}
+	if display.logAnchor != anchor {
+		t.Fatalf("resize anchor: got %d want %d", display.logAnchor, anchor)
+	}
+	display.logPageDown()
+	if display.logAnchor <= anchor {
+		t.Fatalf("page down after resize: got anchor %d want greater than %d", display.logAnchor, anchor)
+	}
+	display.logPageUp()
+	if display.logAnchor != anchor {
+		t.Fatalf("page up after resize: got anchor %d want %d", display.logAnchor, anchor)
+	}
+}

@@ -80,6 +80,7 @@ type Display struct {
 	logFollow      bool
 	logGeneration  uint64
 	logAnchor      uint64
+	logOffset      int
 	logNext        uint64
 	logDropped     uint64
 	logGridEnd     uint64
@@ -521,10 +522,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 					continue
 				}
 				d.dimsInit = dims
-				clear(d.logHeights)
-				if d.logOverlay {
-					d.logRewind()
-				}
+				d.logResize()
 				d.rebuild("resize")
 				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("geometry", resizeStart, "[%d] cols, [%d] rows", cols, rows)
 			case *tcell.EventKey:
@@ -737,13 +735,19 @@ func (d *Display) logPaged(capacity int) ([]logOverlayRow, int, uint64) {
 	consumed := 0
 	for _, line := range lines {
 		texts := scribe.OverlayLines(line, d.dimsInit.cols)
-		if len(rows) > 0 && len(rows)+len(texts) > capacity {
+		if consumed == 0 && d.logOffset > 0 {
+			texts = texts[min(d.logOffset, len(texts)):]
+		}
+		fits := len(rows)+len(texts) <= capacity
+		if len(rows) > 0 && !fits {
 			break
 		}
 		for _, text := range texts {
 			rows = append(rows, logOverlayRow{text: text, level: line.Level})
 		}
-		consumed++
+		if fits {
+			consumed++
+		}
 		if len(rows) >= capacity {
 			break
 		}
@@ -795,8 +799,23 @@ func (d *Display) logRewind() {
 		return
 	}
 	d.logAnchor = d.logPageStart(d.logBuffer.Version(), d.logBuffer.Oldest())
+	d.logOffset = d.logLastOffset(d.logAnchor)
 	d.logDropped = 0
 	d.logFollow = true
+	d.logRegrid()
+}
+
+func (d *Display) logResize() {
+	clear(d.logHeights)
+	if !d.logOverlay || d.logBuffer == nil {
+		return
+	}
+	if d.logFollow {
+		d.logRewind()
+		return
+	}
+	d.logAnchor = max(d.logAnchor, d.logBuffer.Oldest())
+	d.logOffset = 0
 	d.logRegrid()
 }
 
@@ -859,9 +878,15 @@ func (d *Display) logPageUp() {
 		return
 	}
 	d.logFollow = false
+	capacity := max(d.dimsInit.rows-2, 1)
+	if d.logOffset > 0 {
+		d.logOffset = max(d.logOffset-capacity, 0)
+		return
+	}
 	grid := d.logVisible()
 	if index := d.logIndex(grid); index > 0 {
 		d.logAnchor = grid[index-1]
+		d.logOffset = d.logLastOffset(d.logAnchor)
 	}
 }
 
@@ -869,6 +894,12 @@ func (d *Display) logPageDown() {
 	if d.logBuffer == nil {
 		return
 	}
+	capacity := max(d.dimsInit.rows-2, 1)
+	if height := d.logLineHeight(d.logAnchor); d.logOffset+capacity < height {
+		d.logOffset += capacity
+		return
+	}
+	d.logOffset = 0
 	if d.logDescend() {
 		return
 	}
@@ -925,7 +956,42 @@ func (d *Display) logPagination() (int, int) {
 		}
 		cursor = previous
 	}
-	return d.logIndex(grid) + 1, len(grid) + beyond
+	before, extra := d.logContinuationPages(grid[0], newest)
+	return d.logIndex(grid) + 1 + before, len(grid) + beyond + extra
+}
+
+func (d *Display) logContinuationPages(oldest, newest uint64) (int, int) {
+	capacity := max(d.dimsInit.rows-2, 1)
+	lines, start := d.logBuffer.From(oldest, int(newest-oldest))
+	before, total := 0, 0
+	for index, line := range lines {
+		sequence := start + uint64(index)
+		extra := max((d.logHeight(sequence, line)-1)/capacity, 0)
+		total += extra
+		if sequence < d.logAnchor {
+			before += extra
+		} else if sequence == d.logAnchor {
+			before += d.logOffset / capacity
+		}
+	}
+	return before, total
+}
+
+func (d *Display) logLineHeight(sequence uint64) int {
+	lines, start := d.logBuffer.From(sequence, 1)
+	if len(lines) == 0 || start != sequence {
+		return 0
+	}
+	return d.logHeight(sequence, lines[0])
+}
+
+func (d *Display) logLastOffset(sequence uint64) int {
+	capacity := max(d.dimsInit.rows-2, 1)
+	height := d.logLineHeight(sequence)
+	if height <= capacity {
+		return 0
+	}
+	return ((height - 1) / capacity) * capacity
 }
 
 func (d *Display) logHeight(sequence uint64, line scribe.LogLine) int {
