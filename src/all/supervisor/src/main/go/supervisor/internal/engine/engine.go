@@ -135,7 +135,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		removeStart := time.Now()
 		cache.Evict(guid.Host, guid.ServiceName)
 		if cache.Delete(guid.Host, guid.ServiceName) {
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionRemove).Info("removals", removeStart, "[%s] host by an empty payload", guid.Host)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionRemove).Info("removals", removeStart, "[%s] removed; empty payload", guid.Host)
 		}
 	}
 	var resubscribeHost func(client mqtt.Client, hostName string) int
@@ -151,7 +151,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		storeHostStatus(hostName, true)
 		scheduleReconcile(hostName, false)
 		topics := resubscribeHost(client, hostName)
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", reviveStart, "[online] revived, resub [%d], reconcile [%d] s", topics, reconcileDelay.Seconds())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", reviveStart, "[online] resub [%2d], retry [%2d]s", topics, reconcileDelay.Seconds())
 		return true
 	}
 	onData := func(client mqtt.Client, msg mqtt.Message) {
@@ -176,7 +176,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		streamStart := time.Now()
 		if err := json.Unmarshal(msg.Payload(), &value); err != nil {
 			dropCount.Add(1)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Error("received", streamStart, "[unmarshal] failed with [%v]", err)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Error("received", streamStart, "[unmarshal] [%v]", err)
 			return
 		}
 		if !online && !proveOnline(client, guid.Host, value) {
@@ -218,7 +218,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				delete(subscribed, topic)
 			}
 			subscribedMu.Unlock()
-			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%d] topics of [%d], %s, retrying on the next resync", len(refused), len(filters), reason)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%2d]/[%2d] topics refused: %s", len(refused), len(filters), reason)
 		}()
 		return len(filters)
 	}
@@ -289,7 +289,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		registerStart := time.Now()
 		if bindings := cache.RegisterService(hostName, serviceName, false); len(bindings) > 0 {
 			subscribeTopics(client, bindings)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Info("register", registerStart, "[%s], subscribed [%d] topics", hostName, len(bindings))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Info("register", registerStart, "[%s] host, [%2d] topics added", hostName, len(bindings))
 		}
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)
@@ -327,11 +327,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				topics = resubscribeHost(client, hostName)
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", statusStart, "[online], triggered by [%s]", trigger)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", statusStart, "[%3d] topics, reconcile [%5d] s", topics, reconcileDelay.Seconds())
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Info("observed", statusStart, "[%3d] topics, reconcile [%4d] s", topics, reconcileDelay.Seconds())
 		case hostStatusOffline, "":
 			storeHostStatus(hostName, false)
 			if known && !wasOnline {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "[offline], with heartbeat [no-op]")
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debug("observed", statusStart, "[offline] with heartbeat [no-op]")
 				return
 			}
 			evicted := cache.Services(hostName)
@@ -349,7 +349,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionDisconnect).Warn("observed", statusStart, "[offline] evicted [%3d] services", len(evicted))
 		default:
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionSubscribe).Error("observed", statusStart, "[%s] payload unknown", payload)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionSubscribe).Error("observed", statusStart, "[%s] unknown payload", payload)
 		}
 	}
 	wildcardHandlers := map[string]mqtt.MessageHandler{
@@ -379,7 +379,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				wildcardMu.Lock()
 				delete(wildcards, topic)
 				wildcardMu.Unlock()
-				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%s] wildcard, %s, retried on the next resync", topic, reason)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Error("rollback", subscribeStart, "[%s] wildcard refused: %s", topic, reason)
 			}(topic, token)
 		}
 		return len(pending)
@@ -412,13 +412,13 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		topics := subscribeTopics(client, cache.Topics())
 		listens := subscribeWildcards(client)
 		cache.Refresh()
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("attached", connectStart, "[%d] topics, [%d] wildcards", topics, listens)
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("retained", connectStart, "[%d] hosts, [%d] records", len(cache.Hosts()), cache.Size())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("attached", connectStart, "[%4d] topics, [%5d] wildcards", topics, listens)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("retained", connectStart, "[%6d] hosts, [%6d] records", len(cache.Hosts()), cache.Size())
 	}
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
 	if err != nil {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", clientStart, "[%s] loop with [%v]", loopListeningStream, err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Error("faulting", clientStart, "[%s] loop: [%v]", loopListeningStream, err)
 		return
 	}
 	defer client.Disconnect(250)
@@ -426,7 +426,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	cache.SubscribeAttach(&watchAttachListener{onAttach: func() {
 		attachStart := time.Now()
 		if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("attached", attachStart, "[%d] subscribed, [%d] unsubscribed, newly rendered", added, dropped)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("attached", attachStart, "[%4d] subscribed, [%3d] removed", added, dropped)
 		}
 	}})
 	cache.SubscribeDeletes(&watchDeletesListener{
@@ -470,7 +470,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					reconciles[pending.host] = pending
 					reconcileMu.Unlock()
 					topics := resubscribeHost(client, pending.host)
-					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%d] services, after [%d] ms, nothing refreshed so the redelivery was lost, resubscribed [%d] topics", len(services), config.SinceIncludingSuspend(pending.started).Milliseconds(), topics)
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%3d] services after [%7d] s", len(services), config.SinceIncludingSuspend(pending.started).Seconds())
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warn("deferred", reconcileStart, "[%5d] topics resubbed on retry", topics)
 					continue
 				}
 				for _, service := range services {
@@ -478,21 +479,21 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Delete(pending.host, service)
 				}
 				if len(services) == 0 {
-					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[ 0] services, after [%5d] s", config.SinceIncludingSuspend(pending.started).Seconds())
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debug("reclaims", reconcileStart, "[ 0] services, after [%7d] s", config.SinceIncludingSuspend(pending.started).Seconds())
 					continue
 				}
 				cache.Refresh()
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Info("reclaims", reconcileStart, "[%d] services, after [%d] ms, [%s]", len(services), config.SinceIncludingSuspend(pending.started).Milliseconds(), strings.Join(services, ","))
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Info("reclaims", reconcileStart, "[%2d] evicted after [%4d] s: %s", len(services), config.SinceIncludingSuspend(pending.started).Seconds(), strings.Join(services, ","))
 			}
 			resyncStart := time.Now()
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("resynced", resyncStart, "[%d] subscribed, [%d] unsubscribed", added, dropped)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Info("resynced", resyncStart, "[%4d] subscribed, [%3d] removed", added, dropped)
 			}
 			if restored := subscribeWildcards(client); restored > 0 {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Warn("restored", resyncStart, "[%d] wildcards lost since the connect, without which nothing is ever discovered", restored)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Warn("restored", resyncStart, "[%2d] wildcards restored @ resync", restored)
 			}
 			if !client.IsConnected() {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Warn("liveness", purgeStart, "[false] client neither connected nor reconnecting, forcing a revive")
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Warn("liveness", purgeStart, "[false] disconnected; revive now")
 				brokerRevive(ctx, client, 0)
 			}
 			rx := rxCount.Swap(0)
@@ -513,7 +514,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				silent = 0
 				silenceStart := time.Now()
 				restored, listens := resubscribeAll(client)
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] messages across [%d] ticks while [%d] topics subscribed, resubscribed [%d] topics and [%d] wildcards", rx, silenceTickCount, attached, restored, listens)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warn("received", silenceStart, "[%3d] msgs over [%3d] idle ticks", rx, silenceTickCount)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warn("restored", silenceStart, "[%4d] topics [%3d]+[%2d] restored", attached, restored, listens)
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("received", purgeStart, "[%3d] messages [%4d] messages/s", rx, rate)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debug("removals", purgeStart, "[%3d] evictions, [%3d] deletions", evicted, deleted)
