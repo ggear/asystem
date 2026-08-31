@@ -67,15 +67,15 @@ func executeServe(configPath string, opts *serveOptions) error {
 	defer cancel()
 	serveStart := time.Now()
 	loaded := config.Load(configPath)
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", serveStart, "[%s] version", loaded.Version())
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("resolved", serveStart, "[%s] config", filepath.Base(configPath))
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("watching", serveStart, "[%d] services", len(loaded.Services(loaded.Host())))
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] ms poll", periods.PollMillis)
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] ms pulse", periods.PulseMillis)
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", serveStart, "[%d] s heartbeat", periods.HeartbeatSecs)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("identity", serveStart, "[%s] version", loaded.Version())
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("resolved", serveStart, "[%s] config", filepath.Base(configPath))
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("watching", serveStart, "[%d] services", len(loaded.Services(loaded.Host())))
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("periodic", serveStart, "[%d] ms poll", periods.PollMillis)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("periodic", serveStart, "[%d] ms pulse", periods.PulseMillis)
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("periodic", serveStart, "[%d] s heartbeat", periods.HeartbeatSecs)
 	cache := metric.NewRecordCache()
 	engine.RunAllProbesPublishLoop(ctx, configPath, cache, periods)
-	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", serveStart, "[%s] version, exited gracefully", loaded.Version())
+	scribe.Log(scribe.SourceCmdServe, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Infof("identity", serveStart, "[%s] version, exited gracefully", loaded.Version())
 	return nil
 }
 

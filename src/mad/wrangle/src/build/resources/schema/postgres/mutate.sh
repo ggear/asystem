@@ -161,7 +161,8 @@ query_sql() {
 
 printf '\nSchema mutate [%s] against [%s]\n' "wrangle" "${POSTGRES_SERVICE_PROD}"
 FAULTS=0
-for SQL_FILE in "${ROOT_DIR}"/mutate/rename/*.sql "${ROOT_DIR}"/mutate/drop/*.sql; do
+for SQL_FILE in "${ROOT_DIR}"/mutate/rename/*.sql "${ROOT_DIR}"/mutate/drop/*.sql \
+                "${ROOT_DIR}"/mutate/archive/*.sql; do
   [ -e "${SQL_FILE}" ] || continue
   SCHEMA_LABEL="$(dirname "${SQL_FILE}" | xargs basename)/$(basename "${SQL_FILE}")"
   query_sql < "${SQL_FILE}" || FAULTS=$((FAULTS + 1))

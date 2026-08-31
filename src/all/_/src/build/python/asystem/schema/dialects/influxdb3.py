@@ -95,7 +95,7 @@ def artifacts(document, module_name, options):
         raise ValueError("Build generate script [{}] time_column, retention and applier are postgres only, "
                          "the influxdb3 dialect must never be wired to them".format(module_name))
     _validate(document, module_name)
-    dialect = _dialect(document, options.timezone)
+    dialect = _dialect(document, options.timezone, options.archive)
     written = {}
     for relation in document.relations:
         if relation.carried(KINDS):
@@ -109,11 +109,13 @@ def artifacts(document, module_name, options):
     if document.discovered:
         return written
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                          verify(document, options.rename, options.drop)), True)
+                                          verify(document, options.rename, options.drop, options.archive)), True)
     for measurement, statements in mutate(document, options.rename).items():
         written["mutate/rename/{}.sql".format(measurement)] = (statements, False)
     for measurement, statements in retire(document, options.drop).items():
         written["mutate/drop/{}.sql".format(measurement)] = (statements, False)
+    for measurement, statements in archived(document, options.archive).items():
+        written["mutate/archive/{}.sql".format(measurement)] = (statements, False)
     written["mutate.sh"] = (mutate_runner(module_name, DIALECT, TARGET, connect(module_name),
                                           _mutate_body(module_name)), True)
     return written
@@ -296,11 +298,12 @@ def measurements(document):
     return sorted({relation.plugin for relation in document.relations})
 
 
-def verify(document, rename=None, drop=None):
+def verify(document, rename=None, drop=None, archive=None):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
     retired = sorted(set(rename or {}) | set(drop or ()))
+    silenced = sorted(set(retired) | set(archive or ()))
     for measurement in measurements(document):
-        columns = {TIME, MODULE} | set(retired)
+        columns = {TIME, MODULE} | set(silenced)
         arms = []
         for relation in measured(document, measurement):
             columns.update(dimension.key for dimension in relation.dimensions)
@@ -353,14 +356,26 @@ def mutate(document, rename):
 
 
 def retire(document, drop):
+    return _census(
+        document, drop,
+        "-- influxdb3 has no column delete and dropping the table would take every other column with it, "
+        "so a dropped measure stays in the catalog and this reports the residue it still carries")
+
+
+def archived(document, archive):
+    return _census(
+        document, archive,
+        "-- an archived measure is retained deliberately with nothing to delete, silenced in verify and describe, "
+        "and this reports the history it still carries")
+
+
+def _census(document, names, heading):
     written = {}
-    if not drop:
+    if not names:
         return written
     for measurement in measurements(document):
         written[measurement] = render_statements([
-            "-- influxdb3 has no column delete and dropping the table would take every other column with it, "
-            "so a dropped measure stays in the catalog and this reports the residue it still carries",
-            unioned([_retired(measurement, name) for name in sorted(drop)], order_by=["measure"])])
+            heading, unioned([_retired(measurement, name) for name in sorted(names)], order_by=["measure"])])
     return written
 
 
@@ -419,20 +434,25 @@ for SQL_FILE in "${{ROOT_DIR}}"/mutate/rename/*.sql; do
   done < <(statements < "${{SQL_FILE}}")
 done
 
-for SQL_FILE in "${{ROOT_DIR}}"/mutate/drop/*.sql; do
-  [ -e "${{SQL_FILE}}" ] || continue
-  printf -- '\\n-- drop/%s\\n\\n' "$(basename "${{SQL_FILE}}")"
-  printf 'influxdb3 has no column delete, so a dropped measure stays in the catalog and is silenced in verify only\\n\\n'
-  while IFS= read -r STATEMENT; do
-    [ -z "${{STATEMENT}}" ] && continue
-    if ! RESULT="$(query "${{STATEMENT}}")"; then
-      fail "${{STATEMENT}}" "${{RESULT}}"
-      FAULTS=$((FAULTS + 1))
-      continue
-    fi
-    printf '%s\\n' "${{RESULT}}" | table
-    printf '\\n'
-  done < <(statements < "${{SQL_FILE}}")
+for SQL_VERB in drop archive; do
+  for SQL_FILE in "${{ROOT_DIR}}"/mutate/"${{SQL_VERB}}"/*.sql; do
+    [ -e "${{SQL_FILE}}" ] || continue
+    printf -- '\\n-- %s/%s\\n\\n' "${{SQL_VERB}}" "$(basename "${{SQL_FILE}}")"
+    case "${{SQL_VERB}}" in
+      drop) printf 'influxdb3 has no column delete, so a dropped measure stays in the catalog and is silenced in verify only\\n\\n' ;;
+      archive) printf 'an archived measure is retained deliberately, silenced in verify and describe, and nothing is deleted\\n\\n' ;;
+    esac
+    while IFS= read -r STATEMENT; do
+      [ -z "${{STATEMENT}}" ] && continue
+      if ! RESULT="$(query "${{STATEMENT}}")"; then
+        fail "${{STATEMENT}}" "${{RESULT}}"
+        FAULTS=$((FAULTS + 1))
+        continue
+      fi
+      printf '%s\\n' "${{RESULT}}" | table
+      printf '\\n'
+    done < <(statements < "${{SQL_FILE}}")
+  done
 done
 
 if [ "${{FAULTS}}" != "0" ]; then
@@ -443,7 +463,7 @@ printf '\\nSchema mutate [%s] backfilled [%s] points with no faults\\n' "{module
 """.format(target=TARGET, module=module_name)
 
 
-def _dialect(document, zone=""):
+def _dialect(document, zone="", archive=None):
     return SchemaDialect(
         source=lambda relation: relation.plugin,
         predicates=lambda relation: where(relation, document),
@@ -455,7 +475,7 @@ def _dialect(document, zone=""):
         entity=_entity,
         declared=_declared,
         undeclared=lambda measurement, relations, declared, keyed: _describe_undeclared(
-            measurement, relations, keyed),
+            measurement, relations, keyed, archive),
         bucket=lambda bucket: _binned(bucket, zone),
         localised=lambda expression: _localised(expression, zone),
         subject=lambda relation: [(column(dimension.key), dimension.key) for dimension in relation.dimensions],
@@ -465,8 +485,8 @@ def _dialect(document, zone=""):
         kinds=KINDS)
 
 
-def _describe_undeclared(measurement, relations, keyed):
-    columns = set(keyed) | {TIME, MODULE}
+def _describe_undeclared(measurement, relations, keyed, archive=None):
+    columns = set(keyed) | {TIME, MODULE} | set(archive or ())
     for relation in relations:
         columns.update(dimension.key for dimension in relation.dimensions)
     return select(

@@ -107,6 +107,7 @@ class SchemaDatabaseOptions:
     applier: bool = False
     rename: dict = field(default_factory=dict)
     drop: list = field(default_factory=list)
+    archive: list = field(default_factory=list)
 
 
 @dataclass

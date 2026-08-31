@@ -148,7 +148,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		}
 	}
 	if len(tombstoned) > 0 {
-		scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionRemove).Info("removals", tombstoneStart, "[%s] host, [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
+		scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionRemove).Infof("removals", tombstoneStart, "[%s] host, [%d] services [%s]", p.hostName, len(tombstoned), strings.Join(tombstoned, ","))
 	}
 	newBool := func() *stats.BoolStats {
 		return stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
@@ -182,7 +182,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 		configuredStatus, _, _ := polledService.configuredStatus()
 		sleepStatus, _, _ := polledService.sleepStatus()
 		aggregateStatus := sleepStatus || (healthStatus && configuredStatus)
-		reportPulsing(scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
+		reportPulsingf(scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(polledServiceName), scribe.ActionSample), "computed", serviceStart,
 			"[%v] aggregate, service [%s] health [%v] configured [%v] sleeping [%v], every metric of this service is not ok while aggregate is false",
 			aggregateStatus, polledServiceName, healthStatus, configuredStatus, sleepStatus)
 		gates := gateSet{metric.GateServiceAggregate: func() bool { return aggregateStatus }}
@@ -228,7 +228,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 				metric.MetricServiceName,
 				polledService.name(),
 				func() (string, derivation, error) {
-					return polledService.name(), derived(scribe.ActionSample, "computed [%s] name, read from the container name docker reports", polledService.name()), nil
+					return polledService.name(), derivedf(scribe.ActionSample, "computed [%s] name, read from the container name docker reports", polledService.name()), nil
 				},
 				nameStrings[polledServiceName],
 				func() string { return nameStrings[polledServiceName].PulseLast() },
@@ -391,11 +391,11 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			continue
 		}
 		if name == "" {
-			scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover).Error("rejected", servicesStart, "[container] empty name, excluding from the service list")
+			scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover).Errorf("rejected", servicesStart, "[container] empty name, excluding from the service list")
 			continue
 		}
 		if _, exists := seenNames[name]; exists {
-			scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(name), scribe.ActionDiscover).Error("rejected", servicesStart, "[duplicate] container name, excluded from the service list")
+			scribe.Log(scribe.SourceProbeServices, scribe.SubjectService(name), scribe.ActionDiscover).Errorf("rejected", servicesStart, "[duplicate] container name, excluded from the service list")
 			continue
 		}
 		seenNames[name] = struct{}{}
@@ -524,7 +524,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			}
 		}
 	}
-	reportPulsing(scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover), "reported", servicesStart,
+	reportPulsingf(scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover), "reported", servicesStart,
 		"[%3d] containers, services [%d], configured [%d], ghosts [%d] configured but not running",
 		len(containers), len(services)-ghosts, len(p.configuredServiceNames), ghosts)
 	return services, nil
@@ -604,7 +604,7 @@ type serviceIORates struct {
 }
 
 func (p *servicesProbe) servicesStatus() (bool, derivation, error) {
-	return true, derived(scribe.ActionSample, "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
+	return true, derivedf(scribe.ActionSample, "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
 }
 
 func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, derivation, error) {
@@ -612,17 +612,17 @@ func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, d
 	if err != nil {
 		return 0, derivation{}, err
 	}
-	return float64(allocatedBytes) / bytesPerMiB, derived(scribe.ActionCompute, "computed [%.0f] MiB of ceilings, installed [%d] of configured [%d] services",
+	return float64(allocatedBytes) / bytesPerMiB, derivedf(scribe.ActionCompute, "computed [%.0f] MiB of ceilings, installed [%d] of configured [%d] services",
 		float64(allocatedBytes)/bytesPerMiB, installed, len(p.configuredServiceNames)), nil
 }
 
 func (s *service) isUp() (bool, derivation, error) {
-	return true, derived(scribe.ActionSample, "computed [true] reporting, service [%s] publishes this beacon every pulse and its ok flag is the service aggregate", s.nameValue), nil
+	return true, derivedf(scribe.ActionSample, "computed [true] reporting, service [%s] publishes this beacon every pulse and its ok flag is the service aggregate", s.nameValue), nil
 }
 
 func (s *service) backupStatus() (bool, derivation, error) {
 	// TODO: Provide implementation
-	return s.backupStatusValue, derived(scribe.ActionSample, "computed [%v] backed up, service [%s] reports no backup of its own yet so this is assumed until implemented", s.backupStatusValue, s.nameValue), s.backupStatusErr
+	return s.backupStatusValue, derivedf(scribe.ActionSample, "computed [%v] backed up, service [%s] reports no backup of its own yet so this is assumed until implemented", s.backupStatusValue, s.nameValue), s.backupStatusErr
 }
 
 func (s *service) healthStatus() (bool, derivation, error) {
@@ -630,12 +630,12 @@ func (s *service) healthStatus() (bool, derivation, error) {
 }
 
 func (s *service) configuredStatus() (bool, derivation, error) {
-	return s.configuredStatusValue, derived(scribe.ActionSample, "computed [%v] configured, service [%s] is %s named in the config file schema for this host",
+	return s.configuredStatusValue, derivedf(scribe.ActionSample, "computed [%v] configured, service [%s] is %s named in the config file schema for this host",
 		s.configuredStatusValue, s.nameValue, configuredWord(s.configuredStatusValue)), s.configuredStatusErr
 }
 
 func (s *service) sleepStatus() (bool, derivation, error) {
-	return s.sleepStatusValue, derived(scribe.ActionSample, "computed [%v] sleeping, service [%s] holds %s marker in its install tree",
+	return s.sleepStatusValue, derivedf(scribe.ActionSample, "computed [%v] sleeping, service [%s] holds %s marker in its install tree",
 		s.sleepStatusValue, s.nameValue, configuredWord(s.sleepStatusValue)), s.sleepStatusErr
 }
 
@@ -729,7 +729,7 @@ func (p *servicesProbe) processorUsed(name string, response container.StatsRespo
 		onlineCPUs = float64(len(response.CPUStats.CPUUsage.PercpuUsage))
 	}
 	usedPercent := (cpuDelta / systemDelta) * onlineCPUs * 100.0
-	return stats.ConvertToInt(usedPercent), derived(scribe.ActionSample, "computed [%3d] pct used processor, service [%s] delta [%.0f] of system [%.0f] ns across [%.0f] cpus",
+	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionSample, "computed [%3d] pct used processor, service [%s] delta [%.0f] of system [%.0f] ns across [%.0f] cpus",
 		stats.ConvertToInt(usedPercent), name, cpuDelta, systemDelta, onlineCPUs), nil
 }
 
@@ -746,31 +746,31 @@ func (p *servicesProbe) memoryUsed(name string, response container.StatsResponse
 		used = 0
 	}
 	usedPercent := (used / float64(response.MemoryStats.Limit)) * 100.0
-	return stats.ConvertToInt(usedPercent), derived(scribe.ActionSample, "computed [%3d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
+	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionSample, "computed [%3d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
 		stats.ConvertToInt(usedPercent), name, int64(used)/bytesPerMiB, int64(response.MemoryStats.Limit)/bytesPerMiB, int64(cache)/bytesPerMiB), nil
 }
 
 func (p *servicesProbe) diskOpsUsed(name string, rates serviceIORates) (int8, derivation, error) {
 	if rates.blockEntries == 0 {
-		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used disk ops, service [%s] reports no block device counters so the metric is inert and always ok", name), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct used disk ops, service [%s] reports no block device counters so the metric is inert and always ok", name), nil
 	}
 	if rates.err != nil {
 		return 0, derivation{}, rates.err
 	}
 	usedPercent := rates.blockBytes / metric.UsedDiskOpsBudgetBytes * 100.0
-	return percentValue(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used disk ops, service [%s] moved [%.1f] MiB per second of the [%.0f] MiB budget across [%d] devices over [%.1f] s",
+	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used disk ops, service [%s] moved [%.1f] MiB per second of the [%.0f] MiB budget across [%d] devices over [%.1f] s",
 		percentValue(usedPercent), name, rates.blockBytes/bytesPerMiB, metric.UsedDiskOpsBudgetMiB, rates.blockEntries, rates.elapsed), nil
 }
 
 func (p *servicesProbe) networkUsed(name string, rates serviceIORates) (int8, derivation, error) {
 	if rates.networkInterfaces == 0 {
-		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used network, service [%s] shares another network namespace so docker reports no interface counters and the metric is inert and always ok", name), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct used network, service [%s] shares another network namespace so docker reports no interface counters and the metric is inert and always ok", name), nil
 	}
 	if rates.err != nil {
 		return 0, derivation{}, rates.err
 	}
 	usedPercent := rates.networkBytes * bitsPerByte / metric.UsedNetworkBudgetBits * 100.0
-	return percentValue(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used network, service [%s] moved [%.1f] Mbit per second of the [%.0f] Mbit budget across [%d] interfaces over [%.1f] s",
+	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used network, service [%s] moved [%.1f] Mbit per second of the [%.0f] Mbit budget across [%d] interfaces over [%.1f] s",
 		percentValue(usedPercent), name, rates.networkBytes*bitsPerByte/bitsPerMbit, metric.UsedNetworkBudgetMbit, rates.networkInterfaces, rates.elapsed), nil
 }
 
@@ -825,10 +825,10 @@ func serviceNetworkBytes(response container.StatsResponse) (uint64, int) {
 
 func (p *servicesProbe) healthStatus(name string, containerInfo container.InspectResponse) (bool, derivation, error) {
 	if containerInfo.ContainerJSONBase == nil || containerInfo.State == nil || containerInfo.State.Health == nil {
-		return false, derived(scribe.ActionSample, "computed [false] healthy, service [%s] declares no docker health check so docker reports no health state", name), nil
+		return false, derivedf(scribe.ActionSample, "computed [false] healthy, service [%s] declares no docker health check so docker reports no health state", name), nil
 	}
 	healthy := containerInfo.State.Health.Status == container.Healthy
-	return healthy, derived(scribe.ActionSample, "computed [%v] healthy, service [%s] docker health [%s] after [%d] failing streak",
+	return healthy, derivedf(scribe.ActionSample, "computed [%v] healthy, service [%s] docker health [%s] after [%d] failing streak",
 		healthy, name, containerInfo.State.Health.Status, containerInfo.State.Health.FailingStreak), nil
 }
 
@@ -841,7 +841,7 @@ func (p *servicesProbe) restartCount(name string, containerInfo container.Inspec
 	if containerInfo.ContainerJSONBase == nil {
 		return 0, derivation{}, fmt.Errorf("no restart count read, docker returned an inspect response for service [%s] with no base section", name)
 	}
-	return float64(containerInfo.RestartCount), derived(scribe.ActionSample, "computed [%d] restarts, service [%s] as counted by docker since the container was created",
+	return float64(containerInfo.RestartCount), derivedf(scribe.ActionSample, "computed [%d] restarts, service [%s] as counted by docker since the container was created",
 		containerInfo.RestartCount, name), nil
 }
 
@@ -849,18 +849,18 @@ func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo contain
 	if containerInfo.Config != nil && containerInfo.Config.Image != "" {
 		tokens := strings.Split(containerInfo.Config.Image, ":")
 		if len(tokens) > 1 && config.DefaultVersionPattern.MatchString(tokens[1]) {
-			return tokens[1], derived(scribe.ActionSample, "computed [%s] version, read from the image tag [%s] docker reports", tokens[1], containerInfo.Config.Image), nil
+			return tokens[1], derivedf(scribe.ActionSample, "computed [%s] version, read from the image tag [%s] docker reports", tokens[1], containerInfo.Config.Image), nil
 		}
 	}
 	name := containerServiceName(containerInfo)
 	if name == "" {
-		return servicesVersionUnknown, derived(scribe.ActionSample, "computed [%s] version, docker reports no usable image tag and the container carries no service name to look up in the install tree", servicesVersionUnknown), nil
+		return servicesVersionUnknown, derivedf(scribe.ActionSample, "computed [%s] version, docker reports no usable image tag and the container carries no service name to look up in the install tree", servicesVersionUnknown), nil
 	}
 	installed, _ := snapshot.service(name)
 	if installed.version != "" {
-		return installed.version, derived(scribe.ActionSample, "computed [%s] version, service [%s] read from the install tree since the image tag carries none", installed.version, name), nil
+		return installed.version, derivedf(scribe.ActionSample, "computed [%s] version, service [%s] read from the install tree since the image tag carries none", installed.version, name), nil
 	}
-	return servicesVersionUnknown, derived(scribe.ActionSample, "computed [%s] version, service [%s] has no image tag and no version in the install tree under [%s]",
+	return servicesVersionUnknown, derivedf(scribe.ActionSample, "computed [%s] version, service [%s] has no image tag and no version in the install tree under [%s]",
 		servicesVersionUnknown, name, installRoot), nil
 }
 
@@ -881,7 +881,7 @@ func (p *servicesProbe) maxMemory(snapshot *installSnapshot, name string) (float
 	if installed.maxMemoryBytes <= 0 {
 		return 0, derivation{}, fmt.Errorf("no memory ceiling read, service [%s] declares no [deploy.resources.limits.memory] in its compose file under [%s]", name, installRoot)
 	}
-	return float64(installed.maxMemoryBytes) / bytesPerMiB, derived(scribe.ActionSample, "computed [%.0f] MiB ceiling, service [%s] read from [deploy.resources.limits.memory] in its compose file",
+	return float64(installed.maxMemoryBytes) / bytesPerMiB, derivedf(scribe.ActionSample, "computed [%.0f] MiB ceiling, service [%s] read from [deploy.resources.limits.memory] in its compose file",
 		float64(installed.maxMemoryBytes)/bytesPerMiB, name), nil
 }
 
@@ -897,7 +897,7 @@ func (p *servicesProbe) upTime(name string, containerInfo container.InspectRespo
 	if upTime < 0 {
 		return 0, derivation{}, fmt.Errorf("no up time read, service [%s] reports a start time [%s] in the future", name, containerInfo.State.StartedAt)
 	}
-	return upTime, derived(scribe.ActionSample, "computed [%.0f] s up, service [%s] started at [%s]", upTime, name, startedAt.Format(time.RFC3339)), nil
+	return upTime, derivedf(scribe.ActionSample, "computed [%.0f] s up, service [%s] started at [%s]", upTime, name, startedAt.Format(time.RFC3339)), nil
 }
 
 func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services map[string]service) {
@@ -917,7 +917,7 @@ func (p *servicesProbe) logInstallMissing(snapshot *installSnapshot, services ma
 	if len(missing) == 0 {
 		return
 	}
-	scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover).Warn("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
+	scribe.Log(scribe.SourceProbeServices, p.subject(), scribe.ActionDiscover).Warnf("notfound", missingStart, "[%d] containers with no install directory [%s]", len(missing), joined)
 }
 
 func (p *servicesProbe) installs() installReader {

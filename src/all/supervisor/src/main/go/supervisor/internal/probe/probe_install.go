@@ -96,7 +96,7 @@ func (t *installTree) snapshot() *installSnapshot {
 	t.stamp = stamp
 	t.generation++
 	t.cached = t.parse()
-	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectNone, scribe.ActionDiscover).Debug("snapshot", scanStart, "[%d] services, generation [%d] under [%s]", len(t.cached.services), t.generation, t.mount+installRoot)
+	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectNone, scribe.ActionDiscover).Debugf("snapshot", scanStart, "[%d] services, generation [%d] under [%s]", len(t.cached.services), t.generation, t.mount+installRoot)
 	t.cached.report(scanStart)
 	return t.cached
 }
@@ -156,14 +156,14 @@ func (s *installSnapshot) report(scanStart time.Time) {
 	for _, name := range names {
 		entry := s.services[name]
 		if !entry.serviceModule {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] is a host module with no compose file, not counted in the allocation", name)
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("examined", scanStart, "[%s] is a host module with no compose file, not counted in the allocation", name)
 			continue
 		}
 		if entry.maxMemoryBytes <= 0 {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] version [%s] declares no memory ceiling, contributing [0] MiB to the allocation", name, entry.version)
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("examined", scanStart, "[%s] version [%s] declares no memory ceiling, contributing [0] MiB to the allocation", name, entry.version)
 			continue
 		}
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debug("examined", scanStart, "[%s] version [%s] contributes [%5d] MiB to the allocation, sleeping [%v]", name, entry.version, entry.maxMemoryBytes/bytesPerMiB, entry.sleepEnabled)
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("examined", scanStart, "[%s] version [%s] contributes [%5d] MiB to the allocation, sleeping [%v]", name, entry.version, entry.maxMemoryBytes/bytesPerMiB, entry.sleepEnabled)
 	}
 }
 
@@ -276,7 +276,7 @@ func installVersion(home, name string) string {
 	path := home + "/" + installEnvironmentFile
 	data, err := os.ReadFile(path)
 	if err != nil {
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", versionStart, "[%s] version not readable with [%v]", path, err)
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", versionStart, "[%s] version not readable with [%v]", path, err)
 		return ""
 	}
 	for line := range strings.SplitSeq(string(data), "\n") {
@@ -285,12 +285,12 @@ func installVersion(home, name string) string {
 			continue
 		}
 		if !config.DefaultVersionPattern.MatchString(value) {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warn("unusable", versionStart, "[%s] version from [%s] could not be parsed", value, path)
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", versionStart, "[%s] version from [%s] could not be parsed", value, path)
 			return ""
 		}
 		return value
 	}
-	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", versionStart, "[%s] declares no version", path)
+	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", versionStart, "[%s] declares no version", path)
 	return ""
 }
 
@@ -299,12 +299,12 @@ func installMaxMemory(home, name string) int64 {
 	path := home + "/" + installComposeFile
 	data, err := os.ReadFile(path)
 	if err != nil {
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", memoryStart, "[%s] compose not readable with [%v]", path, err)
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", memoryStart, "[%s] compose not readable with [%v]", path, err)
 		return 0
 	}
 	var compose installCompose
 	if err := yaml.Unmarshal(data, &compose); err != nil {
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warn("unusable", memoryStart, "[%s] compose could not be parsed with [%v]", path, err)
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", memoryStart, "[%s] compose could not be parsed with [%v]", path, err)
 		return 0
 	}
 	keys := make([]string, 0, len(compose.Services))
@@ -320,12 +320,12 @@ func installMaxMemory(home, name string) int64 {
 		}
 		limit := composed.Deploy.Resources.Limits.Memory
 		if limit == "" {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warn("notfound", memoryStart, "[%s] compose service declares no memory limit in [%s]", key, path)
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", memoryStart, "[%s] compose service declares no memory limit in [%s]", key, path)
 			continue
 		}
 		limitBytes, limitErr := units.RAMInBytes(limit)
 		if limitErr != nil {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warn("unusable", memoryStart, "[%s] compose service memory [%s] in [%s] with [%v]", key, limit, path, limitErr)
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", memoryStart, "[%s] compose service memory [%s] in [%s] with [%v]", key, limit, path, limitErr)
 			continue
 		}
 		total += limitBytes

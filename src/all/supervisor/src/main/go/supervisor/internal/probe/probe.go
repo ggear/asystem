@@ -53,7 +53,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		}
 		p := probesByMetricID[id]
 		if p == nil {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(id), scribe.ActionStart).Error("rejected", registerStart, "[none] probe registered")
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(id), scribe.ActionStart).Errorf("rejected", registerStart, "[none] probe registered")
 			continue
 		}
 		mask := probeMap[p]
@@ -65,14 +65,14 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		probeCreateStart := time.Now()
 		err := p.create(configPath, cache, mask, periods)
 		if err != nil {
-			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Error("faulting", probeCreateStart, "[create] failed with [%v]", err)
+			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Errorf("faulting", probeCreateStart, "[create] failed with [%v]", err)
 			delete(probeMap, p)
-			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Debug("removals", probeCreateStart, "[removed] from the poll set")
+			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Debugf("removals", probeCreateStart, "[removed] from the poll set")
 			continue
 		}
-		scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Debug("prepared", probeCreateStart, "[%d] metrics", len(p.metrics()))
+		scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Debugf("prepared", probeCreateStart, "[%d] metrics", len(p.metrics()))
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(configPath).Host()), scribe.ActionStart).Debug("prepared", createStart, "[%d] probes", len(probeMap))
+	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(configPath).Host()), scribe.ActionStart).Debugf("prepared", createStart, "[%d] probes", len(probeMap))
 	verifyGates(probeMap)
 	execProbes = probeMap
 	execPeriods = periods
@@ -109,9 +109,9 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 			for p := range execProbes {
 				probeStart := time.Now()
 				if err := p.run(ctx, isPulse); err != nil {
-					scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Error("faulting", probeStart, "[%v] pulse with [%v]", isPulse, err)
+					scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Errorf("faulting", probeStart, "[%v] pulse with [%v]", isPulse, err)
 				}
-				scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Debug("reported", probeStart, "[%v] pulse, metrics [%3d]", isPulse, len(p.metrics()))
+				scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Debugf("reported", probeStart, "[%v] pulse, metrics [%3d]", isPulse, len(p.metrics()))
 			}
 			if isPulse {
 				heartbeatPulseCount--
@@ -123,7 +123,7 @@ func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 					onPulse(isHeartbeat)
 				}
 			}
-			scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debug("reported", tickStart, "[%3d] probes, pulse [%v]", len(execProbes), isPulse)
+			scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debugf("reported", tickStart, "[%3d] probes, pulse [%v]", len(execProbes), isPulse)
 		}
 	}
 }
@@ -183,11 +183,11 @@ type derivation struct {
 	inert  bool
 }
 
-func derived(action scribe.Action, detail string, args ...any) derivation {
+func derivedf(action scribe.Action, detail string, args ...any) derivation {
 	return derivation{action: action, detail: detail, args: args}
 }
 
-func derivedInert(action scribe.Action, detail string, args ...any) derivation {
+func derivedInertf(action scribe.Action, detail string, args ...any) derivation {
 	return derivation{action: action, detail: detail, args: args, inert: true}
 }
 
@@ -343,7 +343,7 @@ func runCacheMetricTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetr
 	for _, task := range tasks {
 		cache := p.records()
 		if cache == nil {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", tasksStart, "[missing] the required cache")
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Errorf("unusable", tasksStart, "[missing] the required cache")
 			continue
 		}
 		if !p.hasMetric(task.metricID) {
@@ -354,7 +354,7 @@ func runCacheMetricTasks(p probe, isPulse bool, gates gateSet, tasks []cacheMetr
 	if !isPulse || census.total == 0 {
 		return
 	}
-	scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionCensus).Debug("reported", tasksStart, "[%3d] metrics%s, green [%3d] amber [%3d] red [%3d] unknown [%3d]%s",
+	scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionCensus).Debugf("reported", tasksStart, "[%3d] metrics%s, green [%3d] amber [%3d] red [%3d] unknown [%3d]%s",
 		census.total, census.subject(), census.green, census.amber, census.red, census.unknown, census.faults())
 }
 
@@ -374,7 +374,7 @@ func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 		missing = append(missing, "pulseRule")
 	}
 	if len(missing) > 0 {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", taskStart, "[%s] required fields missing", strings.Join(missing, ","))
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Errorf("unusable", taskStart, "[%s] required fields missing", strings.Join(missing, ","))
 		return metricStatusUnknown
 	}
 	sample, derivation, err := task.sampleFunc()
@@ -393,7 +393,7 @@ func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	reportMetricDerivation(task, taskStart, derivation, err)
 	hostName := config.Load(execConfigPath).Host()
 	if hostName == "" {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Error("unusable", taskStart, "[missing] the host name")
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Errorf("unusable", taskStart, "[missing] the host name")
 		return metricStatusUnknown
 	}
 	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
@@ -428,7 +428,7 @@ func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	}
 	reportMetricRule(task.metricID, taskStart, pulseOK, pulseResult.Detail, trendOK, trendResult.Detail)
 	if valueErr != nil {
-		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("faulting", taskStart, "[builder] value failed with [%v]", valueErr)
+		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Errorf("faulting", taskStart, "[builder] value failed with [%v]", valueErr)
 		return metricStatusUnknown
 	}
 	value.Failed = errored && !derivation.inert
@@ -469,26 +469,26 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample)
 	switch {
 	case errored && errors.Is(err, errUnimplemented):
-		logger.Debug("faulting", fault.since, "%swith [%v]", metricScope(task), err)
+		logger.Debugf("faulting", fault.since, "%swith [%v]", metricScope(task), err)
 	case errored && fault.polls == 1 && fault.warming:
-		logger.Debug("faulting", fault.since, "%swith [%v]", metricScope(task), err)
+		logger.Debugf("faulting", fault.since, "%swith [%v]", metricScope(task), err)
 	case errored && fault.polls == 1 && errors.Is(err, errEnvironment):
-		logger.Warn("faulting", fault.since, "%swith [%v]", metricScope(task), err)
+		logger.Warnf("faulting", fault.since, "%swith [%v]", metricScope(task), err)
 	case errored && fault.polls == 1:
-		logger.Error("faulting", fault.since, "%swith [%v]", metricScope(task), err)
+		logger.Errorf("faulting", fault.since, "%swith [%v]", metricScope(task), err)
 	case errored && repeat:
-		logger.Debug("faulting", fault.since, "%sfor [%d] polls with [%v]", metricScope(task), fault.polls, err)
+		logger.Debugf("faulting", fault.since, "%sfor [%d] polls with [%v]", metricScope(task), fault.polls, err)
 	case !errored && faulting && fault.warming:
-		logger.Debug("restored", fault.since, "%safter [%d] failed polls with [%s]", metricScope(task), fault.polls, fault.message)
+		logger.Debugf("restored", fault.since, "%safter [%d] failed polls with [%s]", metricScope(task), fault.polls, fault.message)
 	case !errored && faulting:
-		logger.Info("restored", fault.since, "%safter [%d] failed polls with [%s]", metricScope(task), fault.polls, fault.message)
+		logger.Infof("restored", fault.since, "%safter [%d] failed polls with [%s]", metricScope(task), fault.polls, fault.message)
 	}
 }
 
 func reportMetricDerivation(task cacheMetricTask, taskStart time.Time, d derivation, err error) {
 	if d.empty() {
 		if err == nil {
-			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Error("unstated", taskStart,
+			scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Errorf("unstated", taskStart,
 				"%spublished a value stating no derivation", metricScope(task))
 		}
 		return
@@ -499,7 +499,7 @@ func reportMetricDerivation(task cacheMetricTask, taskStart time.Time, d derivat
 	}
 	verb, detail, _ := strings.Cut(strings.TrimLeft(rendered, " "), " ")
 	detail = strings.TrimLeft(detail, " ")
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), d.action).Debug(verb, taskStart, detail)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), d.action).Debugf(verb, taskStart, "%s", detail)
 }
 
 func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status metricStatus, pulse any, pulseOK bool, trend any, trendOK *bool, err error) {
@@ -511,24 +511,24 @@ func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status metric
 	if seen && previous == status {
 		return
 	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Debug("observed", taskStart, "%sstatus [%s] was [%s] pulse [%v] ok [%v] trend [%v] ok [%v] error [%v]",
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Debugf("observed", taskStart, "%sstatus [%s] was [%s] pulse [%v] ok [%v] trend [%v] ok [%v] error [%v]",
 		metricScope(task), status, metricStatusPrevious(seen, previous), metricValue(pulse), pulseOK, metricValue(trend), metricFlag(trendOK), metricError(err))
 }
 
 func reportMetricRule(metricID metric.ID, taskStart time.Time, pulseOK bool, pulseText string, trendOK *bool, trendText string) {
 	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(metricID), scribe.ActionCompute)
 	if trendOK == nil {
-		reportPulsing(logger, "computed", taskStart, "ok pulse [%v] %s", pulseOK, pulseText)
+		reportPulsingf(logger, "computed", taskStart, "ok pulse [%v] %s", pulseOK, pulseText)
 		return
 	}
-	reportPulsing(logger, "computed", taskStart, "ok pulse [%v] %s, ok trend [%v] %s", pulseOK, pulseText, *trendOK, trendText)
+	reportPulsingf(logger, "computed", taskStart, "ok pulse [%v] %s, ok trend [%v] %s", pulseOK, pulseText, *trendOK, trendText)
 }
 
-func reportPulsing(logger scribe.Logger, verb string, started time.Time, detail string, args ...any) {
+func reportPulsingf(logger scribe.Logger, verb string, started time.Time, detail string, args ...any) {
 	if !execPulsing.Load() {
 		return
 	}
-	logger.Debug(verb, started, detail, args...)
+	logger.Debugf(verb, started, detail, args...)
 }
 
 func evaluateRule(rule metric.Rule, inert bool, unit string, value any, siblings metric.ValueResolver, gates gateSet) metric.RuleResult {

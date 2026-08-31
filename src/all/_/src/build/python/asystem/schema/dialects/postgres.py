@@ -46,7 +46,7 @@ def artifacts(document, module_name, options):
         raise ValueError("Build generate script [{}] unknown time_column [{}] expected one of {}"
                          .format(module_name, options.time_column, list(TIME_COLUMNS)))
     _validate(document, module_name)
-    dialect = _dialect(options.time_column, options.timezone)
+    dialect = _dialect(options.time_column, options.timezone, options.archive)
     written = {}
     for table, relations in _tabled(document).items():
         written["model/{}.sql".format(table)] = (leaf(relations, table, options), False)
@@ -55,11 +55,13 @@ def artifacts(document, module_name, options):
                                               describe_statements(document, dialect)), True)
     written["query.sh"] = (query_runner(module_name, DIALECT, TARGET, connect(module_name)), True)
     written["verify.sh"] = (verify_runner(module_name, DIALECT, TARGET, connect(module_name),
-                                          verify(document, options.rename, options.drop)), True)
+                                          verify(document, options.rename, options.drop, options.archive)), True)
     for table, statements in mutate(document, options.rename).items():
         written["mutate/rename/{}.sql".format(table)] = (statements, False)
     for table, statements in retire(document, options.drop).items():
         written["mutate/drop/{}.sql".format(table)] = (statements, False)
+    for table, statements in archived(document, options.archive).items():
+        written["mutate/archive/{}.sql".format(table)] = (statements, False)
     written["mutate.sh"] = (mutate_runner(module_name, DIALECT, TARGET, connect(module_name),
                                           _mutate_body(module_name)), True)
     return written
@@ -160,10 +162,11 @@ def leaf(relations, table, options):
     return "\n".join(lines) + "\n"
 
 
-def verify(document, rename=None, drop=None):
+def verify(document, rename=None, drop=None, archive=None):
     statements = ["-- declared vocabulary against what the service actually wrote, rows come back only on drift"]
     retired = sorted(set(rename or {}) | set(drop or ()))
-    observed = [literals("type", retired)] if retired else []
+    silenced = sorted(set(retired) | set(archive or ()))
+    observed = [literals("type", silenced)] if silenced else []
     for table, relations in _tabled(document).items():
         declared = [(relation.path,) + tuple_ for relation in relations for tuple_ in _vocabulary(relation)]
         values = ",\n".join("    ('{}', '{}', '{}', '{}')".format(*tuple_) for tuple_ in declared)
@@ -239,11 +242,28 @@ def retire(document, drop):
     return written
 
 
+def archived(document, archive):
+    written = {}
+    if not archive:
+        return written
+    for table in sorted(_tabled(document)):
+        written[table] = render_statements([
+            "-- an archived measure is retained deliberately with nothing to delete, silenced in verify and describe, "
+            "and this reports the history it still carries",
+            select(
+                [("'{}'".format(table), "relation"), ("type", "measure"), ("count(*)", "carried"),
+                 ("CAST(min(time) AS VARCHAR)", "oldest"), ("CAST(max(time) AS VARCHAR)", "newest")],
+                table, [literals("type", sorted(archive), negate=False)],
+                group_by=["type"], order_by=["measure"])])
+    return written
+
+
 def _mutate_body(module_name):
     return """
 printf '\\nSchema mutate [%s] against [%s]\\n' "{module}" "${{{target}}}"
 FAULTS=0
-for SQL_FILE in "${{ROOT_DIR}}"/mutate/rename/*.sql "${{ROOT_DIR}}"/mutate/drop/*.sql; do
+for SQL_FILE in "${{ROOT_DIR}}"/mutate/rename/*.sql "${{ROOT_DIR}}"/mutate/drop/*.sql \\
+                "${{ROOT_DIR}}"/mutate/archive/*.sql; do
   [ -e "${{SQL_FILE}}" ] || continue
   SCHEMA_LABEL="$(dirname "${{SQL_FILE}}" | xargs basename)/$(basename "${{SQL_FILE}}")"
   query_sql < "${{SQL_FILE}}" || FAULTS=$((FAULTS + 1))
@@ -257,7 +277,7 @@ printf '\\nSchema mutate [%s] rewrote and deleted with no faults\\n' "{module}"
 """.format(target=TARGET, module=module_name)
 
 
-def _dialect(time_column, zone=""):
+def _dialect(time_column, zone="", archive=None):
     _, _, now, _ = TIME_COLUMNS[time_column]
     return SchemaDialect(
         source=lambda relation: relation.plugin,
@@ -271,7 +291,7 @@ def _dialect(time_column, zone=""):
         stamped=lambda function, _: "CAST({}(time) AS VARCHAR)".format(function),
         entity=lambda _: "entity",
         declared=lambda relation: declared_entity(relation, "entity"),
-        undeclared=lambda table, _, declared, __: _describe_undeclared(table, declared),
+        undeclared=lambda table, _, declared, __: _describe_undeclared(table, declared, archive),
         bucket=lambda bucket: _binned(bucket, zone if time_column != "date" else ""),
         subject=lambda relation: [("entity", relation.subject.key)] if relation.subject else [],
         alias=_named,
@@ -283,12 +303,13 @@ def _dialect(time_column, zone=""):
         floor=BUCKET if time_column == "date" else "")
 
 
-def _describe_undeclared(table, declared):
+def _describe_undeclared(table, declared, archive=None):
     return select(
         [("'{}'".format(NULL), "relation"), ("type", "measure"), ("'{}'".format(NULL), "kind"),
          ("unit", "unit"), ("period", "period"), ("count(*)", "rows"),
          ("CAST(min(time) AS VARCHAR)", "oldest"), ("CAST(max(time) AS VARCHAR)", "newest")],
-        table, [literals("type", declared)], group_by=["type", "unit", "period"])
+        table, [literals("type", sorted(set(declared) | set(archive or ())))],
+        group_by=["type", "unit", "period"])
 
 
 def _tabled(document):

@@ -781,7 +781,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
             _print_line("Linting sources ...")
             _run_local(context, "gofmt -l -w .", module_go_main_path)
             _run_local(context, "modernize -fix ./...", module_go_main_path)
-            _run_local(context, "go vet ./...", module_go_main_path)
+            _run_local(context, "go vet -printf.funcs=derivedf,derivedInertf ./...", module_go_main_path)
             _run_local(context, "GOCACHE={} GOBIN={} go build -o {}".format(
                 join(ROOT_MODULE_DIR, module, "target/go/cache"),
                 join(ROOT_MODULE_DIR, module, "target/go/bin"),

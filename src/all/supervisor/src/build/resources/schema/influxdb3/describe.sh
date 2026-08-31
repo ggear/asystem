@@ -1044,13 +1044,15 @@ WHERE
         'failed_shares_trend', 'health_status', 'health_status_trend', 'host',
         'life_used_drives', 'life_used_drives_trend', 'max_memory', 'module', 'name',
         'restart_count', 'restart_count_trend', 'running_time', 'service', 'services',
-        'services_max_memory', 'spin_fan_speed', 'spin_fan_speed_trend', 'status',
-        'status_trend', 'temperature', 'temperature_trend', 'time', 'up_time',
-        'used_backup_space', 'used_backup_space_trend', 'used_disk_ops',
-        'used_disk_ops_trend', 'used_home_space', 'used_home_space_trend', 'used_memory',
-        'used_memory_trend', 'used_network', 'used_network_trend', 'used_processor',
-        'used_processor_trend', 'used_share_space', 'used_share_space_trend',
-        'used_swap_space', 'used_swap_space_trend', 'version', 'warn_temperature',
+        'services_max_memory', 'spin_fan_speed', 'spin_fan_speed_of_max',
+        'spin_fan_speed_of_max_trend', 'spin_fan_speed_trend', 'status', 'status_trend',
+        'temperature', 'temperature_trend', 'time', 'up_time', 'used_backup_space',
+        'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend',
+        'used_home_space', 'used_home_space_trend', 'used_memory', 'used_memory_trend',
+        'used_network', 'used_network_trend', 'used_processor', 'used_processor_trend',
+        'used_share_space', 'used_share_space_trend', 'used_swap_space',
+        'used_swap_space_trend', 'used_system_space', 'used_system_space_trend', 'version',
+        'warn_temperature', 'warn_temperature_of_max', 'warn_temperature_of_max_trend',
         'warn_temperature_trend'
     )
 ORDER BY rows DESC NULLS LAST;

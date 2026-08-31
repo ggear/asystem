@@ -69,7 +69,7 @@ another host's share and backup disk over samba rather than skipping them. The i
 the *preferred* primary for a host that has one, and **fstab is the authority for a host that does
 not** — the share destination is the lowest-numbered `/share/<n>` actually mounted, which on `jen`
 is `mad`'s `/share/10`. That is the one place `/etc/fstab` is read rather than `config.json`, and it
-is read by the mount script rather than by the plugin. See *Powering and mounting the backup disks*.
+is read by the mount script rather than by the probe. See *Powering and mounting the backup disks*.
 
 ## Module contract — built
 
@@ -89,8 +89,9 @@ write_container_backup()    # the whole enrolment, no policy parameters
 
 **`supervisor` does not call it, and must not.** Supervisor is the driver, not a participant in the
 mechanism it drives, and a `backup.sh` of its own would be a second implementation of the run it is
-already performing in Go. Its own state is copied by the **supervisor module backup** described
-under *Driver*, which is a step of the module stage rather than a generated script. Six modules are
+already performing in Go. Its own state needs no script either: the run record the driver writes
+every day *is* its backup, sitting in the standard backup root as described under *The run's
+output*, so the share and backup stages promote it as they find it. Six modules are
 enrolled today — `postgres`, `mariadb`, `influxdb3`, `zigbee2mqtt`, `letsencrypt`, `plex`.
 
 **The call takes no policy.** It resolves `module_name` / `working_dir` the standard way and nothing
@@ -103,6 +104,15 @@ BACKUP_SKIP_HOURS=0 ./backup.sh    # take one now, whatever the last run's age
 ```
 
 A generate parameter could do neither of those, which is why they are variables.
+
+**The throttle is version-qualified, and that qualifier is load-bearing.** `BACKUP_SOURCE_VERSION` is
+the basename of the resolved data path, so it changes the moment the home moves to a new version, and
+the wrapper skips only when the newest backup is *both* inside the window and from that same version.
+The rule it expresses is **never skip the first backup of a version's data**: the day after a release
+the daily run finds a backup taken minutes ago at release time — of the *old* home — and takes
+another one anyway, because what is being protected is now different data. Dropping the qualifier
+would make the wording simpler and the behaviour wrong, suppressing the new version's first backup
+for a day.
 
 ### Backup naming
 
@@ -181,7 +191,7 @@ wrapper variable, and the wrapper never reads a snippet one.
 | `BACKUP_RUN_TIMESTAMP` | this run's timestamp |
 | `BACKUP_FULL_SUFFIX` / `BACKUP_DELTA_SUFFIX` | the `_full` / `_delta` suffixes |
 | `BACKUP_RETAIN_DAYS` | the dense window in days, default 7 |
-| `BACKUP_SKIP_HOURS` | skip the run when the newest backup is younger than this, default 1 |
+| `BACKUP_SKIP_HOURS` | skip the run when the newest backup is younger than this **and came from the same version**, default 1 |
 | `BACKUP_SERVICE_RESTART` | start the service again after the copy, false when the caller starts it itself |
 | `BACKUP_TARGET_PATH` | the backup path — empty until `backup_target` names it |
 
@@ -364,8 +374,9 @@ A 7 day window therefore retains around 12 days and two fulls. Correct, not wast
 6. **Do not add it to `src/resources.txt`.** The script reads its environment at runtime and holds
    no `${VAR}` placeholders.
 7. **Check the result**: a successful run leaves exactly one backup named
-   `<module>_<stamp>_<version>_full.<extension>`; a failed one leaves no file and no directory. Running it
-   twice inside `BACKUP_SKIP_HOURS` must skip. Sourcing it must produce no backup.
+   `<module>_<stamp>_<version>_full.<extension>`; a failed one leaves no file and no directory. Running
+   it twice inside `BACKUP_SKIP_HOURS` **from the same version** must skip, and running it again after
+   the version has moved must not. Sourcing it must produce no backup.
 
 ## Driver — planned
 
@@ -375,7 +386,7 @@ a module's `backup.sh` and they answer different questions:
 | Invoker | When | Why |
 |---|---|---|
 | `install.sh`'s `run_backup` | at release, before the old home is replaced | a safety copy of the version being upgraded away from — built |
-| `supervisor`'s backup plugin | daily, at `--daily-time` | the estate's actual backup cadence — planned |
+| `supervisor`'s backup probe | daily, at `--daily-time` | the estate's actual backup cadence — planned |
 
 Per-module release hooks are gone: `run_backup` sits in the **root** `install.sh`, selects on
 `${SERVICE_INSTALL}/backup.sh` existing, runs only for `COMMAND=install` with
@@ -383,7 +394,8 @@ Per-module release hooks are gone: `run_backup` sits in the **root** `install.sh
 the backup fails. That is one call site for every module and needs nothing from this plan.
 
 **Supervisor has no `backup.sh` of its own.** The whole driver is
-`internal/plugin/plugin_backup.go`, which is the single new Go file — no `write_container_backup()`
+`internal/probe/probe_backup.go` and the small client beside it, `internal/probe/probe_mqtt.go` — no
+`write_container_backup()`
 call in `supervisor/generate.py`, no `src/build/resources/backup.sh` snippet, no supervisor entry in
 the enrolled-module set. It does ship **one** script of its own, `mount.sh`, and the distinction is
 worth stating precisely: `mount.sh` is not a backup, does not participate in the module stage and is
@@ -396,11 +408,28 @@ stages, timing them, writing a machine-readable result, judging staleness, feedi
 is already what the Go process does for every other subject on the host, and none of it is
 module-specific shell.
 
+**The driver is a probe, because a probe is the only thing this module has that produces a metric.**
+`verifyProbes()` panics unless every metric ID has exactly one registered probe, and `registerProbes`
+panics if two claim the same one, so a driver living outside that set could not own a reading. So
+`backupProbe` is registered like `hostProbe` and `servicesProbe`, and it takes
+`host/failed_backups` and `host/used_backup_space` out of `hostProbe`'s `metrics()` and into its
+own. **`service/backup_status` does not move**: it is produced inside `servicesProbe`'s loop over
+services, where the service is registered and its `ServiceIndex` known, so `servicesProbe` reads
+that module's `success_bool` from the snapshot `backupProbe` publishes — the same division
+`installReader` already has with the two probes that read it.
+
+**Its `run` and its `daily` are two different jobs on two different goroutines, and that separation
+is the point.** `run(ctx, isPulse)` is ordinary probe work — it parses the newest `status.json` on
+the `--cache-period` refresh and stores the three readings, taking milliseconds and never blocking.
+`daily(ctx)` performs the run, which takes hours. Putting the second on the poll goroutine is the
+mistake `engine_database.go` already made once: `probe.Run` executes every probe *and* `onPulse`
+inline on the ticker goroutine, so a blocking call there stops the host sampling entirely, and
+`RunAllProbesOnce` would additionally cancel it after three pulses.
+
 ### The daily gate
 
 **`--daily-time` is a new `serve` flag, defaulting to `01:00`**, and it is generic infrastructure
-rather than a backup flag. The pulse loop already distinguishes a poll from a pulse from a
-heartbeat; the gate adds one more classification on the same tick:
+rather than a backup flag:
 
 ```
 supervisor serve --daily-time 01:00        # -D, HH:MM local, the same clock the stamps use
@@ -411,10 +440,18 @@ supervisor serve --daily-time 01:00        # -D, HH:MM local, the same clock the
 - `makePeriods` parses it into `config.Periods.DailyMinutes`, minutes past local midnight, so the
   flag joins the existing period vocabulary rather than inventing a second one. An unparseable value
   is a startup error, like a bad `--log-action`.
-- `probe.Run` computes the crossing on each **pulse** and passes it down beside the heartbeat flag:
-  `onPulse(isHeartbeat, isDaily)`. `isDaily` is true on the first pulse whose local wall clock is at
-  or past the configured minute of a day on which the gate has not yet fired, so it fires **at most
-  once per calendar day** and never twice in the window.
+- **The gate is its own loop, out of band of the pulse**, started by `probe.Run` on the same `ctx`
+  and running on a goroutine of its own: a coarse ticker compares the wall clock against
+  `DailyMinutes` and calls `daily(ctx)` on any probe that implements it. It fires **at most once per
+  calendar day** and never twice in the window.
+- **It is not a flag on the poll tick, and that is the whole design.** `probe.Run` runs every probe
+  and `onPulse` inline on the ticker goroutine, so a run threaded through `onPulse(isHeartbeat,
+  isDaily)` would hold the poll loop for hours — the same fault the synchronous database write had.
+  The pulse loop keeps its three classifications and gains none.
+- **It runs for `serve` only.** `RunListeningProbesLoop` and `RunAllProbesOnce` call `probe.Run`
+  too, so the daily goroutine is started by the serve path alone; otherwise a `watch` on the dev
+  machine would fire the estate's backups, and `RunAllProbesOnce`'s three-pulse deadline would
+  cancel whatever it started.
 - **The crossing is a wall-clock question, so it uses `config.NowIncludingSuspend()`.** A monotonic
   reading would miss the crossing entirely across a suspend, and this is exactly the split the
   *Clocks* section of `CLAUDE.md` records: "how long have I waited" is monotonic, "what time is it"
@@ -424,12 +461,12 @@ supervisor serve --daily-time 01:00        # -D, HH:MM local, the same clock the
   rule below already reports the gap and a backup storm on every restart is worse than a late one.
 - The gate logs one line when it fires and nothing when it does not, so a quiet day costs nothing.
 
-**Anything else wanting a daily cadence hangs off the same flag.** The gate is a boolean on the
-pulse, not a backup callback, so a future daily task is one more consumer of `isDaily` rather than a
-second scheduler. That is the reason it lives in `probe.Run` beside the heartbeat rather than inside
-the backup plugin.
+**Anything else wanting a daily cadence hangs off the same loop.** It calls a method on a probe
+rather than a backup callback, so a future daily task is one more implementer of `daily(ctx)` rather
+than a second scheduler. That is the reason it lives in `probe.Run` beside the pulse loop rather
+than inside the backup probe.
 
-### What the plugin does when the gate fires
+### What the probe does when the gate fires
 
 Inputs come from `config.json`, already loaded, already carrying everything needed — there is no
 second config file and no `/etc/fstab` discovery:
@@ -438,7 +475,7 @@ second config file and no `/etc/fstab` discovery:
 - `.asystem.schema[] | select(.host == $host) | .services[]` → the modules configured for this host
 
 Participation is `installService.backupEnabled` from `probe_install.go`, which already `Lstat`s
-`<install>/<service>/latest/backup.sh` on every snapshot — so the plugin reuses the install snapshot
+`<install>/<service>/latest/backup.sh` on every snapshot — so the probe reuses the install snapshot
 rather than walking the tree itself, and a module enrolling or leaving is picked up by the existing
 stat fingerprint with nothing new to invalidate.
 
@@ -449,19 +486,17 @@ until the share stage has been written and thinned.
 **module** — for each module configured on this host, **serially**, skipping any with no
 `backup.sh` and any whose container is not running:
 
-1. **The supervisor module backup runs first**, before any other module. It `tar`s supervisor's
-   **state** directory — every past run's `status.json` and `logs/` — into
-   `supervisor_<stamp>_<version>_full.tar.gz` under this run's stamp directory in the standard
-   backup root, so the record of past runs is carried into the share and backup stages with
-   everything else. **The source and the destination are two different directories**, which is what
-   makes this an ordinary backup rather than a directory copying itself: it reads `state/backup/`
-   and writes `backup/`. **This run's own `status.json` and its share and backup stage logs are
-   deliberately not in it**: they do not exist yet, and waiting for them would mean either running
-   the supervisor backup last, after the stages it is meant to precede, or writing the status
-   document twice. The accepted consequence is that the newest run's own record only reaches the
-   share stage on the following day.
-2. execute `${SERVICE_INSTALL}/backup.sh` with no arguments and no environment — it sources its own
-   `.env`
+1. **Supervisor does not back itself up, because its run record already is its backup.** There is no
+   supervisor `tar` and no supervisor step at the head of the module stage. The run directory this
+   run is about to write — `status.json` and `logs/` under
+   `/home/asystem/supervisor/latest/backup/<stamp>/` — sits in a backup root named and stamped like
+   every other module's, so the share and backup stages promote it as they find it. A tar of it would
+   be a second copy of a directory already sitting where backups go. The one consequence is
+   unchanged: this run's own record is written after the stages it describes, so it reaches the share
+   stage on the following day.
+2. execute `${SERVICE_INSTALL}/backup.sh` with the policy variables and nothing else — it sources
+   its own `.env` for everything about itself, so only `BACKUP_SKIP_HOURS` and
+   `BACKUP_SERVICE_RESTART` are passed, exactly as `install.sh`'s `run_backup` passes them
 3. exit `0` is produced or throttled by its own `BACKUP_SKIP_HOURS`, non-zero is failed; the rest of
    its output is that module's log
 4. it writes `/home/asystem/<module>/backup/<stamp>/<module>_<stamp>_<version>_{full,delta}.<ext>`
@@ -473,7 +508,10 @@ fails, the share and backup stages are both recorded failed and nothing is copie
 module whose module stage succeeded, so a bad backup is never promoted:
 
 1. `rsync -a --link-dest` of the previous copy, no `--delete`, of `/home/asystem/<module>/backup/`
-   into `/share/<index>0/backup/<module>/`, with `--temp-dir` (see *Surviving a hard reset*)
+   into `/share/<index>0/backup/<module>/`, with `--temp-dir` (see *Surviving a hard reset*).
+   Supervisor's own root is `/home/asystem/supervisor/latest/backup/` rather than the sibling path,
+   which is not a module-specific case: the driver is not asking where a module keeps its backups, it
+   is copying the directory it writes itself
 2. source that module's `backup.sh` in a subshell, so `backup_is_full`, `backup_is_delta` and
    `backup_listed` are its own, or call `backup.sh --prune <dir>` as a subprocess
 3. thin to grandfather-father-son, oldest tier wins a tie:
@@ -509,8 +547,8 @@ Home Assistant switch entity — powers **every** USB backup drive in the estate
 mounted until it has been on long enough for the drives to spin up and enumerate, so the share and
 backup stages cannot simply `rsync` into a path and hope.
 
-**`mount.sh` owns this, and it is the only script supervisor ships that the build does not
-generate.** Everything else under `src/main/resources/image/` is written by `fab generate` — the
+**`mount.sh` owns the mounting half, and it is the only script supervisor ships that the build does
+not generate.** Everything else under `src/main/resources/image/` is written by `fab generate` — the
 three health checks from their fragments, `broker.sh`, `config.json` — whereas this is hand-authored
 at `src/main/resources/image/mount.sh` and edited in place. There is no `write_container_mount()`
 and there should not be: generation exists to remove repetition between modules, and exactly one
@@ -518,29 +556,36 @@ module has this problem.
 It takes a phase, in the shape `broker.sh [sweep|publish]` already established:
 
 ```
-/asystem/etc/mount.sh up      # switch on, wait for readiness, mount what fstab declares
+/asystem/etc/mount.sh up      # wait for readiness, mount what fstab declares, assert
 /asystem/etc/mount.sh down    # unmount what it mounted, leaving the outlet alone
 ```
 
-**`up` does four things, in order, and each is idempotent:**
+**The switch is not in the script.** `probe_mqtt.go` publishes `ON` and reads the plug's retained
+state back before the probe calls `mount.sh up`, because the same client is needed anyway for the
+election and a second MQTT implementation in shell would only be a second thing to get wrong. So
+`mount.sh` never touches the broker, and its whole subject is fstab and mountpoints. **Never publish
+to the device's `stat` topic** — that is the device's to write, and faking it is the same error as
+publishing `homeassistant/status` on Home Assistant's behalf. A plug already on answers immediately
+and costs one round trip.
 
-1. **Switch on.** Publish `ON` to `tasmota/device/rack_backup_plug/cmnd/POWER` and wait for the
-   retained `tasmota/device/rack_backup_plug/stat/POWER` to read back `ON`, bounded by a timeout.
-   `mosquitto-clients` is already in `docker_deps_base.txt` and `BROKER_HOST`/`BROKER_PORT` are
-   already in the container's environment, so this needs no new dependency. A plug already on
-   answers immediately and costs one round trip. **Never publish to the device's `stat` topic** —
-   that is the device's to write, and faking it is the same error as publishing
-   `homeassistant/status` on Home Assistant's behalf.
-2. **Wait for readiness.** A spinning disk is not ready when the relay closes. The script waits for
+**The plug's topic comes from `config.json`, so no estate literal reaches the Go.** `generate.py`
+writes a `backup` block beside `schema` naming the command and state topics, the probe reads it
+through `config` as it reads everything else, and the boundary test below is unchanged — the driver
+still contains no `rack_backup_plug`. A host with no such block simply never switches anything, which
+is the correct behaviour for a host whose disks are somebody else's.
+
+**`up` does three things, in order, and each is idempotent:**
+
+1. **Wait for readiness.** A spinning disk is not ready when the relay closes. The script waits for
    the devices behind the fstab entries to appear, bounded by `mountReadySeconds`, polling rather
    than sleeping a fixed period — so a run finding the disks already spun up costs milliseconds and
    one finding them powered down still waits as long as it has to.
-3. **Mount what fstab declares, and only that.** The script never invents a mount: it reads
+2. **Mount what fstab declares, and only that.** The script never invents a mount: it reads
    `/etc/fstab`, selects the entries it is responsible for, and `mount`s each by mountpoint. **The
    fstab entry is the declaration and the script is the enactment**, which is the same division
    `storage/install_prep.sh` already uses when it reads `/etc/fstab` for `/share` `ext4` lines to
    decide which shares to publish over samba.
-4. **Assert.** Every mountpoint it was responsible for is `mountpoint`-clean, or `up` fails with the
+3. **Assert.** Every mountpoint it was responsible for is `mountpoint`-clean, or `up` fails with the
    list of those that are not.
 
 **It decides local versus remote from the fstab line, never from the host name.** A `/backup` line
@@ -556,14 +601,15 @@ covers both without a per-host branch:
 **`jen`'s two mounts are not symmetrical, and only one of them is the script's problem.**
 `/share/10` is mounted **automatically by fstab** and needs nothing from `mount.sh` beyond the
 readiness assertion — the drive behind it on `mad` still has to be powered and spun up first, which
-is the whole reason step 1 is estate-wide rather than per host. `/backup` is the on-demand one: its
+is the whole reason the switch is estate-wide rather than per host. `/backup` is the on-demand one: its
 fstab entry is `noauto`, and `mount.sh` mounts and unmounts it around the run.
 
-**Switching on and switching off are not the same problem, and `mount.sh` only solves the first.**
+**Switching on and switching off are not the same problem.**
 One plug powers every host's drive, so switching **on** is idempotent and safe from anywhere, while
 switching **off** would cut another host mid-`rsync` — including `jen`, writing to `mad`'s disk over
-samba. So `mount.sh up` switches on, `mount.sh down` unmounts and leaves the outlet alone, and the
-outlet is switched off by exactly one host per day, elected. See *The cluster singleton*.
+samba. So switching on is harmless wherever it happens and in practice the leader does it, `mount.sh
+down` unmounts and leaves the outlet alone, and the outlet is switched **off** by exactly one host per
+day, elected. See *The cluster singleton*.
 
 `rack_backup_plug` publishes no energy entity today, so nothing reports what an outlet left on
 costs. Adding one — the shape `rack_outlet_plug` and `ceiling_network_switch_plug` already use — is
@@ -575,8 +621,8 @@ ESP8285, where that guarantee holds; the ESP32 caveat in the root `CLAUDE.md` do
 Its `PowerOnState` should nonetheless be confirmed, since a cold power-up of the plug itself decides
 whether the disks come back after a rack outage.
 
-**Failure is a recorded stage failure, never a partial copy.** If the switch does not answer, a
-device does not appear, or a mount does not assert, `up` exits non-zero, the share and backup stages
+**Failure is a recorded stage failure, never a partial copy.** If the plug does not answer, a device
+does not appear, or a mount does not assert, the share and backup stages
 are marked `success_bool: false` with the reason in `logs/share.log`, and the module stage's result
 stands on its own — the day's backups still exist locally and are promoted on the next successful
 run, because the copy from the module stage is additive and no data is lost by a skipped promotion.
@@ -596,6 +642,26 @@ Four retained topics under one namespace, all QoS 1:
 | `supervisor/backup/power` | `<ready\|off>` | the leader, after `mount.sh up` succeeds | the leader when done |
 | `supervisor/backup/done/<host>` | the run's stamp | each host as it finishes its stages | the leader when done |
 | `supervisor/<host>/status` | `<online\|offline>` | **already exists** — each `serve` | its own last will |
+
+**These three topics must be declared and must not be swept, which takes one change in
+`generate.py`.** `broker_topic_glob_data` is `supervisor/${SUPERVISOR_HOST}/#` today, and the
+`${VAR}` placeholder is matched as a wildcard — so `supervisor/backup/*` falls inside it, and
+`broker.sh sweep` at a supervisor release would delete a lease a *different* host is holding, mid-run,
+while `verify.sh` reported all three `undeclared` on every `fab schema` and aborted at supervisor.
+Narrowing the glob to `supervisor/${SUPERVISOR_HOST}/data/#` puts them outside the swept namespace —
+every `state_topic` the xlsx declares is under `data/`, so the validation still passes — and
+`metric.Topics()` gains the three templates with their own role, so they are declared where every
+other retained topic is. The narrowing also takes `supervisor/<host>/status` out of the sweep, which
+is the right outcome anyway: availability is the client's to restore on reconnect, which is why the
+vernemq path uses `publish` alone.
+
+**The client is supervisor's own, and it is not the engine's.** `probe_mqtt.go` is a small
+short-lived client — connect with a last will, publish retained, read one retained payload back,
+close — used by the election and by the plug. It is not `engine`'s paho session: `probe` importing
+`engine` inverts the dependency, and the lease needs a will of its own that the engine's session
+cannot carry. Keeping it small is the point; it is not a second implementation of reconnect, backoff
+and SUBACK reading, because a run that cannot reach the broker for a few seconds should fail its
+election rather than retry for ten minutes.
 
 **Election is publish, settle, confirm — and it is a mutex, not a consensus protocol.** The broker
 serialises writes to one retained topic, so the last write wins and every reader converges on the
@@ -617,7 +683,7 @@ same value. That is all this needs:
    a local backup.
 
 **The lease is the timeout, and it is `backupRunCeiling` — five hours.** That one constant on
-`plugin_backup.go` does three jobs, which is why it is one constant and not three: it bounds the
+`probe_backup.go` does three jobs, which is why it is one constant and not three: it bounds the
 leader's hold, it is the ceiling on a whole run, and it is the allowance in the staleness window
 (`backupStaleWindow` = 24 h + `backupRunCeiling` = **29 hours**). A run that has not finished in
 five hours is not going to, and holding the outlet on past that is worse than cutting it.
@@ -625,8 +691,9 @@ five hours is not going to, and holding the outlet on past that is worse than cu
 **The leader's init and destroy are the singleton, and nothing else is.** Everything between them is
 ordinary per-host work happening in parallel:
 
-- **init** — `mount.sh up`, then publish `power=ready`. Only the leader ever switches on.
-- **destroy** — publish `power=off`, `mount.sh` power-off, then clear `leader`, `power` and every
+- **init** — switch the plug on, `mount.sh up`, then publish `power=ready`. Only the leader ever
+  switches on.
+- **destroy** — publish `power=off`, switch the plug off, then clear `leader`, `power` and every
   `done/<host>`. Reached when every expected host has reported `done`, or when the lease expires,
   whichever is first.
 - **the expected set is read, not configured** — every host whose retained `supervisor/<host>/status`
@@ -673,28 +740,29 @@ direction to fail.
 
 ### The run's output
 
-**Supervisor's data directory holds two backup trees, and confusing them is the one mistake to
-avoid.** One is the run's record, which the driver *writes*; the other is the standard backup root,
-which supervisor's own module-stage backup *produces* like any other module's. Both sit under the
-one existing `${SERVICE_DATA_DIR}:/asystem/mnt` volume, so the plugin writes container paths and
-needs no prefix awareness:
+**Supervisor's data directory holds one backup tree, not two.** The run's record *is* supervisor's
+backup: the driver writes it into the standard backup root, named and stamped exactly as every other
+module's is, and the share and backup stages promote it as they find it. It sits under the one
+existing `${SERVICE_DATA_DIR}:/asystem/mnt` volume, so the probe writes container paths and needs no
+prefix awareness:
 
 | Tree | Container | Host | Holds | Written by |
 |---|---|---|---|---|
-| **state** | `/asystem/mnt/state/backup/` | `/home/asystem/supervisor/latest/state/backup/` | one directory per run — `status.json` and `logs/` | the driver, every run |
-| **backup** | `/asystem/mnt/backup/` | `/home/asystem/supervisor/latest/backup/` | `supervisor_<stamp>_<version>_full.tar.gz` of the state tree | the supervisor module backup, first step of the module stage |
+| **backup** | `/asystem/mnt/backup/` | `/home/asystem/supervisor/latest/backup/` | one directory per run — `status.json` and `logs/` | the driver, every run |
 
-The **state** tree is the driver's own working record and is not itself a backup — it is the thing
-being backed up. The **backup** tree is the standard place, named and stamped exactly as every other
-module's is, which is what lets the share stage promote it without a special case. Reading them the
-other way round — the driver writing into `backup/` — would have the supervisor backup tar the
-directory it is writing into, which is the nesting hazard the module contract already warns about
-for file-copying modules.
+An earlier design had two — a `state/` tree the driver wrote and a `backup/` tree holding a
+`supervisor_<stamp>_<version>_full.tar.gz` of it, produced at the head of the module stage. The tar
+is gone: it was a second copy of a directory already sitting where backups go, it could never
+include the run that produced it, and it cost supervisor a module-stage step no other module has.
 
-The state layout is fixed and is the contract every reader depends on:
+**A run directory carries no `_full` / `_delta` suffix, and does not need one.** Nothing here is
+incremental — every run's record stands alone — so the classification the share stage uses to keep a
+sparse point self-contained is trivially satisfied by every directory in this tree.
+
+The run directory layout is fixed and is the contract every reader depends on:
 
 ```
-/asystem/mnt/state/backup/<stamp>/
+/asystem/mnt/backup/<stamp>/
 ├── status.json                     the machine-readable result, written once, last
 └── logs/
     ├── module.log                  the module stage's own log
@@ -710,13 +778,22 @@ and the module backup directories it produced sort together and read the same wa
 `logs/module/<module>.log` per module actually executed, so a module that was skipped for having no
 script contributes no file.
 
-**Both trees sit inside the versioned home, which is deliberate and has one consequence.** Every
+**The tree sits inside the versioned home, which is deliberate and has one consequence.** Every
 other module's backup root is `/home/asystem/<module>/backup`, a sibling of the versioned homes, so
 that `install.sh`'s `cp -rfpa` of the old home into the new one does not duplicate it. Supervisor's
-are inside `latest/` instead, so **a release copies both trees forward** — which is what keeps the
-run history across a deploy, and is bounded by `retire_home` pruning the older homes and by
-`BACKUP_RETAIN_DAYS` pruning the tars. Watch the cost: supervisor releases often, and `state/backup`
-grows by one directory a day per host.
+is inside `latest/` instead, so **a release copies the run history forward** — which is what keeps it
+across a deploy, and is bounded by `retire_home` pruning the older homes and by the thinning below.
+Watch the cost: supervisor releases often, and the tree grows by one directory a day per host.
+
+**Supervisor thins its own tree, on the same tiers as everything else and by date alone.** It has no
+`backup.sh`, so the share stage has nothing to source and no `--prune` to delegate to, and it has no
+suffix to classify by — so the probe applies `BACKUP_RETAIN_DAYS` at the module stage and the same
+grandfather-father-son tiers at the share stage, reading the stamp from the directory name. The
+alternative — dense locally and append-only on the share — was rejected for the vocabulary rather
+than the bytes, which are negligible either way: one retention policy applies to everything the share
+stage holds, and the component *doing* the thinning is the worst possible place to introduce an
+exception to it. It also keeps the record at the same depth as the backups it describes, so a monthly
+point holds a backup and the account of the run that produced it.
 
 **`status.json` is written once, at the end of the run, and never updated in place.** A partially
 written status document is indistinguishable from a completed run that failed, which is precisely
@@ -789,7 +866,7 @@ which modules were even attempted.
 
 ### Metric wiring
 
-Three metrics read the newest `status.json` and nothing else. The plugin resolves the newest run
+Three metrics read the newest `status.json` and nothing else. The probe resolves the newest run
 directory by stamp, reads the document, and publishes through the existing record cache, so the
 display, the broker and the database all follow with no further wiring.
 
@@ -806,44 +883,50 @@ Mapping onto the two-boolean colour model the display already uses (`pulse=false
   which is what it declares today. Only the value changes: the stub becomes the failed-stage share.
 - **`Used BKP`** — `pulseRule: Bounded(Self, AtMost, 95)`, `trendRule: Bounded(Self, AtMost, 90)`,
   replacing today's 90/80, so the thresholds are the ones stated above rather than inherited from a
-  placeholder. It reads `/backup` and nothing else, so **a host with no `/backup` mounted errors**
-  and paints the blank-and-alert "could not measure" state rather than reporting an inert green
-  zero. That is deliberate and is the opposite of how `spin_fan_speed` treats a fanless host: a
-  missing fan is a permanent fact about the hardware, whereas a missing `/backup` means the disk
-  this metric exists to watch was not there — `jen`'s is `mad`'s over samba and its absence is a
-  real fault, not a property of the Pi.
+  placeholder. **It reads the document and never the filesystem.** `/backup` is unmounted between
+  runs by design, so a metric that stat'd it directly would paint the blank-and-alert "could not
+  measure" state on every host for the twenty-three hours a day the disks are off — a permanent fault
+  reporting a normal condition. The run-level `disk_usage_perc` is the reading, the derivation names
+  the run directory it came from and its age, and the metric errors only when no document has ever
+  been read.
 - **`service/backup_status`** — `Truthy()` on both rules, replacing today's `Always()`. `Always()` is
   what makes the current stub green regardless, and it is exactly the "declaring itself healthy
   whatever it holds" pattern `host/services` was converted away from.
 
 Each metric's `description` in `metricBuildersByID` loses its `not yet implemented` /
 `always true until implemented` clause, and each keeps stating its numbers through constants on the
-plugin rather than as literals in two places.
+probe rather than as literals in two places. **`host/failed_backups` also gains `unit: "%"`**, which
+it lacks today while both layouts suffix its box with `%` and every sibling failure metric —
+`failed_shares`, `failed_drives`, `failed_log_messages` — declares it. That goes in with the
+`Fail BCK` → `Fail BKP` label rename of item 12, since both are one-line corrections to the same
+metric.
 
-**Staleness is the plugin's judgement, and it is derived rather than written.**
+**Staleness is the probe's judgement, and it is derived rather than written.**
 `backupStaleWindow` is `24h + backupRunCeiling` — **29 hours** — so the allowance for a run to
 complete is the same five hours that bounds the leader's lease and the run itself, stated once in
-`plugin_backup.go` and never as a literal at a call site. A run
+`probe_backup.go` and never as a literal at a call site. A run
 directory is *current* when its stamp is within `backupStaleWindow` of now **and** it holds a
 `status.json`. When no current run exists:
 
 - **`Fail BKP` reads `100`**, since every stage has failed to produce a result
 - **`service/backup_status` reads `false`** for every module
-- **`Used BKP` holds its last value**, because disk usage does not become unknown just because a run
-  was missed, and reporting `0` would paint a confidently green box. With no last value — a
-  supervisor that has just started and has never seen a `status.json` — the metric **errors**, which
-  is the blank-and-alert "could not measure" state, exactly as an unreadable sensor does.
+- **`Used BKP` keeps reading the newest document it can find**, current or not, because disk usage
+  does not become unknown just because a run was missed and reporting `0` would paint a confidently
+  green box. Its derivation carries the document's age, so a stale number says so. It **errors** only
+  where there is no document at all — a supervisor that has never seen one — which is the
+  blank-and-alert "could not measure" state, exactly as an unreadable sensor produces.
 
-The last-value carry is **in-process only**: supervisor holds no persistent state across restarts,
-so a restart with no current run leaves `Used BKP` blank until the next run writes a status
-document. That is the honest reading and it is preferable to persisting a number whose age nothing
-would then report.
+There is no in-process last-value carry, and there was no need for one: the last value is on disk in
+the last `status.json`, so a restart re-reads it rather than losing it. That is one source of truth
+rather than two that can disagree.
 
 **The reads are cache-period work, not per-poll work.** `status.json` changes at most once a day, so
-the plugin parses it on the `--cache-period` refresh and on the pulse following a run it performed
-itself, exactly as `probe_mounts.go` treats its snapshot. The three metrics declare `warming: true`
-where they can report before the first read, and the derivation names the run directory and its age
-so a stale reading explains itself without a debugger.
+the probe parses it on the `--cache-period` refresh and on the pulse following a run it performed
+itself, exactly as `probe_mounts.go` treats its snapshot. **Only the two host metrics may declare
+`warming: true`** — the table's `init()` panics on a service-scoped metric that declares it, so
+`service/backup_status` reports `false` before the first read rather than warming, which is also the
+honest reading for a module whose backup has not been observed. The derivation names the run
+directory and its age so a stale reading explains itself without a debugger.
 
 ### What this needs that does not exist yet
 
@@ -885,15 +968,15 @@ and it should be proved on `jen` before the share stage is written anywhere else
 
 **`BROKER_TOKEN` is not in `docker-compose.yml`'s `environment:`**, though `checkexecuting.sh`
 already reads it — the `${BROKER_TOKEN:+…}` form makes it connect anonymously today. If the broker
-requires credentials for the tasmota command topic, that variable has to be named there before
-`mount.sh up` can switch the plug.
+requires credentials for the tasmota command topic or for the election's own topics, that variable
+has to be named there before `probe_mqtt.go` can switch the plug or claim a lease.
 Three consequences, all simplifications:
 
 - **no prefix awareness.** A path is a path. Nothing has to know whether it is running in a
   container, and no `SUPERVISOR_MOUNT`-style rewriting is needed on a module's script. `/` is
   currently mounted at `/host` read-only, which would have forced exactly that rewriting on every
   module script
-- **nothing is spawned.** The plugin executes the module's script directly. The throwaway container
+- **nothing is spawned.** The probe executes the module's script directly. The throwaway container
   earlier designs proposed is unnecessary and should not be built
 - **`OFFLINE` is ordinary module logic.** A script running inside `supervisor`'s container can
   `docker stop` a *different* container without dying, so stop-copy-start needs no sidecar, no
@@ -910,15 +993,15 @@ execs into its own container only if it needs something in there. The driver nev
 modes, never passes the script on stdin, and never needs a sidecar. `${SERVICE_INSTALL}` is
 versioned and freshly copied each release, so the script that runs is always the current one.
 
-**The plugin applies a deadline and the script does not.** `backup_awaited` in `influxdb3` waits
-forever by design — waiting is the script's job, giving up is the scheduler's — so the plugin runs
+**The probe applies a deadline and the script does not.** `backup_awaited` in `influxdb3` waits
+forever by design — waiting is the script's job, giving up is the scheduler's — so the probe runs
 each module under a `context.WithTimeout` and kills it on expiry. Nothing corrupts: the server-side
 backup continues and the next run's status poll finds it. The per-module and per-stage timeouts are
-constants on `plugin_backup.go`, and both sit under `backupRunCeiling`, which bounds the whole run
+constants on `probe_backup.go`, and both sit under `backupRunCeiling`, which bounds the whole run
 and from which `backupStaleWindow` is derived.
 
 **A lock, so a scheduled run and a hand run cannot collide.** `install.sh`'s `run_backup` can fire at
-any moment during a release, including inside the daily window. The plugin holds a `flock` on the
+any moment during a release, including inside the daily window. The probe holds a `flock` on the
 run root for the whole run and skips with a logged reason if it is held; a module's own
 `BACKUP_SKIP_HOURS` throttle is the second line of defence and makes the collision harmless rather
 than merely unlikely.
@@ -931,12 +1014,14 @@ module's own knowledge of its own data.
 | | Owns | Must not |
 |---|---|---|
 | a module's `backup.sh` | what is safe to copy, how to produce it, its own throttle, its own pruning, its own vocabulary | know the schedule, the stages, `/share`, `/backup`, the status document or any metric |
-| `plugin_backup.go` | when to run, discovering the modules, ordering and timing the stages, the `/share` and `/backup` copies, deadlines, the lock, writing `status.json`, judging staleness, feeding the three metrics | inspect a data directory, choose an exclusion, parse a backup format, contain a module name, or know a device topic, an fstab line or a mountpoint |
-| `mount.sh` | the switch, the readiness wait, the fstab entries, the `mountpoint` assertions | know a module, a stage, a backup format, the schedule or the status document |
+| `probe_backup.go` | when to run, discovering the modules, ordering and timing the stages, the `/share` and `/backup` copies, deadlines, the lock, writing `status.json`, judging staleness, feeding the three metrics | inspect a data directory, choose an exclusion, parse a backup format, contain a module name, or know a device topic, an fstab line or a mountpoint |
+| `probe_mqtt.go` | one short-lived broker session — connect with a will, publish retained, read a retained payload back, close — for the election and the plug | know a stage, a module, a mountpoint, or what any topic it is handed means |
+| `mount.sh` | the readiness wait, the fstab entries, the `mountpoint` assertions | know a module, a stage, a backup format, the schedule, the status document or the broker |
 
-If any side reaches into another's right-hand column, the split has failed. The test for the plugin
+If any side reaches into another's right-hand column, the split has failed. The test for the probe
 is that it contains **no module-specific line and no estate-specific literal** — no
-`rack_backup_plug`, no `/share/10`, no `cifs`; it calls `mount.sh up` and reads an exit code. The
+`rack_backup_plug`, no `/share/10`, no `cifs`. It switches the plug through a topic `config.json`
+gave it, and it calls `mount.sh up` and reads an exit code. The
 test for `mount.sh` is that it makes no decision that depends on which host it is running on. The
 test for a module script is that it still runs correctly by hand with no supervisor process
 anywhere.
@@ -946,9 +1031,34 @@ anywhere.
 | | |
 |---|---|
 | `0` | backed up, or legitimately skipped by its own throttle |
-| non-zero | failed — the plugin records `success_bool: false` for that module and does not promote it |
+| non-zero | failed — the probe records `success_bool: false` for that module and does not promote it |
 
-The plugin's own outcome is `status.json`, not an exit code — it is a daemon, not a command.
+The probe's own outcome is `status.json`, not an exit code — it is a daemon, not a command.
+
+## Code style — planned
+
+**A helper is earned by a second call site, and nothing else earns it.** A function called from
+exactly one place is not an abstraction, it is a jump: the reader leaves the flow, reads a name that
+restates the code beneath it, and comes back. Inline it. This applies to `probe_backup.go` and
+`mount.sh` alike, and to every backup snippet — the probe should read as the run it performs, in
+the order it performs it, and a snippet should read as the one command that module actually needs.
+
+- **Inline first.** Write the stage inline and split it only when a second caller appears. Three
+  stages that each read straight down beat a dozen four-line functions whose names are the only
+  documentation of an order the code no longer shows.
+- **Where a step wants a name, use a local closure**, declared beside its use inside the function
+  that needs it, so the name is visible exactly where it means something and cannot be called from
+  anywhere else. That is the answer to "this expression appears twice inside one function", not a
+  package-level helper.
+- **Prefer repetition to a parameterised helper.** Two similar `rsync` invocations spelled out are
+  easier to read, and easier to make differ, than one helper with a flag argument that both callers
+  must mentally re-expand. The generation design already takes this position for the snippets —
+  "repetition between snippets is preferred over parameters on the generate call" — and it holds
+  inside the Go for the same reason.
+- **The exceptions are the ones that already exist in this module**: a helper with genuinely more
+  than one caller, and a pure function that is table-tested on its own (`driveComputed`, `driveLife`
+  and the status-document parsing are the shape — a real input-to-output rule, tested rather than
+  merely named).
 
 ## Generation — built
 
@@ -1037,7 +1147,7 @@ would propagate the module stage's seven day window to the share stage, and no h
 week could exist anywhere. `--link-dest` against the previous copy makes an unchanged backup cost an
 inode rather than its bytes.
 
-**The share stage thins, then the backup stage mirrors.** The plugin copies from the module stage,
+**The share stage thins, then the backup stage mirrors.** The probe copies from the module stage,
 applies the GFS policy to what it holds, then replicates the share to `/backup`. The share stage is
 the only one that deletes a backup on purpose.
 
@@ -1128,7 +1238,7 @@ backups as its weekly and monthly points and retains `_delta` backups only insid
 share directory.** The stage decides the policy — which points to keep, from the GFS knobs in the
 environment — and the module enacts it on backups it alone understands. A `FULL` module reuses its
 default pruning against a different directory; `influxdb3` applies its own rule. No new script and
-no new hook, and the plugin never learns which module it is thinning.
+no new hook, and the probe never learns which module it is thinning.
 
 It also falls out of the module-stage design for free, because pruning was already an overridable
 step; the only change is that it takes the directory to work on rather than assuming its own.
@@ -1162,7 +1272,7 @@ with no question attached. Ordered by what would hurt most.
 |---|------|-------|--------|
 | 1 | No restore has ever been tested | gap | trusting any of this |
 | 2 | influxdb3 keeps two copies and prunes neither | **defect** | running daily |
-| 3 | The driver is not built — `plugin_backup.go` does not exist | gap | daily backups, the share and backup stages |
+| 3 | The driver is not built — `probe_backup.go` does not exist | gap | daily backups, the share and backup stages |
 | 4 | Backups are readable on the public samba share | accepted | — |
 | 5 | The backup stage does not exist, and has no ceiling of its own | gap, decided | off-host |
 | 6 | Five modules need a script, four need a verdict | gap, partly **open** | knowing this is sufficient |
@@ -1210,36 +1320,55 @@ Introduced by moving influxdb3 onto the generated wrapper, and not yet fixed. It
 - **every backup exists twice on disk**, once as the server's directory and once as our gzipped tar.
   The hand-written version avoided this with a hardlinked export that cost nothing.
 
-Both land on the one module that actually grows, which is the worst place for them. The fix is a
-handful of lines in the snippet: after a successful tar, delete the server-side backup whose contents
-were just captured, keeping only what a restore needs — and honouring the cascade, since deleting a
-full removes its deltas. Must be fixed before anything runs this daily.
+Worse, the server-side set lands **inside `${SERVICE_DATA_DIR}`**, which is exactly why the module
+contract puts backups at `<data root>/backup`, a sibling of the versioned homes: `install.sh` copies
+the old home into the new one on every deploy, so every influxdb3 release drags the whole accumulated
+history forward. Our tars are safely outside; the server's set is not. And all of it lands on the one
+module that actually grows, which is the worst place for it.
+
+**The fix is not "delete what we just tarred".** `influxdb3 create backup --incremental --parent
+<name>` needs its parent to still exist server-side, so deleting the backup just captured would
+strand the next delta. What is genuinely dead is every **older chain**: a restore untars our tars
+into an empty store and never reads the server's set, so the server only needs the chain currently
+being extended — the newest full and the deltas hanging off it. So after a successful tar, delete
+every server-side backup outside the current chain with `influxdb3 delete backup`, honouring the
+cascade, since dropping a full drops its deltas. That bounds the store at roughly one full plus
+`BACKUP_RETAIN_DAYS` of deltas instead of everything ever taken. Must be fixed before anything runs
+this daily.
 
 ### 3 The driver is not built — gap
 
 Every module's `backup.sh` works, can be run by hand, and is called at release time by
 `install.sh`'s `run_backup`. Nothing calls them on a schedule, and the share and backup stages do
-not exist. The build order is the one thing this document adds:
+not exist. The build order is the one thing this document adds, and it starts before the Go:
 
+0. **The two prerequisites that are not Go work.** Fix **item 2** — nothing may run daily until
+   influxdb3 stops keeping an unpruned second copy inside its own data directory, because running it
+   daily is what makes that bite. And rehearse **item 1**, the restore, which needs no driver and can
+   be done by hand today; it does not block writing any of what follows, it blocks trusting it.
 1. **`--daily-time` and the gate** — `config.DefaultDailyTime`, `Periods.DailyMinutes`, the flag on
-   `cmd_serve.go`, and `isDaily` threaded through `probe.Run`'s `onPulse`. Testable on its own, with
-   no backup behaviour behind it, and it is the piece anything else daily will reuse.
-2. **`plugin_backup.go` and the module stage** — the supervisor module backup, then each enrolled
-   module serially, writing the log tree and `status.json`. Stops there: it is a complete, useful
-   daily backup with no `/share` involvement.
+   `cmd_serve.go`, and the out-of-band daily loop in `probe.Run` calling `daily(ctx)`, started for
+   `serve` alone. Testable on its own, with no backup behaviour behind it, and it is the piece
+   anything else daily will reuse.
+2. **`probe_backup.go` and the module stage** — the probe registered and the two host metrics moved
+   off `hostProbe`, then each enrolled module serially, writing the log tree and `status.json`. Stops
+   there: it is a complete, useful daily backup with no `/share` involvement.
 3. **The metrics** — `Fail BKP`, `Used BKP` and service `BKP` off the status document, with the
    `backupStaleWindow` rule. Depends on 2 and nothing else.
 4. **The bind mounts and the packages** — `/home/asystem`, `/share`, `/backup`, and the docker
    client, `rsync`, `cifs-utils` and `util-linux` in `docker_deps_base.txt`. The `/home/asystem`
    bind and the docker client are needed before 2 runs anywhere real; the `/share` and `/backup`
    binds, their `rshared` propagation and the other three packages are only needed by 5.
-5. **`mount.sh` and the mounts** — the switch, the readiness wait, the fstab-driven mounting, and
+5. **`mount.sh` and the mounts** — the readiness wait, the fstab-driven mounting, and
    the `rshared` binds proved on `jen`. Independently testable by hand (`mount.sh up`, look at
    `mountpoint`, `mount.sh down`) with no backup behaviour behind it.
-6. **The cluster singleton** — the retained-topic mutex, the will, the lease. Testable against a
-   scratch broker with no disks involved, and it is the only piece with a concurrency hazard.
+6. **The cluster singleton** — `probe_mqtt.go`, the retained-topic mutex, the will, the lease, the
+   narrowed `broker_topic_glob_data` and the three declared topics. Testable against a scratch broker
+   with no disks involved, and it is the only piece with a concurrency hazard.
 7. **The share and backup stages** — the `rsync` pair with `--temp-dir`, the GFS thin by
-   delegation, the `mountpoint` guards, gated on the election and on `mount.sh up` succeeding.
+   delegation, the `mountpoint` guards, gated on the election and on `mount.sh up` succeeding. Do not
+   rely on this until step 0's restore rehearsal has actually been done: a promotion is worth what a
+   restore is worth.
 
 A per-host cron calling each `${SERVICE_INSTALL}/backup.sh` remains a reasonable interim if daily
 backups are wanted before step 2 lands — it needs nothing that does not already exist.
@@ -1313,7 +1442,7 @@ configuration and tooling, with no container and no service state.
 | `tempstat` | may | ❌ | no | writes to MQTT |
 | `nginx` | meg | ❌ | no | configuration generated, certificates pulled from `letsencrypt` |
 | `cloudflare` | may | ❌ | no | configuration generated, credentials from the environment |
-| `supervisor` | all | ❌ | **driver** | no generated script — its own state is copied by the supervisor module backup, the first step of the module stage |
+| `supervisor` | all | ❌ | **driver** | no generated script — the run record it writes daily is its backup, promoted from the standard backup root like any other |
 | `mlserver` | max | ❌ | no | mounts `mlflow`'s backup root; no state of its own |
 | `monitor` | zzz | ❌ | no | host paths mounted read-only |
 | `unpoller` | zzz | ❌ | no | no volumes |
@@ -1368,16 +1497,18 @@ no-last-value case, which must produce a blank rather than a zero.
 
 A year of monthly copies only helps if the damage is eventually noticed. Scheduling `describe.sh`
 and diffing its output would shorten time-to-notice far more cheaply than lengthening the tail, and
-supervisor's daily gate is the obvious place to hang it — a second consumer of `isDaily`, which is
-why the gate is generic infrastructure rather than a backup callback.
+supervisor's daily gate is the obvious place to hang it — a second implementer of `daily(ctx)`,
+which is why the gate is generic infrastructure rather than a backup callback.
 
 ### 11 A module's script has no lock — gap, minor
 
 Two concurrent runs of the same module's `backup.sh` inside one second would share a stamp and race
-on the same `.tmp`. The `BACKUP_SKIP_HOURS` throttle makes it unlikely rather than impossible, and
-the plugin holds a lock of its own, but the collision that matters is a release-time `run_backup`
-landing inside the daily window — so a `flock` on `BACKUP_INTERNAL_ROOT_DIR` in the wrapper is what
-closes it properly.
+on the same `.tmp`. **The throttle is no defence against the collision that matters**, and this is
+the sharp edge of the version qualifier: a release-time `run_backup` landing inside the daily window
+is precisely the case where the version has just moved, so `BACKUP_SKIP_HOURS` deliberately does
+*not* suppress the second run. A `flock` on `BACKUP_INTERNAL_ROOT_DIR` in the wrapper is therefore
+the whole defence rather than the backstop, and it is what makes the probe's own run lock sufficient
+rather than merely likely to work.
 
 ### 12 `Fail BCK` is labelled inconsistently with its metric — gap, decided
 
@@ -1387,6 +1518,12 @@ but both display layouts label it `Fail BCK` (`display_layout.go`). **Rename the
 the topic, the column and the box geometry are all untouched, and both labels are nine characters so
 no row's pre-resize width moves and `Compile`'s equal-width assertion still holds. The cost is
 60-odd occurrences of mechanical churn in `display_test_layouts.go`.
+
+**The same entry is also missing its unit.** `host/failed_backups` declares `unit: ""` while both
+layouts suffix its box with `%` and the reading is a percentage of failed stages; `failed_shares`,
+`failed_drives` and `failed_log_messages` all declare `unit: "%"`. Set it in the same edit — the unit
+is projected into the model leaf and `describe.sh`, so leaving it blank misdeclares the measure to
+both backends as well as reading inconsistently on screen.
 
 ### 13 The cluster singleton is not built — gap
 
@@ -1399,6 +1536,11 @@ assert the next candidate claims it. All three are broker-level tests needing no
 Two numbers are still guesses and should be measured rather than reasoned about:
 `leaderSettle`, which must exceed the broker round trip by a comfortable margin, and
 `mountReadySeconds`, which is however long the drives actually take from relay close to enumerated.
+
+The glob narrowing belongs to this item rather than to the share stage: until
+`broker_topic_glob_data` is `supervisor/${SUPERVISOR_HOST}/data/#` and the three topics are declared
+in `metric.Topics()`, every `fab schema` reports them as drift and aborts at supervisor, and a
+supervisor release sweeps a lease another host is holding.
 
 ### 14 `mount.sh` does not exist, and mount propagation is unproven — gap
 
@@ -1416,9 +1558,10 @@ shape changes nothing in the Go and nothing in this document beyond the table.
 ### Closed during design and build
 
 - **Powering and mounting** — a supervisor-owned `mount.sh`, hand-authored, phased `up`/`down`,
-  driven by `/etc/fstab` rather than by a host list, with the plug published to over MQTT. The
-  plugin calls it and reads an exit code, so no device name, mountpoint or filesystem type reaches
-  the Go.
+  driven by `/etc/fstab` rather than by a host list. The probe calls it and reads an exit code, so no
+  device name, mountpoint or filesystem type reaches the Go. The plug itself is switched from Go
+  through `probe_mqtt.go`, on a topic `config.json` supplies, so the script never touches the broker
+  and the driver still holds no estate literal.
 - **Who switches the outlet off** — a leader elected daily over MQTT with a retained-topic mutex, a
   last will and a five-hour lease, running power-on as its init and power-off as its destroy. The
   module stage sits outside it entirely, so a failed election costs a promotion and never a backup.
@@ -1428,9 +1571,24 @@ shape changes nothing in the Go and nothing in this document beyond the table.
 - **`hot` / `warm` / `cold`** — retired in favour of `module` / `share` / `backup`, one word per
   stage named for what it writes to, used identically in the prose, the JSON, the log file names and
   the Go.
-- **Supervisor's own `backup.sh`** — retired. The driver is `plugin_backup.go`; supervisor is not
-  enrolled through `write_container_backup()` and its own state is copied by the supervisor module
-  backup at the head of the module stage.
+- **Supervisor's own `backup.sh`** — retired, and so is the supervisor module backup that replaced
+  it. The driver is `probe_backup.go`; supervisor is not enrolled through `write_container_backup()`,
+  takes no module-stage step of its own, and its run record *is* its backup, written into the standard
+  backup root and thinned by date on the same tiers as everything else.
+- **Where the driver lives** — `internal/probe/probe_backup.go`, registered like any other probe,
+  owning `host/failed_backups` and `host/used_backup_space` while `servicesProbe` keeps
+  `service/backup_status` and reads its snapshot. A driver outside the probe set could not own a
+  metric at all: `verifyProbes()` panics unless every metric ID has exactly one.
+- **How the daily run is scheduled** — an out-of-band loop started by `probe.Run` for `serve` alone,
+  calling `daily(ctx)` on its own goroutine. Not a flag on the poll tick: `onPulse` runs inline on the
+  ticker goroutine, so a run threaded through it would stall every probe on the host for hours.
+- **The election's topics and its client** — declared in `metric.Topics()` and moved outside the
+  swept namespace by narrowing `broker_topic_glob_data` to `supervisor/${SUPERVISOR_HOST}/data/#`,
+  spoken to by supervisor's own short-lived `probe_mqtt.go` rather than by the engine's session,
+  which cannot carry the lease's last will and which `probe` must not import.
+- **What `Used BKP` reads** — the newest `status.json` and never the filesystem, since `/backup` is
+  unmounted between runs by design and stat'ing it would report a permanent fault for a normal
+  condition. No in-process carry: the last value is already on disk in the last document.
 - **Release-time triggering** — not retired, relocated. Per-module `install_prep.sh` hooks are gone
   and the root `install.sh`'s `run_backup` is the single release-time call site, complementary to
   the daily run rather than competing with it.

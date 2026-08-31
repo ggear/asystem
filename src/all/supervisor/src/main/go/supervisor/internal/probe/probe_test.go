@@ -273,7 +273,7 @@ func TestProbe_FailedSampleBlanks(t *testing.T) {
 				metricID:    testCase.metricID,
 				serviceName: testCase.serviceName,
 				sampleFunc: func() (any, derivation, error) {
-					return int8(42), derived(scribe.ActionSample, "computed [42] pct for the test"), testCase.sampleErr
+					return int8(42), derivedf(scribe.ActionSample, "computed [42] pct for the test"), testCase.sampleErr
 				},
 				statsFunc: func(any) { pushes++ },
 				tickFunc:  func() { ticks++ },

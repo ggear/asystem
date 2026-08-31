@@ -119,7 +119,7 @@ func (s *mountSet) request(window time.Duration) {
 			s.mutex.Lock()
 			s.refreshing = false
 			s.mutex.Unlock()
-			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Error("panicked", refreshStart, "[%v] refreshing [%s], keeping the previous snapshot", failure, filepath.Join(s.root, mountTablePath))
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Errorf("panicked", refreshStart, "[%v] refreshing [%s], keeping the previous snapshot", failure, filepath.Join(s.root, mountTablePath))
 		}()
 		taken := s.collect()
 		s.mutex.Lock()
@@ -170,7 +170,7 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 			home.mountpoint, mountHomeRoot, mountReasons(taken.mounts, false), errEnvironment)
 	}
 	used := float64(home.used) / float64(home.total) * 100.0
-	return percentValue(used), derived(scribe.ActionSample, "computed [%3d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
+	return percentValue(used), derivedf(scribe.ActionSample, "computed [%3d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
 		percentValue(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
 }
 
@@ -184,7 +184,7 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 			taken.unread, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
 	}
 	if taken.locals == 0 {
-		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok"), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok"), nil
 	}
 	total := uint64(0)
 	used := uint64(0)
@@ -201,7 +201,7 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared, failures [%s] [%w]",
 			taken.locals, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
 	}
-	return percentValue(float64(used) / float64(total) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
+	return percentValue(float64(used) / float64(total) * 100.0), derivedf(scribe.ActionSample, "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
 		percentValue(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals), nil
 }
 
@@ -215,10 +215,10 @@ func (s *mountSet) failedShares() (int8, derivation, error) {
 			taken.unread, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
 	}
 	if taken.shares == 0 {
-		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
+		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
 			filepath.Join(s.root, mountFstabPath)), nil
 	}
-	return percentValue(float64(taken.failed) / float64(taken.shares) * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
+	return percentValue(float64(taken.failed) / float64(taken.shares) * 100.0), derivedf(scribe.ActionSample, "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
 		percentValue(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath), mountReasons(taken.mounts, true)), nil
 }
 
@@ -235,14 +235,14 @@ func (s *mountSet) collect() *mountSnapshot {
 			mounts[index].failed = true
 			mounts[index].answered = errors.Is(err, errMountContent)
 			mounts[index].reason = err.Error()
-			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] not counted, failed with [%v]",
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debugf("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] not counted, failed with [%v]",
 				mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassLabel(mounts[index]), err)
 			continue
 		}
 		mounts[index].total = total
 		mounts[index].used = used
 		mounts[index].measured = true
-		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debug("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%3d] of [%3d] MiB at [%3d] pct",
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debugf("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%3d] of [%3d] MiB at [%3d] pct",
 			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassLabel(mounts[index]), used/bytesPerMiB, total/bytesPerMiB, percentValue(mountShare(used, total)))
 	}
 	mounted := map[string]mountUsage{}
@@ -270,13 +270,13 @@ func (s *mountSet) collect() *mountSnapshot {
 		absentStart := time.Now()
 		if _, _, err := s.measure(mountpoint, true); err != nil {
 			taken.failed++
-			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table and counted failed with [%v]", mountpoint, err)
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debugf("examined", absentStart, "[%s] declared in fstab, absent from the mount table and counted failed with [%v]", mountpoint, err)
 			continue
 		}
-		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debug("examined", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debugf("examined", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
 	}
 	taken.drives, taken.read = s.worn(mounts, collectStart)
-	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debug("surveyed", collectStart, "[%3d] mounts, system [%3d], shares local [%3d] declared [%3d] failed [%3d], drives [%3d]",
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debugf("surveyed", collectStart, "[%3d] mounts, system [%3d], shares local [%3d] declared [%3d] failed [%3d], drives [%3d]",
 		len(mounts), len(mounts)-taken.locals-mountRemotes(mounts), taken.locals, taken.shares, taken.failed, len(taken.drives))
 	return taken
 }
@@ -285,7 +285,7 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 	parseStart := time.Now()
 	data, err := os.ReadFile(filepath.Join(s.root, mountTablePath))
 	if err != nil {
-		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Warn("noaccess", parseStart, "[%s] mount table with [%v], reporting no filesystems", filepath.Join(s.root, mountTablePath), err)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Warnf("noaccess", parseStart, "[%s] mount table with [%v], reporting no filesystems", filepath.Join(s.root, mountTablePath), err)
 		return nil, err
 	}
 	devices := map[string]string{}
@@ -325,7 +325,7 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 		deduped = append(deduped, mount)
 	}
 	sort.Slice(deduped, func(first, second int) bool { return deduped[first].mountpoint < deduped[second].mountpoint })
-	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debug("examined", parseStart, "[%3d] lines, kept [%3d] as [%s], dropped [%3d] as [%s]",
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debugf("examined", parseStart, "[%3d] lines, kept [%3d] as [%s], dropped [%3d] as [%s]",
 		lines, len(deduped), mountSummary(deduped), lines-len(deduped), mountDropped(dropped))
 	return deduped, nil
 }
@@ -529,7 +529,7 @@ func mountBase(root string) string {
 			continue
 		}
 		if base != root {
-			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionDiscover).Info("resolved", baseStart,
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionDiscover).Infof("resolved", baseStart,
 				"[%s] mount table read outside the container, configured root [%s] holds none", table, root)
 		}
 		return base

@@ -2,7 +2,7 @@
 -- WARNING: This file is written by the build process, any manual edits will be lost!
 --------------------------------------------------------------------------------
 
--- influxdb3 has no column delete and dropping the table would take every other column with it, so a dropped measure stays in the catalog and this reports the residue it still carries
+-- an archived measure is retained deliberately with nothing to delete, silenced in verify and describe, and this reports the history it still carries
 SELECT
     'supervisor'                                                                AS relation,
     'spin_fan_speed_of_max'                                                     AS measure,

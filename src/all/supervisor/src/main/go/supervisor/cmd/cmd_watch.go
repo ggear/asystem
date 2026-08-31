@@ -198,16 +198,16 @@ func executeWatch(configPath string, opts *watchOptions) error {
 		return err
 	}
 	loaded := config.Load(configPath)
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("identity", watchStart, "[%s] version", loaded.Version())
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("resolved", watchStart, "[%s] config", filepath.Base(configPath))
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("selected", watchStart, "[%s] mode", mode)
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("watching", watchStart, "[%d] hosts", len(hosts))
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("included", watchStart, "[%s] hosts", includedHosts(hosts, loaded.Hosts()))
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", watchStart, "[%d] ms poll", periods.PollMillis)
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Info("periodic", watchStart, "[%d] ms pulse", periods.PulseMillis)
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("identity", watchStart, "[%s] version", loaded.Version())
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("resolved", watchStart, "[%s] config", filepath.Base(configPath))
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("selected", watchStart, "[%s] mode", mode)
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("watching", watchStart, "[%d] hosts", len(hosts))
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("included", watchStart, "[%s] hosts", includedHosts(hosts, loaded.Hosts()))
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("periodic", watchStart, "[%d] ms poll", periods.PollMillis)
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStart).Infof("periodic", watchStart, "[%d] ms pulse", periods.PulseMillis)
 	go d.Run(ctx)
 	d.Draw(ctx, cancel)
-	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Info("identity", watchStart, "[%s] version, exited gracefully", loaded.Version())
+	scribe.Log(scribe.SourceCmdWatch, scribe.SubjectHost(loaded.Host()), scribe.ActionStop).Infof("identity", watchStart, "[%s] version, exited gracefully", loaded.Version())
 	return nil
 }
 

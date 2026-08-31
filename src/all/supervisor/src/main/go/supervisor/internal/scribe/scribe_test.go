@@ -271,7 +271,7 @@ func TestScribe_BufferHandler(t *testing.T) {
 
 func TestScribe_BufferMinimumCapacity(t *testing.T) {
 	buf := EnableBuffer(slog.LevelDebug, 0)
-	Log(SourceScribe, SubjectNone, ActionRemove).Info("minimum", time.Now(), "[1] line")
+	Log(SourceScribe, SubjectNone, ActionRemove).Infof("minimum", time.Now(), "[1] line")
 	if got := len(buf.Tail(1)); got != 1 {
 		t.Fatalf("Tail() count: got %d want 1", got)
 	}
@@ -716,8 +716,14 @@ func detailCalls(t *testing.T, root string) []detailCall {
 				return true
 			}
 			selector, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || !slices.Contains([]string{"Debug", "Info", "Warn", "Error"}, selector.Sel.Name) {
+			if !ok || !slices.Contains([]string{"Debugf", "Infof", "Warnf", "Errorf"}, selector.Sel.Name) {
 				return true
+			}
+
+			if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Name == "fmt" {
+
+				return true
+
 			}
 			if _, ok := call.Args[0].(*ast.BasicLit); !ok {
 				return true
@@ -921,11 +927,12 @@ func verbLiterals(t *testing.T, root string) []verbLiteral {
 		index := -1
 		switch function := call.Fun.(type) {
 		case *ast.SelectorExpr:
-			if slices.Contains([]string{"Debug", "Info", "Warn", "Error"}, function.Sel.Name) {
+			pkg, isPkg := function.X.(*ast.Ident)
+			if slices.Contains([]string{"Debugf", "Infof", "Warnf", "Errorf"}, function.Sel.Name) && !(isPkg && pkg.Name == "fmt") {
 				index = 0
 			}
 		case *ast.Ident:
-			if function.Name == "derived" && len(call.Args) > 1 {
+			if function.Name == "derivedf" && len(call.Args) > 1 {
 				index = 1
 			}
 			if function.Name == "derivePulse" && len(call.Args) > 1 {
@@ -1055,7 +1062,7 @@ func TestScribe_FlattensDetailLineBreaks(t *testing.T) {
 			restore := slog.Default()
 			slog.SetDefault(slog.New(&streamHandler{level: slog.LevelDebug, writer: buffer, sink: sinkFile()}))
 			defer slog.SetDefault(restore)
-			Log(SourceProbe, SubjectMetric(metric.MetricHostLifeUsedDrives), ActionSample).Warn("excluded", time.Now(), "%s", testCase.detail)
+			Log(SourceProbe, SubjectMetric(metric.MetricHostLifeUsedDrives), ActionSample).Warnf("excluded", time.Now(), "%s", testCase.detail)
 			rows := strings.Split(strings.TrimSuffix(buffer.String(), "\n"), "\n")[1:]
 			if len(rows) != testCase.expectedRows {
 				t.Fatalf("rows: got %d want %d", len(rows), testCase.expectedRows)

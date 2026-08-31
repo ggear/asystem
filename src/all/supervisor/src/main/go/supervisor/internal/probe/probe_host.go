@@ -315,7 +315,7 @@ func (p *hostProbe) hasMetric(id metric.ID) bool {
 }
 
 func (p *hostProbe) host() (bool, derivation, error) {
-	return true, derived(scribe.ActionSample, "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
+	return true, derivedf(scribe.ActionSample, "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
 }
 
 func (p *hostProbe) usedProcessor() (int8, derivation, error) {
@@ -337,7 +337,7 @@ func (p *hostProbe) usedMemory() (int8, derivation, error) {
 		return 0, derivation{}, errors.New("no memory reading taken, the host reports [0] bytes of total memory so a share of it cannot be computed")
 	}
 	usedPercent := (float64(memoryStat.Used) / float64(memoryStat.Total)) * 100.0
-	return stats.ConvertToInt(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, available [%d] MiB",
+	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, available [%d] MiB",
 		stats.ConvertToInt(usedPercent), memoryStat.Used/bytesPerMiB, memoryStat.Total/bytesPerMiB, memoryStat.Available/bytesPerMiB), nil
 }
 
@@ -358,12 +358,12 @@ func (p *hostProbe) allocatedMemory() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	allocatedPercent := (float64(allocatedBytes) / float64(memoryStat.Total)) * 100.0
-	sampled := derived(scribe.ActionCompute, "computed [%3d] pct allocated, ceilings [%d] MiB of total [%d] MiB, installed [%d] of configured [%d] services",
+	sampled := derivedf(scribe.ActionCompute, "computed [%3d] pct allocated, ceilings [%d] MiB of total [%d] MiB, installed [%d] of configured [%d] services",
 		stats.ConvertToInt(allocatedPercent), allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, installed, len(config.Load(p.configPath).Services(p.hostName)))
 	if allocatedPercent > 100.0 {
 		if allocatedBytes != p.allocatedMemoryLogged {
 			p.allocatedMemoryLogged = allocatedBytes
-			scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionCompute).Warn("exceeded", allocatedStart, "[%d] MiB allocated of [%d] MiB total at [%.1f] pct across [%d] installed services, capping the metric at [100] pct",
+			scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionCompute).Warnf("exceeded", allocatedStart, "[%d] MiB allocated of [%d] MiB total at [%.1f] pct across [%d] installed services, capping the metric at [100] pct",
 				allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, allocatedPercent, installed)
 		}
 		allocatedPercent = 100.0
@@ -376,10 +376,10 @@ func (p *hostProbe) failedLogs() (int8, derivation, error) {
 	logs := loadLogs(config.Load(p.configPath).Mount())
 	count, available := logs.errorsWithin(window)
 	if !available {
-		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct failed, kernel log unreadable at [%s] so the metric is inert and always ok", logs.attempted()), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct failed, kernel log unreadable at [%s] so the metric is inert and always ok", logs.attempted()), nil
 	}
 	message, leading := logs.leading()
-	return stats.ConvertToInt(float64(count) / metric.FailedLogsBudget * 100.0), derived(scribe.ActionSample, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], most frequent [%d] of them logged [%s], following [%s]",
+	return stats.ConvertToInt(float64(count) / metric.FailedLogsBudget * 100.0), derivedf(scribe.ActionSample, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], most frequent [%d] of them logged [%s], following [%s]",
 		stats.ConvertToInt(float64(count)/metric.FailedLogsBudget*100.0), count, int(metric.FailedLogsBudget), window, leading, message, logs.path), nil
 }
 
@@ -398,7 +398,7 @@ func (p *hostProbe) warnTemperature() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	warnOfMax := stats.ConvertToInt(metric.WarnTemperaturePerCelsius * (temperatureCelsius - metric.WarnTemperatureBaseCelsius))
-	return warnOfMax, derived(scribe.ActionCompute, "computed [%3d] pct of warn, [%.1f] C above floor [%.1f] C at [%.1f] pct/C",
+	return warnOfMax, derivedf(scribe.ActionCompute, "computed [%3d] pct of warn, [%.1f] C above floor [%.1f] C at [%.1f] pct/C",
 		warnOfMax, temperatureCelsius, metric.WarnTemperatureBaseCelsius, metric.WarnTemperaturePerCelsius), nil
 }
 
@@ -440,10 +440,10 @@ func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no swap reading taken, swap memory stats failed with [%w]", err)
 	}
 	if swapStat.Total == 0 {
-		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used, the host configures no swap so the metric is inert and always ok"), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct used, the host configures no swap so the metric is inert and always ok"), nil
 	}
 	usedPercent := (float64(swapStat.Used) / float64(swapStat.Total)) * 100.0
-	return percentValue(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, free [%d] MiB",
+	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, free [%d] MiB",
 		percentValue(usedPercent), swapStat.Used/bytesPerMiB, swapStat.Total/bytesPerMiB, swapStat.Free/bytesPerMiB), nil
 }
 
@@ -474,7 +474,7 @@ func (p *hostProbe) runningTime() (float64, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no running time read, host up time failed with [%w] [%w]", err, errEnvironment)
 	}
 	running := time.Duration(seconds) * time.Second
-	return float64(seconds), derived(scribe.ActionSample, "computed [%d] s running, the host booted [%s] ago at [%s]",
+	return float64(seconds), derivedf(scribe.ActionSample, "computed [%d] s running, the host booted [%s] ago at [%s]",
 		seconds, running, config.NowIncludingSuspend().Add(-running).Format(time.RFC3339)), nil
 }
 
@@ -520,7 +520,7 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 		return 0, derivation{}, fmt.Errorf("no processor sample taken, cpu counters moved by [%.1f] ticks between polls so they are not monotonic", totalDelta)
 	}
 	usedPercent := (1.0 - idleDelta/totalDelta) * 100.0
-	return stats.ConvertToInt(usedPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, idle delta [%.1f] of total delta [%.1f] ticks",
+	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, idle delta [%.1f] of total delta [%.1f] ticks",
 		stats.ConvertToInt(usedPercent), idleDelta, totalDelta), nil
 }
 
@@ -542,7 +542,7 @@ func (s *diskUsageSampler) sample(ioCounters func(...string) (map[string]disk.IO
 		}
 	}
 	if len(current) == 0 {
-		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used, none of the [%d] devices the host reports is named [%s] so the metric is inert and always ok", len(counters), strings.Join(diskDevices, "] or [")), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct used, none of the [%d] devices the host reports is named [%s] so the metric is inert and always ok", len(counters), strings.Join(diskDevices, "] or [")), nil
 	}
 	taken := config.NowIncludingSuspend()
 	previous, previousTaken, hadSample := s.samples, s.taken, s.hasSample
@@ -569,7 +569,7 @@ func (s *diskUsageSampler) sample(ioCounters func(...string) (map[string]disk.IO
 	if busiest == "" {
 		return 0, derivation{}, errProbeWarmingUp
 	}
-	return percentValue(busiestPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] serviced operations for [%.0f] ms of [%.0f] ms elapsed across [%d] devices",
+	return percentValue(busiestPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] serviced operations for [%.0f] ms of [%.0f] ms elapsed across [%d] devices",
 		percentValue(busiestPercent), busiest, busiestMillis, elapsed*1000.0, len(current)), nil
 }
 
@@ -591,7 +591,7 @@ type networkUsageSampler struct {
 func (s *networkUsageSampler) sample(roots []string) (int8, derivation, error) {
 	s.discover(roots)
 	if len(s.links) == 0 {
-		return 0, derivedInert(scribe.ActionSample, "computed [  0] pct used, discovery found no physical interface carrying a rated link speed under [%s] so the metric is inert and always ok", s.root), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct used, discovery found no physical interface carrying a rated link speed under [%s] so the metric is inert and always ok", s.root), nil
 	}
 	current := make(map[string]uint64, len(s.links))
 	var rejected []string
@@ -634,7 +634,7 @@ func (s *networkUsageSampler) sample(roots []string) (int8, derivation, error) {
 	if busiest == "" {
 		return 0, derivation{}, errProbeWarmingUp
 	}
-	return percentValue(busiestPercent), derived(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] moved [%.1f] Mbit per second of its rated [%.0f] Mbit across [%d] interfaces over [%.1f] s",
+	return percentValue(busiestPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] moved [%.1f] Mbit per second of its rated [%.0f] Mbit across [%d] interfaces over [%.1f] s",
 		percentValue(busiestPercent), busiest, busiestBits/networkBitsPerMbit, busiestRated/networkBitsPerMbit, len(current), elapsed), nil
 }
 
@@ -670,11 +670,11 @@ func (s *networkUsageSampler) discover(roots []string) {
 				ratedBits:  float64(rated) * networkBitsPerMbit,
 			})
 		}
-		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "[%d] rated physical interfaces of [%d] under [%s], not rated [%s]",
+		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Infof("topology", discoverStart, "[%d] rated physical interfaces of [%d] under [%s], not rated [%s]",
 			len(s.links), len(entries), classDir, strings.Join(virtual, ", "))
 		return
 	}
-	scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Info("topology", discoverStart, "[0] rated physical interfaces, no directory under [%s]", s.root)
+	scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Infof("topology", discoverStart, "[0] rated physical interfaces, no directory under [%s]", s.root)
 }
 
 func networkCounter(path string) (uint64, error) {

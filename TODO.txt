@@ -28,16 +28,13 @@ retire nginx and use cloudflared for homeasistant?
 
 
 deploy.sh consolidation, only keep those that are necessary
-cleanup supervisor schema, rename/drops
+cleanup supervisor schema, rename/drops, make influxdb drop really work
 
 
 maybe drop vernme /tmp and do a dliverrate delete on release of vernemq so restarts work OK?
 Fix logs for watch so no wrapping, what I see in watch or all?
 check metric attribution works by metric filter when multiple probe_* feed single metric
-in watch log viewer some pages seem to only be a few lines, if entering log viewer, new lines getting added to own page such that page 1 is a full screen, 
-  page 2 just advanced the logs 2/3, even when exiting the log viewing and re-entering. can there be a page merge or other to avoid this easily? be cuareful not to introduce any page counting bugs, there have been many.
-  how to simplify this code at the same time.
-
+ensure all fprintf types are correct eg Debug format %d has arg 1.5 of wrong type float64
 
 
 

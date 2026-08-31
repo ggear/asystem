@@ -209,6 +209,75 @@ func TestProbeDrives_DriveNamespace(t *testing.T) {
 	}
 }
 
+func TestProbeDrives_TopologyReadsThroughTheNamespace(t *testing.T) {
+	tests := []struct {
+		name              string
+		physical          string
+		block             string
+		device            string
+		vendor            string
+		model             string
+		rotational        string
+		expectedHardware  string
+		expectedNode      string
+		expectedTransport string
+		expectedError     bool
+	}{
+		{name: "happy nvme controller reads its namespace attributes", physical: "nvme0", block: "nvme0n1", device: "devices/platform/soc/34bcc0000.nvme/nvme/nvme0/nvme0n1", model: "APPLE SSD AP0512Z                       ", rotational: "0", expectedHardware: "APPLE SSD AP0512Z", expectedNode: "nvme0n1", expectedTransport: driveTransportInternal, expectedError: false},
+		{name: "happy sata reads its own attributes", physical: "sda", block: "sda", device: "devices/platform/soc/f02280000.usb/xhci-hcd.0.auto/usb4/4-1/4-1:1.0/host0/target0:0:0/0:0:0:0/block/sda", vendor: "ATA     ", model: "CT4000MX500SSD1 ", rotational: "1", expectedHardware: "CT4000MX500SSD1", expectedNode: "sda", expectedTransport: driveTransportUSB, expectedError: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root := t.TempDir()
+			device := filepath.Join(root, testCase.device)
+			if err := os.MkdirAll(filepath.Join(device, "device"), 0o755); err != nil {
+				t.Fatalf("mkdir device: %v", err)
+			}
+			if err := os.MkdirAll(filepath.Join(device, "queue"), 0o755); err != nil {
+				t.Fatalf("mkdir queue: %v", err)
+			}
+			written := map[string]string{
+				filepath.Join(device, driveModelPath):      testCase.model,
+				filepath.Join(device, driveRotationalPath): testCase.rotational,
+				filepath.Join(device, driveRemovablePath):  "0",
+			}
+			if testCase.vendor != "" {
+				written[filepath.Join(device, driveVendorPath)] = testCase.vendor
+			}
+			for path, content := range written {
+				if err := os.WriteFile(path, []byte(content+"\n"), 0o644); err != nil {
+					t.Fatalf("write %s: %v", path, err)
+				}
+			}
+			blocks := filepath.Join(root, driveBlockPath)
+			if err := os.MkdirAll(blocks, 0o755); err != nil {
+				t.Fatalf("mkdir blocks: %v", err)
+			}
+			target, err := filepath.Rel(blocks, device)
+			if err != nil {
+				t.Fatalf("relate: %v", err)
+			}
+			if err := os.Symlink(target, filepath.Join(blocks, testCase.block)); err != nil {
+				t.Fatalf("symlink: %v", err)
+			}
+			set := &mountSet{root: root, identities: map[string]*driveIdentity{}}
+			identity := set.identity(testCase.physical)
+			if identity.hardware != testCase.expectedHardware {
+				t.Errorf("hardware: got %q want %q", identity.hardware, testCase.expectedHardware)
+			}
+			if identity.node != filepath.Join(root, "dev", testCase.expectedNode) {
+				t.Errorf("node: got %q want %q", identity.node, filepath.Join(root, "dev", testCase.expectedNode))
+			}
+			if identity.transport != testCase.expectedTransport {
+				t.Errorf("transport: got %q want %q", identity.transport, testCase.expectedTransport)
+			}
+			if identity.rotational != (testCase.rotational == driveFlagSet) {
+				t.Errorf("rotational: got %v want %v", identity.rotational, testCase.rotational == driveFlagSet)
+			}
+		})
+	}
+}
+
 func TestProbeDrives_IgnoresFlashButNotSolidState(t *testing.T) {
 	tests := []struct {
 		name            string

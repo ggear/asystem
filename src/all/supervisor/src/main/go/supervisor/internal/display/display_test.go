@@ -1915,7 +1915,7 @@ func TestDisplay_LogScrolling(t *testing.T) {
 			}
 			display.logOverlay = true
 			for range testCase.pages * capacity {
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "scroll fodder")
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "scroll fodder")
 			}
 			display.logRewind()
 			display.Logging()
@@ -2016,7 +2016,7 @@ func TestDisplay_LogCoverage(t *testing.T) {
 			display.dimsInit = dimensions{rows: testCase.overlayRows, cols: 200}
 			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150, 500, 9}
 			for index := range 400 {
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "%s", strings.Repeat("z", lengths[index%len(lengths)]))
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "%s", strings.Repeat("z", lengths[index%len(lengths)]))
 			}
 			display.logRewind()
 			display.Logging()
@@ -2126,7 +2126,7 @@ func TestDisplay_LogArriving(t *testing.T) {
 			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150}
 			emit := func(count int) {
 				for index := range count {
-					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "%s", strings.Repeat("z", lengths[index%len(lengths)]))
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "%s", strings.Repeat("z", lengths[index%len(lengths)]))
 				}
 			}
 			emit(60)
@@ -2210,7 +2210,7 @@ func TestDisplay_LogParked(t *testing.T) {
 			display.dimsInit = dimensions{rows: overlayRows, cols: 200}
 			emit := func(count int) {
 				for range count {
-					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "%s", strings.Repeat("z", 60))
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "%s", strings.Repeat("z", 60))
 				}
 			}
 			emit(scribe.BufferLines(overlayRows) + overlayRows*10)
@@ -2294,7 +2294,7 @@ func TestDisplay_LogWrapping(t *testing.T) {
 			lengths := []int{4, 180, 7, 320, 12, 95, 240, 3, 61, 410, 28, 150}
 			emit := func(count int) {
 				for index := range count {
-					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "%s", strings.Repeat("y", lengths[index%len(lengths)]))
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "%s", strings.Repeat("y", lengths[index%len(lengths)]))
 				}
 			}
 			emit(200)
@@ -2407,7 +2407,7 @@ func TestDisplay_LogPagination(t *testing.T) {
 			display.logOverlay = true
 			emit := func(count int) {
 				for range count {
-					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "pagination fodder")
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "pagination fodder")
 				}
 			}
 			emit(capacity * 4)
@@ -2493,7 +2493,7 @@ func TestDisplay_LogFollowing(t *testing.T) {
 			display.logOverlay = true
 			emit := func(count int) {
 				for range count {
-					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "follow fodder")
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "follow fodder")
 				}
 			}
 			emit(caseRows - 2)
@@ -2570,7 +2570,7 @@ func TestDisplay_LogPaging(t *testing.T) {
 			display.logOverlay = true
 			emit := func(count int) {
 				for range count {
-					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("received", time.Now(), "page fodder")
+					scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("received", time.Now(), "page fodder")
 				}
 			}
 			emit(capacity)
@@ -2607,7 +2607,7 @@ func TestDisplay_LogPaging(t *testing.T) {
 func TestDisplay_LogEntryTallerThanPage(t *testing.T) {
 	buffer := scribe.EnableBuffer(slog.LevelDebug, 20)
 	t.Cleanup(scribe.Disable)
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info(
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof(
 		"oversize", time.Now(), "[%s]", strings.Repeat("wrapped detail ", 300),
 	)
 	display := &Display{
@@ -2648,7 +2648,7 @@ func TestDisplay_LogResizePreservesPause(t *testing.T) {
 	buffer := scribe.EnableBuffer(slog.LevelDebug, 100)
 	t.Cleanup(scribe.Disable)
 	for range 40 {
-		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Info("resize", time.Now(), "[1] line")
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("resize", time.Now(), "[1] line")
 	}
 	display := &Display{
 		dimsInit:   dimensions{rows: 10, cols: 120},

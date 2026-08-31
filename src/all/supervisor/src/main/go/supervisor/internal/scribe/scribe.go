@@ -185,19 +185,19 @@ func Log(source Source, subject Subject, action Action) Logger {
 	return Logger{source: source, subject: subject, action: action}
 }
 
-func (l Logger) Debug(verb string, started time.Time, detail string, args ...any) {
+func (l Logger) Debugf(verb string, started time.Time, detail string, args ...any) {
 	l.log(slog.LevelDebug, verb, started, detail, args...)
 }
 
-func (l Logger) Info(verb string, started time.Time, detail string, args ...any) {
+func (l Logger) Infof(verb string, started time.Time, detail string, args ...any) {
 	l.log(slog.LevelInfo, verb, started, detail, args...)
 }
 
-func (l Logger) Warn(verb string, started time.Time, detail string, args ...any) {
+func (l Logger) Warnf(verb string, started time.Time, detail string, args ...any) {
 	l.log(slog.LevelWarn, verb, started, detail, args...)
 }
 
-func (l Logger) Error(verb string, started time.Time, detail string, args ...any) {
+func (l Logger) Errorf(verb string, started time.Time, detail string, args ...any) {
 	l.log(slog.LevelError, verb, started, detail, args...)
 }
 
@@ -301,12 +301,13 @@ func (l Logger) log(level slog.Level, verb string, started time.Time, detail str
 	if !slog.Default().Enabled(context.Background(), level) {
 		return
 	}
+	rendered := detail
 	if len(args) > 0 {
-		detail = fmt.Sprintf(detail, args...)
+		rendered = fmt.Sprintf(detail, args...)
 	}
-	detail = flattened.Replace(detail)
+	rendered = flattened.Replace(rendered)
 	slog.Log(context.Background(), level, verb, keySource, l.source.String(), keySubject, l.subject.String(),
-		keyAction, l.action.String(), keyDuration, time.Since(started), keyDetail, detail)
+		keyAction, l.action.String(), keyDuration, time.Since(started), keyDetail, rendered)
 }
 
 func (h *bufferHandler) Enabled(_ context.Context, level slog.Level) bool {
@@ -734,7 +735,7 @@ func purgeLogFiles(keep string) {
 	dir := filepath.Dir(keep)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		Log(SourceScribe, SubjectNone, ActionRemove).Warn("faulting", purgeStart, "[%s] log directory unreadable with [%v]", dir, err)
+		Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%s] log directory unreadable with [%v]", dir, err)
 		return
 	}
 	removed := 0
@@ -751,13 +752,13 @@ func purgeLogFiles(keep string) {
 			continue
 		}
 		if removeErr := os.Remove(path); removeErr != nil {
-			Log(SourceScribe, SubjectNone, ActionRemove).Warn("faulting", purgeStart, "[%s] stale log file with [%v]", name, removeErr)
+			Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%s] stale log file with [%v]", name, removeErr)
 			continue
 		}
 		removed++
 	}
 	if removed > 0 {
-		Log(SourceScribe, SubjectNone, ActionRemove).Info("removals", purgeStart, "[%d] stale log files, kept [%s]", removed, filepath.Base(keep))
+		Log(SourceScribe, SubjectNone, ActionRemove).Infof("removals", purgeStart, "[%d] stale log files, kept [%s]", removed, filepath.Base(keep))
 	}
 }
 
