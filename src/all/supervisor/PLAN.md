@@ -35,16 +35,40 @@ travelled from the thing it protects**, so the ordering is in the name and a sta
 confused with the `/share` or `/backup` disk it happens to write to, nor with the repo *module*
 whose data it carries:
 
-| Stage | Writes to | Protects against | Retention | Status |
-|-------|-----------|------------------|-----------|--------|
-| **primary** | `/home/asystem/<module>/backup/<timestamp>/` | a bad release, an accidental delete, logical corruption | dense — 7 days | **built** |
-| **secondary** | `/share/<index>0/backup/<module>/` | loss of the service data directory or its filesystem | sparse — GFS, daily 7 / weekly 4 / monthly 12 | **planned** |
-| **tertiary** | `/backup/share/<index>0/backup/<module>/` | loss of the host or its principal share | exact mirror of share, `--delete` throughout | **planned** |
+| Stage | Writes to | Protects against | Retention | Runs on | Status |
+|-------|-----------|------------------|-----------|---------|--------|
+| **primary** | `/home/asystem/<module>/backup/<timestamp>/` | a bad release, an accidental delete, logical corruption | dense — 7 days | every `edge` and `server` host | **built** |
+| **secondary** | `/share/<index>0/backup/<module>/` | loss of the service data directory or its filesystem | sparse — GFS, daily 7 / weekly 4 / monthly 12 | every `edge` and `server` host | **planned** |
+| **tertiary** | `/backup/share/<index>0/backup/<module>/` | loss of the host or its principal share | exact mirror of share, `--delete` throughout | `server` hosts only | **planned** |
 
-**The last two stages are not always available, and that is a property of the estate rather than of
-the software.** The disks behind them are USB spinning drives on a switched outlet and are powered
-off between runs, so the secondary and tertiary stages begin by turning that outlet on and waiting for
-what fstab declares to mount. See *Powering and mounting the backup disks*.
+**Which stages a host runs is its `.hosts` form-factor and nothing else.** The fifth field of
+`.hosts` (`network|client|edge|server|ignore`) already decides which hosts get a `config.json`
+schema entry — `generate.py` emits one only for `edge` and `server` — and it now also decides how
+far a host carries a backup:
+
+| Form-factor | `config.json` schema entry | primary | secondary | tertiary | owns `/backup` | in the power-off election |
+|---|---|---|---|---|---|---|
+| `server` (`mad`, `max`, `may`, `meg`) | yes, with `index` and a `backup` block | yes | yes → its own `/share/<index>0` | **yes**, every mounted `/share/*` | yes | yes |
+| `edge` (`jen`, `jil`) | yes, no `index`, no `backup` block | yes | yes → a `server`'s principal share, already fstab-mounted | **no** | no | no |
+| `client` / `network` / `ignore` | none | — | — | — | — | — |
+
+A host with no schema entry has no configured services and no `backup` block, so `probe_backup.go`
+finds nothing to do — the same way `MetricHostAllocatedMemory` reads not-ok on a host absent from
+the schema. Whether such a host runs `serve` or `watch` is unchanged by any of this.
+
+An `edge` host is a satellite: it produces its module backups and pushes them onto a `server`'s
+share, and the `server` that owns that share carries them the rest of the way. It never powers the
+backup disk, never mounts `/backup`, and runs no tertiary stage. A `server` owns disks and runs the
+full replication. Nothing in the Go names a host — the probe reads the form-factor through
+`config.json` the way it reads everything else, and the boundary test in *Boundary with Go* is
+unchanged.
+
+**Only the tertiary stage waits on a powered disk.** `/share/<n>` holds live data — Plex's media
+library, each service's `service/` tree — so it is always mounted and always spinning; a host writes
+its secondary stage into it with no power step and no `mount.sh`. `/backup` is the cold mirror: a USB
+spinning drive on a switched outlet, powered off between runs, mounted by `server` hosts only, and
+the reason the tertiary stage begins by turning that outlet on and waiting for the disk to
+enumerate. See *Powering and mounting the backup disks*.
 
 A copy is only worth what it survives. Each stage protects against the failure the one before it
 cannot, and each is thinner than the last — the retention goes from **dense** (every backup, a week
@@ -52,9 +76,16 @@ deep) to **sparse** (a year deep, a handful of points), because the further back
 resolution is worth paying for.
 
 **The secondary stage is not off the host.** `/share/<n>` is a local ext4 partition
-(`PARTLABEL=share_08 /share/10 ext4 …`), so a host that dies takes the primary and secondary stages with
-it. The secondary stage exists to get copies off the service data directory and onto a large disk a
-later process can pull from. Only the tertiary stage is a real backup.
+(`PARTLABEL=share_08 /share/10 ext4 …`) on a `server`, so a `server` that dies takes the primary and
+secondary stages with it. The secondary stage exists to get copies off the service data directory
+and onto a large disk a later process can pull from. Only the tertiary stage is a real backup.
+
+**For an `edge` host the secondary stage is already off the host.** `jen` has no share of its own, so
+its `/share/10` is `mad`'s partition reached over samba (an fstab `cifs` entry, mounted
+automatically). `jen`'s secondary stage writes its module backups straight into `mad`'s
+`/share/10/backup/<module>/`, and `mad`'s tertiary stage — replicating **every** mounted `/share/*`,
+not only its principal one — mirrors that subtree to `/backup/share/10/backup/<module>/` for free.
+`jen` never learns the backup disk exists.
 
 **The tertiary stage is a subtree of a share replication, not a backup-specific job.** `/backup` is a
 separate mounted disk that mirrors `/share`, and the stage replicates **every** mounted share on the
@@ -90,13 +121,17 @@ key is omitted. Declaring it rather than deriving it from position in `.hosts` i
 inserting a host would otherwise renumber every host after it and silently file backups under
 another host's share.
 
-**A host with no index is not excluded, it borrows.** `jen` holds real state (`zigbee2mqtt`'s
-coordinator database) and must reach the secondary and tertiary stages like any other host, so it mounts
-another host's share and backup disk over samba rather than skipping them. The index therefore names
-the *preferred* principal share for a host that has one, and **fstab is the authority for a host that does
-not** — the share destination is the lowest-numbered `/share/<n>` actually mounted, which on `jen`
-is `mad`'s `/share/10`. That is the one place `/etc/fstab` is read rather than `config.json`, and it
-is read by the mount script rather than by the probe. See *Powering and mounting the backup disks*.
+**A host with no index is an `edge` host, and it borrows a share rather than owning one.** `jen`
+holds real state (`zigbee2mqtt`'s coordinator database) and must reach the secondary stage like any
+other host, so it writes into another host's share over samba. It does **not** reach the tertiary
+stage itself — the `server` that owns the borrowed share does that on `jen`'s behalf. The index
+therefore names the *preferred* principal share for a `server` that has one, and **fstab is the
+authority for an `edge` host that does not** — the share destination is the lowest-numbered
+`/share/<n>` actually mounted, which on `jen` is `mad`'s `/share/10`. That is the one place
+`/etc/fstab` is read rather than `config.json`, and it is read by the secondary stage's own script
+rather than by the probe. An `edge` host's fstab share is a plain `cifs` entry, mounted
+automatically and always available, so no `mount.sh` and no power step is involved for it. See
+*Powering and mounting the backup disks*.
 
 ## Module contract — built
 
@@ -526,20 +561,22 @@ Participation is `installService.backupEnabled` from `probe_install.go`, which a
 rather than walking the tree itself, and a module enrolling or leaving is picked up by the existing
 stat fingerprint with nothing new to invalidate.
 
-The three stages run **serially, in order**, because each depends on the one before: the secondary
+A host's stages run **serially, in order**, because each depends on the one before: the secondary
 stage has nothing to copy until the primary stage has produced it, and the tertiary stage nothing to
-mirror until the secondary stage has been written and thinned.
+mirror until the secondary stage has been written and thinned. An `edge` host runs the first two; a
+`server` runs all three.
 
 So, per run:
 
 1. allocate the `run_id`, create the run directory, publish `supervisor/<host>/backup/status`
-2. for each stage in order, exec `/asystem/etc/backup/<stage>/start.sh` with the `run_id`, and wait
+2. for each stage this host runs, in order, exec `/asystem/etc/backup/<stage>/start.sh` with the
+   `run_id`, and wait
 3. on a stage exceeding its deadline, exec that stage's `stop.sh`, record the stage failed and
    **stop** — a stage whose predecessor did not finish has nothing sound to work from
 4. read the stage and module documents the scripts wrote, roll them into `<run>/status.json`, and
    republish
-5. on the leader alone, once every expected host has reported a terminal state or the lease has
-   expired, switch the outlet off
+5. on the leader alone (a `server`), once every expected `server` has reported a terminal state or
+   the lease has expired, switch the outlet off
 
 **It also watches for runs it did not start.** A stage invoked by hand publishes the same topics, so
 the probe adopts it: an in-flight stage with an `expires_ts` in the future is a run in progress
@@ -549,11 +586,13 @@ inferred — see *Payload specifications*.
 
 ### Powering and mounting the backup disks
 
-**The disks are on a switched outlet and are unmounted between runs.** `rack_backup_plug` — a Sonoff
-BasicR2 in the rack, already declared in `src/meg/tasmota/src/build/resources/devices/` and already a
-Home Assistant switch entity — powers **every** USB backup drive in the estate at once. Nothing is
-mounted until it has been on long enough for the drives to spin up and enumerate, so the secondary
-and tertiary stages cannot simply `rsync` into a path and hope.
+**The `/backup` disks are on a switched outlet and are unmounted between runs.** `rack_backup_plug`
+— a Sonoff BasicR2 in the rack, already declared in
+`src/meg/tasmota/src/build/resources/devices/` and already a Home Assistant switch entity — powers
+**every `server` host's USB `/backup` drive** at once. The `/share` disks are **not** on it: they
+carry live data and stay mounted, so the secondary stage writes into `/share` with no power step.
+Only the tertiary stage needs the outlet, and it cannot simply `rsync` into `/backup` and hope —
+nothing is mounted until the drive has been on long enough to spin up and enumerate.
 
 **`mount.sh` owns the mounting half, and it is generated like everything else supervisor ships.**
 Its source fragment is `src/build/resources/mount.sh` and `fab generate` writes
@@ -581,10 +620,13 @@ publishing `homeassistant/status` on Home Assistant's behalf. A plug already on 
 and costs one round trip.
 
 **The plug's topic comes from `config.json`, so no estate literal reaches the Go.** `generate.py`
-writes a `backup` block beside `schema` naming the command and state topics, the probe reads it
+writes a `backup` block beside `schema` — naming the plug's command and state topics — **for
+`server` form-factor hosts only**, the same hosts that own a `/backup` disk. The probe reads it
 through `config` as it reads everything else, and the boundary test below is unchanged — the driver
-still contains no `rack_backup_plug`. A host with no such block simply never switches anything, which
-is the correct behaviour for a host whose disks are somebody else's.
+still contains no `rack_backup_plug`. A host with no `backup` block never switches anything, never
+mounts `/backup` and runs no tertiary stage: `edge` hosts get no block, and `client`/`network`/`ignore`
+hosts get no schema entry at all. The block's presence *is* the "runs the tertiary stage" flag —
+one source of truth, derived from `.hosts`.
 
 **`up` does three things, in order, and each is idempotent:**
 
@@ -600,28 +642,29 @@ is the correct behaviour for a host whose disks are somebody else's.
 3. **Assert.** Every mountpoint it was responsible for is `mountpoint`-clean, or `up` fails with the
    list of those that are not.
 
-**It decides local versus remote from the fstab line, never from the host name.** A `/backup` line
-of a local filesystem type is a directly attached disk; a `cifs` line is another host's disk over
-samba, and needs its credentials and its network rather than a spin-up wait. So the same script
-covers both without a per-host branch:
+**It reads the fstab line, never the host name.** On a `server` the `/backup` entry is a local
+filesystem type — a directly attached disk behind the switched outlet — and `mount.sh` waits for it
+to spin up, mounts it and asserts it. There is no `cifs` `/backup` anywhere: an `edge` host has no
+`/backup` at all. So the script needs no local-versus-remote branch and no per-host branch:
 
-| Host | `/share/<n>` | `/backup` |
+| Host (form-factor) | `/share/<n>` | `/backup` |
 |---|---|---|
-| `mad`, `max`, `may`, `meg` | local, its own numbered shares | local, its own USB backup disk |
-| `jen` | `cifs` from `mad`, mounted at `/share/10` | `cifs` from `mad` |
+| `mad`, `max`, `may`, `meg` (`server`) | local, its own numbered shares, always mounted | local, its own USB backup disk, `noauto`, mounted by `mount.sh` around the tertiary stage |
+| `jen`, `jil` (`edge`) | `cifs` from a `server`, mounted automatically at `/share/<n>` | none — the `edge` host never mounts `/backup` |
 
-**`jen`'s two mounts are not symmetrical, and only one of them is the script's problem.**
-`/share/10` is mounted **automatically by fstab** and needs nothing from `mount.sh` beyond the
-readiness assertion — the drive behind it on `mad` still has to be powered and spun up first, which
-is the whole reason the switch is estate-wide rather than per host. `/backup` is the on-demand one: its
-fstab entry is `noauto`, and `mount.sh` mounts and unmounts it around the run.
+**`mount.sh` runs on `server` hosts only, and its whole subject is `/backup`.** A `server`'s
+`/share/*` mounts are `auto` and permanent, so the script asserts them with `mountpoint` and does
+nothing else; `/backup` is the `noauto` entry it powers up, waits for, mounts before the tertiary
+stage and unmounts after. An `edge` host ships `mount.sh` too — every module ships every generated
+script — but its `config.json` carries no `backup` block, so it never invokes it and never switches
+the plug.
 
 **Switching on and switching off are not the same problem.**
-One plug powers every host's drive, so switching **on** is idempotent and safe from anywhere, while
-switching **off** would cut another host mid-`rsync` — including `jen`, writing to `mad`'s disk over
-samba. So switching on is harmless wherever it happens and **each stage script does it for itself**,
-`mount.sh down` unmounts and leaves the outlet alone, and the outlet is switched **off** by exactly
-one host per day, elected. See *The cluster singleton*.
+One plug powers every `server`'s `/backup` drive, so switching **on** is idempotent and safe from
+anywhere, while switching **off** would cut another `server` mid-`rsync`. So switching on is harmless
+wherever it happens and **the tertiary stage script does it for itself**, `mount.sh down` unmounts
+and leaves the outlet alone, and the outlet is switched **off** by exactly one `server` per day,
+elected. `edge` hosts are not candidates — they never touched the plug. See *The cluster singleton*.
 
 `rack_backup_plug` publishes no energy entity today, so nothing reports what an outlet left on
 costs. Adding one — the shape `rack_outlet_plug` and `ceiling_network_switch_plug` already use — is
@@ -633,21 +676,25 @@ ESP8285, where that guarantee holds; the ESP32 caveat in the root `CLAUDE.md` do
 Its `PowerOnState` should nonetheless be confirmed, since a cold power-up of the plug itself decides
 whether the disks come back after a rack outage.
 
-**Failure is a recorded stage failure, never a partial copy.** If the plug does not answer, a device
-does not appear, or a mount does not assert, the secondary and tertiary stages
-are marked `success_bool: false` with the reason in `logs/secondary.log`, and the primary stage's result
-stands on its own — the day's backups still exist locally and are promoted on the next successful
-run, because the copy from the primary stage is additive and no data is lost by a skipped promotion.
+**Failure is a recorded stage failure, never a partial copy.** If the plug does not answer, the
+`/backup` disk does not appear, or its mount does not assert, the tertiary stage is marked
+`success_bool: false` with the reason in `logs/tertiary.log`. The secondary stage does not depend on
+any of that — it writes to an always-mounted `/share` — so a dead backup disk costs the tertiary
+stage alone. The primary and secondary results stand on their own: the day's backups exist locally
+and on the share, and are promoted on the next successful tertiary run, because the copy from the
+secondary stage is additive and no data is lost by a skipped promotion.
 
 ### The cluster singleton
 
-**One host per day switches the outlet off. That is the whole of it.** Every host powers the outlet
-*on* for itself and runs its own stages without waiting for anybody — see *Stage scripts and the
-broker namespace* — so the singleton exists for the one decision that cannot be taken locally,
-because cutting power would take out another host mid-`rsync`. The election runs on the broker every
-host is already connected to, using only retained messages and a last will — no new dependency, no
-new service, and nothing that survives a broker recreate, which is correct because a broker recreate
-should void a lease rather than preserve it.
+**One `server` per day switches the outlet off. That is the whole of it.** Every `server` powers the
+outlet *on* for itself and runs its own tertiary stage without waiting for anybody — see *Stage
+scripts and the broker namespace* — so the singleton exists for the one decision that cannot be
+taken locally, because cutting power would take out another `server` mid-`rsync`. `edge` hosts are
+outside the election entirely: they never mount `/backup`, never run a tertiary stage, and never
+touch the plug. The election runs on the broker every host is already connected to, using only
+retained messages and a last will — no new dependency, no new service, and nothing that survives a
+broker recreate, which is correct because a broker recreate should void a lease rather than preserve
+it.
 
 **It is deliberately more than the job appears to need.** A fixed host named in `config.json` would
 switch off too, until that host was down or decommissioned and the disks stayed powered with nothing
@@ -685,8 +732,9 @@ election rather than retry for ten minutes.
 serialises writes to one retained topic, so the last write wins and every reader converges on the
 same value. That is all this needs:
 
-1. Only `mad`, `max`, `may` and `meg` are candidates, in that order — they hold the disks. `jen` and
-   any future host with no local share never claims, it only waits.
+1. Only `server` form-factor hosts are candidates — `mad`, `max`, `may`, `meg`, in that order — since
+   only they own a `/backup` disk and a `config.json` `backup` block. An `edge` host has no block, so
+   `probe_mqtt.go` never enters the election on it.
 2. A candidate publishes the election payload retained to `supervisor/leader/backup/election`, with its
    **last will set to an empty payload on that same topic**, so a crash clears the lease rather than
    stranding it.
@@ -696,7 +744,7 @@ same value. That is all this needs:
 4. A candidate finding a lease that is **already held and not expired** follows immediately and does
    not publish. One finding an **expired** lease claims it, which is what recovers a leader lost to
    a hard reset before its will was delivered.
-5. If no lease can be established within `leaderTimeout`, the host **runs all three stages anyway**
+5. If no lease can be established within `leaderTimeout`, the `server` **runs all its stages anyway**
    and records that no leader was elected. A failed election costs the outlet being switched off at
    the end, not a backup — the scripts need no leader to run, and the next day's leader finds an
    expired lease and clears it. This is weaker than it was and deliberately so: when the stages
@@ -714,21 +762,24 @@ ordinary per-host work happening in parallel:
 - **init** — allocate the run timestamp and publish the lease. It no longer switches the plug on:
   `tertiary/start.sh` does that for itself, so a manual tertiary run needs no leader.
 - **destroy** — switch the plug off, then clear `election` and `status`. Reached when every expected
-  host's `supervisor/<host>/backup/status` reports a terminal state for this timestamp, or when the
-  lease expires, whichever is first. **Switching off is still the leader's alone**, because another
-  host may still be writing.
-- **the expected set is read, not configured** — every host whose retained `supervisor/<host>/status`
-  is `online` and which is configured to back up. So a host that is down does not hold the outlet on
-  for five hours, and no list has to be maintained anywhere.
+  `server`'s `supervisor/<host>/backup/status` reports a terminal state for this timestamp, or when
+  the lease expires, whichever is first. **Switching off is still the leader's alone**, because
+  another `server` may still be writing. `edge` hosts are not in the expected set — they never write
+  to `/backup`, so the leader does not wait on them.
+- **the expected set is read, not configured** — every `server` whose retained
+  `supervisor/<host>/status` is `online` and which carries a `backup` block in `config.json`. `edge`
+  hosts are excluded by having no block. So a `server` that is down does not hold the outlet on for
+  five hours, and no list has to be maintained anywhere.
 
-**The leader is an ordinary host in every other respect** — it runs the same three stages as
-everyone else, on its own gate, and its own terminal state counts like any other.
+**The leader is an ordinary `server` in every other respect** — it runs the same three stages as
+every other `server`, on its own gate, and its own terminal state counts like any other.
 
-**The primary stage is outside all of this.** It writes only to `/home/asystem`, needs no powered
-disk and no mount, so it runs immediately at `--daily-time` on every host with no election, no
-waiting and no dependency on the broker. Only the secondary and tertiary stages are wrapped. That is worth
-being explicit about, because it means **a total failure of the election still produces the day's
-backups** — it only costs their promotion.
+**The primary and secondary stages are outside all of this.** They write only to `/home/asystem` and
+an always-mounted `/share`, need no powered disk and no election, so they run immediately at
+`--daily-time` on every `edge` and `server` host with no waiting and no dependency on the broker.
+Only the tertiary stage is wrapped. That is worth being explicit about, because it means **a total
+failure of the election still produces the day's backups on the share** — it only costs the mirror
+to `/backup`.
 
 ### Surviving a hard reset
 
@@ -759,15 +810,22 @@ direction to fail.
 
 ### The run's output
 
-**Supervisor's data directory holds one backup tree, not two.** The run's record *is* supervisor's
-backup: the driver writes it into the standard backup root, named and timestamped exactly as every other
-module's is, and the secondary and tertiary stages promote it as they find it. It sits under the one
-existing `${SERVICE_DATA_DIR}:/asystem/mnt` volume, so the probe writes container paths and needs no
-prefix awareness:
+**Supervisor's backup tree sits exactly where every other module's does — a sibling of the versioned
+homes, not under `latest`.** The run's record *is* supervisor's backup, so it goes to
+`/home/asystem/supervisor/backup/`, the same `<data root>/backup` shape as
+`/home/asystem/postgres/backup/`, named and timestamped identically, and the secondary and tertiary
+stages promote it as they find it with no special case. Two reasons it is **not**
+`/home/asystem/supervisor/latest/backup/` (nor the container-relative `/asystem/mnt/backup/` that
+resolves to it): `install.sh` copies the old home into the new one on every deploy, so a `backup/`
+inside `latest` would be dragged forward — the whole accumulated history — on every supervisor
+release, exactly the trap *item 2* documents for influxdb3; and a sibling path is the module
+contract, so the secondary stage's `rsync` of supervisor's root stops being an exception. It needs
+the `/home/asystem` same-path bind from build-order step 4, and then the path is identical in the
+container and on the host:
 
-| Tree | Container | Host | Holds | Written by |
-|---|---|---|---|---|
-| **backup** | `/asystem/mnt/backup/` | `/home/asystem/supervisor/latest/backup/` | one directory per run — `status.json` and `logs/` | the driver, every run |
+| Tree | Container and host (same path) | Holds | Written by |
+|---|---|---|---|
+| **backup** | `/home/asystem/supervisor/backup/` | one directory per run — `status.json` and `logs/` | the driver, every run |
 
 An earlier design had two — a `state/` tree the driver wrote and a `backup/` tree holding a
 `supervisor_<timestamp>_<version>_full.tar.gz` of it, produced at the head of the primary stage. The tar
@@ -781,7 +839,7 @@ sparse point self-contained is trivially satisfied by every directory in this tr
 The run directory layout is fixed and is the contract every reader depends on:
 
 ```
-/asystem/mnt/backup/<timestamp>/
+/home/asystem/supervisor/backup/<timestamp>/
 ├── status.json                     the host document      → backup/status
 ├── primary/status.json             one stage's result     → backup/primary/status
 ├── secondary/status.json                                  → backup/secondary/status
@@ -849,7 +907,7 @@ The three shapes share one set of keys, so a reader learns them once and applies
 | `started_ts` / `finished_ts` | an **RFC 3339 instant**, local with offset, so a moment is comparable without knowing the host's zone — distinct from the portable timestamp, which names a run rather than measuring one |
 | `duration_s` | wall seconds, `finished_ts - started_ts` |
 | `success_bool` | this level completed without a failure; a stage is true only when every module under it is true |
-| `disk_usage_perc` | percentage used of the filesystem this level **wrote to** — the module data volume, `/share`, `/backup`. At the run level it is **`/backup` alone**, not a roll-up of the three, because that is the volume `Used BKP` names |
+| `disk_usage_perc` | percentage used of the filesystem this level **wrote to** — the module data volume, `/share`, `/backup`. At the run level it is **`/backup` alone**, not a roll-up, because that is the volume `Used BKP` names — absent from an `edge` host's run document, which has no tertiary stage |
 | `file_count` | files this level wrote or holds at its destination |
 | `size_mb` | megabytes this level wrote or holds at its destination |
 
@@ -871,17 +929,18 @@ which modules were even attempted.
 
 ### Stage scripts and the broker namespace — planned
 
-**Each stage is a self-contained bash pair on the host, and supervisor schedules rather than
-implements it.** The driver decides *when* a stage runs, times it out and rolls up the result; the
-stage itself is a script that can be run by hand with no supervisor at all. That division is what
-makes a backup recoverable when the thing that schedules it is the thing that is broken.
+**Each stage is a self-contained bash pair, and supervisor schedules rather than implements it.** The
+driver decides *when* a stage runs, times it out and rolls up the result; the stage itself is a
+script the driver execs from inside its container and which can equally be run by hand from a host
+shell — the same-path binds make the two identical. That division is what makes a backup recoverable
+when the thing that schedules it is the thing that is broken.
 
 ```
-<install>/supervisor/latest/image/backup/primary/{start.sh,stop.sh}      shipped, on the host
+<install>/supervisor/latest/image/backup/primary/{start.sh,stop.sh}      shipped, reachable from a host shell
 <install>/supervisor/latest/image/backup/secondary/{start.sh,stop.sh}
 <install>/supervisor/latest/image/backup/tertiary/{start.sh,stop.sh}
-/asystem/etc/backup/<stage>/{start.sh,stop.sh}                           the same files, in container
-/home/asystem/supervisor/latest/backup/<timestamp>/                      written, one per run
+/asystem/etc/backup/<stage>/{start.sh,stop.sh}                           the same files, in the container
+/home/asystem/supervisor/backup/<timestamp>/                             written, one per run, same path both sides
 ```
 
 **The scripts are shipped artefacts and belong in `image/`, beside `mount.sh` and `broker.sh`.**
@@ -893,14 +952,14 @@ from `src/build/resources/backup/<stage>/{start,stop}.sh`, land in `src/main/res
 and ship like everything else.
 
 **That is also what settles `backup` against `backups`.** The plural was proposed to keep supervisor's
-stage directory from colliding with the module-level `backup/`, and the collision is real but it is
-not between modules — `/home/asystem/postgres/backup/` and `/home/asystem/supervisor/latest/backup/`
-are already distinct by the module segment. It is **within supervisor's own `latest/`**, where the
-run output has held `backup/` all along. Splitting on the plural would put `backup/` and `backups/`
-side by side in one parent, distinguished by a single letter, which is the kind of naming that
+run directory from colliding with the module-level `backup/`, and there is no collision:
+`/home/asystem/postgres/backup/` and `/home/asystem/supervisor/backup/` are distinct by the module
+segment, and supervisor's tree is now a sibling of `latest/` like every other module's rather than
+nested inside it. Splitting on the plural would put `backup/` and `backups/` side by side in one
+parent, distinguished by a single letter, which is the kind of naming that
 eventually costs somebody an afternoon. Splitting on **what the estate already splits on** costs
 nothing: `image/` is what we ship and `/home/asystem/…` is what we write, so both can be called
-`backup` and neither is ambiguous. The word stays singular everywhere, and `/asystem/mnt/backups`
+`backup` and neither is ambiguous. The word stays singular everywhere, and a `backups/` plural
 is not needed.
 
 **Logs stay in the run directory and are not duplicated beside the scripts.** A stage writes
@@ -910,8 +969,9 @@ it. A `<timestamp>.log` per stage sitting next to the scripts would be a second 
 information in the shipped tree, which a release would then carry forward as though it were an
 artefact.
 
-**`start.sh` runs the stage; `stop.sh` halts it safely.** Both are per stage, both are idempotent,
-and neither knows about the other stages:
+**`start.sh` runs the stage; `stop.sh` tears it down.** Both are per stage, both are idempotent, and
+neither knows about the other stages. For the tertiary stage `start.sh` calls its own `stop.sh` on
+the way out, so `/backup` is mounted only for the span of the copy:
 
 **primary** — for each module configured on this host, **serially**, skipping any with no
 `backup.sh` and any whose container is not running:
@@ -932,49 +992,61 @@ about to write sits in a backup root named and timestamped like every other modu
 stages promote it as they find it. The one consequence is unchanged — this run's own record is
 written after the stages it describes, so it reaches the secondary stage on the following day.
 
-**secondary** — the preamble, then for each module whose primary stage succeeded, so a bad backup is
-never promoted:
+**secondary** — no preamble (the share is always mounted), then for each module whose primary stage
+succeeded, so a bad backup is never promoted:
 
 1. `rsync -a --link-dest` of the previous copy, no `--delete`, of `/home/asystem/<module>/backup/`
-   into `/share/<index>0/backup/<module>/`, with `--temp-dir` (see *Surviving a hard reset*).
-   Supervisor's own root is `/home/asystem/supervisor/latest/backup/` rather than the sibling path,
-   which is not a module-specific case: the script is not asking where a module keeps its backups,
-   it is copying the directory supervisor writes itself
+   into `/share/<index>0/backup/<module>/` — `<index>0` from `config.json` on a `server`, the
+   lowest-numbered mounted `/share/<n>` from fstab on an `edge` host — with `--temp-dir` (see
+   *Surviving a hard reset*).
+   Supervisor's own root is `/home/asystem/supervisor/backup/`, the same `<data root>/backup` shape
+   as every module, so it is not a special case: the script copies the directory supervisor writes
+   itself exactly as it copies a module's
 2. source that module's `backup.sh` in a subshell, so `backup_is_full`, `backup_is_delta` and
    `backup_listed` are its own, or call `backup.sh --prune <dir>` as a subprocess
 3. thin to the GFS ladder — the tiers, the per-module depths and the `_full` / `_delta` rule are
    specified once in *Retention, secondary stage* and are not restated here
 
-**tertiary** — the preamble, then once for each mounted share on this host rather than only the
-principal one, both sides guarded on `mountpoint`:
+**tertiary** — `server` hosts only, the preamble first, then once for each mounted share on this host
+rather than only the principal one, both sides guarded on `mountpoint`:
 
-1. `rsync -a --delete --exclude tmp/` of `/share/<n>/` into `/backup/share/<n>/`, `tmp` being
-   scratch never worth replicating, with `--temp-dir` for the same reason as the secondary stage
-2. snapshot and thin, per *Filesystem, tertiary stage*
+1. the preamble — publish `ON`, then `mount.sh up` for `/backup`
+2. `rsync -a --delete --exclude tmp/` of `/share/<n>/` into `/backup/share/<n>/` for each mounted
+   share, `tmp` being scratch never worth replicating, with `--temp-dir` for the same reason as the
+   secondary stage
+3. snapshot and thin, per *Filesystem, tertiary stage*
+4. `tertiary/stop.sh` — `mount.sh down` to unmount `/backup`, then exit `0`. It runs here on success
+   exactly as it runs on a kill or a timeout, so `/backup` is never left mounted between runs
 
 **Guard on `mountpoint` before every write**, even though the preamble has already asserted it — the
 mount can lapse in between, and writing to an unmounted `/share/10` silently creates the path on the
 root filesystem and fills the OS disk rather than merely failing.
 
-**`stop.sh` is the same three shapes.** Primary signals the running `backup.sh` and lets it clean up
-its own temporary file; secondary and tertiary kill the `rsync` and unmount. **None of them switches
-the plug off**, ever.
+**`stop.sh` is the same three shapes, and for the tertiary stage it always runs.** Primary signals
+the running `backup.sh` and lets it clean up its own temporary file; secondary kills the `rsync`.
+**The tertiary `stop.sh` is the normal teardown, not only the abort path** — `tertiary/start.sh`
+invokes it as its last act once every share has replicated, and it also runs on a kill or a
+timeout. It kills any `rsync` still going, runs `mount.sh down` to unmount `/backup`, and exits
+cleanly. So a successful tertiary run leaves `/backup` unmounted exactly as a failed one does, and
+the disk is idle before the leader cuts power. **None of the three switches the plug off**, ever —
+that stays the leader's, on completion of the whole estate or on lease expiry.
 
-**The preamble is shared, because both stages need the disks.** `/share/<n>` is on the same switched
-outlet as `/backup`, so secondary needs power and a mount exactly as tertiary does, and the preamble
-is two steps: publish `ON` to the plug, then `mount.sh up`. **The waiting and the asserting are
-`mount.sh`'s, not the preamble's** — it already polls for the fstab devices under
-`mountReadySeconds` and fails with the list of mountpoints that did not come up, so a preamble that
-also waited would be a second implementation of the same loop. Both steps are idempotent and
-reentrant, so the second stage to run finds the work done and costs one round trip.
+**The preamble belongs to the tertiary stage alone, because it is the only stage that needs a
+powered disk.** `/share` is always mounted, so the secondary stage writes straight into it; `/backup`
+is the cold drive on the switched outlet. The preamble is two steps: publish `ON` to the plug, then
+`mount.sh up`. **The waiting and the asserting are `mount.sh`'s, not the preamble's** — it already
+polls for the fstab devices under `mountReadySeconds` and fails with the list of mountpoints that did
+not come up, so a preamble that also waited would be a second implementation of the same loop. Both
+steps are idempotent and reentrant, so a `server` finding another `server` has already powered the
+outlet costs one round trip.
 
-**Only tertiary touches the plug, and only in one direction.** Switching on is idempotent and safe
-from anywhere, so `tertiary/start.sh` does it and the retained `power` topic is gone — a script that
-can wait for its own devices to appear does not need to be told that somebody else has powered them.
-Switching **off** is the estate-wide decision and stays with the leader, because another host may
-still be writing: a `stop.sh` that cut power would take out every other tertiary run in flight. So
-`stop.sh` unmounts and returns, and the outlet is switched off by the leader on completion or on
-lease expiry, exactly as before.
+**Only the tertiary stage touches the plug, and only in one direction.** Switching on is idempotent
+and safe from anywhere, so `tertiary/start.sh` does it and the retained `power` topic is gone — a
+script that can wait for its own devices to appear does not need to be told that somebody else has
+powered them. Switching **off** is the estate-wide decision and stays with the leader, because
+another `server` may still be writing: a `stop.sh` that cut power would take out every other tertiary
+run in flight. So `stop.sh` unmounts and returns, and the outlet is switched off by the leader on
+completion or on lease expiry, exactly as before.
 
 **Run by hand, a stage detaches and still leaves a log.** Invoked manually a `start.sh`
 re-executes itself in the background, `disown`ed, so the shell can log out and the run continues,
@@ -982,8 +1054,8 @@ with output `tee`d to both its `<run>/logs/<stage>.log` and stdout. A run invoke
 script with the same output; nothing branches on who called it except where the timestamp comes from.
 
 **The timestamp is allocated at the level that starts the work, and it flows downward only.** A
-supervisor-scheduled run allocates one timestamp and passes it to all three stages, which pass it to
-each module's `backup.sh` and to the btrfs snapshot label, so one string traces a night's work
+supervisor-scheduled run allocates one timestamp and passes it to every stage it runs, which pass it
+to each module's `backup.sh` and to the btrfs snapshot label, so one string traces a night's work
 through every log, every payload and every snapshot. A stage or a module script run **by hand**
 allocates its own timestamp, which does not propagate upward — the module backup directory is then
 timestamped differently from any run that later promotes it, and that is fine and already true: the run
@@ -1090,9 +1162,13 @@ would put one key name with two types in one module's declared payloads, and not
   "disk_usage_perc": "<number>",
   "file_count": "<number>",
   "size_mb": "<number>",
+  "stages_run": "<number>",
   "stages_failed": "<number>"
 }
 ```
+
+`stages_run` is 2 on an `edge` host and 3 on a `server`, so `Fail BKP` is `stages_failed ÷
+stages_run` and never divides by a stage the host was never going to run.
 
 `supervisor/<host>/backup/<stage>/status`
 
@@ -1217,23 +1293,33 @@ standalone rather than merely separately invocable.
 
 | Metric | Reads, in the document | Rule | Mirrored on the topic |
 |---|---|---|---|
-| `host/failed_backups` (`Fail BKP`) | `stages_failed` in `<run>/status.json` | `failed ÷ 3 × 100`, so `0` / `33` / `67` / `100`; red if not `0` | `supervisor/<host>/backup/status` |
-| `host/used_backup_space` (`Used BKP`) | `disk_usage_perc` in `<run>/tertiary/status.json` | amber above `90`, red above `95` | `supervisor/<host>/backup/tertiary/status` |
+| `host/failed_backups` (`Fail BKP`) | `stages_failed` and `stages_run` in `<run>/status.json` | `failed ÷ stages_run × 100` — `stages_run` is 2 on an `edge` host, 3 on a `server` — red if not `0` | `supervisor/<host>/backup/status` |
+| `host/used_backup_space` (`Used BKP`) | `disk_usage_perc` in `<run>/tertiary/status.json` | amber above `90`, red above `95`; **errors on an `edge` host**, which owns no `/backup` and writes no tertiary document | `supervisor/<host>/backup/tertiary/status` |
 | `service/backup_status` (service `BKP`) | `success_bool` in `<run>/<module>/status.json` | true is healthy, which `Truthy()` already expresses | `supervisor/<host>/backup/<module>/status` |
+
+**On an `edge` host only the primary and secondary stages run, so the metrics scope to that.**
+`Fail BKP` divides by `stages_run` rather than a hardcoded 3, so two clean stages read `0` and a
+failed secondary reads `50`. `Used BKP` is a statement about the backup disk, which an `edge` host
+does not have — it errors into the blank-and-alert "could not measure" state, the same reading
+`MetricHostAllocatedMemory` gives on a host absent from the schema, rather than reporting a
+confident number about somebody else's disk. `service/backup_status` is unchanged: the primary
+stage runs on every `edge` and `server` host, so each module's `success_bool` is produced everywhere.
 
 Mapping onto the two-boolean colour model the display already uses (`pulse=false` is red,
 `pulse=true` with `trend=false` is amber):
 
 - **`Fail BKP`** — `pulseRule: Bounded(Self, Exactly, 0)` and `trendRule: Bounded(Self, Exactly, 0)`,
-  which is what it declares today. Only the value changes: the stub becomes the failed-stage share.
+  which is what it declares today. Only the value changes: the stub becomes the failed-stage share,
+  `stages_failed ÷ stages_run`.
 - **`Used BKP`** — `pulseRule: Bounded(Self, AtMost, 95)`, `trendRule: Bounded(Self, AtMost, 90)`,
   replacing today's 90/80, so the thresholds are the ones stated above rather than inherited from a
   placeholder. **It reads the document and never the filesystem.** `/backup` is unmounted between
   runs by design, so a metric that stat'd it directly would paint the blank-and-alert "could not
-  measure" state on every host for the twenty-three hours a day the disks are off — a permanent fault
-  reporting a normal condition. The run-level `disk_usage_perc` is the reading, the derivation names
-  the run directory it came from and its age, and the metric errors only when no document has ever
-  been read.
+  measure" state on a `server` for the twenty-three hours a day the disk is off — a permanent fault
+  reporting a normal condition. The run-level `disk_usage_perc` from `<run>/tertiary/status.json` is
+  the reading, the derivation names the run directory it came from and its age, and the metric errors
+  when no such document has ever been read — which on an `edge` host is always, since it runs no
+  tertiary stage.
 - **`service/backup_status`** — `Truthy()` on both rules, replacing today's `Always()`. `Always()` is
   what makes the current stub green regardless, and it is exactly the "declaring itself healthy
   whatever it holds" pattern `host/services` was converted away from.
@@ -1275,43 +1361,69 @@ directory and its age so a stale reading explains itself without a debugger.
 
 ### What this needs that does not exist yet
 
-Two prerequisites, both about the image. Note the stage scripts run **on the host** and need
-nothing from it: `mosquitto_pub` and the broker variables in `<install>/supervisor/latest/.env` are
-already there on all five hosts, see item **16**.
+Prerequisites about the image and the container boundary. Note the stage scripts publish to the
+broker with `mosquitto_pub` and the broker variables in `<install>/supervisor/latest/.env`, which
+are already present on all five hosts — that half needs nothing new, see item **16**.
 
-**Four packages in the image.** `docker_deps_base.txt` carries `mosquitto-clients`, `jq` and
+**Three packages in the image.** `docker_deps_base.txt` carries `mosquitto-clients`, `jq` and
 `smartmontools` and none of these:
 
 | Package | Needed by |
 |---|---|
 | a docker client | the primary stage — each module's script runs `docker exec` and `docker stop`/`start` |
 | `rsync` | the secondary and tertiary stages |
-| `cifs-utils` | `mount.sh` on `jen`, for the two samba mounts |
-| `util-linux` | `mountpoint`, the guard both stages and `mount.sh` depend on |
+| `util-linux` | `mountpoint`, the guard every stage and `mount.sh` depend on |
 
-All four are base rather than build packages, since they run in the shipped image. Add the names,
+All three are base rather than build packages, since they run in the shipped image. Add the names,
 run `fab generate`, then paste the pinned `RUN` block from `docker_deps.sh` into the `Dockerfile`.
+`cifs-utils` is **not** in this list: the only samba mount left is an `edge` host's `/share/<n>`
+fstab entry, which the *host* mounts — a host concern, not the image's — and a `server`'s `/backup`
+is a local disk.
 
-**Same-path mounts replacing the read-only `/:/host`.** Mount the directories the driver needs at
-the paths they already have on the host, so the script the driver runs is the same script, at the
-same path, reading and writing the same places, whether invoked from a shell on the host or from
-inside `supervisor`:
+**Same-path mounts beside the read-only `/:/host`.** Mount the directories the driver needs at the
+paths they already have on the host, so the script the driver runs is the same script, at the same
+path, reading and writing the same places, whether invoked from a shell on the host or from inside
+`supervisor`:
 
-| Mount | Mode | Why |
-|-------|------|-----|
-| `/var/lib/asystem/install` | `ro` | each module's `backup.sh` and its `.env` |
-| `/home/asystem` | `rw` | the module data directories, where `backup/` is written |
-| `/share` | `rw` | the secondary stage's destination |
-| `/backup` | `rw` | the tertiary stage's destination |
-| `/var/run/docker.sock` | `rw` | already mounted — `exec` into a module, and `stop`/`start` for offline copies |
+| Mount | Mode | Form-factor | Why |
+|-------|------|-------------|-----|
+| `/var/lib/asystem/install` | `ro` | all | each module's `backup.sh` and its `.env` |
+| `/home/asystem` | `rw` | all | the module data directories, where `backup/` is written |
+| `/share` | `rw` `:rshared` | all | the secondary stage's destination — a `server`'s own partitions, or an `edge` host's fstab `cifs` mount |
+| `/backup` | `rw` `:rshared` | `server` only | the tertiary stage's destination, mounted by `mount.sh` inside the container |
+| `/var/run/docker.sock` | `rw` | all | already mounted — `exec` into a module, and `stop`/`start` for offline copies |
 
-**`/share` and `/backup` must be bound `rshared`, or `mount.sh` mounts into a namespace nobody
-sees.** A mount the container makes under a default private bind is invisible to the host, and — the
-half that actually bites — a mount the *host* makes afterwards is invisible to the container, which
-is exactly `jen`'s automatic `/share/10` fstab mount. Both directions need mount propagation, so
-these two entries carry `:rshared` (and the host's own `/share` and `/backup` must be shared mounts
-for the kernel to allow it). This is the one prerequisite that is not merely a package or a path,
-and it should be proved on `jen` before the secondary stage is written anywhere else.
+**`/share` and `/backup` must be bound `:rshared`, or the mounts cross the container boundary the
+wrong way.** A mount the container makes under a default private bind is invisible to the host, and —
+the half that actually bites — a mount the *host* makes afterwards is invisible to the container.
+Two concrete cases: on a `server`, `mount.sh` mounts `/backup` **inside** the container and the
+host-side `mountpoint` guards must see it; on an `edge` host, the host's fstab mounts `/share/<n>`
+**after** the container started and the secondary stage must see it. Both need
+propagation, so both entries carry `:rshared` — and the host's own `/share` and `/backup`
+mountpoints must be shared mounts (`mount --make-shared`, or `/` shared) for the kernel to allow it.
+This is the one prerequisite that is not merely a package or a path; prove it on one `server` and on
+`jen` before the tertiary stage is written.
+
+**AppArmor must be off for the supervisor container.** `mount.sh` calls `mount(2)` from inside the
+container, and Docker's default `docker-default` AppArmor profile — confirmed **enforcing** on the
+amd64 hosts, `docker info` reports `name=apparmor` — denies `mount`/`umount` unconditionally, even
+with `CAP_SYS_ADMIN` held (which supervisor already has, for NVMe SMART). Verified on `may`:
+`docker run --cap-add SYS_ADMIN debian:12-slim … mount -t tmpfs …` → **denied**; adding
+`--security-opt apparmor=unconfined` → **ok**. So `docker-compose.yml` gains
+`security_opt: ["apparmor=unconfined"]` on the supervisor service. This is a real widening of an
+already-privileged container (docker socket, `SYS_ADMIN`, a bind of `/`), accepted deliberately as
+the cost of the container driving `mount.sh`. `seccomp` is left at `builtin` — it already permits
+`mount` once `CAP_SYS_ADMIN` is present. An `edge` host's container never calls `mount`, but ships
+the same compose file, so it carries the flag too and simply never exercises it.
+
+**The memory limit goes to 512M with the other compose changes.** The container's
+`deploy.resources.limits.memory` is `256M` today. The tertiary stage's `rsync -a --delete` of a
+whole `/share` builds an in-memory file list proportional to the file count (media libraries are
+large), and the streaming `tar`/`gzip` in a module snippet is bounded but not free. `512M` is set
+blind in build-order step 4 rather than measured first — the tertiary script also iterates one
+`/share/<n>` at a time rather than one big `rsync`, which caps the list size regardless of the total
+tree. Revisit only if a real run's RSS approaches the new cap; an OOM-killed `rsync` is a
+`--temp-dir` cleanup next run, not corruption, but it is a silent stall.
 
 **`BROKER_TOKEN` is not in `docker-compose.yml`'s `environment:`**, though `checkexecuting.sh`
 already reads it — the `${BROKER_TOKEN:+…}` form makes it connect anonymously today. If the broker
@@ -1365,11 +1477,11 @@ applies the GFS policy to what it holds, then replicates the share to `/backup`.
 the only one that *decides* a backup should go; the tertiary stage deletes only as a consequence of
 mirroring that decision.
 
-**A host writing to a borrowed share copies to a disk it does not own, and that is fine.** On `jen`
-both `/share/10` and `/backup` are `mad`'s, reached over samba, so `jen`'s secondary stage writes into
-`mad`'s share and its tertiary stage is a no-op for every `/share/<n>` but the one it mounted — `mad`
-replicates its own shares on its own run. The `mountpoint` guard is what keeps that honest: `jen`
-sees exactly one mounted share and replicates exactly that.
+**An `edge` host writing to a borrowed share copies to a disk it does not own, and that is fine.** On
+`jen`, `/share/10` is `mad`'s partition reached over samba, so `jen`'s secondary stage writes into
+`mad`'s share and then stops — `jen` runs no tertiary stage. `mad`'s tertiary stage replicates every
+one of its own `/share/*`, including `/share/10` with `jen`'s backups sitting in it, on `mad`'s own
+run. The `mountpoint` guard keeps that honest: `mad` replicates exactly the shares it has mounted.
 
 **The tertiary stage covers every share, not just the one the secondary stage writes to.** The secondary stage
 only ever touches `/share/<index>0/backup/`, but the tertiary stage replicates `/share/*` into
@@ -1664,19 +1776,28 @@ The probe's own outcome is `status.json`, not an exit code — it is a daemon, n
 
 ## Code style — planned
 
-**A helper is earned by a second call site, and nothing else earns it.** A function called from
-exactly one place is not an abstraction, it is a jump: the reader leaves the flow, reads a name that
-restates the code beneath it, and comes back. Inline it. This applies to `probe_backup.go` and
-`mount.sh` alike, and to every backup snippet — the probe should read as the run it performs, in
-the order it performs it, and a snippet should read as the one command that module actually needs.
+**A helper is earned by a second call site in a second function, and nothing else earns it.** The
+rule is a trichotomy, and every step here is decided by which case it is in:
 
-- **Inline first.** Write the stage inline and split it only when a second caller appears. Three
-  stages that each read straight down beat a dozen four-line functions whose names are the only
+| Called from | Write it as |
+|---|---|
+| exactly one place | **inline** — no function, no name |
+| several places, all inside one function | a **local closure**, declared beside its first use in that function |
+| several functions | a **package-level helper** — this is the only case that earns one |
+
+A function called from exactly one place is not an abstraction, it is a jump: the reader leaves the
+flow, reads a name that restates the code beneath it, and comes back. This applies to
+`probe_backup.go` and `mount.sh` alike, and to every backup snippet — the probe should read as the
+run it performs, in the order it performs it, and a snippet should read as the one command that
+module actually needs.
+
+- **Inline first.** Write the stage inline and split it only when a second *function* needs it.
+  Three stages that each read straight down beat a dozen four-line helpers whose names are the only
   documentation of an order the code no longer shows.
-- **Where a step wants a name, use a local closure**, declared beside its use inside the function
-  that needs it, so the name is visible exactly where it means something and cannot be called from
-  anywhere else. That is the answer to "this expression appears twice inside one function", not a
-  package-level helper.
+- **A repeated expression inside one function is a local closure, never a package helper.** Declared
+  beside its use, so the name is visible exactly where it means something and nothing else can call
+  it. Reaching for a package-level function the moment an expression appears twice is what fills a
+  package with names that each mean something in only one place.
 - **Prefer repetition to a parameterised helper.** Two similar `rsync` invocations spelled out are
   easier to read, and easier to make differ, than one helper with a flag argument that both callers
   must mentally re-expand. The generation design already takes this position for the snippets —
@@ -1998,24 +2119,32 @@ not exist. The build order is the one thing this document adds, and it starts be
    `serve` alone. Testable on its own, with no backup behaviour behind it, and it is the piece
    anything else daily will reuse.
 2. **`probe_backup.go` and the primary stage** — the probe registered and the two host metrics moved
-   off `hostProbe`, then each enrolled module serially, writing the log tree and `status.json`. Stops
-   there: it is a complete, useful daily backup with no `/share` involvement.
+   off `hostProbe`, then each enrolled module serially, writing the log tree and `status.json`. Runs
+   on every `edge` and `server` host. Stops there: a complete, useful daily backup with no `/share`
+   involvement.
 3. **The metrics** — `Fail BKP`, `Used BKP` and service `BKP` off the status document, with the
    `backupStaleWindow` rule. Depends on 2 and nothing else.
-4. **The bind mounts and the packages** — `/home/asystem`, `/share`, `/backup`, and the docker
-   client, `rsync`, `cifs-utils` and `util-linux` in `docker_deps_base.txt`. The `/home/asystem`
-   bind and the docker client are needed before 2 runs anywhere real; the `/share` and `/backup`
-   binds, their `rshared` propagation and the other three packages are only needed by 5.
-5. **`mount.sh` and the mounts** — the readiness wait, the fstab-driven mounting, and
-   the `rshared` binds proved on `jen`. Independently testable by hand (`mount.sh up`, look at
-   `mountpoint`, `mount.sh down`) with no backup behaviour behind it.
-6. **The cluster singleton** — `probe_mqtt.go`, the retained-topic mutex, the will, the lease, the
-   narrowed `broker_topic_glob_data` and the three declared topics. Testable against a scratch broker
-   with no disks involved, and it is the only piece with a concurrency hazard.
-7. **The secondary and tertiary stages** — the `rsync` pair with `--temp-dir`, the GFS thin by
-   delegation, the `mountpoint` guards, gated on the election and on `mount.sh up` succeeding. Do not
-   rely on this until step 0's restore rehearsal has actually been done: a promotion is worth what a
-   restore is worth.
+4. **The bind mounts, the packages, the memory bump and the AppArmor flag** — `/home/asystem` and
+   `/var/lib/asystem/install` (all hosts), plus the docker client and `rsync` and `util-linux` in
+   `docker_deps_base.txt`, and `deploy.resources.limits.memory` raised to `512M`. The `/home/asystem`
+   bind and the docker client are needed before 2 runs anywhere real. The `/share` and `/backup`
+   `:rshared` binds and `security_opt: [apparmor=unconfined]` are only needed by 6, and depend on the
+   operator having made `/share` and `/backup` shared mounts and written each `server`'s `/backup`
+   fstab line.
+5. **The secondary stage** — the `rsync --link-dest` copy into `/share/<index>0/backup/` (`server`)
+   or the lowest mounted `/share/<n>` from fstab (`edge`), the GFS thin by delegation. No election,
+   no `mount.sh`, no `/backup` — the share is always mounted. Runs on every `edge` and `server` host.
+6. **`mount.sh`, the `/backup` mount and the cluster singleton** — `server` hosts only. The readiness
+   wait and fstab-driven `/backup` mount inside the container (needs the `:rshared` bind and the
+   AppArmor flag, proved on one `server` and on `jen`); then `probe_mqtt.go`, the retained-topic
+   mutex, the will, the five-hour lease, the narrowed `broker_topic_glob_data` and the three declared
+   topics. Both independently testable — `mount.sh up`/`down` by hand, the election against a scratch
+   broker with no disks.
+7. **The tertiary stage** — `server` hosts only: the preamble, the `rsync -a --delete` mirror of
+   every mounted `/share/*` into `/backup/share/*` with `--temp-dir`, the `mountpoint` guards, then
+   `tertiary/stop.sh` unmounting `/backup` on the way out. Gated on the election and on `mount.sh up`
+   succeeding. Do not rely on this until step 0's restore rehearsal has been done: a promotion is
+   worth what a restore is worth.
 
 A per-host cron calling each `${SERVICE_INSTALL}/backup.sh` remains a reasonable interim if daily
 backups are wanted before step 2 lands — it needs nothing that does not already exist.
@@ -2202,16 +2331,43 @@ supervisor release sweeps a lease another host is holding.
 
 ### 14 `mount.sh` does not exist, and mount propagation is unproven — gap
 
-The script is specified above and nothing is written. The part to prove first is not the script but
-the **`rshared` bind**: a mount made inside the container must be visible on the host and, more
-importantly, `jen`'s fstab-mounted `/share/10` must be visible inside the container. If propagation
-cannot be made to work, the fallback is to run `mount.sh` on the host by way of the install tree
-rather than inside the container — which reintroduces exactly the "a container cannot execute a host
-script" problem the same-path mounts were adopted to remove, so it is worth proving properly.
+The script is specified above and nothing is written. It runs on `server` hosts only, and its whole
+subject is the local `/backup` disk. Two things to prove first, both about the container boundary:
 
-`jen`'s fstab is yours to write and this plan assumes two entries: `/share/10` as `cifs` and
-automatic, `/backup` as `cifs` and `noauto`. The script reads whichever it finds, so a different
+- **The `:rshared` bind.** A `/backup` mount `mount.sh` makes inside the container must be visible to
+  the host-side `mountpoint` guards, and on an `edge` host the host's fstab-mounted `/share/<n>` must
+  be visible inside the container. Both need `:rshared` on the bind and a shared mount on the host
+  side (`mount --make-shared`). Prove it on one `server` and on `jen`.
+- **AppArmor.** Confirmed enforcing on the amd64 hosts (`docker info` → `name=apparmor`,
+  `docker-default` applied to the running supervisor container), and it denies `mount(2)` even with
+  `CAP_SYS_ADMIN`. Verified on `may`: a `--cap-add SYS_ADMIN` container is denied `mount -t tmpfs`,
+  and `--security-opt apparmor=unconfined` allows it. So the supervisor service carries
+  `security_opt: ["apparmor=unconfined"]`. The rejected alternative was running `mount.sh` on the
+  host via the install tree, which reintroduces the "a container cannot execute a host script"
+  problem the same-path mounts exist to remove; unconfining the container is the accepted cost.
+
+`jen`'s fstab is yours to write and this plan assumes one entry: `/share/10` as `cifs` and
+automatic. `jen` has **no** `/backup` entry — it runs no tertiary stage. Each `server`'s fstab needs
+a `/backup` `noauto` entry for its local disk; the script reads whichever it finds, so a different
 shape changes nothing in the Go and nothing in this document beyond the table.
+
+**Two host-provisioning steps are operator-owned, done by hand — not a module's job.** The `:rshared`
+binds need the host's `/share` and `/backup` mountpoints to be **shared mounts** (`mount
+--make-shared`, or `/` shared), and each `server` needs a `/backup` `noauto` fstab entry for its
+local disk. Both are set by hand at host provisioning, the same way `jen`'s `/share/10` fstab line
+already is — deliberately kept out of `storage`/`_debian` so the estate's mount topology stays
+something a person decides rather than something a deploy silently changes. The tertiary stage is
+dead until both exist on every `server`; that is a provisioning checklist item, not a code gap.
+
+**`/home/asystem` as an `rw` bind is a real escalation — accepted.** Today the container's only host
+view is `/:/host:ro`. Binding `/home/asystem` read-write gives a supervisor bug or a compromise
+write access to every service's data directory on the host. Narrowing it — a `ro` bind of
+`/home/asystem` for reading module `backup/` trees plus a single `rw` bind of the supervisor run
+directory — was considered and rejected: it trades the "a path is a path, no prefix awareness"
+property for one saved capability, and the container is already the most privileged in the estate
+(unconfined, docker socket, `SYS_ADMIN`, `SYS_RAWIO`). The one bound that does hold is that the
+same-path bind is `/home/asystem` and not `/`, so `/etc`, `/root` and the other hosts' install
+trees stay out of reach.
 
 ### 15 Every copy is in one building — gap, decided
 
@@ -2269,11 +2425,13 @@ and a background process alive for the length of a five-hour run to save a perio
 
 ### Closed during design and build
 
-- **Powering and mounting** — a supervisor-owned `mount.sh`, hand-authored, phased `up`/`down`,
-  driven by `/etc/fstab` rather than by a host list. The probe calls it and reads an exit code, so no
-  device name, mountpoint or filesystem type reaches the Go. The plug itself is switched from Go
-  through `probe_mqtt.go`, on a topic `config.json` supplies, so the script never touches the broker
-  and the driver still holds no estate literal.
+- **Powering and mounting** — a supervisor-owned `mount.sh`, generated via `write_container_mount()`
+  like every other shipped script, phased `up`/`down`, driven by `/etc/fstab` rather than by a host
+  list, and run on `server` hosts only (its whole subject is the local `/backup` disk). The probe
+  calls it and reads an exit code, so no device name, mountpoint or filesystem type reaches the Go.
+  The plug itself is switched from Go through `probe_mqtt.go`, on a topic `config.json` supplies for
+  `server` hosts only, so the script never touches the broker and the driver still holds no estate
+  literal.
 - **Who switches the outlet off** — a leader elected daily over MQTT with a retained-topic mutex, a
   last will and a five-hour lease, running power-on as its init and power-off as its destroy. The
   primary stage sits outside it entirely, so a failed election costs a promotion and never a backup.
@@ -2331,7 +2489,14 @@ and a background process alive for the length of a five-hour run to save a perio
   `backup_is_delta` let the secondary stage apply GFS to a module it knows nothing about.
 - **Share index** — the sixth field of `.hosts`, read by `_get_host_index()`, emitted into
   `config.json`.
-- **How a container runs a host script** — same-path bind mounts; the sidecar proposal is withdrawn.
+- **How a container runs a host script** — same-path bind mounts, `:rshared` on `/share` and
+  `/backup`, and `security_opt: [apparmor=unconfined]` on the supervisor service so `mount.sh` can
+  call `mount(2)`. The sidecar proposal and the host-side-`mount.sh` fallback are both withdrawn.
+- **Which stages a host runs** — its `.hosts` form-factor. `server` runs all three and owns
+  `/backup`; `edge` runs primary and secondary only, onto a borrowed always-mounted share, and never
+  touches the backup disk or the election; `client`/`network`/`ignore` do not run `serve`. Driven off
+  the same field `generate.py` already uses to decide the `config.json` schema, so no host is named
+  in the Go.
 - **`OFFLINE` execution mode** — not a driver concern; a script in supervisor's container can stop a
   different container without dying.
 - **`zigbee2mqtt` mechanism** — its bridge API over MQTT.
