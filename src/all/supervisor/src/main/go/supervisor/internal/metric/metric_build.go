@@ -109,7 +109,7 @@ var metricBuildersByID = []builder{
 	MetricHostFailedBackups: {
 		id:          MetricHostFailedBackups,
 		valueKind:   ValueInt,
-		unit:        "",
+		unit:        "%",
 		description: "backups failing to complete, not yet implemented",
 		template:    "supervisor/$HOST/$SCOPE/host/failed_backups",
 		persisted:   true,

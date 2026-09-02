@@ -6,7 +6,7 @@ var (
 += labnode-one ================================== vESC =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -18,7 +18,7 @@ var (
 += labnode-one =================================== vESC =+
 |Used CPU 100% Fail LOG 100%  Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50%  Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0%  Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0%  Hlth SSD   0% Used BKP   0%|
 +--------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK  SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +   influxdb3  50%  50%  -   + |
@@ -30,7 +30,7 @@ var (
 += labnode-one ==================================== vESC =+
 | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% |
 | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% |
-| Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% |
+| Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% |
 +---------------------------------------------------------+
 | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK |
 | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  |
@@ -42,7 +42,7 @@ var (
 += labnode-one ===================================== vESC =+
 |Used CPU 100%  Fail LOG 100%  Warn TEM 100%  Used HME 100%|
 |Used RAM  50%  Fail SHR  50%  Revs FAN  50%  Used SHR  50%|
-|Aloc RAM   0%  Fail BCK   0%  Hlth SSD   0%  Used BKP   0%|
+|Aloc RAM   0%  Fail BKP   0%  Hlth SSD   0%  Used BKP   0%|
 +----------------------------------------------------------+
 |SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK|
 |homeassis~ 100% 100%  -   +   influxdb3   50%  50%  -   + |
@@ -54,7 +54,7 @@ var (
 += labnode-one ================================================================ vESC =+
 |Used CPU 100%           Fail LOG 100%           Warn TEM 100%           Used HME 100%|
 |Used RAM  50%           Fail SHR  50%           Revs FAN  50%           Used SHR  50%|
-|Aloc RAM   0%           Fail BCK   0%           Hlth SSD   0%           Used BKP   0%|
+|Aloc RAM   0%           Fail BKP   0%           Hlth SSD   0%           Used BKP   0%|
 +-------------------------------------------------------------------------------------+
 |SERVICE              CPU  RAM BKP AOK           SERVICE              CPU  RAM BKP AOK|
 |homeassistant       100% 100%  -   +            influxdb3            50%  50%  -   + |
@@ -66,7 +66,7 @@ var (
 += labnode-one ================================== ^1/6 =++= labnode-two ================================== ^2/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%||Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%||Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%||Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%||Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------++-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK||SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + ||homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -76,7 +76,7 @@ var (
 += labnode-th~ ================================== ^3/6 =++= labnode-fo~ ================================== ^4/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%||Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%||Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%||Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%||Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------++-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK||SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + ||homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -86,7 +86,7 @@ var (
 += labnode-fi~ ================================== ^5/6 =++= labnode-six ================================== ^6/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%||Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%||Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%||Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%||Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------++-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK||SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + ||homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -98,7 +98,7 @@ var (
 += labnode-one ================================== ^1/6 =+ += labnode-two ================================== ^2/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%| |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%| |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%| |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%| |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+ +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK| |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + | |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -108,7 +108,7 @@ var (
 += labnode-th~ ================================== ^3/6 =+ += labnode-fo~ ================================== ^4/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%| |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%| |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%| |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%| |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+ +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK| |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + | |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -118,7 +118,7 @@ var (
 += labnode-fi~ ================================== ^5/6 =+ += labnode-six ================================== ^6/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%| |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%| |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%| |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%| |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+ +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK| |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + | |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -131,7 +131,7 @@ var (
 += labnode-one ================================== ^1/6 =+  += labnode-two ================================== ^2/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|  |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|  |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|  |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|  |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+  +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|  |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |  |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -141,7 +141,7 @@ var (
 += labnode-th~ ================================== ^3/6 =+  += labnode-fo~ ================================== ^4/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|  |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|  |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|  |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|  |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+  +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|  |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |  |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -151,7 +151,7 @@ var (
 += labnode-fi~ ================================== ^5/6 =+  += labnode-six ================================== ^6/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|  |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|  |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|  |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|  |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+  +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|  |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |  |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -163,7 +163,7 @@ var (
 += labnode-one ================================== ^1/6 =+   += labnode-two ================================== ^2/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|   |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|   |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|   |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|   |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+   +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|   |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |   |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -173,7 +173,7 @@ var (
 += labnode-th~ ================================== ^3/6 =+   += labnode-fo~ ================================== ^4/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|   |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|   |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|   |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|   |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+   +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|   |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |   |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -183,7 +183,7 @@ var (
 += labnode-fi~ ================================== ^5/6 =+   += labnode-six ================================== ^6/6 =+
 |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|   |Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100%|
 |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|   |Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50%|
-|Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|   |Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0%|
+|Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|   |Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0%|
 +-------------------------------------------------------+   +-------------------------------------------------------+
 |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|   |SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK|
 |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |   |homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   + |
@@ -195,7 +195,7 @@ var (
 += labnode-one ==================================== ^1/6 =++= labnode-two ==================================== ^2/6 =+
 | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% || Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% |
 | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% || Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% |
-| Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% || Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% |
+| Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% || Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% |
 +---------------------------------------------------------++---------------------------------------------------------+
 | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK || SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK |
 | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  || homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  |
@@ -205,7 +205,7 @@ var (
 += labnode-th~ ==================================== ^3/6 =++= labnode-fo~ ==================================== ^4/6 =+
 | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% || Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% |
 | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% || Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% |
-| Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% || Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% |
+| Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% || Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% |
 +---------------------------------------------------------++---------------------------------------------------------+
 | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK || SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK |
 | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  || homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  |
@@ -215,7 +215,7 @@ var (
 += labnode-fi~ ==================================== ^5/6 =++= labnode-six ==================================== ^6/6 =+
 | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% || Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% |
 | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% || Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% |
-| Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% || Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% |
+| Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% || Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% |
 +---------------------------------------------------------++---------------------------------------------------------+
 | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK || SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK |
 | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  || homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  |
@@ -227,7 +227,7 @@ var (
 += labnode-one ==================================== ^1/6 =+ += labnode-two ==================================== ^2/6 =+
 | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% | | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% |
 | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% | | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% |
-| Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% | | Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% |
+| Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% | | Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% |
 +---------------------------------------------------------+ +---------------------------------------------------------+
 | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK | | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK |
 | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  | | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  |
@@ -237,7 +237,7 @@ var (
 += labnode-th~ ==================================== ^3/6 =+ += labnode-fo~ ==================================== ^4/6 =+
 | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% | | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% |
 | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% | | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% |
-| Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% | | Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% |
+| Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% | | Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% |
 +---------------------------------------------------------+ +---------------------------------------------------------+
 | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK | | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK |
 | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  | | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  |
@@ -247,7 +247,7 @@ var (
 += labnode-fi~ ==================================== ^5/6 =+ += labnode-six ==================================== ^6/6 =+
 | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% | | Used CPU 100% Fail LOG 100% Warn TEM 100% Used HME 100% |
 | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% | | Used RAM  50% Fail SHR  50% Revs FAN  50% Used SHR  50% |
-| Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% | | Aloc RAM   0% Fail BCK   0% Hlth SSD   0% Used BKP   0% |
+| Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% | | Aloc RAM   0% Fail BKP   0% Hlth SSD   0% Used BKP   0% |
 +---------------------------------------------------------+ +---------------------------------------------------------+
 | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK | | SERVICE    CPU  RAM BKP AOK SERVICE    CPU  RAM BKP AOK |
 | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  | | homeassi~ 100% 100%  -   +  influxdb3  50%  50%  -   +  |
@@ -259,7 +259,7 @@ var (
 += labnode-one ===================================== ^1/6 =++= labnode-two ===================================== ^2/6 =+
 |Used CPU 100%  Fail LOG 100%  Warn TEM 100%  Used HME 100%||Used CPU 100%  Fail LOG 100%  Warn TEM 100%  Used HME 100%|
 |Used RAM  50%  Fail SHR  50%  Revs FAN  50%  Used SHR  50%||Used RAM  50%  Fail SHR  50%  Revs FAN  50%  Used SHR  50%|
-|Aloc RAM   0%  Fail BCK   0%  Hlth SSD   0%  Used BKP   0%||Aloc RAM   0%  Fail BCK   0%  Hlth SSD   0%  Used BKP   0%|
+|Aloc RAM   0%  Fail BKP   0%  Hlth SSD   0%  Used BKP   0%||Aloc RAM   0%  Fail BKP   0%  Hlth SSD   0%  Used BKP   0%|
 +----------------------------------------------------------++----------------------------------------------------------+
 |SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK||SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK|
 |homeassis~ 100% 100%  -   +   influxdb3   50%  50%  -   + ||homeassis~ 100% 100%  -   +   influxdb3   50%  50%  -   + |
@@ -269,7 +269,7 @@ var (
 += labnode-th~ ===================================== ^3/6 =++= labnode-fo~ ===================================== ^4/6 =+
 |Used CPU 100%  Fail LOG 100%  Warn TEM 100%  Used HME 100%||Used CPU 100%  Fail LOG 100%  Warn TEM 100%  Used HME 100%|
 |Used RAM  50%  Fail SHR  50%  Revs FAN  50%  Used SHR  50%||Used RAM  50%  Fail SHR  50%  Revs FAN  50%  Used SHR  50%|
-|Aloc RAM   0%  Fail BCK   0%  Hlth SSD   0%  Used BKP   0%||Aloc RAM   0%  Fail BCK   0%  Hlth SSD   0%  Used BKP   0%|
+|Aloc RAM   0%  Fail BKP   0%  Hlth SSD   0%  Used BKP   0%||Aloc RAM   0%  Fail BKP   0%  Hlth SSD   0%  Used BKP   0%|
 +----------------------------------------------------------++----------------------------------------------------------+
 |SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK||SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK|
 |homeassis~ 100% 100%  -   +   influxdb3   50%  50%  -   + ||homeassis~ 100% 100%  -   +   influxdb3   50%  50%  -   + |
@@ -279,7 +279,7 @@ var (
 += labnode-fi~ ===================================== ^5/6 =++= labnode-six ===================================== ^6/6 =+
 |Used CPU 100%  Fail LOG 100%  Warn TEM 100%  Used HME 100%||Used CPU 100%  Fail LOG 100%  Warn TEM 100%  Used HME 100%|
 |Used RAM  50%  Fail SHR  50%  Revs FAN  50%  Used SHR  50%||Used RAM  50%  Fail SHR  50%  Revs FAN  50%  Used SHR  50%|
-|Aloc RAM   0%  Fail BCK   0%  Hlth SSD   0%  Used BKP   0%||Aloc RAM   0%  Fail BCK   0%  Hlth SSD   0%  Used BKP   0%|
+|Aloc RAM   0%  Fail BKP   0%  Hlth SSD   0%  Used BKP   0%||Aloc RAM   0%  Fail BKP   0%  Hlth SSD   0%  Used BKP   0%|
 +----------------------------------------------------------++----------------------------------------------------------+
 |SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK||SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK|
 |homeassis~ 100% 100%  -   +   influxdb3   50%  50%  -   + ||homeassis~ 100% 100%  -   +   influxdb3   50%  50%  -   + |
@@ -291,7 +291,7 @@ var (
 += labnode-one ======================================== ^1/6 =+  += labnode-two ======================================== ^2/6 =+
 |Used CPU 100%   Fail LOG 100%   Warn TEM 100%   Used HME 100%|  |Used CPU 100%   Fail LOG 100%   Warn TEM 100%   Used HME 100%|
 |Used RAM  50%   Fail SHR  50%   Revs FAN  50%   Used SHR  50%|  |Used RAM  50%   Fail SHR  50%   Revs FAN  50%   Used SHR  50%|
-|Aloc RAM   0%   Fail BCK   0%   Hlth SSD   0%   Used BKP   0%|  |Aloc RAM   0%   Fail BCK   0%   Hlth SSD   0%   Used BKP   0%|
+|Aloc RAM   0%   Fail BKP   0%   Hlth SSD   0%   Used BKP   0%|  |Aloc RAM   0%   Fail BKP   0%   Hlth SSD   0%   Used BKP   0%|
 +-------------------------------------------------------------+  +-------------------------------------------------------------+
 |SERVICE      CPU  RAM BKP AOK   SERVICE      CPU  RAM BKP AOK|  |SERVICE      CPU  RAM BKP AOK   SERVICE      CPU  RAM BKP AOK|
 |homeassist~ 100% 100%  -   +    influxdb3    50%  50%  -   + |  |homeassist~ 100% 100%  -   +    influxdb3    50%  50%  -   + |
@@ -301,7 +301,7 @@ var (
 += labnode-th~ ======================================== ^3/6 =+  += labnode-fo~ ======================================== ^4/6 =+
 |Used CPU 100%   Fail LOG 100%   Warn TEM 100%   Used HME 100%|  |Used CPU 100%   Fail LOG 100%   Warn TEM 100%   Used HME 100%|
 |Used RAM  50%   Fail SHR  50%   Revs FAN  50%   Used SHR  50%|  |Used RAM  50%   Fail SHR  50%   Revs FAN  50%   Used SHR  50%|
-|Aloc RAM   0%   Fail BCK   0%   Hlth SSD   0%   Used BKP   0%|  |Aloc RAM   0%   Fail BCK   0%   Hlth SSD   0%   Used BKP   0%|
+|Aloc RAM   0%   Fail BKP   0%   Hlth SSD   0%   Used BKP   0%|  |Aloc RAM   0%   Fail BKP   0%   Hlth SSD   0%   Used BKP   0%|
 +-------------------------------------------------------------+  +-------------------------------------------------------------+
 |SERVICE      CPU  RAM BKP AOK   SERVICE      CPU  RAM BKP AOK|  |SERVICE      CPU  RAM BKP AOK   SERVICE      CPU  RAM BKP AOK|
 |homeassist~ 100% 100%  -   +    influxdb3    50%  50%  -   + |  |homeassist~ 100% 100%  -   +    influxdb3    50%  50%  -   + |
@@ -311,7 +311,7 @@ var (
 += labnode-fi~ ======================================== ^5/6 =+  += labnode-six ======================================== ^6/6 =+
 |Used CPU 100%   Fail LOG 100%   Warn TEM 100%   Used HME 100%|  |Used CPU 100%   Fail LOG 100%   Warn TEM 100%   Used HME 100%|
 |Used RAM  50%   Fail SHR  50%   Revs FAN  50%   Used SHR  50%|  |Used RAM  50%   Fail SHR  50%   Revs FAN  50%   Used SHR  50%|
-|Aloc RAM   0%   Fail BCK   0%   Hlth SSD   0%   Used BKP   0%|  |Aloc RAM   0%   Fail BCK   0%   Hlth SSD   0%   Used BKP   0%|
+|Aloc RAM   0%   Fail BKP   0%   Hlth SSD   0%   Used BKP   0%|  |Aloc RAM   0%   Fail BKP   0%   Hlth SSD   0%   Used BKP   0%|
 +-------------------------------------------------------------+  +-------------------------------------------------------------+
 |SERVICE      CPU  RAM BKP AOK   SERVICE      CPU  RAM BKP AOK|  |SERVICE      CPU  RAM BKP AOK   SERVICE      CPU  RAM BKP AOK|
 |homeassist~ 100% 100%  -   +    influxdb3    50%  50%  -   + |  |homeassist~ 100% 100%  -   +    influxdb3    50%  50%  -   + |
@@ -323,7 +323,7 @@ var (
 += labnode-one ================================================================ ^1/6 =+ += labnode-two ================================================================ ^2/6 =+
 |Used CPU 100%           Fail LOG 100%           Warn TEM 100%           Used HME 100%| |Used CPU 100%           Fail LOG 100%           Warn TEM 100%           Used HME 100%|
 |Used RAM  50%           Fail SHR  50%           Revs FAN  50%           Used SHR  50%| |Used RAM  50%           Fail SHR  50%           Revs FAN  50%           Used SHR  50%|
-|Aloc RAM   0%           Fail BCK   0%           Hlth SSD   0%           Used BKP   0%| |Aloc RAM   0%           Fail BCK   0%           Hlth SSD   0%           Used BKP   0%|
+|Aloc RAM   0%           Fail BKP   0%           Hlth SSD   0%           Used BKP   0%| |Aloc RAM   0%           Fail BKP   0%           Hlth SSD   0%           Used BKP   0%|
 +-------------------------------------------------------------------------------------+ +-------------------------------------------------------------------------------------+
 |SERVICE              CPU  RAM BKP AOK           SERVICE              CPU  RAM BKP AOK| |SERVICE              CPU  RAM BKP AOK           SERVICE              CPU  RAM BKP AOK|
 |homeassistant       100% 100%  -   +            influxdb3            50%  50%  -   + | |homeassistant       100% 100%  -   +            influxdb3            50%  50%  -   + |
@@ -333,7 +333,7 @@ var (
 += labnode-th~ ================================================================ ^3/6 =+ += labnode-fo~ ================================================================ ^4/6 =+
 |Used CPU 100%           Fail LOG 100%           Warn TEM 100%           Used HME 100%| |Used CPU 100%           Fail LOG 100%           Warn TEM 100%           Used HME 100%|
 |Used RAM  50%           Fail SHR  50%           Revs FAN  50%           Used SHR  50%| |Used RAM  50%           Fail SHR  50%           Revs FAN  50%           Used SHR  50%|
-|Aloc RAM   0%           Fail BCK   0%           Hlth SSD   0%           Used BKP   0%| |Aloc RAM   0%           Fail BCK   0%           Hlth SSD   0%           Used BKP   0%|
+|Aloc RAM   0%           Fail BKP   0%           Hlth SSD   0%           Used BKP   0%| |Aloc RAM   0%           Fail BKP   0%           Hlth SSD   0%           Used BKP   0%|
 +-------------------------------------------------------------------------------------+ +-------------------------------------------------------------------------------------+
 |SERVICE              CPU  RAM BKP AOK           SERVICE              CPU  RAM BKP AOK| |SERVICE              CPU  RAM BKP AOK           SERVICE              CPU  RAM BKP AOK|
 |homeassistant       100% 100%  -   +            influxdb3            50%  50%  -   + | |homeassistant       100% 100%  -   +            influxdb3            50%  50%  -   + |
@@ -343,7 +343,7 @@ var (
 += labnode-fi~ ================================================================ ^5/6 =+ += labnode-six ================================================================ ^6/6 =+
 |Used CPU 100%           Fail LOG 100%           Warn TEM 100%           Used HME 100%| |Used CPU 100%           Fail LOG 100%           Warn TEM 100%           Used HME 100%|
 |Used RAM  50%           Fail SHR  50%           Revs FAN  50%           Used SHR  50%| |Used RAM  50%           Fail SHR  50%           Revs FAN  50%           Used SHR  50%|
-|Aloc RAM   0%           Fail BCK   0%           Hlth SSD   0%           Used BKP   0%| |Aloc RAM   0%           Fail BCK   0%           Hlth SSD   0%           Used BKP   0%|
+|Aloc RAM   0%           Fail BKP   0%           Hlth SSD   0%           Used BKP   0%| |Aloc RAM   0%           Fail BKP   0%           Hlth SSD   0%           Used BKP   0%|
 +-------------------------------------------------------------------------------------+ +-------------------------------------------------------------------------------------+
 |SERVICE              CPU  RAM BKP AOK           SERVICE              CPU  RAM BKP AOK| |SERVICE              CPU  RAM BKP AOK           SERVICE              CPU  RAM BKP AOK|
 |homeassistant       100% 100%  -   +            influxdb3            50%  50%  -   + | |homeassistant       100% 100%  -   +            influxdb3            50%  50%  -   + |
@@ -355,7 +355,7 @@ var (
 += labnode-one ================================================================= vESC =+
 | Used CPU |||| 100%    Fail LOG |||| 100%    Warn TEM |||| 100%    Used HME |||| 100% |
 | Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% |
-| Aloc RAM |  |   0%    Fail BCK |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
+| Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
 +--------------------------------------------------------------------------------------+
 | SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME |
 +--------------------------------------------------------------------------------------+
@@ -371,7 +371,7 @@ var (
 ╭─┐labnode-one┌─────────────────────────────────────────────────────────────────┐↓ESC┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
@@ -388,7 +388,7 @@ var (
 ╭─┐labnode-one┌──────────────────────────────────────────────────────────────────┐↓ESC┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤
@@ -405,7 +405,7 @@ var (
 ╭─┐labnode-one┌───────────────────────────────────────────────────────────────────┐↓ESC┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
@@ -422,7 +422,7 @@ var (
 ╭─┐labnode-one┌────────────────────────────────────────────────────────────────────┐↓ESC┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -439,7 +439,7 @@ var (
 ╭─┐labnode-one┌─────────────────────────────────────────────────────────────────────┐↓ESC┌─╮
 │ Used CPU ■■■■■ 100%    Fail LOG ■■■■■ 100%    Warn TEM ■■■■■ 100%    Used HME ■■■■■ 100% │
 │ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% │
-│ Aloc RAM ■■■■■   0%    Fail BCK ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
+│ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤
@@ -456,7 +456,7 @@ var (
 += labnode-one ================================================================= ^1/6 =++= labnode-two ================================================================= ^2/6 =+
 | Used CPU |||| 100%    Fail LOG |||| 100%    Warn TEM |||| 100%    Used HME |||| 100% || Used CPU |||| 100%    Fail LOG |||| 100%    Warn TEM |||| 100%    Used HME |||| 100% |
 | Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% || Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% |
-| Aloc RAM |  |   0%    Fail BCK |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BCK |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
+| Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
 | SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
@@ -470,7 +470,7 @@ var (
 += labnode-th~ ================================================================= ^3/6 =++= labnode-fo~ ================================================================= ^4/6 =+
 | Used CPU |||| 100%    Fail LOG |||| 100%    Warn TEM |||| 100%    Used HME |||| 100% || Used CPU |||| 100%    Fail LOG |||| 100%    Warn TEM |||| 100%    Used HME |||| 100% |
 | Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% || Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% |
-| Aloc RAM |  |   0%    Fail BCK |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BCK |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
+| Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
 | SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
@@ -484,7 +484,7 @@ var (
 += labnode-fi~ ================================================================= ^5/6 =++= labnode-six ================================================================= ^6/6 =+
 | Used CPU |||| 100%    Fail LOG |||| 100%    Warn TEM |||| 100%    Used HME |||| 100% || Used CPU |||| 100%    Fail LOG |||| 100%    Warn TEM |||| 100%    Used HME |||| 100% |
 | Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% || Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% |
-| Aloc RAM |  |   0%    Fail BCK |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BCK |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
+| Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
 | SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
@@ -500,7 +500,7 @@ var (
 ╭─┐labnode-one┌─────────────────────────────────────────────────────────────────┐↑1/6┌─╮╭─┐labnode-two┌─────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% ││ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
@@ -515,7 +515,7 @@ var (
 ╭─┐labnode-th~┌─────────────────────────────────────────────────────────────────┐↑3/6┌─╮╭─┐labnode-fo~┌─────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% ││ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
@@ -530,7 +530,7 @@ var (
 ╭─┐labnode-fi~┌─────────────────────────────────────────────────────────────────┐↑5/6┌─╮╭─┐labnode-six┌─────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% ││ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
@@ -547,7 +547,7 @@ var (
 ╭─┐labnode-one┌─────────────────────────────────────────────────────────────────┐↑1/6┌─╮ ╭─┐labnode-two┌─────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │ │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
@@ -562,7 +562,7 @@ var (
 ╭─┐labnode-th~┌─────────────────────────────────────────────────────────────────┐↑3/6┌─╮ ╭─┐labnode-fo~┌─────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │ │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
@@ -577,7 +577,7 @@ var (
 ╭─┐labnode-fi~┌─────────────────────────────────────────────────────────────────┐↑5/6┌─╮ ╭─┐labnode-six┌─────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │ │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
@@ -594,7 +594,7 @@ var (
 ╭─┐labnode-one┌──────────────────────────────────────────────────────────────────┐↑1/6┌─╮╭─┐labnode-two┌──────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% ││ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
@@ -609,7 +609,7 @@ var (
 ╭─┐labnode-th~┌──────────────────────────────────────────────────────────────────┐↑3/6┌─╮╭─┐labnode-fo~┌──────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% ││ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
@@ -624,7 +624,7 @@ var (
 ╭─┐labnode-fi~┌──────────────────────────────────────────────────────────────────┐↑5/6┌─╮╭─┐labnode-six┌──────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% ││ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
@@ -641,7 +641,7 @@ var (
 ╭─┐labnode-one┌──────────────────────────────────────────────────────────────────┐↑1/6┌─╮ ╭─┐labnode-two┌──────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │ │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
@@ -656,7 +656,7 @@ var (
 ╭─┐labnode-th~┌──────────────────────────────────────────────────────────────────┐↑3/6┌─╮ ╭─┐labnode-fo~┌──────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │ │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
@@ -671,7 +671,7 @@ var (
 ╭─┐labnode-fi~┌──────────────────────────────────────────────────────────────────┐↑5/6┌─╮ ╭─┐labnode-six┌──────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │ │ Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100% │
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
-│ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
+│ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
@@ -688,7 +688,7 @@ var (
 ╭─┐labnode-one┌───────────────────────────────────────────────────────────────────┐↑1/6┌─╮╭─┐labnode-two┌───────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  ││  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
@@ -703,7 +703,7 @@ var (
 ╭─┐labnode-th~┌───────────────────────────────────────────────────────────────────┐↑3/6┌─╮╭─┐labnode-fo~┌───────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  ││  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
@@ -718,7 +718,7 @@ var (
 ╭─┐labnode-fi~┌───────────────────────────────────────────────────────────────────┐↑5/6┌─╮╭─┐labnode-six┌───────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  ││  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
@@ -735,7 +735,7 @@ var (
 ╭─┐labnode-one┌───────────────────────────────────────────────────────────────────┐↑1/6┌─╮ ╭─┐labnode-two┌───────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │ │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
@@ -750,7 +750,7 @@ var (
 ╭─┐labnode-th~┌───────────────────────────────────────────────────────────────────┐↑3/6┌─╮ ╭─┐labnode-fo~┌───────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │ │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
@@ -765,7 +765,7 @@ var (
 ╭─┐labnode-fi~┌───────────────────────────────────────────────────────────────────┐↑5/6┌─╮ ╭─┐labnode-six┌───────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │ │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%    Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
@@ -782,7 +782,7 @@ var (
 ╭─┐labnode-one┌────────────────────────────────────────────────────────────────────┐↑1/6┌─╮╭─┐labnode-two┌────────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  ││  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -797,7 +797,7 @@ var (
 ╭─┐labnode-th~┌────────────────────────────────────────────────────────────────────┐↑3/6┌─╮╭─┐labnode-fo~┌────────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  ││  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -812,7 +812,7 @@ var (
 ╭─┐labnode-fi~┌────────────────────────────────────────────────────────────────────┐↑5/6┌─╮╭─┐labnode-six┌────────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  ││  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -829,7 +829,7 @@ var (
 ╭─┐labnode-one┌────────────────────────────────────────────────────────────────────┐↑1/6┌─╮ ╭─┐labnode-two┌────────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │ │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -844,7 +844,7 @@ var (
 ╭─┐labnode-th~┌────────────────────────────────────────────────────────────────────┐↑3/6┌─╮ ╭─┐labnode-fo~┌────────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │ │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -859,7 +859,7 @@ var (
 ╭─┐labnode-fi~┌────────────────────────────────────────────────────────────────────┐↑5/6┌─╮ ╭─┐labnode-six┌────────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │ │  Used CPU ■■■■ 100%    Fail LOG ■■■■ 100%     Warn TEM ■■■■ 100%    Used HME ■■■■ 100%  │
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
-│  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BCK ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
+│  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -876,7 +876,7 @@ var (
 ╭─┐labnode-one┌─────────────────────────────────────────────────────────────────────┐↑1/6┌─╮╭─┐labnode-two┌─────────────────────────────────────────────────────────────────────┐↑2/6┌─╮
 │ Used CPU ■■■■■ 100%    Fail LOG ■■■■■ 100%    Warn TEM ■■■■■ 100%    Used HME ■■■■■ 100% ││ Used CPU ■■■■■ 100%    Fail LOG ■■■■■ 100%    Warn TEM ■■■■■ 100%    Used HME ■■■■■ 100% │
 │ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% ││ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% │
-│ Aloc RAM ■■■■■   0%    Fail BCK ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BCK ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
+│ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
@@ -891,7 +891,7 @@ var (
 ╭─┐labnode-th~┌─────────────────────────────────────────────────────────────────────┐↑3/6┌─╮╭─┐labnode-fo~┌─────────────────────────────────────────────────────────────────────┐↑4/6┌─╮
 │ Used CPU ■■■■■ 100%    Fail LOG ■■■■■ 100%    Warn TEM ■■■■■ 100%    Used HME ■■■■■ 100% ││ Used CPU ■■■■■ 100%    Fail LOG ■■■■■ 100%    Warn TEM ■■■■■ 100%    Used HME ■■■■■ 100% │
 │ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% ││ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% │
-│ Aloc RAM ■■■■■   0%    Fail BCK ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BCK ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
+│ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
@@ -906,7 +906,7 @@ var (
 ╭─┐labnode-fi~┌─────────────────────────────────────────────────────────────────────┐↑5/6┌─╮╭─┐labnode-six┌─────────────────────────────────────────────────────────────────────┐↑6/6┌─╮
 │ Used CPU ■■■■■ 100%    Fail LOG ■■■■■ 100%    Warn TEM ■■■■■ 100%    Used HME ■■■■■ 100% ││ Used CPU ■■■■■ 100%    Fail LOG ■■■■■ 100%    Warn TEM ■■■■■ 100%    Used HME ■■■■■ 100% │
 │ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% ││ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% │
-│ Aloc RAM ■■■■■   0%    Fail BCK ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BCK ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
+│ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
 │ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤

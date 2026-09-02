@@ -34,9 +34,15 @@ cleanup supervisor schema, rename/drops, make influxdb drop really work
 maybe drop vernme /tmp and do a dliverrate delete on release of vernemq so restarts work OK?
 Fix logs for watch so no wrapping, what I see in watch or all?
 check metric attribution works by metric filter when multiple probe_* feed single metric
-ensure all fprintf types are correct eg Debug format %d has arg 1.5 of wrong type float64
 
 
+read plan
+execute plan.md
+filter daily  plugin out and release supervisor
+test each modules backup first, test primary as well
+test sedondary
+document btrfs formatting and do so with other formatting nicely. add to fstabs. format all drives, unify format commands and make nice.
+test tertiary
 
 
 
@@ -95,8 +101,6 @@ add host USED BKP and FAIL BKP and Service BKP into backup plan, remove backup p
 
 
 
-
-Implement PLAN and then delete it
 
 
 

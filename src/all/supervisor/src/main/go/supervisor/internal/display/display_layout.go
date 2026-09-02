@@ -190,7 +190,7 @@ func compactDisplayLayout(useUnicode bool) [][]box {
 	d_2_3 := box{lblMid: text{ascii: "Used SHR "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncSpacer}
 
 	d_3_0 := box{lblMid: text{ascii: "Aloc RAM "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostAllocatedMemory}
-	d_3_1 := box{lblMid: text{ascii: "Fail BCK "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedBackups, resizeInc: resizeIncSpacer}
+	d_3_1 := box{lblMid: text{ascii: "Fail BKP "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostFailedBackups, resizeInc: resizeIncSpacer}
 	d_3_2 := box{lblMid: text{ascii: "Hlth SSD "}, valLen: 3, valSfx: "%", metricID: metric.MetricHostLifeUsedDrives}
 	d_3_3 := box{lblMid: text{ascii: "Used BKP "}, valLen: 3, valSfx: "%", lblLhs: text{ascii: " "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeIncSpacer}
 
@@ -344,7 +344,7 @@ func relaxedDisplayLayout(useUnicode bool) [][]box {
 	d_2_3 := box{lblMid: text{ascii: "Used SHR "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedShareSpace, resizeInc: resizeIncHistVal}
 
 	d_3_0 := box{lblMid: text{ascii: "Aloc RAM "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostAllocatedMemory, resizeInc: resizeIncHistVal}
-	d_3_1 := box{lblMid: text{ascii: "Fail BCK "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedBackups, resizeInc: resizeIncHistVal}
+	d_3_1 := box{lblMid: text{ascii: "Fail BKP "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostFailedBackups, resizeInc: resizeIncHistVal}
 	d_3_2 := box{lblMid: text{ascii: "Hlth SSD "}, valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostLifeUsedDrives, resizeInc: resizeIncHistVal}
 	d_3_3 := box{lblMid: text{ascii: "Used BKP "}, valLen: 8, valSfx: "%", valKind: valHist, lblLhs: text{ascii: "    "}, metricID: metric.MetricHostUsedBackupSpace, resizeInc: resizeIncHistVal}
 

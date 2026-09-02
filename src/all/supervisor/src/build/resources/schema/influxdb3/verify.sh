@@ -320,7 +320,7 @@ SELECT
     'supervisor/host' AS relation,
     'failed_backups'  AS measure,
     '6s'              AS period,
-    '-'               AS unit,
+    '%'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
@@ -331,7 +331,7 @@ SELECT
     'supervisor/host'      AS relation,
     'failed_backups_trend' AS measure,
     '6s'                   AS period,
-    '-'                    AS unit,
+    '%'                    AS unit,
     'missing'              AS fault
 FROM information_schema.columns
 WHERE
