@@ -204,20 +204,25 @@ for SQL_FILE in "${ROOT_DIR}"/mutate/rename/*.sql; do
   done < <(statements < "${SQL_FILE}")
 done
 
-for SQL_FILE in "${ROOT_DIR}"/mutate/drop/*.sql; do
-  [ -e "${SQL_FILE}" ] || continue
-  printf -- '\n-- drop/%s\n\n' "$(basename "${SQL_FILE}")"
-  printf 'influxdb3 has no column delete, so a dropped measure stays in the catalog and is silenced in verify only\n\n'
-  while IFS= read -r STATEMENT; do
-    [ -z "${STATEMENT}" ] && continue
-    if ! RESULT="$(query "${STATEMENT}")"; then
-      fail "${STATEMENT}" "${RESULT}"
-      FAULTS=$((FAULTS + 1))
-      continue
-    fi
-    printf '%s\n' "${RESULT}" | table
-    printf '\n'
-  done < <(statements < "${SQL_FILE}")
+for SQL_VERB in drop archive; do
+  for SQL_FILE in "${ROOT_DIR}"/mutate/"${SQL_VERB}"/*.sql; do
+    [ -e "${SQL_FILE}" ] || continue
+    printf -- '\n-- %s/%s\n\n' "${SQL_VERB}" "$(basename "${SQL_FILE}")"
+    case "${SQL_VERB}" in
+      drop) printf 'influxdb3 has no column delete, so a dropped measure stays in the catalog and is silenced in verify only\n\n' ;;
+      archive) printf 'an archived measure is retained deliberately, silenced in verify and describe, and nothing is deleted\n\n' ;;
+    esac
+    while IFS= read -r STATEMENT; do
+      [ -z "${STATEMENT}" ] && continue
+      if ! RESULT="$(query "${STATEMENT}")"; then
+        fail "${STATEMENT}" "${RESULT}"
+        FAULTS=$((FAULTS + 1))
+        continue
+      fi
+      printf '%s\n' "${RESULT}" | table
+      printf '\n'
+    done < <(statements < "${SQL_FILE}")
+  done
 done
 
 if [ "${FAULTS}" != "0" ]; then

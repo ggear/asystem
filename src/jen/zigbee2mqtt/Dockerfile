@@ -1,5 +1,5 @@
 # NOTES: https://github.com/Koenkk/zigbee2mqtt/releases
-FROM koenkk/zigbee2mqtt:2.13.0 AS image_upstream
+FROM koenkk/zigbee2mqtt:2.14.1 AS image_upstream
 USER root
 RUN apk update && \
     apk add --upgrade --no-cache bash=5.3.9-r1 && \

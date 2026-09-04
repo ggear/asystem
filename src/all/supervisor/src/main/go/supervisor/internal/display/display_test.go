@@ -1792,7 +1792,7 @@ func TestDisplay_FailedHostLabelRestoresOnRecovery(t *testing.T) {
 		expectedClear  colour
 		expectedError  bool
 	}{
-		{name: "happy_life_used_drives_recovers", failedHostID: metric.MetricHostLifeUsedDrives, expectedFailed: colourAlert, expectedClear: colourChat, expectedError: false},
+		{name: "happy_life_used_drives_recovers", failedHostID: metric.MetricHostUsedDriveLife, expectedFailed: colourAlert, expectedClear: colourChat, expectedError: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {

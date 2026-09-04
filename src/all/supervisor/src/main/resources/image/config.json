@@ -6,7 +6,7 @@
     "broker": {
       "host": "$BROKER_HOST",
       "port": "$BROKER_PORT",
-      "token": "$DATABASE_TOKEN"
+      "token": "$BROKER_TOKEN"
     },
     "database": {
       "host": "$DATABASE_HOST",
@@ -76,6 +76,14 @@
           "supervisor"
         ]
       }
-    ]
+    ],
+    "backup": {
+      "command_topic": "tasmota/device/rack_backup_plug/cmnd/POWER",
+      "state_topic": "tasmota/device/rack_backup_plug/stat/POWER",
+      "timeout_hours": 3,
+      "keep_daily": 7,
+      "keep_weekly": 4,
+      "keep_monthly": 12
+    }
   }
 }

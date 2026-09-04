@@ -136,9 +136,9 @@ SELECT
     round(last_value(failed_shares_trend ORDER BY time), 1)      AS "Failed Shares Trend",
     count(failed_shares_trend)                                   AS "Failed Shares Trend Count",
     count(DISTINCT failed_shares_trend)                          AS "Failed Shares Trend Distinct",
-    round(last_value(failed_backups ORDER BY time), 1)           AS "Failed Backups",
-    count(failed_backups)                                        AS "Failed Backups Count",
-    count(DISTINCT failed_backups)                               AS "Failed Backups Distinct"
+    round(last_value(failed_backup_stages ORDER BY time), 1)     AS "Failed Backup Stages",
+    count(failed_backup_stages)                                  AS "Failed Backup Stages Count",
+    count(DISTINCT failed_backup_stages)                         AS "Failed Backup Stages Distinct"
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -152,17 +152,17 @@ ORDER BY "Bucket", host;
 -- supervisor/host [health and utilisation of one host] every 6s, bucketed [15 minute] across the newest two buckets
 -- part 7 of 18:
 SELECT
-    date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute') AS "Bucket",
-    host                                                         AS "Host",
-    count(*)                                                     AS "Rows",
-    min(time) + INTERVAL '480 minute'                            AS "Oldest",
-    max(time) + INTERVAL '480 minute'                            AS "Newest",
-    round(last_value(failed_backups_trend ORDER BY time), 1)     AS "Failed Backups Trend",
-    count(failed_backups_trend)                                  AS "Failed Backups Trend Count",
-    count(DISTINCT failed_backups_trend)                         AS "Failed Backups Trend Distinct",
-    round(last_value(warn_temperature ORDER BY time), 1)         AS "Warn Temperature",
-    count(warn_temperature)                                      AS "Warn Temperature Count",
-    count(DISTINCT warn_temperature)                             AS "Warn Temperature Distinct"
+    date_bin(INTERVAL '15 minute', time + INTERVAL '480 minute')   AS "Bucket",
+    host                                                           AS "Host",
+    count(*)                                                       AS "Rows",
+    min(time) + INTERVAL '480 minute'                              AS "Oldest",
+    max(time) + INTERVAL '480 minute'                              AS "Newest",
+    round(last_value(failed_backup_stages_trend ORDER BY time), 1) AS "Failed Backup Stages Trend",
+    count(failed_backup_stages_trend)                              AS "Failed Backup Stages Trend Count",
+    count(DISTINCT failed_backup_stages_trend)                     AS "Failed Backup Stages Trend Distinct",
+    round(last_value(warn_temperature ORDER BY time), 1)           AS "Warn Temperature",
+    count(warn_temperature)                                        AS "Warn Temperature Count",
+    count(DISTINCT warn_temperature)                               AS "Warn Temperature Distinct"
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -208,9 +208,9 @@ SELECT
     round(last_value(spin_fan_speed_trend ORDER BY time), 1)     AS "Spin Fan Speed Trend",
     count(spin_fan_speed_trend)                                  AS "Spin Fan Speed Trend Count",
     count(DISTINCT spin_fan_speed_trend)                         AS "Spin Fan Speed Trend Distinct",
-    round(last_value(life_used_drives ORDER BY time), 1)         AS "Life Used Drives",
-    count(life_used_drives)                                      AS "Life Used Drives Count",
-    count(DISTINCT life_used_drives)                             AS "Life Used Drives Distinct"
+    round(last_value(used_drive_life ORDER BY time), 1)          AS "Used Drive Life",
+    count(used_drive_life)                                       AS "Used Drive Life Count",
+    count(DISTINCT used_drive_life)                              AS "Used Drive Life Distinct"
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -229,9 +229,9 @@ SELECT
     count(*)                                                     AS "Rows",
     min(time) + INTERVAL '480 minute'                            AS "Oldest",
     max(time) + INTERVAL '480 minute'                            AS "Newest",
-    round(last_value(life_used_drives_trend ORDER BY time), 1)   AS "Life Used Drives Trend",
-    count(life_used_drives_trend)                                AS "Life Used Drives Trend Count",
-    count(DISTINCT life_used_drives_trend)                       AS "Life Used Drives Trend Distinct",
+    round(last_value(used_drive_life_trend ORDER BY time), 1)    AS "Used Drive Life Trend",
+    count(used_drive_life_trend)                                 AS "Used Drive Life Trend Count",
+    count(DISTINCT used_drive_life_trend)                        AS "Used Drive Life Trend Distinct",
     round(last_value(used_home_space ORDER BY time), 1)          AS "Used Home Space",
     count(used_home_space)                                       AS "Used Home Space Count",
     count(DISTINCT used_home_space)                              AS "Used Home Space Distinct"
@@ -328,9 +328,9 @@ SELECT
     round(last_value(used_swap_space_trend ORDER BY time), 1)    AS "Used Swap Space Trend",
     count(used_swap_space_trend)                                 AS "Used Swap Space Trend Count",
     count(DISTINCT used_swap_space_trend)                        AS "Used Swap Space Trend Distinct",
-    round(last_value(used_disk_ops ORDER BY time), 1)            AS "Used Disk Ops",
-    count(used_disk_ops)                                         AS "Used Disk Ops Count",
-    count(DISTINCT used_disk_ops)                                AS "Used Disk Ops Distinct"
+    round(last_value(used_disk_time ORDER BY time), 1)           AS "Used Disk Time",
+    count(used_disk_time)                                        AS "Used Disk Time Count",
+    count(DISTINCT used_disk_time)                               AS "Used Disk Time Distinct"
 FROM supervisor
 WHERE
     module = 'supervisor'
@@ -349,9 +349,9 @@ SELECT
     count(*)                                                     AS "Rows",
     min(time) + INTERVAL '480 minute'                            AS "Oldest",
     max(time) + INTERVAL '480 minute'                            AS "Newest",
-    round(last_value(used_disk_ops_trend ORDER BY time), 1)      AS "Used Disk Ops Trend",
-    count(used_disk_ops_trend)                                   AS "Used Disk Ops Trend Count",
-    count(DISTINCT used_disk_ops_trend)                          AS "Used Disk Ops Trend Distinct",
+    round(last_value(used_disk_time_trend ORDER BY time), 1)     AS "Used Disk Time Trend",
+    count(used_disk_time_trend)                                  AS "Used Disk Time Trend Count",
+    count(DISTINCT used_disk_time_trend)                         AS "Used Disk Time Trend Distinct",
     round(last_value(used_network ORDER BY time), 1)             AS "Used Network",
     count(used_network)                                          AS "Used Network Count",
     count(DISTINCT used_network)                                 AS "Used Network Distinct"
@@ -597,12 +597,12 @@ SELECT
     count(*)                                                     AS "Rows",
     min(time) + INTERVAL '480 minute'                            AS "Oldest",
     max(time) + INTERVAL '480 minute'                            AS "Newest",
-    round(last_value(used_disk_ops ORDER BY time), 1)            AS "Used Disk Ops",
-    count(used_disk_ops)                                         AS "Used Disk Ops Count",
-    count(DISTINCT used_disk_ops)                                AS "Used Disk Ops Distinct",
-    round(last_value(used_disk_ops_trend ORDER BY time), 1)      AS "Used Disk Ops Trend",
-    count(used_disk_ops_trend)                                   AS "Used Disk Ops Trend Count",
-    count(DISTINCT used_disk_ops_trend)                          AS "Used Disk Ops Trend Distinct"
+    round(last_value(used_disk_rate ORDER BY time), 1)           AS "Used Disk Rate",
+    count(used_disk_rate)                                        AS "Used Disk Rate Count",
+    count(DISTINCT used_disk_rate)                               AS "Used Disk Rate Distinct",
+    round(last_value(used_disk_rate_trend ORDER BY time), 1)     AS "Used Disk Rate Trend",
+    count(used_disk_rate_trend)                                  AS "Used Disk Rate Trend Count",
+    count(DISTINCT used_disk_rate_trend)                         AS "Used Disk Rate Trend Distinct"
 FROM supervisor
 WHERE
     module = 'supervisor'

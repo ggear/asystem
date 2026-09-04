@@ -123,6 +123,39 @@ func (c *Config) Hosts() []string {
 	return hosts
 }
 
+func (c *Config) HostIndex(host string) (int, bool) {
+	if c == nil {
+		return 0, false
+	}
+	for i := range c.asystem.Schema {
+		if c.asystem.Schema[i].Host == host && c.asystem.Schema[i].Index != nil {
+			return *c.asystem.Schema[i].Index, true
+		}
+	}
+	return 0, false
+}
+
+func (c *Config) BackupCommandTopic() string {
+	if c == nil {
+		return ""
+	}
+	return c.asystem.Backup.CommandTopic
+}
+
+func (c *Config) BackupTimeoutHours() int {
+	if c == nil {
+		return 0
+	}
+	return c.asystem.Backup.TimeoutHours
+}
+
+func (c *Config) BackupStateTopic() string {
+	if c == nil {
+		return ""
+	}
+	return c.asystem.Backup.StateTopic
+}
+
 func (c *Config) Services(host string) []string {
 	if c == nil {
 		return []string{}
@@ -278,10 +311,18 @@ type configData struct {
 	Broker   configEndpoint
 	Database configDatabaseEndpoint
 	Schema   []configServices
+	Backup   configBackup
+}
+
+type configBackup struct {
+	CommandTopic string `json:"command_topic"`
+	StateTopic   string `json:"state_topic"`
+	TimeoutHours int    `json:"timeout_hours"`
 }
 
 type configServices struct {
 	Host     string
+	Index    *int
 	Services []string
 }
 

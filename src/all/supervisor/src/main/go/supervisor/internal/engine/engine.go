@@ -47,7 +47,7 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 		return
 	}
 	runStart := time.Now()
-	if err := probe.Run(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+	if err := probe.RunPoll(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", runStart, "[%s] loop with [%v]", loopListeningProbes, err)
 	}
 }
@@ -573,7 +573,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	runStart := time.Now()
-	err := probe.Run(ctx, nil)
+	err := probe.RunPoll(ctx, nil)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", runStart, "[%s] loop with [%v]", loopAllProbesOnce, err)
 	}
@@ -712,7 +712,8 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	var toDelete []serviceKey
 	deleted := make(map[serviceKey]bool)
 	publishStart := time.Now()
-	err = probe.Run(ctx, func(isHeartbeat bool) {
+	go probe.RunCycle(ctx)
+	err = probe.RunPoll(ctx, func(isHeartbeat bool) {
 		pulseStart := time.Now()
 		publishLabel := "pulse"
 		if isHeartbeat {

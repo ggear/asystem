@@ -31,17 +31,21 @@ deploy.sh consolidation, only keep those that are necessary
 cleanup supervisor schema, rename/drops, make influxdb drop really work
 
 
-maybe drop vernme /tmp and do a dliverrate delete on release of vernemq so restarts work OK?
 Fix logs for watch so no wrapping, what I see in watch or all?
 check metric attribution works by metric filter when multiple probe_* feed single metric
 
 
-read plan
-execute plan.md
-filter daily  plugin out and release supervisor
-test each modules backup first, test primary as well
+test each modules backup
+  src/jen/zigbee2mqtt/src/build/resources/backup.sh
+  src/meg/mariadb/src/build/resources/backup.sh
+  src/max/influxdb3/src/build/resources/backup.sh
+  src/mad/wrangle/src/build/resources/backup.sh
+  src/mad/postgres/src/build/resources/backup.sh
+  src/mad/plex/src/build/resources/backup.sh
+  src/may/letsencrypt/src/build/resources/backup.sh
+test primary
 test sedondary
-document btrfs formatting and do so with other formatting nicely. add to fstabs. format all drives, unify format commands and make nice.
+format all /backup drives, test volumes.sh
 test tertiary
 
 
@@ -50,37 +54,10 @@ test tertiary
    
 
 
-Unimplemented metrics
-
-┌───┬──────────────────────────────┬─────────┬─────┬──────────────────────────────────────┬──────────────┐
-│ # │ Metric                       │ Scope   │ Box │ Probe returns                        │ UI           │
-├───┼──────────────────────────────┼─────────┼─────┼──────────────────────────────────────┼──────────────┤
-│ 1 │ host/failed_backups          │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
-│ 2 │ host/used_backup_space       │ host    │ yes │ 0, derivation{}, errUnimplemented  │ blank + red  │
-│ 9 │ service/backup_status        │ service │ yes │ true + derivation                  │ green        │
-└───┴──────────────────────────────┴─────────┴─────┴──────────────────────────────────────┴──────────────┘
-
-service/backup_status is the one exception: it returns a real true because its rules are Always() and its box is on the service row, where a fault would redden the service name.
-
-Remaining code that supports this
-
-┌────────────────────────────────────────────────┬──────────────────────────────────────────────────────────┐
-│ Code                                           │ Why it exists                                            │
-├────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
-│ errUnimplemented in probe.go's var block   │ the sentinel itself                                      │
-│ one case in trackMetricFault               │ logs it at DEBUG, so 8 permanent faults aren't 8 ERRORs  │
-│ display.serviceShown + shownServiceMetrics │ red service name summarises visible cells — not stub-specific │
-└────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┘
-
-Only the first two are stub machinery, and both are one line each. The third is a general display rule that happens to make 7 and 8 harmless.
-
-Two more TODOs exist that aren't unimplemented metrics, worth knowing about since they'll show up in the same grep: servicesProbe.configuredStatus() returns false, nil as the fallback — the real value is set per service at probe_services.go:463/486/499 from the config list — and servicesProbe.backupStatus() returns the true above. Both feed metrics that carry real data or a deliberate constant, so grep -rn "TODO: Provide implementation" returns 11 hits for 9 metrics.
 
 
 
-
-
-check all metrics working except for backup
+check all metrics working 
 verify that when backup is mounted it is ignored by Hlth SSD
 implement backup so metrics can work - module by modeule first then cron'd backup to /share and to /backup impl
 

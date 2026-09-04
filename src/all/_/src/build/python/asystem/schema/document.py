@@ -115,6 +115,7 @@ class SchemaBrokerOptions:
     working_dir: str = ""
     topic_glob_discovery: str = ""
     topic_glob_data: str = ""
+    topic_glob_verify: object = None
     state: object = None
     command: object = None
     availability: object = None

@@ -12,6 +12,7 @@ x-common: &common
     - DATABASE_PORT
     - DATABASE_NAME
     - DATABASE_TOKEN
+    - BROKER_TOKEN
   cap_add:
     - SYSLOG
     - SYS_RAWIO
@@ -20,10 +21,28 @@ x-common: &common
     - "c 1:11 r"
     - "b 8:* r"
     - "b 259:* r"
+  security_opt:
+    - apparmor=unconfined
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
-    - /:/${SUPERVISOR_MOUNT}:ro
     - /var/run/docker.sock:/var/run/docker.sock
+    - /:/${SUPERVISOR_MOUNT}:ro
+    - /etc/fstab:/etc/fstab:ro
+    - /var/lib/asystem/install:/var/lib/asystem/install:ro
+    - /dev:/dev
+    - /home/asystem:/home/asystem:rw
+    - type: bind
+      source: /share
+      target: /share
+      bind:
+        propagation: rshared
+        create_host_path: true
+    - type: bind
+      source: /backup
+      target: /backup
+      bind:
+        propagation: rshared
+        create_host_path: true
   logging:
     driver: "json-file"
     options:
@@ -44,4 +63,4 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 512M

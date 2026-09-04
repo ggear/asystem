@@ -37,24 +37,24 @@
 #     zigbee2mqtt]
 #   field status - 6s [service is running and reporting metrics]
 #   field status_trend - 6s [service is running and reporting metrics, smoothed across the trend window]
-#   field backup_status - 6s [service backup completed, always true until implemented]
-#   field backup_status_trend - 6s [service backup completed, always true until implemented, smoothed across the trend window]
+#   field backup_status - 6s [module backup completed successfully in the latest run]
+#   field backup_status_trend - 6s [module backup completed successfully in the latest run, smoothed across the trend window]
 #   field health_status - 6s [service container healthcheck reported healthy]
 #   field health_status_trend - 6s [service container healthcheck reported healthy, smoothed across the trend window]
-#   field configured_status - 6s [service is configured as expected, not yet implemented]
-#   field configured_status_trend - 6s [service is configured as expected, not yet implemented, smoothed across the trend window]
+#   field configured_status - 6s [this service is expected to be running on this host]
+#   field configured_status_trend - 6s [this service is expected to be running on this host, smoothed across the trend window]
 #   field name - 6s [service container name] (not persisted)
-#   field version - 6s [service version, from the container image tag or the installed environment] (not persisted)
+#   field version - 6s [service installed version] (not persisted)
 #   field used_processor % 6s [processor time used by the service across all cores]
 #   field used_processor_trend % 6s [processor time used by the service across all cores, smoothed across the trend window]
-#   field used_memory % 6s [memory in use by the service, excluding page cache, against its ceiling]
-#   field used_memory_trend % 6s [memory in use by the service, excluding page cache, against its ceiling, smoothed across the trend window]
-#   field used_disk_ops % 6s [block device throughput used by the service against a 100 MiB per second budget]
-#   field used_disk_ops_trend % 6s [block device throughput used by the service against a 100 MiB per second budget, smoothed across the trend window]
+#   field used_memory % 6s [memory in use by the service, excluding page cache, against its configured ceiling]
+#   field used_memory_trend % 6s [memory in use by the service, excluding page cache, against its configured ceiling, smoothed across the trend window]
+#   field used_disk_rate % 6s [block device throughput used by the service against a 100 MiB per second budget]
+#   field used_disk_rate_trend % 6s [block device throughput used by the service against a 100 MiB per second budget, smoothed across the trend window]
 #   field used_network % 6s [network throughput used by the service against a 1000 Mbit per second budget]
 #   field used_network_trend % 6s [network throughput used by the service against a 1000 Mbit per second budget, smoothed across the trend window]
 #   field up_time s 6s [time the service container has been running] (not persisted)
-#   field max_memory MiB 6s [memory ceiling declared for the service in its compose file] (not persisted)
+#   field max_memory MiB 6s [memory ceiling configured for this service] (not persisted)
 #   field restart_count - 6s [restarts of the service container since it was created]
 #   field restart_count_trend - 6s [restarts of the service container since it was created, smoothed across the trend window]
 
@@ -74,8 +74,8 @@ supervisor,
     used_processor_trend=<int>,
     used_memory=<int>,
     used_memory_trend=<int>,
-    used_disk_ops=<int>,
-    used_disk_ops_trend=<int>,
+    used_disk_rate=<int>,
+    used_disk_rate_trend=<int>,
     used_network=<int>,
     used_network_trend=<int>,
     restart_count=<float>,

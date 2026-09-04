@@ -10,3 +10,7 @@ jq
 procps
 mosquitto-clients
 smartmontools
+rsync
+util-linux
+docker.io
+btrfs-progs

@@ -122,6 +122,18 @@ printf '\nSchema describe [%s] against [%s]\n' "supervisor" "${BROKER_SERVICE}"
 printf -- '\n-- %s\n\n' "homeassistant/+/+/+/config"
 topics "homeassistant/+/+/+/config" "^homeassistant/[^/]+/supervisor_[^/]+/[^/]+/config$" | listed
 printf '\n'
-printf -- '\n-- %s\n\n' "supervisor/+/#"
-topics "supervisor/+/#" | listed
+printf -- '\n-- %s\n\n' "supervisor/+/data/#"
+topics "supervisor/+/data/#" | listed
+printf '\n'
+printf -- '\n-- %s\n\n' "supervisor/+/command/#"
+topics "supervisor/+/command/#" | listed
+printf '\n'
+printf -- '\n-- %s\n\n' "supervisor/+/status"
+topics "supervisor/+/status" | listed
+printf '\n'
+printf -- '\n-- %s\n\n' "supervisor/+/backup/#"
+topics "supervisor/+/backup/#" | listed
+printf '\n'
+printf -- '\n-- %s\n\n' "supervisor/cluster-all/backup/#"
+topics "supervisor/cluster-all/backup/#" | listed
 printf '\n'

@@ -34,7 +34,9 @@ ASYSTEM_PACKAGES_DNF=(
   nvme-cli
   fio
   acl
+  gdisk
   parted
+  btrfs-progs
   util-linux
   usbutils
   smartmontools

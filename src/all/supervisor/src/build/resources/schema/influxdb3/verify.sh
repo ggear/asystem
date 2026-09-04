@@ -317,26 +317,26 @@ WHERE
 HAVING count(*) FILTER (WHERE column_name = 'failed_shares_trend') = 0
 UNION ALL
 SELECT
-    'supervisor/host' AS relation,
-    'failed_backups'  AS measure,
-    '6s'              AS period,
-    '%'               AS unit,
-    'missing'         AS fault
-FROM information_schema.columns
-WHERE
-    table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'failed_backups') = 0
-UNION ALL
-SELECT
     'supervisor/host'      AS relation,
-    'failed_backups_trend' AS measure,
+    'failed_backup_stages' AS measure,
     '6s'                   AS period,
     '%'                    AS unit,
     'missing'              AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'failed_backups_trend') = 0
+HAVING count(*) FILTER (WHERE column_name = 'failed_backup_stages') = 0
+UNION ALL
+SELECT
+    'supervisor/host'            AS relation,
+    'failed_backup_stages_trend' AS measure,
+    '6s'                         AS period,
+    '%'                          AS unit,
+    'missing'                    AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'failed_backup_stages_trend') = 0
 UNION ALL
 SELECT
     'supervisor/host'  AS relation,
@@ -383,26 +383,26 @@ WHERE
 HAVING count(*) FILTER (WHERE column_name = 'spin_fan_speed_trend') = 0
 UNION ALL
 SELECT
-    'supervisor/host'  AS relation,
-    'life_used_drives' AS measure,
-    '6s'               AS period,
-    '%'                AS unit,
-    'missing'          AS fault
+    'supervisor/host' AS relation,
+    'used_drive_life' AS measure,
+    '6s'              AS period,
+    '%'               AS unit,
+    'missing'         AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'life_used_drives') = 0
+HAVING count(*) FILTER (WHERE column_name = 'used_drive_life') = 0
 UNION ALL
 SELECT
-    'supervisor/host'        AS relation,
-    'life_used_drives_trend' AS measure,
-    '6s'                     AS period,
-    '%'                      AS unit,
-    'missing'                AS fault
+    'supervisor/host'       AS relation,
+    'used_drive_life_trend' AS measure,
+    '6s'                    AS period,
+    '%'                     AS unit,
+    'missing'               AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'life_used_drives_trend') = 0
+HAVING count(*) FILTER (WHERE column_name = 'used_drive_life_trend') = 0
 UNION ALL
 SELECT
     'supervisor/host' AS relation,
@@ -494,25 +494,25 @@ HAVING count(*) FILTER (WHERE column_name = 'used_swap_space_trend') = 0
 UNION ALL
 SELECT
     'supervisor/host' AS relation,
-    'used_disk_ops'   AS measure,
+    'used_disk_time'  AS measure,
     '6s'              AS period,
     '%'               AS unit,
     'missing'         AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'used_disk_ops') = 0
+HAVING count(*) FILTER (WHERE column_name = 'used_disk_time') = 0
 UNION ALL
 SELECT
-    'supervisor/host'     AS relation,
-    'used_disk_ops_trend' AS measure,
-    '6s'                  AS period,
-    '%'                   AS unit,
-    'missing'             AS fault
+    'supervisor/host'      AS relation,
+    'used_disk_time_trend' AS measure,
+    '6s'                   AS period,
+    '%'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'used_disk_ops_trend') = 0
+HAVING count(*) FILTER (WHERE column_name = 'used_disk_time_trend') = 0
 UNION ALL
 SELECT
     'supervisor/host' AS relation,
@@ -714,25 +714,25 @@ HAVING count(*) FILTER (WHERE column_name = 'used_memory_trend') = 0
 UNION ALL
 SELECT
     'supervisor/service' AS relation,
-    'used_disk_ops'      AS measure,
+    'used_disk_rate'     AS measure,
     '6s'                 AS period,
     '%'                  AS unit,
     'missing'            AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'used_disk_ops') = 0
+HAVING count(*) FILTER (WHERE column_name = 'used_disk_rate') = 0
 UNION ALL
 SELECT
-    'supervisor/service'  AS relation,
-    'used_disk_ops_trend' AS measure,
-    '6s'                  AS period,
-    '%'                   AS unit,
-    'missing'             AS fault
+    'supervisor/service'   AS relation,
+    'used_disk_rate_trend' AS measure,
+    '6s'                   AS period,
+    '%'                    AS unit,
+    'missing'              AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'supervisor'
-HAVING count(*) FILTER (WHERE column_name = 'used_disk_ops_trend') = 0
+HAVING count(*) FILTER (WHERE column_name = 'used_disk_rate_trend') = 0
 UNION ALL
 SELECT
     'supervisor/service' AS relation,
@@ -790,20 +790,22 @@ WHERE
     AND column_name NOT IN (
         'allocated_memory', 'allocated_memory_trend', 'backup_status',
         'backup_status_trend', 'configured_status', 'configured_status_trend',
-        'failed_backups', 'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
+        'failed_backup_stages', 'failed_backup_stages_trend', 'failed_backups',
+        'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
         'failed_log_messages', 'failed_log_messages_trend', 'failed_shares',
         'failed_shares_trend', 'health_status', 'health_status_trend', 'host',
         'life_used_drives', 'life_used_drives_trend', 'module', 'restart_count',
         'restart_count_trend', 'service', 'spin_fan_speed', 'spin_fan_speed_of_max',
         'spin_fan_speed_of_max_trend', 'spin_fan_speed_trend', 'status', 'status_trend',
         'temperature', 'temperature_trend', 'time', 'used_backup_space',
-        'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend',
-        'used_home_space', 'used_home_space_trend', 'used_memory', 'used_memory_trend',
-        'used_network', 'used_network_trend', 'used_processor', 'used_processor_trend',
-        'used_share_space', 'used_share_space_trend', 'used_swap_space',
-        'used_swap_space_trend', 'used_system_space', 'used_system_space_trend',
-        'warn_temperature', 'warn_temperature_of_max', 'warn_temperature_of_max_trend',
-        'warn_temperature_trend'
+        'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend', 'used_disk_rate',
+        'used_disk_rate_trend', 'used_disk_time', 'used_disk_time_trend', 'used_drive_life',
+        'used_drive_life_trend', 'used_home_space', 'used_home_space_trend', 'used_memory',
+        'used_memory_trend', 'used_network', 'used_network_trend', 'used_processor',
+        'used_processor_trend', 'used_share_space', 'used_share_space_trend',
+        'used_swap_space', 'used_swap_space_trend', 'used_system_space',
+        'used_system_space_trend', 'warn_temperature', 'warn_temperature_of_max',
+        'warn_temperature_of_max_trend', 'warn_temperature_trend'
     )
 ORDER BY fault, measure;
 SCHEMA_SQL

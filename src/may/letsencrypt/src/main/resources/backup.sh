@@ -32,8 +32,12 @@ BACKUP_RUN_TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
 BACKUP_FULL_SUFFIX="_full"
 BACKUP_DELTA_SUFFIX="_delta"
 BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-7}"
+BACKUP_KEEP_DAILY="${BACKUP_KEEP_DAILY:-7}"
+BACKUP_KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
+BACKUP_KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-12}"
 BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
 BACKUP_SERVICE_RESTART="${BACKUP_SERVICE_RESTART:-true}"
+BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS:-3}"
 BACKUP_TARGET_PATH=""
 
 BACKUP_INTERNAL_NEWEST=""
@@ -110,6 +114,47 @@ backup_pruned() {
   done
 }
 
+backup_dir_is_full() {
+  local dir="${1}" stamp="${2}" path
+  for path in "${dir}/${stamp}"/*; do
+    backup_is_full "$(basename "${path}")" && return 0
+  done
+  return 1
+}
+
+backup_pruned_gfs() {
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}" names name stamp bucket
+  mapfile -t names < <(backup_listed "${dir}")
+  [ "${#names[@]}" -gt 1 ] || return 0
+  declare -A keep=()
+  local count="${#names[@]}" index
+  for ((index = count - 1; index >= 0 && index >= count - BACKUP_KEEP_DAILY; index--)); do
+    keep["${names[${index}]}"]=daily
+  done
+  declare -A week_seen=() month_seen=()
+  for ((index = count - 1; index >= 0; index--)); do
+    name="${names[${index}]}"
+    stamp="${name:0:10}"
+    backup_dir_is_full "${dir}" "${name}" || continue
+    bucket="$(date -d "${stamp}" +%G-%V 2>/dev/null)"
+    if [ -n "${bucket}" ] && [ -z "${week_seen[${bucket}]:-}" ] && [ "${#week_seen[@]}" -lt "${BACKUP_KEEP_WEEKLY}" ]; then
+      week_seen["${bucket}"]=1
+      keep["${name}"]=weekly
+    fi
+    bucket="${stamp:0:7}"
+    if [ -z "${month_seen[${bucket}]:-}" ] && [ "${#month_seen[@]}" -lt "${BACKUP_KEEP_MONTHLY}" ]; then
+      month_seen["${bucket}"]=1
+      keep["${name}"]=monthly
+    fi
+  done
+  for name in "${names[@]}"; do
+    if [ -z "${keep[${name}]:-}" ]; then
+      rm -rf "${dir:?}/${name}"
+      echo "Pruned backup [${name}] outside the grandfather-father-son window"
+    fi
+  done
+}
+
 backup_included() {
   local path
   while IFS= read -r -d ':' path || [ -n "${path}" ]; do
@@ -182,6 +227,11 @@ backup_written() {
 
 if [ "${1:-}" = "--prune" ]; then
   backup_pruned "${2}"
+  exit 0
+fi
+
+if [ "${1:-}" = "--prune-gfs" ]; then
+  backup_pruned_gfs "${2}"
   exit 0
 fi
 

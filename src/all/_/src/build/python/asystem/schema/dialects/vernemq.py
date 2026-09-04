@@ -199,6 +199,12 @@ def _recovery(module_root):
 
 
 def publish_script(module_name, topic_glob_discovery, topic_glob_data, published=True, recovery=""):
+    globs_data = _glob_list(topic_glob_data)
+    if published and not globs_data:
+        raise ValueError(
+            "Build generate script [{}] declares entities but no topic_glob_data, so the sweep would drop every "
+            "retained topic on the broker: declare the module's own data topics".format(module_name))
+    glob_data_args = " ".join('-t "{}"'.format(one) for one in globs_data)
     topic_find_discovery = ("*/" + topic_glob_discovery.replace("+", "*").replace("#", "*") + "/*" if topic_glob_discovery else "*")
     header = """
 #!/usr/bin/env bash
@@ -236,7 +242,7 @@ mosquitto_sub "${{BROKER_ARGS[@]}}" --remove-retained -F '%t' -t "{glob_discover
 printf '\\nEntity Metadata publish script [{module}] sleeping before dropping data topics ... ' && sleep 2 && printf 'done\\n\\n'
 
 printf 'Entity Metadata publish script [{module}] dropping data topics on [%s]:\\n' "$BROKER_SERVICE"
-mosquitto_sub "${{BROKER_ARGS[@]}}" --remove-retained -F '%t' -t "{glob_data}" -W 1 2>/dev/null
+mosquitto_sub "${{BROKER_ARGS[@]}}" --remove-retained -F '%t' {glob_data} -W 1 2>/dev/null
 
 printf '\\nEntity Metadata publish script [{module}] sleeping before publishing discovery topics ... ' && sleep 2 && printf 'done\\n\\n'
 
@@ -256,7 +262,7 @@ fi
 """.format(
         module=module_name,
         glob_discovery=topic_glob_discovery,
-        glob_data=topic_glob_data,
+        glob_data=glob_data_args,
         find_discovery=topic_find_discovery,
     ) if published else ""
     return "\n\n".join(part for part in (header.strip(), publish.strip(), recovery) if part) + "\n"
@@ -495,6 +501,7 @@ def _declared_topics(module_name, options):
     document = options.document
     if document is None or not getattr(document, "topics", None):
         return []
+    declared_globs = _glob_list(options.topic_glob_data) + _glob_list(options.topic_glob_verify)
     bindings = _bindings(module_name, options.entities)
     declared = {}
     for topic in document.topics:
@@ -504,11 +511,11 @@ def _declared_topics(module_name, options):
                 "Build generate script [{}] topic template [{}] expanded to nothing, supply broker_entities "
                 "binding every placeholder it names".format(module_name, topic.template))
         for value in expanded:
-            if options.topic_glob_data and not _glob_match(options.topic_glob_data, value):
+            if declared_globs and not _glob_match_any(declared_globs, value):
                 raise ValueError(
-                    "Build generate script [{}] topic_glob_data [{}] does not match declared topic [{}] from "
+                    "Build generate script [{}] declared globs {} do not match declared topic [{}] from "
                     "template [{}]: update the glob or the declaration so they agree"
-                    .format(module_name, options.topic_glob_data, value, topic.template))
+                    .format(module_name, declared_globs, value, topic.template))
             declared[value] = topic.role
     return sorted(declared.items())
 
@@ -545,13 +552,25 @@ def _expanded(module_name, template, bindings):
     return sorted(set(expanded))
 
 
+def _glob_list(topic_glob):
+    if not topic_glob:
+        return []
+    if isinstance(topic_glob, str):
+        return [topic_glob]
+    return list(topic_glob)
+
+
+def _glob_match_any(topic_glob, topic):
+    return any(_glob_match(one, topic) for one in _glob_list(topic_glob))
+
+
 def _validate_globs(metadata_df, module_name, topic_glob_discovery, topic_glob_data):
     for topic_glob, topic_glob_name, topic_glob_columns in (
             (topic_glob_discovery, "topic_glob_discovery", ("discovery_topic",)),
             (topic_glob_data, "topic_glob_data", ("state_topic", "command_topic", "availability_topic"))):
         for topic_glob_column in topic_glob_columns:
             unmatched = [topic for topic in _column_topics(metadata_df, topic_glob_column)
-                         if not _glob_match(topic_glob, topic)]
+                         if not _glob_match_any(topic_glob, topic)]
             if unmatched:
                 raise ValueError(
                     "Build generate script [{}] {} [{}] does not match entity_metadata.xlsx {} topic(s) {}: "
@@ -595,7 +614,7 @@ def _artifacts_declared(metadata_df, module_name, options):
     if not topics and not declared:
         return {}
     document = options.document
-    globs = [glob for glob in (options.topic_glob_discovery, options.topic_glob_data) if glob]
+    globs = [glob for glob in ([options.topic_glob_discovery] + _glob_list(options.topic_glob_data) + _glob_list(options.topic_glob_verify)) if glob]
     discoveries = _discoveries(metadata_df)
     generated = {}
     for column, column_topics in topics.items():

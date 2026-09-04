@@ -39,15 +39,54 @@ backup_awaited() {
   done
 }
 
+backup_eligible() {
+  [ -d "${BACKUP_INTERNAL_ROOT_DIR}/${1#*-}" ]
+}
+
+eval "influxdb3_pruned_local () $(declare -f backup_pruned | tail -n +2)"
+
+influxdb3_pruned_server() {
+  local names name live_full dead=() reversed=()
+  mapfile -t names < <(backup_stored)
+  live_full=""
+  for name in "${names[@]}"; do
+    case "${name}" in full-*) live_full="${name}" ;; esac
+  done
+  [ -n "${live_full}" ] || return 0
+  local past_full=""
+  for name in "${names[@]}"; do
+    [ "${name}" = "${live_full}" ] && past_full=1
+    [ -n "${past_full}" ] || dead+=("${name}")
+  done
+  [ "${#dead[@]}" -gt 0 ] || return 0
+  for ((name = ${#dead[@]} - 1; name >= 0; name--)); do reversed+=("${dead[name]}"); done
+  for name in "${reversed[@]}"; do
+    case "${name}" in
+    delta-*) docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 delete backup --name "${name}" --incremental >/dev/null 2>&1 || echo "Could not delete dead delta backup [${name}]" >&2 ;;
+    esac
+  done
+  for name in "${dead[@]}"; do
+    case "${name}" in
+    full-*) docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 delete backup --name "${name}" >/dev/null 2>&1 || echo "Could not delete dead full backup [${name}]" >&2 ;;
+    esac
+  done
+}
+
+backup_pruned() {
+  influxdb3_pruned_local "$@"
+  influxdb3_pruned_server
+}
+
 backup_written() {
   local names parent full name
   mapfile -t names < <(backup_stored)
   parent=""
   full=""
   for name in "${names[@]}"; do
+    backup_eligible "${name}" || continue
+    parent="${name}"
     case "${name}" in full-*) full="${name}" ;; esac
   done
-  [ "${#names[@]}" -gt 0 ] && parent="${names[-1]}"
   if [ -n "${full}" ] &&
     [ "$(backup_epoch "${full}")" -ge "$(($(date +%s) - BACKUP_RETAIN_DAYS * 86400))" ] &&
     [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ]; then

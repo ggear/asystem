@@ -1062,7 +1062,7 @@ func TestScribe_FlattensDetailLineBreaks(t *testing.T) {
 			restore := slog.Default()
 			slog.SetDefault(slog.New(&streamHandler{level: slog.LevelDebug, writer: buffer, sink: sinkFile()}))
 			defer slog.SetDefault(restore)
-			Log(SourceProbe, SubjectMetric(metric.MetricHostLifeUsedDrives), ActionSample).Warnf("excluded", time.Now(), "%s", testCase.detail)
+			Log(SourceProbe, SubjectMetric(metric.MetricHostUsedDriveLife), ActionSample).Warnf("excluded", time.Now(), "%s", testCase.detail)
 			rows := strings.Split(strings.TrimSuffix(buffer.String(), "\n"), "\n")[1:]
 			if len(rows) != testCase.expectedRows {
 				t.Fatalf("rows: got %d want %d", len(rows), testCase.expectedRows)

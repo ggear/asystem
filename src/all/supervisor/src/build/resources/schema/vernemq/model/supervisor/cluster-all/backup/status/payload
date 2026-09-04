@@ -1,0 +1,12 @@
+{
+  "run_id": "<text>",
+  "state": <running|complete|failed|timeout>,
+  "started_ts": "<text>",
+  "finished_ts": "<text>",
+  "duration_s": <number>,
+  "success_bool": <true|false>,
+  "power_bool": <true|false>,
+  "hosts_expected": <number>,
+  "hosts_reported": <number>,
+  "hosts_failed": <number>
+}

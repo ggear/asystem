@@ -44,7 +44,7 @@ mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "homeassistant/+/
 printf '\nEntity Metadata publish script [supervisor] sleeping before dropping data topics ... ' && sleep 2 && printf 'done\n\n'
 
 printf 'Entity Metadata publish script [supervisor] dropping data topics on [%s]:\n' "$BROKER_SERVICE"
-mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "supervisor/${SUPERVISOR_HOST}/#" -W 1 2>/dev/null
+mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "supervisor/${SUPERVISOR_HOST}/data/#" -t "supervisor/${SUPERVISOR_HOST}/command/#" -t "supervisor/${SUPERVISOR_HOST}/status" -W 1 2>/dev/null
 
 printf '\nEntity Metadata publish script [supervisor] sleeping before publishing discovery topics ... ' && sleep 2 && printf 'done\n\n'
 

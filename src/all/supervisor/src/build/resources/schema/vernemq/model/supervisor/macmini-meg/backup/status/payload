@@ -1,0 +1,18 @@
+{
+  "run_id": "<text>",
+  "state": <idle|running|complete|skipped|failed|timeout>,
+  "trigger": <scheduled|manual>,
+  "started_ts": "<text>",
+  "finished_ts": "<text>",
+  "expires_ts": "<text>",
+  "duration_s": <number>,
+  "success_bool": <true|false>,
+  "disk_usage_perc": <number>,
+  "file_count": <number>,
+  "size_mb": <number>,
+  "files_held": <number>,
+  "files_created": <number>,
+  "files_deleted": <number>,
+  "size_held_mb": <number>,
+  "sent_mb": <number>
+}

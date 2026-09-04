@@ -32,8 +32,12 @@ BACKUP_RUN_TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
 BACKUP_FULL_SUFFIX="_full"
 BACKUP_DELTA_SUFFIX="_delta"
 BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-7}"
+BACKUP_KEEP_DAILY="${BACKUP_KEEP_DAILY:-7}"
+BACKUP_KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
+BACKUP_KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-12}"
 BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
 BACKUP_SERVICE_RESTART="${BACKUP_SERVICE_RESTART:-true}"
+BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS:-3}"
 BACKUP_TARGET_PATH=""
 
 BACKUP_INTERNAL_NEWEST=""
@@ -106,6 +110,47 @@ backup_pruned() {
     if [ "$(backup_epoch "${names[${index}]}")" -lt "${cutoff}" ]; then
       rm -rf "${dir:?}/${names[${index}]}"
       echo "Deleted backup [${names[${index}]}] older than [${BACKUP_RETAIN_DAYS}] days"
+    fi
+  done
+}
+
+backup_dir_is_full() {
+  local dir="${1}" stamp="${2}" path
+  for path in "${dir}/${stamp}"/*; do
+    backup_is_full "$(basename "${path}")" && return 0
+  done
+  return 1
+}
+
+backup_pruned_gfs() {
+  local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}" names name stamp bucket
+  mapfile -t names < <(backup_listed "${dir}")
+  [ "${#names[@]}" -gt 1 ] || return 0
+  declare -A keep=()
+  local count="${#names[@]}" index
+  for ((index = count - 1; index >= 0 && index >= count - BACKUP_KEEP_DAILY; index--)); do
+    keep["${names[${index}]}"]=daily
+  done
+  declare -A week_seen=() month_seen=()
+  for ((index = count - 1; index >= 0; index--)); do
+    name="${names[${index}]}"
+    stamp="${name:0:10}"
+    backup_dir_is_full "${dir}" "${name}" || continue
+    bucket="$(date -d "${stamp}" +%G-%V 2>/dev/null)"
+    if [ -n "${bucket}" ] && [ -z "${week_seen[${bucket}]:-}" ] && [ "${#week_seen[@]}" -lt "${BACKUP_KEEP_WEEKLY}" ]; then
+      week_seen["${bucket}"]=1
+      keep["${name}"]=weekly
+    fi
+    bucket="${stamp:0:7}"
+    if [ -z "${month_seen[${bucket}]:-}" ] && [ "${#month_seen[@]}" -lt "${BACKUP_KEEP_MONTHLY}" ]; then
+      month_seen["${bucket}"]=1
+      keep["${name}"]=monthly
+    fi
+  done
+  for name in "${names[@]}"; do
+    if [ -z "${keep[${name}]:-}" ]; then
+      rm -rf "${dir:?}/${name}"
+      echo "Pruned backup [${name}] outside the grandfather-father-son window"
     fi
   done
 }
@@ -201,15 +246,54 @@ backup_awaited() {
   done
 }
 
+backup_eligible() {
+  [ -d "${BACKUP_INTERNAL_ROOT_DIR}/${1#*-}" ]
+}
+
+eval "influxdb3_pruned_local () $(declare -f backup_pruned | tail -n +2)"
+
+influxdb3_pruned_server() {
+  local names name live_full dead=() reversed=()
+  mapfile -t names < <(backup_stored)
+  live_full=""
+  for name in "${names[@]}"; do
+    case "${name}" in full-*) live_full="${name}" ;; esac
+  done
+  [ -n "${live_full}" ] || return 0
+  local past_full=""
+  for name in "${names[@]}"; do
+    [ "${name}" = "${live_full}" ] && past_full=1
+    [ -n "${past_full}" ] || dead+=("${name}")
+  done
+  [ "${#dead[@]}" -gt 0 ] || return 0
+  for ((name = ${#dead[@]} - 1; name >= 0; name--)); do reversed+=("${dead[name]}"); done
+  for name in "${reversed[@]}"; do
+    case "${name}" in
+    delta-*) docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 delete backup --name "${name}" --incremental >/dev/null 2>&1 || echo "Could not delete dead delta backup [${name}]" >&2 ;;
+    esac
+  done
+  for name in "${dead[@]}"; do
+    case "${name}" in
+    full-*) docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 delete backup --name "${name}" >/dev/null 2>&1 || echo "Could not delete dead full backup [${name}]" >&2 ;;
+    esac
+  done
+}
+
+backup_pruned() {
+  influxdb3_pruned_local "$@"
+  influxdb3_pruned_server
+}
+
 backup_written() {
   local names parent full name
   mapfile -t names < <(backup_stored)
   parent=""
   full=""
   for name in "${names[@]}"; do
+    backup_eligible "${name}" || continue
+    parent="${name}"
     case "${name}" in full-*) full="${name}" ;; esac
   done
-  [ "${#names[@]}" -gt 0 ] && parent="${names[-1]}"
   if [ -n "${full}" ] &&
     [ "$(backup_epoch "${full}")" -ge "$(($(date +%s) - BACKUP_RETAIN_DAYS * 86400))" ] &&
     [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ]; then
@@ -233,6 +317,11 @@ backup_written() {
 
 if [ "${1:-}" = "--prune" ]; then
   backup_pruned "${2}"
+  exit 0
+fi
+
+if [ "${1:-}" = "--prune-gfs" ]; then
+  backup_pruned_gfs "${2}"
   exit 0
 fi
 

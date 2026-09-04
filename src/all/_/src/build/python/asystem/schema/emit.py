@@ -90,7 +90,7 @@ def _validate_retired(document, module_name, rename, drop, archive):
 
 def write_schema_broker(source, module_name=None, schemas_dir=None,
                         broker_working_dir=None, broker_topic_glob_discovery=None,
-                        broker_topic_glob_data=None, broker_state=None, broker_command=None,
+                        broker_topic_glob_data=None, broker_topic_glob_verify=None, broker_state=None, broker_command=None,
                         broker_availability=None, broker_document=None, broker_entities=None):
     module_root = load_bootstrap_root()
     if module_name is None:
@@ -105,6 +105,7 @@ def write_schema_broker(source, module_name=None, schemas_dir=None,
         working_dir=str(broker_working_dir),
         topic_glob_discovery=broker_topic_glob_discovery or "",
         topic_glob_data=broker_topic_glob_data or "",
+        topic_glob_verify=broker_topic_glob_verify,
         state=broker_state, command=broker_command,
         availability=broker_availability, document=broker_document,
         entities=broker_entities)

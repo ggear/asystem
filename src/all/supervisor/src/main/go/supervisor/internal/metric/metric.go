@@ -12,19 +12,19 @@ const (
 	MetricHostAllocatedMemory
 	MetricHostFailedLogs
 	MetricHostFailedShares
-	MetricHostFailedBackups
+	MetricHostFailedBackupStages
 	MetricHostWarnTemperature
 	MetricHostSpinFanSpeed
-	MetricHostLifeUsedDrives
+	MetricHostUsedDriveLife
 	MetricHostUsedHomeSpace
 	MetricHostUsedShareSpace
 	MetricHostUsedBackupSpace
 	MetricHostUsedSwapSpace
-	MetricHostUsedDiskOps
+	MetricHostUsedDiskTime
 	MetricHostUsedNetwork
-	MetricHostRunningTime
+	MetricHostUpTime
 	MetricHostTemperature
-	MetricHostServices
+	MetricHostServicesStatus
 	MetricHostServicesMaxMemory
 	MetricService
 	MetricServiceBackupStatus
@@ -34,7 +34,7 @@ const (
 	MetricServiceVersion
 	MetricServiceUsedProcessor
 	MetricServiceUsedMemory
-	MetricServiceUsedDiskOps
+	MetricServiceUsedDiskRate
 	MetricServiceUsedNetwork
 	MetricServiceUpTime
 	MetricServiceMaxMemory

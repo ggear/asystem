@@ -48,7 +48,7 @@ func TestProbe_RunProbes(t *testing.T) {
 			}
 			done := make(chan error, 1)
 			go func() {
-				done <- Run(ctx, nil)
+				done <- RunPoll(ctx, nil)
 			}()
 			time.Sleep(1100 * time.Millisecond)
 			cancel()
@@ -153,7 +153,7 @@ func TestProbe_RunOnPulse(t *testing.T) {
 			heartbeatFired := false
 			done := make(chan error, 1)
 			go func() {
-				done <- Run(ctx, tt.onPulse(&callCount, &heartbeatFired))
+				done <- RunPoll(ctx, tt.onPulse(&callCount, &heartbeatFired))
 			}()
 			time.Sleep(1100 * time.Millisecond)
 			cancel()
@@ -187,12 +187,15 @@ type mockProbe struct {
 	createErr   error
 	runErr      error
 	cache       *metric.RecordCache
+	isDormant   bool
 	mask        [metric.MetricMax]bool
 	createCalls int
 	runCalls    int
 }
 
 func (m *mockProbe) subject() scribe.Subject { return scribe.SubjectHost("") }
+
+func (m *mockProbe) dormant() bool { return m.isDormant }
 
 func (m *mockProbe) metrics() []metric.ID {
 	return m.metricsList
@@ -212,7 +215,7 @@ func (m *mockProbe) create(_ string, cache *metric.RecordCache, mask [metric.Met
 	return err
 }
 
-func (m *mockProbe) run(_ context.Context, _ bool) error {
+func (m *mockProbe) poll(_ context.Context, _ bool) error {
 	m.mutex.Lock()
 	m.runCalls++
 	err := m.runErr
@@ -305,6 +308,40 @@ func TestProbe_FailedSampleBlanks(t *testing.T) {
 			}
 			if record.Value.Pulse.ValueInt != 42 {
 				t.Errorf("pulse value: got %v want 42", record.Value.Pulse.ValueInt)
+			}
+		})
+	}
+}
+
+func TestProbe_DormantProbeNeverPolls(t *testing.T) {
+	tests := []struct {
+		name          string
+		isDormant     bool
+		wantProbes    int
+		expectedError bool
+	}{
+		{"an active probe joins the poll set", false, 1, false},
+		{"a dormant probe is left out of it", true, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := &mockProbe{metricsList: []metric.ID{metric.MetricHostUsedProcessor}, isDormant: tt.isDormant}
+			for index := range probesByMetricID {
+				probesByMetricID[index] = nil
+			}
+			execProbes = nil
+			registerProbes(func() probe { return mock })
+			cache := metric.NewRecordCache()
+			cache.Store(metric.NewRecordGUID(metric.MetricHostUsedProcessor, "localhost"), &metric.Record{})
+			err := Create("", cache, config.Periods{PollMillis: 1000, PulseMillis: 1000})
+			if (err != nil) != tt.expectedError {
+				t.Fatalf("err: got %v want error %v", err, tt.expectedError)
+			}
+			if len(execProbes) != tt.wantProbes {
+				t.Errorf("probes: got %d want %d", len(execProbes), tt.wantProbes)
+			}
+			if _, ok := execProbes[mock]; ok == tt.isDormant {
+				t.Errorf("polled: got %v want %v", ok, !tt.isDormant)
 			}
 		})
 	}
