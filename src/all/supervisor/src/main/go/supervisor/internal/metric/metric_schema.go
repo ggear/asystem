@@ -97,7 +97,7 @@ func Topics() []schema.Topic {
 		"supervisor/$HOST/backup/status",
 		"supervisor/$HOST/backup/stage/$STAGE/status",
 		"supervisor/$HOST/backup/stage/primary/service/$BACKUP_SERVICE/status",
-		"supervisor/$HOST/backup/stage/tertiary/scrub/status",
+		"supervisor/$SCRUB_HOST/backup/stage/tertiary/scrub/status",
 		"supervisor/cluster-all/backup/leader",
 		"supervisor/cluster-all/backup/status",
 	} {
@@ -179,6 +179,8 @@ func Payloads() []schema.Payload {
 				{Key: "errors_found", Kind: schema.KindInt},
 				{Key: "errors_corrected", Kind: schema.KindInt},
 				{Key: "errors_uncorrectable", Kind: schema.KindInt},
+				{Key: "files_to_delete", Kind: schema.KindStr},
+				{Key: "files_to_delete_count", Kind: schema.KindInt},
 			}},
 		},
 		{Role: schema.RoleState, Match: "*/backup/stage/*/status", Root: backupStatus},

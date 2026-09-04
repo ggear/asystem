@@ -9,5 +9,7 @@
   "progress_perc": <number>,
   "errors_found": <number>,
   "errors_corrected": <number>,
-  "errors_uncorrectable": <number>
+  "errors_uncorrectable": <number>,
+  "files_to_delete": "<text>",
+  "files_to_delete_count": <number>
 }

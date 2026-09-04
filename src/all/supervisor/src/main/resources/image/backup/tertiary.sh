@@ -20,6 +20,7 @@ backup_scrub_counter() {
 
 backup_scrub_document() {
   local state="$1" success="$2" started="$3" scrubbed="$4" progress="$5" found="$6" corrected="$7" uncorrectable="$8"
+  local files="${9:-}" count="${10:-0}"
   mkdir -p "${BACKUP_STAGE_DIR}"
   cat >"${BACKUP_STAGE_DIR}/scrub.json.tmp" <<JSON
 {
@@ -33,11 +34,18 @@ backup_scrub_document() {
   "progress_perc": ${progress},
   "errors_found": ${found},
   "errors_corrected": ${corrected},
-  "errors_uncorrectable": ${uncorrectable}
+  "errors_uncorrectable": ${uncorrectable},
+  "files_to_delete": "${files}",
+  "files_to_delete_count": ${count}
 }
 JSON
   mv "${BACKUP_STAGE_DIR}/scrub.json.tmp" "${BACKUP_STAGE_DIR}/scrub.json"
   backup_publish "supervisor/${BACKUP_HOST}/backup/stage/tertiary/scrub/status" "$(cat "${BACKUP_STAGE_DIR}/scrub.json")"
+}
+
+backup_scrub_corrupt() {
+  dmesg 2>/dev/null | tail -n "+$(( ${1:-0} + 1 ))" |
+    grep -oE '\(path: [^)]+\)' | sed -e 's/^(path: //' -e 's/)$//' | sort -u
 }
 
 backup_scrub_cancel() {
@@ -49,6 +57,7 @@ backup_scrub_cancel() {
 backup_scrub() {
   local status raw action started hard since state=finished success=true
   local scrubbed=0 progress=0 found=0 corrected=0 uncorrectable=0
+  local kernel=0 files="" count=0
   started="$(date +%s)"
   if ! command -v btrfs >/dev/null 2>&1; then
     echo "[tertiary] scrub skipped, no [btrfs] on the PATH" >&2
@@ -83,6 +92,7 @@ backup_scrub() {
     backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
     return 0
   fi
+  kernel="$(dmesg 2>/dev/null | wc -l)"
   echo "[tertiary] scrub ${action} on [/backup] until [$(date --iso-8601=seconds -d @"${hard}")]"
   if ! btrfs scrub "${action}" -c 3 -n 15 /backup >/dev/null 2>&1; then
     echo "[tertiary] could not ${action} the scrub on [/backup]" >&2
@@ -115,15 +125,20 @@ backup_scrub() {
   esac
   if [ "${found}" -gt 0 ] || [ "${uncorrectable}" -gt 0 ]; then
     success=false
+    count="$(backup_scrub_corrupt "${kernel}" | wc -l | tr -d ' ')"
+    files="$(backup_scrub_corrupt "${kernel}" | head -20 | paste -sd ',' - | sed 's/"/\\"/g')"
     {
       printf '%s\n\n' "${raw}"
-      dmesg -T 2>/dev/null | grep -iE 'btrfs.*(csum|checksum|unable to fixup)' | tail -500
+      backup_scrub_corrupt "${kernel}"
+      printf '\n'
+      dmesg -T 2>/dev/null | tail -n "+$(( kernel + 1 ))" |
+        grep -iE 'btrfs.*(csum|checksum|unable to fixup)' | tail -500
     } >"${BACKUP_STAGE_DIR}/scrub.log"
-    echo "[tertiary] scrub found [${found}] error(s) with [${uncorrectable}] uncorrectable, corrupt files listed in [${BACKUP_STAGE_DIR}/scrub.log]" >&2
+    echo "[tertiary] scrub found [${found}] error(s) with [${uncorrectable}] uncorrectable across [${count}] file(s), delete them and re-mirror, listed in [${BACKUP_STAGE_DIR}/scrub.log]" >&2
   else
     echo "[tertiary] scrub ${state} at [${progress}] pct having scrubbed [${scrubbed}] MB with no errors"
   fi
-  backup_scrub_document "${state}" "${success}" "${started}" "${scrubbed}" "${progress}" "${found}" "${corrected}" "${uncorrectable}"
+  backup_scrub_document "${state}" "${success}" "${started}" "${scrubbed}" "${progress}" "${found}" "${corrected}" "${uncorrectable}" "${files}" "${count}"
   [ "${success}" = "true" ]
 }
 
