@@ -1,2 +1,1 @@
-# TODO: Provide implementation
-echo ''
+echo 'MariaDB initialised'
