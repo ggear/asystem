@@ -47,7 +47,7 @@ test each modules schema release
   - src/jen/weewx/src/build/resources/schema/vernemq/describe.sh
   - src/meg/tasmota/src/build/resources/schema/vernemq/describe.sh
   - src/mad/network/src/build/resources/schema/vernemq/describe.sh
-  src/may/tempstat/src/build/resources/schema/vernemq/describe.sh
+  - src/may/tempstat/src/build/resources/schema/vernemq/describe.sh
 test vernemq release
 test supervisor release
 test primary

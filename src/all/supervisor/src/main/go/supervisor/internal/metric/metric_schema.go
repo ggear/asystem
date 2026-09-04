@@ -97,6 +97,7 @@ func Topics() []schema.Topic {
 		"supervisor/$HOST/backup/status",
 		"supervisor/$HOST/backup/stage/$STAGE/status",
 		"supervisor/$HOST/backup/stage/primary/service/$BACKUP_SERVICE/status",
+		"supervisor/$HOST/backup/stage/tertiary/scrub/status",
 		"supervisor/cluster-all/backup/leader",
 		"supervisor/cluster-all/backup/status",
 	} {
@@ -163,6 +164,23 @@ func Payloads() []schema.Payload {
 			}},
 		},
 		{Role: schema.RoleState, Match: "*/backup/status", Root: backupStatus},
+		{
+			Role:  schema.RoleState,
+			Match: "*/backup/stage/tertiary/scrub/status",
+			Root: schema.Member{Members: []schema.Member{
+				{Key: "run_id", Kind: schema.KindStr},
+				{Key: "state", Enum: []string{"finished", "interrupted", "skipped", "failed"}},
+				{Key: "started_ts", Kind: schema.KindStr},
+				{Key: "finished_ts", Kind: schema.KindStr},
+				{Key: "duration_s", Kind: schema.KindInt},
+				{Key: "success_bool", Kind: schema.KindBool},
+				{Key: "scrubbed_mb", Kind: schema.KindInt},
+				{Key: "progress_perc", Kind: schema.KindFloat},
+				{Key: "errors_found", Kind: schema.KindInt},
+				{Key: "errors_corrected", Kind: schema.KindInt},
+				{Key: "errors_uncorrectable", Kind: schema.KindInt},
+			}},
+		},
 		{Role: schema.RoleState, Match: "*/backup/stage/*/status", Root: backupStatus},
 		{
 			Role: schema.RoleState,

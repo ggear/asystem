@@ -28,6 +28,7 @@ x-common: &common
     - /var/run/docker.sock:/var/run/docker.sock
     - /:/${SUPERVISOR_MOUNT}:ro
     - /etc/fstab:/etc/fstab:ro
+    - /var/lib/btrfs:/var/lib/btrfs:rw
     - /var/lib/asystem/install:/var/lib/asystem/install:ro
     - /dev:/dev
     - /home/asystem:/home/asystem:rw
