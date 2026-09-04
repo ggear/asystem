@@ -118,7 +118,7 @@ DATABASES="SELECT d.datname AS database FROM pg_database d
   WHERE d.datallowconn AND NOT d.datistemplate ORDER BY d.datname"
 
 SUMMARY="SELECT count(*) AS tables,
-    round((pg_database_size(current_database()) / 1048576.0)::numeric, 1) AS size
+    round((pg_database_size(current_database()) / 1048576.0)::numeric, 1) AS \\"megaBytes\\"
   FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
   WHERE c.relkind = 'r'
     AND n.nspname NOT IN ('pg_catalog', 'information_schema')
@@ -131,7 +131,7 @@ CATALOGUE="SELECT
     c.relname                                         AS table,
     count(a.attname)                                  AS columns,
     round(((max(pg_total_relation_size(c.oid)) + coalesce((SELECT sum(pg_total_relation_size(i.inhrelid))
-      FROM pg_inherits i WHERE i.inhparent = c.oid), 0)) / 1048576.0)::numeric, 1) AS size,
+      FROM pg_inherits i WHERE i.inhparent = c.oid), 0)) / 1048576.0)::numeric, 1) AS \\"megaBytes\\",
     coalesce(max(a.attname) FILTER (WHERE t.typname IN ('timestamptz', 'timestamp', 'date')), '-') AS stamp,
     coalesce(max(a.attname) FILTER (WHERE t.typname IN ('float8', 'float4', 'int8', 'int4', 'numeric')
       AND (a.attname IN ('time', 'timestamp', 'datetime') OR a.attname LIKE '%\\_ts')), '-') AS epoch
@@ -149,7 +149,7 @@ HYPERTABLES="SELECT
     hypertable_schema                                 AS schema,
     hypertable_name                                   AS table,
     round((hypertable_size(format('%I.%I', hypertable_schema, hypertable_name)::regclass)
-      / 1048576.0)::numeric, 1)                       AS size
+      / 1048576.0)::numeric, 1)                       AS \\"megaBytes\\"
   FROM timescaledb_information.hypertables
   ORDER BY hypertable_schema, hypertable_name"
 
@@ -163,7 +163,7 @@ section "databases"
 for DATABASE_NAME in $(databases); do
   SUMMARISED="$(query "${SUMMARY}")" || { fail "${DATABASE_NAME}" "${SUMMARISED}"; exit 1; }
   printf '%s' "${SUMMARISED}" | jq -c --arg database "${DATABASE_NAME}" '{database: $database} + .'
-done | jq -c -s 'sort_by(-.size) | .[]' | table
+done | jq -c -s 'sort_by(-.megaBytes) | .[]' | table
 printf '\\n'
 
 extent() {
@@ -209,11 +209,11 @@ for DATABASE_NAME in $(databases); do
       extent "${STAMP}" "${EPOCH}"
       [ -n "${STATEMENT}" ] && STATEMENT="${STATEMENT} UNION ALL "
       STATEMENT="${STATEMENT}SELECT '${TABLE}' AS \\"table\\", '${DATABASE_NAME}' AS \\"module\\","
-      STATEMENT="${STATEMENT} ${COLUMNS} AS \\"columns\\", count(*) AS \\"rows\\", ${SIZE} AS \\"size\\","
+      STATEMENT="${STATEMENT} ${COLUMNS} AS \\"columns\\", count(*) AS \\"rows\\", ${SIZE} AS \\"megaBytes\\","
       STATEMENT="${STATEMENT} ${OLDEST} AS \\"oldest\\", ${NEWEST} AS \\"newest\\""
       STATEMENT="${STATEMENT} FROM \\"${SCHEMA_NAME}\\".\\"${TABLE}\\""
     done < <(printf '%s' "${CATALOGUED}" | jq -r --arg s "${SCHEMA_NAME}" \
-      'select(.schema == $s) | [.table, .columns, .size, .stamp, .epoch] | @tsv')
+      'select(.schema == $s) | [.table, .columns, .megaBytes, .stamp, .epoch] | @tsv')
     if [ -z "${STATEMENT}" ]; then
       printf 'no rows\n\n'
     else
@@ -229,11 +229,11 @@ for DATABASE_NAME in $(databases); do
       extent "${STAMP:--}" "${EPOCH:--}"
       [ -n "${STATEMENT}" ] && STATEMENT="${STATEMENT} UNION ALL "
       STATEMENT="${STATEMENT}SELECT '${TABLE}' AS \\"table\\", '${DATABASE_NAME}' AS \\"module\\","
-      STATEMENT="${STATEMENT} ${COLUMNS:-0} AS \\"columns\\", count(*) AS \\"rows\\", ${SIZE} AS \\"size\\","
+      STATEMENT="${STATEMENT} ${COLUMNS:-0} AS \\"columns\\", count(*) AS \\"rows\\", ${SIZE} AS \\"megaBytes\\","
       STATEMENT="${STATEMENT} ${OLDEST} AS \\"oldest\\", ${NEWEST} AS \\"newest\\""
       STATEMENT="${STATEMENT} FROM \\"${SCHEMA_NAME}\\".\\"${TABLE}\\""
     done < <(printf '%s' "${HYPERTABLED}" | jq -r --arg s "${SCHEMA_NAME}" \
-      'select(.schema == $s) | [.table, .size] | @tsv')
+      'select(.schema == $s) | [.table, .megaBytes] | @tsv')
     if [ -n "${STATEMENT}" ]; then
       section "hypertables ${DATABASE_NAME}.${SCHEMA_NAME}"
       query_one "${STATEMENT} ORDER BY 4 DESC" || exit 1

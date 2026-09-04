@@ -37,7 +37,7 @@ fi
 DATABASES="SELECT
     s.SCHEMA_NAME                                                     AS 'database',
     count(t.TABLE_NAME)                                               AS 'tables',
-    round(coalesce(sum(t.DATA_LENGTH + t.INDEX_LENGTH), 0) / 1048576, 1) AS 'size'
+    round(coalesce(sum(t.DATA_LENGTH + t.INDEX_LENGTH), 0) / 1048576, 1) AS 'megaBytes'
   FROM information_schema.SCHEMATA s
   LEFT JOIN information_schema.TABLES t ON t.TABLE_SCHEMA = s.SCHEMA_NAME
   WHERE s.SCHEMA_NAME NOT IN ('information_schema', 'performance_schema', 'mysql', 'sys')
@@ -52,7 +52,7 @@ catalogued() {
   query "SELECT
       t.TABLE_NAME                                                    AS 'table',
       count(c.COLUMN_NAME)                                            AS 'columns',
-      round(coalesce(max(t.DATA_LENGTH + t.INDEX_LENGTH), 0) / 1048576, 1) AS 'size',
+      round(coalesce(max(t.DATA_LENGTH + t.INDEX_LENGTH), 0) / 1048576, 1) AS 'megaBytes',
       coalesce(max(CASE WHEN c.DATA_TYPE IN ('timestamp', 'datetime', 'date')
         THEN c.COLUMN_NAME END), '-')                                 AS 'stamp',
       coalesce(max(CASE WHEN c.COLUMN_NAME IN ('dateTime', 'time', 'timestamp')
@@ -96,10 +96,10 @@ for DATABASE_NAME in $(databases); do
     fi
     [ -n "${STATEMENT}" ] && STATEMENT="${STATEMENT} UNION ALL "
     STATEMENT="${STATEMENT}SELECT '${TABLE}' AS 'table', '${DATABASE_NAME}' AS 'module',"
-    STATEMENT="${STATEMENT} ${COLUMNS} AS 'columns', count(*) AS 'rows', ${SIZE} AS 'size',"
+    STATEMENT="${STATEMENT} ${COLUMNS} AS 'columns', count(*) AS 'rows', ${SIZE} AS 'megaBytes',"
     STATEMENT="${STATEMENT} ${OLDEST} AS 'oldest', ${NEWEST} AS 'newest'"
     STATEMENT="${STATEMENT} FROM \\`${DATABASE_NAME}\\`.\\`${TABLE}\\`"
-  done < <(printf '%s' "${CATALOGUE}" | jq -r '.[] | [.table, .columns, .size, .stamp, .epoch] | @tsv')
+  done < <(printf '%s' "${CATALOGUE}" | jq -r '.[] | [.table, .columns, .megaBytes, .stamp, .epoch] | @tsv')
   if [ -z "${STATEMENT}" ]; then
     printf 'no rows\\n\\n'
     continue
