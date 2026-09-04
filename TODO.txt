@@ -40,9 +40,9 @@ test each modules backup
   - src/meg/mariadb/src/build/resources/backup.sh
   - src/max/influxdb3/src/build/resources/backup.sh
   - src/mad/postgres/src/build/resources/backup.sh
-  src/mad/wrangle/src/build/resources/backup.sh
-  src/mad/plex/src/build/resources/backup.sh
-  src/may/letsencrypt/src/build/resources/backup.sh
+  - src/mad/wrangle/src/build/resources/backup.sh
+  - src/mad/plex/src/build/resources/backup.sh
+  - src/may/letsencrypt/src/build/resources/backup.sh
 test each modules schema release
   - src/jen/weewx/src/build/resources/schema/vernemq/describe.sh
   - src/meg/tasmota/src/build/resources/schema/vernemq/describe.sh

@@ -27,6 +27,7 @@ set -o pipefail
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
 # BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
 # BACKUP_TIMEOUT_HOURS    the budget a backup waiting on its service allows before abandoning the run
+# BACKUP_EXCLUDED         the paths deliberately not backed up, declared by the module snippet
 
 BACKUP_INTERNAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
 [ -f "${BACKUP_INTERNAL_ENV}" ] && . "${BACKUP_INTERNAL_ENV}"
@@ -44,6 +45,7 @@ BACKUP_KEEP_DAILY="${BACKUP_KEEP_DAILY:-7}"
 BACKUP_KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
 BACKUP_KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-12}"
 BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}"
+BACKUP_EXCLUDED="${BACKUP_EXCLUDED:-}"
 BACKUP_SERVICE_RESTART="${BACKUP_SERVICE_RESTART:-true}"
 BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS:-3}"
 BACKUP_TARGET_PATH=""
@@ -180,31 +182,60 @@ backup_pruned_gfs() {
   done
 }
 
-backup_included() {
+backup_split() {
   local path
   while IFS= read -r -d ':' path || [ -n "${path}" ]; do
     [ -n "${path}" ] || continue
+    printf '%s
+' "${path}"
+  done < <(printf '%s:' "${1}")
+}
+
+backup_included() {
+  local path
+  while IFS= read -r path; do
     if [ -e "${BACKUP_SOURCE_PATH}/${path}" ]; then
       printf '%s
 ' "${path}"
     else
       echo "Declared path [${path}] is absent from [${BACKUP_SOURCE_PATH}]" >&2
     fi
-  done < <(printf '%s:' "${1}")
+  done < <(backup_split "${1}")
+}
+
+backup_deepest() {
+  local path depth deepest=1
+  while IFS= read -r path; do
+    depth="$(printf '%s' "${path}" | tr -cd '/' | wc -c)"
+    depth=$((depth + 1))
+    [ "${depth}" -gt "${deepest}" ] && deepest="${depth}"
+  done < <(backup_split "${1}")
+  printf '%s
+' "${deepest}"
 }
 
 backup_unmatched() {
-  local entry path matched includes
-  mapfile -t includes < <(backup_included "${1}" 2>/dev/null)
+  local entry path state deepest declared reported=() covers=()
+  declared="${1}:${BACKUP_EXCLUDED}"
+  deepest="$(backup_deepest "${declared}")"
+  mapfile -t covers < <(backup_split "${declared}")
   while IFS= read -r entry; do
     [ "${entry}" = "backup" ] && continue
-    matched=""
-    for path in "${includes[@]}"; do
-      case "${path}" in "${entry}" | "${entry}/"*) matched=1 ;; esac
+    state="unrelated"
+    for path in "${reported[@]}"; do
+      case "${entry}" in "${path}/"*) state="beneath" ;; esac
     done
-    [ -n "${matched}" ] || printf '%s
+    [ "${state}" = "beneath" ] && continue
+    for path in "${covers[@]}"; do
+      case "${entry}" in "${path}" | "${path}/"*) state="covered" ;; esac
+      [ "${state}" = "covered" ] && break
+      case "${path}" in "${entry}/"*) state="ancestor" ;; esac
+    done
+    [ "${state}" = "unrelated" ] || continue
+    printf '%s
 ' "${entry}"
-  done < <(find "${BACKUP_SOURCE_PATH}" -maxdepth 1 -mindepth 1 -printf '%f
+    reported+=("${entry}")
+  done < <(find "${BACKUP_INTERNAL_SOURCE_DIR}" -mindepth 1 -maxdepth "${deepest}" -printf '%P
 ' 2>/dev/null | sort)
 }
 
@@ -221,7 +252,7 @@ backup_files() {
   fi
   backup_target "${BACKUP_FULL_SUFFIX}" "${2:-tar.gz}" || return 1
   mapfile -t unmatched < <(backup_unmatched "${declared}")
-  [ "${#unmatched[@]}" -gt 0 ] && echo "Not backed up, no declared path covers [${unmatched[*]}]"
+  [ "${#unmatched[@]}" -gt 0 ] && echo "Not backed up and not excluded [${unmatched[*]}]"
   tar --create --directory "${BACKUP_SOURCE_PATH}" --numeric-owner --preserve-permissions     --exclude=backup --file - -- "${paths[@]}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp"
 }
 
@@ -239,9 +270,11 @@ backup_interrupted() {
 # backup_written below, naming the backup with backup_target (or letting backup_files do both) and
 # writing "${BACKUP_TARGET_PATH}.tmp". A snippet leaving the estate changed while it works, such as
 # one stopping its own container, also defines backup_interrupted, called on INT, TERM or HUP but
-# never on a backup that merely fails. Never assign a wrapper variable, prefix this snippet's own
-# state with the module name, and expand a value read from .env as "${VAR:?}", so a missing key
-# fails by name rather than corrupting the backup.
+# never on a backup that merely fails. Declare BACKUP_EXCLUDED as the paths this module deliberately
+# does not back up, so backup_files reports only what neither it nor the declaration covers. Never
+# assign another wrapper variable, prefix this snippet's own state with the module name, and expand
+# a value read from .env as "${VAR:?}", so a missing key fails by name rather than corrupting the
+# backup.
 #
 # BACKUP_MODULE_NAME      this module's name
 # BACKUP_SOURCE_PATH      this module's source data path
@@ -253,6 +286,7 @@ backup_interrupted() {
 # BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
 # BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
+# BACKUP_EXCLUDED         the paths deliberately not backed up, declared by this snippet
 
 MARIADB_BACKUP_ATTEMPTS=3
 MARIADB_BACKUP_BACKOFF=10
