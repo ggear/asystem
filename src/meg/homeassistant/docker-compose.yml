@@ -51,7 +51,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 3G
   homeassistant_bootstrap:
     container_name: homeassistant_bootstrap
     <<: *common
