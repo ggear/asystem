@@ -7,33 +7,26 @@
 
 set -o pipefail
 
-# The wrapper owns the run, the module snippet owns the backup. The wrapper checks the throttle,
-# calls backup_written, renames the temporary file on success, prunes and sets the exit code. The
-# snippet defines backup_written, which names its backup with backup_target (or lets backup_files
-# do both) and writes "${BACKUP_TARGET_PATH}.tmp". Nothing else crosses the line: a snippet never
-# assigns a wrapper variable, and the wrapper never reads a snippet one.
+# Usage:
 #
-# A snippet that leaves the estate changed while it works, such as one stopping its own container,
-# also defines backup_interrupted, which the wrapper calls on INT, TERM or HUP so the change is
-# undone before the run is abandoned. It is not called on a backup that merely fails.
+#   ./backup.sh              take a backup, full or delta off an eligible parent
+#   ./backup.sh --prune      drop local runs older than BACKUP_RETAIN_DAYS, never the newest
+#   ./backup.sh --prune-gfs  apply the grandfather-father-son window
 #
-# BACKUP_*           vars owned by the wrapper for the snippet to read, never assigned by a snippet
-# BACKUP_INTERNAL_*  vars owned by the wrapper for its internal use
-# <MODULE>_*         vars owned by a snippet, prefixed with its module name to avoid collisions with wrapper vars
+#   BACKUP_SKIP_HOURS=0 ./backup.sh            take a backup now, whatever the throttle says
+#   BACKUP_RETAIN_DAYS=0 ./backup.sh --prune   keep only the newest local run
 #
-# BACKUP_MODULE_NAME      this module's name
-# BACKUP_SOURCE_PATH      this module's source data path
-# BACKUP_SOURCE_VERSION   the version the backup was extracted from
-# BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
-# BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
-# BACKUP_FULL_SUFFIX      the file suffix marking a full backup
-# BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
+# Both prune forms take the backup root as an optional argument, defaulting to the module's own.
+# Any variable below can be set on the command line, unless the module's .env already sets it.
+#
+# BACKUP_SOURCE_PATH      the data path backed up, defaulting to this module's own
 # BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
+# BACKUP_KEEP_DAILY       the daily backups kept by --prune-gfs
+# BACKUP_KEEP_WEEKLY      the weekly backups kept by --prune-gfs
+# BACKUP_KEEP_MONTHLY     the monthly backups kept by --prune-gfs
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
 # BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
-#
-# A snippet needing a value from .env expands it with "${VAR:?}", so a renamed or missing key
-# fails by name rather than producing an empty argument and a corrupt backup.
+# BACKUP_TIMEOUT_HOURS    the budget a backup waiting on its service allows before abandoning the run
 
 BACKUP_INTERNAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
 [ -f "${BACKUP_INTERNAL_ENV}" ] && . "${BACKUP_INTERNAL_ENV}"
@@ -223,6 +216,26 @@ backup_written() {
 backup_interrupted() {
   :
 }
+
+# The wrapper owns the run, this snippet owns the backup. The wrapper checks the throttle, calls
+# backup_written, renames the temporary file on success, prunes and sets the exit code. Define
+# backup_written below, naming the backup with backup_target (or letting backup_files do both) and
+# writing "${BACKUP_TARGET_PATH}.tmp". A snippet leaving the estate changed while it works, such as
+# one stopping its own container, also defines backup_interrupted, called on INT, TERM or HUP but
+# never on a backup that merely fails. Never assign a wrapper variable, prefix this snippet's own
+# state with the module name, and expand a value read from .env as "${VAR:?}", so a missing key
+# fails by name rather than corrupting the backup.
+#
+# BACKUP_MODULE_NAME      this module's name
+# BACKUP_SOURCE_PATH      this module's source data path
+# BACKUP_SOURCE_VERSION   the version the backup was extracted from
+# BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
+# BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
+# BACKUP_FULL_SUFFIX      the file suffix marking a full backup
+# BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
+# BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
+# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
+# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
 
 backup_written() {
   backup_target "${BACKUP_FULL_SUFFIX}" "zip" || return 1
