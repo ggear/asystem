@@ -322,7 +322,7 @@ backup_pruned() {
 }
 
 backup_written() {
-  local names parent full name
+  local names parent full name source
   mapfile -t names < <(backup_stored)
   parent=""
   full=""
@@ -335,19 +335,25 @@ backup_written() {
     [ "$(backup_epoch "${full}")" -ge "$(($(date +%s) - BACKUP_RETAIN_DAYS * 86400))" ] &&
     [ -n "${parent}" ] && [ "$(backup_status "${parent}")" = "completed" ]; then
     name="delta-${BACKUP_RUN_TIMESTAMP}"
+    source="${INFLUXDB3_BACKUP_STORE}/${parent}/incremental"
     backup_target "${BACKUP_DELTA_SUFFIX}" "tar.gz" || return 1
     echo "Creating a delta backup from parent [${parent}]"
     docker exec --user root "${BACKUP_MODULE_NAME}" \
       influxdb3 create backup --name "${name}" --incremental --parent "${parent}" >/dev/null || return 1
   else
     name="full-${BACKUP_RUN_TIMESTAMP}"
+    source="${INFLUXDB3_BACKUP_STORE}"
     backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
     [ -n "${full}" ] && echo "Starting a new full backup, previous full backup [${full}] is older than [${BACKUP_RETAIN_DAYS}] days"
     docker exec --user root "${BACKUP_MODULE_NAME}" \
       influxdb3 create backup --name "${name}" >/dev/null || return 1
   fi
   backup_awaited "${name}" || return 1
-  tar --create --directory "${INFLUXDB3_BACKUP_STORE}" --file - -- "${name}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp"
+  if [ ! -d "${source}/${name}" ]; then
+    echo "Backup produced no directory [${source}/${name}]" >&2
+    return 1
+  fi
+  tar --create --directory "${source}" --file - -- "${name}" | gzip >"${BACKUP_TARGET_PATH}.tmp"
 }
 
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
