@@ -35,7 +35,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768M
+          memory: 512M
   mariadb_bootstrap:
     container_name: mariadb_bootstrap
     <<: *common
