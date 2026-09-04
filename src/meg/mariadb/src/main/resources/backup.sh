@@ -134,9 +134,14 @@ backup_pruned_gfs() {
   local dir="${1:-${BACKUP_INTERNAL_ROOT_DIR}}" names name stamp bucket
   mapfile -t names < <(backup_listed "${dir}")
   [ "${#names[@]}" -gt 1 ] || return 0
-  declare -A keep=()
-  local count="${#names[@]}" index
-  for ((index = count - 1; index >= 0 && index >= count - BACKUP_KEEP_DAILY; index--)); do
+  declare -A keep=() day_seen=()
+  local count="${#names[@]}" index day chain
+  for ((index = count - 1; index >= 0; index--)); do
+    day="${names[${index}]:0:10}"
+    if [ -z "${day_seen[${day}]:-}" ]; then
+      [ "${#day_seen[@]}" -ge "${BACKUP_KEEP_DAILY}" ] && break
+      day_seen["${day}"]=1
+    fi
     keep["${names[${index}]}"]=daily
   done
   declare -A week_seen=() month_seen=()
@@ -154,6 +159,15 @@ backup_pruned_gfs() {
       month_seen["${bucket}"]=1
       keep["${name}"]=monthly
     fi
+  done
+  for ((index = count - 1; index >= 0; index--)); do
+    name="${names[${index}]}"
+    [ -n "${keep[${name}]:-}" ] || continue
+    backup_dir_is_full "${dir}" "${name}" && continue
+    for ((chain = index - 1; chain >= 0; chain--)); do
+      keep["${names[${chain}]}"]="${keep[${names[${chain}]}]:-chain}"
+      backup_dir_is_full "${dir}" "${names[${chain}]}" && break
+    done
   done
   for name in "${names[@]}"; do
     if [ -z "${keep[${name}]:-}" ]; then

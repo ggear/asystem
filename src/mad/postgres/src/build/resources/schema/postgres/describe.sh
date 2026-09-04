@@ -169,37 +169,42 @@ slurp() {
 
 printf '\nSchema describe [%s] against [%s]\n' "postgres" "${POSTGRES_SERVICE_PROD}"
 
-DATABASES="SELECT
-    d.datname                                         AS database,
-    pg_get_userbyid(d.datdba)                         AS owner,
-    pg_encoding_to_char(d.encoding)                   AS encoding,
-    pg_size_pretty(pg_database_size(d.datname))       AS size,
-    count(s.pid)                                      AS sessions
-  FROM pg_database d LEFT JOIN pg_stat_activity s ON s.datname = d.datname
-  WHERE d.datallowconn AND NOT d.datistemplate
-  GROUP BY d.datname, d.datdba, d.encoding
-  ORDER BY pg_database_size(d.datname) DESC"
+DATABASES="SELECT d.datname AS database FROM pg_database d
+  WHERE d.datallowconn AND NOT d.datistemplate ORDER BY d.datname"
 
-EXTENSIONS="SELECT extname AS extension, extversion AS version FROM pg_extension ORDER BY extname"
-
-TABLES="SELECT
-    n.nspname                                         AS schema,
-    c.relname                                         AS table,
-    pg_size_pretty(pg_total_relation_size(c.oid))     AS size,
-    CASE WHEN c.reltuples < 0 THEN '-'
-         ELSE c.reltuples::bigint::text END           AS estimate
+SUMMARY="SELECT count(*) AS tables,
+    round((pg_database_size(current_database()) / 1048576.0)::numeric, 1) AS size
   FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
   WHERE c.relkind = 'r'
     AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+    AND n.nspname NOT LIKE '\\_timescaledb%'"
+
+EXTENSIONS="SELECT extname AS extension, extversion AS version FROM pg_extension ORDER BY extname"
+
+CATALOGUE="SELECT
+    n.nspname                                         AS schema,
+    c.relname                                         AS table,
+    count(a.attname)                                  AS columns,
+    round(((max(pg_total_relation_size(c.oid)) + coalesce((SELECT sum(pg_total_relation_size(i.inhrelid))
+      FROM pg_inherits i WHERE i.inhparent = c.oid), 0)) / 1048576.0)::numeric, 1) AS size,
+    coalesce(max(a.attname) FILTER (WHERE t.typname IN ('timestamptz', 'timestamp', 'date')), '-') AS stamp,
+    coalesce(max(a.attname) FILTER (WHERE t.typname IN ('float8', 'float4', 'int8', 'int4', 'numeric')
+      AND (a.attname IN ('time', 'timestamp', 'datetime') OR a.attname LIKE '%\_ts')), '-') AS epoch
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+  JOIN pg_type t ON t.oid = a.atttypid
+  WHERE c.relkind = 'r'
+    AND n.nspname NOT IN ('pg_catalog', 'information_schema')
     AND n.nspname NOT LIKE '\\_timescaledb%'
-  ORDER BY pg_total_relation_size(c.oid) DESC"
+  GROUP BY n.nspname, c.relname, c.oid
+  ORDER BY n.nspname, c.relname"
 
 HYPERTABLES="SELECT
     hypertable_schema                                 AS schema,
     hypertable_name                                   AS table,
-    num_chunks                                        AS chunks,
-    compression_enabled                               AS compressed,
-    pg_size_pretty(hypertable_size(format('%I.%I', hypertable_schema, hypertable_name)::regclass)) AS size
+    round((hypertable_size(format('%I.%I', hypertable_schema, hypertable_name)::regclass)
+      / 1048576.0)::numeric, 1)                       AS size
   FROM timescaledb_information.hypertables
   ORDER BY hypertable_schema, hypertable_name"
 
@@ -210,21 +215,87 @@ databases() {
 MAINTENANCE="${DATABASE_NAME}"
 
 section "databases"
-query_one "${DATABASES}" || exit 1
+for DATABASE_NAME in $(databases); do
+  SUMMARISED="$(query "${SUMMARY}")" || { fail "${DATABASE_NAME}" "${SUMMARISED}"; exit 1; }
+  printf '%s' "${SUMMARISED}" | jq -c --arg database "${DATABASE_NAME}" '{database: $database} + .'
+done | jq -c -s 'sort_by(-.size) | .[]' | table
 printf '\n'
 
-for DATABASE_NAME in $(databases); do
-  section "extensions ${DATABASE_NAME}"
-  query_one "${EXTENSIONS}" || exit 1
-  printf '\n'
-  section "tables ${DATABASE_NAME}"
-  query_one "${TABLES}" || exit 1
-  printf '\n'
-  if [ "$(query "${EXTENSIONS}" | slurp 'any(.extension == "timescaledb")')" = true ]; then
-    section "hypertables ${DATABASE_NAME}"
-    query_one "${HYPERTABLES}" || exit 1
-    printf '\n'
+extent() {
+  local stamp="$1" epoch="$2" earliest="" latest=""
+  if [ "${stamp}" != "-" ]; then
+    earliest="to_char(min(\"${stamp}\"), 'YYYY-MM-DD HH24:MI:SS')"
+    latest="to_char(max(\"${stamp}\"), 'YYYY-MM-DD HH24:MI:SS')"
   fi
-done
+  if [ "${epoch}" != "-" ]; then
+    [ -n "${earliest}" ] && earliest="${earliest}, "
+    [ -n "${latest}" ] && latest="${latest}, "
+    earliest="${earliest}to_char(to_timestamp(min(\"${epoch}\")), 'YYYY-MM-DD HH24:MI:SS')"
+    latest="${latest}to_char(to_timestamp(max(\"${epoch}\")), 'YYYY-MM-DD HH24:MI:SS')"
+  fi
+  if [ -n "${earliest}" ]; then
+    OLDEST="coalesce(${earliest}, '-')"
+    NEWEST="coalesce(${latest}, '-')"
+  else
+    OLDEST="'-'"
+    NEWEST="'-'"
+  fi
+}
 
+for DATABASE_NAME in $(databases); do
+  CATALOGUED="$(query "${CATALOGUE}")" || { fail "${DATABASE_NAME}" "${CATALOGUED}"; exit 1; }
+  HYPERTABLED=""
+  if [ "$(query "${EXTENSIONS}" | slurp 'any(.extension == "timescaledb")')" = true ]; then
+    HYPERTABLED="$(query "${HYPERTABLES}")" || { fail "${DATABASE_NAME}" "${HYPERTABLED}"; exit 1; }
+  fi
+  SCHEMAS="$(printf '%s' "${CATALOGUED}" | jq -r '.schema' | sort -u)"
+  if [ -z "${SCHEMAS}" ]; then
+    section "tables ${DATABASE_NAME}"
+    printf 'no rows
+
+'
+    continue
+  fi
+  while read -r SCHEMA_NAME; do
+    section "tables ${DATABASE_NAME}.${SCHEMA_NAME}"
+    STATEMENT=""
+    while IFS=$'	' read -r TABLE COLUMNS SIZE STAMP EPOCH; do
+      [ -z "${TABLE}" ] && continue
+      [ -n "$(printf '%s' "${HYPERTABLED}" | jq -r --arg s "${SCHEMA_NAME}" --arg t "${TABLE}"         'select(.schema == $s and .table == $t) | .table')" ] && continue
+      extent "${STAMP}" "${EPOCH}"
+      [ -n "${STATEMENT}" ] && STATEMENT="${STATEMENT} UNION ALL "
+      STATEMENT="${STATEMENT}SELECT '${TABLE}' AS \"table\", '${DATABASE_NAME}' AS \"module\","
+      STATEMENT="${STATEMENT} ${COLUMNS} AS \"columns\", count(*) AS \"rows\", ${SIZE} AS \"size\","
+      STATEMENT="${STATEMENT} ${OLDEST} AS \"oldest\", ${NEWEST} AS \"newest\""
+      STATEMENT="${STATEMENT} FROM \"${SCHEMA_NAME}\".\"${TABLE}\""
+    done < <(printf '%s' "${CATALOGUED}" | jq -r --arg s "${SCHEMA_NAME}"       'select(.schema == $s) | [.table, .columns, .size, .stamp, .epoch] | @tsv')
+    if [ -z "${STATEMENT}" ]; then
+      printf 'no rows
+
+'
+    else
+      query_one "${STATEMENT} ORDER BY 4 DESC" || exit 1
+      printf '
+'
+    fi
+    STATEMENT=""
+    while IFS=$'	' read -r TABLE SIZE; do
+      [ -z "${TABLE}" ] && continue
+      META="$(printf '%s' "${CATALOGUED}" | jq -r --arg s "${SCHEMA_NAME}" --arg t "${TABLE}"         'select(.schema == $s and .table == $t) | [.columns, .stamp, .epoch] | @tsv')"
+      IFS=$'	' read -r COLUMNS STAMP EPOCH <<<"${META}"
+      extent "${STAMP:--}" "${EPOCH:--}"
+      [ -n "${STATEMENT}" ] && STATEMENT="${STATEMENT} UNION ALL "
+      STATEMENT="${STATEMENT}SELECT '${TABLE}' AS \"table\", '${DATABASE_NAME}' AS \"module\","
+      STATEMENT="${STATEMENT} ${COLUMNS:-0} AS \"columns\", count(*) AS \"rows\", ${SIZE} AS \"size\","
+      STATEMENT="${STATEMENT} ${OLDEST} AS \"oldest\", ${NEWEST} AS \"newest\""
+      STATEMENT="${STATEMENT} FROM \"${SCHEMA_NAME}\".\"${TABLE}\""
+    done < <(printf '%s' "${HYPERTABLED}" | jq -r --arg s "${SCHEMA_NAME}"       'select(.schema == $s) | [.table, .size] | @tsv')
+    if [ -n "${STATEMENT}" ]; then
+      section "hypertables ${DATABASE_NAME}.${SCHEMA_NAME}"
+      query_one "${STATEMENT} ORDER BY 4 DESC" || exit 1
+      printf '
+'
+    fi
+  done <<<"${SCHEMAS}"
+done
 DATABASE_NAME="${MAINTENANCE}"

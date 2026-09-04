@@ -162,20 +162,20 @@ for DATABASE_NAME in $(databases); do
   while IFS=$'\t' read -r TABLE COLUMNS TAGGED; do
     [ -z "${TABLE}" ] && continue
     if [ "${TAGGED}" = 0 ]; then
-      MODULES="CAST(NULL AS VARCHAR)"
+      MODULE="CAST(NULL AS VARCHAR)"
     else
-      MODULES="string_agg(DISTINCT SCHEMA_MODULE, ', ')"
+      MODULE="string_agg(DISTINCT SCHEMA_MODULE, ', ')"
     fi
     [ -n "${STATEMENT}" ] && STATEMENT="${STATEMENT} UNION ALL "
-    STATEMENT="${STATEMENT}SELECT '${TABLE}' AS \\"table\\", ${MODULES} AS \\"modules\\", ${COLUMNS} AS \\"columns\\","
-    STATEMENT="${STATEMENT} count(*) AS \\"rows\\", CAST(min(SCHEMA_TIME)SCHEMA_SHIFT AS VARCHAR) AS \\"oldest\\","
-    STATEMENT="${STATEMENT} CAST(max(SCHEMA_TIME)SCHEMA_SHIFT AS VARCHAR) AS \\"newest\\" FROM \\"${TABLE}\\""
+    STATEMENT="${STATEMENT}SELECT '${TABLE}' AS \\"table\\", ${MODULE} AS \\"module\\", ${COLUMNS} AS \\"columns\\","
+    STATEMENT="${STATEMENT} count(*) AS \\"rows\\", to_char(min(SCHEMA_TIME)SCHEMA_SHIFT, '%Y-%m-%d %H:%M:%S') AS \\"oldest\\","
+    STATEMENT="${STATEMENT} to_char(max(SCHEMA_TIME)SCHEMA_SHIFT, '%Y-%m-%d %H:%M:%S') AS \\"newest\\" FROM \\"${TABLE}\\""
   done < <(printf '%s' "${CATALOGUE}" | jq -r '.[] | [.table_name, .columns, .tagged] | @tsv')
   if [ -z "${STATEMENT}" ]; then
     printf 'no rows\n\n'
     continue
   fi
-  query_one "${STATEMENT} ORDER BY \\"rows\\" DESC" || exit 1
+  query_one "${STATEMENT} ORDER BY \\"module\\" NULLS LAST, \\"rows\\" DESC" || exit 1
   printf '\n'
 done
 """
