@@ -13,6 +13,7 @@
   "effect": "<text>",
   "effect_color": "<text>",
   "effect_speed": "<text>",
+  "identify": "<text>",
   "last_seen": "<text>",
   "linkquality": <number>,
   "philips_raw": "<text>",

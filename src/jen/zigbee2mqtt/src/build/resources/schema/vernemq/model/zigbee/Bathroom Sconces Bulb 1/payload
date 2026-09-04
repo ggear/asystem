@@ -11,8 +11,6 @@
   "state": "<text>",
   "update": {
     "installed_version": <number>,
-    "latest_release_notes": "<text>",
-    "latest_source": "<text>",
     "latest_version": <number>,
     "state": "<text>"
   }

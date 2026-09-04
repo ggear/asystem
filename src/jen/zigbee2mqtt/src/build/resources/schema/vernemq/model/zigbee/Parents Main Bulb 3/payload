@@ -15,6 +15,7 @@
   "effect_color": "<text>",
   "effect_speed": "<text>",
   "hue_power_on_behavior": "<text>",
+  "identify": "<text>",
   "last_seen": "<text>",
   "linkquality": <number>,
   "philips_raw": "<text>",

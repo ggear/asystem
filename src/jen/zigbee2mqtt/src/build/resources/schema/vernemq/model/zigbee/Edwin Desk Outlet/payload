@@ -1,4 +1,5 @@
 {
+  "identify": "<text>",
   "last_seen": "<text>",
   "linkquality": <number>,
   "power_on_behavior": "<text>",
