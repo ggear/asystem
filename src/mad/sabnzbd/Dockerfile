@@ -1,5 +1,5 @@
 # NOTES: https://sabnzbd.org/downloads#
-FROM linuxserver/sabnzbd:5.1.0 AS image_upstream
+FROM linuxserver/sabnzbd:5.1.2 AS image_upstream
 USER root
 RUN apk update && \
     apk add --upgrade --no-cache bash=5.3.9-r1 && \
