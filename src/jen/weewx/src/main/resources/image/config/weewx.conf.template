@@ -576,7 +576,6 @@ version = 5.0.2
         altimeter = prefer_hardware
         appTemp = prefer_hardware
         barometer = prefer_hardware
-        beaufort = prefer_hardware
         cloudbase = prefer_hardware
         dewpoint = prefer_hardware
         ET = prefer_hardware
