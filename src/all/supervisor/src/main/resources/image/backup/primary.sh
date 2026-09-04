@@ -27,7 +27,7 @@ stage_start() {
       bash "${script}" >"${dir}/output.log" 2>&1 || rc=$?
     local state=complete ok=true
     [ "${rc}" -eq 0 ] || { state=failed; ok=false; failed=$(( failed + 1 )); }
-    local newest size=0 files=0 kind=unknown version=unknown stamp file
+    local newest size=0 files=0 kind=unknown version=unknown stamp file stem
     newest="$(find "${BACKUP_HOME_ROOT}/${service}/backup" -mindepth 1 -maxdepth 1 -type d -name '20*' 2>/dev/null | sort | tail -1)"
     [ "${state}" = complete ] && [ "${newest}" = "${previous}" ] && state=skipped
     if [ -n "${newest}" ]; then
@@ -37,10 +37,13 @@ stage_start() {
       stamp="$(basename "${newest}")"
       file="$(find "${newest}" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort | head -1)"
       case "${file}" in *_delta.*) kind="delta" ;; *_full.*) kind="full" ;; esac
-      version="${file#"${service}_${stamp}_"}"
-      version="${version%%_delta.*}"
-      version="${version%%_full.*}"
-      if [ -z "${version}" ] || [ "${version}" = "${file}" ]; then version=unknown; fi
+      stem="${file%%_delta.*}"
+      stem="${stem%%_full.*}"
+      case "${stem}" in
+      *_from_*) version="${stem##*_from_}" ;;
+      *) version="${stem#"${service}_${stamp}_"}" ;;
+      esac
+      if [ -z "${version}" ] || [ "${version}" = "${stem}" ]; then version=unknown; fi
     fi
     cat >"${dir}/status.json.tmp" <<JSON
 {

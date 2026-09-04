@@ -60,7 +60,7 @@ backup_target() {
     echo "Cannot name the backup, pass the suffix and the extension to backup_target" >&2
     return 1
   fi
-  BACKUP_TARGET_PATH="${BACKUP_INTERNAL_ROOT_DIR}/${BACKUP_RUN_TIMESTAMP}/${BACKUP_MODULE_NAME}_${BACKUP_RUN_TIMESTAMP}_${BACKUP_SOURCE_VERSION}${suffix}.${extension}"
+  BACKUP_TARGET_PATH="${BACKUP_INTERNAL_ROOT_DIR}/${BACKUP_RUN_TIMESTAMP}/${BACKUP_MODULE_NAME}_at_${BACKUP_RUN_TIMESTAMP}_from_${BACKUP_SOURCE_VERSION}${suffix}.${extension}"
   mkdir -p "$(dirname "${BACKUP_TARGET_PATH}")"
 }
 
@@ -93,9 +93,12 @@ backup_versioned() {
   for path in "${dir}/${stamp}"/*; do
     [ -f "${path}" ] || continue
     name="$(basename "${path}")"
-    name="${name#"${BACKUP_MODULE_NAME}_${stamp}_"}"
     name="${name%"${BACKUP_FULL_SUFFIX}".*}"
     name="${name%"${BACKUP_DELTA_SUFFIX}".*}"
+    case "${name}" in
+    *_from_*) name="${name##*_from_}" ;;
+    *) name="${name#"${BACKUP_MODULE_NAME}_${stamp}_"}" ;;
+    esac
     printf '%s
 ' "${name}"
     return 0
