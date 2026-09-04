@@ -50,7 +50,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 VOLUMES_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fstab"
-VOLUMES_SUBVOLUME_OPTS="noatime,compress=zstd:3"
+VOLUMES_SUBVOLUME_OPTS="noatime,compress=zstd:1"
 
 volumes_fault() {
   echo "❌ $*" >&2
