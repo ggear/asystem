@@ -323,7 +323,7 @@ if [ "${#BACKUP_INTERNAL_EXISTING[@]}" -gt 0 ]; then
   fi
 fi
 
-echo "Starting backup from version [${BACKUP_SOURCE_VERSION}] holding [${#BACKUP_INTERNAL_EXISTING[@]}] backups, newest [${BACKUP_INTERNAL_NEWEST:-none}] retaining [${BACKUP_RETAIN_DAYS}] days, skipping backup if executing again within [${BACKUP_SKIP_HOURS}] hours"
+echo "Starting backup from version [${BACKUP_SOURCE_VERSION}] holding [${#BACKUP_INTERNAL_EXISTING[@]}] backups, newest [${BACKUP_INTERNAL_NEWEST:-none}] retaining [${BACKUP_RETAIN_DAYS}] days"
 
 trap backup_discarded EXIT
 trap 'backup_interrupted; exit 130' INT
