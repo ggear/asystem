@@ -45,7 +45,7 @@ VERSION=v1.10.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "ggear/bom-radar-card" "ggear-patches" "https://github.com/ashtonau/bom-radar-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
-"${BUILD_TIMEOUT_CMD[@]}" npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" install || exit $?
+"${BUILD_TIMEOUT_CMD[@]}" npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" install --no-audit --no-fund || exit $?
 "${BUILD_TIMEOUT_CMD[@]}" npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" run build || exit $?
 copy_built "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/bom-radar-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/bom-radar-card.js"
 
