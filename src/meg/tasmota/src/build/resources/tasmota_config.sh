@@ -20,11 +20,11 @@ if netcat -zw 1 10.0.4.101 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.101/cm? --data-urlencode 'cmnd=SensorRetain OFF'
@@ -56,11 +56,11 @@ if netcat -zw 1 10.0.4.102 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.102/cm? --data-urlencode 'cmnd=SensorRetain ON'
@@ -152,11 +152,11 @@ if netcat -zw 1 10.0.4.103 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.103/cm? --data-urlencode 'cmnd=SensorRetain OFF'
@@ -188,11 +188,11 @@ if netcat -zw 1 10.0.4.104 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.104/cm? --data-urlencode 'cmnd=SensorRetain ON'
@@ -284,11 +284,11 @@ if netcat -zw 1 10.0.4.105 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.105/cm? --data-urlencode 'cmnd=SensorRetain ON'
@@ -380,11 +380,11 @@ if netcat -zw 1 10.0.4.107 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.107/cm? --data-urlencode 'cmnd=SensorRetain ON'
@@ -422,11 +422,11 @@ if netcat -zw 1 10.0.4.108 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.108/cm? --data-urlencode 'cmnd=SensorRetain ON'
@@ -464,11 +464,11 @@ if netcat -zw 1 10.0.4.109 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.109/cm? --data-urlencode 'cmnd=SensorRetain OFF'
@@ -500,11 +500,11 @@ if netcat -zw 1 10.0.4.110 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
-	if [ "$(curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
-		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=StatusRetain ON'
+	if [ "$(curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=StatusRetain OFF'
 		echo ''
 	else
-		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+		echo 'Config set skipped, [StatusRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s -m 5 http://10.0.4.110/cm? --data-urlencode 'cmnd=SensorRetain OFF'
