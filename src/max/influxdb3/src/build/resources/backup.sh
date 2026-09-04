@@ -14,6 +14,7 @@
 
 INFLUXDB3_BACKUP_CLUSTER="${INFLUXDB3_CLUSTER_ID:-cluster_1}"
 INFLUXDB3_BACKUP_STORE="${BACKUP_SOURCE_PATH}/${INFLUXDB3_BACKUP_CLUSTER}/backups"
+INFLUXDB3_BACKUP_AWAIT_SECONDS="${INFLUXDB3_BACKUP_AWAIT_SECONDS:-$((BACKUP_TIMEOUT_HOURS * 3600))}"
 
 backup_stored() {
   [ -d "${INFLUXDB3_BACKUP_STORE}" ] || return 0
@@ -27,12 +28,16 @@ backup_status() {
 }
 
 backup_awaited() {
-  local status
+  local status deadline=$((SECONDS + INFLUXDB3_BACKUP_AWAIT_SECONDS))
   while true; do
     status="$(backup_status "$1")"
     [ "${status}" = "completed" ] && return 0
     if [ "${status}" = "failed" ]; then
       echo "Backup failed [$1]" >&2
+      return 1
+    fi
+    if [ "${INFLUXDB3_BACKUP_AWAIT_SECONDS}" -gt 0 ] && [ "${SECONDS}" -ge "${deadline}" ]; then
+      echo "Backup timed out [$1] after [${INFLUXDB3_BACKUP_AWAIT_SECONDS}] seconds holding status [${status:-unknown}]" >&2
       return 1
     fi
     sleep 5

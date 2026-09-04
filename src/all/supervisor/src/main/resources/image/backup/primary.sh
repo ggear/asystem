@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 stage_start() {
-  local service script running failed=0 count=0
+  local service script running health failed=0 count=0
   for service in $(jq -r --arg h "${BACKUP_HOST}" \
     '.asystem.schema[] | select(.host == $h) | .services[]' "${BACKUP_CONFIG}" 2>/dev/null); do
     script="${BACKUP_INSTALL_ROOT}/${service}/latest/backup.sh"
@@ -9,6 +9,11 @@ stage_start() {
     running="$(docker ps --filter "name=^/${service}$" --filter "status=running" --format '{{.Names}}')"
     if [ "${running}" != "${service}" ]; then
       echo "[primary] skipping [${service}], container is not running"
+      continue
+    fi
+    health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "${service}" 2>/dev/null)"
+    if [ "${health}" = "starting" ]; then
+      echo "[primary] skipping [${service}], container is still starting"
       continue
     fi
     count=$(( count + 1 ))

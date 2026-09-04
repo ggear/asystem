@@ -13,6 +13,10 @@ set -o pipefail
 # do both) and writes "${BACKUP_TARGET_PATH}.tmp". Nothing else crosses the line: a snippet never
 # assigns a wrapper variable, and the wrapper never reads a snippet one.
 #
+# A snippet that leaves the estate changed while it works, such as one stopping its own container,
+# also defines backup_interrupted, which the wrapper calls on INT, TERM or HUP so the change is
+# undone before the run is abandoned. It is not called on a backup that merely fails.
+#
 # BACKUP_*           vars owned by the wrapper for the snippet to read, never assigned by a snippet
 # BACKUP_INTERNAL_*  vars owned by the wrapper for its internal use
 # <MODULE>_*         vars owned by a snippet, prefixed with its module name to avoid collisions with wrapper vars
@@ -205,6 +209,10 @@ backup_written() {
   return 1
 }
 
+backup_interrupted() {
+  :
+}
+
 # Defines backup_written for this module, naming its backup with backup_target (or letting
 # backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". Read the wrapper variables below,
 # never assign one, and prefix this snippet's own state with the module name.
@@ -221,6 +229,7 @@ backup_written() {
 
 INFLUXDB3_BACKUP_CLUSTER="${INFLUXDB3_CLUSTER_ID:-cluster_1}"
 INFLUXDB3_BACKUP_STORE="${BACKUP_SOURCE_PATH}/${INFLUXDB3_BACKUP_CLUSTER}/backups"
+INFLUXDB3_BACKUP_AWAIT_SECONDS="${INFLUXDB3_BACKUP_AWAIT_SECONDS:-$((BACKUP_TIMEOUT_HOURS * 3600))}"
 
 backup_stored() {
   [ -d "${INFLUXDB3_BACKUP_STORE}" ] || return 0
@@ -234,12 +243,16 @@ backup_status() {
 }
 
 backup_awaited() {
-  local status
+  local status deadline=$((SECONDS + INFLUXDB3_BACKUP_AWAIT_SECONDS))
   while true; do
     status="$(backup_status "$1")"
     [ "${status}" = "completed" ] && return 0
     if [ "${status}" = "failed" ]; then
       echo "Backup failed [$1]" >&2
+      return 1
+    fi
+    if [ "${INFLUXDB3_BACKUP_AWAIT_SECONDS}" -gt 0 ] && [ "${SECONDS}" -ge "${deadline}" ]; then
+      echo "Backup timed out [$1] after [${INFLUXDB3_BACKUP_AWAIT_SECONDS}] seconds holding status [${status:-unknown}]" >&2
       return 1
     fi
     sleep 5
@@ -342,6 +355,9 @@ fi
 echo "Starting backup from version [${BACKUP_SOURCE_VERSION}] holding [${#BACKUP_INTERNAL_EXISTING[@]}] backups, newest [${BACKUP_INTERNAL_NEWEST:-none}] retaining [${BACKUP_RETAIN_DAYS}] days, skipping backup if executing again within [${BACKUP_SKIP_HOURS}] hours"
 
 trap backup_discarded EXIT
+trap 'backup_interrupted; exit 130' INT
+trap 'backup_interrupted; exit 143' TERM
+trap 'backup_interrupted; exit 129' HUP
 BACKUP_INTERNAL_STARTED=${SECONDS}
 if backup_written && [ -n "${BACKUP_TARGET_PATH}" ] && [ -s "${BACKUP_TARGET_PATH}.tmp" ]; then
   mv "${BACKUP_TARGET_PATH}.tmp" "${BACKUP_TARGET_PATH}"

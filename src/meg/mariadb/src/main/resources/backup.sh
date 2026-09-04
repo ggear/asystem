@@ -13,6 +13,10 @@ set -o pipefail
 # do both) and writes "${BACKUP_TARGET_PATH}.tmp". Nothing else crosses the line: a snippet never
 # assigns a wrapper variable, and the wrapper never reads a snippet one.
 #
+# A snippet that leaves the estate changed while it works, such as one stopping its own container,
+# also defines backup_interrupted, which the wrapper calls on INT, TERM or HUP so the change is
+# undone before the run is abandoned. It is not called on a backup that merely fails.
+#
 # BACKUP_*           vars owned by the wrapper for the snippet to read, never assigned by a snippet
 # BACKUP_INTERNAL_*  vars owned by the wrapper for its internal use
 # <MODULE>_*         vars owned by a snippet, prefixed with its module name to avoid collisions with wrapper vars
@@ -205,6 +209,10 @@ backup_written() {
   return 1
 }
 
+backup_interrupted() {
+  :
+}
+
 # Defines backup_written for this module, naming its backup with backup_target (or letting
 # backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". Read the wrapper variables below,
 # never assign one, and prefix this snippet's own state with the module name.
@@ -219,11 +227,24 @@ backup_written() {
 # BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
 # BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this
 
+MARIADB_BACKUP_ATTEMPTS=3
+MARIADB_BACKUP_BACKOFF=10
+
 backup_written() {
+  local attempt=1
   backup_target "${BACKUP_FULL_SUFFIX}" "sql.gz" || return 1
-  docker exec --user root "${BACKUP_MODULE_NAME}" bash -c '
+  while true; do
+    if docker exec --user root "${BACKUP_MODULE_NAME}" bash -c '
+set -o pipefail
 mariadb-dump -uroot -p"${MARIADB_ROOT_PASSWORD:?}" --all-databases --single-transaction --quick | gzip
-  ' >"${BACKUP_TARGET_PATH}.tmp"
+    ' >"${BACKUP_TARGET_PATH}.tmp"; then
+      return 0
+    fi
+    [ "${attempt}" -lt "${MARIADB_BACKUP_ATTEMPTS}" ] || return 1
+    echo "Dump failed on attempt [${attempt}] of [${MARIADB_BACKUP_ATTEMPTS}], retrying in [${MARIADB_BACKUP_BACKOFF}] seconds" >&2
+    sleep "${MARIADB_BACKUP_BACKOFF}"
+    attempt=$((attempt + 1))
+  done
 }
 
 [ "${BASH_SOURCE[0]}" = "${0}" ] || return 0
@@ -255,6 +276,9 @@ fi
 echo "Starting backup from version [${BACKUP_SOURCE_VERSION}] holding [${#BACKUP_INTERNAL_EXISTING[@]}] backups, newest [${BACKUP_INTERNAL_NEWEST:-none}] retaining [${BACKUP_RETAIN_DAYS}] days, skipping backup if executing again within [${BACKUP_SKIP_HOURS}] hours"
 
 trap backup_discarded EXIT
+trap 'backup_interrupted; exit 130' INT
+trap 'backup_interrupted; exit 143' TERM
+trap 'backup_interrupted; exit 129' HUP
 BACKUP_INTERNAL_STARTED=${SECONDS}
 if backup_written && [ -n "${BACKUP_TARGET_PATH}" ] && [ -s "${BACKUP_TARGET_PATH}.tmp" ]; then
   mv "${BACKUP_TARGET_PATH}.tmp" "${BACKUP_TARGET_PATH}"

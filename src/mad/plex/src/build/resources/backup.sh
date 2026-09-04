@@ -24,6 +24,23 @@ PLEX_BACKUP_EXCLUDES=(
   "Caches"
 )
 
+plex_backup_stopped() {
+  if docker stop "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1; then
+    docker wait "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1 || true
+  else
+    echo "Stop failed [${PLEX_BACKUP_CONTAINER}], copying the running configuration" >&2
+  fi
+}
+
+plex_backup_started() {
+  [ "${BACKUP_SERVICE_RESTART}" = "true" ] || return 0
+  docker start "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1 || echo "Start failed [${PLEX_BACKUP_CONTAINER}]" >&2
+}
+
+backup_interrupted() {
+  plex_backup_started
+}
+
 backup_written() {
   local status=0 include exclude excludes=()
   for include in "${PLEX_BACKUP_INCLUDES[@]}"; do
@@ -36,15 +53,9 @@ backup_written() {
     excludes+=("--exclude=${exclude}")
   done
   backup_target "${BACKUP_FULL_SUFFIX}" "tar.gz" || return 1
-  if docker stop "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1; then
-    docker wait "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1 || true
-  else
-    echo "Stop failed [${PLEX_BACKUP_CONTAINER}], copying the running configuration" >&2
-  fi
+  plex_backup_stopped
   tar --create --directory "${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}" --numeric-owner --preserve-permissions \
     "${excludes[@]}" --file - -- "${PLEX_BACKUP_INCLUDES[@]}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp" || status=1
-  if [ "${BACKUP_SERVICE_RESTART}" = "true" ]; then
-    docker start "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1 || echo "Start failed [${PLEX_BACKUP_CONTAINER}]" >&2
-  fi
+  plex_backup_started
   return "${status}"
 }
