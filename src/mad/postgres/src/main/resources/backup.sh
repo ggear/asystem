@@ -21,6 +21,17 @@ set -o pipefail
 # BACKUP_INTERNAL_*  vars owned by the wrapper for its internal use
 # <MODULE>_*         vars owned by a snippet, prefixed with its module name to avoid collisions with wrapper vars
 #
+# BACKUP_MODULE_NAME      this module's name
+# BACKUP_SOURCE_PATH      this module's source data path
+# BACKUP_SOURCE_VERSION   the version the backup was extracted from
+# BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
+# BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
+# BACKUP_FULL_SUFFIX      the file suffix marking a full backup
+# BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
+# BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
+# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this, zero to never skip
+# BACKUP_SERVICE_RESTART  start the service again after the copy, false when the caller starts it itself
+#
 # A snippet needing a value from .env expands it with "${VAR:?}", so a renamed or missing key
 # fails by name rather than producing an empty argument and a corrupt backup.
 
@@ -213,20 +224,6 @@ backup_interrupted() {
   :
 }
 
-# Defines backup_written for this module, naming its backup with backup_target (or letting
-# backup_files do both) and writing "${BACKUP_TARGET_PATH}.tmp". Read the wrapper variables below,
-# never assign one, and prefix this snippet's own state with the module name.
-#
-# BACKUP_MODULE_NAME      this module's name
-# BACKUP_SOURCE_PATH      this module's source data path
-# BACKUP_SOURCE_VERSION   the version the backup was extracted from
-# BACKUP_TARGET_PATH      this run's backup path, empty until backup_target names it
-# BACKUP_RUN_TIMESTAMP    this run's timestamp, shared by the directory and the filename
-# BACKUP_FULL_SUFFIX      the file suffix marking a full backup
-# BACKUP_DELTA_SUFFIX     the file suffix marking a delta backup, requiring a full backup proceeding it
-# BACKUP_RETAIN_DAYS      the window by which daily backups are retained before entering the pruning window
-# BACKUP_SKIP_HOURS       skip the run when the newest backup is younger than this
-
 backup_written() {
   backup_target "${BACKUP_FULL_SUFFIX}" "sql.gz" || return 1
   docker exec --user root "${BACKUP_MODULE_NAME}" bash -c '
@@ -254,8 +251,7 @@ if [ "${#BACKUP_INTERNAL_EXISTING[@]}" -gt 0 ]; then
   BACKUP_INTERNAL_NEWEST="${BACKUP_INTERNAL_EXISTING[-1]}"
   BACKUP_INTERNAL_NEWEST_VERSION="$(backup_versioned "${BACKUP_INTERNAL_NEWEST}")"
   BACKUP_INTERNAL_AGE=$(($(date +%s) - $(backup_epoch "${BACKUP_INTERNAL_NEWEST}")))
-  if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ] &&
-    [ "${BACKUP_INTERNAL_NEWEST_VERSION}" = "${BACKUP_SOURCE_VERSION}" ]; then
+  if [ "${BACKUP_INTERNAL_AGE}" -lt $((BACKUP_SKIP_HOURS * 3600)) ]; then
     echo "Backup skipped, newest backup [${BACKUP_INTERNAL_NEWEST}] of version [${BACKUP_INTERNAL_NEWEST_VERSION}] is [${BACKUP_INTERNAL_AGE}] seconds old, skipping given within [${BACKUP_SKIP_HOURS}] hours"
     exit 0
   fi
