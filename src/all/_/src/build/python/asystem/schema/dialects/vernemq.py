@@ -15,7 +15,7 @@ from asystem.schema.document import (
     SchemaUnreachable,
 )
 from asystem.schema.query import banner
-from asystem.schema.runner import REPORT, resolved, script, table
+from asystem.schema.runner import REPORT, instance_runner, resolved, script, table
 
 DIALECT = "vernemq"
 SHIPPED = "broker"
@@ -266,6 +266,30 @@ fi
         find_discovery=topic_find_discovery,
     ) if published else ""
     return "\n\n".join(part for part in (header.strip(), publish.strip(), recovery) if part) + "\n"
+
+
+INSTANCE = """
+levelled() {
+  cut -d/ -f1-"$1" | sort | uniq -c | sort -rn |
+    sed -e 's/^ *//' -e 's/ /\\t/'
+}
+
+SWEEP="$(topics '#')"
+
+section "namespaces"
+printf '%s\\n' "${SWEEP}" | sed -e '/^$/d' | levelled 1 |
+  jq -R 'split("\\t") | {namespace: .[1], topics: (.[0] | tonumber)}' | table
+printf '\\n'
+
+section "scopes"
+printf '%s\\n' "${SWEEP}" | sed -e '/^$/d' | levelled 2 |
+  jq -R 'split("\\t") | {scope: .[1], topics: (.[0] | tonumber)}' | table
+printf '\\n'
+"""
+
+
+def instance(module_name, zone=""):
+    return instance_runner(module_name, DIALECT, "BROKER_SERVICE", connect(module_name), INSTANCE)
 
 
 def describe_script(module_name, globs):

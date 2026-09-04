@@ -22,4 +22,5 @@ from asystem.schema.document import (
 from asystem.schema.emit import (
     write_schema_broker,
     write_schema_database,
+    write_schema_instance,
 )

@@ -63,4 +63,5 @@ from asystem.schema import (
     parse_schema_document,
     write_schema_broker,
     write_schema_database,
+    write_schema_instance,
 )

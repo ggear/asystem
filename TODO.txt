@@ -89,12 +89,10 @@ add host USED BKP and FAIL BKP and Service BKP into backup plan, remove backup p
 
 
 
-Implement Life SSD - port from script
 Check all host level metrics, check serve logs
 
 
 
-Implement Fail BKP/Used BKP/Service BKP - await backup implementation
 
 move rue/kasa to max and refactor to be like tasmota including html site. remove deploy and build instead into release like tasmota. use tron theme from https://github.com/educlopez/thegridcn-ui not ares
 

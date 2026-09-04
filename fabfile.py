@@ -878,7 +878,7 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
 
 
 def _schema(context, filter_module=None):
-    for dialect in ("influxdb3", "postgres", "vernemq"):
+    for dialect in ("influxdb3", "mariadb", "postgres", "vernemq"):
         schema_dir = join("src/build/resources/schema", dialect)
         for module in _get_modules(context, join(schema_dir, "describe.sh"), filter_module=filter_module):
             _print_header(module, "schema")

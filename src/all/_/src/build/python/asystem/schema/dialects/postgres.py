@@ -18,7 +18,15 @@ from asystem.schema.query import (
     select,
     vocabulary,
 )
-from asystem.schema.runner import RUNNER, describe_runner, mutate_runner, query_runner, resolved, verify_runner
+from asystem.schema.runner import (
+    RUNNER,
+    describe_runner,
+    instance_runner,
+    mutate_runner,
+    query_runner,
+    resolved,
+    verify_runner,
+)
 
 DIALECT = "postgres"
 SHIPPED = "database"
@@ -93,6 +101,92 @@ def ship(document, module_name, module_root, schemas_dir, options):
         applier_file.write(applier_script(module_name))
     os.chmod(applier_path, 0o750)
     print("Build generate script [{}] database applier persisted to [{}]".format(module_name, applier_path))
+
+
+INSTANCE_CONNECT = """
+export PGPASSWORD="${DATABASE_PASSWORD}"
+export PGTZ="${TZ:-UTC}"
+
+query() {
+  psql -h "${POSTGRES_SERVICE_PROD}" -p "${POSTGRES_API_PORT}" -U "${DATABASE_USER}" -d "${DATABASE_NAME}" \\
+    -q -t -A -v ON_ERROR_STOP=1 -c "SELECT row_to_json(result) FROM ($1) AS result" 2>&1
+}
+""" + RUNNER
+
+INSTANCE = """
+DATABASES="SELECT
+    d.datname                                         AS database,
+    pg_get_userbyid(d.datdba)                         AS owner,
+    pg_encoding_to_char(d.encoding)                   AS encoding,
+    pg_size_pretty(pg_database_size(d.datname))       AS size,
+    count(s.pid)                                      AS sessions
+  FROM pg_database d LEFT JOIN pg_stat_activity s ON s.datname = d.datname
+  WHERE d.datallowconn AND NOT d.datistemplate
+  GROUP BY d.datname, d.datdba, d.encoding
+  ORDER BY pg_database_size(d.datname) DESC"
+
+EXTENSIONS="SELECT extname AS extension, extversion AS version FROM pg_extension ORDER BY extname"
+
+TABLES="SELECT
+    n.nspname                                         AS schema,
+    c.relname                                         AS table,
+    pg_size_pretty(pg_total_relation_size(c.oid))     AS size,
+    CASE WHEN c.reltuples < 0 THEN '-'
+         ELSE c.reltuples::bigint::text END           AS estimate
+  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relkind = 'r'
+    AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+    AND n.nspname NOT LIKE '\\\\_timescaledb%'
+  ORDER BY pg_total_relation_size(c.oid) DESC"
+
+HYPERTABLES="SELECT
+    hypertable_schema                                 AS schema,
+    hypertable_name                                   AS table,
+    num_chunks                                        AS chunks,
+    compression_enabled                               AS compressed,
+    pg_size_pretty(hypertable_size(format('%I.%I', hypertable_schema, hypertable_name)::regclass)) AS size
+  FROM timescaledb_information.hypertables
+  ORDER BY hypertable_schema, hypertable_name"
+
+databases() {
+  query "${DATABASES}" | slurp '.[].database' | sort
+}
+
+MAINTENANCE="${DATABASE_NAME}"
+
+section "databases"
+query_one "${DATABASES}" || exit 1
+printf '\\n'
+
+for DATABASE_NAME in $(databases); do
+  section "extensions ${DATABASE_NAME}"
+  query_one "${EXTENSIONS}" || exit 1
+  printf '\\n'
+  section "tables ${DATABASE_NAME}"
+  query_one "${TABLES}" || exit 1
+  printf '\\n'
+  if [ "$(query "${EXTENSIONS}" | slurp 'any(.extension == "timescaledb")')" = true ]; then
+    section "hypertables ${DATABASE_NAME}"
+    query_one "${HYPERTABLES}" || exit 1
+    printf '\\n'
+  fi
+done
+
+DATABASE_NAME="${MAINTENANCE}"
+"""
+
+
+def instance(module_name, zone=""):
+    return instance_runner(module_name, DIALECT, TARGET, instance_connect(module_name), INSTANCE)
+
+
+def instance_connect(module_name):
+    prefix = module_name.upper()
+    return resolved(module_name, (
+        ("DATABASE_USER", ("{}_DATABASE_USER".format(prefix), "POSTGRES_USER")),
+        ("DATABASE_NAME", ("{}_DATABASE_NAME".format(prefix), "POSTGRES_DATABASE_MAINTENANCE")),
+        ("DATABASE_PASSWORD", ("{}_DATABASE_PASSWORD".format(prefix), "POSTGRES_KEY")),
+    )) + INSTANCE_CONNECT
 
 
 def connect(module_name):

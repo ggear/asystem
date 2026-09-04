@@ -4,7 +4,7 @@ import sys
 from os.path import abspath, basename, dirname, exists, join
 
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
-from asystem.schema.dialects import influxdb3, postgres, vernemq
+from asystem.schema.dialects import influxdb3, mariadb, postgres, vernemq
 from asystem.schema.document import (
     SchemaBrokerOptions,
     SchemaDatabaseOptions,
@@ -18,6 +18,13 @@ ENV = ".env"
 DIALECTS = {
     influxdb3.DIALECT: influxdb3,
     postgres.DIALECT: postgres,
+}
+
+INSTANCES = {
+    influxdb3.DIALECT: influxdb3,
+    mariadb.DIALECT: mariadb,
+    postgres.DIALECT: postgres,
+    vernemq.DIALECT: vernemq,
 }
 
 
@@ -55,6 +62,23 @@ def write_schema_database(document, module_name=None, schemas_dir=None,
         return _skip_schema_dialect(module_name, schemas_dir, database_dialect)
     _write_schema_dialect(module_name, schemas_dir, database_dialect, artifacts)
     emitter.ship(document, module_name, module_root, schemas_dir, options)
+
+
+def write_schema_instance(module_name=None, schemas_dir=None, instance_dialect=None):
+    module_root = load_bootstrap_root()
+    if module_name is None:
+        module_name = basename(module_root)
+    if instance_dialect is None:
+        instance_dialect = module_name
+    if instance_dialect not in INSTANCES:
+        raise ValueError("Build generate script [{}] unknown instance dialect [{}] expected one of {}"
+                         .format(module_name, instance_dialect, sorted(INSTANCES)))
+    if schemas_dir is None:
+        schemas_dir = join(module_root, "src/build/resources/schema")
+    zone = load_bootstrap_env_value("TZ", "UTC", filename=ENV, module_root=module_root)
+    emitter = INSTANCES[instance_dialect]
+    artifacts = {"describe.sh": (emitter.instance(module_name, zone), True)}
+    _write_schema_dialect(module_name, schemas_dir, instance_dialect, artifacts)
 
 
 def _rename_measures(rename):

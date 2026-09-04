@@ -49,6 +49,7 @@ brew install \
   rustup \
   skopeo \
   telnet \
+  mariadb \
   poppler \
   poppler \
   exiftool \

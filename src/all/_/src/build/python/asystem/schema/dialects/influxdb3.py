@@ -26,7 +26,15 @@ from asystem.schema.query import (
     unioned,
     vocabulary,
 )
-from asystem.schema.runner import RUNNER, describe_runner, mutate_runner, query_runner, resolved, verify_runner
+from asystem.schema.runner import (
+    RUNNER,
+    describe_runner,
+    instance_runner,
+    mutate_runner,
+    query_runner,
+    resolved,
+    verify_runner,
+)
 
 DIALECT = "influxdb3"
 TARGET = "INFLUXDB3_SERVICE_PROD"
@@ -123,6 +131,60 @@ def artifacts(document, module_name, options):
 
 def ship(document, module_name, module_root, schemas_dir, options):
     return None
+
+
+# noinspection HttpUrlsUsage
+INSTANCE = """
+databases() {
+  local response
+  response="$(curl -sS "http://${INFLUXDB3_SERVICE_PROD}:${INFLUXDB3_API_PORT}/api/v3/configure/database?format=json" \
+    -H "Authorization: Bearer ${DATABASE_TOKEN}")" || return 1
+  printf '%s' "${response}" | jq -r '.[]["iox::database"]' | sort
+}
+
+catalogued() {
+  query "SELECT table_name, count(*) AS columns, sum(CASE WHEN column_name = 'SCHEMA_MODULE' THEN 1 ELSE 0 END) AS tagged
+    FROM information_schema.columns WHERE table_schema = 'SCHEMA_NAMESPACE' GROUP BY table_name ORDER BY table_name"
+}
+
+section "databases"
+for DATABASE_NAME in $(databases); do
+  CATALOGUE="$(catalogued)" || { fail "${DATABASE_NAME}" "${CATALOGUE}"; exit 1; }
+  jq -nc --arg database "${DATABASE_NAME}" --argjson tables "$(printf '%s' "${CATALOGUE}" | rows)" \
+    '{database: $database, tables: $tables}'
+done | table
+printf '\n'
+
+for DATABASE_NAME in $(databases); do
+  section "tables ${DATABASE_NAME}"
+  CATALOGUE="$(catalogued)" || { fail "${DATABASE_NAME}" "${CATALOGUE}"; exit 1; }
+  STATEMENT=""
+  while IFS=$'\t' read -r TABLE COLUMNS TAGGED; do
+    [ -z "${TABLE}" ] && continue
+    if [ "${TAGGED}" = 0 ]; then
+      MODULES="CAST(NULL AS VARCHAR)"
+    else
+      MODULES="string_agg(DISTINCT SCHEMA_MODULE, ', ')"
+    fi
+    [ -n "${STATEMENT}" ] && STATEMENT="${STATEMENT} UNION ALL "
+    STATEMENT="${STATEMENT}SELECT '${TABLE}' AS \\"table\\", ${MODULES} AS \\"modules\\", ${COLUMNS} AS \\"columns\\","
+    STATEMENT="${STATEMENT} count(*) AS \\"rows\\", CAST(min(SCHEMA_TIME)SCHEMA_SHIFT AS VARCHAR) AS \\"oldest\\","
+    STATEMENT="${STATEMENT} CAST(max(SCHEMA_TIME)SCHEMA_SHIFT AS VARCHAR) AS \\"newest\\" FROM \\"${TABLE}\\""
+  done < <(printf '%s' "${CATALOGUE}" | jq -r '.[] | [.table_name, .columns, .tagged] | @tsv')
+  if [ -z "${STATEMENT}" ]; then
+    printf 'no rows\n\n'
+    continue
+  fi
+  query_one "${STATEMENT} ORDER BY \\"rows\\" DESC" || exit 1
+  printf '\n'
+done
+"""
+
+
+def instance(module_name, zone=""):
+    body = INSTANCE.replace("SCHEMA_NAMESPACE", SCHEMA).replace("SCHEMA_MODULE", MODULE) \
+        .replace("SCHEMA_TIME", TIME).replace("SCHEMA_SHIFT", _shift(zone))
+    return instance_runner(module_name, DIALECT, TARGET, connect(module_name), body)
 
 
 def connect(module_name):
@@ -569,6 +631,11 @@ def _aggregate(function, expression, kind):
 
 def _binned(bucket, zone):
     return "date_bin(INTERVAL '{}', {})".format(bucket, _localised("time", zone))
+
+
+def _shift(zone):
+    offset = _offset(zone)
+    return "" if not offset else " + INTERVAL '{} minute'".format(offset)
 
 
 def _localised(expression, zone):

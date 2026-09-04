@@ -191,6 +191,25 @@ fi
     """.format(banner(), dialect, name, summary, env, connect.strip(), body.strip()).strip() + "\n"
 
 
+INSTANCE = r"""
+section() {
+  printf -- '\n-- %s\n\n' "$1"
+}
+
+slurp() {
+  jq -rs '(if length == 1 and (.[0] | type) == "array" then .[0] else . end) | '"$1"
+}
+"""
+
+
+def instance_runner(module_name, dialect, target, connect, body):
+    return script(module_name, dialect, "describe", "print what the instance actually holds", connect, INSTANCE + """
+printf '\\nSchema describe [%s] against [%s]\\n' "{module}" "${{{target}}}"
+
+{body}
+""".format(target=target, module=module_name, body=body.strip()))
+
+
 def describe_runner(module_name, dialect, target, connect, sql):
     return script(module_name, dialect, "describe", "print what production actually carries", connect, """
 describe_sql() {{
