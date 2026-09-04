@@ -29,8 +29,8 @@ backup_stored() {
 }
 
 backup_status() {
-  docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 status backup --name "$1" --format json 2>/dev/null |
-    jq -r '.. | strings | select(test("^(completed|in_progress|failed)$"))' 2>/dev/null | head -1
+  docker exec --user root "${BACKUP_MODULE_NAME}" influxdb3 status backup --name "$1" |
+    awk '/^Status:/ {print $2}' | head -1
 }
 
 backup_awaited() {
