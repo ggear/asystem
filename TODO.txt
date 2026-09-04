@@ -36,17 +36,24 @@ check metric attribution works by metric filter when multiple probe_* feed singl
 
 
 test each modules backup
-  src/jen/zigbee2mqtt/src/build/resources/backup.sh
   src/meg/mariadb/src/build/resources/backup.sh
   src/max/influxdb3/src/build/resources/backup.sh
   src/mad/wrangle/src/build/resources/backup.sh
   src/mad/postgres/src/build/resources/backup.sh
   src/mad/plex/src/build/resources/backup.sh
   src/may/letsencrypt/src/build/resources/backup.sh
+test each modules schema release
+  src/jen/weewx/src/build/resources/schema/vernemq/describe.sh
+  src/meg/tasmota/src/build/resources/schema/vernemq/describe.sh
+  src/mad/network/src/build/resources/schema/vernemq/describe.sh
+  src/may/tempstat/src/build/resources/schema/vernemq/describe.sh
+test vernemq release
+test supervisor release
 test primary
 test sedondary
 format all /backup drives, test volumes.sh
 test tertiary
+test supervisor backup enable release
 
 
 
