@@ -5,6 +5,23 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
+BUILD_TIMEOUT="${BUILD_TIMEOUT:-900}"
+if command -v timeout >/dev/null 2>&1; then
+	BUILD_TIMEOUT_CMD=(timeout "${BUILD_TIMEOUT}")
+elif command -v gtimeout >/dev/null 2>&1; then
+	BUILD_TIMEOUT_CMD=(gtimeout "${BUILD_TIMEOUT}")
+else
+	BUILD_TIMEOUT_CMD=()
+fi
+
+copy_built() {
+	if [ ! -s "${1}" ]; then
+		echo "Build produced no artifact [${1}], refusing to ship an empty card" >&2
+		exit 1
+	fi
+	cp -f "${1}" "${2}"
+}
+
 if [ -x /opt/homebrew/bin/brew ]; then
 	eval "$(/opt/homebrew/bin/brew shellenv)"
 elif [ -x /usr/local/bin/brew ]; then
@@ -19,28 +36,28 @@ pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "clock-weather-card" "ggear/clock
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card"
 if command -v yarn >/dev/null 2>&1; then YARN_CMD=(yarn); elif command -v corepack >/dev/null 2>&1; then YARN_CMD=(corepack yarn); elif [ -x /opt/homebrew/bin/yarn ]; then YARN_CMD=(/opt/homebrew/bin/yarn); elif [ -x /opt/homebrew/bin/corepack ]; then YARN_CMD=(/opt/homebrew/bin/corepack yarn); elif [ -x /opt/homebrew/bin/npx ]; then YARN_CMD=(/opt/homebrew/bin/npx -y yarn@1.22.22); else exit 127; fi
-"${YARN_CMD[@]}" --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install &&
-"${YARN_CMD[@]}" --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build || exit $?
-cp "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
+"${BUILD_TIMEOUT_CMD[@]}" "${YARN_CMD[@]}" --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" install &&
+"${BUILD_TIMEOUT_CMD[@]}" "${YARN_CMD[@]}" --cwd "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card" build || exit $?
+copy_built "${ROOT_DIR}/../../../.deps/homeassistant/clock-weather-card/dist/clock-weather-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/clock-weather-card/clock-weather-card.js"
 
 # NOTES: https://github.com/ashtonau/bom-radar-card/releases
 VERSION=v1.10.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "ggear/bom-radar-card" "ggear-patches" "https://github.com/ashtonau/bom-radar-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
-npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" install
-npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" run build
-cp "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/bom-radar-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/bom-radar-card.js"
+"${BUILD_TIMEOUT_CMD[@]}" npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" install || exit $?
+"${BUILD_TIMEOUT_CMD[@]}" npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" run build || exit $?
+copy_built "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/bom-radar-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/bom-radar-card.js"
 
 # NOTES: https://github.com/aukedejong/lovelace-windrose-card/releases (upstream tags lag main; track main for latest fixes)
 VERSION=main
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "windrose-card" "ggear/windrose-card" "ggear-patches" "https://github.com/aukedejong/lovelace-windrose-card.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card"
-npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" ci --no-audit --no-fund
+"${BUILD_TIMEOUT_CMD[@]}" npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" ci --no-audit --no-fund || exit $?
 echo "[windrose-card] running esbuild build"
-npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" run esbuild
-cp "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card/build/windrose-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card/windrose-card.js"
+"${BUILD_TIMEOUT_CMD[@]}" npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card" run esbuild || exit $?
+copy_built "${ROOT_DIR}/../../../.deps/homeassistant/windrose-card/build/windrose-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/windrose-card/windrose-card.js"
 
 # NOTES: https://github.com/thomasloven/lovelace-card-mod/releases
 VERSION=v4.2.1-202604
