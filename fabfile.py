@@ -1233,7 +1233,9 @@ def _get_hosts(module, filter_host_type=None):
 
 
 def _is_ignored(module):
-    return all(_get_host_metadata(host)[4] == "ignore" for host in _get_host_labels(module))
+    group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
+    group = group_path.read_text().strip() if group_path.is_file() else ""
+    return group.lstrip("-").isnumeric() and int(group) == -1
 
 
 def _get_dependencies(context, module):

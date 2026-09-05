@@ -25,7 +25,9 @@ if __name__ == "__main__":
             if "/target/" not in certificates_path and \
                     len(certificates_path_tokens) > 2:
                 module_tokens = certificates_path_tokens[1].split("/")
-                if len(module_tokens) > 1:
+                group_path = Path(join(certificates_path_tokens[0], "src", certificates_path_tokens[1], ".group"))
+                group = group_path.read_text().strip() if group_path.is_file() else ""
+                if len(module_tokens) > 1 and group != "-1":
                     service_name = module_tokens[1]
                     host_pull = "{}-{}".format(hosts_labels[host_pull_label][0], host_pull_label)
                     host_push = "{}-{}".format(hosts_labels[module_tokens[0]][0], module_tokens[0])

@@ -1,8 +1,11 @@
 package probe
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
+	"supervisor/internal/scribe"
 	"testing"
 )
 
@@ -12,12 +15,10 @@ func TestProbeLibInstall_Snapshot(t *testing.T) {
 		environment            string
 		compose                string
 		sleepEnabled           bool
-		backupEnabled          bool
 		omitEnvironment        bool
 		omitCompose            bool
 		expectedVersion        string
 		expectedSleepEnabled   bool
-		expectedBackupEnabled  bool
 		expectedMaxMemoryBytes int64
 		expectedServiceModule  bool
 		expectedError          bool
@@ -48,17 +49,6 @@ func TestProbeLibInstall_Snapshot(t *testing.T) {
 			expectedVersion:        "10.100.1234",
 			expectedSleepEnabled:   true,
 			expectedMaxMemoryBytes: 2 << 30,
-			expectedServiceModule:  true,
-			expectedError:          false,
-		},
-		{
-			name:                   "happy_backup_enabled",
-			environment:            "SERVICE_VERSION_ABSOLUTE=10.100.1234\n",
-			compose:                installComposeWith("256M"),
-			backupEnabled:          true,
-			expectedVersion:        "10.100.1234",
-			expectedBackupEnabled:  true,
-			expectedMaxMemoryBytes: 256 << 20,
 			expectedServiceModule:  true,
 			expectedError:          false,
 		},
@@ -171,18 +161,12 @@ func TestProbeLibInstall_Snapshot(t *testing.T) {
 			if testCase.sleepEnabled {
 				writeInstallFile(t, filepath.Join(mount, "var/lib/asystem/install/myservice/.sleep"), "")
 			}
-			if testCase.backupEnabled {
-				writeInstallFile(t, filepath.Join(home, "backup.sh"), "#!/usr/bin/env bash\n")
-			}
-			service, _ := loadInstallTree(mount).snapshot().service("myservice")
+			service, _ := loadInstallTree(mount).snapshot(installTestConfigured).service("myservice")
 			if service.version != testCase.expectedVersion {
 				t.Errorf("version: got %q want %q", service.version, testCase.expectedVersion)
 			}
 			if service.sleepEnabled != testCase.expectedSleepEnabled {
 				t.Errorf("sleepEnabled: got %v want %v", service.sleepEnabled, testCase.expectedSleepEnabled)
-			}
-			if service.backupEnabled != testCase.expectedBackupEnabled {
-				t.Errorf("backupEnabled: got %v want %v", service.backupEnabled, testCase.expectedBackupEnabled)
 			}
 			if service.maxMemoryBytes != testCase.expectedMaxMemoryBytes {
 				t.Errorf("allocatedBytes: got %d want %d", service.maxMemoryBytes, testCase.expectedMaxMemoryBytes)
@@ -204,7 +188,7 @@ func TestProbeLibInstall_SnapshotAbsoluteSymlink(t *testing.T) {
 	if err := os.Symlink("/var/lib/asystem/install/myservice/10.100.5678", filepath.Join(mount, "var/lib/asystem/install/myservice/latest")); err != nil {
 		t.Fatalf("symlink failed: %v", err)
 	}
-	service, _ := loadInstallTree(mount).snapshot().service("myservice")
+	service, _ := loadInstallTree(mount).snapshot(installTestConfigured).service("myservice")
 	if service.version != "10.100.5678" {
 		t.Errorf("version: got %q want %q", service.version, "10.100.5678")
 	}
@@ -286,7 +270,7 @@ func TestProbeLibInstall_Allocation(t *testing.T) {
 			home = filepath.Join(mount, "var/lib/asystem/install/four/latest")
 			writeInstallDir(t, home)
 			writeInstallFile(t, filepath.Join(home, ".env"), "SERVICE_VERSION_ABSOLUTE=10.100.1234\n")
-			got, _, err := loadInstallTree(mount).snapshot().allocation(testCase.names)
+			got, _, err := loadInstallTree(mount).snapshot(testCase.names).allocation(testCase.names)
 			if testCase.expectedError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
@@ -311,12 +295,12 @@ func TestProbeLibInstall_Invalidation(t *testing.T) {
 	writeInstallFile(t, filepath.Join(home, ".env"), "SERVICE_VERSION_ABSOLUTE=10.100.1234\n")
 	writeInstallFile(t, filepath.Join(home, "docker-compose.yml"), installComposeWith("256M"))
 	tree := loadInstallTree(mount)
-	first := tree.snapshot()
-	if second := tree.snapshot(); second != first {
+	first := tree.snapshot(installTestConfigured)
+	if second := tree.snapshot(installTestConfigured); second != first {
 		t.Errorf("snapshot: got a re-parse for an unchanged tree, want the cached snapshot")
 	}
 	writeInstallFile(t, filepath.Join(mount, "var/lib/asystem/install/myservice/.sleep"), "")
-	third := tree.snapshot()
+	third := tree.snapshot(installTestConfigured)
 	if third == first {
 		t.Fatalf("snapshot: got the cached snapshot after the sleep marker appeared, want a re-parse")
 	}
@@ -326,7 +310,7 @@ func TestProbeLibInstall_Invalidation(t *testing.T) {
 	if err := os.Remove(filepath.Join(mount, "var/lib/asystem/install/myservice/.sleep")); err != nil {
 		t.Fatalf("remove .sleep failed: %v", err)
 	}
-	fourth := tree.snapshot()
+	fourth := tree.snapshot(installTestConfigured)
 	if fourth == third {
 		t.Fatalf("snapshot: got the cached snapshot after the sleep marker was removed, want a re-parse")
 	}
@@ -349,7 +333,7 @@ func TestProbeLibInstall_InvalidationOnVersionChange(t *testing.T) {
 		t.Fatalf("symlink failed: %v", err)
 	}
 	tree := loadInstallTree(mount)
-	first := tree.snapshot()
+	first := tree.snapshot(installTestConfigured)
 	if installed, _ := first.service("myservice"); installed.version != "10.100.1234" {
 		t.Fatalf("version: got %q want %q", installed.version, "10.100.1234")
 	}
@@ -359,7 +343,7 @@ func TestProbeLibInstall_InvalidationOnVersionChange(t *testing.T) {
 	if err := os.Symlink("/var/lib/asystem/install/myservice/10.100.5678", filepath.Join(root, "latest")); err != nil {
 		t.Fatalf("symlink failed: %v", err)
 	}
-	second := tree.snapshot()
+	second := tree.snapshot(installTestConfigured)
 	if second == first {
 		t.Fatalf("snapshot: got the cached snapshot after the version was repointed, want a re-parse")
 	}
@@ -384,6 +368,36 @@ func TestProbeLibInstall_LoadIsCachedPerMount(t *testing.T) {
 	}
 }
 
+func TestProbeLibInstall_ReportScopedToConfigured(t *testing.T) {
+	t.Cleanup(resetInstallTrees)
+	buffer := scribe.EnableBuffer(slog.LevelDebug, 200)
+	t.Cleanup(func() { scribe.EnableStdout(slog.LevelInfo) })
+	mount := t.TempDir()
+	for _, name := range []string{"myservice", "departed"} {
+		home := filepath.Join(mount, "var/lib/asystem/install", name, "latest")
+		writeInstallDir(t, home)
+		writeInstallFile(t, filepath.Join(home, "docker-compose.yml"), "services:\n  "+name+":\n    container_name: "+name+"\n")
+	}
+	snapshot := loadInstallTree(mount).snapshot(installTestConfigured)
+	if _, found := snapshot.service("departed"); !found {
+		t.Fatalf("service: got no entry for an unconfigured install, want it parsed for container lookups")
+	}
+	for _, line := range buffer.Tail(200) {
+		if strings.Contains(line.Detail, "departed") {
+			t.Errorf("detail: got a line naming an unconfigured install %q, want none", line.Detail)
+		}
+	}
+	named := false
+	for _, line := range buffer.Tail(200) {
+		if strings.Contains(line.Detail, "myservice") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("detail: got no line naming the configured install, want one")
+	}
+}
+
 func installComposeWith(limit string) string {
 	return "services:\n  myservice:\n    container_name: myservice\n    deploy:\n      resources:\n        limits:\n          memory: " + limit + "\n"
 }
@@ -401,3 +415,5 @@ func writeInstallFile(t *testing.T, path, content string) {
 		t.Fatalf("write %s failed: %v", path, err)
 	}
 }
+
+var installTestConfigured = []string{"myservice"}

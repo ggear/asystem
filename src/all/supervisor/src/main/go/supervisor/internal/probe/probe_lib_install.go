@@ -34,7 +34,8 @@ func newInstallReader(configPath, hostName string) installReader {
 }
 
 func (r installReader) snapshot() *installSnapshot {
-	return loadInstallTree(config.Load(r.configPath).Mount()).snapshot()
+	loaded := config.Load(r.configPath)
+	return loadInstallTree(loaded.Mount()).snapshot(loaded.Services(r.hostName))
 }
 
 func (r installReader) allocation() (int64, int, error) {
@@ -45,7 +46,6 @@ type installService struct {
 	serviceModule  bool
 	version        string
 	sleepEnabled   bool
-	backupEnabled  bool
 	maxMemoryBytes int64
 }
 
@@ -85,7 +85,7 @@ func resetInstallTrees() {
 	clear(installTreeCache)
 }
 
-func (t *installTree) snapshot() *installSnapshot {
+func (t *installTree) snapshot(configured []string) *installSnapshot {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	scanStart := time.Now()
@@ -95,9 +95,9 @@ func (t *installTree) snapshot() *installSnapshot {
 	}
 	t.stamp = stamp
 	t.generation++
-	t.cached = t.parse()
+	t.cached = t.parse(configured)
 	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectNone, scribe.ActionDiscover).Debugf("snapshot", scanStart, "[%d] services, generation [%d] under [%s]", len(t.cached.services), t.generation, t.mount+installRoot)
-	t.cached.report(scanStart)
+	t.cached.report(scanStart, configured)
 	return t.cached
 }
 
@@ -135,14 +135,14 @@ func (s *installSnapshot) allocation(names []string) (int64, int, error) {
 	return total, installed, nil
 }
 
-func (s *installSnapshot) report(scanStart time.Time) {
-	names := make([]string, 0, len(s.services))
-	for name := range s.services {
-		names = append(names, name)
-	}
+func (s *installSnapshot) report(scanStart time.Time, configured []string) {
+	names := append([]string(nil), configured...)
 	sort.Strings(names)
 	for _, name := range names {
-		entry := s.services[name]
+		entry, found := s.service(name)
+		if !found {
+			continue
+		}
 		if !entry.serviceModule {
 			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("examined", scanStart, "[%s] is a host module with no compose file, not counted in the allocation", name)
 			continue
@@ -213,10 +213,14 @@ func (t *installTree) fingerprint() uint64 {
 	return hash.Sum64()
 }
 
-func (t *installTree) parse() *installSnapshot {
+func (t *installTree) parse(configured []string) *installSnapshot {
 	exists := func(path string) bool {
 		_, err := os.Lstat(path)
 		return err == nil
+	}
+	scoped := make(map[string]struct{}, len(configured))
+	for _, name := range configured {
+		scoped[name] = struct{}{}
 	}
 	snapshot := &installSnapshot{services: map[string]installService{}}
 	for _, base := range t.bases() {
@@ -234,13 +238,13 @@ func (t *installTree) parse() *installSnapshot {
 				continue
 			}
 			home := t.home(base, name)
+			_, reported := scoped[name]
 			installed := installService{}
 			installed.sleepEnabled = exists(root + "/" + name + "/" + installSleepMarker)
-			installed.backupEnabled = exists(home + "/" + installBackupScript)
-			installed.version = installVersion(home, name)
+			installed.version = installVersion(home, name, reported)
 			installed.serviceModule = exists(home + "/" + installComposeFile)
 			if installed.serviceModule {
-				installed.maxMemoryBytes = installMaxMemory(home, name)
+				installed.maxMemoryBytes = installMaxMemory(home, name, reported)
 			}
 			snapshot.services[name] = installed
 		}
@@ -248,12 +252,14 @@ func (t *installTree) parse() *installSnapshot {
 	return snapshot
 }
 
-func installVersion(home, name string) string {
+func installVersion(home, name string, reported bool) string {
 	versionStart := time.Now()
 	path := home + "/" + installEnvironmentFile
 	data, err := os.ReadFile(path)
 	if err != nil {
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", versionStart, "[%s] version not readable with [%v]", path, err)
+		if reported {
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", versionStart, "[%s] version not readable with [%v]", path, err)
+		}
 		return ""
 	}
 	for line := range strings.SplitSeq(string(data), "\n") {
@@ -262,26 +268,34 @@ func installVersion(home, name string) string {
 			continue
 		}
 		if !config.DefaultVersionPattern.MatchString(value) {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", versionStart, "[%s] version from [%s] could not be parsed", value, path)
+			if reported {
+				scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", versionStart, "[%s] version from [%s] could not be parsed", value, path)
+			}
 			return ""
 		}
 		return value
 	}
-	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", versionStart, "[%s] declares no version", path)
+	if reported {
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", versionStart, "[%s] declares no version", path)
+	}
 	return ""
 }
 
-func installMaxMemory(home, name string) int64 {
+func installMaxMemory(home, name string, reported bool) int64 {
 	memoryStart := time.Now()
 	path := home + "/" + installComposeFile
 	data, err := os.ReadFile(path)
 	if err != nil {
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", memoryStart, "[%s] compose not readable with [%v]", path, err)
+		if reported {
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", memoryStart, "[%s] compose not readable with [%v]", path, err)
+		}
 		return 0
 	}
 	var compose installCompose
 	if err := yaml.Unmarshal(data, &compose); err != nil {
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", memoryStart, "[%s] compose could not be parsed with [%v]", path, err)
+		if reported {
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", memoryStart, "[%s] compose could not be parsed with [%v]", path, err)
+		}
 		return 0
 	}
 	keys := make([]string, 0, len(compose.Services))
@@ -297,12 +311,16 @@ func installMaxMemory(home, name string) int64 {
 		}
 		limit := composed.Deploy.Resources.Limits.Memory
 		if limit == "" {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", memoryStart, "[%s] compose service declares no memory limit in [%s]", key, path)
+			if reported {
+				scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("notfound", memoryStart, "[%s] compose service declares no memory limit in [%s]", key, path)
+			}
 			continue
 		}
 		limitBytes, limitErr := units.RAMInBytes(limit)
 		if limitErr != nil {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", memoryStart, "[%s] compose service memory [%s] in [%s] with [%v]", key, limit, path, limitErr)
+			if reported {
+				scribe.Log(scribe.SourceProbeInstall, scribe.SubjectService(name), scribe.ActionDiscover).Warnf("unusable", memoryStart, "[%s] compose service memory [%s] in [%s] with [%v]", key, limit, path, limitErr)
+			}
 			continue
 		}
 		total += limitBytes
@@ -337,7 +355,6 @@ const (
 	installLatestLink      = "latest"
 	installSleepMarker     = ".sleep"
 	installEnvironmentFile = ".env"
-	installBackupScript    = "backup.sh"
 	installComposeFile     = "docker-compose.yml"
 	installVersionKey      = "SERVICE_VERSION_ABSOLUTE="
 	installRestartNever    = "no"
