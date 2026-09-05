@@ -351,23 +351,57 @@ never per heartbeat; an unknown host counts as online.
 
 ## How to test
 
-**No services need moving, and most of it needs no estate at all.** Note supervisor ships **no Python
-tests** — `src/test/python/` is empty — so the Go suite is the only harness, which is where this
-belongs anyway.
+**No services need moving, and none of it needs the estate.** Supervisor ships **no Python tests
+today** — `src/test/python/` is empty — and Phase 1 is the reason to add a systest, because four of
+its five steps are properties of the **running container** that a Go test cannot reach.
+
+### Add a systest, planned
+
+`src/test/python/system/system_test.py` plus a `.env_test`, following `src/mad/network` — which
+connects to a broker at `127.0.0.1:${VERNEMQ_API_PORT}`, subscribes, and asserts payload shape. The
+same pattern applies here, and it exercises what nothing currently tests: the packaged image, the
+`cap_add`/`device_cgroup_rules`/bind-mount stanzas in `docker-compose.yml`, the generated
+`check{alive,executing,healthy}.sh`, and the real SIGTERM shutdown path.
+
+**`.env_test` must set `SUPERVISOR_HOST` to a host that appears in the generated `config.json`.**
+The default is `host.docker.internal`, which matches no schema entry, so `config.Services(host)`
+returns empty, there are no configured services, and the ghost and readback paths never exercise.
+This is the same shape as tempstat's `.env_test`, which sets `TEMPSTAT_MOCK=1` and a null device map.
+
+**Assert only what a container on a dev machine can actually measure.** The drive, sensor, mount and
+kernel-log probes read the host's `/sys`, `/proc/mounts`, block devices and `/dev/kmsg`; under Docker
+Desktop those are the VM's, not the Mac's, so they will fault or read inert. Assert the status topic,
+the record envelope, and the host metrics that work anywhere — processor, memory, up time.
+
+**The cost is real:** `fab st`, `fab t` and every `fab release` would then run it for this module.
+
+| Step | Systest assertion |
+|---|---|
+| 1 | Bring the container up, let it publish, `docker stop`, then assert the host's retained data topics **still exist**. Better than the Go form — it exercises the real SIGTERM defer. |
+| 2 | Publish a retained `supervisor/<host>/data/service/zztest/name`, restart the container, assert the topic is cleared within one pulse. The most realistic form of this test — real `config.json`, real docker socket. |
+| 3 | Subscribe before triggering the removal, assert both forms arrive and the retained topic ends cleared. |
+| 4 | Natural fit — the systest has no influxdb3, so asserting the pulse still publishes *is* the offline-database case. |
+| 5 | Time from container start to the first retained data topic appearing. The end-to-end form of the log timing below. |
 
 ### In Go, against a throwaway broker
 
 `TestEngine_RunListeningStreamLoop` already spins up a real VerneMQ per test via
-`testutil.SetupBrokerContainer(t)` behind `testutil.RequiresDocker(t)`. Every Phase 1 step has a home
-there, and each assertion fails against today's code, which is what makes them regression tests:
+`testutil.SetupBrokerContainer(t)` behind `testutil.RequiresDocker(t)`. Keep the **fine-grained
+logic** here — it is faster, it runs without an image, and it can reach states the container cannot
+be steered into. Each assertion below fails against today's code, which is what makes them
+regression tests rather than descriptions:
 
 | Step | Test |
 |---|---|
 | 1 | Run the publish loop, cancel it, assert the host's retained data topics **still exist**. Today they are gone. |
 | 2 | Pre-publish a retained `supervisor/<host>/data/service/zztest/name`, start the loop, assert the service registers and is tombstoned within a poll. |
 | 3 | Subscribe, trigger a delete, assert **two** messages arrive — nil-pulse JSON then the empty payload — and that the retained topic ends up cleared. |
-| 4 | Assert a nil database client does not panic, and that the pulse still publishes with the database unreachable. |
+| 4 | Assert a nil database client does not panic under a concurrent pulse — the race the `atomic.Pointer` exists for, which the systest cannot provoke. |
 | 5 | Assert the first pulse callback fires within a few hundred ms of start rather than after `PollMillis`. |
+
+The division is: **the systest proves the container behaves, the Go tests prove the logic does.**
+Case 6 in particular — a tombstone arriving while the watch has the host wrongly muted — belongs in
+Go, because muting a host on demand is a state the systest has no way to create.
 
 ### On a host, with one synthetic topic
 
