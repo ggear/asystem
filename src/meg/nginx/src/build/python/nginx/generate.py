@@ -29,7 +29,7 @@ ACCESS_PRIVATE = """
 
 if __name__ == "__main__":
     env = load_bootstrap_env(DIR_ROOT)
-    modules = load_bootstrap_modules()
+    modules = load_bootstrap_modules(include_disabled=False, include_infrastructure=False)
 
     write_container_healthchecks(working_dir=join(DIR_ROOT, "src/main/resources/data"))
     write_container_certificates(working_dir=join(DIR_ROOT, "src/main/resources/data"))
