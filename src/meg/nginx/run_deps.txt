@@ -8,9 +8,7 @@ vernemq
 wrangle
 tasmota
 mlserver
-unpoller
 postgres
 influxdb3
-appdaemon
 zigbee2mqtt
 homeassistant

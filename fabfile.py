@@ -305,7 +305,11 @@ def _list(context):
     _print_header("asystem", "list modules")
     group_service_dict: Dict[str, set[str]] = {}
     host_group_service_dict: Dict[str, Dict[str, Dict[str, str]]] = {}
-    for module in _get_modules(context, ".group", filter_changes=False):
+    service_depends_dict: Dict[str, set[str]] = {}
+    service_required_dict: Dict[str, set[str]] = {}
+    modules = _get_modules(context, ".group", filter_changes=False)
+    services_ignored = {_get_service(module) for module in modules if _is_ignored(module)}
+    for module in [module for module in modules if not _is_ignored(module)]:
         group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
         group = group_path.read_text().strip()
         service = _get_service(module)
@@ -332,23 +336,50 @@ def _list(context):
         else:
             raise Exception(
                 "Error in group file [{}], erroneous group number [{}]".format(group_path, group))
-    print("############################################################")
-    print("Services by group:")
-    print("############################################################")
-    print("groups:")
-    for group in sorted(group_service_dict.keys()):
-        print("  {}: {}".format(group, ", ".join(sorted(group_service_dict[group]))))
-    print("############################################################")
-    print("Services by host and group:")
-    print("############################################################")
+        if service != "_":
+            for dependency in [_get_service(dependency) for dependency
+                               in _get_dependencies(context, module)[:-1] if "/" in dependency]:
+                if dependency in services_ignored:
+                    continue
+                if service not in service_depends_dict:
+                    service_depends_dict[service] = set()
+                service_depends_dict[service].add(dependency)
+                if dependency not in service_required_dict:
+                    service_required_dict[dependency] = set()
+                service_required_dict[dependency].add(service)
+    _print_table("Services by group", [
+        (group, sorted(group_service_dict[group]))
+        for group in sorted(group_service_dict.keys())
+    ])
+    host_group_rows = []
     for host in sorted(host_group_service_dict.keys()):
         if FAB_SKIP_HOST_ALLBUT not in os.environ or host.startswith(os.environ[FAB_SKIP_HOST_ALLBUT]):
-            print("{}:".format(host))
+            host_group_rows.append((host, None))
             for group in sorted(host_group_service_dict[host].keys()):
-                services = sorted(host_group_service_dict[host][group].keys())
-                print("  {}: {}".format(group, ", ".join(services)))
+                host_group_rows.append((group, sorted(host_group_service_dict[host][group].keys())))
+    _print_table("Services by host and group", host_group_rows)
+    _print_table("Services depending on module", [
+        (service, sorted(service_depends_dict[service]))
+        for service in sorted(service_depends_dict.keys())
+    ])
+    _print_table("Services required by module", [
+        (service, sorted(service_required_dict[service]))
+        for service in sorted(service_required_dict.keys())
+    ])
     print("############################################################")
     _print_footer("asystem", "list modules")
+
+
+def _print_table(title, rows):
+    print("############################################################")
+    print("{}:".format(title))
+    print("############################################################")
+    width = max([len(label) for label, values in rows if values is not None] + [0])
+    for label, values in rows:
+        if values is None:
+            print("{}:".format(label))
+        else:
+            print("  {} {}".format((label + ":").ljust(width + 1), ", ".join(values)))
 
 
 def _generate(context, filter_module=None, filter_changes=True, filter_host=None,
@@ -1199,6 +1230,10 @@ def _get_hosts(module, filter_host_type=None):
         if filter_host_type is None or filter_host_type == metadata[4]:
             hosts.append(metadata[0] + "-" + host)
     return hosts
+
+
+def _is_ignored(module):
+    return all(_get_host_metadata(host)[4] == "ignore" for host in _get_host_labels(module))
 
 
 def _get_dependencies(context, module):
