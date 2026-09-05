@@ -26,6 +26,7 @@ RUN (python3 -m ensurepip 2> /dev/null || true) && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade virtualenv==20.27.1 && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade psycopg2-binary==2.9.10 && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade mlflow[extras]==${ASYSTEM_MLFLOW_VERSION} && \
+    pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir anyio==4.14.2 && \
     pip3 cache purge
 RUN cd /tmp && \
     rm -rf pyenv && \
