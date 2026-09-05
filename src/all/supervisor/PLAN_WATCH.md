@@ -349,6 +349,57 @@ never per heartbeat; an unknown host counts as online.
 
 ---
 
+## How to test
+
+**No services need moving, and most of it needs no estate at all.** Note supervisor ships **no Python
+tests** — `src/test/python/` is empty — so the Go suite is the only harness, which is where this
+belongs anyway.
+
+### In Go, against a throwaway broker
+
+`TestEngine_RunListeningStreamLoop` already spins up a real VerneMQ per test via
+`testutil.SetupBrokerContainer(t)` behind `testutil.RequiresDocker(t)`. Every Phase 1 step has a home
+there, and each assertion fails against today's code, which is what makes them regression tests:
+
+| Step | Test |
+|---|---|
+| 1 | Run the publish loop, cancel it, assert the host's retained data topics **still exist**. Today they are gone. |
+| 2 | Pre-publish a retained `supervisor/<host>/data/service/zztest/name`, start the loop, assert the service registers and is tombstoned within a poll. |
+| 3 | Subscribe, trigger a delete, assert **two** messages arrive — nil-pulse JSON then the empty payload — and that the retained topic ends up cleared. |
+| 4 | Assert a nil database client does not panic, and that the pulse still publishes with the database unreachable. |
+| 5 | Assert the first pulse callback fires within a few hundred ms of start rather than after `PollMillis`. |
+
+### On a host, with one synthetic topic
+
+**The estate cannot produce the orphan condition naturally right now** — on `max`, config ∪ running
+covers all seven retained service names, so nothing is orphaned. Create it deliberately:
+
+```bash
+mosquitto_pub -h "$VERNEMQ_SERVICE_PROD" -p "$VERNEMQ_API_PORT" -u supervisor -P "$VERNEMQ_TOKEN" \
+  -r -t 'supervisor/macmini-max/data/service/zztest/name' \
+  -m '{"timestamp":'"$(date +%s)"',"pulse":{"ok":true,"kind":4,"valueString":"zztest"},"trend":{"ok":true,"kind":4,"valueString":"zztest"}}'
+```
+
+Restart supervisor on that host and watch. **Today** a `zztest` row appears on every watch and
+survives until the reconcile reaps it at 10-16 s. **After Phase 1** the new process rediscovers it,
+finds it in neither docker nor config, and tombstones it within ~3 s. Clear it afterwards with
+`-r -n` on the same topic. One topic, obviously named, fully reversible — and the phantom row it
+produces is itself the demonstration.
+
+### Steps 4 and 5 need no setup
+
+Read the serve log and time `sessions [broker] connect` against the first `gathered [n] metrics`
+line. That gap is 7 s on `may` today and should fall to under a second.
+
+### Caution on `fab exe`
+
+`BROKER_HOST` resolves to `host.docker.internal`, so a local run cannot touch the production broker.
+But `SUPERVISOR_HOST` is also `host.docker.internal`, which matches no schema entry, so
+`config.Services(host)` is empty, there are no configured services and the ghost path never
+exercises. Fine for checking a mechanism, not representative of a host.
+
+---
+
 ## Phases
 
 ### Phase 0 — verify, planned
