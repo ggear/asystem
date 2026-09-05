@@ -55,7 +55,7 @@ SERVICE_WAIT_RESTART_SECONDS=120
 SERVICE_SETTLE_RESTART_SECONDS=30
 
 wait_service() {
-  local script="$1" label="$2" interval="$3" timeout="$4" fatal="$5" waited=0
+  local script="$1" label="$2" interval="$3" timeout="$4" fatal="$5" waited=0 grace=5 report=30
   ((interval > 0)) || interval=1
   echo "Waiting for service to ${label} ..."
   while ! docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" >/dev/null 2>&1; do
@@ -68,7 +68,7 @@ wait_service() {
       log_warn "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
       return 1
     fi
-    if ((waited > 0 && waited % 30 == 0)); then
+    if ((waited == grace)) || ((waited > 0 && waited % report == 0)); then
       echo "Waiting for service to ${label} ... waited [${waited}] of [${timeout}] seconds"
       docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" -v 2>&1 | tail -n 3
     fi
