@@ -380,7 +380,7 @@ func (s *mountSet) parseFstab() []string {
 			continue
 		}
 		noauto := false
-		for _, option := range strings.Split(fields[3], ",") {
+		for option := range strings.SplitSeq(fields[3], ",") {
 			if strings.TrimSpace(option) == mountNoAuto {
 				noauto = true
 				break

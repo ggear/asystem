@@ -31,9 +31,9 @@
         "host": "macmini-max",
         "index": 2,
         "services": [
-          "influxdb3",
-          "mlflow",
-          "mlserver",
+          "cloudflare",
+          "grafana",
+          "letsencrypt",
           "openra",
           "supervisor"
         ]
@@ -42,9 +42,9 @@
         "host": "macmini-may",
         "index": 3,
         "services": [
-          "cloudflare",
-          "grafana",
-          "letsencrypt",
+          "influxdb3",
+          "mlflow",
+          "mlserver",
           "sonarr",
           "supervisor",
           "tempstat"
