@@ -35,20 +35,9 @@ Fix logs for watch so no wrapping, what I see in watch or all?
 check metric attribution works by metric filter when multiple probe_* feed single metric
 
 
-test each modules backup
-  - src/jen/zigbee2mqtt/src/build/resources/backup.sh
-  - src/meg/mariadb/src/build/resources/backup.sh
-  - src/max/influxdb3/src/build/resources/backup.sh
-  - src/mad/postgres/src/build/resources/backup.sh
-  - src/mad/wrangle/src/build/resources/backup.sh
-  - src/mad/plex/src/build/resources/backup.sh
-  - src/may/letsencrypt/src/build/resources/backup.sh
-test each modules schema release
-  - src/jen/weewx/src/build/resources/schema/vernemq/describe.sh
-  - src/meg/tasmota/src/build/resources/schema/vernemq/describe.sh
-  - src/mad/network/src/build/resources/schema/vernemq/describe.sh
-  - src/may/tempstat/src/build/resources/schema/vernemq/describe.sh
-test vernemq release
+
+
+
 test supervisor release
 test primary
 test sedondary
@@ -153,6 +142,12 @@ Implement upgrade script, generarted?
 Implement syncart.py to store artwork in /shares and save download after failure
 Formalise subtitle download and sync, add missing subtitles to common series
 Drop closed captioning [] sounds from subtitles, just have text of spoken words
+
+
+###############################################################################################################################################################
+# Media
+###############################################################################################################################################################
+PUID=1000/PGID=100 impl to mean restarts dont set /share/10/tmp/usenet to root ownership, install_post.sh does it today
 
 
 ###############################################################################################################################################################
