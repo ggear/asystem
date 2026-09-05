@@ -368,6 +368,33 @@ The default is `host.docker.internal`, which matches no schema entry, so `config
 returns empty, there are no configured services, and the ghost and readback paths never exercise.
 This is the same shape as tempstat's `.env_test`, which sets `TEMPSTAT_MOCK=1` and a null device map.
 
+#### It will not start as configured, measured on Docker Desktop
+
+Tested directly on the dev machine (`Docker Desktop`, `7.0.12-linuxkit`):
+
+| Stanza | Result | Blocker |
+|---|---|---|
+| `propagation: rshared` on `/share` and `/backup` | `path /host_mnt/private/tmp is mounted on /host_mnt/private but it is not a shared mount` | **yes, hard failure** |
+| `/etc/fstab:/etc/fstab:ro` | `/etc/fstab` does not exist on macOS; the bind would create a directory under the Mac's `/private/etc` | **yes** |
+| `/:/${SUPERVISOR_MOUNT}:ro` | mounts, but `ls` returns **only `Users`** — Docker Desktop exposes the shared paths, so `/host/proc`, `/host/sys`, `/host/dev` and `/host/var/lib/asystem/install` do not exist | no, but every probe reading through the mount finds nothing |
+| `/var/lib/btrfs`, `/var/lib/asystem/install`, `/home/asystem` | absent on macOS; compose would auto-create them at the Mac root | no, but it pollutes the machine |
+| `cap_add` `SYSLOG`/`SYS_RAWIO`/`SYS_ADMIN`, `device_cgroup_rules`, `apparmor=unconfined` | accepted, container runs | no |
+| `/var/run/docker.sock` | works, special-cased by Docker Desktop | no |
+
+**So the systest needs the host-coupled stanzas to be env-driven**, overridden in `.env_test` to
+throwaway paths under `target/`: the four bind *sources*, and the propagation mode itself
+(`propagation: ${SUPERVISOR_SHARE_PROPAGATION}`, `rshared` in `.env_all` and `rprivate` in
+`.env_test`). Compose interpolates scalars from the generated `.env`, so this is the same mechanism
+`${SERVICE_DATA_DIR}` and `${SUPERVISOR_MOUNT}` already use — and because the var is always defined
+there, it needs no `${VAR:-default}` form, which the root `CLAUDE.md` records as unsafe.
+
+**This weakens one of the reasons for the systest, and the plan should say so.** The argument that it
+would cover the image, the `cap_add`/`device_cgroup_rules`/bind stanzas and the propagation modes
+mostly evaporates, because the systest has to strip exactly the unusual parts to run at all. The
+capabilities and device rules are still exercised; the binds and propagation are not. What survives
+intact is the smoke tests, the generated health-check script, and every Phase 1 assertion — those
+depend only on the broker and the docker socket, both of which work.
+
 **Assert only what a container on a dev machine can actually measure.** The drive, sensor, mount and
 kernel-log probes read the host's `/sys`, `/proc/mounts`, block devices and `/dev/kmsg`; under Docker
 Desktop those are the VM's, not the Mac's, so they will fault or read inert. Assert the status topic,
@@ -506,12 +533,13 @@ module's first systest and the doc updates. **None in the watch.**
 Together: **≤3 s worst case**, inside one pulse, and cases 1, 3, 4, 6 and 8 closed. Steps 4 and 5
 also make every metric on every host appear several seconds sooner on every start.
 
-**Step 6 earns its place beyond Phase 1.** Supervisor carries more unusual container configuration
-than any other module here — `SYS_ADMIN` and `SYS_RAWIO`, `device_cgroup_rules` for `/dev/kmsg` and
-block devices, the `/` bind at `$SUPERVISOR_MOUNT`, the `/etc/fstab` and `/dev` binds, `rshared`
-propagation for `/share` and `/backup` — and none of it has a test. The systest is the only thing
-that would catch a regression in the image, the compose stanzas or the generated health-check
-scripts, all of which are invisible to the Go suite.
+**Step 6 earns a narrower place than first argued.** Supervisor carries more unusual container
+configuration than any other module here, and none of it has a test — but *see the measured results
+in How to test*: the binds and the `rshared` propagation cannot run under Docker Desktop and have to
+be stripped for the systest, so those specific stanzas stay untested. What the systest does cover
+that the Go suite cannot is the packaged image, the capabilities and device rules, the generated
+`checkexecuting.sh`, and the real SIGTERM shutdown path — plus every Phase 1 assertion, which needs
+only the broker and the docker socket.
 
 **Step 2 is the keystone, not the optional one.** Step 1 makes the breadcrumbs survive, but if the
 readback is broken nothing reads them, the new process never tombstones the departed service, and the
@@ -530,7 +558,7 @@ storm is 21 lines a pulse on `may`, which is what you would be reading through.
 | 3 `MarkDelete` two forms + QoS 1 | ~5 lines | low, runs outside the cache mutex |
 | 5 first tick immediate | ~5 lines | low-med, must not disturb `pulseTickCount`/`heartbeatPulseCount` |
 | 4 `databaseConnect` async | ~15 lines | med, needs `atomic.Pointer` and the `defer db.close()` rehomed |
-| 6 systest + `.env_test` | ~150 lines, new to this module | med — first `fab st` for supervisor, may surface image or compose issues |
+| 6 systest + `.env_test` + env-driven compose sources | ~150 lines plus a compose change | med-high — the host binds and `rshared` must be parameterised before the container will start on macOS at all |
 | 7 doc comments and `CLAUDE.md` | prose | low but slow at this repo's standard |
 | 2 readback | ~10 lines to instrument, **fix unknown** | **unknown** |
 
