@@ -299,6 +299,12 @@ def _pull(context):
     _print_header("asystem", "pull package versions to update")
     _run_local(context, "pip list --outdated | grep 'Package\\|{}'".format("\\|".join(py_deps_dict.keys())))
     _print_footer("asystem", "pull package versions to update")
+    _print_header("asystem", "pull package versions to check")
+    _run_local(context, "pip check | grep 'but you have' || "
+                        "echo 'No version conflicts found'")
+    _run_local(context, "echo \"$(pip check | grep -c 'not installed') dependencies of [.py_deps_dev.txt] "
+                        "absent by design, that file is installed with [--no-deps]\"")
+    _print_footer("asystem", "pull package versions to check")
 
 
 def _list(context):
