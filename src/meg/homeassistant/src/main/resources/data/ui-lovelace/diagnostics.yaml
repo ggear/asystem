@@ -55,18 +55,6 @@
     - entity: switch.service_wrangle
       name: Wrangle
       icon: mdi:heart-pulse
-    - entity: switch.service_influxdb3
-      name: InfluxDB3
-      icon: mdi:heart-pulse
-    - entity: switch.service_mlflow
-      name: MLFlow
-      icon: mdi:heart-pulse
-    - entity: switch.service_mlserver
-      name: MLServer
-      icon: mdi:heart-pulse
-    - entity: switch.service_openra
-      name: OpenRA
-      icon: mdi:heart-pulse
     - entity: switch.service_cloudflare
       name: Cloudflare
       icon: mdi:heart-pulse
@@ -75,6 +63,18 @@
       icon: mdi:heart-pulse
     - entity: switch.service_letsencrypt
       name: LetsEncrypt
+      icon: mdi:heart-pulse
+    - entity: switch.service_openra
+      name: OpenRA
+      icon: mdi:heart-pulse
+    - entity: switch.service_influxdb3
+      name: InfluxDB3
+      icon: mdi:heart-pulse
+    - entity: switch.service_mlflow
+      name: MLFlow
+      icon: mdi:heart-pulse
+    - entity: switch.service_mlserver
+      name: MLServer
       icon: mdi:heart-pulse
     - entity: switch.service_sonarr
       name: Sonarr

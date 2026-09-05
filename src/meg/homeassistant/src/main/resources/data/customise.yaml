@@ -599,18 +599,6 @@ switch.service_sabnzbd:
 switch.service_wrangle:
   friendly_name: 'Wrangle'
   icon: 'mdi:heart-pulse'
-switch.service_influxdb3:
-  friendly_name: 'InfluxDB3'
-  icon: 'mdi:heart-pulse'
-switch.service_mlflow:
-  friendly_name: 'MLFlow'
-  icon: 'mdi:heart-pulse'
-switch.service_mlserver:
-  friendly_name: 'MLServer'
-  icon: 'mdi:heart-pulse'
-switch.service_openra:
-  friendly_name: 'OpenRA'
-  icon: 'mdi:heart-pulse'
 switch.service_cloudflare:
   friendly_name: 'Cloudflare'
   icon: 'mdi:heart-pulse'
@@ -619,6 +607,18 @@ switch.service_grafana:
   icon: 'mdi:heart-pulse'
 switch.service_letsencrypt:
   friendly_name: 'LetsEncrypt'
+  icon: 'mdi:heart-pulse'
+switch.service_openra:
+  friendly_name: 'OpenRA'
+  icon: 'mdi:heart-pulse'
+switch.service_influxdb3:
+  friendly_name: 'InfluxDB3'
+  icon: 'mdi:heart-pulse'
+switch.service_mlflow:
+  friendly_name: 'MLFlow'
+  icon: 'mdi:heart-pulse'
+switch.service_mlserver:
+  friendly_name: 'MLServer'
   icon: 'mdi:heart-pulse'
 switch.service_sonarr:
   friendly_name: 'Sonarr'
