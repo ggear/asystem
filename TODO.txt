@@ -37,13 +37,13 @@ check metric attribution works by metric filter when multiple probe_* feed singl
 
 
 
-
-test supervisor release
+reploy weewx
+test supervisor release, with new systests, new logs etc
 test primary
 test sedondary
 format all /backup drives, test volumes.sh
 test tertiary
-test supervisor backup enable release, validate 384M memeory footprint during backup
+test supervisor backup enable release, validate 384M memeory footprint during backup, make smaller again if possible?
 
 
 redploy mlflow, mlserver, network
