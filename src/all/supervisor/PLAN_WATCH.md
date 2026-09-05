@@ -375,6 +375,39 @@ the record envelope, and the host metrics that work anywhere — processor, memo
 
 **The cost is real:** `fab st`, `fab t` and every `fab release` would then run it for this module.
 
+#### Standard smoke tests first, following `network`
+
+`src/mad/network/src/test/python/system/system_test.py` is the model, and its shape should be copied
+before anything Phase-specific is added:
+
+- **A warm-up retry loop.** The whole body runs inside `while not success and elapsed < TIMEOUT_WARMUP`
+  (120 s), swallowing exceptions and retrying every second, because the container has to build, start
+  and reach its first pulse. Supervisor needs a longer warm-up than network, not a shorter one — it
+  polls at 3 s and pulses at 6 s, and the emulated-arch image is slow to boot under QEMU.
+- **`test_publishes_vitals`.** Subscribe, wait for the topic set to arrive within `TIMEOUT`, then
+  assert. For supervisor that set is:
+  - `supervisor/<host>/status` is exactly `online`
+  - `supervisor/<host>/data/host/used_processor` — a well-formed envelope, so
+    `isinstance(timestamp, int)`, `pulse.ok` a bool, `0 <= pulse.value <= 100`, and the same for
+    `trend`
+  - `supervisor/<host>/data/service/supervisor/name` — supervisor sees its **own** container through
+    the docker socket, which is the one service guaranteed to exist in this environment
+- **`test_declares_every_published_topic`.** Walk `src/build/resources/schema/vernemq/model` for
+  directories containing the `payload` leaf and assert every topic the test subscribed to is
+  declared. Supervisor uses the same `payload` leaf name as network, so `_schema_topics()` copies
+  verbatim. This is the systest-scale version of what `verify.sh` does against production, and it is
+  the check that catches a metric renamed in `metric_build.go` without a `fab generate`.
+
+Note the topics are host-scoped, so they are built from the `SUPERVISOR_HOST` that `.env_test` sets —
+they cannot be constants the way network's `network/data/internet` is.
+
+A fourth is worth considering and is not in any sibling module: **`docker exec supervisor
+/asystem/etc/checkexecuting.sh`** returning 0. It is the script `install.sh` gates a deploy on, it is
+generated, and nothing tests it. Use `checkexecuting` rather than `checkhealthy` — the latter asserts
+data quality that depends on probes which cannot read a real host from here.
+
+#### Then the Phase 1 assertions
+
 | Step | Systest assertion |
 |---|---|
 | 1 | Bring the container up, let it publish, `docker stop`, then assert the host's retained data topics **still exist**. Better than the Go form — it exercises the real SIGTERM defer. |
@@ -452,7 +485,8 @@ exercises. Fine for checking a mechanism, not representative of a host.
 
 ### Phase 1 — A + B, planned
 
-Six changes, all in `RunAllProbesPublishLoop`, `RunPoll` and the deletes listener, none in the watch:
+Seven changes — five in `RunAllProbesPublishLoop`, `RunPoll` and the deletes listener, plus the
+module's first systest and the doc updates. **None in the watch.**
 
 1. **Delete the shutdown tombstone-all** (`engine.go:689-694`).
 2. **Instrument the readback's four silent returns**, then fix whatever they reveal.
@@ -461,7 +495,9 @@ Six changes, all in `RunAllProbesPublishLoop`, `RunPoll` and the deletes listene
 4. **Move `databaseConnect` off the startup path** (`:704`), which costs 3.5 s before a single metric
    is sampled when influx is down, and more on a longer outage.
 5. **Run the first poll tick immediately** rather than after `PollMillis` (`probe.go:107`).
-6. **Update the two doc comments that currently contradict each other** — `RunAllProbesPublishLoop`'s
+6. **Add the systest and its `.env_test`** — see *How to test*. It is where steps 1, 2, 3 and 5 are
+   asserted, and it is the module's first Python test of any kind.
+7. **Update the two doc comments that currently contradict each other** — `RunAllProbesPublishLoop`'s
    *"On shutdown ... 2. Publish an empty payload for every retained topic"* and the watch's *"Ignore
    anything else from an offline host, which is how a departing host's own tombstones are left
    unread"* — plus the *Service slots & lifecycle across restarts* section of the module
@@ -469,6 +505,13 @@ Six changes, all in `RunAllProbesPublishLoop`, `RunPoll` and the deletes listene
 
 Together: **≤3 s worst case**, inside one pulse, and cases 1, 3, 4, 6 and 8 closed. Steps 4 and 5
 also make every metric on every host appear several seconds sooner on every start.
+
+**Step 6 earns its place beyond Phase 1.** Supervisor carries more unusual container configuration
+than any other module here — `SYS_ADMIN` and `SYS_RAWIO`, `device_cgroup_rules` for `/dev/kmsg` and
+block devices, the `/` bind at `$SUPERVISOR_MOUNT`, the `/etc/fstab` and `/dev` binds, `rshared`
+propagation for `/share` and `/backup` — and none of it has a test. The systest is the only thing
+that would catch a regression in the image, the compose stanzas or the generated health-check
+scripts, all of which are invisible to the Go suite.
 
 **Step 2 is the keystone, not the optional one.** Step 1 makes the breadcrumbs survive, but if the
 readback is broken nothing reads them, the new process never tombstones the departed service, and the
@@ -487,10 +530,12 @@ storm is 21 lines a pulse on `may`, which is what you would be reading through.
 | 3 `MarkDelete` two forms + QoS 1 | ~5 lines | low, runs outside the cache mutex |
 | 5 first tick immediate | ~5 lines | low-med, must not disturb `pulseTickCount`/`heartbeatPulseCount` |
 | 4 `databaseConnect` async | ~15 lines | med, needs `atomic.Pointer` and the `defer db.close()` rehomed |
-| 6 doc comments and `CLAUDE.md` | prose | low but slow at this repo's standard |
+| 6 systest + `.env_test` | ~150 lines, new to this module | med — first `fab st` for supervisor, may surface image or compose issues |
+| 7 doc comments and `CLAUDE.md` | prose | low but slow at this repo's standard |
 | 2 readback | ~10 lines to instrument, **fix unknown** | **unknown** |
 
-Steps 1, 3, 4 and 5 are about a day together including tests; step 6 another half day. **The schedule
+Steps 1, 3, 4 and 5 are about a day together; step 6 half a day to a day, since a module's first
+systest usually surfaces something about the image; step 7 another half day. **The schedule
 driver is not the coding** — supervisor is group 31 and deploys to every host, so step 2's diagnosis
 and the acceptance criteria below both need real releases to observe. Two releases minimum: one to
 get the instrumentation onto a host, one to validate the fix.
