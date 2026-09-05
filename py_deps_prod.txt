@@ -48,6 +48,7 @@ jupyterlab==4.5.9
 matplotlib==3.10.9
 matplotlib-inline==0.2.2
 anyio==4.14.2
+fastapi==0.115.14
 virtualenv==20.27.1
 mlflow==$MLFLOW_VERSION
 

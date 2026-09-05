@@ -1,4 +1,5 @@
 # NOTES: https://github.com/grafana/grafana/releases
+FROM grafana/grafana:12.3.1 AS image_upstream
 USER root
 RUN apk update && \
     apk add --upgrade --no-cache bash=5.3.3-r1 && \

@@ -121,6 +121,15 @@ recovery path. Any fix should keep the two-form publish and use it everywhere.
 **A + B is the recommendation, and it meets the budget on its own.** They are one idea in two halves:
 stop destroying the evidence, then act on it.
 
+**A has one honest regression.** Today a graceful stop self-cleans the broker; after A a
+decommissioned host leaves its retained data behind until the next vernemq recreate collects it. That
+is acceptable because it is already the behaviour for a removed *module* (see the rename section in
+the root `CLAUDE.md`), and because the alternative — tombstoning only departed services at shutdown —
+is empty by definition, since at shutdown nothing has departed, the host is going away. A fresh watch
+connecting while such a host is down may also briefly render stale values before the retained
+`offline` lands and blanks them; that is today's post-crash behaviour becoming the normal case, not a
+new failure mode.
+
 - **A** deletes six lines. The offline status already tells every watch to blank the host, and
   `Purge` ages the records out, so tombstoning every topic on the way out is redundant for the watch
   and actively harmful for the next process. Removing it also means an empty payload only ever means

@@ -1,5 +1,6 @@
 mlflow==3.7.0
 anyio==4.14.2
+fastapi==0.115.14
 scipy==1.17.1
 polars==1.44.1
 scikit-learn==1.8.0
