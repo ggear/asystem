@@ -15,6 +15,14 @@ FROM image_upstream AS image_base
 
 FROM image_base AS image_build
 COPY target/package/main/resources/image/. /asystem/etc
+RUN mkdir -p /custom-cont-init.d && \
+    printf '%s\n' \
+      '#!/bin/bash' \
+      'if grep -qe " /downloads " /proc/mounts; then' \
+      '  chown 1000:100 /downloads' \
+      '  chmod g+rwXs /downloads' \
+      'fi' > /custom-cont-init.d/downloads-ownership && \
+    chmod +x /custom-cont-init.d/downloads-ownership
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc
