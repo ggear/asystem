@@ -51,7 +51,6 @@ func newBackupProbe() *backupProbe {
 func (*backupProbe) subject() scribe.Subject { return scribe.SubjectHost("") }
 
 // TODO: Return false to arm the backup driver, dormant so the estate can be released with it
-// shipped but idle, no run started at 01:00 and no backup metric published
 func (*backupProbe) dormant() bool { return true }
 
 func (p *backupProbe) metrics() []metric.ID {
