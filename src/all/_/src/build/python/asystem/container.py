@@ -325,22 +325,23 @@ SERVICE_WAIT_ALIVE_SECONDS=900
 SERVICE_WAIT_EXECUTING_SECONDS=900
 
 wait_service() {{
-  local script="$1" label="$2" interval="$3" timeout="$4" waited=0 ticked=0
+  local script="$1" label="$2" interval="$3" timeout="$4" waited=0
   ((interval > 0)) || interval=1
-  printf 'Waiting for service to %s ...' "${{label}}"
   while ! "${{ASYSTEM_HOME}}/${{script}}" >/dev/null 2>&1; do
     if ((waited >= timeout)); then
-      printf ' failed\\n'
+      echo "Waiting for service to ${{label}} ... failed [${{waited}}s/${{timeout}}s]"
+      "${{ASYSTEM_HOME}}/${{script}}" -v 2>&1 | tail -n 5
       echo "ERROR: Service failed to ${{label}} within [${{timeout}}] seconds" >&2
       exit 1
     fi
-    for ((ticked = 0; ticked < interval; ticked++)); do
-      sleep 1
-      printf '.'
-    done
+    if ((waited % 30 == 0)); then
+      echo "Waiting for service to ${{label}} ... [${{waited}}s/${{timeout}}s]"
+      "${{ASYSTEM_HOME}}/${{script}}" -v 2>&1 | tail -n 3
+    fi
+    sleep "${{interval}}"
     waited=$((waited + interval))
   done
-  printf ' done\\n'
+  echo "Waiting for service to ${{label}} ... done [${{waited}}s/${{timeout}}s]"
 }}
 
 wait_service "checkalive.sh" "come alive" 1 "${{SERVICE_WAIT_ALIVE_SECONDS}}"

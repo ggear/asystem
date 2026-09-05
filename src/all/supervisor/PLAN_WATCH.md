@@ -102,9 +102,20 @@ client.Publish(record.Topic, 0, true, "")        // empty — clears the retaine
 ```
 
 That matters because the JSON form routes through `proveOnline` (`:181`) and is honoured even when
-the watch has the host wrongly muted, whereas the empty form is dropped unconditionally. The shutdown
-defer publishes **only** the empty form, so it is the one departure signal in the system with no
-recovery path. Any fix should keep the two-form publish and use it everywhere.
+the watch has the host wrongly muted, whereas the empty form is dropped unconditionally.
+
+**But the primary removal path never reaches `process`, and so emits only the unrecoverable form.**
+`servicesProbe.poll` evicts then deletes in the same pass; `RecordCache.Delete` removes the dirty
+entries (`metric_cache.go:346`) so the pulse never sees the nil record, and the only publish is
+`MarkDelete`'s empty payload. `process`'s two-form branch covers only the interleave its own doc
+comment describes — a record reaching the pulse still holding no pulse value.
+
+So **both** departure paths publish an unrecoverable signal today, and A fixes only the shutdown one.
+The fix is to give `MarkDelete` the same two forms: marshal a `metric.NewNilValue()` — which already
+carries a fresh `Timestamp` (`metric_value_data.go:77-81`), which is all `proveOnline` needs — publish
+it, then publish the empty payload. Three lines, and it makes the two removal paths identical instead
+of subtly different. `MarkDelete` is called **after** `c.mutex.Unlock()` (`metric_cache.go:363`), so
+this and the QoS change hold no lock across network I/O.
 
 ---
 
@@ -165,7 +176,7 @@ recommendation; `+C` shows what the barrier adds.
 | 3 | Container stopped and unconfigured | Next poll evicts and the deletes listener publishes in that poll | **≤3 s** | unchanged |
 | 4 | `serve` SIGKILLed | Retained survives (unchanged by A); new process reads it back and reconciles | **≤3 s** | unchanged |
 | 5 | `serve` stopped and never restarted | LWT → offline → watch evicts to nil and holds the slots; `Purge` deletes after the window | as today | unchanged |
-| 6 | Watch wrongly muted the host when the tombstone was sent | The nil-pulse JSON form routes through `proveOnline` and is honoured; the empty form is still dropped, which is now harmless | **≤3 s** | barrier on the next transition |
+| 6 | Watch wrongly muted the host when the tombstone was sent | Only once `MarkDelete` publishes the nil-pulse JSON form as well; that form carries a timestamp and routes through `proveOnline`. Without that change A does **not** close this case | **≤3 s** | barrier on the next transition |
 | 7 | vernemq store flushed by a release | No retained anything; each `serve` republishes on reconnect | as today | **hazard** — the barrier returns having seen nothing and would reap every host. The whole-host guard must survive. Gating on `online` does not substitute: `forceRepublish` publishes the status *before* its records (`:723-724`), so a watch acting on `online` races the replay. **D** resolves this by construction |
 | 8 | Tombstone packet lost (QoS 0) | Nothing removes it until the next `serve` restart | **unbounded** — see *Open* | barrier on the next transition, still unbounded between transitions |
 | 9 | Watch suspends and wakes | `brokerRevive` probes or reconnects; a reconnect re-runs the connect path | as today | barrier per host on the transitions that follow |
@@ -210,6 +221,42 @@ and Phase 1 cannot start without knowing which one it is.
 
 The rule worth adopting: **a drop is counted or logged, never both silent**. A malformed payload or a
 short topic is a genuine fault somewhere and should not be indistinguishable from an empty broker.
+
+---
+
+## Robustness check against the documented rules
+
+Checked against the lifecycle rules in the module `CLAUDE.md`. No conflicts, one strengthened:
+
+- **"Every removal path must pair `Evict` with `Delete`"** — preserved. `servicesProbe.poll` already
+  pairs them and `Delete` only removes records already evicted to nil.
+- **"A host proves itself alive with traffic, not only with status"** — *strengthened*. Giving
+  `MarkDelete` the JSON form means a tombstone can prove liveness exactly as data does, which is what
+  closes case 6.
+- **"Non-graceful exit self-heals via the *new* `serve`"** — *generalised*, and this is the strongest
+  argument for A. Today the crash path leaves the retained set intact and is cleaned by the next
+  process, while the graceful path deletes it and relies on tombstones the watch discards. After A
+  there is **one** recovery path instead of two, and it is the one already proven.
+- **"The reconcile is deferred, never a wipe"**, **"a heartbeat must not resubscribe"**, **"a
+  reconcile is only ever scheduled beside a redelivery"**, **"refresh is connect-scoped"** — all
+  untouched, since Phase 1 changes nothing in the watch.
+
+Two implementation hazards found while checking, neither a design problem:
+
+- **Moving `databaseConnect` off the startup path introduces a data race.** `db` is read by the pulse
+  callback under a `db != nil` guard (`engine.go:785`) and would now be written by another goroutine,
+  so it must become an `atomic.Pointer` or be mutex-guarded, and the `defer db.close()` at `:708`
+  needs rehoming.
+- **A docker hiccup cannot mass-tombstone.** If `p.services()` errors the poll returns before the
+  removal loop; if docker returns an empty list without erroring, the ghosts built from
+  `configuredServiceNames` keep the configured set alive and only unconfigured-but-running services
+  would be removed. Existing behaviour, not introduced here, but it is what makes running the first
+  tick immediately safe.
+
+**Residual, and not a regression:** on a restart the departed service is repopulated from the
+retained flood before the new process tombstones it, so its row appears and then vanishes ~3 s later
+rather than never appearing. Today it also shows, from the watch's own cache, for 13 s. A + B
+shortens the row's life; it does not prevent the row.
 
 ---
 
@@ -309,8 +356,10 @@ never per heartbeat; an unknown host counts as online.
 1. **The blank.** Restart `serve` on a host with at least two ghost services while running a remote
    `watch` with `--log-subject=service/mlflow`, against that host's own `retained [n] bytes at qos
    [0]` lines for the same service. The question is whether its value topics were published in the
-   discovery pulse at all. If they were, retained delivery should have covered it and a mechanism is
-   unaccounted for; if they were not, the blank is publish-side and no option here touches it.
+   discovery pulse at all. If they were not, the blank is publish-side and no option here touches it
+   — fix it there. If they **were**, retained delivery should have covered it and a mechanism is
+   unaccounted for; that becomes its own investigation, and until it is understood Phase 4 only masks
+   the symptom by rendering the state honestly rather than removing it.
 2. **Barrier ordering**, only if C is wanted. Subscribe to a wildcard with a large retained set,
    publish a barrier, confirm every retained message precedes it, repeatedly, at the sizes already
    measured in `CLAUDE.md` (443 and 546 topics). If it does not hold on VerneMQ, C is out and D is
@@ -318,17 +367,52 @@ never per heartbeat; an unknown host counts as online.
 
 ### Phase 1 — A + B, planned
 
-Five changes, all in `RunAllProbesPublishLoop` and `RunPoll`, none in the watch:
+Six changes, all in `RunAllProbesPublishLoop`, `RunPoll` and the deletes listener, none in the watch:
 
 1. **Delete the shutdown tombstone-all** (`engine.go:689-694`).
 2. **Instrument the readback's four silent returns**, then fix whatever they reveal.
-3. **Publish both tombstone forms at QoS 1** — closes case 8, the only unbounded gap.
+3. **Give `MarkDelete` both tombstone forms and publish them at QoS 1** — the JSON form closes
+   case 6, QoS 1 closes case 8, and the two removal paths stop differing.
 4. **Move `databaseConnect` off the startup path** (`:704`), which costs 3.5 s before a single metric
    is sampled when influx is down, and more on a longer outage.
 5. **Run the first poll tick immediately** rather than after `PollMillis` (`probe.go:107`).
+6. **Update the two doc comments that currently contradict each other** — `RunAllProbesPublishLoop`'s
+   *"On shutdown ... 2. Publish an empty payload for every retained topic"* and the watch's *"Ignore
+   anything else from an offline host, which is how a departing host's own tombstones are left
+   unread"* — plus the *Service slots & lifecycle across restarts* section of the module
+   `CLAUDE.md`, where the crash path is described as the exceptional one. After A it is the only one.
 
 Together: **≤3 s worst case**, inside one pulse, and cases 1, 3, 4, 6 and 8 closed. Steps 4 and 5
 also make every metric on every host appear several seconds sooner on every start.
+
+**Step 2 is the keystone, not the optional one.** Step 1 makes the breadcrumbs survive, but if the
+readback is broken nothing reads them, the new process never tombstones the departed service, and the
+13 s reconcile catches it exactly as today — no harm, but no observable improvement either. The
+minimal set that changes anything is **1 + 2 + 3**, and its size is dominated by whatever step 2's
+diagnosis turns up. Steps 4 and 5 are genuinely separable and can land first on their own.
+
+**Do Phase 2 first if the readback diagnosis is not immediately obvious.** The ghost `unstated` ERROR
+storm is 21 lines a pulse on `may`, which is what you would be reading through.
+
+**Effort.** Test coupling is light — three references to the changed functions across two test files.
+
+| Step | Size | Risk |
+|---|---|---|
+| 1 delete tombstone-all | ~6 lines deleted | low, pure deletion |
+| 3 `MarkDelete` two forms + QoS 1 | ~5 lines | low, runs outside the cache mutex |
+| 5 first tick immediate | ~5 lines | low-med, must not disturb `pulseTickCount`/`heartbeatPulseCount` |
+| 4 `databaseConnect` async | ~15 lines | med, needs `atomic.Pointer` and the `defer db.close()` rehomed |
+| 6 doc comments and `CLAUDE.md` | prose | low but slow at this repo's standard |
+| 2 readback | ~10 lines to instrument, **fix unknown** | **unknown** |
+
+Steps 1, 3, 4 and 5 are about a day together including tests; step 6 another half day. **The schedule
+driver is not the coding** — supervisor is group 31 and deploys to every host, so step 2's diagnosis
+and the acceptance criteria below both need real releases to observe. Two releases minimum: one to
+get the instrumentation onto a host, one to validate the fix.
+
+**Acceptance, on the next real release:** a departed service leaves every watch within one pulse; a
+`rediscovered` line appears on the restarting host; and the reconcile's `reclaims` line does **not**
+fire for that host. The third is the one that matters — it is the evidence for the decision below.
 
 ### Phase 2 — hygiene, planned, independent
 
@@ -340,6 +424,21 @@ also make every metric on every host appear several seconds sooner on every star
    sample and already says so; today seven of its metrics return `derivation{}` and log `unstated` at
    ERROR every pulse — 21 a pulse on `may`, 1638 in one uptime. It also short-circuits rule
    evaluation, so a ghost stops being judged by a rule it cannot satisfy.
+
+### Phase 2.5 — decide whether the reconcile still earns its place, planned
+
+**This decision is not answerable today**, which is the real reason Phase 1 comes first: the reconcile
+is currently compensating for two bugs, so of course it fires. After Phase 1 it should be
+compensating for almost nothing, and the gate is evidence rather than judgement.
+
+Leave it in place, raise its `reclaims` line to a level you will notice, and watch across a month of
+releases and restarts:
+
+- **It never fires** → it is dead weight. Delete it, and Phase 3 is unnecessary: the departure path
+  alone is sufficient and there is nothing left to simplify.
+- **It fires occasionally** → each firing is a departure that got lost. Diagnose it; that is the
+  case Phase 3 or D would need to handle, and knowing which case it is decides between them.
+- **It fires routinely** → Phase 1 did not work and none of what follows should be built on it.
 
 ### Phase 3 — C, planned, optional
 

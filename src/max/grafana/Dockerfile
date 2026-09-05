@@ -1,10 +1,10 @@
 # NOTES: https://github.com/grafana/grafana/releases
-FROM grafana/grafana:12.3.1 AS image_upstream
+FROM grafana/grafana:13.2.1 AS image_upstream
 USER root
 RUN apk update && \
-    apk add --upgrade --no-cache bash=5.3.3-r1 && \
-    apk add --upgrade --no-cache coreutils=9.8-r1 && \
-    apk add --upgrade --no-cache less=685-r0 && \
+    apk add --upgrade --no-cache bash=5.3.9-r1 && \
+    apk add --upgrade --no-cache coreutils=9.11-r0 && \
+    apk add --upgrade --no-cache less=702-r0 && \
     apk add --upgrade --no-cache curl=8.22.0-r0 && \
     apk add --upgrade --no-cache vim=9.2.1014-r0 && \
     apk add --upgrade --no-cache jq=1.8.2-r0 && \

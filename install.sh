@@ -55,25 +55,26 @@ SERVICE_WAIT_RESTART_SECONDS=120
 SERVICE_SETTLE_RESTART_SECONDS=30
 
 wait_service() {
-  local script="$1" label="$2" interval="$3" timeout="$4" fatal="$5" waited=0 ticked=0
+  local script="$1" label="$2" interval="$3" timeout="$4" fatal="$5" waited=0
   ((interval > 0)) || interval=1
-  printf 'Waiting for service to %s ...' "${label}"
   while ! docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" >/dev/null 2>&1; do
     if ((waited >= timeout)); then
-      printf ' failed\n'
+      echo "Waiting for service to ${label} ... failed [${waited}s/${timeout}s]"
+      docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" -v 2>&1 | tail -n 5
       if [[ "${fatal}" == "true" ]]; then
         log_error "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
       fi
       log_warn "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
       return 1
     fi
-    for ((ticked = 0; ticked < interval; ticked++)); do
-      sleep 1
-      printf '.'
-    done
+    if ((waited % 30 == 0)); then
+      echo "Waiting for service to ${label} ... [${waited}s/${timeout}s]"
+      docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" -v 2>&1 | tail -n 3
+    fi
+    sleep "${interval}"
     waited=$((waited + interval))
   done
-  printf ' done\n'
+  echo "Waiting for service to ${label} ... done [${waited}s/${timeout}s]"
 }
 
 retire_home() {
