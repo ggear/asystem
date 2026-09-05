@@ -327,6 +327,7 @@ SERVICE_WAIT_EXECUTING_SECONDS=900
 wait_service() {{
   local script="$1" label="$2" interval="$3" timeout="$4" waited=0
   ((interval > 0)) || interval=1
+  echo "Waiting for service to ${{label}} ..."
   while ! "${{ASYSTEM_HOME}}/${{script}}" >/dev/null 2>&1; do
     if ((waited >= timeout)); then
       echo "Waiting for service to ${{label}} ... failed after [${{waited}}] of [${{timeout}}] seconds"
@@ -334,7 +335,7 @@ wait_service() {{
       echo "ERROR: Service failed to ${{label}} within [${{timeout}}] seconds" >&2
       exit 1
     fi
-    if ((waited % 30 == 0)); then
+    if ((waited > 0 && waited % 30 == 0)); then
       echo "Waiting for service to ${{label}} ... waited [${{waited}}] of [${{timeout}}] seconds"
       "${{ASYSTEM_HOME}}/${{script}}" -v 2>&1 | tail -n 3
     fi

@@ -37,7 +37,6 @@ check metric attribution works by metric filter when multiple probe_* feed singl
 
 
 
-reploy weewx
 test supervisor release, with new systests, new logs etc
 test primary
 test sedondary
