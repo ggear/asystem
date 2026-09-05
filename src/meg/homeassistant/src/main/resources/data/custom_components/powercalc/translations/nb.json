@@ -3,7 +3,8 @@
     "source_entity": "Kildeentitet",
     "source_device": "Kildeenhet",
     "remarks_smart_switch": "Denne profilen inneholder bare effektverdier for standby. \n Hvis du har et apparat med fast effekt når det er slått på, kan du angi denne verdien i neste trinn i konfigurasjonen",
-    "remarks_smart_dimmer": "Denne profilen inneholder bare effektverdier for standby. \n I neste trinn kan du valgfritt oppgi verdiene for det tilkoblede lyset"
+    "remarks_smart_dimmer": "Denne profilen inneholder bare effektverdier for standby. \n I neste trinn kan du valgfritt oppgi verdiene for det tilkoblede lyset",
+    "view_measurement_details": "Vis måledetaljer"
   },
   "config": {
     "abort": {
@@ -14,7 +15,6 @@
       "daily_energy_mandatory": "Du må oppgi minst én av value eller value_template",
       "entity_mandatory": "Du må velge en entitet for alle strategier unntatt playbook",
       "fixed_mandatory": "Du må oppgi minst én av power, power_template eller states_power",
-      "fixed_states_power_only": "Denne entiteten kan bare bruke «states_power», ikke «power»",
       "group_mandatory": "Du må definere minst undergrupper eller effekt- og energientiteter",
       "linear_mandatory": "Du må oppgi minst én av max_power eller calibrate",
       "linear_min_higher_as_max": "Maksimal effekt kan ikke være lavere enn minimal effekt",
@@ -336,7 +336,7 @@
         "data_description": {
           "confirm_autodisovered_model": "Hvis du velger å ikke bekrefte, kan du selv angi produsenten og modellen"
         },
-        "description": "{source}\n\nProdusent \"{manufacturer}\" og modell \"{model}\" ble automatisk oppdaget for enheten din.{remarks}",
+        "description": "{source}\n\nProdusent \"{manufacturer}\" og modell \"{model}\" ble automatisk oppdaget for enheten din.{remarks}{profile_details}",
         "title": "Bibliotek"
       },
       "library_custom_fields": {
@@ -581,11 +581,15 @@
       },
       "wled": {
         "data": {
+          "current_entity": "Strømenhet",
           "power_factor": "Effektfaktor",
           "voltage": "Spenning"
         },
         "description": "Sørg for å aktivere lysstyrkebegrenser i WLED-programvaren. Se også {docs_uri}",
-        "title": "WLED-konfigurasjon"
+        "title": "WLED-konfigurasjon",
+        "data_description": {
+          "current_entity": "Velg eventuelt en sensor som oppgir beregnet strøm i mA. Bare nødvendig når Powercalc ikke finner WLED-sensoren for beregnet strøm automatisk, for eksempel når lysstyrkebegrenseren er konfigurert per utgang."
+        }
       }
     }
   },
@@ -601,6 +605,25 @@
     },
     "unknown_sub_profile": {
       "message": "\"{profile}\" er ikke en kjent underprofil. Tilgjengelige underprofiler: {known_profiles}."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "measure_session_status": {
+        "name": "Measure session status",
+        "state": {
+          "idle": "Idle",
+          "validating": "Validating",
+          "ready": "Ready",
+          "awaiting_confirmation": "Awaiting confirmation",
+          "running": "Running",
+          "cancelling": "Cancelling",
+          "cancelled": "Cancelled",
+          "completed": "Completed",
+          "failed": "Failed",
+          "resumable": "Resumable"
+        }
+      }
     }
   },
   "issues": {
@@ -657,7 +680,6 @@
     "error": {
       "cost_price_mandatory": "Du må oppgi enten en energipris eller en energiprissensor",
       "fixed_mandatory": "Du må oppgi minst én av power, power_template eller states_power",
-      "fixed_states_power_only": "Denne entiteten kan bare bruke 'states_power', ikke 'power'",
       "group_mandatory": "Du må definere minst undergrupper eller effekt- og energientiteter",
       "linear_mandatory": "Du må oppgi minst én av max_power eller calibrate",
       "linear_min_higher_as_max": "Maks effekt kan ikke være lavere enn min effekt",
@@ -979,7 +1001,7 @@
       },
       "library_options": {
         "title": "Alternativer for bibliotek",
-        "description": "For øyeblikket er følgende bibliotekprofil valgt: \n produsent: {manufacturer}\n modell: {model}\n\nHvis du vil endre profilen, klikker du på neste."
+        "description": "For øyeblikket er følgende bibliotekprofil valgt: \n produsent: {manufacturer}\n modell: {model}\n\nHvis du vil endre profilen, klikker du på neste.{profile_details}"
       },
       "select_device": {
         "data": {
@@ -1083,8 +1105,12 @@
       "wled": {
         "title": "WLED-innstillinger",
         "data": {
+          "current_entity": "Strømenhet",
           "power_factor": "Effektfaktor",
           "voltage": "Spenning"
+        },
+        "data_description": {
+          "current_entity": "Velg eventuelt en sensor som oppgir beregnet strøm i mA. Bare nødvendig når Powercalc ikke finner WLED-sensoren for beregnet strøm automatisk, for eksempel når lysstyrkebegrenseren er konfigurert per utgang."
         }
       },
       "cost_options": {
