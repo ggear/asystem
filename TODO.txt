@@ -43,11 +43,10 @@ test primary
 test sedondary
 format all /backup drives, test volumes.sh
 test tertiary
-test supervisor backup enable release
+test supervisor backup enable release, validate 384M memeory footprint during backup
 
 
-
-                                                                                                                                                                                                                                                                                           
+redploy mlflow, mlserver, network
    
 
 
@@ -64,7 +63,8 @@ implement all stub metrics and remove TODOs and stub code - gates on Backup impl
 
 
 
-mv influxdb3/mlflow/mlserver from max to may, cloudflare/tempstat/letsencrupt to max
+
+
 adjust memeory allocs
 tune fan/tem
 Add host status to ha, combine backup temp etc
