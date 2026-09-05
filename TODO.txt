@@ -36,8 +36,10 @@ check metric attribution works by metric filter when multiple probe_* feed singl
 
 
 
-
-test supervisor release, with new systests, new logs etc
+improve logs around Fail LOG, show timestamps and list them line by line
+implement plan, check code
+test supervisor release, with new systests etc
+test new watch logs, add/remove etc
 test primary
 test sedondary
 format all /backup drives, test volumes.sh

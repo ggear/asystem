@@ -381,12 +381,83 @@ Tested directly on the dev machine (`Docker Desktop`, `7.0.12-linuxkit`):
 | `cap_add` `SYSLOG`/`SYS_RAWIO`/`SYS_ADMIN`, `device_cgroup_rules`, `apparmor=unconfined` | accepted, container runs | no |
 | `/var/run/docker.sock` | works, special-cased by Docker Desktop | no |
 
-**So the systest needs the host-coupled stanzas to be env-driven**, overridden in `.env_test` to
-throwaway paths under `target/`: the four bind *sources*, and the propagation mode itself
-(`propagation: ${SUPERVISOR_SHARE_PROPAGATION}`, `rshared` in `.env_all` and `rprivate` in
-`.env_test`). Compose interpolates scalars from the generated `.env`, so this is the same mechanism
-`${SERVICE_DATA_DIR}` and `${SUPERVISOR_MOUNT}` already use — and because the var is always defined
-there, it needs no `${VAR:-default}` form, which the root `CLAUDE.md` records as unsafe.
+#### Parameterising the host-coupled stanzas
+
+Compose interpolates scalars from the generated `.env`, the same mechanism `${SERVICE_DATA_DIR}` and
+`${SUPERVISOR_MOUNT}` already use. Because every variable below is always defined in `.env_all`, none
+needs the `${VAR:-default}` form the root `CLAUDE.md` records as unsafe.
+
+| Variable | `.env_all` (production, unchanged) | `.env_test` / `.env_exec` |
+|---|---|---|
+| `SUPERVISOR_ROOT_SOURCE` | `/` | `./target/runtime-system/host` |
+| `SUPERVISOR_FSTAB_SOURCE` | `/etc/fstab` | `./target/runtime-system/host/etc/fstab` |
+| `SUPERVISOR_BTRFS_SOURCE` | `/var/lib/btrfs` | `./target/runtime-system/host/var/lib/btrfs` |
+| `SUPERVISOR_INSTALL_SOURCE` | `/var/lib/asystem/install` | `./target/runtime-system/host/var/lib/asystem/install` |
+| `SUPERVISOR_HOME_SOURCE` | `/home/asystem` | `./target/runtime-system/host/home/asystem` |
+| `SUPERVISOR_SHARE_SOURCE` | `/share` | `./target/runtime-system/host/share` |
+| `SUPERVISOR_BACKUP_SOURCE` | `/backup` | `./target/runtime-system/host/backup` |
+| `SUPERVISOR_DEV_SOURCE` | `/dev` | `./target/runtime-system/host/dev` |
+| `SUPERVISOR_DEV_TARGET` | `/dev` | `/asystem/mnt/dev` |
+| `SUPERVISOR_BIND_PROPAGATION` | `rshared` | `rprivate` |
+
+**`/dev` is the one that needs its target parameterised as well.** Every other bind can point its
+source at a throwaway directory and keep its target, but mounting an empty directory over the
+container's own `/dev` removes `/dev/null`, `/dev/urandom` and the rest, and the container will not
+run. The bind exists for `mount(8)` in the backup stages — which are dormant — so moving the target
+aside under test costs nothing. Note the probes already read block devices through the **rebased**
+path under `${SUPERVISOR_MOUNT}`, not through this bind.
+
+**`.env_exec` needs the same values as `.env_test`, not just `.env_test`.** `_write_env` layers
+exactly one environment file over `.env_all` — `.env_prod` on a release, `.env_test` for `fab st`,
+`.env_exec` for `fab exe` — and there is no shared dev file, so a value set only in `.env_test`
+leaves `fab exe` on the production paths and failing exactly as today. The root `CLAUDE.md` records
+this trap; supervisor currently has neither file.
+
+**`create_host_path: true`** already appears on the `/share` and `/backup` binds and should be
+carried onto the parameterised ones. But prefer a **committed fixture tree** at
+`src/test/resources/host/` over auto-created empty directories, and point `SUPERVISOR_ROOT_SOURCE`
+and `SUPERVISOR_FSTAB_SOURCE` into it — `src/test/resources/` is where this repo puts fixtures, the
+tree must exist *before* `fab st` brings the container up, and a committed tree is reviewable.
+
+#### The dummy tree is the negative-path fixture, and that is the best part
+
+Supervisor's documented contract is that a metric which cannot measure its input **says so** rather
+than reporting a confident zero — *inert* (value 0, `ok` true, derivation ending "so the metric is
+inert and always ok") where there is genuinely nothing to measure, *errored* (`failed` set, value
+blanked, WARN under `errEnvironment`) where the input should exist and did not. **Those paths are
+today exercised only in production, when something is already broken.** A synthetic `/host` tree
+exercises them on demand, which is worth more than the Phase 1 assertions.
+
+Build **one** tree that deliberately supplies some inputs and omits others, so a single run asserts
+both directions:
+
+| Planted in the fixture | Probe | Expected |
+|---|---|---|
+| `sys/class/hwmon/hwmon0/{name,temp1_label=Package id 0,temp1_input=45000}` | `host/temperature` | reads 45 °C, tier logged **INFO** once at discovery |
+| *no* `fan1_input` anywhere | `host/spin_fan_speed` | **inert** — 0, ok true, "the metric is inert and always ok" |
+| `sys/class/net/eth9/{device→.,speed=1000,statistics/{rx,tx}_bytes}` | `host/used_network` | `errProbeWarmingUp` on the first poll at **DEBUG**, a rate thereafter |
+| *no* `device` symlink on any interface | — | if the symlink is omitted instead: **inert**, 0, ok, reason in the derivation |
+| `etc/fstab` declaring `/share/10` with no matching `proc/mounts` line | `host/failed_shares` | counts it failed after `mountSettle` (**2 min**) and goes red — the one *positive* failure assertion |
+| `proc/mounts` with an `ext4` line for `/` | `host/used_home_space` | reads a percentage |
+| *no* `proc/mounts` at all (variant) | — | `mountBase` falls back to `mountBareRoot` and logs the base choice at INFO; the documented fallback, otherwise never tested |
+| *empty* `var/lib/asystem/install` | `host/allocated_memory` | **errored** — "none of the [n] configured services are installed", `errEnvironment`, **WARN**, not-ok |
+| `var/lib/asystem/install/<svc>/latest/{.env,docker-compose.yml}` | same | reads a ceiling, and the `examined` line names it |
+| *no* `dev/kmsg` | `host/failed_log_messages` | warns **once**, reports 0, and does **not** error — an error would redden every host |
+
+Four assertions matter more than the individual readings:
+
+1. **No metric reports a confident zero for an input it could not read.** Every metric is either
+   inert-and-ok or carries `failed` — never zero-and-ok when it failed.
+2. **The levels are right.** `errEnvironment` at WARN, permanent host facts (no fan, no SMART, sensor
+   tier) at INFO, code faults at ERROR. Assert by grepping `docker logs supervisor` for the metric's
+   subject and level; the log layout is already pinned by `go/ast` tests, so this is stable.
+3. **Nothing panics and the container stays healthy.** Verified from the fragment:
+   `checkhealthy.sh` asserts `.pulse.ok != null` and a timestamp under 1200 s, plus the docker ping —
+   **not** that any metric is green. So a host where most probes fault still passes its health check,
+   and the systest will not fail for the wrong reason.
+4. **`failed_shares` proves a metric can go red**, not merely inert. It is the only fixture that
+   drives a genuine failure, which is why it earns its cost — and the cost is real: `mountSettle` is
+   **2 minutes**, so that assertion needs a warm-up well past network's 120 s, or its own slow test.
 
 **This weakens one of the reasons for the systest, and the plan should say so.** The argument that it
 would cover the image, the `cap_add`/`device_cgroup_rules`/bind stanzas and the propagation modes
@@ -512,8 +583,8 @@ exercises. Fine for checking a mechanism, not representative of a host.
 
 ### Phase 1 — A + B, planned
 
-Seven changes — five in `RunAllProbesPublishLoop`, `RunPoll` and the deletes listener, plus the
-module's first systest and the doc updates. **None in the watch.**
+Eight changes — five in `RunAllProbesPublishLoop`, `RunPoll` and the deletes listener, plus the
+compose parameterisation, the module's first systest, and the doc updates. **None in the watch.**
 
 1. **Delete the shutdown tombstone-all** (`engine.go:689-694`).
 2. **Instrument the readback's four silent returns**, then fix whatever they reveal.
@@ -522,9 +593,12 @@ module's first systest and the doc updates. **None in the watch.**
 4. **Move `databaseConnect` off the startup path** (`:704`), which costs 3.5 s before a single metric
    is sampled when influx is down, and more on a longer outage.
 5. **Run the first poll tick immediately** rather than after `PollMillis` (`probe.go:107`).
-6. **Add the systest and its `.env_test`** — see *How to test*. It is where steps 1, 2, 3 and 5 are
-   asserted, and it is the module's first Python test of any kind.
-7. **Update the two doc comments that currently contradict each other** — `RunAllProbesPublishLoop`'s
+6. **Parameterise the host-coupled compose stanzas** and add `.env_test` and `.env_exec` — see
+   *Parameterising the host-coupled stanzas*. Without this the container does not start on macOS at
+   all, so it gates step 7 and `fab exe` alike.
+7. **Add the systest** — see *How to test*. It is where changes 1, 2, 3 and 5 are asserted, and it is
+   the module's first Python test of any kind.
+8. **Update the two doc comments that currently contradict each other** — `RunAllProbesPublishLoop`'s
    *"On shutdown ... 2. Publish an empty payload for every retained topic"* and the watch's *"Ignore
    anything else from an offline host, which is how a departing host's own tombstones are left
    unread"* — plus the *Service slots & lifecycle across restarts* section of the module
@@ -558,12 +632,13 @@ storm is 21 lines a pulse on `may`, which is what you would be reading through.
 | 3 `MarkDelete` two forms + QoS 1 | ~5 lines | low, runs outside the cache mutex |
 | 5 first tick immediate | ~5 lines | low-med, must not disturb `pulseTickCount`/`heartbeatPulseCount` |
 | 4 `databaseConnect` async | ~15 lines | med, needs `atomic.Pointer` and the `defer db.close()` rehomed |
-| 6 systest + `.env_test` + env-driven compose sources | ~150 lines plus a compose change | med-high — the host binds and `rshared` must be parameterised before the container will start on macOS at all |
-| 7 doc comments and `CLAUDE.md` | prose | low but slow at this repo's standard |
+| 6 compose parameterisation + `.env_test`/`.env_exec` | 10 vars, ~20 lines of compose | med — gates everything else locally; `/dev` needs its target moved too |
+| 7 systest | ~150 lines, new to this module | med — first `fab st` for supervisor |
+| 8 doc comments and `CLAUDE.md` | prose | low but slow at this repo's standard |
 | 2 readback | ~10 lines to instrument, **fix unknown** | **unknown** |
 
-Steps 1, 3, 4 and 5 are about a day together; step 6 half a day to a day, since a module's first
-systest usually surfaces something about the image; step 7 another half day. **The schedule
+Steps 1, 3, 4 and 5 are about a day together; step 6 half a day; step 7 half a day to a day, since a
+module's first systest usually surfaces something about the image; step 8 another half day. **The schedule
 driver is not the coding** — supervisor is group 31 and deploys to every host, so step 2's diagnosis
 and the acceptance criteria below both need real releases to observe. Two releases minimum: one to
 get the instrumentation onto a host, one to validate the fix.
