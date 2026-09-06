@@ -36,6 +36,12 @@ check metric attribution works by metric filter when multiple probe_* feed singl
 
 
 
+imporve output so that benign/by-design issues are info only and errors complain loudly
+cd ./. && . /Users/graham/Code/asystem/.env_fab && pip check | grep 'but you have' || echo 'No version conflicts found'
+mlserver 1.7.1 has requirement importlib-resources<7.0,>=5.12, but you have importlib-resources 7.1.0.
+homeassistant 2026.9.0 has requirement cryptography==48.0.1, but you have cryptography 46.0.7.
+cd ./. && . /Users/graham/Code/asystem/.env_fab && echo "$(pip check | grep -c 'not installed') dependencies of [.py_deps_dev.txt] absent by design, that file is installed with [--no-deps]"
+45 dependencies of [.py_deps_dev.txt] absent by design, that file is installed with [--no-deps]
 improve logs around Fail LOG, show timestamps and list them line by line
 implement plan, check code
 test supervisor release, with new systests etc
