@@ -772,13 +772,25 @@ anything for it. `onBarrier` fires when the nonce comes back, records the latenc
 `cache.Services(host)` minus the seen set. `compareBarrier` then runs at reap time and reports one of
 five outcomes:
 
+**All seven lines carry the verb `shadowed`**, so `grep shadowed` is the whole instrument, and every
+detail renders at the loop's 32 characters (the last two by the standard rule — the unbounded service
+list moved last behind a prefix padded to 32). These are the rendered forms, taken from the tests
+rather than transcribed:
+
 | Line | Level | Meaning |
 |---|---|---|
-| `returned [n] shadow after [m] ms` | DEBUG | the barrier came back; this is the sizing number against `reconcileDelay` |
-| `shadowed [agreed] on [n] after [m] ms` | DEBUG | both halves chose the same set — the sample size that says C is safe to promote |
-| `shadowed [differ] barrier [n], timer [n]` | **WARN** | the finding, followed by two lines naming each set |
-| `shadowed [pending] barrier, timer reaped [n]` | **WARN** | the flood was still in flight when the timer reaped, which is the "reaping too early" case |
-| `shadowed [none] barrier for this reconcile` | DEBUG | a reconcile with no barrier, which should not happen once every site is covered |
+| `shadowed [  0] would reap, in [   112] ms` | DEBUG | the barrier came back; the count is the shadow reap set and the latency is the sizing number against `reconcileDelay` |
+| `shadowed [agreed] set [  1] in [    0] ms` | DEBUG | both halves chose the same set — the sample size that says C is safe to promote |
+| `shadowed [differ] barrier [ 1] timer [ 2]` | **WARN** | the finding, followed by the two lines below naming each set |
+| `shadowed [barrier] after [  112] ms with svc-a` | **WARN** | the set the barrier would have reaped |
+| `shadowed [timer] reaped in the same tick svc-b,svc-c` | **WARN** | the set the timer actually reaped |
+| `shadowed [pending] barrier, reaped [   1]` | **WARN** | the flood was still in flight when the timer reaped, which is the "reaping too early" case |
+| `shadowed [none] barrier on this reconcile` | DEBUG | a reconcile with no barrier, which should not happen once every site is covered |
+
+**`pending` appears only as a bracketed state**, never as a bare word — an earlier draft of the
+barrier-return line used bare `pending` for the shadow set's count, which collided with the
+`[pending]` state and made a loose grep match both. It reads `would reap` instead, which also says
+what the count *means* rather than how it was derived.
 
 **Both changes are marked in the source, and `grep` is the removal list.** Everything shadow mode
 added carries `TODO(shadow-barrier)` — 15 occurrences in `engine.go`, one on the test, one in
@@ -1056,8 +1068,10 @@ unreliable.
 **Step 4 — size the deadline.** Only meaningful once there are firings to size against:
 
 ```bash
-cat | grep -o 'returned \[ *[0-9]*\] shadow after \[ *[0-9]*\] ms' | awk '{print $(NF-1)}' | sort -n | tail -5
+cat | grep 'shadowed .* would reap' | sed -E 's/.*in \[ *([0-9]+)\] ms.*/\1/' | sort -n | tail -5
 ```
+
+(`sed` rather than `awk` on a field index, because the padded `[   112]` contains spaces and would split.)
 
 The largest barrier latency against `reconcileDelay` (10 s) says whether the grace was ever close to
 being too short. If the maximum is comfortably under a second — as the systest measured for 550 topics —

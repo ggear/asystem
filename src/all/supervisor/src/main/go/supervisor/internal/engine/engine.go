@@ -46,12 +46,12 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 	}
 	createStart := time.Now()
 	if err := probe.Create(configPath, cache, periods); err != nil {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStart).Errorf("faulting", createStart, "[%s] loop with [%v]", loopListeningProbes, err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStart).Errorf("faulting", createStart, "[%-16.16s] loop halted, %v", loopListeningProbes, err)
 		return
 	}
 	runStart := time.Now()
 	if err := probe.RunPoll(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", runStart, "[%s] loop with [%v]", loopListeningProbes, err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", runStart, "[%-16.16s] loop halted, %v", loopListeningProbes, err)
 	}
 }
 
@@ -319,7 +319,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		tokens := strings.Split(msg.Topic(), "/")
 		if len(tokens) < 6 || tokens[1] == "" {
 			dropCount.Add(1)
-			scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[malformed] topic, [%4d] levels", len(tokens))
+			scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[malformed] topic of [%2d] levels", len(tokens))
 			return
 		}
 		hostName := tokens[1]
@@ -343,7 +343,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		tokens := strings.Split(msg.Topic(), "/")
 		if len(tokens) < 3 || tokens[1] == "" {
 			dropCount.Add(1)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", statusStart, "[malformed] topic, [%4d] levels", len(tokens))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", statusStart, "[malformed] topic of [%2d] levels", len(tokens))
 			return
 		}
 		hostName := tokens[1]
@@ -373,7 +373,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			openBarrier(client, hostName) // TODO(shadow-barrier): delete with hostBarrier.
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[online] transition by [%-7.7s]", trigger)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[%3d] topics, reconcile [%4d] s", topics, int64(reconcileDelay.Seconds()))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[%3d] topics, reconcile [%2d] sec", topics, int64(reconcileDelay.Seconds()))
 		case hostStatusOffline, "":
 			storeHostStatus(hostName, false)
 			if known && !wasOnline {
@@ -421,7 +421,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		sort.Strings(pending.shadow)
 		shadow, latency := pending.shadow, pending.latency
 		barrierMu.Unlock()
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("returned", pending.opened, "[%3d] shadow after [%5d] ms", len(shadow), latency.Milliseconds())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("shadowed", pending.opened, "[%3d] would reap, in [%4d] msec", len(shadow), latency.Milliseconds())
 	}
 	wildcardHandlers := map[string]mqtt.MessageHandler{
 		topicDiscovery: onDiscovery,
@@ -484,8 +484,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		topics := subscribeTopics(client, cache.Topics())
 		listens := subscribeWildcards(client)
 		cache.Refresh()
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Infof("attached", connectStart, "[%4d] topics, [%5d] wildcards", topics, listens)
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Infof("retained", connectStart, "[%6d] hosts, [%6d] records", len(cache.Hosts()), cache.Size())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Infof("attached", connectStart, "[%3d] topics, and [%2d] wildcards", topics, listens)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionSubscribe).Infof("retained", connectStart, "[%3d] hosts, holding [%4d] recs", len(cache.Hosts()), cache.Size())
 	}
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
@@ -552,8 +552,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					}
 					topics := resubscribeHost(client, pending.host)
 					openBarrier(client, pending.host) // TODO(shadow-barrier): delete with hostBarrier.
-					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warnf("deferred", reconcileStart, "[%3d] services after [%7d] s", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()))
-					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warnf("deferred", reconcileStart, "[%5d] topics resubbed on retry", topics)
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warnf("deferred", reconcileStart, "[%3d] services after [%4d] secs", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()))
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warnf("deferred", reconcileStart, "[%3d] topics resubbed on a retry", topics)
 					continue
 				}
 				for _, service := range services {
@@ -561,11 +561,11 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					cache.Delete(pending.host, service)
 				}
 				if len(services) == 0 {
-					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debugf("reclaims", reconcileStart, "[  0] services, after [%6d] s", int64(config.SinceIncludingSuspend(pending.started).Seconds()))
+					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debugf("reclaims", reconcileStart, "[  0] services after [%4d] secs", int64(config.SinceIncludingSuspend(pending.started).Seconds()))
 					continue
 				}
 				cache.Refresh()
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Infof("reclaims", reconcileStart, "[%2d] evicted after [%5d] s of %s", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()), strings.Join(services, ","))
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Infof("reclaims", reconcileStart, "[%3d] evicted after [%4d] secs %s", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()), strings.Join(services, ","))
 			}
 			resyncStart := time.Now()
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
@@ -597,9 +597,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				silenceStart := time.Now()
 				restored, listens := resubscribeAll(client)
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warnf("received", silenceStart, "[%3d] msgs over [%3d] idle ticks", rx, silenceTickCount)
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warnf("restored", silenceStart, "[%4d] topics [%2d]+[%2d] restored", attached, restored, listens)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warnf("restored", silenceStart, "[%3d] topics, [%2d]+[%2d] restored", attached, restored, listens)
 			}
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debugf("received", purgeStart, "[%3d] messages [%4d] messages/s", rx, rate)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debugf("received", purgeStart, "[%3d] messages at [%3d] msgs/sec", rx, rate)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debugf("removals", purgeStart, "[%3d] evictions, [%3d] deletions", evicted, deleted)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debugf("unlisted", purgeStart, "[%3d] drops, [%3d] subscriptions", drops, attached)
 			censusStart := time.Now()
@@ -745,7 +745,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			commandStart := time.Now()
 			tokens := strings.Split(msg.Topic(), "/")
 			if len(tokens) < 5 || tokens[1] == "" || tokens[4] == "" {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[malformed] topic, [%4d] levels", len(tokens))
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[malformed] topic of [%2d] levels", len(tokens))
 				return
 			}
 
@@ -911,7 +911,7 @@ func (b *watchDeletesListener) MarkDelete(topic string) {
 		b.onDelete(topic)
 	}
 	b.client.Unsubscribe(topic)
-	scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionRemove).Debugf("removals", deleteStart, "[%s] unsubscribed, dropped from the map", topic)
+	scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionRemove).Debugf("removals", deleteStart, "[unsubbed] dropped from the map %s", topic)
 }
 
 type watchAttachListener struct {
@@ -937,7 +937,7 @@ func (b *watchWakeListener) MarkWake(frozen time.Duration) {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Errorf("unusable", wakeStart, "[wake] requested by the stall detector with no revive bound, so nothing recovers the session")
 		return
 	}
-	scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Infof("detected", wakeStart, "[wake] revive requested by the stall detector")
+	scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Infof("detected", wakeStart, "[wake] revive asked by the stall")
 	b.onWake(frozen)
 }
 
@@ -980,24 +980,24 @@ func compareBarrier(barriers map[string]*hostBarrier, guard *sync.Mutex, hostNam
 	pending := barriers[hostName]
 	if pending == nil {
 		guard.Unlock()
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("shadowed", started, "[none] barrier for this reconcile")
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("shadowed", started, "[none] barrier on this reconcile")
 		return
 	}
 	returned, latency, shadow := pending.returned, pending.latency, slices.Clone(pending.shadow)
 	guard.Unlock()
 	if !returned {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[pending] barrier, timer reaped [%3d]", len(reaped))
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[pending] barrier, cut [%2d] soon", len(reaped))
 		return
 	}
 	timed := slices.Clone(reaped)
 	sort.Strings(timed)
 	if slices.Equal(timed, shadow) {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("shadowed", started, "[agreed] on [%3d] after [%5d] ms", len(timed), latency.Milliseconds())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("shadowed", started, "[agreed] sets [%3d] in [%4d] ms", len(timed), latency.Milliseconds())
 		return
 	}
-	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[differ] barrier [%3d], timer [%3d]", len(shadow), len(timed))
-	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[barrier] after [%5d] ms of %s", latency.Milliseconds(), joinedServices(shadow))
-	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[timer] reaped %s", joinedServices(timed))
+	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[differ] barrier [%2d] timer [%2d]", len(shadow), len(timed))
+	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[barrier] after [%4d] ms, with %s", latency.Milliseconds(), joinedServices(shadow))
+	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[timer] reaped in the same tick %s", joinedServices(timed))
 }
 
 // TODO(shadow-barrier): delete with hostBarrier.

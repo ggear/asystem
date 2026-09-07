@@ -133,7 +133,7 @@ func NewDisplay(
 		cache:           cache,
 		logBuffer:       logBuffer,
 	}
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", initStart, "[%v] layout, rows [%d], cols [%d]", format, height, width)
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", initStart, "[%-7.7s] rows [%3d], cols [%3d]", format, height, width)
 	return display, nil
 }
 
@@ -392,14 +392,14 @@ func (d *Display) Compile() (Format, error) {
 					}
 				}
 			}
-			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", compileStart, "[%v] layout, rows [%d], cols [%d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Infof("geometry", compileStart, "[%-7.7s] rows [%3d], cols [%3d]", attemptedFormat, d.dimsInit.rows, d.dimsInit.cols)
 			return attemptedFormat, nil
 		}
 		if d.format == FormatCompact {
 			return d.format, err
 		}
 		if d.format == FormatRelaxed {
-			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Warnf("fallback", compileStart, "[compact], relaxed layout failed with [%v]", err)
+			scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDiscover).Warnf("fallback", compileStart, "[compact] relaxed layout failed %v", err)
 		}
 		d.format = FormatCompact
 	}
@@ -524,7 +524,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 				d.dimsInit = dims
 				d.logResize()
 				d.rebuild("resize")
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("geometry", resizeStart, "[%d] cols, [%d] rows", cols, rows)
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("geometry", resizeStart, "[%3d] cols by [%3d] rows on show", cols, rows)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlC {
 					cancel()
@@ -585,7 +585,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 		case <-ticker.C:
 			if elapsed := config.SinceIncludingSuspend(ticked); elapsed > d.tickStall {
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("exceeded", ticked, "[%d] ms since the last draw tick", d.tickStall.Milliseconds())
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("exceeded", ticked, "[%4d] ms is the draw tick stall", d.tickStall.Milliseconds())
 				d.cache.Wake(elapsed)
 				d.refresh("wake")
 			}
@@ -625,7 +625,7 @@ func (d *Display) rebuild(trigger string) {
 	d.boxes = nil
 	d.serviceShown = nil
 	if _, err := d.Compile(); err != nil {
-		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Errorf("faulting", rebuildStart, "[%v] rebuilding the display", err)
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Errorf("faulting", rebuildStart, "[rebuild] of the display failed %v", err)
 		if !d.logOverlay {
 			d.logRewind()
 		}
@@ -653,10 +653,10 @@ func (d *Display) refresh(trigger string) {
 	d.terminal.show()
 	d.forceRefresh = true
 	if trigger == "period" {
-		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Debugf("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
+		scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Debugf("triggers", refreshStart, "[%-7.7s] refreshed [%4d] boxes", trigger, len(d.boxes))
 		return
 	}
-	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("triggers", refreshStart, "[%s], refreshed [%4d] boxes", trigger, len(d.boxes))
+	scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionRender).Infof("triggers", refreshStart, "[%-7.7s] refreshed [%4d] boxes", trigger, len(d.boxes))
 }
 
 func (d *Display) subscribeUpdates() {
