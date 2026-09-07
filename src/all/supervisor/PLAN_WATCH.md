@@ -300,8 +300,44 @@ declaration and no drift rows. A superseded barrier is ignored by nonce.
 **MQTT does not guarantee this across topics.** §4.6 orders messages per topic from a given
 publisher; ordering between retained delivery on one filter and a later live publish on another is
 broker behaviour, not spec. VerneMQ serves a session from one FIFO queue over one TCP stream, so it
-should hold — but this is Phase 0's second measurement, and the fallback must be a timeout degrading
-to today's behaviour, never to no reconcile at all.
+should hold — but this is Phase 0's second measurement.
+
+**The fallback is skip-and-retry, not degrade-to-timer.** This paragraph used to say the fallback "must
+be a timeout degrading to today's behaviour, never to no reconcile at all". **That is now rejected**, and
+the reasoning is recorded because the degrade reading is the intuitive one and will be reached again.
+On a barrier that does not return, hold the reap, re-open the barrier, resubscribe and reschedule; only
+the retry reaps, and after a bounded number of failed barriers warn loudly and reap nothing for that
+host. That is not a new mechanism — it is the shape the **whole-host guard already uses** (`engine.go`'s
+retry branch), applied to a second trigger, and already proven against case 7.
+
+Four reasons, strongest first:
+
+- **The two failure modes are not symmetric.** The reconcile is a backstop for a *lost departure*, and
+  Phase 1 exists to stop departures being lost — `mad` fired it zero times in 14.5 hours. Skipping means
+  failing to clean up something that almost never needs cleaning. Degrading means deleting a live row on
+  a 10 s guess. Against a backstop for a rare event, wrongly acting is the worse error.
+- **Degrading goes to a *less*-evidenced answer, not a safer one.** A barrier fails to return when the
+  publish was lost mid-flight, the subscribe was refused (`0x80`, which vernemq really does seconds into
+  a recreate), the QoS 0 message was dropped, or the connection died — **and every one of those is also a
+  condition under which the retained flood did not complete.** So the moment the barrier says "the
+  evidence is missing" is exactly the moment you would hand the decision to a timer whose whole premise
+  is that ten seconds was surely enough. The timer never had evidence; it just cannot tell.
+- **Degrading means C deletes nothing.** `reconcileDelay`, `reconcileGrace`, `started`, `connected`,
+  `fromConnect`, `ServicesBefore`, the wall/monotonic split and the second-granularity fuzz all survive
+  as the fallback path, so C is purely additive and gains a second reconcile path to interact with. The
+  timed arm then becomes permanently dormant code exercised only in rare failure, which can never be
+  retired because it can never be proven unused.
+- **Skipping is countable, degrading is silent.** A skip emits a WARN, so "never fires" is evidence the
+  barrier is sound and "fires often" is immediate evidence it is not. A silent degrade has to be logged
+  to be known, and once it is logged, acting on it buys nothing.
+
+**On the fear the old wording encoded**, two things blunt it. `RecordCache.Purge` already evicts on
+**host** staleness via `hostLastSeen`, so a genuinely dead host still clears; what a skipped reap leaves
+is a stale *service* on a *live* host. And skip-and-retry means no reap **now**, not no reap ever.
+
+**Do not settle this before the shadow data.** If `shadowed [pending]` turns out to be common, the
+barrier does not reliably return in production, and **neither fallback saves C** — that is a reason not
+to build it rather than a reason to pick a fallback. Treat the above as the fallback *if* C is built.
 
 ---
 
@@ -778,15 +814,17 @@ on `rue`. So C's entire value is concentrated in one process on one machine, and
 outcome of this collection is **delete the reconcile** rather than replace it — which is already the
 first branch of Q1. Shadow mode is what tells the two apart at no risk.
 
-**Two decisions to make before C is promoted, neither made yet.** First, the **fallback**: this plan
-says a barrier timeout must "degrade to today's behaviour", and if that stands then C *deletes nothing*
-— `reconcileDelay`, `started`, the cutoff and `ServicesBefore` all survive as the fallback path and C is
-a net addition. C only simplifies if the fallback is **skip the reap and warn**, which is defensible
-since a barrier that did not return means the flood is unproven and reaping is precisely what must not
-happen; the next connect or revive schedules another. Second, the **whole-host guard stays either way**
-(case 7), and it is what converts an early-returning barrier from a mass reap into a deferred one —
-which matters because the ordering measurement was a single-subscriber test broker, not six hosts under
-load.
+**The two design points C depends on, both now settled.** The **fallback is skip-and-retry**, decided
+and reasoned in *Barrier reconcile* above — hold the reap, re-open the barrier, resubscribe and
+reschedule, only the retry reaps, and warn rather than guess after a bounded number of failures. It is
+the whole-host guard's own shape applied to a second trigger, and it is what keeps C a deletion rather
+than an addition. The **whole-host guard stays** (case 7), which is what converts an early-returning
+barrier from a mass reap into a deferred one — and that matters because the ordering measurement was a
+single-subscriber test broker, not six hosts under load. Note the two now share one mechanism, so C
+adds no third recovery path.
+
+**Neither decision should be acted on before the shadow data.** If `shadowed [pending]` is common the
+barrier does not reliably return, and no choice of fallback rescues C.
 
 **The reconcile's own defect, found while assessing whether it should survive C.** `due` was collected
 under `reconcileMu`, the lock released, and the retry branch then **blind-wrote a stale local copy
@@ -872,12 +910,14 @@ row there are two candidate causes and no way to separate them. That reason is *
 expires the moment Phase 1 has one release behind it, unlike the evidence argument it replaces, which
 would have deferred C forever.
 
-Two smaller points argue the same way. C needs a timeout fallback degrading to today's behaviour, so
-the first cut does not actually delete the timed path — it demotes it. And the ordering measurement,
-while solid, is a single-subscriber test broker; production is six hosts under real load.
+One smaller point argues the same way: the ordering measurement, while solid, is a single-subscriber
+test broker, where production is six hosts under real load. (An earlier draft listed a second point —
+that C's timeout fallback would keep the timed path alive, so C could not delete anything. That was true
+of the *degrade-to-timer* fallback only, which has since been rejected in favour of skip-and-retry; see
+*Barrier reconcile*.)
 
-So C is buildable whenever it is wanted — with its timeout fallback and its whole-host guard intact
-(case 7) — and it would buy the deletion of `reconcileDelay`, `reconcileGrace`, the `connected`
+So C is buildable whenever it is wanted — with skip-and-retry as its fallback and its whole-host guard
+intact (case 7) — and it would buy the deletion of `reconcileDelay`, `reconcileGrace`, the `connected`
 cutoff, the `fromConnect` distinction and `RecordCache.ServicesBefore`. **D stays in reserve** for the
 one case C does not cover cleanly, and no longer as a hedge against the ordering assumption failing.
 
