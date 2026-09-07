@@ -387,7 +387,7 @@ const (
 
 var (
 	logIgnore = []*regexp.Regexp{
-		regexp.MustCompile(`^pl2303 ttyUSB0: pl2303_get_line_request - failed: -\d+`),
+		regexp.MustCompile(`^pl2303 ttyUSB\d+: pl2303_get_line_request - failed: -\d+`),
 	}
 
 	logCache   = map[string]*logSet{}

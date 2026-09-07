@@ -18,19 +18,18 @@ wait_service() {
   echo "Waiting for service to ${label} ..."
   while ! "${ASYSTEM_HOME}/${script}" >/dev/null 2>&1; do
     if ((waited >= timeout)); then
-      echo "Waiting for service to ${label} ... failed after [${waited}] of [${timeout}] seconds"
+      printf "Waiting for service to %s ... failed [%3d/%3d] seconds\n" "${label}" "${waited}" "${timeout}"
       "${ASYSTEM_HOME}/${script}" -v 2>&1 | tail -n 5
       echo "ERROR: Service failed to ${label} within [${timeout}] seconds" >&2
       exit 1
     fi
     if ((waited == grace)) || ((waited > 0 && waited % report == 0)); then
-      echo "Waiting for service to ${label} ... waited [${waited}] of [${timeout}] seconds"
-      "${ASYSTEM_HOME}/${script}" -v 2>&1 | tail -n 3
+      printf "Waiting for service to %s ... poll [%3d/%3d] seconds\n" "${label}" "${waited}" "${timeout}"
     fi
     sleep "${interval}"
     waited=$((waited + interval))
   done
-  echo "Waiting for service to ${label} ... done after [${waited}] of [${timeout}] seconds"
+  printf "Waiting for service to %s ... done [%3d/%3d] seconds\n" "${label}" "${waited}" "${timeout}"
 }
 
 wait_service "checkalive.sh" "come alive" 1 "${SERVICE_WAIT_ALIVE_SECONDS}"

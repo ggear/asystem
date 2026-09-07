@@ -60,7 +60,7 @@ wait_service() {
   echo "Waiting for service to ${label} ..."
   while ! docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" >/dev/null 2>&1; do
     if ((waited >= timeout)); then
-      printf "Waiting for service to %s ... failed [%3d] of [%3d] seconds\n" "${label}" "${waited}" "${timeout}"
+      printf "Waiting for service to %s ... failed [%3d/%3d] seconds\n" "${label}" "${waited}" "${timeout}"
       docker exec "${SERVICE_NAME}" "/asystem/etc/${script}" -v 2>&1 | tail -n 5
       if [[ "${fatal}" == "true" ]]; then
         log_error "Service failed to ${label} within [${timeout}] seconds [${SERVICE_NAME}]"
@@ -69,12 +69,12 @@ wait_service() {
       return 1
     fi
     if ((waited == grace)) || ((waited > 0 && waited % report == 0)); then
-      printf "Waiting for service to %s ... poll [%3d] of [%3d] seconds\n" "${label}" "${waited}" "${timeout}"
+      printf "Waiting for service to %s ... poll [%3d/%3d] seconds\n" "${label}" "${waited}" "${timeout}"
     fi
     sleep "${interval}"
     waited=$((waited + interval))
   done
-  printf "Waiting for service to %s ... done [%3d] of [%3d] seconds\n" "${label}" "${waited}" "${timeout}"
+  printf "Waiting for service to %s ... done [%3d/%3d] seconds\n" "${label}" "${waited}" "${timeout}"
 }
 
 retire_home() {
@@ -256,7 +256,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
       echo
       wait_service "checkexecuting.sh" "start executing" 1 "${SERVICE_WAIT_EXECUTING_SECONDS}" true
       echo
-      wait_service "checkhealthy.sh" "become healthy" 5 "${SERVICE_WAIT_HEALTHY_SECONDS}" true
+      wait_service "checkhealthy.sh" "rise up healthy" 5 "${SERVICE_WAIT_HEALTHY_SECONDS}" true
       echo
       docker exec -i "${SERVICE_NAME}" bash -c 'command -v stdbuf >/dev/null 2>&1 && exec stdbuf -oL /asystem/etc/checkhealthy.sh -v || exec /asystem/etc/checkhealthy.sh -v'
       echo && echo
