@@ -1031,7 +1031,7 @@ Two other things were lost the first time and are covered next time: **no watch 
 (so the whole watch-side view of a release went unrecorded), and log survival across a release stayed
 untested for the same reason.
 
-**Take the baseline before releasing.** `~/watch-baseline.sh` on `rue` snapshots both watches and the
+**Take the baseline before releasing.** `~/Temp/watch-baseline.sh` on `rue` snapshots both watches and the
 serve readback in one pass — inode and size per log file, the `shadowed`/`reclaims`/`differ`/`pending`
 counts, the live supervisor pids, and the per-host `rediscovered` count. Run it before, run it after,
 diff the two. The baseline taken at `10.200.1531 + ~12 minutes`:
