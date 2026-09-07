@@ -996,16 +996,17 @@ func compareBarrier(barriers map[string]*hostBarrier, guard *sync.Mutex, hostNam
 		return
 	}
 	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[differ] barrier [%2d] timer [%2d]", len(shadow), len(timed))
-	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[barrier] after [%4d] ms, with %s", latency.Milliseconds(), joinedServices(shadow))
-	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[timer] reaped in the same tick %s", joinedServices(timed))
+	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[barrier] reaps [%-14.14s]", clippedServices(shadow, 14))
+	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[timer] reaped, [%-14.14s]", clippedServices(timed, 14))
 }
 
 // TODO(shadow-barrier): delete with hostBarrier.
-func joinedServices(services []string) string {
-	if len(services) == 0 {
-		return "[none]"
+func clippedServices(services []string, width int) string {
+	joined := strings.Join(services, ",")
+	if len(joined) > width {
+		return joined[:width-1] + "~"
 	}
-	return strings.Join(services, ",")
+	return joined
 }
 
 type hostReconcile struct {

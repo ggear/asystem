@@ -782,8 +782,8 @@ rather than transcribed:
 | `shadowed [  0] would reap, in [ 112] msec` | DEBUG | the barrier came back; the count is the shadow reap set and the latency is the sizing number against `reconcileDelay` |
 | `shadowed [agreed] sets [  1] in [   0] ms` | DEBUG | both halves chose the same set — the sample size that says C is safe to promote |
 | `shadowed [differ] barrier [ 1] timer [ 2]` | **WARN** | the finding, followed by the two lines below naming each set |
-| `shadowed [barrier] after [ 112] ms, with svc-a` | **WARN** | the set the barrier would have reaped |
-| `shadowed [timer] reaped in the same tick svc-b,svc-c` | **WARN** | the set the timer actually reaped |
+| `shadowed [barrier] reaps [zigbee2mqtt   ]` | **WARN** | the set the barrier would have reaped |
+| `shadowed [timer] reaped, [svc-a,svc-b   ]` | **WARN** | the set the timer actually reaped |
 | `shadowed [pending] barrier, cut [ 1] soon` | **WARN** | the flood was still in flight when the timer reaped, which is the "reaping too early" case |
 | `shadowed [none] barrier on this reconcile` | DEBUG | a reconcile with no barrier, which should not happen once every site is covered |
 
@@ -1049,8 +1049,20 @@ cat | grep 'shadowed \[differ\]'    # barrier and timer chose different sets
 cat | grep 'shadowed \[pending\]'   # the timer reaped while the flood was still in flight
 ```
 
-A `[differ]` is followed by two lines naming each set, so the disagreement can be read without
-correlating anything. **`[pending]` is the serious one**: it means the timed reconcile reaped before the
+A `[differ]` is followed by two lines naming each set. **Both name fields are 14 wide, clipped with a
+trailing `~`, padded with spaces when empty, and start at the same column (18)** — so the two sets sit
+directly above one another and can be compared by eye, with an empty set reading as blank rather than
+as absent. Read them with two things in mind. The **counts on the `[differ]` line are authoritative**,
+not the names: `[postgres,sabn~]` against `timer [ 3]` is three services of which one is invisible.
+And the **direction is what matters** — `barrier [ 0] timer [ 2]` means the timer reaped services the
+barrier would have kept, which is the live-service reap this exercise exists to detect, while
+`barrier [ 1] timer [ 0]` is the benign direction of a departure the timer merely missed.
+
+Clipping is unambiguous across this estate: all 22 configured service names have distinct 7-character
+prefixes, checked against the deployed `config.json`, and 14 characters holds `zigbee2mqtt` and
+`homeassistant` whole. **The barrier latency is deliberately absent from this line** — it is already on
+the `would reap` line for the same reconcile, which is what step 4 greps, so repeating it here bought
+nothing and cost the name field six characters. **`[pending]` is the serious one**: it means the timed reconcile reaped before the
 barrier proved the redelivery complete, which is the "reaping a live service" failure this whole
 exercise exists to detect. **Any `[pending]` at all justifies building C.**
 
