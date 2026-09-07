@@ -1016,20 +1016,41 @@ then never again.
 
 #### The first test — a release with the watches running, and its baseline
 
-**Phase 1 shipped as `10.200.1531` on 2026-09-07, and the release that follows it is the first real
-test.** The shipping release could not test itself, for a reason worth recording because it is not
-obvious: the process *shutting down* was the previous version, which still tombstoned every retained
-topic on its way out, so the incoming serve read back an empty set. Confirmed from the estate rather
-than from source — all 26 retained `supervisor/+/data/service/+/name` topics are present on the broker
-now (retain flag set, all five hosts), vernemq was **not** restarted so the store was never flushed,
-and yet every host logged **zero** `rediscovered` lines. The only reading that fits all three is that
-the names were absent at readback and republished afterwards. **The next release is therefore the
-first where a Phase 1 process does the shutting down**, and the first that can exercise the readback at
-all.
+**Phase 1 shipped as `10.200.1531` on 2026-09-07, `10.200.1532` followed it, and both logged zero
+`rediscovered` lines on every host.** That is **not** a defect, and the reason matters enough to state
+plainly because two releases were spent discovering it:
 
-Two other things were lost the first time and are covered next time: **no watch was running during it**
-(so the whole watch-side view of a release went unrecorded), and log survival across a release stayed
-untested for the same reason.
+**A supervisor release can never exercise the readback, by construction.** `install_pre.sh` runs
+`image/broker.sh` with no argument, which is *sweep + publish*, and the sweep drops **every** retained
+topic under the module's globs — including the `supervisor/<host>/data/service/+/name` breadcrumbs the
+readback exists to read. It runs after the old container stops and before the new one starts, so the
+incoming serve always connects to an empty retained set and always finds nothing. Observed directly in
+the `install` output on `meg`: ~190 data topics dropped, `supervisor/macmini-meg/status` among them,
+then only the six discovery topics republished. The guard is `SERVICE_VERSION_CHANGED`, so this happens
+on exactly the releases that change a version.
+
+That is the documented design — the sweep clears topics stranded by a rename or a removed entity, which
+is a property of *the module changing* — and on a release it does the readback's job more thoroughly
+than the readback would. **So the two mechanisms are complementary, not redundant:** a release recovers
+by sweep-then-republish, and the readback recovers a restart that is *not* a release.
+
+**The readback must therefore be tested with `install.sh start` or `docker restart supervisor`**, which
+never reach `install_pre.sh` — it sits inside the `install` branch. Do not use a release for this, and
+correct any earlier reading of scenario 4 that says "or a plain release".
+
+**A second obstacle sits behind the first: four of the five readback outcomes log at DEBUG, and `serve`
+runs at INFO with a fixed `CMD` carrying no `-L`.** Only `rediscovered [n] topics` (a real
+registration) is INFO; `rediscovered [  0] topics`, `[unmarshal]`, `[nil] readback pulse` and
+`[empty] readback` are all DEBUG and unobservable on any host as shipped. So even with a correct
+restart, "no line" still conflates *never delivered* with *delivered, nothing new to register* — which
+is exactly the ambiguity step 2 was built to remove. **Q3 is not answerable until those four are raised
+to INFO, or `serve`'s level is made settable from compose.** Both are small and belong in the next
+release.
+
+What the two releases *did* prove is the thing the collection depends on: **the watch logs survive a
+release.** Both files kept their inode across `10.200.1532` (rue 75964373, mad 6644800), grew through
+it, and the watch process was never restarted — so purging is genuinely off and a month-long window is
+viable.
 
 **Take the baseline before releasing.** `~/Temp/watch-baseline.sh` on `rue` snapshots both watches and the
 serve readback in one pass — inode and size per log file, the `shadowed`/`reclaims`/`differ`/`pending`

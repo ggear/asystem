@@ -30,7 +30,7 @@ retire nginx and use cloudflared for homeasistant?
 
 
 
-test supervisor release, with new systests etc
+test supervisor release against plan
 test new watch logs, add/remove etc
 test primary
 test sedondary
@@ -47,7 +47,6 @@ tune yellow/red
 adjust memeory allocs
 tune fan/tem
 
-Fix logs for watch so no wrapping, what I see in watch or all?
 check metric attribution works by metric filter when multiple probe_* feed single metric
 verify caching hour and all metrics performance
 Add host status to ha, combine backup temp etc
