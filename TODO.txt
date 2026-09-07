@@ -30,7 +30,6 @@ retire nginx and use cloudflared for homeasistant?
 
 
 
-implement plan, check code
 test supervisor release, with new systests etc
 test new watch logs, add/remove etc
 test primary
