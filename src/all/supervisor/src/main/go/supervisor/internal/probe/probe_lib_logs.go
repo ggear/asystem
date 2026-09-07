@@ -386,7 +386,9 @@ const (
 )
 
 var (
-	logIgnore []*regexp.Regexp
+	logIgnore = []*regexp.Regexp{
+		regexp.MustCompile(`^pl2303 ttyUSB0: pl2303_get_line_request - failed: -\d+`),
+	}
 
 	logCache   = map[string]*logSet{}
 	logCacheMu sync.RWMutex
