@@ -6,6 +6,7 @@ x-common: &common
     - SERVICE_NAME
     - SUPERVISOR_HOST
     - SUPERVISOR_MOUNT
+    - SUPERVISOR_LOG_LEVEL
     - BROKER_HOST
     - BROKER_PORT
     - DATABASE_HOST

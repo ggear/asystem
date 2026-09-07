@@ -82,6 +82,9 @@ type logOptions struct {
 }
 
 func addLogFlags(cmd *cobra.Command, opts *logOptions, level string) {
+	if configured := os.Getenv(logLevelEnv); configured != "" {
+		level = configured
+	}
 	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
 	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source comma-separated prefixes (see below)")
 	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject comma-separated prefixes (see below)")
@@ -183,6 +186,8 @@ func formatFlagUsages(flags *pflag.FlagSet) string {
 const (
 	helpAllFlag     = "help-all"
 	rootDescription = "Run supervisor processes"
+
+	logLevelEnv = "SUPERVISOR_LOG_LEVEL"
 
 	logFileSizeMB  = 10
 	logFileBackups = 60

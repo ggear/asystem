@@ -296,7 +296,7 @@ def _pull(context):
             _run_pinned(context, "go mod tidy", module_go_test_path, "go")
         module_rust_main_path = join(ROOT_MODULE_DIR, module, "src/main/rust", _get_service(module))
         if isfile(join(module_rust_main_path, "Cargo.toml")):
-            _run_pinned(context, "cargo update", module_rust_main_path, "rust")
+            _run_pinned(context, "cargo update --verbose", module_rust_main_path, "rust")
     _print_footer("asystem", "pull dependencies update")
     _generate(context, filter_changes=False, is_pull=True)
     _print_header("asystem", "pull package versions to update")
@@ -323,23 +323,38 @@ def _check(context, py_deps_nodeps):
             conflicting.append(issue)
         else:
             unexpected.append(issue)
-    _print_line("Checked [{}] python requirement issues reported by [pip check], of which [{}] are by design"
-                .format(len(absent) + len(conflicting) + len(unexpected), len(absent) + len(conflicting)))
-    _print_line("  [{:3d}] absent, being dependencies of [{}] which install with [--no-deps]"
-                .format(len(absent), ", ".join(sorted(py_deps_nodeps))))
-    _print_line("  [{:3d}] conflicting, being versions [.py_deps_prod.txt] resolved instead"
-                .format(len(conflicting)))
-    for issue in conflicting:
-        _print_line("        {}".format(issue))
+    _print_line("Python requirements:")
+    if not absent and not conflicting and not unexpected:
+        _print_line("  \u2705 [ 0] issues reported, all requirements satisfied")
+        return
+    if absent:
+        _print_line("  \u2705 [{:2d}] missing dev transitive deps, noted but not required".format(len(absent)))
+    if conflicting:
+        _print_line("  \u2705 [{:2d}] conflicting dev transitive deps, using a prod pinned version to resolve"
+                    .format(len(conflicting)))
+        for issue in conflicting:
+            _print_line("  \u2705      - {}".format(_check_conflict(issue)))
     if not unexpected:
         return
-    _print_line("  [{:3d}] UNEXPECTED, from a package installed with its dependencies, so this is a real conflict"
+    _print_line("  \u274c [{:2d}] conflicting prod deps, installed with their dependencies, so a real conflict"
                 .format(len(unexpected)))
     for issue in unexpected:
-        _print_line("        {}".format(issue))
+        _print_line("  \u274c      - {}".format(issue.strip()))
     _print_failure("asystem", "pull package versions to check")
     raise Exception("Found [{}] unexpected python requirement issues, see [pip check] output above"
                     .format(len(unexpected)))
+
+
+def _check_conflict(issue):
+    matched = re.match(r"^(\S+) (\S+) has requirement (.+), but you have (\S+) (\S+?)\.?$", issue.strip())
+    if matched:
+        return "dev {}=={} requires {}, prod pins {}=={}".format(
+            matched.group(1), matched.group(2), matched.group(3), matched.group(4), matched.group(5))
+    matched = re.match(r"^(\S+) (\S+) requires (\S+), which is not installed\.?$", issue.strip())
+    if matched:
+        return "dev {}=={} requires {}, which is not installed".format(
+            matched.group(1), matched.group(2), matched.group(3))
+    return issue.strip()
 
 
 def _list(context):

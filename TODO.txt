@@ -29,7 +29,7 @@ retire nginx and use cloudflared for homeasistant?
 
 
 
-
+document how to update python deps in global CLAUDE.md and attempt to upgrade what I can today, backdown versions where there conflicts that break
 test supervisor release against plan
 test new watch logs, add/remove etc
 test primary
@@ -200,6 +200,7 @@ Impl a tab option expander for bash
 # Tempstat
 ###############################################################################################################################################################
 Validate rust code
+Bypassing the kernel serial driver to avoid noisy dmesg logs and drop filter on Fail LOG
 
 
 ###############################################################################################################################################################

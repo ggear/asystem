@@ -969,7 +969,7 @@ the single line that decides it. Run a remote `watch` throughout with
 | 1 | **Service removed** — *serve side now covered locally* | Stop a container and remove the module from that host's `config.json` schema | watch: `removals [<host>] removed; empty payload`, and the time from the serve-side `removals` line to it. The systest already proves the serve half against a real container, so what is left here is the **watch** half and the estate's latency | The departure path end to end. Target: gone from every watch inside one pulse |
 | 2 | **Service added** — *serve side now covered locally* | Deploy a module to a host that did not run it | watch: `register [<host>] [n] topics added` and the row appearing. Again the systest covers the publish half; only the watch half needs the estate | Discovery is unaffected by the change to the departure path |
 | 3 | **Service moved** | The above pair across two hosts, in one release | Both hosts' lines, plus that the row appears on exactly one watch grid at the end | The case the estate note describes, which is the one that produced the original symptom |
-| 4 | **Graceful restart** | `install.sh start` on a host, or a plain release | serve at DEBUG: exactly one readback line per retained name, and step 2 made the four outcomes distinguishable — `rediscovered [%3d] topics` at INFO for a real registration, `rediscovered [  0] topics` for one that added nothing, `[unmarshal]`, `[nil] readback pulse`, `[empty] readback` for the rest, and **no line at all** for a name that was never delivered. watch: whether the row ever blanks | A, B and step 2 together, and this is the one collection that cannot be faked locally |
+| 4 | **Graceful restart** | `install.sh start` or `docker restart supervisor` on a host — **not** a release, which sweeps the breadcrumbs first | serve at DEBUG: exactly one readback line per retained name, and step 2 made the four outcomes distinguishable — `rediscovered [%3d] topics` at INFO for a real registration, `rediscovered [  0] topics` for one that added nothing, `[unmarshal]`, `[nil] readback pulse`, `[empty] readback` for the rest, and **no line at all** for a name that was never delivered. watch: whether the row ever blanks | A, B and step 2 together, and this is the one collection that cannot be faked locally |
 | 5 | **Ungraceful exit** — *now covered locally* | `docker kill supervisor` on one host, then start it | The systest asserts the will marks the host offline and the records survive; what the estate adds is the `rediscovered` line on the way back and that the crash path and the graceful path read identically | That there is **one** recovery path rather than two |
 | 6 | **Broker recreate** — *restart covered locally, recreate not* | A vernemq release | watch: no `reclaims` line naming a whole host; serve: the reconnect republish. The systest restarts the broker and proves the daemon resumes publishing, but its store **survives** a restart, so the empty-store half is only reachable from a release | Case 7, the whole-host guard, against a genuinely empty retained store |
 | 7 | **Watch suspends** — *the highest-frequency scenario, and the one that contaminates Q1* | Close the laptop for longer than `brokerExpiry`, then open it. Do it after a **short** sleep and a **multi-hour** one, since only the long one is certain to kill the socket | watch: the revive path taken (`liveness [false] frozen …` WARN, `[false] abandoned by paho` WARN, or `[false] closed, paho reconnecting` at DEBUG), then per host the `attached` line, the `transition by [connect]`, and the `reclaims` that follows — **including its service count**, which is the number Q1 needs partitioned | Case 9, the monotonic `hostReconcile.deadline`, and whether a wake ever reaps a **live** service. A non-zero `reclaims` here is a defect, not a lost departure |
@@ -1038,14 +1038,17 @@ by sweep-then-republish, and the readback recovers a restart that is *not* a rel
 never reach `install_pre.sh` — it sits inside the `install` branch. Do not use a release for this, and
 correct any earlier reading of scenario 4 that says "or a plain release".
 
-**A second obstacle sits behind the first: four of the five readback outcomes log at DEBUG, and `serve`
-runs at INFO with a fixed `CMD` carrying no `-L`.** Only `rediscovered [n] topics` (a real
-registration) is INFO; `rediscovered [  0] topics`, `[unmarshal]`, `[nil] readback pulse` and
-`[empty] readback` are all DEBUG and unobservable on any host as shipped. So even with a correct
-restart, "no line" still conflates *never delivered* with *delivered, nothing new to register* — which
-is exactly the ambiguity step 2 was built to remove. **Q3 is not answerable until those four are raised
-to INFO, or `serve`'s level is made settable from compose.** Both are small and belong in the next
-release.
+**A second obstacle sat behind the first, and is now fixed.** Three of the five readback outcomes
+logged at DEBUG while `serve` runs at INFO with a fixed `CMD` carrying no `-L`, so "no line" conflated
+*never delivered* with *delivered, nothing new to register* — exactly the ambiguity step 2 was built to
+remove. `[empty] readback`, `[nil] readback pulse` and `rediscovered [  0] topics` are now **INFO**
+(the other two were already ERROR), so every outcome is observable at the level hosts actually run at.
+They fire at most once per retained name per connect, so a six-service host pays six lines per restart.
+
+**`SUPERVISOR_LOG_LEVEL` now sets the level per release**, declared in `.env_all` (default `info`),
+passed through `docker-compose.yml`, and read by `addLogFlags` as the flag's default — so it covers
+`watch` as well, and `-L` on the command line still wins. Turning one host up for a release is an env
+change rather than a rebuild.
 
 What the two releases *did* prove is the thing the collection depends on: **the watch logs survive a
 release.** Both files kept their inode across `10.200.1532` (rue 75964373, mad 6644800), grew through

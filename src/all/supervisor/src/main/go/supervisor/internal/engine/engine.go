@@ -717,7 +717,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			readbackStart := time.Now()
 			topic := scribe.SubjectTopic(msg.Topic())
 			if len(msg.Payload()) == 0 {
-				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Debugf("excluded", readbackStart, "[empty] readback, tombstoned before")
+				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Infof("excluded", readbackStart, "[empty] readback, tombstoned before")
 				return
 			}
 			var value metric.ValueData
@@ -726,7 +726,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				return
 			}
 			if value.Pulse == nil {
-				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Debugf("excluded", readbackStart, "[nil] readback pulse, departing now")
+				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Infof("excluded", readbackStart, "[nil] readback pulse, departing now")
 				return
 			}
 			serviceName := value.Pulse.ValueString
@@ -736,7 +736,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 			bindings := cache.RegisterService(hostName, serviceName, true)
 			if len(bindings) == 0 {
-				scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Debugf("observed", readbackStart, "[%s] host, rediscovered [  0] topics", hostName)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("observed", readbackStart, "[%s] host, rediscovered [  0] topics", hostName)
 				return
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", readbackStart, "[%s] host, rediscovered [%3d] topics", hostName, len(bindings))
