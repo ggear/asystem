@@ -779,12 +779,12 @@ rather than transcribed:
 
 | Line | Level | Meaning |
 |---|---|---|
-| `shadowed [  0] would reap, in [   112] ms` | DEBUG | the barrier came back; the count is the shadow reap set and the latency is the sizing number against `reconcileDelay` |
-| `shadowed [agreed] set [  1] in [    0] ms` | DEBUG | both halves chose the same set — the sample size that says C is safe to promote |
+| `shadowed [  0] would reap, in [ 112] msec` | DEBUG | the barrier came back; the count is the shadow reap set and the latency is the sizing number against `reconcileDelay` |
+| `shadowed [agreed] sets [  1] in [   0] ms` | DEBUG | both halves chose the same set — the sample size that says C is safe to promote |
 | `shadowed [differ] barrier [ 1] timer [ 2]` | **WARN** | the finding, followed by the two lines below naming each set |
-| `shadowed [barrier] after [  112] ms with svc-a` | **WARN** | the set the barrier would have reaped |
+| `shadowed [barrier] after [ 112] ms, with svc-a` | **WARN** | the set the barrier would have reaped |
 | `shadowed [timer] reaped in the same tick svc-b,svc-c` | **WARN** | the set the timer actually reaped |
-| `shadowed [pending] barrier, reaped [   1]` | **WARN** | the flood was still in flight when the timer reaped, which is the "reaping too early" case |
+| `shadowed [pending] barrier, cut [ 1] soon` | **WARN** | the flood was still in flight when the timer reaped, which is the "reaping too early" case |
 | `shadowed [none] barrier on this reconcile` | DEBUG | a reconcile with no barrier, which should not happen once every site is covered |
 
 **`pending` appears only as a bracketed state**, never as a bare word — an earlier draft of the
@@ -1068,10 +1068,10 @@ unreliable.
 **Step 4 — size the deadline.** Only meaningful once there are firings to size against:
 
 ```bash
-cat | grep 'shadowed .* would reap' | sed -E 's/.*in \[ *([0-9]+)\] ms.*/\1/' | sort -n | tail -5
+cat | grep 'shadowed .* would reap' | sed -E 's/.*in \[ *([0-9]+)\] msec.*/\1/' | sort -n | tail -5
 ```
 
-(`sed` rather than `awk` on a field index, because the padded `[   112]` contains spaces and would split.)
+(`sed` rather than `awk` on a field index, because the padded `[ 112]` contains spaces and would split. Note the unit is `msec` on this line and plain `ms` on the `[agreed]` one — anchor on the whole token, not on `ms`, or the pattern matches both.)
 
 The largest barrier latency against `reconcileDelay` (10 s) says whether the grace was ever close to
 being too short. If the maximum is comfortably under a second — as the systest measured for 550 topics —
