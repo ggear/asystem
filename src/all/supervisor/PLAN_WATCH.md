@@ -1014,6 +1014,49 @@ then never again.
   `unlisted [n] drops` line. That is the design working. The number is a race — how much the broker had
   already queued before the unsubscribes landed — so it varies per departure and may be zero.
 
+#### The first test — a release with the watches running, and its baseline
+
+**Phase 1 shipped as `10.200.1531` on 2026-09-07, and the release that follows it is the first real
+test.** The shipping release could not test itself, for a reason worth recording because it is not
+obvious: the process *shutting down* was the previous version, which still tombstoned every retained
+topic on its way out, so the incoming serve read back an empty set. Confirmed from the estate rather
+than from source — all 26 retained `supervisor/+/data/service/+/name` topics are present on the broker
+now (retain flag set, all five hosts), vernemq was **not** restarted so the store was never flushed,
+and yet every host logged **zero** `rediscovered` lines. The only reading that fits all three is that
+the names were absent at readback and republished afterwards. **The next release is therefore the
+first where a Phase 1 process does the shutting down**, and the first that can exercise the readback at
+all.
+
+Two other things were lost the first time and are covered next time: **no watch was running during it**
+(so the whole watch-side view of a release went unrecorded), and log survival across a release stayed
+untested for the same reason.
+
+**Take the baseline before releasing.** `~/watch-baseline.sh` on `rue` snapshots both watches and the
+serve readback in one pass — inode and size per log file, the `shadowed`/`reclaims`/`differ`/`pending`
+counts, the live supervisor pids, and the per-host `rediscovered` count. Run it before, run it after,
+diff the two. The baseline taken at `10.200.1531 + ~12 minutes`:
+
+```
+--- rue (local) ---
+75964373  watch-10.200.1531-pid-34250.log     lines=1566  shadowed=10  reclaims=5  differ=0  pending=0
+--- mad (remote) ---
+ 6644800  watch-10.200.1531-pid-2773285.log   lines=1255  shadowed=10  reclaims=5  differ=0  pending=0
+--- serve readback across hosts ---
+  macmini-mad/max/may/meg, raspbpi-jen        rediscovered=0
+```
+
+**What the next release should show, and what each outcome means:**
+
+| Where | Expect | If it does not appear |
+|---|---|---|
+| serve, per host | one of `rediscovered [n] topics`, `rediscovered [  0] topics`, `[unmarshal]`, `[nil] readback pulse`, `[empty] readback` | silence again is a **real defect** — the readback is not running, and Q3 becomes a fix rather than an observation |
+| watch | `observed [offline] evicted [n] services`, then `observed [online] transition by [restart]`, then the `shadowed` pair | a missing transition means the watch never saw the host leave |
+| watch | `reclaims [  0] services` | **a non-zero reap on a clean graceful restart is the finding** — the departure path missed something |
+| both log files | **same inode, larger size**, release captured inside them | a new inode or an empty directory means purging is still happening and the month-long collection cannot run |
+
+That last row is the one assumption everything else rests on, and it is the only one this release could
+not check.
+
 #### How to analyse the logs and decide
 
 **This is the whole point of the collection, so it is written as commands rather than as advice.** Run
