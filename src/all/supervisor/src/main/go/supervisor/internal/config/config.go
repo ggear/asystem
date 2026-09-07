@@ -41,6 +41,14 @@ func Reset() {
 	clear(configCache)
 }
 
+func ResolvedVersion(path string) string {
+	version, _ := resolved("SERVICE_VERSION_ABSOLUTE", documentVersion(path))
+	if !DefaultVersionPattern.MatchString(version) {
+		return DefaultVersion
+	}
+	return version
+}
+
 func (c *Config) Version() string {
 	if c != nil && DefaultVersionPattern.MatchString(c.asystem.Version) {
 		return c.asystem.Version
@@ -258,25 +266,49 @@ func resolve(field, env, key string) string {
 	resolveStart := time.Now()
 	logger := scribe.Log(scribe.SourceConfig, scribe.SubjectNone, scribe.ActionResolve)
 	named := strings.ReplaceAll(field, "_", " ")
-	if value := os.Getenv(env); value != "" {
-		logger.Infof("resolved", resolveStart, "[%s] %s [env]", mask(field, value), named)
+	value, origin := resolved(env, key)
+	if origin == "" {
+		if strings.HasPrefix(key, "$") {
+			logger.Warnf("unfilled", resolveStart, "[unset] %s in [env/file]", named)
+		} else {
+			logger.Infof("unfilled", resolveStart, "[unset] %s in [env/file]", named)
+		}
 		return value
 	}
+	logger.Infof("resolved", resolveStart, "[%s] %s [%s]", mask(field, value), named, origin)
+	return value
+}
+
+func resolved(env, key string) (string, string) {
+	if value := os.Getenv(env); value != "" {
+		return value, "env"
+	}
 	if strings.HasPrefix(key, "$") {
-		name := key[1:]
-		if val := os.Getenv(name); val != "" {
-			logger.Infof("resolved", resolveStart, "[%s] %s [env/file]", mask(field, val), named)
-			return val
+		if value := os.Getenv(key[1:]); value != "" {
+			return value, "env/file"
 		}
-		logger.Warnf("unfilled", resolveStart, "[unset] %s in [env/file]", named)
-		return ""
+		return "", ""
 	}
 	if key != "" {
-		logger.Infof("resolved", resolveStart, "[%s] %s [file]", mask(field, key), named)
-	} else {
-		logger.Infof("unfilled", resolveStart, "[unset] %s in [env/file]", named)
+		return key, "file"
 	}
-	return key
+	return "", ""
+}
+
+func documentVersion(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	var document struct {
+		Asystem struct {
+			Version string `json:"version"`
+		} `json:"asystem"`
+	}
+	if json.Unmarshal(data, &document) != nil {
+		return ""
+	}
+	return document.Asystem.Version
 }
 
 func mask(field, value string) string {

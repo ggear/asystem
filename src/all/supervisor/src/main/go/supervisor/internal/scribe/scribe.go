@@ -95,8 +95,8 @@ func EnableStdout(level slog.Level) {
 	slog.SetDefault(scribeLoggerInstance)
 }
 
-func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, path, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
+	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
 	}
@@ -112,8 +112,8 @@ func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays 
 	return nil
 }
 
-func EnableStdoutAndFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays int) error {
-	writer, path, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+func EnableStdoutAndFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
+	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
 	}
@@ -152,8 +152,8 @@ func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
 	return buf
 }
 
-func EnableBufferAndFile(level slog.Level, cmd string, capacity, maxSizeMB, maxBackups, maxAgeDays int) (*LogBuffer, error) {
-	writer, path, err := fileWriter(cmd, maxSizeMB, maxBackups, maxAgeDays)
+func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSizeMB, maxBackups, maxAgeDays int) (*LogBuffer, error) {
+	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return nil, err
 	}
@@ -714,12 +714,16 @@ func logDir() string {
 	return logDirUser
 }
 
-func fileWriter(cmd string, maxSizeMB, maxBackups, maxAgeDays int) (io.WriteCloser, string, error) {
+func fileWriter(cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) (io.WriteCloser, string, error) {
 	dir := logDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, "", fmt.Errorf("create log directory failed [%s] [%w]", dir, err)
 	}
-	path := filepath.Join(dir, fmt.Sprintf("%s-pid-%d%s", cmd, os.Getpid(), logFileSuffix))
+	stem := cmd
+	if version != "" {
+		stem = cmd + "-" + version
+	}
+	path := filepath.Join(dir, fmt.Sprintf("%s-pid-%d%s", stem, os.Getpid(), logFileSuffix))
 	return &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}, path, nil
 }
 
@@ -730,7 +734,21 @@ func closeLoggerWriter() {
 	}
 }
 
+// TODO(shadow-barrier): restore log purging when the shadow-barrier collection ends.
+// logFilePurge is a var only so the purge test can flip it; make it a constant true again.
+// Set logFilePurge back to true and delete this early return and the constant. The purge is
+// disabled so that a month of watch and serve logs survives the several supervisor releases
+// expected in that window -- each release restarts serve under a new pid, and purgeLogFiles
+// would otherwise delete every prior run's file on start, destroying the evidence the
+// shadow-barrier comparison exists to collect. While this is off, /var/log/supervisor grows
+// without bound, held only by lumberjack's own MaxBackups and MaxAge.
+var logFilePurge = false
+
 func purgeLogFiles(keep string) {
+	if !logFilePurge {
+		Log(SourceScribe, SubjectNone, ActionRemove).Infof("retained", time.Now(), "[all] prior logs, purge disabled")
+		return
+	}
 	purgeStart := time.Now()
 	dir := filepath.Dir(keep)
 	entries, err := os.ReadDir(dir)
@@ -793,9 +811,10 @@ func logProcessAlive(pid int) bool {
 const (
 	BufferScreens = 100
 
-	logDirUser          = "/tmp/supervisor"
-	logDirUserMac       = "Library/Logs/supervisor"
-	logDirRoot          = "/var/log/supervisor"
+	logDirUser    = "/tmp/supervisor"
+	logDirUserMac = "Library/Logs/supervisor"
+	logDirRoot    = "/var/log/supervisor"
+
 	logFileSuffix       = ".log"
 	logFileArchive      = ".gz"
 	logFilePIDMarker    = "-pid-"
@@ -808,7 +827,7 @@ const (
 
 	durationCoarser = 10000
 
-	subjectColumns  = 4
+	subjectColumns  = 2
 	subjectSplit    = 2
 	subjectHosts    = "host"
 	subjectServices = "service"

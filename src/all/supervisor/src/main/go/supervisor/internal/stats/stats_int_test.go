@@ -307,7 +307,6 @@ func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 		expectedMean int8
 		expectedMax  int8
 		expectedMin  int8
-		expectedLast int8
 	}{
 		{
 			name:         "happy_single_value",
@@ -315,7 +314,6 @@ func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 			expectedMean: 50,
 			expectedMax:  50,
 			expectedMin:  50,
-			expectedLast: 50,
 		},
 		{
 			name:         "happy_multiple_same_values",
@@ -323,7 +321,6 @@ func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 			expectedMean: 75,
 			expectedMax:  75,
 			expectedMin:  75,
-			expectedLast: 75,
 		},
 		{
 			name:         "happy_ascending_values",
@@ -331,7 +328,6 @@ func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 			expectedMean: 30,
 			expectedMax:  50,
 			expectedMin:  10,
-			expectedLast: 50,
 		},
 		{
 			name:         "happy_descending_values",
@@ -339,7 +335,6 @@ func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 			expectedMean: 50,
 			expectedMax:  90,
 			expectedMin:  10,
-			expectedLast: 10,
 		},
 		{
 			name:         "happy_boundary_values",
@@ -347,7 +342,6 @@ func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 			expectedMean: 50,
 			expectedMax:  100,
 			expectedMin:  0,
-			expectedLast: 100,
 		},
 		{
 			name:         "happy_all_zeros",
@@ -355,7 +349,6 @@ func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 			expectedMean: 0,
 			expectedMax:  0,
 			expectedMin:  0,
-			expectedLast: 0,
 		},
 		{
 			name:         "happy_all_maximum_value",
@@ -363,7 +356,6 @@ func TestStatsInt_TrendWindow_PushAndStats(t *testing.T) {
 			expectedMean: 100,
 			expectedMax:  100,
 			expectedMin:  100,
-			expectedLast: 100,
 		},
 	}
 	for _, testCase := range tests {

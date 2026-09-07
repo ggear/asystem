@@ -21,6 +21,13 @@ func GetIDDeps(id ID) []ID {
 	return metricBuildersByID[id].dependencies
 }
 
+func GetIDLabel(id ID) string {
+	if id < 0 || id >= MetricMax {
+		return ""
+	}
+	return metricBuildersByID[id].label
+}
+
 func GetIDName(id ID) string {
 	if id < 0 || id >= MetricMax {
 		return ""

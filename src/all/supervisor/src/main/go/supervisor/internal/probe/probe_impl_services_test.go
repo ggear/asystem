@@ -62,6 +62,46 @@ func TestProbeImplServices_Services(t *testing.T) {
 			expectedError:        false,
 		},
 		{
+			name:            "happy_ghost_states_every_derivation_and_stays_not_ok",
+			newDockerClient: func() (*client.Client, error) { return &client.Client{}, nil },
+			listContainers: func(_ context.Context, _ *client.Client) ([]container.Summary, error) {
+				return []container.Summary{}, nil
+			},
+			setupFunc: func(p *servicesProbe) {
+				p.configuredServiceNames = []string{"ghostsvc"}
+			},
+			validateFunc: func(t *testing.T, services map[string]service) {
+				ghost, found := services["ghostsvc"]
+				if !found {
+					t.Fatalf("Got %v, expected a configured service with no container to be a ghost", services)
+				}
+				for name, derived := range map[string]derivation{
+					"health_status":  ghost.healthStatusDerived,
+					"used_processor": ghost.usedProcessorDerived,
+					"used_memory":    ghost.usedMemoryDerived,
+					"used_disk_rate": ghost.usedDiskOpsDerived,
+					"used_network":   ghost.usedNetworkDerived,
+					"up_time":        ghost.upTimeDerived,
+					"restart_count":  ghost.restartCountDerived,
+				} {
+					if derived.detail == "" {
+						t.Errorf("%s derivation: got empty want stated, or the pulse logs unstated at ERROR", name)
+					}
+					if derived.inert {
+						t.Errorf("%s derivation: got inert want stated, since inert skips the rule and paints a ghost green", name)
+					}
+				}
+				if healthy, _, err := ghost.healthStatus(); healthy || err != nil {
+					t.Fatalf("ghost health: got %v %v want false and no error", healthy, err)
+				}
+				if configured, _, _ := ghost.configuredStatus(); !configured {
+					t.Fatalf("ghost configured: got false want true")
+				}
+			},
+			expectedServiceCount: 1,
+			expectedError:        false,
+		},
+		{
 			name:                 "happy_reconnection",
 			expectedServiceCount: 1,
 			newDockerClient:      func() (*client.Client, error) { return &client.Client{}, nil },

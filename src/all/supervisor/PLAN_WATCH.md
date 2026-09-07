@@ -164,7 +164,7 @@ it compensates for, and A + B beat it on latency anyway.
 
 ---
 
-## Recommendation tested against every case
+## Recommendation tested against every case, A + B built
 
 Latency is the time from the departure becoming true to the row leaving every watch. `A+B` is the
 recommendation; `+C` shows what the barrier adds.
@@ -260,17 +260,21 @@ shortens the row's life; it does not prevent the row.
 
 ---
 
-## Open: the two gaps
+## Open: the two gaps — one closed, one deliberately kept
 
-**Case 8, a lost tombstone, is the only unbounded one.** Departures are published at QoS 0 like
+**Case 8 is closed, built.** Both tombstone forms now publish at **QoS 1**, in both removal paths.
+The reasoning below is why, and is kept because the temptation to put them back on QoS 0 with
+everything else will recur.
+
+**Case 8, a lost tombstone, was the only unbounded one.** Departures were published at QoS 0 like
 everything else, which is right for a value republished every pulse and wrong for a one-shot state
-change. **Publish both tombstone forms at QoS 1.** They are rare — a handful a day estate-wide — and
-the subscribe side is already QoS 1 for wildcards. That closes case 8 without a new mechanism and
-brings its worst case in line with case 1.
+change. They are rare — a handful a day estate-wide — and the subscribe side is already QoS 1 for
+wildcards, so this closed case 8 without a new mechanism and brought its worst case in line with
+case 1.
 
-**Case 7 is why C cannot delete the whole-host guard.** Keep the guard: a reap that would empty a
-host holds once, resubscribes, re-opens the barrier, and only the retry reaps. That is the existing
-behaviour and it is already proven against exactly this scenario. If keeping it is unacceptable, D is
+**Case 7 is why C cannot delete the whole-host guard, and none of this changes it.** Keep the guard:
+a reap that would empty a host holds once, resubscribes, re-opens the barrier, and only the retry
+reaps. That is the existing behaviour and it is already proven against exactly this scenario. If keeping it is unacceptable, D is
 the design that removes it by construction — a reap needs a roster to act on, and absence is never
 evidence.
 
@@ -355,7 +359,34 @@ never per heartbeat; an unknown host counts as online.
 today** — `src/test/python/` is empty — and Phase 1 is the reason to add a systest, because four of
 its five steps are properties of the **running container** that a Go test cannot reach.
 
-### Add a systest, planned
+### Add a systest, built
+
+**What it ended up being: 15 cases in 139 s**, in this order, because the mutating cases must not run
+ahead of the read-only ones. The stop-plant-restart-rediscover-tombstone cycle is half the runtime on
+its own (68 s, nearly all container boot); nothing else exceeds 13 s.
+
+| Case | Asserts |
+|---|---|
+| `publishes_vitals` | status is `online`, two host envelopes are well formed and in range, and supervisor sees its own container |
+| `reports_an_unmeasurable_metric_as_failed_and_an_absent_one_as_inert` | temperature carries `failed`; the fan and the kernel log read 0 and ok without it |
+| `logs_an_environment_fault_at_warn_and_a_host_fact_at_info` | the levels — `errEnvironment` at WARN, the sensor tier at INFO, neither at ERROR |
+| `reports_a_ghost_and_an_unconfigured_service` | a configured service with no container reads not ok and still publishes its name; a running service absent from the config reads not ok |
+| `declares_every_published_topic` | every topic published for the host and its configured services is declared under `model/`, which is what catches a metric renamed without a `fab generate` |
+| `passes_its_own_health_check` | `docker exec … checkexecuting.sh` exits 0 |
+| `never_panics_and_stays_healthy` | docker reports `healthy`, and no `panic:` or goroutine dump in the logs |
+| `reports_a_declared_share_that_never_mounts_as_failed` | the one *positive* failure the fixture drives — a share in `fstab` with no `proc/mounts` line reads **100 and not ok** after `mountSettle`, and carries no `failed`, since not-mounted is countable rather than unmeasurable |
+| `removes_a_service_that_departs` | a retained orphan name is tombstoned in both forms, the nil form carries a stamp, and the topic ends cleared |
+| `retains_its_records_across_a_graceful_stop` | after `docker stop` the status is `offline` **and** the data topics survive |
+| `rediscovers_and_clears_an_orphan_on_restart` | an orphan planted while the host is down is read back and tombstoned after `docker start` |
+| `registers_a_service_that_appears_and_removes_one_that_goes` | a **real container** started and removed on the docker socket — the service appears and is published, then is tombstoned in both forms. This is production scenarios 1 and 2 for the serve half, and it is stronger than the planted-retained-topic case because nothing is simulated |
+| `resumes_publishing_after_the_broker_restarts` | `docker restart vernemq`, then the host re-asserts `online` **and** publishes a value stamped after the restart — a retained value proves nothing here, only a fresh one does |
+| `publishes_its_will_and_keeps_its_records_when_killed` | `docker kill`, then the broker's last will marks the host offline while every retained record survives — the crash path, and the half that distinguishes the will from the graceful publish |
+| `retained_delivery_precedes_a_barrier_published_after_the_subscribe` | the Phase 2 measurement |
+
+**Subscribe before you trigger.** The departure path is now fast enough to finish between a publish
+and a second client's connect, so a test that published first saw *nothing at all* — which reads as a
+failure and is the fix working. `_await` takes an `on_ready` callback that fires from the connect
+handler, and both the departure and the restart cases use it.
 
 `src/test/python/system/system_test.py` plus a `.env_test`, following `src/mad/network` — which
 connects to a broker at `127.0.0.1:${VERNEMQ_API_PORT}`, subscribes, and asserts payload shape. The
@@ -368,9 +399,11 @@ The default is `host.docker.internal`, which matches no schema entry, so `config
 returns empty, there are no configured services, and the ghost and readback paths never exercise.
 This is the same shape as tempstat's `.env_test`, which sets `TEMPSTAT_MOCK=1` and a null device map.
 
-#### It will not start as configured, measured on Docker Desktop
+#### It would not start as configured, measured on Docker Desktop
 
-Tested directly on the dev machine (`Docker Desktop`, `7.0.12-linuxkit`):
+Tested directly on the dev machine (`Docker Desktop`, `7.0.12-linuxkit`). All of it is resolved by the
+parameterisation below, plus two things this table did not predict — see *Deviations*: the image ships
+no binary at all, and the `/dev` bind's target must move out of the data directory or `fab clean` fails.
 
 | Stanza | Result | Blocker |
 |---|---|---|
@@ -492,9 +525,11 @@ before anything Phase-specific is added:
     the docker socket, which is the one service guaranteed to exist in this environment
 - **`test_declares_every_published_topic`.** Walk `src/build/resources/schema/vernemq/model` for
   directories containing the `payload` leaf and assert every topic the test subscribed to is
-  declared. Supervisor uses the same `payload` leaf name as network, so `_schema_topics()` copies
-  verbatim. This is the systest-scale version of what `verify.sh` does against production, and it is
-  the check that catches a metric renamed in `metric_build.go` without a `fab generate`.
+  declared — and it goes further than network's, asserting every topic actually *published* for the
+  host and its configured services rather than a hand-listed few. Supervisor uses the same `payload`
+  leaf name, so the walk is network's, inlined at its one call site. This is the systest-scale version
+  of what `verify.sh` does against production, and it is the check that catches a metric renamed in
+  `metric_build.go` without a `fab generate`.
 
 Note the topics are host-scoped, so they are built from the `SUPERVISOR_HOST` that `.env_test` sets —
 they cannot be constants the way network's `network/data/internet` is.
@@ -514,13 +549,13 @@ data quality that depends on probes which cannot read a real host from here.
 | 4 | Natural fit — the systest has no influxdb3, so asserting the pulse still publishes *is* the offline-database case. |
 | 5 | Time from container start to the first retained data topic appearing. The end-to-end form of the log timing below. |
 
-### In Go, against a throwaway broker
+### In Go, against a throwaway broker, built
 
 `TestEngine_RunListeningStreamLoop` already spins up a real VerneMQ per test via
 `testutil.SetupBrokerContainer(t)` behind `testutil.RequiresDocker(t)`. Keep the **fine-grained
 logic** here — it is faster, it runs without an image, and it can reach states the container cannot
-be steered into. Each assertion below fails against today's code, which is what makes them
-regression tests rather than descriptions:
+be steered into. Each assertion below was run once with its fix reverted and observed to fail, which
+is what makes them regression tests rather than descriptions:
 
 | Step | Test |
 |---|---|
@@ -534,10 +569,592 @@ The division is: **the systest proves the container behaves, the Go tests prove 
 Case 6 in particular — a tombstone arriving while the watch has the host wrongly muted — belongs in
 Go, because muting a host on demand is a state the systest has no way to create.
 
-### On a host, with one synthetic topic
+### Steps 4 and 5, measured
 
-**The estate cannot produce the orphan condition naturally right now** — on `max`, config ∪ running
-covers all seven retained service names, so nothing is orphaned. Create it deliberately:
+Read the serve log and time `sessions [broker] connect` against the first `gathered [n] metrics`
+line. That gap was 7 s on `may`. In the Go test the first retained publish lands at **2.05 s** against
+**5.06 s** with the immediate tick removed, while the unreachable database backs off for 3.5 s on its
+own goroutine without delaying it — so the remaining 2 s is the first docker poll, not dead time.
+
+### `fab exe`, resolved
+
+`BROKER_HOST` resolves to `host.docker.internal`, so a local run cannot touch the production broker.
+`SUPERVISOR_HOST` used to resolve there too, which matches no schema entry, so `config.Services(host)`
+was empty, there were no configured services and the ghost path never exercised. `.env_exec` now sets
+it to a host that **is** in `config.json`, and carries the same values as `.env_test` — which it must,
+since `_write_env` layers exactly one environment file and there is no shared dev file. A `fab exe` is
+therefore representative enough to read a dashboard against, and it is the fast iteration loop for the
+systest: bring the stack up once, then run `pytest` against it repeatedly.
+
+---
+
+## Deviations from this plan, built
+
+Recorded as they were made, with the reason, so the plan and the repo do not disagree silently.
+
+- **Phase 1 step 10 was inverted: ghost derivations are stated, not inert.** The plan asked for
+  `derivedInertf`, arguing a ghost "stops being judged by a rule it cannot satisfy". That would have
+  turned every ghost **green**: six of the seven affected metrics carry
+  `All(Gated(GateServiceAggregate), ...)` and the seventh, `health_status`, is `Truthy()` on a value
+  that is `false` — and `evaluateRule` short-circuits an inert metric to `OK: true` before either is
+  read, so the very rules that paint a ghost red would never have been evaluated. A configured service with no container is a fault the display must
+  show, not an absence like a fanless host. The `unstated` ERROR storm is fixed by the half that
+  actually caused it — the empty `derivation{}` — so each ghost metric now states one
+  (`computed [0 pct] absent, service [x] is configured with no container ...`) and the rule still runs.
+  Inert stays for the four host cases where there is genuinely nothing on the host to measure.
+- **The image now builds its own Go binary, because supervisor could not run locally at all.** The
+  plan assumed step 7 only had to strip the host-coupled binds. It does not: supervisor's `Dockerfile`
+  ships **no binary** and its `CMD` is `/asystem/mnt/supervisor`, which exists only because `_release`
+  cross-compiles into `target/release/data` and the host mounts that as `/asystem/mnt`. Locally
+  `SERVICE_DATA_DIR` is `target/runtime-system`, nothing puts a Linux binary there, and the container
+  dies on `exec /asystem/mnt/supervisor failed: No such file or directory` — so `fab exe` and `fab st`
+  have never worked for this module, and no systest was reachable without fixing it. Supervisor is the
+  only Go module in the repo built this way: `network` compiles in a `golang:${ASYSTEM_GO_VERSION}`
+  builder stage and ships `/asystem/bin/network`, which is what supervisor now does too. Three
+  consequences worth knowing — the release-time cross-compile still runs and is still **needed** — `install.sh`
+  starts a container only for form factor edge or server, so a `client` host never runs one and the
+  cross-compiled binary is its only deliverable, `rue`'s being darwin/arm64 for `atops`; the in-image
+  binary supersedes only the mounted copy on edge and server hosts; `buildx --platform` picks the builder's architecture, so the
+  in-image binary matches the target host by construction rather than by a separate `GOOS`/`GOARCH`
+  pair; and `src/build/resources/checkalive.sh` had to follow the path, since it `pgrep`s the binary
+  by its absolute path. `.env_test`/`.env_exec` also pin `SERVICE_LOCAL_RUNTIME=native`, or every
+  local run compiles Go under QEMU. The builder stage re-downloads the module cache on every image
+  build, which is a minute or so and is exactly what `network` already pays; a BuildKit cache mount
+  would fix it for both and belongs in neither module alone.
+- **The pulse's own tombstone branch went to QoS 1 with `MarkDelete`.** Step 3 named only the deletes
+  listener, but `process` publishes the same two forms for the interleave case and would have been the
+  one remaining departure at QoS 0 — the two paths were meant to stop differing, and leaving one at
+  QoS 0 would have re-opened case 8 through the back door.
+- **The systest found a metric that has never worked, and it is not one this plan was looking for.**
+  `newHostProbe` builds a `cpuUsageSampler` and a `diskUsageSampler` and **no `networkUsageSampler`**,
+  so `hostProbe.usedNetwork` took its nil guard on every poll and `host/used_network` has been
+  `faulting [host] with [no network sample taken, the probe was created without a network sampler]` at
+  **ERROR**, on every host, since it was written — a red box and a permanently absent InfluxDB column.
+  Nothing caught it because the sampler is not injected in any test and the estate has no assertion
+  that a metric ever reads. One line fixes it; the point worth keeping is that the module's **first**
+  systest found it on its **first** run, which is the argument for step 7 that the plan's own case
+  makes less well.
+- **The fixture cannot drive `host/temperature`, so that row was dropped and inverted.** The plan's
+  fixture table plants an hwmon tree and expects 45 °C. `probe_lib_sensors.go` reads **bare `/sys`**
+  by design — sysfs is kernel-global, so it is deliberately not rebased through `$SUPERVISOR_MOUNT` —
+  and the planted tree is therefore unreachable from the container. The hwmon fixture is deleted, and
+  the assertion becomes the more valuable half anyway: temperature carries `failed`, logs its absence
+  at **WARN** under `errEnvironment` and never at ERROR, while the fan and the kernel log read
+  **0 and ok** without `failed`. That is assertion 1 of the plan's four — no confident zero for an
+  input that could not be read — asserted from the published payload rather than from the log, so it
+  needs no DEBUG level and cannot drift with a message's wording.
+- **Phase 1 step 11, the third row state, was not built, because its premise does not hold in the
+  code.** The plan says a brand-new service "looks broken" since awaiting and failed both render as a
+  blank cell and a failure paints the service name in `colourAlert`. Read against `drawValue`, the
+  three states are already distinct: `runCacheMetricTask` returns **before** `Store` when the pulse is
+  nil, so an awaiting record is never `Failed`; the sibling scan that alerts the service name tests
+  `sibling.Value.Failed` and so never fires for an awaiting row; and `onDiscovery` stores the name
+  record the moment the name arrives, so an awaiting service renders **its name in the ordinary colour
+  beside empty cells**, where a failing one renders its name alert and an empty slot renders nothing
+  at all. Building a fourth rendering against a symptom nobody has reproduced would churn the sixty-odd
+  golden layouts for no observed defect. It stays in Phase 3 instead, tied to the one blank that **is**
+  unexplained — the `mlflow` pulse — because if that turns out to be publish-side, this changes nothing,
+  and if it does not, the state it needs to render is not the one described here.
+- **The `/dev` bind target moved out of the data directory, or `fab clean` cannot clean.** The plan puts
+  it at `/asystem/mnt/dev`, which is *inside* the `${SERVICE_DATA_DIR}` bind — so the container's own
+  mountpoint materialises on the host as `target/runtime-system/dev`, and Docker Desktop leaves it
+  carrying a `user:graham deny delete` ACL. `rm -rf` then fails with `Permission denied` followed by
+  `Directory not empty`, which aborts `_clean` and therefore every `fab b`, `fab t` and `fab st` for the
+  module until it is cleared by hand with `chmod -N`. `/asystem/dev` is outside every bind, so the
+  mountpoint stays in the container's own filesystem and nothing is created on the host at all.
+- **Every log line changed keeps its neighbours' rendered width.** `RunListeningStreamLoop` details
+  are **32 characters wide** — 21 of its lines already were, and the number fields are padded (`%3d`,
+  `%4d`) precisely so a column of them stays a column. New lines match it, one pre-existing outlier
+  (`[%4d] topics [%3d]+[%2d] restored`, 33) was brought to 32, and the only details allowed to vary
+  are those ending in a `%v` error or a `%s` topic, which cannot be padded. `RunAllProbesPublishLoop`
+  has no single house width, so the five readback lines match their own anchor instead — the existing
+  `[%s] host, rediscovered [%3d] topics` at 35 — and the no-op case reuses that sentence with a
+  literal `[  0]` rather than inventing a second wording.
+
+---
+
+## Phases
+
+Restructured around **what can be finished and proven on the dev machine** against what genuinely
+needs the estate. The original numbering is kept in brackets, since the sections above refer to it.
+
+The dividing line is not difficulty, it is **evidence**. Everything whose correctness is a property
+of the code, the packaged image, a broker and a docker socket is Phase 1 and lands in one pass, each
+step carrying the systest or Go assertion that proves it. Everything whose correctness is a property
+of *the estate over time* — how often a departure is lost, whether the reconcile still earns its
+place, why one ghost painted and its neighbour did not — is Phase 3, and cannot be brought forward by
+building more. It can only be brought forward by **releasing Phase 1 and collecting**, which is why
+Phase 3 is written as a collection protocol rather than as a change.
+
+### Phase 1 — everything the dev machine can prove, now [was Phases 1, 2 and 4]
+
+Eleven steps, landing together. Each names the assertion that holds it, and **no step lands without
+one** — a change to a lifecycle this delicate that nothing exercises is indistinguishable from a
+regression waiting for a release.
+
+| # | Step | Was | Proven by |
+|---|---|---|---|
+| 1 | **done** — delete the shutdown tombstone-all | 1.1 | systest: `docker stop`, then the host's retained data topics still exist. Go: cancel the publish loop, same assertion |
+| 2 | **done** — every silent return in the drop inventory instrumented, readback first | 1.2 | Go: a malformed retained name is `rejected` at ERROR naming `unmarshal`, read out of a `scribe` buffer, rather than returning silently. The **diagnosis** it enables is Phase 3 |
+| 3 | **done** — `MarkDelete` and the pulse branch both publish both forms at QoS 1 | 1.3 | Go: subscribe, trigger a delete, assert nil-pulse JSON then empty payload, retained topic ends cleared. Systest: same over the real image |
+| 4 | **done** — `databaseConnect` off the startup path, behind an `atomic.Pointer` | 1.4 | Go, under `-race`: the database backs off for 3.5 s against a dead endpoint while the first publish still lands at 2.07 s, and the client is stored and read across goroutines with no race. The systest has a *reachable* influx, so it cannot cover this |
+| 5 | **done** — first poll tick immediate | 1.5 | Go: the first retained publish lands at **2.05 s** against a budget of one poll period, and at **5.06 s** with the tick removed. Deliberately not a systest assertion — container boot dominates and would only blunt it |
+| 6 | **done** — compose stanzas parameterised, env files added, image builds its own binary | 1.6 | It is what makes steps 7-9 runnable at all; the fixture tree below is the assertion |
+| 7 | **done** — 15 cases, and it found the dead network sampler on its first run | 1.7 | Itself |
+| 8 | **done** — fixture tree, minus the temperature row it cannot drive | 1.7 | systest: inert-versus-errored, and the levels, per the table in *How to test* |
+| 9 | **done** — publish batch sorted by GUID | 2.1 | Go: `Take` returns a batch sorted by host, service then metric, which is what makes a pulse reproducible; asserting the rendered protocol instead would test `sort.Slice` in `render` rather than the map iteration that was actually non-deterministic |
+| 10 | **done, inverted** — ghost derivations *stated*, never inert, see Deviations | 2.2 | Go: a configured service with no container states its derivation and logs no `unstated` ERROR |
+| 11 | ~~The third row state — present but not yet reporting~~ **dropped, see Deviations** | 4 | — the three states already render distinctly, so there is nothing to build until the unexplained blank is diagnosed |
+| 12 | **done** — the reconcile retry's lost update fixed | new | Go, under `-race`: the retry branch re-reads `reconciles[host]` under the lock and re-arms only when the entry is still the one it collected, logging `deferred [superseded] by a newer schedule` at DEBUG otherwise. See *The reconcile's own defect* below |
+| 13 | **done** — the barrier in **shadow mode**, behaviour unchanged | new (C, demoted) | Go: `compareBarrier` is table-tested over all five outcomes out of a `scribe` buffer, and the test was run with the comparison forced to `true`, where two cases fail. The stream loop emits `returned`/`shadowed` against a real broker, clean under `-race` |
+
+**Landed, and each assertion was checked against the old behaviour before being trusted.** A test that
+passes for the wrong reason is worse than none, so every regression assertion was run once with its fix
+reverted: the graceful stop reported `used_memory cleared after a graceful stop`; the departure
+reported `pulse ok[OK] value[zztest] in the form before the empty payload`; the first publish moved
+from **5.06 s** to **2.05 s**, against a budget that is the poll period itself, so the test
+discriminates on the ticker rather than on a margin; and the ghost reported `derivation: got empty want
+stated`. The unreachable-database case backs off for 3.5 s on its own goroutine while the first publish
+still lands at 2.07 s, and the whole engine suite is clean under `-race`, which is the `atomic.Pointer`'s
+only proof. The systest is **15 cases in 139 s**, one of which has to wait out `mountSettle`'s two minutes to
+see a share go red — which is why it sits after the read-only cases and before the mutating ones rather
+than in a slow suite of its own. The departure lands in **8.9 s** end to end including the test's own
+subscribe and settle, and the full stop-plant-restart-rediscover-tombstone cycle in **68.5 s**, of
+which the container's boot is nearly all — that case is a correctness assertion, not a latency one,
+and the latency number to trust is the Go test's.
+
+**Shadow mode is built, and it is deliberately more than a latency probe.** The first sketch of step 13
+only logged when the barrier returned. That is the *sizing* half and it answers nothing about
+correctness, so what landed computes the reap set the barrier **would** produce and logs it beside the
+one the timer actually used. The timer still decides; nothing reaps differently.
+
+The mechanism is four small pieces in `engine.go`. `openBarrier` publishes a per-host nonce to
+`supervisor/watch/<pid>/barrier` immediately **after** each resubscribe — the four sites being
+`proveOnline`, the restart transition, the connect transition and the deferred retry — so the retained
+flood is queued ahead of it. `barrierSeen` marks a service the moment `onData` or `onDiscovery` stores
+anything for it. `onBarrier` fires when the nonce comes back, records the latency and computes
+`cache.Services(host)` minus the seen set. `compareBarrier` then runs at reap time and reports one of
+five outcomes:
+
+| Line | Level | Meaning |
+|---|---|---|
+| `returned [n] shadow after [m] ms` | DEBUG | the barrier came back; this is the sizing number against `reconcileDelay` |
+| `shadowed [agreed] on [n] after [m] ms` | DEBUG | both halves chose the same set — the sample size that says C is safe to promote |
+| `shadowed [differ] barrier [n], timer [n]` | **WARN** | the finding, followed by two lines naming each set |
+| `shadowed [pending] barrier, timer reaped [n]` | **WARN** | the flood was still in flight when the timer reaped, which is the "reaping too early" case |
+| `shadowed [none] barrier for this reconcile` | DEBUG | a reconcile with no barrier, which should not happen once every site is covered |
+
+**Both changes are marked in the source, and `grep` is the removal list.** Everything shadow mode
+added carries `TODO(shadow-barrier)` — 15 occurrences in `engine.go`, one on the test, one in
+`scribe.go` — so `grep -rn "TODO(shadow-barrier)"` enumerates every symbol and call site to delete if C
+is not adopted. The anchor comment on `hostBarrier` lists them explicitly. **These are deliberate
+exceptions to the repo-wide no-comments rule**, the same standing exception `backupProbe.dormant()`
+already holds: a temporary instrument that must be found and removed later cannot rely on someone
+remembering it. If C *is* adopted, none of the shadow code survives as it stands either — the barrier
+becomes the reap decision and the timed arm goes instead.
+
+**Log purging is disabled for the collection window, and that is load-bearing.** `purgeLogFiles` deletes
+every prior run's file on start, keeping only live pids. Supervisor is expected to be released several
+times inside a month, and **each release restarts `serve` under a new pid**, so the purge would delete
+the evidence on every release — the collection could never span more than the gap between two releases.
+`logFilePurge` is therefore `false`, gated at the top of `purgeLogFiles` and logging
+`retained [all] prior logs, purge disabled` at INFO so the state is visible rather than assumed. It is a
+`var` rather than a `const` **only** so `TestScribe_PurgeLogFiles` can flip it and keep exercising the
+purge logic — otherwise that code would rot untested for a month and re-enabling it would be a leap.
+While it is off, `/var/log/supervisor` grows bounded only by lumberjack's own `MaxBackups` and
+`MaxAge`, which is why those were sized first.
+
+**Why shadow rather than adopting C outright.** The failure mode of a wrong reconcile is reaping a
+*live* service, and it is silent, self-healing within a heartbeat and intermittent under load — and a
+spurious reap logs **identically** to a correct one, since the watch has no ground truth. So "adopt it
+and revert if it breaks" assumes a signal that does not exist. There is one weaker post-hoc tell in the
+log (`reclaims … of <svc>` followed by a `register` for the same service, both INFO), but it lands after
+the row has already blanked and can lag a heartbeat. Shadow mode reports the same condition **before**
+anything is reaped, and is the only configuration that keeps a control arm.
+
+**What it is expected to show, and the honest prior.** `mad` logged **zero** reconcile firings in
+14.5 hours, because a stable server never reconnects. Every firing therefore comes from the wake path
+on `rue`. So C's entire value is concentrated in one process on one machine, and the more likely
+outcome of this collection is **delete the reconcile** rather than replace it — which is already the
+first branch of Q1. Shadow mode is what tells the two apart at no risk.
+
+**Two decisions to make before C is promoted, neither made yet.** First, the **fallback**: this plan
+says a barrier timeout must "degrade to today's behaviour", and if that stands then C *deletes nothing*
+— `reconcileDelay`, `started`, the cutoff and `ServicesBefore` all survive as the fallback path and C is
+a net addition. C only simplifies if the fallback is **skip the reap and warn**, which is defensible
+since a barrier that did not return means the flood is unproven and reaping is precisely what must not
+happen; the next connect or revive schedules another. Second, the **whole-host guard stays either way**
+(case 7), and it is what converts an early-returning barrier from a mass reap into a deferred one —
+which matters because the ordering measurement was a single-subscriber test broker, not six hosts under
+load.
+
+**The reconcile's own defect, found while assessing whether it should survive C.** `due` was collected
+under `reconcileMu`, the lock released, and the retry branch then **blind-wrote a stale local copy
+back**: `reconciles[pending.host] = pending`. Two things could land in that window from other
+goroutines. `onConnect` clears the map, so the write **resurrected a deleted entry** carrying a
+pre-reconnect `started` cutoff. Worse, `scheduleReconcile` from `onStatus` or `proveOnline` sets
+`retried = false` with a fresh cutoff, and the overwrite replaced it with `retried = true` and an older
+one — **spending the whole-host guard on a reconcile that never used it**, so the next firing could reap
+an entire host without the hold that exists precisely to stop that. The window is short, since
+`ServicesBefore` is an in-memory walk, so this is rare rather than routine; the failure mode is exactly
+the one the guard was written to prevent, which is what makes it worth fixing rather than tolerating.
+The fix re-reads the entry under the lock and re-arms only when it is still the one collected. **It is
+not throwaway work under C** — the plan's own deletion list keeps the whole-host guard and its retry
+(case 7), so this code survives C either way.
+
+**What was checked and found sound, so it is not re-litigated.** The reap cutoff is **single-clock**:
+`onData` overwrites `value.Timestamp = time.Now().Unix()` before storing, so `ServicesBefore` compares a
+locally-stamped receive time against a locally-stamped cutoff and no publisher-clock skew enters the
+reap. (`proveOnline` deliberately does the opposite, comparing the *publisher's* stamp against the local
+offline instant, which is what stops stale in-flight data reviving a host.) The wall/monotonic split
+across `started`/`deadline` does what it claims. `Refresh()` is correctly conditional on something
+actually having been reaped. The one residual is that the cutoff is second-granular — `seen < since` on
+`Unix()` — giving the reap ±1 s of fuzz, harmless against a 10 s `reconcileDelay` but see below.
+
+**Where a local assertion could not be built, stated so it is not claimed twice.** A case driving
+`cache.Wake(brokerExpiry + 1s)` through `RunListeningStreamLoop` against a real broker was written and
+**removed**: it passed identically whether or not the record was redelivered retained, so it
+discriminated on nothing. Two reasons — the second-granular cutoff above makes a refresh and a cutoff
+inside the same second indistinguishable, and the table driver's own publish refreshes the record
+regardless. Ageing the record past a second boundary did not fix it. So whether a wake ever reaps a
+**live** service is a Phase 3 estate observation (scenario 7), not something the dev machine proves,
+and the same difficulty is why step 13 is not yet built. Do not re-add such a case without first running
+it against the reverted behaviour.
+
+**Steps 1, 2 and 3 are the minimum that changes behaviour**, and step 2 is the keystone: step 1 makes
+the breadcrumbs survive, but if the readback is broken nothing reads them. Steps 4 and 5 are
+separable and are worth landing even alone, since they make every metric on every host appear 3-6 s
+sooner on every start. Steps 9, 10 and 11 touch nothing in the lifecycle and can land in any order.
+
+**What the systest cannot cover, stated once so it is not claimed twice.** The binds and the
+`rshared` propagation have to be stripped for the container to run on Docker Desktop, so those exact
+stanzas stay untested — see the measured table in *How to test*. What is genuinely covered is the
+packaged image, the capabilities and device rules, the generated `checkexecuting.sh`, the real
+SIGTERM shutdown path, and every assertion above.
+
+### Phase 2 — measure the barrier here, then decide C here [was Phase 0.2 and Phase 3]
+
+**This is no longer a production measurement, and that is the one piece of the original Phase 0 that
+moves forward.** `fab st` brings up the module's run dependencies, so the systest runs against a real
+**VerneMQ**, not a stand-in — which is exactly the broker whose queueing behaviour the barrier
+assumption rests on. So measure it here:
+
+1. Publish a retained set at the sizes already measured in `CLAUDE.md` (443 and 546 topics).
+2. Subscribe to the wildcard, publish a barrier nonce to a second topic, and record whether every
+   retained message precedes it. Repeat enough times to catch an interleave, not once.
+3. Record the result in this plan either way. It is a fact about VerneMQ 2.x, it will not change, and
+   nobody should have to measure it twice.
+
+**Measured, and it holds.** `test_retained_delivery_precedes_a_barrier_published_after_the_subscribe`
+seeds **550** retained topics under a `zztest/barrier` namespace, then over **3** rounds subscribes to
+the wildcard, publishes a non-retained nonce to a sibling topic from the connect handler, and records
+the arrival order. Every round delivered all 550 retained messages **before** the nonce, with no
+interleave. The namespace is its own, so nothing the module declares is touched, and the test clears
+its retained set in a `finally` so a failure cannot strand it. Keeping it as a test rather than a
+one-off measurement means a VerneMQ upgrade that breaks the assumption fails the build rather than
+being discovered by a watch that reaps a live host.
+
+**C is therefore viable and is still not being built — but the reason has been corrected.** This
+section used to say *"building it now would remove the machinery whose firing rate is the evidence for
+removing it"*. **That argument does not hold and should not be relied on again.** Under C the *reap*
+survives; only the timing heuristic goes. A barrier reap fires when a service is in the cache and
+absent from the seen set once the flood is provably complete — the same signal Q1 wants, minus the
+timing noise. Today "fired" is ambiguous between a lost departure, a slow flood and a wake; under C
+the middle one is eliminated by construction, so **C would make Q1's measurement cleaner rather than
+impossible**. It does not make it unambiguous: a reap after a reconnect can still legitimately mean
+"departed while we were disconnected" rather than "lost departure", and that is equally true today.
+
+**The real blocker is that Phase 1's acceptance criterion is written in terms of the current
+reconcile.** Phase 1's acceptance is *"the reconcile's `reclaims` line does not fire for that host"*,
+and Phase 1 has never run on the estate. Landing C in the same release puts two substantial changes
+into one lifecycle at once and leaves Phase 1 unvalidatable against its own test — if a watch blanks a
+row there are two candidate causes and no way to separate them. That reason is **time-limited**: it
+expires the moment Phase 1 has one release behind it, unlike the evidence argument it replaces, which
+would have deferred C forever.
+
+Two smaller points argue the same way. C needs a timeout fallback degrading to today's behaviour, so
+the first cut does not actually delete the timed path — it demotes it. And the ordering measurement,
+while solid, is a single-subscriber test broker; production is six hosts under real load.
+
+So C is buildable whenever it is wanted — with its timeout fallback and its whole-host guard intact
+(case 7) — and it would buy the deletion of `reconcileDelay`, `reconcileGrace`, the `connected`
+cutoff, the `fromConnect` distinction and `RecordCache.ServicesBefore`. **D stays in reserve** for the
+one case C does not cover cleanly, and no longer as a hedge against the ordering assumption failing.
+
+**The augmented form is what should ship first, and it is Phase 1 step 12 below.** Publish the barrier
+nonce and log when it returns, but leave the timed reconcile deciding the reap. No behaviour changes,
+nothing to roll back, and it yields the one number nobody has: the real distribution of
+flood-completion times measured against the 10 s `reconcileDelay` currently guessing at it. All three
+outcomes are decisive — consistently inside the deadline means C is safe and `reconcileDelay` was
+always over-generous; sometimes *after* it means the timed reconcile has been reaping before the flood
+completed, which is a live defect invisible today and makes C urgent; never returning means the
+ordering assumption fails under production load and D comes off the shelf. It also gives Q1 a sharper
+partition than log archaeology: a reclaim firing **after** the barrier returned is a real lost
+departure, one firing before it is a timing artifact.
+
+### Phase 3 — production observation, later
+
+**Nothing here is a code change.** It is the collection protocol for the three questions Phase 1
+cannot answer on a dev machine, and it needs **two releases**: one to get the instrumentation onto
+the hosts, one to validate against it. Supervisor is group 31 and deploys everywhere, so each is an
+estate-wide release.
+
+**The estate note below is resolved, so the confound is gone.** `max` and `may` each run exactly
+their configured set now, and the one remaining configured-but-absent service is `openra` on `max`,
+which carries a `.sleep` marker and is therefore deliberately dormant rather than a stray. Expect
+**one** ghost estate-wide, on a known host, not the ghost storm this section used to warn about. Note
+the sleeping-service and ghost paths are distinguishable in the log, so if a second ghost appears
+during collection it is a real finding rather than noise to be read through.
+
+#### What to simulate, and what to collect
+
+Each scenario is staged deliberately — none of it waits for something to go wrong — and each names
+the single line that decides it. Run a remote `watch` throughout with
+`-L debug --log-subject=service/<name>`, and keep the serve-side log of the host being changed.
+
+| # | Scenario | How to stage it | Collect | Decides |
+|---|---|---|---|---|
+| 1 | **Service removed** — *serve side now covered locally* | Stop a container and remove the module from that host's `config.json` schema | watch: `removals [<host>] removed; empty payload`, and the time from the serve-side `removals` line to it. The systest already proves the serve half against a real container, so what is left here is the **watch** half and the estate's latency | The departure path end to end. Target: gone from every watch inside one pulse |
+| 2 | **Service added** — *serve side now covered locally* | Deploy a module to a host that did not run it | watch: `register [<host>] [n] topics added` and the row appearing. Again the systest covers the publish half; only the watch half needs the estate | Discovery is unaffected by the change to the departure path |
+| 3 | **Service moved** | The above pair across two hosts, in one release | Both hosts' lines, plus that the row appears on exactly one watch grid at the end | The case the estate note describes, which is the one that produced the original symptom |
+| 4 | **Graceful restart** | `install.sh start` on a host, or a plain release | serve at DEBUG: exactly one readback line per retained name, and step 2 made the four outcomes distinguishable — `rediscovered [%3d] topics` at INFO for a real registration, `rediscovered [  0] topics` for one that added nothing, `[unmarshal]`, `[nil] readback pulse`, `[empty] readback` for the rest, and **no line at all** for a name that was never delivered. watch: whether the row ever blanks | A, B and step 2 together, and this is the one collection that cannot be faked locally |
+| 5 | **Ungraceful exit** — *now covered locally* | `docker kill supervisor` on one host, then start it | The systest asserts the will marks the host offline and the records survive; what the estate adds is the `rediscovered` line on the way back and that the crash path and the graceful path read identically | That there is **one** recovery path rather than two |
+| 6 | **Broker recreate** — *restart covered locally, recreate not* | A vernemq release | watch: no `reclaims` line naming a whole host; serve: the reconnect republish. The systest restarts the broker and proves the daemon resumes publishing, but its store **survives** a restart, so the empty-store half is only reachable from a release | Case 7, the whole-host guard, against a genuinely empty retained store |
+| 7 | **Watch suspends** — *the highest-frequency scenario, and the one that contaminates Q1* | Close the laptop for longer than `brokerExpiry`, then open it. Do it after a **short** sleep and a **multi-hour** one, since only the long one is certain to kill the socket | watch: the revive path taken (`liveness [false] frozen …` WARN, `[false] abandoned by paho` WARN, or `[false] closed, paho reconnecting` at DEBUG), then per host the `attached` line, the `transition by [connect]`, and the `reclaims` that follows — **including its service count**, which is the number Q1 needs partitioned | Case 9, the monotonic `hostReconcile.deadline`, and whether a wake ever reaps a **live** service. A non-zero `reclaims` here is a defect, not a lost departure |
+| 8 | **A lost departure** | Not stageable — it is a dropped packet | The **absence** of scenario 1's watch line while the serve line is present | Whether QoS 1 closed case 8. Only a count over weeks answers this |
+
+#### What this release changes that must be checked once, and only once
+
+None of this is in the original plan — it is what implementing it turned up, and each item is a
+first-release check rather than an ongoing observation. Do them on the release that carries Phase 1,
+then never again.
+
+- **The container now runs the binary from inside the image.** The `CMD` moved from
+  `/asystem/mnt/supervisor` to `/asystem/bin/supervisor`, and the release-time cross-compile into
+  `target/release/data` is still mounted but no longer used. If `buildx --platform` ever picked the
+  wrong architecture the container would not start at all, so confirm on **each** host that supervisor
+  is running and healthy after the release — this is the one change that can fail estate-wide, and it
+  fails loudly rather than subtly.
+- **The compose file is now interpolated rather than literal.** Every host-coupled bind is a
+  `${SUPERVISOR_*_SOURCE}` variable whose `.env_all` value is the old literal, so the effect should be
+  identical — but a missing variable would silently change a bind rather than error. Diff the mounts on
+  one host against a pre-release capture: `docker inspect supervisor --format '{{json .Mounts}}'`, and
+  confirm `/share` and `/backup` still carry `rshared` propagation, which is the one property the
+  systest cannot cover because Docker Desktop refuses it.
+- **`host/used_network` will report for the first time ever.** `newHostProbe` never built its sampler,
+  so the metric has been erroring on every host since it was written; after this release it produces a
+  real percentage against each interface's rated speed. Two consequences: a new InfluxDB column starts
+  filling, and its `Bounded(Self, AtMost, 90)` pulse and `AtMost, 80` trend rules face real traffic for
+  the first time — so if a host runs hot on its NIC, expect the first genuine amber from a rule nobody
+  has ever seen fire. Check `jen` in particular, whose `eth0` is rated **100** Mbit where every other
+  host is 1000, so the same absolute traffic reads tenfold higher there.
+- **The `unstated` ERROR storm should stop.** A host with three ghosts logged 21 `unstated` ERRORs per
+  pulse, 1638 in one uptime. After the release that count should be **zero**, and each ghost metric
+  should instead carry a `computed [...] absent, service [x] is configured with no container` line at
+  DEBUG. A non-zero `unstated` count afterwards means a metric somewhere else is publishing a value
+  without stating a derivation, which is worth chasing on its own.
+- **Expect a burst of counted drops per departure on the watch, and do not chase it.** A departing
+  service tombstones **all 13** of its metric topics, each in two forms, so 26 messages are in flight.
+  The **first** to arrive is enough: the watch removes the service on the nil-pulse form, and
+  `RecordCache.Delete` removes every one of its records, so `watchDeletesListener.MarkDelete`
+  unsubscribes all 13 topics at once. Everything still in flight then arrives for a topic no longer in
+  the subscribed map and is counted in `dropCount`, surfacing as up to ~25 in one purge tick's
+  `unlisted [n] drops` line. That is the design working. The number is a race — how much the broker had
+  already queued before the unsubscribes landed — so it varies per departure and may be zero.
+
+#### How to analyse the logs and decide
+
+**This is the whole point of the collection, so it is written as commands rather than as advice.** Run
+it against `mad` (the clean population — a server that never sleeps) and `rue` (the wake population — a
+laptop that does) **separately**, and never pool them. Logs live in `/var/log/supervisor` on `mad` and
+`~/Library/Logs/supervisor` on `rue`; archives are gzipped, so use `zgrep` or the `zcat` form below to
+read a whole window at once.
+
+```bash
+LOGS=/var/log/supervisor                                   # rue: ~/Library/Logs/supervisor
+cat() { zcat -f "$LOGS"/watch-*.log "$LOGS"/watch-*.log.gz 2>/dev/null; }
+```
+
+**Step 1 — how often does the reconcile fire at all?** This is Q1, and it is the question that decides
+between delete, keep and replace.
+
+```bash
+cat | grep -c 'reclaims'                    # every firing, including the reaped-nothing ones
+cat | grep 'reclaims' | grep -v '\[  0\]'   # firings that actually reaped, with the service names
+```
+
+| Reading | Verdict |
+|---|---|
+| zero `reclaims` on both watches | **delete the reconcile.** C is unnecessary rather than optional, and shadow mode goes with it |
+| firings only on `rue`, all `[  0]` | the reconcile is exercised only by wakes and never reaps — still delete, but read step 2 first |
+| firings that reaped, on either watch | a departure was lost. Go to step 3 to find out whether the reap was *correct* |
+
+**Step 2 — was the timer ever wrong?** These two lines are the finding, and both are WARN, so they are
+rare by construction and any hit is worth reading in full.
+
+```bash
+cat | grep 'shadowed \[differ\]'    # barrier and timer chose different sets
+cat | grep 'shadowed \[pending\]'   # the timer reaped while the flood was still in flight
+```
+
+A `[differ]` is followed by two lines naming each set, so the disagreement can be read without
+correlating anything. **`[pending]` is the serious one**: it means the timed reconcile reaped before the
+barrier proved the redelivery complete, which is the "reaping a live service" failure this whole
+exercise exists to detect. **Any `[pending]` at all justifies building C.**
+
+**Step 3 — corroborate a reap against a re-register.** A spurious reap and a correct one log
+identically, so the tell is a service coming *back* shortly after being reaped:
+
+```bash
+cat | grep -E 'reclaims|register' | grep -A3 'reclaims .* evicted'
+```
+
+A `register` line for the same service within a pulse or two of the `reclaims` that removed it means the
+service was never gone. This works without shadow mode and is the fallback if the barrier itself proves
+unreliable.
+
+**Step 4 — size the deadline.** Only meaningful once there are firings to size against:
+
+```bash
+cat | grep -o 'returned \[ *[0-9]*\] shadow after \[ *[0-9]*\] ms' | awk '{print $(NF-1)}' | sort -n | tail -5
+```
+
+The largest barrier latency against `reconcileDelay` (10 s) says whether the grace was ever close to
+being too short. If the maximum is comfortably under a second — as the systest measured for 550 topics —
+then `reconcileDelay` was always an order of magnitude over-generous, and that is an argument for
+**deleting** it rather than for replacing it with a barrier.
+
+**Step 5 — confirm the collection is sound before trusting any of the above.** Three ways this can
+silently produce a clean-looking but empty result:
+
+```bash
+cat | grep -c 'purge disabled'      # expect one per process start; zero means logs were purged
+ls -la "$LOGS"                      # expect archives spanning the whole window, not the last two days
+cat | head -1                       # confirm the window actually starts when you think it does
+```
+
+The log file name carries the version that wrote it (`watch-10.200.1502-pid-2396749.log`), so a reading
+can always be attributed to a release — which matters here precisely because several releases are
+expected inside the window.
+
+#### The three questions, and what answers each
+
+- **Does the reconcile still earn its place?** [was Phase 2.5] Read the `reclaims` line across a
+  month of releases and restarts. **No code change is needed to see it** — `engine.go:503` already
+  logs a firing reclaim at **INFO** and only the reaped-nothing case at DEBUG (`:499`), so the line
+  is visible at `watch`'s default level. **Never fires** → delete it, and C becomes unnecessary
+  rather than optional. **Fires occasionally** → each firing is a lost departure; diagnose which
+  case, and that decides between C and D. **Fires routinely** → Phase 1 did not work, and nothing
+  should be built on top of it.
+
+  **The count is contaminated by laptop sleep, and the verdict is wrong unless it is partitioned.**
+  Every wake that ends in a reconnect runs the full `onConnect`, which **clears `hostStatus`**
+  (`engine.go:415-417`) — so each host's retained `online` arrives with `known == false`, misses the
+  heartbeat no-op branch, and takes `scheduleReconcile(host, fromConnect: true)`. A wake therefore
+  schedules a connect-scoped reconcile on **every** host, every time. Confirmed locally by driving
+  `cache.Wake(brokerExpiry + 1s)` against a real broker:
+
+  ```
+  liveness [false] abandoned by paho, reconnecting
+  liveness [true]  session revived
+  attached [   1] topics, [    2] wildcards
+  observed [online] transition by [connect]
+  reclaims [  0] services, after [     3] s
+  ```
+
+  So a laptop sleeping N times a day contributes N x hosts reconcile firings that are **not** lost
+  departures. Counting them together is what would turn a healthy estate into a spurious "fires
+  routinely".
+
+  **The estate already runs both populations separately, so partition by *which watch*, not by log
+  archaeology.** A watch runs continuously on **`mad`** (a server, which never sleeps) and another
+  continuously on **`rue`** (the laptop, which does). `mad` is therefore the clean population — every
+  reclaim it logs is a genuine steady-state firing — and `rue` is the wake population. That is a far
+  more robust split than the `attached`-line heuristic this paragraph used to propose, which stays only
+  as the fallback for a reclaim seen on `rue` alone.
+
+  **First reading, already collected: `mad` has fired the reconcile zero times.** Its current log covers
+  14.5 hours against a process up 1 day 17 hours, and `grep -c reclaims` returns **0** — not zero
+  reaps, zero *firings*, since the reaped-nothing case logs at DEBUG and would appear. On a
+  non-sleeping host with a stable broker the reconcile is not merely harmless, it is inert. That is the
+  first real evidence for the "never fires → delete it" branch, and it was available before the Phase 1
+  release rather than after it.
+
+  **The binding constraint is log retention, not log content, and a month will not fit.** `watch` calls
+  `EnableBufferAndFile(..., 10, 3, 7)` — lumberjack at 10 MB, 3 backups, 7 days — and `mad`'s file is
+  **100 % DEBUG** (69 806 of 69 806 lines; zero INFO, WARN or ERROR), dominated by the per-tick
+  `display render` and reconcile/census lines. It rotates roughly every **14.5 hours**, so three
+  backups plus the current file is a window of about **2.4 days**. `MaxAge` never binds because
+  `MaxBackups` binds first. A month-long sample is therefore impossible as configured, and the loss is
+  silent.
+
+  **Keep the reference watch at DEBUG — do not turn it down to `-L info` to save space.** That was
+  proposed here and is wrong, and the reason is worth recording because the saving is tempting: only an
+  *actual reap* logs at INFO (`engine.go:503`), while the **reaped-nothing** case is DEBUG (`:499`). At
+  INFO the two readings Q1 must tell apart — *never scheduled* and *scheduled, reaped nothing* — are
+  indistinguishable, and they are opposite verdicts. Never scheduled means delete it; scheduled but
+  reaping nothing means it is doing work every reconnect and the barrier should be checking whether it
+  ever reaps too early. The zero-firing reading recorded above was only available *because* `mad` runs
+  at DEBUG.
+
+  **So retention has to be solved on the retention axis, not the verbosity one.** Measured, the
+  dimension filters barely help: `--log-source=engine` drops the display half and no more (33 222 of
+  71 171 lines), taking the window from ~2.4 to ~4.5 days.
+
+  **Done — lumberjack is now sized for a month**, as `logFileSizeMB`/`logFileBackups`/`logFileAgeDays`
+  in `cmd.go` (10 MB, 60 backups, 40 days), shared by `watch` and `serve` so the two cannot drift.
+  **`MaxAge` was the real binding constraint, not `MaxBackups`** — at 7 days it pruned before the backup
+  count ever mattered, which is why raising the count alone would have silently achieved nothing.
+  Measured inputs: `watch` at DEBUG writes ~16.5 MB/day (10 MB per 14.5 h rotation on `mad`), needing
+  ~50 rotations for 30 days; `serve` at INFO writes ~2.2 MB/day (4.07 MB over 45 h in the container),
+  needing ~7. Sixty covers both with margin. **The disk cost is near nothing because lumberjack
+  compresses**: the observed archives are ~386 KB from a 10 MB file, about 26x, so a full watch window is
+  roughly 20 MB and a full serve window about 1 MB. Note `serve`'s files live inside the container at
+  `/var/log/supervisor` and are lost with it, so a host's serve history is bounded by the container's
+  life however this is set — `docker logs` is the copy that survives a restart. Failing all that, harvest at least
+  every two days (`grep 'reclaims' /var/log/supervisor/watch-pid-*.log >> …`), which is the same
+  mechanism the laptop needs anyway, since **`purgeLogFiles` deletes every prior run's log on start** —
+  a continuously-running watch is exempt only while its process stays alive.
+
+  **A log file now names the version that wrote it** (`watch-10.200.1502-pid-2396749.log`), so a
+  reading taken from an archive can be attributed to a release without guessing. That question was live
+  the first time these logs were read: the `reclaims` count was only trustworthy after confirming the
+  line existed in the deployed commit.
+
+  **A quiet wake is not a wake that did nothing.** `SetCleanSession(true)` with `SetAutoReconnect(true)`
+  means paho's own silent reconnect is still a *fresh* session — full resubscribe, full retained flood,
+  reconciles scheduled — and it reports at DEBUG (`liveness [false] closed, paho reconnecting`) rather
+  than at the WARN the frozen-past-keepalive path uses. That is why sockets appear to "resume on their
+  own mostly" while the reconcile fires just the same, and it is the reason this partition cannot be
+  done by counting only the WARN lines.
+
+  **No local assertion covers the reap half, and one was attempted.** A case driving
+  `cache.Wake(brokerExpiry + 1s)` through `RunListeningStreamLoop` against a real broker was written
+  and **removed**: it passed identically whether or not the record was redelivered retained, so it
+  discriminated on nothing. Two reasons it is hard here — `ServicesBefore` compares `Unix()` on both
+  sides, so a refresh and a cutoff inside the same second are indistinguishable, and the driver's own
+  publish refreshes the record anyway. Whether a wake ever reaps a **live** service is therefore a
+  Phase 3 estate observation (scenario 7), not something the dev machine currently proves. Do not
+  re-add such a case without first running it against the reverted behaviour.
+- **Why did one ghost paint and its neighbour blank?** [was Phase 0.1] Restart `serve` on a host with
+  at least two ghosts while a remote watch runs with `--log-subject=service/<name>`, and read it
+  against that host's own `retained [n] bytes at qos [0]` lines for the same service. If the value
+  topics were never published, the blank is publish-side and nothing in this plan touches it. If they
+  were, a mechanism is unaccounted for and that becomes its own investigation — step 11 renders the
+  state honestly either way, so it masks the symptom rather than fixing it.
+- **What was the readback actually doing?** [was step 1.2's other half] Step 2 makes the four cases
+  distinguishable — never delivered, failed to unmarshal, nil pulse, registered nothing new. One
+  release with the instrumentation names which, and only then is a fix worth writing. It may already
+  be fixed by step 1, since the graceful path was deleting the very topic the readback reads.
+
+**Acceptance, on the release after Phase 1:** a departed service leaves every watch within one pulse;
+a `rediscovered` line appears on the restarting host; and the reconcile's `reclaims` line does **not**
+fire for that host. The third is the one that matters — it is the evidence the first question needs.
+
+#### The one synthetic topic, for scenario 1 without a release
+
+The estate cannot produce the orphan condition naturally — on `max`, config ∪ running covers every
+retained service name — so create it deliberately:
 
 ```bash
 mosquitto_pub -h "$VERNEMQ_SERVICE_PROD" -p "$VERNEMQ_API_PORT" -u supervisor -P "$VERNEMQ_TOKEN" \
@@ -545,145 +1162,11 @@ mosquitto_pub -h "$VERNEMQ_SERVICE_PROD" -p "$VERNEMQ_API_PORT" -u supervisor -P
   -m '{"timestamp":'"$(date +%s)"',"pulse":{"ok":true,"kind":4,"valueString":"zztest"},"trend":{"ok":true,"kind":4,"valueString":"zztest"}}'
 ```
 
-Restart supervisor on that host and watch. **Today** a `zztest` row appears on every watch and
-survives until the reconcile reaps it at 10-16 s. **After Phase 1** the new process rediscovers it,
-finds it in neither docker nor config, and tombstones it within ~3 s. Clear it afterwards with
-`-r -n` on the same topic. One topic, obviously named, fully reversible — and the phantom row it
-produces is itself the demonstration.
-
-### Steps 4 and 5 need no setup
-
-Read the serve log and time `sessions [broker] connect` against the first `gathered [n] metrics`
-line. That gap is 7 s on `may` today and should fall to under a second.
-
-### Caution on `fab exe`
-
-`BROKER_HOST` resolves to `host.docker.internal`, so a local run cannot touch the production broker.
-But `SUPERVISOR_HOST` is also `host.docker.internal`, which matches no schema entry, so
-`config.Services(host)` is empty, there are no configured services and the ghost path never
-exercises. Fine for checking a mechanism, not representative of a host.
-
----
-
-## Phases
-
-### Phase 0 — verify, planned
-
-1. **The blank.** Restart `serve` on a host with at least two ghost services while running a remote
-   `watch` with `--log-subject=service/mlflow`, against that host's own `retained [n] bytes at qos
-   [0]` lines for the same service. The question is whether its value topics were published in the
-   discovery pulse at all. If they were not, the blank is publish-side and no option here touches it
-   — fix it there. If they **were**, retained delivery should have covered it and a mechanism is
-   unaccounted for; that becomes its own investigation, and until it is understood Phase 4 only masks
-   the symptom by rendering the state honestly rather than removing it.
-2. **Barrier ordering**, only if C is wanted. Subscribe to a wildcard with a large retained set,
-   publish a barrier, confirm every retained message precedes it, repeatedly, at the sizes already
-   measured in `CLAUDE.md` (443 and 546 topics). If it does not hold on VerneMQ, C is out and D is
-   the design.
-
-### Phase 1 — A + B, planned
-
-Eight changes — five in `RunAllProbesPublishLoop`, `RunPoll` and the deletes listener, plus the
-compose parameterisation, the module's first systest, and the doc updates. **None in the watch.**
-
-1. **Delete the shutdown tombstone-all** (`engine.go:689-694`).
-2. **Instrument the readback's four silent returns**, then fix whatever they reveal.
-3. **Give `MarkDelete` both tombstone forms and publish them at QoS 1** — the JSON form closes
-   case 6, QoS 1 closes case 8, and the two removal paths stop differing.
-4. **Move `databaseConnect` off the startup path** (`:704`), which costs 3.5 s before a single metric
-   is sampled when influx is down, and more on a longer outage.
-5. **Run the first poll tick immediately** rather than after `PollMillis` (`probe.go:107`).
-6. **Parameterise the host-coupled compose stanzas** and add `.env_test` and `.env_exec` — see
-   *Parameterising the host-coupled stanzas*. Without this the container does not start on macOS at
-   all, so it gates step 7 and `fab exe` alike.
-7. **Add the systest** — see *How to test*. It is where changes 1, 2, 3 and 5 are asserted, and it is
-   the module's first Python test of any kind.
-8. **Update the two doc comments that currently contradict each other** — `RunAllProbesPublishLoop`'s
-   *"On shutdown ... 2. Publish an empty payload for every retained topic"* and the watch's *"Ignore
-   anything else from an offline host, which is how a departing host's own tombstones are left
-   unread"* — plus the *Service slots & lifecycle across restarts* section of the module
-   `CLAUDE.md`, where the crash path is described as the exceptional one. After A it is the only one.
-
-Together: **≤3 s worst case**, inside one pulse, and cases 1, 3, 4, 6 and 8 closed. Steps 4 and 5
-also make every metric on every host appear several seconds sooner on every start.
-
-**Step 6 earns a narrower place than first argued.** Supervisor carries more unusual container
-configuration than any other module here, and none of it has a test — but *see the measured results
-in How to test*: the binds and the `rshared` propagation cannot run under Docker Desktop and have to
-be stripped for the systest, so those specific stanzas stay untested. What the systest does cover
-that the Go suite cannot is the packaged image, the capabilities and device rules, the generated
-`checkexecuting.sh`, and the real SIGTERM shutdown path — plus every Phase 1 assertion, which needs
-only the broker and the docker socket.
-
-**Step 2 is the keystone, not the optional one.** Step 1 makes the breadcrumbs survive, but if the
-readback is broken nothing reads them, the new process never tombstones the departed service, and the
-13 s reconcile catches it exactly as today — no harm, but no observable improvement either. The
-minimal set that changes anything is **1 + 2 + 3**, and its size is dominated by whatever step 2's
-diagnosis turns up. Steps 4 and 5 are genuinely separable and can land first on their own.
-
-**Do Phase 2 first if the readback diagnosis is not immediately obvious.** The ghost `unstated` ERROR
-storm is 21 lines a pulse on `may`, which is what you would be reading through.
-
-**Effort.** Test coupling is light — three references to the changed functions across two test files.
-
-| Step | Size | Risk |
-|---|---|---|
-| 1 delete tombstone-all | ~6 lines deleted | low, pure deletion |
-| 3 `MarkDelete` two forms + QoS 1 | ~5 lines | low, runs outside the cache mutex |
-| 5 first tick immediate | ~5 lines | low-med, must not disturb `pulseTickCount`/`heartbeatPulseCount` |
-| 4 `databaseConnect` async | ~15 lines | med, needs `atomic.Pointer` and the `defer db.close()` rehomed |
-| 6 compose parameterisation + `.env_test`/`.env_exec` | 10 vars, ~20 lines of compose | med — gates everything else locally; `/dev` needs its target moved too |
-| 7 systest | ~150 lines, new to this module | med — first `fab st` for supervisor |
-| 8 doc comments and `CLAUDE.md` | prose | low but slow at this repo's standard |
-| 2 readback | ~10 lines to instrument, **fix unknown** | **unknown** |
-
-Steps 1, 3, 4 and 5 are about a day together; step 6 half a day; step 7 half a day to a day, since a
-module's first systest usually surfaces something about the image; step 8 another half day. **The schedule
-driver is not the coding** — supervisor is group 31 and deploys to every host, so step 2's diagnosis
-and the acceptance criteria below both need real releases to observe. Two releases minimum: one to
-get the instrumentation onto a host, one to validate the fix.
-
-**Acceptance, on the next real release:** a departed service leaves every watch within one pulse; a
-`rediscovered` line appears on the restarting host; and the reconcile's `reclaims` line does **not**
-fire for that host. The third is the one that matters — it is the evidence for the decision below.
-
-### Phase 2 — hygiene, planned, independent
-
-1. **Sort the publish batch.** `RecordCache.Take` builds its slice by ranging a map
-   (`metric_cache.go:594`) and `process` consumes it in that order, as does the `forceRepublish`
-   replay, so a pulse is non-deterministic. One `slices.SortFunc` by GUID makes it reproducible,
-   which you want before reasoning about arrival ordering.
-2. **Ghost derivations → `derivedInertf`.** A configured service with no container has nothing to
-   sample and already says so; today seven of its metrics return `derivation{}` and log `unstated` at
-   ERROR every pulse — 21 a pulse on `may`, 1638 in one uptime. It also short-circuits rule
-   evaluation, so a ghost stops being judged by a rule it cannot satisfy.
-
-### Phase 2.5 — decide whether the reconcile still earns its place, planned
-
-**This decision is not answerable today**, which is the real reason Phase 1 comes first: the reconcile
-is currently compensating for two bugs, so of course it fires. After Phase 1 it should be
-compensating for almost nothing, and the gate is evidence rather than judgement.
-
-Leave it in place, raise its `reclaims` line to a level you will notice, and watch across a month of
-releases and restarts:
-
-- **It never fires** → it is dead weight. Delete it, and Phase 3 is unnecessary: the departure path
-  alone is sufficient and there is nothing left to simplify.
-- **It fires occasionally** → each firing is a departure that got lost. Diagnose it; that is the
-  case Phase 3 or D would need to handle, and knowing which case it is decides between them.
-- **It fires routinely** → Phase 1 did not work and none of what follows should be built on it.
-
-### Phase 3 — C, planned, optional
-
-Barrier reconcile and its deletions, gated on Phase 0's second measurement. Do it for the contract it
-removes, not for the latency, which Phase 1 already delivers.
-
-### Phase 4 — the third row state, planned
-
-Distinguish **present but not yet reporting** from **measured and failed**. Today both render as a
-blank cell and a failure also paints the service name in `colourAlert`, so a brand-new service looks
-broken. Render the awaiting state neutral, keep `Failed` alert, and keep the existing precedence:
-sleeping wins over failed, and the `~` overflow marker wins over both. Reachable after Phase 1.
+Restart supervisor on that host and watch. **Before Phase 1** a `zztest` row appears on every watch
+and survives until the reconcile reaps it at 10-16 s. **After** the new process rediscovers it, finds
+it in neither docker nor config, and tombstones it within ~3 s. Clear it afterwards with `-r -n` on
+the same topic. One topic, obviously named, fully reversible — and the phantom row it produces is
+itself the demonstration.
 
 ### Not doing
 
@@ -700,14 +1183,23 @@ sleeping wins over failed, and the `~` overflow marker wins over both. Reachable
 
 ---
 
-## Estate note, built
+## Estate note, resolved
 
-The `10.200.1502` release moved modules between `max` and `may` and the containers have not followed.
-`max` is configured for cloudflare, grafana, letsencrypt, openra, supervisor while running
-letsencrypt, mlflow, mlserver, supervisor; `may` is configured for influxdb3, mlflow, mlserver,
-sonarr, supervisor, tempstat while running cloudflare, grafana, sonarr, supervisor, tempstat. Each
-host publishes a full record set for ~3 ghosts that live on the other, and `influxdb3` is installed on
-`may` but not running, which is why `mad` drops every database write.
+**Resolved, verified 2026-09-07 — Phase 3 is no longer gated on it.** The `10.200.1502` release moved
+modules between `max` and `may` and the containers had not followed: `max` was configured for
+cloudflare, grafana, letsencrypt, openra, supervisor while running letsencrypt, mlflow, mlserver,
+supervisor, and `may` was configured for influxdb3, mlflow, mlserver, sonarr, supervisor, tempstat
+while running cloudflare, grafana, sonarr, supervisor, tempstat. Each host published a full record set
+for ~3 ghosts that lived on the other, and `influxdb3` was installed on `may` but not running, which is
+why `mad` dropped every database write.
 
-None of that is caused by this work or fixed by it. It is why the symptoms were visible, and it should
-be resolved before Phase 0 is measured or the reproduction is confounded.
+The containers have since followed the configuration. `max` runs cloudflare, grafana, letsencrypt,
+supervisor and `may` runs influxdb3, mlflow, mlserver, sonarr, supervisor, tempstat — each host's
+running set is now its configured set, against a `config.json` still on `10.200.1502` and therefore
+unchanged. `openra` is the sole configured-but-absent service, on `max`, and it carries
+`/var/lib/asystem/install/openra/.sleep`, so it is deliberately dormant.
+
+`influxdb3` runs on `may` and `mad`'s writes land — its per-pulse census reports bytes kept, and its
+last `rejected` line is 09-05T16:55 against a container started 09-05T05:44, so roughly 39 hours clean
+at the time of checking. None of this was caused by this work or fixed by it; it is why the symptoms
+were visible, and the measurements Phase 3 asks for can now be taken without reading through it.

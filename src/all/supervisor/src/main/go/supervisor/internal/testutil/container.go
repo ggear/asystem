@@ -29,6 +29,8 @@ func SetupBrokerContainer(t *testing.T) (testcontainers.Container, mqtt.Client, 
 	containerSilenceLogs()
 	contextValue := t.Context()
 	containerRequest := testcontainers.ContainerRequest{
+		Name:         containerBrokerName,
+		Labels:       map[string]string{containerLabel: "true"},
 		Image:        "eclipse-mosquitto:2.0.22",
 		ExposedPorts: []string{"1883/tcp"},
 		Files: []testcontainers.ContainerFile{{
@@ -78,21 +80,18 @@ func SetupBrokerContainer(t *testing.T) (testcontainers.Container, mqtt.Client, 
 		_ = brokerContainer.Terminate(contextValue)
 		return nil, nil, fmt.Errorf("failed to connect to broker [%v]: %w", brokerURL, connectError)
 	}
+	containerOwned.Store(brokerContainer.GetContainerID(), struct{}{})
 	t.Cleanup(func() {
+		stopStart := time.Now()
+		zeroTimeout := time.Duration(0)
 		mqttClient.Disconnect(250)
-		_ = brokerContainer.Terminate(context.Background())
-		t.Logf("Broker brokerContainer stopped in [%v ms]", time.Since(start).Milliseconds())
+		_ = brokerContainer.Stop(context.Background(), &zeroTimeout)
+		containerOwned.Delete(brokerContainer.GetContainerID())
+		containerReclaim(t)
+		t.Logf("Broker brokerContainer stopped in [%v ms]", time.Since(stopStart).Milliseconds())
 	})
 	t.Logf("Broker brokerContainer started in [%v ms] at %s", time.Since(start).Milliseconds(), brokerURL)
 	return brokerContainer, mqttClient, nil
-}
-
-func SetupSleepContainerWithHealth(t *testing.T, names ...string) ([]testcontainers.Container, error) {
-	return SetupSleepContainer(t, FindTestFile(t, "healthy.sh", "health"), true, names...)
-}
-
-func SetupSleepContainerWithoutHealth(t *testing.T, names ...string) ([]testcontainers.Container, error) {
-	return SetupSleepContainer(t, "", false, names...)
 }
 
 func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExit bool, names ...string) ([]testcontainers.Container, error) {
@@ -132,7 +131,7 @@ func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExi
 	}(dockerClient)
 	containers := make([]testcontainers.Container, 0, len(uniqueNames))
 	for _, containerName := range uniqueNames {
-		containerRequest := testcontainers.ContainerRequest{Name: containerName, Image: "alpine", Cmd: []string{"sleep", "99999"}}
+		containerRequest := testcontainers.ContainerRequest{Name: containerName, Labels: map[string]string{containerLabel: "true"}, Image: "alpine", Cmd: []string{"sleep", "99999"}}
 		if healthScriptPath != "" {
 			containerRequest.Files = []testcontainers.ContainerFile{{HostFilePath: healthScriptPath, ContainerFilePath: "/healthcheck.sh", FileMode: 0755}}
 			containerRequest.ConfigModifier = func(config *mobycontainer.Config) {
@@ -151,6 +150,7 @@ func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExi
 			return nil, err
 		}
 		containers = append(containers, containerInstance)
+		containerOwned.Store(containerInstance.GetContainerID(), struct{}{})
 		if healthScriptPath != "" {
 			expectedStatus := container.Unhealthy
 			if healthyScriptExit {
@@ -174,24 +174,12 @@ func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExi
 		}
 	}
 	t.Cleanup(func() {
-		cleanupCtx := context.Background()
 		zeroTimeout := time.Duration(0)
 		for _, c := range containers {
-			_ = c.Stop(cleanupCtx, &zeroTimeout)
+			_ = c.Stop(context.Background(), &zeroTimeout)
+			containerOwned.Delete(c.GetContainerID())
 		}
-		clientInstance, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-		if err != nil {
-			return
-		}
-		defer func(clientInstance *client.Client) {
-			_ = clientInstance.Close()
-		}(clientInstance)
-		for _, name := range uniqueNames {
-			removeErr := clientInstance.ContainerRemove(cleanupCtx, name, container.RemoveOptions{Force: true})
-			if removeErr != nil && !cerrdefs.IsNotFound(removeErr) {
-				t.Logf("failed to remove container [%s]: %v", name, removeErr)
-			}
-		}
+		containerReclaim(t)
 	})
 	return containers, nil
 }
@@ -211,7 +199,7 @@ func RequiresDocker(t *testing.T) {
 		_ = fileLock.Close()
 		t.Fatalf("failed to acquire docker test lock: %v", err)
 	}
-	KillSleepContainers(t)
+	containerReclaim(t)
 	t.Cleanup(func() {
 		dockerTestActive.Delete(t.Name())
 		_ = syscall.Flock(int(fileLock.Fd()), syscall.LOCK_UN)
@@ -219,41 +207,41 @@ func RequiresDocker(t *testing.T) {
 	})
 }
 
-func KillSleepContainers(t *testing.T) {
+func containerReclaim(t *testing.T) {
 	t.Helper()
-	containerSilenceLogs()
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		t.Logf("KillSleepContainers: failed to create docker client: %v", err)
+		t.Logf("failed to reclaim containers with [%v]", err)
 		return
 	}
-	defer func() { _ = dockerClient.Close() }()
-	ctx := t.Context()
-	containerList, err := dockerClient.ContainerList(ctx, container.ListOptions{All: true})
+	defer func(dockerClient *client.Client) {
+		_ = dockerClient.Close()
+	}(dockerClient)
+	containerList, err := dockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
 	if err != nil {
-		t.Logf("KillSleepContainers: failed to list containers: %v", err)
+		t.Logf("failed to list containers for reclaim with [%v]", err)
 		return
 	}
-	var wg sync.WaitGroup
-	for _, c := range containerList {
-		match := false
-		for _, name := range c.Names {
-			if strings.HasPrefix(strings.TrimPrefix(name, "/"), "sleep-") {
-				match = true
-				break
-			}
-		}
-		if !match {
+	for _, listed := range containerList {
+		if listed.Labels[containerLabel] != "true" {
 			continue
 		}
-		wg.Add(1)
-		go func(id string) {
-			defer wg.Done()
-			_ = dockerClient.ContainerRemove(ctx, id, container.RemoveOptions{Force: true})
-		}(c.ID)
+		if _, owned := containerOwned.Load(listed.ID); owned {
+			continue
+		}
+		removeErr := dockerClient.ContainerRemove(context.Background(), listed.ID, container.RemoveOptions{Force: true})
+		if removeErr != nil && !cerrdefs.IsNotFound(removeErr) {
+			t.Logf("failed to reclaim container [%s] with [%v]", listed.ID, removeErr)
+		}
 	}
-	wg.Wait()
 }
+
+const (
+	containerBrokerName = "supervisor-test-broker"
+	containerLabel      = "supervisor.test"
+)
+
+var containerOwned sync.Map
 
 var containerSilenceLogsOnce sync.Once
 
@@ -263,10 +251,3 @@ func containerSilenceLogs() {
 		tclog.SetDefault(log.New(io.Discard, "", 0))
 	})
 }
-
-var _ = RequiresDocker
-var _ = SetupBrokerContainer
-var _ = SetupSleepContainer
-var _ = SetupSleepContainerWithHealth
-var _ = SetupSleepContainerWithoutHealth
-var _ = KillSleepContainers

@@ -1,0 +1,8 @@
+services:
+  supervisor:
+    container_name: supervisor
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 384M

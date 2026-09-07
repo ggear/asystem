@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -65,7 +68,7 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 //  1. Ignore a topic the subscribed map does not hold, counting it as dropped.
 //  2. Remove the service on an empty or nil pulse payload, being the tombstone a live host publishes when a service departs.
 //  3. Revive an offline host when the payload was published after the offline, resubscribing it as a transition would.
-//  4. Ignore anything else from an offline host, which is how a departing host's own tombstones are left unread.
+//  4. Ignore anything else from an offline host, being data that was already in flight when the host stopped answering.
 //  5. Stamp and store everything else.
 //
 // On host status, gated on the prior status so each fires once per transition rather than once per heartbeat:
@@ -113,6 +116,20 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	wildcards := make(map[string]struct{})
 	var reconcileMu sync.Mutex
 	reconciles := make(map[string]hostReconcile)
+	var barrierMu sync.Mutex
+	barriers := make(map[string]*hostBarrier)
+	barrierTopic := fmt.Sprintf(barrierTopicFormat, os.Getpid())
+	// TODO(shadow-barrier): delete with hostBarrier.
+	barrierSeen := func(hostName, serviceName string) {
+		if serviceName == metric.ServiceNameUnset {
+			return
+		}
+		barrierMu.Lock()
+		if pending := barriers[hostName]; pending != nil && !pending.returned {
+			pending.seen[serviceName] = true
+		}
+		barrierMu.Unlock()
+	}
 	connected := config.NowIncludingSuspend()
 	reconcileDelay := max(time.Duration(2*periods.PulseMillis)*time.Millisecond, reconcileGrace)
 	scheduleReconcile := func(hostName string, fromConnect bool) {
@@ -128,6 +145,14 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		reconciles[hostName] = pending
 		reconcileMu.Unlock()
 	}
+	// TODO(shadow-barrier): delete with hostBarrier.
+	openBarrier := func(client mqtt.Client, hostName string) {
+		nonce := fmt.Sprintf("%s|%d", hostName, time.Now().UnixNano())
+		barrierMu.Lock()
+		barriers[hostName] = &hostBarrier{nonce: nonce, opened: time.Now(), seen: map[string]bool{}}
+		barrierMu.Unlock()
+		client.Publish(barrierTopic, 0, false, nonce)
+	}
 	removeService := func(guid metric.RecordGUID) {
 		if guid.ServiceName == metric.ServiceNameUnset {
 			return
@@ -135,7 +160,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		removeStart := time.Now()
 		cache.Evict(guid.Host, guid.ServiceName)
 		if cache.Delete(guid.Host, guid.ServiceName) {
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionRemove).Infof("removals", removeStart, "[%s] removed; empty payload", guid.Host)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(guid.ServiceName), scribe.ActionRemove).Infof("removals", removeStart, "[%-11.11s] removed, nil pulse", guid.Host)
 		}
 	}
 	var resubscribeHost func(client mqtt.Client, hostName string) int
@@ -151,6 +176,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		storeHostStatus(hostName, true)
 		scheduleReconcile(hostName, false)
 		topics := resubscribeHost(client, hostName)
+		openBarrier(client, hostName) // TODO(shadow-barrier): delete with hostBarrier.
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reviveStart, "[online] resub [%2d], retry [%2d]s", topics, int64(reconcileDelay.Seconds()))
 		return true
 	}
@@ -176,7 +202,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		streamStart := time.Now()
 		if err := json.Unmarshal(msg.Payload(), &value); err != nil {
 			dropCount.Add(1)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("received", streamStart, "[unmarshal] [%v]", err)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("received", streamStart, "[unmarshal] data payload broke, %v", err)
 			return
 		}
 		if !online && !proveOnline(client, guid.Host, value) {
@@ -191,6 +217,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)
 		cache.Store(guid, &record)
+		barrierSeen(guid.Host, guid.ServiceName) // TODO(shadow-barrier): delete with hostBarrier.
 	}
 	subscribeTopics := func(client mqtt.Client, bindings []metric.TopicBinding) int {
 		filters := make(map[string]byte, len(bindings))
@@ -218,7 +245,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				delete(subscribed, topic)
 			}
 			subscribedMu.Unlock()
-			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%2d]/[%2d] topics refused: %s", len(refused), len(filters), reason)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%4d] of [%3d] topics refused, %s", len(refused), len(filters), reason)
 		}()
 		return len(filters)
 	}
@@ -268,16 +295,31 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		return subscribeTopics(client, bindings)
 	}
 	onDiscovery := func(client mqtt.Client, msg mqtt.Message) {
+		discoveryStart := time.Now()
+		topic := scribe.SubjectTopic(msg.Topic())
 		var value metric.ValueData
-		if err := json.Unmarshal(msg.Payload(), &value); err != nil || value.Pulse == nil {
+		if len(msg.Payload()) > 0 {
+			if err := json.Unmarshal(msg.Payload(), &value); err != nil {
+				dropCount.Add(1)
+				scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[unmarshal] discovery gone with %v", err)
+				return
+			}
+		}
+		if value.Pulse == nil {
+			dropCount.Add(1)
+			scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Debugf("excluded", discoveryStart, "[nil] discovery pulse, departing")
 			return
 		}
 		serviceName := value.Pulse.ValueString
 		if serviceName == "" {
+			dropCount.Add(1)
+			scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[empty] discovery has no service")
 			return
 		}
 		tokens := strings.Split(msg.Topic(), "/")
 		if len(tokens) < 6 || tokens[1] == "" {
+			dropCount.Add(1)
+			scribe.Log(scribe.SourceEngine, topic, scribe.ActionDiscover).Errorf("rejected", discoveryStart, "[malformed] topic, [%4d] levels", len(tokens))
 			return
 		}
 		hostName := tokens[1]
@@ -289,19 +331,22 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		registerStart := time.Now()
 		if bindings := cache.RegisterService(hostName, serviceName, false); len(bindings) > 0 {
 			subscribeTopics(client, bindings)
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", registerStart, "[%s] [%3d] topics added", hostName, len(bindings))
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", registerStart, "[%-11.11s] added [%3d] topics", hostName, len(bindings))
 		}
 		value.Timestamp = time.Now().Unix()
 		record := metric.NewRecord(value)
 		cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, hostName, serviceName), &record)
+		barrierSeen(hostName, serviceName) // TODO(shadow-barrier): delete with hostBarrier.
 	}
 	onStatus := func(client mqtt.Client, msg mqtt.Message) {
+		statusStart := time.Now()
 		tokens := strings.Split(msg.Topic(), "/")
 		if len(tokens) < 3 || tokens[1] == "" {
+			dropCount.Add(1)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", statusStart, "[malformed] topic, [%4d] levels", len(tokens))
 			return
 		}
 		hostName := tokens[1]
-		statusStart := time.Now()
 		payload := strings.TrimSpace(string(msg.Payload()))
 		rxCount.Add(1)
 		hostStatusMu.RLock()
@@ -326,7 +371,8 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			if restarted {
 				topics = resubscribeHost(client, hostName)
 			}
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[online], triggered by [%s]", trigger)
+			openBarrier(client, hostName) // TODO(shadow-barrier): delete with hostBarrier.
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[online] transition by [%-7.7s]", trigger)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[%3d] topics, reconcile [%4d] s", topics, int64(reconcileDelay.Seconds()))
 		case hostStatusOffline, "":
 			storeHostStatus(hostName, false)
@@ -349,12 +395,38 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionDisconnect).Warnf("observed", statusStart, "[offline] evicted [%3d] services", len(evicted))
 		default:
-			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionSubscribe).Errorf("observed", statusStart, "[%s] unknown payload", payload)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionSubscribe).Errorf("observed", statusStart, "[%-14.14s] unknown payload", payload)
 		}
+	}
+	// TODO(shadow-barrier): delete with hostBarrier.
+	onBarrier := func(_ mqtt.Client, msg mqtt.Message) {
+		nonce := string(msg.Payload())
+		hostName, _, found := strings.Cut(nonce, "|")
+		if !found {
+			return
+		}
+		barrierMu.Lock()
+		pending := barriers[hostName]
+		if pending == nil || pending.returned || pending.nonce != nonce {
+			barrierMu.Unlock()
+			return
+		}
+		pending.returned = true
+		pending.latency = time.Since(pending.opened)
+		for _, service := range cache.Services(hostName) {
+			if !pending.seen[service] {
+				pending.shadow = append(pending.shadow, service)
+			}
+		}
+		sort.Strings(pending.shadow)
+		shadow, latency := pending.shadow, pending.latency
+		barrierMu.Unlock()
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("returned", pending.opened, "[%3d] shadow after [%5d] ms", len(shadow), latency.Milliseconds())
 	}
 	wildcardHandlers := map[string]mqtt.MessageHandler{
 		topicDiscovery: onDiscovery,
 		topicStatus:    onStatus,
+		barrierTopic:   onBarrier, // TODO(shadow-barrier): delete with hostBarrier.
 	}
 	subscribeWildcards := func(client mqtt.Client) int {
 		var pending []string
@@ -379,7 +451,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				wildcardMu.Lock()
 				delete(wildcards, topic)
 				wildcardMu.Unlock()
-				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%s] wildcard refused: %s", topic, reason)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[refused] wildcard resubscribe, %s", reason)
 			}(topic, token)
 		}
 		return len(pending)
@@ -418,7 +490,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	clientStart := time.Now()
 	client, err := brokerConnect(configPath, onConnect, "", "")
 	if err != nil {
-		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%s] loop: [%v]", loopListeningStream, err)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%-16.16s] loop halted, %v", loopListeningStream, err)
 		return
 	}
 	defer client.Disconnect(250)
@@ -463,13 +535,23 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			for _, pending := range due {
 				reconcileStart := time.Now()
 				services := cache.ServicesBefore(pending.host, pending.started.Unix())
+				compareBarrier(barriers, &barrierMu, pending.host, services, reconcileStart) // TODO(shadow-barrier): delete with hostBarrier.
 				if len(services) > 0 && len(services) == len(cache.Services(pending.host)) && !pending.retried {
 					reconcileMu.Lock()
-					pending.retried = true
-					pending.deadline = time.Now().Add(reconcileDelay)
-					reconciles[pending.host] = pending
+					current, held := reconciles[pending.host]
+					superseded := !held || !current.deadline.IsZero() || !current.started.Equal(pending.started)
+					if !superseded {
+						current.retried = true
+						current.deadline = time.Now().Add(reconcileDelay)
+						reconciles[pending.host] = current
+					}
 					reconcileMu.Unlock()
+					if superseded {
+						scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Debugf("deferred", reconcileStart, "[superseded] by a newer schedule")
+						continue
+					}
 					topics := resubscribeHost(client, pending.host)
+					openBarrier(client, pending.host) // TODO(shadow-barrier): delete with hostBarrier.
 					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warnf("deferred", reconcileStart, "[%3d] services after [%7d] s", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()))
 					scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Warnf("deferred", reconcileStart, "[%5d] topics resubbed on retry", topics)
 					continue
@@ -483,7 +565,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					continue
 				}
 				cache.Refresh()
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Infof("reclaims", reconcileStart, "[%2d] evicted after [%4d] s: %s", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()), strings.Join(services, ","))
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(pending.host), scribe.ActionReconcile).Infof("reclaims", reconcileStart, "[%2d] evicted after [%5d] s of %s", len(services), int64(config.SinceIncludingSuspend(pending.started).Seconds()), strings.Join(services, ","))
 			}
 			resyncStart := time.Now()
 			if added, dropped := resyncTopics(client); added > 0 || dropped > 0 {
@@ -515,7 +597,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				silenceStart := time.Now()
 				restored, listens := resubscribeAll(client)
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warnf("received", silenceStart, "[%3d] msgs over [%3d] idle ticks", rx, silenceTickCount)
-				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warnf("restored", silenceStart, "[%4d] topics [%3d]+[%2d] restored", attached, restored, listens)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionDisconnect).Warnf("restored", silenceStart, "[%4d] topics [%2d]+[%2d] restored", attached, restored, listens)
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debugf("received", purgeStart, "[%3d] messages [%4d] messages/s", rx, rate)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(""), scribe.ActionReconcile).Debugf("removals", purgeStart, "[%3d] evictions, [%3d] deletions", evicted, deleted)
@@ -589,25 +671,30 @@ type serviceKey struct {
 //
 // On connect:
 //  1. Subscribe to this host's own retained service names, and register each one, which is how a service survives a crash.
+//     Every arm of that handler reports, because a silent return made an absent line mean four different things at once.
 //  2. Subscribe to the command topic.
 //  3. On a reconnect, read the retained status back, and re-assert it online, forcing a full republish when it had lapsed.
 //
 // On each pulse:
 //  1. Publish the online status and every record on a heartbeat, or only the records that changed otherwise.
 //  2. Publish a record holding a pulse to its own retained topic.
-//  3. Publish a record holding none as nil, then as an empty payload, then delete it, which tombstones it on the broker.
+//  3. Publish a record holding none as nil, then as an empty payload at qos 1, then delete it, which tombstones it.
 //  4. Group the numeric metrics by host and service, and write them to the database as line protocol.
 //
 // On shutdown, which a signal reaches but a kill does not:
-//  1. Publish the offline status, which is what the last will would otherwise have published.
-//  2. Publish an empty payload for every retained topic.
+//  1. Publish the offline status, which is what the last will would otherwise have published, and nothing else.
 //
 // Notes:
-//   - The service name topic must be retained, being the only breadcrumb a crash leaves behind. Nothing publishes the
-//     tombstones after a kill, so the next process rediscovers the service from that name, finds it absent from docker,
-//     and removes it, which is what finally clears the broker. See supervisor/CLAUDE.md.
-//   - The cache belongs to this loop alone, and Take drains the changed set each pulse.
-//   - A service that leaves docker or the config is evicted to nil then deleted, and the deletes listener empties its topics.
+//   - The retained set is deliberately left behind on the way out, because it is the only breadcrumb the next process
+//     has. Tombstoning it here reached no watch, since the offline status is acknowledged first and every watch drops
+//     what an offline host publishes, and it deleted the very names the readback above reads. See supervisor/CLAUDE.md.
+//   - The service name topic must be retained for the same reason after a kill, which publishes nothing at all, so both
+//     exits now recover the same way: the next process rediscovers the service from that name, finds it absent from
+//     docker, and removes it, which is what finally clears the broker.
+//   - The cache belongs to this loop alone, and Take drains the changed set each pulse, sorted, so a pulse is reproducible.
+//   - The database connects on its own goroutine, so an unreachable one delays no probe, and the pulse reads it atomically.
+//   - A service that leaves docker or the config is evicted to nil then deleted, and the deletes listener publishes the
+//     same two forms at qos 1, so a departure carries a timestamp that proves the host alive and cannot be lost in transit.
 //   - A record reaching the pulse without a pulse value is tombstoned there too, covering an interleave with the removal above.
 func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for _, id := range metric.GetIDs() {
@@ -627,21 +714,38 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	var forceRepublish atomic.Bool
 	onConnect := func(client mqtt.Client) {
 		names := client.Subscribe(serviceNameTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
-			var value metric.ValueData
-			if err := json.Unmarshal(msg.Payload(), &value); err != nil || value.Pulse == nil {
+			readbackStart := time.Now()
+			topic := scribe.SubjectTopic(msg.Topic())
+			if len(msg.Payload()) == 0 {
+				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Debugf("excluded", readbackStart, "[empty] readback, tombstoned before")
 				return
 			}
-			if serviceName := value.Pulse.ValueString; serviceName != "" {
-				registerStart := time.Now()
-				if bindings := cache.RegisterService(hostName, serviceName, true); len(bindings) > 0 {
-					scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", registerStart, "[%s] host, rediscovered [%d] topics", hostName, len(bindings))
-				}
+			var value metric.ValueData
+			if err := json.Unmarshal(msg.Payload(), &value); err != nil {
+				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Errorf("rejected", readbackStart, "[unmarshal] readback failed with [%v]", err)
+				return
 			}
+			if value.Pulse == nil {
+				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Debugf("excluded", readbackStart, "[nil] readback pulse, departing now")
+				return
+			}
+			serviceName := value.Pulse.ValueString
+			if serviceName == "" {
+				scribe.Log(scribe.SourceEngine, topic, scribe.ActionRegister).Errorf("rejected", readbackStart, "[empty] readback carries no service")
+				return
+			}
+			bindings := cache.RegisterService(hostName, serviceName, true)
+			if len(bindings) == 0 {
+				scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Debugf("observed", readbackStart, "[%s] host, rediscovered [  0] topics", hostName)
+				return
+			}
+			scribe.Log(scribe.SourceEngine, scribe.SubjectService(serviceName), scribe.ActionRegister).Infof("register", readbackStart, "[%s] host, rediscovered [%3d] topics", hostName, len(bindings))
 		})
 		commands := client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
 			commandStart := time.Now()
 			tokens := strings.Split(msg.Topic(), "/")
 			if len(tokens) < 5 || tokens[1] == "" || tokens[4] == "" {
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[malformed] topic, [%4d] levels", len(tokens))
 				return
 			}
 
@@ -686,27 +790,30 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	defer func() {
 		shutdownStart := time.Now()
 		client.Publish(statusTopic, 1, true, hostStatusOffline).WaitTimeout(2 * time.Second)
-		tombstoned := 0
-		cache.Records(func(_ metric.RecordGUID, record *metric.Record) {
-			if record.Topic != "" {
-				client.Publish(record.Topic, 0, true, "")
-				tombstoned++
-			}
-		})
 		client.Disconnect(2500)
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionStop).Infof("shutdown", shutdownStart, "[%s] status, tombstoned [%d] topics", hostStatusOffline, tombstoned)
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionStop).Infof("shutdown", shutdownStart, "[%s] status, retained [%3d] records", hostStatusOffline, cache.Size())
 	}()
 	cache.SubscribeDeletes(&serveDeletesListener{client: client})
-	var db *databaseClient
-	if config.Load(configPath).Database() != "" {
-		var dbErr error
-		databaseStart := time.Now()
-		db, dbErr = databaseConnect(ctx, configPath)
-		if dbErr != nil {
-			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", databaseStart, "[%s] loop with [%v]", loopAllProbesPublish, dbErr)
-		} else {
-			defer db.close()
+	var db atomic.Pointer[databaseClient]
+	defer func() {
+		if connected := db.Swap(nil); connected != nil {
+			connected.close()
 		}
+	}()
+	if config.Load(configPath).Database() != "" {
+		databaseStart := time.Now()
+		go func() {
+			connected, dbErr := databaseConnect(ctx, configPath)
+			if dbErr != nil {
+				scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionConnect).Errorf("faulting", databaseStart, "[%s] loop with [%v]", loopAllProbesPublish, dbErr)
+				return
+			}
+			if ctx.Err() != nil {
+				connected.close()
+				return
+			}
+			db.Store(connected)
+		}()
 	}
 	batch := newDatabaseBatch()
 	var toDelete []serviceKey
@@ -749,11 +856,11 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 					}
 				} else if guid.ServiceName != metric.ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, metric.ServiceNameSchema) {
 					if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
-						client.Publish(record.Topic, 0, true, payload)
+						client.Publish(record.Topic, 1, true, payload)
 						txBytes += len(payload)
 					}
-					client.Publish(record.Topic, 0, true, "")
-					scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debugf("removals", processStart, "[qos 0] cleared with an empty payload")
+					client.Publish(record.Topic, 1, true, "")
+					scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(record.Topic), scribe.ActionPublish).Debugf("removals", processStart, "[qos 1] nil then empty payload")
 					toDelete = append(toDelete, serviceKey{host: guid.Host, service: guid.ServiceName})
 				}
 			}
@@ -782,8 +889,8 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 		}
 		lineBytes := batch.render(strconv.FormatInt(time.Now().UnixNano(), 10))
-		if lineBytes > 0 && db != nil {
-			db.write(ctx, batch.protocol.Bytes())
+		if connected := db.Load(); lineBytes > 0 && connected != nil {
+			connected.write(ctx, batch.protocol.Bytes())
 		}
 		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Infof("gathered", pulseStart, "[%3d] metrics, sent [%5d] b, kept [%5d] b, [%s]",
 			collected, txBytes, lineBytes, publishLabel)
@@ -840,8 +947,65 @@ type serveDeletesListener struct {
 
 func (b *serveDeletesListener) MarkDelete(topic string) {
 	deleteStart := time.Now()
-	b.client.Publish(topic, 0, true, "")
-	scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionRemove).Debugf("removals", deleteStart, "[%s] tombstoned, empty retained payload", topic)
+	if payload, err := json.Marshal(metric.NewNilValue()); err == nil {
+		b.client.Publish(topic, 1, true, payload)
+	} else {
+		scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionRemove).Errorf("faulting", deleteStart, "[marshal] nil failed with [%v]", err)
+	}
+	b.client.Publish(topic, 1, true, "")
+	scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionRemove).Debugf("removals", deleteStart, "[%s] tombstoned, nil then empty", topic)
+}
+
+// TODO(shadow-barrier): delete all of this if option C is not adopted.
+// Shadow mode computes the reap set a barrier reconcile WOULD produce and logs it beside the set
+// the timed reconcile actually used. It decides nothing. Every symbol and call site carries this
+// same tag, so `grep -rn "TODO(shadow-barrier)"` is the complete removal list. To remove:
+// delete hostBarrier, compareBarrier, joinedServices, openBarrier, barrierSeen, onBarrier,
+// barrierMu, barriers, barrierTopic, barrierTopicFormat, the barrierTopic entry in
+// wildcardHandlers, the two barrierSeen calls, the four openBarrier calls, the compareBarrier
+// call in the purge tick, and TestEngine_CompareBarrier. If option C IS adopted, none of this is
+// reused as it stands: the barrier becomes the reap decision and the timed arm goes instead.
+type hostBarrier struct {
+	nonce    string
+	opened   time.Time
+	returned bool
+	latency  time.Duration
+	seen     map[string]bool
+	shadow   []string
+}
+
+// TODO(shadow-barrier): delete with hostBarrier.
+func compareBarrier(barriers map[string]*hostBarrier, guard *sync.Mutex, hostName string, reaped []string, started time.Time) {
+	guard.Lock()
+	pending := barriers[hostName]
+	if pending == nil {
+		guard.Unlock()
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("shadowed", started, "[none] barrier for this reconcile")
+		return
+	}
+	returned, latency, shadow := pending.returned, pending.latency, slices.Clone(pending.shadow)
+	guard.Unlock()
+	if !returned {
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[pending] barrier, timer reaped [%3d]", len(reaped))
+		return
+	}
+	timed := slices.Clone(reaped)
+	sort.Strings(timed)
+	if slices.Equal(timed, shadow) {
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Debugf("shadowed", started, "[agreed] on [%3d] after [%5d] ms", len(timed), latency.Milliseconds())
+		return
+	}
+	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[differ] barrier [%3d], timer [%3d]", len(shadow), len(timed))
+	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[barrier] after [%5d] ms of %s", latency.Milliseconds(), joinedServices(shadow))
+	scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionReconcile).Warnf("shadowed", started, "[timer] reaped %s", joinedServices(timed))
+}
+
+// TODO(shadow-barrier): delete with hostBarrier.
+func joinedServices(services []string) string {
+	if len(services) == 0 {
+		return "[none]"
+	}
+	return strings.Join(services, ",")
 }
 
 type hostReconcile struct {
@@ -880,8 +1044,9 @@ func init() {
 }
 
 const (
-	topicStatus    = "supervisor/+/status"
-	topicDiscovery = "supervisor/+/data/service/+/name"
+	topicStatus        = "supervisor/+/status"
+	barrierTopicFormat = "supervisor/watch/%d/barrier" // TODO(shadow-barrier): delete with hostBarrier.
+	topicDiscovery     = "supervisor/+/data/service/+/name"
 
 	loopListeningProbes  = "listening probes"
 	loopListeningStream  = "listening stream"

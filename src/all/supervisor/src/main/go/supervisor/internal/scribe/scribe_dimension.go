@@ -182,24 +182,30 @@ func Attribute(source Source, ids ...metric.ID) {
 	attributionMu.Unlock()
 }
 
-func Widen(hosts, services []string) {
-	if Mode() != "" {
-		panic(fmt.Sprintf("error: widen called after logging was enabled as [%s], so a written header cannot match its rows", Mode()))
-	}
-	for _, name := range prefixed(subjectHosts, hosts) {
-		spanSubject.ideal = max(spanSubject.ideal, len(name))
-	}
-	for _, name := range prefixed(subjectServices, services) {
-		spanSubject.ideal = max(spanSubject.ideal, len(name))
-	}
-}
-
 var (
-	AllSources = declaredSources()
-	AllActions = declaredActions()
+	AllSources    = declaredSources()
+	AllActions    = declaredActions()
+	subjectLabels = declaredLabels()
 )
 
-func Vocabularies(hosts, services []string) string {
+func labelled(subject string) string {
+	if label := subjectLabels[subject]; label != "" {
+		return subject + " (" + label + ")"
+	}
+	return subject
+}
+
+func declaredLabels() map[string]string {
+	labels := make(map[string]string, len(metric.GetIDs()))
+	for _, id := range metric.GetIDs() {
+		if label := metric.GetIDLabel(id); label != "" {
+			labels[metric.GetIDName(id)] = label
+		}
+	}
+	return labels
+}
+
+func Vocabularies() string {
 	declared := make([]string, 0, len(metric.GetIDs()))
 	for _, id := range metric.GetIDs() {
 		declared = append(declared, metric.GetIDName(id))
@@ -209,16 +215,14 @@ func Vocabularies(hosts, services []string) string {
 	var serviceMetrics []string
 	for _, subject := range declared {
 		if strings.HasPrefix(subject, subjectServices+"/") {
-			serviceMetrics = append(serviceMetrics, subject)
+			serviceMetrics = append(serviceMetrics, labelled(subject))
 			continue
 		}
 		if strings.HasPrefix(subject, subjectHosts+"/") {
-			hostMetrics = append(hostMetrics, subject)
+			hostMetrics = append(hostMetrics, labelled(subject))
 		}
 	}
-	hostNames := prefixed(subjectHosts, hosts)
-	serviceNames := prefixed(subjectServices, services)
-	cell := max(widest(hostMetrics), widest(serviceMetrics), widest(hostNames), widest(serviceNames),
+	cell := max(widest(hostMetrics), widest(serviceMetrics),
 		subjectSplit*widest(sourceStrings()), subjectSplit*widest(actionStrings()))
 	if cell%subjectSplit != 0 {
 		cell += subjectSplit - cell%subjectSplit
@@ -227,19 +231,11 @@ func Vocabularies(hosts, services []string) string {
 	builder.WriteString("Log Sources:\n")
 	builder.WriteString(columned(sourceStrings(), cell/subjectSplit))
 	builder.WriteString("\nLog Subjects:\n")
-	builder.WriteString(grouped(cell, []string{subjectHosts}, nil, []string{subjectServices}, nil))
-	builder.WriteString(grouped(cell, hostMetrics, hostNames, serviceMetrics, serviceNames))
+	builder.WriteString(grouped(cell, []string{labelled(subjectHosts)}, []string{labelled(subjectServices)}))
+	builder.WriteString(grouped(cell, hostMetrics, serviceMetrics))
 	builder.WriteString("\nLog Actions:\n")
 	builder.WriteString(columned(actionStrings(), cell/subjectSplit))
 	return builder.String()
-}
-
-func prefixed(branch string, names []string) []string {
-	values := make([]string, 0, len(names))
-	for _, name := range names {
-		values = append(values, branch+"/"+name)
-	}
-	return values
 }
 
 func grouped(cell int, columns ...[]string) string {
@@ -323,7 +319,7 @@ func allowed(source, subject, action string) bool {
 }
 
 func subjected(source, subject string, prefixes []string) bool {
-	if matches(subject, prefixes) {
+	if matches(subject, prefixes) || matches(subjectLabels[subject], prefixes) {
 		return true
 	}
 	attributionMu.Lock()
@@ -353,47 +349,58 @@ func declaredActions() []Action {
 	return declared
 }
 
-func matches(value string, prefixes []string) bool {
-	if len(prefixes) == 0 {
+func matches(value string, terms []string) bool {
+	if len(terms) == 0 {
 		return true
 	}
-	lowered := strings.ToLower(value)
-	for _, prefix := range prefixes {
-		if strings.HasPrefix(lowered, prefix) {
+	reduced := normalised(value)
+	for _, term := range terms {
+		if strings.Contains(reduced, term) {
 			return true
 		}
 	}
 	return false
 }
 
+func normalised(value string) string {
+	var builder strings.Builder
+	builder.Grow(len(value))
+	for _, letter := range strings.ToLower(value) {
+		if letter >= 'a' && letter <= 'z' || letter >= '0' && letter <= '9' {
+			builder.WriteRune(letter)
+		}
+	}
+	return builder.String()
+}
+
 func openPrefixes(value string) []string {
 	if strings.TrimSpace(value) == "" {
 		return nil
 	}
-	prefixes := make([]string, 0, strings.Count(value, ",")+1)
+	terms := make([]string, 0, strings.Count(value, ",")+1)
 	for token := range strings.SplitSeq(value, ",") {
-		if token = strings.ToLower(strings.TrimSpace(token)); token != "" {
-			prefixes = append(prefixes, token)
+		if reduced := normalised(token); reduced != "" {
+			terms = append(terms, reduced)
 		}
 	}
-	return prefixes
+	return terms
 }
 
 func closedPrefixes(dimension, value string, declared []string) ([]string, error) {
-	prefixes := openPrefixes(value)
-	for _, prefix := range prefixes {
+	terms := openPrefixes(value)
+	for _, term := range terms {
 		matched := false
 		for _, candidate := range declared {
-			if strings.HasPrefix(strings.ToLower(candidate), prefix) {
+			if strings.Contains(normalised(candidate), term) {
 				matched = true
 				break
 			}
 		}
 		if !matched {
-			return nil, fmt.Errorf("log %s filter prefix [%s] matches none of [%s]", dimension, prefix, strings.Join(declared, ", "))
+			return nil, fmt.Errorf("log %s filter term [%s] matches none of [%s]", dimension, term, strings.Join(declared, ", "))
 		}
 	}
-	return prefixes, nil
+	return terms, nil
 }
 
 func sourceStrings() []string {

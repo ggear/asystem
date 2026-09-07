@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
@@ -171,11 +169,7 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 }
 
 func helpAllVocabularies() string {
-	path := config.DefaultConfigPath
-	if flag := rootCmd.PersistentFlags().Lookup("config"); flag != nil && flag.Value.String() != "" {
-		path = flag.Value.String()
-	}
-	return scribe.Vocabularies(configuredHosts(path), configuredServices(path))
+	return scribe.Vocabularies()
 }
 
 func formatFlagUsages(flags *pflag.FlagSet) string {
@@ -186,55 +180,13 @@ func formatFlagUsages(flags *pflag.FlagSet) string {
 	return strings.Join(lines, "\n")
 }
 
-func configuredHosts(path string) []string {
-	hosts, _ := configuredNames(path)
-	return hosts
-}
-
-func configuredServices(path string) []string {
-	_, services := configuredNames(path)
-	return services
-}
-
-func configuredNames(path string) ([]string, []string) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, nil
-	}
-	var document struct {
-		Asystem struct {
-			Schema []struct {
-				Host     string   `json:"host"`
-				Services []string `json:"services"`
-			} `json:"schema"`
-		} `json:"asystem"`
-	}
-	if json.Unmarshal(data, &document) != nil {
-		return nil, nil
-	}
-	seenHosts, seenServices := map[string]bool{}, map[string]bool{}
-	var hosts, services []string
-	for _, entry := range document.Asystem.Schema {
-		if entry.Host != "" && !seenHosts[entry.Host] {
-			seenHosts[entry.Host] = true
-			hosts = append(hosts, entry.Host)
-		}
-		for _, service := range entry.Services {
-			if service == "" || seenServices[service] {
-				continue
-			}
-			seenServices[service] = true
-			services = append(services, service)
-		}
-	}
-	sort.Strings(hosts)
-	sort.Strings(services)
-	return hosts, services
-}
-
 const (
 	helpAllFlag     = "help-all"
 	rootDescription = "Run supervisor processes"
+
+	logFileSizeMB  = 10
+	logFileBackups = 60
+	logFileAgeDays = 40
 )
 
 const usageTemplate = `Usage:{{if .Runnable}}

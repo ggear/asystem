@@ -2,9 +2,11 @@ package probe
 
 import (
 	"errors"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
@@ -1020,4 +1022,27 @@ func seedHostMounts(t *testing.T) {
 	mountCacheMu.Lock()
 	mountCache[""] = set
 	mountCacheMu.Unlock()
+}
+
+func TestProbeImplHost_EveryMetricIsWiredAtConstruction(t *testing.T) {
+	probe := newHostProbe()
+	samples := map[string]func() (bool, error){
+		"used_processor":   func() (bool, error) { _, d, err := probe.usedProcessor(); return d.detail != "", err },
+		"used_memory":      func() (bool, error) { _, d, err := probe.usedMemory(); return d.detail != "", err },
+		"allocated_memory": func() (bool, error) { _, d, err := probe.allocatedMemory(); return d.detail != "", err },
+		"used_swap_space":  func() (bool, error) { _, d, err := probe.usedSwapSpace(); return d.detail != "", err },
+		"used_disk_time":   func() (bool, error) { _, d, err := probe.usedDiskTime(); return d.detail != "", err },
+		"used_network":     func() (bool, error) { _, d, err := probe.usedNetwork(); return d.detail != "", err },
+		"up_time":          func() (bool, error) { _, d, err := probe.upTime(); return d.detail != "", err },
+	}
+	for _, name := range slices.Sorted(maps.Keys(samples)) {
+		stated, err := samples[name]()
+		if errors.Is(err, errProbeUnwired) {
+			t.Errorf("%s: got %v, expected a reading, a warm-up or an environment fault, never a missing reader", name, err)
+			continue
+		}
+		if err == nil && !stated {
+			t.Errorf("%s: got no derivation, expected every published value to state one", name)
+		}
+	}
 }

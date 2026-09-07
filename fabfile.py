@@ -243,6 +243,7 @@ def _pull(context):
     _print_footer("asystem", "pull main")
     _print_header("asystem", "pull dependencies")
     py_deps_dict = {}
+    py_deps_nodeps = set()
     for py_deps_scope in ["prod", "dev"]:
         py_deps_name = "py_deps_{}.txt".format(py_deps_scope)
         _substitute_env(context, GLOBAL_ENV_PATH, join(ROOT_DIR, py_deps_name), join(ROOT_DIR, "." + py_deps_name), """
@@ -254,6 +255,8 @@ def _pull(context):
             for py_all_line in py_all_file:
                 if py_all_line.strip() != "" and not py_all_line.strip().startswith("#"):
                     if "==" in py_all_line:
+                        if py_deps_scope == "dev":
+                            py_deps_nodeps.add(py_all_line.split("==")[0].strip().lower())
                         if py_all_line.split("==")[0].strip() in py_deps_dict:
                             raise Exception("Error parsing line [{}] from python module file [{}], "
                                             "duplicate python module".format(
@@ -300,11 +303,43 @@ def _pull(context):
     _run_local(context, "pip list --outdated | grep 'Package\\|{}'".format("\\|".join(py_deps_dict.keys())))
     _print_footer("asystem", "pull package versions to update")
     _print_header("asystem", "pull package versions to check")
-    _run_local(context, "pip check | grep 'but you have' || "
-                        "echo 'No version conflicts found'")
-    _run_local(context, "echo \"$(pip check | grep -c 'not installed') dependencies of [.py_deps_dev.txt] "
-                        "absent by design, that file is installed with [--no-deps]\"")
+    _check(context, py_deps_nodeps)
     _print_footer("asystem", "pull package versions to check")
+
+
+def _check(context, py_deps_nodeps):
+    reported = _run_local(context, "pip check", hide='out', warn=True).stdout.strip().splitlines()
+    absent = []
+    conflicting = []
+    unexpected = []
+    for issue in [line.strip() for line in reported if line.strip()]:
+        if issue.lower().startswith("no broken requirements"):
+            continue
+        if issue.split(" ")[0].strip().lower() not in py_deps_nodeps:
+            unexpected.append(issue)
+        elif "which is not installed" in issue:
+            absent.append(issue)
+        elif "but you have" in issue:
+            conflicting.append(issue)
+        else:
+            unexpected.append(issue)
+    _print_line("Checked [{}] python requirement issues reported by [pip check], of which [{}] are by design"
+                .format(len(absent) + len(conflicting) + len(unexpected), len(absent) + len(conflicting)))
+    _print_line("  [{:3d}] absent, being dependencies of [{}] which install with [--no-deps]"
+                .format(len(absent), ", ".join(sorted(py_deps_nodeps))))
+    _print_line("  [{:3d}] conflicting, being versions [.py_deps_prod.txt] resolved instead"
+                .format(len(conflicting)))
+    for issue in conflicting:
+        _print_line("        {}".format(issue))
+    if not unexpected:
+        return
+    _print_line("  [{:3d}] UNEXPECTED, from a package installed with its dependencies, so this is a real conflict"
+                .format(len(unexpected)))
+    for issue in unexpected:
+        _print_line("        {}".format(issue))
+    _print_failure("asystem", "pull package versions to check")
+    raise Exception("Found [{}] unexpected python requirement issues, see [pip check] output above"
+                    .format(len(unexpected)))
 
 
 def _list(context):

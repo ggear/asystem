@@ -1,0 +1,2 @@
+//storage/share10 /share/10 cifs x-systemd.automount,noauto,_netdev,credentials=/etc/credentials 0 0
+//storage/share11 /share/11 cifs x-systemd.automount,_netdev,credentials=/etc/credentials 0 0

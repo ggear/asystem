@@ -26,23 +26,23 @@ x-common: &common
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
     - /var/run/docker.sock:/var/run/docker.sock
-    - /:/${SUPERVISOR_MOUNT}:ro
-    - /etc/fstab:/etc/fstab:ro
-    - /var/lib/btrfs:/var/lib/btrfs:rw
-    - /var/lib/asystem/install:/var/lib/asystem/install:ro
-    - /dev:/dev
-    - /home/asystem:/home/asystem:rw
+    - ${SUPERVISOR_ROOT_SOURCE}:${SUPERVISOR_MOUNT}:ro
+    - ${SUPERVISOR_FSTAB_SOURCE}:/etc/fstab:ro
+    - ${SUPERVISOR_BTRFS_SOURCE}:/var/lib/btrfs:rw
+    - ${SUPERVISOR_INSTALL_SOURCE}:/var/lib/asystem/install:ro
+    - ${SUPERVISOR_DEV_SOURCE}:${SUPERVISOR_DEV_TARGET}
+    - ${SUPERVISOR_HOME_SOURCE}:/home/asystem:rw
     - type: bind
-      source: /share
+      source: ${SUPERVISOR_SHARE_SOURCE}
       target: /share
       bind:
-        propagation: rshared
+        propagation: ${SUPERVISOR_BIND_PROPAGATION}
         create_host_path: true
     - type: bind
-      source: /backup
+      source: ${SUPERVISOR_BACKUP_SOURCE}
       target: /backup
       bind:
-        propagation: rshared
+        propagation: ${SUPERVISOR_BIND_PROPAGATION}
         create_host_path: true
   logging:
     driver: "json-file"

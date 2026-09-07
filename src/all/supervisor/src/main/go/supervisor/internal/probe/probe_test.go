@@ -120,6 +120,20 @@ func TestProbe_RunOnPulse(t *testing.T) {
 			expectedError:    false,
 		},
 		{
+			name:    "happy_first_pulse_fires_before_the_poll_period",
+			periods: config.Periods{PollMillis: 2000, PulseMillis: 2000, HeartbeatSecs: 1000},
+			onPulse: func(count *int, heartbeat *bool) func(bool) {
+				return func(isHeartbeat bool) {
+					*count++
+					if isHeartbeat {
+						*heartbeat = true
+					}
+				}
+			},
+			expectedMinCalls: 1,
+			expectedError:    false,
+		},
+		{
 			name:    "happy_heartbeat_zero_secs_fires_every_pulse",
 			periods: config.Periods{PollMillis: 1000, PulseMillis: 1000, HeartbeatSecs: 0},
 			onPulse: func(count *int, heartbeat *bool) func(bool) {

@@ -11,6 +11,7 @@ type builder struct {
 	id           ID
 	valueKind    ValueKind
 	metricKind   MetricKind
+	label        string
 	unit         string
 	description  string
 	template     string
@@ -50,6 +51,7 @@ var metricBuildersByID = []builder{
 	MetricHost: {
 		id:          MetricHost,
 		valueKind:   ValueBool,
+		label:       "Live HST",
 		unit:        "",
 		description: "host is reporting metrics",
 		template:    "supervisor/$HOST/$SCOPE/host",
@@ -60,6 +62,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedProcessor: {
 		id:          MetricHostUsedProcessor,
 		valueKind:   ValueInt,
+		label:       "Used CPU",
 		unit:        "%",
 		description: "processor time used across all cores",
 		template:    "supervisor/$HOST/$SCOPE/host/used_processor",
@@ -70,6 +73,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedMemory: {
 		id:          MetricHostUsedMemory,
 		valueKind:   ValueInt,
+		label:       "Used RAM",
 		unit:        "%",
 		description: "memory in use against the total installed",
 		template:    "supervisor/$HOST/$SCOPE/host/used_memory",
@@ -80,6 +84,7 @@ var metricBuildersByID = []builder{
 	MetricHostAllocatedMemory: {
 		id:           MetricHostAllocatedMemory,
 		valueKind:    ValueInt,
+		label:        "Aloc RAM",
 		unit:         "%",
 		description:  "configured memory ceilings of the installed services against the total installed, capped at 100",
 		template:     "supervisor/$HOST/$SCOPE/host/allocated_memory",
@@ -91,6 +96,7 @@ var metricBuildersByID = []builder{
 	MetricHostFailedLogs: {
 		id:          MetricHostFailedLogs,
 		valueKind:   ValueInt,
+		label:       "Fail LOG",
 		unit:        "%",
 		description: fmt.Sprintf("kernel errors in the trend window against a %v message budget", FailedLogsBudget),
 		template:    "supervisor/$HOST/$SCOPE/host/failed_log_messages",
@@ -101,6 +107,7 @@ var metricBuildersByID = []builder{
 	MetricHostFailedShares: {
 		id:          MetricHostFailedShares,
 		valueKind:   ValueInt,
+		label:       "Fail SHR",
 		unit:        "%",
 		description: "declared shares failing to mount or report, against those declared",
 		template:    "supervisor/$HOST/$SCOPE/host/failed_shares",
@@ -112,6 +119,7 @@ var metricBuildersByID = []builder{
 	MetricHostFailedBackupStages: {
 		id:          MetricHostFailedBackupStages,
 		valueKind:   ValueInt,
+		label:       "Fail BKP",
 		unit:        "%",
 		description: "backup stages failing to complete against the stages this host runs",
 		template:    "supervisor/$HOST/$SCOPE/host/failed_backup_stages",
@@ -122,6 +130,7 @@ var metricBuildersByID = []builder{
 	MetricHostWarnTemperature: {
 		id:          MetricHostWarnTemperature,
 		valueKind:   ValueInt,
+		label:       "Warn TEM",
 		unit:        "%",
 		description: fmt.Sprintf("hottest processor temperature against its warning ceiling, zero at %v and full at %v degrees", WarnTemperatureBaseCelsius, WarnTemperatureFullCelsius),
 		template:    "supervisor/$HOST/$SCOPE/host/warn_temperature",
@@ -132,6 +141,7 @@ var metricBuildersByID = []builder{
 	MetricHostSpinFanSpeed: {
 		id:           MetricHostSpinFanSpeed,
 		valueKind:    ValueInt,
+		label:        "Revs FAN",
 		unit:         "%",
 		description:  "fastest fan speed against its rated maximum",
 		template:     "supervisor/$HOST/$SCOPE/host/spin_fan_speed",
@@ -143,6 +153,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedDriveLife: {
 		id:           MetricHostUsedDriveLife,
 		valueKind:    ValueInt,
+		label:        "Hlth SSD",
 		unit:         "%",
 		description:  "rated endurance consumed by the most worn drive mounted on this host",
 		template:     "supervisor/$HOST/$SCOPE/host/used_drive_life",
@@ -155,6 +166,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedHomeSpace: {
 		id:          MetricHostUsedHomeSpace,
 		valueKind:   ValueInt,
+		label:       "Used HME",
 		unit:        "%",
 		description: "space used by the services homes",
 		template:    "supervisor/$HOST/$SCOPE/host/used_home_space",
@@ -166,6 +178,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedShareSpace: {
 		id:          MetricHostUsedShareSpace,
 		valueKind:   ValueInt,
+		label:       "Used SHR",
 		unit:        "%",
 		description: "space used across the local share volumes, summed as one pool",
 		template:    "supervisor/$HOST/$SCOPE/host/used_share_space",
@@ -177,6 +190,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedBackupSpace: {
 		id:          MetricHostUsedBackupSpace,
 		valueKind:   ValueInt,
+		label:       "Used BKP",
 		unit:        "%",
 		description: "space used for the backup volume",
 		template:    "supervisor/$HOST/$SCOPE/host/used_backup_space",
@@ -187,6 +201,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedSwapSpace: {
 		id:          MetricHostUsedSwapSpace,
 		valueKind:   ValueInt,
+		label:       "Used SWP",
 		unit:        "%",
 		description: "swap space in use against the total configured",
 		template:    "supervisor/$HOST/$SCOPE/host/used_swap_space",
@@ -197,6 +212,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedDiskTime: {
 		id:          MetricHostUsedDiskTime,
 		valueKind:   ValueInt,
+		label:       "Used DSK",
 		unit:        "%",
 		description: "busiest drive's time spent servicing requests",
 		template:    "supervisor/$HOST/$SCOPE/host/used_disk_time",
@@ -207,6 +223,7 @@ var metricBuildersByID = []builder{
 	MetricHostUsedNetwork: {
 		id:          MetricHostUsedNetwork,
 		valueKind:   ValueInt,
+		label:       "Used NET",
 		unit:        "%",
 		description: "busiest physical interface's throughput against its rated link speed",
 		template:    "supervisor/$HOST/$SCOPE/host/used_network",
@@ -217,6 +234,7 @@ var metricBuildersByID = []builder{
 	MetricHostUpTime: {
 		id:          MetricHostUpTime,
 		valueKind:   ValueFloat,
+		label:       "Live UPT",
 		unit:        "s",
 		description: "time the host has been up",
 		template:    "supervisor/$HOST/$SCOPE/host/up_time",
@@ -226,6 +244,7 @@ var metricBuildersByID = []builder{
 	MetricHostTemperature: {
 		id:          MetricHostTemperature,
 		valueKind:   ValueFloat,
+		label:       "Degs TEM",
 		unit:        "°C",
 		description: "the hosts processor temperature",
 		template:    "supervisor/$HOST/$SCOPE/host/temperature",
@@ -236,6 +255,7 @@ var metricBuildersByID = []builder{
 	MetricHostServicesStatus: {
 		id:          MetricHostServicesStatus,
 		valueKind:   ValueBool,
+		label:       "Hlth SVC",
 		unit:        "",
 		description: "every configured service is running and healthy",
 		template:    "supervisor/$HOST/$SCOPE/host/services_status",
@@ -246,6 +266,7 @@ var metricBuildersByID = []builder{
 	MetricHostServicesMaxMemory: {
 		id:          MetricHostServicesMaxMemory,
 		valueKind:   ValueFloat,
+		label:       "Ceil RAM",
 		unit:        "MiB",
 		description: "memory ceilings summed across the configured services",
 		template:    "supervisor/$HOST/$SCOPE/host/services_max_memory",
@@ -255,6 +276,7 @@ var metricBuildersByID = []builder{
 	MetricService: {
 		id:          MetricService,
 		valueKind:   ValueBool,
+		label:       "AOK",
 		unit:        "",
 		description: "service is running and reporting metrics",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE",
@@ -265,6 +287,7 @@ var metricBuildersByID = []builder{
 	MetricServiceBackupStatus: {
 		id:          MetricServiceBackupStatus,
 		valueKind:   ValueBool,
+		label:       "BKP",
 		unit:        "",
 		description: "module backup completed successfully in the latest run",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/backup_status",
@@ -275,6 +298,7 @@ var metricBuildersByID = []builder{
 	MetricServiceHealthStatus: {
 		id:          MetricServiceHealthStatus,
 		valueKind:   ValueBool,
+		label:       "HLT",
 		unit:        "",
 		description: "service container healthcheck reported healthy",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/health_status",
@@ -285,6 +309,7 @@ var metricBuildersByID = []builder{
 	MetricServiceConfiguredStatus: {
 		id:          MetricServiceConfiguredStatus,
 		valueKind:   ValueBool,
+		label:       "CFG",
 		unit:        "",
 		description: "this service is expected to be running on this host",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/configured_status",
@@ -295,6 +320,7 @@ var metricBuildersByID = []builder{
 	MetricServiceName: {
 		id:          MetricServiceName,
 		valueKind:   ValueString,
+		label:       "SERVICE",
 		unit:        "",
 		description: "service container name",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/name",
@@ -305,6 +331,7 @@ var metricBuildersByID = []builder{
 	MetricServiceVersion: {
 		id:          MetricServiceVersion,
 		valueKind:   ValueString,
+		label:       "VERSION",
 		unit:        "",
 		description: "service installed version",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/version",
@@ -315,6 +342,7 @@ var metricBuildersByID = []builder{
 	MetricServiceUsedProcessor: {
 		id:          MetricServiceUsedProcessor,
 		valueKind:   ValueInt,
+		label:       "CPU",
 		unit:        "%",
 		description: "processor time used by the service across all cores",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_processor",
@@ -324,6 +352,7 @@ var metricBuildersByID = []builder{
 	MetricServiceUsedMemory: {
 		id:          MetricServiceUsedMemory,
 		valueKind:   ValueInt,
+		label:       "RAM",
 		unit:        "%",
 		description: "memory in use by the service, excluding page cache, against its configured ceiling",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_memory",
@@ -333,6 +362,7 @@ var metricBuildersByID = []builder{
 	MetricServiceUsedDiskRate: {
 		id:          MetricServiceUsedDiskRate,
 		valueKind:   ValueInt,
+		label:       "DSK",
 		unit:        "%",
 		description: fmt.Sprintf("block device throughput used by the service against a %v MiB per second budget", UsedDiskRateBudgetMiB),
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_disk_rate",
@@ -342,6 +372,7 @@ var metricBuildersByID = []builder{
 	MetricServiceUsedNetwork: {
 		id:          MetricServiceUsedNetwork,
 		valueKind:   ValueInt,
+		label:       "NET",
 		unit:        "%",
 		description: fmt.Sprintf("network throughput used by the service against a %v Mbit per second budget", UsedNetworkBudgetMbit),
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/used_network",
@@ -351,6 +382,7 @@ var metricBuildersByID = []builder{
 	MetricServiceUpTime: {
 		id:          MetricServiceUpTime,
 		valueKind:   ValueFloat,
+		label:       "UPTIME",
 		unit:        "s",
 		description: "time the service container has been running",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/up_time",
@@ -361,6 +393,7 @@ var metricBuildersByID = []builder{
 	MetricServiceMaxMemory: {
 		id:          MetricServiceMaxMemory,
 		valueKind:   ValueFloat,
+		label:       "MAX",
 		unit:        "MiB",
 		description: "memory ceiling configured for this service",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/max_memory",
@@ -370,6 +403,7 @@ var metricBuildersByID = []builder{
 	MetricHostFailedDrives: {
 		id:          MetricHostFailedDrives,
 		valueKind:   ValueInt,
+		label:       "Fail SSD",
 		unit:        "%",
 		description: "drives reporting new errors since discovery, against those in scope",
 		template:    "supervisor/$HOST/$SCOPE/host/failed_drives",
@@ -380,6 +414,7 @@ var metricBuildersByID = []builder{
 	MetricServiceRestartCount: {
 		id:          MetricServiceRestartCount,
 		valueKind:   ValueFloat,
+		label:       "RST",
 		unit:        "",
 		description: "restarts of the service container since it was created",
 		template:    "supervisor/$HOST/$SCOPE/service/$SERVICE/restart_count",
@@ -495,10 +530,14 @@ var metricBuildersByTemplate = func() map[string]builder {
 	}
 	ids := make(map[ID]bool)
 	templates := make(map[string]bool)
+	labels := make(map[string]bool)
 	builders := make(map[string]builder)
 	for id := range MetricMax {
 		if metricBuildersByID[id].id < ID(0) || metricBuildersByID[id].id >= MetricMax {
 			panic(fmt.Sprintf("error: invalid metric ID [%d]", id))
+		}
+		if metricBuildersByID[id].id != ID(id) {
+			panic(fmt.Sprintf("error: metric at index [%d] declares ID [%d], so a topic lookup would resolve to the wrong metric", id, metricBuildersByID[id].id))
 		}
 		if ids[metricBuildersByID[id].id] {
 			panic(fmt.Sprintf("error: duplicate or missing metric ID [%d]", id))
@@ -526,6 +565,22 @@ var metricBuildersByTemplate = func() map[string]builder {
 		default:
 			panic(fmt.Sprintf("error: could not determine metric type from template [%s] for ID [%d]", metricBuildersByID[id].template, id))
 		}
+		if metricBuildersByID[id].valueKind == ValueNone {
+			panic(fmt.Sprintf("error: metric ID [%d] declares no valueKind, which would pass a bounded rule and persist as no kind", id))
+		}
+		if metricBuildersByID[id].description == "" {
+			panic(fmt.Sprintf("error: metric ID [%d] declares no description, which is projected into the model leaf and describe.sh", id))
+		}
+		if kind := metricBuildersByID[id].valueKind; (kind == ValueBool || kind == ValueString) && metricBuildersByID[id].unit != "" {
+			panic(fmt.Sprintf("error: metric ID [%d] declares unit [%s] on a [%s] valued metric", id, metricBuildersByID[id].unit, kind))
+		}
+		if metricBuildersByID[id].label == "" {
+			panic(fmt.Sprintf("error: metric ID [%d] declares no label, which is the second key --log-subject accepts", id))
+		}
+		if labels[metricBuildersByID[id].label] {
+			panic(fmt.Sprintf("error: duplicate label [%s] for metric ID [%d]", metricBuildersByID[id].label, id))
+		}
+		labels[metricBuildersByID[id].label] = true
 		if metricBuildersByID[id].warming && metricBuildersByID[id].metricKind == MetricKindService {
 			panic(fmt.Sprintf("error: metric ID [%d] is service scoped and declares warming, which would stop the service refreshing", id))
 		}

@@ -1,0 +1,5 @@
+/dev/sda2 /host ext4 rw,relatime 0 0
+/dev/sda1 /host/boot vfat rw,relatime 0 0
+proc /host/proc proc rw,nosuid,nodev,noexec,relatime 0 0
+sysfs /host/sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
+systemd-1 /host/share/11 autofs rw,relatime,fd=44 0 0

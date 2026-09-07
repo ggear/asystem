@@ -27,22 +27,9 @@ Add big ass temps for deck
 retire nginx and use cloudflared for homeasistant?
 
 
-deploy.sh consolidation, only keep those that are necessary
-cleanup supervisor schema, rename/drops, make influxdb drop really work
-
-
-Fix logs for watch so no wrapping, what I see in watch or all?
-check metric attribution works by metric filter when multiple probe_* feed single metric
 
 
 
-imporve output so that benign/by-design issues are info only and errors complain loudly
-cd ./. && . /Users/graham/Code/asystem/.env_fab && pip check | grep 'but you have' || echo 'No version conflicts found'
-mlserver 1.7.1 has requirement importlib-resources<7.0,>=5.12, but you have importlib-resources 7.1.0.
-homeassistant 2026.9.0 has requirement cryptography==48.0.1, but you have cryptography 46.0.7.
-cd ./. && . /Users/graham/Code/asystem/.env_fab && echo "$(pip check | grep -c 'not installed') dependencies of [.py_deps_dev.txt] absent by design, that file is installed with [--no-deps]"
-45 dependencies of [.py_deps_dev.txt] absent by design, that file is installed with [--no-deps]
-improve logs around Fail LOG, show timestamps and list them line by line
 implement plan, check code
 test supervisor release, with new systests etc
 test new watch logs, add/remove etc
@@ -51,68 +38,30 @@ test sedondary
 format all /backup drives, test volumes.sh
 test tertiary
 test supervisor backup enable release, validate 384M memeory footprint during backup, make smaller again if possible?
-
-
-redploy mlflow, mlserver, network
-   
-
-
+implement PLAN_BACKUP.md and delete
 
 
 
 check all metrics working 
-verify that when backup is mounted it is ignored by Hlth SSD
-implement backup so metrics can work - module by modeule first then cron'd backup to /share and to /backup impl
 
-
-verify caching hour and all metrics performance
-implement all stub metrics and remove TODOs and stub code - gates on Backup impl
-
-
-
-
-
+tune yellow/red
 adjust memeory allocs
 tune fan/tem
+
+Fix logs for watch so no wrapping, what I see in watch or all?
+check metric attribution works by metric filter when multiple probe_* feed single metric
+verify caching hour and all metrics performance
 Add host status to ha, combine backup temp etc
-add debug (or other) to each grunular metric that helps to show what is driving ui - eg which SSD has poor life, hidden in serve (? maybe only info?) but visible in watch when local
-
-make cache-eriod=1h and daily 24h and 3s and 1s intervals well specified and daily useful for backups too - maybe have to add a timestart? so if daily goes to 12 hours, it starts at time and 12/6 + time
-add host USED BKP and FAIL BKP and Service BKP into backup plan, remove backup phases and add as shared probe that runs daily from a time (above).
-
-
-
-
-
-
-
-Check all host level metrics, check serve logs
-
-
-
-
-move rue/kasa to max and refactor to be like tasmota including html site. remove deploy and build instead into release like tasmota. use tron theme from https://github.com/educlopez/thegridcn-ui not ares
-
-
-resinstate BACKUP_RETAIN_DAYS for HOT, maybe rename and create new ones for WARM that are both available as defaults in script but passed as params into python write too, which will be tuned on a module by module basis - implications for success? write an hard link copy? not worth it?
-go through each module and inspect or implement close out 6 with results, prune backup aggresively, offload metatadata outside of backup in slow moving, single copy backups
-
-
 add restore.sh and test 
-implement plan
 
 
 
-Order of attach:
-  - schema
-  - network
-  - storage/backup
-  - grafana
-  - wrangle balances/transactions
-
-add explorer module for influxdb, call is influxdb3ui or explorer?
 
 
+
+
+
+Collect months worth of logs from Sep 7, make reconcile decision and close out PLAN_WATCH.md, deleting it
 display_terminal.go: hide tcell namespace completely - tcell.Event?
 how to deal with vernemq redploy and run all mqtt publish, also make install.sh start not run broker, and others. 
 doesnt seem worth it? is it possible to have postgress/influxdb3/vernemq discover their schemas and then have verify.sh diff with the agrgegate of the modules to check missing and extra elements in the schema without too much code? worthwhile?
@@ -142,6 +91,11 @@ Add fields to UI
 Implement upgrade script, generarted?
 
 
+###############################################################################################################################################################
+# Kasa
+###############################################################################################################################################################
+move rue/kasa to max and refactor to be like tasmota including html site. remove deploy and build instead into release like tasmota. use tron theme from https://github.com/educlopez/thegridcn-ui not ares
+
 
 ###############################################################################################################################################################
 # Media
@@ -170,7 +124,8 @@ Issues today: mounts all work, mlflow creates a share/1, sonarr requires mad to 
 Rename to InfluxDB
 Move to mad and remove emulation env test/exec vars
 Update HASS to use
-add schema describe to src/build/resources/schemas/influxdb
+add explorer module for influxdb, call is influxdb3ui or explorer?
+
 
 
 ###############################################################################################################################################################

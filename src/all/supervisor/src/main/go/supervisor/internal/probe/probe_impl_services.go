@@ -510,6 +510,7 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 			ghostSleep, _ := p.sleep(snapshot, ghostInspect)
 			ghostMaxMemory, ghostMaxMemoryDerived, ghostMaxMemoryErr := p.maxMemory(snapshot, configuredServiceName)
 			ghostBackup, ghostBackupDerived, ghostBackupErr := p.backupStatus(configuredServiceName)
+			ghostAbsent := derivedf(scribe.ActionSample, "computed [absent] container for service [%s], which is configured but not running, so nothing is sampled and the service aggregate fails it", configuredServiceName)
 			services[configuredServiceName] = service{
 				nameValue:             configuredServiceName,
 				configuredStatusValue: true,
@@ -522,6 +523,13 @@ func (p *servicesProbe) services(ctx context.Context, snapshot *installSnapshot)
 				backupStatusValue:     ghostBackup,
 				backupStatusDerived:   ghostBackupDerived,
 				backupStatusErr:       ghostBackupErr,
+				healthStatusDerived:   ghostAbsent,
+				usedProcessorDerived:  ghostAbsent,
+				usedMemoryDerived:     ghostAbsent,
+				usedDiskOpsDerived:    ghostAbsent,
+				usedNetworkDerived:    ghostAbsent,
+				upTimeDerived:         ghostAbsent,
+				restartCountDerived:   ghostAbsent,
 			}
 		}
 	}

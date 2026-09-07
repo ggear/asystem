@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -53,14 +54,30 @@ func TestScribe_Stdout(t *testing.T) {
 		},
 	}
 	for index, testCase := range tests {
-		message := fmt.Sprintf("Expected log message %d", index)
-		if !testCase.expected {
-			message = fmt.Sprintf("UNEXPECTED LOG MESSAGE %d!!!!", index)
-		}
+		message := fmt.Sprintf("mark%d", index)
 		t.Run(testCase.name, func(t *testing.T) {
+			reader, writer, pipeErr := os.Pipe()
+			if pipeErr != nil {
+				t.Fatalf("os.Pipe(): %v", pipeErr)
+			}
+			original := os.Stdout
+			os.Stdout = writer
 			testCase.setup()
-			t.Logf("Log in mode [%s] and level [%v]", Mode(), Level())
 			testCase.logFunc(message)
+			os.Stdout = original
+			t.Cleanup(func() { EnableStdout(slog.LevelDebug) })
+			if closeErr := writer.Close(); closeErr != nil {
+				t.Fatalf("close writer: %v", closeErr)
+			}
+			captured, readErr := io.ReadAll(reader)
+			if readErr != nil {
+				t.Fatalf("read captured stdout: %v", readErr)
+			}
+			_ = reader.Close()
+			t.Logf("Log in mode [%s] and level [%v]", Mode(), Level())
+			if carried := strings.Contains(string(captured), message); carried != testCase.expected {
+				t.Fatalf("stdout carried the message: got %v want %v in %q", carried, testCase.expected, string(captured))
+			}
 		})
 	}
 }
@@ -75,19 +92,19 @@ func TestScribe_File(t *testing.T) {
 	}{
 		{
 			name:     "happy_debug_enabled",
-			setup:    func(cmd string) error { return EnableFile(slog.LevelDebug, cmd, 10, 7, 30) },
+			setup:    func(cmd string) error { return EnableFile(slog.LevelDebug, cmd, "10.200.9999", 10, 7, 30) },
 			logFunc:  func(message string) { slog.Debug(message) },
 			expected: true,
 		},
 		{
 			name:     "happy_level_too_high",
-			setup:    func(cmd string) error { return EnableFile(9, cmd, 10, 7, 30) },
+			setup:    func(cmd string) error { return EnableFile(9, cmd, "10.200.9999", 10, 7, 30) },
 			logFunc:  func(message string) { slog.Error(message) },
 			expected: false,
 		},
 		{
 			name:     "happy_re_enabled",
-			setup:    func(cmd string) error { return EnableFile(slog.LevelDebug, cmd, 10, 7, 30) },
+			setup:    func(cmd string) error { return EnableFile(slog.LevelDebug, cmd, "10.200.9999", 10, 7, 30) },
 			logFunc:  func(message string) { slog.Debug(message) },
 			expected: true,
 		},
@@ -105,7 +122,7 @@ func TestScribe_File(t *testing.T) {
 			message = fmt.Sprintf("bad%d", index)
 		}
 		cmdName := fmt.Sprintf("supervisor-test-%d", index)
-		logPath := filepath.Join(logDir, fmt.Sprintf("%s-pid-%d.log", cmdName, os.Getpid()))
+		logPath := filepath.Join(logDir, fmt.Sprintf("%s-%s-pid-%d.log", cmdName, "10.200.9999", os.Getpid()))
 		t.Run(testCase.name, func(t *testing.T) {
 			_ = os.Remove(logPath)
 			if err := testCase.setup(cmdName); err != nil {
@@ -997,6 +1014,8 @@ func TestScribe_LogFilePID(t *testing.T) {
 	}{
 		{name: "happy current log carries its pid", file: "serve-pid-4321.log", expectedPID: 4321, expectedOK: true},
 		{name: "happy rotated log carries the pid of the run that wrote it", file: "watch-pid-77-2026-08-26T14-00-00.000.log.gz", expectedPID: 77, expectedOK: true},
+		{name: "happy versioned log carries its pid", file: "watch-10.200.1527-pid-4321.log", expectedPID: 4321, expectedOK: true},
+		{name: "happy versioned snapshot rotated log carries its pid", file: "serve-00.000.0000-SNAPSHOT-pid-77-2026-08-26T14-00-00.000.log.gz", expectedPID: 77, expectedOK: true},
 		{name: "sad marker missing", file: "serve.log", expectedPID: 0, expectedOK: false},
 		{name: "sad marker carries no digits", file: "serve-pid-.log", expectedPID: 0, expectedOK: false},
 	}
@@ -1011,6 +1030,8 @@ func TestScribe_LogFilePID(t *testing.T) {
 }
 
 func TestScribe_PurgeLogFiles(t *testing.T) {
+	logFilePurge = true
+	t.Cleanup(func() { logFilePurge = false })
 	dir := t.TempDir()
 	keep := filepath.Join(dir, fmt.Sprintf("serve-pid-%d.log", os.Getpid()))
 	files := []string{
@@ -1231,4 +1252,41 @@ func TestScribe_BufferFrom(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestScribe_SubjectTerms(t *testing.T) {
+	cases := []struct {
+		term     string
+		subject  string
+		expected bool
+	}{
+		{"warn", "host/warn_temperature", true},
+		{"WARN TEM", "host/warn_temperature", true},
+		{"warn tem", "host/warn_temperature", true},
+		{"warn_tem", "host/warn_temperature", true},
+		{"Warn TEM", "host/warn_temperature", true},
+		{"used hme", "host/used_home_space", true},
+		{"Used HME", "host/used_home_space", true},
+		{"hlth ssd", "host/used_drive_life", true},
+		{"revs fan", "host/spin_fan_speed", true},
+		{"aok", "service", true},
+		{"uptime", "service/up_time", true},
+		{"warn", "host/used_memory", false},
+		{"used hme", "host/used_share_space", false},
+	}
+	for _, c := range cases {
+		t.Run(c.term+"/"+c.subject, func(t *testing.T) {
+			ResetFilters()
+			if err := SetFilters("", c.term, ""); err != nil {
+				t.Fatalf("SetFilters: %v", err)
+			}
+			filterMu.Lock()
+			terms := activeFilter.subject
+			filterMu.Unlock()
+			if got := subjected("engine", c.subject, terms); got != c.expected {
+				t.Errorf("subjected: got %v want %v", got, c.expected)
+			}
+		})
+	}
+	ResetFilters()
 }

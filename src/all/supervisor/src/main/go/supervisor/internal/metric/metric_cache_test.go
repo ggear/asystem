@@ -2421,6 +2421,30 @@ func TestMetricCache_Take(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name: "happy_take_returns_a_stable_order",
+			setupFunc: func(cache *RecordCache) {
+				for _, guid := range []RecordGUID{
+					NewServiceRecordGUID(MetricServiceName, "zulu", "svc-b"),
+					NewServiceRecordGUID(MetricServiceName, "alpha", "svc-b"),
+					NewServiceRecordGUID(MetricServiceUpTime, "alpha", "svc-a"),
+					NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"),
+				} {
+					record := NewRecord(value1)
+					cache.Store(guid, &record)
+				}
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				taken := cache.Take()
+				if len(taken) != 4 {
+					t.Fatalf("taken: got %d want 4", len(taken))
+				}
+				if !slices.IsSortedFunc(taken, compareRecordGUID) {
+					t.Fatalf("Got %v, expected the batch sorted by host, service then metric", taken)
+				}
+			},
+			expectedError: false,
+		},
+		{
 			name:      "happy_empty_cache_returns_nil",
 			setupFunc: func(_ *RecordCache) {},
 			checkFunc: func(t *testing.T, cache *RecordCache) {

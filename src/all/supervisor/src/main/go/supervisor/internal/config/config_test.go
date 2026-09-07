@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"reflect"
 	"supervisor/internal/testutil"
 	"testing"
@@ -1018,4 +1019,38 @@ func TestConfig_Services(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConfig_ResolvedVersion(t *testing.T) {
+	tests := []struct {
+		name        string
+		document    string
+		environment string
+		expected    string
+	}{
+		{name: "happy file version is used", document: `{"asystem":{"version":"10.200.1502"}}`, expected: "10.200.1502"},
+		{name: "happy env overrides the file", document: `{"asystem":{"version":"10.200.1502"}}`, environment: "10.200.7777", expected: "10.200.7777"},
+		{name: "happy env fills a file reference", document: `{"asystem":{"version":"$SERVICE_VERSION_ABSOLUTE"}}`, environment: "10.200.7777", expected: "10.200.7777"},
+		{name: "sad unfilled file reference defaults", document: `{"asystem":{"version":"$SERVICE_VERSION_ABSOLUTE"}}`, expected: DefaultVersion},
+		{name: "sad malformed version defaults", document: `{"asystem":{"version":"not-a-version"}}`, expected: DefaultVersion},
+		{name: "sad unparseable document defaults", document: `{`, expected: DefaultVersion},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Setenv("SERVICE_VERSION_ABSOLUTE", testCase.environment)
+			path := filepath.Join(t.TempDir(), "config.json")
+			if err := os.WriteFile(path, []byte(testCase.document), 0644); err != nil {
+				t.Fatalf("write config file failed: %v", err)
+			}
+			if got := ResolvedVersion(path); got != testCase.expected {
+				t.Errorf("version: got %v want %v", got, testCase.expected)
+			}
+		})
+	}
+	t.Run("sad missing file defaults", func(t *testing.T) {
+		t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
+		if got := ResolvedVersion(filepath.Join(t.TempDir(), "absent.json")); got != DefaultVersion {
+			t.Errorf("version: got %v want %v", got, DefaultVersion)
+		}
+	})
 }

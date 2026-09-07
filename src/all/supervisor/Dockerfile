@@ -1,5 +1,5 @@
 # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
-ARG ASYSTEM_PYTHON_VERSION="latest"
+ARG ASYSTEM_GO_VERSION="latest"
 ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
 FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
 USER root
@@ -20,11 +20,13 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
-FROM image_upstream AS image_base
+FROM golang:${ASYSTEM_GO_VERSION}-bookworm AS image_build
+WORKDIR /src
+COPY src/main/go/supervisor/ ./
+RUN CGO_ENABLED=0 GOFLAGS=-mod=readonly go build -trimpath -o /asystem/bin/supervisor .
 
-FROM image_base AS image_build
+FROM image_upstream AS image_runtime
+COPY --from=image_build /asystem/bin/supervisor /asystem/bin/supervisor
 COPY target/package/main/resources/image/. /asystem/etc
-
-FROM image_build AS image_runtime
 WORKDIR /asystem/etc
-CMD ["/asystem/mnt/supervisor", "serve", "-c", "/asystem/etc/config.json"]
+CMD ["/asystem/bin/supervisor", "serve", "-c", "/asystem/etc/config.json"]

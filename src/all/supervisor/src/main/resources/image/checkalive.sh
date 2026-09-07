@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  pgrep -f "/asystem/mnt/supervisor serve" >/dev/null
+  pgrep -f "/asystem/bin/supervisor serve" >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [supervisor] is alive :)" >&2

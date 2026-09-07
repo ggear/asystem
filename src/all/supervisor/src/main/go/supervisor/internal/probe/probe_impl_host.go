@@ -59,14 +59,15 @@ type hostProbe struct {
 
 func newHostProbe() *hostProbe {
 	return &hostProbe{
-		sysRoot:       sensorSysRoot,
-		cpuSampler:    &cpuUsageSampler{},
-		diskSampler:   &diskUsageSampler{},
-		cpuTimes:      cpu.Times,
-		virtualMemory: mem.VirtualMemory,
-		swapMemory:    mem.SwapMemory,
-		diskCounters:  disk.IOCounters,
-		hostUptime:    host.Uptime,
+		sysRoot:        sensorSysRoot,
+		cpuSampler:     &cpuUsageSampler{},
+		diskSampler:    &diskUsageSampler{},
+		networkSampler: &networkUsageSampler{},
+		cpuTimes:       cpu.Times,
+		virtualMemory:  mem.VirtualMemory,
+		swapMemory:     mem.SwapMemory,
+		diskCounters:   disk.IOCounters,
+		hostUptime:     host.Uptime,
 	}
 }
 
@@ -298,14 +299,14 @@ func (p *hostProbe) host() (bool, derivation, error) {
 
 func (p *hostProbe) usedProcessor() (int8, derivation, error) {
 	if p.cpuSampler == nil || p.cpuTimes == nil {
-		return 0, derivation{}, errors.New("no processor sample taken, the probe was created without a cpu sampler or a times reader")
+		return 0, derivation{}, fmt.Errorf("no processor sample taken, the probe was created without a cpu sampler or a times reader [%w]", errProbeUnwired)
 	}
 	return p.cpuSampler.sample(p.cpuTimes)
 }
 
 func (p *hostProbe) usedMemory() (int8, derivation, error) {
 	if p.virtualMemory == nil {
-		return 0, derivation{}, errors.New("no memory reading taken, the probe was created without a virtual memory reader")
+		return 0, derivation{}, fmt.Errorf("no memory reading taken, the probe was created without a virtual memory reader [%w]", errProbeUnwired)
 	}
 	memoryStat, err := p.virtualMemory()
 	if err != nil {
@@ -321,7 +322,7 @@ func (p *hostProbe) usedMemory() (int8, derivation, error) {
 
 func (p *hostProbe) allocatedMemory() (int8, derivation, error) {
 	if p.virtualMemory == nil {
-		return 0, derivation{}, errors.New("no memory ceiling computed, the probe was created without a virtual memory reader")
+		return 0, derivation{}, fmt.Errorf("no memory ceiling computed, the probe was created without a virtual memory reader [%w]", errProbeUnwired)
 	}
 	memoryStat, err := p.virtualMemory()
 	if err != nil {
@@ -401,7 +402,7 @@ func (p *hostProbe) usedShareSpace() (int8, derivation, error) {
 
 func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
 	if p.swapMemory == nil {
-		return 0, derivation{}, errors.New("no swap reading taken, the probe was created without a swap memory reader")
+		return 0, derivation{}, fmt.Errorf("no swap reading taken, the probe was created without a swap memory reader [%w]", errProbeUnwired)
 	}
 	swapStat, err := p.swapMemory()
 	if err != nil {
@@ -417,14 +418,14 @@ func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
 
 func (p *hostProbe) usedDiskTime() (int8, derivation, error) {
 	if p.diskSampler == nil || p.diskCounters == nil {
-		return 0, derivation{}, errors.New("no disk operations sample taken, the probe was created without a disk sampler or an io counter reader")
+		return 0, derivation{}, fmt.Errorf("no disk operations sample taken, the probe was created without a disk sampler or an io counter reader [%w]", errProbeUnwired)
 	}
 	return p.diskSampler.sample(p.diskCounters)
 }
 
 func (p *hostProbe) usedNetwork() (int8, derivation, error) {
 	if p.networkSampler == nil {
-		return 0, derivation{}, errors.New("no network sample taken, the probe was created without a network sampler")
+		return 0, derivation{}, fmt.Errorf("no network sample taken, the probe was created without a network sampler [%w]", errProbeUnwired)
 	}
 	roots := []string{networkBareRoot}
 	if mount := config.Load(p.configPath).Mount(); mount != "" {
@@ -435,7 +436,7 @@ func (p *hostProbe) usedNetwork() (int8, derivation, error) {
 
 func (p *hostProbe) upTime() (float64, derivation, error) {
 	if p.hostUptime == nil {
-		return 0, derivation{}, errors.New("no up time read, the probe was created without an up time reader")
+		return 0, derivation{}, fmt.Errorf("no up time read, the probe was created without an up time reader [%w]", errProbeUnwired)
 	}
 	seconds, err := p.hostUptime()
 	if err != nil {

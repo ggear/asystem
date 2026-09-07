@@ -99,24 +99,37 @@ func (s *logSet) report(censusStart time.Time, window time.Duration) {
 		return
 	}
 	logger := scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample)
-	logger.Debugf("examined", censusStart, "[%d] kernel errors already in the ring across [%d] distinct messages within window [%s], showing the most frequent [%d]",
+	logger.Debugf("examined", censusStart, "[%d] kernel errors already in the ring across [%d] distinct messages within window [%s], showing the most frequent [%d], each with a pattern ready to paste into logIgnore in probe_lib_logs.go",
 		len(s.records), len(counted), window, min(len(counted), logCensusMax))
 	for index, entry := range counted {
 		if index >= logCensusMax {
 			return
 		}
-		logger.Debugf("examined", censusStart, "[%4d] kernel errors logged [%s]", entry.count, entry.message)
+		logger.Debugf("examined", censusStart, "[%4d] kernel errors, first [%s] last [%s] at dmesg [%s], message [%s], suppress with %s",
+			entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339),
+			logElapsed(entry.last.Sub(s.boot)), entry.message, logSuppression(entry.message))
 	}
 }
 
 func (s *logSet) census() []logCount {
-	counts := map[string]int{}
+	counts := map[string]logCount{}
 	for _, record := range s.records {
-		counts[record.message]++
+		seen, found := counts[record.message]
+		if !found {
+			seen = logCount{message: record.message, first: record.stamp, last: record.stamp}
+		}
+		if record.stamp.Before(seen.first) {
+			seen.first = record.stamp
+		}
+		if record.stamp.After(seen.last) {
+			seen.last = record.stamp
+		}
+		seen.count++
+		counts[record.message] = seen
 	}
 	counted := make([]logCount, 0, len(counts))
-	for message, count := range counts {
-		counted = append(counted, logCount{message: message, count: count})
+	for _, seen := range counts {
+		counted = append(counted, seen)
 	}
 	sort.Slice(counted, func(first, second int) bool {
 		if counted[first].count != counted[second].count {
@@ -184,6 +197,8 @@ type logRecord struct {
 
 type logCount struct {
 	message string
+	first   time.Time
+	last    time.Time
 	count   int
 }
 
@@ -225,7 +240,8 @@ func (s *logSet) scan(shouts int) int {
 		s.records = append(s.records, logRecord{stamp: stamp, message: clipped})
 		if s.drained && shouts < logShoutsMax {
 			shouts++
-			scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warnf("observed", time.Now(), "[%s] kernel logged [%s]", stamp.Format(time.RFC3339), clipped)
+			scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warnf("observed", time.Now(), "[%s] kernel error at dmesg [%s], message [%s], suppress with %s",
+				stamp.Format(time.RFC3339), logElapsed(stamp.Sub(s.boot)), clipped, logSuppression(clipped))
 		}
 	}
 }
@@ -288,6 +304,43 @@ func isLogError(priority int, message string) bool {
 		return true
 	}
 	return strings.Contains(strings.ToLower(message), logErrorText)
+}
+
+func logElapsed(since time.Duration) string {
+	return fmt.Sprintf("%12.6f", since.Seconds())
+}
+
+func logSuppression(message string) string {
+	quoted := regexp.QuoteMeta(strings.TrimSuffix(message, "..."))
+	alphanumeric := func(at int) bool {
+		if at < 0 || at >= len(quoted) {
+			return false
+		}
+		return quoted[at] >= '0' && quoted[at] <= '9' || quoted[at] >= 'a' && quoted[at] <= 'z' || quoted[at] >= 'A' && quoted[at] <= 'Z'
+	}
+	builder := strings.Builder{}
+	for index := 0; index < len(quoted); {
+		if quoted[index] < '0' || quoted[index] > '9' {
+			builder.WriteByte(quoted[index])
+			index++
+			continue
+		}
+		end := index
+		for end < len(quoted) && quoted[end] >= '0' && quoted[end] <= '9' {
+			end++
+		}
+		if alphanumeric(index-1) || alphanumeric(end) {
+			builder.WriteString(quoted[index:end])
+		} else {
+			builder.WriteString(`\d+`)
+		}
+		index = end
+	}
+	pattern := builder.String()
+	if strings.Contains(pattern, "`") {
+		return fmt.Sprintf("regexp.MustCompile(%q),", "^"+pattern)
+	}
+	return fmt.Sprintf("regexp.MustCompile(`^%s`),", pattern)
 }
 
 func logIgnoring(message string) bool {

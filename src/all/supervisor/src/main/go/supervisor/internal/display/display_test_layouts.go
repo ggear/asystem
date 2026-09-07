@@ -357,7 +357,7 @@ var (
 | Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% |
 | Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
 +--------------------------------------------------------------------------------------+
-| SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME |
+| SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME |
 +--------------------------------------------------------------------------------------+
 | homeassistant  10.100.1001   |||||| 100%    |||||| 100%    -    +    +    0      23d |
 | influxdb3      10.100.1002   |||  |  50%    |||  |  50%    -    +    +    0      46d |
@@ -373,7 +373,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -390,7 +390,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -407,7 +407,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -424,7 +424,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -441,7 +441,7 @@ var (
 │ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% │
 │ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION          CPU              RAM        BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■■■ 100%    ■■■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■■■  50%    ■■■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -458,7 +458,7 @@ var (
 | Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% || Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% |
 | Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
-| SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME |
+| SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
 | homeassistant  10.100.1001   |||||| 100%    |||||| 100%    -    +    +    0      23d || homeassistant  10.100.1001   |||||| 100%    |||||| 100%    -    +    +    0      23d |
 | influxdb3      10.100.1002   |||  |  50%    |||  |  50%    -    +    +    0      46d || influxdb3      10.100.1002   |||  |  50%    |||  |  50%    -    +    +    0      46d |
@@ -472,7 +472,7 @@ var (
 | Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% || Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% |
 | Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
-| SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME |
+| SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
 | homeassistant  10.100.1001   |||||| 100%    |||||| 100%    -    +    +    0      23d || homeassistant  10.100.1001   |||||| 100%    |||||| 100%    -    +    +    0      23d |
 | influxdb3      10.100.1002   |||  |  50%    |||  |  50%    -    +    +    0      46d || influxdb3      10.100.1002   |||  |  50%    |||  |  50%    -    +    +    0      46d |
@@ -486,7 +486,7 @@ var (
 | Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% || Used RAM || |  50%    Fail SHR || |  50%    Revs FAN || |  50%    Used SHR || |  50% |
 | Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% || Aloc RAM |  |   0%    Fail BKP |  |   0%    Hlth SSD |  |   0%    Used BKP |  |   0% |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
-| SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME |
+| SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME || SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME |
 +--------------------------------------------------------------------------------------++--------------------------------------------------------------------------------------+
 | homeassistant  10.100.1001   |||||| 100%    |||||| 100%    -    +    +    0      23d || homeassistant  10.100.1001   |||||| 100%    |||||| 100%    -    +    +    0      23d |
 | influxdb3      10.100.1002   |||  |  50%    |||  |  50%    -    +    +    0      46d || influxdb3      10.100.1002   |||  |  50%    |||  |  50%    -    +    +    0      46d |
@@ -502,7 +502,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -517,7 +517,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -532,7 +532,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -549,7 +549,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │ │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │ │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -564,7 +564,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │ │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │ │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -579,7 +579,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │ │ homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │ │ influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -596,7 +596,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -611,7 +611,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -626,7 +626,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% ││ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% ││ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤├───────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -643,7 +643,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │ │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │ │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -658,7 +658,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │ │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │ │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -673,7 +673,7 @@ var (
 │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │ │ Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50% │
 │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │ │ Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0% │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │ │ SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME │
 ├───────────────────────────────────────────────────────────────────────────────────────┤ ├───────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │ │ homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │ │ influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -690,7 +690,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  ││  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  ││  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -705,7 +705,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  ││  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  ││  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -720,7 +720,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤├────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  ││  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  ││  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -737,7 +737,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │ │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │ │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -752,7 +752,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │ │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │ │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -767,7 +767,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%    Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%    Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU            RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤ ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │ │  homeassistant  10.100.1001   ■■■■■■ 100%    ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │ │  influxdb3      10.100.1002   ■■■■■■  50%    ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -784,7 +784,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  ││  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  ││  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -799,7 +799,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  ││  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  ││  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -814,7 +814,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  ││  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  ││  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  ││  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  ││  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  ││  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -831,7 +831,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │ │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │ │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -846,7 +846,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │ │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │ │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -861,7 +861,7 @@ var (
 │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │ │  Used RAM ■■■■  50%    Fail SHR ■■■■  50%     Revs FAN ■■■■  50%    Used SHR ■■■■  50%  │
 │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │ │  Aloc RAM ■■■■   0%    Fail BKP ■■■■   0%     Hlth SSD ■■■■   0%    Used BKP ■■■■   0%  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-│  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             MEM       BKP  HLT  CFG  RST  UPTIME  │
+│  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │ │  SERVICE          VERSION         CPU             RAM       BKP  HLT  CFG  RST  UPTIME  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │ │  homeassistant  10.100.1001   ■■■■■■ 100%     ■■■■■■ 100%    ✖    ✔    ✔    0      23d  │
 │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │ │  influxdb3      10.100.1002   ■■■■■■  50%     ■■■■■■  50%    ✖    ✔    ✔    0      46d  │
@@ -878,7 +878,7 @@ var (
 │ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% ││ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% │
 │ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION          CPU              RAM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              RAM        BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■■■ 100%    ■■■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■■■ 100%    ■■■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■■■  50%    ■■■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■■■  50%    ■■■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -893,7 +893,7 @@ var (
 │ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% ││ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% │
 │ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION          CPU              RAM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              RAM        BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■■■ 100%    ■■■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■■■ 100%    ■■■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■■■  50%    ■■■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■■■  50%    ■■■■■■■■  50%    ✖    ✔    ✔    0      46d │
@@ -908,7 +908,7 @@ var (
 │ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% ││ Used RAM ■■■■■  50%    Fail SHR ■■■■■  50%    Revs FAN ■■■■■  50%    Used SHR ■■■■■  50% │
 │ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% ││ Aloc RAM ■■■■■   0%    Fail BKP ■■■■■   0%    Hlth SSD ■■■■■   0%    Used BKP ■■■■■   0% │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
-│ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              MEM        BKP  HLT  CFG  RST  UPTIME │
+│ SERVICE          VERSION          CPU              RAM        BKP  HLT  CFG  RST  UPTIME ││ SERVICE          VERSION          CPU              RAM        BKP  HLT  CFG  RST  UPTIME │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤├──────────────────────────────────────────────────────────────────────────────────────────┤
 │ homeassistant  10.100.1001   ■■■■■■■■ 100%    ■■■■■■■■ 100%    ✖    ✔    ✔    0      23d ││ homeassistant  10.100.1001   ■■■■■■■■ 100%    ■■■■■■■■ 100%    ✖    ✔    ✔    0      23d │
 │ influxdb3      10.100.1002   ■■■■■■■■  50%    ■■■■■■■■  50%    ✖    ✔    ✔    0      46d ││ influxdb3      10.100.1002   ■■■■■■■■  50%    ■■■■■■■■  50%    ✖    ✔    ✔    0      46d │

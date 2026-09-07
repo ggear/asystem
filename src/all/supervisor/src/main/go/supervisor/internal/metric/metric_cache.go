@@ -597,6 +597,7 @@ func (c *RecordCache) Take() []RecordGUID {
 	}
 	c.dirty = make(map[guidKey]RecordGUID, len(result))
 	c.mutex.Unlock()
+	slices.SortFunc(result, compareRecordGUID)
 	return result
 }
 

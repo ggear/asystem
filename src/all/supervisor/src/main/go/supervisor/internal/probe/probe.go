@@ -106,40 +106,44 @@ func RunPoll(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 	heartbeatPulseCount := 1
 	ticker := time.NewTicker(time.Duration(execPeriods.PollMillis) * time.Millisecond)
 	defer ticker.Stop()
+	tick := func() {
+		tickStart := time.Now()
+		pulseTickCount--
+		isPulse := false
+		if pulseTickCount == 0 {
+			isPulse = true
+			pulseTickCount = pulseEveryTick
+		}
+		execPulsing.Store(isPulse)
+		if isPulse {
+			execPulses.Add(1)
+		}
+		for p := range execProbes {
+			probeStart := time.Now()
+			if err := p.poll(ctx, isPulse); err != nil {
+				scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Errorf("faulting", probeStart, "[%v] pulse with [%v]", isPulse, err)
+			}
+			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Debugf("reported", probeStart, "[%v] pulse, metrics [%3d]", isPulse, len(p.metrics()))
+		}
+		if isPulse {
+			heartbeatPulseCount--
+			isHeartbeat := heartbeatPulseCount <= 0
+			if isHeartbeat {
+				heartbeatPulseCount = heartbeatEveryPulse
+			}
+			if onPulse != nil {
+				onPulse(isHeartbeat)
+			}
+		}
+		scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debugf("reported", tickStart, "[%3d] probes, pulse [%v]", len(execProbes), isPulse)
+	}
+	tick()
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			tickStart := time.Now()
-			pulseTickCount--
-			isPulse := false
-			if pulseTickCount == 0 {
-				isPulse = true
-				pulseTickCount = pulseEveryTick
-			}
-			execPulsing.Store(isPulse)
-			if isPulse {
-				execPulses.Add(1)
-			}
-			for p := range execProbes {
-				probeStart := time.Now()
-				if err := p.poll(ctx, isPulse); err != nil {
-					scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Errorf("faulting", probeStart, "[%v] pulse with [%v]", isPulse, err)
-				}
-				scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionSample).Debugf("reported", probeStart, "[%v] pulse, metrics [%3d]", isPulse, len(p.metrics()))
-			}
-			if isPulse {
-				heartbeatPulseCount--
-				isHeartbeat := heartbeatPulseCount <= 0
-				if isHeartbeat {
-					heartbeatPulseCount = heartbeatEveryPulse
-				}
-				if onPulse != nil {
-					onPulse(isHeartbeat)
-				}
-			}
-			scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debugf("reported", tickStart, "[%3d] probes, pulse [%v]", len(execProbes), isPulse)
+			tick()
 		}
 	}
 }
@@ -590,6 +594,7 @@ var (
 	errProbeWarmingUp = errors.New("probe is still warming up")
 	errMountContent   = errors.New("mount answered but is not healthy")
 	errEnvironment    = errors.New("environment cannot supply this reading")
+	errProbeUnwired   = errors.New("probe reader was not wired, which is a code defect")
 
 	execConfigPath string
 	execPeriods    config.Periods

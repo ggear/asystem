@@ -52,8 +52,7 @@ func executeServe(configPath string, opts *serveOptions) error {
 	if err != nil {
 		return err
 	}
-	scribe.Widen(configuredHosts(configPath), configuredServices(configPath))
-	if err := scribe.EnableStdoutAndFile(level, "serve", 10, 3, 7); err != nil {
+	if err := scribe.EnableStdoutAndFile(level, "serve", config.ResolvedVersion(configPath), logFileSizeMB, logFileBackups, logFileAgeDays); err != nil {
 		return fmt.Errorf("enable file logging: %w", err)
 	}
 	if err := setLogFilters(&opts.logOptions); err != nil {

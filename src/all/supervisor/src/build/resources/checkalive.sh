@@ -1,1 +1,1 @@
-pgrep -f "/asystem/mnt/supervisor serve" >/dev/null
+pgrep -f "/asystem/bin/supervisor serve" >/dev/null
