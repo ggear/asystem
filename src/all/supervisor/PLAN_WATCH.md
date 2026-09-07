@@ -958,6 +958,48 @@ which carries a `.sleep` marker and is therefore deliberately dormant rather tha
 the sleeping-service and ghost paths are distinguishable in the log, so if a second ghost appears
 during collection it is a real finding rather than noise to be read through.
 
+#### Status as of 2026-09-07, and what is left
+
+**Verified in production, nothing outstanding to check:**
+
+| Finding | Evidence |
+|---|---|
+| Phase 1 released and healthy estate-wide | `10.200.1531` → `1537`, all five hosts `Up (healthy)` |
+| The `unstated` ERROR storm is gone | `grep -c unstated` returns **0** on every host, from 21 per pulse per ghost |
+| `host/used_network` reports for the first time | `topology [1] rated physical interfaces of [14]` on mad, `of [9]` on jen |
+| Database writes land | zero `rejected` since the release |
+| Log purging is off and logs survive a release | both watch files kept their inode (rue 75964373, mad 6644800) across several releases while growing |
+| Shadow mode is live and the barrier returns | `57`–`87` ms against a 10 s `reconcileDelay`, two orders of magnitude of headroom |
+| Barrier and timer agree | `differ=0`, `pending=0` on both watches to date |
+| The readback works | `rediscovered [ 12] topics` per service on a restart — **Q3 closed** |
+| A release cannot test the readback | `install.sh` stops the container (line 213), sweeps (245), then starts (247), so the breadcrumbs are gone before the new serve connects |
+| A release's watch-side signature is clean | per host: `offline` evict → `transition by [restart]` → `reclaims [  0]`, no `deferred` |
+
+**The release-induced population does not contaminate Q1.** A release does cause an offline/online
+cycle and a reconcile per host, but what Q1 counts is a **non-zero** reap, and every firing so far is
+`[  0]` — a DEBUG no-op. So releases add legible noise, not false findings, and their signature is
+identifiable by the eviction line immediately preceding.
+
+**Open, and each needs something the dev machine cannot give:**
+
+- **Q1 — does the reconcile earn its place?** Needs the month. Partition by watch: `mad` is the clean
+  population, `rue` the wake population.
+- **Q2 — why did one ghost paint and its neighbour blank?** Now *harder* than when it was written,
+  because resolving the estate note left exactly one ghost (`openra` on `max`, asleep). It must be
+  staged: stop two containers on `may` without touching its `config.json`, restart `serve`, and read a
+  remote watch with `--log-subject=service/<name>` for each.
+- **Scenario 1 — a departed service leaving every watch within one pulse.** Not yet staged; the
+  synthetic `zztest` topic below does it without a release.
+
+**Carried, unreleased:** thirteen modules hold a regenerated `bootstrap.sh` from the `container.py`
+wait-output change (zigbee2mqtt, postgres, sabnzbd, grafana, influxdb3, mlflow, mlserver, sonarr,
+homeassistant, mariadb, appdaemon, rhasspy, unpoller). Cosmetic, so it can ride along with whatever is
+released next rather than driving a release of its own.
+
+**Next steps, in order:** wait out the month; harvest with `~/Temp/watch-baseline.sh`; run the five
+analysis steps below; decide Q1. On the evidence so far the verdict is leaning toward **deleting the
+reconcile** rather than building C — `mad` has never once had it reap anything.
+
 #### What to simulate, and what to collect
 
 Each scenario is staged deliberately — none of it waits for something to go wrong — and each names
@@ -1037,6 +1079,23 @@ by sweep-then-republish, and the readback recovers a restart that is *not* a rel
 **The readback must therefore be tested with `install.sh start` or `docker restart supervisor`**, which
 never reach `install_pre.sh` — it sits inside the `install` branch. Do not use a release for this, and
 correct any earlier reading of scenario 4 that says "or a plain release".
+
+**Q3 is answered: the readback works.** Verified on `jen` at 19:54:58 on 2026-09-07 with
+`docker restart supervisor` under `10.200.1537` — all three services logged
+`register [raspbpi-jen] host, rediscovered [ 12] topics`, registering twelve topics each from the
+retained breadcrumbs before the Docker probe had discovered them. That is the crash-recovery path Phase
+1 built, observed working for the first time. No further test is needed; the remaining questions are
+Q1 and Q2, which are watch-side and need the month.
+
+**Reading these lines has one trap, and it is the reason two releases looked like a defect.** `serve`
+subscribes to its **own** name topics, so every name it publishes is delivered straight back to the
+readback handler, which registers nothing and logs `rediscovered [  0] topics`. That fires on the first
+publish and on every 300 s heartbeat forever — the 19:47:00 and 19:52:00 lines on `jen` are exactly
+five minutes apart and are self-echo, not readback. **Only the `register … rediscovered [n] topics`
+form (the INFO `register` verb) is unambiguous evidence that a retained breadcrumb was read.** The
+`observed … rediscovered [  0] topics` form conflates *readback delivered, nothing new* with *my own
+publish came back*, and cannot distinguish them. A later fix could have the handler ignore a payload it
+has just published; do not attempt it mid-collection.
 
 **A second obstacle sat behind the first, and is now fixed.** Three of the five readback outcomes
 logged at DEBUG while `serve` runs at INFO with a fixed `CMD` carrying no `-L`, so "no line" conflated
@@ -1275,14 +1334,18 @@ expected inside the window.
   topics were never published, the blank is publish-side and nothing in this plan touches it. If they
   were, a mechanism is unaccounted for and that becomes its own investigation — step 11 renders the
   state honestly either way, so it masks the symptom rather than fixing it.
-- **What was the readback actually doing?** [was step 1.2's other half] Step 2 makes the four cases
-  distinguishable — never delivered, failed to unmarshal, nil pulse, registered nothing new. One
-  release with the instrumentation names which, and only then is a fix worth writing. It may already
-  be fixed by step 1, since the graceful path was deleting the very topic the readback reads.
+- ~~**What was the readback actually doing?**~~ **Answered 2026-09-07 — it works.** A
+  `docker restart supervisor` on `jen` under `10.200.1537` logged
+  `register [raspbpi-jen] host, rediscovered [ 12] topics` for all three services, recovering twelve
+  topics each from the retained breadcrumbs before the Docker probe reached them. No fix is needed and
+  no further test is warranted. Read the caveat under *The first test* before interpreting any
+  `rediscovered [  0]` line — those are self-echo, not readback.
 
-**Acceptance, on the release after Phase 1:** a departed service leaves every watch within one pulse;
-a `rediscovered` line appears on the restarting host; and the reconcile's `reclaims` line does **not**
-fire for that host. The third is the one that matters — it is the evidence the first question needs.
+**Acceptance, on the release after Phase 1 — met, except the part that needs time.** A `rediscovered`
+line appeared on the restarting host (above). The reconcile's `reclaims` line has fired only ever as
+`[  0]`, on both watches, across several releases — so nothing has been reaped, which is the third and
+most important criterion. The first criterion, that a departed service leaves every watch within one
+pulse, has not been staged deliberately yet and is scenario 1's job.
 
 #### The one synthetic topic, for scenario 1 without a release
 

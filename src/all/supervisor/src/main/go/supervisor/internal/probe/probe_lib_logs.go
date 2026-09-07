@@ -388,6 +388,8 @@ const (
 var (
 	logIgnore = []*regexp.Regexp{
 		regexp.MustCompile(`^pl2303 ttyUSB\d+: pl2303_get_line_request - failed: -\d+`),
+		regexp.MustCompile(`^\.ready`),
+		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Synchronize Cache\(10\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
 	}
 
 	logCache   = map[string]*logSet{}
