@@ -265,7 +265,7 @@ func (s *mountSet) reading(physical string) driveWear {
 			identity.warned = true
 			scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Infof("excluded", readingStart, "[%s] at [%s] over [%s] as [%s] is declared not solid state, no wear rating applies so it is not counted in wear", physical, identity.node, identity.transport, identity.hardware)
 		}
-		scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("examined", readingStart, "[%s] not considered, declared not solid state, as [%s] over [%s]", physical, identity.hardware, identity.transport)
+		scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("excluded", readingStart, "[%s] not considered, declared not solid state, as [%s] over [%s]", physical, identity.hardware, identity.transport)
 		return driveWear{kernel: physical}
 	}
 	report, err := s.smart(identity.node, identity.kinds)
@@ -274,7 +274,7 @@ func (s *mountSet) reading(physical string) driveWear {
 			identity.warned = true
 			scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Warnf("excluded", readingStart, "[%s] unreadable at [%s] over [%s] as [%s] with rotational [%v] removable [%v], not counted in wear, with [%v]", physical, identity.node, identity.transport, identity.hardware, identity.rotational, identity.removable, err)
 		}
-		scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("examined", readingStart, "[%s] not considered, unreadable by smartctl, as [%s] over [%s]", physical, identity.hardware, identity.transport)
+		scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("excluded", readingStart, "[%s] not considered, unreadable by smartctl, as [%s] over [%s]", physical, identity.hardware, identity.transport)
 		return driveWear{kernel: physical, model: identity.model, unreadable: true, reason: err.Error()}
 	}
 	s.identifyFromReport(identity, report, readingStart)
@@ -282,9 +282,9 @@ func (s *mountSet) reading(physical string) driveWear {
 	if report.errors > identity.baseline {
 		wear.errored = true
 	}
-	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debugf("examined", readingStart, "[%s] errors [%3d] baseline [%3d] increased [%v], as [%s]", physical, report.errors, identity.baseline, wear.errored, identity.named())
+	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostFailedDrives), scribe.ActionSample).Debugf("measured", readingStart, "[%s] errors [%3d] baseline [%3d] increased [%v], as [%s]", physical, report.errors, identity.baseline, wear.errored, identity.named())
 	if !identity.rated {
-		scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("examined", readingStart, "[%s] not considered, %s, as [%s]", physical, identity.excluded, identity.named())
+		scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("excluded", readingStart, "[%s] not considered, %s, as [%s]", physical, identity.excluded, identity.named())
 		return wear
 	}
 	computed := driveComputed(report.written, identity.rating)
@@ -293,7 +293,7 @@ func (s *mountSet) reading(physical string) driveWear {
 	if report.estimated {
 		estimate = fmt.Sprintf("%.1f", report.estimate)
 	}
-	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("examined", readingStart, "[%s] life [%3d] pct, computed [%.1f] drive [%s] pct, written [%.1f] of [%.0f] TB, as [%s]", physical, percentValue(wear.life), computed, estimate, report.written/bytesPerTB, identity.rating, identity.named())
+	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionSample).Debugf("measured", readingStart, "[%s] life [%3d] pct, computed [%.1f] drive [%s] pct, written [%.1f] of [%.0f] TB, as [%s]", physical, percentValue(wear.life), computed, estimate, report.written/bytesPerTB, identity.rating, identity.named())
 	return wear
 }
 

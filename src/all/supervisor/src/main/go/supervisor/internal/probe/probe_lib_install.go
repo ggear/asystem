@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/docker/go-units"
+	"github.com/shirou/gopsutil/v4/mem"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -138,21 +139,32 @@ func (s *installSnapshot) allocation(names []string) (int64, int, error) {
 func (s *installSnapshot) report(scanStart time.Time, configured []string) {
 	names := append([]string(nil), configured...)
 	sort.Strings(names)
+	allocated := int64(0)
 	for _, name := range names {
 		entry, found := s.service(name)
 		if !found {
 			continue
 		}
 		if !entry.serviceModule {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("examined", scanStart, "[%s] is a host module with no compose file, not counted in the allocation", name)
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("excluded", scanStart, "[%s] is a host module with no compose file, not counted in the allocation", name)
 			continue
 		}
 		if entry.maxMemoryBytes <= 0 {
-			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("examined", scanStart, "[%s] version [%s] declares no memory ceiling, contributing [0] MiB to the allocation", name, entry.version)
+			scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("declared", scanStart, "[%s] version [%s] declares no memory ceiling, contributing [0] MiB to the allocation", name, entry.version)
 			continue
 		}
-		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("examined", scanStart, "[%s] version [%s] contributes [%5d] MiB to the allocation, sleeping [%v]", name, entry.version, entry.maxMemoryBytes/bytesPerMiB, entry.sleepEnabled)
+		allocated += entry.maxMemoryBytes
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("declared", scanStart, "[%4d] MiB max RAM allocated to [%s]", entry.maxMemoryBytes/bytesPerMiB, name)
 	}
+	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("declared", scanStart, "[%4d] MiB max RAM allocated to all services", allocated/bytesPerMiB)
+	stat, err := installVirtualMemory()
+	if err != nil || stat == nil || stat.Total == 0 {
+		scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Warnf("unusable", scanStart, "[unreadable] sys RAM for the host, the memory reader failed with [%v]", err)
+		return
+	}
+	installedMiB := int64(stat.Total) / bytesPerMiB
+	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("measured", scanStart, "[%4d] MiB sys RAM unallocated on host", installedMiB-allocated/bytesPerMiB)
+	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectMetric(metric.MetricHostAllocatedMemory), scribe.ActionDiscover).Debugf("measured", scanStart, "[%4d] MiB sys RAM installed on host", installedMiB)
 }
 
 func (t *installTree) bases() []string {
@@ -363,6 +375,8 @@ const (
 
 var (
 	installAbsentMark = []byte{0xff}
+
+	installVirtualMemory = mem.VirtualMemory
 
 	installTreeCache   = map[string]*installTree{}
 	installTreeCacheMu sync.RWMutex

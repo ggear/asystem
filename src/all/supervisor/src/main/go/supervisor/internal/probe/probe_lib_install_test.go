@@ -7,6 +7,8 @@ import (
 	"strings"
 	"supervisor/internal/scribe"
 	"testing"
+
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 func TestProbeLibInstall_Snapshot(t *testing.T) {
@@ -395,6 +397,39 @@ func TestProbeLibInstall_ReportScopedToConfigured(t *testing.T) {
 	}
 	if !named {
 		t.Errorf("detail: got no line naming the configured install, want one")
+	}
+}
+
+func TestProbeLibInstall_ReportSummarisesAllocation(t *testing.T) {
+	t.Cleanup(resetInstallTrees)
+	previous := installVirtualMemory
+	installVirtualMemory = func() (*mem.VirtualMemoryStat, error) {
+		return &mem.VirtualMemoryStat{Total: 8000 * bytesPerMiB}, nil
+	}
+	t.Cleanup(func() { installVirtualMemory = previous })
+	buffer := scribe.EnableBuffer(slog.LevelDebug, 200)
+	t.Cleanup(func() { scribe.EnableStdout(slog.LevelInfo) })
+	mount := t.TempDir()
+	home := filepath.Join(mount, "var/lib/asystem/install", "myservice", "latest")
+	writeInstallDir(t, home)
+	writeInstallFile(t, filepath.Join(home, "docker-compose.yml"), installComposeWith("384m"))
+	writeInstallFile(t, filepath.Join(mount, "var/lib/asystem/install", "myservice", ".sleep"), "")
+	loadInstallTree(mount).snapshot(installTestConfigured)
+	for _, want := range []string{
+		"[ 384] MiB max RAM allocated to [myservice]",
+		"[ 384] MiB max RAM allocated to all services",
+		"[7616] MiB sys RAM unallocated on host",
+		"[8000] MiB sys RAM installed on host",
+	} {
+		found := false
+		for _, line := range buffer.Tail(200) {
+			if strings.Contains(line.Detail, want) {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("detail: got no line containing %q, want one", want)
+		}
 	}
 }
 

@@ -99,13 +99,13 @@ func (s *logSet) report(censusStart time.Time, window time.Duration) {
 		return
 	}
 	logger := scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample)
-	logger.Debugf("examined", censusStart, "[%d] kernel errors already in the ring across [%d] distinct messages within window [%s], showing the most frequent [%d], each with a pattern ready to paste into logIgnore in probe_lib_logs.go",
+	logger.Debugf("measured", censusStart, "[%d] kernel errors already in the ring across [%d] distinct messages within window [%s], showing the most frequent [%d], each with a pattern ready to paste into logIgnore in probe_lib_logs.go",
 		len(s.records), len(counted), window, min(len(counted), logCensusMax))
 	for index, entry := range counted {
 		if index >= logCensusMax {
 			return
 		}
-		logger.Debugf("examined", censusStart, "[%4d] kernel errors, first [%s] last [%s] at dmesg [%s]", entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339), logElapsed(entry.last.Sub(s.boot)))
+		logger.Debugf("measured", censusStart, "[%4d] kernel errors, first [%s] last [%s] at dmesg [%s]", entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339), logElapsed(entry.last.Sub(s.boot)))
 		logger.Debugf("observed", censusStart, "[%s]", entry.message)
 		logger.Debugf("suppress", censusStart, "[%s]", logSuppression(entry.message))
 	}

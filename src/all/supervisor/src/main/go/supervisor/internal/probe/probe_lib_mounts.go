@@ -235,7 +235,7 @@ func (s *mountSet) collect() *mountSnapshot {
 			mounts[index].failed = true
 			mounts[index].answered = errors.Is(err, errMountContent)
 			mounts[index].reason = err.Error()
-			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debugf("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] not counted, failed with [%v]",
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debugf("excluded", measureStart, "[%s] device [%s] fstype [%s] class [%s] not counted, failed with [%v]",
 				mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassLabel(mounts[index]), err)
 			continue
 		}
@@ -246,7 +246,7 @@ func (s *mountSet) collect() *mountSnapshot {
 		if total > 0 {
 			usedShare = float64(used) / float64(total) * 100.0
 		}
-		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debugf("examined", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%3d] of [%3d] MiB at [%3d] pct",
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(mountFeeding(mounts[index])), scribe.ActionSample).Debugf("measured", measureStart, "[%s] device [%s] fstype [%s] class [%s] used [%3d] of [%3d] MiB at [%3d] pct",
 			mounts[index].mountpoint, mounts[index].device, mounts[index].fstype, mountClassLabel(mounts[index]), used/bytesPerMiB, total/bytesPerMiB, percentValue(usedShare))
 	}
 	mounted := map[string]mountUsage{}
@@ -274,10 +274,10 @@ func (s *mountSet) collect() *mountSnapshot {
 		absentStart := time.Now()
 		if _, _, err := s.measure(mountpoint, true); err != nil {
 			taken.failed++
-			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debugf("examined", absentStart, "[%s] declared in fstab, absent from the mount table and counted failed with [%v]", mountpoint, err)
+			scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debugf("faulting", absentStart, "[%s] declared in fstab, absent from the mount table and counted failed with [%v]", mountpoint, err)
 			continue
 		}
-		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debugf("examined", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
+		scribe.Log(scribe.SourceProbeMounts, scribe.SubjectMetric(metric.MetricHostFailedShares), scribe.ActionSample).Debugf("excluded", absentStart, "[%s] declared in fstab, absent from the mount table but answered a probe so not counted failed", mountpoint)
 	}
 	taken.drives, taken.read = s.worn(mounts, collectStart)
 	remotes := 0
@@ -343,7 +343,7 @@ func (s *mountSet) parseMounts() ([]mountUsage, error) {
 	if len(summarised) > 0 {
 		kept = strings.Join(summarised, " ")
 	}
-	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debugf("examined", parseStart, "[%3d] lines, kept [%3d] as [%s], dropped [%3d] as [%s]",
+	scribe.Log(scribe.SourceProbeMounts, scribe.SubjectNone, scribe.ActionSample).Debugf("declared", parseStart, "[%3d] lines, kept [%3d] as [%s], dropped [%3d] as [%s]",
 		lines, len(deduped), kept, lines-len(deduped), mountDropped(dropped))
 	return deduped, nil
 }
