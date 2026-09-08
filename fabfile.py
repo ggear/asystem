@@ -1084,7 +1084,7 @@ def _release(context):
                         if target_arch == "x86_64":
                             target_arch = "amd64"
                         target_os = _get_host_metadata(_get_host_label(host))[3]
-                        module_go_bin = join(ROOT_MODULE_DIR, release_module, "target/release/data")
+                        module_go_bin = join(ROOT_MODULE_DIR, release_module, "target/release")
                         _run_local(context, "mkdir -p {}".format(module_go_bin), release_module)
                         _run_local(context, "GOOS={} GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
                             target_os,

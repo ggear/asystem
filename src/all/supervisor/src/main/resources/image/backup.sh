@@ -3,6 +3,11 @@
 # Runs one stage of a backup run, from the supervisor probe or by hand, the same path both sides.
 #
 #   backup.sh <primary|secondary|tertiary> [start|stop] [run-id]
+#   backup.sh watch [run-id]
+#
+# watch follows a run that is already going, defaulting to the newest, tailing all three stage logs
+# as one stream and printing each stage's status document once nothing is running any more. It reads
+# and never writes, so it is safe beside a live run and any number may watch at once.
 #
 # Stages of one run must share a run id - a stage reads what the earlier stages of that run recorded.
 # start heartbeats a status document and exits on the stage result, detaching only on a hand run,
@@ -37,9 +42,10 @@ BACKUP_STAGE="${1:-}"
 BACKUP_PHASE="${2:-start}"
 
 case "${BACKUP_STAGE}/${BACKUP_PHASE}" in
-primary/start | primary/stop | secondary/start | secondary/stop | tertiary/start | tertiary/stop) ;;
+primary/start | primary/stop | secondary/start | secondary/stop | tertiary/start | tertiary/stop | watch/*) ;;
 *)
   echo "Usage: ${0} <primary|secondary|tertiary> [start|stop] [run-id]" >&2
+  echo "       ${0} watch [run-id]" >&2
   exit 2
   ;;
 esac
@@ -55,6 +61,63 @@ BACKUP_SERVICE_PATH="${BACKUP_RUN_PATH}/stage/primary/service"
 BACKUP_LOG="${BACKUP_STAGE_DIR}/output.log"
 BACKUP_LOCK="$(dirname "${BACKUP_RUN_PATH}")/.lock"
 BACKUP_CONFIG="${BACKUP_INSTALL_ROOT}/supervisor/latest/image/config.json"
+
+backup_watch() {
+  local base run path stage doc state ok logs=() tail_pid="" faults=0
+  base="$(dirname "${BACKUP_RUN_PATH}")"
+  run="${BACKUP_PHASE}"
+  [ "${run}" = "start" ] && run=""
+  [ -n "${run}" ] || run="$(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort | tail -1)"
+  [ -n "${run}" ] || { echo "No backup run found under [${base}]" >&2; return 1; }
+  path="${base}/${run}"
+  [ -d "${path}" ] || { echo "No backup run at [${path}]" >&2; return 1; }
+  echo && echo "Backup watch [${run}] under [${path}]" && echo
+  for stage in primary secondary tertiary; do logs+=("${path}/stage/${stage}/output.log"); done
+  tail -n +1 -F -q "${logs[@]}" 2>/dev/null &
+  tail_pid=$!
+  while :; do
+    sleep "${BACKUP_WATCH_POLL:-5}"
+    pgrep -f "backup\.sh (primary|secondary|tertiary) (start|stop)" >/dev/null 2>&1 && continue
+    for stage in primary secondary tertiary; do
+      doc="${path}/stage/${stage}/status.json"
+      [ -f "${doc}" ] || continue
+      state="$(backup_watch_field "${doc}" state)"
+      [ "${state}" = "running" ] && continue 2
+    done
+    break
+  done
+  kill "${tail_pid}" 2>/dev/null
+  wait "${tail_pid}" 2>/dev/null
+  echo && echo "-- final status"
+  for stage in primary secondary tertiary; do
+    doc="${path}/stage/${stage}/status.json"
+    if [ ! -f "${doc}" ]; then
+      echo "   [${stage}] never started"
+      continue
+    fi
+    state="$(backup_watch_field "${doc}" state)"
+    ok="$(backup_watch_field "${doc}" success_bool)"
+    if [ "${state}" = "complete" ] && [ "${ok}" = "true" ]; then
+      echo "✅ [${stage}] [${state}] in [$(backup_watch_field "${doc}" duration_s)] s, files [$(backup_watch_field "${doc}" file_count)], size [$(backup_watch_field "${doc}" size_mb)] MB"
+    else
+      echo "❌ [${stage}] [${state}] in [$(backup_watch_field "${doc}" duration_s)] s, see [${path}/stage/${stage}/output.log]"
+      faults=$(( faults + 1 ))
+    fi
+    sed 's/^/   /' "${doc}"
+  done
+  echo
+  [ "${faults}" -eq 0 ] || return 1
+  return 0
+}
+
+backup_watch_field() {
+  sed -n "s/.*\"${2}\": *\"\{0,1\}\([^\",]*\)\"\{0,1\},\{0,1\}$/\1/p" "${1}" | head -1
+}
+
+if [ "${BACKUP_STAGE}" = "watch" ]; then
+  backup_watch
+  exit $?
+fi
 
 mkdir -p "${BACKUP_STAGE_DIR}"
 
@@ -255,10 +318,14 @@ backup_settle() {
 }
 
 backup_heartbeat() {
-  local hard=0
+  local hard=0 nap=""
+  trap '[ -n "${nap}" ] && kill "${nap}" 2>/dev/null; exit 0' TERM
   [ "${BACKUP_TIMEOUT_HOURS}" -gt 0 ] 2>/dev/null && hard=$(( BACKUP_STARTED + BACKUP_TIMEOUT_HOURS * 3600 ))
   while :; do
-    sleep "${BACKUP_HEARTBEAT_REFRESH}"
+    sleep "${BACKUP_HEARTBEAT_REFRESH}" &
+    nap=$!
+    wait "${nap}"
+    nap=""
     local now; now="$(date +%s)"
     if [ "${hard}" -gt 0 ] && [ "${now}" -ge "${hard}" ]; then
       backup_document "running" false "${BACKUP_STARTED}" "$(( now - 1 ))"
@@ -699,7 +766,7 @@ if [ -z "${BACKUP_DETACHED:-}" ] && [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && { [ -t
   exit 0
 fi
 if [ -z "${BACKUP_RUN_ID_PASSED:-}" ]; then
-  if [ -n "${BACKUP_QUIET:-}" ]; then
+  if [ -n "${BACKUP_QUIET:-}" ] || [ -n "${BACKUP_DETACHED:-}" ]; then
     exec >>"${BACKUP_LOG}" 2>&1
   else
     exec > >(tee -a "${BACKUP_LOG}") 2>&1
@@ -730,7 +797,7 @@ backup_banner "starting [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]" \
   "retention [${BACKUP_KEEP_DAILY}] daily, [${BACKUP_KEEP_WEEKLY}] weekly, [${BACKUP_KEEP_MONTHLY}] monthly" \
   "heartbeat [${BACKUP_HEARTBEAT_REFRESH}] s refresh, [${BACKUP_HEARTBEAT_GRACE}] s grace"
 backup_document "running" false "${BACKUP_STARTED}" "$(( BACKUP_STARTED + BACKUP_HEARTBEAT_GRACE ))"
-backup_heartbeat &
+backup_heartbeat 9>&- &
 BACKUP_HEARTBEAT_PID=$!
 
 BACKUP_RESULT=0

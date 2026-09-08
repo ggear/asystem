@@ -725,7 +725,7 @@ func writeDocumentAtomic(path string, document backupDocument) {
 
 const (
 	backupRunRoot        = "/home/asystem/supervisor/backup"
-	backupRunner         = "/asystem/mnt/backup.sh"
+	backupRunner         = "/asystem/etc/backup.sh"
 	backupRunStamp       = "2006-01-02_15-04-05"
 	backupRunCeiling     = 5 * time.Hour
 	backupStaleWindow    = 24*time.Hour + backupRunCeiling
