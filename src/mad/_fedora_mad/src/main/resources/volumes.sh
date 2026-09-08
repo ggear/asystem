@@ -92,7 +92,7 @@ volumes_device() {
 }
 
 volumes_mounted() {
-  findmnt -rn -o TARGET | awk '$1 == "/share" || $1 ~ /^\/share\// || $1 == "/backup" || $1 ~ /^\/backup\//' | sort
+  findmnt -rn -o TARGET | awk '$1 == "/share" || $1 ~ /^\/share\// || $1 == "/backup" || $1 ~ /^\/backup\//' | sort -u
 }
 
 volumes_local_shares() {
@@ -104,11 +104,51 @@ volumes_local_shares() {
   done | sort -u
 }
 
+volumes_ownership() {
+  local target="$1" mode owner held
+  [ -d "${target}" ] || return 0
+  held="$(findmnt -rn -o FSTYPE --target "${target}" 2>/dev/null | tail -1)"
+  mountpoint -q "${target}" || held=""
+  case "${held}" in cifs | smb3 | nfs | nfs4 | autofs) return 0 ;; esac
+  mode="$(stat -c %a "${target}" 2>/dev/null)"
+  owner="$(stat -c %U:%G "${target}" 2>/dev/null)"
+  { [ "${mode: -3}" = "750" ] && [ "${owner}" = "graham:users" ]; } && return 0
+  chmod 750 "${target}" 2>/dev/null
+  chown graham:users "${target}" 2>/dev/null
+  mode="$(stat -c %a "${target}" 2>/dev/null)"
+  owner="$(stat -c %U:%G "${target}" 2>/dev/null)"
+  { [ "${mode: -3}" = "750" ] && [ "${owner}" = "graham:users" ]; } &&
+    volumes_changed "set [${target}] to [750] [graham:users]"
+  return 0
+}
+
+volumes_orphans() {
+  local declared root dir
+  declared="$(volumes_entries "${VOLUMES_SOURCE}" | cut -f1 | sort -u)"
+  for root in /share /backup; do
+    [ -d "${root}" ] || continue
+    while read -r dir; do
+      [ -n "${dir}" ] || continue
+      printf '%s\n' "${declared}" | grep -qxF "${dir}" && continue
+      mountpoint -q "${dir}" && continue
+      rmdir "${dir}" 2>/dev/null &&
+        volumes_changed "removed empty undeclared [${dir}]"
+    done < <(find "${root}" -mindepth 1 -maxdepth 1 -type d -empty 2>/dev/null)
+  done
+}
+
 volumes_unmount() {
-  local target="$1"
-  mountpoint -q "${target}" || return 0
+  local target="$1" unit
+  unit="$(systemd-escape -p --suffix=automount "${target}" 2>/dev/null)"
+  if [ -n "${unit}" ] && systemctl is-active --quiet "${unit}" 2>/dev/null; then
+    systemctl stop "${unit}" >/dev/null 2>&1 &&
+      volumes_changed "stopped undeclared [${unit}]"
+  fi
   sync
-  umount "${target}" 2>/dev/null || umount -l "${target}" 2>/dev/null
+  for _ in 1 2 3 4; do
+    mountpoint -q "${target}" || return 0
+    umount "${target}" 2>/dev/null || umount -l "${target}" 2>/dev/null || break
+  done
   mountpoint -q "${target}" && return 1
   return 0
 }
@@ -202,6 +242,30 @@ volumes_disk_clean() {
   volumes_report "a format only ever writes to a blank disk, so nothing that already belongs to something can be overwritten"
   volumes_report "if this disk really is spare, clear it deliberately by hand and run the format again"
   volumes_report "wipefs -a ${disk} && sgdisk -Z ${disk} && partprobe ${disk}"
+  return 1
+}
+
+volumes_format_guard() {
+  local target source fstype opts device resolved parent disk actual faults=0
+  while IFS=$'\t' read -r target source fstype opts; do
+    [ -n "${target}" ] || continue
+    device="$(volumes_device "${source}")"
+    [ -n "${device}" ] || continue
+    [ -e "${device}" ] || continue
+    resolved="$(readlink -f "${device}")"
+    actual="$(blkid -s TYPE -o value "${resolved}" 2>/dev/null)"
+    [ "${actual}" = "${fstype}" ] && continue
+    parent="$(lsblk -no PKNAME "${resolved}" 2>/dev/null | grep . | head -1)"
+    disk="${resolved}"
+    [ -n "${parent}" ] && disk="/dev/${parent}"
+    volumes_fault "[${target}] declares [${fstype}] but [${resolved}] holds [${actual:-no filesystem}], which only a format can change"
+    volumes_report "wipe the disk by hand with it powered on, then run the format, then apply again"
+    volumes_report "wipefs -a ${disk} && sgdisk -Z ${disk} && partprobe ${disk}"
+    volumes_report "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --force"
+    faults=$((faults + 1))
+  done < <(volumes_entries "${VOLUMES_SOURCE}")
+  [ "${faults}" -eq 0 ] && return 0
+  volumes_fault "apply never formats a disk, so nothing has been mounted, unmounted or written"
   return 1
 }
 
@@ -304,6 +368,7 @@ volumes_check() {
 
 volumes_apply() {
   local stale
+  volumes_format_guard || return 1
   if [ -f /etc/fstab ] && diff -q "${VOLUMES_SOURCE}" /etc/fstab >/dev/null 2>&1; then
     volumes_report "[/etc/fstab] already matches the declaration"
   else
@@ -313,12 +378,13 @@ volumes_apply() {
     cp -f "${VOLUMES_SOURCE}" /etc/fstab
     volumes_changed "wrote [/etc/fstab] from the declaration"
   fi
+  systemctl daemon-reload
 
   local target source fstype opts
   while IFS=$'\t' read -r target source fstype opts; do
     [ -n "${target}" ] || continue
     [ -d "${target}" ] || volumes_changed "created mountpoint [${target}]"
-    mkdir -p "${target}" && chmod 750 "${target}" && chown graham:users "${target}"
+    mkdir -p "${target}" && volumes_ownership "${target}"
   done < <(volumes_entries "${VOLUMES_SOURCE}")
 
   stale="$(comm -23 <(volumes_mounted) <(volumes_entries "${VOLUMES_SOURCE}" | cut -f1 | sort) | sort -r)"
@@ -352,20 +418,12 @@ volumes_apply() {
     fi
   done < <(volumes_entries "${VOLUMES_SOURCE}")
 
-  find /share -mindepth 1 -maxdepth 1 -type d -empty -delete 2>/dev/null
-  find /backup -mindepth 1 -maxdepth 1 -type d -empty -delete 2>/dev/null
+  volumes_orphans
   while IFS=$'\t' read -r target source fstype opts; do
     [ -n "${target}" ] || continue
-    mkdir -p "${target}" && chmod 750 "${target}" && chown graham:users "${target}"
+    mkdir -p "${target}" && volumes_ownership "${target}"
   done < <(volumes_entries "${VOLUMES_SOURCE}")
 
-  systemctl daemon-reload
-  local unit
-  for unit in $(systemctl list-units --type=automount --no-legend | awk '/share-[0-9]+\.automount$/ {print $2}'); do
-    systemctl stop "${unit}"
-    systemctl disable "${unit}"
-  done
-  systemctl daemon-reload
   systemctl reset-failed
   [ "$(find /share -mindepth 1 -maxdepth 1 2>/dev/null)" ] &&
     duf -width 250 -style ascii -output mountpoint,size,used,avail,usage,filesystem /share/*
