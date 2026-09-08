@@ -22,6 +22,8 @@ ASYSTEM_PACKAGES=(
   vim
   rename
   parted
+  gdisk
+  btrfs-progs
   curl
   screen
   fswatch
@@ -104,5 +106,5 @@ for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do apt-get install -y "${ASYSTE
 echo "#######################################################################################"
 echo "Base image install commands:"
 echo "#######################################################################################" && echo ""
-for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do echo "apt-get -y --allow-downgrades install" "${ASYSTEM_PACKAGE}="$(apt show ${ASYSTEM_PACKAGE} 2>/dev/null | grep "Version" | column -t | awk '{print $2}'); done
+for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do echo "apt-get -y --allow-downgrades install" "${ASYSTEM_PACKAGE}=$(apt show "${ASYSTEM_PACKAGE}" 2>/dev/null | grep "Version" | column -t | awk '{print $2}')"; done
 echo "" && echo "#######################################################################################"

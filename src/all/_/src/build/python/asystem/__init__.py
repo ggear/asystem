@@ -38,7 +38,7 @@ import time
 from collections import OrderedDict
 
 # noinspection PyUnresolvedReferences
-from os.path import *
+from os.path import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 # noinspection PyUnresolvedReferences
 import pandas as pd

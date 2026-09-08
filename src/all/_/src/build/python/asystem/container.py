@@ -2,7 +2,7 @@ import glob
 import os
 import stat
 import sys
-from os.path import *
+from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
 
 from pathlib2 import Path
 
