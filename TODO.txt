@@ -92,7 +92,13 @@ Implement upgrade script, generarted?
 ###############################################################################################################################################################
 # Kasa
 ###############################################################################################################################################################
-move rue/kasa to max and refactor to be like tasmota including html site. remove deploy and build instead into release like tasmota. use tron theme from https://github.com/educlopez/thegridcn-ui not ares
+Move rue/kasa to max and refactor to be like tasmota including html site. remove deploy and build instead into release like tasmota. use tron theme from https://github.com/educlopez/thegridcn-ui not ares
+
+
+###############################################################################################################################################################
+# Withings
+###############################################################################################################################################################
+Integrate Withings scale direcltly, locally, it has been done here https://didac.dev/blog/i-made-my-withings-scale-sync-to-home-assistant-without-the-cloud
 
 
 ###############################################################################################################################################################
