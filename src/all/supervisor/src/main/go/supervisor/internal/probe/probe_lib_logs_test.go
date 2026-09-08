@@ -304,25 +304,25 @@ func TestProbeLibLogs_Suppression(t *testing.T) {
 		{
 			name:          "happy_standalone_numbers_generalise",
 			message:       "EXT4-fs warning: Error reading block 12345",
-			expected:      "regexp.MustCompile(`^EXT4-fs warning: Error reading block \\d+`),",
+			expected:      "regexp.MustCompile(`^EXT4-fs warning: Error reading block \\d+`)",
 			expectedError: false,
 		},
 		{
 			name:          "happy_device_names_are_kept_whole",
 			message:       "nvme0n1: I/O error, dev nvme0n1, sector 998",
-			expected:      "regexp.MustCompile(`^nvme0n1: I/O error, dev nvme0n1, sector \\d+`),",
+			expected:      "regexp.MustCompile(`^nvme0n1: I/O error, dev nvme0n1, sector \\d+`)",
 			expectedError: false,
 		},
 		{
 			name:          "happy_delimited_numbers_generalise_but_identifiers_do_not",
 			message:       "usb 1-1: device descriptor read/64, error -110",
-			expected:      "regexp.MustCompile(`^usb \\d+-\\d+: device descriptor read/\\d+, error -\\d+`),",
+			expected:      "regexp.MustCompile(`^usb \\d+-\\d+: device descriptor read/\\d+, error -\\d+`)",
 			expectedError: false,
 		},
 		{
 			name:          "happy_clipped_message_drops_its_ellipsis",
 			message:       "mce: [Hardware Error]: Machine check events logged...",
-			expected:      "regexp.MustCompile(`^mce: \\[Hardware Error\\]: Machine check events logged`),",
+			expected:      "regexp.MustCompile(`^mce: \\[Hardware Error\\]: Machine check events logged`)",
 			expectedError: false,
 		},
 	}

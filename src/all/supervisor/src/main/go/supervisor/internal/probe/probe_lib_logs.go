@@ -105,9 +105,9 @@ func (s *logSet) report(censusStart time.Time, window time.Duration) {
 		if index >= logCensusMax {
 			return
 		}
-		logger.Debugf("examined", censusStart, "[%4d] kernel errors, first [%s] last [%s] at dmesg [%s], message [%s], suppress with %s",
-			entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339),
-			logElapsed(entry.last.Sub(s.boot)), entry.message, logSuppression(entry.message))
+		logger.Debugf("examined", censusStart, "[%4d] kernel errors, first [%s] last [%s] at dmesg [%s]", entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339), logElapsed(entry.last.Sub(s.boot)))
+		logger.Debugf("observed", censusStart, "[%s]", entry.message)
+		logger.Debugf("suppress", censusStart, "[%s]", logSuppression(entry.message))
 	}
 }
 
@@ -240,8 +240,10 @@ func (s *logSet) scan(shouts int) int {
 		s.records = append(s.records, logRecord{stamp: stamp, message: clipped})
 		if s.drained && shouts < logShoutsMax {
 			shouts++
-			scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample).Warnf("observed", time.Now(), "[%s] kernel error at dmesg [%s], message [%s], suppress with %s",
-				stamp.Format(time.RFC3339), logElapsed(stamp.Sub(s.boot)), clipped, logSuppression(clipped))
+			logger := scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample)
+			logger.Warnf("observed", time.Now(), "[%s] kernel error at dmesg [%s]", stamp.Format(time.RFC3339), logElapsed(stamp.Sub(s.boot)))
+			logger.Warnf("reported", time.Now(), "[%s]", clipped)
+			logger.Warnf("suppress", time.Now(), "[%s]", logSuppression(clipped))
 		}
 	}
 }
@@ -338,9 +340,9 @@ func logSuppression(message string) string {
 	}
 	pattern := builder.String()
 	if strings.Contains(pattern, "`") {
-		return fmt.Sprintf("regexp.MustCompile(%q),", "^"+pattern)
+		return fmt.Sprintf("regexp.MustCompile(%q)", "^"+pattern)
 	}
-	return fmt.Sprintf("regexp.MustCompile(`^%s`),", pattern)
+	return fmt.Sprintf("regexp.MustCompile(`^%s`)", pattern)
 }
 
 func logIgnoring(message string) bool {
@@ -387,8 +389,13 @@ const (
 
 var (
 	logIgnore = []*regexp.Regexp{
+		// Linux driver pl2303 incompatible with the tempstat chipset which results in 15m benign errors
 		regexp.MustCompile(`^pl2303 ttyUSB\d+: pl2303_get_line_request - failed: -\d+`),
+
+		// Noisy backup HDDs on detection, not really errors
 		regexp.MustCompile(`^\.ready`),
+		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Asking for cache data failed$`),
+		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Read Capacity\(\d+\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Synchronize Cache\(10\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
 	}
 
