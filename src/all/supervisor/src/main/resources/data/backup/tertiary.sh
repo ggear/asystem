@@ -60,12 +60,12 @@ backup_scrub() {
   local kernel=0 files="" count=0
   started="$(date +%s)"
   if ! command -v btrfs >/dev/null 2>&1; then
-    echo "[tertiary] scrub skipped, no [btrfs] on the PATH" >&2
+    backup_log WARN "scrub skipped, no [btrfs] on the PATH"
     backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
     return 0
   fi
   if ! btrfs filesystem show /backup >/dev/null 2>&1; then
-    echo "[tertiary] scrub skipped, [/backup] is not btrfs"
+    backup_log INFO "scrub skipped, [/backup] is not btrfs"
     backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
     return 0
   fi
@@ -77,7 +77,7 @@ backup_scrub() {
     since="$(printf '%s\n' "${status}" | sed -n 's/^Scrub started:[[:space:]]*//p' | head -1)"
     if [ -n "${since}" ] &&
       [ "$(date -d "${since}" +%s 2>/dev/null || echo 0)" -gt "$(( started - BACKUP_SCRUB_DAYS * 86400 ))" ]; then
-      echo "[tertiary] scrub skipped, the last pass started [${since}] within [${BACKUP_SCRUB_DAYS}] days"
+      backup_log INFO "scrub skipped, the last pass started [${since}] within [${BACKUP_SCRUB_DAYS}] days"
       backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
       return 0
     fi
@@ -88,20 +88,21 @@ backup_scrub() {
     hard=$(( BACKUP_STARTED + BACKUP_TIMEOUT_HOURS * 3600 - BACKUP_SCRUB_MARGIN ))
   [ "${hard}" -gt 0 ] || hard=$(( started + 3600 ))
   if [ "${hard}" -le "${started}" ]; then
-    echo "[tertiary] scrub skipped, no time left inside the stage timeout"
+    backup_log WARN "scrub skipped, no time left inside the stage timeout"
     backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
     return 0
   fi
   kernel="$(dmesg 2>/dev/null | wc -l)"
-  echo "[tertiary] scrub ${action} on [/backup] until [$(date --iso-8601=seconds -d @"${hard}")]"
+  backup_log INFO "scrub [${action}] on [/backup] until [$(date --iso-8601=seconds -d @"${hard}")], polling every [${BACKUP_SCRUB_POLL}] s"
   if ! btrfs scrub "${action}" -c 3 -n 15 /backup >/dev/null 2>&1; then
-    echo "[tertiary] could not ${action} the scrub on [/backup]" >&2
+    backup_log ERROR "could not [${action}] the scrub on [/backup]"
     backup_scrub_document "failed" false "${started}" 0 0 0 0 0
     return 1
   fi
   while :; do
     sleep "${BACKUP_SCRUB_POLL}"
     raw="$(btrfs scrub status -R /backup 2>/dev/null)"
+    backup_log INFO "scrub at [$(printf '%s\n' "$(btrfs scrub status /backup 2>/dev/null)" | sed -n 's/.*(\([0-9.]*\)%).*/\1/p' | head -1)] pct, scrubbed [$(( $(backup_scrub_counter "${raw}" "data_bytes_scrubbed") / 1048576 ))] MB"
     printf '%s\n' "${raw}" | grep -qi "status:[[:space:]]*running" || break
     if [ "$(date +%s)" -ge "${hard}" ]; then
       btrfs scrub cancel /backup >/dev/null 2>&1 || true
@@ -134,9 +135,9 @@ backup_scrub() {
       dmesg -T 2>/dev/null | tail -n "+$(( kernel + 1 ))" |
         grep -iE 'btrfs.*(csum|checksum|unable to fixup)' | tail -500
     } >"${BACKUP_STAGE_DIR}/scrub.log"
-    echo "[tertiary] scrub found [${found}] error(s) with [${uncorrectable}] uncorrectable across [${count}] file(s), delete them and re-mirror, listed in [${BACKUP_STAGE_DIR}/scrub.log]" >&2
+    backup_log ERROR "scrub found [${found}] errors with [${uncorrectable}] uncorrectable across [${count}] files, delete them and re-mirror, listed in [${BACKUP_STAGE_DIR}/scrub.log]"
   else
-    echo "[tertiary] scrub ${state} at [${progress}] pct having scrubbed [${scrubbed}] MB with no errors"
+    backup_log INFO "scrub [${state}] at [${progress}] pct having scrubbed [${scrubbed}] MB with no errors"
   fi
   backup_scrub_document "${state}" "${success}" "${started}" "${scrubbed}" "${progress}" "${found}" "${corrected}" "${uncorrectable}" "${files}" "${count}"
   [ "${success}" = "true" ]
@@ -145,31 +146,32 @@ backup_scrub() {
 stage_start() {
   local share index target failed=0 fstab_target fstab_type
   if ! backup_attach; then
-    echo "[tertiary] backup disk did not come up" >&2
+    backup_log ERROR "backup disk did not come up"
     return 1
   fi
   if ! backup_ready; then
-    echo "[tertiary] /backup is not a mounted local filesystem, refusing to mirror" >&2
+    backup_log ERROR "[/backup] is not a mounted local filesystem, refusing to mirror"
     return 1
   fi
   while read -r fstab_target fstab_type; do
     case "${fstab_type}" in ext4 | xfs | btrfs | f2fs) ;; *) continue ;; esac
-    backup_mount "${fstab_target}" || echo "[tertiary] could not mount [${fstab_target}]" >&2
+    backup_mount "${fstab_target}" || backup_log WARN "could not mount [${fstab_target}]"
   done < <(awk '$1 !~ /^#/ && $2 ~ /^\/share\/[0-9]+$/ { print $2, $3 }' /etc/fstab)
   while read -r share; do
     index="${share#/share/}"
     [[ "${index}" =~ ^[0-9]+$ ]] || continue
     target="/backup/share/${index}"
-    mountpoint -q "${share}" || { echo "[tertiary] [${share}] vanished mid-run, skipping" >&2; failed=1; continue; }
-    mountpoint -q /backup || { echo "[tertiary] /backup vanished mid-run, aborting" >&2; failed=1; break; }
+    mountpoint -q "${share}" || { backup_log ERROR "[${share}] vanished mid-run, skipping"; failed=1; continue; }
+    mountpoint -q /backup || { backup_log ERROR "[/backup] vanished mid-run, aborting"; failed=1; break; }
     mkdir -p "${target}/.rsync"
     find "${target}/.rsync" -mindepth 1 -mtime +7 -delete 2>/dev/null
-    echo "[tertiary] mirroring [${share}] to [${target}]"
-    local output
-    output="$(rsync -a --delete --stats --exclude '/tmp/' --exclude '/.rsync/' \
-      --partial-dir="${target}/.rsync" -- "${share}/" "${target}/" 2>&1)" || failed=1
-    printf '%s\n' "${output}"
-    backup_count "${output}"
+    backup_log INFO "mirroring [${share}] to [${target}]"
+    local started; started="$(date +%s)"
+    backup_rsync -a --delete --stats --human-readable --out-format='%t %o %f %l' \
+      --exclude '/tmp/' --exclude '/.rsync/' \
+      --partial-dir="${target}/.rsync" -- "${share}/" "${target}/" || failed=1
+    backup_count "${BACKUP_RSYNC_OUTPUT}"
+    backup_log INFO "mirrored [${share}] in [$(backup_elapsed $(( $(date +%s) - started )))], running total [${BACKUP_FILES}] files, [${BACKUP_SIZE}] MB"
   done < <(findmnt -rn -o TARGET,SOURCE,FSTYPE 2>/dev/null | while read -r mount source fstype; do
     [[ "${mount}" =~ ^/share/[0-9]+$ ]] || continue
     case "${fstype}" in ext4 | xfs | btrfs | f2fs) ;; *) continue ;; esac
@@ -184,7 +186,7 @@ stage_start() {
         name="$(basename "${subvolume}")"
         mkdir -p "${snapshots}/share/${name}"
         btrfs subvolume snapshot -r "${subvolume}" "${snapshots}/share/${name}/${BACKUP_RUN_ID}" >/dev/null 2>&1 &&
-          echo "[tertiary] snapshot ${snapshots}/share/${name}/${BACKUP_RUN_ID}"
+          backup_log INFO "snapshotted [${subvolume}] to [${snapshots}/share/${name}/${BACKUP_RUN_ID}]"
         backup_thin "${snapshots}/share/${name}"
       done
     fi
@@ -196,6 +198,7 @@ stage_start() {
 }
 
 stage_stop() {
+  backup_log INFO "cancelling any scrub and unmounting the backup disk"
   backup_scrub_cancel
   pkill -TERM -f "rsync .*/backup/share" 2>/dev/null || true
   sync
@@ -223,7 +226,7 @@ backup_attach() {
     done < <(backup_targets)
     [ "${pending}" -eq 0 ] && break
     if [ "$(date +%s)" -ge "${deadline}" ]; then
-      echo "[tertiary] timed out after [${BACKUP_DISK_SECONDS}]s waiting for the backup disk to enumerate" >&2
+      backup_log ERROR "timed out after [${BACKUP_DISK_SECONDS}] s waiting for the backup disk to enumerate"
       return 1
     fi
     sleep 2
@@ -239,6 +242,6 @@ backup_detach() {
   while read -r target; do
     mountpoint -q "${target}" || continue
     sync
-    umount "${target}" || umount -l "${target}" || echo "[tertiary] could not unmount [${target}]" >&2
+    umount "${target}" || umount -l "${target}" || backup_log WARN "could not unmount [${target}]"
   done < <(backup_targets)
 }

@@ -1,19 +1,24 @@
 # shellcheck shell=bash
 
 stage_start() {
-  local service script running health failed=0 count=0
-  for service in $(jq -r --arg h "${BACKUP_HOST}" \
-    '.asystem.schema[] | select(.host == $h) | .services[]' "${BACKUP_CONFIG}" 2>/dev/null); do
+  local service script running health failed=0 count=0 index=0 enrolled=() configured=()
+  mapfile -t configured < <(jq -r --arg h "${BACKUP_HOST}" \
+    '.asystem.schema[] | select(.host == $h) | .services[]' "${BACKUP_CONFIG}" 2>/dev/null)
+  for service in "${configured[@]}"; do
+    [ -x "${BACKUP_INSTALL_ROOT}/${service}/latest/backup.sh" ] && enrolled+=("${service}")
+  done
+  backup_log INFO "configured [${#configured[@]}] services, of which [${#enrolled[@]}] ship a backup.sh"
+  for service in "${enrolled[@]}"; do
+    index=$(( index + 1 ))
     script="${BACKUP_INSTALL_ROOT}/${service}/latest/backup.sh"
-    [ -x "${script}" ] || continue
     running="$(docker ps --filter "name=^/${service}$" --filter "status=running" --format '{{.Names}}')"
     if [ "${running}" != "${service}" ]; then
-      echo "[primary] skipping [${service}], container is not running"
+      backup_log WARN "skipped [${service}] [${index}/${#enrolled[@]}], container is not running"
       continue
     fi
     health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "${service}" 2>/dev/null)"
     if [ "${health}" = "starting" ]; then
-      echo "[primary] skipping [${service}], container is still starting"
+      backup_log WARN "skipped [${service}] [${index}/${#enrolled[@]}], container is still starting"
       continue
     fi
     count=$(( count + 1 ))
@@ -21,7 +26,7 @@ stage_start() {
     mkdir -p "${dir}"
     local started; started="$(date +%s)"
     local previous; previous="$(find "${BACKUP_HOME_ROOT}/${service}/backup" -mindepth 1 -maxdepth 1 -type d -name '20*' 2>/dev/null | sort | tail -1)"
-    echo "[primary] backing up [${service}]"
+    backup_log INFO "backing up [${service}] [${index}/${#enrolled[@]}] with [${script}], logging to [${dir}/output.log]"
     local rc=0
     BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}" BACKUP_SERVICE_RESTART=true BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS}" \
       bash "${script}" >"${dir}/output.log" 2>&1 || rc=$?
@@ -61,16 +66,19 @@ stage_start() {
 }
 JSON
     mv "${dir}/status.json.tmp" "${dir}/status.json"
+    backup_log "$([ "${ok}" = true ] && echo INFO || echo ERROR)" \
+      "finished [${service}] as [${state}] in [$(backup_elapsed $(( $(date +%s) - started )))], kind [${kind}], version [${version}], files [${files:-0}], size [${size:-0}] MB"
     BACKUP_FILES=$(( BACKUP_FILES + files ))
     BACKUP_SIZE=$(( BACKUP_SIZE + size ))
     [ "${state}" = complete ] && BACKUP_FILES_CREATED=$(( BACKUP_FILES_CREATED + 1 ))
     backup_publish "supervisor/${BACKUP_HOST}/backup/stage/primary/service/${service}/status" "$(cat "${dir}/status.json")"
   done
-  echo "[primary] attempted [${count}] services, [${failed}] failed"
+  backup_log INFO "attempted [${count}] services with [${failed}] failed"
   backup_usage "${BACKUP_HOME_ROOT}"
   return "${failed}"
 }
 
 stage_stop() {
+  backup_log INFO "terminating any running service backup.sh"
   pkill -TERM -f "${BACKUP_INSTALL_ROOT}/[a-z0-9_-]*/latest/backup.sh" 2>/dev/null || true
 }

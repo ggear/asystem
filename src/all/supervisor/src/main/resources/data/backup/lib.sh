@@ -6,6 +6,41 @@
 # and a stage only reads them. A stage provides stage_start and stage_stop, and reports its work by
 # adding to BACKUP_USAGE and the BACKUP_FILES/SIZE counters, directly or through backup_count.
 
+backup_stamp() {
+  date '+%Y-%m-%dT%H:%M:%S%z'
+}
+
+backup_log() {
+  local level="$1"; shift
+  local line; line="$(printf '%s [%-9s] %-5s %s' "$(backup_stamp)" "${BACKUP_STAGE}" "${level}" "$*")"
+  case "${level}" in
+  WARN | ERROR) printf '%s\n' "${line}" >&2 ;;
+  *) printf '%s\n' "${line}" ;;
+  esac
+}
+
+backup_banner() {
+  local title="$1"; shift
+  backup_log INFO "${title}"
+  local field
+  for field in "$@"; do backup_log INFO "  ${field}"; done
+}
+
+backup_elapsed() {
+  local seconds="$1"
+  printf '%02dh%02dm%02ds' $(( seconds / 3600 )) $(( seconds % 3600 / 60 )) $(( seconds % 60 ))
+}
+
+backup_rsync() {
+  local capture="${BACKUP_STAGE_DIR}/.rsync-$$.out" status
+  rsync "$@" 2>&1 | tee "${capture}"
+  status="${PIPESTATUS[0]}"
+  # shellcheck disable=SC2034
+  BACKUP_RSYNC_OUTPUT="$(cat "${capture}" 2>/dev/null)"
+  rm -f "${capture}"
+  return "${status}"
+}
+
 backup_config() {
   local value
   value="$(jq -r "${1} // empty" "${BACKUP_CONFIG}" 2>/dev/null)"
@@ -24,10 +59,10 @@ backup_mount() {
   local target="$1"
   mountpoint -q "${target}" && return 0
   grep -qsE "^[^#][^[:space:]]*[[:space:]]+${target}[[:space:]]" /etc/fstab || {
-    echo "[${BACKUP_STAGE}] [${target}] is not mounted and not in /etc/fstab" >&2
+    backup_log ERROR "mount of [${target}] refused, not mounted and not in /etc/fstab"
     return 1
   }
-  echo "[${BACKUP_STAGE}] mounting [${target}]"
+  backup_log INFO "mounting [${target}]"
   mount "${target}" >/dev/null 2>&1 || ls "${target}" >/dev/null 2>&1 || true
   mountpoint -q "${target}"
 }
@@ -90,7 +125,7 @@ backup_thin() {
   for name in "${names[@]}"; do
     [ -n "${keep[${name}]:-}" ] && continue
     { btrfs subvolume delete "${dir}/${name}" >/dev/null 2>&1 || rm -rf "${dir:?}/${name}"; } &&
-      echo "[${BACKUP_STAGE}] pruned [${dir}/${name}] outside the grandfather-father-son window"
+      backup_log INFO "pruned [${name}] from [${dir}] outside the grandfather father son window"
   done
 }
 
@@ -139,9 +174,10 @@ backup_heartbeat() {
     local now; now="$(date +%s)"
     if [ "${hard}" -gt 0 ] && [ "${now}" -ge "${hard}" ]; then
       backup_document "running" false "${BACKUP_STARTED}" "$(( now - 1 ))"
-      echo "[${BACKUP_STAGE}] exceeded BACKUP_TIMEOUT_HOURS [${BACKUP_TIMEOUT_HOURS}], signalling supervisor to reap" >&2
+      backup_log ERROR "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, signalling supervisor to reap"
       return 0
     fi
+    backup_log INFO "heartbeat after [$(backup_elapsed $(( now - BACKUP_STARTED )))], files [${BACKUP_FILES}], size [${BACKUP_SIZE}] MB"
     backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))"
   done
 }

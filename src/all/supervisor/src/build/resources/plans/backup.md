@@ -582,7 +582,7 @@ mirror until the secondary stage has been written and thinned. An `edge` host ru
 So, per run:
 
 1. allocate the `run_id`, create the run directory, publish `supervisor/<host>/backup/status`
-2. for each stage this host runs, in order, exec `/asystem/etc/backup.sh <stage> start` with the
+2. for each stage this host runs, in order, exec `/asystem/mnt/backup.sh <stage> start` with the
    `run_id`, and wait
 3. on a stage exceeding its deadline, exec that stage's `stop.sh`, record the stage failed and
    **stop** — a stage whose predecessor did not finish has nothing sound to work from
@@ -973,10 +973,10 @@ shell — the same-path binds make the two identical. That division is what make
 when the thing that schedules it is the thing that is broken.
 
 ```
-<install>/supervisor/latest/image/backup.sh                              the runner, reachable from a host shell
-<install>/supervisor/latest/image/backup/lib.sh                          the functions it sources
-<install>/supervisor/latest/image/backup/{primary,secondary,tertiary}.sh the stages
-/asystem/etc/backup.sh <stage> [start|stop] [run-id]                     the same files, in the container
+<install>/supervisor/latest/image/config.json                            the config the stages read
+/home/asystem/supervisor/latest/backup.sh                                the runner, reachable from a host shell
+/home/asystem/supervisor/latest/backup/{lib,primary,secondary,tertiary}.sh  the functions and the stages
+/asystem/mnt/backup.sh <stage> [start|stop] [run-id]                     the same files, in the container
 /home/asystem/supervisor/backup/<timestamp>/                             written, one per run, same path both sides
 ```
 
@@ -2602,7 +2602,7 @@ Recorded as the plan is implemented. Each entry: what the plan said, what was do
 - **`daily(ctx)`** runs the stages serially by form-factor — `primary`, `secondary`, then
   `tertiary` when `config.HostIndex(host)` reports an index (server). It `flock`s
   `<root>/.lock` (non-blocking, skips if held), allocates the `run_id` timestamp, `exec`s
-  `/asystem/etc/backup.sh <stage> start <run_id>` under `backupStageTimeout` teeing to
+  `/asystem/mnt/backup.sh <stage> start <run_id>` under `backupStageTimeout` teeing to
   `<run>/logs/<stage>.log`, calls the stage's `stop.sh` and stops the run on failure, then writes
   `<run>/status.json`. **DEVIATION vs plan:** the run-level roll-up is currently minimal — it does
   not yet read per-stage `status.json` files to aggregate `file_count`/`size_mb`, and it does not
@@ -3775,7 +3775,7 @@ mount.sh                 unchanged, and it never had a parameter to interpolate 
 ```
 
 **start and stop became one file per stage**, since `stop` is two lines everywhere and the phase was
-already a variable inside the wrapper. Go execs `bash /asystem/etc/backup.sh <stage> <phase> <run-id>`
+already a variable inside the wrapper. Go execs `bash /asystem/mnt/backup.sh <stage> <phase> <run-id>`
 from three sites in `probe_impl_backup.go`; `backupStageDir` became `backupRunner` and
 `backupProbe.stageDir` became `backupProbe.runner`.
 

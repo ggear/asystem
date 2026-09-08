@@ -9,6 +9,11 @@
 # never under the probe, which owns the redirection and reads that status. stop is idempotent and
 # never unmounts a share. The stage contract is in backup/lib.sh, and each stage holds one of its own:
 #
+# Every stage writes one log, at BACKUP_STAGE_DIR/output.log, and echoes it to stdout as it goes -
+# except under the probe, where stdout already is that file and a tee would write every line twice.
+# Lines are stamped, levelled and prefixed with the stage, so a stage log reads on its own and the
+# three concatenate in run order. Set BACKUP_QUIET=1 to keep the file and drop the stdout copy.
+#
 # primary   never reads a data directory or knows a backup format, the module's own backup.sh owns
 #           both, and a service is enrolled by shipping one.
 # secondary is additive and never deletes, mounts the share on demand and never unmounts it, and
@@ -69,8 +74,14 @@ BACKUP_SIZE_HELD=0
 BACKUP_SENT=0
 
 if [ "${BACKUP_PHASE}" = "stop" ]; then
-  exec >>"${BACKUP_LOG}" 2>&1
+  if [ -n "${BACKUP_RUN_ID_PASSED:-}" ] || [ -n "${BACKUP_QUIET:-}" ]; then
+    exec >>"${BACKUP_LOG}" 2>&1
+  else
+    exec > >(tee -a "${BACKUP_LOG}") 2>&1
+  fi
+  backup_log INFO "stopping [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]"
   stage_stop || true
+  backup_log INFO "stopped [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]"
   exit 0
 fi
 
@@ -78,22 +89,44 @@ if [ -z "${BACKUP_DETACHED:-}" ] && [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && { [ -t
   export BACKUP_DETACHED=1
   nohup "$0" "${BACKUP_STAGE}" start "${BACKUP_RUN_ID}" >>"${BACKUP_LOG}" 2>&1 &
   disown
-  echo "[${BACKUP_STAGE}] detached, following ${BACKUP_LOG}"
+  backup_log INFO "detached, following [${BACKUP_LOG}]"
   exit 0
 fi
-[ -n "${BACKUP_RUN_ID_PASSED:-}" ] || exec > >(tee -a "${BACKUP_LOG}") 2>&1
+if [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && [ -z "${BACKUP_QUIET:-}" ]; then
+  exec > >(tee -a "${BACKUP_LOG}") 2>&1
+fi
 
 BACKUP_STARTED="$(date +%s)"
-trap 'stage_stop || true; backup_settle; exit 143' TERM INT
+trap 'backup_log WARN "interrupted, stopping [${BACKUP_STAGE}]"; stage_stop || true; backup_settle; exit 143' TERM INT
+backup_banner "starting [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]" \
+  "host      [${BACKUP_HOST}]" \
+  "trigger   [${BACKUP_TRIGGER}]" \
+  "runner    [${BACKUP_ROOT}/$(basename "${BASH_SOURCE[0]}")]" \
+  "log       [${BACKUP_LOG}]" \
+  "run path  [${BACKUP_RUN_PATH}]" \
+  "home root [${BACKUP_HOME_ROOT}]" \
+  "installs  [${BACKUP_INSTALL_ROOT}]" \
+  "config    [${BACKUP_CONFIG}]" \
+  "timeout   [${BACKUP_TIMEOUT_HOURS}] hours" \
+  "retention [${BACKUP_KEEP_DAILY}] daily, [${BACKUP_KEEP_WEEKLY}] weekly, [${BACKUP_KEEP_MONTHLY}] monthly" \
+  "heartbeat [${BACKUP_HEARTBEAT_REFRESH}] s refresh, [${BACKUP_HEARTBEAT_GRACE}] s grace"
 backup_document "running" false "${BACKUP_STARTED}" "$(( BACKUP_STARTED + BACKUP_HEARTBEAT_GRACE ))"
 backup_heartbeat &
 BACKUP_HEARTBEAT_PID=$!
 
-if stage_start; then
-  backup_settle
-  backup_document "complete" true "${BACKUP_STARTED}"
-  exit 0
-fi
+BACKUP_RESULT=0
+stage_start || BACKUP_RESULT=$?
 backup_settle
-backup_document "failed" false "${BACKUP_STARTED}"
-exit 1
+BACKUP_ELAPSED=$(( $(date +%s) - BACKUP_STARTED ))
+if [ "${BACKUP_RESULT}" -eq 0 ]; then
+  backup_document "complete" true "${BACKUP_STARTED}"
+else
+  backup_document "failed" false "${BACKUP_STARTED}"
+fi
+backup_banner "finished [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}] as [$([ "${BACKUP_RESULT}" -eq 0 ] && echo complete || echo failed)]" \
+  "elapsed   [$(backup_elapsed "${BACKUP_ELAPSED}")]" \
+  "files     [${BACKUP_FILES}] transferred, [${BACKUP_FILES_CREATED}] created, [${BACKUP_FILES_DELETED}] deleted, [${BACKUP_FILES_HELD}] held" \
+  "size      [${BACKUP_SIZE}] MB transferred, [${BACKUP_SENT}] MB sent, [${BACKUP_SIZE_HELD}] MB held" \
+  "disk      [${BACKUP_USAGE}] pct used" \
+  "status    [${BACKUP_STAGE_DIR}/status.json]"
+exit "${BACKUP_RESULT}"

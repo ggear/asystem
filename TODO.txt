@@ -29,8 +29,7 @@ document how to update python deps in global CLAUDE.md and attempt to upgrade wh
 
 
 
-is watch plan complete now? all temp code removed?
-do the backup dir move to home. make the backup scripts executable. add logging to the backup scripts that tee logs to stdout and file logs, show progress and be verbose
+do the backup dir move to home. make the backup scripts executable. add logging to the backup scripts that tee logs to stdout and file logs, show progress in stdout/file firendly way, and be verbose
 test supervisor release against plan
 test new watch logs, add/remove etc
 test primary
@@ -49,7 +48,7 @@ adjust memeory allocs
 tune fan/tem
 
 check metric attribution works by metric filter when multiple probe_* feed single metric
-verify caching hour and all metrics performance
+verify caching hour and all metrics performance, increase poll frequency?
 Add host status to ha, combine backup temp etc
 add restore.sh and test 
 

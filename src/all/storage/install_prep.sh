@@ -1,13 +1,24 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 # shellcheck disable=SC1091
 . "${ROOT_DIR}/.env"
 
-if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
+if [[ "${SERVICE_FORM_FACTOR:-}" == "server" && "${SERVICE_COMMAND:-}" == "install" ]]; then
 
-  cat <<EOF >/etc/samba/smb.conf
+  SMB_CONF="/etc/samba/smb.conf"
+  SMB_CONF_NEW="$(mktemp "${SMB_CONF}.XXXXXX")"
+  SHARE_COUNT=0
+
+  cleanup() {
+    rm -f "${SMB_CONF_NEW}"
+  }
+  trap cleanup EXIT
+
+  cat <<EOF >"${SMB_CONF_NEW}"
 [global]
   server min protocol = SMB2
   server max protocol = SMB3
@@ -67,6 +78,14 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
 
 EOF
   while IFS= read -r SHARE_DIR; do
+    if [[ -z "${SHARE_DIR}" ]]; then
+      echo "Skipping share with no mount point in [/etc/fstab]" >&2
+      continue
+    fi
+    if ! mountpoint -q "${SHARE_DIR}"; then
+      echo "Skipping share not mounted [${SHARE_DIR}]" >&2
+      continue
+    fi
     SHARE_INDEX=$(echo "${SHARE_DIR}" | awk 'BEGIN{FS=OFS="/"}{print $3}')
     rm -rf "${SHARE_DIR}/lost+found"
     mkdir -p "${SHARE_DIR}/backup"
@@ -74,8 +93,15 @@ EOF
     mkdir -p "${SHARE_DIR}/service"
     mkdir -p "${SHARE_DIR}/service/mlflow"
     mkdir -p "${SHARE_DIR}/tmp"
-    chown -R graham:users "${SHARE_DIR}"
-    cat <<EOF >>/etc/samba/smb.conf
+    chown graham:users \
+      "${SHARE_DIR}" \
+      "${SHARE_DIR}/backup" \
+      "${SHARE_DIR}/media" \
+      "${SHARE_DIR}/service" \
+      "${SHARE_DIR}/service/mlflow" \
+      "${SHARE_DIR}/tmp"
+    SHARE_COUNT=$((SHARE_COUNT + 1))
+    cat <<EOF >>"${SMB_CONF_NEW}"
 [share-${SHARE_INDEX}]
   comment = Share-${SHARE_INDEX} Files
   path = ${SHARE_DIR}
@@ -93,7 +119,7 @@ EOF
 EOF
 
     # TODO: Disable Time Machine share until we want it again
-    #  cat <<EOF >>/etc/samba/smb.conf
+    #  cat <<EOF >>"${SMB_CONF_NEW}"
     #[time-machine-${SHARE_INDEX}]
     #  comment = Time-Machine-${SHARE_INDEX} Files
     #  path = ${SHARE_DIR}/backup/timemachine
@@ -116,10 +142,22 @@ EOF
 
   done < <(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}')
 
-  for _smb in smb.service smbd.service nmb.service nmbd.service remote-fs.target; do
-    systemctl list-unit-files ${_smb} | grep -q ${_smb} && systemctl enable ${_smb} && systemctl restart ${_smb} && systemctl --no-pager status ${_smb}
-  done
+  if [[ "${SHARE_COUNT}" -eq 0 ]]; then
+    echo "Samba not reconfigured, no mounted shares found in [/etc/fstab]" >&2
+  else
+    chmod 644 "${SMB_CONF_NEW}"
+    mv -f "${SMB_CONF_NEW}" "${SMB_CONF}"
+    trap - EXIT
 
-  [ -d /share ] && ls -d /share/* >/dev/null 2>&1 && duf -width 250 -style ascii -output mountpoint,size,used,avail,usage /share/*
+    for _smb in smb.service smbd.service nmb.service nmbd.service remote-fs.target; do
+      if systemctl list-unit-files "${_smb}" | grep -q "${_smb}"; then
+        systemctl enable "${_smb}" || echo "Failed to enable unit [${_smb}]" >&2
+        systemctl restart "${_smb}" || echo "Failed to restart unit [${_smb}]" >&2
+        systemctl --no-pager status "${_smb}" || true
+      fi
+    done
+  fi
+
+  { [ -d /share ] && ls -d /share/* >/dev/null 2>&1 && duf -width 250 -style ascii -output mountpoint,size,used,avail,usage /share/*; } || true
 
 fi
