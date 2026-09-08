@@ -734,29 +734,15 @@ func closeLoggerWriter() {
 	}
 }
 
-// TODO(shadow-barrier): restore log purging when the shadow-barrier collection ends.
-// logFilePurge is a var only so the purge test can flip it; make it a constant true again.
-// Set logFilePurge back to true and delete this early return and the constant. The purge is
-// disabled so that a month of watch and serve logs survives the several supervisor releases
-// expected in that window -- each release restarts serve under a new pid, and purgeLogFiles
-// would otherwise delete every prior run's file on start, destroying the evidence the
-// shadow-barrier comparison exists to collect. While this is off, /var/log/supervisor grows
-// without bound, held only by lumberjack's own MaxBackups and MaxAge.
-var logFilePurge = false
-
 func purgeLogFiles(keep string) {
-	if !logFilePurge {
-		Log(SourceScribe, SubjectNone, ActionRemove).Infof("retained", time.Now(), "[all] prior logs, purge disabled")
-		return
-	}
 	purgeStart := time.Now()
 	dir := filepath.Dir(keep)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%s] log directory unreadable with [%v]", dir, err)
+		Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[unreadable] log dir for purge, %v", err)
 		return
 	}
-	removed := 0
+	removed, kept := 0, 0
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, logFileSuffix) && !strings.HasSuffix(name, logFileSuffix+logFileArchive) {
@@ -767,16 +753,17 @@ func purgeLogFiles(keep string) {
 			continue
 		}
 		if pid, ok := logFilePID(name); ok && pid != os.Getpid() && logProcessAlive(pid) {
+			kept++
 			continue
 		}
 		if removeErr := os.Remove(path); removeErr != nil {
-			Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%s] stale log file with [%v]", name, removeErr)
+			Log(SourceScribe, SubjectNone, ActionRemove).Warnf("faulting", purgeStart, "[%-16.16s] not removed, %v", name, removeErr)
 			continue
 		}
 		removed++
 	}
 	if removed > 0 {
-		Log(SourceScribe, SubjectNone, ActionRemove).Infof("removals", purgeStart, "[%d] stale log files, kept [%s]", removed, filepath.Base(keep))
+		Log(SourceScribe, SubjectNone, ActionRemove).Infof("removals", purgeStart, "[%3d] purged, [%3d] kept as live", removed, kept)
 	}
 }
 

@@ -25,11 +25,12 @@ Setup outdoor air quality monitor
 Implement Coral/Frigate
 Add big ass temps for deck
 retire nginx and use cloudflared for homeasistant?
-
-
-
-
 document how to update python deps in global CLAUDE.md and attempt to upgrade what I can today, backdown versions where there conflicts that break
+
+
+
+is watch plan complete now? all temp code removed?
+do the backup dir move to home. make the backup scripts executable. add logging to the backup scripts that tee logs to stdout and file logs, show progress and be verbose
 test supervisor release against plan
 test new watch logs, add/remove etc
 test primary

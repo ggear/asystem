@@ -1030,8 +1030,6 @@ func TestScribe_LogFilePID(t *testing.T) {
 }
 
 func TestScribe_PurgeLogFiles(t *testing.T) {
-	logFilePurge = true
-	t.Cleanup(func() { logFilePurge = false })
 	dir := t.TempDir()
 	keep := filepath.Join(dir, fmt.Sprintf("serve-pid-%d.log", os.Getpid()))
 	files := []string{

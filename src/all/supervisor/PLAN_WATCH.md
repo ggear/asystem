@@ -2,10 +2,11 @@
 
 How a `watch` learns which services a host runs, why a departed service lingers, and what should
 replace the machinery that currently compensates. Status is marked per section: **built** is in the
-repo today, **planned** is not.
+repo today, **planned** is not, and **ruled out** was tried and rejected on evidence.
 
 Read *Root cause* first — it is confirmed, it is two lines, and it changes which of the options below
-are worth building. *Budget* is the latency target every option is measured against.
+are worth building. *Budget* is the latency target every option is measured against. *First findings*
+carries the estate measurements taken 2026-09-08, which are what ruled option C out.
 
 ---
 
@@ -125,12 +126,28 @@ this and the QoS change hold no lock across network I/O.
 |---|---|---|---|---|
 | **A** | Drop the shutdown tombstone-all | serve, ~6 lines deleted | — | the breadcrumb destruction; makes B possible |
 | **B** | `serve` reconciles its retained set at connect | serve | ≤3 s once startup is unblocked | the departed service, at the source |
-| **C** | Barrier-triggered reconcile | watch | ~50 ms | replaces the timed reconcile with a definitive one |
+| **C** | Barrier-triggered reconcile | watch | ~50 ms | **ruled out** by the shadow collection — see below |
 | **D** | Roster topic the watch consumes | serve + watch | ~50 ms | as C, plus an explicit membership statement |
-| **E** | Lower `reconcileGrace` from 10 s to 3 s | 1 line | ~4 s | nothing else |
+| **E** | Lower `reconcileGrace` from 10 s to 3 s | 1 line | ~4 s | **nothing — it is a no-op**, see below |
 
 **A + B is the recommendation, and it meets the budget on its own.** They are one idea in two halves:
 stop destroying the evidence, then act on it.
+
+**C is ruled out, on evidence, and D inherits the reason.** Phase 3 ran it in shadow mode against the
+estate and every `[differ]` it produced was the barrier proposing to reap **live** services, including
+`supervisor` itself — because a barrier proves that *broker delivery* has drained, and the thing a
+restart reconcile must wait for is the remote host **re-announcing**, which is not in flight anywhere
+when the nonce is published. The measurements are under *First findings*; D would need a roster
+published by the host it is waiting for, so it does not inherit the defect, but it does inherit the
+lesson that only the publisher can settle this question. Shadow mode and its `TODO(shadow-barrier)`
+tags come out with C.
+
+**E cannot do anything, and should be struck rather than implemented.** `reconcileDelay` is
+`max(2 x PulseMillis, reconcileGrace)` (`engine.go:134`), so at the production 3 s poll x 2 that is
+**12 s against a 10 s grace** — `reconcileGrace` never wins the `max`, and the estate's observed
+`after [ 11] secs` / `after [ 12] secs` / `after [ 13] secs` bracket the 12, not the 10. Shortening the
+grace would mean changing the pulse multiple, and the staged orphan says do not: the 12 s is the window
+in which a restarted `serve` republishes, which is precisely what the reconcile must wait for.
 
 **A has one honest regression.** Today a graceful stop self-cleans the broker; after A a
 decommissioned host leaves its retained data behind until the next vernemq recreate collects it. That
@@ -272,15 +289,22 @@ change. They are rare — a handful a day estate-wide — and the subscribe side
 wildcards, so this closed case 8 without a new mechanism and brought its worst case in line with
 case 1.
 
-**Case 7 is why C cannot delete the whole-host guard, and none of this changes it.** Keep the guard:
-a reap that would empty a host holds once, resubscribes, re-opens the barrier, and only the retry
-reaps. That is the existing behaviour and it is already proven against exactly this scenario. If keeping it is unacceptable, D is
+**Case 7 is why the whole-host guard exists, and none of this changes it.** Keep the guard: a reap
+that would empty a host holds once, resubscribes and reschedules, and only the retry reaps. That is the existing behaviour and it is already proven against exactly this scenario. If keeping it is unacceptable, D is
 the design that removes it by construction — a reap needs a roster to act on, and absence is never
 evidence.
 
 ---
 
-## Barrier reconcile, planned — option C
+## Barrier reconcile, ruled out — option C
+
+**Do not build this. The premise below is false, and the shadow collection is what showed it** — see
+*First findings*, and read this section as the reasoning that was tested rather than as a design. The
+premise fails on the sentence "so anything not seen since the resubscribe is gone": what the nonce
+proves is that the *broker* has finished delivering, and on a restart the services the reconcile is
+weighing have not been published by anyone yet, so the barrier laps an empty flood and proposes to reap
+a live host. Kept in full because the instrumentation is still in the tree behind
+`TODO(shadow-barrier)` and because the failed premise is the most useful thing this document records.
 
 After `resubscribeHost` forces a redelivery, publish a nonce to a topic this watch also subscribes
 to. When it returns, the retained flood for those filters is complete, so anything not seen since the
@@ -341,7 +365,7 @@ to build it rather than a reason to pick a fallback. Treat the above as the fall
 
 ---
 
-## Roster, planned — option D, held in reserve
+## Roster, not being built — option D, held in reserve
 
 If C's ordering assumption fails, or the whole-host guard's survival is unacceptable, the host states
 its membership instead: `host/services_roster`, `valueKind` str, `persisted: false`,
@@ -351,8 +375,14 @@ comma-joined `servicesByName` after the ghost pass. Owned by `servicesProbe`, in
 retained publish, topic template, `metric.Topics()` declaration, schema leaf, `--log-subject`
 vocabulary and reconnect replay.
 
-`topicDiscovery` → `topicRoster` and `onDiscovery` → `onRoster` is a 1:1 swap, collapsing estate
-discovery from ~200 retained topics to 6. Three rules: register names the cache lacks, evict-and-
+`topicDiscovery` → `topicRoster` and `onDiscovery` → `onRoster` is a 1:1 swap on the watch side.
+**It collapses nothing, and the saving this sentence used to claim was wrong twice over.** It read
+"collapsing estate discovery from ~200 retained topics to 6": the real count is **26** (one per
+service, measured against production, beside 438 retained `supervisor/#` topics in total), and the
+name topics cannot be dropped in any case — option B's readback re-subscribes to its own retained
+`…/service/+/name` topics on start, which is the whole of the restart recovery. So a roster is
+**additive**, and both discovery paths would have to work simultaneously and indefinitely, since a
+watch runs an old binary for weeks at a time. Three rules: register names the cache lacks, evict-and-
 delete names the roster omits then one `Refresh()` (since `Delete` reindexes), ignore a roster
 stamped no later than the last applied for that host. Published retained at **QoS 1**, because
 `Store` skips notify on an equal value so an unchanged roster goes quiet until the 300 s heartbeat.
@@ -361,7 +391,17 @@ Validate on receipt — non-empty, no `/`, not prefixed `ServiceNameSchema` (whi
 specially), and a count cap. A roster is remote input; per-topic discovery got this for free.
 
 **Its cost** is a new source of truth: a bug in the ghost pass makes a whole host's membership wrong
-at once, where today ~200 independent topics fail independently.
+at once, where today 26 independent topics fail independently.
+
+**Its remaining benefit, after the 2026-09-08 findings, is one thing only: it would state membership
+where the reconcile infers it from absence-of-refresh** — clearing a removed module in one publish
+(~3 s) rather than at the 12 s grace, deterministically, with no cutoff and no whole-host guard. That
+is worth having and it is not worth building yet: the condition is a module removed from a host
+followed by a release, which happened **zero** times in the 20-hour window and last happened at the
+`max`/`may` migration. Nine seconds saved a few times a year against a per-host single point of
+failure, a second discovery path to keep alive, and a new metric with its schema leaf, topic
+declaration, `verify.sh` rows and `generate.py` binding. Build it if module moves become routine —
+a migration project would flip this — or if a 12 s stale row ever becomes visible pain.
 
 ---
 
@@ -370,10 +410,12 @@ at once, where today ~200 independent topics fail independently.
 **A**: the six-line tombstone-all in the shutdown defer (`engine.go:689-694`) and the *"On shutdown"*
 step 2 in the loop's doc comment.
 
-**C**: `reconcileDelay`, `reconcileGrace` (`:902`), the `connected` cutoff and the `fromConnect`
-distinction, and `RecordCache.ServicesBefore` (`metric_cache.go:510`), replaced by a seen-set. The
-whole-host guard **stays** (case 7). Under **D** the guard and the remaining `hostReconcile`
-scaffolding go too.
+**C**: ~~`reconcileDelay`, `reconcileGrace`, the `connected` cutoff and the `fromConnect`
+distinction, and `RecordCache.ServicesBefore`, replaced by a seen-set.~~ **None of this happens.** C
+is ruled out and the timed reconcile is kept, so every symbol listed here stays exactly as it is —
+what was deleted instead was the shadow instrumentation that measured C. `reconcileGrace` is the one
+oddity left: it is inert, since `reconcileDelay` takes `max(2 x PulseMillis, reconcileGrace)` and the
+pulse term always wins, and it is kept only so a slower pulse cannot shrink the grace below 10 s.
 
 **Kept regardless, none of it reconcile machinery:** `proveOnline`, unchanged and load-bearing
 (case 6); `resubscribeHost`, keeping its revive-from-mute (`:153`) and restart (`:327`) callers —
@@ -820,10 +862,11 @@ log (`reclaims … of <svc>` followed by a `register` for the same service, both
 the row has already blanked and can lag a heartbeat. Shadow mode reports the same condition **before**
 anything is reaped, and is the only configuration that keeps a control arm.
 
-**What it is expected to show, and the honest prior.** `mad` logged **zero** reconcile firings in
-14.5 hours, because a stable server never reconnects. Every firing therefore comes from the wake path
-on `rue`. So C's entire value is concentrated in one process on one machine, and the more likely
-outcome of this collection is **delete the reconcile** rather than replace it — which is already the
+**What it was expected to show, and what it did.** The prior recorded here was that `mad` logged
+**zero** reconcile firings in 14.5 hours, so every firing came from the wake path on `rue` and C's value
+was concentrated in one process on one machine. Both halves were wrong — `mad` fires on every release,
+and the collection found the barrier itself unsound — but the predicted *outcome* was right: the more
+likely outcome of this collection is **delete the reconcile** rather than replace it — which is already the
 first branch of Q1. Shadow mode is what tells the two apart at no risk.
 
 **The two design points C depends on, both now settled.** The **fallback is skip-and-retry**, decided
@@ -882,7 +925,7 @@ stanzas stay untested — see the measured table in *How to test*. What is genui
 packaged image, the capabilities and device rules, the generated `checkexecuting.sh`, the real
 SIGTERM shutdown path, and every assertion above.
 
-### Phase 2 — measure the barrier here, then decide C here [was Phase 0.2 and Phase 3]
+### Phase 2 — measure the barrier here, then decide C here, done — C is ruled out
 
 **This is no longer a production measurement, and that is the one piece of the original Phase 0 that
 moves forward.** `fab st` brings up the module's run dependencies, so the systest runs against a real
@@ -944,7 +987,7 @@ ordering assumption fails under production load and D comes off the shelf. It al
 partition than log archaeology: a reclaim firing **after** the barrier returned is a real lost
 departure, one firing before it is a timing artifact.
 
-### Phase 3 — production observation, later
+### Phase 3 — production observation, done 2026-09-08
 
 **Nothing here is a code change.** It is the collection protocol for the three questions Phase 1
 cannot answer on a dev machine, and it needs **two releases**: one to get the instrumentation onto
@@ -996,9 +1039,13 @@ wait-output change (zigbee2mqtt, postgres, sabnzbd, grafana, influxdb3, mlflow, 
 homeassistant, mariadb, appdaemon, rhasspy, unpoller). Cosmetic, so it can ride along with whatever is
 released next rather than driving a release of its own.
 
-**Next steps, in order:** wait out the month; harvest with `~/Temp/watch-baseline.sh`; run the five
-analysis steps below; decide Q1. On the evidence so far the verdict is leaning toward **deleting the
-reconcile** rather than building C — `mad` has never once had it reap anything.
+**Next steps, in order:** remove the shadow instrumentation (17 `TODO(shadow-barrier)` tags across
+`engine.go`, `engine_test.go` and `scribe.go`), re-enable `logFilePurge`, and strike option E — at the
+production 3 s poll, `reconcileDelay` is `max(2 x PulseMillis, reconcileGrace)` = **12 s against a 10 s
+grace**, so `reconcileGrace` never wins the `max` and lowering it changes nothing. The month-long wait
+is done with: 20 hours across five releases produced 188 firings, 6 `[differ]` events and 9
+`[pending]`, and the staged orphan answered the last question. **C is ruled out; the timed reconcile
+stays.**
 
 #### What to simulate, and what to collect
 
@@ -1134,7 +1181,7 @@ diff the two. The baseline taken at `10.200.1531 + ~12 minutes`:
 |---|---|---|
 | serve, per host | one of `rediscovered [n] topics`, `rediscovered [  0] topics`, `[unmarshal]`, `[nil] readback pulse`, `[empty] readback` | silence again is a **real defect** — the readback is not running, and Q3 becomes a fix rather than an observation |
 | watch | `observed [offline] evicted [n] services`, then `observed [online] transition by [restart]`, then the `shadowed` pair | a missing transition means the watch never saw the host leave |
-| watch | `reclaims [  0] services` | **a non-zero reap on a clean graceful restart is the finding** — the departure path missed something |
+| watch | `reclaims [  0] removed` | **a non-zero reap on a clean graceful restart is the finding** — the departure path missed something |
 | both log files | **same inode, larger size**, release captured inside them | a new inode or an empty directory means purging is still happening and the month-long collection cannot run |
 
 That last row is the one assumption everything else rests on, and it is the only one this release could
@@ -1150,29 +1197,66 @@ read a whole window at once.
 
 ```bash
 LOGS=/var/log/supervisor                                   # rue: ~/Library/Logs/supervisor
-cat() { zcat -f "$LOGS"/watch-*.log "$LOGS"/watch-*.log.gz 2>/dev/null; }
+files() { ls -1 "$LOGS"/watch-*.log "$LOGS"/watch-*.log.gz 2>/dev/null; }
+logs()  { files | while read -r f; do zcat -f "$f"; done; }
+```
+
+**Every step below reads the whole directory, which is several files, and that is where the readings
+go wrong if it is not stated.** A watch directory holds one file per *process* plus lumberjack's
+rotated `.log.gz` archives of each, purging is disabled so nothing is ever removed, and `mad` has run
+two watch processes concurrently — so at the time of writing its **five files hold four processes**,
+spanning 13:04 on 09-07 to 09:14 on 09-08, with two of them running at once. Three consequences, all of them silent:
+
+- **A count over the directory is per watch *process*, not per estate event.** Two concurrent watches
+  on one host both log the same reconcile, so `grep -c` double-counts it. Dedupe by timestamp and host
+  before quoting an event count — the four `[differ]` events below were seen six times between the two
+  watches, and one of those was a single mad process seeing an event twice over.
+- **Concatenation order is not a timeline.** `watch-*.log` then `watch-*.log.gz` puts every archive
+  after every live file, and `ls -tr` puts an archive at its *rotation* time rather than at the time it
+  covers. Order does not affect a count, but `head -1`, `grep -A3` and any reading of context do — so
+  do those **one file at a time**, `zcat -f <file> | grep -A3 …`, never against `logs`.
+- **A version and a pid are in every file name**, so per-file is also how a reading is attributed to a
+  release. Take the census per file first and sum it yourself:
+
+```bash
+files | while read -r f; do
+  body=$(zcat -f "$f")
+  printf '%-46s %7s %7s %7s %7s %7s\n' "$(basename "$f")" \
+    "$(printf '%s\n' "$body" | sed -n 2p | cut -c1-14)" \
+    "$(printf '%s\n' "$body" | grep -c 'reclaims')" \
+    "$(printf '%s\n' "$body" | grep -c 'shadowed \[agreed\]')" \
+    "$(printf '%s\n' "$body" | grep -c 'shadowed \[differ\]')" \
+    "$(printf '%s\n' "$body" | grep -c 'shadowed \[pending\]')"
+done
 ```
 
 **Step 1 — how often does the reconcile fire at all?** This is Q1, and it is the question that decides
 between delete, keep and replace.
 
 ```bash
-cat | grep -c 'reclaims'                    # every firing, including the reaped-nothing ones
-cat | grep 'reclaims' | grep -v '\[  0\]'   # firings that actually reaped, with the service names
+logs | grep -c 'reclaims'                    # every firing, including the reaped-nothing ones
+logs | grep 'reclaims' | grep -v '\[  0\]'   # firings that actually reaped, with the service names
 ```
 
 | Reading | Verdict |
 |---|---|
 | zero `reclaims` on both watches | **delete the reconcile.** C is unnecessary rather than optional, and shadow mode goes with it |
-| firings only on `rue`, all `[  0]` | the reconcile is exercised only by wakes and never reaps — still delete, but read step 2 first |
+| firings on both watches, all `[  0]` | the reconcile is exercised but has had nothing to reap; **not** grounds to delete it — see the staged orphan below |
 | firings that reaped, on either watch | a departure was lost. Go to step 3 to find out whether the reap was *correct* |
+
+**Do not partition this by sleep — the first collection killed that hypothesis.** The row above used
+to read *"firings only on `rue`"*, on the assumption that a wake was the only thing that schedules a
+reconcile. `mad` never sleeps and fired 29 times, because a **release** does it too: every host's
+`serve` restarts, each restart is a status transition, and each transition schedules a reconcile on
+every watch. Releases, not wakes, are the dominant source in an estate that releases several times a
+month, and a partition by population no longer separates anything.
 
 **Step 2 — was the timer ever wrong?** These two lines are the finding, and both are WARN, so they are
 rare by construction and any hit is worth reading in full.
 
 ```bash
-cat | grep 'shadowed \[differ\]'    # barrier and timer chose different sets
-cat | grep 'shadowed \[pending\]'   # the timer reaped while the flood was still in flight
+logs | grep 'shadowed \[differ\]'    # barrier and timer chose different sets
+logs | grep 'shadowed \[pending\]'   # the timer reaped while the flood was still in flight
 ```
 
 A `[differ]` is followed by two lines naming each set. **Both name fields are 14 wide, clipped with a
@@ -1182,21 +1266,29 @@ as absent. Read them with two things in mind. The **counts on the `[differ]` lin
 not the names: `[postgres,sabn~]` against `timer [ 3]` is three services of which one is invisible.
 And the **direction is what matters** — `barrier [ 0] timer [ 2]` means the timer reaped services the
 barrier would have kept, which is the live-service reap this exercise exists to detect, while
-`barrier [ 1] timer [ 0]` is the benign direction of a departure the timer merely missed.
+`barrier [ 1] timer [ 0]` means the barrier would have reaped what the timer kept. That second
+direction was written here as *"the benign direction of a departure the timer merely missed"*, and the
+first collection showed it is nothing of the kind: **every `[differ]` observed was that direction, and
+every one of them named live services** — see finding 3 below. Read it as the barrier being wrong, not
+as the timer being late, until an example turns up where the service really had departed.
 
 Clipping is unambiguous across this estate: all 22 configured service names have distinct 7-character
 prefixes, checked against the deployed `config.json`, and 14 characters holds `zigbee2mqtt` and
 `homeassistant` whole. **The barrier latency is deliberately absent from this line** — it is already on
 the `would reap` line for the same reconcile, which is what step 4 greps, so repeating it here bought
-nothing and cost the name field six characters. **`[pending]` is the serious one**: it means the timed reconcile reaped before the
-barrier proved the redelivery complete, which is the "reaping a live service" failure this whole
-exercise exists to detect. **Any `[pending]` at all justifies building C.**
+nothing and cost the name field six characters. **`[pending]` was written up as the serious one**: it means the timed
+reconcile cut before the barrier proved the redelivery complete, which is the "reaping a live service"
+failure this whole exercise exists to detect. **Read the `cut [nn]` count before treating it as one** —
+the first collection found nine, all with `cut [ 0]`, so the timer had reaped nothing and no service
+was harmed. A `[pending]` with a non-zero cut is the finding; a `[pending]` with `cut [ 0]` says only
+that the **barrier** had not come back, which on the evidence is more often a fault in the barrier than
+in the timer (finding 5).
 
 **Step 3 — corroborate a reap against a re-register.** A spurious reap and a correct one log
 identically, so the tell is a service coming *back* shortly after being reaped:
 
 ```bash
-cat | grep -E 'reclaims|register' | grep -A3 'reclaims .* evicted'
+files | while read -r f; do zcat -f "$f" | grep -E 'reclaims|register' | grep -A3 'reclaims .* evicted'; done
 ```
 
 A `register` line for the same service within a pulse or two of the `reclaims` that removed it means the
@@ -1206,7 +1298,7 @@ unreliable.
 **Step 4 — size the deadline.** Only meaningful once there are firings to size against:
 
 ```bash
-cat | grep 'shadowed .* would reap' | sed -E 's/.*in \[ *([0-9]+)\] msec.*/\1/' | sort -n | tail -5
+logs | grep 'shadowed .* would reap' | sed -E 's/.*in \[ *([0-9]+)\] msec.*/\1/' | sort -n | tail -5
 ```
 
 (`sed` rather than `awk` on a field index, because the padded `[ 112]` contains spaces and would split. Note the unit is `msec` on this line and plain `ms` on the `[agreed]` one — anchor on the whole token, not on `ms`, or the pattern matches both.)
@@ -1220,14 +1312,73 @@ then `reconcileDelay` was always an order of magnitude over-generous, and that i
 silently produce a clean-looking but empty result:
 
 ```bash
-cat | grep -c 'purge disabled'      # expect one per process start; zero means logs were purged
+logs | grep -c 'purge disabled'      # expect one per process start; zero means logs were purged
 ls -la "$LOGS"                      # expect archives spanning the whole window, not the last two days
-cat | head -1                       # confirm the window actually starts when you think it does
+files | while read -r f; do zcat -f "$f" | sed -n 2p; done   # the real first line of each file
 ```
 
 The log file name carries the version that wrote it (`watch-10.200.1502-pid-2396749.log`), so a reading
 can always be attributed to a release — which matters here precisely because several releases are
 expected inside the window.
+
+#### First findings, collected 2026-09-08
+
+**Window** 09-07T12:59 to 09-08T09:14, about 20 hours, spanning releases `10.200.1531` to
+`10.200.1539` — five of them, so restarts are over-represented rather than rare. Read per file and
+summed, both populations separately.
+
+| Population | Files / processes | Lines | `reclaims` | of those, reaped | `[agreed]` | `[differ]` | `[pending]` |
+|---|---|---|---|---|---|---|---|
+| `rue` (wake) | 2 / 2, sequential | 97 031 | 159 | **0** | 148 | 2 | 9 |
+| `mad` (clean) | 5 / 4, overlapping | 127 275 | 29 | **0** | 25 | 4 | 0 |
+
+Deduped to estate events — the two watches see the same reconciles — that is **four `[differ]`
+events** (jen 19:47:00, jen 20:30:14, mad 20:31:44, jen 20:38:04) and **two `[pending]` bursts**
+(16:56:05 across five hosts, 08:25:32 across four).
+
+**1. Nothing has ever been reaped.** 188 firings across both watches and every one is `[  0]`. That
+is the Q1 reading and it has not moved: the reconcile is inert in steady state, on a sleeping laptop
+and on a server alike.
+
+**2. `mad` is no longer zero-firing, and the earlier reading below is superseded.** It fired 29 times
+in this window against zero in the last. The difference is releases, not sleep — `mad` still never
+sleeps — so *"fires only on wakes"* is not the partition it looked like. Every firing is still a
+reaped-nothing firing.
+
+**3. Every `[differ]` is the barrier over-reaping, and never once the direction C exists to catch.**
+All four are `barrier [n] timer [ 0]`, and the sets name **live** services — `supervisor,we~` and
+`zigbee2mqtt` on jen, `supervisor,wr~` on mad. A barrier-triggered reconcile would have reaped
+`supervisor` itself, twice, on hosts that were up. The timer reaped none of them, because by the time
+its 10 s grace expired every one had refreshed.
+
+**4. The mechanism is that a barrier proves broker delivery, not host re-announcement.** Every
+`[differ]` follows `observed [online] transition by [restart]`, and the barrier returned in 6-42 ms
+having seen nothing. On a *release* restart there is nothing retained to redeliver — `install_pre.sh`
+runs `broker.sh` with no argument, which sweeps the host's retained set — so the nonce laps an empty
+flood and the shadow set is "every service the new `serve` has not published yet". Whether that is
+empty or the whole host is a race against the remote host's ~7 s startup, which is why two restarts in
+the same minute produced `[  0]` and `[ 2]`. **No barrier can close that gap**, because the thing
+being waited for is not in flight anywhere at the moment the nonce is published.
+
+**5. `[pending]` is a wake artefact, and it also shows the barrier failing to return at all.** All
+nine are on `rue`, in two bursts covering every host at once, and every one carries `cut [ 0]` — the
+timer reaped nothing, so no live service was harmed. But in the first burst **no** barrier returned
+within the 11 s grace and in the second only one of five did, on a `transition by [connect]` where the
+nonce is a QoS 0 publish issued while the session is still settling. So the instrument is least
+reliable exactly where C would depend on it most.
+
+**Barrier latency, for the record**, since it was the number Phase 3 set out to size: n=150 on `rue`,
+min 13 ms, median 36 ms, max 135 ms — two orders of magnitude inside `reconcileDelay` (10 s), which
+was the case for calling that grace over-generous. Findings 4 and 5 say the latency was never the
+binding question.
+
+**Verdict on C — do not build it.** It is not merely unnecessary (finding 1), it is **unsafe as
+designed** (findings 3 and 4) and unreliable at the moment it is needed (finding 5).
+
+**Verdict on the timed reconcile — keep it.** That was the open question when these findings were
+written, and *delete* was the reading they supported. Staging the orphan settled it the other way the
+same day: see *The case that decides delete-vs-keep*. Finding 1 says only that the condition had not
+occurred, not that it cannot — 188 inert firings and one correct reap is a backstop doing its job.
 
 #### The three questions, and what answers each
 
@@ -1251,7 +1402,7 @@ expected inside the window.
   liveness [true]  session revived
   attached [   1] topics, [    2] wildcards
   observed [online] transition by [connect]
-  reclaims [  0] services, after [     3] s
+  reclaims [  0] removed, after [  3000] ms
   ```
 
   So a laptop sleeping N times a day contributes N x hosts reconcile firings that are **not** lost
@@ -1265,12 +1416,15 @@ expected inside the window.
   more robust split than the `attached`-line heuristic this paragraph used to propose, which stays only
   as the fallback for a reclaim seen on `rue` alone.
 
-  **First reading, already collected: `mad` has fired the reconcile zero times.** Its current log covers
-  14.5 hours against a process up 1 day 17 hours, and `grep -c reclaims` returns **0** — not zero
-  reaps, zero *firings*, since the reaped-nothing case logs at DEBUG and would appear. On a
-  non-sleeping host with a stable broker the reconcile is not merely harmless, it is inert. That is the
-  first real evidence for the "never fires → delete it" branch, and it was available before the Phase 1
-  release rather than after it.
+  **Superseded — `mad` fires too, and the population split does not hold.** The first reading here was
+  *"`mad` has fired the reconcile zero times"*, taken over 14.5 hours in which the estate happened not
+  to release: `grep -c reclaims` returned **0**, and that was read as the clean population being inert.
+  Over the 20 hours of *First findings* below, which span five releases, `mad` fired **29** times. The
+  paragraphs above are still right that a wake schedules a reconcile on every host; they are wrong that
+  a wake is the only thing that does, because **a release restarts every `serve` and each restart is a
+  transition**. So the sleep partition separates nothing, and both populations are read the same way:
+  what matters is not how often it fires but that every firing is `[  0]`. That conclusion is
+  unchanged, and stronger for resting on 188 firings rather than on none.
 
   **The binding constraint is log retention, not log content, and a month will not fit.** `watch` calls
   `EnableBufferAndFile(..., 10, 3, 7)` — lumberjack at 10 MB, 3 backups, 7 days — and `mad`'s file is
@@ -1343,26 +1497,124 @@ expected inside the window.
 
 **Acceptance, on the release after Phase 1 — met, except the part that needs time.** A `rediscovered`
 line appeared on the restarting host (above). The reconcile's `reclaims` line has fired only ever as
-`[  0]`, on both watches, across several releases — so nothing has been reaped, which is the third and
-most important criterion. The first criterion, that a departed service leaves every watch within one
-pulse, has not been staged deliberately yet and is scenario 1's job.
+`[  0]` — **188 times** across both watches and five releases, counted in *First findings* — so nothing
+has been reaped, which is the third and most important criterion. The first criterion, that a departed
+service leaves every watch within one pulse, has not been staged deliberately yet and is scenario 1's
+job — **staged and passed on 2026-09-08**, one reap of one orphan on both watches, at 11 s and 12 s
+against a one-pulse target of 6 s. That is one pulse late in the worst case and is the price of the
+grace the restart window needs; nothing here waits on time any longer.
 
-#### The one synthetic topic, for scenario 1 without a release
+#### The one synthetic topic, for scenario 1 without a release — run 2026-09-08, and it passed
 
 The estate cannot produce the orphan condition naturally — on `max`, config ∪ running covers every
-retained service name — so create it deliberately:
+retained service name — so create it deliberately. **Run it from the module directory on the dev
+machine**, which is the only place `.env` carries the broker host and port; root's home on a host has
+no `.env`, and without it `mosquitto_pub` fails with `Invalid arguments provided`:
 
 ```bash
-mosquitto_pub -h "$VERNEMQ_SERVICE_PROD" -p "$VERNEMQ_API_PORT" -u supervisor -P "$VERNEMQ_TOKEN" \
+cd src/all/supervisor && set -a; . ./.env; set +a
+mosquitto_pub -h "$VERNEMQ_SERVICE_PROD" -p "$VERNEMQ_API_PORT" ${VERNEMQ_TOKEN:+-u supervisor -P $VERNEMQ_TOKEN} \
   -r -t 'supervisor/macmini-max/data/service/zztest/name' \
-  -m '{"timestamp":'"$(date +%s)"',"pulse":{"ok":true,"kind":4,"valueString":"zztest"},"trend":{"ok":true,"kind":4,"valueString":"zztest"}}'
+  -m '{"timestamp":'"$(date +%s)"',"pulse":{"ok":true,"value":"zztest"},"trend":{"ok":true,"value":"zztest"}}'
 ```
 
-Restart supervisor on that host and watch. **Before Phase 1** a `zztest` row appears on every watch
-and survives until the reconcile reaps it at 10-16 s. **After** the new process rediscovers it, finds
-it in neither docker nor config, and tombstones it within ~3 s. Clear it afterwards with `-r -n` on
-the same topic. One topic, obviously named, fully reversible — and the phantom row it produces is
-itself the demonstration.
+**The payload shape above is the correction, and the old one had never been run.** This recipe used to
+send `{"ok":true,"kind":4,"valueString":"zztest"}`; `ValueDataDetail` marshals as `{"ok":…,"value":…}`
+and carries neither `kind` nor `valueString`, so the whole scenario was unrunnable as written — every
+publish produced `rejected [empty] discovery has no service` on the watch and
+`rejected [empty] readback carries no service` on the host, and nothing else happened. Compare against
+a live topic before inventing a payload: `mosquitto_sub -t 'supervisor/+/data/service/+/name' -v -W 3`.
+
+**What it showed, and it is stronger than this section predicted.** No restart is needed and none was
+performed — the host's `serve` had been up 13 hours:
+
+```
+serve  09:38:43 register [macmini-max] host, rediscovered [ 12] topics
+serve  09:38:45 removals [macmini-max] host, [1] services [zztest]
+watch  09:38:43 register [macmini-max] added [  8] topics
+watch  09:38:45 removals [macmini-max] removed, nil pulse
+```
+
+**`serve` keeps its `supervisor/<host>/data/service/+/name` subscription for the life of the process,
+not just for the startup readback.** So an orphan name is registered the moment it is retained, the
+next per-pulse services reconciliation finds no container behind it, and all twelve topics are
+tombstoned **~2 seconds later** — which every watch honours immediately, since the host is online and
+the tombstone carries both the nil-pulse and the empty form. The phantom row lives about two seconds,
+not the 10-16 s this section expected, and `reclaims` never fires at all. Option B covers the
+orphan-with-breadcrumb case **continuously**, which is more than it was built to promise.
+
+Retained state cleans itself up here — `serve`'s own tombstone empties the topic — so the `-r -n`
+afterwards is only needed if the publish was malformed and nothing consumed it.
+
+#### The case that decides delete-vs-keep — run 2026-09-08, and the reconcile earned its place
+
+The variant above proves B, not the reconcile — because a *running* `serve` consumes the orphan, the
+one case B cannot reach is an orphan `serve` never sees. That is exactly what a release does to a
+**removed module**, and it is the reconcile's only remaining job:
+
+1. `stop_service` publishes `offline`, so every watch mutes the host.
+2. `install_pre.sh` runs `broker.sh` with no argument and sweeps every retained topic under the host's
+   globs, the `…/service/<name>/name` breadcrumbs included.
+3. The watch discards all of it — data empties because `onData` drops an empty payload from an offline
+   host, and name empties because **`onDiscovery` has no removal path at all**, only
+   `excluded [nil] discovery pulse, departing`.
+4. The new `serve` reads back an empty retained set and never learns the removed service existed.
+5. Nothing refreshes the row and nothing tombstones it, so **only the timed reconcile clears it**.
+
+Staging it needs the orphan planted while `serve` is down, which is the only invasive part of this
+whole exercise — the host is unmonitored for about a minute:
+
+```bash
+ssh root@macmini-max 'docker stop supervisor'                      # watches mark the host offline
+# publish the zztest name exactly as above — proveOnline revives the host and registers the row
+mosquitto_pub … -r -n -t 'supervisor/macmini-max/data/service/zztest/name'   # clear the breadcrumb
+ssh root@macmini-max 'docker start supervisor'
+```
+
+The row must **survive** the clear at step 3 — if it does not, the argument above is wrong and the
+reconcile has no job left.
+
+**It survived, and the reconcile reaped it.** Both watches, on the first firing in the whole collection
+that has ever reaped anything:
+
+```
+09:56:48  observed [offline] evicted [  6] services          host marked offline
+09:57:12  (breadcrumb cleared - no removal line follows)     empty dropped, row survives
+09:57:45  observed [online] transition by [restart]          host back, [ 75] topics resubscribed
+09:57:58  shadowed [agreed] sets [  1] in [  43] ms
+09:57:58  reclaims [  1] removed, after [ 12000] ms           rue; mad reaped the same at [ 11000] ms
+09:57:58  reclaims [zztest                ] removed            one line per reaped service
+```
+
+**Verdict: keep the timed reconcile.** It is the only mechanism that clears a module removed from a
+host across a release, its 188 previous firings were inert only because no module had been removed in
+the window, and when the condition was finally staged it did exactly its job on both watches.
+
+**Two mechanisms were learned the hard way, and both belong in the record.**
+
+**A service's `name` topic is *both* the discovery wildcard and a bound data topic.**
+`MetricServiceName` is an ordinary row in `metricBuildersByID`, so `RegisterService` binds
+`…/service/<name>/name` and `subscribeTopics` routes it to `onData` as well as to `onDiscovery`. An
+empty payload on it therefore reaches `onData`, which removes the service outright when the host is
+online — it never reaches `onDiscovery`'s harmless `excluded [nil] discovery pulse, departing`. The
+first attempt at this staging cleared the breadcrumb while the host read online and lost the row
+instantly at 09:54:17, which looked like the argument collapsing and was in fact the wrong precondition.
+
+**So the whole behaviour turns on host status at the moment the empty arrives** — which is exactly what
+makes the release path what it is. `stop_service` publishes `offline` *before* `install_pre.sh` sweeps,
+so a real release's tombstones are dropped; staging it means reproducing that order, not just the
+sweep. Re-asserting the host's own already-retained, currently-true `offline` on
+`supervisor/<host>/status` is what puts the watches back into it — a re-delivery of a true value, not a
+fabricated one, and the only reason it is needed is that planting the orphan revives the host through
+`proveOnline`.
+
+**A footnote on the barrier, which was right here and is still not adoptable.** This reconcile logged
+`[agreed] sets [  1]` — the barrier picked the same single service, 12 s sooner. That is the case it
+was designed for: the retained store was **intact** (this was a container restart, not a release), so
+the redelivery genuinely completed and "not seen since the resubscribe" genuinely meant departed. A
+real release sweeps the store first, which is when the same barrier proposes to reap the whole host.
+The 12 s grace is not slack the barrier could remove — it is the window in which the restarted `serve`
+republishes, and that is the thing being waited for.
 
 ### Not doing
 
