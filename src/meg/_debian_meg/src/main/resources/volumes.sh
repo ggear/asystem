@@ -53,9 +53,11 @@ VOLUMES_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fstab"
 VOLUMES_SUBVOLUME_OPTS="noatime,compress=zstd:1"
 
 volumes_fault() {
-  echo "❌ $*" >&2
+  echo "❌ $*"
   VOLUMES_FAULTS=$((VOLUMES_FAULTS + 1))
 }
+
+volumes_clean() { echo "✅ $*"; }
 
 volumes_report() { echo "   $*"; }
 
@@ -247,14 +249,24 @@ volumes_disk_clean() {
 
 volumes_format_guard() {
   local target source fstype opts device resolved parent disk actual faults=0
+  echo && echo "-- declared formats"
   while IFS=$'\t' read -r target source fstype opts; do
     [ -n "${target}" ] || continue
     device="$(volumes_device "${source}")"
-    [ -n "${device}" ] || continue
-    [ -e "${device}" ] || continue
+    if [ -z "${device}" ]; then
+      volumes_clean "[${target}] is remote [${source}], no local format to check"
+      continue
+    fi
+    if [ ! -e "${device}" ]; then
+      volumes_report "[${target}] device [${source}] is absent, format not checked, expected only while its disk is powered down"
+      continue
+    fi
     resolved="$(readlink -f "${device}")"
     actual="$(blkid -s TYPE -o value "${resolved}" 2>/dev/null)"
-    [ "${actual}" = "${fstype}" ] && continue
+    if [ "${actual}" = "${fstype}" ]; then
+      volumes_clean "[${target}] holds [${fstype}] on [${resolved}] as declared, no format needed"
+      continue
+    fi
     parent="$(lsblk -no PKNAME "${resolved}" 2>/dev/null | grep . | head -1)"
     disk="${resolved}"
     [ -n "${parent}" ] && disk="/dev/${parent}"
@@ -265,7 +277,7 @@ volumes_format_guard() {
     faults=$((faults + 1))
   done < <(volumes_entries "${VOLUMES_SOURCE}")
   [ "${faults}" -eq 0 ] && return 0
-  volumes_fault "apply never formats a disk, so nothing has been mounted, unmounted or written"
+  volumes_report "apply never formats a disk, so nothing has been mounted, unmounted or written"
   return 1
 }
 
@@ -370,7 +382,7 @@ volumes_apply() {
   local stale
   volumes_format_guard || return 1
   if [ -f /etc/fstab ] && diff -q "${VOLUMES_SOURCE}" /etc/fstab >/dev/null 2>&1; then
-    volumes_report "[/etc/fstab] already matches the declaration"
+    volumes_clean "[/etc/fstab] already matches the declaration"
   else
     [ ! -f /etc/fstab.bak ] && cp -v /etc/fstab /etc/fstab.bak
     cp -f /etc/fstab "/etc/fstab.$(date +%Y-%m-%d_%H-%M-%S).bak"
