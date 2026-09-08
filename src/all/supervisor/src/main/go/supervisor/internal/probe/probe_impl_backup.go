@@ -149,14 +149,14 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	defer p.reapRunning.Unlock()
+	if snapshot := readNewestRun(p.root); snapshot != nil {
+		p.reapLocalStale(ctx, snapshot)
+	}
 	if !p.serverHost {
 		return
 	}
 	reapStart := config.NowIncludingSuspend()
 	loaded := config.Load(p.configPath)
-	if snapshot := readNewestRun(p.root); snapshot != nil {
-		p.reapLocalStale(ctx, snapshot)
-	}
 	if p.backupActive.Load() {
 		return
 	}
@@ -215,29 +215,35 @@ func (p *backupProbe) reap(ctx context.Context) {
 }
 
 func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapshot) {
-	document := snapshot.tertiary
-	if document == nil || document.State != "running" || document.ExpiresTS == "" {
-		return
-	}
-	expires, err := time.Parse(time.RFC3339, document.ExpiresTS)
-	if err != nil || time.Now().Before(expires) {
-		return
-	}
 	if _, statErr := os.Stat(p.runner); statErr != nil {
 		return
 	}
-	staleStart := config.NowIncludingSuspend()
+	reaped := false
 	runPath := filepath.Join(p.root, snapshot.dir)
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%s] tertiary stage still running with liveness expired at [%s], stopping it", snapshot.dir, document.ExpiresTS)
-	stop := exec.CommandContext(context.WithoutCancel(ctx), "bash", p.runner, "tertiary", "stop", snapshot.dir)
-	stop.Env = append(os.Environ(), "BACKUP_RUN_ID="+snapshot.dir, "BACKUP_RUN_PATH="+runPath, "BACKUP_RUN_ID_PASSED=1")
-	_ = stop.Run()
-	stale := *document
-	stale.State = "timeout"
-	stale.FinishedTS = time.Now().Format(time.RFC3339)
-	stale.ExpiresTS = ""
-	writeDocumentAtomic(stageStatusPath(runPath, "tertiary"), stale)
-	p.refresh()
+	for _, stage := range backupStages {
+		document := snapshot.stages[stage]
+		if document == nil || document.State != "running" || document.ExpiresTS == "" {
+			continue
+		}
+		expires, err := time.Parse(time.RFC3339, document.ExpiresTS)
+		if err != nil || time.Now().Before(expires) {
+			continue
+		}
+		staleStart := config.NowIncludingSuspend()
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] still running with liveness expired at [%s], stopping it", stage, snapshot.dir, document.ExpiresTS)
+		stop := exec.CommandContext(context.WithoutCancel(ctx), "bash", p.runner, stage, "stop", snapshot.dir)
+		stop.Env = append(os.Environ(), "BACKUP_RUN_ID="+snapshot.dir, "BACKUP_RUN_PATH="+runPath, "BACKUP_RUN_ID_PASSED=1")
+		_ = stop.Run()
+		stale := *document
+		stale.State = "timeout"
+		stale.FinishedTS = time.Now().Format(time.RFC3339)
+		stale.ExpiresTS = ""
+		writeDocumentAtomic(stageStatusPath(runPath, stage), stale)
+		reaped = true
+	}
+	if reaped {
+		p.refresh()
+	}
 }
 
 func (p *backupProbe) documents() *backupSnapshot {
@@ -291,9 +297,9 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Errorf("faulting", runStart, "[%s] backup run directory could not be created with [%v]", runPath, err)
 		return
 	}
-	stages := []string{"primary", "secondary"}
+	stages := backupStages[:2]
 	if p.serverHost {
-		stages = append(stages, "tertiary")
+		stages = backupStages
 	}
 	isLeader := false
 	var leaderClient *brokerClient
@@ -641,6 +647,7 @@ type backupSnapshot struct {
 	running  bool
 	host     *backupDocument
 	tertiary *backupDocument
+	stages   map[string]*backupDocument
 	services map[string]bool
 }
 
@@ -668,11 +675,16 @@ func readNewestRun(root string) *backupSnapshot {
 	sort.Strings(runs)
 	dir := runs[len(runs)-1]
 	at, _ := time.ParseInLocation(backupRunStamp, dir, time.Local)
-	snapshot := &backupSnapshot{dir: dir, at: at, services: map[string]bool{}}
+	snapshot := &backupSnapshot{dir: dir, at: at, stages: map[string]*backupDocument{}, services: map[string]bool{}}
 	runPath := filepath.Join(root, dir)
 	snapshot.host = readStageDocument(filepath.Join(runPath, "status.json"))
-	snapshot.tertiary = readStageDocument(stageStatusPath(runPath, "tertiary"))
 	staged, _ := filepath.Glob(filepath.Join(runPath, "stage", "*", "status.json"))
+	for _, path := range staged {
+		if document := readStageDocument(path); document != nil {
+			snapshot.stages[filepath.Base(filepath.Dir(path))] = document
+		}
+	}
+	snapshot.tertiary = snapshot.stages["tertiary"]
 	snapshot.running = snapshot.host == nil && len(staged) > 0 && snapshot.age() <= backupRunCeiling
 	documents, _ := filepath.Glob(filepath.Join(runPath, "stage", "primary", "service", "*", "status.json"))
 	for _, path := range documents {
@@ -730,6 +742,8 @@ const (
 
 var (
 	backupProbeInstance *backupProbe
+
+	backupStages = []string{"primary", "secondary", "tertiary"}
 
 	backupRunDirPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`)
 )

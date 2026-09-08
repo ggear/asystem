@@ -9,6 +9,9 @@
 # never under the probe, which owns the redirection and reads that status. stop is idempotent and
 # never unmounts a share. The stage contract is in backup/lib.sh, and each stage holds one of its own:
 #
+# A run holds BACKUP_LOCK for its whole life, so a hand run and the scheduled run cannot overlap -
+# except under the probe, which holds the same lock across all three stages and would deadlock itself.
+#
 # Every stage writes one log, at BACKUP_STAGE_DIR/output.log, and echoes it to stdout as it goes -
 # except under the probe, where stdout already is that file and a tee would write every line twice.
 # Lines are stamped, levelled and prefixed with the stage, so a stage log reads on its own and the
@@ -42,6 +45,7 @@ BACKUP_HOME_ROOT="${BACKUP_HOME_ROOT:-/home/asystem}"
 BACKUP_RUN_PATH="${BACKUP_RUN_PATH:-${BACKUP_HOME_ROOT}/supervisor/backup/${BACKUP_RUN_ID}}"
 BACKUP_STAGE_DIR="${BACKUP_RUN_PATH}/stage/${BACKUP_STAGE}"
 BACKUP_LOG="${BACKUP_STAGE_DIR}/output.log"
+BACKUP_LOCK="$(dirname "${BACKUP_RUN_PATH}")/.lock"
 BACKUP_CONFIG="${BACKUP_INSTALL_ROOT}/supervisor/latest/image/config.json"
 
 mkdir -p "${BACKUP_STAGE_DIR}"
@@ -92,12 +96,25 @@ if [ -z "${BACKUP_DETACHED:-}" ] && [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && { [ -t
   backup_log INFO "detached, following [${BACKUP_LOG}]"
   exit 0
 fi
-if [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && [ -z "${BACKUP_QUIET:-}" ]; then
-  exec > >(tee -a "${BACKUP_LOG}") 2>&1
+if [ -z "${BACKUP_RUN_ID_PASSED:-}" ]; then
+  if [ -n "${BACKUP_QUIET:-}" ]; then
+    exec >>"${BACKUP_LOG}" 2>&1
+  else
+    exec > >(tee -a "${BACKUP_LOG}") 2>&1
+  fi
 fi
 
+if [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && command -v flock >/dev/null 2>&1; then
+  exec 9>>"${BACKUP_LOCK}"
+  if ! flock -n 9; then
+    backup_log ERROR "another backup run holds [${BACKUP_LOCK}], refusing to start [${BACKUP_STAGE}]"
+    exit 3
+  fi
+fi
+
+BACKUP_MAIN_PID=$$
 BACKUP_STARTED="$(date +%s)"
-trap 'backup_log WARN "interrupted, stopping [${BACKUP_STAGE}]"; stage_stop || true; backup_settle; exit 143' TERM INT
+trap 'backup_log WARN "interrupted, stopping [${BACKUP_STAGE}]"; stage_stop || true; backup_settle; backup_document "failed" false "${BACKUP_STARTED}"; exit 143' TERM INT
 backup_banner "starting [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]" \
   "host      [${BACKUP_HOST}]" \
   "trigger   [${BACKUP_TRIGGER}]" \

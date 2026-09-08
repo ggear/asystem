@@ -7,6 +7,7 @@ apt-get update
 apt-get install -y --allow-downgrades 'mbpfan=2.3.0-1+b1'
 apt-get install -y --allow-downgrades 'libc6-i386=2.36-9+deb12u10'
 apt-get install -y --allow-downgrades 'intel-microcode=3.20250512.1~deb12u1'
+apt-get install -y --allow-downgrades 'btrfs-progs=6.2-1+deb12u2'
 
 ################################################################################
 # Grub config

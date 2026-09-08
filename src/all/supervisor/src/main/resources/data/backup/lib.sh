@@ -174,7 +174,9 @@ backup_heartbeat() {
     local now; now="$(date +%s)"
     if [ "${hard}" -gt 0 ] && [ "${now}" -ge "${hard}" ]; then
       backup_document "running" false "${BACKUP_STARTED}" "$(( now - 1 ))"
-      backup_log ERROR "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, signalling supervisor to reap"
+      backup_log ERROR "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, terminating [${BACKUP_STAGE}]"
+      stage_stop || true
+      kill -TERM "${BACKUP_MAIN_PID}" 2>/dev/null
       return 0
     fi
     backup_log INFO "heartbeat after [$(backup_elapsed $(( now - BACKUP_STARTED )))], files [${BACKUP_FILES}], size [${BACKUP_SIZE}] MB"

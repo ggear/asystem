@@ -946,8 +946,8 @@ func init() {
 }
 
 const (
-	topicStatus        = "supervisor/+/status"
-	topicDiscovery     = "supervisor/+/data/service/+/name"
+	topicStatus    = "supervisor/+/status"
+	topicDiscovery = "supervisor/+/data/service/+/name"
 
 	loopListeningProbes  = "listening probes"
 	loopListeningStream  = "listening stream"
