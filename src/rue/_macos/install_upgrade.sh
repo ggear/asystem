@@ -38,6 +38,7 @@ brew install \
   node \
   pigz \
   wget \
+  lftp \
   goenv \
   pyenv \
   shfmt \
