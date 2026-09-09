@@ -3,13 +3,16 @@
 # Runs one stage of a backup run, from the supervisor probe or by hand, the same path both sides.
 #
 #   backup.sh <primary|secondary|tertiary> [start|stop] [run-id]
-#   backup.sh watch [run-id]
+#   backup.sh tail [run-id]
 #
-# watch follows a run that is already going, defaulting to the newest, tailing all three stage logs
+# tail follows a run that is already going, defaulting to the newest, tailing all three stage logs
 # as one stream and printing each stage's status document once nothing is running any more. It reads
-# and never writes, so it is safe beside a live run and any number may watch at once.
+# and never writes, so it is safe beside a live run and any number may tail at once.
 #
-# Stages of one run must share a run id - a stage reads what the earlier stages of that run recorded.
+# Stages of one run share a run id, a stage reading what the earlier stages of that run recorded. A
+# hand run that gives none mints a new id per invocation, so secondary would see no primary at all -
+# it therefore adopts the newest run that did record one, and says which. It only ever adopts a
+# service list, never data, so this cannot happen under the probe, where primary ran in this run.
 # start heartbeats a status document and exits on the stage result, detaching only on a hand run,
 # never under the probe, which owns the redirection and reads that status. stop is idempotent and
 # never unmounts a share.
@@ -31,7 +34,9 @@
 #           both, and a service is enrolled by shipping one. It records one status document per
 #           service under BACKUP_SERVICE_PATH, which is what secondary reads back.
 # secondary is additive and never deletes, mounts the share on demand and never unmounts it, and
-#           delegates thinning to the service, falling back to backup_thin for one shipping none.
+#           delegates thinning to the service, falling back to backup_thin for one shipping none. It
+#           promotes a service's whole backup directory, so the run id it reads chooses which
+#           services to promote and never which bytes, and adopting an older run's list is safe.
 # tertiary  is server hosts only, mirrors each locally-owned share whole - media and service homes,
 #           not just backups - guarded on both mounts, and brings the disk up and down around itself.
 
@@ -42,10 +47,10 @@ BACKUP_STAGE="${1:-}"
 BACKUP_PHASE="${2:-start}"
 
 case "${BACKUP_STAGE}/${BACKUP_PHASE}" in
-primary/start | primary/stop | secondary/start | secondary/stop | tertiary/start | tertiary/stop | watch/*) ;;
+primary/start | primary/stop | secondary/start | secondary/stop | tertiary/start | tertiary/stop | tail/*) ;;
 *)
   echo "Usage: ${0} <primary|secondary|tertiary> [start|stop] [run-id]" >&2
-  echo "       ${0} watch [run-id]" >&2
+  echo "       ${0} tail [run-id]" >&2
   exit 2
   ;;
 esac
@@ -62,7 +67,7 @@ BACKUP_LOG="${BACKUP_STAGE_DIR}/output.log"
 BACKUP_LOCK="$(dirname "${BACKUP_RUN_PATH}")/.lock"
 BACKUP_CONFIG="${BACKUP_INSTALL_ROOT}/supervisor/latest/image/config.json"
 
-backup_watch() {
+backup_tail() {
   local base run path stage doc state ok logs=() tail_pid="" faults=0
   base="$(dirname "${BACKUP_RUN_PATH}")"
   run="${BACKUP_PHASE}"
@@ -71,7 +76,7 @@ backup_watch() {
   [ -n "${run}" ] || { echo "No backup run found under [${base}]" >&2; return 1; }
   path="${base}/${run}"
   [ -d "${path}" ] || { echo "No backup run at [${path}]" >&2; return 1; }
-  echo && echo "Backup watch [${run}] under [${path}]" && echo
+  echo && echo "Backup tail [${run}] under [${path}]" && echo
   for stage in primary secondary tertiary; do logs+=("${path}/stage/${stage}/output.log"); done
   tail -n +1 -F -q "${logs[@]}" 2>/dev/null &
   tail_pid=$!
@@ -81,7 +86,7 @@ backup_watch() {
     for stage in primary secondary tertiary; do
       doc="${path}/stage/${stage}/status.json"
       [ -f "${doc}" ] || continue
-      state="$(backup_watch_field "${doc}" state)"
+      state="$(backup_tail_field "${doc}" state)"
       [ "${state}" = "running" ] && continue 2
     done
     break
@@ -95,12 +100,12 @@ backup_watch() {
       echo "   [${stage}] never started"
       continue
     fi
-    state="$(backup_watch_field "${doc}" state)"
-    ok="$(backup_watch_field "${doc}" success_bool)"
+    state="$(backup_tail_field "${doc}" state)"
+    ok="$(backup_tail_field "${doc}" success_bool)"
     if [ "${state}" = "complete" ] && [ "${ok}" = "true" ]; then
-      echo "✅ [${stage}] [${state}] in [$(backup_watch_field "${doc}" duration_s)] s, files [$(backup_watch_field "${doc}" file_count)], size [$(backup_watch_field "${doc}" size_mb)] MB"
+      echo "✅ [${stage}] [${state}] in [$(backup_tail_field "${doc}" duration_s)] s, files [$(backup_tail_field "${doc}" file_count)], size [$(backup_tail_field "${doc}" size_mb)] MB"
     else
-      echo "❌ [${stage}] [${state}] in [$(backup_watch_field "${doc}" duration_s)] s, see [${path}/stage/${stage}/output.log]"
+      echo "❌ [${stage}] [${state}] in [$(backup_tail_field "${doc}" duration_s)] s, see [${path}/stage/${stage}/output.log]"
       faults=$(( faults + 1 ))
     fi
     sed 's/^/   /' "${doc}"
@@ -110,12 +115,12 @@ backup_watch() {
   return 0
 }
 
-backup_watch_field() {
+backup_tail_field() {
   sed -n "s/.*\"${2}\": *\"\{0,1\}\([^\",]*\)\"\{0,1\},\{0,1\}$/\1/p" "${1}" | head -1
 }
 
-if [ "${BACKUP_STAGE}" = "watch" ]; then
-  backup_watch
+if [ "${BACKUP_STAGE}" = "tail" ]; then
+  backup_tail
   exit $?
 fi
 
@@ -208,6 +213,24 @@ backup_promoted() {
   for status in "${BACKUP_SERVICE_PATH}"/*/status.json; do
     [ -f "${status}" ] || continue
     [ "$(jq -r '.success_bool // false' "${status}" 2>/dev/null)" = "true" ] &&
+      basename "$(dirname "${status}")"
+  done
+}
+
+backup_adopted() {
+  local base run
+  base="$(dirname "${BACKUP_RUN_PATH}")"
+  while read -r run; do
+    [ -d "${base}/${run}/stage/primary/service" ] && { echo "${run}"; return 0; }
+  done < <(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r)
+  return 1
+}
+
+backup_demoted() {
+  local status
+  for status in "${BACKUP_SERVICE_PATH}"/*/status.json; do
+    [ -f "${status}" ] || continue
+    [ "$(jq -r '.success_bool // false' "${status}" 2>/dev/null)" = "true" ] ||
       basename "$(dirname "${status}")"
   done
 }
@@ -423,7 +446,7 @@ primary_stop() {
 }
 
 secondary_start() {
-  local share index service failed=0 promote=() total=0 promoted=0
+  local share index service adopted="" failed=0 promote=() demoted=() total=0 promoted=0
   index="$(jq -r --arg h "${BACKUP_HOST}" \
     '.asystem.schema[] | select(.host == $h) | .index // empty' "${BACKUP_CONFIG}" 2>/dev/null)"
   if [ -n "${index}" ]; then
@@ -436,8 +459,24 @@ secondary_start() {
   backup_log INFO "resolved share [${share}] from [${index:-fstab}]"
   backup_mount "${share}" || return 1
   mkdir -p "${share}/backup"
+  if [ ! -d "${BACKUP_RUN_PATH}/stage/primary" ]; then
+    adopted="$(backup_adopted)"
+    if [ -n "${adopted}" ]; then
+      BACKUP_SERVICE_PATH="$(dirname "${BACKUP_RUN_PATH}")/${adopted}/stage/primary/service"
+      backup_log WARN "run [${BACKUP_RUN_ID}] ran no primary, adopting the service list of run [${adopted}] from [${BACKUP_SERVICE_PATH}]"
+    else
+      backup_log WARN "run [${BACKUP_RUN_ID}] ran no primary and no earlier run under [$(dirname "${BACKUP_RUN_PATH}")] recorded one"
+    fi
+  fi
   mapfile -t promote < <(printf 'supervisor\n'; backup_promoted)
+  mapfile -t demoted < <(backup_demoted)
   total="${#promote[@]}"
+  for service in "${demoted[@]}"; do
+    backup_log WARN "not promoting [${service}], its primary backup did not succeed in run [${adopted:-${BACKUP_RUN_ID}}]"
+  done
+  if [ "${total}" -eq 1 ]; then
+    backup_log WARN "run [${adopted:-${BACKUP_RUN_ID}}] recorded no successful service backup under [${BACKUP_SERVICE_PATH}], promoting [supervisor] alone"
+  fi
   backup_log INFO "promoting [${total}] services to [${share}/backup]"
   for service in "${promote[@]}"; do
     promoted=$(( promoted + 1 ))
