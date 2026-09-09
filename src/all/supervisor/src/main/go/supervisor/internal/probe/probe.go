@@ -451,9 +451,10 @@ func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 	}
 	ruleLogger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute)
 	if trendOK == nil {
-		reportPulsingf(ruleLogger, "computed", taskStart, "ok pulse [%v] %s", pulseOK, pulseResult.Detail)
+		reportPulsingf(ruleLogger, "computed", taskStart, "%s Pulse OK [%v] %s", metricValued(pulse, unit), pulseOK, pulseResult.Detail)
 	} else {
-		reportPulsingf(ruleLogger, "computed", taskStart, "ok pulse [%v] %s, ok trend [%v] %s", pulseOK, pulseResult.Detail, *trendOK, trendResult.Detail)
+		reportPulsingf(ruleLogger, "computed", taskStart, "%s Pulse OK [%v] %s, %s Trend OK [%v] %s",
+			metricValued(pulse, unit), pulseOK, pulseResult.Detail, metricValued(trend, unit), *trendOK, trendResult.Detail)
 	}
 	if valueErr != nil {
 		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Errorf("faulting", taskStart, "[builder] value failed with [%v]", valueErr)
@@ -528,14 +529,9 @@ func reportMetricStatus(task cacheMetricTask, taskStart time.Time, status metric
 	if trendOK != nil {
 		trended = *trendOK
 	}
-	metricValue := func(value any) any {
-		if value == nil {
-			return "none"
-		}
-		return value
-	}
-	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Debugf("observed", taskStart, "%sstatus [%s] was [%s] pulse [%v] ok [%v] trend [%v] ok [%v] error [%v]",
-		metricScope(task), status, was, metricValue(pulse), pulseOK, metricValue(trend), trended, metricValue(err))
+	unit := metric.GetIDUnit(task.metricID)
+	scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionCompute).Debugf("observed", taskStart, "%s %sstatus [%s] was [%s] Pulse OK [%v], %s Trend OK [%v], error [%v]",
+		metricValued(pulse, unit), metricScope(task), status, was, pulseOK, metricValued(trend, unit), trended, metricValued(err, ""))
 }
 
 func reportPulsingf(logger scribe.Logger, verb string, started time.Time, detail string, args ...any) {
@@ -574,6 +570,13 @@ func percentValue(value float64) int8 {
 		return 100
 	}
 	return int8(value + 0.5)
+}
+
+func metricValued(value any, unit string) string {
+	if value == nil {
+		return "[none]"
+	}
+	return metric.Valued(value, unit)
 }
 
 func metricScope(task cacheMetricTask) string {

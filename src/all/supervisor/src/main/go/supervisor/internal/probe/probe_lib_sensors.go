@@ -87,7 +87,7 @@ func (s *sensorSet) celsius() (float64, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no temperature read, none of the [%d] discovered [%s] tier sensors answered sanely, rejected [%s]",
 			len(s.temperatureInputs), s.tier, strings.Join(rejected, ", "))
 	}
-	return hottest, derivedf(scribe.ActionSample, "computed [%.1f] C hottest, tier [%s], inputs [%d], offset [%.1f] C, sane between [%.0f] and [%.0f] C",
+	return hottest, derivedf(scribe.ActionSample, "computed [%.1f] degC hottest, tier [%s], inputs [%d], offset [%.1f] degC, sane between [%.0f] and [%.0f] degC",
 		hottest, s.tier, len(s.temperatureInputs), s.temperatureOffset, sensorMinCelsius, sensorMaxCelsius), nil
 }
 
@@ -192,7 +192,7 @@ func discoverSensors(sysRoot string) *sensorSet {
 		}
 	}
 	if discovered.tier == sensorTierComposite {
-		scribe.Log(scribe.SourceProbeSensors, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Infof("fallback", discoverStart, "[composite] no package or soc sensor found, deriving from a drive sensor offset by [%.0f] C", sensorCompositeOffset)
+		scribe.Log(scribe.SourceProbeSensors, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Infof("fallback", discoverStart, "[composite] no package or soc sensor found, deriving from a drive sensor offset by [%.0f] degC", sensorCompositeOffset)
 	}
 	scribe.Log(scribe.SourceProbeSensors, scribe.SubjectMetric(metric.MetricHostTemperature), scribe.ActionDiscover).Infof("topology", discoverStart, "[%s] tier with [%d] temperature and [%d] fan inputs under [%s]", discovered.tier, len(discovered.temperatureInputs), len(discovered.fans), sysRoot)
 	return discovered

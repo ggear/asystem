@@ -88,7 +88,7 @@ func (s *mountSet) usedDriveLife() (int8, derivation, error) {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok, unrated [%s]",
 			len(taken.drives), summary), nil
 	}
-	return percentValue(worst), derivedf(scribe.ActionSample, "computed [%d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, unreadable [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
+	return percentValue(worst), derivedf(scribe.ActionSample, "computed [%d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, unreadable [%d] drives, Pulse OK at [<=90] pct, Trend OK at [<=80] pct, and no new errors",
 		percentValue(worst), rated, worstAt, errored, len(driveUnreadable(taken.drives))), nil
 }
 

@@ -3,6 +3,7 @@ package metric
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestMetricRule_Evaluate(t *testing.T) {
@@ -33,19 +34,19 @@ func TestMetricRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "at most within the limit", rule: Bounded(Self, AtMost, 90), self: 12, selfNumeric: true,
-			expectedOK: true, expectedDetails: []string{"value [12]", "within", "[<=90]"},
+			expectedOK: true, expectedDetails: []string{"within [<=90] pct"},
 		},
 		{
 			name: "at most beyond the limit", rule: Bounded(Self, AtMost, 90), self: 91, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"value [91]", "not within", "[<=90]"},
+			expectedOK: false, expectedDetails: []string{"not within [<=90] pct"},
 		},
 		{
 			name: "at least within the limit", rule: Bounded(Self, AtLeast, 10), self: 10, selfNumeric: true,
-			expectedOK: true, expectedDetails: []string{"value [10]", "within", "[>=10]"},
+			expectedOK: true, expectedDetails: []string{"within [>=10] pct"},
 		},
 		{
 			name: "at least beyond the limit", rule: Bounded(Self, AtLeast, 10), self: 9, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"value [9]", "not within", "[>=10]"},
+			expectedOK: false, expectedDetails: []string{"not within [>=10] pct"},
 		},
 		{
 			name: "above excludes the limit", rule: Bounded(Self, Above, 50), self: 50, selfNumeric: true,
@@ -61,7 +62,7 @@ func TestMetricRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "a bound reads another metric by name", rule: Bounded(MetricHostWarnTemperature, AtMost, 65), self: 0, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"host/warn_temperature [70]", "not within"},
+			expectedOK: false, expectedDetails: []string{"host/warn_temperature [70] pct not within [<=65] pct"},
 		},
 		{
 			name: "an unreadable sibling fails the bound", rule: Bounded(MetricHostUsedMemory, AtMost, 90), self: 0, selfNumeric: true,
@@ -77,19 +78,19 @@ func TestMetricRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "all requires every term", rule: All(Bounded(Self, AtMost, 90), Gated(GateServiceAggregate)), self: 12, selfNumeric: true,
-			expectedOK: true, expectedDetails: []string{"value [12]", "gate [service aggregate] is [true]"},
+			expectedOK: true, expectedDetails: []string{"within [<=90] pct and gate [service aggregate] is [true]"},
 		},
 		{
 			name: "all fails on one term", rule: All(Bounded(Self, AtMost, 90), Gated(GateID(99))), self: 12, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"value [12]", "is unbound"},
+			expectedOK: false, expectedDetails: []string{"within [<=90] pct and gate [-] is unbound"},
 		},
 		{
 			name: "any passes on one term", rule: Any(Gated(GateID(99)), Bounded(Self, Above, 80)), self: 90, selfNumeric: true,
-			expectedOK: true, expectedDetails: []string{"is unbound", "value [90]"},
+			expectedOK: true, expectedDetails: []string{"is unbound or within [>80] pct"},
 		},
 		{
 			name: "any fails when no term passes", rule: Any(Gated(GateID(99)), Bounded(Self, Above, 80)), self: 10, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"is unbound", "not within"},
+			expectedOK: false, expectedDetails: []string{"is unbound or not within [>80] pct"},
 		},
 		{
 			name: "truthy is ok on a true value", rule: Truthy(), self: 1, selfNumeric: true,
@@ -101,11 +102,11 @@ func TestMetricRule_Evaluate(t *testing.T) {
 		},
 		{
 			name: "healthy follows a readable sibling", rule: Healthy(MetricHostWarnTemperature), self: 0, selfNumeric: true,
-			expectedOK: true, expectedDetails: []string{"host/warn_temperature is [ok]"},
+			expectedOK: true, expectedDetails: []string{"host/warn_temperature is [true]"},
 		},
 		{
 			name: "healthy fails an unreadable sibling", rule: Healthy(MetricHostUsedMemory), self: 0, selfNumeric: true,
-			expectedOK: false, expectedDetails: []string{"host/used_memory is [not ok]"},
+			expectedOK: false, expectedDetails: []string{"host/used_memory is [false]"},
 		},
 		{
 			name: "an undeclared rule is never ok", rule: Rule{}, self: 0, selfNumeric: true,
@@ -167,6 +168,46 @@ func TestMetricRule_DeclaredByEveryMetric(t *testing.T) {
 					t.Errorf("%v: rule reads %v which is absent from dependencies", GetIDName(id), GetIDName(target))
 				}
 			}
+		}
+	}
+}
+
+func TestMetricRule_UnitLabel(t *testing.T) {
+	tests := []struct {
+		unit     string
+		expected string
+	}{
+		{unit: "", expected: ""},
+		{unit: "%", expected: "pct"},
+		{unit: "°C", expected: "degC"},
+		{unit: "°F", expected: "degF"},
+		{unit: "℃", expected: "degC"},
+		{unit: "MiB", expected: "MiB"},
+		{unit: "Mbit/s", expected: "Mbit/s"},
+		{unit: "µs", expected: "us"},
+		{unit: "Ω", expected: "ohm"},
+		{unit: "m²", expected: "m2"},
+		{unit: "µΩ·m", expected: "uohm.m"},
+		{unit: "°é", expected: "dege"},
+	}
+	for _, test := range tests {
+		t.Run(test.unit, func(t *testing.T) {
+			if label := unitLabel(test.unit); label != test.expected {
+				t.Errorf("label: got %q want %q", label, test.expected)
+			}
+		})
+	}
+}
+
+func TestMetricRule_UnitLabelIsAsciiForEveryMetric(t *testing.T) {
+	for _, id := range GetIDs() {
+		unit := GetIDUnit(id)
+		label := unitLabel(unit)
+		if unit != "" && label == "" {
+			t.Errorf("%v label: got %q want a spelling of unit %q", GetIDName(id), label, unit)
+		}
+		if strings.IndexFunc(label, func(glyph rune) bool { return glyph >= utf8.RuneSelf || glyph == '%' }) >= 0 {
+			t.Errorf("%v label: got %q want ascii with no percent, from unit %q", GetIDName(id), label, unit)
 		}
 	}
 }

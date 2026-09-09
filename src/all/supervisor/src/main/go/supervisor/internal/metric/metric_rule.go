@@ -3,6 +3,9 @@ package metric
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 type Comparator uint8
@@ -150,11 +153,7 @@ func (r Rule) Evaluate(unit string, self float64, selfNumeric bool, values Value
 		return RuleResult{OK: selfNumeric && self != 0, Detail: fmt.Sprintf("value is [%v]", selfNumeric && self != 0)}
 	case ruleHealthy:
 		_, healthy := values(r.target)
-		okLabel := "not ok"
-		if healthy {
-			okLabel = "ok"
-		}
-		return RuleResult{OK: healthy, Detail: fmt.Sprintf("%s is [%s]", GetIDName(r.target), okLabel)}
+		return RuleResult{OK: healthy, Detail: fmt.Sprintf("%s is [%v]", GetIDName(r.target), healthy)}
 	case ruleGated:
 		value, bound := gates(r.gate)
 		if !bound {
@@ -168,6 +167,13 @@ func (r Rule) Evaluate(unit string, self float64, selfNumeric bool, values Value
 	}
 }
 
+func Valued(value any, unit string) string {
+	if label := unitLabel(unit); label != "" {
+		return fmt.Sprintf("[%v] %s", value, label)
+	}
+	return fmt.Sprintf("[%v]", value)
+}
+
 func (r Rule) walk(visit func(Rule)) {
 	visit(r)
 	for _, child := range r.children {
@@ -176,21 +182,25 @@ func (r Rule) walk(visit func(Rule)) {
 }
 
 func (r Rule) evaluateBounded(unit string, self float64, selfNumeric bool, values ValueResolver) RuleResult {
-	value, ok, label := self, selfNumeric, "value"
+	value, ok, subject := self, selfNumeric, ""
 	if r.target != Self {
-		label = GetIDName(r.target)
 		value, ok = values(r.target)
+		subject = GetIDName(r.target) + " " + Valued(value, unit) + " "
 	}
 	satisfied := ok && r.comparator.satisfies(value, r.limit)
 	word := "within"
 	if !satisfied {
 		word = "not within"
 	}
-	return RuleResult{OK: satisfied, Detail: fmt.Sprintf("%s [%v] %s %s [%s%v] %s", label, value, unit, word, r.comparator, r.limit, unit)}
+	return RuleResult{OK: satisfied, Detail: fmt.Sprintf("%s%s %s", subject, word, Valued(fmt.Sprintf("%s%v", r.comparator, r.limit), unit))}
 }
 
 func (r Rule) combine(unit string, self float64, selfNumeric bool, values ValueResolver, gates GateResolver) RuleResult {
 	conjunction := r.kind == ruleAll
+	joiner := " or "
+	if conjunction {
+		joiner = " and "
+	}
 	ok := conjunction
 	details := make([]string, 0, len(r.children))
 	for _, child := range r.children {
@@ -202,7 +212,44 @@ func (r Rule) combine(unit string, self float64, selfNumeric bool, values ValueR
 			ok = ok || result.OK
 		}
 	}
-	return RuleResult{OK: ok, Detail: strings.Join(details, ", ")}
+	return RuleResult{OK: ok, Detail: strings.Join(details, joiner)}
+}
+
+func unitLabel(unit string) string {
+	if unitPlain(unit) {
+		return unit
+	}
+	builder := strings.Builder{}
+	for _, glyph := range norm.NFKD.String(unit) {
+		if word, spelled := unitWords[glyph]; spelled {
+			builder.WriteString(word)
+			continue
+		}
+		if glyph < utf8.RuneSelf {
+			builder.WriteRune(glyph)
+		}
+	}
+	return builder.String()
+}
+
+func unitPlain(unit string) bool {
+	return strings.IndexFunc(unit, func(glyph rune) bool {
+		_, spelled := unitWords[glyph]
+		return spelled || glyph >= utf8.RuneSelf
+	}) < 0
 }
 
 const unknownValue = "-"
+
+var unitWords = map[rune]string{
+	'%': "pct",
+	'°': "deg",
+	'℃': "degC",
+	'℉': "degF",
+	'µ': "u",
+	'μ': "u",
+	'Ω': "ohm",
+	'±': "+-",
+	'×': "x",
+	'·': ".",
+}
