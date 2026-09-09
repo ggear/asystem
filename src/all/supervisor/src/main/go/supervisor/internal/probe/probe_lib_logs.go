@@ -105,7 +105,7 @@ func (s *logSet) report(censusStart time.Time, window time.Duration) {
 		if index >= logCensusMax {
 			return
 		}
-		logger.Debugf("measured", censusStart, "[%4d] kernel errors, first [%s] last [%s] at dmesg [%s]", entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339), logElapsed(entry.last.Sub(s.boot)))
+		logger.Debugf("measured", censusStart, "[%d] kernel errors, first [%s] last [%s] at dmesg [%s]", entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339), logElapsed(entry.last.Sub(s.boot)))
 		logger.Debugf("observed", censusStart, "[%s]", entry.message)
 		logger.Debugf("suppress", censusStart, "[%s]", logSuppression(entry.message))
 	}
