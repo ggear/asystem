@@ -631,6 +631,7 @@ type backupDocument struct {
 	SuccessBool   bool    `json:"success_bool"`
 	DiskUsagePerc float64 `json:"disk_usage_perc,omitempty"`
 	FileCount     int     `json:"file_count,omitempty"`
+	TotalMB       int     `json:"total_mb,omitempty"`
 	SizeMB        int     `json:"size_mb,omitempty"`
 	FilesHeld     int     `json:"files_held,omitempty"`
 	FilesCreated  int     `json:"files_created,omitempty"`

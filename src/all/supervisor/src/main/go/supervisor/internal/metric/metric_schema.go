@@ -127,6 +127,7 @@ func Payloads() []schema.Payload {
 		{Key: "duration_s", Kind: schema.KindInt},
 		{Key: "success_bool", Kind: schema.KindBool},
 		{Key: "disk_usage_perc", Kind: schema.KindFloat},
+		{Key: "total_mb", Kind: schema.KindInt},
 		{Key: "file_count", Kind: schema.KindInt},
 		{Key: "size_mb", Kind: schema.KindInt},
 		{Key: "files_held", Kind: schema.KindInt},

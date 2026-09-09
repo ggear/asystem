@@ -8,6 +8,7 @@
   "duration_s": <number>,
   "success_bool": <true|false>,
   "disk_usage_perc": <number>,
+  "total_mb": <number>,
   "file_count": <number>,
   "size_mb": <number>,
   "files_held": <number>,
