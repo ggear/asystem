@@ -170,7 +170,7 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 			home.mountpoint, mountHomeRoot, mountReasons(taken.mounts, false), errEnvironment)
 	}
 	used := float64(home.used) / float64(home.total) * 100.0
-	return percentValue(used), derivedf(scribe.ActionSample, "computed [%3d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
+	return percentValue(used), derivedf(scribe.ActionSample, "computed [%d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
 		percentValue(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
 }
 
@@ -201,7 +201,7 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared, failures [%s] [%w]",
 			taken.locals, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
 	}
-	return percentValue(float64(used) / float64(total) * 100.0), derivedf(scribe.ActionSample, "computed [%3d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
+	return percentValue(float64(used) / float64(total) * 100.0), derivedf(scribe.ActionSample, "computed [%d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
 		percentValue(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals), nil
 }
 
@@ -218,7 +218,7 @@ func (s *mountSet) failedShares() (int8, derivation, error) {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
 			filepath.Join(s.root, mountFstabPath)), nil
 	}
-	return percentValue(float64(taken.failed) / float64(taken.shares) * 100.0), derivedf(scribe.ActionSample, "computed [%3d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
+	return percentValue(float64(taken.failed) / float64(taken.shares) * 100.0), derivedf(scribe.ActionSample, "computed [%d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
 		percentValue(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath), mountReasons(taken.mounts, true)), nil
 }
 

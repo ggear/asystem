@@ -114,7 +114,7 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	}
 	run := max(snapshot.host.StagesRun, 1)
 	value := percentValue(float64(snapshot.host.StagesFailed) / float64(run) * 100.0)
-	return value, derivedf(scribe.ActionCompute, "computed [%3d] pct failed, run [%s] aged [%s] reported [%d] of [%d] stages failed",
+	return value, derivedf(scribe.ActionCompute, "computed [%d] pct failed, run [%s] aged [%s] reported [%d] of [%d] stages failed",
 		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.host.StagesFailed, run), nil
 }
 
@@ -131,7 +131,7 @@ func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 		return 0, derivation{}, fmt.Errorf("no backup volume reading, this host has written no tertiary stage document under [%s] [%w]", p.root, errEnvironment)
 	}
 	value := percentValue(snapshot.tertiary.DiskUsagePerc)
-	return value, derivedf(scribe.ActionCompute, "computed [%3d] pct used, tertiary stage of run [%s] aged [%s] measured [%.1f] pct disk usage on /backup",
+	return value, derivedf(scribe.ActionCompute, "computed [%d] pct used, tertiary stage of run [%s] aged [%s] measured [%.1f] pct disk usage on /backup",
 		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.tertiary.DiskUsagePerc), nil
 }
 

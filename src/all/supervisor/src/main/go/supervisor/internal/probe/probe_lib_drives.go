@@ -88,7 +88,7 @@ func (s *mountSet) usedDriveLife() (int8, derivation, error) {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct life used, none of [%d] drives are rated and readable so the metric is inert and always ok, unrated [%s]",
 			len(taken.drives), summary), nil
 	}
-	return percentValue(worst), derivedf(scribe.ActionSample, "computed [%3d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, unreadable [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
+	return percentValue(worst), derivedf(scribe.ActionSample, "computed [%d] pct life used, most worn of [%d] rated drives [%s], errored [%d] drives, unreadable [%d] drives, ok pulse at [<=90] pct trend at [<=80] pct and no new errors",
 		percentValue(worst), rated, worstAt, errored, len(driveUnreadable(taken.drives))), nil
 }
 
@@ -112,7 +112,7 @@ func (s *mountSet) failedDrives() (int8, derivation, error) {
 			failed = append(failed, drive.kernel+"="+drive.model)
 		}
 	}
-	return percentValue(float64(errored) / float64(len(taken.drives)) * 100.0), derivedf(scribe.ActionSample, "computed [%3d] pct failed drive, errored [%d] of [%d] drives, ok only at [0] pct, failed [%s]",
+	return percentValue(float64(errored) / float64(len(taken.drives)) * 100.0), derivedf(scribe.ActionSample, "computed [%d] pct failed drive, errored [%d] of [%d] drives, ok only at [0] pct, failed [%s]",
 		percentValue(float64(errored)/float64(len(taken.drives))*100.0), errored, len(taken.drives), strings.Join(failed, ", ")), nil
 }
 

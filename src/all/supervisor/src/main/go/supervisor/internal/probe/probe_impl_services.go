@@ -738,7 +738,7 @@ func (p *servicesProbe) processorUsed(name string, response container.StatsRespo
 		onlineCPUs = float64(len(response.CPUStats.CPUUsage.PercpuUsage))
 	}
 	usedPercent := (cpuDelta / systemDelta) * onlineCPUs * 100.0
-	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionSample, "computed [%3d] pct used processor, service [%s] delta [%.0f] of system [%.0f] ns across [%.0f] cpus",
+	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionSample, "computed [%d] pct used processor, service [%s] delta [%.0f] of system [%.0f] ns across [%.0f] cpus",
 		stats.ConvertToInt(usedPercent), name, cpuDelta, systemDelta, onlineCPUs), nil
 }
 
@@ -755,7 +755,7 @@ func (p *servicesProbe) memoryUsed(name string, response container.StatsResponse
 		used = 0
 	}
 	usedPercent := (used / float64(response.MemoryStats.Limit)) * 100.0
-	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionSample, "computed [%3d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
+	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionSample, "computed [%d] pct used memory, service [%s] used [%d] MiB of limit [%d] MiB, cache [%d] MiB excluded",
 		stats.ConvertToInt(usedPercent), name, int64(used)/bytesPerMiB, int64(response.MemoryStats.Limit)/bytesPerMiB, int64(cache)/bytesPerMiB), nil
 }
 
@@ -767,7 +767,7 @@ func (p *servicesProbe) diskOpsUsed(name string, rates serviceIORates) (int8, de
 		return 0, derivation{}, rates.err
 	}
 	usedPercent := rates.blockBytes / metric.UsedDiskRateBudgetBytes * 100.0
-	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used disk ops, service [%s] moved [%.1f] MiB per second of the [%.0f] MiB budget across [%d] devices over [%.1f] s",
+	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used disk ops, service [%s] moved [%.1f] MiB per second of the [%.0f] MiB budget across [%d] devices over [%.1f] s",
 		percentValue(usedPercent), name, rates.blockBytes/bytesPerMiB, metric.UsedDiskRateBudgetMiB, rates.blockEntries, rates.elapsed), nil
 }
 
@@ -779,7 +779,7 @@ func (p *servicesProbe) networkUsed(name string, rates serviceIORates) (int8, de
 		return 0, derivation{}, rates.err
 	}
 	usedPercent := rates.networkBytes * bitsPerByte / metric.UsedNetworkBudgetBits * 100.0
-	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used network, service [%s] moved [%.1f] Mbit per second of the [%.0f] Mbit budget across [%d] interfaces over [%.1f] s",
+	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used network, service [%s] moved [%.1f] Mbit per second of the [%.0f] Mbit budget across [%d] interfaces over [%.1f] s",
 		percentValue(usedPercent), name, rates.networkBytes*bitsPerByte/bitsPerMbit, metric.UsedNetworkBudgetMbit, rates.networkInterfaces, rates.elapsed), nil
 }
 

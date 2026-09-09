@@ -316,7 +316,7 @@ func (p *hostProbe) usedMemory() (int8, derivation, error) {
 		return 0, derivation{}, errors.New("no memory reading taken, the host reports [0] bytes of total memory so a share of it cannot be computed")
 	}
 	usedPercent := (float64(memoryStat.Used) / float64(memoryStat.Total)) * 100.0
-	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, available [%d] MiB",
+	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used, used [%d] MiB of total [%d] MiB, available [%d] MiB",
 		stats.ConvertToInt(usedPercent), memoryStat.Used/bytesPerMiB, memoryStat.Total/bytesPerMiB, memoryStat.Available/bytesPerMiB), nil
 }
 
@@ -337,7 +337,7 @@ func (p *hostProbe) allocatedMemory() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	allocatedPercent := (float64(allocatedBytes) / float64(memoryStat.Total)) * 100.0
-	sampled := derivedf(scribe.ActionCompute, "computed [%3d] pct allocated, ceilings [%d] MiB of total [%d] MiB, installed [%d] of configured [%d] services",
+	sampled := derivedf(scribe.ActionCompute, "computed [%d] pct allocated, ceilings [%d] MiB of total [%d] MiB, installed [%d] of configured [%d] services",
 		stats.ConvertToInt(allocatedPercent), allocatedBytes/bytesPerMiB, int64(memoryStat.Total)/bytesPerMiB, installed, len(config.Load(p.configPath).Services(p.hostName)))
 	if allocatedPercent > 100.0 {
 		if allocatedBytes != p.allocatedMemoryLogged {
@@ -358,8 +358,8 @@ func (p *hostProbe) failedLogs() (int8, derivation, error) {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct failed, kernel log unreadable at [%s] so the metric is inert and always ok", logs.attempted()), nil
 	}
 	message, leading := logs.leading()
-	return stats.ConvertToInt(float64(count) / metric.FailedLogsBudget * 100.0), derivedf(scribe.ActionSample, "computed [%3d] pct failed, errors [%d] of budget [%d] within window [%s], most frequent [%d] of them logged [%s], following [%s]",
-		stats.ConvertToInt(float64(count)/metric.FailedLogsBudget*100.0), count, int(metric.FailedLogsBudget), window, leading, message, logs.path), nil
+	return stats.ConvertToInt(float64(count) / metric.FailedLogsBudget * 100.0), derivedf(scribe.ActionSample, "computed [%d] pct failed, errors [%d] of budget [%d] within window [%s], with most common being logged [%d] times",
+		stats.ConvertToInt(float64(count)/metric.FailedLogsBudget*100.0), count, int(metric.FailedLogsBudget), window, leading), nil
 }
 
 func (p *hostProbe) failedShares() (int8, derivation, error) {
@@ -372,7 +372,7 @@ func (p *hostProbe) warnTemperature() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	warnOfMax := stats.ConvertToInt(metric.WarnTemperaturePerCelsius * (temperatureCelsius - metric.WarnTemperatureBaseCelsius))
-	return warnOfMax, derivedf(scribe.ActionCompute, "computed [%3d] pct of warn, [%.1f] C above floor [%.1f] C at [%.1f] pct/C",
+	return warnOfMax, derivedf(scribe.ActionCompute, "computed [%d] pct of warn, [%.1f] C above floor [%.1f] C at [%.1f] pct/C",
 		warnOfMax, temperatureCelsius, metric.WarnTemperatureBaseCelsius, metric.WarnTemperaturePerCelsius), nil
 }
 
@@ -412,7 +412,7 @@ func (p *hostProbe) usedSwapSpace() (int8, derivation, error) {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct used, the host configures no swap so the metric is inert and always ok"), nil
 	}
 	usedPercent := (float64(swapStat.Used) / float64(swapStat.Total)) * 100.0
-	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, used [%d] MiB of total [%d] MiB, free [%d] MiB",
+	return percentValue(usedPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used, used [%d] MiB of total [%d] MiB, free [%d] MiB",
 		percentValue(usedPercent), swapStat.Used/bytesPerMiB, swapStat.Total/bytesPerMiB, swapStat.Free/bytesPerMiB), nil
 }
 
@@ -489,7 +489,7 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 		return 0, derivation{}, fmt.Errorf("no processor sample taken, cpu counters moved by [%.1f] ticks between polls so they are not monotonic", totalDelta)
 	}
 	usedPercent := (1.0 - idleDelta/totalDelta) * 100.0
-	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, idle delta [%.1f] of total delta [%.1f] ticks",
+	return stats.ConvertToInt(usedPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used, idle delta [%.1f] of total delta [%.1f] ticks",
 		stats.ConvertToInt(usedPercent), idleDelta, totalDelta), nil
 }
 
@@ -541,7 +541,7 @@ func (s *diskUsageSampler) sample(ioCounters func(...string) (map[string]disk.IO
 	if busiest == "" {
 		return 0, derivation{}, errProbeWarmingUp
 	}
-	return percentValue(busiestPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] serviced operations for [%.0f] ms of [%.0f] ms elapsed across [%d] devices",
+	return percentValue(busiestPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used, busiest [%s] serviced operations for [%.0f] ms of [%.0f] ms elapsed across [%d] devices",
 		percentValue(busiestPercent), busiest, busiestMillis, elapsed*1000.0, len(current)), nil
 }
 
@@ -606,7 +606,7 @@ func (s *networkUsageSampler) sample(roots []string) (int8, derivation, error) {
 	if busiest == "" {
 		return 0, derivation{}, errProbeWarmingUp
 	}
-	return percentValue(busiestPercent), derivedf(scribe.ActionCompute, "computed [%3d] pct used, busiest [%s] moved [%.1f] Mbit per second of its rated [%.0f] Mbit across [%d] interfaces over [%.1f] s",
+	return percentValue(busiestPercent), derivedf(scribe.ActionCompute, "computed [%d] pct used, busiest [%s] moved [%.1f] Mbit per second of its rated [%.0f] Mbit across [%d] interfaces over [%.1f] s",
 		percentValue(busiestPercent), busiest, busiestBits/networkBitsPerMbit, busiestRated/networkBitsPerMbit, len(current), elapsed), nil
 }
 

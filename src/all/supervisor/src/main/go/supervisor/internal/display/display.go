@@ -585,7 +585,7 @@ func (d *Display) Draw(ctx context.Context, cancel context.CancelFunc) {
 			}
 		case <-ticker.C:
 			if elapsed := config.SinceIncludingSuspend(ticked); elapsed > d.tickStall {
-				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("exceeded", ticked, "[%4d] ms is the draw tick stall", d.tickStall.Milliseconds())
+				scribe.Log(scribe.SourceDisplay, scribe.SubjectNone, scribe.ActionDisconnect).Warnf("exceeded", ticked, "[%3d] ms is the draw tick stall", d.tickStall.Milliseconds())
 				d.cache.Wake(elapsed)
 				d.refresh("wake")
 			}

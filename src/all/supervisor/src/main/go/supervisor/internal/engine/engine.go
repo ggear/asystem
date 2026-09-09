@@ -222,7 +222,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				delete(subscribed, topic)
 			}
 			subscribedMu.Unlock()
-			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%4d] of [%3d] topics refused, %s", len(refused), len(filters), reason)
+			scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%3d] of [%3d] topics refused, %s", len(refused), len(filters), reason)
 		}()
 		return len(filters)
 	}
