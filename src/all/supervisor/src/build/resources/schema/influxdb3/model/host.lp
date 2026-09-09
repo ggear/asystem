@@ -12,8 +12,8 @@
 #     macmini-meg,
 #     raspbpi-jen,
 #     raspbpi-jil]
-#   field status - 6s [host is reporting metrics]
-#   field status_trend - 6s [host is reporting metrics, smoothed across the trend window]
+#   field status - 6s [host is reporting metrics and all host metrics are ok]
+#   field status_trend - 6s [host is reporting metrics and all host metrics are ok, smoothed across the trend window]
 #   field used_processor % 6s [processor time used across all cores]
 #   field used_processor_trend % 6s [processor time used across all cores, smoothed across the trend window]
 #   field used_memory % 6s [memory in use against the total installed]

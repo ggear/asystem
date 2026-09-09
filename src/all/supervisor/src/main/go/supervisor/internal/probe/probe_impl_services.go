@@ -26,6 +26,7 @@ type servicesProbe struct {
 	configPath string
 
 	servicesBool           *stats.BoolStats
+	hostBool               *stats.BoolStats
 	servicesMaxMemoryFloat *stats.FloatStats
 	serviceBool            map[string]*stats.BoolStats
 	backupStatusBool       map[string]*stats.BoolStats
@@ -97,6 +98,7 @@ func (p *servicesProbe) metrics() []metric.ID {
 	return []metric.ID{
 		metric.MetricHostServicesStatus,
 		metric.MetricHostServicesMaxMemory,
+		metric.MetricHost,
 		metric.MetricService,
 		metric.MetricServiceBackupStatus,
 		metric.MetricServiceHealthStatus,
@@ -118,6 +120,7 @@ func (p *servicesProbe) create(configPath string, cache *metric.RecordCache, mas
 	p.mask = mask
 	p.periods = periods
 	p.servicesBool = stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
+	p.hostBool = stats.NewBoolStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
 	p.servicesMaxMemoryFloat = stats.NewFloatStats(p.periods.TrendHours, float64(p.periods.PulseMillis)/1000.0, float64(p.periods.PollMillis)/1000.0)
 	p.configPath = configPath
 	c := config.Load(configPath)
@@ -328,6 +331,15 @@ func (p *servicesProbe) poll(ctx context.Context, isPulse bool) error {
 			p.servicesMaxMemoryFloat,
 			func() float64 { return p.servicesMaxMemoryFloat.PulseLast() },
 			nil,
+		),
+		newCacheMetricTask(
+			metric.ValueBool,
+			metric.MetricHost,
+			metric.ServiceNameUnset,
+			func() (bool, derivation, error) { return p.host() },
+			p.hostBool,
+			func() bool { return p.hostBool.PulseLast() },
+			func() bool { return p.hostBool.TrendMean() },
 		),
 	})
 
@@ -615,6 +627,10 @@ type serviceIORates struct {
 
 func (p *servicesProbe) servicesStatus() (bool, derivation, error) {
 	return true, derivedf(scribe.ActionSample, "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
+}
+
+func (p *servicesProbe) host() (bool, derivation, error) {
+	return true, derivedf(scribe.ActionSample, "computed [true] reporting, the host publishes this beacon every pulse and its ok flag is every host metric that can fail"), nil
 }
 
 func (p *servicesProbe) servicesMaxMemory(snapshot *installSnapshot) (float64, derivation, error) {

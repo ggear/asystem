@@ -1071,3 +1071,34 @@ func assertConfiguredStatus(t *testing.T, services map[string]service, name stri
 		t.Fatalf("Got configuredStatus = %v, expected %v", got, want)
 	}
 }
+
+func TestProbeImplServices_Host(t *testing.T) {
+	tests := []struct {
+		name          string
+		expectedValue bool
+		expectedOK    bool
+		expectedError bool
+	}{
+		{
+			name:          "happy",
+			expectedValue: true,
+			expectedOK:    true,
+			expectedError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			probe := newServicesProbe()
+			value, _, err := probe.host()
+			if testCase.expectedError && err == nil {
+				t.Fatalf("expected error but got nil")
+			}
+			if !testCase.expectedError && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if testCase.expectedOK && value != testCase.expectedValue {
+				t.Fatalf("expected %v, got %v", testCase.expectedValue, value)
+			}
+		})
+	}
+}

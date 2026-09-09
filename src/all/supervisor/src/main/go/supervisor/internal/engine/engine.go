@@ -659,7 +659,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	hostName := config.Load(configPath).Host()
 	statusTopic := "supervisor/" + hostName + "/status"
 	serviceNameTopic := "supervisor/" + hostName + "/data/service/+/name"
-	commandTopic := "supervisor/+/command/service/+"
+	commandTopic := "supervisor/+/command/+/+"
 	var hasConnected atomic.Bool
 	var forceRepublish atomic.Bool
 	onConnect := func(client mqtt.Client) {
@@ -694,14 +694,24 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		commands := client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
 			commandStart := time.Now()
 			tokens := strings.Split(msg.Topic(), "/")
-			if len(tokens) < 5 || tokens[1] == "" || tokens[4] == "" {
+			if len(tokens) < 5 || tokens[1] == "" || tokens[3] == "" || tokens[4] == "" {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[malformed] topic of [%2d] levels", len(tokens))
+				return
+			}
+			var subject scribe.Subject
+			switch tokens[3] {
+			case commandScopeService:
+				subject = scribe.SubjectService(tokens[4])
+			case commandScopeHost:
+				subject = scribe.SubjectHost(tokens[1])
+			default:
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[%s] scope, only [%s] and [%s] are commanded", tokens[3], commandScopeHost, commandScopeService)
 				return
 			}
 
 			// TODO: Implement command handling
 
-			scribe.Log(scribe.SourceEngine, scribe.SubjectService(tokens[4]), scribe.ActionSubscribe).Debugf("observed", commandStart, "[%s] host, command [%s]", tokens[1], string(msg.Payload()))
+			scribe.Log(scribe.SourceEngine, subject, scribe.ActionSubscribe).Debugf("observed", commandStart, "[%s] host, [%s] scope, command [%s]", tokens[1], tokens[3], string(msg.Payload()))
 		})
 		subscribeStart := time.Now()
 		for topic, token := range map[string]mqtt.Token{serviceNameTopic: names, commandTopic: commands} {
@@ -953,6 +963,9 @@ const (
 	loopListeningStream  = "listening stream"
 	loopAllProbesOnce    = "all probes once"
 	loopAllProbesPublish = "all probes publish"
+
+	commandScopeHost    = "host"
+	commandScopeService = "service"
 
 	hostStatusOnline  = "online"
 	hostStatusOffline = "offline"

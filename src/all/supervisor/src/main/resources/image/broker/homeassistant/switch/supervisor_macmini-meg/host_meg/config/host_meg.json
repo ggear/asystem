@@ -1,0 +1,22 @@
+{
+  "default_entity_id": "switch.host_meg",
+  "unique_id": "host_meg",
+  "name": "Host Meg",
+  "icon": "mdi:heart-pulse",
+  "force_update": false,
+  "state_topic": "supervisor/macmini-meg/data/host",
+  "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
+  "command_topic": "supervisor/macmini-meg/command/host/meg",
+  "availability_topic": "supervisor/macmini-meg/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-supervisor"
+    ],
+    "name": "Rack Supervisor",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

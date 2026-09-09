@@ -53,11 +53,9 @@ var metricBuildersByID = []builder{
 		valueKind:   ValueBool,
 		label:       "Live HST",
 		unit:        "",
-		description: "host is reporting metrics",
+		description: "host is reporting metrics and all host metrics are ok",
 		template:    "supervisor/$HOST/$SCOPE/host",
 		persisted:   true,
-		pulseRule:   Always(),
-		trendRule:   Always(),
 	},
 	MetricHostUsedProcessor: {
 		id:          MetricHostUsedProcessor,
@@ -528,6 +526,22 @@ var metricBuildersByTemplate = func() map[string]builder {
 		panic(fmt.Sprintf("error: metricBuildersByID is incorrect length [%d], should use all (and only all) ID's (sans MetricMax) giving length [%d]",
 			len(metricBuildersByID), MetricMax))
 	}
+	aggregated := make([]ID, 0, MetricMax)
+	for id := range MetricMax {
+		if ID(id) == MetricHost ||
+			!strings.HasPrefix(metricBuildersByID[id].template, templateHostPrefix) ||
+			metricBuildersByID[id].pulseRule.kind == ruleAlways {
+			continue
+		}
+		aggregated = append(aggregated, ID(id))
+	}
+	healthy := make([]Rule, 0, len(aggregated))
+	for _, id := range aggregated {
+		healthy = append(healthy, Healthy(id))
+	}
+	metricBuildersByID[MetricHost].dependencies = aggregated
+	metricBuildersByID[MetricHost].pulseRule = All(healthy...)
+	metricBuildersByID[MetricHost].trendRule = All(healthy...)
 	ids := make(map[ID]bool)
 	templates := make(map[string]bool)
 	labels := make(map[string]bool)
@@ -560,7 +574,7 @@ var metricBuildersByTemplate = func() map[string]builder {
 			metricBuildersByID[id].metricKind = MetricKindServices
 		case strings.HasPrefix(metricBuildersByID[id].template, "supervisor/$HOST/$SCOPE/service/"):
 			metricBuildersByID[id].metricKind = MetricKindService
-		case strings.HasPrefix(metricBuildersByID[id].template, "supervisor/$HOST/$SCOPE/host"):
+		case strings.HasPrefix(metricBuildersByID[id].template, templateHostPrefix):
 			metricBuildersByID[id].metricKind = MetricKindHost
 		default:
 			panic(fmt.Sprintf("error: could not determine metric type from template [%s] for ID [%d]", metricBuildersByID[id].template, id))
@@ -624,6 +638,8 @@ func validateRule(owner builder, rule Rule) {
 }
 
 var (
+	templateHostPrefix = "supervisor/$HOST/$SCOPE/host"
+
 	templateCommand  = "supervisor/$HOST/command"
 	templateSnapshot = "supervisor/$HOST/snapshot"
 

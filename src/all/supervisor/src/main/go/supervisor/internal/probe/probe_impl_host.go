@@ -27,7 +27,6 @@ type hostProbe struct {
 	configPath string
 	hostName   string
 
-	hostBool           *stats.BoolStats
 	usedProcessorInt   *stats.IntStats
 	usedMemoryInt      *stats.IntStats
 	allocatedMemoryInt *stats.IntStats
@@ -77,7 +76,6 @@ func (*hostProbe) dormant() bool { return false }
 
 func (p *hostProbe) metrics() []metric.ID {
 	return []metric.ID{
-		metric.MetricHost,
 		metric.MetricHostUsedProcessor,
 		metric.MetricHostUsedMemory,
 		metric.MetricHostAllocatedMemory,
@@ -104,7 +102,6 @@ func (p *hostProbe) create(configPath string, cache *metric.RecordCache, mask [m
 	p.configPath = configPath
 	p.hostName = config.Load(configPath).Host()
 
-	p.hostBool = stats.NewBoolStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedProcessorInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedMemoryInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.allocatedMemoryInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
@@ -128,15 +125,6 @@ func (p *hostProbe) gates() []metric.GateID { return nil }
 
 func (p *hostProbe) poll(_ context.Context, isPulse bool) error {
 	runCacheMetricTasks(p, isPulse, nil, []cacheMetricTask{
-		newCacheMetricTask(
-			metric.ValueBool,
-			metric.MetricHost,
-			metric.ServiceNameUnset,
-			p.host,
-			p.hostBool,
-			func() bool { return p.hostBool.PulseLast() },
-			func() bool { return p.hostBool.TrendMean() },
-		),
 		newCacheMetricTask(
 			metric.ValueInt,
 			metric.MetricHostUsedProcessor,
@@ -291,10 +279,6 @@ func (p *hostProbe) records() *metric.RecordCache {
 
 func (p *hostProbe) hasMetric(id metric.ID) bool {
 	return p.mask[id]
-}
-
-func (p *hostProbe) host() (bool, derivation, error) {
-	return true, derivedf(scribe.ActionSample, "computed [true] reporting, the host publishes this beacon every pulse and it is ok whenever the record exists"), nil
 }
 
 func (p *hostProbe) usedProcessor() (int8, derivation, error) {
