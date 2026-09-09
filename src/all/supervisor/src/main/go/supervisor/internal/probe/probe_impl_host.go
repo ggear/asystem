@@ -357,7 +357,7 @@ func (p *hostProbe) failedLogs() (int8, derivation, error) {
 	if !available {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct failed, kernel log unreadable at [%s] so the metric is inert and always ok", logs.attempted()), nil
 	}
-	message, leading := logs.leading()
+	_, leading := logs.leading()
 	return stats.ConvertToInt(float64(count) / metric.FailedLogsBudget * 100.0), derivedf(scribe.ActionSample, "computed [%d] pct failed, errors [%d] of budget [%d] within window [%s], with most common being logged [%d] times",
 		stats.ConvertToInt(float64(count)/metric.FailedLogsBudget*100.0), count, int(metric.FailedLogsBudget), window, leading), nil
 }
