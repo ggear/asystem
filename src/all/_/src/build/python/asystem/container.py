@@ -567,6 +567,8 @@ volumes_clean() { echo "✅ $*"; }
 
 volumes_report() { echo "   $*"; }
 
+volumes_command() { echo "   $ $*"; }
+
 volumes_changed() {
   echo "   $*"
   VOLUMES_CHANGED=$((VOLUMES_CHANGED + 1))
@@ -747,9 +749,10 @@ volumes_disk_clean() {
     return 0
   fi
   volumes_fault "[${disk}] is not clean, it carries partition(s) [${partitions:-none}] label(s) [${partlabels:-none}] filesystem(s) [${fstypes:-none}] signature(s) [${signatures:-none}]"
-  volumes_report "a format only ever writes to a blank disk, so nothing that already belongs to something can be overwritten"
-  volumes_report "if this disk really is spare, clear it deliberately by hand and run the format again"
-  volumes_report "wipefs -a ${disk} && sgdisk -Z ${disk} && partprobe ${disk}"
+  volumes_command "wipefs -a ${disk}"
+  volumes_command "sgdisk -Z ${disk}"
+  volumes_command "partprobe ${disk}"
+  volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --force"
   return 1
 }
 
@@ -764,7 +767,8 @@ volumes_format_guard() {
       continue
     fi
     if [ ! -e "${device}" ]; then
-      volumes_report "[${target}] device [${source}] is absent, format not checked, expected only while its disk is powered down"
+      volumes_report "[${target}] device [${source}] is absent, powered down or not yet prepared"
+      volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=/dev/sdX --force"
       continue
     fi
     resolved="$(readlink -f "${device}")"
@@ -776,14 +780,15 @@ volumes_format_guard() {
     parent="$(lsblk -no PKNAME "${resolved}" 2>/dev/null | grep . | head -1)"
     disk="${resolved}"
     [ -n "${parent}" ] && disk="/dev/${parent}"
-    volumes_fault "[${target}] declares [${fstype}] but [${resolved}] holds [${actual:-no filesystem}], which only a format can change"
-    volumes_report "wipe the disk by hand with it powered on, then run the format, then apply again"
-    volumes_report "wipefs -a ${disk} && sgdisk -Z ${disk} && partprobe ${disk}"
-    volumes_report "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --force"
+    volumes_fault "[${target}] declares [${fstype}] but [${resolved}] holds [${actual:-no filesystem}]"
+    volumes_command "wipefs -a ${disk}"
+    volumes_command "sgdisk -Z ${disk}"
+    volumes_command "partprobe ${disk}"
+    volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --force"
     faults=$((faults + 1))
   done < <(volumes_entries "${VOLUMES_SOURCE}")
   [ "${faults}" -eq 0 ] && return 0
-  volumes_report "apply never formats a disk, so nothing has been mounted, unmounted or written"
+  volumes_report "apply changed nothing, no disk was formatted, mounted or written"
   return 1
 }
 
@@ -997,7 +1002,7 @@ volumes_format() {
   fi
 
   if [ -z "${VOLUMES_DISK}" ]; then
-    volumes_fault "[${label}] is absent and no [--disk] was given, power the disk on and name it explicitly"
+    volumes_fault "[${label}] is absent and no [--disk] was given, power the disk on and name it from below"
     lsblk -o NAME,SIZE,TYPE,PARTLABEL,FSTYPE,MOUNTPOINT,MODEL,SERIAL
     return 1
   fi

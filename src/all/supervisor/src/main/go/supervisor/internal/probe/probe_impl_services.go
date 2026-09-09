@@ -835,11 +835,14 @@ func (p *servicesProbe) backupStatus(name string) (bool, derivation, error) {
 	if backupProbeInstance == nil {
 		return true, derivedInertf(scribe.ActionSample, "computed [true] backed up, service [%s] has no backup probe registered so the metric is inert and always ok", name), nil
 	}
-	success, enrolled := backupProbeInstance.serviceSuccess(name)
+	success, enrolled, run := backupProbeInstance.serviceSuccess(name)
 	if !enrolled {
-		return true, derivedInertf(scribe.ActionSample, "computed [true] backed up, service [%s] declares no backup script so the metric is inert and always ok", name), nil
+		if run == "" {
+			return true, derivedInertf(scribe.ActionSample, "computed [true] backed up, service [%s] has no backup run to read so the metric is inert and always ok", name), nil
+		}
+		return true, derivedInertf(scribe.ActionSample, "computed [true] backed up, service [%s] recorded no backup in run [%s], it ships no backup.sh or was not running when primary ran, so the metric is inert and always ok", name, run), nil
 	}
-	return success, derivedf(scribe.ActionSample, "computed [%v] backed up, service [%s] as reported by the newest backup run status document", success, name), nil
+	return success, derivedf(scribe.ActionSample, "computed [%v] backed up, service [%s] as reported by run [%s]", success, name, run), nil
 }
 
 func (p *servicesProbe) restartCount(name string, containerInfo container.InspectResponse) (float64, derivation, error) {

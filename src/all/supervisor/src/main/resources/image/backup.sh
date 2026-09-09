@@ -2,8 +2,12 @@
 
 # Runs one stage of a backup run, from the supervisor probe or by hand, the same path both sides.
 #
-#   backup.sh <primary|secondary|tertiary> [start|stop] [run-id]
+#   backup.sh <all|primary|secondary|tertiary> [start|stop] [run-id]
 #   backup.sh tail [run-id]
+#
+# all is the hand entry point - it runs the stages this host owns, in order, under one run id, so a
+# hand run has the same shape as the probe's and nothing has to adopt anything. tertiary joins only
+# where fstab declares a /backup, since it is the one stage a host without a backup disk cannot run.
 #
 # tail follows a run that is already going, defaulting to the newest, tailing all three stage logs
 # as one stream and printing each stage's status document once nothing is running any more. It reads
@@ -14,8 +18,11 @@
 # it therefore adopts the newest run that did record one, and says which. It only ever adopts a
 # service list, never data, so this cannot happen under the probe, where primary ran in this run.
 # start heartbeats a status document and exits on the stage result, detaching only on a hand run,
-# never under the probe, which owns the redirection and reads that status. stop is idempotent and
-# never unmounts a share.
+# never under the probe, which owns the redirection and reads that status. A hand start detaches and
+# then tails its own run, so the terminal follows the stage it just began and exits on its result -
+# interrupting the tail leaves the stage running, since a tail only ever reads. stop is idempotent
+# and never unmounts a share, and by hand it waits for the run to settle, bounded by
+# BACKUP_STOP_SECONDS, then prints the same final status a tail ends with.
 #
 # A run holds BACKUP_LOCK for its whole life, so a hand run and the scheduled run cannot overlap -
 # except under the probe, which holds the same lock across all three stages and would deadlock itself.
@@ -47,9 +54,9 @@ BACKUP_STAGE="${1:-}"
 BACKUP_PHASE="${2:-start}"
 
 case "${BACKUP_STAGE}/${BACKUP_PHASE}" in
-primary/start | primary/stop | secondary/start | secondary/stop | tertiary/start | tertiary/stop | tail/*) ;;
+all/start | all/stop | primary/start | primary/stop | secondary/start | secondary/stop | tertiary/start | tertiary/stop | tail/*) ;;
 *)
-  echo "Usage: ${0} <primary|secondary|tertiary> [start|stop] [run-id]" >&2
+  echo "Usage: ${0} <all|primary|secondary|tertiary> [start|stop] [run-id]" >&2
   echo "       ${0} tail [run-id]" >&2
   exit 2
   ;;
@@ -68,9 +75,9 @@ BACKUP_LOCK="$(dirname "${BACKUP_RUN_PATH}")/.lock"
 BACKUP_CONFIG="${BACKUP_INSTALL_ROOT}/supervisor/latest/image/config.json"
 
 backup_tail() {
-  local base run path stage doc state ok logs=() tail_pid="" faults=0
+  local base run path stage logs=() tail_pid="" sequence="${2:-}"
   base="$(dirname "${BACKUP_RUN_PATH}")"
-  run="${BACKUP_PHASE}"
+  run="${1:-}"
   [ "${run}" = "start" ] && run=""
   [ -n "${run}" ] || run="$(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort | tail -1)"
   [ -n "${run}" ] || { echo "No backup run found under [${base}]" >&2; return 1; }
@@ -80,19 +87,91 @@ backup_tail() {
   for stage in primary secondary tertiary; do logs+=("${path}/stage/${stage}/output.log"); done
   tail -n +1 -F -q "${logs[@]}" 2>/dev/null &
   tail_pid=$!
+  backup_await "${path}" "" "${sequence}"
+  kill "${tail_pid}" 2>/dev/null
+  wait "${tail_pid}" 2>/dev/null
+  backup_status "${path}"
+}
+
+backup_sequence() {
+  local stage result=0 started sequence stages=(primary secondary)
+  [ -n "$(backup_targets)" ] && stages+=(tertiary)
+  echo && echo "Backup ${BACKUP_PHASE} [${BACKUP_RUN_ID}] over [${stages[*]}]"
+  if [ "${BACKUP_PHASE}" = "stop" ]; then
+    for stage in "${stages[@]}"; do
+      BACKUP_DETACHED=1 "$0" "${stage}" stop "${BACKUP_RUN_ID}" || result=$?
+    done
+    backup_status "${BACKUP_RUN_PATH}" || result=1
+    return "${result}"
+  fi
+  started="$(date +%s)"
+  (
+    for stage in "${stages[@]}"; do
+      BACKUP_DETACHED=1 "$0" "${stage}" start "${BACKUP_RUN_ID}" || exit 1
+    done
+  ) &
+  sequence=$!
+  backup_tail "${BACKUP_RUN_ID}" "${sequence}" || result=1
+  wait "${sequence}" || result=1
+  backup_rollup "${started}"
+  return "${result}"
+}
+
+backup_rollup() {
+  local started="$1" stage doc run=0 failed=0 state=complete success=true
+  for stage in primary secondary tertiary; do
+    doc="${BACKUP_RUN_PATH}/stage/${stage}/status.json"
+    [ -f "${doc}" ] || continue
+    run=$(( run + 1 ))
+    [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] || failed=$(( failed + 1 ))
+  done
+  [ "${run}" -gt 0 ] || return 0
+  if [ "${failed}" -gt 0 ]; then state=failed; success=false; fi
+  cat >"${BACKUP_RUN_PATH}/status.json.tmp" <<JSON
+{
+  "run_id": "${BACKUP_RUN_ID}",
+  "state": "${state}",
+  "trigger": "${BACKUP_TRIGGER}",
+  "started_ts": "$(date --iso-8601=seconds -d @"${started}")",
+  "finished_ts": "$(date --iso-8601=seconds)",
+  "duration_s": $(( $(date +%s) - started )),
+  "success_bool": ${success},
+  "stages_run": ${run},
+  "stages_failed": ${failed}
+}
+JSON
+  mv "${BACKUP_RUN_PATH}/status.json.tmp" "${BACKUP_RUN_PATH}/status.json"
+}
+
+backup_running() {
+  local pid
+  while read -r pid; do
+    [ -n "${pid}" ] || continue
+    [ "${pid}" = "$$" ] && continue
+    return 0
+  done < <(pgrep -f "backup\.sh (primary|secondary|tertiary) (start|stop)" 2>/dev/null)
+  return 1
+}
+
+backup_await() {
+  local path="$1" stage doc deadline=0 sequence="${3:-}"
+  [ -n "${2:-}" ] && deadline=$(( $(date +%s) + $2 ))
   while :; do
-    sleep "${BACKUP_WATCH_POLL:-5}"
-    pgrep -f "backup\.sh (primary|secondary|tertiary) (start|stop)" >/dev/null 2>&1 && continue
+    sleep "${BACKUP_TAIL_POLL:-2}"
+    [ "${deadline}" -gt 0 ] && [ "$(date +%s)" -ge "${deadline}" ] && return 1
+    [ -n "${sequence}" ] && kill -0 "${sequence}" 2>/dev/null && continue
+    backup_running && continue
     for stage in primary secondary tertiary; do
       doc="${path}/stage/${stage}/status.json"
       [ -f "${doc}" ] || continue
-      state="$(backup_tail_field "${doc}" state)"
-      [ "${state}" = "running" ] && continue 2
+      [ "$(backup_tail_field "${doc}" state)" = "running" ] && continue 2
     done
-    break
+    return 0
   done
-  kill "${tail_pid}" 2>/dev/null
-  wait "${tail_pid}" 2>/dev/null
+}
+
+backup_status() {
+  local path="$1" stage doc state ok faults=0
   echo && echo "-- final status"
   for stage in primary secondary tertiary; do
     doc="${path}/stage/${stage}/status.json"
@@ -116,15 +195,15 @@ backup_tail() {
 }
 
 backup_tail_field() {
-  sed -n "s/.*\"${2}\": *\"\{0,1\}\([^\",]*\)\"\{0,1\},\{0,1\}$/\1/p" "${1}" | head -1
+  jq -r --arg field "${2}" '.[$field] // empty' "${1}" 2>/dev/null
 }
 
 if [ "${BACKUP_STAGE}" = "tail" ]; then
-  backup_tail
+  backup_tail "${BACKUP_PHASE}"
   exit $?
 fi
 
-mkdir -p "${BACKUP_STAGE_DIR}"
+[ "${BACKUP_STAGE}" = "all" ] || mkdir -p "${BACKUP_STAGE_DIR}"
 
 BACKUP_ENV="${BACKUP_INSTALL_ROOT}/supervisor/latest/.env"
 # shellcheck disable=SC1090
@@ -171,6 +250,14 @@ backup_config() {
   printf '%s' "${value:-$2}"
 }
 
+backup_command() {
+  local topic="$1" payload="$2"
+  command -v mosquitto_pub >/dev/null 2>&1 || return 1
+  [ -n "${BROKER_HOST:-}" ] || return 1
+  mosquitto_pub -h "${BROKER_HOST}" -p "${BROKER_PORT:-1883}" \
+    ${BROKER_TOKEN:+-u supervisor -P "${BROKER_TOKEN}"} -q 1 -t "${topic}" -m "${payload}" 2>/dev/null
+}
+
 backup_publish() {
   local topic="$1" payload="$2"
   command -v mosquitto_pub >/dev/null 2>&1 || return 0
@@ -180,15 +267,17 @@ backup_publish() {
 }
 
 backup_mount() {
-  local target="$1"
+  local target="$1" error=""
   mountpoint -q "${target}" && return 0
   grep -qsE "^[^#][^[:space:]]*[[:space:]]+${target}[[:space:]]" /etc/fstab || {
     backup_log ERROR "mount of [${target}] refused, not mounted and not in /etc/fstab"
     return 1
   }
   backup_log INFO "mounting [${target}]"
-  mount "${target}" >/dev/null 2>&1 || ls "${target}" >/dev/null 2>&1 || true
-  mountpoint -q "${target}"
+  error="$(mount "${target}" 2>&1)" || ls "${target}" >/dev/null 2>&1 || true
+  mountpoint -q "${target}" && return 0
+  backup_log ERROR "mount of [${target}] failed with [${error:-no reason reported}]"
+  return 1
 }
 
 backup_local() {
@@ -463,7 +552,7 @@ secondary_start() {
     adopted="$(backup_adopted)"
     if [ -n "${adopted}" ]; then
       BACKUP_SERVICE_PATH="$(dirname "${BACKUP_RUN_PATH}")/${adopted}/stage/primary/service"
-      backup_log WARN "run [${BACKUP_RUN_ID}] ran no primary, adopting the service list of run [${adopted}] from [${BACKUP_SERVICE_PATH}]"
+      backup_log INFO "run [${BACKUP_RUN_ID}] ran no primary, adopting the service list of run [${adopted}] from [${BACKUP_SERVICE_PATH}]"
     else
       backup_log WARN "run [${BACKUP_RUN_ID}] ran no primary and no earlier run under [$(dirname "${BACKUP_RUN_PATH}")] recorded one"
     fi
@@ -491,6 +580,7 @@ secondary_start() {
     backup_log INFO "promoting [${service}] [${promoted}/${total}] from [${source}] to [${target}]"
     local started; started="$(date +%s)"
     backup_rsync -a --stats --human-readable --out-format='%t %o %f %l' \
+      --exclude '/.lock' --exclude '.rsync/' --exclude '.rsync-*' \
       --temp-dir="${target}/.rsync" -- "${source}" "${target}/" || failed=1
     backup_transferred "promoted" "${service}" "${started}"
     local prune="${BACKUP_INSTALL_ROOT}/${service}/latest/backup.sh"
@@ -523,7 +613,9 @@ backup_targets() {
 }
 
 backup_attach() {
-  local deadline=$(( $(date +%s) + BACKUP_DISK_SECONDS )) target device pending failed=0
+  local deadline=$(( $(date +%s) + BACKUP_DISK_SECONDS )) started target device pending failed=0
+  started="$(date +%s)"
+  backup_log INFO "waiting up to [${BACKUP_DISK_SECONDS}] s for [$(backup_targets | xargs)] to enumerate, polling every [${BACKUP_DISK_POLL}] s"
   while :; do
     pending=0
     while read -r target; do
@@ -539,11 +631,12 @@ backup_attach() {
     done < <(backup_targets)
     [ "${pending}" -eq 0 ] && break
     if [ "$(date +%s)" -ge "${deadline}" ]; then
-      backup_log ERROR "timed out after [${BACKUP_DISK_SECONDS}] s waiting for the backup disk to enumerate"
+      backup_log ERROR "timed out after [${BACKUP_DISK_SECONDS}] s waiting for the backup disk to enumerate, check the disk is powered"
       return 1
     fi
-    sleep 2
+    sleep "${BACKUP_DISK_POLL}"
   done
+  backup_log INFO "backup disk enumerated after [$(( $(date +%s) - started ))] s"
   while read -r target; do
     backup_mount "${target}" || failed=1
   done < <(backup_targets)
@@ -691,7 +784,13 @@ backup_scrub() {
 }
 
 tertiary_start() {
-  local share index target failed=0 fstab_target fstab_type
+  local share index target failed=0 fstab_target fstab_type command_topic
+  command_topic="$(backup_config '.asystem.backup.command_topic' '')"
+  if [ -n "${command_topic}" ]; then
+    backup_log INFO "powering the backup disk on with [ON] to [${command_topic}]"
+    backup_command "${command_topic}" "ON" ||
+      backup_log WARN "could not publish [ON] to [${command_topic}], the disk must already be powered"
+  fi
   if ! backup_attach; then
     backup_log ERROR "backup disk did not come up"
     return 1
@@ -715,7 +814,7 @@ tertiary_start() {
     backup_log INFO "mirroring [${share}] to [${target}]"
     local started; started="$(date +%s)"
     backup_rsync -a --delete --stats --human-readable --out-format='%t %o %f %l' \
-      --exclude '/tmp/' --exclude '/.rsync/' \
+      --exclude '/tmp/' --exclude '.rsync/' --exclude '.rsync-*' --exclude '/.lock' \
       --partial-dir="${target}/.rsync" -- "${share}/" "${target}/" || failed=1
     backup_transferred "mirrored" "${share}" "${started}"
   done < <(backup_mounted)
@@ -771,6 +870,7 @@ BACKUP_HEARTBEAT_REFRESH="${BACKUP_HEARTBEAT_REFRESH:-600}"
 BACKUP_HEARTBEAT_GRACE="${BACKUP_HEARTBEAT_GRACE:-3600}"
 BACKUP_HEARTBEAT_PID=""
 BACKUP_DISK_SECONDS="${BACKUP_DISK_SECONDS:-120}"
+BACKUP_DISK_POLL="${BACKUP_DISK_POLL:-1}"
 BACKUP_SCRUB_DAYS="${BACKUP_SCRUB_DAYS:-30}"
 BACKUP_SCRUB_MARGIN="${BACKUP_SCRUB_MARGIN:-900}"
 BACKUP_SCRUB_POLL="${BACKUP_SCRUB_POLL:-30}"
@@ -785,7 +885,13 @@ BACKUP_SIZE_HELD=0
 BACKUP_SENT=0
 BACKUP_RSYNC_OUTPUT=""
 
+if [ "${BACKUP_STAGE}" = "all" ]; then
+  backup_sequence
+  exit $?
+fi
+
 if [ "${BACKUP_PHASE}" = "stop" ]; then
+  exec 3>&1
   if [ -n "${BACKUP_RUN_ID_PASSED:-}" ] || [ -n "${BACKUP_QUIET:-}" ]; then
     exec >>"${BACKUP_LOG}" 2>&1
   else
@@ -794,15 +900,23 @@ if [ "${BACKUP_PHASE}" = "stop" ]; then
   backup_log INFO "stopping [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]"
   stage_stop || true
   backup_log INFO "stopped [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]"
+  if [ -z "${BACKUP_RUN_ID_PASSED:-}" ]; then
+    backup_await "${BACKUP_RUN_PATH}" "${BACKUP_STOP_SECONDS:-60}" ||
+      backup_log WARN "[${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}] is still running after [${BACKUP_STOP_SECONDS:-60}] s"
+    backup_status "${BACKUP_RUN_PATH}" >&3 || true
+  fi
   exit 0
 fi
 
 if [ -z "${BACKUP_DETACHED:-}" ] && [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && { [ -t 1 ] || [ "${BACKUP_TIMEOUT_HOURS}" = "0" ]; }; then
   export BACKUP_DETACHED=1
   nohup "$0" "${BACKUP_STAGE}" start "${BACKUP_RUN_ID}" >>"${BACKUP_LOG}" 2>&1 &
+  BACKUP_CHILD=$!
   disown
-  backup_log INFO "detached, following [${BACKUP_LOG}]"
-  exit 0
+  backup_log INFO "detached [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}], following [${BACKUP_LOG}]"
+  while kill -0 "${BACKUP_CHILD}" 2>/dev/null && [ ! -f "${BACKUP_STAGE_DIR}/status.json" ]; do sleep 1; done
+  backup_tail "${BACKUP_RUN_ID}"
+  exit $?
 fi
 if [ -z "${BACKUP_RUN_ID_PASSED:-}" ]; then
   if [ -n "${BACKUP_QUIET:-}" ] || [ -n "${BACKUP_DETACHED:-}" ]; then

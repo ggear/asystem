@@ -135,13 +135,13 @@ func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.tertiary.DiskUsagePerc), nil
 }
 
-func (p *backupProbe) serviceSuccess(service string) (bool, bool) {
+func (p *backupProbe) serviceSuccess(service string) (bool, bool, string) {
 	snapshot := p.documents()
 	if snapshot == nil || snapshot.age() > backupStaleWindow {
-		return false, false
+		return false, false, ""
 	}
 	success, found := snapshot.services[service]
-	return success, found
+	return success, found, snapshot.dir
 }
 
 func (p *backupProbe) reap(ctx context.Context) {
@@ -644,6 +644,7 @@ type backupDocument struct {
 type backupSnapshot struct {
 	dir      string
 	at       time.Time
+	staged   int
 	running  bool
 	host     *backupDocument
 	tertiary *backupDocument
@@ -673,19 +674,35 @@ func readNewestRun(root string) *backupSnapshot {
 		return nil
 	}
 	sort.Strings(runs)
-	dir := runs[len(runs)-1]
+	newest := readRun(root, runs[len(runs)-1])
+	running := newest.host == nil && newest.staged > 0 && newest.age() <= backupRunCeiling
+	snapshot := newest
+	for index := len(runs) - 2; snapshot.host == nil && index >= 0; index-- {
+		candidate := readRun(root, runs[index])
+		if candidate.age() > backupStaleWindow {
+			break
+		}
+		if candidate.host != nil {
+			snapshot = candidate
+		}
+	}
+	snapshot.running = running
+	return snapshot
+}
+
+func readRun(root, dir string) *backupSnapshot {
 	at, _ := time.ParseInLocation(backupRunStamp, dir, time.Local)
 	snapshot := &backupSnapshot{dir: dir, at: at, stages: map[string]*backupDocument{}, services: map[string]bool{}}
 	runPath := filepath.Join(root, dir)
 	snapshot.host = readStageDocument(filepath.Join(runPath, "status.json"))
 	staged, _ := filepath.Glob(filepath.Join(runPath, "stage", "*", "status.json"))
+	snapshot.staged = len(staged)
 	for _, path := range staged {
 		if document := readStageDocument(path); document != nil {
 			snapshot.stages[filepath.Base(filepath.Dir(path))] = document
 		}
 	}
 	snapshot.tertiary = snapshot.stages["tertiary"]
-	snapshot.running = snapshot.host == nil && len(staged) > 0 && snapshot.age() <= backupRunCeiling
 	documents, _ := filepath.Glob(filepath.Join(runPath, "stage", "primary", "service", "*", "status.json"))
 	for _, path := range documents {
 		if document := readStageDocument(path); document != nil {

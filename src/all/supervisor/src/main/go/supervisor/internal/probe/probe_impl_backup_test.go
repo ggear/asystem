@@ -51,6 +51,7 @@ func TestProbeImplBackup_FailedBackups(t *testing.T) {
 	fresh := time.Now().Format(backupRunStamp)
 	stale := time.Now().Add(-40 * time.Hour).Format(backupRunStamp)
 	abandoned := time.Now().Add(-6 * time.Hour).Format(backupRunStamp)
+	rolled := time.Now().Add(-7 * time.Hour).Format(backupRunStamp)
 	tests := []struct {
 		name          string
 		setup         func(root string)
@@ -77,6 +78,18 @@ func TestProbeImplBackup_FailedBackups(t *testing.T) {
 		{"failed secondary on edge host", func(root string) {
 			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 2, StagesFailed: 1}, nil, nil)
 		}, 50, false, false},
+		{"a hand stage newer than the last roll-up does not mask it", func(root string) {
+			writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupStage(t, root, abandoned, "secondary", backupDocument{State: "complete"})
+		}, 0, false, false},
+		{"a hand stage newer than a stale roll-up still reads fully failed", func(root string) {
+			writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupStage(t, root, abandoned, "secondary", backupDocument{State: "complete"})
+		}, 100, false, false},
+		{"a hand stage in flight is still inert over an older roll-up", func(root string) {
+			writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupStage(t, root, fresh, "secondary", backupDocument{State: "running"})
+		}, 0, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -158,11 +171,30 @@ func TestProbeImplBackup_ServiceSuccess(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.service, func(t *testing.T) {
-			value, found := p.serviceSuccess(tt.service)
+			value, found, run := p.serviceSuccess(tt.service)
 			if value != tt.wantValue || found != tt.wantFound {
 				t.Errorf("got (%v,%v) want (%v,%v)", value, found, tt.wantValue, tt.wantFound)
 			}
+			if run != fresh {
+				t.Errorf("run: got %q want %q", run, fresh)
+			}
 		})
+	}
+}
+
+func TestProbeImplBackup_ServiceSuccessSurvivesAHandRun(t *testing.T) {
+	root := t.TempDir()
+	rolled := time.Now().Add(-7 * time.Hour).Format(backupRunStamp)
+	handed := time.Now().Add(-6 * time.Hour).Format(backupRunStamp)
+	writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3}, nil, map[string]bool{"mariadb": true})
+	writeBackupStage(t, root, handed, "secondary", backupDocument{State: "complete"})
+	p := &backupProbe{root: root}
+	value, found, run := p.serviceSuccess("mariadb")
+	if !value || !found {
+		t.Errorf("mariadb: got (%v,%v) want (true,true)", value, found)
+	}
+	if run != rolled {
+		t.Errorf("run: got %q want %q", run, rolled)
 	}
 }
 
