@@ -24,6 +24,7 @@ VOLUMES_ACTION="apply"
 VOLUMES_FORCE="${VOLUMES_FORCE:-false}"
 VOLUMES_DISK=""
 VOLUMES_SERIAL=""
+VOLUMES_CAREFUL="!!!!!!BE CAREFUL THAT IS THE CORRECT DRIVE TO CLEAR!!!!!"
 VOLUMES_FAULTS=0
 VOLUMES_CHANGED=0
 
@@ -201,7 +202,9 @@ volumes_prepare() {
   disk="${candidates[0]}"
   serial="$(lsblk -drno SERIAL "${disk}" 2>/dev/null)"
   volumes_report "one unclaimed disk is attached, [${disk}] carries no declared label and nothing mounted"
+  echo
   lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${disk}"
+  echo
   if [ -z "${serial}" ]; then
     volumes_report "[${disk}] reports no serial, [--serial] is required to format and cannot be guessed"
     return 0
@@ -210,7 +213,7 @@ volumes_prepare() {
     volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --serial=${serial} --force"
     return 0
   fi
-  volumes_report "[${disk}] is not clean, it carries ${state}, clear it first, this destroys everything on it"
+  volumes_report "[${disk}] is not clean, it carries ${state}, destroy first"
   volumes_clearing "${disk}"
 }
 
@@ -304,17 +307,21 @@ volumes_disk_state() {
   if [ -z "${partitions}" ] && [ -z "${partlabels}" ] && [ -z "${fstypes}" ] && [ -z "${signatures}" ]; then
     return 0
   fi
-  printf 'partition(s) [%s] label(s) [%s] filesystem(s) [%s] signature(s) [%s]' \
-    "${partitions:-none}" "${partlabels:-none}" "${fstypes:-none}" "${signatures:-none}"
+  printf 'partition(s) [%s] with [%s]' "${partitions:-none}" "${fstypes:-none}"
   return 1
 }
 
 volumes_clearing() {
   local disk="$1"
-  volumes_command "wipefs -a ${disk}"
-  volumes_command "sgdisk -Z ${disk}"
-  volumes_command "partprobe ${disk}"
-  volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk}$(volumes_serial "${disk}") --force"
+  echo
+  volumes_report "${VOLUMES_CAREFUL}"
+  echo
+  echo "wipefs -a ${disk}"
+  echo "sgdisk -Z ${disk}"
+  echo "partprobe ${disk}"
+  echo "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk}$(volumes_serial "${disk}") --force"
+  echo
+  volumes_report "${VOLUMES_CAREFUL}"
 }
 
 volumes_disk_clean() {
