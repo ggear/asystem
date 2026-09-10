@@ -52,7 +52,7 @@ func newBackupProbe() *backupProbe {
 
 func (*backupProbe) subject() scribe.Subject { return scribe.SubjectHost("") }
 
-func (*backupProbe) dormant() bool { return false }
+func (*backupProbe) dormant() bool { return true }
 
 func (p *backupProbe) metrics() []metric.ID {
 	return []metric.ID{metric.MetricHostFailedBackupStages, metric.MetricHostUsedBackupSpace}
