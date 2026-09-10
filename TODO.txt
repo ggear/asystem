@@ -29,12 +29,12 @@ document how to update python deps in global CLAUDE.md and attempt to upgrade wh
 
 
 
-test supervisor release against plan complete backups, release supervisor with backup/switch enabled:
+test supervisor release against plan complete backups:
 mad
 max
 may
-
-
+check backups working on all servers
+release supervisor with backup/switch enabled
 test new watch logs, add/remove etc
 test primary
 test sedondary
