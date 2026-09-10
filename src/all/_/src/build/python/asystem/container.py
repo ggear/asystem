@@ -663,6 +663,52 @@ volumes_unmount() {
   return 0
 }
 
+volumes_candidates() {
+  local disk node label claimed declared
+  declared="$(while IFS=$'\t' read -r _ source _ _; do
+    case "${source}" in PARTLABEL=*) printf '%s\n' "${source#PARTLABEL=}" ;; esac
+  done < <(volumes_entries "${VOLUMES_SOURCE}") | sort -u)"
+  while read -r disk; do
+    [ -n "${disk}" ] || continue
+    node="/dev/${disk}"
+    [ "$(lsblk -rno MOUNTPOINT "${node}" 2>/dev/null | grep -c .)" -eq 0 ] || continue
+    [ -z "$(volumes_holders "${node}")" ] || continue
+    swapon --show=NAME --noheadings 2>/dev/null | grep -qx "${node}" && continue
+    claimed=no
+    while read -r label; do
+      [ -n "${label}" ] || continue
+      printf '%s\n' "${declared}" | grep -qx "${label}" && claimed=yes
+    done < <(lsblk -rno PARTLABEL "${node}" 2>/dev/null)
+    [ "${claimed}" = "no" ] || continue
+    printf '%s\n' "${node}"
+  done < <(lsblk -dno NAME,TYPE 2>/dev/null | awk '$2 == "disk" { print $1 }')
+}
+
+volumes_prepare() {
+  local candidates=() disk serial
+  while read -r disk; do
+    [ -n "${disk}" ] && candidates+=("${disk}")
+  done < <(volumes_candidates)
+  if [ "${#candidates[@]}" -eq 0 ]; then
+    volumes_report "no unclaimed disk is attached, power the backup disk on and run [check] again"
+    return 0
+  fi
+  if [ "${#candidates[@]}" -gt 1 ]; then
+    volumes_report "[${#candidates[@]}] unclaimed disks are attached, name the one to prepare, none is assumed"
+    lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${candidates[@]}"
+    return 0
+  fi
+  disk="${candidates[0]}"
+  serial="$(lsblk -drno SERIAL "${disk}" 2>/dev/null)"
+  volumes_report "one unclaimed disk is attached, [${disk}] carries no declared label and nothing mounted"
+  lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${disk}"
+  if [ -z "${serial}" ]; then
+    volumes_report "[${disk}] reports no serial, [--serial] is required to format and cannot be guessed"
+    return 0
+  fi
+  volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --serial=${serial} --force"
+}
+
 volumes_holders() {
   local node holders
   node="$(basename "$(readlink -f "${1}")")"
@@ -768,7 +814,7 @@ volumes_format_guard() {
     fi
     if [ ! -e "${device}" ]; then
       volumes_report "[${target}] device [${source}] is absent, powered down or not yet prepared"
-      volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=/dev/sdX --force"
+      volumes_prepare
       continue
     fi
     resolved="$(readlink -f "${device}")"
@@ -864,7 +910,8 @@ volumes_check() {
   device="$(volumes_device "${source}")"
   label="${source#PARTLABEL=}"
   if [ -z "${device}" ] || [ ! -e "${device}" ]; then
-    volumes_report "[${target}] label [${label}] is not present, run [volumes.sh format --disk=/dev/sdX --force] with the disk powered on"
+    volumes_report "[${target}] label [${label}] is not present, the disk is powered down or not yet prepared"
+    volumes_prepare
     return 0
   fi
   local actual
@@ -1003,7 +1050,7 @@ volumes_format() {
 
   if [ -z "${VOLUMES_DISK}" ]; then
     volumes_fault "[${label}] is absent and no [--disk] was given, power the disk on and name it from below"
-    lsblk -o NAME,SIZE,TYPE,PARTLABEL,FSTYPE,MOUNTPOINT,MODEL,SERIAL
+    volumes_prepare
     return 1
   fi
   if [ ! -b "${VOLUMES_DISK}" ]; then
