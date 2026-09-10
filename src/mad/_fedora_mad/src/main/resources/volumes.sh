@@ -24,6 +24,7 @@ VOLUMES_ACTION="apply"
 VOLUMES_FORCE="${VOLUMES_FORCE:-false}"
 VOLUMES_DISK=""
 VOLUMES_SERIAL=""
+VOLUMES_DISK_MINIMUM=17179869184
 VOLUMES_CAREFUL="!!!!!!BE CAREFUL THAT IS THE CORRECT DRIVE TO DESTROY!!!!!"
 VOLUMES_FAULTS=0
 VOLUMES_CHANGED=0
@@ -175,10 +176,11 @@ volumes_candidates() {
     [ "$(lsblk -rno MOUNTPOINT "${node}" 2>/dev/null | grep -c .)" -eq 0 ] || continue
     [ -z "$(volumes_holders "${node}")" ] || continue
     swapon --show=NAME --noheadings 2>/dev/null | grep -qx "${node}" && continue
+    [ "$(lsblk -dbno SIZE "${node}" 2>/dev/null || echo 0)" -ge "${VOLUMES_DISK_MINIMUM}" ] || continue
     claimed=no
     while read -r label; do
       [ -n "${label}" ] || continue
-      printf '%s\n' "${declared}" | grep -qx "${label}" && claimed=yes
+      printf '%s\n' "${declared}" | grep -Fqx "${label}" && claimed=yes
     done < <(lsblk -rno PARTLABEL "${node}" 2>/dev/null)
     [ "${claimed}" = "no" ] || continue
     printf '%s\n' "${node}"
@@ -213,7 +215,7 @@ volumes_prepare() {
     volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --serial=${serial} --force"
     return 0
   fi
-  volumes_report "[${disk}] is not clean, it carries ${state}, destroy first"
+  volumes_report "[${disk}] is not clean, it carries ${state}, destroy first."
   volumes_clearing "${disk}"
 }
 
@@ -294,7 +296,6 @@ volumes_disk_guard() {
     volumes_fault "[${label}] appeared under [/dev/disk/by-partlabel] while checking, refusing"
     return 1
   fi
-  volumes_disk_clean "${disk}" || return 1
   return 0
 }
 
@@ -311,15 +312,20 @@ volumes_disk_state() {
   return 1
 }
 
+volumes_guarded() {
+  # shellcheck disable=SC2016
+  printf '[ "$(hostname)" = "%s" ] && %s\n' "$(hostname)" "$*"
+}
+
 volumes_clearing() {
   local disk="$1"
   echo
   volumes_report "${VOLUMES_CAREFUL}"
   echo
-  echo "wipefs -a ${disk}"
-  echo "sgdisk -Z ${disk}"
-  echo "partprobe ${disk}"
-  echo "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk}$(volumes_serial "${disk}") --force"
+  volumes_guarded "wipefs -a ${disk}"
+  volumes_guarded "sgdisk -Z ${disk}"
+  volumes_guarded "partprobe ${disk}"
+  volumes_guarded "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk}$(volumes_serial "${disk}") --force"
   echo
   volumes_report "${VOLUMES_CAREFUL}"
 }
@@ -330,9 +336,38 @@ volumes_disk_clean() {
     volumes_report "[${disk}] is clean, no partition, label, filesystem or signature"
     return 0
   fi
-  volumes_fault "[${disk}] is not clean, it carries ${state}"
-  volumes_clearing "${disk}"
+  volumes_report "[${disk}] is not clean, it carries ${state}, destroy first."
   return 1
+}
+
+volumes_confirm() {
+  local disk="$1" answer
+  if [ ! -t 0 ]; then
+    volumes_fault "[${disk}] needs a terminal to confirm destroying it, run this by hand"
+    return 1
+  fi
+  echo
+  volumes_report "${VOLUMES_CAREFUL}"
+  echo
+  read -r -p "   Destroy [${disk}] on [$(hostname)] and everything on it, type Y to go on, anything else stops: " answer
+  echo
+  if [ "${answer}" != "Y" ]; then
+    volumes_report "[${disk}] left alone, nothing was destroyed"
+    return 1
+  fi
+  return 0
+}
+
+volumes_destroy() {
+  local disk="$1"
+  volumes_disk_clean "${disk}" && return 0
+  volumes_confirm "${disk}" || return 1
+  wipefs -a "${disk}" >/dev/null 2>&1 || { volumes_fault "could not wipe signatures from [${disk}]"; return 1; }
+  sgdisk -Z "${disk}" >/dev/null 2>&1 || { volumes_fault "could not clear the partition table on [${disk}]"; return 1; }
+  partprobe "${disk}" 2>/dev/null
+  udevadm settle 2>/dev/null
+  volumes_changed "destroyed every partition, label, filesystem and signature on [${disk}]"
+  return 0
 }
 
 volumes_format_guard() {
@@ -589,8 +624,9 @@ volumes_format() {
     volumes_fault "[${VOLUMES_DISK}] is not a block device"
     return 1
   fi
-  echo && echo "-- candidate disk" && lsblk -o NAME,SIZE,TYPE,PARTLABEL,FSTYPE,MOUNTPOINT,MODEL,SERIAL "${VOLUMES_DISK}"
+  echo && echo "-- candidate disk" && lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MOUNTPOINT,MODEL,SERIAL "${VOLUMES_DISK}"
   volumes_disk_guard "${VOLUMES_DISK}" "${label}" || return 1
+  volumes_destroy "${VOLUMES_DISK}" || return 1
   echo && echo "-- plan"
   volumes_report "create one GPT partition spanning the blank disk [${VOLUMES_DISK}] named [${label}]"
   volumes_report "make btrfs labelled [${label}] on it, [xxhash] checksums and [dup] metadata"

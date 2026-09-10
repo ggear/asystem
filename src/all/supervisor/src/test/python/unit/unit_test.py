@@ -270,7 +270,7 @@ class BackupShellTest(unittest.TestCase):
             'backup_progress "{}" 6528'.format(join(self.home, "supervisor/backup", run)))
         self.assertIn("scrubbed [   61] GB of [ 4170] GB", reported)
         self.assertIn("at [  1] percent complete", reported)
-        self.assertRegex(reported, r"\[\s*4[67]\] min remaining")
+        self.assertRegex(reported, r"estimated to complete in \[\s*4[67]\] min")
         self.assertIn("at [182] MB/s", reported)
 
     @NEEDS_GNU

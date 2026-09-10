@@ -528,7 +528,7 @@ backup_stopping() {
 
 backup_started() {
   local elapsed="$1" stage="$2"
-  backup_marker "${stage}" "${elapsed}" "starting, estimated to finish in [$(backup_pending "${stage}")] min"
+  backup_marker "${stage}" "${elapsed}" "starting and estimated to finish in [$(backup_pending "${stage}")] min"
 }
 
 
@@ -538,7 +538,7 @@ backup_finished() {
     status="$(backup_tail_field "${doc}" state)"
     pointer=", see [$(dirname "${doc}")/output.log]"
   fi
-  backup_marker "${stage}" "${elapsed}" "$(printf 'finished, status [%s], took [%s], files [%s], size [%s] MB, disk [%s] pct%s' \
+  backup_marker "${stage}" "${elapsed}" "$(printf 'finished with status [%s] in [%s] with files [%s], size [%s] MB and disk at [%s] pct%s' \
     "${status}" \
     "$(backup_elapsed "$(backup_tail_field "${doc}" duration_s)")" \
     "$(backup_tail_field "${doc}" file_count)" \
@@ -589,7 +589,7 @@ backup_progress() {
       [ "${until}" -lt 0 ] && until=0
       [ "${until}" -lt "${remaining}" ] && remaining="${until}"
     fi
-    backup_marker "${active}" "${elapsed}" "$(printf 'scrubbed [%5s] GB of [%5s] GB at [%3s] percent complete with approximately [%4s] min remaining at [%3s] MB/s' \
+    backup_marker "${active}" "${elapsed}" "$(printf 'scrubbed [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \
       "${copied}" "${total}" "${percent}" "${remaining}" "${rate}")"
     return 0
   fi
@@ -647,7 +647,7 @@ backup_progress() {
   backup_stalled "${active}" "${now}" "${copied}" "${used:-}"
   { [ "${copied}" = "0" ] || [ "${copied}" = "-" ]; } &&
     { [ "${total}" = "0" ] || [ "${total}" = "-" ]; } && return 0
-  backup_marker "${active:-none}" "${elapsed}" "$(printf '%s [%5s] GB of [%5s] GB at [%3s] percent complete with approximately [%4s] min remaining at [%3s] MB/s' \
+  backup_marker "${active:-none}" "${elapsed}" "$(printf '%s [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \
     "$(backup_verb "${active}")" "${copied}" "${total}" "${percent}" "${remaining}" "${rate}")"
 }
 
