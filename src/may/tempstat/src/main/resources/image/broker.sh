@@ -53,7 +53,7 @@ fi
 if [ "${SCHEMA_PHASE}" != "sweep" ]; then
 
 printf 'Entity Metadata publish script [tempstat] publishing discovery topics on [%s]:\n' "$BROKER_SERVICE"
-find "$ROOT_DIR" -path "*/homeassistant/*/tempstat/*/config/*" -name "*.json" -print0 | sort -z | while read -r -d $'\0' METADATA_FILE; do
+find "$ROOT_DIR" \( -path "*/homeassistant/*/tempstat/*/config/*" \) -name "*.json" -print0 | sort -z | while read -r -d $'\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${METADATA_FILE/$ROOT_DIR\//}")
   mosquitto_pub "${BROKER_ARGS[@]}" -t "$METADATA_TOPIC" -f "$METADATA_FILE" -r
   printf '%s\n' "$METADATA_TOPIC"

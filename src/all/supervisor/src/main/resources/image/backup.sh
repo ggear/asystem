@@ -85,14 +85,15 @@ backup_help() {
   {
     echo "Usage: ${0##*/} [command] [run-id] [options]"
     echo
-    echo "  start [run-id]  run this host's stages, minting a run id when given none"
-    echo "  stop  [run-id]  stop a run, or every active one"
-    echo "  tail  [run-id]  follow a run, or the newest"
-    echo "  list            every run, newest first, with its result"
-    echo "  help            this text                                        (default)"
+    echo "  start  [run-id]  run this host's stages, minting a run id when given none"
+    echo "  stop   [run-id]  stop a run, or every active one"
+    echo "  tail   [run-id]  follow a run, or the newest"
+    echo "  manual [on|off]  pause the disk reaper until the next scheduled run, off by default"
+    echo "  list             every run, newest first, with its result"
+    echo "  help             this text (default command)"
     echo
-    echo "  --scrub         scrub the backup disk, tertiary only"
-    echo "  --quiet         drop the stdout copy of the stage log"
+    echo "  --scrub          scrub the backup disk, tertiary only"
+    echo "  --quiet          drop the stdout copy of the stage log"
   } >&"${out}"
 }
 
@@ -118,7 +119,7 @@ fi
 BACKUP_REFUSED=""
 [ -n "${BACKUP_REJECT}" ] && BACKUP_REFUSED="unknown option [${BACKUP_REJECT}]"
 case "${BACKUP_COMMAND}" in
-start | stop | tail | list | help) ;;
+start | stop | tail | list | manual | help) ;;
 *) BACKUP_REFUSED="unknown command [${BACKUP_COMMAND}]" ;;
 esac
 case "${BACKUP_STAGE}" in
@@ -147,6 +148,7 @@ if [ -z "${BACKUP_SCRUB}" ]; then
 fi
 export BACKUP_SCRUB BACKUP_SCRUB_FORCED
 BACKUP_RUNNING_MATCH='"state": "running"'
+BACKUP_REAPER_TOPIC="supervisor/cluster-all/backup/reaper"
 BACKUP_BAR_WIDTH=18
 BACKUP_LIST_WIDTHS=(19 16 9 9 7 9 8 9 8 25 10)
 BACKUP_LIST_RUNS=()
@@ -265,6 +267,25 @@ backup_title() {
   local width=0 each
   for each in "${BACKUP_LIST_WIDTHS[@]}"; do width=$(( width + each + 3 )); done
   printf '|%-*s|\n' $(( width - 1 )) " $*"
+}
+
+backup_manual() {
+  local want="${1:-off}" payload
+  case "${want}" in
+  off | pause) payload=OFF ;;
+  on | arm) payload=ON ;;
+  *) echo "${0##*/}: manual takes [off] to pause the reaper or [on] to arm it, not [${want}]" >&2; return 2 ;;
+  esac
+  if ! backup_publish "${BACKUP_REAPER_TOPIC}" "${payload}"; then
+    backup_log ERROR "could not publish [${payload}] to [${BACKUP_REAPER_TOPIC}], is the broker reachable"
+    return 1
+  fi
+  if [ "${payload}" = "OFF" ]; then
+    backup_log INFO "reaper paused, the backup disk stays powered until the next scheduled run arms it"
+  else
+    backup_log INFO "reaper armed, the backup disk is powered down again when nothing needs it"
+  fi
+  return 0
 }
 
 backup_list() {
@@ -764,7 +785,7 @@ if [ "${BACKUP_COMMAND}" = "stop" ] && [ ! -d "${BACKUP_RUN_PATH}" ]; then
   echo "no backup run at [${BACKUP_RUN_PATH}], refusing to stop" >&2
   exit 2
 fi
-case "${BACKUP_COMMAND}/${BACKUP_STAGE}" in tail/* | list/* | */all) ;; *) mkdir -p "${BACKUP_STAGE_DIR}" ;; esac
+case "${BACKUP_COMMAND}/${BACKUP_STAGE}" in tail/* | list/* | manual/* | */all) ;; *) mkdir -p "${BACKUP_STAGE_DIR}" ;; esac
 
 BACKUP_ENV="${BACKUP_INSTALL_ROOT}/supervisor/latest/.env"
 # shellcheck disable=SC1090
@@ -1553,6 +1574,11 @@ BACKUP_RSYNC_OUTPUT=""
 
 # shellcheck disable=SC2317
 if [ -n "${BACKUP_SOURCE_ONLY:-}" ]; then return 0 2>/dev/null || exit 0; fi
+
+if [ "${BACKUP_COMMAND}" = "manual" ]; then
+  backup_manual "${BACKUP_RUN_GIVEN}"
+  exit $?
+fi
 
 if [ "${BACKUP_COMMAND}" = "list" ]; then
   backup_list

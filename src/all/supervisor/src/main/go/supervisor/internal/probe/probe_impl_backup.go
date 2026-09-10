@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -42,8 +41,8 @@ type backupProbe struct {
 	backupActive    atomic.Bool
 	reapRunning     sync.Mutex
 	reapIdle        int
+	reapPaused      bool
 	reapWatch       *brokerWatcher
-	reapDisabled    bool
 }
 
 func newBackupProbe() *backupProbe {
@@ -72,12 +71,6 @@ func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask 
 	p.failedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.haltedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedBackupSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
-	createStart := config.NowIncludingSuspend()
-	p.reapDisabled, _ = strconv.ParseBool(os.Getenv(backupReaperDisabledVar))
-	if p.reapDisabled {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("excluded", createStart,
-			"[%s] set, the backup disk is never powered down, stale runs are still reaped", backupReaperDisabledVar)
-	}
 	return nil
 }
 
@@ -178,6 +171,20 @@ func (p *backupProbe) serviceSuccess(service string) (bool, bool, string) {
 	return success, found, snapshot.dir
 }
 
+func (p *backupProbe) armReaper(started time.Time) {
+	client, err := brokerDial(p.configPath, "manual")
+	if err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], the reaper stays paused until it can be reached", err, clusterReaperTopic)
+		return
+	}
+	defer client.close()
+	if err := client.publishRetained(clusterReaperTopic, "ON"); err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], the reaper stays paused until it can be reached", err, clusterReaperTopic)
+		return
+	}
+	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] armed, the scheduled run turns the reaper back on", clusterReaperTopic)
+}
+
 func (p *backupProbe) reap(ctx context.Context) {
 	if !p.reapRunning.TryLock() {
 		return
@@ -186,7 +193,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 	if snapshot := readNewestRun(p.root); snapshot != nil {
 		p.reapLocalStale(ctx, snapshot)
 	}
-	if p.reapDisabled || !p.serverHost {
+	if !p.serverHost {
 		return
 	}
 	reapStart := config.NowIncludingSuspend()
@@ -199,7 +206,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	if p.reapWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, clusterLeaderTopic, "supervisor/+/backup/stage/tertiary/status")
+		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, clusterLeaderTopic, clusterReaperTopic, "supervisor/+/backup/stage/tertiary/status")
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the estate, retrying on the next tick", err)
 			return
@@ -208,6 +215,20 @@ func (p *backupProbe) reap(ctx context.Context) {
 	}
 	retained, watching := p.reapWatch.readRetained()
 	if !watching {
+		p.reapIdle = 0
+		return
+	}
+	if paused := strings.EqualFold(strings.TrimSpace(retained[clusterReaperTopic]), "off"); paused != p.reapPaused {
+		p.reapPaused = paused
+		if paused {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("excluded", reapStart,
+				"[%s] is off, the backup disk stays powered until the [%02d:00] run arms it", clusterReaperTopic, backupScheduledHour)
+		} else {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("restored", reapStart,
+				"[%s] is on, the backup disk is powered down again when nothing needs it", clusterReaperTopic)
+		}
+	}
+	if p.reapPaused {
 		p.reapIdle = 0
 		return
 	}
@@ -309,6 +330,7 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 	p.backupActive.Store(true)
 	defer p.backupActive.Store(false)
 	runStart := time.Now()
+	p.armReaper(runStart)
 	if err := os.MkdirAll(p.root, 0o755); err != nil {
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Errorf("faulting", runStart, "[%s] backup run root could not be created with [%v]", p.root, err)
 		return
@@ -777,20 +799,20 @@ func writeDocumentAtomic(path string, document backupDocument) {
 }
 
 const (
-	backupReaperDisabledVar = "SUPERVISOR_DISABLE_REAPER"
-	backupRunRoot           = "/home/asystem/supervisor/backup"
-	backupRunner            = "/asystem/etc/backup.sh"
-	backupRunStamp          = "2006-01-02_15-04-05"
-	backupRunCeiling        = 5 * time.Hour
-	backupStaleWindow       = 24*time.Hour + backupRunCeiling
-	backupStageKillGrace    = 2 * time.Minute
-	leaderPollInterval      = 30 * time.Second
-	leaderLeaseRefresh      = 15 * time.Minute
-	backupRunsKept          = 30
-	backupScheduledHour     = 1
-	reaperIdleTicks         = 2
+	backupRunRoot        = "/home/asystem/supervisor/backup"
+	backupRunner         = "/asystem/etc/backup.sh"
+	backupRunStamp       = "2006-01-02_15-04-05"
+	backupRunCeiling     = 5 * time.Hour
+	backupStaleWindow    = 24*time.Hour + backupRunCeiling
+	backupStageKillGrace = 2 * time.Minute
+	leaderPollInterval   = 30 * time.Second
+	leaderLeaseRefresh   = 15 * time.Minute
+	backupRunsKept       = 30
+	backupScheduledHour  = 1
+	reaperIdleTicks      = 2
 
 	clusterLeaderTopic = "supervisor/cluster-all/backup/leader"
+	clusterReaperTopic = "supervisor/cluster-all/backup/reaper"
 	clusterStatusTopic = "supervisor/cluster-all/backup/status"
 )
 

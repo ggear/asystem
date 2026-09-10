@@ -205,7 +205,10 @@ def publish_script(module_name, topic_glob_discovery, topic_glob_data, published
             "Build generate script [{}] declares entities but no topic_glob_data, so the sweep would drop every "
             "retained topic on the broker: declare the module's own data topics".format(module_name))
     glob_data_args = " ".join('-t "{}"'.format(one) for one in globs_data)
-    topic_find_discovery = ("*/" + topic_glob_discovery.replace("+", "*").replace("#", "*") + "/*" if topic_glob_discovery else "*")
+    globs_discovery = _glob_list(topic_glob_discovery)
+    glob_discovery_args = " ".join('-t "{}"'.format(one) for one in globs_discovery) or '-t "#"'
+    find_discovery_args = " -o ".join(
+        '-path "*/{}/*"'.format(one.replace("+", "*").replace("#", "*")) for one in globs_discovery) or '-path "*"'
     header = """
 #!/usr/bin/env bash
 {banner}
@@ -232,12 +235,12 @@ BROKER_ARGS=(-h "$BROKER_SERVICE" -p "$BROKER_PORT")
 if [ "${{SCHEMA_PHASE}}" != "publish" ]; then
 
 printf '\\nEntity Metadata publish script [{module}] dropping discovery topics on [%s]:\\n' "$BROKER_SERVICE"
-mosquitto_sub "${{BROKER_ARGS[@]}}" -F '%t' -t "{glob_discovery}" -W 5 2>/dev/null | sort -u | \\
+mosquitto_sub "${{BROKER_ARGS[@]}}" -F '%t' {glob_discovery} -W 5 2>/dev/null | sort -u | \\
   while read -r TOPIC; do
     printf '%s\\n' "$TOPIC"
     mosquitto_pub "${{BROKER_ARGS[@]}}" -t "$TOPIC" -r -n
   done
-mosquitto_sub "${{BROKER_ARGS[@]}}" --remove-retained -F '%t' -t "{glob_discovery}" -W 5 2>/dev/null
+mosquitto_sub "${{BROKER_ARGS[@]}}" --remove-retained -F '%t' {glob_discovery} -W 5 2>/dev/null
 
 printf '\\nEntity Metadata publish script [{module}] sleeping before dropping data topics ... ' && sleep 2 && printf 'done\\n\\n'
 
@@ -251,7 +254,7 @@ fi
 if [ "${{SCHEMA_PHASE}}" != "sweep" ]; then
 
 printf 'Entity Metadata publish script [{module}] publishing discovery topics on [%s]:\\n' "$BROKER_SERVICE"
-find "$ROOT_DIR" -path "{find_discovery}" -name "*.json" -print0 | sort -z | while read -r -d $'\\0' METADATA_FILE; do
+find "$ROOT_DIR" \\( {find_discovery} \\) -name "*.json" -print0 | sort -z | while read -r -d $'\\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${{METADATA_FILE/$ROOT_DIR\\//}}")
   mosquitto_pub "${{BROKER_ARGS[@]}}" -t "$METADATA_TOPIC" -f "$METADATA_FILE" -r
   printf '%s\\n' "$METADATA_TOPIC"
@@ -261,9 +264,9 @@ printf '\\n'
 fi
 """.format(
         module=module_name,
-        glob_discovery=topic_glob_discovery,
+        glob_discovery=glob_discovery_args,
         glob_data=glob_data_args,
-        find_discovery=topic_find_discovery,
+        find_discovery=find_discovery_args,
     ) if published else ""
     return "\n\n".join(part for part in (header.strip(), publish.strip(), recovery) if part) + "\n"
 

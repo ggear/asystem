@@ -116,9 +116,22 @@ class BackupShellTest(unittest.TestCase):
         done = self.invoke("help")
         self.assertEqual(done.returncode, 0)
         self.assertEqual(done.stderr, "")
-        for command in ("start", "stop", "tail", "list", "help"):
+        for command in ("start", "stop", "tail", "list", "manual", "help"):
             self.assertIn("  {}".format(command), done.stdout)
         self.assertIn("minting a run id when given none", done.stdout)
+
+    def test_manual_publishes_the_reaper_switch_both_ways(self):
+        probe = ('backup_publish() { printf "%s %s\\n" "$1" "$2"; }\n'
+                 'backup_log() { :; }\n'
+                 'backup_manual {}')
+        self.assertEqual(self.shell(probe.replace("{}", "")), "supervisor/cluster-all/backup/reaper OFF")
+        self.assertEqual(self.shell(probe.replace("{}", "off")), "supervisor/cluster-all/backup/reaper OFF")
+        self.assertEqual(self.shell(probe.replace("{}", "on")), "supervisor/cluster-all/backup/reaper ON")
+
+    def test_manual_refuses_a_word_it_does_not_know(self):
+        done = self.invoke("manual", "sideways")
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("manual takes [off] to pause the reaper or [on] to arm it, not [sideways]", done.stderr)
 
     def test_command_is_first_and_defaults_to_help_rather_than_a_run(self):
         self.assertEqual(self.parse(), "help all - 0 0")

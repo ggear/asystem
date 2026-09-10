@@ -99,6 +99,7 @@ func Topics() []schema.Topic {
 		"supervisor/$HOST/backup/stage/primary/service/$BACKUP_SERVICE/status",
 		"supervisor/$SCRUB_HOST/backup/stage/tertiary/scrub/status",
 		"supervisor/cluster-all/backup/leader",
+		"supervisor/cluster-all/backup/reaper",
 		"supervisor/cluster-all/backup/status",
 	} {
 		topics = append(topics, schema.Topic{Template: template, Role: schema.RoleState})
