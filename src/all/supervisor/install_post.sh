@@ -22,12 +22,14 @@ ${SERVICE_INSTALL}/supervisor watch -m remote "\$@"
 
 EOF
 chmod +x /usr/local/bin/atops
-chmod +x "${SERVICE_INSTALL}/image/backup.sh"
-rm -f /usr/local/bin/abackup
-cat >/usr/local/bin/abackup <<EOF
+if [[ "${SERVICE_FORM_FACTOR:-}" == "client" ]]; then
+  chmod +x "${SERVICE_INSTALL}/image/backup.sh"
+  rm -f /usr/local/bin/abackup
+  cat >/usr/local/bin/abackup <<EOF
 #!/bin/bash
 
 ${SERVICE_INSTALL}/image/backup.sh "\$@"
 
 EOF
-chmod +x /usr/local/bin/abackup
+  chmod +x /usr/local/bin/abackup
+fi
