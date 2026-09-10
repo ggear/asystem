@@ -156,8 +156,8 @@ export BACKUP_SCRUB BACKUP_SCRUB_FORCED
 BACKUP_RUNNING_MATCH='"state": "running"'
 BACKUP_REAPER_TOPIC="supervisor/cluster-all/backup/reaper"
 BACKUP_BAR_WIDTH=18
-BACKUP_RATE_WINDOW="${BACKUP_RATE_WINDOW:-60}"
-BACKUP_RATE_SETTLE="${BACKUP_RATE_SETTLE:-30}"
+BACKUP_RATE_WINDOW="${BACKUP_RATE_WINDOW:-300}"
+BACKUP_RATE_SETTLE="${BACKUP_RATE_SETTLE:-120}"
 BACKUP_LIST_WIDTHS=(19 16 9 9 7 9 8 9 10 25 10)
 BACKUP_LIST_RUNS=()
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
@@ -719,28 +719,29 @@ backup_sampled() {
 }
 
 backup_mirroring() {
-  local path="$1" record="${2:-}" doc began spent transferred raw used sum copied total percent remaining rate windowed
+  local path="$1" record="${2:-}" doc began transferred raw used sum copied total percent remaining rate windowed
   doc="${path}/stage/tertiary/status.json"
   raw="$(backup_used /backup)"
   began="$(cat "${path}/stage/tertiary/disk-start" 2>/dev/null)"
-  spent="$(backup_tail_field "${doc}" duration_s)"
   transferred=$(( $(backup_tail_field "${doc}" size_mb || echo 0) * 1048576 ))
   sum=$(( $(backup_tail_field "${doc}" total_mb || echo 0) * 1048576 ))
   used=$(( raw - ${began:-0} ))
   [ "${used}" -lt "${transferred}" ] && used="${transferred}"
   [ "${used}" -lt 0 ] && used=0
   [ "${sum}" -lt "${used}" ] && sum="${used}"
-  rate="${BACKUP_RATE_MB:-150}"
-  [ "${spent:-0}" -gt 0 ] 2>/dev/null && [ "${used}" -gt 0 ] && rate=$(( used / 1048576 / spent ))
-  windowed="$(backup_sampled "${path}/stage/tertiary" "${raw}" "${record}")" && rate="${windowed}"
-  [ "${rate}" -gt 0 ] || rate=1
+  rate="-"
+  remaining="-"
+  windowed="$(backup_sampled "${path}/stage/tertiary" "${raw}" "${record}")" &&
+    [ "${windowed:-0}" -gt 0 ] 2>/dev/null && rate="${windowed}"
   copied=$(( used / 1073741824 ))
   total=$(( sum / 1073741824 ))
   percent="-"
   [ "${sum}" -gt 0 ] && percent=$(( used * 100 / sum ))
   [ "${percent}" = "-" ] || [ "${percent}" -le 100 ] || percent=100
-  remaining=$(( (sum - used) / 1048576 / rate / 60 ))
-  [ "${remaining}" -lt 0 ] && remaining=0
+  if [ "${rate}" != "-" ]; then
+    remaining=$(( (sum - used) / 1048576 / rate / 60 ))
+    [ "${remaining}" -lt 0 ] && remaining=0
+  fi
   printf '%s\t%s\t%s\t%s\t%s\t%s' "${copied}" "${total}" "${percent}" "${remaining}" "${rate}" "${used}"
 }
 

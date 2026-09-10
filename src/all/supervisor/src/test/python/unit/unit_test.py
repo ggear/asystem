@@ -531,43 +531,41 @@ class BackupShellTest(unittest.TestCase):
                                     'BACKUP_SIZE=34\nbackup_counted; echo "${BACKUP_SIZE}"'), "34")
 
     @NEEDS_GNU
-    def test_mirroring_rates_the_run_by_its_own_average(self):
-        run = "2026-09-08_00-00-00"
-        path = join(self.home, "supervisor/backup", run)
-        self.document(run, "tertiary", state="running", size_mb=0, total_mb=900 * 1024, duration_s=6733)
-        with open(join(path, "stage/tertiary/disk-start"), "w") as handle:
-            handle.write(str(2242 * 1073741824))
-        fields = self.shell('backup_used() {{ echo $(( 3094 * 1073741824 )); }}\n'
-                            'backup_mirroring "{}" | tr "\\t" " "'.format(path))
+    def test_mirroring_withholds_the_rate_and_estimate_until_the_window_answers(self):
+        raw, path = self.ramp()
+        fields = self.shell('backup_used() {{ echo {}; }}\n'
+                            'backup_mirroring "{}" | tr "\\t" " "'.format(raw, path))
         copied, total, percent, remaining, rate, _ = fields.split()
         self.assertEqual(copied, "852")
-        self.assertEqual(rate, "129")
-        self.assertEqual(remaining, str((900 - 852) * 1024 // 129 // 60))
+        self.assertEqual(total, "900")
+        self.assertEqual(percent, "94")
+        self.assertEqual(rate, "-")
+        self.assertEqual(remaining, "-")
 
     @NEEDS_GNU
-    def test_mirroring_prefers_a_windowed_rate_over_the_run_average(self):
+    def test_mirroring_rates_the_span_the_window_covers(self):
         raw, path = self.ramp()
         stage = join(path, "stage/tertiary")
         now = int(time.time())
         with open(join(stage, "samples"), "w") as handle:
-            handle.write("{} {}\n".format(now - 60, raw - 200 * 60 * 1048576))
+            handle.write("{} {}\n".format(now - 300, raw - 200 * 300 * 1048576))
             handle.write("{} {}\n".format(now - 10, raw - 200 * 10 * 1048576))
-        self.assertEqual(self.rated(raw, path), "200")
+        self.assertAlmostEqual(int(self.rated(raw, path)), 200, delta=3)
 
     @NEEDS_GNU
-    def test_mirroring_falls_back_to_the_average_until_the_window_settles(self):
+    def test_mirroring_withholds_the_rate_below_the_settle_span(self):
         raw, path = self.ramp()
         stage = join(path, "stage/tertiary")
         with open(join(stage, "samples"), "w") as handle:
-            handle.write("{} {}\n".format(int(time.time()) - 10, raw - 200 * 10 * 1048576))
-        self.assertEqual(self.rated(raw, path), "129")
+            handle.write("{} {}\n".format(int(time.time()) - 60, raw - 200 * 60 * 1048576))
+        self.assertEqual(self.rated(raw, path), "-")
 
     @NEEDS_GNU
     def test_mirroring_ignores_a_truncated_sample_rather_than_rating_the_whole_disk(self):
         raw, path = self.ramp()
         with open(join(path, "stage/tertiary/samples"), "w") as handle:
-            handle.write("{}\n".format(int(time.time()) - 60))
-        self.assertEqual(self.rated(raw, path), "129")
+            handle.write("{}\n".format(int(time.time()) - 300))
+        self.assertEqual(self.rated(raw, path), "-")
 
     @NEEDS_GNU
     def test_mirroring_records_a_sample_and_forgets_what_falls_out_of_the_window(self):
@@ -575,11 +573,13 @@ class BackupShellTest(unittest.TestCase):
         samples = join(path, "stage/tertiary/samples")
         now = int(time.time())
         with open(samples, "w") as handle:
-            handle.write("{} 1\n{} {}\n".format(now - 600, now - 30, raw - 200 * 30 * 1048576))
-        self.assertEqual(self.rated(raw, path, record="record"), "200")
+            handle.write("{} 1\n{} {}\n".format(now - 900, now - 200, raw - 200 * 200 * 1048576))
+        self.assertAlmostEqual(int(self.rated(raw, path, record="record")), 200, delta=3)
         with open(samples) as handle:
             kept = [line.split()[0] for line in handle if line.strip()]
-        self.assertEqual(kept, [str(now - 30), str(now)])
+        self.assertEqual(len(kept), 2)
+        self.assertEqual(kept[0], str(now - 200))
+        self.assertGreaterEqual(int(kept[1]), now)
 
     def ramp(self):
         run = "2026-09-08_00-00-00"
