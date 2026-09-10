@@ -852,7 +852,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if connected := db.Load(); lineBytes > 0 && connected != nil {
 			connected.write(ctx, batch.protocol.Bytes())
 		}
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Infof("gathered", pulseStart, "[%3d] metrics, sent [%5d] b, kept [%5d] b, [%s]",
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Infof("gathered", pulseStart, "[%3d] metrics, sent [%5d] bytes, kept [%5d] bytes, [%s]",
 			collected, txBytes, lineBytes, publishLabel)
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
