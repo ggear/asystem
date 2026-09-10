@@ -156,6 +156,8 @@ export BACKUP_SCRUB BACKUP_SCRUB_FORCED
 BACKUP_RUNNING_MATCH='"state": "running"'
 BACKUP_REAPER_TOPIC="supervisor/cluster-all/backup/reaper"
 BACKUP_BAR_WIDTH=18
+BACKUP_RATE_WINDOW="${BACKUP_RATE_WINDOW:-60}"
+BACKUP_RATE_SETTLE="${BACKUP_RATE_SETTLE:-30}"
 BACKUP_LIST_WIDTHS=(19 16 9 9 7 9 8 9 10 25 10)
 BACKUP_LIST_RUNS=()
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
@@ -694,20 +696,43 @@ backup_scrubbing() {
     "${copied}" "${total}" "${percent}" "${remaining}" "${rate}"
 }
 
+backup_sampled() {
+  local dir="$1" raw="$2" record="$3" file now stamp bytes kept="" span delta
+  file="${dir}/samples"
+  now="$(date +%s)"
+  if [ -n "${record}" ]; then
+    printf '%s %s\n' "${now}" "${raw}" >>"${file}"
+    while read -r stamp bytes; do
+      [ "${stamp:-0}" -ge $(( now - BACKUP_RATE_WINDOW )) ] 2>/dev/null &&
+        kept="${kept}${stamp} ${bytes}"$'\n'
+    done <"${file}"
+    printf '%s' "${kept}" >"${file}"
+  fi
+  [ -s "${file}" ] || return 1
+  read -r stamp bytes <"${file}" || return 1
+  [ "${stamp:-x}" -gt 0 ] 2>/dev/null && [ "${bytes:-x}" -ge 0 ] 2>/dev/null || return 1
+  span=$(( now - stamp ))
+  delta=$(( raw - bytes ))
+  [ "${span}" -ge "${BACKUP_RATE_SETTLE}" ] 2>/dev/null || return 1
+  [ "${delta}" -gt 0 ] || return 1
+  printf '%s' $(( delta / 1048576 / span ))
+}
+
 backup_mirroring() {
-  local path="$1" doc began spent transferred used sum copied total percent remaining rate
+  local path="$1" record="${2:-}" doc began spent transferred raw used sum copied total percent remaining rate windowed
   doc="${path}/stage/tertiary/status.json"
-  used="$(backup_used /backup)"
+  raw="$(backup_used /backup)"
   began="$(cat "${path}/stage/tertiary/disk-start" 2>/dev/null)"
   spent="$(backup_tail_field "${doc}" duration_s)"
   transferred=$(( $(backup_tail_field "${doc}" size_mb || echo 0) * 1048576 ))
   sum=$(( $(backup_tail_field "${doc}" total_mb || echo 0) * 1048576 ))
-  used=$(( used - ${began:-0} ))
+  used=$(( raw - ${began:-0} ))
   [ "${used}" -lt "${transferred}" ] && used="${transferred}"
   [ "${used}" -lt 0 ] && used=0
   [ "${sum}" -lt "${used}" ] && sum="${used}"
   rate="${BACKUP_RATE_MB:-150}"
   [ "${spent:-0}" -gt 0 ] 2>/dev/null && [ "${used}" -gt 0 ] && rate=$(( used / 1048576 / spent ))
+  windowed="$(backup_sampled "${path}/stage/tertiary" "${raw}" "${record}")" && rate="${windowed}"
   [ "${rate}" -gt 0 ] || rate=1
   copied=$(( used / 1073741824 ))
   total=$(( sum / 1073741824 ))
@@ -738,7 +763,7 @@ backup_promoting() {
 }
 
 backup_progress() {
-  local path="$1" forced="${2:-}" active now scrub copied total percent remaining rate used
+  local path="$1" forced="${2:-}" record="${3:-}" active now scrub copied total percent remaining rate used
   active="$(backup_active_stage "${path}" "${forced}")"
   now="$(date +%s)"
   scrub="${path}/stage/${active}/scrub.json"
@@ -748,7 +773,7 @@ backup_progress() {
   fi
   if [ "${active}" = "tertiary" ] && mountpoint -q /backup 2>/dev/null &&
     [ -f "${path}/stage/tertiary/disk-start" ]; then
-    IFS=$'\t' read -r copied total percent remaining rate used < <(backup_mirroring "${path}")
+    IFS=$'\t' read -r copied total percent remaining rate used < <(backup_mirroring "${path}" "${record}")
   else
     IFS=$'\t' read -r copied total percent remaining rate used < <(backup_promoting "${path}/stage/${active}/status.json")
   fi
@@ -1112,7 +1137,7 @@ backup_heartbeat() {
       return 0
     fi
     backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))" quiet
-    backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}"
+    backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}" record
     [ "${now}" -ge "${due}" ] || continue
     due=$(( now + BACKUP_HEARTBEAT_REFRESH ))
     backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))"
@@ -1521,6 +1546,7 @@ tertiary_start() {
   done < <(backup_shares)
   stat -c %d /backup >"${BACKUP_STAGE_DIR}/disk-device" 2>/dev/null
   backup_used /backup >"${BACKUP_STAGE_DIR}/disk-start"
+  rm -f "${BACKUP_STAGE_DIR}/samples"
   backup_estimate "$(backup_expected)" "mirror"
   while read -r share; do
     index="${share#/share/}"
