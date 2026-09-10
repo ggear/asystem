@@ -228,22 +228,43 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell('backup_result "{}/tertiary/status.json"'.format(base)), "running")
         self.assertEqual(self.shell('backup_result "{}/absent/status.json"'.format(base)), "-")
 
+    def test_result_tells_stopped_and_timeout_from_a_genuine_failure(self):
+        for state in ("stopped", "timeout", "failed"):
+            document = self.document("2026-09-08_00-00-0{}".format(len(state)), "tertiary",
+                                     state=state, success_bool=False)
+            self.assertEqual(self.shell('backup_result "{}"'.format(document)), state)
+
+    def test_interrupted_records_why_the_stage_ended(self):
+        probe = ('BACKUP_STAGE_DIR="${BACKUP_HOME_ROOT}"; BACKUP_STARTED=0\n'
+                 'stage_stop() { :; }\nbackup_settle() { :; }\nbackup_log() { :; }\n'
+                 'backup_document() { printf "%s" "$1"; exit 0; }\n'
+                 '{}\nbackup_interrupted')
+        self.assertEqual(self.shell(probe.replace("{}", ":")), "failed")
+        self.assertEqual(self.shell(probe.replace("{}", ': >"${BACKUP_HOME_ROOT}/.stopped"')), "stopped")
+        self.assertEqual(self.shell(probe.replace("{}", ': >"${BACKUP_HOME_ROOT}/.timeout"')), "timeout")
+
+    def test_gigabytes_is_the_one_unit_the_table_shows(self):
+        for megabytes, expected in ((0, "-"), (17, "0 GB"), (1024, "1 GB"), (994000, "970 GB"), (1048576, "1024 GB")):
+            self.assertEqual(self.shell("backup_gigabytes {}".format(megabytes)), expected)
+
     @NEEDS_GNU
-    def test_list_rolls_the_stages_up_into_one_result_per_run(self):
+    def test_list_draws_one_aligned_row_per_run(self):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
         for stage in ("primary", "secondary", "tertiary"):
             self.document("2026-09-08_00-00-00", stage, state="complete", success_bool=True,
-                          trigger="scheduled", finished_ts="2026-09-08T00:10:00+08:00")
+                          trigger="scheduled", file_count=7, size_mb=2048, disk_usage_perc=61,
+                          finished_ts="2026-09-08T00:10:00+08:00")
         self.document("2026-09-08_01-00-00", "primary", state="complete", success_bool=True, trigger="manual")
-        self.document("2026-09-08_01-00-00", "tertiary", state="failed", success_bool=False, trigger="manual")
+        self.document("2026-09-08_01-00-00", "tertiary", state="stopped", success_bool=False, trigger="manual")
         os.makedirs(join(self.home, "supervisor/backup", "2026-09-08_02-00-00"), exist_ok=True)
-        listed = self.shell("backup_list")
-        rows = {line.split()[0]: line.split()[1:] for line in listed.splitlines() if line.startswith("2026-")}
-        self.assertEqual(rows["2026-09-08_00-00-00"][-1], "complete")
-        self.assertEqual(rows["2026-09-08_00-00-00"][3], "scheduled")
-        self.assertEqual(rows["2026-09-08_01-00-00"][-1], "failed")
-        self.assertEqual(rows["2026-09-08_02-00-00"][-1], "-")
-        self.assertNotIn("Listed", listed)
+        listed = self.shell('backup_running() { return 1; }\nbackup_list')
+        widths = {len(line) for line in listed.splitlines() if line}
+        self.assertEqual(len(widths), 1, "every row must be the same width, got {}".format(sorted(widths)))
+        self.assertIn("| RUN-ID ", listed)
+        self.assertIn("3 backup runs under", listed)
+        self.assertRegex(listed, r"2026-09-08_02-00-00 .*\|\s+-\s+\|")
+        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*success .*61%.*complete")
+        self.assertRegex(listed, r"2026-09-08_01-00-00 .*success .*-  .*stopped .*incomplete")
 
     @NEEDS_GNU
     def test_scrub_document_records_the_cancel_deadline(self):

@@ -147,6 +147,8 @@ if [ -z "${BACKUP_SCRUB}" ]; then
 fi
 export BACKUP_SCRUB BACKUP_SCRUB_FORCED
 BACKUP_RUNNING_MATCH='"state": "running"'
+BACKUP_LIST_WIDTHS=(19 16 9 9 7 9 8 9 8 6 10)
+BACKUP_LIST_RUNS=()
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
 BACKUP_HOME_ROOT="${BACKUP_HOME_ROOT:-/home/asystem}"
 if [ -z "${BACKUP_RUN_GIVEN}" ] && [ -z "${BACKUP_RUN_ID:-}" ] && [ "${BACKUP_COMMAND}" = "stop" ]; then
@@ -218,26 +220,70 @@ backup_result() {
   [ -f "${doc}" ] || { printf '%s' "-"; return 0; }
   state="$(backup_tail_field "${doc}" state)"
   [ "${state}" = "running" ] && { printf '%s' "running"; return 0; }
+  case "${state}" in stopped | timeout) printf '%s' "${state}"; return 0 ;; esac
   [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] && { printf '%s' "success"; return 0; }
   printf '%s' "${state:-unknown}"
 }
 
+backup_gigabytes() {
+  local megabytes="${1:-0}"
+  [ "${megabytes}" -gt 0 ] 2>/dev/null || { printf '%s' "-"; return 0; }
+  printf '%s GB' $(( megabytes / 1024 ))
+}
+
+backup_rule() {
+  local joined="$1" width out="" first=1
+  for width in "${BACKUP_LIST_WIDTHS[@]}"; do
+    [ "${first}" -eq 1 ] || out="${out}${joined}"
+    first=0
+    out="${out}$(printf '%*s' $(( width + 2 )) '' | tr ' ' '-')"
+  done
+  printf '+%s+\n' "${out}"
+}
+
+backup_row() {
+  local index=0 out="" value
+  for value in "$@"; do
+    out="${out}$(printf ' %-*s ' "${BACKUP_LIST_WIDTHS[index]}" "${value}")|"
+    index=$(( index + 1 ))
+  done
+  printf '|%s\n' "${out}"
+}
+
+backup_title() {
+  local width=0 each
+  for each in "${BACKUP_LIST_WIDTHS[@]}"; do width=$(( width + each + 3 )); done
+  printf '|%-*s|\n' $(( width - 1 )) " $*"
+}
+
 backup_list() {
   local base run path stage state doc live cells result began elapsed trigger runs=0 latest ended
+  local files size volume held
   base="$(dirname "${BACKUP_RUN_PATH}")"
-  echo && echo "Backup runs under [${base}]" && echo
-  printf '%-21s %-16s %-10s %-10s %-10s%-10s%-10s%s\n' \
-    RUN-ID STARTED ELAPSED TRIGGER PRIMARY SECONDARY TERTIARY RESULT
-  while read -r run; do
-    [ -n "${run}" ] || continue
+  mapfile -t BACKUP_LIST_RUNS < <(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r)
+  echo
+  if [ "${#BACKUP_LIST_RUNS[@]}" -eq 0 ]; then
+    echo "No backup runs under [${base}]" >&2
+    echo
+    return 1
+  fi
+  backup_rule "-"
+  backup_title "${#BACKUP_LIST_RUNS[@]} backup runs under ${base}"
+  backup_rule "+"
+  backup_row RUN-ID STARTED ELAPSED TRIGGER PRIMARY SECONDARY TERTIARY FILES SIZE VOLUME RESULT
+  backup_rule "+"
+  for run in "${BACKUP_LIST_RUNS[@]}"; do
     runs=$(( runs + 1 ))
     path="${base}/${run}"
     began="$(backup_epoch "${run}")"
     live=0
     backup_running "${run}" && live=1
-    cells=""
+    cells=()
     result="-"
     trigger=""
+    files=0
+    size=0
+    volume="-"
     for stage in primary secondary tertiary; do
       doc="${path}/stage/${stage}/status.json"
       state="$(backup_result "${doc}")"
@@ -246,9 +292,16 @@ backup_list() {
       -) ;;
       running) result="running" ;;
       success) [ "${result}" = "-" ] && result="complete" ;;
-      *) [ "${result}" = "running" ] || result="failed" ;;
+      *) [ "${result}" = "running" ] || result="incomplete" ;;
       esac
-      cells="${cells}$(printf '%-10s' "${state}")"
+      if [ -f "${doc}" ]; then
+        held="$(backup_tail_field "${doc}" file_count)"
+        files=$(( files + ${held:-0} ))
+        held="$(backup_tail_field "${doc}" size_mb)"
+        size=$(( size + ${held:-0} ))
+        [ "${stage}" = "tertiary" ] && volume="$(backup_tail_field "${doc}" disk_usage_perc)"
+      fi
+      cells+=("${state}")
     done
     [ "${live}" -eq 1 ] && result="running"
     if [ "${result}" = "running" ]; then
@@ -264,12 +317,14 @@ backup_list() {
       elapsed="-"
       [ "${latest}" -gt "${began}" ] && elapsed="$(backup_elapsed $(( latest - began )))"
     fi
-    printf '%-21s %-16s %-10s %-10s %s%s\n' \
-      "${run}" "$(date -d @"${began}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "-")" \
-      "${elapsed}" "${trigger:--}" "${cells}" "${result}"
-  done < <(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r)
+    [ "${volume}" = "-" ] || volume="${volume}%"
+    backup_row "${run}" "$(date -d @"${began}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "-")" \
+      "${elapsed}" "${trigger:--}" "${cells[@]}" \
+      "$(printf '%9s' "$([ "${files}" -gt 0 ] && printf '%s' "${files}" || printf '%s' "-")")" \
+      "$(printf '%8s' "$(backup_gigabytes "${size}")")" "$(printf '%6s' "${volume}")" "${result}"
+  done
+  backup_rule "+"
   echo
-  [ "${runs}" -gt 0 ] || { echo "No backup runs found" >&2; return 1; }
   return 0
 }
 
@@ -951,6 +1006,18 @@ JSON
   backup_publish "supervisor/${BACKUP_HOST}/backup/stage/${BACKUP_STAGE}/status" "$(cat "${BACKUP_STAGE_DIR}/status.json")"
 }
 
+# shellcheck disable=SC2329
+backup_interrupted() {
+  local state=failed
+  [ -f "${BACKUP_STAGE_DIR}/.stopped" ] && state=stopped
+  [ -f "${BACKUP_STAGE_DIR}/.timeout" ] && state=timeout
+  backup_log WARN "interrupted, [${state}] this stage"
+  stage_stop || true
+  backup_settle
+  backup_document "${state}" false "${BACKUP_STARTED}"
+  exit 143
+}
+
 backup_settle() {
   [ -n "${BACKUP_HEARTBEAT_PID}" ] || return 0
   kill "${BACKUP_HEARTBEAT_PID}" 2>/dev/null
@@ -972,7 +1039,8 @@ backup_heartbeat() {
     kill -0 "${BACKUP_MAIN_PID}" 2>/dev/null || return 0
     if [ "${hard}" -gt 0 ] && [ "${now}" -ge "${hard}" ]; then
       backup_document "running" false "${BACKUP_STARTED}" "$(( now - 1 ))"
-      backup_log ERROR "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, terminating this stage"
+      backup_log WARN "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, stopping this stage, the next run resumes it"
+      : >"${BACKUP_STAGE_DIR}/.timeout"
       stage_stop || true
       kill -TERM "${BACKUP_MAIN_PID}" 2>/dev/null
       return 0
@@ -1490,6 +1558,7 @@ if [ "${BACKUP_COMMAND}" = "stop" ]; then
     else
       backup_stopping "stopping run [${BACKUP_RUN_ID}]"
     fi
+    : >"${BACKUP_STAGE_DIR}/.stopped"
     pkill -TERM -f "backup\.sh start ${BACKUP_RUN_ID} --stage ${BACKUP_STAGE}" 2>/dev/null &&
       backup_stopping "signalled the runner to clean up and exit"
     stage_stop || true
@@ -1531,7 +1600,7 @@ fi
 
 BACKUP_MAIN_PID=$$
 BACKUP_STARTED="$(date +%s)"
-trap 'backup_log WARN "interrupted, stopping this stage"; stage_stop || true; backup_settle; backup_document "failed" false "${BACKUP_STARTED}"; exit 143' TERM INT
+trap 'backup_interrupted' TERM INT
 [ -n "${BACKUP_RUN_GIVEN}" ] || [ -n "${BACKUP_RUN_ID_PASSED:-}" ] ||
   backup_log WARN "started as its own run [${BACKUP_RUN_ID}], pass a run id to join the stages of one run"
 backup_started "$(( $(date +%s) - $(backup_epoch "${BACKUP_RUN_ID}") ))" "${BACKUP_STAGE}"
