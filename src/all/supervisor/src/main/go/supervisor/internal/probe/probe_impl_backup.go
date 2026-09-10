@@ -50,8 +50,7 @@ func newBackupProbe() *backupProbe {
 
 func (*backupProbe) subject() scribe.Subject { return scribe.SubjectHost("") }
 
-// TODO: Return false to arm the backup driver, dormant so the estate can be released with it
-func (*backupProbe) dormant() bool { return true }
+func (*backupProbe) dormant() bool { return false }
 
 func (p *backupProbe) metrics() []metric.ID {
 	return []metric.ID{metric.MetricHostFailedBackupStages, metric.MetricHostUsedBackupSpace}
@@ -231,7 +230,7 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 		}
 		staleStart := config.NowIncludingSuspend()
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] still running with liveness expired at [%s], stopping it", stage, snapshot.dir, document.ExpiresTS)
-		stop := exec.CommandContext(context.WithoutCancel(ctx), "bash", p.runner, stage, "stop", snapshot.dir)
+		stop := exec.CommandContext(context.WithoutCancel(ctx), "bash", p.runner, "stop", snapshot.dir, "--stage", stage)
 		stop.Env = append(os.Environ(), "BACKUP_RUN_ID="+snapshot.dir, "BACKUP_RUN_PATH="+runPath, "BACKUP_RUN_ID_PASSED=1")
 		_ = stop.Run()
 		stale := *document
@@ -391,7 +390,7 @@ func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string
 		stageCtx, cancel = context.WithTimeout(ctx, time.Duration(hours)*time.Hour)
 		defer cancel()
 	}
-	command := exec.CommandContext(stageCtx, "bash", p.runner, stage, "start", runID)
+	command := exec.CommandContext(stageCtx, "bash", p.runner, "start", runID, "--stage", stage)
 	command.Env = append(os.Environ(), "BACKUP_RUN_ID="+runID, "BACKUP_RUN_PATH="+runPath, "BACKUP_RUN_ID_PASSED=1")
 	command.Cancel = func() error { return command.Process.Signal(syscall.SIGTERM) }
 	command.WaitDelay = backupStageKillGrace

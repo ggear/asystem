@@ -29,7 +29,6 @@ document how to update python deps in global CLAUDE.md and attempt to upgrade wh
 
 
 
-do the backup dir move to home. make the backup scripts executable. add logging to the backup scripts that tee logs to stdout and file logs, show progress in stdout/file firendly way, and be verbose
 test supervisor release against plan
 test new watch logs, add/remove etc
 test primary
@@ -59,7 +58,6 @@ add restore.sh and test
 
 
 
-Collect months worth of logs from Sep 7, make reconcile decision and close out PLAN_WATCH.md, deleting it
 display_terminal.go: hide tcell namespace completely - tcell.Event?
 how to deal with vernemq redploy and run all mqtt publish, also make install.sh start not run broker, and others. 
 doesnt seem worth it? is it possible to have postgress/influxdb3/vernemq discover their schemas and then have verify.sh diff with the agrgegate of the modules to check missing and extra elements in the schema without too much code? worthwhile?
@@ -71,7 +69,7 @@ improve sys tests with datbase/broker asserts
 simplify CLAUDE.md globals and all nested on these chnages
 Move _/volumes into storage?
 Define process by which schema can be updated, what is additive and safe, what is destructive, how to migrate old to new so histpory is not lost etc
-
+have a global abackup.sh or asys-backup.sh link from /usr/bin or whereever like media, convert them to amedia-* and atop* to be the same
 
 
 

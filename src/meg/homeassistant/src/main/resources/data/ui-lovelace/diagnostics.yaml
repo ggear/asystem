@@ -27,14 +27,27 @@
       name: Domain
       icon: mdi:archive-search-outline
 ################################################################################
+- type: custom:layout-break
+################################################################################
 - type: entities
-  title: Device Maintenance
+  title: Host Status
   show_header_toggle: false
   entities:
-    - entity: button.google_assistant_synchronize_devices
-      name: Google Device Syncronise
-################################################################################
-- type: custom:layout-break
+    - entity: switch.host_mad
+      name: Host
+      icon: mdi:heart-pulse
+    - entity: switch.host_max
+      name: Host
+      icon: mdi:heart-pulse
+    - entity: switch.host_may
+      name: Host
+      icon: mdi:heart-pulse
+    - entity: switch.host_meg
+      name: Host
+      icon: mdi:heart-pulse
+    - entity: switch.host_jen
+      name: Host
+      icon: mdi:heart-pulse
 ################################################################################
 - type: entities
   title: Service Status
@@ -227,4 +240,11 @@
     - entity: switch.ceiling_network_switch_plug
       name: Ceiling Network Devices
       icon: mdi:server-network
+################################################################################
+- type: entities
+  title: Device Maintenance
+  show_header_toggle: false
+  entities:
+    - entity: button.google_assistant_synchronize_devices
+      name: Google Device Syncronise
 ################################################################################

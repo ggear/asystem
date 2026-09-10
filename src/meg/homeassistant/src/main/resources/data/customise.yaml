@@ -582,8 +582,21 @@ switch.network_certificate:
 switch.network_domain:
   friendly_name: 'Domain'
   icon: 'mdi:archive-search-outline'
-button.google_assistant_synchronize_devices:
-  friendly_name: 'Google Device Syncronise'
+switch.host_mad:
+  friendly_name: 'Host'
+  icon: 'mdi:heart-pulse'
+switch.host_max:
+  friendly_name: 'Host'
+  icon: 'mdi:heart-pulse'
+switch.host_may:
+  friendly_name: 'Host'
+  icon: 'mdi:heart-pulse'
+switch.host_meg:
+  friendly_name: 'Host'
+  icon: 'mdi:heart-pulse'
+switch.host_jen:
+  friendly_name: 'Host'
+  icon: 'mdi:heart-pulse'
 switch.service_network:
   friendly_name: 'Network'
   icon: 'mdi:heart-pulse'
@@ -878,6 +891,8 @@ input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces:
 input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
   friendly_name: 'Wardrobe Main'
   icon: 'mdi:lightbulb-group'
+button.google_assistant_synchronize_devices:
+  friendly_name: 'Google Device Syncronise'
 media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:

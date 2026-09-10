@@ -162,7 +162,7 @@ Three hazards, all silent:
 ```bash
 logs | grep -c 'reclaims'                    # every firing, including the reaped-nothing ones
 logs | grep 'reclaims' | grep -v '\[  0\]'   # firings that actually reaped
-logs | grep -c 'purge disabled'              # soundness: zero means logs were purged under you
+logs | grep 'removals' | grep 'purged'       # soundness: each line is a window a restart deleted
 ```
 
 **Log retention was the binding constraint, not log content.** `watch` at DEBUG writes ~16.5 MB/day and
@@ -173,9 +173,14 @@ compresses ~26x, so a full watch window is ~20 MB. **Keep the reference watch at
 actual reap logs at INFO, so at INFO the two readings that matter (*never scheduled* versus *scheduled,
 reaped nothing*) are indistinguishable, and they are opposite verdicts.
 
-For a long collection, disable `logFilePurge` in `scribe.go` — a release restarts `serve` under a new
-pid and the purge would delete the evidence each time — or harvest between releases, which needs no
-code change. It is on today.
+For a long collection, **harvest between releases** — that is the only route now, and it needs no code
+change. The purge deletes every `*.log`/`*.log.gz` in the directory but keeps everything belonging to a
+live pid, so a running `serve` or `watch` retains its own file and its own rotated archives; what a
+release costs you is the previous process's window, because the restart runs under a new pid. There was
+a `logFilePurge` var in `scribe.go` that short-circuited `purgeLogFiles` for exactly this, and it and
+its test hook are **gone** — do not go looking for it. If a future collection needs one again, reinstate
+it as a `var` rather than a `const` so the purge test can still flip it and the code cannot rot
+untested, which is why it was shaped that way the first time.
 
 ---
 

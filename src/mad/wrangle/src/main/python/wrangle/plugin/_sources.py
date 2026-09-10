@@ -660,7 +660,7 @@ class SourcesMixin(ContractMixin):
                 return DownloadResult(DownloadStatus.CACHED, file_path)
         file_path = unversioned_path if drive_version is None else abspath(f"{self.local_cache}/_sheet_{name}_v{drive_version}.csv")
         gc = gspread.Client(auth=credentials)
-        gc.timeout = TIMEOUT_NETWORK_SECONDS
+        gc.set_timeout(TIMEOUT_NETWORK_SECONDS)
         retries = 0
         caught_exception = None
 
@@ -737,7 +737,7 @@ class SourcesMixin(ContractMixin):
             if drive_key is not None and not config.disable_sheet_uploads:
                 credentials = self._sheets_credentials()
                 gc = gspread.Client(auth=credentials)
-                gc.timeout = TIMEOUT_NETWORK_SECONDS
+                gc.set_timeout(TIMEOUT_NETWORK_SECONDS)
                 for sheet_upload_attempt in range(3):
                     try:
                         spreadsheet = gc.open_by_key(drive_key)
@@ -747,7 +747,7 @@ class SourcesMixin(ContractMixin):
                             time.sleep(10 * (sheet_upload_attempt + 1))
                             credentials = self._sheets_credentials()
                             gc = gspread.Client(auth=credentials)
-                            gc.timeout = TIMEOUT_NETWORK_SECONDS
+                            gc.set_timeout(TIMEOUT_NETWORK_SECONDS)
                         else:
                             raise
                 try:

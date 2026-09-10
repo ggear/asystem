@@ -1,11 +1,11 @@
 aenum==3.1.17
 pyyaml==6.0.3
-pandas==2.3.3
-polars==1.44.1
-pyarrow==21.0.0
+pandas==3.0.5
+polars==1.44.2
+pyarrow==25.0.1
 requests==2.34.2
-plexapi==4.17.0
-gspread==5.12.4
-gspread-pandas==3.3.0
+plexapi==4.18.2
+gspread==6.2.1
+gspread-pandas==4.2.1
 ffmpeg-python==0.2.0
 subtitle-filter==1.5.1

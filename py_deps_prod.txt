@@ -10,71 +10,72 @@ ruff==0.16.6
 pytest==9.1.1
 dotenv==0.9.9
 varsubst==2.0.0
-packaging==24.2
-pyright==1.1.411
+packaging==26.3
+pyright==1.1.413
 requests==2.34.2
 setuptools==84.0.0
 pathlib2==2.3.7.post1
 
 # Date/time
-datetime==5.5
+datetime==6.0
 pytz==2026.3.post1
 python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.0.20260807
 
 # Numeric/scientific
-numpy==2.4.5
+numpy==2.5.3
 aenum==3.1.17
-scipy==1.17.1
-scikit-learn==1.8.0
+scipy==1.18.1
+scikit-learn==1.9.0
 sortedcontainers==2.4.0
 
 # Data serialisation
 pyyaml==6.0.3
 jinja2==3.1.6
-pandas==2.3.3
+pandas==3.0.5
 openpyxl==3.1.5
-polars==1.44.1
+polars==1.44.2
 orjson==3.12.0
-pyarrow==21.0.0
+pyarrow==25.0.1
 tabulate==0.10.0
 jproperties==2.1.2
-python-calamine==0.7.0
+python-calamine==0.8.2
 
 # Machine learning/visualisation
-notebook==7.5.6
-pdftotext==2.2.2
-jupyterlab==4.5.9
-matplotlib==3.10.9
+notebook==7.6.2
+pdftotext==4.0.0
+jupyterlab==4.6.3
+matplotlib==3.11.1
 matplotlib-inline==0.2.2
-anyio==4.14.2
+anyio==4.15.1
+# NOTES: HELD, not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
 fastapi==0.115.14
-virtualenv==20.27.1
+virtualenv==21.7.9
 mlflow==$MLFLOW_VERSION
 
 # Storage/databases
-dropbox==12.0.2
-gspread==5.12.4
-gspread-pandas==3.3.0
-psycopg[binary]==3.3.4
-psycopg2-binary==2.9.10
-influxdb3-python==0.20.0
+dropbox==12.2.1
+gspread==6.2.1
+gspread-pandas==4.2.1
+psycopg[binary]==3.3.5
+psycopg2-binary==2.9.13
+influxdb3-python==0.21.0
 adbc-driver-postgresql==1.12.0
 
 # External services
 docker==7.2.0
-plexapi==4.17.0
+plexapi==4.18.2
 yfinance==1.7.0
 dnspython==2.8.0
-paho-mqtt==1.6.1
+paho-mqtt==2.1.0
 pydigitemp==1.4.1
-osxphotos==0.67.10
+osxphotos==0.76.1
 python-kasa==0.10.2
 speedtest-cli==2.1.3
 ffmpeg-python==0.2.0
 subtitle-filter==1.5.1
-decode-config==13.3.0.0
-google-auth==2.56.3
-google-auth-httplib2==0.4.1
-google-auth-oauthlib==1.4.0
-google-api-python-client==2.199.0
+decode-config==15.6.0.0
+google-auth==2.58.0
+google-auth-httplib2==0.4.2
+google-auth-oauthlib==1.4.1
+google-api-python-client==2.200.0

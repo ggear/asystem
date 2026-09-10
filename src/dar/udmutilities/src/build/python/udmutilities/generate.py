@@ -75,7 +75,7 @@ if __name__ == "__main__":
         metadata_dhcp_vlan_df = metadata_dhcp_df[(metadata_dhcp_df["connection_vlan"] == vlan)]
         metadata_dhcp_vlan_df = metadata_dhcp_vlan_df.set_index(
             metadata_dhcp_vlan_df["connection_ip"].str.split(".").str[3].apply(lambda x: '{0:0>3}'.format(x))
-        ).sort_index()
+        ).sort_index(kind="stable")
         metadata_dhcp_dicts = [row.dropna().to_dict() for index, row in metadata_dhcp_vlan_df.iterrows()]
         dnsmasq_conf_path = join(dnsmasq_conf_root_path, "{}-{}-custom.conf".format(DNSMASQ_CONF_PREFIX, vlan))
         metadata_dhcp_dnsmasq[dnsmasq_conf_path] = []
