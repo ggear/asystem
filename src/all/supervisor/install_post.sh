@@ -22,7 +22,7 @@ ${SERVICE_INSTALL}/supervisor watch -m remote "\$@"
 
 EOF
 chmod +x /usr/local/bin/atops
-if [[ "${SERVICE_FORM_FACTOR:-}" == "client" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
+if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   chmod +x "${SERVICE_INSTALL}/image/backup.sh"
   rm -f /usr/local/bin/abackup
   cat >/usr/local/bin/abackup <<EOF
