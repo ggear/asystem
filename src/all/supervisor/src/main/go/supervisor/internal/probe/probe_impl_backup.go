@@ -32,6 +32,7 @@ type backupProbe struct {
 	runner     string
 
 	failedBackupStagesInt *stats.IntStats
+	haltedBackupStagesInt *stats.IntStats
 	usedBackupSpaceInt    *stats.IntStats
 
 	snapshotMu      sync.Mutex
@@ -55,7 +56,7 @@ func (*backupProbe) subject() scribe.Subject { return scribe.SubjectHost("") }
 func (*backupProbe) dormant() bool { return true }
 
 func (p *backupProbe) metrics() []metric.ID {
-	return []metric.ID{metric.MetricHostFailedBackupStages, metric.MetricHostUsedBackupSpace}
+	return []metric.ID{metric.MetricHostHaltedBackupStages, metric.MetricHostFailedBackupStages, metric.MetricHostUsedBackupSpace}
 }
 
 func (p *backupProbe) gates() []metric.GateID { return nil }
@@ -69,6 +70,7 @@ func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask 
 	p.hostName = loaded.Host()
 	_, p.serverHost = loaded.HostIndex(p.hostName)
 	p.failedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+	p.haltedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedBackupSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	createStart := config.NowIncludingSuspend()
 	p.reapDisabled, _ = strconv.ParseBool(os.Getenv(backupReaperDisabledVar))
@@ -87,6 +89,15 @@ func (p *backupProbe) hasMetric(id metric.ID) bool {
 
 func (p *backupProbe) poll(ctx context.Context, isPulse bool) error {
 	runCacheMetricTasks(p, isPulse, nil, []cacheMetricTask{
+		newCacheMetricTask(
+			metric.ValueInt,
+			metric.MetricHostHaltedBackupStages,
+			metric.ServiceNameUnset,
+			p.haltedBackupStages,
+			p.haltedBackupStagesInt,
+			func() int8 { return p.haltedBackupStagesInt.PulseMax() },
+			func() int8 { return p.haltedBackupStagesInt.TrendMax() },
+		),
 		newCacheMetricTask(
 			metric.ValueInt,
 			metric.MetricHostFailedBackupStages,
@@ -123,6 +134,22 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	value := percentValue(float64(snapshot.host.StagesFailed) / float64(run) * 100.0)
 	return value, derivedf(scribe.ActionCompute, "computed [%d] pct failed, run [%s] aged [%s] reported [%d] of [%d] stages failed",
 		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.host.StagesFailed, run), nil
+}
+
+func (p *backupProbe) haltedBackupStages() (int8, derivation, error) {
+	snapshot := p.documents()
+	if snapshot != nil && snapshot.running {
+		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, run [%s] started [%s] ago has not written its roll-up yet so the metric is inert and always ok",
+			snapshot.dir, snapshot.age().Round(time.Minute)), nil
+	}
+	if snapshot == nil || snapshot.host == nil || snapshot.age() > backupStaleWindow {
+		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, no run directory under [%s] holds a status document inside the [%s] window so the metric is inert and always ok",
+			p.root, backupStaleWindow), nil
+	}
+	run := max(snapshot.host.StagesRun, 1)
+	value := percentValue(float64(snapshot.host.StagesHalted) / float64(run) * 100.0)
+	return value, derivedf(scribe.ActionCompute, "computed [%d] pct halted, run [%s] aged [%s] reported [%d] of [%d] stages halted by a stop or a timeout",
+		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.host.StagesHalted, run), nil
 }
 
 func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
@@ -647,6 +674,7 @@ type backupDocument struct {
 	SentMB        int     `json:"sent_mb,omitempty"`
 	StagesRun     int     `json:"stages_run,omitempty"`
 	StagesFailed  int     `json:"stages_failed,omitempty"`
+	StagesHalted  int     `json:"stages_halted,omitempty"`
 }
 
 type backupSnapshot struct {

@@ -24,8 +24,8 @@
 #   field failed_log_messages_trend % 6s [kernel errors in the trend window against a 10 message budget, smoothed across the trend window]
 #   field failed_shares % 6s [declared shares failing to mount or report, against those declared]
 #   field failed_shares_trend % 6s [declared shares failing to mount or report, against those declared, smoothed across the trend window]
-#   field failed_backup_stages % 6s [backup stages failing to complete against the stages this host runs]
-#   field failed_backup_stages_trend % 6s [backup stages failing to complete against the stages this host runs, smoothed across the trend window]
+#   field failed_backup_stages % 6s [backup stages failing outright against the stages this host runs]
+#   field failed_backup_stages_trend % 6s [backup stages failing outright against the stages this host runs, smoothed across the trend window]
 #   field warn_temperature % 6s [hottest processor temperature against its warning ceiling, zero at 40 and full at 60 degrees]
 #   field warn_temperature_trend % 6s [hottest processor temperature against its warning ceiling, zero at 40 and full at 60 degrees, smoothed across the trend window]
 #   field spin_fan_speed % 6s [fastest fan speed against its rated maximum]
@@ -51,6 +51,8 @@
 #   field services_max_memory MiB 6s [memory ceilings summed across the configured services] (not persisted)
 #   field failed_drives % 6s [drives reporting new errors since discovery, against those in scope]
 #   field failed_drives_trend % 6s [drives reporting new errors since discovery, against those in scope, smoothed across the trend window]
+#   field halted_backup_stages % 6s [backup stages halted by a stop or a timeout against the stages this host runs]
+#   field halted_backup_stages_trend % 6s [backup stages halted by a stop or a timeout against the stages this host runs, smoothed across the trend window]
 
 supervisor,
   module=supervisor,
@@ -90,5 +92,7 @@ supervisor,
     temperature=<float>,
     temperature_trend=<float>,
     failed_drives=<int>,
-    failed_drives_trend=<int>
+    failed_drives_trend=<int>,
+    halted_backup_stages=<int>,
+    halted_backup_stages_trend=<int>
   <timestamp>

@@ -1108,7 +1108,8 @@ func TestScribe_ClipsSubjectToColumn(t *testing.T) {
 		{name: "happy_short_subject_is_untouched", subject: "host/used_memory", expectedSubject: "host/used_memory", expectedError: false},
 		{name: "happy_long_subject_keeps_its_underscored_token", subject: "supervisor/macmini-mad/data/service/plex/backup_status", expectedSubject: "~status", expectedError: false},
 		{name: "happy_long_subject_keeps_its_hyphenated_token", subject: "supervisor/data/host/raspberrypi-jen", expectedSubject: "~jen", expectedError: false},
-		{name: "happy_long_subject_without_a_token_keeps_its_tail", subject: "supervisorsupervisorsupervisor/temperature", expectedSubject: "~orsupervisor/temperature", expectedError: false},
+		{name: "happy_long_subject_without_a_token_keeps_its_tail", subject: "supervisorsupervisorsupervisor/temperature",
+			expectedSubject: clipMarker + "supervisorsupervisorsupervisor/temperature"[len("supervisorsupervisorsupervisor/temperature")-spanSubject.ideal+len(clipMarker):], expectedError: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {

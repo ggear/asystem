@@ -200,6 +200,45 @@ func TestProbeImplBackup_ServiceSuccessSurvivesAHandRun(t *testing.T) {
 	}
 }
 
+func TestProbeImplBackup_HaltedBackupStages(t *testing.T) {
+	fresh := time.Now().Format(backupRunStamp)
+	tests := []struct {
+		name          string
+		setup         func(root string)
+		wantValue     int8
+		wantInert     bool
+		expectedError bool
+	}{
+		{"no runs is inert rather than a fault", func(string) {}, 0, true, false},
+		{"a clean run reads zero", func(root string) {
+			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
+		}, 0, false, false},
+		{"one stage halted of three", func(root string) {
+			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3, StagesHalted: 1}, nil, nil)
+		}, 33, false, false},
+		{"every stage halted", func(root string) {
+			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3, StagesHalted: 3}, nil, nil)
+		}, 100, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			tt.setup(root)
+			probe := &backupProbe{root: root}
+			value, derived, err := probe.haltedBackupStages()
+			if (err != nil) != tt.expectedError {
+				t.Fatalf("err: got %v want error %v", err, tt.expectedError)
+			}
+			if value != tt.wantValue {
+				t.Errorf("value: got %d want %d", value, tt.wantValue)
+			}
+			if derived.inert != tt.wantInert {
+				t.Errorf("inert: got %v want %v", derived.inert, tt.wantInert)
+			}
+		})
+	}
+}
+
 func TestProbeImplBackup_ReaperDisabledByEnv(t *testing.T) {
 	for _, tt := range []struct {
 		name     string

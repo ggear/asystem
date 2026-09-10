@@ -147,7 +147,8 @@ if [ -z "${BACKUP_SCRUB}" ]; then
 fi
 export BACKUP_SCRUB BACKUP_SCRUB_FORCED
 BACKUP_RUNNING_MATCH='"state": "running"'
-BACKUP_LIST_WIDTHS=(19 16 9 9 7 9 8 9 8 6 10)
+BACKUP_BAR_WIDTH=18
+BACKUP_LIST_WIDTHS=(19 16 9 9 7 9 8 9 8 25 10)
 BACKUP_LIST_RUNS=()
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
 BACKUP_HOME_ROOT="${BACKUP_HOME_ROOT:-/home/asystem}"
@@ -208,11 +209,10 @@ backup_tail() {
   while [ -n "${sequence}" ] && [ ! -d "${path}" ] && kill -0 "${sequence}" 2>/dev/null; do sleep 1; done
   [ -d "${path}" ] || { echo "No backup run at [${path}]" >&2; return 1; }
   echo && echo "Backup tail [${run}] under [${path}]" && echo
-  local began; began="$(date +%s)"
   trap 'backup_interrupt' INT
   backup_await "${path}" "" "${sequence}"
   trap - INT
-  backup_status "${path}" "$(( $(date +%s) - began ))"
+  backup_status "${path}"
 }
 
 backup_result() {
@@ -223,6 +223,17 @@ backup_result() {
   case "${state}" in stopped | timeout) printf '%s' "${state}"; return 0 ;; esac
   [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] && { printf '%s' "success"; return 0; }
   printf '%s' "${state:-unknown}"
+}
+
+backup_bar() {
+  local percent="${1:-}" filled
+  case "${percent}" in '' | *[!0-9]*) printf '%s' "-"; return 0 ;; esac
+  [ "${percent}" -le 100 ] || percent=100
+  filled=$(( percent * BACKUP_BAR_WIDTH / 100 ))
+  printf '[%s%s] %3s%%' \
+    "$(printf '%*s' "${filled}" '' | tr ' ' '#')" \
+    "$(printf '%*s' $(( BACKUP_BAR_WIDTH - filled )) '' | tr ' ' '.')" \
+    "${percent}"
 }
 
 backup_gigabytes() {
@@ -258,6 +269,7 @@ backup_title() {
 
 backup_list() {
   local base run path stage state doc live cells result began elapsed trigger runs=0 latest ended
+  local ran halted broke alive
   local files size volume held
   base="$(dirname "${BACKUP_RUN_PATH}")"
   mapfile -t BACKUP_LIST_RUNS < <(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r)
@@ -279,20 +291,24 @@ backup_list() {
     live=0
     backup_running "${run}" && live=1
     cells=()
-    result="-"
     trigger=""
     files=0
     size=0
     volume="-"
+    ran=0
+    halted=0
+    broke=0
+    alive=0
     for stage in primary secondary tertiary; do
       doc="${path}/stage/${stage}/status.json"
       state="$(backup_result "${doc}")"
       [ -n "${trigger}" ] || trigger="$(backup_tail_field "${doc}" trigger)"
       case "${state}" in
       -) ;;
-      running) result="running" ;;
-      success) [ "${result}" = "-" ] && result="complete" ;;
-      *) [ "${result}" = "running" ] || result="incomplete" ;;
+      running) alive=1 ;;
+      success) ran=1 ;;
+      stopped | timeout) halted=1 ;;
+      *) broke=1 ;;
       esac
       if [ -f "${doc}" ]; then
         held="$(backup_tail_field "${doc}" file_count)"
@@ -303,7 +319,14 @@ backup_list() {
       fi
       cells+=("${state}")
     done
-    [ "${live}" -eq 1 ] && result="running"
+    result="$(backup_tail_field "${path}/status.json" state)"
+    if [ -z "${result}" ]; then
+      result="-"
+      [ "${ran}" -eq 1 ] && result="complete"
+      [ "${halted}" -eq 1 ] && result="halted"
+      [ "${broke}" -eq 1 ] && result="failed"
+    fi
+    { [ "${alive}" -eq 1 ] || [ "${live}" -eq 1 ]; } && result="running"
     if [ "${result}" = "running" ]; then
       elapsed="$(backup_elapsed $(( $(date +%s) - began )))"
     else
@@ -317,11 +340,10 @@ backup_list() {
       elapsed="-"
       [ "${latest}" -gt "${began}" ] && elapsed="$(backup_elapsed $(( latest - began )))"
     fi
-    [ "${volume}" = "-" ] || volume="${volume}%"
     backup_row "${run}" "$(date -d @"${began}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "-")" \
       "${elapsed}" "${trigger:--}" "${cells[@]}" \
       "$(printf '%9s' "$([ "${files}" -gt 0 ] && printf '%s' "${files}" || printf '%s' "-")")" \
-      "$(printf '%8s' "$(backup_gigabytes "${size}")")" "$(printf '%6s' "${volume}")" "${result}"
+      "$(printf '%8s' "$(backup_gigabytes "${size}")")" "$(backup_bar "${volume}")" "${result}"
   done
   backup_rule "+"
   echo
@@ -354,7 +376,7 @@ backup_sequence() {
     done
     backup_await "${BACKUP_RUN_PATH}" "${BACKUP_STOP_SECONDS:-300}" ||
       backup_log WARN "run [${BACKUP_RUN_ID}] is still running after [${BACKUP_STOP_SECONDS:-300}] s"
-    backup_status "${BACKUP_RUN_PATH}" 0 || result=1
+    backup_status "${BACKUP_RUN_PATH}" || result=1
     return "${result}"
   fi
   local active; active="$(backup_active)"
@@ -381,15 +403,21 @@ backup_sequence() {
 }
 
 backup_rollup() {
-  local started="$1" stage doc run=0 failed=0 state=complete success=true
+  local started="$1" stage doc run=0 failed=0 partial=0 state=complete success=true
   for stage in primary secondary tertiary; do
     doc="${BACKUP_RUN_PATH}/stage/${stage}/status.json"
     [ -f "${doc}" ] || continue
     run=$(( run + 1 ))
-    [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] || failed=$(( failed + 1 ))
+    [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] && continue
+    case "$(backup_result "${doc}")" in
+    stopped | timeout) partial=$(( partial + 1 )) ;;
+    *) failed=$(( failed + 1 )) ;;
+    esac
   done
   [ "${run}" -gt 0 ] || return 0
-  if [ "${failed}" -gt 0 ]; then state=failed; success=false; fi
+  if [ "${failed}" -gt 0 ] || [ "${partial}" -gt 0 ]; then success=false; fi
+  [ "${partial}" -gt 0 ] && state=halted
+  [ "${failed}" -gt 0 ] && state=failed
   cat >"${BACKUP_RUN_PATH}/status.json.tmp" <<JSON
 {
   "run_id": "${BACKUP_RUN_ID}",
@@ -400,7 +428,8 @@ backup_rollup() {
   "duration_s": $(( $(date +%s) - started )),
   "success_bool": ${success},
   "stages_run": ${run},
-  "stages_failed": ${failed}
+  "stages_failed": ${failed},
+  "stages_halted": ${partial}
 }
 JSON
   mv "${BACKUP_RUN_PATH}/status.json.tmp" "${BACKUP_RUN_PATH}/status.json"
@@ -417,9 +446,8 @@ backup_running() {
 }
 
 backup_await() {
-  local path="$1" stage doc deadline=0 sequence="${3:-}" started aged now due stamped
+  local path="$1" stage doc deadline=0 sequence="${3:-}" started now due stamped
   started="$(date +%s)"
-  aged="$(backup_epoch "$(basename "${path}")")"
   due=$(( started + ${BACKUP_TAIL_PROGRESS:-10} ))
   [ -n "${2:-}" ] && deadline=$(( started + $2 ))
   while :; do
@@ -433,21 +461,21 @@ backup_await() {
         *" ${stage} "*) ;;
         *)
           BACKUP_SEEN_STAGES="${BACKUP_SEEN_STAGES} ${stage}"
-          backup_started "$(( now - aged ))" "${stage}"
+          backup_started "${stage}"
           [ "$(backup_tail_field "${doc}" state)" = "running" ] &&
-            backup_progress "${path}" "$(( now - aged ))" "${stage}"
+            backup_progress "${path}" "${stage}"
           ;;
         esac
         [ "$(backup_tail_field "${doc}" state)" = "running" ] && continue
         case " ${BACKUP_DONE_STAGES} " in *" ${stage} "*) continue ;; esac
         BACKUP_DONE_STAGES="${BACKUP_DONE_STAGES} ${stage}"
-        [ "${stage}" = "tertiary" ] || backup_progress "${path}" "$(( now - aged ))" "${stage}"
-        backup_finished "$(( now - aged ))" "${stage}" "${doc}"
+        [ "${stage}" = "tertiary" ] || backup_progress "${path}" "${stage}"
+        backup_finished "${stage}" "${doc}"
       done
     fi
     if [ "${BACKUP_TAIL_PROGRESS:-10}" -gt 0 ] && [ "${now}" -ge "${due}" ]; then
       if [ "${deadline}" -eq 0 ]; then
-        backup_progress "${path}" "$(( now - aged ))"
+        backup_progress "${path}"
       else
         backup_stopping "waiting for run [$(basename "${path}")] to finish stopping"
       fi
@@ -569,10 +597,15 @@ backup_flushing() {
   printf '%s %s' "${megabytes}" "$(( megabytes / rate ))"
 }
 
+backup_line() {
+  local level="$1" stage="$2"; shift 2
+  printf '[%-4s %-9s %8s] %s\n' "${level}" "${stage}" "$(date '+%H:%M:%S')" "$*"
+}
+
 backup_marker() {
-  local stage="$1" elapsed="$2"; shift 2
+  local stage="$1"; shift
   [ "${stage}" = "all" ] && stage=""
-  printf '[%-9s %s] %s\n' "${stage}" "$(backup_elapsed "${elapsed}")" "$*"
+  backup_line INFO "${stage}" "$*"
 }
 
 backup_stopping() {
@@ -580,22 +613,22 @@ backup_stopping() {
     backup_log INFO "$*"
     return 0
   fi
-  backup_marker "${BACKUP_STAGE}" "$(( $(date +%s) - BACKUP_STOP_STARTED ))" "$*"
+  backup_marker "${BACKUP_STAGE}" "$*"
 }
 
 backup_started() {
-  local elapsed="$1" stage="$2"
-  backup_marker "${stage}" "${elapsed}" "starting and estimated to finish in [$(backup_pending "${stage}")] min"
+  local stage="$1"
+  backup_marker "${stage}" "starting and estimated to finish in [$(backup_pending "${stage}")] min"
 }
 
 
 backup_finished() {
-  local elapsed="$1" stage="$2" doc="$3" status="success" pointer=""
+  local stage="$1" doc="$2" status="success" pointer=""
   if [ "$(backup_tail_field "${doc}" success_bool)" != "true" ]; then
     status="$(backup_tail_field "${doc}" state)"
     pointer=", see [$(dirname "${doc}")/output.log]"
   fi
-  backup_marker "${stage}" "${elapsed}" "$(printf 'finished with status [%s] in [%s] with files [%s], size [%s] MB and disk at [%s] pct%s' \
+  backup_marker "${stage}" "$(printf 'finished with status [%s] in [%s] with files [%s], size [%s] MB and disk at [%s] pct%s' \
     "${status}" \
     "$(backup_elapsed "$(backup_tail_field "${doc}" duration_s)")" \
     "$(backup_tail_field "${doc}" file_count)" \
@@ -614,7 +647,7 @@ backup_verb() {
 }
 
 backup_progress() {
-  local path="$1" elapsed="$2" forced="${3:-}" stage doc state active="" now share used sum=0
+  local path="$1" forced="${2:-}" stage doc state active="" now share used sum=0
   local copied="-" total="-" remaining="-" percent="-" rate="${BACKUP_RATE_MB:-150}"
   for stage in primary secondary tertiary; do
     doc="${path}/stage/${stage}/status.json"
@@ -646,7 +679,7 @@ backup_progress() {
       [ "${until}" -lt 0 ] && until=0
       [ "${until}" -lt "${remaining}" ] && remaining="${until}"
     fi
-    backup_marker "${active}" "${elapsed}" "$(printf 'scrubbed [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \
+    backup_marker "${active}" "$(printf 'scrubbed [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \
       "${copied}" "${total}" "${percent}" "${remaining}" "${rate}")"
     return 0
   fi
@@ -704,16 +737,16 @@ backup_progress() {
   backup_stalled "${active}" "${now}" "${copied}" "${used:-}"
   { [ "${copied}" = "0" ] || [ "${copied}" = "-" ]; } &&
     { [ "${total}" = "0" ] || [ "${total}" = "-" ]; } && return 0
-  backup_marker "${active:-none}" "${elapsed}" "$(printf '%s [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \
+  backup_marker "${active:-none}" "$(printf '%s [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \
     "$(backup_verb "${active}")" "${copied}" "${total}" "${percent}" "${remaining}" "${rate}")"
 }
 
 backup_status() {
-  local path="$1" elapsed="${2:-0}" stage doc faults=0
+  local path="$1" stage doc faults=0
   for stage in primary secondary tertiary; do
     doc="${path}/stage/${stage}/status.json"
     if [ ! -f "${doc}" ]; then
-      backup_marker "${stage}" "${elapsed}" "never started"
+      backup_marker "${stage}" "never started"
       continue
     fi
     [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] || faults=$(( faults + 1 ))
@@ -738,16 +771,12 @@ BACKUP_ENV="${BACKUP_INSTALL_ROOT}/supervisor/latest/.env"
 if [ -f "${BACKUP_ENV}" ] && [ -z "${BACKUP_SOURCE_ONLY:-}" ]; then set -a; . "${BACKUP_ENV}"; set +a; fi
 BACKUP_HOST="${SUPERVISOR_HOST:-$(hostname)}"
 
-backup_stamp() {
-  date '+%Y-%m-%dT%H:%M:%S%z'
-}
-
 backup_log() {
   local level="$1"; shift
-  local line; line="$(printf '%s [%-9s] %-5s %s' "$(backup_stamp)" "${BACKUP_STAGE}" "${level}" "$*")"
+  [ "${level}" = "ERROR" ] && level=ERRS
   case "${level}" in
-  WARN | ERROR) printf '%s\n' "${line}" >&2 ;;
-  *) printf '%s\n' "${line}" ;;
+  WARN | ERRS) backup_line "${level}" "" "$*" >&2 ;;
+  *) backup_line "${level}" "" "$*" ;;
   esac
 }
 
@@ -1046,7 +1075,7 @@ backup_heartbeat() {
       return 0
     fi
     backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))" quiet
-    backup_progress "${BACKUP_RUN_PATH}" "$(( now - $(backup_epoch "${BACKUP_RUN_ID}") ))" "${BACKUP_STAGE}"
+    backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}"
     [ "${now}" -ge "${due}" ] || continue
     due=$(( now + BACKUP_HEARTBEAT_REFRESH ))
     backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))"
@@ -1567,7 +1596,7 @@ if [ "${BACKUP_COMMAND}" = "stop" ]; then
   if [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && [ "${BACKUP_STOP_SECONDS:-300}" -gt 0 ]; then
     backup_await "${BACKUP_RUN_PATH}" "${BACKUP_STOP_SECONDS:-300}" ||
       backup_log WARN "run [${BACKUP_RUN_ID}] is still running after [${BACKUP_STOP_SECONDS:-300}] s"
-    backup_status "${BACKUP_RUN_PATH}" 0 >&3 || true
+    backup_status "${BACKUP_RUN_PATH}" >&3 || true
   fi
   exit 0
 fi
@@ -1603,7 +1632,7 @@ BACKUP_STARTED="$(date +%s)"
 trap 'backup_interrupted' TERM INT
 [ -n "${BACKUP_RUN_GIVEN}" ] || [ -n "${BACKUP_RUN_ID_PASSED:-}" ] ||
   backup_log WARN "started as its own run [${BACKUP_RUN_ID}], pass a run id to join the stages of one run"
-backup_started "$(( $(date +%s) - $(backup_epoch "${BACKUP_RUN_ID}") ))" "${BACKUP_STAGE}"
+backup_started "${BACKUP_STAGE}"
 backup_banner "starting [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]" \
   "host      [${BACKUP_HOST}]" \
   "trigger   [${BACKUP_TRIGGER}]" \
@@ -1617,7 +1646,7 @@ backup_banner "starting [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]" \
   "retention [${BACKUP_KEEP_DAILY}] daily, [${BACKUP_KEEP_WEEKLY}] weekly, [${BACKUP_KEEP_MONTHLY}] monthly" \
   "heartbeat [${BACKUP_HEARTBEAT_REFRESH}] s refresh, [${BACKUP_HEARTBEAT_GRACE}] s grace"
 backup_document "running" false "${BACKUP_STARTED}" "$(( BACKUP_STARTED + BACKUP_HEARTBEAT_GRACE ))"
-backup_progress "${BACKUP_RUN_PATH}" "$(( $(date +%s) - $(backup_epoch "${BACKUP_RUN_ID}") ))" "${BACKUP_STAGE}"
+backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}"
 backup_heartbeat 9>&- &
 BACKUP_HEARTBEAT_PID=$!
 
@@ -1636,6 +1665,6 @@ backup_banner "finished [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}] as [$([ "${B
   "size      [${BACKUP_SIZE}] MB transferred, [${BACKUP_SENT}] MB sent, [${BACKUP_SIZE_HELD}] MB held" \
   "disk      [${BACKUP_USAGE}] pct used" \
   "status    [${BACKUP_STAGE_DIR}/status.json]"
-[ "${BACKUP_STAGE}" = "tertiary" ] || backup_progress "${BACKUP_RUN_PATH}" "$(( $(date +%s) - $(backup_epoch "${BACKUP_RUN_ID}") ))" "${BACKUP_STAGE}"
-backup_finished "$(( $(date +%s) - $(backup_epoch "${BACKUP_RUN_ID}") ))" "${BACKUP_STAGE}" "${BACKUP_STAGE_DIR}/status.json"
+[ "${BACKUP_STAGE}" = "tertiary" ] || backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}"
+backup_finished "${BACKUP_STAGE}" "${BACKUP_STAGE_DIR}/status.json"
 exit "${BACKUP_RESULT}"

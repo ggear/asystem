@@ -581,6 +581,28 @@ WHERE
 HAVING count(*) FILTER (WHERE column_name = 'failed_drives_trend') = 0
 UNION ALL
 SELECT
+    'supervisor/host'      AS relation,
+    'halted_backup_stages' AS measure,
+    '6s'                   AS period,
+    '%'                    AS unit,
+    'missing'              AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'halted_backup_stages') = 0
+UNION ALL
+SELECT
+    'supervisor/host'            AS relation,
+    'halted_backup_stages_trend' AS measure,
+    '6s'                         AS period,
+    '%'                          AS unit,
+    'missing'                    AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'halted_backup_stages_trend') = 0
+UNION ALL
+SELECT
     'supervisor/service' AS relation,
     'status'             AS measure,
     '6s'                 AS period,
@@ -793,13 +815,14 @@ WHERE
         'failed_backup_stages', 'failed_backup_stages_trend', 'failed_backups',
         'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
         'failed_log_messages', 'failed_log_messages_trend', 'failed_shares',
-        'failed_shares_trend', 'health_status', 'health_status_trend', 'host',
-        'life_used_drives', 'life_used_drives_trend', 'module', 'restart_count',
-        'restart_count_trend', 'service', 'spin_fan_speed', 'spin_fan_speed_of_max',
-        'spin_fan_speed_of_max_trend', 'spin_fan_speed_trend', 'status', 'status_trend',
-        'temperature', 'temperature_trend', 'time', 'used_backup_space',
-        'used_backup_space_trend', 'used_disk_ops', 'used_disk_ops_trend', 'used_disk_rate',
-        'used_disk_rate_trend', 'used_disk_time', 'used_disk_time_trend', 'used_drive_life',
+        'failed_shares_trend', 'halted_backup_stages', 'halted_backup_stages_trend',
+        'health_status', 'health_status_trend', 'host', 'life_used_drives',
+        'life_used_drives_trend', 'module', 'restart_count', 'restart_count_trend',
+        'service', 'spin_fan_speed', 'spin_fan_speed_of_max', 'spin_fan_speed_of_max_trend',
+        'spin_fan_speed_trend', 'status', 'status_trend', 'temperature',
+        'temperature_trend', 'time', 'used_backup_space', 'used_backup_space_trend',
+        'used_disk_ops', 'used_disk_ops_trend', 'used_disk_rate', 'used_disk_rate_trend',
+        'used_disk_time', 'used_disk_time_trend', 'used_drive_life',
         'used_drive_life_trend', 'used_home_space', 'used_home_space_trend', 'used_memory',
         'used_memory_trend', 'used_network', 'used_network_trend', 'used_processor',
         'used_processor_trend', 'used_share_space', 'used_share_space_trend',
