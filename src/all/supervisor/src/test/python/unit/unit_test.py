@@ -131,7 +131,7 @@ class BackupShellTest(unittest.TestCase):
                          "/share/10/backup/supervisor/macmini-mad")
 
     def test_readings_are_tab_separated_so_a_field_can_never_split(self):
-        head = 'backup_used() { echo 0; }\nbackup_rate() { echo "150 seeded"; }\n'
+        head = 'backup_used() { echo 0; }\nbackup_rate() { echo "150 default"; }\n'
         for reader in ("backup_promoting /nowhere/status.json", "backup_mirroring /nowhere"):
             line = self.shell(head + 'printf "%s" "$(' + reader + ' | tr "\\t" "|")"')
             self.assertEqual(len(line.split("|")), 6, "got [{}] from {}".format(line, reader))
@@ -479,7 +479,7 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(expected, str(10 * 1073741824))
 
     @NEEDS_GNU
-    def test_expected_counts_only_what_a_resumed_seed_has_left_to_move(self):
+    def test_expected_counts_only_what_a_resumed_mirror_has_left_to_move(self):
         expected = self.shell('backup_mounted() { echo /share/40; }\n'
                               'mountpoint() { return 0; }\n'
                               'backup_used() { case "$1" in /backup) echo $(( 30 * 1073741824 ));; '
@@ -488,12 +488,12 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(expected, str(170 * 1073741824))
 
     @NEEDS_GNU
-    def test_expected_falls_back_to_the_whole_source_for_a_first_seed(self):
-        seeded = self.shell('backup_mounted() { echo /share/40; }\n'
+    def test_expected_falls_back_to_the_whole_source_for_a_first_mirror(self):
+        mirrored = self.shell('backup_mounted() { echo /share/40; }\n'
                             'mountpoint() { return 1; }\n'
                             'backup_used() { echo $(( 200 * 1073741824 )); }\n'
                             'backup_expected')
-        self.assertEqual(seeded, str(200 * 1073741824))
+        self.assertEqual(mirrored, str(200 * 1073741824))
 
     @NEEDS_GNU
     def test_pending_prices_tertiary_from_what_is_left_not_a_previous_duration(self):

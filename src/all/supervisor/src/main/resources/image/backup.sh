@@ -858,7 +858,7 @@ backup_rate() {
   done < <(find "$(dirname "${BACKUP_RUN_PATH}")" -mindepth 4 -maxdepth 4 -path "*/stage/${stage}/status.json" -printf '%T@ %p\n' 2>/dev/null | sort -rn | cut -d' ' -f2-)
   rate="${BACKUP_RATE_MB:-150}"
   [ "${rate}" -gt 0 ] 2>/dev/null || rate=150
-  printf '%s %s' "${rate}" "seeded"
+  printf '%s %s' "${rate}" "default"
 }
 
 backup_used() {
