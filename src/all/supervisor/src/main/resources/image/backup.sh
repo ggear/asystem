@@ -978,6 +978,18 @@ backup_count() {
   backup_counters
 }
 
+backup_counted() {
+  local began delta
+  [ "${BACKUP_STAGE}" = "tertiary" ] || return 0
+  [ -f "${BACKUP_STAGE_DIR}/disk-start" ] || return 0
+  mountpoint -q /backup 2>/dev/null || return 0
+  began="$(cat "${BACKUP_STAGE_DIR}/disk-start" 2>/dev/null)"
+  delta=$(( ( $(backup_used /backup) - ${began:-0} ) / 1048576 ))
+  [ "${delta}" -gt "${BACKUP_SIZE}" ] || return 0
+  BACKUP_SIZE="${delta}"
+  backup_counters
+}
+
 backup_transferred() {
   local verb="$1" what="$2" started="$3"
   backup_count "${BACKUP_RSYNC_OUTPUT}"
@@ -1059,6 +1071,7 @@ backup_interrupted() {
   [ -f "${BACKUP_STAGE_DIR}/.stopped" ] && state=stopped
   [ -f "${BACKUP_STAGE_DIR}/.timeout" ] && state=timeout
   backup_log WARN "interrupted, [${state}] this stage"
+  backup_counted
   stage_stop || true
   backup_settle
   backup_document "${state}" false "${BACKUP_STARTED}"
@@ -1523,6 +1536,7 @@ tertiary_start() {
       --exclude '/tmp/' --exclude '.rsync/' --exclude '.rsync-*' --exclude '/.lock' \
       --partial-dir="${target}/.rsync" -- "${share}/" "${target}/" || failed=1
     backup_transferred "mirrored" "${share}" "${started}"
+    backup_counted
   done < <(backup_mounted)
   if mountpoint -q /backup; then
     if command -v btrfs >/dev/null 2>&1 && backup_ready; then

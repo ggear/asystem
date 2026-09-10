@@ -515,6 +515,21 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("backup_rate tertiary"), "100 measured")
 
     @NEEDS_GNU
+    def test_counted_floors_the_size_by_what_the_disk_actually_grew(self):
+        head = ('BACKUP_STAGE=tertiary; BACKUP_STAGE_DIR="${BACKUP_HOME_ROOT}"\n'
+                'BACKUP_TOTAL=0; BACKUP_USAGE=0; BACKUP_FILES=0; BACKUP_FILES_HELD=0\n'
+                'BACKUP_FILES_CREATED=0; BACKUP_FILES_DELETED=0; BACKUP_SIZE_HELD=0; BACKUP_SENT=0\n'
+                'echo $(( 2242 * 1073741824 )) >"${BACKUP_HOME_ROOT}/disk-start"\n'
+                'mountpoint() { return 0; }\n'
+                'backup_used() { echo $(( 3094 * 1073741824 )); }\n')
+        self.assertEqual(self.shell(head + 'BACKUP_SIZE=34\nbackup_counted; echo "${BACKUP_SIZE}"'),
+                         str(852 * 1024))
+        self.assertEqual(self.shell(head + 'BACKUP_SIZE=999999999\nbackup_counted; echo "${BACKUP_SIZE}"'),
+                         "999999999")
+        self.assertEqual(self.shell(head.replace("BACKUP_STAGE=tertiary", "BACKUP_STAGE=primary") +
+                                    'BACKUP_SIZE=34\nbackup_counted; echo "${BACKUP_SIZE}"'), "34")
+
+    @NEEDS_GNU
     def test_mirroring_rates_the_run_by_its_own_average(self):
         run = "2026-09-08_00-00-00"
         path = join(self.home, "supervisor/backup", run)
