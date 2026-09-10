@@ -158,6 +158,8 @@ BACKUP_REAPER_TOPIC="supervisor/cluster-all/backup/reaper"
 BACKUP_BAR_WIDTH=18
 BACKUP_RATE_WINDOW="${BACKUP_RATE_WINDOW:-300}"
 BACKUP_RATE_SETTLE="${BACKUP_RATE_SETTLE:-120}"
+BACKUP_REAP_WAIT="${BACKUP_REAP_WAIT:-15}"
+BACKUP_RATE_EVIDENCE="${BACKUP_RATE_EVIDENCE:-3221225472}"
 BACKUP_LIST_WIDTHS=(19 16 9 9 7 9 8 9 10 25 10)
 BACKUP_LIST_RUNS=()
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
@@ -713,8 +715,9 @@ backup_sampled() {
   [ "${stamp:-x}" -gt 0 ] 2>/dev/null && [ "${bytes:-x}" -ge 0 ] 2>/dev/null || return 1
   span=$(( now - stamp ))
   delta=$(( raw - bytes ))
-  [ "${span}" -ge "${BACKUP_RATE_SETTLE}" ] 2>/dev/null || return 1
-  [ "${delta}" -gt 0 ] || return 1
+  [ "${span}" -gt 0 ] && [ "${delta}" -gt 0 ] || return 1
+  [ "${span}" -ge "${BACKUP_RATE_SETTLE}" ] 2>/dev/null ||
+    [ "${delta}" -ge "${BACKUP_RATE_EVIDENCE}" ] || return 1
   printf '%s' $(( delta / 1048576 / span ))
 }
 
@@ -1098,6 +1101,7 @@ backup_interrupted() {
   [ -f "${BACKUP_STAGE_DIR}/.timeout" ] && state=timeout
   backup_log WARN "interrupted, [${state}] this stage"
   backup_counted
+  [ "${BACKUP_STAGE}" = "tertiary" ] && mountpoint -q /backup 2>/dev/null && backup_usage /backup
   stage_stop || true
   backup_settle
   backup_document "${state}" false "${BACKUP_STARTED}"
@@ -1112,12 +1116,14 @@ backup_settle() {
 }
 
 backup_heartbeat() {
-  local hard=0 nap="" now due
+  local hard=0 nap="" now due tick
   trap '[ -n "${nap}" ] && kill "${nap}" 2>/dev/null; exit 0' TERM
+  tick="${BACKUP_TAIL_PROGRESS:-10}"
+  [ "${tick}" -gt 0 ] 2>/dev/null || tick=10
   [ "${BACKUP_TIMEOUT_HOURS}" -gt 0 ] 2>/dev/null && hard=$(( BACKUP_STARTED + BACKUP_TIMEOUT_HOURS * 3600 ))
   due=$(( $(date +%s) + BACKUP_HEARTBEAT_REFRESH ))
   while :; do
-    sleep "${BACKUP_TAIL_PROGRESS:-10}" &
+    sleep "${tick}" &
     nap=$!
     wait "${nap}"
     nap=""
@@ -1138,7 +1144,8 @@ backup_heartbeat() {
       return 0
     fi
     backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))" quiet
-    backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}" record
+    [ "${BACKUP_TAIL_PROGRESS:-10}" -gt 0 ] 2>/dev/null &&
+      backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}" record
     [ "${now}" -ge "${due}" ] || continue
     due=$(( now + BACKUP_HEARTBEAT_REFRESH ))
     backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))"
@@ -1361,6 +1368,20 @@ backup_attach() {
   return "${failed}"
 }
 
+backup_reaped() {
+  local pattern="$1" waited=0
+  while pgrep -f "${pattern}" >/dev/null 2>&1; do
+    [ "${waited}" -lt "${BACKUP_REAP_WAIT}" ] || {
+      backup_log WARN "[${waited}] s on and still holding the disk [${pattern}]"
+      return 1
+    }
+    sleep 1
+    waited=$(( waited + 1 ))
+  done
+  [ "${waited}" -gt 0 ] && backup_log INFO "exited [${pattern}] after [${waited}] s"
+  return 0
+}
+
 backup_detach() {
   local target
   while read -r target; do
@@ -1563,7 +1584,6 @@ tertiary_start() {
       --exclude '/tmp/' --exclude '.rsync/' --exclude '.rsync-*' --exclude '/.lock' \
       --partial-dir="${target}/.rsync" -- "${share}/" "${target}/" || failed=1
     backup_transferred "mirrored" "${share}" "${started}"
-    backup_counted
   done < <(backup_mounted)
   if mountpoint -q /backup; then
     if command -v btrfs >/dev/null 2>&1 && backup_ready; then
@@ -1590,6 +1610,7 @@ tertiary_stop() {
   backup_stopping "terminating any running mirror and scrub, flushing and unmounting the backup disk"
   backup_scrub_cancel
   pkill -TERM -f "rsync .*/backup/share" 2>/dev/null || true
+  backup_reaped "rsync .*/backup/share"
   sync -f /backup 2>/dev/null || sync
   backup_detach
 }

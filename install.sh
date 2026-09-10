@@ -226,7 +226,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "edge" || "${SERVICE_FORM_FACTOR:-}" == "ser
         log_error "Insufficient space to copy home, need [$((REQUIRED_KB / 1024))] MB have [$((AVAILABLE_KB / 1024))] MB [${SERVICE_HOME_OLD}]"
       fi
       log_info "Copying old home [$((REQUIRED_KB / 1024))] MB to new ..."
-      cp -rfpa "${SERVICE_HOME_OLD}/." "${SERVICE_HOME}"
+      cp -rfpa --reflink=never "${SERVICE_HOME_OLD}/." "${SERVICE_HOME}"
     fi
     if [[ "${COMMAND}" == "install" ]] && ((${#SERVICE_HOME_OLDEST[@]} > 0)); then
       for HOME_OLDEST in "${SERVICE_HOME_OLDEST[@]}"; do

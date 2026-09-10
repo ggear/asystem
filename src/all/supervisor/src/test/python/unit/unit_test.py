@@ -530,6 +530,15 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell(head.replace("BACKUP_STAGE=tertiary", "BACKUP_STAGE=primary") +
                                     'BACKUP_SIZE=34\nbackup_counted; echo "${BACKUP_SIZE}"'), "34")
 
+    def test_reaped_returns_at_once_when_nothing_holds_the_disk(self):
+        self.assertEqual(self.shell('pattern="zzznothing""holdsthis"\n'
+                                    'backup_reaped "${pattern}" && echo gone'), "gone")
+
+    def test_reaped_gives_up_and_warns_rather_than_waiting_forever(self):
+        out = self.shell('sleep 30 & backup_reaped "sleep 30" || echo waited\nkill %1 2>/dev/null',
+                         BACKUP_REAP_WAIT=1)
+        self.assertIn("waited", out)
+
     @NEEDS_GNU
     def test_mirroring_withholds_the_rate_and_estimate_until_the_window_answers(self):
         raw, path = self.ramp()
@@ -552,12 +561,29 @@ class BackupShellTest(unittest.TestCase):
             handle.write("{} {}\n".format(now - 10, raw - 200 * 10 * 1048576))
         self.assertAlmostEqual(int(self.rated(raw, path)), 200, delta=3)
 
+    def test_heartbeat_never_sleeps_on_a_disabled_progress_interval(self):
+        with open(BACKUP_SCRIPT) as handle:
+            body = handle.read()
+        self.assertNotIn('sleep "${BACKUP_TAIL_PROGRESS', body)
+
+    def test_counted_is_reached_only_from_the_interrupted_path(self):
+        with open(BACKUP_SCRIPT) as handle:
+            calls = [line for line in handle if line.strip() == "backup_counted"]
+        self.assertEqual(len(calls), 1)
+
     @NEEDS_GNU
-    def test_mirroring_withholds_the_rate_below_the_settle_span(self):
+    def test_mirroring_rates_early_once_enough_bytes_have_landed(self):
+        raw, path = self.ramp()
+        with open(join(path, "stage/tertiary/samples"), "w") as handle:
+            handle.write("{} {}\n".format(int(time.time()) - 30, raw - 4 * 1073741824))
+        self.assertAlmostEqual(int(self.rated(raw, path)), 4096 // 30, delta=4)
+
+    @NEEDS_GNU
+    def test_mirroring_withholds_the_rate_below_both_the_span_and_the_evidence(self):
         raw, path = self.ramp()
         stage = join(path, "stage/tertiary")
         with open(join(stage, "samples"), "w") as handle:
-            handle.write("{} {}\n".format(int(time.time()) - 60, raw - 200 * 60 * 1048576))
+            handle.write("{} {}\n".format(int(time.time()) - 60, raw - 1073741824))
         self.assertEqual(self.rated(raw, path), "-")
 
     @NEEDS_GNU
