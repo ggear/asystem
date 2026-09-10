@@ -530,6 +530,7 @@ VOLUMES_ACTION="apply"
 VOLUMES_FORCE="${VOLUMES_FORCE:-false}"
 VOLUMES_DISK=""
 VOLUMES_SERIAL=""
+VOLUMES_PREPARED=0
 VOLUMES_FAULTS=0
 VOLUMES_CHANGED=0
 
@@ -663,6 +664,12 @@ volumes_unmount() {
   return 0
 }
 
+volumes_serial() {
+  local serial
+  serial="$(lsblk -drno SERIAL "${1}" 2>/dev/null)"
+  [ -n "${serial}" ] && printf ' --serial=%s' "${serial}"
+}
+
 volumes_candidates() {
   local disk node label claimed declared
   declared="$(while IFS=$'\t' read -r _ source _ _; do
@@ -685,7 +692,9 @@ volumes_candidates() {
 }
 
 volumes_prepare() {
-  local candidates=() disk serial
+  local candidates=() disk serial detail="yes"
+  [ "${VOLUMES_PREPARED}" -eq 0 ] || detail="no"
+  VOLUMES_PREPARED=$(( VOLUMES_PREPARED + 1 ))
   while read -r disk; do
     [ -n "${disk}" ] && candidates+=("${disk}")
   done < <(volumes_candidates)
@@ -695,13 +704,15 @@ volumes_prepare() {
   fi
   if [ "${#candidates[@]}" -gt 1 ]; then
     volumes_report "[${#candidates[@]}] unclaimed disks are attached, name the one to prepare, none is assumed"
-    lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${candidates[@]}"
+    [ "${detail}" = "yes" ] && lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${candidates[@]}"
     return 0
   fi
   disk="${candidates[0]}"
   serial="$(lsblk -drno SERIAL "${disk}" 2>/dev/null)"
-  volumes_report "one unclaimed disk is attached, [${disk}] carries no declared label and nothing mounted"
-  lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${disk}"
+  if [ "${detail}" = "yes" ]; then
+    volumes_report "one unclaimed disk is attached, [${disk}] carries no declared label and nothing mounted"
+    lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${disk}"
+  fi
   if [ -z "${serial}" ]; then
     volumes_report "[${disk}] reports no serial, [--serial] is required to format and cannot be guessed"
     return 0
@@ -762,8 +773,14 @@ volumes_disk_guard() {
     return 1
   fi
   if printf '%s' "${partlabels}" | grep -qiE 'efi|boot|recovery|ibootsystem'; then
-    volumes_fault "[${disk}] carries a system partition [${partlabels}], refusing"
-    return 1
+    local transport removable
+    transport="$(lsblk -drno TRAN "${disk}" 2>/dev/null)"
+    removable="$(cat "/sys/block/${node}/removable" 2>/dev/null || echo 0)"
+    if [ "${transport}" != "usb" ] && [ "${removable}" != "1" ]; then
+      volumes_fault "[${disk}] carries a system partition [${partlabels}] on an internal [${transport:-unknown}] disk, refusing"
+      return 1
+    fi
+    volumes_report "[${disk}] carries a system partition [${partlabels}] on a [${transport}] disk, every GPT disk a Mac formats carries one, so it is not read as a boot disk"
   fi
   while read -r spec; do
     [ -n "${spec}" ] || continue
@@ -798,7 +815,7 @@ volumes_disk_clean() {
   volumes_command "wipefs -a ${disk}"
   volumes_command "sgdisk -Z ${disk}"
   volumes_command "partprobe ${disk}"
-  volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --force"
+  volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk}$(volumes_serial "${disk}") --force"
   return 1
 }
 
@@ -830,7 +847,7 @@ volumes_format_guard() {
     volumes_command "wipefs -a ${disk}"
     volumes_command "sgdisk -Z ${disk}"
     volumes_command "partprobe ${disk}"
-    volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --force"
+    volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk}$(volumes_serial "${disk}") --force"
     faults=$((faults + 1))
   done < <(volumes_entries "${VOLUMES_SOURCE}")
   [ "${faults}" -eq 0 ] && return 0
