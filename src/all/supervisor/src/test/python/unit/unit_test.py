@@ -119,6 +119,44 @@ class BackupShellTest(unittest.TestCase):
         for command in ("start", "stop", "tail", "list", "manual", "help"):
             self.assertIn("  {}".format(command), done.stdout)
         self.assertIn("minting a run id when given none", done.stdout)
+        self.assertIn("--stage <name>", done.stdout)
+
+    def test_promotion_namespaces_supervisor_by_host_and_nothing_else(self):
+        head = 'BACKUP_HOST=raspbpi-jen\n'
+        self.assertEqual(self.shell(head + 'backup_promotion supervisor /share/10'),
+                         "/share/10/backup/supervisor/raspbpi-jen")
+        self.assertEqual(self.shell(head + 'backup_promotion mariadb /share/10'),
+                         "/share/10/backup/mariadb")
+        self.assertEqual(self.shell('BACKUP_HOST=macmini-mad\nbackup_promotion supervisor /share/10'),
+                         "/share/10/backup/supervisor/macmini-mad")
+
+    def test_readings_are_tab_separated_so_a_field_can_never_split(self):
+        head = 'backup_used() { echo 0; }\nbackup_rate() { echo "150 seeded"; }\n'
+        for reader in ("backup_promoting /nowhere/status.json", "backup_mirroring /nowhere"):
+            line = self.shell(head + 'printf "%s" "$(' + reader + ' | tr "\\t" "|")"')
+            self.assertEqual(len(line.split("|")), 6, "got [{}] from {}".format(line, reader))
+
+    def test_attached_refuses_anything_that_is_not_the_backup_disk(self):
+        head = 'BACKUP_STAGE_DIR="${BACKUP_HOME_ROOT}"\n'
+        self.assertEqual(self.shell(head + 'mountpoint() { return 1; }\n'
+                                           'backup_attached && echo attached || echo detached'), "detached")
+        self.assertEqual(self.shell(head + 'mountpoint() { return 0; }\n'
+                                           'backup_attached && echo attached || echo detached'), "attached")
+        self.assertEqual(self.shell(head + 'echo 2049 >"${BACKUP_HOME_ROOT}/disk-device"\n'
+                                           'mountpoint() { return 0; }\nstat() { echo 2049; }\n'
+                                           'backup_attached && echo attached || echo detached'), "attached")
+        self.assertEqual(self.shell(head + 'echo 2049 >"${BACKUP_HOME_ROOT}/disk-device"\n'
+                                           'mountpoint() { return 0; }\nstat() { echo 65024; }\n'
+                                           'backup_attached && echo attached || echo detached'), "detached")
+
+    def test_manual_reports_a_publish_that_did_not_happen(self):
+        done = self.shell('backup_publish() { return 1; }\n'
+                          'backup_manual off 2>&1 || echo "exit=$?"')
+        self.assertIn("could not publish [OFF] to [supervisor/cluster-all/backup/reaper]", done)
+        self.assertIn("exit=1", done)
+
+    def test_publish_says_when_it_cannot_reach_a_broker(self):
+        self.assertEqual(self.shell('BROKER_HOST=""; backup_publish topic payload; echo "exit=$?"'), "exit=1")
 
     def test_manual_publishes_the_reaper_switch_both_ways(self):
         probe = ('backup_publish() { printf "%s %s\\n" "$1" "$2"; }\n'
@@ -127,6 +165,11 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell(probe.replace("{}", "")), "supervisor/cluster-all/backup/reaper OFF")
         self.assertEqual(self.shell(probe.replace("{}", "off")), "supervisor/cluster-all/backup/reaper OFF")
         self.assertEqual(self.shell(probe.replace("{}", "on")), "supervisor/cluster-all/backup/reaper ON")
+
+    def test_manual_keeps_its_argument_out_of_the_run_id_slot(self):
+        self.assertEqual(self.parse("manual", "on"), "manual all - 0 0")
+        self.assertEqual(self.shell('backup_publish() { printf "%s" "$2"; }\nbackup_log() { :; }\n'
+                                    'backup_manual "${BACKUP_ARGUMENT}"', arguments=("manual", "on")), "ON")
 
     def test_manual_refuses_a_word_it_does_not_know(self):
         done = self.invoke("manual", "sideways")
@@ -170,6 +213,12 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(done.returncode, 2)
         self.assertIn("unknown option [--no-scrub]", done.stderr)
         self.assertEqual(self.parse("start", BACKUP_RUN_ID_PASSED=1, BACKUP_SCRUB=0), "start all - 0 0")
+
+    def test_scrub_refusal_reads_this_command_line_not_an_inherited_flag(self):
+        self.assertEqual(self.parse("start", "--stage", "primary", BACKUP_SCRUB_FORCED=1, BACKUP_SCRUB=1),
+                         "start primary - 1 1")
+        done = self.invoke("start", "--stage", "primary", "--scrub")
+        self.assertEqual(done.returncode, 2)
 
     def test_scrub_is_refused_against_a_stage_that_cannot_scrub(self):
         for stage in ("primary", "secondary"):
@@ -278,9 +327,9 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell('backup_bar ""'), "-")
         self.assertEqual(self.shell("backup_bar"), "-")
 
-    def test_gigabytes_is_the_one_unit_the_table_shows(self):
-        for megabytes, expected in ((0, "-"), (17, "0 GB"), (1024, "1 GB"), (994000, "970 GB"), (1048576, "1024 GB")):
-            self.assertEqual(self.shell("backup_gigabytes {}".format(megabytes)), expected)
+    def test_megabytes_is_the_one_unit_the_table_shows(self):
+        for megabytes, expected in ((0, "-"), (4, "4 MB"), (1024, "1024 MB"), (19940000, "19940000 MB")):
+            self.assertEqual(self.shell("backup_megabytes {}".format(megabytes)), expected)
 
     @NEEDS_GNU
     def test_list_draws_one_aligned_row_per_run(self):
@@ -296,7 +345,6 @@ class BackupShellTest(unittest.TestCase):
         widths = {len(line) for line in listed.splitlines() if line}
         self.assertEqual(len(widths), 1, "every row must be the same width, got {}".format(sorted(widths)))
         self.assertIn("| RUN-ID ", listed)
-        self.assertIn("3 backup runs under", listed)
         self.assertRegex(listed, r"2026-09-08_02-00-00 .*\|\s+-\s+\|")
         self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*success .*\[#+\.*\]\s+61%.*complete")
         self.assertRegex(listed, r"2026-09-08_01-00-00 .*success .*-  .*stopped .*halted")
@@ -465,6 +513,20 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("backup_rate tertiary"), "1 measured")
         self.scrub("2026-09-08_00-00-00", "tertiary", state="interrupted", duration_s=3540)
         self.assertEqual(self.shell("backup_rate tertiary"), "100 measured")
+
+    @NEEDS_GNU
+    def test_mirroring_rates_the_run_by_its_own_average(self):
+        run = "2026-09-08_00-00-00"
+        path = join(self.home, "supervisor/backup", run)
+        self.document(run, "tertiary", state="running", size_mb=0, total_mb=900 * 1024, duration_s=6733)
+        with open(join(path, "stage/tertiary/disk-start"), "w") as handle:
+            handle.write(str(2242 * 1073741824))
+        fields = self.shell('backup_used() {{ echo $(( 3094 * 1073741824 )); }}\n'
+                            'backup_mirroring "{}" | tr "\\t" " "'.format(path))
+        copied, total, percent, remaining, rate, _ = fields.split()
+        self.assertEqual(copied, "852")
+        self.assertEqual(rate, "129")
+        self.assertEqual(remaining, str((900 - 852) * 1024 // 129 // 60))
 
     @NEEDS_GNU
     def test_progress_measures_the_bytes_this_run_moved_not_what_the_disk_holds(self):

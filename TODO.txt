@@ -33,8 +33,11 @@ test supervisor release against plan complete backups:
 mad
 max
 may
+test timeout, other failure modes?
+release, clean history, ssh root@macmini-mad 'rm -rf /share/{10,20,30,40}/backup/supervisor/*'
+test end to end
 check backups working on all servers
-release supervisor with backup/switch enabled
+release supervisor with dorment set to false
 test new watch logs, add/remove etc
 test primary
 test sedondary
