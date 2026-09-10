@@ -217,16 +217,16 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("backup_pending secondary"), "7")
 
     @NEEDS_GNU
-    def test_state_maps_a_status_document_to_one_word(self):
+    def test_result_maps_a_status_document_to_one_word(self):
         run = "2026-09-08_00-00-00"
         self.document(run, "primary", state="complete", success_bool=True)
         self.document(run, "secondary", state="failed", success_bool=False)
         self.document(run, "tertiary", state="running", success_bool=False)
         base = join(self.home, "supervisor/backup", run, "stage")
-        self.assertEqual(self.shell('backup_state "{}/primary/status.json"'.format(base)), "success")
-        self.assertEqual(self.shell('backup_state "{}/secondary/status.json"'.format(base)), "failed")
-        self.assertEqual(self.shell('backup_state "{}/tertiary/status.json"'.format(base)), "running")
-        self.assertEqual(self.shell('backup_state "{}/absent/status.json"'.format(base)), "-")
+        self.assertEqual(self.shell('backup_result "{}/primary/status.json"'.format(base)), "success")
+        self.assertEqual(self.shell('backup_result "{}/secondary/status.json"'.format(base)), "failed")
+        self.assertEqual(self.shell('backup_result "{}/tertiary/status.json"'.format(base)), "running")
+        self.assertEqual(self.shell('backup_result "{}/absent/status.json"'.format(base)), "-")
 
     @NEEDS_GNU
     def test_list_rolls_the_stages_up_into_one_result_per_run(self):
@@ -283,29 +283,58 @@ class BackupShellTest(unittest.TestCase):
 
     @NEEDS_GNU
     def test_expected_is_what_the_mirror_last_moved_not_the_disk_against_the_sources(self):
-        self.assertEqual(self.shell('backup_mounted() { :; }; backup_expected'), "0")
+        detached = 'backup_mounted() { :; }\nmountpoint() { return 1; }\n'
+        self.assertEqual(self.shell(detached + 'backup_expected'), "0")
         self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=4096, duration_s=600)
-        self.assertEqual(self.shell("backup_expected"), str(4096 * 1048576))
+        self.assertEqual(self.shell(detached + 'backup_expected'), str(4096 * 1048576))
 
     @NEEDS_GNU
     def test_expected_reads_zero_from_an_in_sync_run_rather_than_calling_it_no_history(self):
         self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=0, duration_s=31)
         self.assertEqual(self.shell('backup_mounted() { echo /share/40; }\n'
+                                    'mountpoint() { return 1; }\n'
                                     'backup_used() { echo $(( 200 * 1073741824 )); }\n'
                                     'backup_expected'), "0")
-        self.assertEqual(self.shell("backup_pending tertiary"), "0")
+        self.assertEqual(self.shell('mountpoint() { return 1; }\nbackup_pending tertiary'), "0")
+
+    @NEEDS_GNU
+    def test_expected_prefers_what_is_left_over_what_a_big_earlier_run_moved(self):
+        self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=5000000, duration_s=36000)
+        expected = self.shell('backup_mounted() { echo /share/40; }\n'
+                              'mountpoint() { return 0; }\n'
+                              'backup_used() { case "$1" in /backup) echo $(( 190 * 1073741824 ));; '
+                              '*) echo $(( 200 * 1073741824 ));; esac; }\n'
+                              'backup_expected')
+        self.assertEqual(expected, str(10 * 1073741824))
+
+    @NEEDS_GNU
+    def test_expected_counts_only_what_a_resumed_seed_has_left_to_move(self):
+        expected = self.shell('backup_mounted() { echo /share/40; }\n'
+                              'mountpoint() { return 0; }\n'
+                              'backup_used() { case "$1" in /backup) echo $(( 30 * 1073741824 ));; '
+                              '*) echo $(( 200 * 1073741824 ));; esac; }\n'
+                              'backup_expected')
+        self.assertEqual(expected, str(170 * 1073741824))
 
     @NEEDS_GNU
     def test_expected_falls_back_to_the_whole_source_for_a_first_seed(self):
         seeded = self.shell('backup_mounted() { echo /share/40; }\n'
+                            'mountpoint() { return 1; }\n'
                             'backup_used() { echo $(( 200 * 1073741824 )); }\n'
                             'backup_expected')
         self.assertEqual(seeded, str(200 * 1073741824))
 
     @NEEDS_GNU
+    def test_pending_prices_tertiary_from_what_is_left_not_a_previous_duration(self):
+        self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=1, duration_s=28800)
+        self.assertEqual(self.shell('backup_mounted() { :; }\nmountpoint() { return 1; }\n'
+                                    'backup_pending tertiary'), "0")
+
+    @NEEDS_GNU
     def test_pending_prices_the_expected_bytes_at_the_measured_rate(self):
         self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=36000, duration_s=360)
-        self.assertEqual(self.shell("backup_pending tertiary"), "6")
+        self.assertEqual(self.shell('backup_mounted() { :; }\nmountpoint() { return 1; }\n'
+                                    'backup_pending tertiary'), "6")
 
     @NEEDS_GNU
     def test_rate_discounts_the_scrub_from_the_run_it_shared_a_stage_with(self):
@@ -360,6 +389,24 @@ class BackupShellTest(unittest.TestCase):
             'printf "%s %s" "${BACKUP_USAGE}" "$(cut -d" " -f2 "${BACKUP_HOME_ROOT}/counters")"',
             BACKUP_SYSFS_BTRFS=join(self.home, "sysfs"))
         self.assertEqual(published, "74 74")
+
+    def test_detach_is_silent_when_another_process_won_the_unmount(self):
+        head = ('MARK="${BACKUP_HOME_ROOT}/mounted"; touch "${MARK}"\n'
+                'backup_targets() { echo /backup; }\n'
+                'sync() { :; }\n'
+                'mountpoint() { [ -f "${MARK}" ]; }\n')
+        self.assertEqual(self.shell(head + 'umount() { rm -f "${MARK}"; return 0; }\nbackup_detach 2>&1'), "")
+        self.assertEqual(self.shell(head + 'umount() { rm -f "${MARK}"; echo "umount: /backup: not mounted." >&2; return 1; }\n'
+                                           'backup_detach 2>&1'), "")
+
+    def test_detach_still_warns_when_the_mount_survives(self):
+        reported = self.shell('backup_targets() { echo /backup; }\n'
+                              'sync() { :; }\n'
+                              'mountpoint() { return 0; }\n'
+                              'umount() { echo "umount: /backup: target is busy." >&2; return 1; }\n'
+                              'backup_detach 2>&1')
+        self.assertIn("unmount of [/backup] failed with [umount: /backup: target is busy.], detaching lazily", reported)
+        self.assertIn("could not detach [/backup]", reported)
 
     @NEEDS_GNU
     def test_tail_field_reads_json(self):
