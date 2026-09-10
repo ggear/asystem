@@ -24,7 +24,6 @@ VOLUMES_ACTION="apply"
 VOLUMES_FORCE="${VOLUMES_FORCE:-false}"
 VOLUMES_DISK=""
 VOLUMES_SERIAL=""
-VOLUMES_PREPARED=0
 VOLUMES_FAULTS=0
 VOLUMES_CHANGED=0
 
@@ -186,9 +185,7 @@ volumes_candidates() {
 }
 
 volumes_prepare() {
-  local candidates=() disk serial detail="yes"
-  [ "${VOLUMES_PREPARED}" -eq 0 ] || detail="no"
-  VOLUMES_PREPARED=$(( VOLUMES_PREPARED + 1 ))
+  local candidates=() disk serial state
   while read -r disk; do
     [ -n "${disk}" ] && candidates+=("${disk}")
   done < <(volumes_candidates)
@@ -198,20 +195,23 @@ volumes_prepare() {
   fi
   if [ "${#candidates[@]}" -gt 1 ]; then
     volumes_report "[${#candidates[@]}] unclaimed disks are attached, name the one to prepare, none is assumed"
-    [ "${detail}" = "yes" ] && lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${candidates[@]}"
+    lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${candidates[@]}"
     return 0
   fi
   disk="${candidates[0]}"
   serial="$(lsblk -drno SERIAL "${disk}" 2>/dev/null)"
-  if [ "${detail}" = "yes" ]; then
-    volumes_report "one unclaimed disk is attached, [${disk}] carries no declared label and nothing mounted"
-    lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${disk}"
-  fi
+  volumes_report "one unclaimed disk is attached, [${disk}] carries no declared label and nothing mounted"
+  lsblk -o NAME,SIZE,TYPE,TRAN,PARTLABEL,FSTYPE,MODEL,SERIAL "${disk}"
   if [ -z "${serial}" ]; then
     volumes_report "[${disk}] reports no serial, [--serial] is required to format and cannot be guessed"
     return 0
   fi
-  volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --serial=${serial} --force"
+  if state="$(volumes_disk_state "${disk}")"; then
+    volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk} --serial=${serial} --force"
+    return 0
+  fi
+  volumes_report "[${disk}] is not clean, it carries ${state}, clear it first, this destroys everything on it"
+  volumes_clearing "${disk}"
 }
 
 volumes_holders() {
@@ -295,21 +295,36 @@ volumes_disk_guard() {
   return 0
 }
 
-volumes_disk_clean() {
+volumes_disk_state() {
   local disk="$1" partitions partlabels fstypes signatures
   partitions="$(lsblk -rno NAME "${disk}" 2>/dev/null | tail -n +2 | tr '\n' ' ')"
   partlabels="$(lsblk -rno PARTLABEL "${disk}" 2>/dev/null | grep . | tr '\n' ' ')"
   fstypes="$(lsblk -rno FSTYPE "${disk}" 2>/dev/null | grep . | sort -u | tr '\n' ' ')"
   signatures="$(wipefs -n "${disk}" 2>/dev/null | tail -n +2 | awk '{print $3}' | sort -u | tr '\n' ' ')"
   if [ -z "${partitions}" ] && [ -z "${partlabels}" ] && [ -z "${fstypes}" ] && [ -z "${signatures}" ]; then
-    volumes_report "[${disk}] is clean, no partition, label, filesystem or signature"
     return 0
   fi
-  volumes_fault "[${disk}] is not clean, it carries partition(s) [${partitions:-none}] label(s) [${partlabels:-none}] filesystem(s) [${fstypes:-none}] signature(s) [${signatures:-none}]"
+  printf 'partition(s) [%s] label(s) [%s] filesystem(s) [%s] signature(s) [%s]' \
+    "${partitions:-none}" "${partlabels:-none}" "${fstypes:-none}" "${signatures:-none}"
+  return 1
+}
+
+volumes_clearing() {
+  local disk="$1"
   volumes_command "wipefs -a ${disk}"
   volumes_command "sgdisk -Z ${disk}"
   volumes_command "partprobe ${disk}"
   volumes_command "$(dirname "${VOLUMES_SOURCE}")/volumes.sh format --disk=${disk}$(volumes_serial "${disk}") --force"
+}
+
+volumes_disk_clean() {
+  local disk="$1" state
+  if state="$(volumes_disk_state "${disk}")"; then
+    volumes_report "[${disk}] is clean, no partition, label, filesystem or signature"
+    return 0
+  fi
+  volumes_fault "[${disk}] is not clean, it carries ${state}"
+  volumes_clearing "${disk}"
   return 1
 }
 
@@ -325,7 +340,6 @@ volumes_format_guard() {
     fi
     if [ ! -e "${device}" ]; then
       volumes_report "[${target}] device [${source}] is absent, powered down or not yet prepared"
-      volumes_prepare
       continue
     fi
     resolved="$(readlink -f "${device}")"
