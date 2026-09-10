@@ -1070,8 +1070,8 @@ backup_heartbeat() {
       backup_document "running" false "${BACKUP_STARTED}" "$(( now - 1 ))"
       backup_log WARN "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, stopping this stage, the next run resumes it"
       : >"${BACKUP_STAGE_DIR}/.timeout"
-      stage_stop || true
       kill -TERM "${BACKUP_MAIN_PID}" 2>/dev/null
+      stage_stop || true
       return 0
     fi
     backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))" quiet
