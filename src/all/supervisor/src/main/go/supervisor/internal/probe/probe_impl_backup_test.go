@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"supervisor/internal/config"
+	"supervisor/internal/metric"
 	"testing"
 	"time"
 )
@@ -195,6 +197,32 @@ func TestProbeImplBackup_ServiceSuccessSurvivesAHandRun(t *testing.T) {
 	}
 	if run != rolled {
 		t.Errorf("run: got %q want %q", run, rolled)
+	}
+}
+
+func TestProbeImplBackup_ReaperDisabledByEnv(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		value    string
+		expected bool
+	}{
+		{name: "unset leaves the reaper running", value: "", expected: false},
+		{name: "true disables it", value: "true", expected: true},
+		{name: "one disables it", value: "1", expected: true},
+		{name: "false leaves it running", value: "false", expected: false},
+		{name: "unparseable leaves it running", value: "nonsense", expected: false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(backupReaperDisabledVar, tt.value)
+			probe := &backupProbe{root: t.TempDir()}
+			if err := probe.create("", metric.NewRecordCache(), [metric.MetricMax]bool{},
+				config.Periods{TrendHours: 24, PulseMillis: 6000, PollMillis: 3000}); err != nil {
+				t.Fatalf("create: got %v want nil", err)
+			}
+			if probe.reapDisabled != tt.expected {
+				t.Errorf("reapDisabled: got %v want %v", probe.reapDisabled, tt.expected)
+			}
+		})
 	}
 }
 

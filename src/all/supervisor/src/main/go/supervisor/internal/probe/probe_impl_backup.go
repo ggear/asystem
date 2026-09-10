@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -41,6 +42,7 @@ type backupProbe struct {
 	reapRunning     sync.Mutex
 	reapIdle        int
 	reapWatch       *brokerWatcher
+	reapDisabled    bool
 }
 
 func newBackupProbe() *backupProbe {
@@ -68,6 +70,12 @@ func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask 
 	_, p.serverHost = loaded.HostIndex(p.hostName)
 	p.failedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedBackupSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
+	createStart := config.NowIncludingSuspend()
+	p.reapDisabled, _ = strconv.ParseBool(os.Getenv(backupReaperDisabledVar))
+	if p.reapDisabled {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("excluded", createStart,
+			"[%s] set, the backup disk is never powered down, stale runs are still reaped", backupReaperDisabledVar)
+	}
 	return nil
 }
 
@@ -151,7 +159,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 	if snapshot := readNewestRun(p.root); snapshot != nil {
 		p.reapLocalStale(ctx, snapshot)
 	}
-	if !p.serverHost {
+	if p.reapDisabled || !p.serverHost {
 		return
 	}
 	reapStart := config.NowIncludingSuspend()
@@ -741,17 +749,18 @@ func writeDocumentAtomic(path string, document backupDocument) {
 }
 
 const (
-	backupRunRoot        = "/home/asystem/supervisor/backup"
-	backupRunner         = "/asystem/etc/backup.sh"
-	backupRunStamp       = "2006-01-02_15-04-05"
-	backupRunCeiling     = 5 * time.Hour
-	backupStaleWindow    = 24*time.Hour + backupRunCeiling
-	backupStageKillGrace = 2 * time.Minute
-	leaderPollInterval   = 30 * time.Second
-	leaderLeaseRefresh   = 15 * time.Minute
-	backupRunsKept       = 30
-	backupScheduledHour  = 1
-	reaperIdleTicks      = 2
+	backupReaperDisabledVar = "SUPERVISOR_DISABLE_REAPER"
+	backupRunRoot           = "/home/asystem/supervisor/backup"
+	backupRunner            = "/asystem/etc/backup.sh"
+	backupRunStamp          = "2006-01-02_15-04-05"
+	backupRunCeiling        = 5 * time.Hour
+	backupStaleWindow       = 24*time.Hour + backupRunCeiling
+	backupStageKillGrace    = 2 * time.Minute
+	leaderPollInterval      = 30 * time.Second
+	leaderLeaseRefresh      = 15 * time.Minute
+	backupRunsKept          = 30
+	backupScheduledHour     = 1
+	reaperIdleTicks         = 2
 
 	clusterLeaderTopic = "supervisor/cluster-all/backup/leader"
 	clusterStatusTopic = "supervisor/cluster-all/backup/status"
