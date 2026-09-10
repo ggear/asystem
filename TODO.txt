@@ -29,7 +29,12 @@ document how to update python deps in global CLAUDE.md and attempt to upgrade wh
 
 
 
-test supervisor release against plan
+test supervisor release against plan complete backups, release supervisor with backup/switch enabled:
+mad
+max
+may
+
+
 test new watch logs, add/remove etc
 test primary
 test sedondary
@@ -69,9 +74,9 @@ improve sys tests with datbase/broker asserts
 simplify CLAUDE.md globals and all nested on these chnages
 Move _/volumes into storage?
 Define process by which schema can be updated, what is additive and safe, what is destructive, how to migrate old to new so histpory is not lost etc
+
+
 have a global abackup.sh or asys-backup.sh link from /usr/bin or whereever like media, convert them to amedia-* and atop* to be the same
-
-
 
 
 
