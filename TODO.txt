@@ -28,7 +28,6 @@ retire nginx and use cloudflared for homeasistant?
 document how to update python deps in global CLAUDE.md and attempt to upgrade what I can today, backdown versions where there conflicts that break
 
 
-release plex
 check jen can run all, skips tertiary
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
