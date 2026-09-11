@@ -34,7 +34,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 1G
   mlserver_bootstrap:
     container_name: mlserver_bootstrap
     <<: *common
