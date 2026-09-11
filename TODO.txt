@@ -27,7 +27,18 @@ Add big ass temps for deck
 retire nginx and use cloudflared for homeasistant?
 improve sys tests with datbase/broker asserts
 
-check switch turned off, how long? stopped backup at 11am
+
+
+
+
+
+
+
+
+
+
+supervisor reaper did not turn switch off, i had stopped manual backup on mad at 11am, and then waited, until I manually turned switch off at 11.25am. find bug. 
+make this robust in the face of mqtt broker availability and topic flush due to release etc validate leader election also robust
 
 why is first estimate so bad? can it be imroved?
 [INFO tertiary  10:51:39] starting and estimated to finish in [848] min
@@ -101,6 +112,19 @@ check metric attribution works by metric filter when multiple probe_* feed singl
 verify caching hour and all metrics performance, increase poll frequency?
 Add host status to ha, combine backup temp etc
 add restore.sh and test 
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

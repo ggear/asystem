@@ -1,5 +1,5 @@
 # NOTES: https://www.videohelp.com/software/Plex/version-history
-FROM linuxserver/plex:1.43.3 AS image_upstream
+FROM linuxserver/plex:1.43.4 AS image_upstream
 USER root
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.3-2ubuntu1 && \
