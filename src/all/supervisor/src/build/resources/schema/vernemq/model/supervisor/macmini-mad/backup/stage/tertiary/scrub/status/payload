@@ -1,6 +1,6 @@
 {
   "run_id": "<text>",
-  "state": <finished|interrupted|skipped|failed>,
+  "state": <finished|interrupted|skipped|failed|running>,
   "started_ts": "<text>",
   "finished_ts": "<text>",
   "duration_s": <number>,
@@ -11,5 +11,7 @@
   "errors_corrected": <number>,
   "errors_uncorrectable": <number>,
   "files_to_delete": "<text>",
-  "files_to_delete_count": <number>
+  "files_to_delete_count": <number>,
+  "device_errors": <number>,
+  "chunks_relocated": <number>
 }

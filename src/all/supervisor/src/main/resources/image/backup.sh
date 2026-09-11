@@ -27,6 +27,14 @@
 # through scrub.json, which is why backup_progress prefers it over the mirror it follows. It reads and
 # never writes, so it is safe beside a live run and any number may tail at once.
 #
+# Every state a status document carries, and every plug command, is a BACKUP_STATE_* or
+# BACKUP_COMMAND_* variable rather than a literal, because the same vocabulary is declared on the Go
+# side in src/main/go/supervisor/internal/metric/metric_schema.go as metric.BackupState* and
+# metric.Command*, which is what the published broker schema is generated from. The prefixes are
+# deliberately the same word either side, so grepping BackupStateTimedout or BACKUP_STATE_TIMEDOUT
+# finds both halves. A unit test asserts the two sets are equal, so a state added here without being
+# declared there fails the build rather than being published against an enum that does not list it.
+#
 # Stages of one run share a run id, a stage reading what the earlier stages of that run recorded. A
 # hand run that gives none mints a new id per invocation, so secondary would see no primary at all -
 # it therefore adopts the newest run that did record one, and says which. It only ever adopts a
@@ -70,7 +78,11 @@
 #           env escape hatch for suppressing the scheduled one. Both are resolved once by the run and
 #           inherited by its stages. A scrub that runs out of stage timeout is cancelled,
 #           recorded interrupted and resumed by the next run rather than restarted, and never fails
-#           the stage - only a checksum error does.
+#           the stage - only a checksum error or a device error does. The scrub window is also the
+#           filesystem's maintenance window, so it reads the cumulative btrfs device error counters,
+#           reports them, then zeroes them so the next month's figure is the next month's, and a
+#           scrub that finished closes with a filtered balance that reclaims only chunks under ten
+#           percent used and so does nothing at all on a healthy disk.
 
 set -uo pipefail
 
@@ -153,14 +165,25 @@ if [ -z "${BACKUP_SCRUB}" ]; then
   [ "${BACKUP_TRIGGER}" = "scheduled" ] && BACKUP_SCRUB=1
 fi
 export BACKUP_SCRUB BACKUP_SCRUB_FORCED
-BACKUP_RUNNING_MATCH='"state": "running"'
+BACKUP_STATE_RUNNING="running"
+BACKUP_STATE_COMPLETE="complete"
+BACKUP_STATE_SKIPPED="skipped"
+BACKUP_STATE_STOPPED="stopped"
+BACKUP_STATE_TIMEDOUT="timedout"
+BACKUP_STATE_HALTED="halted"
+BACKUP_STATE_FAILED="failed"
+BACKUP_STATE_FINISHED="finished"
+BACKUP_STATE_INTERRUPTED="interrupted"
+BACKUP_COMMAND_ON="ON"
+BACKUP_COMMAND_OFF="OFF"
+BACKUP_RUNNING_MATCH='"state": "'"${BACKUP_STATE_RUNNING}"'"'
 BACKUP_REAPER_TOPIC="supervisor/cluster-all/backup/reaper"
 BACKUP_BAR_WIDTH=18
 BACKUP_RATE_WINDOW="${BACKUP_RATE_WINDOW:-300}"
 BACKUP_RATE_SETTLE="${BACKUP_RATE_SETTLE:-120}"
 BACKUP_REAP_WAIT="${BACKUP_REAP_WAIT:-15}"
 BACKUP_RATE_EVIDENCE="${BACKUP_RATE_EVIDENCE:-3221225472}"
-BACKUP_LIST_WIDTHS=(19 16 9 9 7 9 8 9 10 25 10)
+BACKUP_LIST_WIDTHS=(19 19 9 9 9 9 9 13 25 10)
 BACKUP_LIST_RUNS=()
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
 BACKUP_HOME_ROOT="${BACKUP_HOME_ROOT:-/home/asystem}"
@@ -225,8 +248,8 @@ backup_result() {
   local doc="$1" state
   [ -f "${doc}" ] || { printf '%s' "-"; return 0; }
   state="$(backup_tail_field "${doc}" state)"
-  [ "${state}" = "running" ] && { printf '%s' "running"; return 0; }
-  case "${state}" in stopped | timeout) printf '%s' "${state}"; return 0 ;; esac
+  [ "${state}" = "${BACKUP_STATE_RUNNING}" ] && { printf '%s' "${BACKUP_STATE_RUNNING}"; return 0; }
+  case "${state}" in "${BACKUP_STATE_STOPPED}" | "${BACKUP_STATE_TIMEDOUT}") printf '%s' "${state}"; return 0 ;; esac
   [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] && { printf '%s' "success"; return 0; }
   printf '%s' "${state:-unknown}"
 }
@@ -243,9 +266,14 @@ backup_bar() {
 }
 
 backup_megabytes() {
-  local megabytes="${1:-0}"
+  local megabytes="${1:-0}" grouped="" rest
   [ "${megabytes}" -gt 0 ] 2>/dev/null || { printf '%s' "-"; return 0; }
-  printf '%s MB' "${megabytes}"
+  rest="${megabytes}"
+  while [ "${#rest}" -gt 3 ]; do
+    grouped=",${rest: -3}${grouped}"
+    rest="${rest:0:${#rest} - 3}"
+  done
+  printf '%s MB' "${rest}${grouped}"
 }
 
 backup_rule() {
@@ -270,15 +298,15 @@ backup_row() {
 backup_manual() {
   local want="${1:-off}" payload
   case "${want}" in
-  off) payload=OFF ;;
-  on) payload=ON ;;
+  off) payload="${BACKUP_COMMAND_OFF}" ;;
+  on) payload="${BACKUP_COMMAND_ON}" ;;
   *) echo "${0##*/}: manual takes [off] to pause the reaper or [on] to arm it, not [${want}]" >&2; return 2 ;;
   esac
   if ! backup_publish "${BACKUP_REAPER_TOPIC}" "${payload}"; then
     backup_log ERROR "could not publish [${payload}] to [${BACKUP_REAPER_TOPIC}], is the broker reachable"
     return 1
   fi
-  if [ "${payload}" = "OFF" ]; then
+  if [ "${payload}" = "${BACKUP_COMMAND_OFF}" ]; then
     backup_log INFO "reaper paused, the backup disk stays powered until the next scheduled run arms it"
   else
     backup_log INFO "reaper armed, the backup disk is powered down again when nothing needs it"
@@ -287,9 +315,9 @@ backup_manual() {
 }
 
 backup_list() {
-  local base run path stage state doc live cells result began elapsed trigger latest ended
+  local base run path stage state doc live cells result began elapsed finished trigger latest ended
   local ran halted broke alive
-  local files size volume held
+  local size volume held
   base="$(dirname "${BACKUP_RUN_PATH}")"
   mapfile -t BACKUP_LIST_RUNS < <(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r)
   echo
@@ -299,7 +327,7 @@ backup_list() {
     return 1
   fi
   backup_rule "+"
-  backup_row RUN-ID STARTED DURATION TRIGGER PRIMARY SECONDARY TERTIARY FILES SIZE VOLUME RESULT
+  backup_row "RUN-ID (STARTED)" FINISHED DURATION TRIGGER PRIMARY SECONDARY TERTIARY SIZE VOLUME RESULT
   backup_rule "+"
   for run in "${BACKUP_LIST_RUNS[@]}"; do
     path="${base}/${run}"
@@ -308,7 +336,6 @@ backup_list() {
     backup_running "${run}" && live=1
     cells=()
     trigger=""
-    files=0
     size=0
     volume="-"
     ran=0
@@ -321,14 +348,12 @@ backup_list() {
       [ -n "${trigger}" ] || trigger="$(backup_tail_field "${doc}" trigger)"
       case "${state}" in
       -) ;;
-      running) alive=1 ;;
+      "${BACKUP_STATE_RUNNING}") alive=1 ;;
       success) ran=1 ;;
-      stopped | timeout) halted=1 ;;
+      "${BACKUP_STATE_STOPPED}" | "${BACKUP_STATE_TIMEDOUT}") halted=1 ;;
       *) broke=1 ;;
       esac
       if [ -f "${doc}" ]; then
-        held="$(backup_tail_field "${doc}" file_count)"
-        files=$(( files + ${held:-0} ))
         held="$(backup_tail_field "${doc}" size_mb)"
         size=$(( size + ${held:-0} ))
         [ "${stage}" = "tertiary" ] && volume="$(backup_tail_field "${doc}" disk_usage_perc)"
@@ -338,28 +363,28 @@ backup_list() {
     result="$(backup_tail_field "${path}/status.json" state)"
     if [ -z "${result}" ]; then
       result="-"
-      [ "${ran}" -eq 1 ] && result="complete"
+      [ "${ran}" -eq 1 ] && result="${BACKUP_STATE_COMPLETE}"
       [ "${halted}" -eq 1 ] && result="halted"
-      [ "${broke}" -eq 1 ] && result="failed"
+      [ "${broke}" -eq 1 ] && result="${BACKUP_STATE_FAILED}"
     fi
-    { [ "${alive}" -eq 1 ] || [ "${live}" -eq 1 ]; } && result="running"
-    if [ "${result}" = "running" ]; then
+    { [ "${alive}" -eq 1 ] || [ "${live}" -eq 1 ]; } && result="${BACKUP_STATE_RUNNING}"
+    latest=0
+    for stage in primary secondary tertiary; do
+      ended="$(backup_tail_field "${path}/stage/${stage}/status.json" finished_ts)"
+      [ -n "${ended}" ] || continue
+      ended="$(date -d "${ended}" +%s 2>/dev/null || echo 0)"
+      [ "${ended}" -gt "${latest}" ] && latest="${ended}"
+    done
+    finished="-"
+    if [ "${result}" = "${BACKUP_STATE_RUNNING}" ]; then
       elapsed="$(backup_elapsed $(( $(date +%s) - began )))"
     else
-      latest=0
-      for stage in primary secondary tertiary; do
-        doc="${path}/stage/${stage}/status.json"
-        [ -f "${doc}" ] || continue
-        ended="$(date -d "$(backup_tail_field "${doc}" finished_ts)" +%s 2>/dev/null || echo 0)"
-        [ "${ended}" -gt "${latest}" ] && latest="${ended}"
-      done
       elapsed="-"
       [ "${latest}" -gt "${began}" ] && elapsed="$(backup_elapsed $(( latest - began )))"
+      [ "${latest}" -gt 0 ] && finished="$(date -d @"${latest}" '+%Y-%m-%d_%H-%M-%S' 2>/dev/null || echo "-")"
     fi
-    backup_row "${run}" "$(date -d @"${began}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "-")" \
-      "${elapsed}" "${trigger:--}" "${cells[@]}" \
-      "$(printf '%9s' "$([ "${files}" -gt 0 ] && printf '%s' "${files}" || printf '%s' "-")")" \
-      "$(printf '%10s' "$(backup_megabytes "${size}")")" "$(backup_bar "${volume}")" "${result}"
+    backup_row "${run}" "${finished}" "${elapsed}" "${trigger:--}" "${cells[@]}" \
+      "$(printf '%13s' "$(backup_megabytes "${size}")")" "$(backup_bar "${volume}")" "${result}"
   done
   backup_rule "+"
   echo
@@ -419,21 +444,21 @@ backup_sequence() {
 }
 
 backup_rollup() {
-  local started="$1" stage doc run=0 failed=0 partial=0 state=complete success=true
+  local started="$1" stage doc run=0 failed=0 partial=0 state="${BACKUP_STATE_COMPLETE}" success=true
   for stage in primary secondary tertiary; do
     doc="${BACKUP_RUN_PATH}/stage/${stage}/status.json"
     [ -f "${doc}" ] || continue
     run=$(( run + 1 ))
     [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] && continue
     case "$(backup_result "${doc}")" in
-    stopped | timeout) partial=$(( partial + 1 )) ;;
+    "${BACKUP_STATE_STOPPED}" | "${BACKUP_STATE_TIMEDOUT}") partial=$(( partial + 1 )) ;;
     *) failed=$(( failed + 1 )) ;;
     esac
   done
   [ "${run}" -gt 0 ] || return 0
   if [ "${failed}" -gt 0 ] || [ "${partial}" -gt 0 ]; then success=false; fi
-  [ "${partial}" -gt 0 ] && state=halted
-  [ "${failed}" -gt 0 ] && state=failed
+  [ "${partial}" -gt 0 ] && state="${BACKUP_STATE_HALTED}"
+  [ "${failed}" -gt 0 ] && state="${BACKUP_STATE_FAILED}"
   cat >"${BACKUP_RUN_PATH}/status.json.tmp" <<JSON
 {
   "run_id": "${BACKUP_RUN_ID}",
@@ -478,11 +503,11 @@ backup_await() {
         *)
           BACKUP_SEEN_STAGES="${BACKUP_SEEN_STAGES} ${stage}"
           backup_started "${stage}"
-          [ "$(backup_tail_field "${doc}" state)" = "running" ] &&
+          [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_RUNNING}" ] &&
             backup_progress "${path}" "${stage}"
           ;;
         esac
-        [ "$(backup_tail_field "${doc}" state)" = "running" ] && continue
+        [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_RUNNING}" ] && continue
         case " ${BACKUP_DONE_STAGES} " in *" ${stage} "*) continue ;; esac
         BACKUP_DONE_STAGES="${BACKUP_DONE_STAGES} ${stage}"
         [ "${stage}" = "tertiary" ] || backup_progress "${path}" "${stage}"
@@ -503,7 +528,7 @@ backup_await() {
     for stage in primary secondary tertiary; do
       doc="${path}/stage/${stage}/status.json"
       [ -f "${doc}" ] || continue
-      [ "$(backup_tail_field "${doc}" state)" = "running" ] || continue
+      [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_RUNNING}" ] || continue
       stamped="$(stat -c %Y "${doc}" 2>/dev/null || echo 0)"
       [ $(( now - stamped )) -lt "${BACKUP_TAIL_STALE:-300}" ] && continue 2
     done
@@ -560,7 +585,7 @@ backup_previous() {
   while read -r doc; do
     [ -f "${doc}" ] || continue
     state="$(backup_tail_field "${doc}" state)"
-    [ "${state}" = "running" ] && continue
+    [ "${state}" = "${BACKUP_STATE_RUNNING}" ] && continue
     [ -z "${want}" ] || [ "${state}" = "${want}" ] || continue
     value="$(backup_tail_field "${doc}" "${field}")"
     [ -n "${value}" ] || continue
@@ -593,7 +618,7 @@ backup_pending() {
   fi
   while read -r doc; do
     [ -f "${doc}" ] || continue
-    [ "$(backup_tail_field "${doc}" state)" = "complete" ] || continue
+    [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_COMPLETE}" ] || continue
     seconds="$(backup_spent "${doc}")"
     [ "${seconds:-0}" -gt 0 ] 2>/dev/null || continue
     printf '%s' "$(( seconds / 60 ))"
@@ -667,7 +692,7 @@ backup_active_stage() {
   for stage in primary secondary tertiary; do
     doc="${path}/stage/${stage}/status.json"
     [ -f "${doc}" ] || continue
-    [ "$(backup_tail_field "${doc}" state)" = "running" ] && active="${stage}"
+    [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_RUNNING}" ] && active="${stage}"
   done
   [ -n "${active}" ] ||
     active="$(find "${path}/stage" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)"
@@ -761,7 +786,7 @@ backup_promoting() {
     [ "${whole:-0}" -gt 0 ] 2>/dev/null && percent=$(( ${moved:-0} * 100 / whole ))
     [ "${rate}" -gt 0 ] 2>/dev/null && remaining=$(( (${whole:-0} - ${moved:-0}) / rate / 60 ))
     [ "${remaining}" = "-" ] || [ "${remaining}" -ge 0 ] || remaining=0
-    [ "$(backup_tail_field "${doc}" state)" = "running" ] || remaining=0
+    [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_RUNNING}" ] || remaining=0
   fi
   printf '%s\t%s\t%s\t%s\t%s\t' "${copied}" "${total}" "${percent}" "${remaining}" "${rate}"
 }
@@ -771,7 +796,7 @@ backup_progress() {
   active="$(backup_active_stage "${path}" "${forced}")"
   now="$(date +%s)"
   scrub="${path}/stage/${active}/scrub.json"
-  if [ -n "${active}" ] && [ -f "${scrub}" ] && [ "$(backup_tail_field "${scrub}" state)" = "running" ]; then
+  if [ -n "${active}" ] && [ -f "${scrub}" ] && [ "$(backup_tail_field "${scrub}" state)" = "${BACKUP_STATE_RUNNING}" ]; then
     backup_marker "${active}" "$(backup_scrubbing "${scrub}" "${now}")"
     return 0
   fi
@@ -875,7 +900,7 @@ backup_rate() {
   local stage="$1" doc size seconds rate
   while read -r doc; do
     [ -f "${doc}" ] || continue
-    [ "$(backup_tail_field "${doc}" state)" = "complete" ] || continue
+    [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_COMPLETE}" ] || continue
     size="$(backup_tail_field "${doc}" size_mb)"
     seconds="$(backup_spent "${doc}")"
     [ "${size:-0}" -gt 0 ] 2>/dev/null || continue
@@ -918,16 +943,26 @@ backup_publish() {
     ${BROKER_TOKEN:+-u supervisor -P "${BROKER_TOKEN}"} -q 1 -r -t "${topic}" -m "${payload}" 2>/dev/null
 }
 
+backup_unclean() {
+  local target="$1" kernel="$2"
+  dmesg 2>/dev/null | tail -n "+$(( kernel + 1 ))" |
+    grep -qiE 'btrfs.*(tree-log replay|has been changed)' || return 0
+  backup_log WARN "[${target}] replayed its log at mount, the previous unmount was unclean"
+  [ "${target}" = /backup ] || return 0
+  printf 'true\n' >"${BACKUP_STAGE_DIR}/disk-unclean" 2>/dev/null || true
+}
+
 backup_mount() {
-  local target="$1" error=""
+  local target="$1" error="" kernel
   mountpoint -q "${target}" && return 0
   grep -qsE "^[^#][^[:space:]]*[[:space:]]+${target}[[:space:]]" /etc/fstab || {
     backup_log ERROR "mount of [${target}] refused, not mounted and not in /etc/fstab"
     return 1
   }
   backup_log INFO "mounting [${target}]"
+  kernel="$(dmesg 2>/dev/null | wc -l)"
   error="$(mount "${target}" 2>&1)" || ls "${target}" >/dev/null 2>&1 || true
-  mountpoint -q "${target}" && return 0
+  mountpoint -q "${target}" && { backup_unclean "${target}" "${kernel}"; return 0; }
   backup_log ERROR "mount of [${target}] failed with [${error:-no reason reported}]"
   return 1
 }
@@ -978,15 +1013,15 @@ backup_usage() {
     for allocation in data metadata system; do
       used=$(( used + $(cat "${BACKUP_SYSFS_BTRFS}/${uuid}/allocation/${allocation}/bytes_used" 2>/dev/null || echo 0) ))
     done
-    if [ "${total}" -gt 0 ]; then
-      BACKUP_USAGE=$(( used * 100 / total ))
-      backup_counters
-      return 0
-    fi
   fi
-  percent="$(df --output=pcent "$1" 2>/dev/null | tail -1 | tr -dc '0-9')"
-  BACKUP_USAGE="${percent:-0}"
-  backup_counters
+  if [ "${total}" -gt 0 ]; then
+    BACKUP_USAGE=$(( used * 100 / total ))
+  else
+    percent="$(df --output=pcent "$1" 2>/dev/null | tail -1 | tr -dc '0-9')"
+    BACKUP_USAGE="${percent:-0}"
+  fi
+  printf '%s\n' "${BACKUP_USAGE}" >"${BACKUP_STAGE_DIR}/disk-usage.tmp" 2>/dev/null &&
+    mv "${BACKUP_STAGE_DIR}/disk-usage.tmp" "${BACKUP_STAGE_DIR}/disk-usage" 2>/dev/null || true
 }
 
 backup_field() {
@@ -1052,18 +1087,22 @@ backup_thin() {
 }
 
 backup_counters() {
-  printf '%s %s %s %s %s %s %s %s %s\n' \
-    "${BACKUP_TOTAL}" "${BACKUP_USAGE}" "${BACKUP_FILES}" "${BACKUP_SIZE}" "${BACKUP_FILES_HELD}" \
+  printf '%s %s %s %s %s %s %s %s\n' \
+    "${BACKUP_TOTAL}" "${BACKUP_FILES}" "${BACKUP_SIZE}" "${BACKUP_FILES_HELD}" \
     "${BACKUP_FILES_CREATED}" "${BACKUP_FILES_DELETED}" "${BACKUP_SIZE_HELD}" "${BACKUP_SENT}" \
-    >"${BACKUP_STAGE_DIR}/counters" 2>/dev/null || true
+    >"${BACKUP_STAGE_DIR}/counters.tmp" 2>/dev/null &&
+    mv "${BACKUP_STAGE_DIR}/counters.tmp" "${BACKUP_STAGE_DIR}/counters" 2>/dev/null || true
 }
 
 backup_document() {
   local state="$1" success="$2" started="$3" expires="${4:-}" quiet="${5:-}"
-  [ -f "${BACKUP_STAGE_DIR}/counters" ] &&
-    read -r BACKUP_TOTAL BACKUP_USAGE BACKUP_FILES BACKUP_SIZE BACKUP_FILES_HELD \
+  [ -s "${BACKUP_STAGE_DIR}/counters" ] &&
+    read -r BACKUP_TOTAL BACKUP_FILES BACKUP_SIZE BACKUP_FILES_HELD \
       BACKUP_FILES_CREATED BACKUP_FILES_DELETED BACKUP_SIZE_HELD BACKUP_SENT \
       <"${BACKUP_STAGE_DIR}/counters"
+  [ -s "${BACKUP_STAGE_DIR}/disk-usage" ] && read -r BACKUP_USAGE <"${BACKUP_STAGE_DIR}/disk-usage"
+  local unclean=false
+  [ -f "${BACKUP_STAGE_DIR}/disk-unclean" ] && unclean=true
   local finished; finished="$(date --iso-8601=seconds)"
   local expires_ts=""
   [ -n "${expires}" ] && expires_ts="$(date --iso-8601=seconds -d @"${expires}" 2>/dev/null)"
@@ -1079,6 +1118,7 @@ backup_document() {
   "duration_s": ${duration},
   "success_bool": ${success},
   "disk_usage_perc": ${BACKUP_USAGE:-0},
+  "disk_unclean_bool": ${unclean},
   "total_mb": ${BACKUP_TOTAL},
   "file_count": ${BACKUP_FILES},
   "size_mb": ${BACKUP_SIZE},
@@ -1096,9 +1136,9 @@ JSON
 
 # shellcheck disable=SC2329
 backup_interrupted() {
-  local state=failed
-  [ -f "${BACKUP_STAGE_DIR}/.stopped" ] && state=stopped
-  [ -f "${BACKUP_STAGE_DIR}/.timeout" ] && state=timeout
+  local state="${BACKUP_STATE_FAILED}"
+  [ -f "${BACKUP_STAGE_DIR}/.stopped" ] && state="${BACKUP_STATE_STOPPED}"
+  [ -f "${BACKUP_STAGE_DIR}/.timedout" ] && state="${BACKUP_STATE_TIMEDOUT}"
   backup_log WARN "interrupted, [${state}] this stage"
   backup_counted
   [ "${BACKUP_STAGE}" = "tertiary" ] && mountpoint -q /backup 2>/dev/null && backup_usage /backup
@@ -1135,20 +1175,21 @@ backup_heartbeat() {
       stage_stop || true
       return 0
     fi
+    [ "${BACKUP_STAGE}" = "tertiary" ] && mountpoint -q /backup 2>/dev/null && backup_usage /backup
     if [ "${hard}" -gt 0 ] && [ "${now}" -ge "${hard}" ]; then
-      backup_document "running" false "${BACKUP_STARTED}" "$(( now - 1 ))"
+      backup_document "${BACKUP_STATE_RUNNING}" false "${BACKUP_STARTED}" "$(( now - 1 ))"
       backup_log WARN "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, stopping this stage, the next run resumes it"
-      : >"${BACKUP_STAGE_DIR}/.timeout"
+      : >"${BACKUP_STAGE_DIR}/.timedout"
       kill -TERM "${BACKUP_MAIN_PID}" 2>/dev/null
       stage_stop || true
       return 0
     fi
-    backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))" quiet
+    backup_document "${BACKUP_STATE_RUNNING}" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))" quiet
     [ "${BACKUP_TAIL_PROGRESS:-10}" -gt 0 ] 2>/dev/null &&
       backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}" record
     [ "${now}" -ge "${due}" ] || continue
     due=$(( now + BACKUP_HEARTBEAT_REFRESH ))
-    backup_document "running" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))"
+    backup_document "${BACKUP_STATE_RUNNING}" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))"
   done
 }
 
@@ -1183,11 +1224,11 @@ primary_start() {
     local rc=0
     BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}" BACKUP_SERVICE_RESTART=true BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS}" \
       bash "${script}" >"${dir}/output.log" 2>&1 || rc=$?
-    local state=complete ok=true
-    [ "${rc}" -eq 0 ] || { state=failed; ok=false; failed=$(( failed + 1 )); }
+    local state="${BACKUP_STATE_COMPLETE}" ok=true
+    [ "${rc}" -eq 0 ] || { state="${BACKUP_STATE_FAILED}"; ok=false; failed=$(( failed + 1 )); }
     local newest size=0 files=0 kind=unknown version=unknown stamp file stem
     newest="$(find "${BACKUP_HOME_ROOT}/${service}/backup" -mindepth 1 -maxdepth 1 -type d -name '20*' 2>/dev/null | sort | tail -1)"
-    [ "${state}" = complete ] && [ "${newest}" = "${previous}" ] && state=skipped
+    [ "${state}" = "${BACKUP_STATE_COMPLETE}" ] && [ "${newest}" = "${previous}" ] && state="${BACKUP_STATE_SKIPPED}"
     if [ -n "${newest}" ]; then
       size="$(du -m -s "${newest}" 2>/dev/null | cut -f1)"
       size="${size:-0}"
@@ -1402,6 +1443,22 @@ backup_scrub_counter() {
   printf '%s' "${value:-0}"
 }
 
+backup_device_counter() {
+  printf '%s\n' "$1" | awk -v key="$2" '$1 ~ ("\\]\\." key "$") { total += $2 } END { printf "%d", total + 0 }'
+}
+
+backup_balance() {
+  local started output relocated
+  started="$(date +%s)"
+  if ! output="$(btrfs balance start -dusage=10 -musage=10 /backup 2>&1)"; then
+    backup_log WARN "could not balance [/backup] with [${output}]"
+    return 0
+  fi
+  relocated="$(printf '%s\n' "${output}" | sed -n 's/.*relocate \([0-9]*\) out of.*/\1/p' | head -1)"
+  BACKUP_RELOCATED="${relocated:-0}"
+  backup_log INFO "balanced [${BACKUP_RELOCATED}] chunks relocated on [/backup] in [$(backup_elapsed $(( $(date +%s) - started )))]"
+}
+
 backup_scrub_document() {
   local state="$1" success="$2" started="$3" scrubbed="$4" progress="$5" found="$6" corrected="$7" uncorrectable="$8"
   local files="${9:-}" count="${10:-0}" deadline="${11:-0}" expires=""
@@ -1422,7 +1479,9 @@ backup_scrub_document() {
   "errors_corrected": ${corrected},
   "errors_uncorrectable": ${uncorrectable},
   "files_to_delete": "${files}",
-  "files_to_delete_count": ${count}
+  "files_to_delete_count": ${count},
+  "device_errors": ${BACKUP_DEVICE_ERRORS},
+  "chunks_relocated": ${BACKUP_RELOCATED}
 }
 JSON
   mv "${BACKUP_STAGE_DIR}/scrub.json.tmp" "${BACKUP_STAGE_DIR}/scrub.json"
@@ -1435,7 +1494,7 @@ backup_scrub_corrupt() {
 }
 
 backup_scrub_reading() {
-  local raw status scrubbed progress corrected uncorrectable found phase=finished
+  local raw status scrubbed progress corrected uncorrectable found phase="${BACKUP_STATE_FINISHED}"
   raw="$(btrfs scrub status -R /backup 2>/dev/null)"
   status="$(btrfs scrub status /backup 2>/dev/null)"
   scrubbed=$(( $(backup_scrub_counter "${raw}" "data_bytes_scrubbed") / 1048576 ))
@@ -1447,8 +1506,8 @@ backup_scrub_reading() {
     $(backup_scrub_counter "${raw}" "super_errors") ))
   case "${status}" in
   *aborted*) phase=aborted ;;
-  *interrupted*) phase=interrupted ;;
-  *) printf '%s\n' "${raw}" | grep -qi "status:[[:space:]]*running" && phase=running ;;
+  *interrupted*) phase="${BACKUP_STATE_INTERRUPTED}" ;;
+  *) printf '%s\n' "${raw}" | grep -qi "status:[[:space:]]*running" && phase="${BACKUP_STATE_RUNNING}" ;;
   esac
   printf '%s\t%s\t%s\t%s\t%s\t%s' "${scrubbed}" "${progress:-0}" "${found}" "${corrected}" "${uncorrectable}" "${phase}"
 }
@@ -1460,23 +1519,23 @@ backup_scrub_cancel() {
 }
 
 backup_scrub() {
-  local action started hard since state=finished success=true phase=finished
+  local action started hard since state="${BACKUP_STATE_FINISHED}" success=true phase="${BACKUP_STATE_FINISHED}"
   local scrubbed=0 progress=0 found=0 corrected=0 uncorrectable=0
-  local kernel=0 files="" count=0 status
+  local kernel=0 files="" count=0 status devices
   started="$(date +%s)"
   if [ "${BACKUP_SCRUB}" != "1" ]; then
     backup_log INFO "scrub skipped, a [${BACKUP_TRIGGER}] run does not scrub, pass [--scrub] to force one"
-    backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
+    backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
     return 0
   fi
   if ! command -v btrfs >/dev/null 2>&1; then
     backup_log WARN "scrub skipped, no [btrfs] on the PATH"
-    backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
+    backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
     return 0
   fi
   if ! btrfs filesystem show /backup >/dev/null 2>&1; then
     backup_log INFO "scrub skipped, [/backup] is not btrfs"
-    backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
+    backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
     return 0
   fi
   status="$(btrfs scrub status /backup 2>/dev/null)"
@@ -1488,7 +1547,7 @@ backup_scrub() {
     if [ "${BACKUP_SCRUB_FORCED}" != "1" ] && [ -n "${since}" ] &&
       [ "$(date -d "${since}" +%s 2>/dev/null || echo 0)" -gt "$(( started - BACKUP_SCRUB_DAYS * 86400 ))" ]; then
       backup_log INFO "scrub skipped, the last pass started [${since}] within [${BACKUP_SCRUB_DAYS}] days, pass [--scrub] to force one"
-      backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
+      backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
       return 0
     fi
     ;;
@@ -1499,49 +1558,62 @@ backup_scrub() {
   [ "${hard}" -gt 0 ] || hard=$(( started + 3600 ))
   if [ "${hard}" -le "${started}" ]; then
     backup_log WARN "scrub skipped, no time left inside the stage timeout"
-    backup_scrub_document "skipped" true "${started}" 0 0 0 0 0
+    backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
     return 0
   fi
   kernel="$(dmesg 2>/dev/null | wc -l)"
   backup_log INFO "scrub [${action}] on [/backup] until [$(date --iso-8601=seconds -d @"${hard}")], polling every [${BACKUP_SCRUB_POLL}] s"
   if ! btrfs scrub "${action}" -c 3 -n 15 /backup >/dev/null 2>&1; then
     backup_log ERROR "could not [${action}] the scrub on [/backup]"
-    backup_scrub_document "failed" false "${started}" 0 0 0 0 0
+    backup_scrub_document "${BACKUP_STATE_FAILED}" false "${started}" 0 0 0 0 0
     return 1
   fi
   while :; do
     sleep "${BACKUP_SCRUB_POLL}"
     IFS=$'\t' read -r scrubbed progress found corrected uncorrectable phase < <(backup_scrub_reading)
     backup_log INFO "scrub at [${progress}] pct, scrubbed [${scrubbed}] MB"
-    backup_scrub_document "running" false "${started}" "${scrubbed}" "${progress}" \
+    backup_scrub_document "${BACKUP_STATE_RUNNING}" false "${started}" "${scrubbed}" "${progress}" \
       "${found}" "${corrected}" "${uncorrectable}" "" 0 "${hard}"
-    [ "${phase}" = "running" ] || break
+    [ "${phase}" = "${BACKUP_STATE_RUNNING}" ] || break
     if [ "$(date +%s)" -ge "${hard}" ]; then
       btrfs scrub cancel /backup >/dev/null 2>&1 || true
-      state="interrupted"
+      state="${BACKUP_STATE_INTERRUPTED}"
       break
     fi
   done
   IFS=$'\t' read -r scrubbed progress found corrected uncorrectable phase < <(backup_scrub_reading)
   case "${phase}" in
-  aborted) state="failed" ;;
-  interrupted) state="interrupted" ;;
+  aborted) state="${BACKUP_STATE_FAILED}" ;;
+  "${BACKUP_STATE_INTERRUPTED}") state="${BACKUP_STATE_INTERRUPTED}" ;;
   esac
-  if [ "${found}" -gt 0 ] || [ "${uncorrectable}" -gt 0 ]; then
+  devices="$(btrfs device stats /backup 2>/dev/null)"
+  BACKUP_DEVICE_ERRORS=$(( $(backup_device_counter "${devices}" "write_io_errs") +
+    $(backup_device_counter "${devices}" "read_io_errs") +
+    $(backup_device_counter "${devices}" "flush_io_errs") +
+    $(backup_device_counter "${devices}" "corruption_errs") +
+    $(backup_device_counter "${devices}" "generation_errs") ))
+  if [ "${found}" -gt 0 ] || [ "${uncorrectable}" -gt 0 ] || [ "${BACKUP_DEVICE_ERRORS}" -gt 0 ]; then
     success=false
     count="$(backup_scrub_corrupt "${kernel}" | wc -l | tr -d ' ')"
     files="$(backup_scrub_corrupt "${kernel}" | head -20 | paste -sd ',' - | sed 's/"/\\"/g')"
     {
       btrfs scrub status -R /backup 2>/dev/null && printf '\n'
+      printf '%s\n\n' "${devices}"
       backup_scrub_corrupt "${kernel}"
       printf '\n'
       dmesg -T 2>/dev/null | tail -n "+$(( kernel + 1 ))" |
-        grep -iE 'btrfs.*(csum|checksum|unable to fixup)' | tail -500
+        grep -iE 'btrfs.*(csum|checksum|unable to fixup)|usb.*(reset|disconnect)|i/o error|blk_update_request|tag#' | tail -500
     } >"${BACKUP_STAGE_DIR}/scrub.log"
-    backup_log ERROR "scrub found [${found}] errors with [${uncorrectable}] uncorrectable across [${count}] files, delete them and re-mirror, listed in [${BACKUP_STAGE_DIR}/scrub.log]"
+    if [ "${found}" -gt 0 ] || [ "${uncorrectable}" -gt 0 ]; then
+      backup_log ERROR "scrub found [${found}] errors with [${uncorrectable}] uncorrectable across [${count}] files and [${BACKUP_DEVICE_ERRORS}] device errors, delete them and re-mirror, listed in [${BACKUP_STAGE_DIR}/scrub.log]"
+    else
+      backup_log ERROR "scrub found [${BACKUP_DEVICE_ERRORS}] device errors accumulated since the last scrub with no checksum error this pass, counters in [${BACKUP_STAGE_DIR}/scrub.log]"
+    fi
   else
     backup_log INFO "scrub [${state}] at [${progress}] pct having scrubbed [${scrubbed}] MB with no errors"
   fi
+  btrfs device stats -z /backup >/dev/null 2>&1 || true
+  { [ "${state}" = "${BACKUP_STATE_FINISHED}" ] && [ "$(date +%s)" -lt "${hard}" ]; } && backup_balance
   backup_scrub_document "${state}" "${success}" "${started}" "${scrubbed}" "${progress}" "${found}" "${corrected}" "${uncorrectable}" "${files}" "${count}"
   [ "${success}" = "true" ]
 }
@@ -1551,7 +1623,7 @@ tertiary_start() {
   command_topic="$(backup_config '.asystem.backup.command_topic' '')"
   if [ -n "${command_topic}" ]; then
     backup_log INFO "powering the backup disk on with [ON] to [${command_topic}]"
-    backup_command "${command_topic}" "ON" ||
+    backup_command "${command_topic}" "${BACKUP_COMMAND_ON}" ||
       backup_log WARN "could not publish [ON] to [${command_topic}], the disk must already be powered"
   fi
   if ! backup_attach; then
@@ -1609,6 +1681,8 @@ tertiary_stop() {
   rm -f "${BACKUP_STAGE_DIR}/disk-device"
   backup_stopping "terminating any running mirror and scrub, flushing and unmounting the backup disk"
   backup_scrub_cancel
+  command -v btrfs >/dev/null 2>&1 && mountpoint -q /backup &&
+    { btrfs balance cancel /backup >/dev/null 2>&1 || true; }
   pkill -TERM -f "rsync .*/backup/share" 2>/dev/null || true
   backup_reaped "rsync .*/backup/share"
   sync -f /backup 2>/dev/null || sync
@@ -1646,6 +1720,8 @@ BACKUP_SCRUB_MARGIN="${BACKUP_SCRUB_MARGIN:-900}"
 BACKUP_SCRUB_POLL="${BACKUP_SCRUB_POLL:-30}"
 
 BACKUP_USAGE=0
+BACKUP_DEVICE_ERRORS=0
+BACKUP_RELOCATED=0
 BACKUP_TOTAL=0
 BACKUP_FILES=0
 BACKUP_FILES_HELD=0
@@ -1755,7 +1831,7 @@ backup_banner "starting [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]" \
   "timeout   [${BACKUP_TIMEOUT_HOURS}] hours" \
   "retention [${BACKUP_KEEP_DAILY}] daily, [${BACKUP_KEEP_WEEKLY}] weekly, [${BACKUP_KEEP_MONTHLY}] monthly" \
   "heartbeat [${BACKUP_HEARTBEAT_REFRESH}] s refresh, [${BACKUP_HEARTBEAT_GRACE}] s grace"
-backup_document "running" false "${BACKUP_STARTED}" "$(( BACKUP_STARTED + BACKUP_HEARTBEAT_GRACE ))"
+backup_document "${BACKUP_STATE_RUNNING}" false "${BACKUP_STARTED}" "$(( BACKUP_STARTED + BACKUP_HEARTBEAT_GRACE ))"
 backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}"
 backup_heartbeat 9>&- &
 BACKUP_HEARTBEAT_PID=$!
@@ -1765,9 +1841,9 @@ stage_start || BACKUP_RESULT=$?
 backup_settle
 BACKUP_ELAPSED=$(( $(date +%s) - BACKUP_STARTED ))
 if [ "${BACKUP_RESULT}" -eq 0 ]; then
-  backup_document "complete" true "${BACKUP_STARTED}"
+  backup_document "${BACKUP_STATE_COMPLETE}" true "${BACKUP_STARTED}"
 else
-  backup_document "failed" false "${BACKUP_STARTED}"
+  backup_document "${BACKUP_STATE_FAILED}" false "${BACKUP_STARTED}"
 fi
 backup_banner "finished [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}] as [$([ "${BACKUP_RESULT}" -eq 0 ] && echo complete || echo failed)]" \
   "elapsed   [$(backup_elapsed "${BACKUP_ELAPSED}")]" \

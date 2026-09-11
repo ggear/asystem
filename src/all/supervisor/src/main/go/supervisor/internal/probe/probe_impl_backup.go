@@ -147,7 +147,7 @@ func (p *backupProbe) haltedBackupStages() (int8, derivation, error) {
 
 func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 	snapshot := p.documents()
-	if snapshot == nil || snapshot.tertiary == nil || snapshot.tertiary.State == "running" {
+	if snapshot == nil || snapshot.tertiary == nil || snapshot.tertiary.State == metric.BackupStateRunning {
 		if !p.serverHost {
 			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, host [%s] owns no share index so it runs no tertiary stage and holds no backup disk, so the metric is inert and always ok", p.hostName), nil
 		}
@@ -178,7 +178,7 @@ func (p *backupProbe) armReaper(started time.Time) {
 		return
 	}
 	defer client.close()
-	if err := client.publishRetained(clusterReaperTopic, "ON"); err != nil {
+	if err := client.publishRetained(clusterReaperTopic, metric.CommandOn); err != nil {
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], the reaper stays paused until it can be reached", err, clusterReaperTopic)
 		return
 	}
@@ -246,7 +246,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 			continue
 		}
 		var document backupDocument
-		if json.Unmarshal([]byte(payload), &document) != nil || document.State != "running" || document.ExpiresTS == "" {
+		if json.Unmarshal([]byte(payload), &document) != nil || document.State != metric.BackupStateRunning || document.ExpiresTS == "" {
 			continue
 		}
 		if expires, perr := time.Parse(time.RFC3339, document.ExpiresTS); perr == nil && time.Now().Before(expires) {
@@ -263,7 +263,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 	if !isLeader || leaderClient == nil {
 		return
 	}
-	_ = leaderClient.publishCommand(commandTopic, "OFF")
+	_ = leaderClient.publishCommand(commandTopic, metric.CommandOff)
 	_ = leaderClient.publishRetained(clusterLeaderTopic, "")
 	leaderClient.close()
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", reapStart, "[%s] backup disk powered down, no tertiary stage running for [%d] ticks", commandTopic, reaperIdleTicks)
@@ -277,7 +277,7 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 	runPath := filepath.Join(p.root, snapshot.dir)
 	for _, stage := range backupStages {
 		document := snapshot.stages[stage]
-		if document == nil || document.State != "running" || document.ExpiresTS == "" {
+		if document == nil || document.State != metric.BackupStateRunning || document.ExpiresTS == "" {
 			continue
 		}
 		expires, err := time.Parse(time.RFC3339, document.ExpiresTS)
@@ -290,7 +290,7 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 		stop.Env = append(os.Environ(), "BACKUP_RUN_ID="+snapshot.dir, "BACKUP_RUN_PATH="+runPath, "BACKUP_RUN_ID_PASSED=1")
 		_ = stop.Run()
 		stale := *document
-		stale.State = "timeout"
+		stale.State = metric.BackupStateTimedout
 		stale.FinishedTS = time.Now().Format(time.RFC3339)
 		stale.ExpiresTS = ""
 		writeDocumentAtomic(stageStatusPath(runPath, stage), stale)
@@ -361,12 +361,12 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 	var leaderClient *brokerClient
 	if p.serverHost {
 		isLeader, leaderClient = electBackupLeader(p.configPath, p.hostName, runID)
-		p.powerBackupDisk("ON", runStart)
+		p.powerBackupDisk(metric.CommandOn, runStart)
 	}
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("schedule", runStart, "[%s] backup run over [%d] stages", runID, len(stages))
 	leaseCancel := context.CancelFunc(func() {})
 	if isLeader && leaderClient != nil {
-		p.publishClusterStatus(leaderClient, runID, "running", runStart, true, 0, 0)
+		p.publishClusterStatus(leaderClient, runID, metric.BackupStateRunning, runStart, true, 0, 0)
 		var leaseCtx context.Context
 		leaseCtx, leaseCancel = context.WithCancel(ctx)
 		go func() {
@@ -466,9 +466,9 @@ func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string
 }
 
 func (p *backupProbe) writeRunDocument(runPath, runID string, stagesRun, stagesFailed int, started time.Time) backupDocument {
-	state := "failed"
+	state := metric.BackupStateFailed
 	if stagesFailed == 0 {
-		state = "complete"
+		state = metric.BackupStateComplete
 	}
 	document := backupDocument{
 		RunID:        runID,
@@ -480,7 +480,7 @@ func (p *backupProbe) writeRunDocument(runPath, runID string, stagesRun, stagesF
 		StagesRun:    stagesRun,
 		StagesFailed: stagesFailed,
 	}
-	for _, stage := range []string{"primary", "secondary", "tertiary"} {
+	for _, stage := range backupStages {
 		staged := readStageDocument(stageStatusPath(runPath, stage))
 		if staged == nil {
 			continue
@@ -490,7 +490,7 @@ func (p *backupProbe) writeRunDocument(runPath, runID string, stagesRun, stagesF
 		document.FilesCreated += staged.FilesCreated
 		document.FilesDeleted += staged.FilesDeleted
 		document.SentMB += staged.SentMB
-		if stage == "tertiary" {
+		if stage == backupStageTertiary {
 			document.DiskUsagePerc = staged.DiskUsagePerc
 			document.FilesHeld = staged.FilesHeld
 			document.SizeHeldMB = staged.SizeHeldMB
@@ -526,13 +526,13 @@ func (p *backupProbe) publishClusterStatus(client *brokerClient, runID, state st
 		"state":          state,
 		"started_ts":     started.Format(time.RFC3339),
 		"duration_s":     int(time.Since(started).Seconds()),
-		"success_bool":   state == "complete",
+		"success_bool":   state == metric.BackupStateComplete,
 		"power_bool":     powered,
 		"hosts_expected": len(expected),
 		"hosts_reported": reported,
 		"hosts_failed":   failed,
 	}
-	if state != "running" {
+	if state != metric.BackupStateRunning {
 		document["finished_ts"] = time.Now().Format(time.RFC3339)
 	}
 	payload, _ := json.Marshal(document)
@@ -552,7 +552,8 @@ func (p *backupProbe) publishHostStatus(document backupDocument) {
 func (p *backupProbe) finishLeadership(ctx context.Context, client *brokerClient, runID string, started time.Time) {
 	expected := backupExpectedServers(p.configPath)
 	deadline := time.Now().Add(backupRunCeiling)
-	terminal := map[string]bool{"complete": true, "failed": true, "timeout": true}
+	terminal := map[string]bool{metric.BackupStateComplete: true, metric.BackupStateFailed: true,
+		metric.BackupStateTimedout: true}
 	reported, failedHosts, timedOut := 0, 0, true
 	for time.Now().Before(deadline) {
 		reported, failedHosts = 0, 0
@@ -575,21 +576,21 @@ func (p *backupProbe) finishLeadership(ctx context.Context, client *brokerClient
 			break
 		}
 		p.refreshLease(client, runID)
-		p.publishClusterStatus(client, runID, "running", started, true, reported, failedHosts)
+		p.publishClusterStatus(client, runID, metric.BackupStateRunning, started, true, reported, failedHosts)
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(leaderPollInterval):
 		}
 	}
-	terminalState := "complete"
+	terminalState := metric.BackupStateComplete
 	if timedOut {
-		terminalState = "timeout"
+		terminalState = metric.BackupStateTimedout
 	} else if failedHosts > 0 {
-		terminalState = "failed"
+		terminalState = metric.BackupStateFailed
 	}
 	if topic := config.Load(p.configPath).BackupCommandTopic(); topic != "" {
-		_ = client.publishCommand(topic, "OFF")
+		_ = client.publishCommand(topic, metric.CommandOff)
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] backup disk powered down after run [%s]", topic, runID)
 	}
 	p.publishClusterStatus(client, runID, terminalState, started, false, reported, failedHosts)
@@ -760,7 +761,7 @@ func readRun(root, dir string) *backupSnapshot {
 			snapshot.stages[filepath.Base(filepath.Dir(path))] = document
 		}
 	}
-	snapshot.tertiary = snapshot.stages["tertiary"]
+	snapshot.tertiary = snapshot.stages[backupStageTertiary]
 	documents, _ := filepath.Glob(filepath.Join(runPath, "stage", "primary", "service", "*", "status.json"))
 	for _, path := range documents {
 		if document := readStageDocument(path); document != nil {
@@ -816,10 +817,12 @@ const (
 	clusterStatusTopic = "supervisor/cluster-all/backup/status"
 )
 
+const backupStageTertiary = "tertiary"
+
 var (
 	backupProbeInstance *backupProbe
 
-	backupStages = []string{"primary", "secondary", "tertiary"}
+	backupStages = []string{"primary", "secondary", backupStageTertiary}
 
 	backupRunDirPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`)
 )

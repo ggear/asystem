@@ -497,11 +497,11 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, cache *metric.RecordCache, _ metric.TopicBinding) []byte {
 				cache.SubscribeRefresh(refreshes)
-				return []byte(hostStatusOnline)
+				return []byte(metric.AvailabilityOnline)
 			},
 			checkFunc: func(t *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) {
 				time.Sleep(time.Second)
-				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
+				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(metric.AvailabilityOnline))
 				time.Sleep(time.Second)
 				if got := refreshes.count(); got != 0 {
 					t.Fatalf("Got refresh count = %d after online transition and heartbeat, expected 0 — refresh is connect scoped", got)
@@ -515,7 +515,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			},
 			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
 				time.Sleep(time.Second)
-				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
+				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(metric.AvailabilityOnline))
 				time.Sleep(4 * time.Second)
 				if _, ok := cache.Load(b.GUID); !ok {
 					t.Fatalf("Got record reaped, expected service delivered after connect but before the transition to survive")
@@ -529,7 +529,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 				stale := nonNilValue
 				stale.Timestamp = time.Now().Add(-time.Hour).Unix()
 				cache.Store(b.GUID, &metric.Record{Value: stale})
-				return []byte(hostStatusOnline)
+				return []byte(metric.AvailabilityOnline)
 			},
 			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
 				time.Sleep(3 * time.Second)
@@ -546,7 +546,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 				stale := nonNilValue
 				stale.Timestamp = time.Now().Add(-time.Hour).Unix()
 				cache.Store(b.GUID, &metric.Record{Value: stale})
-				return []byte(hostStatusOnline)
+				return []byte(metric.AvailabilityOnline)
 			},
 			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
 				deadline := time.Now().Add(14 * time.Second)
@@ -571,10 +571,10 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 				mqttClient.Publish(b.Topic, 0, true, nonNilPayload)
 				defer mqttClient.Publish(b.Topic, 0, true, []byte{})
 				time.Sleep(500 * time.Millisecond)
-				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
+				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(metric.AvailabilityOnline))
 				time.Sleep(2 * time.Second)
 				cache.Evict(b.GUID.Host, b.GUID.ServiceName)
-				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(hostStatusOnline))
+				mqttClient.Publish("supervisor/alpha/status", 1, false, []byte(metric.AvailabilityOnline))
 				time.Sleep(2 * time.Second)
 				record, ok := cache.Load(b.GUID)
 				if !ok {
@@ -589,7 +589,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			name:  "happy_offline_host_revived_by_later_data",
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
-				return []byte(hostStatusOffline)
+				return []byte(metric.AvailabilityOffline)
 			},
 			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
 				time.Sleep(time.Second)
@@ -615,7 +615,7 @@ func TestEngine_RunListeningStreamLoop(t *testing.T) {
 			name:  "sad_offline_host_ignores_earlier_data",
 			topic: "supervisor/alpha/status",
 			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
-				return []byte(hostStatusOffline)
+				return []byte(metric.AvailabilityOffline)
 			},
 			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
 				time.Sleep(time.Second)
@@ -741,8 +741,8 @@ func TestEngine_RunAllProbesPublishLoop(t *testing.T) {
 				statusTopic := "supervisor/" + hostName + "/status"
 				dataTopic := "supervisor/" + hostName + "/data/host/used_memory"
 				retained := subscribeRetained(t, mqttClient, statusTopic, dataTopic)
-				if got := string(retained[statusTopic]); got != hostStatusOffline {
-					t.Errorf("status: got %q want %q", got, hostStatusOffline)
+				if got := string(retained[statusTopic]); got != metric.AvailabilityOffline {
+					t.Errorf("status: got %q want %q", got, metric.AvailabilityOffline)
 				}
 				if len(retained[dataTopic]) == 0 {
 					t.Fatalf("Got %s cleared after a graceful stop, expected the record retained", dataTopic)

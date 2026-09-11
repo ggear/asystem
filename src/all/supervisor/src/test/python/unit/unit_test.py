@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -301,8 +302,8 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell('backup_result "{}/tertiary/status.json"'.format(base)), "running")
         self.assertEqual(self.shell('backup_result "{}/absent/status.json"'.format(base)), "-")
 
-    def test_result_tells_stopped_and_timeout_from_a_genuine_failure(self):
-        for state in ("stopped", "timeout", "failed"):
+    def test_result_tells_stopped_and_timedout_from_a_genuine_failure(self):
+        for state in ("stopped", "timedout", "failed"):
             document = self.document("2026-09-08_00-00-0{}".format(len(state)), "tertiary",
                                      state=state, success_bool=False)
             self.assertEqual(self.shell('backup_result "{}"'.format(document)), state)
@@ -314,7 +315,7 @@ class BackupShellTest(unittest.TestCase):
                  '{}\nbackup_interrupted')
         self.assertEqual(self.shell(probe.replace("{}", ":")), "failed")
         self.assertEqual(self.shell(probe.replace("{}", ': >"${BACKUP_HOME_ROOT}/.stopped"')), "stopped")
-        self.assertEqual(self.shell(probe.replace("{}", ': >"${BACKUP_HOME_ROOT}/.timeout"')), "timeout")
+        self.assertEqual(self.shell(probe.replace("{}", ': >"${BACKUP_HOME_ROOT}/.timedout"')), "timedout")
 
     def test_bar_fills_in_proportion_and_stays_one_width(self):
         widths = set()
@@ -329,7 +330,7 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("backup_bar"), "-")
 
     def test_megabytes_is_the_one_unit_the_table_shows(self):
-        for megabytes, expected in ((0, "-"), (4, "4 MB"), (1024, "1024 MB"), (19940000, "19940000 MB")):
+        for megabytes, expected in ((0, "-"), (4, "4 MB"), (1024, "1,024 MB"), (19940000, "19,940,000 MB")):
             self.assertEqual(self.shell("backup_megabytes {}".format(megabytes)), expected)
 
     @NEEDS_GNU
@@ -337,7 +338,7 @@ class BackupShellTest(unittest.TestCase):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
         for stage in ("primary", "secondary", "tertiary"):
             self.document("2026-09-08_00-00-00", stage, state="complete", success_bool=True,
-                          trigger="scheduled", file_count=7, size_mb=2048, disk_usage_perc=61,
+                          trigger="scheduled", size_mb=2048, disk_usage_perc=61,
                           finished_ts="2026-09-08T00:10:00+08:00")
         self.document("2026-09-08_01-00-00", "primary", state="complete", success_bool=True, trigger="manual")
         self.document("2026-09-08_01-00-00", "tertiary", state="stopped", success_bool=False, trigger="manual")
@@ -345,16 +346,33 @@ class BackupShellTest(unittest.TestCase):
         listed = self.shell('backup_running() { return 1; }\nbackup_list')
         widths = {len(line) for line in listed.splitlines() if line}
         self.assertEqual(len(widths), 1, "every row must be the same width, got {}".format(sorted(widths)))
-        self.assertIn("| RUN-ID ", listed)
+        self.assertIn("| RUN-ID (STARTED)  ", listed)
+        self.assertIn("| FINISHED ", listed)
+        self.assertEqual(len(self.shell(
+            'backup_row a b c d "${BACKUP_STATE_TIMEDOUT}" "${BACKUP_STATE_COMPLETE}" '
+            '"${BACKUP_STATE_INTERRUPTED:0:9}" h i j')), len(listed.splitlines()[0]))
         self.assertRegex(listed, r"2026-09-08_02-00-00 .*\|\s+-\s+\|")
         self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*success .*\[#+\.*\]\s+61%.*complete")
         self.assertRegex(listed, r"2026-09-08_01-00-00 .*success .*-  .*stopped .*halted")
 
     @NEEDS_GNU
+    def test_list_finishes_nothing_on_a_stamp_date_cannot_read(self):
+        shutil.rmtree(join(self.home, "supervisor/backup/x"))
+        self.document("2026-09-08_00-00-00", "primary", state="complete", success_bool=True, finished_ts="")
+        self.document("2026-09-08_01-00-00", "primary", state="complete", success_bool=True,
+                      finished_ts="2026-09-08T01-00-00+08:00")
+        listed = self.shell('backup_running() { return 1; }\nbackup_list')
+        for line in listed.splitlines():
+            if "2026-09-08_" not in line:
+                continue
+            self.assertEqual(line.split("|")[2].strip(), "-", line)
+            self.assertEqual(line.split("|")[3].strip(), "-", line)
+
+    @NEEDS_GNU
     def test_rollup_counts_halted_apart_from_failed(self):
         run = "2026-09-08_00-00-00"
         self.document(run, "primary", state="complete", success_bool=True)
-        self.document(run, "secondary", state="timeout", success_bool=False)
+        self.document(run, "secondary", state="timedout", success_bool=False)
         self.document(run, "tertiary", state="failed", success_bool=False)
         path = join(self.home, "supervisor/backup", run)
         self.shell('BACKUP_RUN_PATH="{}"; BACKUP_RUN_ID="{}"; BACKUP_TRIGGER=scheduled\n'
@@ -398,9 +416,9 @@ class BackupShellTest(unittest.TestCase):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
         run = "2026-09-08_00-00-00"
         self.document(run, "primary", state="complete", success_bool=True)
-        self.document(run, "tertiary", state="timeout", success_bool=False)
+        self.document(run, "tertiary", state="timedout", success_bool=False)
         listed = self.shell('backup_running() { return 1; }\nbackup_list')
-        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*timeout .*halted")
+        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*timedout .*halted")
 
     @NEEDS_GNU
     def test_list_ranks_running_over_failed_over_halted(self):
@@ -662,9 +680,90 @@ class BackupShellTest(unittest.TestCase):
             'BACKUP_SIZE_HELD=0; BACKUP_SENT=0\n'
             'btrfs() { echo "Label: \'backup_04\'  uuid: deadbeef"; }\n'
             'backup_usage /backup\n'
-            'printf "%s %s" "${BACKUP_USAGE}" "$(cut -d" " -f2 "${BACKUP_HOME_ROOT}/counters")"',
+            'printf "%s %s" "${BACKUP_USAGE}" "$(cat "${BACKUP_HOME_ROOT}/disk-usage")"',
             BACKUP_SYSFS_BTRFS=join(self.home, "sysfs"))
         self.assertEqual(published, "74 74")
+
+    def test_state_vocabulary_matches_the_go_schema_declaration(self):
+        source = join(DIR_ROOT, "src/main/go/supervisor/internal/metric/metric_schema.go")
+        with open(source) as handle:
+            declared = re.findall(r'\n\t(BackupState|Command)(\w+)\s+= "([^"]+)"', handle.read())
+        self.assertTrue(declared, "found no vocabulary constants in [{}]".format(source))
+        with open(BACKUP_SCRIPT) as handle:
+            shelled = dict(re.findall(r'^(BACKUP_(?:STATE|COMMAND)_\w+)="([^"]+)"$', handle.read(), re.M))
+        self.assertTrue(shelled, "found no vocabulary variables in [{}]".format(BACKUP_SCRIPT))
+        named = {"BACKUP_{}_{}".format("STATE" if kind == "BackupState" else "COMMAND", word.upper()): value
+                 for kind, word, value in declared}
+        self.assertEqual(shelled, named)
+
+    def test_device_counter_sums_every_device_in_the_filesystem(self):
+        stats = ("[/dev/sdd1].write_io_errs    0\n"
+                 "[/dev/sdd1].read_io_errs     3\n"
+                 "[/dev/sdd1].flush_io_errs    0\n"
+                 "[/dev/sdd1].corruption_errs  11\n"
+                 "[/dev/sdd1].generation_errs  0\n"
+                 "[/dev/sde1].write_io_errs    0\n"
+                 "[/dev/sde1].read_io_errs     4\n"
+                 "[/dev/sde1].corruption_errs  0\n")
+        for counter, expected in (("read_io_errs", "7"), ("corruption_errs", "11"),
+                                  ("write_io_errs", "0"), ("absent_errs", "0")):
+            self.assertEqual(self.shell('backup_device_counter "{}" "{}"'.format(stats, counter)), expected)
+
+    def test_balance_reports_the_chunks_it_relocated(self):
+        head = 'BACKUP_RELOCATED=0\nbackup_log() { :; }\n'
+        self.assertEqual(
+            self.shell(head + 'btrfs() { echo "Done, had to relocate 4 out of 6377 chunks"; }\n'
+                              'backup_balance; printf "%s" "${BACKUP_RELOCATED}"').splitlines()[-1],
+            "4")
+        self.assertEqual(
+            self.shell(head + 'btrfs() { echo "ERROR: error during balancing"; return 1; }\n'
+                              'backup_balance; printf "%s" "${BACKUP_RELOCATED}"').splitlines()[-1],
+            "0")
+
+    def test_unclean_flags_the_backup_disk_alone_since_shares_mount_the_same_way(self):
+        head = ('BACKUP_STAGE_DIR="${BACKUP_HOME_ROOT}"\nbackup_log() { :; }\n'
+                'MARK="${BACKUP_HOME_ROOT}/disk-unclean"; rm -f "${MARK}"\n'
+                'dmesg() { echo "BTRFS info (device sdd1): start tree-log replay"; }\n')
+        self.assertEqual(self.shell(head + 'backup_unclean /share/10 0; [ -f "${MARK}" ] && echo yes || echo no'), "no")
+        self.assertEqual(self.shell(head + 'backup_unclean /backup 0; [ -f "${MARK}" ] && echo yes || echo no'), "yes")
+
+    def test_unclean_flags_only_a_mount_that_replayed_its_log(self):
+        head = ('BACKUP_STAGE_DIR="${BACKUP_HOME_ROOT}"\nbackup_log() { :; }\n'
+                'MARK="${BACKUP_HOME_ROOT}/disk-unclean"\n')
+        replay = ('dmesg() { echo "BTRFS info (device sdd1): start tree-log replay"; }\n'
+                  'backup_unclean /backup 0; [ -f "${MARK}" ] && echo yes || echo no')
+        clean = ('rm -f "${MARK}"\n'
+                 'dmesg() { echo "BTRFS info (device sdd1): first mount of filesystem"; }\n'
+                 'backup_unclean /backup 0; [ -f "${MARK}" ] && echo yes || echo no')
+        self.assertEqual(self.shell(head + replay), "yes")
+        self.assertEqual(self.shell(head + clean), "no")
+
+    @NEEDS_GNU
+    def test_document_records_an_unclean_mount_beside_the_disk_usage(self):
+        stage = join(self.home, "supervisor/backup/2026-09-08_00-00-00/stage/tertiary")
+        os.makedirs(stage, exist_ok=True)
+        probe = ('BACKUP_STAGE_DIR="{}"; BACKUP_STAGE=tertiary\n'
+                 'backup_publish() {{ :; }}\n'
+                 'backup_document complete true 0'.format(stage))
+        self.shell(probe)
+        with open(join(stage, "status.json")) as handle:
+            self.assertFalse(json.load(handle)["disk_unclean_bool"])
+        open(join(stage, "disk-unclean"), "w").write("true\n")
+        self.shell(probe)
+        with open(join(stage, "status.json")) as handle:
+            self.assertTrue(json.load(handle)["disk_unclean_bool"])
+
+    @NEEDS_GNU
+    def test_document_reports_the_disk_usage_recorded_while_the_disk_was_mounted(self):
+        stage = join(self.home, "supervisor/backup/2026-09-08_00-00-00/stage/tertiary")
+        os.makedirs(stage, exist_ok=True)
+        with open(join(stage, "disk-usage"), "w") as handle:
+            handle.write("37\n")
+        self.shell('BACKUP_STAGE_DIR="{}"; BACKUP_STAGE=tertiary; BACKUP_USAGE=0\n'
+                   'backup_publish() {{ :; }}\n'
+                   'backup_document timedout false 0'.format(stage))
+        with open(join(stage, "status.json")) as handle:
+            self.assertEqual(json.load(handle)["disk_usage_perc"], 37)
 
     def test_detach_is_silent_when_another_process_won_the_unmount(self):
         head = ('MARK="${BACKUP_HOME_ROOT}/mounted"; touch "${MARK}"\n'

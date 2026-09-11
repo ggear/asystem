@@ -329,7 +329,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		wasOnline, known := hostStatus[hostName]
 		hostStatusMu.RUnlock()
 		switch payload {
-		case hostStatusOnline:
+		case metric.AvailabilityOnline:
 			storeHostStatus(hostName, true)
 			if known && wasOnline {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debugf("observed", statusStart, "[online], with heartbeat [no-op]")
@@ -349,7 +349,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			}
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[online] transition by [%-7.7s]", trigger)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", statusStart, "[%3d] topics, reconcile [%2d] sec", topics, int64(reconcileDelay.Seconds()))
-		case hostStatusOffline, "":
+		case metric.AvailabilityOffline, "":
 			storeHostStatus(hostName, false)
 			if known && !wasOnline {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionCensus).Debugf("observed", statusStart, "[offline] with heartbeat [no-op]")
@@ -734,24 +734,24 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			case <-time.After(2 * time.Second):
 			}
 			client.Unsubscribe(statusTopic)
-			if seen != hostStatusOnline {
+			if seen != metric.AvailabilityOnline {
 				forceRepublish.Store(true)
 			}
-			client.Publish(statusTopic, 1, true, hostStatusOnline).WaitTimeout(brokerTimeout)
+			client.Publish(statusTopic, 1, true, metric.AvailabilityOnline).WaitTimeout(brokerTimeout)
 			scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reconnectStart, "[online] re-asserted, read [%s], republish [%v]", seen, forceRepublish.Load())
 		}
 	}
 	clientStart := time.Now()
-	client, err := brokerConnect(configPath, onConnect, statusTopic, hostStatusOffline)
+	client, err := brokerConnect(configPath, onConnect, statusTopic, metric.AvailabilityOffline)
 	if err != nil {
 		scribe.Log(scribe.SourceEngine, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", clientStart, "[%s] loop with [%v]", loopAllProbesPublish, err)
 		return
 	}
 	defer func() {
 		shutdownStart := time.Now()
-		client.Publish(statusTopic, 1, true, hostStatusOffline).WaitTimeout(2 * time.Second)
+		client.Publish(statusTopic, 1, true, metric.AvailabilityOffline).WaitTimeout(2 * time.Second)
 		client.Disconnect(2500)
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionStop).Infof("shutdown", shutdownStart, "[%s] status, retained [%3d] records", hostStatusOffline, cache.Size())
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionStop).Infof("shutdown", shutdownStart, "[%s] status, retained [%3d] records", metric.AvailabilityOffline, cache.Size())
 	}()
 	cache.SubscribeDeletes(&serveDeletesListener{client: client})
 	var db atomic.Pointer[databaseClient]
@@ -787,7 +787,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			publishLabel = "heartbeat"
 		}
 		if forceRepublish.Swap(false) && !isHeartbeat {
-			client.Publish(statusTopic, 1, true, hostStatusOnline)
+			client.Publish(statusTopic, 1, true, metric.AvailabilityOnline)
 			cache.Records(func(_ metric.RecordGUID, record *metric.Record) {
 				if record.Topic == "" || record.Value.Pulse == nil {
 					return
@@ -827,8 +827,8 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			batch.add(guid, record)
 		}
 		if isHeartbeat {
-			client.Publish(statusTopic, 1, true, hostStatusOnline)
-			txBytes += len(hostStatusOnline)
+			client.Publish(statusTopic, 1, true, metric.AvailabilityOnline)
+			txBytes += len(metric.AvailabilityOnline)
 			cache.Records(func(guid metric.RecordGUID, record *metric.Record) {
 				process(guid, record)
 			})
@@ -966,9 +966,6 @@ const (
 
 	commandScopeHost    = "host"
 	commandScopeService = "service"
-
-	hostStatusOnline  = "online"
-	hostStatusOffline = "offline"
 
 	silenceTickCount = 5
 )

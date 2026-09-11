@@ -28,12 +28,11 @@ retire nginx and use cloudflared for homeasistant?
 document how to update python deps in global CLAUDE.md and attempt to upgrade what I can today, backdown versions where there conflicts that break
 
 
-
-test supervisor release against plan complete backups:
-mad
-max
-may
-test timeout, other failure modes?
+release plex
+check jen can run all, skips tertiary
+test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
+test timeout, other failure modes?, is 3 hours suffcient?
+test scrub
 release, clean history, ssh root@macmini-mad 'rm -rf /share/{10,20,30,40}/backup/supervisor/*'
 test end to end
 check backups working on all servers
@@ -47,7 +46,7 @@ test supervisor backup enable release, validate 384M memeory footprint during ba
 implement PLAN_BACKUP.md and delete
 
 
-
+test fans scale up on all hosts
 check all metrics working 
 
 tune yellow/red

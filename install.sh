@@ -153,10 +153,6 @@ SERVICE_SLEEP="/var/lib/asystem/install/${SERVICE_NAME}/.sleep"
 [[ -d "${SERVICE_INSTALL}" ]] || log_error "Install directory does not exist: ${SERVICE_INSTALL}"
 cd "${SERVICE_INSTALL}"
 
-if [[ -f "${SERVICE_INSTALL}/.sleep" ]]; then
-  mv -f "${SERVICE_INSTALL}/.sleep" "${SERVICE_SLEEP}"
-fi
-
 if [[ "${COMMAND}" == "stop" || "${COMMAND}" == "sleep" ]]; then
   stop_service
   if [[ "${COMMAND}" == "sleep" ]]; then

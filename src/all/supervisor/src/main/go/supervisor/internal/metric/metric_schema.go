@@ -107,6 +107,28 @@ func Topics() []schema.Topic {
 	return topics
 }
 
+const (
+	BackupStateRunning     = "running"
+	BackupStateComplete    = "complete"
+	BackupStateSkipped     = "skipped"
+	BackupStateStopped     = "stopped"
+	BackupStateTimedout    = "timedout"
+	BackupStateHalted      = "halted"
+	BackupStateFailed      = "failed"
+	BackupStateFinished    = "finished"
+	BackupStateInterrupted = "interrupted"
+)
+
+const (
+	CommandOn  = "ON"
+	CommandOff = "OFF"
+)
+
+const (
+	AvailabilityOnline  = "online"
+	AvailabilityOffline = "offline"
+)
+
 func Payloads() []schema.Payload {
 	value := schema.Member{
 		Key:  "value",
@@ -120,7 +142,8 @@ func Payloads() []schema.Payload {
 	}
 	backupStatus := schema.Member{Members: []schema.Member{
 		{Key: "run_id", Kind: schema.KindStr},
-		{Key: "state", Enum: []string{"idle", "running", "complete", "skipped", "failed", "timeout"}},
+		{Key: "state", Enum: []string{BackupStateRunning, BackupStateComplete, BackupStateSkipped,
+			BackupStateStopped, BackupStateTimedout, BackupStateHalted, BackupStateFailed}},
 		{Key: "trigger", Enum: []string{"scheduled", "manual"}},
 		{Key: "started_ts", Kind: schema.KindStr},
 		{Key: "finished_ts", Kind: schema.KindStr},
@@ -128,6 +151,7 @@ func Payloads() []schema.Payload {
 		{Key: "duration_s", Kind: schema.KindInt},
 		{Key: "success_bool", Kind: schema.KindBool},
 		{Key: "disk_usage_perc", Kind: schema.KindFloat},
+		{Key: "disk_unclean_bool", Kind: schema.KindBool},
 		{Key: "total_mb", Kind: schema.KindInt},
 		{Key: "file_count", Kind: schema.KindInt},
 		{Key: "size_mb", Kind: schema.KindInt},
@@ -154,7 +178,8 @@ func Payloads() []schema.Payload {
 			Match: "*/cluster-all/backup/status",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "run_id", Kind: schema.KindStr},
-				{Key: "state", Enum: []string{"running", "complete", "failed", "timeout"}},
+				{Key: "state", Enum: []string{BackupStateRunning, BackupStateComplete,
+					BackupStateFailed, BackupStateTimedout}},
 				{Key: "started_ts", Kind: schema.KindStr},
 				{Key: "finished_ts", Kind: schema.KindStr},
 				{Key: "duration_s", Kind: schema.KindInt},
@@ -171,7 +196,8 @@ func Payloads() []schema.Payload {
 			Match: "*/backup/stage/tertiary/scrub/status",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "run_id", Kind: schema.KindStr},
-				{Key: "state", Enum: []string{"finished", "interrupted", "skipped", "failed"}},
+				{Key: "state", Enum: []string{BackupStateFinished, BackupStateInterrupted,
+					BackupStateSkipped, BackupStateFailed, BackupStateRunning}},
 				{Key: "started_ts", Kind: schema.KindStr},
 				{Key: "finished_ts", Kind: schema.KindStr},
 				{Key: "duration_s", Kind: schema.KindInt},
@@ -183,6 +209,8 @@ func Payloads() []schema.Payload {
 				{Key: "errors_uncorrectable", Kind: schema.KindInt},
 				{Key: "files_to_delete", Kind: schema.KindStr},
 				{Key: "files_to_delete_count", Kind: schema.KindInt},
+				{Key: "device_errors", Kind: schema.KindInt},
+				{Key: "chunks_relocated", Kind: schema.KindInt},
 			}},
 		},
 		{Role: schema.RoleState, Match: "*/backup/stage/*/status", Root: backupStatus},
@@ -197,11 +225,11 @@ func Payloads() []schema.Payload {
 		},
 		{
 			Role: schema.RoleCommand,
-			Root: schema.Member{Enum: []string{"ON", "OFF"}},
+			Root: schema.Member{Enum: []string{CommandOn, CommandOff}},
 		},
 		{
 			Role: schema.RoleAvailability,
-			Root: schema.Member{Enum: []string{"online", "offline"}},
+			Root: schema.Member{Enum: []string{AvailabilityOnline, AvailabilityOffline}},
 		},
 	}
 }
