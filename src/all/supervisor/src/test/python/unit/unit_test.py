@@ -185,7 +185,7 @@ class BackupShellTest(unittest.TestCase):
     def test_manual_refuses_a_word_it_does_not_know(self):
         done = self.invoke("manual", "sideways")
         self.assertEqual(done.returncode, 2)
-        self.assertIn("manual takes [off] to pause the reaper or [on] to arm it, not [sideways]", done.stderr)
+        self.assertIn("manual reads [sideways], taking [off] to pause the reaper or [on] to arm it", done.stderr)
 
     def test_command_is_first_and_defaults_to_help_rather_than_a_run(self):
         self.assertEqual(self.parse(), "help all - 0 0")
@@ -598,6 +598,33 @@ class BackupShellTest(unittest.TestCase):
         with open(BACKUP_SCRIPT) as handle:
             body = handle.read()
         self.assertNotIn('sleep "${BACKUP_TAIL_PROGRESS', body)
+
+    def test_every_detached_run_is_put_in_its_own_process_group(self):
+        with open(BACKUP_SCRIPT) as handle:
+            lines = handle.read().splitlines()
+        spawns = [index for index, line in enumerate(lines)
+                  if line.strip().startswith("nohup ") or line.strip().endswith(") &")]
+        self.assertTrue(spawns, "found no background spawn in [{}]".format(BACKUP_SCRIPT))
+        for index in spawns:
+            enabled = False
+            for line in (lines[step].strip() for step in range(index - 1, max(-1, index - 21), -1)):
+                if line == "set +m":
+                    break
+                if line == "set -m":
+                    enabled = True
+                    break
+            self.assertTrue(enabled,
+                            "a background run left in the terminal process group is killed by the "
+                            "Ctrl-C that was meant to leave the tail, line {}: {}".format(index + 1, lines[index].strip()))
+
+    def test_status_reports_only_the_stages_the_invocation_asked_for(self):
+        base = join(self.home, "supervisor", "backup", "run")
+        os.makedirs(join(base, "stage", "tertiary"), exist_ok=True)
+        with open(join(base, "stage", "tertiary", "status.json"), "w") as handle:
+            handle.write('{"state": "complete", "success_bool": true}')
+        out = self.shell('backup_status "{}"'.format(base))
+        self.assertNotIn("never started", out)
+        self.assertNotIn("primary", out)
 
     def test_every_term_is_preceded_by_a_cont_so_a_stopped_stage_runs_its_trap(self):
         with open(BACKUP_SCRIPT) as handle:

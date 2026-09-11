@@ -119,6 +119,24 @@
 
 set -uo pipefail
 
+backup_line() {
+  local level="$1" stage="$2"; shift 2
+  printf '[%-4s %-9s %8s] %s\n' "${level}" "${stage}" "$(date '+%H:%M:%S')" "$*"
+}
+
+backup_log() {
+  local level="$1"; shift
+  [ "${level}" = "ERROR" ] && level=ERRS
+  case "${level}" in
+  WARN | ERRS) backup_line "${level}" "" "$*" >&2 ;;
+  *) backup_line "${level}" "" "$*" ;;
+  esac
+}
+
+backup_announce() {
+  backup_log INFO "starting run [${BACKUP_RUN_ID}] over [$1] as [${BACKUP_TRIGGER}] with scrub [$([ "${BACKUP_SCRUB}" = "1" ] && echo on || echo off)]"
+}
+
 BACKUP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_SCRUB="${BACKUP_SCRUB:-}"
 BACKUP_SCRUB_FORCED="${BACKUP_SCRUB_FORCED:-0}"
@@ -186,8 +204,7 @@ if [ "${BACKUP_SCRUB_ASKED}" -eq 1 ]; then
 fi
 if [ -n "${BACKUP_REFUSED}" ]; then
   [ -z "${BACKUP_SOURCE_ONLY:-}" ] || return 0 2>/dev/null || true
-  echo "${0##*/}: ${BACKUP_REFUSED}" >&2
-  echo >&2
+  backup_log ERROR "${BACKUP_REFUSED}"
   backup_help
   exit 2
 fi
@@ -255,27 +272,25 @@ backup_elapsed() {
 
 # shellcheck disable=SC2329
 backup_interrupt() {
-  echo
-  echo "Tail stopped but run will continue in the background" >&2
-  echo "Tail restart [${0} tail]" >&2
-  echo "Stop backups [${0} stop]" >&2
+  backup_log WARN "tail stopped, run [${BACKUP_RUN_ID}] continues in the background"
+  backup_log WARN "follow it again with [${0} tail] or end it with [${0} stop]"
   exit 0
 }
 
 backup_tail() {
-  local base run path sequence="${2:-}"
+  local base run path sequence="${2:-}" expected="${3:-}"
   base="$(dirname "${BACKUP_RUN_PATH}")"
   run="${1:-}"
   [ -n "${run}" ] || run="$(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort | tail -1)"
-  [ -n "${run}" ] || { echo "No backup run found under [${base}]" >&2; return 1; }
+  [ -n "${run}" ] || { backup_log ERROR "no backup run found under [${base}]"; return 1; }
   path="${base}/${run}"
   while [ -n "${sequence}" ] && [ ! -d "${path}" ] && kill -0 "${sequence}" 2>/dev/null; do sleep 1; done
-  [ -d "${path}" ] || { echo "No backup run at [${path}]" >&2; return 1; }
-  echo && echo "Backup tail [${run}] under [${path}]" && echo
+  [ -d "${path}" ] || { backup_log ERROR "no backup run at [${path}]"; return 1; }
+  [ "${BACKUP_COMMAND}" = "tail" ] && backup_log INFO "following run [${run}] under [${path}]"
   trap 'backup_interrupt' INT
   backup_await "${path}" "" "${sequence}"
   trap - INT
-  backup_status "${path}"
+  backup_status "${path}" "${expected}"
 }
 
 backup_result() {
@@ -372,7 +387,7 @@ backup_manual() {
     expires=""
     payload="$(printf '{"state":"%s","expires_ts":""}' "${BACKUP_COMMAND_ON}")"
     ;;
-  *) echo "${0##*/}: manual takes [off] to pause the reaper or [on] to arm it, not [${want}]" >&2; return 2 ;;
+  *) backup_log ERROR "manual reads [${want}], taking [off] to pause the reaper or [on] to arm it"; return 2 ;;
   esac
   if ! backup_publish "${BACKUP_REAPER_TOPIC}" "${payload}"; then
     backup_log ERROR "could not publish [${payload}] to [${BACKUP_REAPER_TOPIC}], is the broker reachable"
@@ -392,12 +407,11 @@ backup_list() {
   local size volume held
   base="$(dirname "${BACKUP_RUN_PATH}")"
   mapfile -t BACKUP_LIST_RUNS < <(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r)
-  echo
   if [ "${#BACKUP_LIST_RUNS[@]}" -eq 0 ]; then
-    echo "No backup runs under [${base}]" >&2
-    echo
+    backup_log WARN "no backup runs under [${base}]"
     return 1
   fi
+  echo
   backup_rule "+"
   backup_row "RUN-ID (STARTED)" FINISHED DURATION TRIGGER PRIMARY SECONDARY TERTIARY SIZE VOLUME RESULT
   backup_rule "+"
@@ -466,9 +480,11 @@ backup_list() {
 backup_sequence() {
   local stage result=0 started sequence stages
   mapfile -t stages < <(backup_stages)
-  echo && echo "Backup ${BACKUP_COMMAND} [${BACKUP_RUN_ID}] on [${BACKUP_HOST}] over [${stages[*]}]"
-  [ "${BACKUP_COMMAND}" = "start" ] &&
-    echo "Backup params trigger [${BACKUP_TRIGGER}] timeout [${BACKUP_TIMEOUT_HOURS}] hours scrub [$([ "${BACKUP_SCRUB}" = "1" ] && echo on || echo off)] retention [${BACKUP_KEEP_DAILY}] daily [${BACKUP_KEEP_WEEKLY}] weekly [${BACKUP_KEEP_MONTHLY}] monthly"
+  if [ "${BACKUP_COMMAND}" = "start" ]; then
+    backup_announce "${stages[*]}"
+  else
+    backup_log INFO "stopping run [${BACKUP_RUN_ID}] over [${stages[*]}]"
+  fi
   if [ "${BACKUP_COMMAND}" = "stop" ]; then
     local targets=("${BACKUP_RUN_ID}") target
     BACKUP_STOPPING=1
@@ -512,7 +528,7 @@ backup_sequence() {
   ) &
   sequence=$!
   set +m
-  backup_tail "${BACKUP_RUN_ID}" "${sequence}" || result=1
+  backup_tail "${BACKUP_RUN_ID}" "${sequence}" "${stages[*]}" || result=1
   wait "${sequence}" || result=1
   return "${result}"
 }
@@ -690,11 +706,6 @@ backup_flushing() {
   rate="${BACKUP_FLUSH_RATE_MB:-20}"
   [ "${rate}" -gt 0 ] 2>/dev/null || rate=20
   printf '%s %s' "${megabytes}" "$(( megabytes / rate ))"
-}
-
-backup_line() {
-  local level="$1" stage="$2"; shift 2
-  printf '[%-4s %-9s %8s] %s\n' "${level}" "${stage}" "$(date '+%H:%M:%S')" "$*"
 }
 
 backup_marker() {
@@ -876,8 +887,14 @@ backup_progress() {
 }
 
 backup_status() {
-  local path="$1" stage doc faults=0
-  for stage in $(backup_stages); do
+  local path="$1" expected="${2:-}" stage doc faults=0
+  if [ -z "${expected}" ]; then
+    for stage in primary secondary tertiary; do
+      [ -d "${path}/stage/${stage}" ] && expected="${expected}${expected:+ }${stage}"
+    done
+  fi
+  [ -n "${expected}" ] || expected="$(backup_stages | xargs)"
+  for stage in ${expected}; do
     doc="${path}/stage/${stage}/status.json"
     if [ ! -f "${doc}" ]; then
       backup_marker "${stage}" "never started"
@@ -895,7 +912,7 @@ backup_tail_field() {
 
 
 if [ "${BACKUP_COMMAND}" = "stop" ] && [ ! -d "${BACKUP_RUN_PATH}" ]; then
-  echo "no backup run at [${BACKUP_RUN_PATH}], refusing to stop" >&2
+  backup_log ERROR "no backup run at [${BACKUP_RUN_PATH}], refusing to stop"
   exit 2
 fi
 case "${BACKUP_COMMAND}/${BACKUP_STAGE}" in tail/* | list/* | manual/* | */all) ;; *) mkdir -p "${BACKUP_STAGE_DIR}" ;; esac
@@ -904,15 +921,6 @@ BACKUP_ENV="${BACKUP_INSTALL_ROOT}/supervisor/latest/.env"
 # shellcheck disable=SC1090
 if [ -f "${BACKUP_ENV}" ] && [ -z "${BACKUP_SOURCE_ONLY:-}" ]; then set -a; . "${BACKUP_ENV}"; set +a; fi
 BACKUP_HOST="${SUPERVISOR_HOST:-$(hostname)}"
-
-backup_log() {
-  local level="$1"; shift
-  [ "${level}" = "ERROR" ] && level=ERRS
-  case "${level}" in
-  WARN | ERRS) backup_line "${level}" "" "$*" >&2 ;;
-  *) backup_line "${level}" "" "$*" ;;
-  esac
-}
 
 backup_banner() {
   local title="$1"; shift
@@ -1840,19 +1848,21 @@ if [ "${BACKUP_COMMAND}" = "stop" ]; then
   if [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && [ "${BACKUP_STOP_SECONDS:-300}" -gt 0 ]; then
     backup_await "${BACKUP_RUN_PATH}" "${BACKUP_STOP_SECONDS:-300}" ||
       backup_log WARN "run [${BACKUP_RUN_ID}] is still running after [${BACKUP_STOP_SECONDS:-300}] s"
-    backup_status "${BACKUP_RUN_PATH}" >&3 || true
+    backup_status "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}" >&3 || true
   fi
   exit 0
 fi
 
 if [ -z "${BACKUP_DETACHED:-}" ] && [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && { [ -t 1 ] || [ "${BACKUP_TIMEOUT_HOURS}" = "0" ]; }; then
   export BACKUP_DETACHED=1
+  set -m
   nohup "$0" start "${BACKUP_RUN_ID}" --stage "${BACKUP_STAGE}" >>"${BACKUP_LOG}" 2>&1 &
   BACKUP_CHILD=$!
+  set +m
   disown
-  backup_log INFO "detached run [${BACKUP_RUN_ID}], following [${BACKUP_LOG}]"
+  backup_announce "${BACKUP_STAGE}"
   while kill -0 "${BACKUP_CHILD}" 2>/dev/null && [ ! -f "${BACKUP_STAGE_DIR}/status.json" ]; do sleep 1; done
-  backup_tail "${BACKUP_RUN_ID}"
+  backup_tail "${BACKUP_RUN_ID}" "" "${BACKUP_STAGE}"
   exit $?
 fi
 if [ -z "${BACKUP_RUN_ID_PASSED:-}" ]; then
