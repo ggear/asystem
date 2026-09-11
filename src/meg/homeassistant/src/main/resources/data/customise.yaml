@@ -583,19 +583,19 @@ switch.network_domain:
   friendly_name: 'Domain'
   icon: 'mdi:archive-search-outline'
 switch.host_mad:
-  friendly_name: 'Host'
+  friendly_name: 'Mad'
   icon: 'mdi:heart-pulse'
 switch.host_max:
-  friendly_name: 'Host'
+  friendly_name: 'Max'
   icon: 'mdi:heart-pulse'
 switch.host_may:
-  friendly_name: 'Host'
+  friendly_name: 'May'
   icon: 'mdi:heart-pulse'
 switch.host_meg:
-  friendly_name: 'Host'
+  friendly_name: 'Meg'
   icon: 'mdi:heart-pulse'
 switch.host_jen:
-  friendly_name: 'Host'
+  friendly_name: 'Jen'
   icon: 'mdi:heart-pulse'
 switch.service_network:
   friendly_name: 'Network'

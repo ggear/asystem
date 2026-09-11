@@ -27,27 +27,27 @@
       name: Domain
       icon: mdi:archive-search-outline
 ################################################################################
-- type: custom:layout-break
-################################################################################
 - type: entities
   title: Host Status
   show_header_toggle: false
   entities:
     - entity: switch.host_mad
-      name: Host
+      name: Mad
       icon: mdi:heart-pulse
     - entity: switch.host_max
-      name: Host
+      name: Max
       icon: mdi:heart-pulse
     - entity: switch.host_may
-      name: Host
+      name: May
       icon: mdi:heart-pulse
     - entity: switch.host_meg
-      name: Host
+      name: Meg
       icon: mdi:heart-pulse
     - entity: switch.host_jen
-      name: Host
+      name: Jen
       icon: mdi:heart-pulse
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: entities
   title: Service Status
