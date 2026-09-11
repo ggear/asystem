@@ -131,6 +131,18 @@ func (c *Config) Hosts() []string {
 	return hosts
 }
 
+func (c *Config) HostStages(host string) []string {
+	if c == nil {
+		return nil
+	}
+	for i := range c.asystem.Schema {
+		if c.asystem.Schema[i].Host == host {
+			return c.asystem.Schema[i].Stages
+		}
+	}
+	return nil
+}
+
 func (c *Config) HostIndex(host string) (int, bool) {
 	if c == nil {
 		return 0, false
@@ -355,6 +367,7 @@ type configBackup struct {
 type configServices struct {
 	Host     string
 	Index    *int
+	Stages   []string
 	Services []string
 }
 

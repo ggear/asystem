@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"supervisor/internal/config"
@@ -27,6 +28,7 @@ type backupProbe struct {
 	configPath string
 	hostName   string
 	serverHost bool
+	stages     []string
 	root       string
 	runner     string
 
@@ -41,6 +43,9 @@ type backupProbe struct {
 	backupActive    atomic.Bool
 	reapRunning     sync.Mutex
 	reapIdle        int
+	reapNotice      int
+	reapStale       int
+	reapArming      bool
 	reapPaused      bool
 	reapWatch       *brokerWatcher
 }
@@ -67,7 +72,14 @@ func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask 
 	p.configPath = configPath
 	loaded := config.Load(configPath)
 	p.hostName = loaded.Host()
-	_, p.serverHost = loaded.HostIndex(p.hostName)
+	createStart := config.NowIncludingSuspend()
+	p.stages = loaded.HostStages(p.hostName)
+	if len(p.stages) == 0 {
+		p.stages = backupStages[:2]
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Warnf("faulting", createStart,
+			"[%s] declares no backup stages, assuming [%s]", p.configPath, strings.Join(p.stages, ","))
+	}
+	p.serverHost = slices.Contains(p.stages, backupStageTertiary)
 	p.failedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.haltedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedBackupSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
@@ -120,6 +132,9 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 			snapshot.dir, snapshot.age().Round(time.Minute)), nil
 	}
 	if snapshot == nil || snapshot.host == nil || snapshot.age() > backupStaleWindow {
+		if !p.everRolled() {
+			return 0, derivation{}, fmt.Errorf("no backup verdict, no scheduled run has ever rolled up under [%s], so no stage ratio can be computed [%w]", p.root, errEnvironment)
+		}
 		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, no run directory under [%s] holds a status document inside the [%s] window",
 			p.root, backupStaleWindow), nil
 	}
@@ -127,6 +142,11 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	value := percentValue(float64(snapshot.host.StagesFailed) / float64(run) * 100.0)
 	return value, derivedf(scribe.ActionCompute, "computed [%d] pct failed, run [%s] aged [%s] reported [%d] of [%d] stages failed",
 		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.host.StagesFailed, run), nil
+}
+
+func (p *backupProbe) everRolled() bool {
+	rolled, _ := filepath.Glob(filepath.Join(p.root, "*", "status.json"))
+	return len(rolled) > 0
 }
 
 func (p *backupProbe) haltedBackupStages() (int8, derivation, error) {
@@ -171,18 +191,33 @@ func (p *backupProbe) serviceSuccess(service string) (bool, bool, string) {
 	return success, found, snapshot.dir
 }
 
-func (p *backupProbe) armReaper(started time.Time) {
+func (p *backupProbe) armReaper(started time.Time) bool {
+	p.reapArming = true
 	client, err := brokerDial(p.configPath, "manual")
 	if err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], the reaper stays paused until it can be reached", err, clusterReaperTopic)
-		return
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, clusterReaperTopic)
+		return false
 	}
 	defer client.close()
-	if err := client.publishRetained(clusterReaperTopic, metric.CommandOn); err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], the reaper stays paused until it can be reached", err, clusterReaperTopic)
-		return
+	armed, _ := json.Marshal(backupReaper{State: metric.CommandOn})
+	if err := client.publishRetained(clusterReaperTopic, string(armed)); err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, clusterReaperTopic)
+		return false
 	}
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] armed, the scheduled run turns the reaper back on", clusterReaperTopic)
+	p.reapArming = false
+	p.reapNotice = 0
+	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] armed, the backup disk is powered down again when nothing needs it", clusterReaperTopic)
+	return true
+}
+
+func (p *backupProbe) reapQuiet() bool {
+	p.reapIdle = 0
+	p.reapNotice++
+	if p.reapNotice < reaperNoticeTicks {
+		return false
+	}
+	p.reapNotice = 0
+	return true
 }
 
 func (p *backupProbe) reap(ctx context.Context) {
@@ -216,29 +251,63 @@ func (p *backupProbe) reap(ctx context.Context) {
 	retained, watching := p.reapWatch.readRetained()
 	if !watching {
 		p.reapIdle = 0
+		p.reapStale++
+		if p.reapStale >= reaperStaleTicks {
+			p.reapStale = 0
+			p.reapWatch = nil
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart,
+				"[%d] ticks with nothing watched, redialling the estate watch", reaperStaleTicks)
+		}
 		return
 	}
-	if paused := strings.EqualFold(strings.TrimSpace(retained[clusterReaperTopic]), "off"); paused != p.reapPaused {
+	p.reapStale = 0
+	flag, declared := retained[clusterReaperTopic]
+	var reaper backupReaper
+	if declared {
+		_ = json.Unmarshal([]byte(flag), &reaper)
+	}
+	switch {
+	case !declared:
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
+			"[%s] is absent, asserting the armed default the broker no longer carries", clusterReaperTopic)
+		p.armReaper(reapStart)
+	case strings.EqualFold(strings.TrimSpace(reaper.State), metric.CommandOff) && !reaper.paused():
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
+			"[%s] paused until [%s], which has passed, arming it again", clusterReaperTopic, reaper.ExpiresTS)
+		p.armReaper(reapStart)
+	case p.reapArming:
+		p.armReaper(reapStart)
+	}
+	if paused := reaper.paused(); paused != p.reapPaused {
 		p.reapPaused = paused
 		if paused {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("excluded", reapStart,
-				"[%s] is off, the backup disk stays powered until the [%02d:00] run arms it", clusterReaperTopic, backupScheduledHour)
+				"[%s] is off until [%s], the backup disk stays powered", clusterReaperTopic, reaper.ExpiresTS)
 		} else {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("restored", reapStart,
 				"[%s] is on, the backup disk is powered down again when nothing needs it", clusterReaperTopic)
 		}
 	}
 	if p.reapPaused {
-		p.reapIdle = 0
+		if p.reapQuiet() {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
+				"[%s] is still off until [%s], the backup disk stays powered", clusterReaperTopic, reaper.ExpiresTS)
+		}
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(retained[stateTopic]), "on") {
-		p.reapIdle = 0
+		if p.reapQuiet() {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
+				"[%s] does not report the disk on, so there is nothing to power down", stateTopic)
+		}
 		return
 	}
 	var lease backupLease
 	if json.Unmarshal([]byte(retained[clusterLeaderTopic]), &lease) == nil && !lease.expired() {
-		p.reapIdle = 0
+		if p.reapQuiet() {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
+				"[%s] holds the backup lease, leaving the disk powered", lease.Host)
+		}
 		return
 	}
 	for topic, payload := range retained {
@@ -250,7 +319,10 @@ func (p *backupProbe) reap(ctx context.Context) {
 			continue
 		}
 		if expires, perr := time.Parse(time.RFC3339, document.ExpiresTS); perr == nil && time.Now().Before(expires) {
-			p.reapIdle = 0
+			if p.reapQuiet() {
+				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
+					"[%s] still reports a tertiary stage running, leaving the disk powered", topic)
+			}
 			return
 		}
 	}
@@ -258,14 +330,21 @@ func (p *backupProbe) reap(ctx context.Context) {
 	if p.reapIdle < reaperIdleTicks {
 		return
 	}
-	p.reapIdle = 0
+	p.reapIdle = reaperIdleTicks
 	isLeader, leaderClient := electBackupLeader(p.configPath, p.hostName, "reaper-"+time.Now().Format(backupRunStamp))
 	if !isLeader || leaderClient == nil {
 		return
 	}
-	_ = leaderClient.publishCommand(commandTopic, metric.CommandOff)
+	defer leaderClient.close()
+	if err := leaderClient.publishCommand(commandTopic, metric.CommandOff); err != nil {
+		_ = leaderClient.publishRetained(clusterLeaderTopic, "")
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", reapStart,
+			"[%v] powering down [%s], retrying on the next tick", err, commandTopic)
+		return
+	}
 	_ = leaderClient.publishRetained(clusterLeaderTopic, "")
-	leaderClient.close()
+	p.reapIdle = 0
+	p.reapNotice = 0
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", reapStart, "[%s] backup disk powered down, no tertiary stage running for [%d] ticks", commandTopic, reaperIdleTicks)
 }
 
@@ -353,10 +432,7 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Errorf("faulting", runStart, "[%s] backup run directory could not be created with [%v]", runPath, err)
 		return
 	}
-	stages := backupStages[:2]
-	if p.serverHost {
-		stages = backupStages
-	}
+	stages := p.stages
 	isLeader := false
 	var leaderClient *brokerClient
 	if p.serverHost {
@@ -590,12 +666,20 @@ func (p *backupProbe) finishLeadership(ctx context.Context, client *brokerClient
 		terminalState = metric.BackupStateFailed
 	}
 	if topic := config.Load(p.configPath).BackupCommandTopic(); topic != "" {
-		_ = client.publishCommand(topic, metric.CommandOff)
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] backup disk powered down after run [%s]", topic, runID)
+		if err := client.publishCommand(topic, metric.CommandOff); err != nil {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] powering down [%s], the reaper takes it from here", err, topic)
+		} else {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] backup disk powered down after run [%s]", topic, runID)
+		}
 	}
 	p.publishClusterStatus(client, runID, terminalState, started, false, reported, failedHosts)
 	_ = client.publishRetained(clusterLeaderTopic, "")
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionRemove).Infof("released", started, "[%s] backup lease cleared, run [%s] ended [%s]", clusterLeaderTopic, runID, terminalState)
+}
+
+type backupReaper struct {
+	State     string `json:"state"`
+	ExpiresTS string `json:"expires_ts"`
 }
 
 type backupLease struct {
@@ -604,6 +688,14 @@ type backupLease struct {
 	RunID     string `json:"run_id"`
 	ClaimedTS string `json:"claimed_ts"`
 	ExpiresTS string `json:"expires_ts"`
+}
+
+func (r backupReaper) paused() bool {
+	if !strings.EqualFold(strings.TrimSpace(r.State), metric.CommandOff) {
+		return false
+	}
+	expires, err := time.Parse(time.RFC3339, r.ExpiresTS)
+	return err == nil && time.Now().Before(expires)
 }
 
 func (l backupLease) expired() bool {
@@ -669,7 +761,7 @@ func backupExpectedServers(configPath string) []string {
 	var servers []string
 	loaded := config.Load(configPath)
 	for _, host := range loaded.Hosts() {
-		if _, hasIndex := loaded.HostIndex(host); hasIndex {
+		if slices.Contains(loaded.HostStages(host), backupStageTertiary) {
 			servers = append(servers, host)
 		}
 	}
@@ -811,6 +903,8 @@ const (
 	backupRunsKept       = 30
 	backupScheduledHour  = 1
 	reaperIdleTicks      = 2
+	reaperNoticeTicks    = 15
+	reaperStaleTicks     = 5
 
 	clusterLeaderTopic = "supervisor/cluster-all/backup/leader"
 	clusterReaperTopic = "supervisor/cluster-all/backup/reaper"

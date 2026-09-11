@@ -62,10 +62,14 @@ func TestProbeImplBackup_FailedBackups(t *testing.T) {
 		{"run in flight is inert until it writes its roll-up", func(root string) {
 			writeBackupStage(t, root, fresh, "primary", backupDocument{State: "complete"})
 		}, 0, true, false},
-		{"run abandoned beyond the ceiling reads fully failed", func(root string) {
+		{"run abandoned beyond the ceiling with no roll-up ever cannot be measured", func(root string) {
+			writeBackupStage(t, root, abandoned, "primary", backupDocument{State: "running"})
+		}, 0, false, true},
+		{"no runs at all cannot be measured", func(string) {}, 0, false, true},
+		{"an abandoned run on a host that has rolled up before reads fully failed", func(root string) {
+			writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
 			writeBackupStage(t, root, abandoned, "primary", backupDocument{State: "running"})
 		}, 100, false, false},
-		{"no runs reads fully failed", func(string) {}, 100, false, false},
 		{"stale run reads fully failed", func(root string) {
 			writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
 		}, 100, false, false},
@@ -252,6 +256,48 @@ func TestProbeImplBackup_LeaseExpired(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := (backupLease{ExpiresTS: tt.expiresTS}).expired(); got != tt.wantExpired {
 				t.Errorf("expired: got %v want %v", got, tt.wantExpired)
+			}
+		})
+	}
+}
+
+func TestProbeImplBackup_ReapQuietRestatesAStandingCondition(t *testing.T) {
+	probe := &backupProbe{}
+	probe.reapIdle = 7
+	spoken := 0
+	for tick := range reaperNoticeTicks * 3 {
+		if probe.reapQuiet() {
+			spoken++
+		}
+		if probe.reapIdle != 0 {
+			t.Fatalf("tick %d idle: got %v want 0", tick, probe.reapIdle)
+		}
+	}
+	if spoken != 3 {
+		t.Errorf("spoken: got %v want %v", spoken, 3)
+	}
+}
+
+func TestProbeImplBackup_ReaperPausedFailsSafeToArmed(t *testing.T) {
+	tests := []struct {
+		name       string
+		state      string
+		expiresTS  string
+		wantPaused bool
+	}{
+		{"off with a future deadline is paused", "OFF", time.Now().Add(time.Hour).Format(time.RFC3339), true},
+		{"off with a passed deadline is armed", "OFF", time.Now().Add(-time.Hour).Format(time.RFC3339), false},
+		{"off with an unparseable deadline is armed", "OFF", "tomorrow", false},
+		{"off with no deadline is armed", "OFF", "", false},
+		{"on is armed", "ON", time.Now().Add(time.Hour).Format(time.RFC3339), false},
+		{"an empty document is armed", "", "", false},
+		{"an unknown state is armed", "PAUSED", time.Now().Add(time.Hour).Format(time.RFC3339), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reaper := backupReaper{State: tt.state, ExpiresTS: tt.expiresTS}
+			if got := reaper.paused(); got != tt.wantPaused {
+				t.Errorf("paused: got %v want %v", got, tt.wantPaused)
 			}
 		})
 	}

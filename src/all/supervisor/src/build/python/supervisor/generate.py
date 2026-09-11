@@ -73,6 +73,7 @@ if __name__ == "__main__":
         host_schema = {"host": host}
         if host_index is not None:
             host_schema["index"] = host_index
+        host_schema["stages"] = stages_host[host]
         host_schema["services"] = sorted(services)
         metadata_supervisor_schema.append(host_schema)
     metadata_supervisor_path = abspath(join(DIR_ROOT, "src/main/resources/image/config.json"))

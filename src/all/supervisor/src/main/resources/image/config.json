@@ -18,6 +18,11 @@
       {
         "host": "macmini-mad",
         "index": 1,
+        "stages": [
+          "primary",
+          "secondary",
+          "tertiary"
+        ],
         "services": [
           "network",
           "plex",
@@ -30,6 +35,11 @@
       {
         "host": "macmini-max",
         "index": 2,
+        "stages": [
+          "primary",
+          "secondary",
+          "tertiary"
+        ],
         "services": [
           "cloudflare",
           "grafana",
@@ -41,6 +51,11 @@
       {
         "host": "macmini-may",
         "index": 3,
+        "stages": [
+          "primary",
+          "secondary",
+          "tertiary"
+        ],
         "services": [
           "influxdb3",
           "mlflow",
@@ -53,6 +68,11 @@
       {
         "host": "macmini-meg",
         "index": 4,
+        "stages": [
+          "primary",
+          "secondary",
+          "tertiary"
+        ],
         "services": [
           "homeassistant",
           "mariadb",
@@ -64,6 +84,10 @@
       },
       {
         "host": "raspbpi-jen",
+        "stages": [
+          "primary",
+          "secondary"
+        ],
         "services": [
           "supervisor",
           "weewx",
@@ -72,6 +96,10 @@
       },
       {
         "host": "raspbpi-jil",
+        "stages": [
+          "primary",
+          "secondary"
+        ],
         "services": [
           "supervisor"
         ]

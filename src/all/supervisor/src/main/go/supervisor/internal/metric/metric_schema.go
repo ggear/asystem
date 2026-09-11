@@ -224,6 +224,14 @@ func Payloads() []schema.Payload {
 			}},
 		},
 		{
+			Role:  schema.RoleState,
+			Match: "*/backup/reaper",
+			Root: schema.Member{Members: []schema.Member{
+				{Key: "state", Enum: []string{CommandOn, CommandOff}},
+				{Key: "expires_ts", Kind: schema.KindStr},
+			}},
+		},
+		{
 			Role: schema.RoleCommand,
 			Root: schema.Member{Enum: []string{CommandOn, CommandOff}},
 		},

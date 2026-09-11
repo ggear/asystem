@@ -37,53 +37,7 @@ improve sys tests with datbase/broker asserts
 
 
 
-supervisor reaper did not turn switch off, i had stopped manual backup on mad at 11am, and then waited, until I manually turned switch off at 11.25am. find bug. 
-make this robust in the face of mqtt broker availability and topic flush due to release etc validate leader election also robust
 
-why is first estimate so bad? can it be imroved?
-[INFO tertiary  10:51:39] starting and estimated to finish in [848] min
-[INFO tertiary  10:52:23] mirrored [    0] GB of [  364] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
-[INFO tertiary  10:52:34] mirrored [    0] GB of [  364] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
-[INFO tertiary  10:52:44] mirrored [    0] GB of [  364] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
-[INFO tertiary  10:52:54] mirrored [    6] GB of [  364] GB at [  1] percent complete and estimated to complete in [  43] min at [141] MB/s
-
-maybe make rate only update when mirrored qunatised block comes through, not time based for warm up (start once first mirrored total updated) nor for each meausre period subsequent, but for each block between when mirrored updates, so it stays constant in this period, with an actively copying flag (inverse of stalled) and doesnt just drop until next block comes through on mirrored
-root@macmini-mad:~$ abackup start
-
-Backup start [2026-09-11_10-51-02] over [primary secondary tertiary]
-
-Backup tail [2026-09-11_10-51-02] under [/home/asystem/supervisor/backup/2026-09-11_10-51-02]
-
-[INFO primary   10:51:05] starting and estimated to finish in [0] min
-[INFO primary   10:51:35] finished with status [success] in [00h00m31s] with files [0], size [0] MB and disk at [17] pct
-[INFO secondary 10:51:35] starting and estimated to finish in [0] min
-[INFO secondary 10:51:37] finished with status [success] in [00h00m02s] with files [46], size [712] MB and disk at [71] pct
-[INFO tertiary  10:51:39] starting and estimated to finish in [848] min
-[INFO tertiary  10:52:23] mirrored [    0] GB of [  364] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
-[INFO tertiary  10:52:34] mirrored [    0] GB of [  364] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
-[INFO tertiary  10:52:44] mirrored [    0] GB of [  364] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
-[INFO tertiary  10:52:54] mirrored [    6] GB of [  364] GB at [  1] percent complete and estimated to complete in [  43] min at [141] MB/s
-[INFO tertiary  10:53:04] mirrored [    6] GB of [  364] GB at [  1] percent complete and estimated to complete in [  54] min at [111] MB/s
-[INFO tertiary  10:53:14] mirrored [    6] GB of [  364] GB at [  1] percent complete and estimated to complete in [  67] min at [ 91] MB/s
-[INFO tertiary  10:53:24] mirrored [   10] GB of [  364] GB at [  2] percent complete and estimated to complete in [  36] min at [167] MB/s
-[INFO tertiary  10:53:34] mirrored [   10] GB of [  364] GB at [  2] percent complete and estimated to complete in [  41] min at [145] MB/s
-[INFO tertiary  10:53:44] mirrored [   10] GB of [  364] GB at [  2] percent complete and estimated to complete in [  47] min at [128] MB/s
-[INFO tertiary  10:53:54] mirrored [   17] GB of [  364] GB at [  4] percent complete and estimated to complete in [  31] min at [187] MB/s
-[INFO tertiary  10:54:04] mirrored [   17] GB of [  364] GB at [  4] percent complete and estimated to complete in [  35] min at [169] MB/s
-[INFO tertiary  10:54:14] mirrored [   17] GB of [  364] GB at [  4] percent complete and estimated to complete in [  38] min at [155] MB/s
-[INFO tertiary  10:54:24] mirrored [   17] GB of [  364] GB at [  4] percent complete and estimated to complete in [  41] min at [142] MB/s
-[INFO tertiary  10:54:35] mirrored [   24] GB of [  364] GB at [  6] percent complete and estimated to complete in [  31] min at [183] MB/s
-[INFO tertiary  10:54:45] mirrored [   24] GB of [  364] GB at [  6] percent complete and estimated to complete in [  34] min at [170] MB/s
-[INFO tertiary  10:54:55] mirrored [   24] GB of [  364] GB at [  6] percent complete and estimated to complete in [  36] min at [160] MB/s
-[INFO tertiary  10:55:05] mirrored [   31] GB of [  364] GB at [  8] percent complete and estimated to complete in [  29] min at [190] MB/s
-[INFO tertiary  10:55:15] mirrored [   31] GB of [  364] GB at [  8] percent complete and estimated to complete in [  31] min at [179] MB/s
-[INFO tertiary  10:55:25] mirrored [   31] GB of [  364] GB at [  8] percent complete and estimated to complete in [  33] min at [170] MB/s
-[INFO tertiary  10:55:35] mirrored [   37] GB of [  364] GB at [ 10] percent complete and estimated to complete in [  28] min at [196] MB/s
-[INFO tertiary  10:55:45] mirrored [   37] GB of [  364] GB at [ 10] percent complete and estimated to complete in [  29] min at [187] MB/s
-
-
-
-check jen can run all, skips tertiary, Fail BKP is 100%?
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
 test scrub

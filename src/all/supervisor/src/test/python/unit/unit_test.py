@@ -4,12 +4,13 @@ import re
 import shutil
 import subprocess
 import tempfile
-import time
 import unittest
+from datetime import datetime
 from os.path import abspath, dirname, join, realpath
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 BACKUP_SCRIPT = join(DIR_ROOT, "src/main/resources/image/backup.sh")
+CLOCK = 1789000000
 
 
 def _gnu_userland():
@@ -133,7 +134,7 @@ class BackupShellTest(unittest.TestCase):
                          "/share/10/backup/supervisor/macmini-mad")
 
     def test_readings_are_tab_separated_so_a_field_can_never_split(self):
-        head = 'backup_used() { echo 0; }\nbackup_rate() { echo "150 default"; }\n'
+        head = 'backup_used() { echo 0; }\n'
         for reader in ("backup_promoting /nowhere/status.json", "backup_mirroring /nowhere"):
             line = self.shell(head + 'printf "%s" "$(' + reader + ' | tr "\\t" "|")"')
             self.assertEqual(len(line.split("|")), 6, "got [{}] from {}".format(line, reader))
@@ -151,27 +152,34 @@ class BackupShellTest(unittest.TestCase):
                                            'mountpoint() { return 0; }\nstat() { echo 65024; }\n'
                                            'backup_attached && echo attached || echo detached'), "detached")
 
+    @NEEDS_GNU
     def test_manual_reports_a_publish_that_did_not_happen(self):
         done = self.shell('backup_publish() { return 1; }\n'
                           'backup_manual off 2>&1 || echo "exit=$?"')
-        self.assertIn("could not publish [OFF] to [supervisor/cluster-all/backup/reaper]", done)
+        self.assertIn('could not publish [{"state":"OFF"', done)
+        self.assertIn("to [supervisor/cluster-all/backup/reaper]", done)
         self.assertIn("exit=1", done)
 
     def test_publish_says_when_it_cannot_reach_a_broker(self):
         self.assertEqual(self.shell('BROKER_HOST=""; backup_publish topic payload; echo "exit=$?"'), "exit=1")
 
+    @NEEDS_GNU
     def test_manual_publishes_the_reaper_switch_both_ways(self):
         probe = ('backup_publish() { printf "%s %s\\n" "$1" "$2"; }\n'
                  'backup_log() { :; }\n'
+                 'backup_reaper() { printf ""; }\n'
                  'backup_manual {}')
-        self.assertEqual(self.shell(probe.replace("{}", "")), "supervisor/cluster-all/backup/reaper OFF")
-        self.assertEqual(self.shell(probe.replace("{}", "off")), "supervisor/cluster-all/backup/reaper OFF")
-        self.assertEqual(self.shell(probe.replace("{}", "on")), "supervisor/cluster-all/backup/reaper ON")
+        self.assertEqual(self.shell(probe.replace("{}", "")), "")
+        self.assertTrue(self.shell(probe.replace("{}", "off")).startswith(
+            'supervisor/cluster-all/backup/reaper {"state":"OFF","expires_ts":"'))
+        self.assertEqual(self.shell(probe.replace("{}", "on")),
+                         'supervisor/cluster-all/backup/reaper {"state":"ON","expires_ts":""}')
 
     def test_manual_keeps_its_argument_out_of_the_run_id_slot(self):
         self.assertEqual(self.parse("manual", "on"), "manual all - 0 0")
         self.assertEqual(self.shell('backup_publish() { printf "%s" "$2"; }\nbackup_log() { :; }\n'
-                                    'backup_manual "${BACKUP_ARGUMENT}"', arguments=("manual", "on")), "ON")
+                                    'backup_manual "${BACKUP_ARGUMENT}"', arguments=("manual", "on")),
+                         '{"state":"ON","expires_ts":""}')
 
     def test_manual_refuses_a_word_it_does_not_know(self):
         done = self.invoke("manual", "sideways")
@@ -282,15 +290,6 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("backup_active"), "2026-09-08_02-00-00")
 
     @NEEDS_GNU
-    def test_pending_falls_back_to_a_default_for_a_service_stage(self):
-        self.assertEqual(self.shell("backup_pending primary"), "<10")
-
-    @NEEDS_GNU
-    def test_pending_reads_the_last_duration_for_a_service_stage(self):
-        self.document("2026-09-08_00-00-00", "secondary", state="complete", duration_s=420, size_mb=5)
-        self.assertEqual(self.shell("backup_pending secondary"), "7")
-
-    @NEEDS_GNU
     def test_result_maps_a_status_document_to_one_word(self):
         run = "2026-09-08_00-00-00"
         self.document(run, "primary", state="complete", success_bool=True)
@@ -367,6 +366,23 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(len(widths), 1, "every row must be the same width, got {}".format(sorted(widths)))
         self.assertIn("| TERTIARY  ", listed)
         self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*\|\s+-\s+\|")
+
+    @NEEDS_GNU
+    def test_stages_are_read_from_the_declaration_not_inferred_from_fstab(self):
+        config = join(self.home, "config.json")
+        with open(config, "w") as handle:
+            json.dump({"asystem": {"schema": [{"host": "macmini-mad",
+                                               "stages": ["primary", "secondary", "tertiary"]},
+                                              {"host": "raspbpi-jen", "stages": ["primary", "secondary"]}]}}, handle)
+        def staged(host):
+            return self.shell('BACKUP_CONFIG="' + config + '"; BACKUP_HOST="' + host + '"\n'
+                              'backup_log() { :; }\nbackup_stages | xargs')
+        self.assertEqual(staged("macmini-mad"), "primary secondary tertiary")
+        self.assertEqual(staged("raspbpi-jen"), "primary secondary")
+        self.assertEqual(staged("raspbpi-nowhere"), "primary secondary")
+        warned = self.shell('BACKUP_CONFIG="' + config + '"; BACKUP_HOST="raspbpi-nowhere"\n'
+                            'backup_log() { printf "%s\\n" "$2" >&2; }\nbackup_stages 2>&1 >/dev/null')
+        self.assertIn("declares no backup stages", warned)
 
     def test_status_says_nothing_about_a_stage_this_host_does_not_run(self):
         path = join(self.home, "supervisor/backup/2026-09-08_00-00-00")
@@ -507,7 +523,6 @@ class BackupShellTest(unittest.TestCase):
                                     'mountpoint() { return 1; }\n'
                                     'backup_used() { echo $(( 200 * 1073741824 )); }\n'
                                     'backup_expected'), "0")
-        self.assertEqual(self.shell('mountpoint() { return 1; }\nbackup_pending tertiary'), "0")
 
     @NEEDS_GNU
     def test_expected_prefers_what_is_left_over_what_a_big_earlier_run_moved(self):
@@ -535,25 +550,6 @@ class BackupShellTest(unittest.TestCase):
                             'backup_used() { echo $(( 200 * 1073741824 )); }\n'
                             'backup_expected')
         self.assertEqual(mirrored, str(200 * 1073741824))
-
-    @NEEDS_GNU
-    def test_pending_prices_tertiary_from_what_is_left_not_a_previous_duration(self):
-        self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=1, duration_s=28800)
-        self.assertEqual(self.shell('backup_mounted() { :; }\nmountpoint() { return 1; }\n'
-                                    'backup_pending tertiary'), "0")
-
-    @NEEDS_GNU
-    def test_pending_prices_the_expected_bytes_at_the_measured_rate(self):
-        self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=36000, duration_s=360)
-        self.assertEqual(self.shell('backup_mounted() { :; }\nmountpoint() { return 1; }\n'
-                                    'backup_pending tertiary'), "6")
-
-    @NEEDS_GNU
-    def test_rate_discounts_the_scrub_from_the_run_it_shared_a_stage_with(self):
-        self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=6000, duration_s=3600)
-        self.assertEqual(self.shell("backup_rate tertiary"), "1 measured")
-        self.scrub("2026-09-08_00-00-00", "tertiary", state="interrupted", duration_s=3540)
-        self.assertEqual(self.shell("backup_rate tertiary"), "100 measured")
 
     @NEEDS_GNU
     def test_counted_floors_the_size_by_what_the_disk_actually_grew(self):
@@ -592,14 +588,10 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(remaining, "-")
 
     @NEEDS_GNU
-    def test_mirroring_rates_the_span_the_window_covers(self):
+    def test_mirroring_rates_the_span_between_the_changes_it_recorded(self):
         raw, path = self.ramp()
-        stage = join(path, "stage/tertiary")
-        now = int(time.time())
-        with open(join(stage, "samples"), "w") as handle:
-            handle.write("{} {}\n".format(now - 300, raw - 200 * 300 * 1048576))
-            handle.write("{} {}\n".format(now - 10, raw - 200 * 10 * 1048576))
-        self.assertAlmostEqual(int(self.rated(raw, path)), 200, delta=3)
+        self.sample(path, (3000, raw - 80 * 1073741824), (300, raw - 40 * 1073741824), (100, raw))
+        self.assertAlmostEqual(int(self.rated(raw, path)), 40 * 1024 // 200, delta=2)
 
     def test_heartbeat_never_sleeps_on_a_disabled_progress_interval(self):
         with open(BACKUP_SCRIPT) as handle:
@@ -612,40 +604,48 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(len(calls), 1)
 
     @NEEDS_GNU
-    def test_mirroring_rates_early_once_enough_bytes_have_landed(self):
+    def test_mirroring_holds_the_rate_while_the_disk_sits_flat(self):
         raw, path = self.ramp()
-        with open(join(path, "stage/tertiary/samples"), "w") as handle:
-            handle.write("{} {}\n".format(int(time.time()) - 30, raw - 4 * 1073741824))
-        self.assertAlmostEqual(int(self.rated(raw, path)), 4096 // 30, delta=4)
+        self.sample(path, (400, raw - 60 * 1073741824), (300, raw - 40 * 1073741824), (100, raw))
+        held = self.rated(raw, path, record="record")
+        self.assertEqual(self.rated(raw, path, record="record", clock=CLOCK + 90), held)
+        self.assertEqual(self.rated(raw + 50 * 1048576, path, record="record", clock=CLOCK + 180), held)
 
     @NEEDS_GNU
-    def test_mirroring_withholds_the_rate_below_both_the_span_and_the_evidence(self):
+    def test_mirroring_withholds_the_rate_until_two_changes_have_landed(self):
         raw, path = self.ramp()
-        stage = join(path, "stage/tertiary")
-        with open(join(stage, "samples"), "w") as handle:
-            handle.write("{} {}\n".format(int(time.time()) - 60, raw - 1073741824))
+        self.sample(path, (300, raw - 40 * 1073741824), (100, raw))
         self.assertEqual(self.rated(raw, path), "-")
 
     @NEEDS_GNU
     def test_mirroring_ignores_a_truncated_sample_rather_than_rating_the_whole_disk(self):
         raw, path = self.ramp()
         with open(join(path, "stage/tertiary/samples"), "w") as handle:
-            handle.write("{}\n".format(int(time.time()) - 300))
+            handle.write("{}\n".format(CLOCK - 300))
         self.assertEqual(self.rated(raw, path), "-")
 
     @NEEDS_GNU
-    def test_mirroring_records_a_sample_and_forgets_what_falls_out_of_the_window(self):
+    def test_mirroring_records_a_change_and_ignores_anything_below_the_quantum(self):
         raw, path = self.ramp()
-        samples = join(path, "stage/tertiary/samples")
-        now = int(time.time())
-        with open(samples, "w") as handle:
-            handle.write("{} 1\n{} {}\n".format(now - 900, now - 200, raw - 200 * 200 * 1048576))
-        self.assertAlmostEqual(int(self.rated(raw, path, record="record")), 200, delta=3)
-        with open(samples) as handle:
-            kept = [line.split()[0] for line in handle if line.strip()]
-        self.assertEqual(len(kept), 2)
-        self.assertEqual(kept[0], str(now - 200))
-        self.assertGreaterEqual(int(kept[1]), now)
+        self.sample(path, (300, raw - 40 * 1073741824), (100, raw))
+        self.rated(raw + 50 * 1048576, path, record="record")
+        self.assertEqual(len(self.samples(path)), 2)
+        self.rated(raw + 4 * 1073741824, path, record="record")
+        self.assertEqual(len(self.samples(path)), 3)
+
+    @NEEDS_GNU
+    def test_mirroring_restarts_the_samples_when_the_disk_gives_bytes_back(self):
+        raw, path = self.ramp()
+        self.sample(path, (300, raw - 40 * 1073741824), (100, raw))
+        self.rated(raw - 1073741824, path, record="record")
+        self.assertEqual(len(self.samples(path)), 1)
+
+    @NEEDS_GNU
+    def test_mirroring_bounds_the_points_it_keeps(self):
+        raw, path = self.ramp()
+        self.sample(path, *[(900 - index * 30, raw - (30 - index) * 1073741824) for index in range(25)])
+        self.rated(raw + 4 * 1073741824, path, record="record")
+        self.assertEqual(len(self.samples(path)), 12)
 
     def ramp(self):
         run = "2026-09-08_00-00-00"
@@ -655,9 +655,19 @@ class BackupShellTest(unittest.TestCase):
             handle.write(str(2242 * 1073741824))
         return 3094 * 1073741824, path
 
-    def rated(self, raw, path, record=""):
-        return self.shell('backup_used() {{ echo {}; }}\n'
-                          'backup_mirroring "{}" "{}" | cut -f5'.format(raw, path, record))
+    def rated(self, raw, path, record="", clock=CLOCK):
+        stub = ('date() { if [ "$1" = "+%s" ]; then echo ' + str(clock) + '; else command date "$@"; fi; }\n'
+                'backup_used() { echo ' + str(raw) + '; }\n')
+        return self.shell(stub + 'backup_mirroring "' + path + '" "' + record + '" | cut -f5')
+
+    def sample(self, path, *points):
+        with open(join(path, "stage/tertiary/samples"), "w") as handle:
+            for ago, bytes_used in points:
+                handle.write("{} {}\n".format(CLOCK - ago, bytes_used))
+
+    def samples(self, path):
+        with open(join(path, "stage/tertiary/samples")) as handle:
+            return [line for line in handle if line.strip()]
 
     @NEEDS_GNU
     def test_progress_measures_the_bytes_this_run_moved_not_what_the_disk_holds(self):
@@ -717,6 +727,43 @@ class BackupShellTest(unittest.TestCase):
         named = {"BACKUP_{}_{}".format("STATE" if kind == "BackupState" else "COMMAND", word.upper()): value
                  for kind, word, value in declared}
         self.assertEqual(shelled, named)
+
+    @NEEDS_GNU
+    def test_manual_reports_the_reaper_rather_than_pausing_it_when_given_nothing(self):
+        head = ('backup_log() { printf "%s\\n" "$2"; }\n'
+                'backup_publish() { printf "PUBLISHED %s\\n" "$2"; }\n')
+        for held, expected in (('{\\"state\\":\\"OFF\\",\\"expires_ts\\":\\"2026-09-12T01:00:00+08:00\\"}',
+                                "paused until [2026-09-12T01:00:00+08:00]"),
+                               ('{\\"state\\":\\"ON\\",\\"expires_ts\\":\\"\\"}', "armed"),
+                               ("", "undeclared"),
+                               ('{\\"state\\":\\"OFF\\"}', "states no deadline")):
+            spoken = self.shell(head + 'backup_reaper() { printf "' + held + '"; }\nbackup_manual')
+            self.assertIn(expected, spoken)
+            self.assertNotIn("PUBLISHED", spoken)
+
+    @NEEDS_GNU
+    def test_manual_pauses_the_reaper_only_until_the_next_scheduled_run(self):
+        head = ('backup_log() { printf "%s\\n" "$2"; }\n'
+                'backup_publish() { printf "PUBLISHED %s\\n" "$2"; }\n')
+        paused = self.shell(head + 'backup_manual off')
+        self.assertIn('"state":"OFF"', paused)
+        expires = json.loads(paused.splitlines()[0][len("PUBLISHED "):])["expires_ts"]
+        self.assertGreater(expires, datetime.now().astimezone().isoformat(timespec="seconds"))
+        self.assertEqual(int(expires[11:13]), self.scheduled_hour())
+        self.assertIn("PUBLISHED {\"state\":\"ON\",\"expires_ts\":\"\"}", self.shell(head + 'backup_manual on'))
+
+    def test_scheduled_hour_matches_the_go_probe_declaration(self):
+        source = join(DIR_ROOT, "src/main/go/supervisor/internal/probe/probe_impl_backup.go")
+        with open(source) as handle:
+            declared = re.search(r"backupScheduledHour\s+=\s+(\d+)", handle.read())
+        self.assertIsNotNone(declared, "found no backupScheduledHour in [{}]".format(source))
+        self.assertEqual(self.scheduled_hour(), int(declared.group(1)))
+
+    def scheduled_hour(self):
+        with open(BACKUP_SCRIPT) as handle:
+            declared = re.search(r"^BACKUP_SCHEDULED_HOUR=(\d+)$", handle.read(), re.M)
+        self.assertIsNotNone(declared, "found no BACKUP_SCHEDULED_HOUR in [{}]".format(BACKUP_SCRIPT))
+        return int(declared.group(1))
 
     def test_device_counter_sums_every_device_in_the_filesystem(self):
         stats = ("[/dev/sdd1].write_io_errs    0\n"

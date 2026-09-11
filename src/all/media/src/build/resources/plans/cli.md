@@ -55,6 +55,13 @@ Modelled on `backup.sh`: the command always comes first, the one positional afte
 command's single argument, options are flags, and **help is the default** so a naked `amedia`
 explains itself rather than starting a multi-hour transcode nobody asked for.
 
+**The name is not new, it is the estate's existing convention.** `supervisor`'s `install_post.sh`
+already writes `atop`, `atops` and `abackup` into `/usr/local/bin`, so `a<verb-or-module>` is the
+established shape for an asystem CLI and `amedia` is the media module taking its place in it rather
+than inventing a prefix. Verified free on both platforms — `command -v amedia` and
+`compgen -c | grep -x amedia` return nothing on rue or on `macmini-mad`, whose `/usr/local/bin` holds
+exactly `abackup atop atops other-transcode` and the 21 `media-*` links this plan retires.
+
 ```
 Usage: amedia [command] [argument] [options]
 
@@ -91,7 +98,7 @@ Usage: amedia [command] [argument] [options]
     home               print the install bin directory
     help               this text, and a bare amedia prints it
 
-  --force              analyse only, ignore what was probed      (default: off)
+  --force              analyse only, re-probe every file first   (default: off)
   --keep-going         carry on past a failed pipeline stage     (default: off)
   --share <index>      one share, not the one you are in         (default: all local)
   --quiet              summaries only, the default below a share (default: off)
@@ -114,6 +121,23 @@ concept below is an *extent* and the defaults say `from $PWD` rather than "this 
 **`force` folded into `analyse --force`.** It was `analyse` with one flag and a narrower
 precondition, and a verb named for how it behaves rather than what it does; three pipeline verbs
 where two plus a flag will do is the repetition this refactor exists to remove.
+
+**The flag is what `force` did, which is not what its name suggests.** `--force` in `analyse.py` only
+changes how an already-probed file is *classified*; what makes a re-probe happen is deleting the
+cached `._metadata_*.yaml`, which is why `media-force.sh` runs `media-clean` before it. So
+`analyse --force` is `clean` then `analyse` over the resolved extent, and the help line says
+"re-probe every file first" rather than "ignore what was probed". Note plain `analyse` already
+cleans in the `file`/`media` extents and does not in `share`/`local` — an inconsistency inherited
+from `media-analyse.sh`, kept deliberately so the merge changes no behaviour it was not asked to.
+
+**`--force` is accepted in every extent, unguarded** — a decision, not an oversight. `media-force.sh`
+refuses outside a media file root, so today there is no way to force a re-probe of a whole share
+short of deleting the metadata by hand; the flag becomes that capability. The cost is stated plainly
+because nothing else states it: `amedia analyse --force` typed anywhere outside a share deletes
+every cached probe on every local share and re-ffprobes the estate, which is hours. It is the one
+place in this CLI where a single flag is that expensive, and the two things that keep it honest are
+that `--force` is never in a pipeline stage list and that the extent is echoed in the progress line
+before any work starts, so a `local` run announces what it is about to do.
 
 **Groups are four kinds of thing, not three plus a grab bag.** `mount` mutates (it mounts
 filesystems, and `space` calls it), and `home` and `help` are about the tool rather than the
@@ -294,8 +318,11 @@ already demonstrates the bug of an unanchored one, where `/share/1` matches `/sh
 stale. It reports `mounted`, `already` or `failed` per share and accumulates the exit, so
 `amedia mount` is worth running before a `space` or a `publish` on either machine.
 
-`space` keeps calling it first on Darwin, as it does now; on Linux it may now do so too, since the
-verb is no longer a no-op there.
+`space` calls it first on **both** platforms. On Darwin that is what it does now; on Linux it is new
+and is the point of giving the verb Linux behaviour at all — `space` is the last stage of `process`
+and the command you run to ask whether a share is full, and a dropped cifs share answers that
+question with an empty directory and a plausible-looking table. The cost is one anchored mount-table
+check per mountpoint on a command that already shells out to `duf`.
 
 ### `ingress` is extent-aware, in two phases
 
@@ -349,17 +376,39 @@ the **extent**, since *scope* is the library's own word for `kids|parents|docos|
 | `share` | `$PWD` is inside a share root | `<share>/media` |
 | `local` | anywhere else | every directory in `SHARE_DIRS_LOCAL` |
 
+**`file` dispatches exactly as `media` does, for every command but `metadata`.** The row is in the
+table because two commands need to know they are standing in one title's directory, not because the
+dispatchers branch on it — the seven action wrappers test only `SHARE_DIR_MEDIA` today and finding
+nothing beneath a leaf directory is already the right answer, so giving `file` its own action
+dispatch would change behaviour to no end. It is `metadata`'s precondition, and `analyse`'s cleaning
+rule above; with `--force` unguarded it is no longer a precondition of anything else. Resolving it as
+an extent rather than as a per-command test is what removes the identical four-line
+`basename/dirname` block that `force` and `metadata` each carry.
+
 and two dispatchers, one per shape:
 
-- `dispatch_action <verb>` (shape A) — `media` extent runs `${FIND_CMD} . -name <verb>.sh -exec {} \;`;
-  `share` and `local` run each share's `tmp/scripts/media/<verb>.sh`, calling `command_analyse` first
-  when it is absent.
-- `dispatch_library <verb> [dir]` (shape B) — an explicit `dir` wins; otherwise `media` extent runs the
-  function against `$PWD`, and `share`/`local` prefer the share's generated script and fall back to
-  the function.
+- `dispatch_action <verb>` (shape A) — `file` and `media` extents run
+  `${FIND_CMD} . -name <verb>.sh -print0` and iterate (see "Exit propagation"); `share` and `local`
+  run each share's `tmp/scripts/media/<verb>.sh`, calling `command_analyse` first when it is absent.
+- `dispatch_library <verb> [dir]` (shape B) — an explicit `dir` wins; otherwise `file`/`media` extents
+  run the function against `$PWD`, and `share`/`local` prefer the share's generated script and fall
+  back to the function.
 
 Shape A's whole body is then `dispatch_action "${1}"`, so the seven scripts become **zero** lines:
 they are entries in the action list, nothing more.
+
+**`--quiet`/`--verbose` are not only display flags, and the merge must not treat them as such.** The
+generated `analyse.sh` takes `${1}` as the verbosity *and* `${2:-/media}` as the subpath under the
+share, and today's wrapper passes the pair together — `--verbose "media"` in the `share` extent,
+`--quiet "/"` in the `local` extent — so the second positional is what decides whether the run
+analyses `<share>/media` or the whole of `<share>`. Read as a display flag alone, `--quiet` looks
+free to move and the path argument disappears with it, which analyses the wrong root in one of the
+two extents and would pass every test that only counts actions. So `dispatch_library analyse` passes
+**both**, deriving the subpath from the extent and the verbosity from the flags, and the default when
+neither flag is given stays extent-derived — verbose in a share, quiet across `local` — which is what
+the help line means by "the default below a share". The right fix at the generated end is to give
+`analyse.sh` a named second argument rather than a positional, but that is `analyse.py`'s to make and
+this plan only commits to not silently dropping it.
 
 ### `move` splits into `stow` and `move`
 
@@ -444,53 +493,177 @@ agree.
 house pattern here, and `.env_media` is a file of `[[ … ]] && …` chains whose last line returns 1,
 which `set -e` would turn into a failed source.
 
-## Install and migration
+### Generated scripts resolve the bin directory, they never call the link
 
-`install.sh` currently links every `bin/*.sh` by its basename:
+**Nothing generated may depend on a `/usr/local/bin` link, because the link is not always on the
+machine the code runs on.** Three mechanisms execute a string on a *different* host than the one you
+typed on — the generated aggregate scripts' self-delegation (`analyse.py`'s `HOST_DIRS`/`HOST_CMD`),
+`move`'s rsync half, and `find`'s ssh to `macmini-mad` — and the first two carry `$(media-home)`
+*inside* the remote command. A release reaches hosts one at a time, so renaming the link creates a
+window where rue's rewritten scripts ask a macmini for `amedia` while that macmini still has only
+`media-home`, and the reverse for a macmini that is released first. Ordering the rollout would only
+narrow the window, and `fab release` ordering is not the module's to control.
+
+So the dependency goes rather than the window being managed. Every generated script, and every
+remote command string, resolves the bin directory itself:
 
 ```bash
-for SCRIPT in ".../bin/"*.sh; do
+MEDIA_BIN_INSTALL="/var/lib/asystem/install/media/latest/bin"
+MEDIA_BIN_DIR="${MEDIA_BIN_DIR:-${MEDIA_BIN_INSTALL}}"
+[ -f "${MEDIA_BIN_DIR}/.env_media" ] || { echo "Missing bin directory [${MEDIA_BIN_DIR}]" >&2; exit 1; }
+. "${MEDIA_BIN_DIR}/.env_media"
+```
+
+**That path is not a new hardcoding — it is the one `.env_media` already carries**, on both
+platforms, as `LIB_ROOT=/var/lib/asystem/install/media/latest/bin/lib`. `$(media-home)` resolves to
+exactly it on every installed host, client and server alike; the command substitution was only ever
+buying the checkout case, which the `MEDIA_BIN_DIR` override buys instead and more explicitly.
+
+Three rules fall out of it:
+
+1. **The two halves are distinct and must stay distinct.** `MEDIA_BIN_DIR` is the local, overridable
+   one; `MEDIA_BIN_INSTALL` is the literal that goes into an ssh command string. A checkout override
+   must never be interpolated into a command that lands on a server, where that path does not exist.
+2. **The override is what makes the generated scripts testable.** `unit_test.py` runs from a checkout
+   with no install tree, so exporting `MEDIA_BIN_DIR` at the top of the suite is the only way an
+   aggregate script can be executed under test at all — see the verification steps below, which is
+   where this stops being theoretical.
+3. **`amedia home` survives as a verb** (it is in the help, and it is what you type to find the
+   install), but nothing in the repo calls it any more. That is the whole of the migration risk: with
+   no generated artifact and no remote string naming a link, the rename is a change to what an
+   operator types and to nothing else.
+
+## Install and migration
+
+`install.sh` currently links every `bin/*.sh` by its basename, through the `latest` symlink:
+
+```bash
+for SCRIPT in "/var/lib/asystem/install/media/latest/bin/"*.sh; do
   rm -rf "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
   ln -vs "${SCRIPT}" "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
 done
 ```
 
-That loop goes, because the link name and the file name now differ:
+That loop goes. **`amedia` is installed exactly as `atop`, `atops` and `abackup` are** — the same
+four lines in the same order that `src/all/supervisor/install_post.sh` uses for each of them: make
+the target executable, `rm -f` the command, write it with a `cat >` heredoc, `chmod +x` it. Not a
+symlink, and not a variation on one:
 
 ```bash
+SERVICE_INSTALL_LATEST="/var/lib/asystem/install/${SERVICE_NAME}/latest"
+
 # NOTES: Remove one release after this one, when no host can still carry a media-* link
 for LINK in "/usr/local/bin/media-"*; do
   [ -L "${LINK}" ] && rm -vf "${LINK}"
 done
-ln -vfns ".../bin/media.sh" "/usr/local/bin/amedia"
+chmod +x "${SERVICE_INSTALL_LATEST}/bin/media.sh"
+rm -f /usr/local/bin/amedia
+cat >/usr/local/bin/amedia <<EOF
+#!/bin/bash
+
+${SERVICE_INSTALL_LATEST}/bin/media.sh "\$@"
+
+EOF
+chmod +x /usr/local/bin/amedia
 ```
 
-`ln -fns` replaces whatever is there, link or not, without following an existing symlink into a
-directory — so an upgrade and a reinstall are the same line and the new link needs no `rm`. The
-`media-*` sweep is the transitional half: guarded on `-L` so the no-match literal is skipped, unable
-to touch `/usr/local/bin/other-transcode`, and **deleted in the release after the one that ships
-it**. Nothing else in `install.sh` changes.
+The result on a host is the same three-line file the others are — `#!/bin/bash`, a blank line, the
+install path with `"$@"`, a trailing blank line — so `cat /usr/local/bin/a*` reads as one family
+rather than as three conventions. The `\$@` escape is what keeps the heredoc from expanding it at
+install time, exactly as supervisor writes it; everything else in the body is expanded, which is the
+point.
+
+**What is copied is the shape, not the gating.** supervisor writes `atop` and `atops` on every host
+and gates `abackup` on `edge|server`; `amedia` stays inside the `client|server` gate the link loop
+already sits in, which is what puts it on rue and the four macminis and keeps it off the rest. Same
+family, each member scoped to the hosts its command means something on.
+
+**Ruled out: `ln -vfns` to the script**, which an earlier draft of this plan specified. It works —
+BSD `ln` takes `-v` and treats `-n` as `-h`, so it is idempotent over an existing link on both
+platforms — but it would be a *third* mechanism for the same job in one estate, and the two that
+exist (this module's `ln -vs` loop, supervisor's heredoc) already disagree. Note the advantage is
+**not** version-independence: the existing loop already links through `latest`, so a symlink survives
+a release just as well. What the wrapper buys is consistency with `atop`/`atops`/`abackup`, an
+explicit `"$@"` so there is one place to read what the entry point receives, and a `$0` that is the
+real script, so `media.sh`'s `readlink -f "$0"` preamble needs no thought about symlink resolution.
+
+**`SERVICE_INSTALL_LATEST` rather than supervisor's `SERVICE_INSTALL`, and the difference is forced.**
+supervisor's `install_post.sh` binds `SERVICE_INSTALL` to the `latest` path; this module's
+`install.sh` already binds the same name to the *versioned*
+`/var/lib/asystem/install/media/${SERVICE_VERSION_ABSOLUTE}`, because it is a full install script
+rather than a post hook. Reusing the name would either shadow the versioned path the rest of the file
+depends on or bake a retired version home into a wrapper that outlives it. So the shape is copied and
+the spelling is not, and the new variable earns its keep beyond the wrapper: `install.sh` currently
+repeats the literal `/var/lib/asystem/install/media/latest/` on four lines (the `other-transcode`
+copy, the `gspread_pandas` config, the `chmod +x`, and the link loop), and all four become it.
+
+That literal now exists in exactly two places in the module — `install.sh` as
+`SERVICE_INSTALL_LATEST`, and `analyse.py` as the `MEDIA_BIN_INSTALL` it generates into every script
+header. That is a constant crossing a shell↔Python boundary that cannot share a symbol, so it follows
+the house rule for one: mirrored names, and a `unit_test.py` assertion that the path `install.sh`
+assigns and the path `analyse.py` emits are equal, failing loudly if either parse finds nothing.
+
+The `media-*` sweep is the transitional half, guarded on `-L` for one reason only: an unmatched glob
+leaves the literal `/usr/local/bin/media-*` as the loop variable, and `-L` is what skips it. (The
+earlier draft justified the guard as protecting `other-transcode`, which it does not need to — a
+`media-*` glob cannot match that name. The real hazard is the unmatched literal, and it is the same
+reason `[ -L ]` rather than `[ -e ]`.) The sweep is **deleted in the release after the one that ships
+it**.
+
+**No shim is needed and the rollout needs no ordering**, because of the section above: no generated
+script and no remote command string names a link, so a half-released estate has nothing to skew.
+What a not-yet-released host loses is the ability to *type* `amedia`, which is a person's problem
+for an hour and not a pipeline's.
+
+**The existing `chmod +x` line goes with the loop it served.** It marks `bin/*.sh` **and**
+`bin/lib/*.sh` executable, and after the collapse the first glob matches one file and the second
+matches only `history.sh` — a scrapbook the plan says is never executed, leaving a line whose only
+remaining job is one deletion away from an unmatched-glob failure. The snippet above chmods
+`bin/media.sh` by name instead, which is both what supervisor does for `supervisor` and
+`image/backup.sh` and the only thing that still needs it: nothing under `lib/` is executed by
+anything once `clean.sh`, `normalise.sh` and `ingress.sh` are functions. Nothing else in `install.sh`
+changes.
+
+**Rollback is by path, and is worth saying out loud** since the install deletes every `media-*` link
+in the same pass that creates `amedia`. The scripts are not gone: the install layout retains the
+previous version's tree beside the current one — `macmini-mad` carries `10.200.1307` and
+`10.200.1337` with `latest` pointing at the second — so
+`/var/lib/asystem/install/media/<previous>/bin/media-<verb>.sh` is still there and still executable,
+and a full rollback is that release's own `install.sh install`. There is no bespoke recovery step to
+design, which is the only reason this paragraph is short.
 
 ### Callers outside `bin/`
 
 1. **`deploy.sh`** — `COMMANDS_SINGLETON` / `COMMANDS_ALL_HOSTS` become verbs and the ssh line calls
-   `${BIN_DIR}/media.sh <verb>`. It already runs by path rather than through the link, so it never
-   depends on the migration having reached that host.
+   `${BIN_DIR}/media.sh <verb>`. It runs by path rather than through the link, so it never depends on
+   the migration having reached that host — but the path it runs is the *remote* one, so a checkout
+   updated to verb form against a host still carrying the old release calls `media.sh` where only
+   `media-clean.sh` exists. `deploy.sh` is an operator hook run by hand, never by `fab release`, so
+   the rule is simply that it is run after the release it belongs to, and its four verbs fail loudly
+   (`FAILURES+=()`, non-zero exit) rather than silently if it is not.
 2. **`analyse.py`'s generated script headers** — five `$(media-home)` uses, two
-   `$(media-home)/../shares.csv`, and `$(media-home)/lib/{clean,normalise}.sh`, becoming
-   `$(amedia home)` and `amedia clean "${SHARE_DIR}"` / `amedia normalise "${SHARE_DIR}"`. This is why
-   the library verbs take an optional explicit directory. The already-written copies under
-   `<share>/tmp/scripts/media/` still say `media-home` and are covered — `install.sh` `rm -rf`s
-   `${SHARE_DIR}/tmp/scripts` on every server host on every install, and the client Macs see those
-   same trees over SMB — but the first `amedia analyse` after the release is what rewrites them, so
-   run it before anything else.
-3. **`media-space.sh` calling `media-mount`** — an internal function call.
-4. **`lib/history.sh`** — one scrapbook line naming `media-reformat`, cosmetic.
+   `$(media-home)/../shares.csv`, and `$(media-home)/lib/{clean,normalise}.sh`. All eight become
+   `${MEDIA_BIN_DIR}` (or `${MEDIA_BIN_INSTALL}` in the two remote command strings, `HOST_DIRS` and
+   `HOST_CMD`), and the last two become `"${MEDIA_BIN_DIR}/media.sh" clean "${SHARE_DIR}"` /
+   `… normalise "${SHARE_DIR}"` — by path, not through the link. This is why the library verbs take an
+   optional explicit directory. The already-written copies under `<share>/tmp/scripts/media/` still
+   say `media-home` and are covered — `install.sh` `rm -rf`s `${SHARE_DIR}/tmp/scripts` on every
+   server host on every install, and the client Macs see those same trees over SMB — but the first
+   `amedia analyse` after the release is what rewrites them, so run it before anything else.
+3. **`media-move.sh`'s two `$(media-home)` uses**, which the earlier draft of this plan missed. Line
+   90 reads `$(media-home)/../shares.csv` locally and becomes the `shares_file()` helper; line 84
+   embeds `. $(media-home)/.env_media` in a string executed **on the remote server** via
+   `ssh root@${share_host}`, and becomes `${MEDIA_BIN_INSTALL}`. The second is the same class as
+   `analyse.py`'s `HOST_CMD` and is the reason rule 1 of the section above exists.
+4. **`media-space.sh` calling `media-mount`** — an internal function call.
+5. **`lib/history.sh`** — one scrapbook line naming `media-reformat`, cosmetic.
 
 `src/main/python/media/syncart.py` is a plan carried in a docstring proposing a 22nd wrapper,
-`media-syncart.sh`, which copies "the three branches from media-analyse.sh" by name. Retarget it to
-`amedia syncart`: under this design it is one entry in the command table and one function, and it
-inherits the scope dispatch instead of copying it.
+`media-syncart.sh`, which copies "the three branches from media-analyse.sh" by name. It is **not in
+the command table above and must not be added until it is built** — a help text that advertises a
+verb the script does not implement is worse than no plan for it. What this plan commits to is the
+shape it lands in when it does: `amedia syncart`, one entry in the command table and one function,
+inheriting the extent resolution instead of copying the three branches.
 
 ## Defects the copies are hiding
 
@@ -502,9 +675,11 @@ Found while reading the 21 scripts, all fixed by construction once there is one 
   branch. The test is therefore against `/tmp/scripts/media/<verb>.sh`, which never exists, so an
   estate-wide `media-transcode` re-runs `analyse` once per share and then runs a script it never
   checked for.
-- **`media-truncate.sh` hardcodes the production sheet GUID** rather than reading
-  `${MEDIA_GOOGLE_SHEET_GUID}`, so a dev-checkout run writes the production history sheet — the
-  `.env_exec` override cannot reach it.
+- **`media-truncate.sh` hardcodes both the production sheet GUID and the library root.** It passes
+  the literal `14W6B24…` rather than `${MEDIA_GOOGLE_SHEET_GUID}`, so a dev-checkout run writes the
+  production history sheet and the `.env_exec` override cannot reach it; and it passes the literal
+  `/share`, which is `SHARE_ROOT` on Linux only, so the command cannot run from rue at all. One line,
+  two literals, and both must be replaced or the fix is half done.
 - **Shape A's `SCRIPT_PATH="${ROOT_DIR}/lib/<verb>.sh"` is dead in all seven** — no such file has
   ever existed in `lib/`.
 - **`media-space.sh` propagates no result** (no `RESULT`, no `exit`) and its awk totals block is
@@ -514,6 +689,11 @@ Found while reading the 21 scripts, all fixed by construction once there is one 
   been trusting a success it never earned.
 - **The wrappers call each other by link name** (`media-analyse`, `media-clean`, `media-mount`), so
   they work only through `/usr/local/bin` and never from a source checkout; all become function calls.
+- **`move` and the generated scripts call a link name *on a remote host*.** `media-move.sh:84` and
+  `analyse.py`'s `HOST_DIRS`/`HOST_CMD` put `$(media-home)` inside a string run over
+  `ssh root@macmini-*`, so they depend on the other machine's `/usr/local/bin` as well as their own.
+  That is the whole of the rename's migration risk and is why it is retired rather than renamed — see
+  "Generated scripts resolve the bin directory".
 - **`lib/ingress.sh` sweeps after a failed import.** The mount and the rsync only set `RESULT=1`, so
   `ingress.py` runs on a partial copy and files it into `__RENAMED` as a finished arrival.
 - **`media-ingress.sh` exits 0 on Darwin without printing anything**, so a Mac run is indistinguishable
@@ -543,16 +723,48 @@ the checks are explicit:
 6. `amedia ingress` from a title, a share root and an arbitrary directory, against a fixture with two
    share roots — the first two sweep one share, the third sweeps both, the usb import is attempted once
    in each case, and `amedia ingress /tmp` is refused as not a share root.
-7. `fab ut` from `src/test/python/unit` — the existing suite executes the generated action scripts, so
-   it covers the `$(amedia home)` rewrite in `analyse.py`; add the `MEDIA_ACTIONS` equality assertion
-   here.
-8. `fab generate` in this module, and confirm `bin/lib/{ingress,analyse,refresh}.py` come back
-   byte-identical apart from the intended `$(amedia home)` lines.
-9. On rue, `amedia find`, `amedia space`, `amedia metadata` and one action verb from a media directory
+7. `fab ut` from `src/test/python/unit` — add the `MEDIA_ACTIONS` equality assertion here, and the
+   install-path one beside it (`SERVICE_INSTALL_LATEST` in `install.sh` against the
+   `MEDIA_BIN_INSTALL` that `analyse.py` emits). **The
+   suite does not currently reach the bin-directory rewrite and must not be assumed to**: it walks the
+   fixture tree for `<verb>.sh` while explicitly skipping anything under `/tmp/scripts/media`, so it
+   executes only the *per-file* scripts, which carry `BASH_EXIT_HANDLER` and have never named
+   `media-home`. Every `$(media-home)` lives in the *aggregate* scripts, which nothing executes under
+   test — which is the highest-risk edit in this change sitting on zero coverage.
+8. **A new case that executes an aggregate script**, since step 7 does not. Export
+   `MEDIA_BIN_DIR="$(pwd)/../../../main/resources/bin"` and run the generated
+   `<share>/tmp/scripts/media/analyse.sh` and one action aggregate from the fixture tree — asserting
+   they resolve `.env_media` from the override and exit 0, and that with `MEDIA_BIN_DIR` pointed at a
+   directory holding no `.env_media` they exit non-zero with the missing-directory message rather than
+   sourcing nothing and continuing. This is the test the rewrite actually needs, and it is only
+   writable because the override exists.
+9. `grep -rn 'media-[a-z]' src/main/python/media src/main/resources/bin deploy.sh install.sh`
+   returns nothing but `lib/history.sh`'s scrapbook line and the `media-*` sweep in `install.sh` — the
+   mechanical check that no link name survives anywhere, local or inside an ssh heredoc. Run it
+   *after* the rewrite and before the release; it is the cheapest of these steps and the one that
+   catches the site the reading missed, which is how `move.sh:84` was found in the first place.
+10. `fab generate` in this module, and confirm `bin/lib/{ingress,analyse,refresh}.py` come back
+   byte-identical apart from the intended `${MEDIA_BIN_DIR}` / `${MEDIA_BIN_INSTALL}` lines.
+11. `amedia analyse --force` from a share root, against a two-share fixture — it must clean and
+   re-probe that share and **not** the other, and from an arbitrary directory it must do both. This
+   is new behaviour (`media-force.sh` refuses outside a media file root), so it is asserted rather
+   than assumed.
+12. On rue, `amedia find`, `amedia space`, `amedia metadata` and one action verb from a media directory
    — the action must delegate over ssh to the owning macmini as it does today, and `amedia ingress`
    must print a Linux-only skip rather than succeeding silently.
-10. On one server host after release, `amedia analyse` first, then `amedia space` and `amedia process`,
-   and confirm `/usr/local/bin` holds `amedia` and no `media-*`.
+13. `amedia truncate` from a checkout, and confirm it writes the `.env_exec` sheet and not the
+   production one, having read `${MEDIA_GOOGLE_SHEET_GUID}` and `${SHARE_ROOT}` rather than the two
+   literals it carries today. This is the one defect whose fix is invisible from the outside — the
+   command succeeds either way, against whichever sheet it was given.
+14. On one server host after release, `amedia analyse` first, then `amedia space` and `amedia process`,
+   and confirm `/usr/local/bin` holds `amedia` and no `media-*`. `cat /usr/local/bin/a*` must show
+   four files of the same shape — `amedia` beside `abackup`, `atop` and `atops`, each a `#!/bin/bash`
+   wrapper calling an install path through `latest` with `"$@"`. A symlink, a different body, or a
+   versioned path in `amedia` means the convention was approximated rather than followed.
+15. **The skew check, run once while the estate is half released**: from rue, an action verb on a
+   share owned by a host that has *not* yet taken the release, and the same from a released macmini
+   against an unreleased one. Both must work, because neither names a link. If either fails, the
+   bin-directory rewrite is incomplete and the grep in step 9 missed a site.
 
 ## Expected outcome
 
@@ -562,9 +774,13 @@ becomes an entry in `FileAction`, with no shell edit at all.
 
 **No loss of functionality.** Every one of the 21 commands survives: 19 keep their name as a verb,
 `force` becomes `analyse --force`, and `move` becomes the two commands it always was, `stow` and
-`move`. Two things are added — the `publish` pipeline and `--share` — and nothing is dropped. The only
-removals anywhere are of things that never worked: the dead `SCRIPT_PATH` in seven files, the
-commented-out awk block in `space`, and `truncate`'s hardcoded production sheet GUID.
+`move`. Three things are added — the `publish` pipeline, `--share`, and a forced re-probe of a whole
+share, which `--force` makes reachable for the first time — and nothing is dropped. **One behaviour
+deliberately widens**: `media-force.sh` refuses outside a media file root and `analyse --force` does
+not, so this is not a pure refactor and the `--force` paragraph above states what that costs when it
+is typed from the wrong directory. The only removals anywhere are of things that never worked: the
+dead `SCRIPT_PATH` in seven files, the commented-out awk block in `space`, and `truncate`'s
+hardcoded production sheet GUID and `/share` root.
 
 **macOS and Linux both keep working, because nothing about platform detection changes.**
 `.env_media` stays the only file that branches on `uname` and is edited not at all; `media.sh` reads
@@ -583,13 +799,21 @@ relative to the script, so it is found from a checkout and from an install. All 
 delegations are preserved unchanged: the generated scripts self-delegating over ssh when `$HOSTNAME`
 is absent from `shares.csv`, `find` reaching `macmini-mad` and mapping paths back with
 `${dir_found/#\/share/$SHARE_ROOT}`, and `move`'s rsync half quoting its arguments and evaluating
-Linux-absolute paths on the owning host.
+Linux-absolute paths on the owning host — the last two with their `$(media-home)` replaced by the
+install literal, so they no longer depend on the other machine's `/usr/local/bin`.
 
 **`mount` gains parity rather than losing it** — SMB mounts on rue as today, fstab-declared shares on
 the macminis where it used to return 0 without acting, so a dropped cifs share is recoverable and
 reported instead of appearing as an empty directory.
 
-**And four things start working that do not today**: an action verb's failure is actually reported
+**And five things start working that do not today**: an action verb's failure is actually reported
 (`find -exec` always exited 0), a pipeline stops at the stage that failed and names it, a failed usb
-import is no longer swept into `__RENAMED` as a finished arrival, and an estate-wide action stops
-re-running `analyse` once per share because of a mistyped variable.
+import is no longer swept into `__RENAMED` as a finished arrival, an estate-wide action stops
+re-running `analyse` once per share because of a mistyped variable, and `truncate` becomes runnable
+from rue against the sheet its environment names rather than the production one.
+
+**And one thing stops being possible to get wrong**: no generated artifact and no remote command
+string names a `/usr/local/bin` link any more, so the class of failure where a command works on the
+machine you typed it on and not on the machine it delegates to — which the rename would have
+created, and which the current `$(media-home)` already risks on any host whose install is behind —
+cannot occur.
