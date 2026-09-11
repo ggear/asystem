@@ -356,6 +356,28 @@ class BackupShellTest(unittest.TestCase):
         self.assertRegex(listed, r"2026-09-08_01-00-00 .*success .*-  .*stopped .*halted")
 
     @NEEDS_GNU
+    def test_list_keeps_every_stage_column_on_a_host_that_runs_only_two(self):
+        shutil.rmtree(join(self.home, "supervisor/backup/x"))
+        self.document("2026-09-08_00-00-00", "primary", state="complete", success_bool=True)
+        self.document("2026-09-08_00-00-00", "secondary", state="complete", success_bool=True)
+        listed = self.shell('backup_running() { return 1; }\n'
+                            'backup_stages() { printf "primary\\nsecondary\\n"; }\n'
+                            'backup_list')
+        widths = {len(line) for line in listed.splitlines() if line}
+        self.assertEqual(len(widths), 1, "every row must be the same width, got {}".format(sorted(widths)))
+        self.assertIn("| TERTIARY  ", listed)
+        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*\|\s+-\s+\|")
+
+    def test_status_says_nothing_about_a_stage_this_host_does_not_run(self):
+        path = join(self.home, "supervisor/backup/2026-09-08_00-00-00")
+        os.makedirs(path, exist_ok=True)
+        edge = 'backup_stages() { printf "primary\\nsecondary\\n"; }\n'
+        staged = 'backup_stages() { printf "primary\\nsecondary\\ntertiary\\n"; }\n'
+        probe = 'backup_status "' + path + '" || true'
+        self.assertNotIn("tertiary", self.shell(edge + probe))
+        self.assertIn("tertiary", self.shell(staged + probe))
+
+    @NEEDS_GNU
     def test_list_finishes_nothing_on_a_stamp_date_cannot_read(self):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
         self.document("2026-09-08_00-00-00", "primary", state="complete", success_bool=True, finished_ts="")

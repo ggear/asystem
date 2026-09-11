@@ -69,6 +69,14 @@
 #           delegates thinning to the service, falling back to backup_thin for one shipping none. It
 #           promotes a service's whole backup directory, so the run id it reads chooses which
 #           services to promote and never which bytes, and adopting an older run's list is safe.
+# Which stages a host runs is one question with one answer, backup_stages, derived from whether its
+# fstab declares a /backup at all - a host without the disk has no tertiary stage rather than a
+# tertiary stage that never runs, so start skips it and status says nothing about it. list is
+# deliberately not driven by it: the table is one fixed shape across every host so two of them can be
+# read against each other, and a stage this host never runs simply renders - like a stage that has
+# not run yet. The loops that walk a run's own status documents are left alone for the same reason,
+# since what a past run did is a different question from what this host does.
+#
 # tertiary  is server hosts only, mirrors each locally-owned share whole - media and service homes,
 #           not just backups - guarded on both mounts, and brings the disk up and down around itself.
 #           It closes with a btrfs scrub of the backup disk, which the scheduled run does and a hand
@@ -392,8 +400,8 @@ backup_list() {
 }
 
 backup_sequence() {
-  local stage result=0 started sequence stages=(primary secondary)
-  [ -n "$(backup_targets)" ] && stages+=(tertiary)
+  local stage result=0 started sequence stages
+  mapfile -t stages < <(backup_stages)
   echo && echo "Backup ${BACKUP_COMMAND} [${BACKUP_RUN_ID}] over [${stages[*]}]"
   if [ "${BACKUP_COMMAND}" = "stop" ]; then
     local targets=("${BACKUP_RUN_ID}") target
@@ -815,7 +823,7 @@ backup_progress() {
 
 backup_status() {
   local path="$1" stage doc faults=0
-  for stage in primary secondary tertiary; do
+  for stage in $(backup_stages); do
     doc="${path}/stage/${stage}/status.json"
     if [ ! -f "${doc}" ]; then
       backup_marker "${stage}" "never started"
@@ -1376,6 +1384,12 @@ backup_ready() {
 
 backup_targets() {
   awk '$1 !~ /^#/ && ($2 == "/backup" || $2 ~ /^\/backup\//) { print $2 }' /etc/fstab
+}
+
+backup_stages() {
+  printf 'primary\nsecondary\n'
+  [ -n "$(backup_targets)" ] && printf 'tertiary\n'
+  return 0
 }
 
 backup_attach() {
