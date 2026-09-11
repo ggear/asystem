@@ -37,6 +37,17 @@
 # the lease vanish. BACKUP_SCHEDULED_HOUR mirrors backupScheduledHour in
 # src/main/go/supervisor/internal/probe/probe_impl_backup.go and a unit test holds the two equal.
 #
+# Every stop sends SIGCONT before SIGTERM, because a process stopped by a signal cannot run its trap
+# until it is continued - a queued TERM just sits there, so the stage is killed without ever writing
+# its terminal document and list reports it running until the liveness stamp expires an hour later.
+#
+# A module's own backup.sh is handed /dev/null on stdin, never the operator's terminal. The stage
+# sequence runs under set -m in a background process group, so anything that reads the terminal from
+# down there is sent SIGTTIN and stopped - a hand run of a module using docker exec -i sat in state T
+# with wchan do_signal_stop until the stage timeout, looking like a hung backup while the broker and
+# the service were both perfectly healthy. Only a hand run can produce it, since the probe has no
+# controlling terminal, which is what makes it easy to miss.
+#
 # Every state a status document carries, and every plug command, is a BACKUP_STATE_* or
 # BACKUP_COMMAND_* variable rather than a literal, because the same vocabulary is declared on the Go
 # side in src/main/go/supervisor/internal/metric/metric_schema.go as metric.BackupState* and
@@ -455,7 +466,9 @@ backup_list() {
 backup_sequence() {
   local stage result=0 started sequence stages
   mapfile -t stages < <(backup_stages)
-  echo && echo "Backup ${BACKUP_COMMAND} [${BACKUP_RUN_ID}] over [${stages[*]}]"
+  echo && echo "Backup ${BACKUP_COMMAND} [${BACKUP_RUN_ID}] on [${BACKUP_HOST}] over [${stages[*]}]"
+  [ "${BACKUP_COMMAND}" = "start" ] &&
+    echo "Backup params trigger [${BACKUP_TRIGGER}] timeout [${BACKUP_TIMEOUT_HOURS}] hours scrub [$([ "${BACKUP_SCRUB}" = "1" ] && echo on || echo off)] retention [${BACKUP_KEEP_DAILY}] daily [${BACKUP_KEEP_WEEKLY}] weekly [${BACKUP_KEEP_MONTHLY}] monthly"
   if [ "${BACKUP_COMMAND}" = "stop" ]; then
     local targets=("${BACKUP_RUN_ID}") target
     BACKUP_STOPPING=1
@@ -563,7 +576,7 @@ backup_await() {
         *" ${stage} "*) ;;
         *)
           BACKUP_SEEN_STAGES="${BACKUP_SEEN_STAGES} ${stage}"
-          backup_started "${stage}"
+          backup_started "${stage}" "${doc}"
           [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_RUNNING}" ] &&
             backup_progress "${path}" "${stage}"
           ;;
@@ -699,7 +712,10 @@ backup_stopping() {
 }
 
 backup_started() {
-  backup_marker "$1" "starting"
+  local stage="$1" doc="${2:-}" began until=""
+  began="$(backup_tail_field "${doc}" started_ts)"
+  until="$(date -d "${began} + ${BACKUP_TIMEOUT_HOURS} hours" '+%H:%M:%S' 2>/dev/null)"
+  backup_marker "${stage}" "starting with timeout [$(( BACKUP_TIMEOUT_HOURS * 60 ))] min until [${until:-unknown}]"
 }
 
 
@@ -709,7 +725,7 @@ backup_finished() {
     status="$(backup_tail_field "${doc}" state)"
     pointer=", see [$(dirname "${doc}")/output.log]"
   fi
-  backup_marker "${stage}" "$(printf 'finished with status [%s] in [%s] with files [%s], size [%s] MB and disk at [%s] pct%s' \
+  backup_marker "${stage}" "$(printf 'finished with status [%s] in [%s] with files [%s] and size [%s] MB and disk at [%s] pct%s' \
     "${status}" \
     "$(backup_elapsed "$(backup_tail_field "${doc}" duration_s)")" \
     "$(backup_tail_field "${doc}" file_count)" \
@@ -1054,6 +1070,16 @@ backup_count() {
   backup_counters
 }
 
+backup_partial() {
+  local moved
+  moved="$(cat "${BACKUP_STAGE_DIR}"/.rsync-*.out 2>/dev/null |
+    awk '$3 == "recv" || $3 == "send" { total++ } END { print total + 0 }')"
+  [ "${moved:-0}" -gt 0 ] 2>/dev/null || return 0
+  BACKUP_FILES=$(( BACKUP_FILES + moved ))
+  backup_counters
+  backup_log INFO "recovered [${moved}] transferred files from the interrupted rsync, which reported no stats"
+}
+
 backup_counted() {
   local began delta
   [ "${BACKUP_STAGE}" = "tertiary" ] || return 0
@@ -1152,6 +1178,7 @@ backup_interrupted() {
   [ -f "${BACKUP_STAGE_DIR}/.stopped" ] && state="${BACKUP_STATE_STOPPED}"
   [ -f "${BACKUP_STAGE_DIR}/.timedout" ] && state="${BACKUP_STATE_TIMEDOUT}"
   backup_log WARN "interrupted, [${state}] this stage"
+  backup_partial
   backup_counted
   [ "${BACKUP_STAGE}" = "tertiary" ] && mountpoint -q /backup 2>/dev/null && backup_usage /backup
   stage_stop || true
@@ -1235,7 +1262,7 @@ primary_start() {
     backup_log INFO "backing up [${service}] [${index}/${#enrolled[@]}] with [${script}], logging to [${dir}/output.log]"
     local rc=0
     BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}" BACKUP_SERVICE_RESTART=true BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS}" \
-      bash "${script}" >"${dir}/output.log" 2>&1 || rc=$?
+      bash "${script}" >"${dir}/output.log" 2>&1 </dev/null || rc=$?
     local state="${BACKUP_STATE_COMPLETE}" ok=true
     [ "${rc}" -eq 0 ] || { state="${BACKUP_STATE_FAILED}"; ok=false; failed=$(( failed + 1 )); }
     local newest size=0 files=0 kind=unknown version=unknown stamp file stem
@@ -1277,6 +1304,7 @@ JSON
     BACKUP_FILES=$(( BACKUP_FILES + files ))
     BACKUP_SIZE=$(( BACKUP_SIZE + size ))
     [ "${state}" = complete ] && BACKUP_FILES_CREATED=$(( BACKUP_FILES_CREATED + 1 ))
+    backup_counters
     backup_publish "supervisor/${BACKUP_HOST}/backup/stage/primary/service/${service}/status" "$(cat "${dir}/status.json")" || true
   done
   backup_log INFO "attempted [${count}] services with [${failed}] failed"
@@ -1286,6 +1314,7 @@ JSON
 
 primary_stop() {
   backup_stopping "terminating any running service backup.sh"
+  pkill -CONT -f "${BACKUP_INSTALL_ROOT}/[a-z0-9_-]*/latest/backup.sh" 2>/dev/null || true
   pkill -TERM -f "${BACKUP_INSTALL_ROOT}/[a-z0-9_-]*/latest/backup.sh" 2>/dev/null || true
 }
 
@@ -1359,6 +1388,7 @@ secondary_start() {
 
 secondary_stop() {
   backup_stopping "terminating any running promotion rsync"
+  pkill -CONT -f "rsync .*${BACKUP_HOME_ROOT}" 2>/dev/null || true
   pkill -TERM -f "rsync .*${BACKUP_HOME_ROOT}" 2>/dev/null || true
 }
 
@@ -1706,6 +1736,7 @@ tertiary_stop() {
   backup_scrub_cancel
   command -v btrfs >/dev/null 2>&1 && mountpoint -q /backup &&
     { btrfs balance cancel /backup >/dev/null 2>&1 || true; }
+  pkill -CONT -f "rsync .*/backup/share" 2>/dev/null || true
   pkill -TERM -f "rsync .*/backup/share" 2>/dev/null || true
   backup_reaped "rsync .*/backup/share"
   sync -f /backup 2>/dev/null || sync
@@ -1797,6 +1828,7 @@ if [ "${BACKUP_COMMAND}" = "stop" ]; then
       backup_stopping "stopping run [${BACKUP_RUN_ID}]"
     fi
     : >"${BACKUP_STAGE_DIR}/.stopped"
+    pkill -CONT -f "backup\.sh start ${BACKUP_RUN_ID} --stage ${BACKUP_STAGE}" 2>/dev/null
     pkill -TERM -f "backup\.sh start ${BACKUP_RUN_ID} --stage ${BACKUP_STAGE}" 2>/dev/null &&
       backup_stopping "signalled the runner to clean up and exit"
     stage_stop || true

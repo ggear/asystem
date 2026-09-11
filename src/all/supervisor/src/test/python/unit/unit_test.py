@@ -35,7 +35,7 @@ class BackupShellTest(unittest.TestCase):
 
     def shell(self, snippet, arguments=(), **environment):
         script = 'set -uo pipefail\nsource "{}" {}\n{}'.format(BACKUP_SCRIPT, " ".join(arguments), snippet)
-        env = dict(os.environ)
+        env = {key: value for key, value in os.environ.items() if not key.startswith("BACKUP_")}
         env.update({
             "BACKUP_SOURCE_ONLY": "1",
             "BACKUP_HOME_ROOT": self.home,
@@ -54,8 +54,9 @@ class BackupShellTest(unittest.TestCase):
             arguments=arguments, **environment)
 
     def invoke(self, *arguments):
+        env = {key: value for key, value in os.environ.items() if not key.startswith("BACKUP_")}
         return subprocess.run([BACKUP_SCRIPT, *arguments], capture_output=True, text=True,
-                              env=dict(os.environ, BACKUP_HOME_ROOT=self.home))
+                              env=dict(env, BACKUP_HOME_ROOT=self.home))
 
     def scrub(self, run, stage, **fields):
         path = join(self.home, "supervisor/backup", run, "stage", stage)
@@ -597,6 +598,37 @@ class BackupShellTest(unittest.TestCase):
         with open(BACKUP_SCRIPT) as handle:
             body = handle.read()
         self.assertNotIn('sleep "${BACKUP_TAIL_PROGRESS', body)
+
+    def test_every_term_is_preceded_by_a_cont_so_a_stopped_stage_runs_its_trap(self):
+        with open(BACKUP_SCRIPT) as handle:
+            lines = handle.read().splitlines()
+        terms = [index for index, line in enumerate(lines) if "pkill -TERM" in line]
+        self.assertTrue(terms, "found no pkill -TERM in [{}]".format(BACKUP_SCRIPT))
+        for index in terms:
+            pattern = lines[index].split("-f", 1)[1].strip().split(" 2>")[0]
+            self.assertIn("pkill -CONT", lines[index - 1],
+                          "a stopped process never runs its trap, so [{}] must be continued first".format(pattern))
+            self.assertIn(pattern, lines[index - 1], "the CONT must target the same pattern as the TERM")
+
+    def test_a_module_backup_is_handed_no_terminal_on_stdin(self):
+        with open(BACKUP_SCRIPT) as handle:
+            invocation = [line for line in handle if 'bash "${script}"' in line]
+        self.assertEqual(len(invocation), 1, "expected one module backup invocation, got {}".format(invocation))
+        self.assertIn("</dev/null", invocation[0],
+                      "a module backup reading the terminal is stopped by SIGTTIN under set -m")
+
+    def test_every_counter_change_is_written_to_the_bridge(self):
+        with open(BACKUP_SCRIPT) as handle:
+            lines = handle.read().splitlines()
+        changed = [index for index, line in enumerate(lines)
+                   if re.match(r"\s*BACKUP_(FILES|SIZE|FILES_CREATED|FILES_DELETED|SENT)\w*=\$\(\( BACKUP_", line)
+                   or re.search(r"&& BACKUP_\w+=\$\(\( BACKUP_", line)]
+        self.assertTrue(changed, "found no counter accumulation in [{}]".format(BACKUP_SCRIPT))
+        for index in changed:
+            window = lines[index + 1:index + 9]
+            self.assertTrue(any("backup_counters" in line for line in window),
+                            "counter change at line {} is never persisted, so backup_document "
+                            "re-reads the stale bridge and zeroes it: {}".format(index + 1, lines[index].strip()))
 
     def test_counted_is_reached_only_from_the_interrupted_path(self):
         with open(BACKUP_SCRIPT) as handle:
