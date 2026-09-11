@@ -674,7 +674,7 @@ backup_expected() {
   while read -r share; do sources=$(( sources + $(backup_used "${share}") )); done < <(backup_mounted)
   if mountpoint -q /backup 2>/dev/null; then
     remaining=$(( sources - $(backup_used /backup) ))
-    [ "${remaining}" -gt 0 ] && { printf '%s' "${remaining}"; return 0; }
+    [ "${remaining}" -gt $(( sources / 100 )) ] && { printf '%s' "${remaining}"; return 0; }
   elif [ "$(backup_previous tertiary duration_s)" -le 0 ] 2>/dev/null; then
     printf '%s' "${sources}"
     return 0
@@ -751,8 +751,10 @@ backup_active_stage() {
     [ -f "${doc}" ] || continue
     [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_RUNNING}" ] && active="${stage}"
   done
-  [ -n "${active}" ] ||
+  if [ -z "${active}" ]; then
     active="$(find "${path}/stage" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)"
+    [ -n "${active}" ] && [ -f "${path}/stage/${active}/status.json" ] && active=""
+  fi
   printf '%s' "${active}"
 }
 
@@ -866,6 +868,7 @@ backup_progress() {
     IFS=$'\t' read -r copied total percent remaining rate used < <(backup_promoting "${path}/stage/${active}/status.json")
   fi
   backup_stalled "${active}" "${now}" "${copied}" "${used:-}"
+  [ -n "${used:-}" ] && [ "${used}" -lt "${BACKUP_RATE_QUANTUM}" ] 2>/dev/null && return 0
   { [ "${copied}" = "0" ] || [ "${copied}" = "-" ]; } &&
     { [ "${total}" = "0" ] || [ "${total}" = "-" ]; } && return 0
   backup_marker "${active:-none}" "$(printf '%s [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \

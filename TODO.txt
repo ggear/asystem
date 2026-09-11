@@ -32,6 +32,130 @@ improve sys tests with datbase/broker asserts
 
 
 
+why does mirrored log come after finished. why is 57GB when should be 0, it btrfs was already in sync. on reruns is always 57GB. other hosts dont see the same. 
+root@macmini-mad:~$ abackup start
+
+Backup start [2026-09-11_17-57-32] on [macmini-mad] over [primary secondary tertiary]
+Backup params trigger [manual] timeout [3] hours scrub [off] retention [7] daily [4] weekly [3] monthly
+
+Backup tail [2026-09-11_17-57-32] under [/home/asystem/supervisor/backup/2026-09-11_17-57-32]
+
+[INFO primary   17:57:35] starting with timeout [180] min until [20:57:32]
+[INFO primary   17:58:21] finished with status [success] in [00h00m49s] with files [3] and size [724] MB and disk at [18] pct
+[INFO secondary 17:58:23] starting with timeout [180] min until [20:58:22]
+[INFO secondary 17:58:25] finished with status [success] in [00h00m02s] with files [28] and size [721] MB and disk at [71] pct
+[INFO tertiary  17:58:25] starting with timeout [180] min until [20:58:25]
+[INFO tertiary  17:59:14] mirrored [    0] GB of [   57] GB at [  1] percent complete and estimated to complete in [   -] min at [  -] MB/s
+[INFO tertiary  17:59:24] finished with status [success] in [00h00m58s] with files [28] and size [721] MB and disk at [33] pct
+[INFO tertiary  17:59:24] mirrored [    0] GB of [   57] GB at [  1] percent complete and estimated to complete in [   0] min at [ 12] MB/s
+
+root@macmini-mad:~$ abackup list
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
+| RUN-ID (STARTED)    | FINISHED            | DURATION  | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SIZE          | VOLUME                    | RESULT     |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
+| 2026-09-11_18-00-08 | 2026-09-11_18-00-42 | 00h00m34s | manual    | success   | success   | success   |        724 MB | [#####.............]  33% | complete   |
+| 2026-09-11_17-57-32 | 2026-09-11_17-59-23 | 00h01m51s | manual    | success   | success   | success   |      2,166 MB | [#####.............]  33% | complete   |
+| 2026-09-11_17-07-15 | 2026-09-11_17-07-47 | 00h00m32s | manual    | success   | success   | success   |             - | [#####.............]  33% | complete   |
+| 2026-09-11_16-55-14 | 2026-09-11_17-06-36 | 00h11m22s | manual    | success   | success   | success   |    139,455 MB | [#####.............]  33% | complete   |
+| 2026-09-11_16-46-17 | 2026-09-11_16-54-55 | 00h08m38s | manual    | success   | success   | stopped   |     85,924 MB | [#####.............]  32% | halted     |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
+
+may doesnt do this, is it becuase backup drive smaller and less pre-work? how to make mad work like may. maybe dont print any logs that dont have a rate yet, so it can warm up?
+root@macmini-may:~$ abackup start
+
+Backup start [2026-09-11_18-01-10] on [macmini-may] over [primary secondary tertiary]
+Backup params trigger [manual] timeout [3] hours scrub [off] retention [7] daily [4] weekly [3] monthly
+
+Backup tail [2026-09-11_18-01-10] under [/home/asystem/supervisor/backup/2026-09-11_18-01-10]
+
+[INFO primary   18:01:13] starting with timeout [180] min until [21:01:10]
+[INFO primary   18:01:13] finished with status [success] in [00h00m00s] with files [1] and size [2] MB and disk at [1] pct
+[INFO secondary 18:01:13] starting with timeout [180] min until [21:01:11]
+[INFO secondary 18:01:14] finished with status [success] in [00h00m01s] with files [21] and size [0] MB and disk at [55] pct
+[INFO tertiary  18:01:14] starting with timeout [180] min until [21:01:12]
+[INFO tertiary  18:01:29] finished with status [success] in [00h00m15s] with files [21] and size [0] MB and disk at [46] pct
+root@macmini-may:~$ abackup list
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
+| RUN-ID (STARTED)    | FINISHED            | DURATION  | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SIZE          | VOLUME                    | RESULT     |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
+| 2026-09-11_18-01-10 | 2026-09-11_18-01-27 | 00h00m17s | manual    | success   | success   | success   |          2 MB | [########..........]  46% | complete   |
+| 2026-09-11_17-59-20 | 2026-09-11_17-59-39 | 00h00m19s | manual    | success   | success   | success   |          4 MB | [########..........]  46% | complete   |
+| 2026-09-11_16-52-22 | 2026-09-11_16-52-54 | 00h00m32s | manual    | success   | success   | success   |        188 MB | [########..........]  46% | complete   |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
+
+
+
+
+
+INFO log before header, make it after, or dont log at all? make it like the typical start log trace
+[INFO           18:11:34] detached run [2026-09-11_18-11-34], following [/home/asystem/supervisor/backup/2026-09-11_18-11-34/stage/tertiary/output.log]
+
+Backup tail [2026-09-11_18-11-34] under [/home/asystem/supervisor/backup/2026-09-11_18-11-34]
+
+[INFO tertiary  18:11:37] starting with timeout [180] min until [21:11:34]
+
+
+
+
+
+
+
+
+cant tail a scrub
+root@macmini-mad:~$ abackup start --stage tertiary --scrub
+[INFO           18:17:04] detached run [2026-09-11_18-17-04], following [/home/asystem/supervisor/backup/2026-09-11_18-17-04/stage/tertiary/output.log]
+
+Backup tail [2026-09-11_18-17-04] under [/home/asystem/supervisor/backup/2026-09-11_18-17-04]
+
+[INFO tertiary  18:17:07] starting with timeout [180] min until [21:17:04]
+[INFO tertiary  18:17:46] mirrored [    0] GB of [   57] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
+[INFO tertiary  18:17:56] mirrored [    0] GB of [   57] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
+[INFO tertiary  18:18:06] mirrored [    0] GB of [   57] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
+[INFO tertiary  18:18:16] mirrored [    0] GB of [   57] GB at [  0] percent complete and estimated to complete in [   -] min at [  -] MB/s
+[INFO tertiary  18:18:26] scrubbed [    3] GB of [ 7410] GB at [  0] percent complete and estimated to complete in [ 163] min at [113] MB/s
+[INFO tertiary  18:18:37] scrubbed [    3] GB of [ 7410] GB at [  0] percent complete and estimated to complete in [ 163] min at [113] MB/s
+[INFO tertiary  18:18:47] scrubbed [    3] GB of [ 7410] GB at [  0] percent complete and estimated to complete in [ 163] min at [113] MB/s
+^C
+Tail stopped but run will continue in the background
+Tail restart [/var/lib/asystem/install/supervisor/latest/image/backup.sh tail]
+Stop backups [/var/lib/asystem/install/supervisor/latest/image/backup.sh stop]
+root@macmini-mad:~$ abackup tail
+
+Backup tail [2026-09-11_18-17-04] under [/home/asystem/supervisor/backup/2026-09-11_18-17-04]
+
+[INFO tertiary  18:18:57] starting with timeout [180] min until [21:17:04]
+[INFO tertiary  18:18:57] scrubbed [   10] GB of [ 7410] GB at [  0] percent complete and estimated to complete in [ 163] min at [170] MB/s
+[INFO tertiary  18:18:59] finished with status [success] in [00h01m55s] with files [18] and size [0] MB and disk at [33] pct
+[INFO primary   18:19:01] never started
+[INFO secondary 18:19:01] never started
+root@macmini-mad:~$ abackup stop
+
+Backup stop [2026-09-11_18-17-04] on [macmini-mad] over [primary secondary tertiary]
+[INFO           18:20:04] no active run, sweeping run [2026-09-11_18-17-04] for leftovers
+[INFO primary   18:20:04] stopping run [2026-09-11_18-17-04]
+[INFO primary   18:20:04] terminating any running service backup.sh
+[INFO primary   18:20:04] stopped run [2026-09-11_18-17-04]
+[INFO secondary 18:20:04] stopping run [2026-09-11_18-17-04]
+[INFO secondary 18:20:04] terminating any running promotion rsync
+[INFO secondary 18:20:04] stopped run [2026-09-11_18-17-04]
+[INFO tertiary  18:20:04] stopping run [2026-09-11_18-17-04], flushing [0] MB, estimated to stop in [0] s
+[INFO tertiary  18:20:04] terminating any running mirror and scrub, flushing and unmounting the backup disk
+[INFO tertiary  18:20:04] stopped run [2026-09-11_18-17-04]
+[INFO primary   18:20:06] never started
+[INFO secondary 18:20:06] never started
+
+
+
+
+
+
+
+
+
+
+
 
 
 
