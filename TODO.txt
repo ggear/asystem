@@ -99,12 +99,10 @@ implement PLAN_BACKUP.md and delete
 
 implement media cli.md 
 
-test fans scale up on all hosts
+tune fan/tem and test fans scale up on all hosts, mbfan in _fedora_max? should be in all? sync temp with fan/temp metrics
 check all metrics working 
 
-tune yellow/red
 adjust memeory allocs
-tune fan/tem
 
 check metric attribution works by metric filter when multiple probe_* feed single metric
 verify caching hour and all metrics performance, increase poll frequency?
@@ -278,7 +276,7 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 make health script easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
 Binaries for media-space to call it, also have a adu and abench?
 Add quirks to asahi install
-impl media-space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
+impl space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
 Implement backup - each module has personal backup script, desicovered and serially called by master backup script
 
 add storage format to here, if host== and shared funcs. maybe add sftab here too? or storage into each mod wheere fstab is today, move shared media mounting stuff here too?
