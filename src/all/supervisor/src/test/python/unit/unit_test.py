@@ -142,15 +142,18 @@ class BackupShellTest(unittest.TestCase):
 
     def test_attached_refuses_anything_that_is_not_the_backup_disk(self):
         head = 'BACKUP_STAGE_DIR="${BACKUP_HOME_ROOT}"\n'
-        self.assertEqual(self.shell(head + 'mountpoint() { return 1; }\n'
+        self.assertEqual(self.shell(head + 'backup_verified() { return 1; }\n'
                                            'backup_attached && echo attached || echo detached'), "detached")
-        self.assertEqual(self.shell(head + 'mountpoint() { return 0; }\n'
+        self.assertEqual(self.shell(head + 'backup_verified() { return 0; }\n'
                                            'backup_attached && echo attached || echo detached'), "attached")
         self.assertEqual(self.shell(head + 'echo 2049 >"${BACKUP_HOME_ROOT}/disk-device"\n'
-                                           'mountpoint() { return 0; }\nstat() { echo 2049; }\n'
+                                           'backup_verified() { return 0; }\nstat() { echo 2049; }\n'
                                            'backup_attached && echo attached || echo detached'), "attached")
         self.assertEqual(self.shell(head + 'echo 2049 >"${BACKUP_HOME_ROOT}/disk-device"\n'
-                                           'mountpoint() { return 0; }\nstat() { echo 65024; }\n'
+                                           'backup_verified() { return 0; }\nstat() { echo 65024; }\n'
+                                           'backup_attached && echo attached || echo detached'), "detached")
+        self.assertEqual(self.shell(head + 'echo 2049 >"${BACKUP_HOME_ROOT}/disk-device"\n'
+                                           'backup_verified() { return 1; }\nstat() { echo 2049; }\n'
                                            'backup_attached && echo attached || echo detached'), "detached")
 
     @NEEDS_GNU
@@ -495,7 +498,7 @@ class BackupShellTest(unittest.TestCase):
                                              capture_output=True, text=True).stdout.strip())
         reported = self.shell(
             'backup_used() {{ echo $(( 4170 * 1073741824 )); }}\n'
-            'mountpoint() {{ return 0; }}\n'
+            'backup_verified() {{ return 0; }}\n'
             'backup_progress "{}"'.format(join(self.home, "supervisor/backup", run)))
         self.assertIn("scrubbed [   61] GB of [ 4170] GB", reported)
         self.assertIn("at [  1] percent complete", reported)
@@ -512,7 +515,7 @@ class BackupShellTest(unittest.TestCase):
 
     @NEEDS_GNU
     def test_expected_is_what_the_mirror_last_moved_not_the_disk_against_the_sources(self):
-        detached = 'backup_mounted() { :; }\nmountpoint() { return 1; }\n'
+        detached = 'backup_mounted() { :; }\nbackup_verified() { return 1; }\n'
         self.assertEqual(self.shell(detached + 'backup_expected'), "0")
         self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=4096, duration_s=600)
         self.assertEqual(self.shell(detached + 'backup_expected'), str(4096 * 1048576))
@@ -521,7 +524,7 @@ class BackupShellTest(unittest.TestCase):
     def test_expected_reads_zero_from_an_in_sync_run_rather_than_calling_it_no_history(self):
         self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=0, duration_s=31)
         self.assertEqual(self.shell('backup_mounted() { echo /share/40; }\n'
-                                    'mountpoint() { return 1; }\n'
+                                    'backup_verified() { return 1; }\n'
                                     'backup_used() { echo $(( 200 * 1073741824 )); }\n'
                                     'backup_expected'), "0")
 
@@ -529,7 +532,7 @@ class BackupShellTest(unittest.TestCase):
     def test_expected_prefers_what_is_left_over_what_a_big_earlier_run_moved(self):
         self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=5000000, duration_s=36000)
         expected = self.shell('backup_mounted() { echo /share/40; }\n'
-                              'mountpoint() { return 0; }\n'
+                              'backup_verified() { return 0; }\n'
                               'backup_used() { case "$1" in /backup) echo $(( 190 * 1073741824 ));; '
                               '*) echo $(( 200 * 1073741824 ));; esac; }\n'
                               'backup_expected')
@@ -538,7 +541,7 @@ class BackupShellTest(unittest.TestCase):
     @NEEDS_GNU
     def test_expected_counts_only_what_a_resumed_mirror_has_left_to_move(self):
         expected = self.shell('backup_mounted() { echo /share/40; }\n'
-                              'mountpoint() { return 0; }\n'
+                              'backup_verified() { return 0; }\n'
                               'backup_used() { case "$1" in /backup) echo $(( 30 * 1073741824 ));; '
                               '*) echo $(( 200 * 1073741824 ));; esac; }\n'
                               'backup_expected')
@@ -547,7 +550,7 @@ class BackupShellTest(unittest.TestCase):
     @NEEDS_GNU
     def test_expected_falls_back_to_the_whole_source_for_a_first_mirror(self):
         mirrored = self.shell('backup_mounted() { echo /share/40; }\n'
-                            'mountpoint() { return 1; }\n'
+                            'backup_verified() { return 1; }\n'
                             'backup_used() { echo $(( 200 * 1073741824 )); }\n'
                             'backup_expected')
         self.assertEqual(mirrored, str(200 * 1073741824))
@@ -558,7 +561,7 @@ class BackupShellTest(unittest.TestCase):
                 'BACKUP_TOTAL=0; BACKUP_USAGE=0; BACKUP_FILES=0; BACKUP_FILES_HELD=0\n'
                 'BACKUP_FILES_CREATED=0; BACKUP_FILES_DELETED=0; BACKUP_SIZE_HELD=0; BACKUP_SENT=0\n'
                 'echo $(( 2242 * 1073741824 )) >"${BACKUP_HOME_ROOT}/disk-start"\n'
-                'mountpoint() { return 0; }\n'
+                'backup_verified() { return 0; }\n'
                 'backup_used() { echo $(( 3094 * 1073741824 )); }\n')
         self.assertEqual(self.shell(head + 'BACKUP_SIZE=34\nbackup_counted; echo "${BACKUP_SIZE}"'),
                          str(852 * 1024))
@@ -616,6 +619,18 @@ class BackupShellTest(unittest.TestCase):
             self.assertTrue(enabled,
                             "a background run left in the terminal process group is killed by the "
                             "Ctrl-C that was meant to leave the tail, line {}: {}".format(index + 1, lines[index].strip()))
+
+    def test_an_active_run_is_refused_once_before_anything_is_spawned(self):
+        with open(BACKUP_SCRIPT) as handle:
+            lines = handle.read().splitlines()
+        refusals = [index for index, line in enumerate(lines) if "is already active, refusing to start" in line]
+        self.assertEqual(len(refusals), 1,
+                         "the refusal must be shared by the all and single-stage paths, not copied into one")
+        opened = [index for index, line in enumerate(lines) if re.match(r"^[a-z_]+\(\) \{", line)]
+        self.assertTrue(opened, "found no function definition in [{}]".format(BACKUP_SCRIPT))
+        self.assertGreater(refusals[0], opened[-1],
+                           "the refusal must sit in the dispatch, above both the all and the "
+                           "single-stage path, not inside one of them")
 
     def test_status_reports_only_the_stages_the_invocation_asked_for(self):
         base = join(self.home, "supervisor", "backup", "run")
@@ -737,7 +752,7 @@ class BackupShellTest(unittest.TestCase):
             handle.write(str(4000 * 1073741824))
         reported = self.shell(
             'backup_used() {{ echo $(( 4025 * 1073741824 )); }}\n'
-            'mountpoint() {{ return 0; }}\n'
+            'backup_verified() {{ return 0; }}\n'
             'backup_progress "{}"'.format(path))
         self.assertIn("mirrored [   25] GB of [  100] GB", reported)
         self.assertIn("at [ 25] percent complete", reported)
@@ -751,7 +766,7 @@ class BackupShellTest(unittest.TestCase):
             handle.write(str(4170 * 1073741824))
         reported = self.shell(
             'backup_used() {{ echo $(( 4170 * 1073741824 )); }}\n'
-            'mountpoint() {{ return 0; }}\n'
+            'backup_verified() {{ return 0; }}\n'
             'backup_progress "{}"'.format(path))
         self.assertEqual(reported, "")
 
@@ -897,7 +912,7 @@ class BackupShellTest(unittest.TestCase):
         head = ('MARK="${BACKUP_HOME_ROOT}/mounted"; touch "${MARK}"\n'
                 'backup_targets() { echo /backup; }\n'
                 'sync() { :; }\n'
-                'mountpoint() { [ -f "${MARK}" ]; }\n')
+                'backup_verified() { [ -f "${MARK}" ]; }\n')
         self.assertEqual(self.shell(head + 'umount() { rm -f "${MARK}"; return 0; }\nbackup_detach 2>&1'), "")
         self.assertEqual(self.shell(head + 'umount() { rm -f "${MARK}"; echo "umount: /backup: not mounted." >&2; return 1; }\n'
                                            'backup_detach 2>&1'), "")
@@ -905,11 +920,68 @@ class BackupShellTest(unittest.TestCase):
     def test_detach_still_warns_when_the_mount_survives(self):
         reported = self.shell('backup_targets() { echo /backup; }\n'
                               'sync() { :; }\n'
-                              'mountpoint() { return 0; }\n'
+                              'backup_verified() { return 0; }\n'
                               'umount() { echo "umount: /backup: target is busy." >&2; return 1; }\n'
                               'backup_detach 2>&1')
         self.assertIn("unmount of [/backup] failed with [umount: /backup: target is busy.], detaching lazily", reported)
         self.assertIn("could not detach [/backup]", reported)
+
+    def fstab(self, *lines):
+        path = join(self.home, "fstab")
+        with open(path, "w") as handle:
+            handle.write("".join("{}\n".format(line) for line in lines))
+        return path
+
+    @NEEDS_GNU
+    def test_declared_resolves_every_fstab_spec_form(self):
+        node = join(self.home, "sdz1")
+        open(node, "w").close()
+        link = join(self.home, "by-label-backup")
+        os.symlink(node, link)
+        table = self.fstab(
+            "# comment                 /backup  btrfs  noauto  0 2",
+            "{}  /backup  btrfs  noauto  0 2".format(link),
+            "//macmini-max/share-20    /share/20  cifs  guest  0 0")
+        self.assertEqual(self.shell("backup_declared /backup", BACKUP_FSTAB=table), realpath(node))
+        self.assertEqual(self.shell("backup_declared /share/20", BACKUP_FSTAB=table), "//macmini-max/share-20")
+        self.assertEqual(self.shell("backup_declared /absent || true", BACKUP_FSTAB=table), "")
+
+    @NEEDS_GNU
+    def test_declared_refuses_a_device_that_has_not_enumerated(self):
+        table = self.fstab("PARTLABEL=backup_06  /backup  btrfs  noauto  0 2")
+        self.assertEqual(self.shell("backup_declared /backup || echo REFUSED", BACKUP_FSTAB=table), "REFUSED")
+
+    @NEEDS_GNU
+    def test_verified_refuses_a_mount_that_is_not_the_declared_device(self):
+        table = self.fstab("/dev/sdz1  /backup  btrfs  noauto  0 2")
+        stub = 'backup_declared() {{ echo /dev/sdz1; }}\nbackup_sourced() {{ echo "{}"; }}\n'
+        self.assertEqual(self.shell(stub.format("/dev/sdz1") + "backup_verified /backup && echo YES",
+                                    BACKUP_FSTAB=table), "YES")
+        self.assertEqual(self.shell(stub.format("/dev/nvme0n1p6") + "backup_verified /backup || echo REFUSED",
+                                    BACKUP_FSTAB=table), "REFUSED")
+        self.assertEqual(self.shell('backup_declared() { echo /dev/sdz1; }\nbackup_sourced() { return 1; }\n'
+                                    "backup_verified /backup || echo REFUSED", BACKUP_FSTAB=table), "REFUSED")
+
+    @NEEDS_GNU
+    def test_mount_refuses_a_target_already_carrying_another_filesystem(self):
+        table = self.fstab("/dev/sdz1  /backup  btrfs  noauto  0 2")
+        reported = self.shell('backup_declared() { echo /dev/sdz1; }\n'
+                              'backup_sourced() { echo /dev/nvme0n1p6; }\n'
+                              'mountpoint() { return 0; }\n'
+                              'dmesg() { :; }\n'
+                              'mount() { return 0; }\n'
+                              '{ backup_mount /backup && echo MOUNTED || echo REFUSED; } 2>&1', BACKUP_FSTAB=table)
+        self.assertIn("already carries [/dev/nvme0n1p6] rather than the declared [/dev/sdz1]", reported)
+        self.assertIn("REFUSED", reported)
+        self.assertNotIn("MOUNTED", reported)
+
+    def test_detach_leaves_a_mount_it_did_not_make(self):
+        reported = self.shell('backup_targets() { echo /backup; }\n'
+                              'sync() { :; }\n'
+                              'backup_verified() { return 1; }\n'
+                              'umount() { echo UNMOUNTED; }\n'
+                              'backup_detach 2>&1')
+        self.assertEqual(reported, "")
 
     @NEEDS_GNU
     def test_tail_field_reads_json(self):

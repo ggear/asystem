@@ -3,11 +3,12 @@
 # backup_written below, naming the backup with backup_target (or letting backup_files do both) and
 # writing "${BACKUP_TARGET_PATH}.tmp". A snippet leaving the estate changed while it works, such as
 # one stopping its own container, also defines backup_interrupted, called on INT, TERM or HUP but
-# never on a backup that merely fails. Declare BACKUP_EXCLUDED as the paths this module deliberately
-# does not back up, so backup_files reports only what neither it nor the declaration covers. Never
-# assign another wrapper variable, prefix this snippet's own state with the module name, and expand
-# a value read from .env as "${VAR:?}", so a missing key fails by name rather than corrupting the
-# backup.
+# never on a backup that merely fails, and backup_completed, called once the archive has been named
+# and kept whatever the outcome, whose non-zero return fails the run without discarding the archive.
+# Declare BACKUP_EXCLUDED as the paths this module deliberately does not back up, so backup_files
+# reports only what neither it nor the declaration covers. Never assign another wrapper variable,
+# prefix this snippet's own state with the module name, and expand a value read from .env as
+# "${VAR:?}", so a missing key fails by name rather than corrupting the backup.
 #
 # BACKUP_MODULE_NAME      this module's name
 # BACKUP_SOURCE_PATH      this module's source data path
@@ -32,21 +33,43 @@ PLEX_BACKUP_EXCLUDES=(
   "Caches"
 )
 
+PLEX_BACKUP_FAULT=0
+PLEX_BACKUP_RESTART_TRIES=5
+PLEX_BACKUP_RESTART_WAIT=10
+
 plex_backup_stopped() {
-  if docker stop "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1; then
+  local reported
+  if reported="$(docker stop "${PLEX_BACKUP_CONTAINER}" 2>&1)"; then
     docker wait "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1 || true
   else
-    echo "Stop failed [${PLEX_BACKUP_CONTAINER}], copying the running configuration" >&2
+    echo "Stop failed [${PLEX_BACKUP_CONTAINER}] [${reported}], copying the running configuration" >&2
   fi
 }
 
 plex_backup_started() {
   [ "${BACKUP_SERVICE_RESTART}" = "true" ] || return 0
-  docker start "${PLEX_BACKUP_CONTAINER}" >/dev/null 2>&1 || echo "Start failed [${PLEX_BACKUP_CONTAINER}]" >&2
+  local reported attempt=1
+  while :; do
+    if reported="$(docker start "${PLEX_BACKUP_CONTAINER}" 2>&1)"; then
+      PLEX_BACKUP_FAULT=0
+      [ "${attempt}" -gt 1 ] && echo "Started [${PLEX_BACKUP_CONTAINER}] on attempt [${attempt}]" >&2
+      return 0
+    fi
+    echo "Start failed [${PLEX_BACKUP_CONTAINER}] [${reported}] on attempt [${attempt}] of [${PLEX_BACKUP_RESTART_TRIES}]" >&2
+    [ "${attempt}" -lt "${PLEX_BACKUP_RESTART_TRIES}" ] || break
+    attempt=$(( attempt + 1 ))
+    sleep "${PLEX_BACKUP_RESTART_WAIT}"
+  done
+  PLEX_BACKUP_FAULT=1
+  return 1
 }
 
 backup_interrupted() {
   plex_backup_started
+}
+
+backup_completed() {
+  return "${PLEX_BACKUP_FAULT}"
 }
 
 backup_written() {
@@ -64,6 +87,6 @@ backup_written() {
   plex_backup_stopped
   tar --create --directory "${BACKUP_SOURCE_PATH}/${PLEX_BACKUP_CONFIG}" --numeric-owner --preserve-permissions \
     "${excludes[@]}" --file - -- "${PLEX_BACKUP_INCLUDES[@]}" 2>/dev/null | gzip >"${BACKUP_TARGET_PATH}.tmp" || status=1
-  plex_backup_started
+  plex_backup_started || true
   return "${status}"
 }

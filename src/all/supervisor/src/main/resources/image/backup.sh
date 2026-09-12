@@ -236,6 +236,7 @@ BACKUP_RATE_QUANTUM="${BACKUP_RATE_QUANTUM:-104857600}"
 BACKUP_REAP_WAIT="${BACKUP_REAP_WAIT:-15}"
 BACKUP_LIST_WIDTHS=(19 19 9 9 9 9 9 13 25 10)
 BACKUP_LIST_RUNS=()
+BACKUP_FSTAB="${BACKUP_FSTAB:-/etc/fstab}"
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
 BACKUP_HOME_ROOT="${BACKUP_HOME_ROOT:-/home/asystem}"
 if [ -z "${BACKUP_RUN_GIVEN}" ] && [ -z "${BACKUP_RUN_ID:-}" ] && [ "${BACKUP_COMMAND}" = "stop" ]; then
@@ -272,6 +273,7 @@ backup_elapsed() {
 
 # shellcheck disable=SC2329
 backup_interrupt() {
+  echo >&2
   backup_log WARN "tail stopped, run [${BACKUP_RUN_ID}] continues in the background"
   backup_log WARN "follow it again with [${0} tail] or end it with [${0} stop]"
   exit 0
@@ -510,12 +512,6 @@ backup_sequence() {
     backup_status "${BACKUP_RUN_PATH}" || result=1
     return "${result}"
   fi
-  local active; active="$(backup_active)"
-  if [ -n "${active}" ] && [ "${active}" != "${BACKUP_RUN_ID}" ]; then
-    backup_log ERROR "run [${active}] is already active, refusing to start run [${BACKUP_RUN_ID}]"
-    backup_log INFO "watch it with [${0} tail] or stop it with [${0} stop]"
-    return 3
-  fi
   started="$(date +%s)"
   set -m
   (
@@ -688,7 +684,7 @@ backup_previous() {
 backup_expected() {
   local share sources=0 remaining
   while read -r share; do sources=$(( sources + $(backup_used "${share}") )); done < <(backup_mounted)
-  if mountpoint -q /backup 2>/dev/null; then
+  if backup_verified /backup; then
     remaining=$(( sources - $(backup_used /backup) ))
     [ "${remaining}" -gt $(( sources / 100 )) ] && { printf '%s' "${remaining}"; return 0; }
   elif [ "$(backup_previous tertiary duration_s)" -le 0 ] 2>/dev/null; then
@@ -776,7 +772,7 @@ backup_scrubbing() {
   expires="$(backup_tail_field "${scrub}" expires_ts)"
   copied=$(( ${done_mb:-0} / 1024 ))
   total="${copied}"
-  mountpoint -q /backup 2>/dev/null && total=$(( $(backup_used /backup) / 1073741824 ))
+  backup_verified /backup && total=$(( $(backup_used /backup) / 1073741824 ))
   percent=100
   [ "${total}" -gt 0 ] && percent=$(( copied * 100 / total ))
   [ "${percent}" -le 100 ] || percent=100
@@ -872,7 +868,7 @@ backup_progress() {
     backup_marker "${active}" "$(backup_scrubbing "${scrub}" "${now}")"
     return 0
   fi
-  if [ "${active}" = "tertiary" ] && mountpoint -q /backup 2>/dev/null &&
+  if [ "${active}" = "tertiary" ] && backup_verified /backup &&
     [ -f "${path}/stage/tertiary/disk-start" ]; then
     IFS=$'\t' read -r copied total percent remaining rate used < <(backup_mirroring "${path}" "${record}")
   else
@@ -991,18 +987,53 @@ backup_unclean() {
   printf 'true\n' >"${BACKUP_STAGE_DIR}/disk-unclean" 2>/dev/null || true
 }
 
+backup_declared() {
+  local target="$1" spec
+  spec="$(awk -v mp="${target}" '$1 !~ /^#/ && $2 == mp { print $1 }' "${BACKUP_FSTAB}")"
+  [ -n "${spec}" ] || return 1
+  case "${spec}" in
+  PARTLABEL=*) readlink -e "/dev/disk/by-partlabel/${spec#PARTLABEL=}" 2>/dev/null ;;
+  PARTUUID=*) readlink -e "/dev/disk/by-partuuid/${spec#PARTUUID=}" 2>/dev/null ;;
+  UUID=*) readlink -e "/dev/disk/by-uuid/${spec#UUID=}" 2>/dev/null ;;
+  LABEL=*) readlink -e "/dev/disk/by-label/${spec#LABEL=}" 2>/dev/null ;;
+  //*) printf '%s\n' "${spec}" ;;
+  /*) readlink -e "${spec}" 2>/dev/null ;;
+  *) printf '%s\n' "${spec}" ;;
+  esac
+}
+
+backup_sourced() {
+  local source
+  source="$(findmnt -M "$1" -n -o SOURCE 2>/dev/null | tail -n 1)" || return 1
+  [ -n "${source}" ] || return 1
+  case "${source}" in
+  //*) printf '%s\n' "${source}" ;;
+  /*) readlink -e "${source%%\[*}" 2>/dev/null ;;
+  *) printf '%s\n' "${source}" ;;
+  esac
+}
+
+backup_verified() {
+  local target="$1" declared current
+  declared="$(backup_declared "${target}")" || return 1
+  current="$(backup_sourced "${target}")" || return 1
+  [ -n "${declared}" ] && [ -n "${current}" ] && [ "${declared}" = "${current}" ]
+}
+
 backup_mount() {
   local target="$1" error="" kernel
-  mountpoint -q "${target}" && return 0
-  grep -qsE "^[^#][^[:space:]]*[[:space:]]+${target}[[:space:]]" /etc/fstab || {
-    backup_log ERROR "mount of [${target}] refused, not mounted and not in /etc/fstab"
+  backup_verified "${target}" && return 0
+  grep -qsE "^[^#][^[:space:]]*[[:space:]]+${target}[[:space:]]" "${BACKUP_FSTAB}" || {
+    backup_log ERROR "mount of [${target}] refused, not mounted and not in [${BACKUP_FSTAB}]"
     return 1
   }
+  mountpoint -q "${target}" &&
+    backup_log WARN "[${target}] already carries [$(backup_sourced "${target}")] rather than the declared [$(backup_declared "${target}")], mounting over it"
   backup_log INFO "mounting [${target}]"
   kernel="$(dmesg 2>/dev/null | wc -l)"
   error="$(mount "${target}" 2>&1)" || ls "${target}" >/dev/null 2>&1 || true
-  mountpoint -q "${target}" && { backup_unclean "${target}" "${kernel}"; return 0; }
-  backup_log ERROR "mount of [${target}] failed with [${error:-no reason reported}]"
+  backup_verified "${target}" && { backup_unclean "${target}" "${kernel}"; return 0; }
+  backup_log ERROR "mount of [${target}] failed with [${error:-no reason reported}], [${target}] carries [$(backup_sourced "${target}" || echo nothing)]"
   return 1
 }
 
@@ -1011,7 +1042,7 @@ backup_local() {
 }
 
 backup_shares() {
-  awk '$1 !~ /^#/ && $2 ~ /^\/share\/[0-9]+$/ { print $2, $3 }' /etc/fstab | sort -u
+  awk '$1 !~ /^#/ && $2 ~ /^\/share\/[0-9]+$/ { print $2, $3 }' "${BACKUP_FSTAB}" | sort -u
 }
 
 backup_mounted() {
@@ -1095,7 +1126,7 @@ backup_counted() {
   local began delta
   [ "${BACKUP_STAGE}" = "tertiary" ] || return 0
   [ -f "${BACKUP_STAGE_DIR}/disk-start" ] || return 0
-  mountpoint -q /backup 2>/dev/null || return 0
+  backup_verified /backup || return 0
   began="$(cat "${BACKUP_STAGE_DIR}/disk-start" 2>/dev/null)"
   delta=$(( ( $(backup_used /backup) - ${began:-0} ) / 1048576 ))
   [ "${delta}" -gt "${BACKUP_SIZE}" ] || return 0
@@ -1191,7 +1222,7 @@ backup_interrupted() {
   backup_log WARN "interrupted, [${state}] this stage"
   backup_partial
   backup_counted
-  [ "${BACKUP_STAGE}" = "tertiary" ] && mountpoint -q /backup 2>/dev/null && backup_usage /backup
+  [ "${BACKUP_STAGE}" = "tertiary" ] && backup_verified /backup && backup_usage /backup
   stage_stop || true
   backup_settle
   backup_document "${state}" false "${BACKUP_STARTED}"
@@ -1225,7 +1256,7 @@ backup_heartbeat() {
       stage_stop || true
       return 0
     fi
-    [ "${BACKUP_STAGE}" = "tertiary" ] && mountpoint -q /backup 2>/dev/null && backup_usage /backup
+    [ "${BACKUP_STAGE}" = "tertiary" ] && backup_verified /backup && backup_usage /backup
     if [ "${hard}" -gt 0 ] && [ "${now}" -ge "${hard}" ]; then
       backup_document "${BACKUP_STATE_RUNNING}" false "${BACKUP_STARTED}" "$(( now - 1 ))"
       backup_log WARN "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, stopping this stage, the next run resumes it"
@@ -1405,7 +1436,7 @@ secondary_stop() {
 
 backup_attached() {
   local expected
-  mountpoint -q /backup 2>/dev/null || return 1
+  backup_verified /backup || return 1
   [ -f "${BACKUP_STAGE_DIR}/disk-device" ] || return 0
   expected="$(cat "${BACKUP_STAGE_DIR}/disk-device" 2>/dev/null)"
   [ -n "${expected}" ] || return 0
@@ -1421,14 +1452,14 @@ backup_promotion() {
 }
 
 backup_ready() {
-  local source fstype
-  read -r fstype source < <(findmnt -M /backup -n -o FSTYPE,SOURCE 2>/dev/null) || return 1
-  backup_local "${fstype}" || return 1
-  case "${source}" in /dev/*) return 0 ;; *) return 1 ;; esac
+  local fstype
+  backup_verified /backup || return 1
+  fstype="$(findmnt -M /backup -n -o FSTYPE 2>/dev/null)"
+  backup_local "${fstype}"
 }
 
 backup_targets() {
-  awk '$1 !~ /^#/ && ($2 == "/backup" || $2 ~ /^\/backup\//) { print $2 }' /etc/fstab
+  awk '$1 !~ /^#/ && ($2 == "/backup" || $2 ~ /^\/backup\//) { print $2 }' "${BACKUP_FSTAB}"
 }
 
 backup_stages() {
@@ -1443,21 +1474,13 @@ backup_stages() {
 }
 
 backup_attach() {
-  local deadline=$(( $(date +%s) + BACKUP_DISK_SECONDS )) started target device pending failed=0
+  local deadline=$(( $(date +%s) + BACKUP_DISK_SECONDS )) started target pending failed=0
   started="$(date +%s)"
   backup_log INFO "waiting up to [${BACKUP_DISK_SECONDS}] s for [$(backup_targets | xargs)] to enumerate, polling every [${BACKUP_DISK_POLL}] s"
   while :; do
     pending=0
     while read -r target; do
-      device="$(awk -v mp="${target}" '$1 !~ /^#/ && $2 == mp { print $1 }' /etc/fstab)"
-      case "${device}" in
-      PARTLABEL=*) [ -e "/dev/disk/by-partlabel/${device#PARTLABEL=}" ] || pending=1 ;;
-      PARTUUID=*) [ -e "/dev/disk/by-partuuid/${device#PARTUUID=}" ] || pending=1 ;;
-      UUID=*) [ -e "/dev/disk/by-uuid/${device#UUID=}" ] || pending=1 ;;
-      LABEL=*) [ -e "/dev/disk/by-label/${device#LABEL=}" ] || pending=1 ;;
-      /dev/*) [ -b "${device}" ] || pending=1 ;;
-      *) : ;;
-      esac
+      backup_declared "${target}" >/dev/null || pending=1
     done < <(backup_targets)
     [ "${pending}" -eq 0 ] && break
     if [ "$(date +%s)" -ge "${deadline}" ]; then
@@ -1490,11 +1513,11 @@ backup_reaped() {
 backup_detach() {
   local target
   while read -r target; do
-    mountpoint -q "${target}" || continue
+    backup_verified "${target}" || continue
     sync
     local failure=""
     failure="$(umount "${target}" 2>&1)"
-    mountpoint -q "${target}" || continue
+    backup_verified "${target}" || continue
     backup_log WARN "unmount of [${target}] failed with [${failure:-no reason reported}], detaching lazily"
     umount -l "${target}" 2>/dev/null ||
       backup_log WARN "could not detach [${target}]"
@@ -1578,7 +1601,7 @@ backup_scrub_reading() {
 
 backup_scrub_cancel() {
   command -v btrfs >/dev/null 2>&1 || return 0
-  mountpoint -q /backup || return 0
+  backup_verified /backup || return 0
   btrfs scrub cancel /backup >/dev/null 2>&1 || true
 }
 
@@ -1695,7 +1718,11 @@ tertiary_start() {
     return 1
   fi
   if ! backup_ready; then
-    backup_log ERROR "[/backup] is not a mounted local filesystem, refusing to mirror"
+    backup_log ERROR "[/backup] carries [$(backup_sourced /backup || echo nothing)] rather than the declared [$(backup_declared /backup || echo nothing)], refusing to mirror"
+    return 1
+  fi
+  if [ "$(stat -c %d /backup 2>/dev/null)" = "$(stat -c %d "${BACKUP_HOME_ROOT}" 2>/dev/null)" ]; then
+    backup_log ERROR "[/backup] shares a filesystem with [${BACKUP_HOME_ROOT}], refusing to mirror onto the host"
     return 1
   fi
   while read -r fstab_target fstab_type; do
@@ -1721,7 +1748,7 @@ tertiary_start() {
       --partial-dir="${target}/.rsync" -- "${share}/" "${target}/" || failed=1
     backup_transferred "mirrored" "${share}" "${started}"
   done < <(backup_mounted)
-  if mountpoint -q /backup; then
+  if backup_verified /backup; then
     if command -v btrfs >/dev/null 2>&1 && backup_ready; then
       local subvolume name snapshots="/backup/.snapshots"
       for subvolume in /backup/share/*; do
@@ -1745,7 +1772,7 @@ tertiary_stop() {
   rm -f "${BACKUP_STAGE_DIR}/disk-device"
   backup_stopping "terminating any running mirror and scrub, flushing and unmounting the backup disk"
   backup_scrub_cancel
-  command -v btrfs >/dev/null 2>&1 && mountpoint -q /backup &&
+  command -v btrfs >/dev/null 2>&1 && backup_verified /backup &&
     { btrfs balance cancel /backup >/dev/null 2>&1 || true; }
   pkill -CONT -f "rsync .*/backup/share" 2>/dev/null || true
   pkill -TERM -f "rsync .*/backup/share" 2>/dev/null || true
@@ -1815,6 +1842,15 @@ if [ "${BACKUP_COMMAND}" = "tail" ]; then
   exit $?
 fi
 
+if [ "${BACKUP_COMMAND}" = "start" ] && [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && [ -z "${BACKUP_DETACHED:-}" ]; then
+  BACKUP_ACTIVE_RUN="$(backup_active)"
+  if [ -n "${BACKUP_ACTIVE_RUN}" ] && [ "${BACKUP_ACTIVE_RUN}" != "${BACKUP_RUN_ID}" ]; then
+    backup_log ERROR "run [${BACKUP_ACTIVE_RUN}] is already active, refusing to start run [${BACKUP_RUN_ID}]"
+    backup_log INFO "watch it with [${0} tail] or stop it with [${0} stop]"
+    exit 3
+  fi
+fi
+
 if [ "${BACKUP_STAGE}" = "all" ]; then
   backup_sequence
   exit $?
@@ -1862,6 +1898,10 @@ if [ -z "${BACKUP_DETACHED:-}" ] && [ -z "${BACKUP_RUN_ID_PASSED:-}" ] && { [ -t
   disown
   backup_announce "${BACKUP_STAGE}"
   while kill -0 "${BACKUP_CHILD}" 2>/dev/null && [ ! -f "${BACKUP_STAGE_DIR}/status.json" ]; do sleep 1; done
+  if [ ! -f "${BACKUP_STAGE_DIR}/status.json" ]; then
+    backup_log ERROR "run [${BACKUP_RUN_ID}] exited before recording [${BACKUP_STAGE}], see [${BACKUP_LOG}]"
+    exit 1
+  fi
   backup_tail "${BACKUP_RUN_ID}" "" "${BACKUP_STAGE}"
   exit $?
 fi

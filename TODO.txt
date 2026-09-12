@@ -35,7 +35,7 @@ improve sys tests with datbase/broker asserts
 code review backup, look for bugs, simplication options
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
-test scrub
+test scrub, make sure ctrl-c works and tail
 release, clean history, ssh root@macmini-mad 'rm -rf /share/{10,20,30,40}/backup/supervisor/*'
 test end to end
 check backups working on all servers
