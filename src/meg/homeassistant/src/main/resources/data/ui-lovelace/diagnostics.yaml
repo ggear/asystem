@@ -77,9 +77,6 @@
     - entity: switch.service_letsencrypt
       name: LetsEncrypt
       icon: mdi:heart-pulse
-    - entity: switch.service_openra
-      name: OpenRA
-      icon: mdi:heart-pulse
     - entity: switch.service_influxdb3
       name: InfluxDB3
       icon: mdi:heart-pulse

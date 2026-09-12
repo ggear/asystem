@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import slugify
 
 from . import BomDataUpdateCoordinator
 from .const import (
@@ -96,9 +97,13 @@ class BomWarningSensor(BinarySensorEntity):
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, f"{self.entity_prefix}_warnings")},
             manufacturer=SHORT_ATTRIBUTION,
-            model=MODEL_NAME,
+            model=f"{MODEL_NAME} - Warnings",
             name=f"BOM {self.location_name} Warnings",
         )
+
+        # See SensorBase: the id keeps the bom_ prefix the friendly name no
+        # longer shows.
+        self.entity_id = f"binary_sensor.{slugify(f'BOM {self.name}')}"
 
     async def async_added_to_hass(self) -> None:
         """Set up a listener and load data."""
@@ -118,7 +123,7 @@ class BomWarningSensor(BinarySensorEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        return f"BOM {self.location_name} {self.warning_info['name']}"
+        return f"{self.location_name} {self.warning_info['name']}"
 
     @property
     def unique_id(self) -> str:

@@ -621,9 +621,6 @@ switch.service_grafana:
 switch.service_letsencrypt:
   friendly_name: 'LetsEncrypt'
   icon: 'mdi:heart-pulse'
-switch.service_openra:
-  friendly_name: 'OpenRA'
-  icon: 'mdi:heart-pulse'
 switch.service_influxdb3:
   friendly_name: 'InfluxDB3'
   icon: 'mdi:heart-pulse'
