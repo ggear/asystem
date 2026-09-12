@@ -390,7 +390,7 @@ const (
 var (
 	logIgnore = []*regexp.Regexp{
 		// Linux driver pl2303 incompatible with the tempstat chipset which results in 15m benign errors
-		regexp.MustCompile(`^pl2303 ttyUSB\d+: pl2303_get_line_request - failed: -\d+`),
+		regexp.MustCompile(`^pl2303 ttyUSB\d+: .*`),
 
 		// Noisy backup HDDs on detection, not really errors
 		regexp.MustCompile(`^\.ready`),

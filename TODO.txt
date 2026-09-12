@@ -80,6 +80,7 @@ backup metrics stats take a long time in to show up in supervisor, check
 ability call suite wide backup from rue as client abackups with simpler command line? have it work on server and clients like amedia
 put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one?
 
+make sys test pass
 code review entire backup.sh dont make chnages yet. test all logic. check for dead code. check for inconsistencies. check for simplications.
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
@@ -273,12 +274,10 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 # Storage
 ###############################################################################################################################################################
+impl aspace, that does repotrting ala duf, work on /shares, /home/asystem, /backup and perhaps / of servers? work on rue and servers
 make health script easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
 Binaries for media-space to call it, also have a adu and abench?
 Add quirks to asahi install
-impl space, that does repotrting ala duf, benchmarking and stats/health, mount (resolving errors) ala script, supervisor to use
-Implement backup - each module has personal backup script, desicovered and serially called by master backup script
-
 add storage format to here, if host== and shared funcs. maybe add sftab here too? or storage into each mod wheere fstab is today, move shared media mounting stuff here too?
 Implement TRIM on all SSDs
 enable TRIM:

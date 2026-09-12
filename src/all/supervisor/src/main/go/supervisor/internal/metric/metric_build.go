@@ -38,10 +38,10 @@ const (
 	UsedNetworkBudgetMbit = 1000.0
 	UsedNetworkBudgetBits = UsedNetworkBudgetMbit * 1000 * 1000
 
-	WarnTemperatureBaseCelsius  = 40.0
+	WarnTemperatureBaseCelsius  = 45.0
 	WarnTemperaturePerCelsius   = 5.0
-	WarnTemperaturePulseCelsius = 53.0
-	WarnTemperatureTrendCelsius = 51.0
+	WarnTemperaturePulseCelsius = 58.0
+	WarnTemperatureTrendCelsius = 56.0
 	WarnTemperaturePulseLimit   = WarnTemperaturePerCelsius * (WarnTemperaturePulseCelsius - WarnTemperatureBaseCelsius)
 	WarnTemperatureTrendLimit   = WarnTemperaturePerCelsius * (WarnTemperatureTrendCelsius - WarnTemperatureBaseCelsius)
 	WarnTemperatureFullCelsius  = WarnTemperatureBaseCelsius + 100.0/WarnTemperaturePerCelsius

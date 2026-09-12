@@ -433,24 +433,24 @@ func TestProbeImplHost_WarnTemperature(t *testing.T) {
 		{
 			name:          "happy_midpoint",
 			temps:         map[string]float64{"package id 0": 45.0},
-			expectedValue: 25,
+			expectedValue: 0,
 			expectedError: false,
 		},
 		{
 			name:          "happy_high_anchor",
 			temps:         map[string]float64{"package id 0": 50.0},
-			expectedValue: 50,
+			expectedValue: 25,
 			expectedError: false,
 		},
 		{
 			name:          "happy_warn_threshold",
-			temps:         map[string]float64{"package id 0": 51.0},
+			temps:         map[string]float64{"package id 0": 56.0},
 			expectedValue: 55,
 			expectedError: false,
 		},
 		{
 			name:          "happy_alert_threshold",
-			temps:         map[string]float64{"package id 0": 53.0},
+			temps:         map[string]float64{"package id 0": 58.0},
 			expectedValue: 65,
 			expectedError: false,
 		},
