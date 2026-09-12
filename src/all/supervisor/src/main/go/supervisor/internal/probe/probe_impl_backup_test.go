@@ -1,10 +1,10 @@
 package probe
 
 import (
-	"supervisor/internal/config"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"supervisor/internal/config"
 	"testing"
 	"time"
 )

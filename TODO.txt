@@ -53,6 +53,7 @@ test sedondary
 format all /backup drives, test volumes.sh
 test tertiary
 test supervisor backup enable release, validate 384M memeory footprint during backup, make smaller again if possible?
+consider backup.sh as python or go?
 implement PLAN_BACKUP.md and delete
 
 implement media cli.md 
