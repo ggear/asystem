@@ -29,6 +29,13 @@ improve sys tests with datbase/broker asserts
 
 
 
+from:
+09-12T09:18:44 INFO  probe[host]      host/used_network         discover        0ms topology [1] rated physical interfaces of [11] under [/host/sys/class/net], not rated [br-47788c583686, br-61f1688b2208, br-663568ea64cd, br-9034a07ef72e, docker0, ~
+09-12T09:18:44 INFO  probe[host]      host/used_network         discover        0ms          lo, veth6f0818b, veth7512e0c, vetha7b5d3a, vethfef6cd8]
+to 
+09-12T09:18:44 INFO  probe[host]      host/used_network         discover        0ms topology [1] rated physical interfaces, [10] rated virtual interfaces under [/host/sys/class/net]
+in primary print out log for each service being backed up like mirror
+backup metrics stats take a long time in to show up in supervisor
 
 code review entire backup.sh dont make chnages yet. test all logic. check for dead code. check for inconsistencies. check for simplications.
 put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one?

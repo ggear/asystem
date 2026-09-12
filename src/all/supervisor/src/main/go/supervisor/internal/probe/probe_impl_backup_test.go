@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"supervisor/internal/config"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -199,6 +200,23 @@ func TestProbeImplBackup_ServiceSuccessSurvivesAHandRun(t *testing.T) {
 	}
 	if run != rolled {
 		t.Errorf("run: got %q want %q", run, rolled)
+	}
+}
+
+func TestProbeImplBackup_SnapshotFollowsAHandRunWithinTheCacheWindow(t *testing.T) {
+	root := t.TempDir()
+	stale := time.Now().Add(-3 * time.Hour).Format(backupRunStamp)
+	writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 1}, nil, nil)
+	p := &backupProbe{root: root, serverHost: true, periods: config.Periods{CacheMins: 60}}
+	value, _, err := p.failedBackupStages()
+	if err != nil || value != 33 {
+		t.Fatalf("before: got (%v,%v) want (33,nil)", value, err)
+	}
+	handed := time.Now().Format(backupRunStamp)
+	writeBackupRun(t, root, handed, &backupDocument{StagesRun: 3}, nil, nil)
+	value, _, err = p.failedBackupStages()
+	if err != nil || value != 0 {
+		t.Errorf("after hand run: got (%v,%v) want (0,nil), the snapshot did not follow the tree", value, err)
 	}
 }
 

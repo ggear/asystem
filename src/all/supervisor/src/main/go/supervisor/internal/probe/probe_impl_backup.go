@@ -39,6 +39,7 @@ type backupProbe struct {
 	snapshotMu      sync.Mutex
 	snapshot        *backupSnapshot
 	snapshotTakenAt time.Time
+	snapshotPrint   string
 	backupRunning   sync.Mutex
 	backupActive    atomic.Bool
 	reapRunning     sync.Mutex
@@ -383,12 +384,50 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 func (p *backupProbe) documents() *backupSnapshot {
 	p.snapshotMu.Lock()
 	defer p.snapshotMu.Unlock()
-	if p.snapshot != nil && config.SinceIncludingSuspend(p.snapshotTakenAt) < config.CacheWindow(p.periods.CacheMins) {
+	printed := p.fingerprint()
+	if p.snapshot != nil && printed == p.snapshotPrint &&
+		config.SinceIncludingSuspend(p.snapshotTakenAt) < config.CacheWindow(p.periods.CacheMins) {
 		return p.snapshot
 	}
 	p.snapshot = readNewestRun(p.root)
+	p.snapshotPrint = printed
 	p.snapshotTakenAt = config.NowIncludingSuspend()
 	return p.snapshot
+}
+
+func (p *backupProbe) fingerprint() string {
+	entries, err := os.ReadDir(p.root)
+	if err != nil {
+		return ""
+	}
+	newest := ""
+	for _, entry := range entries {
+		if entry.IsDir() && backupRunDirPattern.MatchString(entry.Name()) && entry.Name() > newest {
+			newest = entry.Name()
+		}
+	}
+	if newest == "" {
+		return ""
+	}
+	runPath := filepath.Join(p.root, newest)
+	marks := []string{newest}
+	for _, path := range append([]string{filepath.Join(runPath, "status.json")}, stageStatusPaths(runPath)...) {
+		info, err := os.Stat(path)
+		if err != nil {
+			marks = append(marks, "-")
+			continue
+		}
+		marks = append(marks, info.ModTime().UTC().Format(time.RFC3339Nano))
+	}
+	return strings.Join(marks, "/")
+}
+
+func stageStatusPaths(runPath string) []string {
+	paths := make([]string, 0, len(backupStages))
+	for _, stage := range backupStages {
+		paths = append(paths, stageStatusPath(runPath, stage))
+	}
+	return paths
 }
 
 func (p *backupProbe) refresh() {
