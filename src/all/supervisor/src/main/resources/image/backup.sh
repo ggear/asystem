@@ -499,17 +499,20 @@ backup_sequence() {
         backup_stopping "stopping [${#targets[@]}] active run(s) [${targets[*]}]"
       fi
     fi
+    local base; base="$(dirname "${BACKUP_RUN_PATH}")"
     BACKUP_RUN_ID="${targets[-1]}"
-    BACKUP_RUN_PATH="$(dirname "${BACKUP_RUN_PATH}")/${BACKUP_RUN_ID}"
+    BACKUP_RUN_PATH="${base}/${BACKUP_RUN_ID}"
     for target in "${targets[@]}"; do
       for stage in "${stages[@]}"; do
         BACKUP_DETACHED=1 BACKUP_STOP_SECONDS=0 BACKUP_STOP_FORCED=1 \
           BACKUP_STOPPING=1 "$0" stop "${target}" --stage "${stage}" || result=$?
       done
     done
-    backup_await "${BACKUP_RUN_PATH}" "${BACKUP_STOP_SECONDS:-300}" ||
-      backup_log WARN "run [${BACKUP_RUN_ID}] is still running after [${BACKUP_STOP_SECONDS:-300}] s"
-    backup_status "${BACKUP_RUN_PATH}" || result=1
+    for target in "${targets[@]}"; do
+      backup_await "${base}/${target}" "${BACKUP_STOP_SECONDS:-300}" ||
+        backup_log WARN "run [${target}] is still running after [${BACKUP_STOP_SECONDS:-300}] s"
+      backup_status "${base}/${target}" || result=1
+    done
     return "${result}"
   fi
   started="$(date +%s)"
@@ -724,7 +727,6 @@ backup_started() {
   until="$(date -d "${began} + ${BACKUP_TIMEOUT_HOURS} hours" '+%H:%M:%S' 2>/dev/null)"
   backup_marker "${stage}" "starting with timeout [$(( BACKUP_TIMEOUT_HOURS * 60 ))] min until [${until:-unknown}]"
 }
-
 
 backup_finished() {
   local stage="$1" doc="$2" status="success" pointer=""
@@ -988,18 +990,21 @@ backup_unclean() {
 }
 
 backup_declared() {
-  local target="$1" spec
+  local target="$1" spec device
   spec="$(awk -v mp="${target}" '$1 !~ /^#/ && $2 == mp { print $1 }' "${BACKUP_FSTAB}")"
   [ -n "${spec}" ] || return 1
   case "${spec}" in
-  PARTLABEL=*) readlink -e "/dev/disk/by-partlabel/${spec#PARTLABEL=}" 2>/dev/null ;;
-  PARTUUID=*) readlink -e "/dev/disk/by-partuuid/${spec#PARTUUID=}" 2>/dev/null ;;
-  UUID=*) readlink -e "/dev/disk/by-uuid/${spec#UUID=}" 2>/dev/null ;;
-  LABEL=*) readlink -e "/dev/disk/by-label/${spec#LABEL=}" 2>/dev/null ;;
-  //*) printf '%s\n' "${spec}" ;;
-  /*) readlink -e "${spec}" 2>/dev/null ;;
-  *) printf '%s\n' "${spec}" ;;
+  PARTLABEL=*) device="$(readlink -e "/dev/disk/by-partlabel/${spec#PARTLABEL=}" 2>/dev/null)" ;;
+  PARTUUID=*) device="$(readlink -e "/dev/disk/by-partuuid/${spec#PARTUUID=}" 2>/dev/null)" ;;
+  UUID=*) device="$(readlink -e "/dev/disk/by-uuid/${spec#UUID=}" 2>/dev/null)" ;;
+  LABEL=*) device="$(readlink -e "/dev/disk/by-label/${spec#LABEL=}" 2>/dev/null)" ;;
+  //*) device="${spec}" ;;
+  /*) device="$(readlink -e "${spec}" 2>/dev/null)" ;;
+  *) device="${spec}" ;;
   esac
+  [ -n "${device}" ] || return 1
+  case "${device}" in /dev/*) [ -b "${device}" ] || return 1 ;; esac
+  printf '%s\n' "${device}"
 }
 
 backup_sourced() {
@@ -1027,9 +1032,9 @@ backup_mount() {
     backup_log ERROR "mount of [${target}] refused, not mounted and not in [${BACKUP_FSTAB}]"
     return 1
   }
-  mountpoint -q "${target}" &&
-    backup_log WARN "[${target}] already carries [$(backup_sourced "${target}")] rather than the declared [$(backup_declared "${target}")], mounting over it"
-  backup_log INFO "mounting [${target}]"
+  local over=""
+  mountpoint -q "${target}" && over=" over [$(backup_sourced "${target}" || echo unknown)]"
+  backup_log INFO "mounting [${target}]${over}"
   kernel="$(dmesg 2>/dev/null | wc -l)"
   error="$(mount "${target}" 2>&1)" || ls "${target}" >/dev/null 2>&1 || true
   backup_verified "${target}" && { backup_unclean "${target}" "${kernel}"; return 0; }
@@ -1454,7 +1459,7 @@ backup_promotion() {
 backup_ready() {
   local fstype
   backup_verified /backup || return 1
-  fstype="$(findmnt -M /backup -n -o FSTYPE 2>/dev/null)"
+  fstype="$(findmnt -M /backup -n -o FSTYPE 2>/dev/null | tail -n 1)"
   backup_local "${fstype}"
 }
 
@@ -1510,14 +1515,21 @@ backup_reaped() {
   return 0
 }
 
+backup_detachable() {
+  local target="$1"
+  mountpoint -q "${target}" 2>/dev/null || return 1
+  backup_verified "${target}" && return 0
+  [ "$(stat -c %d "${target}" 2>/dev/null)" != "$(stat -c %d "${BACKUP_HOME_ROOT}" 2>/dev/null)" ]
+}
+
 backup_detach() {
   local target
   while read -r target; do
-    backup_verified "${target}" || continue
+    backup_detachable "${target}" || continue
     sync
     local failure=""
     failure="$(umount "${target}" 2>&1)"
-    backup_verified "${target}" || continue
+    backup_detachable "${target}" || continue
     backup_log WARN "unmount of [${target}] failed with [${failure:-no reason reported}], detaching lazily"
     umount -l "${target}" 2>/dev/null ||
       backup_log WARN "could not detach [${target}]"
@@ -1601,7 +1613,7 @@ backup_scrub_reading() {
 
 backup_scrub_cancel() {
   command -v btrfs >/dev/null 2>&1 || return 0
-  backup_verified /backup || return 0
+  backup_detachable /backup || return 0
   btrfs scrub cancel /backup >/dev/null 2>&1 || true
 }
 

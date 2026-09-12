@@ -30,8 +30,8 @@ improve sys tests with datbase/broker asserts
 
 
 
-
-
+code review entire backup.sh dont make chnages yet. test all logic. check for dead code. check for inconsistencies. check for simplications.
+put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one?
 code review backup, look for bugs, simplication options
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?

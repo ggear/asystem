@@ -912,7 +912,7 @@ class BackupShellTest(unittest.TestCase):
         head = ('MARK="${BACKUP_HOME_ROOT}/mounted"; touch "${MARK}"\n'
                 'backup_targets() { echo /backup; }\n'
                 'sync() { :; }\n'
-                'backup_verified() { [ -f "${MARK}" ]; }\n')
+                'backup_detachable() { [ -f "${MARK}" ]; }\n')
         self.assertEqual(self.shell(head + 'umount() { rm -f "${MARK}"; return 0; }\nbackup_detach 2>&1'), "")
         self.assertEqual(self.shell(head + 'umount() { rm -f "${MARK}"; echo "umount: /backup: not mounted." >&2; return 1; }\n'
                                            'backup_detach 2>&1'), "")
@@ -920,7 +920,7 @@ class BackupShellTest(unittest.TestCase):
     def test_detach_still_warns_when_the_mount_survives(self):
         reported = self.shell('backup_targets() { echo /backup; }\n'
                               'sync() { :; }\n'
-                              'backup_verified() { return 0; }\n'
+                              'backup_detachable() { return 0; }\n'
                               'umount() { echo "umount: /backup: target is busy." >&2; return 1; }\n'
                               'backup_detach 2>&1')
         self.assertIn("unmount of [/backup] failed with [umount: /backup: target is busy.], detaching lazily", reported)
@@ -971,17 +971,47 @@ class BackupShellTest(unittest.TestCase):
                               'dmesg() { :; }\n'
                               'mount() { return 0; }\n'
                               '{ backup_mount /backup && echo MOUNTED || echo REFUSED; } 2>&1', BACKUP_FSTAB=table)
-        self.assertIn("already carries [/dev/nvme0n1p6] rather than the declared [/dev/sdz1]", reported)
+        self.assertIn("mounting [/backup] over [/dev/nvme0n1p6]", reported)
+        self.assertIn("mount of [/backup] failed", reported)
         self.assertIn("REFUSED", reported)
         self.assertNotIn("MOUNTED", reported)
+        self.assertNotIn("WARN", reported)
 
     def test_detach_leaves_a_mount_it_did_not_make(self):
         reported = self.shell('backup_targets() { echo /backup; }\n'
                               'sync() { :; }\n'
-                              'backup_verified() { return 1; }\n'
+                              'backup_detachable() { return 1; }\n'
                               'umount() { echo UNMOUNTED; }\n'
                               'backup_detach 2>&1')
         self.assertEqual(reported, "")
+
+    def test_ready_reads_the_top_mount_when_a_disk_is_stacked_over_a_bind(self):
+        head = 'backup_verified() { return 0; }\n'
+        self.assertEqual(self.shell(head + 'findmnt() { printf "btrfs\\nbtrfs\\n"; }\n'
+                                           'backup_ready && echo READY || echo REFUSED'), "READY")
+        self.assertEqual(self.shell(head + 'findmnt() { printf "btrfs\\ntmpfs\\n"; }\n'
+                                           'backup_ready && echo READY || echo REFUSED'), "REFUSED")
+        self.assertEqual(self.shell('backup_verified() { return 1; }\n'
+                                    'findmnt() { printf "btrfs\\n"; }\n'
+                                    'backup_ready && echo READY || echo REFUSED'), "REFUSED")
+
+    @NEEDS_GNU
+    def test_declared_refuses_a_dev_path_that_is_not_a_block_device(self):
+        table = self.fstab("/dev/null  /backup  btrfs  noauto  0 2")
+        self.assertEqual(self.shell("backup_declared /backup || echo REFUSED", BACKUP_FSTAB=table), "REFUSED")
+
+    def test_detachable_takes_a_real_filesystem_and_never_the_host_tree(self):
+        mounted = 'mountpoint() { return 0; }\n'
+        self.assertEqual(self.shell(mounted + 'backup_verified() { return 0; }\n'
+                                              'backup_detachable /backup && echo YES || echo no'), "YES")
+        self.assertEqual(self.shell(mounted + 'backup_verified() { return 1; }\n'
+                                              'stat() { echo 2049; }\n'
+                                              'backup_detachable /backup && echo YES || echo no'), "no")
+        self.assertEqual(self.shell(mounted + 'backup_verified() { return 1; }\n'
+                                              'stat() { case "$3" in /backup) echo 65024 ;; *) echo 2049 ;; esac; }\n'
+                                              'backup_detachable /backup && echo YES || echo no'), "YES")
+        self.assertEqual(self.shell('mountpoint() { return 1; }\n'
+                                    'backup_detachable /backup && echo YES || echo no'), "no")
 
     @NEEDS_GNU
     def test_tail_field_reads_json(self):
