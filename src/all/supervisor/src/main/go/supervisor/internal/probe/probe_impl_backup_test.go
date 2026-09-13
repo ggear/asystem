@@ -338,7 +338,7 @@ func TestProbeImplBackup_RunnerInvocationsSpeakTheRunnerCli(t *testing.T) {
 	if match == nil {
 		t.Fatal("found no BACKUP_COMMAND dispatch in backup.sh, the parse has rotted")
 	}
-	for _, word := range strings.Split(match[1], " | ") {
+	for word := range strings.SplitSeq(match[1], " | ") {
 		commands[word] = true
 	}
 	for _, required := range []string{"start", "stop", "tail", "list"} {
