@@ -28,6 +28,11 @@ retire nginx and use cloudflared for homeasistant?
 improve sys tests with datbase/broker asserts
 
 
+make 1 from 1/6 and all other first numerals in watch multi host UI the same colour as hostname not red, ESC from log view and single host view also same colour os hostname not red, red should only be for failed metrics, any others to chnage also?
+from
+ RUN-ID (STARTED)
+to
+ STARTED (RUN-ID)
 
 from:
 09-12T09:18:44 INFO  probe[host]      host/used_network         discover        0ms topology [1] rated physical interfaces of [11] under [/host/sys/class/net], not rated [br-47788c583686, br-61f1688b2208, br-663568ea64cd, br-9034a07ef72e, docker0, ~
