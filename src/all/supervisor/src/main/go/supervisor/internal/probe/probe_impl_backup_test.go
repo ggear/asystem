@@ -391,3 +391,29 @@ func sortedKeys(set map[string]bool) []string {
 	sort.Strings(keys)
 	return keys
 }
+
+func TestProbeImplBackup_ReportedForRunIdentifiesAPeerByWindowNotRunID(t *testing.T) {
+	runStart := time.Date(2026, 9, 13, 1, 0, 25, 0, time.Local)
+	earliest := runStart.Add(-backupRunSkew)
+	cases := []struct {
+		name      string
+		startedTS string
+		expected  bool
+	}{
+		{"the leader's own run", runStart.Format(time.RFC3339), true},
+		{"a peer that minted its own id seconds later", runStart.Add(30 * time.Second).Format(time.RFC3339), true},
+		{"a peer at the far edge of the skew", earliest.Format(time.RFC3339), true},
+		{"a peer that started before the skew", earliest.Add(-time.Second).Format(time.RFC3339), false},
+		{"yesterday's run still retained", runStart.Add(-24 * time.Hour).Format(time.RFC3339), false},
+		{"a document carrying no start", "", false},
+		{"a document carrying an unparseable start", "not a timestamp", false},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			got := reportedForRun(backupDocument{RunID: "whatever", StartedTS: test.startedTS}, earliest)
+			if got != test.expected {
+				t.Errorf("reportedForRun(%q): got %v want %v", test.startedTS, got, test.expected)
+			}
+		})
+	}
+}

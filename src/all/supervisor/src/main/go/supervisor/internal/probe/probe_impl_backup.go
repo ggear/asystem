@@ -679,7 +679,7 @@ func (p *backupProbe) finishLeadership(ctx context.Context, client *brokerClient
 		for _, host := range expected {
 			var document backupDocument
 			if json.Unmarshal([]byte(statuses["supervisor/"+host+"/backup/status"]), &document) == nil &&
-				document.RunID == runID && terminal[document.State] {
+				terminal[document.State] && reportedForRun(document, started.Add(-backupRunSkew)) {
 				reported++
 				if !document.SuccessBool {
 					failedHosts++
@@ -735,6 +735,11 @@ func (r backupReaper) paused() bool {
 	}
 	expires, err := time.Parse(time.RFC3339, r.ExpiresTS)
 	return err == nil && time.Now().Before(expires)
+}
+
+func reportedForRun(document backupDocument, earliest time.Time) bool {
+	started, err := time.Parse(time.RFC3339, document.StartedTS)
+	return err == nil && !started.Before(earliest)
 }
 
 func (l backupLease) expired() bool {
@@ -937,6 +942,7 @@ const (
 	backupRunCeiling     = 5 * time.Hour
 	backupStaleWindow    = 24*time.Hour + backupRunCeiling
 	backupStageKillGrace = 2 * time.Minute
+	backupRunSkew        = 10 * time.Minute
 	leaderPollInterval   = 30 * time.Second
 	leaderLeaseRefresh   = 15 * time.Minute
 	backupRunsKept       = 30
