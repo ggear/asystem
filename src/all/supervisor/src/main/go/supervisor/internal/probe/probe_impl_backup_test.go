@@ -2,8 +2,14 @@ package probe
 
 import (
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
 	"supervisor/internal/config"
 	"testing"
 	"time"
@@ -319,4 +325,69 @@ func TestProbeImplBackup_ReaperPausedFailsSafeToArmed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProbeImplBackup_RunnerInvocationsSpeakTheRunnerCli(t *testing.T) {
+	script, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "resources", "image", "backup.sh"))
+	if err != nil {
+		t.Fatalf("read backup.sh: %v", err)
+	}
+	commands := map[string]bool{}
+	dispatch := regexp.MustCompile(`case "\$\{BACKUP_COMMAND\}" in\n((?:[a-z]+ \| )+[a-z]+)\) ;;`)
+	match := dispatch.FindStringSubmatch(string(script))
+	if match == nil {
+		t.Fatal("found no BACKUP_COMMAND dispatch in backup.sh, the parse has rotted")
+	}
+	for _, word := range strings.Split(match[1], " | ") {
+		commands[word] = true
+	}
+	for _, required := range []string{"start", "stop", "tail", "list"} {
+		if !commands[required] {
+			t.Fatalf("parsed no [%s] out of the backup.sh dispatch, the parse has rotted", required)
+		}
+	}
+	parsed, err := parser.ParseFile(token.NewFileSet(), "probe_impl_backup.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parse probe_impl_backup.go: %v", err)
+	}
+	invocations := 0
+	ast.Inspect(parsed, func(node ast.Node) bool {
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		if function, isFunction := call.Fun.(*ast.SelectorExpr); !isFunction ||
+			!strings.HasPrefix(function.Sel.Name, "Command") {
+			return true
+		}
+		for index, argument := range call.Args {
+			selector, isSelector := argument.(*ast.SelectorExpr)
+			if !isSelector || selector.Sel.Name != "runner" || index+1 >= len(call.Args) {
+				continue
+			}
+			invocations++
+			literal, isLiteral := call.Args[index+1].(*ast.BasicLit)
+			if !isLiteral || literal.Kind != token.STRING {
+				t.Errorf("invocation of the runner passes a non-literal command, want one of %v", sortedKeys(commands))
+				continue
+			}
+			command := strings.Trim(literal.Value, `"`)
+			if !commands[command] {
+				t.Errorf("invocation of the runner passes the command [%s], want one of %v", command, sortedKeys(commands))
+			}
+		}
+		return true
+	})
+	if invocations == 0 {
+		t.Fatal("found no runner invocations to check, the walk has rotted")
+	}
+}
+
+func sortedKeys(set map[string]bool) []string {
+	keys := make([]string, 0, len(set))
+	for key := range set {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }

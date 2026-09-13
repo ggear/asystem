@@ -20,7 +20,7 @@ x-common: &common
     - SYS_ADMIN
   device_cgroup_rules:
     - "c 1:11 r"
-    - "b 8:* r"
+    - "b 8:* rw"
     - "b 259:* r"
   security_opt:
     - apparmor=unconfined

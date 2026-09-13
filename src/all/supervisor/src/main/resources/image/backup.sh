@@ -1038,7 +1038,13 @@ backup_mount() {
   kernel="$(dmesg 2>/dev/null | wc -l)"
   error="$(mount "${target}" 2>&1)" || ls "${target}" >/dev/null 2>&1 || true
   backup_verified "${target}" && { backup_unclean "${target}" "${kernel}"; return 0; }
-  backup_log ERROR "mount of [${target}] failed with [${error:-no reason reported}], [${target}] carries [$(backup_sourced "${target}" || echo nothing)]"
+  local declared writable=""
+  declared="$(backup_declared "${target}" 2>/dev/null)" || declared="unknown"
+  case "${declared}" in
+  /dev/*) dd if=/dev/null of="${declared}" count=0 2>/dev/null ||
+    writable=", device [${declared}] cannot be opened for writing, so a read-write mount can never succeed here" ;;
+  esac
+  backup_log ERROR "mount of [${target}] failed with [${error:-no reason reported}], [${target}] carries [$(backup_sourced "${target}" || echo nothing)] declared [${declared}]${writable}"
   return 1
 }
 

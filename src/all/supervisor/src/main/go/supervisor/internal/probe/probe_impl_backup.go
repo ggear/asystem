@@ -570,7 +570,7 @@ func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string
 	command.Stderr = logFile
 	runErr := command.Run()
 	if runErr != nil {
-		stop := exec.CommandContext(context.WithoutCancel(ctx), "bash", p.runner, stage, "stop", runID)
+		stop := exec.CommandContext(context.WithoutCancel(ctx), "bash", p.runner, "stop", runID, "--stage", stage)
 		stop.Env = command.Env
 		stop.Stdout = logFile
 		stop.Stderr = logFile

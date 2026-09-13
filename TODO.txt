@@ -75,16 +75,62 @@ root@macmini-mad:~$ abackup start
 +---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
 
 
+is the first and last times in local time, if not convert it to be so
+12:32:14 DEBUG probe[logs]      host/failed_log_messages  sample          8ms measured [2] kernel errors, first [2026-09-12T06:21:27+08:00] last [2026-09-12T08:22:56+08:00] at dmesg [5614578.826280]                                                                                                                              
+
+scrub overestimates rate at first, but then drops, should be about 240MB/s but is 400MB/s at beginning:
+root@macmini-mad:~$ abackup tail
+[INFO           12:37:17] following run [2026-09-12_12-35-09] under [/home/asystem/supervisor/backup/2026-09-12_12-35-09]
+[INFO tertiary  12:37:19] starting with timeout [180] min until [15:35:09]
+[INFO tertiary  12:37:19] scrubbed [   24] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 162] min at [406] MB/s
+[INFO tertiary  12:37:27] scrubbed [   24] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 162] min at [406] MB/s
+[INFO tertiary  12:37:37] scrubbed [   31] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 162] min at [351] MB/s
+root@macmini-mad:~$ abackup tail
+[INFO           12:38:47] following run [2026-09-12_12-35-09] under [/home/asystem/supervisor/backup/2026-09-12_12-35-09]
+[INFO tertiary  12:38:49] starting with timeout [180] min until [15:35:09]
+[INFO tertiary  12:38:49] scrubbed [   45] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 161] min at [301] MB/s
+[INFO tertiary  12:38:57] scrubbed [   45] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 161] min at [301] MB/s
+[INFO tertiary  12:39:08] scrubbed [   53] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 161] min at [295] MB/s
+[INFO tertiary  12:39:18] scrubbed [   53] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [295] MB/s
+
+[INFO tertiary  12:39:28] scrubbed [   53] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [295] MB/s
+[INFO tertiary  12:39:38] scrubbed [   60] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [285] MB/s
+[INFO tertiary  12:39:48] scrubbed [   60] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [285] MB/s
+[INFO tertiary  12:39:58] scrubbed [   60] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [285] MB/s
+[INFO tertiary  12:40:08] scrubbed [   67] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [278] MB/s
+[INFO tertiary  12:40:19] scrubbed [   67] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [278] MB/s
+[INFO tertiary  12:40:29] scrubbed [   67] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [278] MB/s
+[INFO tertiary  12:40:39] scrubbed [   74] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [272] MB/s
+[INFO tertiary  12:40:49] scrubbed [   74] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [272] MB/s
+[INFO tertiary  12:40:59] scrubbed [   74] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [272] MB/s
+[INFO tertiary  12:41:09] scrubbed [   81] GB of [ 7419] GB at [  1] percent complete and estimated to complete in [ 159] min at [269] MB/s
+[INFO tertiary  12:41:20] scrubbed [   81] GB of [ 7419] GB at [  1] percent complete and estimated to complete in [ 158] min at [269] MB/s
+iotop:
+  Total DISK READ:  244.15 M/s ⣀⣀⣀⣀⣀⣀⣀⣀⣀⣸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ |   Total DISK WRITE:   91.87 K/s ⣀⣼⣄⣠⣄⣤⣄⣤⣄⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+Current DISK READ:  244.15 M/s ⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ | Current DISK WRITE:    0.00 B/s ⢸⣀⡇⢰⣸⢀⡇⢸⡀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
+
+abackup list to include whether scrub was performed. if scrub restarts the next night, does it resume from where it left off or starts again? increase timeout to 5 hours to accomodate largest scrub on max
+scrubs to be scheduled in line with monthly GFS trimming so history of the scrub can be seen in abackup list
+
+
+add and at time to all stage and scrub log lines with estimate time from
+[INFO tertiary  12:46:41] scrubbed [  153] GB of [ 7419] GB at [  2] percent complete and estimated to complete in [ 153] min at [253] MB/s
+to
+[INFO tertiary  12:46:41] scrubbed [  153] GB of [ 7419] GB at [  2] percent complete and estimated to complete in [ 153] min at [15:35:09] at [253] MB/s
+
+
+Why does host status in ha show as off when abackup start --stage tertiary --scrub being run, returns to ON when it is stopped. Fail BKP remains 0% and green. it shouldnt do that. only if backup fails should it go OFF. abackup start does not do it. is it easy to fix?
+
 in primary print out log for each service being backed up like mirror
 backup metrics stats take a long time in to show up in supervisor, check
-ability call suite wide backup from rue as client abackups with simpler command line? have it work on server and clients like amedia
+ability call suite wide backup from rue as client abackups with simpler command line? have it work on server and clients like amedia maybe have a json export for ouput to make this easier?
 put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one?
 
 make sys test pass
 code review entire backup.sh dont make chnages yet. test all logic. check for dead code. check for inconsistencies. check for simplications.
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
-test scrub, make sure ctrl-c works and tail
 release, clean history, ssh root@macmini-mad 'rm -rf /share/{10,20,30,40}/backup/supervisor/*'
 test end to end
 check backups working on all servers
@@ -95,8 +141,8 @@ test sedondary
 format all /backup drives, test volumes.sh
 test tertiary
 test supervisor backup enable release, validate 384M memeory footprint during backup, make smaller again if possible?
-consider backup.sh as python or go?
 implement PLAN_BACKUP.md and delete
+consider backup.sh as python or go?
 
 implement media cli.md 
 
