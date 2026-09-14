@@ -397,6 +397,9 @@ var (
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Asking for cache data failed$`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Read Capacity\(\d+\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Synchronize Cache\(10\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
+
+		// Non-errors
+		regexp.MustCompile(`^RAS: Correctable Errors collector initialized\.`),
 	}
 
 	logCache   = map[string]*logSet{}
