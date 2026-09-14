@@ -11,7 +11,7 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
-func TestProbeLibInstall_Snapshot(t *testing.T) {
+func TestProbeUtilInstall_Snapshot(t *testing.T) {
 	tests := []struct {
 		name                   string
 		environment            string
@@ -180,7 +180,7 @@ func TestProbeLibInstall_Snapshot(t *testing.T) {
 	}
 }
 
-func TestProbeLibInstall_SnapshotAbsoluteSymlink(t *testing.T) {
+func TestProbeUtilInstall_SnapshotAbsoluteSymlink(t *testing.T) {
 	t.Cleanup(resetInstallTrees)
 	mount := t.TempDir()
 	home := filepath.Join(mount, "var/lib/asystem/install/myservice/10.100.5678")
@@ -199,7 +199,7 @@ func TestProbeLibInstall_SnapshotAbsoluteSymlink(t *testing.T) {
 	}
 }
 
-func TestProbeLibInstall_Allocation(t *testing.T) {
+func TestProbeUtilInstall_Allocation(t *testing.T) {
 	tests := []struct {
 		name          string
 		names         []string
@@ -289,7 +289,7 @@ func TestProbeLibInstall_Allocation(t *testing.T) {
 	}
 }
 
-func TestProbeLibInstall_Invalidation(t *testing.T) {
+func TestProbeUtilInstall_Invalidation(t *testing.T) {
 	t.Cleanup(resetInstallTrees)
 	mount := t.TempDir()
 	home := filepath.Join(mount, "var/lib/asystem/install/myservice/latest")
@@ -321,7 +321,7 @@ func TestProbeLibInstall_Invalidation(t *testing.T) {
 	}
 }
 
-func TestProbeLibInstall_InvalidationOnVersionChange(t *testing.T) {
+func TestProbeUtilInstall_InvalidationOnVersionChange(t *testing.T) {
 	t.Cleanup(resetInstallTrees)
 	mount := t.TempDir()
 	root := filepath.Join(mount, "var/lib/asystem/install/myservice")
@@ -354,7 +354,7 @@ func TestProbeLibInstall_InvalidationOnVersionChange(t *testing.T) {
 	}
 }
 
-func TestProbeLibInstall_LoadIsCachedPerMount(t *testing.T) {
+func TestProbeUtilInstall_LoadIsCachedPerMount(t *testing.T) {
 	t.Cleanup(resetInstallTrees)
 	mount := t.TempDir()
 	if loadInstallTree(mount) != loadInstallTree(mount) {
@@ -370,7 +370,7 @@ func TestProbeLibInstall_LoadIsCachedPerMount(t *testing.T) {
 	}
 }
 
-func TestProbeLibInstall_ReportScopedToConfigured(t *testing.T) {
+func TestProbeUtilInstall_ReportScopedToConfigured(t *testing.T) {
 	t.Cleanup(resetInstallTrees)
 	buffer := scribe.EnableBuffer(slog.LevelDebug, 200)
 	t.Cleanup(func() { scribe.EnableStdout(slog.LevelInfo) })
@@ -400,7 +400,7 @@ func TestProbeLibInstall_ReportScopedToConfigured(t *testing.T) {
 	}
 }
 
-func TestProbeLibInstall_ReportSummarisesAllocation(t *testing.T) {
+func TestProbeUtilInstall_ReportSummarisesAllocation(t *testing.T) {
 	t.Cleanup(resetInstallTrees)
 	previous := installVirtualMemory
 	installVirtualMemory = func() (*mem.VirtualMemoryStat, error) {

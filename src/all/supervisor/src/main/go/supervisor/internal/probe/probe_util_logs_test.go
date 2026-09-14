@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestProbeLibLogs_IsLogError(t *testing.T) {
+func TestProbeUtilLogs_IsLogError(t *testing.T) {
 	tests := []struct {
 		name       string
 		priority   int
@@ -57,7 +57,7 @@ func TestProbeLibLogs_IsLogError(t *testing.T) {
 	}
 }
 
-func TestProbeLibLogs_IgnoredMessages(t *testing.T) {
+func TestProbeUtilLogs_IgnoredMessages(t *testing.T) {
 	original := logIgnore
 	t.Cleanup(func() { logIgnore = original })
 	logIgnore = []*regexp.Regexp{
@@ -94,7 +94,7 @@ func TestProbeLibLogs_IgnoredMessages(t *testing.T) {
 	}
 }
 
-func TestProbeLibLogs_IgnoredMessagesAreNotErrors(t *testing.T) {
+func TestProbeUtilLogs_IgnoredMessagesAreNotErrors(t *testing.T) {
 	original := logIgnore
 	t.Cleanup(func() { logIgnore = original })
 	logIgnore = []*regexp.Regexp{regexp.MustCompile(`pl2303 ttyUSB\d+: pl2303_get_line_request - failed`)}
@@ -106,7 +106,7 @@ func TestProbeLibLogs_IgnoredMessagesAreNotErrors(t *testing.T) {
 	}
 }
 
-func TestProbeLibLogs_ParseLogRecord(t *testing.T) {
+func TestProbeUtilLogs_ParseLogRecord(t *testing.T) {
 	boot := time.Now().Add(-time.Hour)
 	tests := []struct {
 		name            string
@@ -163,7 +163,7 @@ func TestProbeLibLogs_ParseLogRecord(t *testing.T) {
 	}
 }
 
-func TestProbeLibLogs_ErrorsWithin(t *testing.T) {
+func TestProbeUtilLogs_ErrorsWithin(t *testing.T) {
 	tests := []struct {
 		name            string
 		records         []string
@@ -237,7 +237,7 @@ func TestProbeLibLogs_ErrorsWithin(t *testing.T) {
 	}
 }
 
-func TestProbeLibLogs_ErrorsWithinFollowsIncrementally(t *testing.T) {
+func TestProbeUtilLogs_ErrorsWithinFollowsIncrementally(t *testing.T) {
 	root := writeLogTree(t, []string{"3,1,1000000,-;ata1.00: failed command"}, 7200)
 	set := &logSet{roots: []string{root}, buffer: make([]byte, logBufferBytes)}
 	t.Cleanup(set.close)
@@ -294,7 +294,7 @@ func joinLogRecords(records []string) string {
 	return joined
 }
 
-func TestProbeLibLogs_Suppression(t *testing.T) {
+func TestProbeUtilLogs_Suppression(t *testing.T) {
 	tests := []struct {
 		name          string
 		message       string

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestProbeLibSensors_DiscoverTier(t *testing.T) {
+func TestProbeUtilSensors_DiscoverTier(t *testing.T) {
 	tests := []struct {
 		name           string
 		devices        []sensorDevice
@@ -87,8 +87,8 @@ func TestProbeLibSensors_DiscoverTier(t *testing.T) {
 			expectedError:  false,
 		},
 		{
-			name:           "happy_fan_with_maximum_kept",
-			devices:        []sensorDevice{{name: "applesmc", fans: map[string][2]float64{"Exhaust": {1799, 4800}}}},
+			name:           "happy_fan_discovered",
+			devices:        []sensorDevice{{name: "applesmc", fans: map[string]float64{"Exhaust": 1799}}},
 			expectedTier:   sensorTierNone,
 			expectedInputs: 0,
 			expectedFans:   1,
@@ -96,7 +96,7 @@ func TestProbeLibSensors_DiscoverTier(t *testing.T) {
 		},
 		{
 			name:           "happy_nested_applesmc_fan",
-			devices:        []sensorDevice{{name: "", nested: true, fans: map[string][2]float64{"Exhaust": {1799, 4800}}}},
+			devices:        []sensorDevice{{name: "", nested: true, fans: map[string]float64{"Exhaust": 1799}}},
 			expectedTier:   sensorTierNone,
 			expectedInputs: 0,
 			expectedFans:   1,
@@ -104,18 +104,10 @@ func TestProbeLibSensors_DiscoverTier(t *testing.T) {
 		},
 		{
 			name:           "happy_nested_and_direct_layouts_together",
-			devices:        []sensorDevice{{name: "coretemp", labelled: map[string]float64{"Package id 0": 55.0}}, {name: "", nested: true, fans: map[string][2]float64{"Exhaust": {1799, 4800}}}},
+			devices:        []sensorDevice{{name: "coretemp", labelled: map[string]float64{"Package id 0": 55.0}}, {name: "", nested: true, fans: map[string]float64{"Exhaust": 1799}}},
 			expectedTier:   sensorTierPackage,
 			expectedInputs: 1,
 			expectedFans:   1,
-			expectedError:  false,
-		},
-		{
-			name:           "sad_fan_without_maximum_skipped",
-			devices:        []sensorDevice{{name: "applesmc", fans: map[string][2]float64{"Exhaust": {1799, 0}}}},
-			expectedTier:   sensorTierNone,
-			expectedInputs: 0,
-			expectedFans:   0,
 			expectedError:  false,
 		},
 	}
@@ -139,7 +131,7 @@ func TestProbeLibSensors_DiscoverTier(t *testing.T) {
 	}
 }
 
-func TestProbeLibSensors_Celsius(t *testing.T) {
+func TestProbeUtilSensors_Celsius(t *testing.T) {
 	tests := []struct {
 		name          string
 		devices       []sensorDevice
@@ -222,10 +214,10 @@ func TestProbeLibSensors_Celsius(t *testing.T) {
 	}
 }
 
-func TestProbeLibSensors_FanSpeedOfMax(t *testing.T) {
+func TestProbeUtilSensors_FanSpeedOfMax(t *testing.T) {
 	tests := []struct {
 		name          string
-		fans          map[string][2]float64
+		fans          map[string]float64
 		removeInputs  bool
 		expected      float64
 		expectedError bool
@@ -236,44 +228,50 @@ func TestProbeLibSensors_FanSpeedOfMax(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_macmini_mad_fan",
-			fans:          map[string][2]float64{"Fan": {1690, 5000}},
-			expected:      33.8,
+			name:          "happy_macmini_mad_fan_idling",
+			fans:          map[string]float64{"Fan": 1690},
+			expected:      6.3,
 			expectedError: false,
 		},
 		{
-			name:          "happy_macmini_exhaust",
-			fans:          map[string][2]float64{"Exhaust": {1799, 4800}},
-			expected:      37.5,
+			name:          "happy_macmini_exhaust_idling",
+			fans:          map[string]float64{"Exhaust": 1799},
+			expected:      10.0,
 			expectedError: false,
 		},
 		{
 			name:          "happy_fastest_of_several",
-			fans:          map[string][2]float64{"Exhaust": {1799, 4800}, "Intake": {4000, 4800}},
+			fans:          map[string]float64{"Exhaust": 1799, "Intake": 4000},
 			expected:      83.3,
 			expectedError: false,
 		},
 		{
 			name:          "happy_stopped_fan",
-			fans:          map[string][2]float64{"Exhaust": {0, 4800}},
+			fans:          map[string]float64{"Exhaust": 0},
 			expected:      0,
 			expectedError: false,
 		},
 		{
-			name:          "happy_above_maximum_is_left_uncapped_here",
-			fans:          map[string][2]float64{"Exhaust": {5000, 4800}},
-			expected:      104.2,
+			name:          "happy_below_the_window_floor_is_zero",
+			fans:          map[string]float64{"Exhaust": 1400},
+			expected:      0,
 			expectedError: false,
 		},
 		{
-			name:          "happy_fan_without_maximum_is_never_discovered",
-			fans:          map[string][2]float64{"Exhaust": {1799, 0}},
-			expected:      0,
+			name:          "happy_above_the_window_ceiling_is_full",
+			fans:          map[string]float64{"Exhaust": 5000},
+			expected:      100,
+			expectedError: false,
+		},
+		{
+			name:          "happy_mid_window",
+			fans:          map[string]float64{"Exhaust": 3000},
+			expected:      50.0,
 			expectedError: false,
 		},
 		{
 			name:          "sad_input_disappeared_after_discovery",
-			fans:          map[string][2]float64{"Exhaust": {1799, 4800}},
+			fans:          map[string]float64{"Exhaust": 1799},
 			removeInputs:  true,
 			expectedError: true,
 		},
@@ -307,7 +305,7 @@ func TestProbeLibSensors_FanSpeedOfMax(t *testing.T) {
 	}
 }
 
-func TestProbeLibSensors_LoadIsCachedPerRoot(t *testing.T) {
+func TestProbeUtilSensors_LoadIsCachedPerRoot(t *testing.T) {
 	t.Cleanup(resetSensors)
 	sysRoot := writeSensorDevices(t, []sensorDevice{{name: "coretemp", labelled: map[string]float64{"Package id 0": 55.0}}}, nil)
 	if loadSensors(sysRoot) != loadSensors(sysRoot) {
@@ -323,14 +321,14 @@ func TestProbeLibSensors_LoadIsCachedPerRoot(t *testing.T) {
 	}
 }
 
-func TestProbeLibSensors_DiscoveryIsNeverRepeated(t *testing.T) {
+func TestProbeUtilSensors_DiscoveryIsNeverRepeated(t *testing.T) {
 	t.Cleanup(resetSensors)
 	sysRoot := writeSensorDevices(t, nil, nil)
 	discovered := loadSensors(sysRoot)
 	if discovered.tier != sensorTierNone || len(discovered.fans) != 0 {
 		t.Fatalf("discovered: got tier %q with %d fans want %q with none", discovered.tier, len(discovered.fans), sensorTierNone)
 	}
-	writeSensorDevicesInto(t, sysRoot, []sensorDevice{{name: "applesmc", fans: map[string][2]float64{"Exhaust": {1799, 4800}}}}, nil)
+	writeSensorDevicesInto(t, sysRoot, []sensorDevice{{name: "applesmc", fans: map[string]float64{"Exhaust": 1799}}}, nil)
 	if loadSensors(sysRoot) != discovered {
 		t.Fatalf("load: got a re-discovery after a sensor appeared, want the cached set until restart")
 	}
@@ -348,10 +346,10 @@ type sensorDevice struct {
 	nested     bool
 	labelled   map[string]float64
 	unlabelled []float64
-	fans       map[string][2]float64
+	fans       map[string]float64
 }
 
-func writeSensorTree(t *testing.T, temps, zones map[string]float64, fans map[string][2]float64) string {
+func writeSensorTree(t *testing.T, temps, zones, fans map[string]float64) string {
 	t.Helper()
 	return writeSensorDevices(t, []sensorDevice{{name: "fixture", labelled: temps, fans: fans}}, zones)
 }
@@ -386,14 +384,11 @@ func writeSensorDevicesInto(t *testing.T, sysRoot string, devices []sensorDevice
 			writeSensorFile(t, filepath.Join(attributes, fmt.Sprintf("temp%d_input", index)), sensorMilli(celsius))
 		}
 		index = 0
-		for label, reading := range device.fans {
+		for label, rpm := range device.fans {
 			index++
 			prefix := filepath.Join(attributes, fmt.Sprintf("fan%d", index))
 			writeSensorFile(t, prefix+"_label", label)
-			writeSensorFile(t, prefix+"_input", strconv.FormatFloat(reading[0], 'f', 0, 64))
-			if reading[1] > 0 {
-				writeSensorFile(t, prefix+"_max", strconv.FormatFloat(reading[1], 'f', 0, 64))
-			}
+			writeSensorFile(t, prefix+"_input", strconv.FormatFloat(rpm, 'f', 0, 64))
 		}
 	}
 	index := 0

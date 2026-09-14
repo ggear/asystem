@@ -386,11 +386,11 @@ class BackupShellTest(unittest.TestCase):
         listed = self.shell('backup_running() { return 1; }\nbackup_list')
         widths = {len(line) for line in listed.splitlines() if line}
         self.assertEqual(len(widths), 1, "every row must be the same width, got {}".format(sorted(widths)))
-        self.assertIn("| RUN-ID (STARTED)  ", listed)
+        self.assertIn("| STARTED (RUN-ID)  ", listed)
         self.assertIn("| FINISHED ", listed)
         self.assertEqual(len(self.shell(
             'backup_row a b c d "${BACKUP_STATE_TIMEDOUT}" "${BACKUP_STATE_COMPLETE}" '
-            '"${BACKUP_STATE_INTERRUPTED:0:9}" h i j')), len(listed.splitlines()[0]))
+            '"${BACKUP_STATE_INTERRUPTED:0:9}" e h i j k l')), len(listed.splitlines()[0]))
         self.assertRegex(listed, r"2026-09-08_02-00-00 .*\|\s+-\s+\|")
         self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*success .*\[#+\.*\]\s+61%.*complete")
         self.assertRegex(listed, r"2026-09-08_01-00-00 .*success .*-  .*stopped .*halted")

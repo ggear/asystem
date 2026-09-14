@@ -3,6 +3,7 @@ import sys
 sys.path.append('../../../main/python')
 
 import os
+import re
 from pathlib import Path
 import shutil
 import unittest
@@ -21,6 +22,45 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 from media.analyse import MEDIA_FILE_SCRIPTS, MEDIA_FILE_EXTENSIONS
 
 
+class StaticTest(unittest.TestCase):
+
+    def test_media_actions_matches_file_action_scripts(self):
+        with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
+            bin_source = bin_file.read()
+        match = re.search(r'^MEDIA_ACTIONS=\(([^)]*)\)', bin_source, re.MULTILINE)
+        self.assertIsNotNone(match, "found no MEDIA_ACTIONS array in media.sh, the parse has rotted")
+        media_actions = match.group(1).split()
+        self.assertTrue(len(media_actions) > 0, "parsed no actions out of media.sh, the parse has rotted")
+        self.assertEqual(media_actions, MEDIA_FILE_SCRIPTS)
+
+    def test_media_bin_install_matches_service_install_latest(self):
+        with open(join(DIR_ROOT, "install.sh")) as install_file:
+            install_source = install_file.read()
+        install_match = re.search(r'^SERVICE_INSTALL_LATEST="([^"]*)"', install_source, re.MULTILINE)
+        self.assertIsNotNone(install_match,
+                             "found no SERVICE_INSTALL_LATEST in install.sh, the parse has rotted")
+        service_install_latest = install_match.group(1).replace("${SERVICE_NAME}", "media")
+
+        with open(join(DIR_ROOT, "src/main/python/media/analyse.py")) as analyse_file:
+            analyse_source = analyse_file.read()
+        analyse_match = re.search(r'MEDIA_BIN_INSTALL="([^"]*)"', analyse_source)
+        self.assertIsNotNone(analyse_match,
+                             "found no MEDIA_BIN_INSTALL in analyse.py, the parse has rotted")
+        media_bin_install = analyse_match.group(1)
+
+        self.assertEqual("{}/bin".format(service_install_latest), media_bin_install)
+
+    def test_media_sh_has_no_media_home_or_wrapper_calls(self):
+        with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
+            bin_source = bin_file.read()
+        self.assertNotIn("media-home", bin_source)
+        retired_verbs = "analyse|check|clean|downscale|find|force|home|ingress|merge|metadata|" \
+                        "mount|move|normalise|process|reformat|refresh|rename|space|transcode|" \
+                        "truncate|upscale"
+        self.assertIsNone(re.search(r'\bmedia-(?:{})\b(?!\.log)'.format(retired_verbs), bin_source),
+                          "media.sh calls a retired media-* wrapper by name")
+
+
 class InternetTest(unittest.TestCase):
 
     def test_analyse_simple(self):
@@ -36,6 +76,27 @@ class InternetTest(unittest.TestCase):
                                   files_action_expected=actions(
                                       check=1
                                   ), scripts={})
+
+    def test_analyse_aggregate_script_resolves_bin_dir(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        share_dir = join(dir_test, "22")
+        self._test_analyse_assert(join(share_dir, "media"),
+                                  files_action_expected=actions(
+                                      check=1
+                                  ), scripts={})
+        script = join(share_dir, "tmp/scripts/media/.lib/clean.sh")
+        self.assertTrue(exists(script), "expected generated aggregate script [{}]".format(script))
+
+        env_ok = dict(os.environ)
+        env_ok["MEDIA_BIN_DIR"] = join(DIR_ROOT, "src/main/resources/bin")
+        result_ok = subprocess.run([script], env=env_ok, capture_output=True, text=True)
+        self.assertEqual(0, result_ok.returncode, result_ok.stderr)
+
+        env_bad = dict(os.environ)
+        env_bad["MEDIA_BIN_DIR"] = "/tmp/media_bin_dir_missing"
+        result_bad = subprocess.run([script], env=env_bad, capture_output=True, text=True)
+        self.assertNotEqual(0, result_bad.returncode)
+        self.assertIn("Missing bin directory", result_bad.stderr)
 
     def test_analyse_containers(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)

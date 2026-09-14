@@ -7,10 +7,11 @@ import (
 )
 
 func TestMetricRule_Evaluate(t *testing.T) {
-	values := map[ID]float64{MetricHostWarnTemperature: 70}
-	resolve := func(id ID) (float64, bool) {
+	values := map[ID]float64{MetricHostWarnTemperature: 70, MetricHostUsedProcessor: 30}
+	healthy := map[ID]bool{MetricHostWarnTemperature: true}
+	resolve := func(id ID) (float64, bool, bool) {
 		value, found := values[id]
-		return value, found
+		return value, found, healthy[id]
 	}
 	gates := func(gate GateID) (bool, bool) {
 		switch gate {
@@ -109,6 +110,34 @@ func TestMetricRule_Evaluate(t *testing.T) {
 			expectedOK: false, expectedDetails: []string{"host/used_memory is [false]"},
 		},
 		{
+			name: "against a sibling within the comparison", rule: Against(MetricHostWarnTemperature, AtLeast), self: 71, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"within [>=70] pct of host/warn_temperature"},
+		},
+		{
+			name: "against a sibling at the comparison", rule: Against(MetricHostWarnTemperature, AtLeast), self: 70, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"within [>=70] pct of host/warn_temperature"},
+		},
+		{
+			name: "against a sibling beyond the comparison", rule: Against(MetricHostWarnTemperature, AtLeast), self: 69, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"not within [>=70] pct of host/warn_temperature"},
+		},
+		{
+			name: "against an unreadable sibling is never ok", rule: Against(MetricHostUsedMemory, AtLeast), self: 99, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"host/used_memory is [unreadable]"},
+		},
+		{
+			name: "against a sibling with a non numeric value is never ok", rule: Against(MetricHostWarnTemperature, AtLeast), self: 0, selfNumeric: false,
+			expectedOK: false, expectedDetails: []string{"host/warn_temperature is [unreadable]"},
+		},
+		{
+			name: "against reads the value of an unhealthy sibling", rule: Against(MetricHostUsedProcessor, AtLeast), self: 40, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"within [>=30] pct of host/used_processor"},
+		},
+		{
+			name: "healthy fails a readable but unhealthy sibling", rule: Healthy(MetricHostUsedProcessor), self: 0, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"host/used_processor is [false]"},
+		},
+		{
 			name: "an undeclared rule is never ok", rule: Rule{}, self: 0, selfNumeric: true,
 			expectedOK: false, expectedDetails: []string{"no rule declared"},
 		},
@@ -139,6 +168,13 @@ func TestMetricRule_TargetsAndGates(t *testing.T) {
 	targets := rule.Targets()
 	if len(targets) != 2 || targets[0] != MetricHostWarnTemperature || targets[1] != Self {
 		t.Errorf("targets: got %v want [%v %v]", targets, MetricHostWarnTemperature, Self)
+	}
+	against := Against(MetricHostUsedMemory, AtLeast)
+	if siblings := against.Siblings(); len(siblings) != 1 || siblings[0] != MetricHostUsedMemory {
+		t.Errorf("against siblings: got %v want [%v]", siblings, MetricHostUsedMemory)
+	}
+	if targets := against.Targets(); len(targets) != 2 || targets[0] != MetricHostUsedMemory || targets[1] != Self {
+		t.Errorf("against targets: got %v want [%v %v]", targets, MetricHostUsedMemory, Self)
 	}
 	gates := rule.Gates()
 	if len(gates) != 1 || gates[0] != GateServiceAggregate {

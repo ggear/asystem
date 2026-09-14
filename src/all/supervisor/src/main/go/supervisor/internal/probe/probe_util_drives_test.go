@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestProbeLibDrives_Physical(t *testing.T) {
+func TestProbeUtilDrives_Physical(t *testing.T) {
 	tests := []struct {
 		name             string
 		device           string
@@ -55,7 +55,7 @@ func TestProbeLibDrives_Physical(t *testing.T) {
 	}
 }
 
-func TestProbeLibDrives_Wear(t *testing.T) {
+func TestProbeUtilDrives_Wear(t *testing.T) {
 	tests := []struct {
 		name          string
 		report        smartReport
@@ -158,7 +158,7 @@ func TestProbeLibDrives_Wear(t *testing.T) {
 	}
 }
 
-func TestProbeLibDrives_DriveKinds(t *testing.T) {
+func TestProbeUtilDrives_DriveKinds(t *testing.T) {
 	tests := []struct {
 		name          string
 		physical      string
@@ -177,7 +177,7 @@ func TestProbeLibDrives_DriveKinds(t *testing.T) {
 	}
 }
 
-func TestProbeLibDrives_DriveNamespace(t *testing.T) {
+func TestProbeUtilDrives_DriveNamespace(t *testing.T) {
 	root := t.TempDir()
 	blocks := filepath.Join(root, driveBlockPath)
 	if err := os.MkdirAll(blocks, 0o755); err != nil {
@@ -209,7 +209,7 @@ func TestProbeLibDrives_DriveNamespace(t *testing.T) {
 	}
 }
 
-func TestProbeLibDrives_TopologyReadsThroughTheNamespace(t *testing.T) {
+func TestProbeUtilDrives_TopologyReadsThroughTheNamespace(t *testing.T) {
 	tests := []struct {
 		name              string
 		physical          string
@@ -278,7 +278,7 @@ func TestProbeLibDrives_TopologyReadsThroughTheNamespace(t *testing.T) {
 	}
 }
 
-func TestProbeLibDrives_IgnoresFlashButNotSolidState(t *testing.T) {
+func TestProbeUtilDrives_IgnoresFlashButNotSolidState(t *testing.T) {
 	tests := []struct {
 		name            string
 		hardware        string
@@ -302,7 +302,7 @@ func TestProbeLibDrives_IgnoresFlashButNotSolidState(t *testing.T) {
 	}
 }
 
-func TestProbeLibDrives_HardwareFromInquiryFields(t *testing.T) {
+func TestProbeUtilDrives_HardwareFromInquiryFields(t *testing.T) {
 	tests := []struct {
 		name             string
 		vendor           string
@@ -334,7 +334,7 @@ func TestProbeLibDrives_HardwareFromInquiryFields(t *testing.T) {
 	}
 }
 
-func TestProbeLibDrives_DriveLifeTakesTheHigher(t *testing.T) {
+func TestProbeUtilDrives_DriveLifeTakesTheHigher(t *testing.T) {
 	tests := []struct {
 		name          string
 		written       float64
@@ -361,7 +361,7 @@ func TestProbeLibDrives_DriveLifeTakesTheHigher(t *testing.T) {
 	}
 }
 
-func TestProbeLibDrives_DrivesHonourTheCacheWindow(t *testing.T) {
+func TestProbeUtilDrives_DrivesHonourTheCacheWindow(t *testing.T) {
 	tests := []struct {
 		name          string
 		window        time.Duration

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestProbeLibMounts_Classification(t *testing.T) {
+func TestProbeUtilMounts_Classification(t *testing.T) {
 	tests := []struct {
 		name               string
 		mounts             string
@@ -85,7 +85,7 @@ func TestProbeLibMounts_Classification(t *testing.T) {
 	}
 }
 
-func TestProbeLibMounts_Usage(t *testing.T) {
+func TestProbeUtilMounts_Usage(t *testing.T) {
 	t.Cleanup(resetMounts)
 	mounts := "/dev/nvme0n1p6 / btrfs rw 0 0\n" +
 		"/dev/nvme0n1p5 /home ext4 rw 0 0\n" +
@@ -116,7 +116,7 @@ func TestProbeLibMounts_Usage(t *testing.T) {
 	}
 }
 
-func TestProbeLibMounts_HomeVolume(t *testing.T) {
+func TestProbeUtilMounts_HomeVolume(t *testing.T) {
 	tests := []struct {
 		name          string
 		mounts        string
@@ -163,7 +163,7 @@ func TestProbeLibMounts_HomeVolume(t *testing.T) {
 	}
 }
 
-func TestProbeLibMounts_FailedShares(t *testing.T) {
+func TestProbeUtilMounts_FailedShares(t *testing.T) {
 	tests := []struct {
 		name           string
 		mounts         string
@@ -264,7 +264,7 @@ func TestProbeLibMounts_FailedShares(t *testing.T) {
 	}
 }
 
-func TestProbeLibMounts_RefreshPanicIsContained(t *testing.T) {
+func TestProbeUtilMounts_RefreshPanicIsContained(t *testing.T) {
 	t.Cleanup(resetMounts)
 	root := writeMountTree(t, "/dev/sda2 / ext4 rw 0 0\n", "", nil)
 	set := newMountFixture(t, root, map[string][2]uint64{"/": {1000, 100}}, nil)
@@ -292,7 +292,7 @@ func TestProbeLibMounts_RefreshPanicIsContained(t *testing.T) {
 	}
 }
 
-func TestProbeLibMounts_RetriesFasterWhileAShareIsFailed(t *testing.T) {
+func TestProbeUtilMounts_RetriesFasterWhileAShareIsFailed(t *testing.T) {
 	tests := []struct {
 		name            string
 		failed          int
@@ -335,7 +335,7 @@ func TestProbeLibMounts_RetriesFasterWhileAShareIsFailed(t *testing.T) {
 	}
 }
 
-func TestProbeLibMounts_WarmingUp(t *testing.T) {
+func TestProbeUtilMounts_WarmingUp(t *testing.T) {
 	t.Cleanup(resetMounts)
 	root := writeMountTree(t, "/dev/sda2 / ext4 rw 0 0\n", "", nil)
 	set := newMountFixture(t, root, nil, nil)
@@ -344,7 +344,7 @@ func TestProbeLibMounts_WarmingUp(t *testing.T) {
 	}
 }
 
-func TestProbeLibMounts_UnreadableMountTable(t *testing.T) {
+func TestProbeUtilMounts_UnreadableMountTable(t *testing.T) {
 	t.Cleanup(resetMounts)
 	root := t.TempDir()
 	set := newMountFixture(t, root, nil, nil)
@@ -398,7 +398,7 @@ func newMountFixture(t *testing.T, root string, sizes map[string][2]uint64, hung
 	return set
 }
 
-func TestProbeLibMounts_BaseFallsBackOutsideTheContainer(t *testing.T) {
+func TestProbeUtilMounts_BaseFallsBackOutsideTheContainer(t *testing.T) {
 	tests := []struct {
 		name        string
 		rootedTable bool
@@ -432,7 +432,7 @@ func TestProbeLibMounts_BaseFallsBackOutsideTheContainer(t *testing.T) {
 	}
 }
 
-func TestProbeLibMounts_ContainerMountsAreDropped(t *testing.T) {
+func TestProbeUtilMounts_ContainerMountsAreDropped(t *testing.T) {
 	t.Cleanup(resetMounts)
 	root := t.TempDir()
 	writeMountFile(t, filepath.Join(root, mountTablePath),

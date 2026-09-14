@@ -18,22 +18,22 @@ func (g gateSet) resolve(gate metric.GateID) (bool, bool) {
 }
 
 func siblingResolver(p probe, hostName string, trended bool) metric.ValueResolver {
-	return func(id metric.ID) (float64, bool) {
+	return func(id metric.ID) (float64, bool, bool) {
 		record, found := p.records().LoadByID(id, hostName, metric.ServiceIndexUnset)
 		if !found || record == nil {
-			return 0, false
+			return 0, false, false
 		}
 		detail := record.Value.Pulse
 		if trended {
 			detail = record.Value.Trend
 		}
-		if detail == nil || !detail.OK {
-			return 0, false
+		if detail == nil || record.Value.Failed {
+			return 0, false, false
 		}
 		if detail.Kind == metric.ValueFloat {
-			return detail.ValueFloat, true
+			return detail.ValueFloat, true, detail.OK
 		}
-		return float64(detail.ValueInt), true
+		return float64(detail.ValueInt), true, detail.OK
 	}
 }
 

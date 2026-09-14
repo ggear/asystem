@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestProbeLibRule_GatesCarryNoThreshold(t *testing.T) {
+func TestProbeUtilRule_GatesCarryNoThreshold(t *testing.T) {
 	files, err := filepath.Glob("probe_*.go")
 	if err != nil {
 		t.Fatalf("glob: %v", err)
@@ -56,7 +56,7 @@ func TestProbeLibRule_GatesCarryNoThreshold(t *testing.T) {
 	}
 }
 
-func TestProbeLibRule_SiblingIsProbedEarlier(t *testing.T) {
+func TestProbeUtilRule_SiblingIsProbedEarlier(t *testing.T) {
 	order := map[string]int{}
 	files, err := filepath.Glob("probe_*.go")
 	if err != nil {
@@ -107,7 +107,7 @@ func TestProbeLibRule_SiblingIsProbedEarlier(t *testing.T) {
 	}
 }
 
-func TestProbeLibRule_TrendFuncMatchesTrendRule(t *testing.T) {
+func TestProbeUtilRule_TrendFuncMatchesTrendRule(t *testing.T) {
 	trended := map[string]bool{}
 	files, err := filepath.Glob("probe_*.go")
 	if err != nil {

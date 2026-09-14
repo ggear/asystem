@@ -62,7 +62,7 @@ func (m stubMessage) MessageID() uint16 { return 0 }
 func (m stubMessage) Payload() []byte   { return []byte(m.payload) }
 func (m stubMessage) Ack()              {}
 
-func TestProbeLibBroker_PayloadsKeepLatestPerTopic(t *testing.T) {
+func TestProbeUtilBroker_PayloadsKeepLatestPerTopic(t *testing.T) {
 	store := &brokerPayloads{payloads: map[string]string{}}
 	store.collect(nil, stubMessage{topic: "tasmota/stat/POWER", payload: "OFF"})
 	store.collect(nil, stubMessage{topic: "tasmota/stat/POWER", payload: "ON"})
@@ -80,7 +80,7 @@ func TestProbeLibBroker_PayloadsKeepLatestPerTopic(t *testing.T) {
 	}
 }
 
-func TestProbeLibBroker_WatcherReportsFreshOnlyWhenConnectedAndReady(t *testing.T) {
+func TestProbeUtilBroker_WatcherReportsFreshOnlyWhenConnectedAndReady(t *testing.T) {
 	tests := []struct {
 		name          string
 		connected     bool
@@ -123,7 +123,7 @@ func TestProbeLibBroker_WatcherReportsFreshOnlyWhenConnectedAndReady(t *testing.
 	}
 }
 
-func TestProbeLibBroker_ForgetClearsPayloadsAndReadiness(t *testing.T) {
+func TestProbeUtilBroker_ForgetClearsPayloadsAndReadiness(t *testing.T) {
 	watch := &brokerWatcher{
 		brokerPayloads: brokerPayloads{payloads: map[string]string{"a/b": "1"}},
 		client:         &stubClient{connected: true},

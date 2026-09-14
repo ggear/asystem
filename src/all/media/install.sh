@@ -2,6 +2,7 @@
 
 SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
 SERVICE_INSTALL="/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
+SERVICE_INSTALL_LATEST="/var/lib/asystem/install/${SERVICE_NAME}/latest"
 
 cd "${SERVICE_INSTALL}" || exit
 
@@ -71,13 +72,23 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "client" || "${SERVICE_FORM_FACTOR:-}" == "s
     "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
     "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r "./.reqs.txt"
   fi
-  cp -rvf "/var/lib/asystem/install/media/latest/bin/lib/other-transcode.rb" "/usr/local/bin/other-transcode"
+  cp -rvf "${SERVICE_INSTALL_LATEST}/bin/lib/other-transcode.rb" "/usr/local/bin/other-transcode"
   chmod +x "/usr/local/bin/other-transcode"
   mkdir -p "${HOME}/.config"
-  cp -rvf "/var/lib/asystem/install/media/latest/.gspread_pandas" "${HOME}/.config/gspread_pandas"
-  chmod +x "/var/lib/asystem/install/media/latest/bin/"*.sh "/var/lib/asystem/install/media/latest/bin/lib/"*.sh
-  for SCRIPT in "/var/lib/asystem/install/media/latest/bin/"*.sh; do
-    rm -rf "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
-    ln -vs "${SCRIPT}" "/usr/local/bin/$(basename "${SCRIPT}" .sh)"
+  cp -rvf "${SERVICE_INSTALL_LATEST}/.gspread_pandas" "${HOME}/.config/gspread_pandas"
+  chmod +x "${SERVICE_INSTALL_LATEST}/bin/media.sh"
+
+  # NOTES: Remove one release after this one, when no host can still carry a media-* link
+  for LINK in "/usr/local/bin/media-"*; do
+    [ -L "${LINK}" ] && rm -vf "${LINK}"
   done
+
+  rm -f /usr/local/bin/amedia
+  cat >/usr/local/bin/amedia <<EOF
+#!/bin/bash
+
+${SERVICE_INSTALL_LATEST}/bin/media.sh "\$@"
+
+EOF
+  chmod +x /usr/local/bin/amedia
 fi

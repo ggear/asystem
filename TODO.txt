@@ -28,53 +28,9 @@ retire nginx and use cloudflared for homeasistant?
 improve sys tests with datbase/broker asserts
 
 
-
-Sensor Temp, Warn Temp mertic, Alert Stage
-<25 35 Green
-<30 40 Green
-<35 45 Green
-<40 50 Green
-<45 55 Green
-<50 60 Green
-<55 65 Green
-<60 70 Yellow
-<65 75 Red
-<70 80 Red
-<75 85 Red
-<80 95 Red
-<85 100 Red
-<90 100 Red
->90 100 Red
-
-adjust Revs FAN  to work on scale from min = 1500 RPM, max = 4500 RPM 0-100%. alert stage should be if Revs FAN < Warn TEM. if no fan (like on jen) always 0% and green.
-suugest mbfan config that ensures fan speed scales to stay green given these Warn TEM and Revs FAN scales:
-cat <<'EOF' >/etc/mbpfan.conf
-[general]
-low_temp = 55          # if temperature in celcius is below this, fans will run at minimum speed, default 63
-high_temp = 60         # if temperature in celcius is above this, fan speed will gradually increase, default 66
-max_temp = 80          # if temperature in celcius is above this, fans will run at maximum speed, default 86
-polling_interval = 1   # seconds to poll, default 1
-EOF
-You can refactor Warn TEM and Revs FAN scales to make go consts simpler and readability clear, driven from Warn TEM as primary. Best way to construct this? mimic mbpfan style specifcations?
-
-
-if you a modeul backup.sh skips, should you hardlink a copy into a new run-id? should run-id be passed into module backup.sh so it is traceable
+if you do a module backup.sh skips within 1hr, should you hardlink a copy into a new run-id? should run-id be passed into module backup.sh so it is traceable? just adivse
 make 1 from 1/6 and all other first numerals in watch multi host UI the same colour as hostname not red, ESC from log view and single host view also same colour os hostname not red, red should only be for failed metrics, any others to chnage also?
 
-
-Rename RUN-ID (STARTED) to STARTED (RUN-ID), rename SIZE to DELTA, add Size which is size of used prtion of backup disk, CAPACITY with is backup disk size, and rename VOLUME to Used. size / capicity in TB, smae col width:
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-| STARTED (RUN-ID)    | FINISHED            | DURATION  | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | DELTA         | SIZE      | CAPACITY | USED                      | RESULT     |
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-| 2026-09-13_09-52-25 | 2026-09-13_09-52-43 | 00h00m18s | manual    | success   | success   | success   |          6 MB |  4 TB     | 24 TB    | [########..........]  46% | complete   |
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-
-
-from:
-09-12T09:18:44 INFO  probe[host]      host/used_network         discover        0ms topology [1] rated physical interfaces of [11] under [/host/sys/class/net], not rated [br-47788c583686, br-61f1688b2208, br-663568ea64cd, br-9034a07ef72e, docker0, ~
-09-12T09:18:44 INFO  probe[host]      host/used_network         discover        0ms          lo, veth6f0818b, veth7512e0c, vetha7b5d3a, vethfef6cd8]
-to 
-09-12T09:18:44 INFO  probe[host]      host/used_network         discover        0ms topology [1] rated physical interfaces, [10] rated virtual interfaces under [/host/sys/class/net]
 
 is there an ability to replace nil estimate min/rate for the typical aprox 10GB mirror case below? assume 150 MB/s for instance, if in the warm up phase and then resort to real numbers for the large transfers >100GB or so? without disturbing the logs od the <1GB also very common phase which is second.
 root@macmini-mad:~$ abackup start
@@ -116,9 +72,6 @@ root@macmini-mad:~$ abackup start
 +---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
 
 
-is the first and last times in local time, if not convert it to be so
-12:32:14 DEBUG probe[logs]      host/failed_log_messages  sample          8ms measured [2] kernel errors, first [2026-09-12T06:21:27+08:00] last [2026-09-12T08:22:56+08:00] at dmesg [5614578.826280]                                                                                                                              
-
 scrub overestimates rate at first, but then drops, should be about 240MB/s but is 400MB/s at beginning:
 root@macmini-mad:~$ abackup tail
 [INFO           12:37:17] following run [2026-09-12_12-35-09] under [/home/asystem/supervisor/backup/2026-09-12_12-35-09]
@@ -151,20 +104,6 @@ iotop:
 Current DISK READ:  244.15 M/s ⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ | Current DISK WRITE:    0.00 B/s ⢸⣀⡇⢰⣸⢀⡇⢸⡀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
 
-abackup list to include whether scrub was performed. if scrub restarts the next night, does it resume from where it left off or starts again? increase timeout to 5 hours to accomodate largest scrub on max
-scrubs to be scheduled in line with monthly GFS trimming so history of the scrub can be seen in abackup list
-
-
-add and at time to all stage and scrub log lines with estimate time from
-[INFO tertiary  12:46:41] scrubbed [  153] GB of [ 7419] GB at [  2] percent complete and estimated to complete in [ 153] min at [253] MB/s
-to
-[INFO tertiary  12:46:41] scrubbed [  153] GB of [ 7419] GB at [  2] percent complete and estimated to complete in [ 153] min at [15:35:09] at [253] MB/s
-
-
-Why does host status in ha show as off when abackup start --stage tertiary --scrub being run, returns to ON when it is stopped. Fail BKP remains 0% and green. it shouldnt do that. only if backup fails should it go OFF. abackup start does not do it. ha host switches oscilate when doing a standad all stage backup too, on/off/on/off, should stay on unless a stage fails. is it easy to fix?
-
-in primary print out log for each service being backed up like mirror
-backup metrics stats take a long time in to show up in supervisor, check
 put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one?
 
 
@@ -187,7 +126,8 @@ backup_help() {
   } >&"${out}"
 }
 
-make sys test pass
+
+
 code review entire backup.sh dont make chnages yet. test all logic. check for dead code. check for inconsistencies. check for simplications.
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
@@ -202,7 +142,12 @@ format all /backup drives, test volumes.sh
 test tertiary
 test supervisor backup enable release, validate 384M memeory footprint during backup, make smaller again if possible?
 implement PLAN_BACKUP.md and delete
-consider backup.sh as python or go?
+
+
+write plan to reimplement backup.sh as go program in plans/gobackup.md
+implement a cmd/cmd_backup.go that calls a new engine func in new file engine_impl_backup.go
+make backup cli match existing watch/server cli impl, but incorporate backup.sh but modifying to be more go like and matching existing watch/server style, show suggestion of how to do this
+preserve all existing backup.sh functionality, error handling, edge cases, logging style, cli 
 
 implement media cli.md 
 

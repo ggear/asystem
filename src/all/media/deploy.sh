@@ -4,8 +4,8 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 SHARES_FILE="${ROOT_DIR}/src/main/resources/shares.csv"
 BIN_DIR="/var/lib/asystem/install/media/latest/bin"
 
-COMMANDS_SINGLETON=("media-truncate" "media-refresh")
-COMMANDS_ALL_HOSTS=("media-normalise" "media-clean" "media-analyse" "media-space")
+COMMANDS_SINGLETON=("truncate" "refresh")
+COMMANDS_ALL_HOSTS=("normalise" "clean" "analyse" "space")
 
 RESULT=0
 FAILURES=()
@@ -21,7 +21,7 @@ execute_remote() {
   fi
   for COMMAND in "$@"; do
     printf '\033[1;36m==> %s %s\033[0m\n' "${HOST}" "${COMMAND}"
-    if ! ssh -o StrictHostKeyChecking=no -t -t -q "root@${HOST}" "${BIN_DIR}/${COMMAND}.sh"; then
+    if ! ssh -o StrictHostKeyChecking=no -t -t -q "root@${HOST}" "${BIN_DIR}/media.sh" "${COMMAND}"; then
       printf '\033[1;31m==> %s %s failed\033[0m\n' "${HOST}" "${COMMAND}"
       FAILURES+=("${HOST} ${COMMAND}")
       RESULT=1

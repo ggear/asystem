@@ -70,6 +70,7 @@ const (
 	ruleUnset ruleKind = iota
 	ruleAlways
 	ruleBounded
+	ruleAgainst
 	ruleGated
 	ruleTruthy
 	ruleHealthy
@@ -92,6 +93,10 @@ func Bounded(target ID, compare Comparator, limit float64) Rule {
 	return Rule{kind: ruleBounded, target: target, comparator: compare, limit: limit}
 }
 
+func Against(target ID, compare Comparator) Rule {
+	return Rule{kind: ruleAgainst, target: target, comparator: compare}
+}
+
 func Gated(gate GateID) Rule { return Rule{kind: ruleGated, gate: gate} }
 
 func Truthy() Rule { return Rule{kind: ruleTruthy} }
@@ -110,6 +115,9 @@ func (r Rule) Targets() []ID {
 		if term.kind == ruleBounded {
 			targets = append(targets, term.target)
 		}
+		if term.kind == ruleAgainst {
+			targets = append(targets, term.target, Self)
+		}
 	})
 	return targets
 }
@@ -117,7 +125,7 @@ func (r Rule) Targets() []ID {
 func (r Rule) Siblings() []ID {
 	var siblings []ID
 	r.walk(func(term Rule) {
-		if (term.kind == ruleBounded || term.kind == ruleHealthy) && term.target != Self {
+		if (term.kind == ruleBounded || term.kind == ruleAgainst || term.kind == ruleHealthy) && term.target != Self {
 			siblings = append(siblings, term.target)
 		}
 	})
@@ -134,7 +142,7 @@ func (r Rule) Gates() []GateID {
 	return gates
 }
 
-type ValueResolver func(id ID) (float64, bool)
+type ValueResolver func(id ID) (value float64, readable bool, healthy bool)
 
 type GateResolver func(gate GateID) (bool, bool)
 
@@ -149,11 +157,13 @@ func (r Rule) Evaluate(unit string, self float64, selfNumeric bool, values Value
 		return RuleResult{OK: true, Detail: "always ok"}
 	case ruleBounded:
 		return r.evaluateBounded(unit, self, selfNumeric, values)
+	case ruleAgainst:
+		return r.evaluateAgainst(unit, self, selfNumeric, values)
 	case ruleTruthy:
 		return RuleResult{OK: selfNumeric && self != 0, Detail: fmt.Sprintf("value is [%v]", selfNumeric && self != 0)}
 	case ruleHealthy:
-		_, healthy := values(r.target)
-		return RuleResult{OK: healthy, Detail: fmt.Sprintf("%s is [%v]", GetIDName(r.target), healthy)}
+		_, readable, healthy := values(r.target)
+		return RuleResult{OK: readable && healthy, Detail: fmt.Sprintf("%s is [%v]", GetIDName(r.target), readable && healthy)}
 	case ruleGated:
 		value, bound := gates(r.gate)
 		if !bound {
@@ -184,7 +194,7 @@ func (r Rule) walk(visit func(Rule)) {
 func (r Rule) evaluateBounded(unit string, self float64, selfNumeric bool, values ValueResolver) RuleResult {
 	value, ok, subject := self, selfNumeric, ""
 	if r.target != Self {
-		value, ok = values(r.target)
+		value, ok, _ = values(r.target)
 		subject = GetIDName(r.target) + " " + Valued(value, unit) + " "
 	}
 	satisfied := ok && r.comparator.satisfies(value, r.limit)
@@ -193,6 +203,19 @@ func (r Rule) evaluateBounded(unit string, self float64, selfNumeric bool, value
 		word = "not within"
 	}
 	return RuleResult{OK: satisfied, Detail: fmt.Sprintf("%s%s %s", subject, word, Valued(fmt.Sprintf("%s%v", r.comparator, r.limit), unit))}
+}
+
+func (r Rule) evaluateAgainst(unit string, self float64, selfNumeric bool, values ValueResolver) RuleResult {
+	limit, readable, _ := values(r.target)
+	if !selfNumeric || !readable {
+		return RuleResult{OK: false, Detail: fmt.Sprintf("%s is [unreadable]", GetIDName(r.target))}
+	}
+	satisfied := r.comparator.satisfies(self, limit)
+	word := "within"
+	if !satisfied {
+		word = "not within"
+	}
+	return RuleResult{OK: satisfied, Detail: fmt.Sprintf("%s %s of %s", word, Valued(fmt.Sprintf("%s%v", r.comparator, limit), unit), GetIDName(r.target))}
 }
 
 func (r Rule) combine(unit string, self float64, selfNumeric bool, values ValueResolver, gates GateResolver) RuleResult {

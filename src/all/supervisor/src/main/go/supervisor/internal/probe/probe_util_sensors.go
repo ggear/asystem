@@ -29,9 +29,8 @@ type sensorSet struct {
 }
 
 type sensorFan struct {
-	label  string
-	input  string
-	maxRPM float64
+	label string
+	input string
 }
 
 func loadSensors(sysRoot string) *sensorSet {
@@ -93,10 +92,10 @@ func (s *sensorSet) celsius() (float64, derivation, error) {
 
 func (s *sensorSet) fanSpeedOfMax() (float64, derivation, error) {
 	if s == nil {
-		return 0, derivedInertf(scribe.ActionSample, "computed [0.0] pct of max, discovery found no fan input so the metric is inert and always ok"), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [0.0] pct of window, discovery found no fan input so the metric is inert and always ok"), nil
 	}
 	if len(s.fans) == 0 {
-		return 0, derivedInertf(scribe.ActionSample, "computed [0.0] pct of max, discovery found no fan input under [%s] so the metric is inert and always ok", s.sysRoot), nil
+		return 0, derivedInertf(scribe.ActionSample, "computed [0.0] pct of window, discovery found no fan input under [%s] so the metric is inert and always ok", s.sysRoot), nil
 	}
 	fastest := 0.0
 	found := false
@@ -112,8 +111,8 @@ func (s *sensorSet) fanSpeedOfMax() (float64, derivation, error) {
 			rejected = append(rejected, fmt.Sprintf("%s read [%.0f] rpm below zero", fan.input, rpm))
 			continue
 		}
-		ofMax := rpm / fan.maxRPM * 100.0
-		fastestDetail = append(fastestDetail, fmt.Sprintf("%s=%.0f/%.0f rpm", fan.label, rpm, fan.maxRPM))
+		ofMax := min(max((rpm-metric.SpinFanSpeedFloorRPM)/(metric.SpinFanSpeedFullRPM-metric.SpinFanSpeedFloorRPM)*100.0, 0), 100)
+		fastestDetail = append(fastestDetail, fmt.Sprintf("%s=%.0f rpm", fan.label, rpm))
 		if !found || ofMax > fastest {
 			fastest = ofMax
 		}
@@ -122,8 +121,8 @@ func (s *sensorSet) fanSpeedOfMax() (float64, derivation, error) {
 	if !found {
 		return 0, derivation{}, fmt.Errorf("no fan speed read, none of the [%d] discovered fans answered, rejected [%s]", len(s.fans), strings.Join(rejected, ", "))
 	}
-	return fastest, derivedf(scribe.ActionSample, "computed [%.1f] pct of max fastest, fans [%d], readings [%s]",
-		fastest, len(s.fans), strings.Join(fastestDetail, " ")), nil
+	return fastest, derivedf(scribe.ActionSample, "computed [%.1f] pct of window fastest, fans [%d], window [%.0f] to [%.0f] rpm, readings [%s]",
+		fastest, len(s.fans), metric.SpinFanSpeedFloorRPM, metric.SpinFanSpeedFullRPM, strings.Join(fastestDetail, " ")), nil
 }
 
 func discoverSensors(sysRoot string) *sensorSet {
@@ -158,15 +157,9 @@ func discoverSensors(sysRoot string) *sensorSet {
 			fans, _ := filepath.Glob(filepath.Join(attributes, "fan*_input"))
 			sort.Strings(fans)
 			for _, input := range fans {
-				maxRPM, err := readSensorValue(strings.TrimSuffix(input, "_input") + "_max")
-				if err != nil || maxRPM <= 0 {
-					scribe.Log(scribe.SourceProbeSensors, scribe.SubjectMetric(metric.MetricHostSpinFanSpeed), scribe.ActionDiscover).Infof("bypassed", discoverStart, "[%s] fan declares no maximum speed", input)
-					continue
-				}
 				discovered.fans = append(discovered.fans, sensorFan{
-					label:  sensorLabel(input, device),
-					input:  input,
-					maxRPM: maxRPM,
+					label: sensorLabel(input, device),
+					input: input,
 				})
 			}
 		}

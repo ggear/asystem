@@ -1,128 +1,35 @@
 #!/usr/bin/env bash
 
 # Runs one stage of a backup run, from the supervisor probe or by hand, the same path both sides.
+# Usage: backup.sh help. Full design and rationale: src/build/resources/plans/backup.md.
 #
-#   backup.sh [start|stop|tail|list|auto|help] [argument] [--stage|--scrub|--quiet]
+# The run owns identity, roots, retention window, timeout and BACKUP_SCRUB/BACKUP_TRIGGER as BACKUP_*,
+# and a stage only reads them. A stage provides <stage>_start and <stage>_stop, reached through
+# stage_start and stage_stop, and reports its work by adding to BACKUP_USAGE and the BACKUP_FILES/SIZE
+# counters, directly or through backup_count.
 #
-# The command always comes first and help is the default, so a naked backup.sh explains itself rather
-# than starting a multi-hour run nobody asked for; the one positional after it is always a run id. Which
-# stages run is not a positional but --stage, defaulting to all, since a single stage is the probe's
-# entry point and a debugging one by hand - it mints its own run id when given none and so orphans
-# itself from the run it meant to join, which is why the help tells you to give it one. --scrub is
-# tertiary's alone and is refused against another stage rather than silently ignored, on what this
-# command line asked for rather than on the forced flag a sequence exports to its own stages.
+# A run holds BACKUP_LOCK for its whole life, so a hand run and the scheduled run cannot overlap - except
+# under the probe, which holds the same lock across all three stages and would deadlock itself.
 #
-# all is the default stage and the hand entry point - it runs the stages this host owns, in order, under
-# one run id, so a hand run has the same shape as the probe's and nothing has to adopt anything.
-# tertiary joins only where fstab declares a /backup, since it is the one stage a host without a backup
-# disk cannot run.
-#
-# list prints every run newest first, one row each, with its per-stage result and whether it is still
-# running - it reads and never writes, so it is safe beside a live run.
-#
-# tail follows a run that is already going, defaulting to the newest, and prints each stage's status
-# document once nothing is running any more. It does not stream the stage logs - it synthesises its
-# lines from the status documents alone, so anything only backup_log writes stays in output.log and a
-# tail can never show it. A phase worth watching therefore has to reach a document: the scrub does,
-# through scrub.json, which is why backup_progress prefers it over the mirror it follows. It reads and
-# never writes, so it is safe beside a live run and any number may tail at once.
-#
-# The reaper pause carries its own deadline rather than being a bare switch, so it cannot outlive
-# the outage that would otherwise hide it: auto off publishes {"state":"OFF","expires_ts":"<next
-# scheduled run>"} retained, and the estate reads a pause past its deadline, an unparseable one, a
-# stateless one and an absent topic all as armed. Nothing has to be running at any particular minute
-# for a pause to end, which a re-arm tied to the scheduled hour could never promise. It is a topic of
-# its own and must stay one - folding it into the leader lease would put it behind that topic's last
-# will, its three deliberate clears and its fifteen-minute refresh, every one of which exists to make
-# the lease vanish. BACKUP_SCHEDULED_HOUR mirrors backupScheduledHour in
-# src/main/go/supervisor/internal/probe/probe_impl_backup.go and a unit test holds the two equal.
+# Every stage writes one log at BACKUP_STAGE_DIR/output.log and echoes it to stdout as it goes - except
+# under the probe, where stdout already is that file and a tee would write every line twice. Set
+# BACKUP_QUIET=1 to keep the file and drop the stdout copy, and BACKUP_SOURCE_ONLY=1 to source this file
+# for its functions alone, skipping the run and its side effects, which is how the unit tests reach them.
 #
 # Every stop sends SIGCONT before SIGTERM, because a process stopped by a signal cannot run its trap
-# until it is continued - a queued TERM just sits there, so the stage is killed without ever writing
-# its terminal document and list reports it running until the liveness stamp expires an hour later.
+# until continued. A module's own backup.sh is handed /dev/null on stdin, never the operator's terminal,
+# and the stage sequence runs under set -m in a background process group, so anything that reads the
+# terminal from down there is sent SIGTTIN and stopped rather than hanging silently.
 #
-# A module's own backup.sh is handed /dev/null on stdin, never the operator's terminal. The stage
-# sequence runs under set -m in a background process group, so anything that reads the terminal from
-# down there is sent SIGTTIN and stopped - a hand run of a module using docker exec -i sat in state T
-# with wchan do_signal_stop until the stage timeout, looking like a hung backup while the broker and
-# the service were both perfectly healthy. Only a hand run can produce it, since the probe has no
-# controlling terminal, which is what makes it easy to miss.
+# Every state a status document carries, and every plug command, is a BACKUP_STATE_*/BACKUP_COMMAND_*
+# variable mirroring metric.BackupState*/Command* in src/main/go/supervisor/internal/metric/metric_schema.go
+# - a unit test holds the two sets equal, so an addition here left undeclared there fails the build.
 #
-# Every state a status document carries, and every plug command, is a BACKUP_STATE_* or
-# BACKUP_COMMAND_* variable rather than a literal, because the same vocabulary is declared on the Go
-# side in src/main/go/supervisor/internal/metric/metric_schema.go as metric.BackupState* and
-# metric.Command*, which is what the published broker schema is generated from. The prefixes are
-# deliberately the same word either side, so grepping BackupStateTimedout or BACKUP_STATE_TIMEDOUT
-# finds both halves. A unit test asserts the two sets are equal, so a state added here without being
-# declared there fails the build rather than being published against an enum that does not list it.
-#
-# Stages of one run share a run id, a stage reading what the earlier stages of that run recorded. A
-# hand run that gives none mints a new id per invocation, so secondary would see no primary at all -
-# it therefore adopts the newest run that did record one, and says which. It only ever adopts a
-# service list, never data, so this cannot happen under the probe, where primary ran in this run.
-# start heartbeats a status document and exits on the stage result, detaching only on a hand run,
-# never under the probe, which owns the redirection and reads that status. A hand start detaches and
-# then tails its own run, so the terminal follows the stage it just began and exits on its result -
-# interrupting the tail leaves the stage running, since a tail only ever reads. stop is idempotent
-# and never unmounts a share, and by hand it waits for the run to settle, bounded by
-# BACKUP_STOP_SECONDS, then prints the same final status a tail ends with.
-#
-# A run holds BACKUP_LOCK for its whole life, so a hand run and the scheduled run cannot overlap -
-# except under the probe, which holds the same lock across all three stages and would deadlock itself.
-#
-# Every stage writes one log, at BACKUP_STAGE_DIR/output.log, and echoes it to stdout as it goes -
-# except under the probe, where stdout already is that file and a tee would write every line twice.
-# Lines are stamped, levelled and prefixed with the stage, so a stage log reads on its own and the
-# three concatenate in run order. Set BACKUP_QUIET=1 to keep the file and drop the stdout copy, and
-# BACKUP_SOURCE_ONLY=1 to source this file for its functions, skipping the run and the two side
-# effects a caller would not want, the usage exit and the service env, which is how the unit tests
-# reach them without running a backup.
-#
-# The run owns identity, roots, retention window and timeout as BACKUP_* and a stage only reads them.
-# A stage provides <stage>_start and <stage>_stop, reached through stage_start and stage_stop, and
-# reports its work by adding to BACKUP_USAGE and the BACKUP_FILES/SIZE counters, directly or
-# through backup_count.
-#
-# primary   never reads a data directory or knows a backup format, the module's own backup.sh owns
-#           both, and a service is enrolled by shipping one. It records one status document per
-#           service under BACKUP_SERVICE_PATH, which is what secondary reads back.
-# secondary is additive and never deletes, mounts the share on demand and never unmounts it, and
-#           delegates thinning to the service, falling back to backup_thin for one shipping none. It
-#           promotes a service's whole backup directory, so the run id it reads chooses which
-#           services to promote and never which bytes, and adopting an older run's list is safe.
-# Which stages a host runs is one question with one answer, and it is declared rather than inferred:
-# generate.py writes each host's stages into config.json from its .hosts form factor, backup_stages
-# reads them and the Go probe reads the same field, so the shell, the probe and the declared topics
-# cannot disagree. It used to be three different predicates - a form factor here, a share index in
-# the probe, a /backup line in fstab there - which agreed only by coincidence. fstab is still what
-# backup_attach mounts, but it no longer decides anything. A host without a tertiary stage has no
-# tertiary stage rather than one that never runs, so start skips it and status says nothing about it. list is
-# deliberately not driven by it: the table is one fixed shape across every host so two of them can be
-# read against each other, and a stage this host never runs simply renders - like a stage that has
-# not run yet. The loops that walk a run's own status documents are left alone for the same reason,
-# since what a past run did is a different question from what this host does.
-#
-# tertiary  is server hosts only, mirrors each locally-owned share whole - media and service homes,
-#           not just backups - guarded on both mounts, and brings the disk up and down around itself.
-#           It closes with a btrfs scrub of the backup disk, which the scheduled run does and a hand
-#           run does not, since a scrub runs for hours past the mirror it follows and a hand run is
-#           watched. The scheduled scrub is monthly, armed on the BACKUP_SCRUB_WINDOW days from
-#           BACKUP_SCRUB_DAY of the month. Only arming is dated: inside the window btrfs itself decides,
-#           since an interrupted pass resumes where it left off and a finished one is held off by the
-#           same-month guard, so the window costs a scrub run only where one is owed. --scrub forces
-#           one either way and past that cadence; there is no --no-scrub, since not scrubbing is what
-#           a hand run already does, and BACKUP_SCRUB=0 is the env escape hatch for suppressing the
-#           scheduled one. Both are resolved once by the run and inherited by its stages. Every call
-#           that reaches the disk is run through backup_bounded, which never waits past
-#           BACKUP_BOUNDED_WAIT, because a btrfs ioctl against a disk whose bridge has gone blocks in
-#           uninterruptible sleep and no signal can end it. A scrub that runs out of stage timeout is
-#           cancelled, and one whose status stops answering is abandoned,
-#           recorded interrupted and resumed by the next run rather than restarted, and never fails
-#           the stage - only a checksum error or a device error does. The scrub window is also the
-#           filesystem's maintenance window, so it reads the cumulative btrfs device error counters,
-#           reports them, then zeroes them so the next month's figure is the next month's, and a
-#           scrub that finished closes with a filtered balance that reclaims only chunks under ten
-#           percent used and so does nothing at all on a healthy disk.
+# primary   never reads a data directory or knows a backup format - the module's own backup.sh owns both.
+# secondary is additive and never deletes, mounts the share on demand and never unmounts it.
+# tertiary  mirrors each locally-owned share whole - media and service homes, not just backups - and
+#           closes with a monthly btrfs scrub; a scrub fault never fails the stage, only a checksum or a
+#           device error does.
 
 set -uo pipefail
 
@@ -279,7 +186,7 @@ BACKUP_BAR_WIDTH=18
 BACKUP_RATE_POINTS="${BACKUP_RATE_POINTS:-12}"
 BACKUP_RATE_QUANTUM="${BACKUP_RATE_QUANTUM:-104857600}"
 BACKUP_REAP_WAIT="${BACKUP_REAP_WAIT:-15}"
-BACKUP_LIST_WIDTHS=(19 19 9 9 9 9 9 13 25 10)
+BACKUP_LIST_WIDTHS=(19 19 9 9 9 9 9 9 13 9 8 25 10)
 BACKUP_LIST_RUNS=()
 BACKUP_FSTAB="${BACKUP_FSTAB:-/etc/fstab}"
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
@@ -372,6 +279,12 @@ backup_megabytes() {
   printf '%s MB' "${rest}${grouped}"
 }
 
+backup_terabytes() {
+  local megabytes="${1:-}"
+  case "${megabytes}" in '' | *[!0-9]*) printf '%s' "-"; return 0 ;; esac
+  printf '%2d TB' $(( (megabytes + 500000) / 1000000 ))
+}
+
 backup_rule() {
   local joined="$1" width out="" first=1
   for width in "${BACKUP_LIST_WIDTHS[@]}"; do
@@ -451,7 +364,7 @@ backup_auto() {
 backup_list() {
   local base run path stage state doc live cells result began elapsed finished trigger latest ended
   local ran halted broke alive
-  local size volume held
+  local size volume held scrub used_disk_mb total_disk_mb scrub_doc
   base="$(dirname "${BACKUP_RUN_PATH}")"
   mapfile -t BACKUP_LIST_RUNS < <(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r)
   if [ "${#BACKUP_LIST_RUNS[@]}" -eq 0 ]; then
@@ -460,7 +373,7 @@ backup_list() {
   fi
   echo
   backup_rule "+"
-  backup_row "RUN-ID (STARTED)" FINISHED DURATION TRIGGER PRIMARY SECONDARY TERTIARY SIZE VOLUME RESULT
+  backup_row "STARTED (RUN-ID)" FINISHED DURATION TRIGGER PRIMARY SECONDARY TERTIARY SCRUB DELTA SIZE CAPACITY USED RESULT
   backup_rule "+"
   for run in "${BACKUP_LIST_RUNS[@]}"; do
     path="${base}/${run}"
@@ -471,6 +384,9 @@ backup_list() {
     trigger=""
     size=0
     volume="-"
+    scrub="-"
+    used_disk_mb="-"
+    total_disk_mb="-"
     ran=0
     halted=0
     broke=0
@@ -489,10 +405,16 @@ backup_list() {
       if [ -f "${doc}" ]; then
         held="$(backup_tail_field "${doc}" size_mb)"
         size=$(( size + ${held:-0} ))
-        [ "${stage}" = "tertiary" ] && volume="$(backup_tail_field "${doc}" disk_usage_perc)"
+        if [ "${stage}" = "tertiary" ]; then
+          volume="$(backup_tail_field "${doc}" disk_usage_perc)"
+          used_disk_mb="$(backup_tail_field "${doc}" disk_used_mb)"
+          total_disk_mb="$(backup_tail_field "${doc}" disk_total_mb)"
+        fi
       fi
       cells+=("${state}")
     done
+    scrub_doc="${path}/stage/tertiary/scrub.json"
+    [ -f "${scrub_doc}" ] && scrub="$(backup_tail_field "${scrub_doc}" state)"
     result="$(backup_tail_field "${path}/status.json" state)"
     if [ -z "${result}" ]; then
       result="-"
@@ -516,8 +438,9 @@ backup_list() {
       [ "${latest}" -gt "${began}" ] && elapsed="$(backup_elapsed $(( latest - began )))"
       [ "${latest}" -gt 0 ] && finished="$(date -d @"${latest}" '+%Y-%m-%d_%H-%M-%S' 2>/dev/null || echo "-")"
     fi
-    backup_row "${run}" "${finished}" "${elapsed}" "${trigger:--}" "${cells[@]}" \
-      "$(printf '%13s' "$(backup_megabytes "${size}")")" "$(backup_bar "${volume}")" "${result}"
+    backup_row "${run}" "${finished}" "${elapsed}" "${trigger:--}" "${cells[@]}" "${scrub:--}" \
+      "$(printf '%13s' "$(backup_megabytes "${size}")")" "$(backup_terabytes "${used_disk_mb}")" \
+      "$(backup_terabytes "${total_disk_mb}")" "$(backup_bar "${volume}")" "${result}"
   done
   backup_rule "+"
   echo
@@ -812,6 +735,12 @@ backup_active_stage() {
   printf '%s' "${active}"
 }
 
+backup_eta() {
+  local now="$1" remaining="$2"
+  case "${remaining}" in '' | *[!0-9]*) printf '%s' "--:--:--"; return 0 ;; esac
+  date -d @$(( now + remaining * 60 )) '+%H:%M:%S' 2>/dev/null || printf '%s' "--:--:--"
+}
+
 backup_scrubbing() {
   local scrub="$1" now="$2" done_mb spent expires deadline copied total percent rate remaining
   done_mb="$(backup_tail_field "${scrub}" scrubbed_mb)"
@@ -832,8 +761,8 @@ backup_scrubbing() {
     [ "${deadline}" -lt 0 ] && deadline=0
     [ "${deadline}" -lt "${remaining}" ] && remaining="${deadline}"
   fi
-  printf 'scrubbed [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \
-    "${copied}" "${total}" "${percent}" "${remaining}" "${rate}"
+  printf 'scrubbed [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%8s] at [%3s] MB/s' \
+    "${copied}" "${total}" "${percent}" "${remaining}" "$(backup_eta "${now}" "${remaining}")" "${rate}"
 }
 
 backup_sampled() {
@@ -925,8 +854,8 @@ backup_progress() {
   [ -n "${used:-}" ] && [ "${used}" -lt "${BACKUP_RATE_QUANTUM}" ] 2>/dev/null && return 0
   { [ "${copied}" = "0" ] || [ "${copied}" = "-" ]; } &&
     { [ "${total}" = "0" ] || [ "${total}" = "-" ]; } && return 0
-  backup_marker "${active:-none}" "$(printf '%s [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%3s] MB/s' \
-    "$(backup_verb "${active}")" "${copied}" "${total}" "${percent}" "${remaining}" "${rate}")"
+  backup_marker "${active:-none}" "$(printf '%s [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%8s] at [%3s] MB/s' \
+    "$(backup_verb "${active}")" "${copied}" "${total}" "${percent}" "${remaining}" "$(backup_eta "${now}" "${remaining}")" "${rate}")"
 }
 
 backup_status() {
@@ -1131,7 +1060,7 @@ backup_adopted() {
 }
 
 backup_usage() {
-  local uuid file allocation used=0 total=0 percent
+  local uuid file allocation used=0 total=0
   case " ${BACKUP_USAGE_WEDGED} " in *" $1 "*) return 0 ;; esac
   if ! backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs filesystem show [$1]" btrfs filesystem show "$1"; then
     BACKUP_USAGE_WEDGED="${BACKUP_USAGE_WEDGED} $1"
@@ -1149,15 +1078,19 @@ backup_usage() {
   fi
   if [ "${total}" -gt 0 ]; then
     BACKUP_USAGE=$(( used * 100 / total ))
-  elif backup_bounded "${BACKUP_BOUNDED_WAIT}" "df [$1]" df --output=pcent "$1"; then
-    percent="$(printf '%s\n' "${BACKUP_BOUNDED_OUTPUT}" | tail -1 | tr -dc '0-9')"
-    BACKUP_USAGE="${percent:-0}"
+  elif backup_bounded "${BACKUP_BOUNDED_WAIT}" "df [$1]" df --output=used,size -B1 "$1"; then
+    read -r used total <<<"$(printf '%s\n' "${BACKUP_BOUNDED_OUTPUT}" | tail -1)"
+    used="${used:-0}"
+    total="${total:-0}"
+    BACKUP_USAGE=0
+    [ "${total}" -gt 0 ] && BACKUP_USAGE=$(( used * 100 / total ))
   else
     BACKUP_USAGE_WEDGED="${BACKUP_USAGE_WEDGED} $1"
     backup_log WARN "holding [${BACKUP_USAGE}] pct as the last usage of [$1], it stopped answering and this stage will not sample it again"
     return 0
   fi
-  printf '%s\n' "${BACKUP_USAGE}" >"${BACKUP_STAGE_DIR}/disk-usage.tmp" 2>/dev/null &&
+  printf '%s %s %s\n' "${BACKUP_USAGE}" "$(( used / 1048576 ))" "$(( total / 1048576 ))" \
+    >"${BACKUP_STAGE_DIR}/disk-usage.tmp" 2>/dev/null &&
     mv "${BACKUP_STAGE_DIR}/disk-usage.tmp" "${BACKUP_STAGE_DIR}/disk-usage" 2>/dev/null || true
 }
 
@@ -1248,7 +1181,8 @@ backup_document() {
     read -r BACKUP_TOTAL BACKUP_FILES BACKUP_SIZE BACKUP_FILES_HELD \
       BACKUP_FILES_CREATED BACKUP_FILES_DELETED BACKUP_SIZE_HELD BACKUP_SENT \
       <"${BACKUP_STAGE_DIR}/counters"
-  [ -s "${BACKUP_STAGE_DIR}/disk-usage" ] && read -r BACKUP_USAGE <"${BACKUP_STAGE_DIR}/disk-usage"
+  [ -s "${BACKUP_STAGE_DIR}/disk-usage" ] &&
+    read -r BACKUP_USAGE BACKUP_USAGE_USED_MB BACKUP_USAGE_TOTAL_MB <"${BACKUP_STAGE_DIR}/disk-usage"
   local unclean=false
   [ -f "${BACKUP_STAGE_DIR}/disk-unclean" ] && unclean=true
   local finished; finished="$(date --iso-8601=seconds)"
@@ -1266,6 +1200,8 @@ backup_document() {
   "duration_s": ${duration},
   "success_bool": ${success},
   "disk_usage_perc": ${BACKUP_USAGE:-0},
+  "disk_used_mb": ${BACKUP_USAGE_USED_MB:-0},
+  "disk_total_mb": ${BACKUP_USAGE_TOTAL_MB:-0},
   "disk_unclean_bool": ${unclean},
   "total_mb": ${BACKUP_TOTAL},
   "file_count": ${BACKUP_FILES},
@@ -1369,7 +1305,7 @@ primary_start() {
     mkdir -p "${dir}"
     local started; started="$(date +%s)"
     local previous; previous="$(find "${BACKUP_HOME_ROOT}/${service}/backup" -mindepth 1 -maxdepth 1 -type d -name '20*' 2>/dev/null | sort | tail -1)"
-    backup_log INFO "backing up [${service}] [${index}/${#enrolled[@]}] with [${script}], logging to [${dir}/output.log]"
+    backup_marker primary "started [${service}] [${index}/${#enrolled[@]}] with [${script}], logging to [${dir}/output.log]"
     local rc=0
     BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}" BACKUP_SERVICE_RESTART=true BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS}" \
       bash "${script}" >"${dir}/output.log" 2>&1 </dev/null || rc=$?
@@ -1409,8 +1345,7 @@ primary_start() {
 }
 JSON
     mv "${dir}/status.json.tmp" "${dir}/status.json"
-    backup_log "$([ "${ok}" = true ] && echo INFO || echo ERROR)" \
-      "finished [${service}] as [${state}] in [$(backup_elapsed $(( $(date +%s) - started )))], kind [${kind}], version [${version}], files [${files:-0}], size [${size:-0}] MB"
+    backup_marker primary "finished [${service}] as [${state}] in [$(backup_elapsed $(( $(date +%s) - started )))], kind [${kind}], version [${version}], files [${files:-0}], size [${size:-0}] MB"
     BACKUP_FILES=$(( BACKUP_FILES + files ))
     BACKUP_SIZE=$(( BACKUP_SIZE + size ))
     [ "${state}" = complete ] && BACKUP_FILES_CREATED=$(( BACKUP_FILES_CREATED + 1 ))
@@ -1929,6 +1864,8 @@ BACKUP_SCRUB_SILENCE="${BACKUP_SCRUB_SILENCE:-3}"
 BACKUP_BALANCE_WAIT="${BACKUP_BALANCE_WAIT:-3600}"
 
 BACKUP_USAGE=0
+BACKUP_USAGE_USED_MB=0
+BACKUP_USAGE_TOTAL_MB=0
 BACKUP_DEVICE_ERRORS=0
 BACKUP_RELOCATED=0
 BACKUP_TOTAL=0

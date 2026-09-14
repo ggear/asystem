@@ -38,13 +38,15 @@ const (
 	UsedNetworkBudgetMbit = 1000.0
 	UsedNetworkBudgetBits = UsedNetworkBudgetMbit * 1000 * 1000
 
-	WarnTemperatureBaseCelsius  = 45.0
-	WarnTemperaturePerCelsius   = 5.0
-	WarnTemperaturePulseCelsius = 58.0
-	WarnTemperatureTrendCelsius = 56.0
-	WarnTemperaturePulseLimit   = WarnTemperaturePerCelsius * (WarnTemperaturePulseCelsius - WarnTemperatureBaseCelsius)
-	WarnTemperatureTrendLimit   = WarnTemperaturePerCelsius * (WarnTemperatureTrendCelsius - WarnTemperatureBaseCelsius)
-	WarnTemperatureFullCelsius  = WarnTemperatureBaseCelsius + 100.0/WarnTemperaturePerCelsius
+	WarnTemperatureOffsetPercent = 10.0
+	WarnTemperatureFullCelsius   = 100.0 - WarnTemperatureOffsetPercent
+	WarnTemperaturePulseCelsius  = 60.0
+	WarnTemperatureTrendCelsius  = 55.0
+	WarnTemperaturePulseLimit    = WarnTemperaturePulseCelsius + WarnTemperatureOffsetPercent
+	WarnTemperatureTrendLimit    = WarnTemperatureTrendCelsius + WarnTemperatureOffsetPercent
+
+	SpinFanSpeedFloorRPM = 1500.0
+	SpinFanSpeedFullRPM  = 4500.0
 )
 
 var metricBuildersByID = []builder{
@@ -142,7 +144,7 @@ var metricBuildersByID = []builder{
 		valueKind:   ValueInt,
 		label:       "Warn TEM",
 		unit:        "%",
-		description: fmt.Sprintf("hottest processor temperature against its warning ceiling, zero at %v and full at %v degrees", WarnTemperatureBaseCelsius, WarnTemperatureFullCelsius),
+		description: fmt.Sprintf("hottest processor temperature against its warning ceiling, one percent per degree offset by %v, so full at %v degrees", WarnTemperatureOffsetPercent, WarnTemperatureFullCelsius),
 		template:    "supervisor/$HOST/$SCOPE/host/warn_temperature",
 		persisted:   true,
 		pulseRule:   Bounded(Self, AtMost, WarnTemperaturePulseLimit),
@@ -153,12 +155,12 @@ var metricBuildersByID = []builder{
 		valueKind:    ValueInt,
 		label:        "Revs FAN",
 		unit:         "%",
-		description:  "fastest fan speed against its rated maximum",
+		description:  fmt.Sprintf("fastest fan speed across the %v to %v revolutions per minute window", SpinFanSpeedFloorRPM, SpinFanSpeedFullRPM),
 		template:     "supervisor/$HOST/$SCOPE/host/spin_fan_speed",
 		persisted:    true,
 		dependencies: []ID{MetricHostWarnTemperature},
-		pulseRule:    Any(Bounded(MetricHostWarnTemperature, AtMost, WarnTemperaturePulseLimit), Bounded(Self, Above, 80)),
-		trendRule:    Any(Bounded(MetricHostWarnTemperature, AtMost, WarnTemperatureTrendLimit), Bounded(Self, Above, 50)),
+		pulseRule:    Any(Healthy(MetricHostWarnTemperature), Against(MetricHostWarnTemperature, AtLeast)),
+		trendRule:    Any(Healthy(MetricHostWarnTemperature), Against(MetricHostWarnTemperature, AtLeast)),
 	},
 	MetricHostUsedDriveLife: {
 		id:           MetricHostUsedDriveLife,

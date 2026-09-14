@@ -419,44 +419,38 @@ func TestProbeImplHost_WarnTemperature(t *testing.T) {
 			expectedError: true,
 		},
 		{
-			name:          "happy_below_floor_clamps_to_zero",
-			temps:         map[string]float64{"package id 0": 30.0},
-			expectedValue: 0,
+			name:          "happy_idle_soc",
+			temps:         map[string]float64{"package id 0": 29.0},
+			expectedValue: 39,
 			expectedError: false,
 		},
 		{
-			name:          "happy_floor",
-			temps:         map[string]float64{"package id 0": 40.0},
-			expectedValue: 0,
+			name:          "happy_idle_package",
+			temps:         map[string]float64{"package id 0": 37.0},
+			expectedValue: 47,
 			expectedError: false,
 		},
 		{
-			name:          "happy_midpoint",
-			temps:         map[string]float64{"package id 0": 45.0},
-			expectedValue: 0,
-			expectedError: false,
-		},
-		{
-			name:          "happy_high_anchor",
-			temps:         map[string]float64{"package id 0": 50.0},
-			expectedValue: 25,
-			expectedError: false,
-		},
-		{
-			name:          "happy_warn_threshold",
-			temps:         map[string]float64{"package id 0": 56.0},
-			expectedValue: 55,
-			expectedError: false,
-		},
-		{
-			name:          "happy_alert_threshold",
-			temps:         map[string]float64{"package id 0": 58.0},
+			name:          "happy_green_ceiling",
+			temps:         map[string]float64{"package id 0": 55.0},
 			expectedValue: 65,
 			expectedError: false,
 		},
 		{
+			name:          "happy_amber_ceiling",
+			temps:         map[string]float64{"package id 0": 60.0},
+			expectedValue: 70,
+			expectedError: false,
+		},
+		{
+			name:          "happy_red",
+			temps:         map[string]float64{"package id 0": 65.0},
+			expectedValue: 75,
+			expectedError: false,
+		},
+		{
 			name:          "happy_above_ceiling_clamps_to_full",
-			temps:         map[string]float64{"package id 0": 70.0},
+			temps:         map[string]float64{"package id 0": 95.0},
 			expectedValue: 100,
 			expectedError: false,
 		},
@@ -486,7 +480,7 @@ func TestProbeImplHost_WarnTemperature(t *testing.T) {
 func TestProbeImplHost_SpinFanSpeed(t *testing.T) {
 	tests := []struct {
 		name          string
-		fans          map[string][2]float64
+		fans          map[string]float64
 		expectedValue int8
 		expectedError bool
 	}{
@@ -497,39 +491,39 @@ func TestProbeImplHost_SpinFanSpeed(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "happy_macmini_mad_fan",
-			fans:          map[string][2]float64{"Fan": {1690, 5000}},
-			expectedValue: 34,
+			name:          "happy_macmini_mad_fan_idling",
+			fans:          map[string]float64{"Fan": 1690},
+			expectedValue: 6,
 			expectedError: false,
 		},
 		{
-			name:          "happy_macmini_exhaust",
-			fans:          map[string][2]float64{"Exhaust": {1799, 4800}},
-			expectedValue: 37,
+			name:          "happy_macmini_exhaust_idling",
+			fans:          map[string]float64{"Exhaust": 1799},
+			expectedValue: 10,
 			expectedError: false,
 		},
 		{
 			name:          "happy_fastest_of_several",
-			fans:          map[string][2]float64{"Exhaust": {1799, 4800}, "Intake": {4000, 4800}},
+			fans:          map[string]float64{"Exhaust": 1799, "Intake": 4000},
 			expectedValue: 83,
 			expectedError: false,
 		},
 		{
 			name:          "happy_stopped_fan",
-			fans:          map[string][2]float64{"Exhaust": {0, 4800}},
+			fans:          map[string]float64{"Exhaust": 0},
 			expectedValue: 0,
 			expectedError: false,
 		},
 		{
-			name:          "happy_full_speed",
-			fans:          map[string][2]float64{"Exhaust": {4800, 4800}},
+			name:          "happy_window_ceiling",
+			fans:          map[string]float64{"Exhaust": 4500},
 			expectedValue: 100,
 			expectedError: false,
 		},
 		{
-			name:          "happy_fan_without_maximum_skipped",
-			fans:          map[string][2]float64{"Exhaust": {1799, 0}},
-			expectedValue: 0,
+			name:          "happy_above_the_window_ceiling_is_full",
+			fans:          map[string]float64{"Exhaust": 4800},
+			expectedValue: 100,
 			expectedError: false,
 		},
 	}
@@ -557,29 +551,31 @@ func TestProbeImplHost_SpinFanSpeed(t *testing.T) {
 
 func TestProbeImplHost_SpinFanRule(t *testing.T) {
 	tests := []struct {
-		name        string
-		fans        map[string][2]float64
-		fan         int8
-		temperature int8
-		window      string
-		expectedOK  bool
+		name               string
+		fan                int8
+		temperature        int8
+		temperatureOK      bool
+		temperatureUnknown bool
+		window             string
+		expectedOK         bool
 	}{
-		{name: "happy_cool_host_pulse", fans: map[string][2]float64{"Exhaust": {1799, 4800}}, fan: 37, temperature: 40, window: "pulse", expectedOK: true},
-		{name: "happy_hot_host_fan_idle_pulse", fans: map[string][2]float64{"Exhaust": {1799, 4800}}, fan: 37, temperature: 90, window: "pulse", expectedOK: false},
-		{name: "happy_hot_host_fan_ramped_pulse", fans: map[string][2]float64{"Exhaust": {4080, 4800}}, fan: 85, temperature: 90, window: "pulse", expectedOK: true},
-		{name: "happy_warm_trend_fan_idle", fans: map[string][2]float64{"Exhaust": {1799, 4800}}, fan: 37, temperature: 60, window: "trend", expectedOK: false},
-		{name: "happy_warm_trend_fan_ramped", fans: map[string][2]float64{"Exhaust": {2880, 4800}}, fan: 60, temperature: 60, window: "trend", expectedOK: true},
+		{name: "happy_cool_host_idle_fan_pulse", fan: 10, temperature: 47, temperatureOK: true, window: "pulse", expectedOK: true},
+		{name: "happy_cool_host_idle_fan_trend", fan: 10, temperature: 47, temperatureOK: true, window: "trend", expectedOK: true},
+		{name: "sad_hot_host_idle_fan_pulse", fan: 10, temperature: 75, window: "pulse", expectedOK: false},
+		{name: "happy_hot_host_fan_keeping_pace_pulse", fan: 80, temperature: 75, window: "pulse", expectedOK: true},
+		{name: "happy_hot_host_fan_exactly_matching_pulse", fan: 75, temperature: 75, window: "pulse", expectedOK: true},
+		{name: "sad_warm_host_idle_fan_trend", fan: 10, temperature: 70, window: "trend", expectedOK: false},
+		{name: "happy_warm_host_fan_keeping_pace_trend", fan: 75, temperature: 70, window: "trend", expectedOK: true},
+		{name: "sad_unreadable_temperature_pulse", fan: 90, temperatureUnknown: true, window: "pulse", expectedOK: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Cleanup(resetSensors)
-			writeSensorTree(t, nil, nil, testCase.fans)
 			gates := metric.GateResolver(func(metric.GateID) (bool, bool) { return false, false })
-			values := metric.ValueResolver(func(id metric.ID) (float64, bool) {
-				if id == metric.MetricHostWarnTemperature {
-					return float64(testCase.temperature), true
+			values := metric.ValueResolver(func(id metric.ID) (float64, bool, bool) {
+				if id == metric.MetricHostWarnTemperature && !testCase.temperatureUnknown {
+					return float64(testCase.temperature), true, testCase.temperatureOK
 				}
-				return 0, false
+				return 0, false, false
 			})
 			rule := metric.GetIDPulseRule(metric.MetricHostSpinFanSpeed)
 			if testCase.window == "trend" {

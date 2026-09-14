@@ -355,9 +355,9 @@ func (p *hostProbe) warnTemperature() (int8, derivation, error) {
 	if err != nil {
 		return 0, derivation{}, err
 	}
-	warnOfMax := stats.ConvertToInt(metric.WarnTemperaturePerCelsius * (temperatureCelsius - metric.WarnTemperatureBaseCelsius))
-	return warnOfMax, derivedf(scribe.ActionCompute, "computed [%d] pct of warn, [%.1f] degC above floor [%.1f] degC at [%.1f] pct/degC",
-		warnOfMax, temperatureCelsius, metric.WarnTemperatureBaseCelsius, metric.WarnTemperaturePerCelsius), nil
+	warnOfMax := stats.ConvertToInt(temperatureCelsius + metric.WarnTemperatureOffsetPercent)
+	return warnOfMax, derivedf(scribe.ActionCompute, "computed [%d] pct of warn, [%.1f] degC at one pct per degC offset [%.1f] pct, full at [%.1f] degC",
+		warnOfMax, temperatureCelsius, metric.WarnTemperatureOffsetPercent, metric.WarnTemperatureFullCelsius), nil
 }
 
 func (p *hostProbe) spinFanSpeed() (int8, derivation, error) {
@@ -626,8 +626,8 @@ func (s *networkUsageSampler) discover(roots []string) {
 				ratedBits:  float64(rated) * networkBitsPerMbit,
 			})
 		}
-		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Infof("topology", discoverStart, "[%d] rated physical interfaces of [%d] under [%s], not rated [%s]",
-			len(s.links), len(entries), classDir, strings.Join(virtual, ", "))
+		scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Infof("topology", discoverStart, "[%d] rated physical interfaces, [%d] virtual interfaces under [%s]",
+			len(s.links), len(virtual), classDir)
 		return
 	}
 	scribe.Log(scribe.SourceProbeHost, scribe.SubjectMetric(metric.MetricHostUsedNetwork), scribe.ActionDiscover).Infof("topology", discoverStart, "[0] rated physical interfaces, no directory under [%s]", s.root)

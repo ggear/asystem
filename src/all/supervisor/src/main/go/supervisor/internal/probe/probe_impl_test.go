@@ -12,7 +12,7 @@ import (
 	"supervisor/internal/scribe"
 )
 
-func TestProbe_RunProbes(t *testing.T) {
+func TestProbeImpl_RunProbes(t *testing.T) {
 	tests := []struct {
 		name             string
 		createErr        error
@@ -69,7 +69,7 @@ func TestProbe_RunProbes(t *testing.T) {
 	}
 }
 
-func TestProbe_RunOnPulse(t *testing.T) {
+func TestProbeImpl_RunOnPulse(t *testing.T) {
 	tests := []struct {
 		name             string
 		periods          config.Periods
@@ -257,7 +257,7 @@ func (m *mockProbe) snapshot() (createCalls, executeCalls int) {
 	return m.createCalls, m.runCalls
 }
 
-func TestProbe_FailedSampleBlanks(t *testing.T) {
+func TestProbeImpl_FailedSampleBlanks(t *testing.T) {
 	tests := []struct {
 		name           string
 		sampleErr      error
@@ -327,7 +327,7 @@ func TestProbe_FailedSampleBlanks(t *testing.T) {
 	}
 }
 
-func TestProbe_DormantProbeNeverPolls(t *testing.T) {
+func TestProbeImpl_DormantProbeNeverPolls(t *testing.T) {
 	tests := []struct {
 		name          string
 		isDormant     bool
@@ -361,7 +361,7 @@ func TestProbe_DormantProbeNeverPolls(t *testing.T) {
 	}
 }
 
-func TestProbe_MetricStatusOf(t *testing.T) {
+func TestProbeImpl_MetricStatusOf(t *testing.T) {
 	trended := func(value bool) *bool { return &value }
 	testCases := []struct {
 		name           string
