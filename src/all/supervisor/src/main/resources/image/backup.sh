@@ -2,7 +2,7 @@
 
 # Runs one stage of a backup run, from the supervisor probe or by hand, the same path both sides.
 #
-#   backup.sh [start|stop|tail|list|manual|help] [argument] [--stage|--scrub|--quiet]
+#   backup.sh [start|stop|tail|list|auto|help] [argument] [--stage|--scrub|--quiet]
 #
 # The command always comes first and help is the default, so a naked backup.sh explains itself rather
 # than starting a multi-hour run nobody asked for; the one positional after it is always a run id. Which
@@ -28,7 +28,7 @@
 # never writes, so it is safe beside a live run and any number may tail at once.
 #
 # The reaper pause carries its own deadline rather than being a bare switch, so it cannot outlive
-# the outage that would otherwise hide it: manual off publishes {"state":"OFF","expires_ts":"<next
+# the outage that would otherwise hide it: auto off publishes {"state":"OFF","expires_ts":"<next
 # scheduled run>"} retained, and the estate reads a pause past its deadline, an unparseable one, a
 # stateless one and an absent topic all as armed. Nothing has to be running at any particular minute
 # for a pause to end, which a re-arm tied to the scheduled hour could never promise. It is a topic of
@@ -106,10 +106,17 @@
 #           not just backups - guarded on both mounts, and brings the disk up and down around itself.
 #           It closes with a btrfs scrub of the backup disk, which the scheduled run does and a hand
 #           run does not, since a scrub runs for hours past the mirror it follows and a hand run is
-#           watched. --scrub forces one either way and past the BACKUP_SCRUB_DAYS cadence; there is no
-#           --no-scrub, since not scrubbing is what a hand run already does, and BACKUP_SCRUB=0 is the
-#           env escape hatch for suppressing the scheduled one. Both are resolved once by the run and
-#           inherited by its stages. A scrub that runs out of stage timeout is cancelled,
+#           watched. The scheduled scrub is monthly, armed on the BACKUP_SCRUB_WINDOW days from
+#           BACKUP_SCRUB_DAY of the month. Only arming is dated: inside the window btrfs itself decides,
+#           since an interrupted pass resumes where it left off and a finished one is held off by the
+#           same-month guard, so the window costs a scrub run only where one is owed. --scrub forces
+#           one either way and past that cadence; there is no --no-scrub, since not scrubbing is what
+#           a hand run already does, and BACKUP_SCRUB=0 is the env escape hatch for suppressing the
+#           scheduled one. Both are resolved once by the run and inherited by its stages. Every call
+#           that reaches the disk is run through backup_bounded, which never waits past
+#           BACKUP_BOUNDED_WAIT, because a btrfs ioctl against a disk whose bridge has gone blocks in
+#           uninterruptible sleep and no signal can end it. A scrub that runs out of stage timeout is
+#           cancelled, and one whose status stops answering is abandoned,
 #           recorded interrupted and resumed by the next run rather than restarted, and never fails
 #           the stage - only a checksum error or a device error does. The scrub window is also the
 #           filesystem's maintenance window, so it reads the cumulative btrfs device error counters,
@@ -133,6 +140,35 @@ backup_log() {
   esac
 }
 
+backup_bounded() {
+  local limit="$1" label="$2" root work pid waited=0 status
+  shift 2
+  root="${BACKUP_STAGE_DIR:-}"
+  [ -n "${root}" ] && mkdir -p "${root}" 2>/dev/null
+  [ -d "${root}" ] || root="${TMPDIR:-/tmp}"
+  BACKUP_BOUNDED_SEQ=$(( BACKUP_BOUNDED_SEQ + 1 ))
+  work="${root}/.bounded-${BASHPID}-${BACKUP_BOUNDED_SEQ}"
+  BACKUP_BOUNDED_OUTPUT=""
+  rm -f "${work}.out" "${work}.rc"
+  { "$@" >"${work}.out" 2>&1; printf '%s' "$?" >"${work}.tmp"; mv "${work}.tmp" "${work}.rc"; } &
+  pid=$!
+  while [ ! -s "${work}.rc" ]; do
+    [ "${waited}" -ge "${limit}" ] && break
+    sleep 1
+    waited=$(( waited + 1 ))
+  done
+  if [ -s "${work}.rc" ]; then
+    read -r status <"${work}.rc"
+    BACKUP_BOUNDED_OUTPUT="$(cat "${work}.out" 2>/dev/null)"
+    rm -f "${work}.out" "${work}.rc"
+    return "${status:-0}"
+  fi
+  kill -KILL "${pid}" 2>/dev/null
+  rm -f "${work}.out" "${work}.rc"
+  backup_log WARN "abandoned [${label}] with no answer after [${limit}] s, it is blocked on a disk that stopped responding"
+  return "${BACKUP_BOUNDED_ABANDONED}"
+}
+
 backup_announce() {
   backup_log INFO "starting run [${BACKUP_RUN_ID}] over [$1] as [${BACKUP_TRIGGER}] with scrub [$([ "${BACKUP_SCRUB}" = "1" ] && echo on || echo off)]"
 }
@@ -140,6 +176,14 @@ backup_announce() {
 BACKUP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_SCRUB="${BACKUP_SCRUB:-}"
 BACKUP_SCRUB_FORCED="${BACKUP_SCRUB_FORCED:-0}"
+BACKUP_SCRUB_DAY="${BACKUP_SCRUB_DAY:-1}"
+BACKUP_SCRUB_WINDOW="${BACKUP_SCRUB_WINDOW:-3}"
+BACKUP_BOUNDED_WAIT="${BACKUP_BOUNDED_WAIT:-60}"
+BACKUP_BOUNDED_ABANDONED=124
+BACKUP_BOUNDED_SEQ=0
+BACKUP_BOUNDED_OUTPUT=""
+BACKUP_USAGE_WEDGED=""
+BACKUP_SCRUB_READING=""
 BACKUP_STAGE="${BACKUP_STAGE:-all}"
 BACKUP_SCRUB_ASKED=0
 BACKUP_GIVEN=()
@@ -151,17 +195,16 @@ backup_help() {
   {
     echo "Usage: ${0##*/} [command] [argument] [options]"
     echo
-    echo "  start  [run-id]  run this host's stages, minting a run id when given none"
-    echo "  stop   [run-id]  stop a run, or every active one"
-    echo "  tail   [run-id]  follow a run, or the newest"
-    echo "  manual [on|off]  pause the disk reaper so the disk stays powered, or arm it again,"
-    echo "                   reporting which it currently is when given neither"
-    echo "  list             every run, newest first, with its result"
-    echo "  help             this text (default command)"
+    echo "  start   [run-id]  run this host's stages, minting a run id when given none"
+    echo "  stop    [run-id]  stop a run, or every active one when given none"
+    echo "  tail    [run-id]  follow a run, or the newest when given none"
+    echo "  auto    [on|off]  turn switch reaper on or off, resets to on daily"
+    echo "  list              list history of runs"
+    echo "  help              this text, default command when given none"
     echo
-    echo "  --stage <name>   one stage only, primary|secondary|tertiary, give a run-id to join a run"
-    echo "  --scrub          scrub the backup disk, tertiary only, past its cadence"
-    echo "  --quiet          drop the stdout copy of the stage log"
+    echo "  --stage <name>    execute one stage (primary|secondary|tertiary) only"
+    echo "  --scrub           scrub the backup disk"
+    echo "  --quiet           drop the stdout copy of the stage log"
   } >&"${out}"
 }
 
@@ -180,7 +223,7 @@ set -- ${BACKUP_GIVEN[@]+"${BACKUP_GIVEN[@]}"}
 BACKUP_COMMAND="${1:-help}"
 BACKUP_ARGUMENT="${2:-}"
 BACKUP_RUN_GIVEN="${BACKUP_ARGUMENT}"
-[ "${BACKUP_COMMAND}" = "manual" ] && BACKUP_RUN_GIVEN=""
+[ "${BACKUP_COMMAND}" = "auto" ] && BACKUP_RUN_GIVEN=""
 
 if [ "${BACKUP_COMMAND}" = "help" ] && [ -z "${BACKUP_SOURCE_ONLY:-}" ]; then
   backup_help help
@@ -189,7 +232,7 @@ fi
 BACKUP_REFUSED=""
 [ -n "${BACKUP_REJECT}" ] && BACKUP_REFUSED="unknown option [${BACKUP_REJECT}]"
 case "${BACKUP_COMMAND}" in
-start | stop | tail | list | manual | help) ;;
+start | stop | tail | list | auto | help) ;;
 *) BACKUP_REFUSED="unknown command [${BACKUP_COMMAND}]" ;;
 esac
 case "${BACKUP_STAGE}" in
@@ -213,7 +256,9 @@ BACKUP_TRIGGER="${BACKUP_TRIGGER:-manual}"
 [ -n "${BACKUP_RUN_ID_PASSED:-}" ] && BACKUP_TRIGGER="scheduled"
 if [ -z "${BACKUP_SCRUB}" ]; then
   BACKUP_SCRUB=0
-  [ "${BACKUP_TRIGGER}" = "scheduled" ] && BACKUP_SCRUB=1
+  BACKUP_SCRUB_TODAY="$(date +%-d)"
+  [ "${BACKUP_TRIGGER}" = "scheduled" ] && [ "${BACKUP_SCRUB_TODAY}" -ge "${BACKUP_SCRUB_DAY}" ] &&
+    [ "${BACKUP_SCRUB_TODAY}" -lt $(( BACKUP_SCRUB_DAY + BACKUP_SCRUB_WINDOW )) ] && BACKUP_SCRUB=1
 fi
 export BACKUP_SCRUB BACKUP_SCRUB_FORCED
 BACKUP_STATE_RUNNING="running"
@@ -362,7 +407,7 @@ backup_scheduled() {
   printf '%s' "${stamp}"
 }
 
-backup_manual() {
+backup_auto() {
   local want="${1:-}" payload held state expires
   if [ -z "${want}" ]; then
     held="$(backup_reaper)"
@@ -389,7 +434,7 @@ backup_manual() {
     expires=""
     payload="$(printf '{"state":"%s","expires_ts":""}' "${BACKUP_COMMAND_ON}")"
     ;;
-  *) backup_log ERROR "manual reads [${want}], taking [off] to pause the reaper or [on] to arm it"; return 2 ;;
+  *) backup_log ERROR "auto reads [${want}], taking [on] to turn the reaper on or [off] to turn it off"; return 2 ;;
   esac
   if ! backup_publish "${BACKUP_REAPER_TOPIC}" "${payload}"; then
     backup_log ERROR "could not publish [${payload}] to [${BACKUP_REAPER_TOPIC}], is the broker reachable"
@@ -913,7 +958,7 @@ if [ "${BACKUP_COMMAND}" = "stop" ] && [ ! -d "${BACKUP_RUN_PATH}" ]; then
   backup_log ERROR "no backup run at [${BACKUP_RUN_PATH}], refusing to stop"
   exit 2
 fi
-case "${BACKUP_COMMAND}/${BACKUP_STAGE}" in tail/* | list/* | manual/* | */all) ;; *) mkdir -p "${BACKUP_STAGE_DIR}" ;; esac
+case "${BACKUP_COMMAND}/${BACKUP_STAGE}" in tail/* | list/* | auto/* | */all) ;; *) mkdir -p "${BACKUP_STAGE_DIR}" ;; esac
 
 BACKUP_ENV="${BACKUP_INSTALL_ROOT}/supervisor/latest/.env"
 # shellcheck disable=SC1090
@@ -953,8 +998,9 @@ backup_total() {
 }
 
 backup_used() {
-  local used
-  used="$(df --output=used -B1 "$1" 2>/dev/null | tail -1 | tr -d ' ')"
+  local used=""
+  backup_bounded "${BACKUP_BOUNDED_WAIT}" "df [$1]" df --output=used -B1 "$1" &&
+    used="$(printf '%s\n' "${BACKUP_BOUNDED_OUTPUT}" | tail -1 | tr -d ' ')"
   printf '%s' "${used:-0}"
 }
 
@@ -1086,7 +1132,13 @@ backup_adopted() {
 
 backup_usage() {
   local uuid file allocation used=0 total=0 percent
-  uuid="$(btrfs filesystem show "$1" 2>/dev/null | sed -n 's/.*uuid: //p' | head -1)"
+  case " ${BACKUP_USAGE_WEDGED} " in *" $1 "*) return 0 ;; esac
+  if ! backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs filesystem show [$1]" btrfs filesystem show "$1"; then
+    BACKUP_USAGE_WEDGED="${BACKUP_USAGE_WEDGED} $1"
+    backup_log WARN "holding [${BACKUP_USAGE}] pct as the last usage of [$1], it stopped answering and this stage will not sample it again"
+    return 0
+  fi
+  uuid="$(printf '%s\n' "${BACKUP_BOUNDED_OUTPUT}" | sed -n 's/.*uuid: //p' | head -1)"
   if [ -n "${uuid}" ]; then
     for file in "${BACKUP_SYSFS_BTRFS}/${uuid}"/devices/*/size; do
       [ -f "${file}" ] && total=$(( total + $(cat "${file}") * 512 ))
@@ -1097,9 +1149,13 @@ backup_usage() {
   fi
   if [ "${total}" -gt 0 ]; then
     BACKUP_USAGE=$(( used * 100 / total ))
-  else
-    percent="$(df --output=pcent "$1" 2>/dev/null | tail -1 | tr -dc '0-9')"
+  elif backup_bounded "${BACKUP_BOUNDED_WAIT}" "df [$1]" df --output=pcent "$1"; then
+    percent="$(printf '%s\n' "${BACKUP_BOUNDED_OUTPUT}" | tail -1 | tr -dc '0-9')"
     BACKUP_USAGE="${percent:-0}"
+  else
+    BACKUP_USAGE_WEDGED="${BACKUP_USAGE_WEDGED} $1"
+    backup_log WARN "holding [${BACKUP_USAGE}] pct as the last usage of [$1], it stopped answering and this stage will not sample it again"
+    return 0
   fi
   printf '%s\n' "${BACKUP_USAGE}" >"${BACKUP_STAGE_DIR}/disk-usage.tmp" 2>/dev/null &&
     mv "${BACKUP_STAGE_DIR}/disk-usage.tmp" "${BACKUP_STAGE_DIR}/disk-usage" 2>/dev/null || true
@@ -1172,7 +1228,8 @@ backup_thin() {
   done
   for name in "${names[@]}"; do
     [ -n "${keep[${name}]:-}" ] && continue
-    { btrfs subvolume delete "${dir}/${name}" >/dev/null 2>&1 || rm -rf "${dir:?}/${name}"; } &&
+    { backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs subvolume delete [${dir}/${name}]" \
+      btrfs subvolume delete "${dir}/${name}" || rm -rf "${dir:?}/${name}"; } &&
       backup_log INFO "pruned [${name}] from [${dir}] outside the grandfather father son window"
   done
 }
@@ -1267,7 +1324,6 @@ backup_heartbeat() {
       stage_stop || true
       return 0
     fi
-    [ "${BACKUP_STAGE}" = "tertiary" ] && backup_verified /backup && backup_usage /backup
     if [ "${hard}" -gt 0 ] && [ "${now}" -ge "${hard}" ]; then
       backup_document "${BACKUP_STATE_RUNNING}" false "${BACKUP_STARTED}" "$(( now - 1 ))"
       backup_log WARN "exceeded the timeout of [${BACKUP_TIMEOUT_HOURS}] hours, stopping this stage, the next run resumes it"
@@ -1276,6 +1332,7 @@ backup_heartbeat() {
       stage_stop || true
       return 0
     fi
+    [ "${BACKUP_STAGE}" = "tertiary" ] && backup_verified /backup && backup_usage /backup
     backup_document "${BACKUP_STATE_RUNNING}" false "${BACKUP_STARTED}" "$(( now + BACKUP_HEARTBEAT_GRACE ))" quiet
     [ "${BACKUP_TAIL_PROGRESS:-10}" -gt 0 ] 2>/dev/null &&
       backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}" record
@@ -1532,13 +1589,15 @@ backup_detach() {
   local target
   while read -r target; do
     backup_detachable "${target}" || continue
-    sync
+    backup_bounded "${BACKUP_BOUNDED_WAIT}" "sync [${target}]" sync -f "${target}" || true
     local failure=""
-    failure="$(umount "${target}" 2>&1)"
+    backup_bounded "${BACKUP_BOUNDED_WAIT}" "umount [${target}]" umount "${target}" || true
+    failure="${BACKUP_BOUNDED_OUTPUT}"
     backup_detachable "${target}" || continue
-    backup_log WARN "unmount of [${target}] failed with [${failure:-no reason reported}], detaching lazily"
-    umount -l "${target}" 2>/dev/null ||
-      backup_log WARN "could not detach [${target}]"
+    backup_log WARN "unmount of [${target}] failed with [${failure:-no reason reported}], detaching forcibly and lazily"
+    backup_bounded "${BACKUP_BOUNDED_WAIT}" "umount -f -l [${target}]" umount -f -l "${target}" || true
+    backup_detachable "${target}" &&
+      backup_log WARN "could not detach [${target}], it is still mounted and will need the disk powered back on"
   done < <(backup_targets)
 }
 
@@ -1555,10 +1614,13 @@ backup_device_counter() {
 backup_balance() {
   local started output relocated
   started="$(date +%s)"
-  if ! output="$(btrfs balance start -dusage=10 -musage=10 /backup 2>&1)"; then
-    backup_log WARN "could not balance [/backup] with [${output}]"
+  if ! backup_bounded "${BACKUP_BALANCE_WAIT}" "btrfs balance start [/backup]" \
+    btrfs balance start -dusage=10 -musage=10 /backup; then
+    output="${BACKUP_BOUNDED_OUTPUT}"
+    backup_log WARN "could not balance [/backup] with [${output:-no reason reported}]"
     return 0
   fi
+  output="${BACKUP_BOUNDED_OUTPUT}"
   relocated="$(printf '%s\n' "${output}" | sed -n 's/.*relocate \([0-9]*\) out of.*/\1/p' | head -1)"
   BACKUP_RELOCATED="${relocated:-0}"
   backup_log INFO "balanced [${BACKUP_RELOCATED}] chunks relocated on [/backup] in [$(backup_elapsed $(( $(date +%s) - started )))]"
@@ -1600,8 +1662,11 @@ backup_scrub_corrupt() {
 
 backup_scrub_reading() {
   local raw status scrubbed progress corrected uncorrectable found phase="${BACKUP_STATE_FINISHED}"
-  raw="$(btrfs scrub status -R /backup 2>/dev/null)"
-  status="$(btrfs scrub status /backup 2>/dev/null)"
+  BACKUP_SCRUB_READING=""
+  backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs scrub status -R [/backup]" btrfs scrub status -R /backup || return 1
+  raw="${BACKUP_BOUNDED_OUTPUT}"
+  backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs scrub status [/backup]" btrfs scrub status /backup || return 1
+  status="${BACKUP_BOUNDED_OUTPUT}"
   scrubbed=$(( $(backup_scrub_counter "${raw}" "data_bytes_scrubbed") / 1048576 ))
   progress="$(printf '%s\n' "${status}" | sed -n 's/.*(\([0-9.]*\)%).*/\1/p' | head -1)"
   corrected="$(backup_scrub_counter "${raw}" "corrected_errors")"
@@ -1614,13 +1679,21 @@ backup_scrub_reading() {
   *interrupted*) phase="${BACKUP_STATE_INTERRUPTED}" ;;
   *) printf '%s\n' "${raw}" | grep -qi "status:[[:space:]]*running" && phase="${BACKUP_STATE_RUNNING}" ;;
   esac
-  printf '%s\t%s\t%s\t%s\t%s\t%s' "${scrubbed}" "${progress:-0}" "${found}" "${corrected}" "${uncorrectable}" "${phase}"
+  BACKUP_SCRUB_READING="$(printf '%s\t%s\t%s\t%s\t%s\t%s' \
+    "${scrubbed}" "${progress:-0}" "${found}" "${corrected}" "${uncorrectable}" "${phase}")"
+}
+
+backup_scrub_state() {
+  case "$1" in
+  "${BACKUP_STATE_FINISHED}") printf '%s' "${BACKUP_STATE_FINISHED}" ;;
+  *) printf '%s' "${BACKUP_STATE_INTERRUPTED}" ;;
+  esac
 }
 
 backup_scrub_cancel() {
   command -v btrfs >/dev/null 2>&1 || return 0
   backup_detachable /backup || return 0
-  btrfs scrub cancel /backup >/dev/null 2>&1 || true
+  backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs scrub cancel [/backup]" btrfs scrub cancel /backup || true
 }
 
 backup_scrub() {
@@ -1638,20 +1711,25 @@ backup_scrub() {
     backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
     return 0
   fi
-  if ! btrfs filesystem show /backup >/dev/null 2>&1; then
-    backup_log INFO "scrub skipped, [/backup] is not btrfs"
+  if ! backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs filesystem show [/backup]" btrfs filesystem show /backup; then
+    backup_log WARN "scrub skipped, [/backup] did not answer"
     backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
     return 0
   fi
-  status="$(btrfs scrub status /backup 2>/dev/null)"
+  if ! backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs scrub status [/backup]" btrfs scrub status /backup; then
+    backup_log WARN "scrub skipped, [/backup] did not report its scrub status"
+    backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
+    return 0
+  fi
+  status="${BACKUP_BOUNDED_OUTPUT}"
   case "${status}" in
   *interrupted* | *aborted*) action="resume" ;;
   *)
     action="start"
     since="$(printf '%s\n' "${status}" | sed -n 's/^Scrub started:[[:space:]]*//p' | head -1)"
     if [ "${BACKUP_SCRUB_FORCED}" != "1" ] && [ -n "${since}" ] &&
-      [ "$(date -d "${since}" +%s 2>/dev/null || echo 0)" -gt "$(( started - BACKUP_SCRUB_DAYS * 86400 ))" ]; then
-      backup_log INFO "scrub skipped, the last pass started [${since}] within [${BACKUP_SCRUB_DAYS}] days, pass [--scrub] to force one"
+      [ "$(date -d "${since}" +%Y-%m 2>/dev/null || echo none)" = "$(date -d @"${started}" +%Y-%m)" ]; then
+      backup_log INFO "scrub skipped, the last pass started [${since}] in this month already, pass [--scrub] to force one"
       backup_scrub_document "${BACKUP_STATE_SKIPPED}" true "${started}" 0 0 0 0 0
       return 0
     fi
@@ -1668,30 +1746,46 @@ backup_scrub() {
   fi
   kernel="$(dmesg 2>/dev/null | wc -l)"
   backup_log INFO "scrub [${action}] on [/backup] until [$(date --iso-8601=seconds -d @"${hard}")], polling every [${BACKUP_SCRUB_POLL}] s"
-  if ! btrfs scrub "${action}" -c 3 -n 15 /backup >/dev/null 2>&1; then
-    backup_log ERROR "could not [${action}] the scrub on [/backup]"
+  if ! backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs scrub ${action} [/backup]" \
+    btrfs scrub "${action}" -c 3 -n 15 /backup; then
+    backup_log ERROR "could not [${action}] the scrub on [/backup] with [${BACKUP_BOUNDED_OUTPUT:-no reason reported}]"
     backup_scrub_document "${BACKUP_STATE_FAILED}" false "${started}" 0 0 0 0 0
     return 1
   fi
+  local silent=0
   while :; do
     sleep "${BACKUP_SCRUB_POLL}"
-    IFS=$'\t' read -r scrubbed progress found corrected uncorrectable phase < <(backup_scrub_reading)
+    if [ "$(date +%s)" -ge "${hard}" ]; then
+      backup_log WARN "scrub ran past [$(date --iso-8601=seconds -d @"${hard}")], cancelling it, the next armed run resumes it"
+      backup_scrub_cancel
+      break
+    fi
+    if ! backup_scrub_reading; then
+      silent=$(( silent + 1 ))
+      backup_log WARN "scrub status unanswered [${silent}] of [${BACKUP_SCRUB_SILENCE}] times, the disk may have gone"
+      [ "${silent}" -lt "${BACKUP_SCRUB_SILENCE}" ] && continue
+      backup_log ERROR "abandoning the scrub, [/backup] has not reported its status [${silent}] times running"
+      backup_scrub_cancel
+      break
+    fi
+    silent=0
+    IFS=$'\t' read -r scrubbed progress found corrected uncorrectable phase <<<"${BACKUP_SCRUB_READING}"
     backup_log INFO "scrub at [${progress}] pct, scrubbed [${scrubbed}] MB"
     backup_scrub_document "${BACKUP_STATE_RUNNING}" false "${started}" "${scrubbed}" "${progress}" \
       "${found}" "${corrected}" "${uncorrectable}" "" 0 "${hard}"
     [ "${phase}" = "${BACKUP_STATE_RUNNING}" ] || break
-    if [ "$(date +%s)" -ge "${hard}" ]; then
-      btrfs scrub cancel /backup >/dev/null 2>&1 || true
-      state="${BACKUP_STATE_INTERRUPTED}"
-      break
-    fi
   done
-  IFS=$'\t' read -r scrubbed progress found corrected uncorrectable phase < <(backup_scrub_reading)
-  case "${phase}" in
-  aborted) state="${BACKUP_STATE_FAILED}" ;;
-  "${BACKUP_STATE_INTERRUPTED}") state="${BACKUP_STATE_INTERRUPTED}" ;;
-  esac
-  devices="$(btrfs device stats /backup 2>/dev/null)"
+  local reached="${progress}"
+  if backup_scrub_reading; then
+    IFS=$'\t' read -r scrubbed progress found corrected uncorrectable phase <<<"${BACKUP_SCRUB_READING}"
+  else
+    phase="${BACKUP_STATE_INTERRUPTED}"
+  fi
+  state="$(backup_scrub_state "${phase}")"
+  [ "${progress%%.*}" -eq 0 ] 2>/dev/null && progress="${reached:-0}"
+  devices=""
+  backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs device stats [/backup]" btrfs device stats /backup &&
+    devices="${BACKUP_BOUNDED_OUTPUT}"
   BACKUP_DEVICE_ERRORS=$(( $(backup_device_counter "${devices}" "write_io_errs") +
     $(backup_device_counter "${devices}" "read_io_errs") +
     $(backup_device_counter "${devices}" "flush_io_errs") +
@@ -1702,7 +1796,8 @@ backup_scrub() {
     count="$(backup_scrub_corrupt "${kernel}" | wc -l | tr -d ' ')"
     files="$(backup_scrub_corrupt "${kernel}" | head -20 | paste -sd ',' - | sed 's/"/\\"/g')"
     {
-      btrfs scrub status -R /backup 2>/dev/null && printf '\n'
+      backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs scrub status -R [/backup]" btrfs scrub status -R /backup &&
+        printf '%s\n\n' "${BACKUP_BOUNDED_OUTPUT}"
       printf '%s\n\n' "${devices}"
       backup_scrub_corrupt "${kernel}"
       printf '\n'
@@ -1717,7 +1812,8 @@ backup_scrub() {
   else
     backup_log INFO "scrub [${state}] at [${progress}] pct having scrubbed [${scrubbed}] MB with no errors"
   fi
-  btrfs device stats -z /backup >/dev/null 2>&1 || true
+  [ -n "${devices}" ] &&
+    { backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs device stats -z [/backup]" btrfs device stats -z /backup || true; }
   { [ "${state}" = "${BACKUP_STATE_FINISHED}" ] && [ "$(date +%s)" -lt "${hard}" ]; } && backup_balance
   backup_scrub_document "${state}" "${success}" "${started}" "${scrubbed}" "${progress}" "${found}" "${corrected}" "${uncorrectable}" "${files}" "${count}"
   [ "${success}" = "true" ]
@@ -1771,10 +1867,12 @@ tertiary_start() {
       local subvolume name snapshots="/backup/.snapshots"
       for subvolume in /backup/share/*; do
         [ -d "${subvolume}" ] || continue
-        btrfs subvolume show "${subvolume}" >/dev/null 2>&1 || continue
+        backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs subvolume show [${subvolume}]" \
+          btrfs subvolume show "${subvolume}" || continue
         name="$(basename "${subvolume}")"
         mkdir -p "${snapshots}/share/${name}"
-        btrfs subvolume snapshot -r "${subvolume}" "${snapshots}/share/${name}/${BACKUP_RUN_ID}" >/dev/null 2>&1 &&
+        backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs subvolume snapshot [${subvolume}]" \
+          btrfs subvolume snapshot -r "${subvolume}" "${snapshots}/share/${name}/${BACKUP_RUN_ID}" &&
           backup_log INFO "snapshotted [${subvolume}] to [${snapshots}/share/${name}/${BACKUP_RUN_ID}]"
         backup_thin "${snapshots}/share/${name}"
       done
@@ -1790,12 +1888,12 @@ tertiary_stop() {
   rm -f "${BACKUP_STAGE_DIR}/disk-device"
   backup_stopping "terminating any running mirror and scrub, flushing and unmounting the backup disk"
   backup_scrub_cancel
-  command -v btrfs >/dev/null 2>&1 && backup_verified /backup &&
-    { btrfs balance cancel /backup >/dev/null 2>&1 || true; }
+  command -v btrfs >/dev/null 2>&1 && backup_detachable /backup &&
+    { backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs balance cancel [/backup]" btrfs balance cancel /backup || true; }
   pkill -CONT -f "rsync .*/backup/share" 2>/dev/null || true
   pkill -TERM -f "rsync .*/backup/share" 2>/dev/null || true
   backup_reaped "rsync .*/backup/share"
-  sync -f /backup 2>/dev/null || sync
+  backup_bounded "${BACKUP_BOUNDED_WAIT}" "sync [/backup]" sync -f /backup || true
   backup_detach
 }
 
@@ -1825,9 +1923,10 @@ BACKUP_HEARTBEAT_PID=""
 BACKUP_DISK_SECONDS="${BACKUP_DISK_SECONDS:-120}"
 BACKUP_DISK_POLL="${BACKUP_DISK_POLL:-1}"
 BACKUP_SYSFS_BTRFS="${BACKUP_SYSFS_BTRFS:-/sys/fs/btrfs}"
-BACKUP_SCRUB_DAYS="${BACKUP_SCRUB_DAYS:-30}"
 BACKUP_SCRUB_MARGIN="${BACKUP_SCRUB_MARGIN:-900}"
 BACKUP_SCRUB_POLL="${BACKUP_SCRUB_POLL:-30}"
+BACKUP_SCRUB_SILENCE="${BACKUP_SCRUB_SILENCE:-3}"
+BACKUP_BALANCE_WAIT="${BACKUP_BALANCE_WAIT:-3600}"
 
 BACKUP_USAGE=0
 BACKUP_DEVICE_ERRORS=0
@@ -1845,8 +1944,8 @@ BACKUP_RSYNC_OUTPUT=""
 # shellcheck disable=SC2317
 if [ -n "${BACKUP_SOURCE_ONLY:-}" ]; then return 0 2>/dev/null || exit 0; fi
 
-if [ "${BACKUP_COMMAND}" = "manual" ]; then
-  backup_manual "${BACKUP_ARGUMENT}"
+if [ "${BACKUP_COMMAND}" = "auto" ]; then
+  backup_auto "${BACKUP_ARGUMENT}"
   exit $?
 fi
 
@@ -1876,6 +1975,7 @@ fi
 
 if [ "${BACKUP_COMMAND}" = "stop" ]; then
   BACKUP_STOPPING=1
+  trap 'backup_log WARN "interrupted, the stop is incomplete and [/backup] may still be mounted"; exit 130' INT TERM
   exec 3>&1
   if [ -n "${BACKUP_RUN_ID_PASSED:-}" ] || [ -n "${BACKUP_QUIET:-}" ]; then
     exec >>"${BACKUP_LOG}" 2>&1

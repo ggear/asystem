@@ -15,7 +15,8 @@
 #     lounge_home,
 #     office_home,
 #     parents_move,
-#     pixel_tablet]
+#     pixel_tablet,
+#     pixel_tablet_2]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 

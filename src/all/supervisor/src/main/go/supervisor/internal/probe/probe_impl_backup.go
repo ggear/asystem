@@ -128,6 +128,10 @@ func (p *backupProbe) poll(ctx context.Context, isPulse bool) error {
 
 func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	snapshot := p.documents()
+	if snapshot != nil && snapshot.abandoned {
+		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, scheduled run [%s] started [%s] ago wrote no roll-up and stopped reporting past the [%s] ceiling, so every stage it owns is unaccounted for",
+			snapshot.dir, snapshot.age().Round(time.Minute), backupRunCeiling), nil
+	}
 	if snapshot != nil && snapshot.running {
 		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct failed, run [%s] started [%s] ago has not written its roll-up yet so the metric is inert and always ok",
 			snapshot.dir, snapshot.age().Round(time.Minute)), nil
@@ -175,6 +179,9 @@ func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 		if snapshot != nil && snapshot.running {
 			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, run [%s] started [%s] ago has not measured the backup disk yet so the metric is inert and always ok",
 				snapshot.dir, snapshot.age().Round(time.Minute)), nil
+		}
+		if snapshot != nil && snapshot.abandoned {
+			return 0, derivation{}, fmt.Errorf("no backup volume reading, scheduled run [%s] stopped reporting [%s] ago so its last disk usage cannot be trusted [%w]", snapshot.dir, snapshot.age().Round(time.Minute), errEnvironment)
 		}
 		return 0, derivation{}, fmt.Errorf("no backup volume reading, this host has written no tertiary stage document under [%s] [%w]", p.root, errEnvironment)
 	}
@@ -837,14 +844,16 @@ type backupDocument struct {
 }
 
 type backupSnapshot struct {
-	dir      string
-	at       time.Time
-	staged   int
-	running  bool
-	host     *backupDocument
-	tertiary *backupDocument
-	stages   map[string]*backupDocument
-	services map[string]bool
+	dir       string
+	at        time.Time
+	staged    int
+	running   bool
+	abandoned bool
+	trigger   string
+	host      *backupDocument
+	tertiary  *backupDocument
+	stages    map[string]*backupDocument
+	services  map[string]bool
 }
 
 func (s *backupSnapshot) age() time.Duration {
@@ -870,9 +879,11 @@ func readNewestRun(root string) *backupSnapshot {
 	}
 	sort.Strings(runs)
 	newest := readRun(root, runs[len(runs)-1])
-	running := newest.host == nil && newest.staged > 0 && newest.age() <= backupRunCeiling
+	started := newest.host == nil && newest.staged > 0
+	running := started && newest.age() <= backupRunCeiling
+	abandoned := started && !running && newest.trigger == metric.BackupTriggerScheduled
 	snapshot := newest
-	for index := len(runs) - 2; snapshot.host == nil && index >= 0; index-- {
+	for index := len(runs) - 2; !abandoned && snapshot.host == nil && index >= 0; index-- {
 		candidate := readRun(root, runs[index])
 		if candidate.age() > backupStaleWindow {
 			break
@@ -882,6 +893,7 @@ func readNewestRun(root string) *backupSnapshot {
 		}
 	}
 	snapshot.running = running
+	snapshot.abandoned = abandoned
 	return snapshot
 }
 
@@ -898,6 +910,12 @@ func readRun(root, dir string) *backupSnapshot {
 		}
 	}
 	snapshot.tertiary = snapshot.stages[backupStageTertiary]
+	for _, stage := range backupStages {
+		if document := snapshot.stages[stage]; document != nil && document.Trigger != "" {
+			snapshot.trigger = document.Trigger
+			break
+		}
+	}
 	documents, _ := filepath.Glob(filepath.Join(runPath, "stage", "primary", "service", "*", "status.json"))
 	for _, path := range documents {
 		if document := readStageDocument(path); document != nil {

@@ -111,6 +111,8 @@
 #     pantry_main_bulb_1_power,
 #     parents_fan_power,
 #     parents_fans_power,
+#     parents_graham_bedside_bulb_1_power,
+#     parents_jane_bedside_bulb_1_power,
 #     parents_lights_power,
 #     parents_main_bulb_1_power,
 #     parents_main_bulb_2_power,

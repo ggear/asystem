@@ -120,7 +120,7 @@ class BackupShellTest(unittest.TestCase):
         done = self.invoke("help")
         self.assertEqual(done.returncode, 0)
         self.assertEqual(done.stderr, "")
-        for command in ("start", "stop", "tail", "list", "manual", "help"):
+        for command in ("start", "stop", "tail", "list", "auto", "help"):
             self.assertIn("  {}".format(command), done.stdout)
         self.assertIn("minting a run id when given none", done.stdout)
         self.assertIn("--stage <name>", done.stdout)
@@ -157,7 +157,7 @@ class BackupShellTest(unittest.TestCase):
                                            'backup_attached && echo attached || echo detached'), "detached")
 
     @NEEDS_GNU
-    def test_manual_reports_a_publish_that_did_not_happen(self):
+    def test_auto_reports_a_publish_that_did_not_happen(self):
         done = self.shell('backup_publish() { return 1; }\n'
                           'backup_manual off 2>&1 || echo "exit=$?"')
         self.assertIn('could not publish [{"state":"OFF"', done)
@@ -168,27 +168,28 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell('BROKER_HOST=""; backup_publish topic payload; echo "exit=$?"'), "exit=1")
 
     @NEEDS_GNU
-    def test_manual_publishes_the_reaper_switch_both_ways(self):
+    def test_auto_publishes_the_reaper_switch_both_ways(self):
         probe = ('backup_publish() { printf "%s %s\\n" "$1" "$2"; }\n'
                  'backup_log() { :; }\n'
                  'backup_reaper() { printf ""; }\n'
-                 'backup_manual {}')
+                 'backup_auto {}')
         self.assertEqual(self.shell(probe.replace("{}", "")), "")
         self.assertTrue(self.shell(probe.replace("{}", "off")).startswith(
             'supervisor/cluster-all/backup/reaper {"state":"OFF","expires_ts":"'))
         self.assertEqual(self.shell(probe.replace("{}", "on")),
                          'supervisor/cluster-all/backup/reaper {"state":"ON","expires_ts":""}')
 
-    def test_manual_keeps_its_argument_out_of_the_run_id_slot(self):
-        self.assertEqual(self.parse("manual", "on"), "manual all - 0 0")
+    def test_auto_keeps_its_argument_out_of_the_run_id_slot(self):
+        self.assertEqual(self.parse("auto", "on"), "auto all - 0 0")
         self.assertEqual(self.shell('backup_publish() { printf "%s" "$2"; }\nbackup_log() { :; }\n'
-                                    'backup_manual "${BACKUP_ARGUMENT}"', arguments=("manual", "on")),
+                                    'backup_auto "${BACKUP_ARGUMENT}"', arguments=("auto", "on")),
                          '{"state":"ON","expires_ts":""}')
 
-    def test_manual_refuses_a_word_it_does_not_know(self):
-        done = self.invoke("manual", "sideways")
+    def test_auto_refuses_a_word_it_does_not_know(self):
+        done = self.invoke("auto", "sideways")
         self.assertEqual(done.returncode, 2)
-        self.assertIn("manual reads [sideways], taking [off] to pause the reaper or [on] to arm it", done.stderr)
+        self.assertIn("auto reads [sideways], taking [on] to turn the reaper on or [off] to turn it off",
+                      done.stderr)
 
     def test_command_is_first_and_defaults_to_help_rather_than_a_run(self):
         self.assertEqual(self.parse(), "help all - 0 0")
@@ -215,8 +216,43 @@ class BackupShellTest(unittest.TestCase):
                          "start secondary 2026-09-08_00-00-00 0 0")
 
     def test_scrub_is_off_by_hand_and_on_when_scheduled(self):
-        self.assertEqual(self.parse("start"), "start all - 0 0")
-        self.assertEqual(self.parse("start", BACKUP_RUN_ID_PASSED=1), "start all - 1 0")
+        today = datetime.now().day
+        self.assertEqual(self.parse("start", BACKUP_SCRUB_DAY=today), "start all - 0 0")
+        self.assertEqual(self.parse("start", BACKUP_RUN_ID_PASSED=1, BACKUP_SCRUB_DAY=today),
+                         "start all - 1 0")
+
+    def test_scrub_is_armed_only_inside_the_monthly_window(self):
+        today = datetime.now().day
+        for first, window, armed in ((today, 1, True), (today, 3, True), (today - 1, 3, True),
+                                     (today - 2, 3, True), (today + 1, 3, False),
+                                     (today - 3, 3, False), (today - 1, 1, False)):
+            self.assertEqual(self.parse("start", BACKUP_RUN_ID_PASSED=1,
+                                        BACKUP_SCRUB_DAY=first, BACKUP_SCRUB_WINDOW=window),
+                             "start all - {} 0".format(1 if armed else 0),
+                             "day [{}] against window [{}..{}]".format(today, first, first + window - 1))
+
+    def test_scrub_state_reads_every_cancel_as_interrupted_not_failed(self):
+        for phase, state in (("finished", "interrupted"), ("aborted", "interrupted"),
+                             ("interrupted", "interrupted"), ("running", "interrupted")):
+            reported = self.shell('BACKUP_STATE_FINISHED=finished; BACKUP_STATE_INTERRUPTED=interrupted\n'
+                                  'backup_scrub_state "{}"'.format(phase))
+            want = "finished" if phase == "finished" else state
+            self.assertEqual(reported, want, "phase [{}]".format(phase))
+
+    def test_scrub_reading_reports_a_cancelled_pass_as_aborted_so_it_is_resumed(self):
+        status = ("UUID:             9e4a9990\n"
+                  "Scrub started:    Mon Sep  1 01:00:59 2026\n"
+                  "Status:           aborted\n"
+                  "Duration:         2:44:48\n")
+        reported = self.shell('btrfs() { [ "$3" = "-R" ] && printf "%s" "data_bytes_scrubbed: 2388654460928"'
+                              ' || printf "%s" "${STATUS}"; }\n'
+                              'backup_scrub_reading && printf "%s" "${BACKUP_SCRUB_READING}"',
+                              STATUS=status)
+        self.assertEqual(reported.split("\t")[-1], "aborted")
+
+    def test_scrub_flag_arms_a_run_the_window_would_not(self):
+        self.assertEqual(self.parse("start", "--scrub", BACKUP_RUN_ID_PASSED=1,
+                                    BACKUP_SCRUB_DAY=datetime.now().day + 1), "start all - 1 1")
 
     def test_scrub_flag_forces_one_a_hand_run_would_not_do(self):
         self.assertEqual(self.parse("start", "--scrub"), "start all - 1 1")
@@ -226,7 +262,8 @@ class BackupShellTest(unittest.TestCase):
         done = self.invoke("start", "--no-scrub")
         self.assertEqual(done.returncode, 2)
         self.assertIn("unknown option [--no-scrub]", done.stderr)
-        self.assertEqual(self.parse("start", BACKUP_RUN_ID_PASSED=1, BACKUP_SCRUB=0), "start all - 0 0")
+        self.assertEqual(self.parse("start", BACKUP_RUN_ID_PASSED=1, BACKUP_SCRUB=0,
+                                    BACKUP_SCRUB_DAY=datetime.now().day), "start all - 0 0")
 
     def test_scrub_refusal_reads_this_command_line_not_an_inherited_flag(self):
         self.assertEqual(self.parse("start", "--stage", "primary", BACKUP_SCRUB_FORCED=1, BACKUP_SCRUB=1),
@@ -803,7 +840,7 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(shelled, named)
 
     @NEEDS_GNU
-    def test_manual_reports_the_reaper_rather_than_pausing_it_when_given_nothing(self):
+    def test_auto_reports_the_reaper_rather_than_pausing_it_when_given_nothing(self):
         head = ('backup_log() { printf "%s\\n" "$2"; }\n'
                 'backup_publish() { printf "PUBLISHED %s\\n" "$2"; }\n')
         for held, expected in (('{\\"state\\":\\"OFF\\",\\"expires_ts\\":\\"2026-09-12T01:00:00+08:00\\"}',
@@ -816,7 +853,7 @@ class BackupShellTest(unittest.TestCase):
             self.assertNotIn("PUBLISHED", spoken)
 
     @NEEDS_GNU
-    def test_manual_pauses_the_reaper_only_until_the_next_scheduled_run(self):
+    def test_auto_pauses_the_reaper_only_until_the_next_scheduled_run(self):
         head = ('backup_log() { printf "%s\\n" "$2"; }\n'
                 'backup_publish() { printf "PUBLISHED %s\\n" "$2"; }\n')
         paused = self.shell(head + 'backup_manual off')
@@ -923,8 +960,32 @@ class BackupShellTest(unittest.TestCase):
                               'backup_detachable() { return 0; }\n'
                               'umount() { echo "umount: /backup: target is busy." >&2; return 1; }\n'
                               'backup_detach 2>&1')
-        self.assertIn("unmount of [/backup] failed with [umount: /backup: target is busy.], detaching lazily", reported)
-        self.assertIn("could not detach [/backup]", reported)
+        self.assertIn("unmount of [/backup] failed with [umount: /backup: target is busy.], "
+                      "detaching forcibly and lazily", reported)
+        self.assertIn("could not detach [/backup], it is still mounted", reported)
+
+    def test_bounded_abandons_a_command_that_never_returns_rather_than_waiting(self):
+        reported = self.shell('BACKUP_BOUNDED_WAIT=1\n'
+                              'backup_bounded 1 "wedged probe" sleep 30 2>&1; printf "%s" "$?"')
+        self.assertIn("abandoned [wedged probe] with no answer after [1] s", reported)
+        self.assertTrue(reported.strip().endswith("124"), reported)
+
+    def test_bounded_returns_the_status_and_output_of_a_command_that_answers(self):
+        reported = self.shell('backup_bounded 5 "quick probe" printf "hello"\n'
+                              'printf "%s/%s" "$?" "${BACKUP_BOUNDED_OUTPUT}"')
+        self.assertEqual(reported, "0/hello")
+
+    def test_bounded_never_leaves_a_disk_touching_call_unbounded(self):
+        with open(BACKUP_SCRIPT) as handle:
+            source = handle.read()
+        stripped = re.sub(r'^backup_bounded\(\).*?\n}\n', '', source, flags=re.S | re.M)
+        joined = re.sub(r'\\\n\s*', ' ', stripped)
+        unbounded = [line.strip() for line in joined.splitlines()
+                     if re.search(r'(?:^|[;&|(){}!]\s*|\bif\s+|\bthen\s+|\$\(\s*)'
+                                  r'(?:btrfs|umount|df|sync)\s+[-\w"$/]', line)
+                     and "backup_bounded" not in line and not line.lstrip().startswith("#")
+                     and "command -v" not in line]
+        self.assertEqual(unbounded, [], "found unbounded disk calls {}".format(unbounded))
 
     def fstab(self, *lines):
         path = join(self.home, "fstab")

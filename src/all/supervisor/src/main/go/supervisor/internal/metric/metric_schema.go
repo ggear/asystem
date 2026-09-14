@@ -117,6 +117,9 @@ const (
 	BackupStateFailed      = "failed"
 	BackupStateFinished    = "finished"
 	BackupStateInterrupted = "interrupted"
+
+	BackupTriggerScheduled = "scheduled"
+	BackupTriggerManual    = "manual"
 )
 
 const (
@@ -144,7 +147,7 @@ func Payloads() []schema.Payload {
 		{Key: "run_id", Kind: schema.KindStr},
 		{Key: "state", Enum: []string{BackupStateRunning, BackupStateComplete, BackupStateSkipped,
 			BackupStateStopped, BackupStateTimedout, BackupStateHalted, BackupStateFailed}},
-		{Key: "trigger", Enum: []string{"scheduled", "manual"}},
+		{Key: "trigger", Enum: []string{BackupTriggerScheduled, BackupTriggerManual}},
 		{Key: "started_ts", Kind: schema.KindStr},
 		{Key: "finished_ts", Kind: schema.KindStr},
 		{Key: "expires_ts", Kind: schema.KindStr},

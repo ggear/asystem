@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"supervisor/internal/config"
+	"supervisor/internal/metric"
 	"testing"
 	"time"
 )
@@ -206,6 +207,41 @@ func TestProbeImplBackup_ServiceSuccessSurvivesAHandRun(t *testing.T) {
 	}
 	if run != rolled {
 		t.Errorf("run: got %q want %q", run, rolled)
+	}
+}
+
+func TestProbeImplBackup_AbandonedScheduledRunIsNotWalkedPast(t *testing.T) {
+	root := t.TempDir()
+	rolled := time.Now().Add(-30 * time.Hour).Format(backupRunStamp)
+	writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3}, nil, nil)
+	yesterday := time.Now().Add(-25 * time.Hour).Format(backupRunStamp)
+	writeBackupRun(t, root, yesterday, &backupDocument{StagesRun: 3}, nil, nil)
+	stuck := time.Now().Add(-8 * time.Hour).Format(backupRunStamp)
+	writeBackupStage(t, root, stuck, "primary", backupDocument{
+		State: metric.BackupStateComplete, Trigger: metric.BackupTriggerScheduled})
+	writeBackupStage(t, root, stuck, "tertiary", backupDocument{
+		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled, DiskUsagePerc: 26})
+	p := &backupProbe{root: root, serverHost: true, periods: config.Periods{CacheMins: 60}}
+	value, _, err := p.failedBackupStages()
+	if err != nil || value != 100 {
+		t.Fatalf("failedBackupStages: got (%v,%v) want (100,nil)", value, err)
+	}
+	if _, _, err = p.usedBackupSpace(); err == nil {
+		t.Error("usedBackupSpace: got nil error, want a fault rather than a frozen reading")
+	}
+}
+
+func TestProbeImplBackup_AbandonedHandRunIsStillWalkedPast(t *testing.T) {
+	root := t.TempDir()
+	rolled := time.Now().Add(-9 * time.Hour).Format(backupRunStamp)
+	writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3}, nil, nil)
+	handed := time.Now().Add(-8 * time.Hour).Format(backupRunStamp)
+	writeBackupStage(t, root, handed, "tertiary", backupDocument{
+		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerManual})
+	p := &backupProbe{root: root, serverHost: true, periods: config.Periods{CacheMins: 60}}
+	value, _, err := p.failedBackupStages()
+	if err != nil || value != 0 {
+		t.Errorf("failedBackupStages: got (%v,%v) want (0,nil)", value, err)
 	}
 }
 
