@@ -29,51 +29,33 @@ improve sys tests with datbase/broker asserts
 
 
 
-scrub started on max 14 sep 1am, it should be monthly on the 1st. Also, it did not timeout and was still running at 7am. i then turned the switch off manually. and stop hangs with ctrl-c not working:
-root@macmini-max:~$ abackup stop
-[INFO           08:10:12] stopping run [2026-09-14_01-00-54] over [primary secondary tertiary]
-[INFO           08:10:12] stopping [1] active run(s) [2026-09-14_01-00-54]
-[INFO primary   08:10:12] stopping run [2026-09-14_01-00-54]
-[INFO primary   08:10:12] terminating any running service backup.sh
-[INFO primary   08:10:12] stopped run [2026-09-14_01-00-54]
-[INFO secondary 08:10:12] stopping run [2026-09-14_01-00-54]
-[INFO secondary 08:10:12] terminating any running promotion rsync
-[INFO secondary 08:10:12] stopped run [2026-09-14_01-00-54]
-[INFO tertiary  08:10:12] stopping run [2026-09-14_01-00-54], flushing [1] MB, estimated to stop in [0] s
-[INFO tertiary  08:10:12] signalled the runner to clean up and exit
-[INFO tertiary  08:10:12] terminating any running mirror and scrub, flushing and unmounting the backup disk
-^C
-^C^C^C^C^C^C^C^C^C^C^C
-kill terminal session and retry, hangs as well:
-root@macmini-max:~$ abackup stop
-[INFO           08:15:30] stopping run [2026-09-14_01-00-54] over [primary secondary tertiary]
-[INFO           08:15:30] stopping [1] active run(s) [2026-09-14_01-00-54]
-[INFO primary   08:15:31] stopping run [2026-09-14_01-00-54]
-[INFO primary   08:15:31] terminating any running service backup.sh
-[INFO primary   08:15:31] stopped run [2026-09-14_01-00-54]
-[INFO secondary 08:15:31] stopping run [2026-09-14_01-00-54]
-[INFO secondary 08:15:31] terminating any running promotion rsync
-[INFO secondary 08:15:31] stopped run [2026-09-14_01-00-54]
-[INFO tertiary  08:15:31] stopping run [2026-09-14_01-00-54], flushing [3] MB, estimated to stop in [0] s
-[INFO tertiary  08:15:31] signalled the runner to clean up and exit
-[INFO tertiary  08:15:31] terminating any running mirror and scrub, flushing and unmounting the backup disk
+Sensor Temp, Warn Temp mertic, Alert Stage
+<25 35 Green
+<30 40 Green
+<35 45 Green
+<40 50 Green
+<45 55 Green
+<50 60 Green
+<55 65 Green
+<60 70 Yellow
+<65 75 Red
+<70 80 Red
+<75 85 Red
+<80 95 Red
+<85 100 Red
+<90 100 Red
+>90 100 Red
 
-
-
-
-
-
-^C^C^C^C^C^C^C^C^C^C^C^C^C^C^C
-still shows runing and cant resolve:
-root@macmini-max:~$ abackup list
-
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-| RUN-ID (STARTED)    | FINISHED            | DURATION  | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SIZE          | VOLUME                    | RESULT     |
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-| 2026-09-14_01-00-54 | -                   | 07h15m13s | scheduled | success   | success   | running   |          1 MB | [####..............]  26% | running    |
-| 2026-09-13_09-52-07 | 2026-09-13_09-52-22 | 00h00m15s | manual    | success   | success   | success   |          1 MB | [####..............]  26% | complete   |
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-stop needs to be resilient, even when switch is killed, needs to stop scrub, needs to timeout on scrub, robustly. make bullet proof.
+adjust Revs FAN  to work on scale from min = 1500 RPM, max = 4500 RPM 0-100%. alert stage should be if Revs FAN < Warn TEM. if no fan (like on jen) always 0% and green.
+suugest mbfan config that ensures fan speed scales to stay green given these Warn TEM and Revs FAN scales:
+cat <<'EOF' >/etc/mbpfan.conf
+[general]
+low_temp = 55          # if temperature in celcius is below this, fans will run at minimum speed, default 63
+high_temp = 60         # if temperature in celcius is above this, fan speed will gradually increase, default 66
+max_temp = 80          # if temperature in celcius is above this, fans will run at maximum speed, default 86
+polling_interval = 1   # seconds to poll, default 1
+EOF
+You can refactor Warn TEM and Revs FAN scales to make go consts simpler and readability clear, driven from Warn TEM as primary. Best way to construct this? mimic mbpfan style specifcations?
 
 
 if you a modeul backup.sh skips, should you hardlink a copy into a new run-id? should run-id be passed into module backup.sh so it is traceable

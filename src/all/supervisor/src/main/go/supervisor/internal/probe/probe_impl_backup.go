@@ -373,9 +373,15 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 		}
 		staleStart := config.NowIncludingSuspend()
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] still running with liveness expired at [%s], stopping it", stage, snapshot.dir, document.ExpiresTS)
-		stop := exec.CommandContext(context.WithoutCancel(ctx), "bash", p.runner, "stop", snapshot.dir, "--stage", stage)
+		stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), backupStopDeadline)
+		stop := exec.CommandContext(stopCtx, "bash", p.runner, "stop", snapshot.dir, "--stage", stage)
 		stop.Env = append(os.Environ(), "BACKUP_RUN_ID="+snapshot.dir, "BACKUP_RUN_PATH="+runPath, "BACKUP_RUN_ID_PASSED=1")
-		_ = stop.Run()
+		stop.Cancel = func() error { return stop.Process.Signal(syscall.SIGTERM) }
+		stop.WaitDelay = backupStageKillGrace
+		if stopErr := stop.Run(); stopErr != nil {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] did not stop within [%s], abandoning it with [%v]", stage, snapshot.dir, backupStopDeadline, stopErr)
+		}
+		stopCancel()
 		stale := *document
 		stale.State = metric.BackupStateTimedout
 		stale.FinishedTS = time.Now().Format(time.RFC3339)
@@ -577,8 +583,12 @@ func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string
 	command.Stderr = logFile
 	runErr := command.Run()
 	if runErr != nil {
-		stop := exec.CommandContext(context.WithoutCancel(ctx), "bash", p.runner, "stop", runID, "--stage", stage)
+		stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), backupStopDeadline)
+		defer stopCancel()
+		stop := exec.CommandContext(stopCtx, "bash", p.runner, "stop", runID, "--stage", stage)
 		stop.Env = command.Env
+		stop.Cancel = func() error { return stop.Process.Signal(syscall.SIGTERM) }
+		stop.WaitDelay = backupStageKillGrace
 		stop.Stdout = logFile
 		stop.Stderr = logFile
 		_ = stop.Run()
@@ -960,6 +970,7 @@ const (
 	backupRunCeiling     = 5 * time.Hour
 	backupStaleWindow    = 24*time.Hour + backupRunCeiling
 	backupStageKillGrace = 2 * time.Minute
+	backupStopDeadline   = 10 * time.Minute
 	backupRunSkew        = 10 * time.Minute
 	leaderPollInterval   = 30 * time.Second
 	leaderLeaseRefresh   = 15 * time.Minute

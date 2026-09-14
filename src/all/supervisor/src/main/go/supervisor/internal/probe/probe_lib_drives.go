@@ -462,7 +462,9 @@ func (e smartFailure) Error() string {
 func driveSmartKind(node, kind string) (smartReport, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mountDeadline)
 	defer cancel()
-	output, err := exec.CommandContext(ctx, driveSmartCommand, "--json", "-d", kind, "-a", node).Output()
+	command := exec.CommandContext(ctx, driveSmartCommand, "--json", "-d", kind, "-a", node)
+	command.WaitDelay = driveSmartAbandon
+	output, err := command.Output()
 	if len(output) == 0 {
 		if err == nil {
 			return smartReport{}, smartFailure{kind: kind, reason: "returned no output"}
@@ -567,6 +569,7 @@ const (
 	driveTransportUSB        = "usb"
 	driveTransportInternal   = "internal"
 	driveSmartCommand        = "smartctl"
+	driveSmartAbandon        = 2 * time.Second
 	driveSmartExitUnreadable = 0b11
 	drivePrefixNVME          = "nvme"
 	driveNamespaceFirst      = "n1"

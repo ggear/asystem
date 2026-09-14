@@ -49,6 +49,8 @@ run_backup() {
   }
 }
 
+SERVICE_STOP_GRACE_SECONDS=30
+SERVICE_STOP_SECONDS=120
 SERVICE_WAIT_EXECUTING_SECONDS=300
 SERVICE_WAIT_HEALTHY_SECONDS=900
 SERVICE_WAIT_RESTART_SECONDS=120
@@ -102,12 +104,31 @@ retire_home() {
   rm -rf "${home}"
 }
 
+present_container() {
+  docker ps -a --format '{{.Names}}' | grep -Fxq "$1"
+}
+
+report_container() {
+  local container="$1" pid
+  pid="$(docker inspect --format '{{.State.Pid}}' "${container}" 2>/dev/null)" || pid=""
+  if [[ -z "${pid}" ]] || [[ "${pid}" == "0" ]]; then
+    return 0
+  fi
+  log_warn "Stop blocked by these processes of [${container}] under pid [${pid}]"
+  ps -eo pid,ppid,stat,wchan:30,etime,args 2>/dev/null |
+    awk -v parent="${pid}" '$2 == parent && $3 ~ /^[DZ]/' >&2 || true
+}
+
 stop_service() {
   local container
   for container in "${SERVICE_NAME}" "${SERVICE_NAME}_bootstrap"; do
-    docker stop "${container}" >/dev/null 2>&1 || true
-    docker wait "${container}" >/dev/null 2>&1 || true
-    docker rm -f "${container}" >/dev/null 2>&1 || true
+    present_container "${container}" || continue
+    timeout "${SERVICE_STOP_SECONDS}" docker stop -t "${SERVICE_STOP_GRACE_SECONDS}" "${container}" >/dev/null 2>&1 || true
+    timeout "${SERVICE_STOP_SECONDS}" docker wait "${container}" >/dev/null 2>&1 || true
+    timeout "${SERVICE_STOP_SECONDS}" docker rm -f "${container}" >/dev/null 2>&1 || true
+    present_container "${container}" || continue
+    report_container "${container}"
+    log_error "Service could not be stopped within [${SERVICE_STOP_SECONDS}] seconds per step, abandoning the install of [${SERVICE_VERSION_ABSOLUTE}] with a wedged container [${container}]"
   done
 }
 
