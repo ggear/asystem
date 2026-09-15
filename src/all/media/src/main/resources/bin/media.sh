@@ -28,7 +28,7 @@ MEDIA_SCOPE_DEFAULT="parents"
 PUBLISH_SCOPE="${MEDIA_SCOPE_DEFAULT}"
 
 OPT_FORCE=0
-OPT_KEEP_GOING=0
+OPT_PERSISTENT=0
 OPT_SHARE=""
 OPT_QUIET=0
 OPT_VERBOSE=0
@@ -67,12 +67,12 @@ EOF
     ingress   [dir]    import the usb drive and downloads        (default: from $PWD)
     stow      [scope]  file staged content into the library      (default: parents)
     move      <share>  copy to another share, drop the source
-    refresh            reconcile paths into Plex and scan
-    truncate           trim the Google Sheet history
+    refresh            reconcile paths into downstream stores
+    truncate           trim the online shared history
 
   Inspect
-    find      <token>  print a cd per matching directory
-    metadata           print this directory's spec and probes
+    find      <token>  find a media artefact
+    metadata           print this media artefact's spec and probes
     space              print share usage
 
   Tool
@@ -80,12 +80,12 @@ EOF
     home               print the install bin directory
     help               this text, and a bare amedia prints it
 
+  --share      <index> one share, not the one you are in         (default: all local)
   --force              analyse only, re-probe every file first   (default: off)
-  --keep-going         carry on past a failed pipeline stage     (default: off)
-  --share <index>      one share, not the one you are in         (default: all local)
+  --persistent         carry on past a failed pipeline stage     (default: off)
   --quiet              summaries only, the default below a share (default: off)
   --verbose            one line per file, the default in a share (default: off)
-  --dry-run            move only, print it and change nothing    (default: off)
+  --dryrun             move only, print it and change nothing    (default: off)
 EOF
 }
 
@@ -757,7 +757,7 @@ run_pipeline() {
     else
       [ ${result} -eq 0 ] && result=${status}
       echo "failed"
-      if [ "${OPT_KEEP_GOING}" -ne 1 ]; then
+      if [ "${OPT_PERSISTENT}" -ne 1 ]; then
         echo "amedia pipeline stopped at [${stage}], exit [${result}]" >&2
         return ${result}
       fi
@@ -782,13 +782,13 @@ parse_args() {
   while [ $# -gt 0 ]; do
     case "${1}" in
     --*)
-      in_list "${1}" --force --keep-going --share --quiet --verbose --dry-run ||
+      in_list "${1}" --force --persistent --share --quiet --verbose --dryrun ||
         refuse "unknown option [${1}]"
       command_accepts_option "${COMMAND}" "${1}" ||
         refuse "option [${1}] is not accepted by command [${COMMAND}]"
       case "${1}" in
       --force) OPT_FORCE=1 ;;
-      --keep-going) OPT_KEEP_GOING=1 ;;
+      --persistent) OPT_PERSISTENT=1 ;;
       --share)
         [ $# -ge 2 ] || refuse "option [--share] requires an index"
         shift
@@ -796,7 +796,7 @@ parse_args() {
         ;;
       --quiet) OPT_QUIET=1 ;;
       --verbose) OPT_VERBOSE=1 ;;
-      --dry-run) OPT_DRY_RUN=1 ;;
+      --dryrun) OPT_DRY_RUN=1 ;;
       esac
       ;;
     *)
@@ -812,8 +812,8 @@ command_accepts_option() {
   local command="${1}" option="${2}"
   case "${option}" in
   --force) [ "${command}" = "analyse" ] ;;
-  --keep-going) in_list "${command}" publish process ;;
-  --dry-run) [ "${command}" = "move" ] ;;
+  --persistent) in_list "${command}" publish process ;;
+  --dryrun) [ "${command}" = "move" ] ;;
   --share) in_list "${command}" analyse process clean normalise ingress space "${MEDIA_ACTIONS[@]}" ;;
   --quiet | --verbose) in_list "${command}" analyse process publish "${MEDIA_ACTIONS[@]}" ;;
   *) return 1 ;;
