@@ -32,7 +32,8 @@ BACKUPS_GIVEN=()
 BACKUPS_REJECT=""
 
 backups_log() {
-  local level="$1"; shift
+  local level="$1"
+  shift
   case "${level}" in
   WARN | ERRS) printf '[%-4s %-9s %8s] %s\n' "${level}" "" "$(date '+%H:%M:%S')" "$*" >&2 ;;
   *) printf '[%-4s %-9s %8s] %s\n' "${level}" "" "$(date '+%H:%M:%S')" "$*" ;;
@@ -45,18 +46,21 @@ backups_help() {
   {
     echo "Usage: ${0##*/} [command] [options]"
     echo
-    echo "  start           dispatch every enrolled host's run, then follow them until interrupted"
-    echo "  stop            stop every active run on every enrolled host"
-    echo "  tail            follow every enrolled host's newest run until interrupted"
-    echo "  list            list every enrolled host's run history"
-    echo "  help            this text, default command when given none"
+    echo "  start    start runs on all hosts, then follow them until interrupted"
+    echo "  stop     stop every active run on every host"
+    echo "  tail     follow every host's newest run until interrupted"
+    echo "  list     list every host's run history"
+    echo "  help     this text, default command when given none"
     echo
-    echo "  --scrub   scrub each host's backup disk, off unless asked"
+    echo "  --scrub  scrub each host's backup disk"
   } >&"${out}"
 }
 
 backups_hosts() {
-  [ -f "${BACKUPS_CONFIG}" ] || { backups_log ERRS "could not find [${BACKUPS_CONFIG}] to read the enrolled hosts from"; return 1; }
+  [ -f "${BACKUPS_CONFIG}" ] || {
+    backups_log ERRS "could not find [${BACKUPS_CONFIG}] to read the enrolled hosts from"
+    return 1
+  }
   jq -r '.asystem.schema[]?.host // empty' "${BACKUPS_CONFIG}" 2>/dev/null
 }
 
@@ -66,13 +70,16 @@ backups_scheduled() {
   scheduled="$(date -d "today ${BACKUPS_SCHEDULED_HOUR}:00:00" +%s 2>/dev/null)"
   [ -n "${scheduled}" ] || scheduled="$(date -v"${BACKUPS_SCHEDULED_HOUR}"H -v0M -v0S +%s 2>/dev/null)"
   [ -n "${scheduled}" ] || return 0
-  [ "${scheduled}" -gt "${now}" ] || scheduled=$(( scheduled + 86400 ))
+  [ "${scheduled}" -gt "${now}" ] || scheduled=$((scheduled + 86400))
   printf '%s' "${scheduled}"
 }
 
 backups_timeout_hours() {
   local now scheduled seconds hours
-  [ -n "${BACKUPS_TIMEOUT_HOURS}" ] && { printf '%s' "${BACKUPS_TIMEOUT_HOURS}"; return 0; }
+  [ -n "${BACKUPS_TIMEOUT_HOURS}" ] && {
+    printf '%s' "${BACKUPS_TIMEOUT_HOURS}"
+    return 0
+  }
   now="$(date +%s)"
   scheduled="$(backups_scheduled)"
   if [ -z "${scheduled}" ]; then
@@ -80,8 +87,8 @@ backups_timeout_hours() {
     printf '%s' "${BACKUPS_TIMEOUT_DEFAULT}"
     return 0
   fi
-  seconds=$(( scheduled - now ))
-  hours=$(( (seconds - 1) / 3600 ))
+  seconds=$((scheduled - now))
+  hours=$(((seconds - 1) / 3600))
   if [ "${hours}" -lt 1 ]; then
     hours=1
     backups_log WARN "less than an hour until the [$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] run, so this one cannot expire before it"
@@ -141,8 +148,8 @@ backups_each() {
   for host in ${hosts[@]+"${hosts[@]}"}; do
     [ -n "${host}" ] || continue
     [ "${BACKUPS_INTERRUPTED}" -eq 0 ] || return 130
-    found=$(( found + 1 ))
-    "${action}" "${host}" || failed=$(( failed + 1 ))
+    found=$((found + 1))
+    "${action}" "${host}" || failed=$((failed + 1))
   done
   if [ "${found}" -eq 0 ]; then
     backups_log ERRS "no enrolled hosts found in [${BACKUPS_CONFIG}]"
@@ -215,8 +222,14 @@ help)
   exit 0
   ;;
 start | stop | tail | list)
-  command -v ssh >/dev/null 2>&1 || { backups_log ERRS "ssh is required and was not found"; exit 1; }
-  command -v jq >/dev/null 2>&1 || { backups_log ERRS "jq is required and was not found"; exit 1; }
+  command -v ssh >/dev/null 2>&1 || {
+    backups_log ERRS "ssh is required and was not found"
+    exit 1
+  }
+  command -v jq >/dev/null 2>&1 || {
+    backups_log ERRS "jq is required and was not found"
+    exit 1
+  }
   "backups_${BACKUPS_COMMAND}"
   ;;
 *)

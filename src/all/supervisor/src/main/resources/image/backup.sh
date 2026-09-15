@@ -102,7 +102,7 @@ backup_help() {
   {
     echo "Usage: ${0##*/} [command] [argument] [options]"
     echo
-    echo "  start   [run-id]  run this host's stages, minting a run id when given none"
+    echo "  start   [run-id]  start a run, minting a run id when given none"
     echo "  stop    [run-id]  stop a run, or every active one when given none"
     echo "  tail    [run-id]  follow a run, or the newest when given none"
     echo "  auto    [on|off]  turn switch reaper on or off, resets to on daily"
@@ -191,7 +191,7 @@ BACKUP_TAIL_POLL="${BACKUP_TAIL_POLL:-2}"
 BACKUP_TAIL_STALE="${BACKUP_TAIL_STALE:-300}"
 BACKUP_TAIL_STALL="${BACKUP_TAIL_STALL:-300}"
 BACKUP_STOP_SECONDS="${BACKUP_STOP_SECONDS:-300}"
-BACKUP_LIST_WIDTHS=(19 19 9 9 9 9 9 9 13 9 8 25 10)
+BACKUP_LIST_WIDTHS=(19 19 8 9 9 9 9 9 11 8 8 25 10)
 BACKUP_LIST_RIGHTS=(2 8 9 10 11)
 BACKUP_LIST_RUNS=()
 BACKUP_FSTAB="${BACKUP_FSTAB:-/etc/fstab}"
@@ -227,6 +227,11 @@ backup_epoch() {
 backup_elapsed() {
   local seconds="$1"
   printf '%02dh%02dm%02ds' $(( seconds / 3600 )) $(( seconds % 3600 / 60 )) $(( seconds % 60 ))
+}
+
+backup_seconds() {
+  case "${1:-}" in '' | *[!0-9]*) printf '%s' "-"; return 0 ;; esac
+  printf '%d s' "$1"
 }
 
 # shellcheck disable=SC2329
@@ -283,14 +288,14 @@ backup_bar() {
 }
 
 backup_megabytes() {
-  local megabytes="${1:-}" grouped="" rest
-  [ "${megabytes}" -ge 0 ] 2>/dev/null || { printf '%s' "-"; return 0; }
-  rest="${megabytes}"
+  local mebibytes="${1:-}" grouped="" rest
+  [ "${mebibytes}" -ge 0 ] 2>/dev/null || { printf '%s' "-"; return 0; }
+  rest="${mebibytes}"
   while [ "${#rest}" -gt 3 ]; do
     grouped=",${rest: -3}${grouped}"
     rest="${rest:0:${#rest} - 3}"
   done
-  printf '%s MB' "${rest}${grouped}"
+  printf '%s MiB' "${rest}${grouped}"
 }
 
 backup_rated() {
@@ -300,10 +305,10 @@ backup_rated() {
 }
 
 backup_terabytes() {
-  local megabytes="${1:-}" tenths
-  case "${megabytes}" in '' | *[!0-9]*) printf '%s' "-"; return 0 ;; esac
-  tenths=$(( (megabytes + 50000) / 100000 ))
-  printf '%d.%d TB' $(( tenths / 10 )) $(( tenths % 10 ))
+  local mebibytes="${1:-}" tenths
+  case "${mebibytes}" in '' | *[!0-9]*) printf '%s' "-"; return 0 ;; esac
+  tenths=$(( (mebibytes * 10 + 524288) / 1048576 ))
+  printf '%d.%d TiB' $(( tenths / 10 )) $(( tenths % 10 ))
 }
 
 backup_rule() {
@@ -457,10 +462,10 @@ backup_list() {
     done
     finished="-"
     if [ "${result}" = "${BACKUP_STATE_RUNNING}" ]; then
-      elapsed="$(backup_elapsed $(( $(date +%s) - began )))"
+      elapsed="$(backup_seconds $(( $(date +%s) - began )))"
     else
       elapsed="-"
-      [ "${latest}" -gt "${began}" ] && elapsed="$(backup_elapsed $(( latest - began )))"
+      [ "${latest}" -gt "${began}" ] && elapsed="$(backup_seconds $(( latest - began )))"
       [ "${latest}" -gt 0 ] && finished="$(date -d @"${latest}" '+%Y-%m-%d_%H-%M-%S' 2>/dev/null || echo "-")"
     fi
     backup_row "${run}" "${finished}" "${elapsed}" "${trigger:--}" "${cells[@]}" "${scrub:--}" \

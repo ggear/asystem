@@ -45,8 +45,9 @@ SHARE_PATH_INDEX=""
 SHARE_PATH_SUFFIX=""
 
 usage() {
-  cat <<'EOF'
-Usage: amedia [command] [argument] [options]
+  local prog="${0##*/}"
+  cat <<EOF
+Usage: ${prog} [command] [argument] [options]
 
   Pipeline             stop at the first failed stage
     publish   [scope]  stow, process, merge, refresh             (default: parents)
@@ -59,12 +60,12 @@ EOF
   for action in "${MEDIA_ACTIONS[@]}"; do
     printf '    %-19s%s\n' "${action}" "${MEDIA_ACTION_HELP[${action}]}"
   done
-  cat <<'EOF'
+  cat <<EOF
 
   Library
-    clean     [dir]    delete generated metadata and scripts     (default: from $PWD)
-    normalise [dir]    fix ownership and modes, strip junk       (default: from $PWD)
-    ingress   [dir]    import the usb drive and downloads        (default: from $PWD)
+    clean     [dir]    delete generated metadata and scripts     (default: from \$PWD)
+    normalise [dir]    fix ownership and modes, strip junk       (default: from \$PWD)
+    ingress   [dir]    import the usb drive and downloads        (default: from \$PWD)
     stow      [scope]  file staged content into the library      (default: parents)
     move      <share>  copy to another share, drop the source
     refresh            reconcile paths into downstream stores
@@ -76,9 +77,9 @@ EOF
     space              print share usage
 
   Tool
-    mount              mount the remote shares, Darwin
+    mount              mount the remote shares
     home               print the install bin directory
-    help               this text, and a bare amedia prints it
+    help               this text, and a bare ${prog} prints it
 
   --share      <index> one share, not the one you are in         (default: all local)
   --force              analyse only, re-probe every file first   (default: off)
@@ -90,7 +91,7 @@ EOF
 }
 
 refuse() {
-  echo "amedia ${1}" >&2
+  echo "${0##*/} ${1}" >&2
   usage >&2
   exit 2
 }
