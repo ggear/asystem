@@ -295,7 +295,7 @@ backup_megabytes() {
 
 backup_rated() {
   local megabytes="${1:-0}" seconds="${2:-0}"
-  { [ "${seconds}" -gt 0 ] && [ "${megabytes}" -gt 0 ]; } 2>/dev/null || { backup_throughput "-"; return 0; }
+  { [ "${seconds}" -gt 0 ] && [ "${megabytes}" -ge 0 ]; } 2>/dev/null || { backup_throughput "-"; return 0; }
   backup_throughput $(( megabytes / seconds ))
 }
 
@@ -767,6 +767,21 @@ backup_active_stage() {
   printf '%s' "${active}"
 }
 
+backup_progressed() {
+  local verb="$1" copied="$2" total="$3" percent="$4" remaining="$5" eta="$6" rate="$7" last=0 line
+  [ "${total}" = "-" ] || last=1
+  [ "${rate}" = "-" ] || last=2
+  [ "${percent}" = "-" ] || last=3
+  [ "${remaining}" = "-" ] || last=4
+  line="$(printf '%s [%5s] GB' "${verb}" "${copied}")"
+  [ "${last}" -ge 1 ] && line="${line}$(printf ' of [%5s] GB' "${total}")"
+  [ "${last}" -ge 2 ] && line="${line}$(printf ' at [%s] MB/s' "$(backup_throughput "${rate}")")"
+  [ "${last}" -ge 3 ] && line="${line}$(printf ' at [%s] percent complete' "$(backup_percent "${percent}")")"
+  [ "${last}" -ge 4 ] &&
+    line="${line}$(printf ' and estimated to complete in [%4s] min at [%8s]' "${remaining}" "${eta}")"
+  printf '%s' "${line}"
+}
+
 backup_eta() {
   local now="$1" remaining="$2"
   case "${remaining}" in '' | *[!0-9]*) printf '%s' "--:--:--"; return 0 ;; esac
@@ -796,8 +811,7 @@ backup_scrubbing() {
     [ "${deadline}" -lt 0 ] && deadline=0
     { [ "${remaining}" = "-" ] || [ "${deadline}" -lt "${remaining}" ]; } && remaining="${deadline}"
   fi
-  printf 'scrubbed [%5s] GB of [%5s] GB at [%s] percent complete and estimated to complete in [%4s] min at [%8s] at [%s] MB/s' \
-    "${copied}" "${total}" "$(backup_percent "${percent}")" "${remaining}" "$(backup_eta "${now}" "${remaining}")" "$(backup_throughput "${rate}")"
+  backup_progressed scrubbed "${copied}" "${total}" "${percent}" "${remaining}" "$(backup_eta "${now}" "${remaining}")" "${rate}"
 }
 
 backup_sampled() {
@@ -893,8 +907,8 @@ backup_progress() {
   [ -n "${used:-}" ] && [ "${used}" -lt "${BACKUP_RATE_QUANTUM}" ] 2>/dev/null && return 0
   { [ "${copied}" = "0" ] || [ "${copied}" = "-" ]; } &&
     { [ "${total}" = "0" ] || [ "${total}" = "-" ]; } && return 0
-  backup_marker "${active:-none}" "$(printf '%s [%5s] GB of [%5s] GB at [%s] percent complete and estimated to complete in [%4s] min at [%8s] at [%s] MB/s' \
-    "$(backup_verb "${active}")" "${copied}" "${total}" "$(backup_percent "${percent}")" "${remaining}" "$(backup_eta "${now}" "${remaining}")" "$(backup_throughput "${rate}")")"
+  backup_marker "${active:-none}" "$(backup_progressed "$(backup_verb "${active}")" "${copied}" "${total}" \
+    "${percent}" "${remaining}" "$(backup_eta "${now}" "${remaining}")" "${rate}")"
 }
 
 backup_status() {
@@ -1417,9 +1431,9 @@ primary_start() {
 }
 JSON
     mv "${dir}/status.json.tmp" "${dir}/status.json"
-    local spent=$(( $(date +%s) - started )) rated=0
-    [ "${state}" = "${BACKUP_STATE_COMPLETE}" ] && rated="${size:-0}"
-    rated="$(backup_rated "${rated}" "${spent}")"
+    local spent=$(( $(date +%s) - started )) rated
+    rated="$(backup_throughput "-")"
+    [ "${state}" = "${BACKUP_STATE_COMPLETE}" ] && rated="$(backup_rated "${size:-0}" "${spent}")"
     backup_marker primary "finished [${service}] as [${state}] in [$(backup_elapsed "${spent}")], kind [${kind}], version [${version}], size [$(backup_sized "${size:-0}")] MB at [${rated}] MB/s"
     primary_counted "${state}" "${files:-0}" "${size:-0}"
     backup_publish "supervisor/${BACKUP_HOST}/backup/stage/primary/service/${service}/status" "$(cat "${dir}/status.json")" || true
@@ -1836,7 +1850,7 @@ backup_scrub() {
   else
     gained=""
     [ -n "${opened}" ] && gained=$(( scrubbed - opened ))
-    session="$(backup_rated "${gained:-0}" "$(( $(date +%s) - opened_at ))")"
+    session="$(backup_rated "${gained:--}" "$(( $(date +%s) - opened_at ))")"
     backup_log INFO "scrub [${state}] at [$(backup_percent "${progress}")] percent having scrubbed [$(backup_sized "${scrubbed}")] MB, [$(backup_sized "${gained:--}")] MB this session at [${session}] MB/s"
   fi
   [ -n "${devices}" ] &&

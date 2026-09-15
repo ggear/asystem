@@ -477,6 +477,29 @@ class BackupShellTest(unittest.TestCase):
             self.assertEqual(self.shell('printf "[%s]" "$(backup_percent {})"'.format(value)),
                              "[{}]".format(expected))
 
+    def test_progressed_omits_trailing_unknowns_and_dashes_interior_ones(self):
+        for name, args, expected in (
+                ("nothing beyond the bytes moved", "mirrored 5 - - - -- -",
+                 "mirrored [    5] GB"),
+                ("a rate with no total keeps the total as a placeholder", "mirrored 9 - - - -- 140",
+                 "mirrored [    9] GB of [    -] GB at [140] MB/s"),
+                ("a total with no rate keeps the rate as a placeholder", "scrubbed 24 7419 0 162 00:05:48 -",
+                 "scrubbed [   24] GB of [ 7419] GB at [  -] MB/s at [ 0] percent complete "
+                 "and estimated to complete in [ 162] min at [00:05:48]"),
+                ("everything measured", "mirrored 25 100 25 12 18:02:28 140",
+                 "mirrored [   25] GB of [  100] GB at [140] MB/s at [25] percent complete "
+                 "and estimated to complete in [  12] min at [18:02:28]")):
+            self.assertEqual(self.shell("backup_progressed " + args), expected, name)
+
+    def test_progressed_puts_every_stage_in_one_field_order(self):
+        order = ("] GB of [", "] GB at [", "] MB/s at [", "] percent complete and estimated")
+        for verb in ("mirrored", "scrubbed", "exported", "promoted"):
+            rendered = self.shell("backup_progressed {} 25 100 25 12 18:02:28 140".format(verb))
+            self.assertTrue(rendered.startswith(verb + " ["), rendered)
+            positions = [rendered.index(token) for token in order]
+            self.assertEqual(positions, sorted(positions),
+                             "every stage renders the same fields in the same order: " + rendered)
+
     def test_resulted_is_the_one_place_a_run_state_is_decided(self):
         for ran, halted, broke, expected in ((1, 0, 0, "complete"), (3, 0, 0, "complete"),
                                              (1, 1, 0, "halted"), (3, 2, 0, "halted"),
@@ -499,11 +522,16 @@ class BackupShellTest(unittest.TestCase):
 
     def test_rated_is_the_one_place_a_throughput_is_formed(self):
         for megabytes, seconds, expected in ((7047, 87, " 81"), (139455, 682, "204"), (723, 22, " 32"),
-                                             (0, 5, "  -"), (500, 0, "  -"), ("-", 10, "  -"), ("", "", "  -")):
+                                             (0, 5, "  0"), (0, 1, "  0"), (500, 0, "  -"),
+                                             ("-", 10, "  -"), ("", "", "  -")):
             rated = self.shell('printf "[%s]" "$(backup_rated "{}" "{}")"'.format(megabytes, seconds))
             self.assertEqual(rated, "[{}]".format(expected),
                              "[{}] MB over [{}] s".format(megabytes, seconds))
             self.assertEqual(len(rated) - 2, 3, "every rate renders three characters wide")
+        self.assertEqual(self.shell('printf "[%s]" "$(backup_rated 0 6)"'), "[  0]",
+                         "nothing moved over a real duration is a measured zero, not an unknown")
+        self.assertEqual(self.shell('printf "[%s]" "$(backup_rated 9 0)"'), "[  -]",
+                         "a zero duration cannot yield a rate at all")
 
     @NEEDS_GNU
     def test_finished_reports_the_rate_the_stage_achieved(self):
@@ -744,7 +772,8 @@ class BackupShellTest(unittest.TestCase):
         self.assertIn("scrubbed [   61] GB of [ 4170] GB", reported)
         self.assertIn("at [ 1] percent complete", reported)
         self.assertRegex(reported, r"estimated to complete in \[\s*4[67]\] min")
-        self.assertIn("at [  -] MB/s", reported)
+        self.assertIn("of [ 4170] GB at [  -] MB/s at [ 1] percent complete", reported,
+                      "an unmeasured rate that has fields after it holds its column with a dash")
         samples = join(self.home, "supervisor/backup", run, "stage/tertiary/scrub-samples")
         with open(samples, "w") as handle:
             handle.write("1000000 0\n1000010 {}\n1000110 {}\n".format(10 * 1073741824, 34 * 1073741824))
@@ -1346,12 +1375,18 @@ class BackupsShellTest(unittest.TestCase):
 
     def test_start_scrubs_only_when_asked(self):
         self.hosts("h1")
-        probe = ('ssh() { for a in "$@"; do case "${a}" in *nohup*) printf "%s\\n" "${a}" ;; esac; done; }\n'
+        capture = join(self.workdir, "ssh-args")
+        probe = ('ssh() { for a in "$@"; do c="$a"; done; printf "%s\\n" "${c}" >>"' + capture + '"; }\n'
                  'BACKUPS_RUN_ID=2026-09-15_00-00-00 BACKUPS_RUN_HOURS=9\n'
-                 'backups_each backups_start_one')
-        self.assertNotIn("--scrub", self.shell(probe, BACKUPS_SETTLE_SECONDS=0),
-                         "an estate run must not force an hours-long scrub by default")
-        self.assertIn("--scrub", self.shell(probe, BACKUPS_SCRUB=1, BACKUPS_SETTLE_SECONDS=0))
+                 'backups_each backups_start_one >/dev/null')
+        self.shell(probe, BACKUPS_SETTLE_SECONDS=0)
+        with open(capture) as handle:
+            self.assertNotIn("--scrub", handle.read(),
+                             "an estate run must not force an hours-long scrub by default")
+        os.remove(capture)
+        self.shell(probe, BACKUPS_SCRUB=1, BACKUPS_SETTLE_SECONDS=0)
+        with open(capture) as handle:
+            self.assertIn("--scrub", handle.read())
 
     def test_scrub_is_refused_against_a_command_that_cannot_scrub(self):
         self.hosts("h1")
@@ -1435,17 +1470,40 @@ class BackupsShellTest(unittest.TestCase):
 
     def test_start_one_dispatches_a_detached_run_with_the_computed_timeout(self):
         self.hosts()
-        probe = ('ssh() { shift 6; echo "$*"; }\n'
+        capture = join(self.workdir, "ssh-args")
+        probe = ('ssh() { for a in "$@"; do c="$a"; done; printf "%s\\n" "${c}" >>"' + capture + '"; }\n'
                  'BACKUPS_RUN_ID=2026-09-15_00-00-00 BACKUPS_RUN_HOURS=9\n'
-                 'backups_start_one macmini-mad')
-        line = self.shell(probe)
+                 'backups_start_one macmini-mad >/dev/null')
+        self.shell(probe)
+        with open(capture) as handle:
+            line = handle.read()
         self.assertIn("BACKUP_TIMEOUT_HOURS=9", line)
-        self.assertIn("abackup start 2026-09-15_00-00-00 ", line)
+        self.assertIn("abackup start 2026-09-15_00-00-00", line)
         self.assertNotIn("--scrub", line)
         self.assertIn("nohup", line)
         self.assertIn("disown", line)
-        self.assertIn("</dev/null >/dev/null 2>&1", line)
-        self.assertIn("--scrub", self.shell(probe, BACKUPS_SCRUB=1))
+        os.remove(capture)
+        self.shell(probe, BACKUPS_SCRUB=1)
+        with open(capture) as handle:
+            self.assertIn("--scrub", handle.read())
+
+    def test_start_one_names_the_host_it_dispatched_to(self):
+        self.hosts()
+        probe = ('ssh() { return 0; }\n'
+                 'BACKUPS_RUN_ID=2026-09-15_00-00-00 BACKUPS_RUN_HOURS=9\n'
+                 'backups_start_one macmini-mad')
+        self.assertRegex(self.shell(probe),
+                         r"^\[INFO\s+\d\d:\d\d:\d\d\] dispatched run \[2026-09-15_00-00-00\] "
+                         r"to \[macmini-mad\] with timeout \[9\] hours and scrub \[off\]$")
+
+    def test_start_one_says_nothing_about_a_host_that_did_not_answer(self):
+        self.hosts()
+        probe = ('ssh() { echo "ssh: could not resolve" >&2; return 255; }\n'
+                 'BACKUPS_RUN_ID=r BACKUPS_RUN_HOURS=9\n'
+                 'backups_start_one raspbpi-jil 2>&1 || printf "exit=%s" "$?"')
+        reported = self.shell(probe)
+        self.assertNotIn("raspbpi-jil", reported.replace("exit=255", ""))
+        self.assertIn("exit=255", reported)
 
     def test_stop_one_and_list_one_send_the_plain_subcommand(self):
         self.hosts()
@@ -1480,12 +1538,10 @@ class BackupsShellTest(unittest.TestCase):
 
     def test_every_log_line_shares_one_format(self):
         self.hosts()
-        rendered = self.shell('backups_line INFO "a message"')
-        self.assertRegex(rendered, r"^\[INFO\s+\d\d:\d\d:\d\d\] a message$")
-        announced = self.shell('BACKUPS_RUN_ID=r BACKUPS_RUN_HOURS=9\n'
-                               'ssh() { for a in "$@"; do c="$a"; done; sh -c "${c#*disown; }"; }\n'
-                               'backups_start_one macmini-mad')
-        self.assertRegex(announced.splitlines()[-1], r"^\[INFO\s+\d\d:\d\d:\d\d\] dispatched run \[r\]")
+        self.assertRegex(self.shell('backups_log INFO "a message"'),
+                         r"^\[INFO\s+\d\d:\d\d:\d\d\] a message$")
+        self.assertRegex(self.shell('backups_log WARN "a warning" 2>&1'),
+                         r"^\[WARN\s+\d\d:\d\d:\d\d\] a warning$")
 
     def test_each_continues_past_a_failing_host_and_still_reaches_every_other(self):
         self.hosts("h1", "h2", "h3")
@@ -1500,13 +1556,93 @@ class BackupsShellTest(unittest.TestCase):
 
     def test_start_dispatches_every_host_then_tails_every_host(self):
         self.hosts("h1", "h2", "h3")
-        probe = ('ssh() { local d; for d; do case "${d}" in *@*) break ;; esac; done; echo "${d}"; }\n'
-                 'backups_start')
-        order = [line for line in self.shell(probe, BACKUPS_SETTLE_SECONDS=0).splitlines()
-                 if line.startswith("root@")]
+        capture = join(self.workdir, "ssh-hosts")
+        probe = ('ssh() { local d; for d; do case "${d}" in *@*) break ;; esac; done\n'
+                 '  printf "%s\\n" "${d}" >>"' + capture + '"; }\n'
+                 'backups_start >/dev/null')
+        self.shell(probe, BACKUPS_SETTLE_SECONDS=0)
+        with open(capture) as handle:
+            order = [line for line in handle.read().splitlines() if line.startswith("root@")]
         self.assertEqual(order, ["root@h1", "root@h2", "root@h3",
                                  "root@h1", "root@h2", "root@h3"],
                          "every host is dispatched first, so the runs proceed in parallel, then tailed")
+
+
+INSTALL_PREP_SCRIPT = join(DIR_ROOT, "install_prep.sh")
+
+
+class InstallPrepShellTest(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp()
+        self.mount = join(self.workdir, "backup")
+        self.fstab = join(self.workdir, "fstab")
+        self.stubs = join(self.workdir, "stubs")
+        os.makedirs(self.stubs)
+        self.stub("chattr", 0)
+        self.stub("mountpoint", 1)
+
+    def tearDown(self):
+        shutil.rmtree(self.workdir, ignore_errors=True)
+
+    def stub(self, name, status):
+        path = join(self.stubs, name)
+        with open(path, "w") as handle:
+            handle.write('#!/bin/sh\nprintf "%s %s\\n" "{}" "$*" >>"{}"\nexit {}\n'
+                         .format(name, join(self.workdir, "calls"), status))
+        os.chmod(path, 0o755)
+
+    def declare(self):
+        with open(self.fstab, "w") as handle:
+            handle.write("# a comment  {}  btrfs  noauto  0 2\n".format(self.mount))
+            handle.write("PARTLABEL=backup_02  {}  btrfs  noauto  0 2\n".format(self.mount))
+
+    def invoke(self):
+        env = dict(os.environ, PATH=self.stubs + ":" + os.environ["PATH"],
+                   BACKUP_MOUNT=self.mount, BACKUP_FSTAB=self.fstab)
+        done = subprocess.run(["bash", INSTALL_PREP_SCRIPT], capture_output=True, text=True, env=env)
+        self.assertEqual(done.returncode, 0, "the hook must never fail an install: " + done.stderr)
+        return done.stdout + done.stderr
+
+    def calls(self):
+        try:
+            with open(join(self.workdir, "calls")) as handle:
+                return handle.read()
+        except FileNotFoundError:
+            return ""
+
+    def test_a_host_declaring_no_backup_mount_is_left_alone(self):
+        with open(self.fstab, "w") as handle:
+            handle.write("/dev/sda1  /home  ext4  defaults  0 2\n")
+        self.assertEqual(self.invoke(), "")
+        self.assertNotIn("chattr", self.calls())
+        self.assertFalse(os.path.exists(self.mount), "it must not create a mountpoint the host never declared")
+
+    def test_a_declared_mountpoint_is_created_and_made_immutable(self):
+        self.declare()
+        self.assertIn("Protected", self.invoke())
+        self.assertTrue(os.path.isdir(self.mount))
+        self.assertIn("chattr +i", self.calls())
+
+    def test_a_mounted_backup_disk_is_never_touched(self):
+        self.declare()
+        os.makedirs(self.mount)
+        self.stub("mountpoint", 0)
+        self.assertIn("it is mounted", self.invoke())
+        self.assertNotIn("chattr", self.calls(), "making the mounted disk immutable would break every backup")
+
+    def test_data_written_while_unmounted_is_reported_rather_than_frozen(self):
+        self.declare()
+        os.makedirs(self.mount)
+        open(join(self.mount, "stray"), "w").close()
+        reported = self.invoke()
+        self.assertIn("written while unmounted", reported)
+        self.assertNotIn("chattr", self.calls(), "freezing stray data would make it undeletable")
+
+    def test_a_filesystem_without_immutable_support_warns_and_carries_on(self):
+        self.declare()
+        self.stub("chattr", 1)
+        self.assertIn("Could not make", self.invoke())
 
 
 if __name__ == "__main__":

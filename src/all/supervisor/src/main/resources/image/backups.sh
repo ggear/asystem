@@ -21,6 +21,7 @@ BACKUPS_REMOTE="${BACKUPS_REMOTE:-/usr/local/bin/abackup}"
 BACKUPS_TIMEOUT_DEFAULT="${BACKUPS_TIMEOUT_DEFAULT:-6}"
 BACKUPS_TIMEOUT_HOURS="${BACKUPS_TIMEOUT_HOURS:-}"
 BACKUPS_SCHEDULED_HOUR=1
+BACKUPS_HOSTS_LABEL="*******-***"
 BACKUPS_EXIT_PARTIAL=3
 BACKUPS_RUN_HOURS=""
 BACKUPS_SETTLE_SECONDS="${BACKUPS_SETTLE_SECONDS:-5}"
@@ -30,16 +31,11 @@ BACKUPS_SCRUB="${BACKUPS_SCRUB:-0}"
 BACKUPS_GIVEN=()
 BACKUPS_REJECT=""
 
-backups_line() {
-  local level="$1"; shift
-  printf '[%-4s %-9s %8s] %s\n' "${level}" "" "$(date '+%H:%M:%S')" "$*"
-}
-
 backups_log() {
   local level="$1"; shift
   case "${level}" in
-  WARN | ERRS) backups_line "${level}" "$*" >&2 ;;
-  *) backups_line "${level}" "$*" ;;
+  WARN | ERRS) printf '[%-4s %-9s %8s] %s\n' "${level}" "" "$(date '+%H:%M:%S')" "$*" >&2 ;;
+  *) printf '[%-4s %-9s %8s] %s\n' "${level}" "" "$(date '+%H:%M:%S')" "$*" ;;
   esac
 }
 
@@ -47,11 +43,11 @@ backups_help() {
   local out=2
   [ "${1:-}" = "help" ] && out=1
   {
-    echo "Usage: ${0##*/} [command] [argument] [options]"
+    echo "Usage: ${0##*/} [command] [options]"
     echo
     echo "  start           dispatch every enrolled host's run, then follow them until interrupted"
     echo "  stop            stop every active run on every enrolled host"
-    echo "  tail  [run-id]  follow a run on every enrolled host, or each host's newest when given none"
+    echo "  tail            follow every enrolled host's newest run until interrupted"
     echo "  list            list every enrolled host's run history"
     echo "  help            this text, default command when given none"
     echo
@@ -107,16 +103,19 @@ backups_dispatch() {
   return "${status}"
 }
 
+# shellcheck disable=SC2029
 backups_start_one() {
-  local scrub="" announced
+  local host="$1" scrub="" status=0
   [ "${BACKUPS_SCRUB}" = "1" ] && scrub=" --scrub"
-  announced="$(backups_line INFO "dispatched run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]")"
-  backups_dispatch "$1" \
-    "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID}${scrub} </dev/null >/dev/null 2>&1 & disown; printf '%s\\n' \"${announced}\""
+  ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" \
+    "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID}${scrub} </dev/null >/dev/null 2>&1 & disown" \
+    >/dev/null 2>&1 || status=$?
+  [ "${status}" -eq 0 ] || return "${status}"
+  backups_log INFO "dispatched run [${BACKUPS_RUN_ID}] to [${host}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]"
 }
 
 backups_tail_one() {
-  backups_dispatch "$1" "${BACKUPS_REMOTE} tail ${BACKUPS_RUN_ID}"
+  backups_dispatch "$1" "${BACKUPS_REMOTE} tail"
 }
 
 backups_stop_one() {
@@ -155,6 +154,7 @@ backups_each() {
 
 backups_start() {
   local status=0
+  printf '== %s ==\n\n' "${BACKUPS_HOSTS_LABEL}"
   BACKUPS_RUN_ID="$(date +%Y-%m-%d_%H-%M-%S)"
   BACKUPS_RUN_HOURS="$(backups_timeout_hours)"
   backups_log INFO "starting suite run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours, expiring before the $(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00 scheduled run"
@@ -201,12 +201,6 @@ if [ -n "${BACKUPS_REJECT}" ]; then
 fi
 
 BACKUPS_COMMAND="${1:-help}"
-BACKUPS_RUN_ID="${2:-${BACKUPS_RUN_ID}}"
-if [ -n "${BACKUPS_RUN_ID}" ] && [ "${BACKUPS_COMMAND}" != "tail" ]; then
-  backups_log ERRS "only tail takes a run id, not command [${BACKUPS_COMMAND}]"
-  backups_help
-  exit 2
-fi
 if [ "${BACKUPS_SCRUB}" = "1" ] && [ "${BACKUPS_COMMAND}" != "start" ]; then
   backups_log ERRS "only start scrubs, not command [${BACKUPS_COMMAND}]"
   backups_help
