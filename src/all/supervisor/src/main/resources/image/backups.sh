@@ -154,14 +154,14 @@ backups_each() {
 
 backups_start() {
   local status=0
-  printf '== %s ==\n\n' "${BACKUPS_HOSTS_LABEL}"
+  printf '\n== %s ==\n\n' "${BACKUPS_HOSTS_LABEL}"
   BACKUPS_RUN_ID="$(date +%Y-%m-%d_%H-%M-%S)"
   BACKUPS_RUN_HOURS="$(backups_timeout_hours)"
-  backups_log INFO "starting suite run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours, expiring before the $(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00 scheduled run"
   backups_each backups_start_one || status=$?
   [ "${status}" -eq 1 ] && return 1
   sleep "${BACKUPS_SETTLE_SECONDS}"
   backups_tail || status="$?"
+  printf '\n'
   return "${status}"
 }
 
@@ -171,15 +171,18 @@ backups_tail() {
   backups_each backups_tail_one || status=$?
   trap - INT
   [ "${status}" -eq 130 ] && status=0
+  printf '\n'
   return "${status}"
 }
 
 backups_stop() {
   backups_each backups_stop_one
+  printf '\n'
 }
 
 backups_list() {
   backups_each backups_list_one
+  printf '\n'
 }
 
 # shellcheck disable=SC2317
