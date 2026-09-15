@@ -90,6 +90,7 @@ BACKUP_BOUNDED_ABANDONED=124
 BACKUP_BOUNDED_SEQ=0
 BACKUP_BOUNDED_OUTPUT=""
 BACKUP_USAGE_WEDGED=""
+BACKUP_USAGE_UNIDENTIFIED=""
 BACKUP_SCRUB_READING=""
 BACKUP_STAGE="${BACKUP_STAGE:-all}"
 BACKUP_SCRUB_ASKED=0
@@ -187,6 +188,7 @@ BACKUP_RATE_POINTS="${BACKUP_RATE_POINTS:-12}"
 BACKUP_RATE_QUANTUM="${BACKUP_RATE_QUANTUM:-104857600}"
 BACKUP_REAP_WAIT="${BACKUP_REAP_WAIT:-15}"
 BACKUP_LIST_WIDTHS=(19 19 9 9 9 9 9 9 13 9 8 25 10)
+BACKUP_LIST_RIGHTS=(2 8 9 10 11)
 BACKUP_LIST_RUNS=()
 BACKUP_FSTAB="${BACKUP_FSTAB:-/etc/fstab}"
 BACKUP_INSTALL_ROOT="${BACKUP_INSTALL_ROOT:-/var/lib/asystem/install}"
@@ -279,10 +281,17 @@ backup_megabytes() {
   printf '%s MB' "${rest}${grouped}"
 }
 
+backup_rated() {
+  local megabytes="${1:-0}" seconds="${2:-0}"
+  { [ "${seconds}" -gt 0 ] && [ "${megabytes}" -gt 0 ]; } 2>/dev/null || { printf '%3s' "-"; return 0; }
+  printf '%3s' $(( megabytes / seconds ))
+}
+
 backup_terabytes() {
-  local megabytes="${1:-}"
+  local megabytes="${1:-}" tenths
   case "${megabytes}" in '' | *[!0-9]*) printf '%s' "-"; return 0 ;; esac
-  printf '%2d TB' $(( (megabytes + 500000) / 1000000 ))
+  tenths=$(( (megabytes + 50000) / 100000 ))
+  printf '%d.%d TB' $(( tenths / 10 )) $(( tenths % 10 ))
 }
 
 backup_rule() {
@@ -296,9 +305,17 @@ backup_rule() {
 }
 
 backup_row() {
-  local index=0 out="" value
+  local index=0 out="" value right column
   for value in "$@"; do
-    out="${out}$(printf ' %-*s ' "${BACKUP_LIST_WIDTHS[index]}" "${value}")|"
+    right=""
+    for column in "${BACKUP_LIST_RIGHTS[@]}"; do
+      [ "${column}" -eq "${index}" ] && right="1" && break
+    done
+    if [ -n "${right}" ]; then
+      out="${out}$(printf ' %*s ' "${BACKUP_LIST_WIDTHS[index]}" "${value}")|"
+    else
+      out="${out}$(printf ' %-*s ' "${BACKUP_LIST_WIDTHS[index]}" "${value}")|"
+    fi
     index=$(( index + 1 ))
   done
   printf '|%s\n' "${out}"
@@ -439,7 +456,7 @@ backup_list() {
       [ "${latest}" -gt 0 ] && finished="$(date -d @"${latest}" '+%Y-%m-%d_%H-%M-%S' 2>/dev/null || echo "-")"
     fi
     backup_row "${run}" "${finished}" "${elapsed}" "${trigger:--}" "${cells[@]}" "${scrub:--}" \
-      "$(printf '%13s' "$(backup_megabytes "${size}")")" "$(backup_terabytes "${used_disk_mb}")" \
+      "$(backup_megabytes "${size}")" "$(backup_terabytes "${used_disk_mb}")" \
       "$(backup_terabytes "${total_disk_mb}")" "$(backup_bar "${volume}")" "${result}"
   done
   backup_rule "+"
@@ -697,16 +714,20 @@ backup_started() {
 }
 
 backup_finished() {
-  local stage="$1" doc="$2" status="success" pointer=""
+  local stage="$1" doc="$2" status="success" pointer="" spent moved rate
   if [ "$(backup_tail_field "${doc}" success_bool)" != "true" ]; then
     status="$(backup_tail_field "${doc}" state)"
     pointer=", see [$(dirname "${doc}")/output.log]"
   fi
-  backup_marker "${stage}" "$(printf 'finished with status [%s] in [%s] with files [%s] and size [%s] MB and disk at [%s] pct%s' \
+  spent="$(backup_tail_field "${doc}" duration_s)"
+  moved="$(backup_tail_field "${doc}" size_mb)"
+  rate="$(backup_rated "${moved}" "${spent}")"
+  backup_marker "${stage}" "$(printf 'finished with status [%s] in [%s] with files [%s] and size [%s] MB at [%s] MB/s and disk at [%s] pct%s' \
     "${status}" \
-    "$(backup_elapsed "$(backup_tail_field "${doc}" duration_s)")" \
+    "$(backup_elapsed "${spent}")" \
     "$(backup_tail_field "${doc}" file_count)" \
-    "$(backup_tail_field "${doc}" size_mb)" \
+    "${moved}" \
+    "${rate}" \
     "$(backup_tail_field "${doc}" disk_usage_perc)" \
     "${pointer}")"
 }
@@ -742,9 +763,8 @@ backup_eta() {
 }
 
 backup_scrubbing() {
-  local scrub="$1" now="$2" done_mb spent expires deadline copied total percent rate remaining
+  local scrub="$1" now="$2" record="${3:-}" done_mb expires deadline copied total percent rate remaining windowed
   done_mb="$(backup_tail_field "${scrub}" scrubbed_mb)"
-  spent="$(backup_tail_field "${scrub}" duration_s)"
   expires="$(backup_tail_field "${scrub}" expires_ts)"
   copied=$(( ${done_mb:-0} / 1024 ))
   total="${copied}"
@@ -752,22 +772,25 @@ backup_scrubbing() {
   percent=100
   [ "${total}" -gt 0 ] && percent=$(( copied * 100 / total ))
   [ "${percent}" -le 100 ] || percent=100
-  rate=0
-  [ "${spent:-0}" -gt 0 ] 2>/dev/null && rate=$(( ${done_mb:-0} / spent ))
-  remaining=0
-  [ "${rate}" -gt 0 ] && [ "${total}" -gt "${copied}" ] && remaining=$(( (total - copied) * 1024 / rate / 60 ))
+  rate="-"
+  windowed="$(backup_sampled "$(dirname "${scrub}")/scrub-samples" "$(( ${done_mb:-0} * 1048576 ))" "${record}")" &&
+    [ "${windowed:-0}" -gt 0 ] 2>/dev/null && rate="${windowed}"
+  remaining="-"
+  if [ "${rate}" != "-" ]; then
+    remaining=0
+    [ "${total}" -gt "${copied}" ] && remaining=$(( (total - copied) * 1024 / rate / 60 ))
+  fi
   if [ -n "${expires}" ]; then
     deadline=$(( ( $(date -d "${expires}" +%s 2>/dev/null || echo "${now}") - now ) / 60 ))
     [ "${deadline}" -lt 0 ] && deadline=0
-    [ "${deadline}" -lt "${remaining}" ] && remaining="${deadline}"
+    { [ "${remaining}" = "-" ] || [ "${deadline}" -lt "${remaining}" ]; } && remaining="${deadline}"
   fi
   printf 'scrubbed [%5s] GB of [%5s] GB at [%3s] percent complete and estimated to complete in [%4s] min at [%8s] at [%3s] MB/s' \
     "${copied}" "${total}" "${percent}" "${remaining}" "$(backup_eta "${now}" "${remaining}")" "${rate}"
 }
 
 backup_sampled() {
-  local dir="$1" raw="$2" record="$3" file previous points from_stamp from_bytes to_stamp to_bytes span delta
-  file="${dir}/samples"
+  local file="$1" raw="$2" record="$3" previous points from_stamp from_bytes to_stamp to_bytes span delta
   if [ -n "${record}" ]; then
     previous="$(tail -1 "${file}" 2>/dev/null | cut -d' ' -f2)"
     [ "${previous:-x}" -ge 0 ] 2>/dev/null || previous=""
@@ -791,7 +814,7 @@ backup_sampled() {
 }
 
 backup_mirroring() {
-  local path="$1" record="${2:-}" doc began transferred raw used sum copied total percent remaining rate windowed
+  local path="$1" record="${2:-}" doc began transferred raw used sum copied total percent remaining rate windowed clamped=""
   doc="${path}/stage/tertiary/status.json"
   raw="$(backup_used /backup)"
   began="$(cat "${path}/stage/tertiary/disk-start" 2>/dev/null)"
@@ -800,10 +823,10 @@ backup_mirroring() {
   used=$(( raw - ${began:-0} ))
   [ "${used}" -lt "${transferred}" ] && used="${transferred}"
   [ "${used}" -lt 0 ] && used=0
-  [ "${sum}" -lt "${used}" ] && sum="${used}"
+  [ "${sum}" -lt "${used}" ] && { sum="${used}"; clamped=1; }
   rate="-"
   remaining="-"
-  windowed="$(backup_sampled "${path}/stage/tertiary" "${raw}" "${record}")" &&
+  windowed="$(backup_sampled "${path}/stage/tertiary/samples" "${raw}" "${record}")" &&
     [ "${windowed:-0}" -gt 0 ] 2>/dev/null && rate="${windowed}"
   copied=$(( used / 1073741824 ))
   total=$(( sum / 1073741824 ))
@@ -813,6 +836,11 @@ backup_mirroring() {
   if [ "${rate}" != "-" ]; then
     remaining=$(( (sum - used) / 1048576 / rate / 60 ))
     [ "${remaining}" -lt 0 ] && remaining=0
+  fi
+  if [ -n "${clamped}" ]; then
+    total="-"
+    percent="-"
+    remaining="-"
   fi
   printf '%s\t%s\t%s\t%s\t%s\t%s' "${copied}" "${total}" "${percent}" "${remaining}" "${rate}" "${used}"
 }
@@ -841,7 +869,7 @@ backup_progress() {
   now="$(date +%s)"
   scrub="${path}/stage/${active}/scrub.json"
   if [ -n "${active}" ] && [ -f "${scrub}" ] && [ "$(backup_tail_field "${scrub}" state)" = "${BACKUP_STATE_RUNNING}" ]; then
-    backup_marker "${active}" "$(backup_scrubbing "${scrub}" "${now}")"
+    backup_marker "${active}" "$(backup_scrubbing "${scrub}" "${now}" "${record}")"
     return 0
   fi
   if [ "${active}" = "tertiary" ] && backup_verified /backup &&
@@ -1060,14 +1088,25 @@ backup_adopted() {
 }
 
 backup_usage() {
-  local uuid file allocation used=0 total=0
+  local uuid="" file allocation used=0 total=0 answered
   case " ${BACKUP_USAGE_WEDGED} " in *" $1 "*) return 0 ;; esac
-  if ! backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs filesystem show [$1]" btrfs filesystem show "$1"; then
-    BACKUP_USAGE_WEDGED="${BACKUP_USAGE_WEDGED} $1"
-    backup_log WARN "holding [${BACKUP_USAGE}] pct as the last usage of [$1], it stopped answering and this stage will not sample it again"
-    return 0
-  fi
-  uuid="$(printf '%s\n' "${BACKUP_BOUNDED_OUTPUT}" | sed -n 's/.*uuid: //p' | head -1)"
+  case " ${BACKUP_USAGE_UNIDENTIFIED} " in
+  *" $1 "*) ;;
+  *)
+    backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs filesystem show [$1]" btrfs filesystem show "$1"
+    answered=$?
+    if [ "${answered}" -eq 0 ]; then
+      uuid="$(printf '%s\n' "${BACKUP_BOUNDED_OUTPUT}" | sed -n 's/.*uuid: //p' | head -1)"
+    elif [ "${answered}" -eq "${BACKUP_BOUNDED_ABANDONED}" ]; then
+      BACKUP_USAGE_WEDGED="${BACKUP_USAGE_WEDGED} $1"
+      backup_log WARN "holding [${BACKUP_USAGE}] pct as the last usage of [$1], it stopped answering and this stage will not sample it again"
+      return 0
+    else
+      BACKUP_USAGE_UNIDENTIFIED="${BACKUP_USAGE_UNIDENTIFIED} $1"
+      backup_log INFO "btrfs could not identify [$1], measuring it with [df] for the rest of this run"
+    fi
+    ;;
+  esac
   if [ -n "${uuid}" ]; then
     for file in "${BACKUP_SYSFS_BTRFS}/${uuid}"/devices/*/size; do
       [ -f "${file}" ] && total=$(( total + $(cat "${file}") * 512 ))
@@ -1086,7 +1125,7 @@ backup_usage() {
     [ "${total}" -gt 0 ] && BACKUP_USAGE=$(( used * 100 / total ))
   else
     BACKUP_USAGE_WEDGED="${BACKUP_USAGE_WEDGED} $1"
-    backup_log WARN "holding [${BACKUP_USAGE}] pct as the last usage of [$1], it stopped answering and this stage will not sample it again"
+    backup_log WARN "holding [${BACKUP_USAGE}] pct as the last usage of [$1], neither btrfs nor df answered and this stage will not sample it again"
     return 0
   fi
   printf '%s %s %s\n' "${BACKUP_USAGE}" "$(( used / 1048576 ))" "$(( total / 1048576 ))" \
@@ -1278,6 +1317,15 @@ backup_heartbeat() {
   done
 }
 
+primary_counted() {
+  local state="$1" files="$2" size="$3"
+  [ "${state}" = "${BACKUP_STATE_COMPLETE}" ] || return 0
+  BACKUP_FILES=$(( BACKUP_FILES + files ))
+  BACKUP_SIZE=$(( BACKUP_SIZE + size ))
+  BACKUP_FILES_CREATED=$(( BACKUP_FILES_CREATED + 1 ))
+  backup_counters
+}
+
 primary_start() {
   local service script running health failed=0 count=0 index=0 enrolled=() configured=()
   mapfile -t configured < <(jq -r --arg h "${BACKUP_HOST}" \
@@ -1345,11 +1393,11 @@ primary_start() {
 }
 JSON
     mv "${dir}/status.json.tmp" "${dir}/status.json"
-    backup_marker primary "finished [${service}] as [${state}] in [$(backup_elapsed $(( $(date +%s) - started )))], kind [${kind}], version [${version}], files [${files:-0}], size [${size:-0}] MB"
-    BACKUP_FILES=$(( BACKUP_FILES + files ))
-    BACKUP_SIZE=$(( BACKUP_SIZE + size ))
-    [ "${state}" = complete ] && BACKUP_FILES_CREATED=$(( BACKUP_FILES_CREATED + 1 ))
-    backup_counters
+    local spent=$(( $(date +%s) - started )) rated=0
+    [ "${state}" = "${BACKUP_STATE_COMPLETE}" ] && rated="${size:-0}"
+    rated="$(backup_rated "${rated}" "${spent}")"
+    backup_marker primary "finished [${service}] as [${state}] in [$(backup_elapsed "${spent}")], kind [${kind}], version [${version}], files [${files:-0}], size [${size:-0}] MB at [${rated}] MB/s"
+    primary_counted "${state}" "${files:-0}" "${size:-0}"
     backup_publish "supervisor/${BACKUP_HOST}/backup/stage/primary/service/${service}/status" "$(cat "${dir}/status.json")" || true
   done
   backup_log INFO "attempted [${count}] services with [${failed}] failed"
@@ -1687,6 +1735,9 @@ backup_scrub() {
     backup_scrub_document "${BACKUP_STATE_FAILED}" false "${started}" 0 0 0 0 0
     return 1
   fi
+  local opened="" opened_at gained session
+  opened_at="$(date +%s)"
+  backup_scrub_reading && IFS=$'\t' read -r opened _ _ _ _ _ <<<"${BACKUP_SCRUB_READING}"
   local silent=0
   while :; do
     sleep "${BACKUP_SCRUB_POLL}"
@@ -1745,7 +1796,10 @@ backup_scrub() {
       backup_log ERROR "scrub found [${BACKUP_DEVICE_ERRORS}] device errors accumulated since the last scrub with no checksum error this pass, counters in [${BACKUP_STAGE_DIR}/scrub.log]"
     fi
   else
-    backup_log INFO "scrub [${state}] at [${progress}] pct having scrubbed [${scrubbed}] MB with no errors"
+    gained=""
+    [ -n "${opened}" ] && gained=$(( scrubbed - opened ))
+    session="$(backup_rated "${gained:-0}" "$(( $(date +%s) - opened_at ))")"
+    backup_log INFO "scrub [${state}] at [${progress}] pct having scrubbed [${scrubbed}] MB, [${gained:--}] MB this session at [${session}] MB/s"
   fi
   [ -n "${devices}" ] &&
     { backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs device stats -z [/backup]" btrfs device stats -z /backup || true; }
@@ -2012,6 +2066,7 @@ backup_banner "finished [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}] as [$([ "${B
   "elapsed   [$(backup_elapsed "${BACKUP_ELAPSED}")]" \
   "files     [${BACKUP_FILES}] transferred, [${BACKUP_FILES_CREATED}] created, [${BACKUP_FILES_DELETED}] deleted, [${BACKUP_FILES_HELD}] held" \
   "size      [${BACKUP_SIZE}] MB transferred, [${BACKUP_SENT}] MB sent, [${BACKUP_SIZE_HELD}] MB held" \
+  "rate      [$(backup_rated "${BACKUP_SIZE}" "${BACKUP_ELAPSED}")] MB/s transferred" \
   "disk      [${BACKUP_USAGE}] pct used" \
   "status    [${BACKUP_STAGE_DIR}/status.json]"
 [ "${BACKUP_STAGE}" = "tertiary" ] || backup_progress "${BACKUP_RUN_PATH}" "${BACKUP_STAGE}"

@@ -28,107 +28,9 @@ retire nginx and use cloudflared for homeasistant?
 improve sys tests with datbase/broker asserts
 
 
-if you do a module backup.sh skips within 1hr, should you hardlink a copy into a new run-id? should run-id be passed into module backup.sh so it is traceable? just adivse
-make 1 from 1/6 and all other first numerals in watch multi host UI the same colour as hostname not red, ESC from log view and single host view also same colour os hostname not red, red should only be for failed metrics, any others to chnage also?
 
 
-is there an ability to replace nil estimate min/rate for the typical aprox 10GB mirror case below? assume 150 MB/s for instance, if in the warm up phase and then resort to real numbers for the large transfers >100GB or so? without disturbing the logs od the <1GB also very common phase which is second.
-root@macmini-mad:~$ abackup start
-[INFO           09:53:27] starting run [2026-09-12_09-53-27] over [primary secondary tertiary] as [manual] with scrub [off]
-[INFO primary   09:53:30] starting with timeout [180] min until [12:53:27]
-[INFO primary   09:53:50] finished with status [success] in [00h00m22s] with files [3] and size [723] MB and disk at [18] pct
-[INFO secondary 09:53:50] starting with timeout [180] min until [12:53:50]
-[INFO secondary 09:53:52] finished with status [success] in [00h00m02s] with files [160] and size [484] MB and disk at [71] pct
-[INFO tertiary  09:53:54] starting with timeout [180] min until [12:53:53]
-[INFO tertiary  09:55:09] mirrored [    4] GB of [    4] GB at [100] percent complete and estimated to complete in [   -] min at [  -] MB/s
-[INFO tertiary  09:55:19] mirrored [    6] GB of [    6] GB at [100] percent complete and estimated to complete in [   -] min at [  -] MB/s
-[INFO tertiary  09:55:21] finished with status [success] in [00h01m27s] with files [31] and size [7047] MB and disk at [33] pct
-root@macmini-mad:~$ abackup start
-[INFO           09:55:52] starting run [2026-09-12_09-55-52] over [primary secondary tertiary] as [manual] with scrub [off]
-[INFO primary   09:55:55] starting with timeout [180] min until [12:55:52]
-[INFO primary   09:55:57] finished with status [success] in [00h00m05s] with files [3] and size [723] MB and disk at [18] pct
-[INFO secondary 09:55:59] starting with timeout [180] min until [12:55:58]
-[INFO secondary 09:56:01] finished with status [success] in [00h00m01s] with files [171] and size [0] MB and disk at [71] pct
-[INFO tertiary  09:56:01] starting with timeout [180] min until [12:56:01]
-[INFO tertiary  09:56:22] finished with status [success] in [00h00m21s] with files [25] and size [0] MB and disk at [33] pct
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-| RUN-ID (STARTED)    | FINISHED            | DURATION  | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SIZE          | VOLUME                    | RESULT     |
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-| 2026-09-12_09-55-52 | 2026-09-12_09-56-22 | 00h00m30s | manual    | success   | success   | success   |        723 MB | [#####.............]  33% | complete   |
-| 2026-09-12_09-53-27 | 2026-09-12_09-55-20 | 00h01m53s | manual    | success   | success   | success   |      8,254 MB | [#####.............]  33% | complete   |
-| 2026-09-12_09-26-14 | 2026-09-12_09-27-46 | 00h01m32s | manual    | success   | success   | success   |      2,893 MB | [#####.............]  33% | complete   |
-| 2026-09-12_01-00-58 | 2026-09-12_01-25-12 | 00h24m14s | scheduled | success   | success   | failed    |      1,461 MB | [##################] 100% | failed     |
-| 2026-09-11_20-22-38 | 2026-09-11_20-23-38 | 00h01m00s | manual    | success   | success   | success   |        242 MB | [#####.............]  33% | complete   |
-| 2026-09-11_19-43-18 | 2026-09-11_19-44-16 | 00h00m58s | manual    | success   | success   | success   |        242 MB | [#####.............]  33% | complete   |
-| 2026-09-11_19-40-14 | 2026-09-11_19-41-12 | 00h00m58s | manual    | success   | success   | success   |        242 MB | [#####.............]  33% | complete   |
-| 2026-09-11_19-31-28 | 2026-09-11_19-33-19 | 00h01m51s | manual    | success   | success   | success   |      2,172 MB | [#####.............]  33% | complete   |
-| 2026-09-11_18-17-04 | 2026-09-11_18-18-59 | 00h01m55s | manual    | -         | -         | success   |             - | [#####.............]  33% | complete   |
-| 2026-09-11_18-03-21 | 2026-09-11_18-04-22 | 00h01m01s | manual    | success   | success   | success   |        724 MB | [#####.............]  33% | complete   |
-| 2026-09-11_18-00-08 | 2026-09-11_18-00-42 | 00h00m34s | manual    | success   | success   | success   |        724 MB | [#####.............]  33% | complete   |
-| 2026-09-11_17-57-32 | 2026-09-11_17-59-23 | 00h01m51s | manual    | success   | success   | success   |      2,166 MB | [#####.............]  33% | complete   |
-| 2026-09-11_17-07-15 | 2026-09-11_17-07-47 | 00h00m32s | manual    | success   | success   | success   |             - | [#####.............]  33% | complete   |
-| 2026-09-11_16-55-14 | 2026-09-11_17-06-36 | 00h11m22s | manual    | success   | success   | success   |    139,455 MB | [#####.............]  33% | complete   |
-| 2026-09-11_16-46-17 | 2026-09-11_16-54-55 | 00h08m38s | manual    | success   | success   | stopped   |     85,924 MB | [#####.............]  32% | halted     |
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+---------------+---------------------------+------------+
-
-
-scrub overestimates rate at first, but then drops, should be about 240MB/s but is 400MB/s at beginning:
-root@macmini-mad:~$ abackup tail
-[INFO           12:37:17] following run [2026-09-12_12-35-09] under [/home/asystem/supervisor/backup/2026-09-12_12-35-09]
-[INFO tertiary  12:37:19] starting with timeout [180] min until [15:35:09]
-[INFO tertiary  12:37:19] scrubbed [   24] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 162] min at [406] MB/s
-[INFO tertiary  12:37:27] scrubbed [   24] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 162] min at [406] MB/s
-[INFO tertiary  12:37:37] scrubbed [   31] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 162] min at [351] MB/s
-root@macmini-mad:~$ abackup tail
-[INFO           12:38:47] following run [2026-09-12_12-35-09] under [/home/asystem/supervisor/backup/2026-09-12_12-35-09]
-[INFO tertiary  12:38:49] starting with timeout [180] min until [15:35:09]
-[INFO tertiary  12:38:49] scrubbed [   45] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 161] min at [301] MB/s
-[INFO tertiary  12:38:57] scrubbed [   45] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 161] min at [301] MB/s
-[INFO tertiary  12:39:08] scrubbed [   53] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 161] min at [295] MB/s
-[INFO tertiary  12:39:18] scrubbed [   53] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [295] MB/s
-
-[INFO tertiary  12:39:28] scrubbed [   53] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [295] MB/s
-[INFO tertiary  12:39:38] scrubbed [   60] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [285] MB/s
-[INFO tertiary  12:39:48] scrubbed [   60] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [285] MB/s
-[INFO tertiary  12:39:58] scrubbed [   60] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [285] MB/s
-[INFO tertiary  12:40:08] scrubbed [   67] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 160] min at [278] MB/s
-[INFO tertiary  12:40:19] scrubbed [   67] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [278] MB/s
-[INFO tertiary  12:40:29] scrubbed [   67] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [278] MB/s
-[INFO tertiary  12:40:39] scrubbed [   74] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [272] MB/s
-[INFO tertiary  12:40:49] scrubbed [   74] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [272] MB/s
-[INFO tertiary  12:40:59] scrubbed [   74] GB of [ 7419] GB at [  0] percent complete and estimated to complete in [ 159] min at [272] MB/s
-[INFO tertiary  12:41:09] scrubbed [   81] GB of [ 7419] GB at [  1] percent complete and estimated to complete in [ 159] min at [269] MB/s
-[INFO tertiary  12:41:20] scrubbed [   81] GB of [ 7419] GB at [  1] percent complete and estimated to complete in [ 158] min at [269] MB/s
-iotop:
-  Total DISK READ:  244.15 M/s ⣀⣀⣀⣀⣀⣀⣀⣀⣀⣸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ |   Total DISK WRITE:   91.87 K/s ⣀⣼⣄⣠⣄⣤⣄⣤⣄⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-Current DISK READ:  244.15 M/s ⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ | Current DISK WRITE:    0.00 B/s ⢸⣀⡇⢰⣸⢀⡇⢸⡀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-
-
-put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one?
-
-
-ability call suite wide backup from rue as client abackups linked to new backups.sh script with simpler but consistent command line. have it work on servers (mad/jen etc) and clients (rue)
-start to pass through very long timeout, extended until the 12:00am so will expire before 1am scheduled start. make sure reaper works correctly in this time. always do scrub in start. 
-done done serially, no need for tail, ctrl-c just exits loop and already started continues in background like with:
-for h in macmini-mad macmini-max macmini-may macmini-meg raspbpi-jen; do   ssh root@$h 'abackup start'; done
-do a nicer header indicating which host is executing and have a space between hosts output
-use this sort of commands
-backup_help() {
-  local out=2
-  [ "${1:-}" = "help" ] && out=1
-  {
-    echo "Usage: ${0##*/} [command] [argument] [options]"
-    echo
-    echo "  start  run this host's stages"
-    echo "  stop   stop every active one when given none"
-    echo "  list   list history of runs"
-    echo "  help   this text, default command when given none"
-  } >&"${out}"
-}
-
-
-
-code review entire backup.sh dont make chnages yet. test all logic. check for dead code. check for inconsistencies. check for simplications.
+i had bugs in backup.sh that lead to rsyncing to /backup unounted when mount failed, should I put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one? advice dont do
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
 release, clean history, ssh root@macmini-mad 'rm -rf /share/{10,20,30,40}/backup/supervisor/*'
@@ -149,7 +51,7 @@ implement a cmd/cmd_backup.go that calls a new engine func in new file engine_im
 make backup cli match existing watch/server cli impl, but incorporate backup.sh but modifying to be more go like and matching existing watch/server style, show suggestion of how to do this
 preserve all existing backup.sh functionality, error handling, edge cases, logging style, cli 
 
-implement media cli.md 
+implement media cli.md and delete plan
 
 tune fan/tem and test fans scale up on all hosts, mbfan in _fedora_max? should be in all? sync temp with fan/temp metrics
 check all metrics working 

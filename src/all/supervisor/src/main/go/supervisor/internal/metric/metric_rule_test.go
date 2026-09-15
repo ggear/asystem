@@ -58,6 +58,14 @@ func TestMetricRule_Evaluate(t *testing.T) {
 			expectedOK: true, expectedDetails: []string{"[==0]"},
 		},
 		{
+			name: "below excludes the limit", rule: Bounded(Self, Below, 65), self: 65, selfNumeric: true,
+			expectedOK: false, expectedDetails: []string{"not within [<65] pct"},
+		},
+		{
+			name: "below admits one under the limit", rule: Bounded(Self, Below, 65), self: 64, selfNumeric: true,
+			expectedOK: true, expectedDetails: []string{"within [<65] pct"},
+		},
+		{
 			name: "a non numeric value can satisfy no bound", rule: Bounded(Self, AtMost, 90), self: 0, selfNumeric: false,
 			expectedOK: false, expectedDetails: []string{"not within"},
 		},

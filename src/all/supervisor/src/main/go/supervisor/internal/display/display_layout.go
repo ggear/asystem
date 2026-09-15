@@ -580,10 +580,10 @@ func (b *box) draw(display *Display, force bool) {
 			arrowLen := runewidth.StringWidth(arrow)
 			beforeSlash, slashAndAfter, hasSlash := strings.Cut(rest, "/")
 			if hasSlash && beforeSlash != "" {
-				display.terminal.draw(col+arrowLen, row, beforeSlash, colourShout)
+				display.terminal.draw(col+arrowLen, row, beforeSlash, colourGrowl)
 				display.terminal.draw(col+arrowLen+runewidth.StringWidth(beforeSlash), row, "/"+slashAndAfter, colourChat)
 			} else {
-				display.terminal.draw(col+arrowLen, row, rest, colourShout)
+				display.terminal.draw(col+arrowLen, row, rest, colourGrowl)
 			}
 		}
 		col += runewidth.StringWidth(mid)

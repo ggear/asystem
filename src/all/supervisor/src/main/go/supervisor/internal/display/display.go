@@ -771,7 +771,7 @@ func (d *Display) drawLogOverlayBar() {
 	d.terminal.draw(0, 0, strings.Repeat(textRule.pick(d.useUnicode), padLen), colourChat)
 	d.terminal.draw(padLen, 0, status, colour)
 	d.terminal.draw(padLen+statusWidth, 0, arrow, colourChat)
-	d.terminal.draw(padLen+statusWidth+arrowWidth, 0, esc, colourShout)
+	d.terminal.draw(padLen+statusWidth+arrowWidth, 0, esc, colourChat)
 	d.terminal.draw(padLen+statusWidth+arrowWidth+escWidth, 0, suffix, colourChat)
 }
 

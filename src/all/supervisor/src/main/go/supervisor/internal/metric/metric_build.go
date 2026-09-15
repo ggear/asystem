@@ -17,6 +17,7 @@ type builder struct {
 	template     string
 	persisted    bool
 	warming      bool
+	bursty       bool
 	pulseRule    Rule
 	trendRule    Rule
 	dependencies []ID
@@ -67,6 +68,7 @@ var metricBuildersByID = []builder{
 		description: "processor time used across all cores",
 		template:    "supervisor/$HOST/$SCOPE/host/used_processor",
 		persisted:   true,
+		bursty:      true,
 		pulseRule:   Bounded(Self, AtMost, 90),
 		trendRule:   Bounded(Self, AtMost, 70),
 	},
@@ -147,8 +149,8 @@ var metricBuildersByID = []builder{
 		description: fmt.Sprintf("hottest processor temperature against its warning ceiling, one percent per degree offset by %v, so full at %v degrees", WarnTemperatureOffsetPercent, WarnTemperatureFullCelsius),
 		template:    "supervisor/$HOST/$SCOPE/host/warn_temperature",
 		persisted:   true,
-		pulseRule:   Bounded(Self, AtMost, WarnTemperaturePulseLimit),
-		trendRule:   Bounded(Self, AtMost, WarnTemperatureTrendLimit),
+		pulseRule:   Bounded(Self, Below, WarnTemperaturePulseLimit),
+		trendRule:   Bounded(Self, Below, WarnTemperatureTrendLimit),
 	},
 	MetricHostSpinFanSpeed: {
 		id:           MetricHostSpinFanSpeed,
@@ -229,6 +231,7 @@ var metricBuildersByID = []builder{
 		description: "busiest drive's time spent servicing requests",
 		template:    "supervisor/$HOST/$SCOPE/host/used_disk_time",
 		persisted:   true,
+		bursty:      true,
 		pulseRule:   Bounded(Self, AtMost, 90),
 		trendRule:   Bounded(Self, AtMost, 80),
 	},
@@ -240,6 +243,7 @@ var metricBuildersByID = []builder{
 		description: "busiest physical interface's throughput against its rated link speed",
 		template:    "supervisor/$HOST/$SCOPE/host/used_network",
 		persisted:   true,
+		bursty:      true,
 		pulseRule:   Bounded(Self, AtMost, 90),
 		trendRule:   Bounded(Self, AtMost, 80),
 	},
@@ -544,7 +548,8 @@ var metricBuildersByTemplate = func() map[string]builder {
 	for id := range MetricMax {
 		if ID(id) == MetricHost ||
 			!strings.HasPrefix(metricBuildersByID[id].template, templateHostPrefix) ||
-			metricBuildersByID[id].pulseRule.kind == ruleAlways {
+			metricBuildersByID[id].pulseRule.kind == ruleAlways ||
+			metricBuildersByID[id].bursty {
 			continue
 		}
 		aggregated = append(aggregated, ID(id))
@@ -611,6 +616,9 @@ var metricBuildersByTemplate = func() map[string]builder {
 		labels[metricBuildersByID[id].label] = true
 		if metricBuildersByID[id].warming && metricBuildersByID[id].metricKind == MetricKindService {
 			panic(fmt.Sprintf("error: metric ID [%d] is service scoped and declares warming, which would stop the service refreshing", id))
+		}
+		if metricBuildersByID[id].bursty && metricBuildersByID[id].metricKind == MetricKindService {
+			panic(fmt.Sprintf("error: metric ID [%d] is service scoped and declares bursty, which only excludes a metric from the host aggregate", id))
 		}
 		if metricBuildersByID[id].pulseRule.IsZero() {
 			panic(fmt.Sprintf("error: metric ID [%d] declares no pulseRule", id))

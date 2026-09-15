@@ -33,3 +33,12 @@ ${SERVICE_INSTALL}/image/backup.sh "\$@"
 EOF
   chmod +x /usr/local/bin/abackup
 fi
+chmod +x "${SERVICE_INSTALL}/image/backups.sh"
+rm -f /usr/local/bin/abackups
+cat >/usr/local/bin/abackups <<EOF
+#!/bin/bash
+
+${SERVICE_INSTALL}/image/backups.sh "\$@"
+
+EOF
+chmod +x /usr/local/bin/abackups

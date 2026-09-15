@@ -2390,3 +2390,54 @@ Two things the merge does not fix, both by design: the sequencing dependency of 
 primary's documents is inherent to a pipeline and is now merely visible rather than removed; and
 `install.sh` copies `data/*` forward without deleting, so **the `backup/` directory persists in every
 installed home until removed by hand** — the same lingering-script caveat already recorded above.
+
+### `backups.sh` — an estate-wide dispatcher, deliberately outside `backup.sh` — built
+
+**A separate file, not a new command inside `backup.sh`.** `backups.sh` knows nothing about stages,
+runs, documents or the reaper's payload shape — it reads the enrolled host list out of this host's
+own generated `config.json` (`.asystem.schema[].host`, the same list every host carries, edge and
+server form factors only) and drives the already-installed `abackup` on each host over `ssh`,
+serially. `backup.sh` did not change to make this possible, and that was the constraint, not an
+accident: the per-host script is what a release, a probe and an operator all still drive directly,
+and folding suite-wide concerns into it would have meant every one of those callers threading a new
+"which other hosts" concept through a script that has no business knowing about the rest of the
+estate. Installed as `abackups` on every host, client and server alike (`install_post.sh`, beside the
+existing per-host `abackup`), so the same command dispatches the estate whether run from an edge/server
+host or from a client like `rue` that has no local `backup.sh` to run at all.
+
+**`start` computes its own timeout, and does not reuse `backup_scheduled`'s.** `BACKUP_TIMEOUT_HOURS`
+defaults to 3 in `backup.sh`, which is what the single-host probe's scheduled run wants, and is far too
+short for a hand-driven multi-terabyte estate run kicked off in the evening. `backups.sh` instead
+computes hours from *now* until the next local midnight and passes that as `BACKUP_TIMEOUT_HOURS` over
+`ssh`, so a long run is not killed early but is still guaranteed to stop itself before the 01:00
+scheduled run reaches `backup_active`'s already-running check — a manual run still active at 01:00
+would otherwise **block** the scheduled one rather than race it. Midnight rather than 01:00 itself
+is the margin: the reaper's own `off` expiry (`backup_auto off`, unchanged, still resolves to the next
+01:00) covers the disk staying powered for the whole window including the idle hour between midnight
+and the scheduled start. Computed with a portable `date`, GNU (`date -d`) tried first and BSD
+(`date -v`) as the fallback — `rue`, the one host this is routinely run from by hand, is macOS.
+
+**`start` always scrubs and always dispatches detached; `stop` and `list` do neither.** `--scrub` is
+passed on every suite-wide `start`, overriding each host's own day-of-month eligibility window,
+because a hand-triggered estate run is exactly the kind of infrequent event worth scrubbing on. The
+`start` dispatch is `nohup … & disown` inside the remote shell, so the local `ssh` returns as soon as
+the remote shell has backgrounded the job — `backup.sh`'s own `start` (via `backup_sequence`) still
+tails and waits on its background subshell exactly as it does today, but by the time it does that this
+process is already detached from the session `ssh` opened, so nothing here waits on it. This is what
+makes the loop serial in dispatch only: each host is contacted in turn, but the estate then runs
+concurrently, and closing the terminal or pressing Ctrl-C only stops the local loop from dispatching
+hosts it had not yet reached — every host already dispatched keeps running, unaffected, exactly as
+`for h in …; do ssh root@$h abackup start; done` would.
+
+**`backups.sh` never touches the reaper, on purpose — `reap()` already defers on its own.** The first
+draft had `start` call `abackup auto off` on each host before dispatching, on the reasoning that a
+long suite-wide run needs the disk kept powered. That reasoning was already true without it:
+`backupProbe.reap` (`probe_impl_backup.go`) watches the retained `supervisor/+/backup/stage/tertiary/status`
+topic for any host reporting `state: running` with an unexpired `expires_ts`, and that document is
+published and refreshed by `backup.sh`'s own heartbeat (`backup_document` at start, then every
+`BACKUP_HEARTBEAT_REFRESH`) regardless of who triggered the run — a hand run and a probe-scheduled run
+look identical to the reaper. Publishing `auto off` was therefore pausing a mechanism the run was
+already exempt from by a different path, and doing so estate-wide would have left the reaper armed but
+paused (via the switch) even on hosts whose stage had already finished, until the switch's own next
+01:00 expiry. The per-run `BACKUP_TIMEOUT_HOURS` computed against local midnight is unrelated to this
+and stays: it bounds the run itself, not the reaper's view of it.

@@ -225,3 +225,42 @@ func TestMetricBuild_TopicToAndFromID(t *testing.T) {
 		})
 	}
 }
+
+func TestMetricBuild_HostAggregate(t *testing.T) {
+	tests := []struct {
+		name             string
+		metricID         ID
+		expectedEnrolled bool
+	}{
+		{name: "a bursty rate is excluded", metricID: MetricHostUsedDiskTime, expectedEnrolled: false},
+		{name: "a bursty network rate is excluded", metricID: MetricHostUsedNetwork, expectedEnrolled: false},
+		{name: "a bursty processor rate is excluded", metricID: MetricHostUsedProcessor, expectedEnrolled: false},
+		{name: "a fault count is enrolled", metricID: MetricHostFailedShares, expectedEnrolled: true},
+		{name: "a space level is enrolled", metricID: MetricHostUsedHomeSpace, expectedEnrolled: true},
+		{name: "a memory level is enrolled", metricID: MetricHostUsedMemory, expectedEnrolled: true},
+		{name: "a swap level is enrolled", metricID: MetricHostUsedSwapSpace, expectedEnrolled: true},
+		{name: "an always ruled metric is excluded", metricID: MetricHostHaltedBackupStages, expectedEnrolled: false},
+		{name: "a service scoped metric is excluded", metricID: MetricServiceUsedMemory, expectedEnrolled: false},
+	}
+	enrolled := map[ID]bool{}
+	for _, id := range GetIDDeps(MetricHost) {
+		enrolled[id] = true
+	}
+	if len(enrolled) == 0 {
+		t.Fatalf("aggregate: got no enrolled metrics, want the host metrics that can fail")
+	}
+	siblings := map[ID]bool{}
+	for _, id := range GetIDPulseRule(MetricHost).Siblings() {
+		siblings[id] = true
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if enrolled[test.metricID] != test.expectedEnrolled {
+				t.Errorf("dependencies: got %v want %v", enrolled[test.metricID], test.expectedEnrolled)
+			}
+			if siblings[test.metricID] != test.expectedEnrolled {
+				t.Errorf("rule siblings: got %v want %v", siblings[test.metricID], test.expectedEnrolled)
+			}
+		})
+	}
+}

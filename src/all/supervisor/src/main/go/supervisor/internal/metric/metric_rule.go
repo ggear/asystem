@@ -14,6 +14,7 @@ const (
 	AtMost Comparator = iota
 	AtLeast
 	Above
+	Below
 	Exactly
 )
 
@@ -25,6 +26,8 @@ func (c Comparator) String() string {
 		return ">="
 	case Above:
 		return ">"
+	case Below:
+		return "<"
 	case Exactly:
 		return "=="
 	default:
@@ -40,6 +43,8 @@ func (c Comparator) satisfies(value, limit float64) bool {
 		return value >= limit
 	case Above:
 		return value > limit
+	case Below:
+		return value < limit
 	case Exactly:
 		return value == limit
 	default:

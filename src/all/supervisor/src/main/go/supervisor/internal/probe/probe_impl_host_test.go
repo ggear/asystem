@@ -1011,3 +1011,35 @@ func TestProbeImplHost_EveryMetricIsWiredAtConstruction(t *testing.T) {
 		}
 	}
 }
+
+func TestProbeImplHost_WarnTemperatureRule(t *testing.T) {
+	tests := []struct {
+		name            string
+		warn            int8
+		expectedPulseOK bool
+		expectedTrendOK bool
+	}{
+		{name: "happy_idle_is_green", warn: 47, expectedPulseOK: true, expectedTrendOK: true},
+		{name: "happy_under_the_yellow_onset_is_green", warn: 64, expectedPulseOK: true, expectedTrendOK: true},
+		{name: "sad_at_the_yellow_onset_is_yellow", warn: 65, expectedPulseOK: true, expectedTrendOK: false},
+		{name: "sad_under_the_red_onset_is_yellow", warn: 69, expectedPulseOK: true, expectedTrendOK: false},
+		{name: "sad_at_the_red_onset_is_red", warn: 70, expectedPulseOK: false, expectedTrendOK: false},
+		{name: "sad_above_the_red_onset_is_red", warn: 90, expectedPulseOK: false, expectedTrendOK: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			gates := metric.GateResolver(func(metric.GateID) (bool, bool) { return false, false })
+			values := metric.ValueResolver(func(metric.ID) (float64, bool, bool) { return 0, false, false })
+			pulse := metric.GetIDPulseRule(metric.MetricHostWarnTemperature).
+				Evaluate("%", float64(testCase.warn), true, values, gates)
+			trend := metric.GetIDTrendRule(metric.MetricHostWarnTemperature).
+				Evaluate("%", float64(testCase.warn), true, values, gates)
+			if pulse.OK != testCase.expectedPulseOK {
+				t.Errorf("pulse: got %v want %v detail %s", pulse.OK, testCase.expectedPulseOK, pulse.Detail)
+			}
+			if trend.OK != testCase.expectedTrendOK {
+				t.Errorf("trend: got %v want %v detail %s", trend.OK, testCase.expectedTrendOK, trend.Detail)
+			}
+		})
+	}
+}
