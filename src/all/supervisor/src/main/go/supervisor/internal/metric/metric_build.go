@@ -41,8 +41,8 @@ const (
 
 	WarnTemperatureOffsetPercent  = 10.0
 	WarnTemperatureFullCelsius    = 100.0 - WarnTemperatureOffsetPercent
-	WarnTemperaturePulseCelsius   = 65.0
-	WarnTemperatureTrendCelsius   = 60.0
+	WarnTemperaturePulseCelsius   = 70.0
+	WarnTemperatureTrendCelsius   = 65.0
 	WarnTemperatureThresholdAmber = WarnTemperatureTrendCelsius + WarnTemperatureOffsetPercent
 	WarnTemperatureThresholdRed   = WarnTemperaturePulseCelsius + WarnTemperatureOffsetPercent
 

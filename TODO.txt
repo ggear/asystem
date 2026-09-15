@@ -29,21 +29,6 @@ improve sys tests with datbase/broker asserts
 
 
 
-amedia help to use     echo "Usage: ${0##*/} [command] [options]" style so as not to hard code amedia
-DURATION to be in seconds and more compact col, and MB, TB to be converted into MiB TiB and tighter cols, is that what is being calculated today? correct on linux systems?
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+---------------+-----------+----------+---------------------------+------------+
-| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |         DELTA |      SIZE | CAPACITY |                      USED | RESULT     |
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+---------------+-----------+----------+---------------------------+------------+
-| 2026-09-15_18-54-52 | 2026-09-15_18-56-14 | 00h01m22s | manual    | success   | success   | success   | skipped   |          0 MB |    7.6 TB |  22.9 TB | [#####.............]  33% | complete   |
-+---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+---------------+-----------+----------+---------------------------+------------+
-to
-+---------------------+---------------------+----------+-----------+-----------+-----------+-----------+-----------+-----------+----------+----------+---------------------------+------------+
-| STARTED (RUN-ID)    | FINISHED            | DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |     DELTA |     SIZE | CAPACITY |                      USED | RESULT     |
-+---------------------+---------------------+----------+-----------+-----------+-----------+-----------+-----------+-----------+----------+----------+---------------------------+------------+
-| 2026-09-15_18-54-52 | 2026-09-15_18-56-14 |     82 s | manual    | success   | success   | success   | skipped   | 10000 MiB |  7.6 TiB | 22.9 TiB | [#####.............]  33% | complete   |
-+---------------------+---------------------+----------+-----------+-----------+-----------+-----------+-----------+-----------+----------+----------+---------------------------+------------+
-
-
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
 release, clean history, ssh root@macmini-mad 'rm -rf /share/{10,20,30,40}/backup/supervisor/*'

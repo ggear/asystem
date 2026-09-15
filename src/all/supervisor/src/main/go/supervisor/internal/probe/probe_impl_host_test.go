@@ -1021,9 +1021,9 @@ func TestProbeImplHost_WarnTemperatureRule(t *testing.T) {
 	}{
 		{name: "happy_idle_is_green", warn: 47, expectedPulseOK: true, expectedTrendOK: true},
 		{name: "happy_under_the_amber_onset_is_green", warn: 64, expectedPulseOK: true, expectedTrendOK: true},
-		{name: "sad_at_the_amber_onset_is_amber", warn: 70, expectedPulseOK: true, expectedTrendOK: false},
-		{name: "sad_under_the_red_onset_is_amber", warn: 74, expectedPulseOK: true, expectedTrendOK: false},
-		{name: "sad_at_the_red_onset_is_red", warn: 75, expectedPulseOK: false, expectedTrendOK: false},
+		{name: "sad_at_the_amber_onset_is_amber", warn: 75, expectedPulseOK: true, expectedTrendOK: false},
+		{name: "sad_under_the_red_onset_is_amber", warn: 79, expectedPulseOK: true, expectedTrendOK: false},
+		{name: "sad_at_the_red_onset_is_red", warn: 80, expectedPulseOK: false, expectedTrendOK: false},
 		{name: "sad_above_the_red_onset_is_red", warn: 90, expectedPulseOK: false, expectedTrendOK: false},
 	}
 	for _, testCase := range tests {
