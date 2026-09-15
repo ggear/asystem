@@ -30,11 +30,16 @@ BACKUPS_SCRUB="${BACKUPS_SCRUB:-0}"
 BACKUPS_GIVEN=()
 BACKUPS_REJECT=""
 
+backups_line() {
+  local level="$1"; shift
+  printf '[%-4s %-9s %8s] %s\n' "${level}" "" "$(date '+%H:%M:%S')" "$*"
+}
+
 backups_log() {
   local level="$1"; shift
   case "${level}" in
-  WARN | ERRS) printf '[%-4s %8s] %s\n' "${level}" "$(date '+%H:%M:%S')" "$*" >&2 ;;
-  *) printf '[%-4s %8s] %s\n' "${level}" "$(date '+%H:%M:%S')" "$*" ;;
+  WARN | ERRS) backups_line "${level}" "$*" >&2 ;;
+  *) backups_line "${level}" "$*" ;;
   esac
 }
 
@@ -75,7 +80,7 @@ backups_timeout_hours() {
   now="$(date +%s)"
   scheduled="$(backups_scheduled)"
   if [ -z "${scheduled}" ]; then
-    backups_log WARN "could not resolve the next [${BACKUPS_SCHEDULED_HOUR}:00] run to bound the run timeout, using [${BACKUPS_TIMEOUT_DEFAULT}] hours"
+    backups_log WARN "could not resolve the next [$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] run to bound the run timeout, using [${BACKUPS_TIMEOUT_DEFAULT}] hours"
     printf '%s' "${BACKUPS_TIMEOUT_DEFAULT}"
     return 0
   fi
@@ -83,29 +88,31 @@ backups_timeout_hours() {
   hours=$(( (seconds - 1) / 3600 ))
   if [ "${hours}" -lt 1 ]; then
     hours=1
-    backups_log WARN "less than an hour until the [${BACKUPS_SCHEDULED_HOUR}:00] run, so this one cannot expire before it"
+    backups_log WARN "less than an hour until the [$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] run, so this one cannot expire before it"
   fi
   printf '%s' "${hours}"
-}
-
-backups_header() {
-  printf '\n== %s ==\n\n' "$1"
 }
 
 # shellcheck disable=SC2029
 backups_dispatch() {
   local host="$1" remote="$2" status=0
-  backups_header "${host}"
-  ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" "${remote}" || status=$?
-  [ "${status}" -eq 0 ] || backups_log ERRS "could not reach [${host}], see above"
+  ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" "${remote}" 2>/dev/null |
+    awk -v host="${host}" '
+      /^[[:space:]]*$/ { if (shown) pending = 1; next }
+      { if (!shown) { printf "\n== %s ==\n\n", host; shown = 1 }
+        else if (pending) { print "" }
+        pending = 0
+        print }'
+  status=$?
   return "${status}"
 }
 
 backups_start_one() {
-  local scrub=""
+  local scrub="" announced
   [ "${BACKUPS_SCRUB}" = "1" ] && scrub=" --scrub"
+  announced="$(backups_line INFO "dispatched run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]")"
   backups_dispatch "$1" \
-    "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID}${scrub} </dev/null >/dev/null 2>&1 & disown; echo dispatched run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]"
+    "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID}${scrub} </dev/null >/dev/null 2>&1 & disown; printf '%s\\n' \"${announced}\""
 }
 
 backups_tail_one() {
@@ -142,10 +149,7 @@ backups_each() {
     backups_log ERRS "no enrolled hosts found in [${BACKUPS_CONFIG}]"
     return 1
   fi
-  if [ "${failed}" -gt 0 ]; then
-    backups_log ERRS "[${failed}] of [${found}] enrolled hosts did not answer"
-    return "${BACKUPS_EXIT_PARTIAL}"
-  fi
+  [ "${failed}" -eq 0 ] || return "${BACKUPS_EXIT_PARTIAL}"
   return 0
 }
 
@@ -153,7 +157,7 @@ backups_start() {
   local status=0
   BACKUPS_RUN_ID="$(date +%Y-%m-%d_%H-%M-%S)"
   BACKUPS_RUN_HOURS="$(backups_timeout_hours)"
-  backups_log INFO "starting suite run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours, expiring before the ${BACKUPS_SCHEDULED_HOUR}:00 scheduled run"
+  backups_log INFO "starting suite run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours, expiring before the $(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00 scheduled run"
   backups_each backups_start_one || status=$?
   [ "${status}" -eq 1 ] && return 1
   sleep "${BACKUPS_SETTLE_SECONDS}"

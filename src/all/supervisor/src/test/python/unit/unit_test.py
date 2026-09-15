@@ -1309,14 +1309,14 @@ class BackupsShellTest(unittest.TestCase):
         with open(self.config, "w") as handle:
             json.dump({"asystem": {"schema": [{"host": name} for name in names]}}, handle)
 
-    def shell(self, snippet, **environment):
+    def shell(self, snippet, keep_blanks=False, **environment):
         script = 'set -uo pipefail\nsource "{}"\n{}'.format(BACKUPS_SCRIPT, snippet)
         env = {key: value for key, value in os.environ.items() if not key.startswith("BACKUPS_")}
         env.update({"BACKUPS_SOURCE_ONLY": "1", "BACKUPS_CONFIG": self.config})
         env.update({key: str(value) for key, value in environment.items()})
         done = subprocess.run(["bash", "-c", script], capture_output=True, text=True, env=env)
         self.assertEqual(done.returncode, 0, "stderr: {}".format(done.stderr))
-        return done.stdout.strip()
+        return done.stdout.rstrip("\n") if keep_blanks else done.stdout.strip()
 
     def invoke(self, *arguments, **environment):
         env = {key: value for key, value in os.environ.items() if not key.startswith("BACKUPS_")}
@@ -1461,13 +1461,31 @@ class BackupsShellTest(unittest.TestCase):
                          "stdin must be closed so a host list read by the loop is never swallowed")
         self.assertIn("root@macmini-mad", args)
 
-    def test_dispatch_reports_an_unreachable_host_and_says_so_in_its_status(self):
+    def test_dispatch_hides_a_host_that_did_not_answer(self):
         self.hosts()
-        probe = ('ssh() { return 255; }\n'
-                 'backups_stop_one macmini-mad 2>&1 1>/dev/null || printf "exit=%s" "$?"')
+        probe = ('ssh() { echo "ssh: could not resolve hostname" >&2; return 255; }\n'
+                 'backups_stop_one macmini-mad 2>&1 || printf "exit=%s" "$?"')
         reported = self.shell(probe)
-        self.assertIn("could not reach [macmini-mad]", reported)
-        self.assertIn("exit=255", reported)
+        self.assertNotIn("macmini-mad ==", reported, "an unreachable host prints no header")
+        self.assertNotIn("could not resolve", reported, "its ssh error is hidden too")
+        self.assertIn("exit=255", reported, "but the status still records it")
+
+    def test_dispatch_prints_one_blank_line_around_a_host_block(self):
+        self.hosts()
+        probe = ('ssh() { printf "\\n\\n+----+\\n| row |\\n\\n\\n| row |\\n+----+\\n\\n\\n"; }\n'
+                 'backups_stop_one macmini-mad')
+        lines = self.shell(probe, keep_blanks=True).split("\n")
+        self.assertEqual(lines, ["", "== macmini-mad ==", "", "+----+", "| row |", "", "| row |", "+----+"],
+                         "blank runs collapse to one and trailing blanks are dropped")
+
+    def test_every_log_line_shares_one_format(self):
+        self.hosts()
+        rendered = self.shell('backups_line INFO "a message"')
+        self.assertRegex(rendered, r"^\[INFO\s+\d\d:\d\d:\d\d\] a message$")
+        announced = self.shell('BACKUPS_RUN_ID=r BACKUPS_RUN_HOURS=9\n'
+                               'ssh() { for a in "$@"; do c="$a"; done; sh -c "${c#*disown; }"; }\n'
+                               'backups_start_one macmini-mad')
+        self.assertRegex(announced.splitlines()[-1], r"^\[INFO\s+\d\d:\d\d:\d\d\] dispatched run \[r\]")
 
     def test_each_continues_past_a_failing_host_and_still_reaches_every_other(self):
         self.hosts("h1", "h2", "h3")
