@@ -283,8 +283,8 @@ backup_bar() {
 }
 
 backup_megabytes() {
-  local megabytes="${1:-0}" grouped="" rest
-  [ "${megabytes}" -gt 0 ] 2>/dev/null || { printf '%s' "-"; return 0; }
+  local megabytes="${1:-}" grouped="" rest
+  [ "${megabytes}" -ge 0 ] 2>/dev/null || { printf '%s' "-"; return 0; }
   rest="${megabytes}"
   while [ "${#rest}" -gt 3 ]; do
     grouped=",${rest: -3}${grouped}"
@@ -391,7 +391,7 @@ backup_auto() {
 }
 
 backup_list() {
-  local base run path stage state doc live cells result began elapsed finished trigger latest ended
+  local base run path stage state doc live cells result began elapsed finished trigger latest ended sized
   local ran halted broke alive
   local size volume held scrub used_disk_mb total_disk_mb scrub_doc
   base="$(dirname "${BACKUP_RUN_PATH}")"
@@ -412,6 +412,7 @@ backup_list() {
     cells=()
     trigger=""
     size=0
+    sized=""
     volume="-"
     scrub="-"
     used_disk_mb="-"
@@ -433,7 +434,7 @@ backup_list() {
       esac
       if [ -f "${doc}" ]; then
         held="$(backup_tail_field "${doc}" size_mb)"
-        size=$(( size + ${held:-0} ))
+        [ -z "${held}" ] || { size=$(( size + held )); sized=1; }
         if [ "${stage}" = "tertiary" ]; then
           volume="$(backup_tail_field "${doc}" disk_usage_perc)"
           used_disk_mb="$(backup_tail_field "${doc}" disk_used_mb)"
@@ -463,7 +464,7 @@ backup_list() {
       [ "${latest}" -gt 0 ] && finished="$(date -d @"${latest}" '+%Y-%m-%d_%H-%M-%S' 2>/dev/null || echo "-")"
     fi
     backup_row "${run}" "${finished}" "${elapsed}" "${trigger:--}" "${cells[@]}" "${scrub:--}" \
-      "$(backup_megabytes "${size}")" "$(backup_terabytes "${used_disk_mb}")" \
+      "$(backup_megabytes "${sized:+${size}}")" "$(backup_terabytes "${used_disk_mb}")" \
       "$(backup_terabytes "${total_disk_mb}")" "$(backup_bar "${volume}")" "${result}"
   done
   backup_rule "+"

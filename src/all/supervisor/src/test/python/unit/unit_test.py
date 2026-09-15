@@ -370,8 +370,12 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("backup_bar"), "-")
 
     def test_megabytes_is_the_one_unit_the_table_shows(self):
-        for megabytes, expected in ((0, "-"), (4, "4 MB"), (1024, "1,024 MB"), (19940000, "19,940,000 MB")):
+        for megabytes, expected in ((0, "0 MB"), (4, "4 MB"), (1024, "1,024 MB"),
+                                    (19940000, "19,940,000 MB")):
             self.assertEqual(self.shell("backup_megabytes {}".format(megabytes)), expected)
+        self.assertEqual(self.shell('backup_megabytes ""'), "-",
+                         "a run with no stage document wrote an unknown amount, not zero")
+        self.assertEqual(self.shell("backup_megabytes -"), "-")
 
     def test_terabytes_resolves_a_sub_terabyte_volume(self):
         for megabytes, expected in ((0, "0.0 TB"), (75200, "0.1 TB"), (404403, "0.4 TB"),
