@@ -39,12 +39,12 @@ const (
 	UsedNetworkBudgetMbit = 1000.0
 	UsedNetworkBudgetBits = UsedNetworkBudgetMbit * 1000 * 1000
 
-	WarnTemperatureOffsetPercent = 10.0
-	WarnTemperatureFullCelsius   = 100.0 - WarnTemperatureOffsetPercent
-	WarnTemperaturePulseCelsius  = 60.0
-	WarnTemperatureTrendCelsius  = 55.0
-	WarnTemperaturePulseLimit    = WarnTemperaturePulseCelsius + WarnTemperatureOffsetPercent
-	WarnTemperatureTrendLimit    = WarnTemperatureTrendCelsius + WarnTemperatureOffsetPercent
+	WarnTemperatureOffsetPercent  = 10.0
+	WarnTemperatureFullCelsius    = 100.0 - WarnTemperatureOffsetPercent
+	WarnTemperaturePulseCelsius   = 65.0
+	WarnTemperatureTrendCelsius   = 60.0
+	WarnTemperatureThresholdAmber = WarnTemperatureTrendCelsius + WarnTemperatureOffsetPercent
+	WarnTemperatureThresholdRed   = WarnTemperaturePulseCelsius + WarnTemperatureOffsetPercent
 
 	SpinFanSpeedFloorRPM = 1500.0
 	SpinFanSpeedFullRPM  = 4500.0
@@ -149,8 +149,8 @@ var metricBuildersByID = []builder{
 		description: fmt.Sprintf("hottest processor temperature against its warning ceiling, one percent per degree offset by %v, so full at %v degrees", WarnTemperatureOffsetPercent, WarnTemperatureFullCelsius),
 		template:    "supervisor/$HOST/$SCOPE/host/warn_temperature",
 		persisted:   true,
-		pulseRule:   Bounded(Self, Below, WarnTemperaturePulseLimit),
-		trendRule:   Bounded(Self, Below, WarnTemperatureTrendLimit),
+		pulseRule:   Bounded(Self, Below, WarnTemperatureThresholdRed),
+		trendRule:   Bounded(Self, Below, WarnTemperatureThresholdAmber),
 	},
 	MetricHostSpinFanSpeed: {
 		id:           MetricHostSpinFanSpeed,
