@@ -33,6 +33,12 @@ class StaticTest(unittest.TestCase):
         self.assertTrue(len(media_actions) > 0, "parsed no actions out of media.sh, the parse has rotted")
         self.assertEqual(media_actions, MEDIA_FILE_SCRIPTS)
 
+        help_match = re.search(r'^declare -A MEDIA_ACTION_HELP=\(([^)]*)\)', bin_source, re.MULTILINE)
+        self.assertIsNotNone(help_match, "found no MEDIA_ACTION_HELP array in media.sh, the parse has rotted")
+        help_actions = re.findall(r'^\s*\[([a-z]+)\]=', help_match.group(1), re.MULTILINE)
+        self.assertTrue(len(help_actions) > 0, "parsed no help entries out of media.sh, the parse has rotted")
+        self.assertEqual(sorted(help_actions), sorted(MEDIA_FILE_SCRIPTS))
+
     def test_media_bin_install_matches_service_install_latest(self):
         with open(join(DIR_ROOT, "install.sh")) as install_file:
             install_source = install_file.read()

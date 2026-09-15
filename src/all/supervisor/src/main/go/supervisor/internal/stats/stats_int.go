@@ -70,7 +70,11 @@ func ConvertToInt[T constraints.Integer | constraints.Float](value T) int8 {
 	if valueWide > 100 {
 		valueWide = 100
 	}
-	return int8(valueWide + 0.5)
+	rounded := int8(valueWide + 0.5)
+	if rounded == 0 && valueWide > 0 {
+		rounded = 1
+	}
+	return rounded
 }
 
 func (v *IntStats) Tick() {

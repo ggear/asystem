@@ -9,6 +9,16 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 MEDIA_ACTIONS=(rename check merge upscale transcode reformat downscale)
 
+declare -A MEDIA_ACTION_HELP=(
+  [rename]="apply the canonical naming"
+  [check]="verify streams and subtitles"
+  [merge]="merge a split title, never in process"
+  [upscale]="raise resolution to target"
+  [transcode]="re-encode to the target quality"
+  [reformat]="remux without re-encoding"
+  [downscale]="lower resolution to target"
+)
+
 MEDIA_BIN_INSTALL="/var/lib/asystem/install/media/latest/bin"
 
 MEDIA_SHARES_FILE="${ROOT_DIR}/../shares.csv"
@@ -44,13 +54,12 @@ Usage: amedia [command] [argument] [options]
     analyse            probe the library, write the scripts
 
   Actions              run what analyse wrote, writing it if absent
-    rename             apply the canonical naming
-    check              verify streams and subtitles
-    upscale            raise resolution to target
-    reformat           remux without re-encoding
-    transcode          re-encode to the target quality
-    downscale          lower resolution to target
-    merge              merge a split title, never in process
+EOF
+  local action
+  for action in "${MEDIA_ACTIONS[@]}"; do
+    printf '    %-19s%s\n' "${action}" "${MEDIA_ACTION_HELP[${action}]}"
+  done
+  cat <<'EOF'
 
   Library
     clean     [dir]    delete generated metadata and scripts     (default: from $PWD)
@@ -95,6 +104,18 @@ in_media_file_root() {
 }
 
 resolve_extent() {
+  SHARE_PATH_DIR=""
+  SHARE_PATH_INDEX=""
+  SHARE_PATH_SUFFIX=""
+  if [ -n "${SHARE_DIR}" ] && [[ "${PWD}" == "${SHARE_DIR}" || "${PWD}" == "${SHARE_DIR}/"* ]]; then
+    SHARE_PATH_DIR="${SHARE_DIR}"
+    SHARE_PATH_INDEX="$(basename "${SHARE_DIR}")"
+    if [ "${PWD}" = "${SHARE_DIR}" ]; then
+      SHARE_PATH_SUFFIX="${SHARE_PATH_INDEX}"
+    else
+      SHARE_PATH_SUFFIX="${PWD#"${SHARE_DIR}"/}"
+    fi
+  fi
   if [ -n "${OPT_SHARE}" ]; then
     local match="" _dir
     for _dir in ${SHARE_DIRS_LOCAL}; do
@@ -414,25 +435,13 @@ dispatch_library() {
   return ${result}
 }
 
-resolve_share_path() {
-  local current_dir="${PWD}"
-  [[ "${current_dir}" == *"/share/"* ]] || return 1
-  local share_prefix
-  share_prefix="${current_dir%%/share/*}"
-  SHARE_PATH_SUFFIX="${current_dir#"${share_prefix}"/share/}"
-  SHARE_PATH_INDEX="${SHARE_PATH_SUFFIX%%/*}"
-  SHARE_PATH_DIR="${share_prefix}/share/${SHARE_PATH_INDEX}"
-  SHARE_PATH_SUFFIX="${SHARE_PATH_SUFFIX#"${SHARE_PATH_INDEX}"/}"
-  return 0
-}
-
 share_path_is_outside_media() {
   [[ "${SHARE_PATH_SUFFIX}" != "${SHARE_PATH_INDEX}" && ! "${SHARE_PATH_SUFFIX}" =~ ^media.* ]]
 }
 
 command_stow() {
   local scope="${1:-${MEDIA_SCOPE_DEFAULT}}"
-  resolve_share_path || refuse "current directory [${PWD}] is not a share"
+  [ -n "${SHARE_PATH_DIR}" ] || refuse "current directory [${PWD}] is not a share"
   if [ "${SHARE_PATH_SUFFIX}" = "${SHARE_PATH_INDEX}" ]; then
     refuse "current directory [${PWD}] is a bare share root, nothing there to stow"
   fi
@@ -495,7 +504,7 @@ command_move() {
   local dest="${1:-}"
   [ -n "${dest}" ] || refuse "move requires a <share> argument"
   [[ "${dest}" =~ ^[0-9]+$ ]] || refuse "[${dest}] is not a share index, did you mean [amedia stow ${dest}]"
-  resolve_share_path || refuse "current directory [${PWD}] is not a share"
+  [ -n "${SHARE_PATH_DIR}" ] || refuse "current directory [${PWD}] is not a share"
   share_path_is_outside_media && refuse "current directory is not nested in the library, did you mean [amedia stow <scope>]"
   local share_dashes
   share_dashes="$(path_slashes "${SHARE_PATH_SUFFIX}")"
@@ -539,7 +548,7 @@ command_move() {
     share_args=("$(printf '%q' "${share_src}")" "$(printf '%q' "${share_dest}")")
   fi
   # shellcheck disable=SC2064
-  trap "${share_ssh[*]} killall -9 rsync; echo; exit" INT
+  trap "${share_ssh[*]} pkill -9 -f 'rsync .*/share/${dest}/'; echo; exit" INT
   "${share_ssh[@]}" bash -s -- "${share_args[@]}" <<'EOF' || result=1
 share_src="${1}"
 share_dest="${2}"
@@ -642,7 +651,7 @@ EOF
 }
 
 command_space() {
-  [ "$(uname)" = "Darwin" ] && command_mount
+  command_mount
   local dirs result=0
   case "${EXTENT}" in
   file | media) dirs="${EXTENT_MEDIA_DIR}" ;;
@@ -772,17 +781,24 @@ parse_args() {
   [ $# -gt 0 ] && shift
   while [ $# -gt 0 ]; do
     case "${1}" in
-    --force) OPT_FORCE=1 ;;
-    --keep-going) OPT_KEEP_GOING=1 ;;
-    --share)
-      [ $# -ge 2 ] || refuse "option [--share] requires an index"
-      shift
-      OPT_SHARE="${1}"
+    --*)
+      in_list "${1}" --force --keep-going --share --quiet --verbose --dry-run ||
+        refuse "unknown option [${1}]"
+      command_accepts_option "${COMMAND}" "${1}" ||
+        refuse "option [${1}] is not accepted by command [${COMMAND}]"
+      case "${1}" in
+      --force) OPT_FORCE=1 ;;
+      --keep-going) OPT_KEEP_GOING=1 ;;
+      --share)
+        [ $# -ge 2 ] || refuse "option [--share] requires an index"
+        shift
+        OPT_SHARE="${1}"
+        ;;
+      --quiet) OPT_QUIET=1 ;;
+      --verbose) OPT_VERBOSE=1 ;;
+      --dry-run) OPT_DRY_RUN=1 ;;
+      esac
       ;;
-    --quiet) OPT_QUIET=1 ;;
-    --verbose) OPT_VERBOSE=1 ;;
-    --dry-run) OPT_DRY_RUN=1 ;;
-    --*) refuse "unknown option [${1}]" ;;
     *)
       [ -z "${POSITIONAL}" ] || refuse "unexpected argument [${1}]"
       POSITIONAL="${1}"
@@ -790,6 +806,18 @@ parse_args() {
     esac
     shift
   done
+}
+
+command_accepts_option() {
+  local command="${1}" option="${2}"
+  case "${option}" in
+  --force) [ "${command}" = "analyse" ] ;;
+  --keep-going) in_list "${command}" publish process ;;
+  --dry-run) [ "${command}" = "move" ] ;;
+  --share) in_list "${command}" analyse process clean normalise ingress space "${MEDIA_ACTIONS[@]}" ;;
+  --quiet | --verbose) in_list "${command}" analyse process publish "${MEDIA_ACTIONS[@]}" ;;
+  *) return 1 ;;
+  esac
 }
 
 command_takes_positional() {

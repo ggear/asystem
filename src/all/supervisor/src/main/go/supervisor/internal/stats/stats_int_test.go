@@ -1468,3 +1468,31 @@ func TestStatsInt_MissedPushIsHole(t *testing.T) {
 		})
 	}
 }
+
+func TestStatsInt_ConvertToInt(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    float64
+		expected int8
+	}{
+		{name: "a true zero stays zero", value: 0, expected: 0},
+		{name: "a home volume barely used never reads empty", value: 0.235, expected: 1},
+		{name: "another barely used volume never reads empty", value: 0.444, expected: 1},
+		{name: "the smallest measurable share never reads empty", value: 0.0001, expected: 1},
+		{name: "a value already rounding up is unchanged", value: 0.6, expected: 1},
+		{name: "a threshold is not moved from below", value: 64.2, expected: 64},
+		{name: "a threshold is not moved from above", value: 64.6, expected: 65},
+		{name: "a busy disk short of its limit is unchanged", value: 89.4, expected: 89},
+		{name: "a value over the ceiling clamps", value: 140, expected: 100},
+		{name: "a negative value clamps to zero", value: -3, expected: 0},
+		{name: "not a number reads zero", value: math.NaN(), expected: 0},
+		{name: "infinity reads zero", value: math.Inf(1), expected: 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := ConvertToInt(test.value); got != test.expected {
+				t.Errorf("ConvertToInt(%v): got %d want %d", test.value, got, test.expected)
+			}
+		})
+	}
+}
