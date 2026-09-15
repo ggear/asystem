@@ -48,7 +48,14 @@ class StaticTest(unittest.TestCase):
                              "found no MEDIA_BIN_INSTALL in analyse.py, the parse has rotted")
         media_bin_install = analyse_match.group(1)
 
+        with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
+            bin_source = bin_file.read()
+        bin_match = re.search(r'^MEDIA_BIN_INSTALL="([^"]*)"', bin_source, re.MULTILINE)
+        self.assertIsNotNone(bin_match,
+                             "found no MEDIA_BIN_INSTALL in media.sh, the parse has rotted")
+
         self.assertEqual("{}/bin".format(service_install_latest), media_bin_install)
+        self.assertEqual("{}/bin".format(service_install_latest), bin_match.group(1))
 
     def test_media_sh_has_no_media_home_or_wrapper_calls(self):
         with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
@@ -57,7 +64,7 @@ class StaticTest(unittest.TestCase):
         retired_verbs = "analyse|check|clean|downscale|find|force|home|ingress|merge|metadata|" \
                         "mount|move|normalise|process|reformat|refresh|rename|space|transcode|" \
                         "truncate|upscale"
-        self.assertIsNone(re.search(r'\bmedia-(?:{})\b(?!\.log)'.format(retired_verbs), bin_source),
+        self.assertIsNone(re.search(r'\bmedia-(?:{})\b'.format(retired_verbs), bin_source),
                           "media.sh calls a retired media-* wrapper by name")
 
 

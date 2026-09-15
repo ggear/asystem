@@ -415,6 +415,88 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(remaining, "-")
         self.assertEqual(rate, "-")
 
+    @NEEDS_GNU
+    def test_scrub_cancel_closes_a_document_it_left_running(self):
+        stage = join(self.home, "supervisor/backup/x/stage/tertiary")
+        os.makedirs(stage, exist_ok=True)
+        with open(join(stage, "scrub.json"), "w") as handle:
+            json.dump({"state": "running", "started_ts": "2026-09-15T10:22:22+00:00",
+                       "scrubbed_mb": 232032, "progress_perc": 3.07, "errors_found": 0,
+                       "errors_corrected": 0, "errors_uncorrectable": 0}, handle)
+        self.shell('BACKUP_STAGE_DIR="' + stage + '"\n'
+                   'BACKUP_DEVICE_ERRORS=0; BACKUP_RELOCATED=0\n'
+                   'backup_log() { :; }\n'
+                   'backup_scrub_halted')
+        with open(join(stage, "scrub.json")) as handle:
+            closed = json.load(handle)
+        self.assertEqual(closed["state"], "stopped", "a cancelled scrub must not stay running forever")
+        self.assertEqual(closed["scrubbed_mb"], 232032, "it must keep what it had scrubbed")
+        self.assertFalse(closed["success_bool"])
+
+    @NEEDS_GNU
+    def test_scrub_cancel_leaves_a_document_that_already_finished(self):
+        stage = join(self.home, "supervisor/backup/y/stage/tertiary")
+        os.makedirs(stage, exist_ok=True)
+        with open(join(stage, "scrub.json"), "w") as handle:
+            json.dump({"state": "finished", "scrubbed_mb": 7419000}, handle)
+        self.shell('BACKUP_STAGE_DIR="' + stage + '"\n'
+                   'BACKUP_DEVICE_ERRORS=0; BACKUP_RELOCATED=0\n'
+                   'backup_log() { :; }\n'
+                   'backup_scrub_halted')
+        with open(join(stage, "scrub.json")) as handle:
+            self.assertEqual(json.load(handle)["state"], "finished")
+
+    @NEEDS_GNU
+    def test_bounded_never_mints_a_run_directory_it_was_only_reading(self):
+        phantom = join(self.home, "supervisor/backup/2026-09-15_10-20-15/stage/all")
+        self.shell('BACKUP_STAGE_DIR="' + phantom + '"\n'
+                   'backup_bounded 5 "probe" printf hello >/dev/null')
+        self.assertFalse(os.path.exists(phantom), "a reader must not create the run it was watching")
+
+    @NEEDS_GNU
+    def test_started_reads_the_timeout_the_run_recorded_not_the_readers_own(self):
+        doc = self.document("x", "primary", state="running", started_ts="2026-09-15T10:19:40+00:00",
+                            timeout_hours=14)
+        reported = self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
+                              'backup_started primary "' + doc + '"', BACKUP_TIMEOUT_HOURS=3, TZ="UTC")
+        self.assertIn("timeout [ 840] min", reported, "must read the document, not the reader's environment")
+        self.assertIn("until [00:19:40]", reported)
+
+    @NEEDS_GNU
+    def test_started_says_unknown_when_the_run_recorded_no_timeout(self):
+        doc = self.document("y", "primary", state="running", started_ts="2026-09-15T10:19:40+00:00")
+        reported = self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
+                              'backup_started primary "' + doc + '"', BACKUP_TIMEOUT_HOURS=3, TZ="UTC")
+        self.assertIn("timeout [   -] min until [unknown]", reported)
+
+    def test_sized_and_percent_pad_to_a_floor_and_overflow_past_it(self):
+        for value, expected in ((0, "   0"), (7, "   7"), (801, " 801"), (7047, "7047"), (35407, "35407")):
+            self.assertEqual(self.shell('printf "[%s]" "$(backup_sized {})"'.format(value)),
+                             "[{}]".format(expected))
+        for value, expected in ((0, " 0"), (5, " 5"), (18, "18"), (100, "100")):
+            self.assertEqual(self.shell('printf "[%s]" "$(backup_percent {})"'.format(value)),
+                             "[{}]".format(expected))
+
+    def test_resulted_is_the_one_place_a_run_state_is_decided(self):
+        for ran, halted, broke, expected in ((1, 0, 0, "complete"), (3, 0, 0, "complete"),
+                                             (1, 1, 0, "halted"), (3, 2, 0, "halted"),
+                                             (1, 0, 1, "failed"), (1, 1, 1, "failed"),
+                                             (0, 0, 0, "-")):
+            self.assertEqual(self.shell('backup_resulted {} {} {}'.format(ran, halted, broke)), expected,
+                             "ran [{}] halted [{}] broke [{}]".format(ran, halted, broke))
+
+    def test_settings_carry_their_default_once_and_not_at_every_use(self):
+        with open(BACKUP_SCRIPT) as handle:
+            source = handle.read()
+        for setting in ("BACKUP_TAIL_PROGRESS", "BACKUP_TAIL_POLL", "BACKUP_TAIL_STALE",
+                        "BACKUP_TAIL_STALL", "BACKUP_STOP_SECONDS", "BACKUP_SCRUB_POLL",
+                        "BACKUP_HEARTBEAT_REFRESH", "BACKUP_REAP_WAIT", "BACKUP_RATE_POINTS"):
+            defaults = re.findall(r"\$\{" + setting + r":-[^}]*\}", source)
+            self.assertEqual(len(defaults), 1,
+                             "[{}] should default once, found {}".format(setting, defaults))
+            self.assertRegex(source, r"(?m)^" + setting + r'="\$\{' + setting + r':-[^}]*\}"$',
+                             "[{}] should be normalised at the top".format(setting))
+
     def test_rated_is_the_one_place_a_throughput_is_formed(self):
         for megabytes, seconds, expected in ((7047, 87, " 81"), (139455, 682, "204"), (723, 22, " 32"),
                                              (0, 5, "  -"), (500, 0, "  -"), ("-", 10, "  -"), ("", "", "  -")):
@@ -430,6 +512,8 @@ class BackupShellTest(unittest.TestCase):
         reported = self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
                               'backup_finished tertiary "' + doc + '"')
         self.assertIn("size [7047] MB at [ 81] MB/s", reported)
+        self.assertIn("disk at [33] percent", reported)
+        self.assertNotIn("files [", reported, "the file count is not part of a finish line")
         stalled = self.document("y", "tertiary", state="complete", success_bool=True,
                                 duration_s=0, size_mb=0, file_count=0, disk_usage_perc=33)
         self.assertIn("at [  -] MB/s", self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
@@ -658,7 +742,7 @@ class BackupShellTest(unittest.TestCase):
             'backup_verified() {{ return 0; }}\n'
             'backup_progress "{}"'.format(join(self.home, "supervisor/backup", run)))
         self.assertIn("scrubbed [   61] GB of [ 4170] GB", reported)
-        self.assertIn("at [  1] percent complete", reported)
+        self.assertIn("at [ 1] percent complete", reported)
         self.assertRegex(reported, r"estimated to complete in \[\s*4[67]\] min")
         self.assertIn("at [  -] MB/s", reported)
         samples = join(self.home, "supervisor/backup", run, "stage/tertiary/scrub-samples")
@@ -676,7 +760,7 @@ class BackupShellTest(unittest.TestCase):
         self.document(run, "primary", state="running", size_mb=512, total_mb=1024, duration_s=64)
         reported = self.shell('backup_progress "{}"'.format(join(self.home, "supervisor/backup", run)))
         self.assertIn("exported [    0] GB of [    1] GB", reported)
-        self.assertIn("at [ 50] percent complete", reported)
+        self.assertIn("at [50] percent complete", reported)
 
     @NEEDS_GNU
     def test_expected_is_what_the_mirror_last_moved_not_the_disk_against_the_sources(self):
@@ -920,7 +1004,7 @@ class BackupShellTest(unittest.TestCase):
             'backup_verified() {{ return 0; }}\n'
             'backup_progress "{}"'.format(path))
         self.assertIn("mirrored [   25] GB of [  100] GB", reported)
-        self.assertIn("at [ 25] percent complete", reported)
+        self.assertIn("at [25] percent complete", reported)
 
     @NEEDS_GNU
     def test_progress_can_no_longer_report_more_than_it_set_out_to_move(self):
@@ -1243,6 +1327,72 @@ class BackupsShellTest(unittest.TestCase):
         self.hosts("macmini-mad", "macmini-max", "raspbpi-jen")
         self.assertEqual(self.shell("backups_hosts"), "macmini-mad\nmacmini-max\nraspbpi-jen")
 
+    def test_each_reaches_every_host_even_when_the_action_drains_stdin(self):
+        self.hosts("macmini-mad", "macmini-max", "macmini-may", "raspbpi-jen")
+        reached = self.shell('drains() { cat >/dev/null; printf "%s\\n" "$1"; }\n'
+                             'backups_each drains')
+        self.assertEqual(reached.split(),
+                         ["macmini-mad", "macmini-max", "macmini-may", "raspbpi-jen"],
+                         "ssh reading stdin must not swallow the remaining hosts")
+
+    def test_each_starts_no_further_host_once_interrupted(self):
+        self.hosts("macmini-mad", "macmini-max", "macmini-may")
+        reached = self.shell('names() { printf "%s\\n" "$1"; '
+                             '[ "$1" = "macmini-mad" ] && backups_interrupt 2>/dev/null; return 0; }\n'
+                             'backups_each names; printf "exit=%s" "$?"')
+        self.assertIn("macmini-mad", reached)
+        self.assertNotIn("macmini-max", reached, "an interrupt must stop the loop reaching later hosts")
+        self.assertIn("exit=130", reached)
+
+    def test_start_scrubs_only_when_asked(self):
+        self.hosts("h1")
+        probe = ('ssh() { for a in "$@"; do case "${a}" in *nohup*) printf "%s\\n" "${a}" ;; esac; done; }\n'
+                 'BACKUPS_RUN_ID=2026-09-15_00-00-00 BACKUPS_RUN_HOURS=9\n'
+                 'backups_each backups_start_one')
+        self.assertNotIn("--scrub", self.shell(probe, BACKUPS_SETTLE_SECONDS=0),
+                         "an estate run must not force an hours-long scrub by default")
+        self.assertIn("--scrub", self.shell(probe, BACKUPS_SCRUB=1, BACKUPS_SETTLE_SECONDS=0))
+
+    def test_scrub_is_refused_against_a_command_that_cannot_scrub(self):
+        self.hosts("h1")
+        done = self.invoke("list", "--scrub", BACKUPS_CONFIG=self.config)
+        self.assertIn("only start scrubs", done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 2)
+
+    def test_an_unknown_option_is_refused_with_exit_2(self):
+        self.hosts("h1")
+        done = self.invoke("start", "--nope", BACKUPS_CONFIG=self.config)
+        self.assertIn("unknown option [--nope]", done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 2)
+
+    def test_dispatch_returns_the_status_ssh_gave_it(self):
+        self.hosts()
+        self.assertEqual(self.shell('ssh() { return 255; }\n'
+                                    'backups_stop_one macmini-mad >/dev/null 2>&1; printf "exit=%s" "$?"'),
+                         "exit=255")
+        self.assertEqual(self.shell('ssh() { return 0; }\n'
+                                    'backups_stop_one macmini-mad >/dev/null 2>&1; printf "exit=%s" "$?"'),
+                         "exit=0")
+
+    def test_timeout_never_outlives_the_scheduled_run(self):
+        scheduled = datetime(2026, 9, 15, 1, 0).timestamp()
+        for hour, minute, expected in ((10, 19, 14), (18, 0, 6), (23, 30, 1), (0, 30, 1), (1, 30, 23)):
+            now = datetime(2026, 9, 15, hour, minute).timestamp()
+            stub = ('date() { case "$*" in\n'
+                    '  "+%s") printf "%s" ' + str(int(now)) + ' ;;\n'
+                    '  "-d today 1:00:00 +%s") printf "%s" ' + str(int(scheduled)) + ' ;;\n'
+                    '  *) command date "$@" ;;\n'
+                    'esac; }\n'
+                    'backups_timeout_hours')
+            hours = int(self.shell(stub))
+            self.assertEqual(hours, expected, "started at [{:02d}:{:02d}]".format(hour, minute))
+            self.assertGreaterEqual(hours, 1, "a run always gets at least an hour")
+
+    def test_tail_is_a_command_the_dispatcher_accepts(self):
+        self.hosts()
+        done = self.invoke("tail", BACKUPS_CONFIG=self.config)
+        self.assertNotIn("unknown command", done.stdout + done.stderr)
+
     def test_hosts_is_empty_and_not_an_error_over_an_empty_schema(self):
         self.hosts()
         self.assertEqual(self.shell("backups_hosts"), "")
@@ -1261,9 +1411,9 @@ class BackupsShellTest(unittest.TestCase):
         self.assertGreaterEqual(computed, 1)
         self.assertLessEqual(computed, 24)
 
-    def test_timeout_hours_falls_back_when_midnight_cannot_be_resolved(self):
+    def test_timeout_hours_falls_back_when_the_scheduled_run_cannot_be_resolved(self):
         self.hosts()
-        broken = 'backups_midnight() { printf ""; }\nbackups_timeout_hours'
+        broken = 'backups_scheduled() { printf ""; }\nbackups_timeout_hours 2>/dev/null'
         self.assertEqual(self.shell(broken), str(6))
 
     def test_help_lists_start_stop_list_help(self):
@@ -1283,17 +1433,19 @@ class BackupsShellTest(unittest.TestCase):
         self.assertEqual(done.returncode, 1)
         self.assertIn("no enrolled hosts found", done.stderr)
 
-    def test_start_one_dispatches_a_detached_scrubbing_run_with_the_computed_timeout(self):
+    def test_start_one_dispatches_a_detached_run_with_the_computed_timeout(self):
         self.hosts()
-        probe = ('ssh() { shift 5; echo "$*"; }\n'
-                  'BACKUPS_RUN_ID=2026-09-15_00-00-00 BACKUPS_RUN_HOURS=9\n'
-                  'backups_start_one macmini-mad')
+        probe = ('ssh() { shift 6; echo "$*"; }\n'
+                 'BACKUPS_RUN_ID=2026-09-15_00-00-00 BACKUPS_RUN_HOURS=9\n'
+                 'backups_start_one macmini-mad')
         line = self.shell(probe)
         self.assertIn("BACKUP_TIMEOUT_HOURS=9", line)
-        self.assertIn("abackup start 2026-09-15_00-00-00 --scrub", line)
+        self.assertIn("abackup start 2026-09-15_00-00-00 ", line)
+        self.assertNotIn("--scrub", line)
         self.assertIn("nohup", line)
         self.assertIn("disown", line)
         self.assertIn("</dev/null >/dev/null 2>&1", line)
+        self.assertIn("--scrub", self.shell(probe, BACKUPS_SCRUB=1))
 
     def test_stop_one_and_list_one_send_the_plain_subcommand(self):
         self.hosts()
@@ -1303,30 +1455,40 @@ class BackupsShellTest(unittest.TestCase):
 
     def test_dispatch_connects_as_root_with_a_bounded_connect_timeout(self):
         self.hosts()
-        probe = 'ssh() { printf "%s\\n" "$1" "$2" "$3" "$4" "$5"; }\nbackups_stop_one macmini-mad'
-        lines = self.shell(probe).splitlines()
-        self.assertEqual(lines[-5:], ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "root@macmini-mad"])
+        probe = 'ssh() { printf "ARG %s\\n" "$@"; }\nbackups_stop_one macmini-mad'
+        args = [line[4:] for line in self.shell(probe).splitlines() if line.startswith("ARG ")]
+        self.assertEqual(args[:5], ["-n", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"],
+                         "stdin must be closed so a host list read by the loop is never swallowed")
+        self.assertIn("root@macmini-mad", args)
 
-    def test_dispatch_reports_an_unreachable_host_without_raising(self):
+    def test_dispatch_reports_an_unreachable_host_and_says_so_in_its_status(self):
         self.hosts()
-        probe = 'ssh() { return 255; }\nbackups_stop_one macmini-mad 2>&1 1>/dev/null'
-        self.assertIn("could not reach [macmini-mad]", self.shell(probe))
+        probe = ('ssh() { return 255; }\n'
+                 'backups_stop_one macmini-mad 2>&1 1>/dev/null || printf "exit=%s" "$?"')
+        reported = self.shell(probe)
+        self.assertIn("could not reach [macmini-mad]", reported)
+        self.assertIn("exit=255", reported)
 
     def test_each_continues_past_a_failing_host_and_still_reaches_every_other(self):
         self.hosts("h1", "h2", "h3")
-        probe = ('ssh() { case "$5" in *h2) return 1 ;; *) echo "reached $5" ;; esac; }\n'
-                  'backups_each backups_stop_one; echo "exit=$?"')
+        probe = ('ssh() { local d; for d; do case "${d}" in *@*) break ;; esac; done\n'
+                 '  case "${d}" in *h2) return 1 ;; *) echo "reached ${d}" ;; esac; }\n'
+                 'backups_each backups_stop_one; echo "exit=$?"')
         lines = self.shell(probe).splitlines()
         self.assertIn("reached root@h1", lines)
         self.assertIn("reached root@h3", lines)
         self.assertNotIn("reached root@h2", lines)
-        self.assertEqual(lines[-1], "exit=0")
+        self.assertEqual(lines[-1], "exit=3", "a host that did not answer must reach the exit code")
 
-    def test_start_dispatches_every_host_in_the_order_the_schema_declares(self):
+    def test_start_dispatches_every_host_then_tails_every_host(self):
         self.hosts("h1", "h2", "h3")
-        probe = 'ssh() { echo "$5"; }\nbackups_start'
-        order = [line for line in self.shell(probe).splitlines() if line.startswith("root@")]
-        self.assertEqual(order, ["root@h1", "root@h2", "root@h3"])
+        probe = ('ssh() { local d; for d; do case "${d}" in *@*) break ;; esac; done; echo "${d}"; }\n'
+                 'backups_start')
+        order = [line for line in self.shell(probe, BACKUPS_SETTLE_SECONDS=0).splitlines()
+                 if line.startswith("root@")]
+        self.assertEqual(order, ["root@h1", "root@h2", "root@h3",
+                                 "root@h1", "root@h2", "root@h3"],
+                         "every host is dispatched first, so the runs proceed in parallel, then tailed")
 
 
 if __name__ == "__main__":

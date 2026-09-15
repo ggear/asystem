@@ -16,10 +16,19 @@ set -uo pipefail
 BACKUPS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUPS_CONFIG="${BACKUPS_CONFIG:-${BACKUPS_ROOT}/config.json}"
 BACKUPS_SSH_USER="${BACKUPS_SSH_USER:-root}"
-BACKUPS_SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10)
+BACKUPS_SSH_OPTS=(-n -o BatchMode=yes -o ConnectTimeout=10)
 BACKUPS_REMOTE="${BACKUPS_REMOTE:-/usr/local/bin/abackup}"
 BACKUPS_TIMEOUT_DEFAULT="${BACKUPS_TIMEOUT_DEFAULT:-6}"
 BACKUPS_TIMEOUT_HOURS="${BACKUPS_TIMEOUT_HOURS:-}"
+BACKUPS_SCHEDULED_HOUR=1
+BACKUPS_EXIT_PARTIAL=3
+BACKUPS_RUN_HOURS=""
+BACKUPS_SETTLE_SECONDS="${BACKUPS_SETTLE_SECONDS:-5}"
+BACKUPS_RUN_ID="${BACKUPS_RUN_ID:-}"
+BACKUPS_INTERRUPTED=0
+BACKUPS_SCRUB="${BACKUPS_SCRUB:-0}"
+BACKUPS_GIVEN=()
+BACKUPS_REJECT=""
 
 backups_log() {
   local level="$1"; shift
@@ -33,12 +42,15 @@ backups_help() {
   local out=2
   [ "${1:-}" = "help" ] && out=1
   {
-    echo "Usage: ${0##*/} [command]"
+    echo "Usage: ${0##*/} [command] [argument] [options]"
     echo
-    echo "  start  dispatch every enrolled host's backup, serially, detached"
-    echo "  stop   stop every active run on every enrolled host"
-    echo "  list   list every enrolled host's run history"
-    echo "  help   this text, default command when given none"
+    echo "  start           dispatch every enrolled host's run, then follow them until interrupted"
+    echo "  stop            stop every active run on every enrolled host"
+    echo "  tail  [run-id]  follow a run on every enrolled host, or each host's newest when given none"
+    echo "  list            list every enrolled host's run history"
+    echo "  help            this text, default command when given none"
+    echo
+    echo "  --scrub   scrub each host's backup disk, off unless asked"
   } >&"${out}"
 }
 
@@ -47,26 +59,32 @@ backups_hosts() {
   jq -r '.asystem.schema[]?.host // empty' "${BACKUPS_CONFIG}" 2>/dev/null
 }
 
-backups_midnight() {
-  local midnight
-  midnight="$(date -d "00:00:00" +%s 2>/dev/null)"
-  [ -n "${midnight}" ] || midnight="$(date -v0H -v0M -v0S +%s 2>/dev/null)"
-  [ -n "${midnight}" ] && printf '%s' "$(( midnight + 86400 ))"
+backups_scheduled() {
+  local now scheduled
+  now="$(date +%s)"
+  scheduled="$(date -d "today ${BACKUPS_SCHEDULED_HOUR}:00:00" +%s 2>/dev/null)"
+  [ -n "${scheduled}" ] || scheduled="$(date -v"${BACKUPS_SCHEDULED_HOUR}"H -v0M -v0S +%s 2>/dev/null)"
+  [ -n "${scheduled}" ] || return 0
+  [ "${scheduled}" -gt "${now}" ] || scheduled=$(( scheduled + 86400 ))
+  printf '%s' "${scheduled}"
 }
 
 backups_timeout_hours() {
-  local now midnight seconds hours
+  local now scheduled seconds hours
   [ -n "${BACKUPS_TIMEOUT_HOURS}" ] && { printf '%s' "${BACKUPS_TIMEOUT_HOURS}"; return 0; }
   now="$(date +%s)"
-  midnight="$(backups_midnight)"
-  if [ -z "${midnight}" ]; then
-    backups_log WARN "could not resolve local midnight to bound the run timeout, using [${BACKUPS_TIMEOUT_DEFAULT}] hours"
+  scheduled="$(backups_scheduled)"
+  if [ -z "${scheduled}" ]; then
+    backups_log WARN "could not resolve the next [${BACKUPS_SCHEDULED_HOUR}:00] run to bound the run timeout, using [${BACKUPS_TIMEOUT_DEFAULT}] hours"
     printf '%s' "${BACKUPS_TIMEOUT_DEFAULT}"
     return 0
   fi
-  seconds=$(( midnight - now ))
-  hours=$(( (seconds + 3599) / 3600 ))
-  [ "${hours}" -ge 1 ] || hours=1
+  seconds=$(( scheduled - now ))
+  hours=$(( (seconds - 1) / 3600 ))
+  if [ "${hours}" -lt 1 ]; then
+    hours=1
+    backups_log WARN "less than an hour until the [${BACKUPS_SCHEDULED_HOUR}:00] run, so this one cannot expire before it"
+  fi
   printf '%s' "${hours}"
 }
 
@@ -76,15 +94,22 @@ backups_header() {
 
 # shellcheck disable=SC2029
 backups_dispatch() {
-  local host="$1" remote="$2"
+  local host="$1" remote="$2" status=0
   backups_header "${host}"
-  ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" "${remote}" ||
-    backups_log ERRS "could not reach [${host}], see above"
+  ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" "${remote}" || status=$?
+  [ "${status}" -eq 0 ] || backups_log ERRS "could not reach [${host}], see above"
+  return "${status}"
 }
 
 backups_start_one() {
+  local scrub=""
+  [ "${BACKUPS_SCRUB}" = "1" ] && scrub=" --scrub"
   backups_dispatch "$1" \
-    "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID} --scrub </dev/null >/dev/null 2>&1 & disown; echo dispatched run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours"
+    "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID}${scrub} </dev/null >/dev/null 2>&1 & disown; echo dispatched run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]"
+}
+
+backups_tail_one() {
+  backups_dispatch "$1" "${BACKUPS_REMOTE} tail ${BACKUPS_RUN_ID}"
 }
 
 backups_stop_one() {
@@ -95,25 +120,54 @@ backups_list_one() {
   backups_dispatch "$1" "${BACKUPS_REMOTE} list"
 }
 
+# shellcheck disable=SC2329
+backups_interrupt() {
+  BACKUPS_INTERRUPTED=1
+  echo >&2
+  backups_log WARN "tailing stopped, every dispatched run continues on its own host"
+  backups_log WARN "follow them again with [${0##*/} tail] or end them with [${0##*/} stop]"
+}
+
 backups_each() {
-  local action="$1" host found=0
-  while IFS= read -r host; do
+  local action="$1" host found=0 failed=0 hosts=() enrolled
+  enrolled="$(backups_hosts)" || return 1
+  mapfile -t hosts <<<"${enrolled}"
+  for host in ${hosts[@]+"${hosts[@]}"}; do
     [ -n "${host}" ] || continue
-    found=1
-    "${action}" "${host}"
-  done < <(backups_hosts)
+    [ "${BACKUPS_INTERRUPTED}" -eq 0 ] || return 130
+    found=$(( found + 1 ))
+    "${action}" "${host}" || failed=$(( failed + 1 ))
+  done
   if [ "${found}" -eq 0 ]; then
     backups_log ERRS "no enrolled hosts found in [${BACKUPS_CONFIG}]"
     return 1
+  fi
+  if [ "${failed}" -gt 0 ]; then
+    backups_log ERRS "[${failed}] of [${found}] enrolled hosts did not answer"
+    return "${BACKUPS_EXIT_PARTIAL}"
   fi
   return 0
 }
 
 backups_start() {
+  local status=0
   BACKUPS_RUN_ID="$(date +%Y-%m-%d_%H-%M-%S)"
   BACKUPS_RUN_HOURS="$(backups_timeout_hours)"
-  backups_log INFO "starting suite run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours, expiring before the 01:00 scheduled run"
-  backups_each backups_start_one
+  backups_log INFO "starting suite run [${BACKUPS_RUN_ID}] with timeout [${BACKUPS_RUN_HOURS}] hours, expiring before the ${BACKUPS_SCHEDULED_HOUR}:00 scheduled run"
+  backups_each backups_start_one || status=$?
+  [ "${status}" -eq 1 ] && return 1
+  sleep "${BACKUPS_SETTLE_SECONDS}"
+  backups_tail || status="$?"
+  return "${status}"
+}
+
+backups_tail() {
+  local status=0
+  trap 'backups_interrupt' INT
+  backups_each backups_tail_one || status=$?
+  trap - INT
+  [ "${status}" -eq 130 ] && status=0
+  return "${status}"
 }
 
 backups_stop() {
@@ -127,13 +181,39 @@ backups_list() {
 # shellcheck disable=SC2317
 if [ -n "${BACKUPS_SOURCE_ONLY:-}" ]; then return 0 2>/dev/null || exit 0; fi
 
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  --scrub) BACKUPS_SCRUB=1 ;;
+  -*) BACKUPS_REJECT="$1" ;;
+  *) BACKUPS_GIVEN+=("$1") ;;
+  esac
+  shift
+done
+set -- ${BACKUPS_GIVEN[@]+"${BACKUPS_GIVEN[@]}"}
+if [ -n "${BACKUPS_REJECT}" ]; then
+  backups_log ERRS "unknown option [${BACKUPS_REJECT}]"
+  backups_help
+  exit 2
+fi
+
 BACKUPS_COMMAND="${1:-help}"
+BACKUPS_RUN_ID="${2:-${BACKUPS_RUN_ID}}"
+if [ -n "${BACKUPS_RUN_ID}" ] && [ "${BACKUPS_COMMAND}" != "tail" ]; then
+  backups_log ERRS "only tail takes a run id, not command [${BACKUPS_COMMAND}]"
+  backups_help
+  exit 2
+fi
+if [ "${BACKUPS_SCRUB}" = "1" ] && [ "${BACKUPS_COMMAND}" != "start" ]; then
+  backups_log ERRS "only start scrubs, not command [${BACKUPS_COMMAND}]"
+  backups_help
+  exit 2
+fi
 case "${BACKUPS_COMMAND}" in
 help)
   backups_help help
   exit 0
   ;;
-start | stop | list)
+start | stop | tail | list)
   command -v ssh >/dev/null 2>&1 || { backups_log ERRS "ssh is required and was not found"; exit 1; }
   command -v jq >/dev/null 2>&1 || { backups_log ERRS "jq is required and was not found"; exit 1; }
   "backups_${BACKUPS_COMMAND}"

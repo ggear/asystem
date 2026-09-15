@@ -11,7 +11,11 @@ MEDIA_ACTIONS=(rename check merge upscale transcode reformat downscale)
 
 MEDIA_BIN_INSTALL="/var/lib/asystem/install/media/latest/bin"
 
-PUBLISH_SCOPE="parents"
+MEDIA_SHARES_FILE="${ROOT_DIR}/../shares.csv"
+
+MEDIA_SCOPE_DEFAULT="parents"
+
+PUBLISH_SCOPE="${MEDIA_SCOPE_DEFAULT}"
 
 OPT_FORCE=0
 OPT_KEEP_GOING=0
@@ -20,9 +24,15 @@ OPT_QUIET=0
 OPT_VERBOSE=0
 OPT_DRY_RUN=0
 
+COMMAND=""
+POSITIONAL=""
+
 EXTENT=""
 EXTENT_SHARE_DIR=""
-EXTENT_MEDIA_DIR=""
+
+SHARE_PATH_DIR=""
+SHARE_PATH_INDEX=""
+SHARE_PATH_SUFFIX=""
 
 usage() {
   cat <<'EOF'
@@ -93,28 +103,31 @@ resolve_extent() {
     [ -n "${match}" ] || refuse "share [${OPT_SHARE}] is not held by this host"
     EXTENT="share"
     EXTENT_SHARE_DIR="${match}"
-    EXTENT_MEDIA_DIR="${match}/media"
     return
   fi
-  if in_media_file_root; then
-    EXTENT="file"
+  if [ -n "${SHARE_DIR_MEDIA}" ]; then
+    if in_media_file_root; then EXTENT="file"; else EXTENT="media"; fi
     EXTENT_SHARE_DIR="${SHARE_DIR}"
-    EXTENT_MEDIA_DIR="${SHARE_DIR_MEDIA}"
-  elif [ -n "${SHARE_DIR_MEDIA}" ]; then
-    EXTENT="media"
-    EXTENT_SHARE_DIR="${SHARE_DIR}"
-    EXTENT_MEDIA_DIR="${SHARE_DIR_MEDIA}"
   elif [ -n "${SHARE_DIR}" ]; then
     EXTENT="share"
     EXTENT_SHARE_DIR="${SHARE_DIR}"
-    EXTENT_MEDIA_DIR="${SHARE_DIR}/media"
   else
     EXTENT="local"
   fi
 }
 
-shares_file() {
-  echo "${ROOT_DIR}/../shares.csv"
+in_list() {
+  local needle="${1}" item
+  shift
+  for item in "$@"; do
+    [ "${item}" = "${needle}" ] && return 0
+  done
+  return 1
+}
+
+path_slashes() {
+  local slashes="${1//[!\/]/}"
+  echo "${#slashes}"
 }
 
 resolve_verbosity() {
@@ -139,6 +152,19 @@ analyse_share() {
   fi
 }
 
+analyse_extent() {
+  local dir="${1}" verbosity subpath
+  verbosity="$(resolve_verbosity)"
+  if [ "${EXTENT}" = "local" ]; then
+    subpath="/"
+    verbosity="${verbosity:-quiet}"
+  else
+    subpath="media"
+    verbosity="${verbosity:-verbose}"
+  fi
+  analyse_share "${dir}" "${subpath}" "${verbosity}"
+}
+
 command_analyse() {
   local result=0
   local verbosity
@@ -153,17 +179,16 @@ command_analyse() {
       echo "amedia force re-probing extent [share] [${EXTENT_SHARE_DIR}]"
       library_clean "${EXTENT_SHARE_DIR}" || result=1
     fi
-    analyse_share "${EXTENT_SHARE_DIR}" "media" "${verbosity:-verbose}" || result=1
+    analyse_extent "${EXTENT_SHARE_DIR}" || result=1
     ;;
   local)
     [ "${OPT_FORCE}" -eq 1 ] && echo "amedia force re-probing extent [local]"
     local _dir
-    # shellcheck disable=SC2086
     for _dir in ${SHARE_DIRS_LOCAL}; do
       if [ "${OPT_FORCE}" -eq 1 ]; then
         library_clean "${_dir}" || result=1
       fi
-      analyse_share "${_dir}" "/" "${verbosity:-quiet}" || result=1
+      analyse_extent "${_dir}" || result=1
     done
     ;;
   esac
@@ -184,11 +209,10 @@ dispatch_action() {
     local dirs
     if [ "${EXTENT}" = "share" ]; then dirs="${EXTENT_SHARE_DIR}"; else dirs="${SHARE_DIRS_LOCAL}"; fi
     local _dir
-    # shellcheck disable=SC2086
     for _dir in ${dirs}; do
       local script="${_dir}/tmp/scripts/media/${verb}.sh"
       if [ ! -f "${script}" ]; then
-        analyse_share "${_dir}" "media" "verbose" || result=1
+        analyse_extent "${_dir}" || result=1
       fi
       [ -f "${script}" ] && { "${script}" || result=1; }
     done
@@ -203,26 +227,26 @@ library_clean() {
     echo "amedia [${working_dir}] is not a directory" >&2
     return 1
   }
-  local log="/tmp/media-clean.log"
+  local result=0 action log
+  log="$(mktemp -t amedia-clean.XXXXXX)"
   echo -n "Cleaning [${working_dir}] ... "
-  local action
   {
-    : >"${log}"
-    ${FIND_CMD} "${working_dir}" -name ".DS_Store" -type f -delete
-    ${FIND_CMD} "${working_dir}" -name "._metadata_*.yaml" -type f -delete
-    ${FIND_CMD} "${working_dir}" -name "._defaults_analysed_*.yaml" -type f -delete
+    ${FIND_CMD} "${working_dir}" -name ".DS_Store" -type f -delete || result=1
+    ${FIND_CMD} "${working_dir}" -name "._metadata_*.yaml" -type f -delete || result=1
+    ${FIND_CMD} "${working_dir}" -name "._defaults_analysed_*.yaml" -type f -delete || result=1
     for action in "${MEDIA_ACTIONS[@]}"; do
-      ${FIND_CMD} "${working_dir}" -name "${action}.sh" -type f -delete
-      ${FIND_CMD} "${working_dir}" -name "._${action}_*" -type d -exec rm -rf '{}' +
+      ${FIND_CMD} "${working_dir}" -name "${action}.sh" -type f -delete || result=1
+      ${FIND_CMD} "${working_dir}" -name "._${action}_*" -type d -prune -exec rm -rf '{}' + || result=1
     done
-    [ -d "${working_dir}" ] && ${FIND_CMD} "${working_dir}" -path "*/share/*/media/*" -type d -empty -delete
-    [ -d "${working_dir}" ] && ${FIND_CMD} "${working_dir}" -path "*/share/*/media/*" -type d -empty -delete
-  } >>"${log}" 2>&1
-  if [ -s "${log}" ]; then
+    [ -d "${working_dir}" ] && { ${FIND_CMD} "${working_dir}" -path "*/share/*/media/*" -type d -empty -delete || result=1; }
+  } >"${log}" 2>&1
+  if [ "${result}" -ne 0 ]; then
     echo "failed"
     cat "${log}"
+    rm -f "${log}"
     return 1
   fi
+  rm -f "${log}"
   echo "done"
   return 0
 }
@@ -247,7 +271,7 @@ normalise_permissions() {
 # shellcheck disable=SC2329
 normalise_share_tmp_dir() {
   local working_dir="${1}" _dir
-  # shellcheck disable=SC2086,SC2153
+  # shellcheck disable=SC2153
   for _dir in ${SHARE_DIRS}; do
     if [[ "${working_dir}" == "${_dir}" || "${working_dir}" == "${_dir}/"* ]]; then
       echo "${_dir}/tmp/scripts"
@@ -311,13 +335,10 @@ library_ingress_sweep() {
   local result=0
   echo -n "Sweeping [${share_dir}/tmp] ... "
   rm -rf \
-    "${share_dir}/tmp/usbdrive/.Spotlight-V100" \
-    "${share_dir}/tmp/usbdrive/.Trashes" \
-    "${share_dir}/tmp/usbdrive/.fseventsd" \
     "${share_dir}/tmp/usbdrive/System Volume Information" \
     "${share_dir}/tmp/usbdrive/\$RECYCLE.BIN" \
     "${share_dir}"/tmp/usbdrive/..?* \
-    "${share_dir}"/tmp/usbdrive/.[!.]*
+    "${share_dir}"/tmp/usbdrive/.[!.]* || result=1
   "${PYTHON_DIR}/python" "${LIB_ROOT}/ingress.py" "${share_dir}/tmp" || result=1
   if [ ${result} -ne 0 ]; then
     echo "failed"
@@ -336,7 +357,6 @@ command_ingress() {
   local shares=()
   if [ -n "${dir}" ]; then
     local match="" _dir
-    # shellcheck disable=SC2086
     for _dir in ${SHARE_DIRS}; do
       [ "${_dir}" = "${dir}" ] && match="${_dir}"
     done
@@ -352,19 +372,18 @@ command_ingress() {
     echo "amedia no local share to ingress into" >&2
     return 0
   fi
-  local result=0 import_ok=1 i=0
+  local result=0 import_ok=1
   library_ingress_import "${shares[0]}" || {
     import_ok=0
     result=1
   }
   local _share
   for _share in "${shares[@]}"; do
-    if [ ${i} -eq 0 ] && [ ${import_ok} -eq 0 ]; then
-      i=$((i + 1))
+    if [ "${_share}" = "${shares[0]}" ] && [ ${import_ok} -eq 0 ]; then
+      echo "amedia skipping sweep of [${_share}], the import failed" >&2
       continue
     fi
     library_ingress_sweep "${_share}" || result=1
-    i=$((i + 1))
   done
   return ${result}
 }
@@ -386,7 +405,6 @@ dispatch_library() {
     ;;
   local)
     local _dir
-    # shellcheck disable=SC2086
     for _dir in ${SHARE_DIRS_LOCAL}; do
       local script="${_dir}/tmp/scripts/media/${verb}.sh"
       if [ -f "${script}" ]; then "${script}" || result=1; else "library_${verb}" "${_dir}" || result=1; fi
@@ -404,7 +422,7 @@ resolve_share_path() {
   SHARE_PATH_SUFFIX="${current_dir#"${share_prefix}"/share/}"
   SHARE_PATH_INDEX="${SHARE_PATH_SUFFIX%%/*}"
   SHARE_PATH_DIR="${share_prefix}/share/${SHARE_PATH_INDEX}"
-  SHARE_PATH_SUFFIX="${SHARE_PATH_SUFFIX#"${SHARE_PATH_INDEX}"/*}"
+  SHARE_PATH_SUFFIX="${SHARE_PATH_SUFFIX#"${SHARE_PATH_INDEX}"/}"
   return 0
 }
 
@@ -413,7 +431,7 @@ share_path_is_outside_media() {
 }
 
 command_stow() {
-  local scope="${1:-parents}"
+  local scope="${1:-${MEDIA_SCOPE_DEFAULT}}"
   resolve_share_path || refuse "current directory [${PWD}] is not a share"
   if [ "${SHARE_PATH_SUFFIX}" = "${SHARE_PATH_INDEX}" ]; then
     refuse "current directory [${PWD}] is a bare share root, nothing there to stow"
@@ -441,6 +459,7 @@ command_stow() {
     if [ -n "${share_type_dir}" ]; then
       local share_type_suffix="${share_current_dir#"${share_type_dir}"}"
       local share_type_dest="${share_dest}/${share_type}"
+      local dir file
       while IFS= read -r -d '' dir; do
         local rel_dir="${dir#"${share_type_dir}"/}"
         local target_dir="${share_type_dest}/${rel_dir}"
@@ -479,13 +498,15 @@ command_move() {
   resolve_share_path || refuse "current directory [${PWD}] is not a share"
   share_path_is_outside_media && refuse "current directory is not nested in the library, did you mean [amedia stow <scope>]"
   local share_dashes
-  share_dashes="$(echo "${SHARE_PATH_SUFFIX}" | grep -o "/" | wc -l)"
+  share_dashes="$(path_slashes "${SHARE_PATH_SUFFIX}")"
   if [ "${share_dashes}" -lt 2 ]; then
     echo "amedia current directory [${PWD}] is a share, but not nested in a library" >&2
     return 1
   fi
-  local result=0 share_ssh=""
-  if [ "$(mount | grep -c "${SHARE_PATH_DIR} ")" -gt 0 ] && [ "$(mount | grep "${SHARE_PATH_DIR} " | grep -c "//")" -gt 0 ]; then
+  local result=0 share_mount
+  local share_ssh=()
+  share_mount="$(mount | grep " on ${SHARE_PATH_DIR} ")"
+  if [ -n "${share_mount}" ] && [[ "${share_mount}" == *"//"* ]]; then
     while IFS=',' read -r share_host share_csv_index; do
       if [[ -z "${share_host}" || -z "${share_csv_index}" || "${share_csv_index}" != "${SHARE_PATH_INDEX}" ]]; then
         continue
@@ -494,11 +515,11 @@ command_move() {
       if host "${share_host}" >/dev/null 2>&1; then
         # shellcheck disable=SC2029
         if [ "$(ssh "root@${share_host}" "${share_current_dir_host}")" -gt 0 ]; then
-          share_ssh="ssh root@${share_host}"
+          share_ssh=(ssh "root@${share_host}")
         fi
       fi
-    done <"$(shares_file)"
-    if [ -z "${share_ssh}" ]; then
+    done <"${MEDIA_SHARES_FILE}"
+    if [ ${#share_ssh[@]} -eq 0 ]; then
       echo "amedia current directory [${PWD}] is not directly attached, nor can it be found on any SAMBA share" >&2
       return 1
     fi
@@ -513,13 +534,13 @@ command_move() {
     return 0
   fi
   local share_args=("${share_src}" "${share_dest}")
-  if [ -n "${share_ssh}" ]; then
+  if [ ${#share_ssh[@]} -gt 0 ]; then
     echo "Executing remotely ..."
     share_args=("$(printf '%q' "${share_src}")" "$(printf '%q' "${share_dest}")")
   fi
   # shellcheck disable=SC2064
-  trap "${share_ssh} killall -9 rsync; echo; exit" INT
-  ${share_ssh} bash -s -- "${share_args[@]}" <<'EOF' || result=1
+  trap "${share_ssh[*]} killall -9 rsync; echo; exit" INT
+  "${share_ssh[@]}" bash -s -- "${share_args[@]}" <<'EOF' || result=1
 share_src="${1}"
 share_dest="${2}"
 result=0
@@ -598,7 +619,7 @@ EOF
 
 command_metadata() {
   if [ "${EXTENT}" != "file" ]; then
-    echo "" && echo "Error: Not in media file root directory, not doing anything!" && echo ""
+    echo "amedia metadata needs a movies or series file directory, not [${PWD}]" >&2
     return 1
   fi
   local defaults_file="._defaults.yaml"
@@ -636,9 +657,7 @@ command_space() {
 
 mount_darwin() {
   local result=0
-  local shares_file
-  shares_file="$(shares_file)"
-  if [[ -f "${shares_file}" ]] && ! grep -q "^${HOSTNAME}," "${shares_file}"; then
+  if [[ -f "${MEDIA_SHARES_FILE}" ]] && ! grep -q "^${HOSTNAME}," "${MEDIA_SHARES_FILE}"; then
     while IFS=',' read -r share_host share_index; do
       [[ -z "${share_host}" || -z "${share_index}" ]] && continue
       local share_dir="${HOME}/Desktop/share/${share_index}"
@@ -647,7 +666,7 @@ mount_darwin() {
       if [[ ! -d "${share_dir}/tmp" ]]; then
         echo -n "Mounting [${share_samba}] ... "
         diskutil unmount force "${share_dir}" &>/dev/null
-        if mount_smbfs -o soft,nodatacache,nodatacache "${share_samba}" "${share_dir}"; then
+        if mount_smbfs -o soft,nodatacache "${share_samba}" "${share_dir}"; then
           echo "done"
         else
           echo "failed"
@@ -656,7 +675,7 @@ mount_darwin() {
       else
         echo "Mount [${share_dir}] already"
       fi
-    done <"${shares_file}"
+    done <"${MEDIA_SHARES_FILE}"
   fi
   return ${result}
 }
@@ -707,23 +726,27 @@ run_stage() {
   case "${1}" in
   stow) command_stow "${PUBLISH_SCOPE}" ;;
   process) command_process ;;
-  merge) dispatch_action merge ;;
   refresh) command_refresh ;;
   normalise) dispatch_library normalise "" ;;
   analyse) command_analyse ;;
-  rename | check | upscale | reformat | transcode | downscale) dispatch_action "${1}" ;;
   space) command_space ;;
+  *)
+    in_list "${1}" "${MEDIA_ACTIONS[@]}" || refuse "unknown stage [${1}]"
+    dispatch_action "${1}"
+    ;;
   esac
 }
 
 run_pipeline() {
-  local result=0 stage
+  local result=0 stage status
   for stage in "$@"; do
     echo -n "==> $(printf '%-10s' "${stage}") "
-    if run_stage "${stage}"; then
+    run_stage "${stage}"
+    status=$?
+    if [ ${status} -eq 0 ]; then
       echo "done"
     else
-      result=1
+      [ ${result} -eq 0 ] && result=${status}
       echo "failed"
       if [ "${OPT_KEEP_GOING}" -ne 1 ]; then
         echo "amedia pipeline stopped at [${stage}], exit [${result}]" >&2
@@ -731,11 +754,12 @@ run_pipeline() {
       fi
     fi
   done
+  [ ${result} -ne 0 ] && echo "amedia pipeline failed, exit [${result}]" >&2
   return ${result}
 }
 
 command_publish() {
-  PUBLISH_SCOPE="${1:-parents}"
+  PUBLISH_SCOPE="${1:-${MEDIA_SCOPE_DEFAULT}}"
   run_pipeline stow process merge refresh
 }
 
@@ -746,14 +770,14 @@ command_process() {
 parse_args() {
   COMMAND="${1:-help}"
   [ $# -gt 0 ] && shift
-  POSITIONAL=""
   while [ $# -gt 0 ]; do
     case "${1}" in
     --force) OPT_FORCE=1 ;;
     --keep-going) OPT_KEEP_GOING=1 ;;
     --share)
+      [ $# -ge 2 ] || refuse "option [--share] requires an index"
       shift
-      OPT_SHARE="${1:-}"
+      OPT_SHARE="${1}"
       ;;
     --quiet) OPT_QUIET=1 ;;
     --verbose) OPT_VERBOSE=1 ;;
@@ -786,22 +810,21 @@ main() {
     usage
     exit 0
     ;;
-  publish) command_publish "${POSITIONAL:-parents}" ;;
-  process) command_process ;;
-  analyse) command_analyse ;;
-  rename | check | merge | upscale | reformat | transcode | downscale) dispatch_action "${COMMAND}" ;;
+  publish) command_publish "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
+  process | analyse | refresh | space) run_stage "${COMMAND}" ;;
   clean | normalise) dispatch_library "${COMMAND}" "${POSITIONAL}" ;;
   ingress) command_ingress "${POSITIONAL}" ;;
-  stow) command_stow "${POSITIONAL:-parents}" ;;
+  stow) command_stow "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
   move) command_move "${POSITIONAL}" ;;
-  refresh) command_refresh ;;
   truncate) command_truncate ;;
   find) command_find "${POSITIONAL}" ;;
   metadata) command_metadata ;;
-  space) command_space ;;
   mount) command_mount ;;
   home) command_home ;;
-  *) refuse "unknown command [${COMMAND}]" ;;
+  *)
+    in_list "${COMMAND}" "${MEDIA_ACTIONS[@]}" || refuse "unknown command [${COMMAND}]"
+    dispatch_action "${COMMAND}"
+    ;;
   esac
 }
 

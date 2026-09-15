@@ -30,7 +30,9 @@ improve sys tests with datbase/broker asserts
 
 
 
-i had bugs in backup.sh that lead to rsyncing to /backup unounted when mount failed, should I put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one? advice dont do
+
+
+I had bugs in backup.sh that lead to rsyncing to /backup unounted when mount failed, should I put /backup on a constrained volume so it cant fill up root if mount does not work - on mad use btrfs, on others use tmp vol? a new one? advice dont do
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
 test timeout, other failure modes?, is 3 hours suffcient?
 release, clean history, ssh root@macmini-mad 'rm -rf /share/{10,20,30,40}/backup/supervisor/*'
@@ -43,6 +45,7 @@ test sedondary
 format all /backup drives, test volumes.sh
 test tertiary
 test supervisor backup enable release, validate 384M memeory footprint during backup, make smaller again if possible?
+add abackup to client too, backup photos etc?
 implement PLAN_BACKUP.md and delete
 
 
