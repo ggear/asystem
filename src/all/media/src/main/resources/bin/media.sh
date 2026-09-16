@@ -750,14 +750,14 @@ run_stage() {
 run_pipeline() {
   local result=0 stage status
   for stage in "$@"; do
-    echo -n "==> $(printf '%-10s' "${stage}") "
+    echo
+    echo "== ${stage} =="
+    echo
     run_stage "${stage}"
     status=$?
-    if [ ${status} -eq 0 ]; then
-      echo "done"
-    else
+    if [ ${status} -ne 0 ]; then
       [ ${result} -eq 0 ] && result=${status}
-      echo "failed"
+      echo "amedia stage [${stage}] failed, exit [${status}]" >&2
       if [ "${OPT_PERSISTENT}" -ne 1 ]; then
         echo "amedia pipeline stopped at [${stage}], exit [${result}]" >&2
         return ${result}
