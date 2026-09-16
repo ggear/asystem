@@ -201,7 +201,7 @@ GO_VERSION_LATEST="${ASYSTEM_GO_VERSION}"
 for env in "${GOENV_ROOT}"/versions/*; do
   [ -d "${env}" ] && [ "${env##*/}" != "${GO_VERSION_LATEST}" ] && chmod -R u+w "${env}" && rm -rf "${env}"
 done
-goenv install -sv "${GO_VERSION_LATEST}"
+goenv install -s "${GO_VERSION_LATEST}"
 GOROOT="${GOENV_ROOT}/versions/${GO_VERSION_LATEST}"
 goenv global "${GO_VERSION_LATEST}"
 goenv versions
