@@ -1597,15 +1597,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  if [ ! -f \"${NEW_FILE}\" ]; then\n"),
                     pl.lit("    mv \"${ORIG_FILE}\" \"${NEW_FILE}\"\n"),
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
-                    pl.lit("      echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
+                    pl.lit("      echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
                     pl.lit("    else\n"),
-                    pl.lit("      echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 1\n"),
+                    pl.lit("      echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 1\n"),
                     pl.lit("    fi\n"),
                     pl.lit("  else\n"),
-                    pl.lit("    echo '' && echo 'Skipped (pre-existing) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
+                    pl.lit("    echo '' && echo 'Skipped (pre-existing) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
                     pl.lit("  fi\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo '' && exit 0\n"),
+                    pl.lit("exit 0\n"),
                 ]).alias("Rename Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
@@ -1666,7 +1666,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  MERG_FILE=\"${ORIG_DIR}/${ROOT_FILE_STEM}.mkv\"\n"),
                     pl.lit("  if [ -f \"${ORIG_FILE}\" ] && [ -f \"${TRAN_FILE}\" ]; then\n"),
                     pl.lit("    if [ \"${CHECK_REQUIRED}\" != \"\" ]; then\n"),
-                    pl.lit("      echo '' && echo \"Skipped (check-${CHECK_REQUIRED}) [\"$(date '+%H:%M:%S %y:%m:%d')\"]\" && echo '' && echo '' && exit 0\n"),
+                    pl.lit("      echo '' && echo \"Skipped (check-${CHECK_REQUIRED}) [\"$(date '+%H:%M:%S %y:%m:%d')\"]\" && exit 0\n"),
                     pl.lit("    fi\n"),
                     pl.lit("    echo ''\n"),
                     pl.lit("    ORIG_FILE_SIZE=$(du -m \"${ORIG_FILE}\" | "
@@ -1687,17 +1687,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("      fi\n"),
                     pl.lit("      echo \"./$(basename \"${TRAN_FILE}\") [${TRAN_FILE_SIZE} GB] " + \
                            "-> ./$(basename "), pl.lit("\"${ORIG_FILE}\")\" [${ORIG_FILE_SIZE} GB]\n"),
-                    pl.lit("      echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
+                    pl.lit("      echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
                     pl.lit("    else\n"),
-                    pl.lit("      echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 1\n"),
+                    pl.lit("      echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 1\n"),
                     pl.lit("    fi\n"),
                     pl.lit("  else\n"),
-                    pl.lit("    echo '' && echo 'Skipped (missing-files) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
+                    pl.lit("    echo '' && echo 'Skipped (missing-files) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
                     pl.lit("  fi\n"),
                     pl.lit("else\n"),
-                    pl.lit("  echo '' && echo 'Skipped (non-unique-files) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
+                    pl.lit("  echo '' && echo 'Skipped (non-unique-files) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo '' && echo 'Failed ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 2\n"),
+                    pl.lit("echo '' && echo 'Failed ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 2\n"),
                 ]).alias("Merge Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
@@ -1751,14 +1751,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("TRAN_FILE_NAME=\""), pl.col("Transcode File Name").str.replace_all(
                         "\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("if [ -f \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" ]; then\n"),
-                    pl.lit("  echo '' && echo 'Skipped (pre-existing) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
+                    pl.lit("  echo '' && echo 'Skipped (pre-existing) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [ $(df -k \"${ROOT_DIR}\" | tail -1 | awk '{print $4}') -lt 20000000 ]; then\n"),
-                    pl.lit("  echo '' && echo 'Skipped (space) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 1\n"),
+                    pl.lit("  echo '' && echo 'Skipped (space) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
                     pl.lit("if [ ! -f \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" ]; then\n"),
-                    pl.lit("  echo '' && echo 'Skipped (missing) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
+                    pl.lit("  echo '' && echo 'Skipped (missing) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
                     pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
@@ -1776,14 +1776,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                            "-> ./$(basename "), pl.lit("\"${TRAN_FILE_NAME}\")\" " + \
                                                        "[$(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" | "
                                                        "awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB]\n"),
-                    pl.lit("    echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
+                    pl.lit("    echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
                     pl.lit("  else\n"),
-                    pl.lit("    echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 3\n"),
+                    pl.lit("    echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 3\n"),
                     pl.lit("  fi\n"),
                     pl.lit("else\n"),
-                    pl.lit("  echo '' && echo 'Failed (other-transcode) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 2\n"),
+                    pl.lit("  echo '' && echo 'Failed (other-transcode) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 2\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo '' && exit -1\n"),
+                    pl.lit("exit -1\n"),
                 ]).alias("Transcode Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
@@ -1811,7 +1811,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                            "._defaults_analysed_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("echo '' && echo \"File probe reported:"
-                           " "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),
+                           " "), pl.col("File Validity"), pl.lit("\" && exit 0\n"),
                 ]).alias("Check Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
@@ -1839,7 +1839,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                            "._defaults_analysed_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("echo '' && echo \"File probe reported:"
-                           " "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),
+                           " "), pl.col("File Validity"), pl.lit("\" && exit 0\n"),
                 ]).alias("Upscale Script Source"),
             ]
         ).sort("Action Index")
@@ -1855,12 +1855,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     script_global_file.write("#!/usr/bin/env bash\n\n")
                     script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
                     script_global_file.write(BASH_EXIT_HANDLER.format(""))
-                    script_global_file.write("echo ''\n")
+                    script_global_file.write("MEDIA_SEPARATE=\"\"\n")
                 for script_local_row in _script_local_rows:
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
                         if not file_path_media_is_nested:
                             script_global_file.write(
-                                "[[ -f \"${{ROOT_DIR}}/../../../../../..{}\" ]] && \"${{ROOT_DIR}}/../../../../../..{}\"\n"
+                                "[[ -f \"${{ROOT_DIR}}/../../../../../..{}\" ]] && "
+                                "{{ [ -n \"${{MEDIA_SEPARATE}}\" ] && echo ''; MEDIA_SEPARATE=1; \"${{ROOT_DIR}}/../../../../../..{}\"; }}\n"
                                 .format(script_local_row[0].replace("\"", "\\\""),
                                         script_local_row[0].replace("\"", "\\\"")))
                         script_local_dir = _localise_path(script_local_row[1].replace("\\$", "$").replace("\\`", "`"),
@@ -1962,11 +1963,11 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")/${2:-/media}"
         """
         script_source_exec_clean = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
-"${MEDIA_BIN_DIR}/media.sh" clean "${SHARE_DIR}"
+MEDIA_NESTED=1 "${MEDIA_BIN_DIR}/media.sh" clean "${SHARE_DIR}"
         """
         script_source_exec_normalise = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
-"${MEDIA_BIN_DIR}/media.sh" normalise "${SHARE_DIR}"
+MEDIA_NESTED=1 "${MEDIA_BIN_DIR}/media.sh" normalise "${SHARE_DIR}"
         """
         script_source_exec_summarise = """
 declare -a OP_CODES=({})

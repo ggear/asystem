@@ -231,7 +231,10 @@ dispatch_action() {
   file | media)
     print_header "$(hostname)" "${verb}" 0
     local action
+    MEDIA_SEPARATE=""
     while IFS= read -r -d '' action; do
+      [ -n "${MEDIA_SEPARATE}" ] && echo ""
+      MEDIA_SEPARATE=1
       "${action}" || result=1
     done < <(${FIND_CMD} . -name "${verb}.sh" -print0)
     ;;
@@ -679,7 +682,6 @@ EOF
   fi
   echo "" && echo "Defaults file:" && cat "${defaults_file}"
   echo "" && echo "Defaults edit:" && echo "vi ${defaults_file}"
-  echo ""
   return 0
 }
 
@@ -953,6 +955,7 @@ main() {
   case "${COMMAND}" in
   help)
     usage
+    echo ""
     exit 0
     ;;
   process) command_process "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
@@ -971,6 +974,10 @@ main() {
     dispatch_action "${COMMAND}"
     ;;
   esac
+  local status=$?
+  # shellcheck disable=SC2031
+  [ -n "${MEDIA_NESTED}" ] || echo ""
+  return ${status}
 }
 
 case "${1:-}" in

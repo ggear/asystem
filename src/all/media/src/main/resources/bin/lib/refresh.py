@@ -45,12 +45,13 @@ class Exit(IntEnum):
     FAIL_PLEX_REFRESH = 43
 
 
-def _print_error(_message, _exception=None):
+def _print_error(_message, _exception=None, _footer=True):
     print(f"\nError: {_message}, processing interrupted")
     if _exception is not None:
         for detail in "".join(traceback.format_exception(_exception)).rstrip().split("\n"):
             print(f"    {detail}")
-    print()
+    if _footer:
+        print()
 
 
 def _print_messages(_messages):
@@ -313,7 +314,7 @@ def _refresh(_share_root):
     try:
         share_paths = _get_share_paths(_share_root)
     except Exception as exception:
-        _print_error(f"{exception}", exception)
+        _print_error(f"{exception}", exception, _footer=False)
         return Exit.FAIL_FILESYSTEM
     exit_values = [
         refresh_service("sabnzbd", _refresh_sabnzbd),
@@ -328,6 +329,6 @@ if __name__ == "__main__":
     argument_parser.add_argument("share_root", nargs="?", default=os.environ.get("SHARE_ROOT"))
     arguments = argument_parser.parse_args()
     if not arguments.share_root:
-        _print_error("no share root argument or [SHARE_ROOT] environment variable set")
+        _print_error("no share root argument or [SHARE_ROOT] environment variable set", _footer=False)
         sys.exit(Exit.FAIL_ARGUMENTS)
     sys.exit(_refresh(Path(arguments.share_root).absolute().as_posix()))

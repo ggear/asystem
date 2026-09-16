@@ -20,7 +20,7 @@ execute_remote() {
     return
   fi
   for COMMAND in "$@"; do
-    if ! ssh -o StrictHostKeyChecking=no -t -t -q "root@${HOST}" "MEDIA_REMOTE=1" "${BIN_DIR}/media.sh" "${COMMAND}"; then
+    if ! ssh -o StrictHostKeyChecking=no -t -t -q "root@${HOST}" "MEDIA_REMOTE=1" "MEDIA_NESTED=1" "${BIN_DIR}/media.sh" "${COMMAND}"; then
       printf '\033[1;31mdeploy [%s] failed on [%s]\033[0m\n' "${COMMAND}" "${HOST}"
       FAILURES+=("${HOST} ${COMMAND}")
       RESULT=1
