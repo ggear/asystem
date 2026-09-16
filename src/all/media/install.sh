@@ -67,11 +67,7 @@ EOF
   done
 fi
 if [[ "${SERVICE_FORM_FACTOR:-}" == "client" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
-  if [ ! -d "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin" ]; then
-    pyenv install "${ASYSTEM_PYTHON_VERSION}"
-    "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
-    "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r "./.reqs.txt"
-  fi
+  "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r "./.reqs.txt"
   cp -rvf "${SERVICE_INSTALL_LATEST}/bin/lib/other-transcode.rb" "/usr/local/bin/other-transcode"
   chmod +x "/usr/local/bin/other-transcode"
   mkdir -p "${HOME}/.config"

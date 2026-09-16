@@ -5,12 +5,5 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-# NOTES: https://github.com/pyenv/pyenv/releases
-VERSION=v2.6.16
-pull_repo "${ROOT_DIR}" "${1}" "python" "pyenv" "pyenv/pyenv" "${VERSION}"
-rm -rf "${ROOT_DIR}/src/main/resources/pyenv"
-mkdir -p "${ROOT_DIR}/src/main/resources"
-cp -rvf "${ROOT_DIR}/../../../.deps/python/pyenv" "${ROOT_DIR}/src/main/resources"
-rm -rf "${ROOT_DIR}/src/main/resources/pyenv/.git"
-rm -rf "${ROOT_DIR}/src/main/resources/pyenv/.github"
-rm -rf "${ROOT_DIR}/src/main/resources/pyenv/bin/pyenv"
+pull_repo "${ROOT_DIR}" "${1}" "python" "pyenv" "pyenv/pyenv" "v${PYENVBIN_VERSION}"
+[ -e "${ROOT_DIR}/../../../.deps/python/pyenv/plugins/python-build/share/python-build/${PYTHON_VERSION}" ] || { echo "pyenv [${PYENVBIN_VERSION}] has no python-build definition for python [${PYTHON_VERSION}], bump PYENVBIN_VERSION in .env_fab" >&2; exit 1; }
