@@ -82,4 +82,7 @@ ${SERVICE_INSTALL_LATEST}/bin/media.sh "\$@"
 
 EOF
   chmod +x /usr/local/bin/amedia
+  if [ -d /etc/bash_completion.d ]; then
+    /usr/local/bin/amedia completion >/etc/bash_completion.d/amedia
+  fi
 fi

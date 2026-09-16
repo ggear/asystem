@@ -73,6 +73,46 @@ class StaticTest(unittest.TestCase):
         self.assertIsNone(re.search(r'\bmedia-(?:{})\b'.format(retired_verbs), bin_source),
                           "media.sh calls a retired media-* wrapper by name")
 
+    def test_media_commands_matches_main_dispatch(self):
+        with open(join(DIR_ROOT, "src/main/resources/bin/media.sh")) as bin_file:
+            bin_source = bin_file.read()
+        commands_match = re.search(r'^MEDIA_COMMANDS=\(([^)]*)\)', bin_source, re.MULTILINE)
+        self.assertIsNotNone(commands_match, "found no MEDIA_COMMANDS array in media.sh, the parse has rotted")
+        main_match = re.search(r'^main\(\) \{\n(.*?)^\}', bin_source, re.MULTILINE | re.DOTALL)
+        self.assertIsNotNone(main_match, "found no main function in media.sh, the parse has rotted")
+        dispatched = set()
+        for labels in re.findall(r'^  ([a-z][a-z |]*)\)', main_match.group(1), re.MULTILINE):
+            dispatched.update(label.strip() for label in labels.split("|"))
+        self.assertTrue(len(dispatched) > 0, "parsed no commands out of main in media.sh, the parse has rotted")
+        self.assertEqual(set(commands_match.group(1).split()), dispatched | {"completion"})
+
+    def test_media_complete_candidates(self):
+        def complete(*words):
+            result = subprocess.run([join(DIR_ROOT, "src/main/resources/bin/media.sh"), "complete",
+                                     str(len(words)), "amedia", *words], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return result.stdout.split()
+
+        self.assertIn("transcode", complete(""))
+        self.assertIn("completion", complete(""))
+        self.assertNotIn("complete", complete(""))
+        self.assertEqual(complete("tr"), ["truncate", "transcode"])
+        self.assertEqual(complete("analyse", "--"), ["--share", "--force", "--quiet", "--verbose"])
+        self.assertEqual(complete("analyse", "--force", "--"), ["--share", "--quiet", "--verbose"])
+        self.assertEqual(complete("process", ""), ["kids", "parents", "docos", "comedy"])
+        self.assertEqual(complete("process", "kids", ""), ["--share", "--persistent", "--quiet", "--verbose"])
+        self.assertEqual(complete("move", "--dryrun", "2"), ["20", "21"])
+        self.assertEqual(complete("clean", ""), [])
+        self.assertEqual(complete("bogus", ""), [])
+
+    def test_media_completion_drives_bash(self):
+        bin_path = join(DIR_ROOT, "src/main/resources/bin/media.sh")
+        script = 'amedia() { "%s" "$@"; }; eval "$(amedia completion)"; ' \
+                 'COMP_WORDS=(amedia move ""); COMP_CWORD=2; _amedia; printf "%%s\\n" "${COMPREPLY[@]}"' % bin_path
+        result = subprocess.run(["/bin/bash", "-c", script], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("40", result.stdout.split())
+
 
 class InternetTest(unittest.TestCase):
 

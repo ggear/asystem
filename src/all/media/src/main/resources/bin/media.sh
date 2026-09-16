@@ -4,8 +4,11 @@ set -uo pipefail
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-# shellcheck disable=SC1091
-. "${ROOT_DIR}/.env_media"
+MEDIA_COMMANDS=(process analyse clean normalise ingress stow move refresh truncate find metadata space mount home completion help)
+
+MEDIA_OPTIONS=(--share --force --persistent --quiet --verbose --dryrun)
+
+MEDIA_SCOPES=(kids parents docos comedy)
 
 MEDIA_ACTIONS=(rename check merge upscale transcode reformat downscale)
 
@@ -80,6 +83,7 @@ EOF
   Tool
     mount              mount the remote shares
     home               print the install bin directory
+    completion         print the bash completion, eval it in a profile
     help               this text, and a bare ${prog} prints it
 
   --share      <index> one share, not the one you are in         (default: all local)
@@ -799,7 +803,7 @@ parse_args() {
   while [ $# -gt 0 ]; do
     case "${1}" in
     --*)
-      in_list "${1}" --force --persistent --share --quiet --verbose --dryrun ||
+      in_list "${1}" "${MEDIA_OPTIONS[@]}" ||
         refuse "unknown option [${1}]"
       command_accepts_option "${COMMAND}" "${1}" ||
         refuse "option [${1}] is not accepted by command [${COMMAND}]"
@@ -837,16 +841,108 @@ command_accepts_option() {
   esac
 }
 
-command_takes_positional() {
+command_positional() {
   case "${1}" in
-  process | stow | move | clean | normalise | ingress | find) return 0 ;;
-  *) return 1 ;;
+  process | stow) echo "scope" ;;
+  move) echo "share" ;;
+  clean | normalise | ingress) echo "dir" ;;
+  find) echo "token" ;;
   esac
+}
+
+complete_matching() {
+  local current="${1}" candidate
+  shift
+  for candidate in "$@"; do
+    [[ "${candidate}" == "${current}"* ]] && echo "${candidate}"
+  done
+  return 0
+}
+
+share_indices_all() {
+  local share_host share_index
+  [ -f "${MEDIA_SHARES_FILE}" ] || return 0
+  while IFS=',' read -r share_host share_index; do
+    [[ -z "${share_host}" || "${share_host}" == "#"* || -z "${share_index}" ]] && continue
+    echo "${share_index}"
+  done <"${MEDIA_SHARES_FILE}"
+}
+
+share_indices_local() {
+  (
+    # shellcheck disable=SC1091
+    . "${ROOT_DIR}/.env_media" >/dev/null 2>&1
+    local share_dir
+    for share_dir in ${SHARE_DIRS_LOCAL:-}; do
+      basename "${share_dir}"
+    done
+  )
+}
+
+command_complete() {
+  local index="${1:-}"
+  [ $# -gt 0 ] && shift
+  [[ "${index}" =~ ^[0-9]+$ ]] || return 0
+  local words=("$@")
+  local current="${words[${index}]:-}" command="${words[1]:-}"
+  if [ "${index}" -le 1 ]; then
+    complete_matching "${current}" "${MEDIA_COMMANDS[@]}" "${MEDIA_ACTIONS[@]}"
+    return 0
+  fi
+  in_list "${command}" "${MEDIA_COMMANDS[@]}" "${MEDIA_ACTIONS[@]}" || return 0
+  local shares=()
+  if [ "${words[$((index - 1))]}" = "--share" ]; then
+    mapfile -t shares < <(share_indices_local)
+    [ ${#shares[@]} -gt 0 ] && complete_matching "${current}" "${shares[@]}"
+    return 0
+  fi
+  local position used=() positional=0
+  for ((position = 2; position < index; position++)); do
+    case "${words[${position}]}" in
+    --share)
+      used+=("--share")
+      position=$((position + 1))
+      ;;
+    --*) used+=("${words[${position}]}") ;;
+    *) positional=1 ;;
+    esac
+  done
+  local candidates=() option
+  for option in "${MEDIA_OPTIONS[@]}"; do
+    command_accepts_option "${command}" "${option}" || continue
+    [ ${#used[@]} -gt 0 ] && in_list "${option}" "${used[@]}" && continue
+    candidates+=("${option}")
+  done
+  local kind
+  kind="$(command_positional "${command}")"
+  if [[ "${current}" != -* ]]; then
+    [ "${positional}" -eq 1 ] && kind=""
+    case "${kind}" in
+    scope) candidates=("${MEDIA_SCOPES[@]}") ;;
+    share) mapfile -t candidates < <(share_indices_all) ;;
+    dir | token) return 0 ;;
+    esac
+  fi
+  [ ${#candidates[@]} -gt 0 ] && complete_matching "${current}" "${candidates[@]}"
+  return 0
+}
+
+command_completion() {
+  cat <<'EOF'
+_amedia() {
+  local candidate
+  COMPREPLY=()
+  while IFS= read -r candidate; do
+    COMPREPLY+=("${candidate}")
+  done < <(amedia complete "${COMP_CWORD}" "${COMP_WORDS[@]}" 2>/dev/null)
+}
+complete -o default -F _amedia amedia
+EOF
 }
 
 main() {
   parse_args "$@"
-  if [ -n "${POSITIONAL}" ] && ! command_takes_positional "${COMMAND}"; then
+  if [ -n "${POSITIONAL}" ] && [ -z "$(command_positional "${COMMAND}")" ]; then
     refuse "unexpected argument [${POSITIONAL}]"
   fi
   resolve_extent
@@ -872,6 +968,21 @@ main() {
     ;;
   esac
 }
+
+case "${1:-}" in
+complete)
+  shift
+  command_complete "$@"
+  exit 0
+  ;;
+completion)
+  command_completion
+  exit 0
+  ;;
+esac
+
+# shellcheck disable=SC1091
+. "${ROOT_DIR}/.env_media"
 
 main "$@"
 exit $?

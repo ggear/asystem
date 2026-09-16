@@ -65,6 +65,8 @@ node() { unset -f nvm node npm npx; [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. 
 npm() { unset -f nvm node npm npx; [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"; npm "$@"; }
 npx() { unset -f nvm node npm npx; [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"; npx "$@"; }
 
+[[ $- == *i* ]] && command -v amedia >/dev/null && eval "$(amedia completion 2>/dev/null)"
+
 EOF
 
 ################################################################################
