@@ -19,8 +19,11 @@ dnf-3 install -y \
   yq-4.47.1 \
   xq-1.3.0 \
   nvme-cli-2.15 \
+  fio-3.37 \
   acl-2.3.2 \
+  gdisk-1.0.10 \
   parted-3.6 \
+  btrfs-progs-6.16.1 \
   util-linux-2.40.4 \
   usbutils-018 \
   smartmontools-7.5 \
@@ -35,6 +38,7 @@ dnf-3 install -y \
   cups-2.4.14 \
   avahi-0.9~rc2 \
   inotify-tools-4.23.9.0 \
+  mosquitto-2.0.22 \
   powertop-2.15 \
   python3-3.13.7 \
   python3-pip-24.3.1 \
@@ -89,6 +93,11 @@ dnf-3 install -y \
   tuptime-5.2.4 \
   duf-0.9.0 \
   fswatch-1.17.1 \
+  tmux-3.5a \
+  glances-4.3.0.8 \
+  sysstat-12.7.7 \
+  fbterm-1.7 \
+  terminus-fonts-console-4.49.1 \
   buildbot-4.3.0 \
   colordiff-1.0.21 \
   cvs-1.11.23 \
@@ -102,8 +111,9 @@ dnf-3 install -y \
   gambas3-ide-3.20.4 \
   gettext-0.23.1 \
   git-2.51.0 \
-  git2cl-3.0 \
+  git-annex-10.20250320 \
   git-cola-4.15.0 \
+  git2cl-3.0 \
   gitg-45~20250512gitf7501bc \
   gtranslator-48.0 \
   highlight-4.13 \
@@ -418,7 +428,7 @@ ln -sf /root/.pyenv/libexec/pyenv /root/.pyenv/bin/pyenv
 source /root/.bashrc
 cd /tmp
 if [ ! -d "/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin" ]; then
-  pyenv install "${ASYSTEM_PYTHON_VERSION}"
+  pyenv install -s "${ASYSTEM_PYTHON_VERSION}"
   "/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
 fi
 find /root/.pyenv/versions -mindepth 1 -maxdepth 1 -type d ! -name "${ASYSTEM_PYTHON_VERSION}" -exec rm -rf {} +

@@ -24,7 +24,7 @@ ln -sf /root/.pyenv/libexec/pyenv /root/.pyenv/bin/pyenv
 source /root/.bashrc
 cd /tmp
 if [ ! -d "/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin" ]; then
-  pyenv install "${ASYSTEM_PYTHON_VERSION}"
+  pyenv install -s "${ASYSTEM_PYTHON_VERSION}"
   "/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
 fi
 find /root/.pyenv/versions -mindepth 1 -maxdepth 1 -type d ! -name "${ASYSTEM_PYTHON_VERSION}" -exec rm -rf {} +
