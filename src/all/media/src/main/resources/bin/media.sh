@@ -51,7 +51,7 @@ Usage: ${prog} [command] [argument] [options]
 
   Pipeline             stop at the first failed stage
     publish   [scope]  stow, process, merge, refresh             (default: parents)
-    process            normalise, analyse, act, report space
+    process            normalise, analyse, act
     analyse            probe the library, write the scripts
 
   Actions              run what analyse wrote, writing it if absent
@@ -794,7 +794,7 @@ command_publish() {
 }
 
 command_process() {
-  run_pipeline normalise analyse rename check upscale reformat transcode downscale analyse space
+  run_pipeline normalise analyse rename check upscale reformat transcode downscale analyse
 }
 
 parse_args() {

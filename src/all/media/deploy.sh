@@ -5,7 +5,7 @@ SHARES_FILE="${ROOT_DIR}/src/main/resources/shares.csv"
 BIN_DIR="/var/lib/asystem/install/media/latest/bin"
 
 COMMANDS_SINGLETON=("truncate" "refresh")
-COMMANDS_ALL_HOSTS=("normalise" "clean" "analyse" "space")
+COMMANDS_ALL_HOSTS=("normalise" "clean" "analyse")
 
 RESULT=0
 FAILURES=()
