@@ -14,15 +14,15 @@ execute_remote() {
   local HOST=${1} && shift
   local COMMAND
   if ! host "${HOST}" >/dev/null 2>&1; then
-    printf '\033[1;33m==> %s unreachable, skipping [%s]\033[0m\n' "${HOST}" "$*"
+    printf '\n\033[1;33m== %s ==\033[0m\n\nunreachable, skipping [%s]\n\n' "${HOST}" "$*"
     FAILURES+=("${HOST} unreachable")
     RESULT=1
     return
   fi
   for COMMAND in "$@"; do
-    printf '\033[1;36m==> %s %s\033[0m\n' "${HOST}" "${COMMAND}"
+    printf '\n\033[1;36m== %s %s ==\033[0m\n\n' "${HOST}" "${COMMAND}"
     if ! ssh -o StrictHostKeyChecking=no -t -t -q "root@${HOST}" "${BIN_DIR}/media.sh" "${COMMAND}"; then
-      printf '\033[1;31m==> %s %s failed\033[0m\n' "${HOST}" "${COMMAND}"
+      printf '\033[1;31mdeploy [%s] failed on [%s]\033[0m\n' "${COMMAND}" "${HOST}"
       FAILURES+=("${HOST} ${COMMAND}")
       RESULT=1
     fi
@@ -46,7 +46,7 @@ for HOST in ${HOSTS}; do
 done
 
 if [ ${RESULT} -ne 0 ]; then
-  printf '\033[1;31m==> Deploy failed [%s]\033[0m\n' "${#FAILURES[@]}"
+  printf '\n\033[1;31m== deploy failed [%s] ==\033[0m\n\n' "${#FAILURES[@]}"
   printf '      %s\n' "${FAILURES[@]}"
 fi
 
