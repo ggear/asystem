@@ -1,10 +1,26 @@
 #!/bin/bash
 
+if [ "$(id -u)" -eq 0 ]; then
+  INSTALL_SCRIPT="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+  cd / || exit 1
+  exec sudo -u graham -H /bin/bash "${INSTALL_SCRIPT}" "$@"
+fi
+if [ "$(id -un)" != "graham" ]; then
+  echo "install must run as [graham] or root, not [$(id -un)]" >&2
+  exit 1
+fi
+
+INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+. "${INSTALL_DIR}/.env"
+export PATH="/opt/homebrew/sbin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+cd "${HOME}" || exit 1
+
 ################################################################################
 # Normalise
 ################################################################################
 mkdir -p ~/Temp ~/Code ~/Backup
-rm -rf .zprofile .zsh_history .zsh_sessions
+rm -rf ~/.zprofile ~/.zsh_history ~/.zsh_sessions
 rm -rf /Users/graham/.profile
 defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool TRUE
 
@@ -99,7 +115,7 @@ cat <<'EOF' >~/.gitconfig
   email = graham@nowhere.com
 
 [core]
-  autocrlf = input
+  autocrlf = false
   editor = vim
 
 [pull]
@@ -131,6 +147,7 @@ EOF
 ################################################################################
 # Ghostty
 ################################################################################
+mkdir -p ~/.config/ghostty
 cat <<'EOF' >~/.config/ghostty/config
 background = #000000
 background-opacity = 1.0
@@ -154,10 +171,13 @@ EOF
 # Python
 ################################################################################
 PYENV_ROOT="${HOME}/.pyenv"
-PYTHON_VERSION_LATEST=$(pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' ')
-PYTHON_VERSION_LATEST=3.12.14
-for env in $(pyenv versions --bare); do pyenv uninstall -f "$env"; done
-for venv in $(pyenv virtualenvs --bare); do pyenv virtualenv-delete -f "$venv"; done
+PYTHON_VERSION_LATEST="${ASYSTEM_PYTHON_VERSION}"
+for venv in $(pyenv virtualenvs --bare --skip-aliases); do
+  [[ "${venv}" == "${PYTHON_VERSION_LATEST}/envs/"* ]] || pyenv virtualenv-delete -f "${venv}"
+done
+for env in $(pyenv versions --bare --skip-aliases --skip-envs); do
+  [ "${env}" = "${PYTHON_VERSION_LATEST}" ] || pyenv uninstall -f "${env}"
+done
 pyenv install -sv "${PYTHON_VERSION_LATEST}"
 PYTHON_HOME="${PYENV_ROOT}/versions/${PYTHON_VERSION_LATEST}"
 "${PYTHON_HOME}/bin/pip" install --upgrade \
@@ -177,10 +197,10 @@ echo "$("${PYTHON_HOME}/bin/python" --version) installed"
 # Go
 ################################################################################
 GOENV_ROOT="${HOME}/.goenv"
-GO_VERSION_LATEST=$(goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' ')
-GO_VERSION_LATEST=1.27.0
-chmod -R u+w "${GOENV_ROOT}"/versions/*
-for env in $(goenv list --bare); do rm -rf "$(goenv root)/versions/${env}"; done
+GO_VERSION_LATEST="${ASYSTEM_GO_VERSION}"
+for env in "${GOENV_ROOT}"/versions/*; do
+  [ -d "${env}" ] && [ "${env##*/}" != "${GO_VERSION_LATEST}" ] && chmod -R u+w "${env}" && rm -rf "${env}"
+done
 goenv install -sv "${GO_VERSION_LATEST}"
 GOROOT="${GOENV_ROOT}/versions/${GO_VERSION_LATEST}"
 goenv global "${GO_VERSION_LATEST}"
@@ -190,6 +210,9 @@ echo "$("${GOROOT}/bin/go" version) installed"
 ################################################################################
 # Node
 ################################################################################
+export NVM_DIR="${HOME}/.nvm"
+# shellcheck disable=SC1091
+. "/opt/homebrew/opt/nvm/nvm.sh"
 nvm install --lts
 npm install -g yarn
 
@@ -215,4 +238,5 @@ cat <<'EOF' >~/Library/LaunchAgents/me.graham.goenv.plist
 </dict>
 </plist>
 EOF
-launchctl load ~/Library/LaunchAgents/me.graham.goenv.plist
+launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/me.graham.goenv.plist 2>/dev/null
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/me.graham.goenv.plist
