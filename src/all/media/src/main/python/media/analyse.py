@@ -77,10 +77,6 @@ BASH_EXIT_HANDLER = "shopt -s expand_aliases\n" \
                     "[[ $(uname) == 'Darwin' ]] && alias realpath=grealpath\n\n" \
                     "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                     "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
-BASH_ECHO_HEADER = ("echo \""
-                    "###############################################################"
-                    "###############################################################"
-                    "\"\n")
 
 
 # noinspection PyUnresolvedReferences,PyUnusedLocal
@@ -1561,9 +1557,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
                         "\"", "\\\""), pl.lit("\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Renaming!'\n")),
-                    pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Renaming: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
-                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo \"Renaming [${ROOT_FILE_NAME}] [${ROOT_DIR_LOCAL}]\"\n"),
                     pl.lit("BASE_DIR=\""), pl.col("Base Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("BASE_DIR=(\"${BASE_DIR// /_____}\")\n"),
                     pl.lit("BASE_DIR=(${BASE_DIR//\\// })\n"),
@@ -1599,12 +1593,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  if [ ! -f \"${NEW_FILE}\" ]; then\n"),
                     pl.lit("    mv \"${ORIG_FILE}\" \"${NEW_FILE}\"\n"),
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
-                    pl.lit("      echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
+                    pl.lit("      echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
                     pl.lit("    else\n"),
-                    pl.lit("      echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 1\n"),
+                    pl.lit("      echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 1\n"),
                     pl.lit("    fi\n"),
                     pl.lit("  else\n"),
-                    pl.lit("    echo '' && echo 'Skipped (pre-existing) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
+                    pl.lit("    echo '' && echo 'Skipped (pre-existing) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
                     pl.lit("  fi\n"),
                     pl.lit("fi\n"),
                     pl.lit("echo '' && exit 0\n"),
@@ -1620,9 +1614,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
                         "\"", "\\\""), pl.lit("\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merging!'\n")),
-                    pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Merging: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
-                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo \"Merging [${ROOT_FILE_NAME}] [${ROOT_DIR_LOCAL}]\"\n"),
                     pl.lit("if [[ ${ROOT_DIR} == *\"/Plex Versions/\"* ]]; then\n"),
                     pl.lit("  ORIG_DIR=\"$(realpath \"${ROOT_DIR}/../../../..\")\"\n"),
                     pl.lit("else\n"),
@@ -1670,7 +1662,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  MERG_FILE=\"${ORIG_DIR}/${ROOT_FILE_STEM}.mkv\"\n"),
                     pl.lit("  if [ -f \"${ORIG_FILE}\" ] && [ -f \"${TRAN_FILE}\" ]; then\n"),
                     pl.lit("    if [ \"${CHECK_REQUIRED}\" != \"\" ]; then\n"),
-                    pl.lit("      echo '' && echo \"Skipped (check-${CHECK_REQUIRED}) [\"$(date '+%H:%M:%S %y:%m:%d')\"]\" && exit 0\n"),
+                    pl.lit("      echo '' && echo \"Skipped (check-${CHECK_REQUIRED}) [\"$(date '+%H:%M:%S %y:%m:%d')\"]\" && echo '' && echo '' && exit 0\n"),
                     pl.lit("    fi\n"),
                     pl.lit("    echo ''\n"),
                     pl.lit("    ORIG_FILE_SIZE=$(du -m \"${ORIG_FILE}\" | "
@@ -1691,17 +1683,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("      fi\n"),
                     pl.lit("      echo \"./$(basename \"${TRAN_FILE}\") [${TRAN_FILE_SIZE} GB] " + \
                            "-> ./$(basename "), pl.lit("\"${ORIG_FILE}\")\" [${ORIG_FILE_SIZE} GB]\n"),
-                    pl.lit("      echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
+                    pl.lit("      echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
                     pl.lit("    else\n"),
-                    pl.lit("      echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 1\n"),
+                    pl.lit("      echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 1\n"),
                     pl.lit("    fi\n"),
                     pl.lit("  else\n"),
-                    pl.lit("    echo '' && echo 'Skipped (missing-files) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
+                    pl.lit("    echo '' && echo 'Skipped (missing-files) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
                     pl.lit("  fi\n"),
                     pl.lit("else\n"),
-                    pl.lit("  echo '' && echo 'Skipped (non-unique-files) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
+                    pl.lit("  echo '' && echo 'Skipped (non-unique-files) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo '' && echo 'Failed ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 2\n"),
+                    pl.lit("echo '' && echo 'Failed ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 2\n"),
                 ]).alias("Merge Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
@@ -1719,9 +1711,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing '${SCRIPT_VERB}'!'\n  "
                                                     "rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
-                    pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"${SCRIPT_VERB}: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
-                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo \"${SCRIPT_VERB} [${ROOT_FILE_NAME}] [${ROOT_DIR_LOCAL}]\"\n"),
                     pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "\\( " +
                            "-name \"._metadata_${ROOT_FILE_STEM}_\"??.yaml -o " +
@@ -1757,14 +1747,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("TRAN_FILE_NAME=\""), pl.col("Transcode File Name").str.replace_all(
                         "\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("if [ -f \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" ]; then\n"),
-                    pl.lit("  echo '' && echo 'Skipped (pre-existing) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && exit 0\n"),
+                    pl.lit("  echo '' && echo 'Skipped (pre-existing) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [ $(df -k \"${ROOT_DIR}\" | tail -1 | awk '{print $4}') -lt 20000000 ]; then\n"),
-                    pl.lit("  echo '' && echo 'Skipped (space) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && exit 1\n"),
+                    pl.lit("  echo '' && echo 'Skipped (space) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
                     pl.lit("if [ ! -f \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" ]; then\n"),
-                    pl.lit("  echo '' && echo 'Skipped (missing) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && exit 0\n"),
+                    pl.lit("  echo '' && echo 'Skipped (missing) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
                     pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
@@ -1782,12 +1772,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                            "-> ./$(basename "), pl.lit("\"${TRAN_FILE_NAME}\")\" " + \
                                                        "[$(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" | "
                                                        "awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB]\n"),
-                    pl.lit("    echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 0\n"),
+                    pl.lit("    echo '' && echo 'Completed ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 0\n"),
                     pl.lit("  else\n"),
-                    pl.lit("    echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 3\n"),
+                    pl.lit("    echo '' && echo 'Failed (mv) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 3\n"),
                     pl.lit("  fi\n"),
                     pl.lit("else\n"),
-                    pl.lit("  echo 'Failed (other-transcode) ['$(date '+%H:%M:%S %y:%m:%d')']' && exit 2\n"),
+                    pl.lit("  echo '' && echo 'Failed (other-transcode) ['$(date '+%H:%M:%S %y:%m:%d')']' && echo '' && echo '' && exit 2\n"),
                     pl.lit("fi\n"),
                     pl.lit("echo '' && exit -1\n"),
                 ]).alias("Transcode Script Source"),
@@ -1803,9 +1793,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         "\"", "\\\""), pl.lit("\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Check!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
-                    pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Checking: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
-                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo \"Checking [${ROOT_FILE_NAME}] [${ROOT_DIR_LOCAL}]\"\n"),
                     pl.lit("FILE_META_NAME=\"._metadata_${ROOT_FILE_NAME%.*}_"
                            "$(basename \"${ROOT_FILE_NAME}\" | rev | cut -d. -f1 | rev).yaml\"\n"),
                     pl.lit("FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name \"${FILE_META_NAME}\")\"\n"),
@@ -1833,9 +1821,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         "\"", "\\\""), pl.lit("\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Upscale!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
-                    pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Upscaling: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
-                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo \"Upscaling [${ROOT_FILE_NAME}] [${ROOT_DIR_LOCAL}]\"\n"),
                     pl.lit("FILE_META_NAME=\"._metadata_${ROOT_FILE_NAME%.*}_"
                            "$(basename \"${ROOT_FILE_NAME}\" | rev | cut -d. -f1 | rev).yaml\"\n"),
                     pl.lit("FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name \"${FILE_META_NAME}\")\"\n"),

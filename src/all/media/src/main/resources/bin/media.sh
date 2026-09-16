@@ -733,6 +733,7 @@ command_home() {
 }
 
 run_stage() {
+  unset MEDIA_HEADER_PRINTED
   case "${1}" in
   stow) command_stow "${PUBLISH_SCOPE}" ;;
   process) command_process ;;
@@ -750,9 +751,6 @@ run_stage() {
 run_pipeline() {
   local result=0 stage status
   for stage in "$@"; do
-    echo
-    echo "== ${stage} =="
-    echo
     run_stage "${stage}"
     status=$?
     if [ ${status} -ne 0 ]; then
