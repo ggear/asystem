@@ -168,6 +168,7 @@ analyse_share() {
   if [ -f "${script}" ]; then
     "${script}" "--${verbosity}" "${subpath}"
   else
+    print_header "$(hostname)" "analyse"
     local target="${dir}"
     [ "${subpath}" = "media" ] && target="${dir}/media"
     "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "--${verbosity}" "${target}" "${MEDIA_GOOGLE_SHEET_GUID}"
@@ -528,7 +529,7 @@ command_move() {
     return 1
   fi
   local result=0 share_mount
-  local share_ssh=()
+  local share_ssh=() share_ssh_host=""
   share_mount="$(mount | grep " on ${SHARE_PATH_DIR} ")"
   if [ -n "${share_mount}" ] && [[ "${share_mount}" == *"//"* ]]; then
     while IFS=',' read -r share_host share_csv_index; do
@@ -540,6 +541,7 @@ command_move() {
         # shellcheck disable=SC2029
         if [ "$(ssh "root@${share_host}" "${share_current_dir_host}")" -gt 0 ]; then
           share_ssh=(ssh "root@${share_host}")
+          share_ssh_host="${share_host}"
         fi
       fi
     done <"${MEDIA_SHARES_FILE}"
@@ -559,8 +561,10 @@ command_move() {
   fi
   local share_args=("${share_src}" "${share_dest}")
   if [ ${#share_ssh[@]} -gt 0 ]; then
-    echo "Executing remotely ..."
+    print_header "${share_ssh_host}" "move" 1
     share_args=("$(printf '%q' "${share_src}")" "$(printf '%q' "${share_dest}")")
+  else
+    print_header "$(hostname)" "move"
   fi
   # shellcheck disable=SC2064
   trap "${share_ssh[*]} pkill -9 -f 'rsync .*/share/${dest}/'; echo; exit" INT
@@ -615,6 +619,7 @@ command_refresh() {
 }
 
 command_truncate() {
+  print_header "$(hostname)" "truncate"
   "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_ROOT}" "${MEDIA_GOOGLE_SHEET_GUID}" --clean
 }
 
@@ -624,7 +629,9 @@ command_find() {
   local share_ssh=()
   if [ "${SHARE_ROOT}" != "/share" ]; then
     share_ssh=(ssh root@macmini-mad)
-    echo "Executing remotely ..."
+    print_header "macmini-mad" "find" 1
+  else
+    print_header "$(hostname)" "find"
   fi
   "${share_ssh[@]}" bash -s <<EOF | while IFS= read -r file_found; do
 find /share -type f ! -name "._*" ! -path "*/audio/*" -path "*/media/*" -iname "*${token}*"

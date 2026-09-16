@@ -119,8 +119,13 @@ echo "" && echo "###############################################################
 echo "Base image install commands:"
 echo "#######################################################################################" && echo ""
 echo "dnf-3 install -y \\"
+_package_last="${ASYSTEM_PACKAGES_DNF[-1]}"
 for _package in "${ASYSTEM_PACKAGES_DNF[@]}"; do
-  echo "  ${_package}-$(dnf info --installed "${_package}" 2>/dev/null | awk '/^Version/ {print $3}') \\"
+  _package_pinned="${_package}-$(dnf info --installed "${_package}" 2>/dev/null | awk '/^Version/ {print $3}')"
+  if [ "${_package}" = "${_package_last}" ]; then
+    echo "  ${_package_pinned}"
+  else
+    echo "  ${_package_pinned} \\"
+  fi
 done
-echo "  #"
 echo "" && echo "#######################################################################################"
