@@ -402,7 +402,10 @@ locale
 ################################################################################
 # Python
 ################################################################################
-[ ! -d /root/.pyenv ] && git clone https://github.com/pyenv/pyenv.git /root/.pyenv
+if [ ! -d /root/.pyenv/.git ]; then
+  rm -rf /root/.pyenv
+  git clone https://github.com/pyenv/pyenv.git /root/.pyenv
+fi
 (
   cd /root/.pyenv || exit 1
   if [ "$(git describe --tags 2>/dev/null)" != "v${ASYSTEM_PYENVBIN_VERSION}" ]; then
