@@ -149,7 +149,7 @@ backups_each() {
     [ -n "${host}" ] || continue
     [ "${BACKUPS_INTERRUPTED}" -eq 0 ] || return 130
     found=$((found + 1))
-    "${action}" "${host}" || failed=$((failed + 1))
+    "${action}" "${host}" </dev/null || failed=$((failed + 1))
   done
   if [ "${found}" -eq 0 ]; then
     backups_log ERRS "no enrolled hosts found in [${BACKUPS_CONFIG}]"

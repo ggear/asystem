@@ -12,7 +12,7 @@ MEDIA_ACTIONS=(rename check merge upscale transcode reformat downscale)
 declare -A MEDIA_ACTION_HELP=(
   [rename]="apply the canonical naming"
   [check]="verify streams and subtitles"
-  [merge]="merge a split title, never in process"
+  [merge]="merge a split title"
   [upscale]="raise resolution to target"
   [transcode]="re-encode to the target quality"
   [reformat]="remux without re-encoding"
@@ -25,7 +25,7 @@ MEDIA_SHARES_FILE="${ROOT_DIR}/../shares.csv"
 
 MEDIA_SCOPE_DEFAULT="parents"
 
-PUBLISH_SCOPE="${MEDIA_SCOPE_DEFAULT}"
+PROCESS_SCOPE="${MEDIA_SCOPE_DEFAULT}"
 
 OPT_FORCE=0
 OPT_PERSISTENT=0
@@ -49,12 +49,13 @@ usage() {
   cat <<EOF
 Usage: ${prog} [command] [argument] [options]
 
-  Pipeline             stop at the first failed stage
-    publish   [scope]  stow, process, merge, refresh             (default: parents)
-    process            normalise, analyse, act
+  Pipeline
+    process   [scope]  stow, normalise, analyse, rename,
+                       check, upscale, reformat, transcode,
+                       downscale, analyse, merge, refresh        (default: parents)
     analyse            probe the library, write the scripts
 
-  Actions              run what analyse wrote, writing it if absent
+  Actions
 EOF
   local action
   for action in "${MEDIA_ACTIONS[@]}"; do
@@ -757,8 +758,7 @@ command_home() {
 
 run_stage() {
   case "${1}" in
-  stow) command_stow "${PUBLISH_SCOPE}" ;;
-  process) command_process ;;
+  stow) command_stow "${PROCESS_SCOPE}" ;;
   refresh) command_refresh ;;
   normalise) dispatch_library normalise "" ;;
   analyse) command_analyse ;;
@@ -788,13 +788,9 @@ run_pipeline() {
   return ${result}
 }
 
-command_publish() {
-  PUBLISH_SCOPE="${1:-${MEDIA_SCOPE_DEFAULT}}"
-  run_pipeline stow process merge refresh
-}
-
 command_process() {
-  run_pipeline normalise analyse rename check upscale reformat transcode downscale analyse
+  PROCESS_SCOPE="${1:-${MEDIA_SCOPE_DEFAULT}}"
+  run_pipeline stow normalise analyse rename check upscale reformat transcode downscale analyse merge refresh
 }
 
 parse_args() {
@@ -833,17 +829,17 @@ command_accepts_option() {
   local command="${1}" option="${2}"
   case "${option}" in
   --force) [ "${command}" = "analyse" ] ;;
-  --persistent) in_list "${command}" publish process ;;
+  --persistent) [ "${command}" = "process" ] ;;
   --dryrun) [ "${command}" = "move" ] ;;
   --share) in_list "${command}" analyse process clean normalise ingress space "${MEDIA_ACTIONS[@]}" ;;
-  --quiet | --verbose) in_list "${command}" analyse process publish "${MEDIA_ACTIONS[@]}" ;;
+  --quiet | --verbose) in_list "${command}" analyse process "${MEDIA_ACTIONS[@]}" ;;
   *) return 1 ;;
   esac
 }
 
 command_takes_positional() {
   case "${1}" in
-  publish | stow | move | clean | normalise | ingress | find) return 0 ;;
+  process | stow | move | clean | normalise | ingress | find) return 0 ;;
   *) return 1 ;;
   esac
 }
@@ -859,8 +855,8 @@ main() {
     usage
     exit 0
     ;;
-  publish) command_publish "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
-  process | analyse | refresh | space) run_stage "${COMMAND}" ;;
+  process) command_process "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
+  analyse | refresh | space) run_stage "${COMMAND}" ;;
   clean | normalise) dispatch_library "${COMMAND}" "${POSITIONAL}" ;;
   ingress) command_ingress "${POSITIONAL}" ;;
   stow) command_stow "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;

@@ -312,11 +312,11 @@ backup_terabytes() {
 }
 
 backup_rule() {
-  local joined="$1" width out="" first=1
+  local joined="$1" fill="${2:--}" width out="" first=1
   for width in "${BACKUP_LIST_WIDTHS[@]}"; do
     [ "${first}" -eq 1 ] || out="${out}${joined}"
     first=0
-    out="${out}$(printf '%*s' $(( width + 2 )) '' | tr ' ' '-')"
+    out="${out}$(printf '%*s' $(( width + 2 )) '' | tr ' ' "${fill}")"
   done
   printf '+%s+\n' "${out}"
 }
@@ -398,7 +398,7 @@ backup_auto() {
 backup_list() {
   local base run path stage state doc live cells result began elapsed finished trigger latest ended sized
   local ran halted broke alive
-  local size volume held scrub used_disk_mb total_disk_mb scrub_doc
+  local size volume held scrub used_disk_mb total_disk_mb free_disk_mb scrub_doc
   base="$(dirname "${BACKUP_RUN_PATH}")"
   mapfile -t BACKUP_LIST_RUNS < <(find "${base}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r)
   if [ "${#BACKUP_LIST_RUNS[@]}" -eq 0 ]; then
@@ -407,8 +407,8 @@ backup_list() {
   fi
   echo
   backup_rule "+"
-  backup_row "STARTED (RUN-ID)" FINISHED DURATION TRIGGER PRIMARY SECONDARY TERTIARY SCRUB DELTA SIZE CAPACITY USED RESULT
-  backup_rule "+"
+  backup_row "STARTED (RUN-ID)" FINISHED DURATION TRIGGER PRIMARY SECONDARY TERTIARY SCRUB DELTA SIZE FREE USED RESULT
+  backup_rule "+" "="
   for run in "${BACKUP_LIST_RUNS[@]}"; do
     path="${base}/${run}"
     began="$(backup_epoch "${run}")"
@@ -422,6 +422,7 @@ backup_list() {
     scrub="-"
     used_disk_mb="-"
     total_disk_mb="-"
+    free_disk_mb="-"
     ran=0
     halted=0
     broke=0
@@ -450,6 +451,9 @@ backup_list() {
     done
     scrub_doc="${path}/stage/tertiary/scrub.json"
     [ -f "${scrub_doc}" ] && scrub="$(backup_tail_field "${scrub_doc}" state)"
+    if [ "${used_disk_mb}" -ge 0 ] 2>/dev/null && [ "${total_disk_mb}" -ge 0 ] 2>/dev/null; then
+      free_disk_mb=$(( total_disk_mb - used_disk_mb ))
+    fi
     result="$(backup_tail_field "${path}/status.json" state)"
     [ -n "${result}" ] || result="$(backup_resulted "${ran}" "${halted}" "${broke}")"
     { [ "${alive}" -eq 1 ] || [ "${live}" -eq 1 ]; } && result="${BACKUP_STATE_RUNNING}"
@@ -470,7 +474,7 @@ backup_list() {
     fi
     backup_row "${run}" "${finished}" "${elapsed}" "${trigger:--}" "${cells[@]}" "${scrub:--}" \
       "$(backup_megabytes "${sized:+${size}}")" "$(backup_terabytes "${used_disk_mb}")" \
-      "$(backup_terabytes "${total_disk_mb}")" "$(backup_bar "${volume}")" "${result}"
+      "$(backup_terabytes "${free_disk_mb}")" "$(backup_bar "${volume}")" "${result}"
   done
   backup_rule "+"
   echo

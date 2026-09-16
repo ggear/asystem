@@ -27,6 +27,9 @@ Add big ass temps for deck
 retire nginx and use cloudflared for homeasistant?
 improve sys tests with datbase/broker asserts
 
+rename storage to be drives drives mount|space
+consider moving fstabs? volumes.sh?
+design space align with abackup list
 
 
 test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?

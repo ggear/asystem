@@ -60,7 +60,9 @@ def _configured():
 
 
 def _client():
-    client = mqtt.Client("".join(random.choice(string.ascii_lowercase) for _ in range(10)), True)
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1,
+                         client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)),
+                         clean_session=True)
     client.connect(BROKER, PORT)
     return client
 
