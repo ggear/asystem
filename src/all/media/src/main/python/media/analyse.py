@@ -1910,6 +1910,7 @@ SCRIPT_DIR="$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media
 SCRIPT_CMD="{}"
         """
         script_source_exec_local = """
+print_header "$(hostname)" "${SCRIPT_CMD%.sh}"
 "${SHARE_ROOT}/${SCRIPT_DIR}/${SCRIPT_CMD}"
         """
         script_source_exec_remote = """
@@ -1937,15 +1938,16 @@ done
 if [ ${HOST_IN_SHARES} -eq 0 ]; then
     for HOST_NAME in "${SHARE_HOSTS[@]}"; do
         HOST_DIRS='. '"${MEDIA_BIN_INSTALL}"'/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
-        HOST_CMD='. '"${MEDIA_BIN_INSTALL}"'/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
+        HOST_CMD='. '"${MEDIA_BIN_INSTALL}"'/.env_media; export MEDIA_HEADER_PRINTED=1; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
         if host "${HOST_NAME}" >/dev/null 2>&1; then
             if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
-                echo "Executing remotely ... "
+                print_header "${HOST_NAME}" "${SCRIPT_CMD%.sh}" 1
                 LOG=$(ssh "root@${HOST_NAME}" "${HOST_CMD}" | tee "${LOG_DEV}")
             fi
         fi
     done
 else
+    print_header "$(hostname)" "${SCRIPT_CMD%.sh}"
     LOG=$("${SHARE_ROOT}/${SCRIPT_DIR}/${SCRIPT_CMD}" $@ | tee "${LOG_DEV}")
 fi
         """

@@ -4,6 +4,8 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 SHARES_FILE="${ROOT_DIR}/src/main/resources/shares.csv"
 BIN_DIR="/var/lib/asystem/install/media/latest/bin"
 
+. "${ROOT_DIR}/src/main/resources/bin/.env_media"
+
 COMMANDS_SINGLETON=("truncate" "refresh")
 COMMANDS_ALL_HOSTS=("normalise" "clean" "analyse" "space")
 
@@ -14,13 +16,15 @@ execute_remote() {
   local HOST=${1} && shift
   local COMMAND
   if ! host "${HOST}" >/dev/null 2>&1; then
-    printf '\n\033[1;33m== %s ==\033[0m\n\nunreachable, skipping [%s]\n\n' "${HOST}" "$*"
+    unset MEDIA_HEADER_PRINTED
+    print_header "${HOST}" "unreachable, skipping [$*]" 1
     FAILURES+=("${HOST} unreachable")
     RESULT=1
     return
   fi
   for COMMAND in "$@"; do
-    printf '\n\033[1;36m== %s %s ==\033[0m\n\n' "${HOST}" "${COMMAND}"
+    unset MEDIA_HEADER_PRINTED
+    print_header "${HOST}" "${COMMAND}" 1
     if ! ssh -o StrictHostKeyChecking=no -t -t -q "root@${HOST}" "${BIN_DIR}/media.sh" "${COMMAND}"; then
       printf '\033[1;31mdeploy [%s] failed on [%s]\033[0m\n' "${COMMAND}" "${HOST}"
       FAILURES+=("${HOST} ${COMMAND}")

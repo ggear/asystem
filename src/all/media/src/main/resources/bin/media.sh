@@ -193,6 +193,7 @@ command_analyse() {
   verbosity="$(resolve_verbosity)"
   case "${EXTENT}" in
   file | media)
+    print_header "$(hostname)" "analyse"
     library_clean "${PWD}" || result=1
     "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "--${verbosity:-verbose}" "${PWD}" "${MEDIA_GOOGLE_SHEET_GUID}" || result=1
     ;;
@@ -222,6 +223,7 @@ dispatch_action() {
   local result=0
   case "${EXTENT}" in
   file | media)
+    print_header "$(hostname)" "${verb}"
     local action
     while IFS= read -r -d '' action; do
       "${action}" || result=1
@@ -414,22 +416,34 @@ dispatch_library() {
   local verb="${1}" dir="${2:-}"
   local result=0
   if [ -n "${dir}" ]; then
+    print_header "$(hostname)" "${verb}"
     "library_${verb}" "${dir}" || result=1
     return ${result}
   fi
   case "${EXTENT}" in
   file | media)
+    print_header "$(hostname)" "${verb}"
     "library_${verb}" "${PWD}" || result=1
     ;;
   share)
     local script="${EXTENT_SHARE_DIR}/tmp/scripts/media/${verb}.sh"
-    if [ -f "${script}" ]; then "${script}" || result=1; else "library_${verb}" "${EXTENT_SHARE_DIR}" || result=1; fi
+    if [ -f "${script}" ]; then
+      "${script}" || result=1
+    else
+      print_header "$(hostname)" "${verb}"
+      "library_${verb}" "${EXTENT_SHARE_DIR}" || result=1
+    fi
     ;;
   local)
     local _dir
     for _dir in ${SHARE_DIRS_LOCAL}; do
       local script="${_dir}/tmp/scripts/media/${verb}.sh"
-      if [ -f "${script}" ]; then "${script}" || result=1; else "library_${verb}" "${_dir}" || result=1; fi
+      if [ -f "${script}" ]; then
+        "${script}" || result=1
+      else
+        print_header "$(hostname)" "${verb}"
+        "library_${verb}" "${_dir}" || result=1
+      fi
     done
     ;;
   esac
@@ -441,6 +455,7 @@ share_path_is_outside_media() {
 }
 
 command_stow() {
+  print_header "$(hostname)" "stow"
   local scope="${1:-${MEDIA_SCOPE_DEFAULT}}"
   [ -n "${SHARE_PATH_DIR}" ] || refuse "current directory [${PWD}] is not a share"
   if [ "${SHARE_PATH_SUFFIX}" = "${SHARE_PATH_INDEX}" ]; then
@@ -593,6 +608,7 @@ EOF
 }
 
 command_refresh() {
+  print_header "$(hostname)" "refresh"
   export SABNZBD_URL SABNZBD_API_KEY
   export SONARR_URL SONARR_API_KEY
   export PLEX_URL PLEX_TOKEN
@@ -652,6 +668,7 @@ EOF
 }
 
 command_space() {
+  print_header "$(hostname)" "space"
   command_mount
   local dirs result=0
   case "${EXTENT}" in
