@@ -103,7 +103,6 @@ dnf-3 install -y \
   gettext-0.23.1 \
   git-2.51.0 \
   git2cl-3.0 \
-  git-annex-10.20250320 \
   git-cola-4.15.0 \
   gitg-45~20250512gitf7501bc \
   gtranslator-48.0 \
