@@ -1476,10 +1476,10 @@ func TestStatsInt_ConvertToInt(t *testing.T) {
 		expected int8
 	}{
 		{name: "a true zero stays zero", value: 0, expected: 0},
-		{name: "a home volume barely used never reads empty", value: 0.235, expected: 1},
-		{name: "another barely used volume never reads empty", value: 0.444, expected: 1},
-		{name: "the smallest measurable share never reads empty", value: 0.0001, expected: 1},
-		{name: "a value already rounding up is unchanged", value: 0.6, expected: 1},
+		{name: "a fraction below a half rounds down", value: 0.235, expected: 0},
+		{name: "another fraction below a half rounds down", value: 0.444, expected: 0},
+		{name: "the smallest measurable share rounds down", value: 0.0001, expected: 0},
+		{name: "a fraction above a half rounds up", value: 0.6, expected: 1},
 		{name: "a threshold is not moved from below", value: 64.2, expected: 64},
 		{name: "a threshold is not moved from above", value: 64.6, expected: 65},
 		{name: "a busy disk short of its limit is unchanged", value: 89.4, expected: 89},

@@ -78,11 +78,6 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "client" || "${SERVICE_FORM_FACTOR:-}" == "s
   cp -rvf "${SERVICE_INSTALL_LATEST}/.gspread_pandas" "${HOME}/.config/gspread_pandas"
   chmod +x "${SERVICE_INSTALL_LATEST}/bin/media.sh"
 
-  # NOTES: Remove one release after this one, when no host can still carry a media-* link
-  for LINK in "/usr/local/bin/media-"*; do
-    [ -L "${LINK}" ] && rm -vf "${LINK}"
-  done
-
   rm -f /usr/local/bin/amedia
   cat >/usr/local/bin/amedia <<EOF
 #!/bin/bash
