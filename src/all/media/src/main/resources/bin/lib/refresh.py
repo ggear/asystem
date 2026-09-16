@@ -15,8 +15,6 @@ from pathlib import Path
 import requests
 from plexapi.server import PlexServer
 
-BANNER = "#" * 126
-
 API_TIMEOUT_SECONDS = 10
 API_COMMAND_TIMEOUT_SECONDS = 120
 API_COMMAND_POLL_SECONDS = 0.2
@@ -312,21 +310,16 @@ def _refresh(_share_root):
         print(f"Finished [{_name}] refresh in [{round(time.perf_counter() - started, 1)}] seconds")
         return exit_value
 
-    print(BANNER)
-    print("Refresh")
-    print(BANNER)
     try:
         share_paths = _get_share_paths(_share_root)
     except Exception as exception:
         _print_error(f"{exception}", exception)
-        print(BANNER)
         return Exit.FAIL_FILESYSTEM
     exit_values = [
         refresh_service("sabnzbd", _refresh_sabnzbd),
         refresh_service("sonarr", _refresh_sonarr),
         refresh_service("plex", _refresh_plex),
     ]
-    print(BANNER)
     return next(filter(None, exit_values), Exit.PASS)
 
 
