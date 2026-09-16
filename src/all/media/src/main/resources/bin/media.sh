@@ -416,7 +416,6 @@ dispatch_library() {
   local verb="${1}" dir="${2:-}"
   local result=0
   if [ -n "${dir}" ]; then
-    print_header "$(hostname)" "${verb}"
     "library_${verb}" "${dir}" || result=1
     return ${result}
   fi
@@ -750,7 +749,6 @@ command_home() {
 }
 
 run_stage() {
-  unset MEDIA_HEADER_PRINTED
   case "${1}" in
   stow) command_stow "${PUBLISH_SCOPE}" ;;
   process) command_process ;;

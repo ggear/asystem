@@ -16,14 +16,12 @@ execute_remote() {
   local HOST=${1} && shift
   local COMMAND
   if ! host "${HOST}" >/dev/null 2>&1; then
-    unset MEDIA_HEADER_PRINTED
     print_header "${HOST}" "unreachable, skipping [$*]" 1
     FAILURES+=("${HOST} unreachable")
     RESULT=1
     return
   fi
   for COMMAND in "$@"; do
-    unset MEDIA_HEADER_PRINTED
     print_header "${HOST}" "${COMMAND}" 1
     if ! ssh -o StrictHostKeyChecking=no -t -t -q "root@${HOST}" "${BIN_DIR}/media.sh" "${COMMAND}"; then
       printf '\033[1;31mdeploy [%s] failed on [%s]\033[0m\n' "${COMMAND}" "${HOST}"
