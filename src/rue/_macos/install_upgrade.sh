@@ -65,6 +65,7 @@ brew install \
   shellcheck \
   docker-slim \
   cloudflared \
+  bash-completion \
   hudochenkov/sshpass/sshpass
 brew upgrade
 brew cleanup
