@@ -1914,7 +1914,7 @@ SCRIPT_DIR="$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media
 SCRIPT_CMD="{}"
         """
         script_source_exec_local = """
-print_header "$(hostname)" "${SCRIPT_CMD%.sh}"
+print_header "$(hostname)" "${SCRIPT_CMD%.sh}" 0
 "${SHARE_ROOT}/${SCRIPT_DIR}/${SCRIPT_CMD}"
         """
         script_source_exec_remote = """
@@ -1951,7 +1951,7 @@ if [ ${HOST_IN_SHARES} -eq 0 ]; then
         fi
     done
 else
-    print_header "$(hostname)" "${SCRIPT_CMD%.sh}"
+    print_header "$(hostname)" "${SCRIPT_CMD%.sh}" 0
     LOG=$("${SHARE_ROOT}/${SCRIPT_DIR}/${SCRIPT_CMD}" $@ | tee "${LOG_DEV}")
 fi
         """

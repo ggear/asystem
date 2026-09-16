@@ -168,7 +168,7 @@ analyse_share() {
   if [ -f "${script}" ]; then
     "${script}" "--${verbosity}" "${subpath}"
   else
-    print_header "$(hostname)" "analyse"
+    print_header "$(hostname)" "analyse" 0
     local target="${dir}"
     [ "${subpath}" = "media" ] && target="${dir}/media"
     "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "--${verbosity}" "${target}" "${MEDIA_GOOGLE_SHEET_GUID}"
@@ -194,7 +194,7 @@ command_analyse() {
   verbosity="$(resolve_verbosity)"
   case "${EXTENT}" in
   file | media)
-    print_header "$(hostname)" "analyse"
+    print_header "$(hostname)" "analyse" 0
     library_clean "${PWD}" || result=1
     "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "--${verbosity:-verbose}" "${PWD}" "${MEDIA_GOOGLE_SHEET_GUID}" || result=1
     ;;
@@ -224,7 +224,7 @@ dispatch_action() {
   local result=0
   case "${EXTENT}" in
   file | media)
-    print_header "$(hostname)" "${verb}"
+    print_header "$(hostname)" "${verb}" 0
     local action
     while IFS= read -r -d '' action; do
       "${action}" || result=1
@@ -422,7 +422,7 @@ dispatch_library() {
   fi
   case "${EXTENT}" in
   file | media)
-    print_header "$(hostname)" "${verb}"
+    print_header "$(hostname)" "${verb}" 0
     "library_${verb}" "${PWD}" || result=1
     ;;
   share)
@@ -430,7 +430,7 @@ dispatch_library() {
     if [ -f "${script}" ]; then
       "${script}" || result=1
     else
-      print_header "$(hostname)" "${verb}"
+      print_header "$(hostname)" "${verb}" 0
       "library_${verb}" "${EXTENT_SHARE_DIR}" || result=1
     fi
     ;;
@@ -441,7 +441,7 @@ dispatch_library() {
       if [ -f "${script}" ]; then
         "${script}" || result=1
       else
-        print_header "$(hostname)" "${verb}"
+        print_header "$(hostname)" "${verb}" 0
         "library_${verb}" "${_dir}" || result=1
       fi
     done
@@ -455,7 +455,7 @@ share_path_is_outside_media() {
 }
 
 command_stow() {
-  print_header "$(hostname)" "stow"
+  print_header "$(hostname)" "stow" 0
   local scope="${1:-${MEDIA_SCOPE_DEFAULT}}"
   [ -n "${SHARE_PATH_DIR}" ] || refuse "current directory [${PWD}] is not a share"
   if [ "${SHARE_PATH_SUFFIX}" = "${SHARE_PATH_INDEX}" ]; then
@@ -564,7 +564,7 @@ command_move() {
     print_header "${share_ssh_host}" "move" 1
     share_args=("$(printf '%q' "${share_src}")" "$(printf '%q' "${share_dest}")")
   else
-    print_header "$(hostname)" "move"
+    print_header "$(hostname)" "move" 0
   fi
   # shellcheck disable=SC2064
   trap "${share_ssh[*]} pkill -9 -f 'rsync .*/share/${dest}/'; echo; exit" INT
@@ -611,7 +611,7 @@ EOF
 }
 
 command_refresh() {
-  print_header "$(hostname)" "refresh"
+  print_header "$(hostname)" "refresh" 0
   export SABNZBD_URL SABNZBD_API_KEY
   export SONARR_URL SONARR_API_KEY
   export PLEX_URL PLEX_TOKEN
@@ -619,7 +619,7 @@ command_refresh() {
 }
 
 command_truncate() {
-  print_header "$(hostname)" "truncate"
+  print_header "$(hostname)" "truncate" 0
   "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_ROOT}" "${MEDIA_GOOGLE_SHEET_GUID}" --clean
 }
 
@@ -631,7 +631,7 @@ command_find() {
     share_ssh=(ssh root@macmini-mad)
     print_header "macmini-mad" "find" 1
   else
-    print_header "$(hostname)" "find"
+    print_header "$(hostname)" "find" 0
   fi
   "${share_ssh[@]}" bash -s <<EOF | while IFS= read -r file_found; do
 find /share -type f ! -name "._*" ! -path "*/audio/*" -path "*/media/*" -iname "*${token}*"
@@ -674,7 +674,7 @@ EOF
 }
 
 command_space() {
-  print_header "$(hostname)" "space"
+  print_header "$(hostname)" "space" 0
   command_mount
   local dirs result=0
   case "${EXTENT}" in
