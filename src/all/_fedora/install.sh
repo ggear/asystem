@@ -418,18 +418,7 @@ ln -sf /root/.pyenv/libexec/pyenv /root/.pyenv/bin/pyenv
 source /root/.bashrc
 cd /tmp
 if [ ! -d "/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin" ]; then
-  [[ ! -d "/usr/local/lib/cpython" ]] && git clone https://github.com/python/cpython.git "/usr/local/lib/cpython"
-  (
-    cd "/usr/local/lib/cpython" || exit 1
-    git checkout main
-    git pull --all
-    git checkout "v${ASYSTEM_PYTHON_VERSION}"
-    ./configure --prefix="/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}"
-    make -j 8
-    make install
-  )
-  ln -sf "python3" "/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/python"
-  ln -sf "pip3" "/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip"
+  pyenv install "${ASYSTEM_PYTHON_VERSION}"
   "/root/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
 fi
 
