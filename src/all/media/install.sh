@@ -1,11 +1,12 @@
 #!/bin/bash
 
-SERVICE_HOME="/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
+# shellcheck disable=SC2153
 SERVICE_INSTALL="/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}"
 SERVICE_INSTALL_LATEST="/var/lib/asystem/install/${SERVICE_NAME}/latest"
 
 cd "${SERVICE_INSTALL}" || exit
 
+# shellcheck disable=SC1091
 source "./.env"
 
 normalise_owner() {
@@ -19,7 +20,7 @@ normalise_owner() {
 }
 
 if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
-  if ! command -v ffprobe >/dev/null 2>&1 || [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -eq 0 ]; then
+  if ! command -v ffprobe >/dev/null 2>&1 || [ "$(ffprobe 2>&1 | grep -c "${MEDIA_FFMPEG_VERSION}")" -eq 0 ]; then
     [[ ! -d "/usr/local/lib/ffmpeg" ]] && git clone git://git.videolan.org/ffmpeg.git "/usr/local/lib/ffmpeg"
     (
       cd "/usr/local/lib/ffmpeg" || exit 1
@@ -34,7 +35,8 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
       done
     )
   fi
-  for SHARE_DIR in $(grep -v '^#' "/etc/fstab" | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+  mapfile -t SHARE_DIRS < <(grep -v '^#' "/etc/fstab" | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}')
+  for SHARE_DIR in "${SHARE_DIRS[@]}"; do
     rm -rf "${SHARE_DIR}/tmp/scripts"
     mkdir -p "${SHARE_DIR}/tmp/scripts"
     normalise_owner "${SHARE_DIR}/tmp" 2750
@@ -46,7 +48,7 @@ if [[ "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
       done
     done
   done
-  for SHARE_DIR in $(grep -v '^#' "/etc/fstab" | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+  for SHARE_DIR in "${SHARE_DIRS[@]}"; do
     for SHARE_DIR_SCOPE in "kids" "docos" "comedy"; do
       for SHARE_DIR_TYPE in "movies" "series"; do
         cat <<EOF >"${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}/._defaults.yaml"
@@ -68,11 +70,11 @@ EOF
 fi
 if [[ "${SERVICE_FORM_FACTOR:-}" == "client" || "${SERVICE_FORM_FACTOR:-}" == "server" ]]; then
   "${HOME}/.pyenv/versions/${ASYSTEM_PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r "./.reqs.txt"
-  cp -rvf "${SERVICE_INSTALL_LATEST}/bin/lib/other-transcode.rb" "/usr/local/bin/other-transcode"
+  cp -rvf "${SERVICE_INSTALL}/bin/lib/other-transcode.rb" "/usr/local/bin/other-transcode"
   chmod +x "/usr/local/bin/other-transcode"
   mkdir -p "${HOME}/.config"
-  cp -rvf "${SERVICE_INSTALL_LATEST}/.gspread_pandas" "${HOME}/.config/gspread_pandas"
-  chmod +x "${SERVICE_INSTALL_LATEST}/bin/media.sh"
+  cp -rvf "${SERVICE_INSTALL}/.gspread_pandas" "${HOME}/.config/gspread_pandas"
+  chmod +x "${SERVICE_INSTALL}/bin/media.sh"
 
   rm -f /usr/local/bin/amedia
   cat >/usr/local/bin/amedia <<EOF
@@ -83,6 +85,6 @@ ${SERVICE_INSTALL_LATEST}/bin/media.sh "\$@"
 EOF
   chmod +x /usr/local/bin/amedia
   if [ -d /etc/bash_completion.d ]; then
-    /usr/local/bin/amedia completion >/etc/bash_completion.d/amedia
+    "${SERVICE_INSTALL}/bin/media.sh" completion >/etc/bash_completion.d/amedia
   fi
 fi

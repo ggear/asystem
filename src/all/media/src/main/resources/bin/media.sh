@@ -459,63 +459,68 @@ share_path_is_outside_media() {
   [[ "${SHARE_PATH_SUFFIX}" != "${SHARE_PATH_INDEX}" && ! "${SHARE_PATH_SUFFIX}" =~ ^media.* ]]
 }
 
+stow_type() {
+  local share_type_dir="${1}" share_current_dir="${2}" share_type_dest="${3}"
+  local result=0
+  local share_type_suffix="${share_current_dir#"${share_type_dir}"}"
+  local dir file
+  while IFS= read -r -d '' dir; do
+    local rel_dir="${dir#"${share_type_dir}"/}"
+    local target_dir="${share_type_dest}/${rel_dir}"
+    if [[ -z "${share_type_suffix}" ]] || [[ "${target_dir}" == *"${share_type_suffix}"* ]]; then
+      mkdir -p "${target_dir}" || result=1
+    fi
+  done < <(${FIND_CMD} "${share_type_dir}" -mindepth 1 -type d -print0)
+  while IFS= read -r -d '' file; do
+    local source_file="${file}"
+    local target_file="${share_type_dest}/${file#"${share_type_dir}"/}"
+    if [ -e "${target_file}" ]; then
+      local target_dir="${target_file%/*}"
+      local target_base="${target_file##*/}"
+      local target_name="${target_base%.*}"
+      local target_extension=""
+      [ "${target_name}" != "${target_base}" ] && target_extension=".${target_base##*.}"
+      local target_index=1
+      while [ -e "${target_dir}/${target_name}_${target_index}${target_extension}" ]; do
+        target_index=$((target_index + 1))
+      done
+      target_file="${target_dir}/${target_name}_${target_index}${target_extension}"
+      echo "Warning: Target file already exists, moving [${source_file}] to [${target_file}] instead"
+    fi
+    mv -vn "${source_file}" "${target_file}" || result=1
+  done < <(${FIND_CMD} "${share_current_dir}" -mindepth 1 -type f -print0)
+  [ -d "${share_current_dir}/.." ] && ${FIND_CMD} "${share_current_dir}/.." -type d -empty -delete >/dev/null 2>&1
+  return ${result}
+}
+
 command_stow() {
   print_header "$(hostname)" "stow" 0
   local scope="${1:-${MEDIA_SCOPE_DEFAULT}}"
-  [ -n "${SHARE_PATH_DIR}" ] || refuse "current directory [${PWD}] is not a share"
-  if [ "${SHARE_PATH_SUFFIX}" = "${SHARE_PATH_INDEX}" ]; then
-    refuse "current directory [${PWD}] is a bare share root, nothing there to stow"
+  if [ -z "${SHARE_PATH_DIR}" ]; then
+    echo "amedia current directory [${PWD}] is not a share" >&2
+    return 2
   fi
-  share_path_is_outside_media || refuse "already in the library, did you mean [amedia move <share>]"
+  if [ "${SHARE_PATH_SUFFIX}" = "${SHARE_PATH_INDEX}" ]; then
+    echo "amedia current directory [${PWD}] is a bare share root, nothing there to stow" >&2
+    return 2
+  fi
+  if ! share_path_is_outside_media; then
+    echo "amedia already in the library, did you mean [amedia move <share>]" >&2
+    return 2
+  fi
   local share_dest="${SHARE_PATH_DIR}/media/${scope}"
   if [ ! -d "${share_dest}" ]; then
     echo "amedia share directory [${share_dest}] does not exist" >&2
     return 1
   fi
-  local result=0 share_type
+  local result=0 share_type share_type_dir
   for share_type in series movies audio; do
-    local share_type_dir="" share_current_dir=""
     if [[ "${SHARE_PATH_SUFFIX}" == *"/${share_type}/"* ]]; then
-      share_current_dir="${PWD}"
-      share_type_dir="${PWD%%/"${share_type}"/*}/${share_type}"
+      stow_type "${PWD%%/"${share_type}"/*}/${share_type}" "${PWD}" "${share_dest}/${share_type}" || result=1
     else
-      local share_suffix_find
-      share_suffix_find="$(${FIND_CMD} "${PWD}" -name "${share_type}" -type d)"
-      if [ -n "${share_suffix_find}" ]; then
-        share_current_dir="${share_suffix_find}"
-        share_type_dir="${share_suffix_find}"
-      fi
-    fi
-    if [ -n "${share_type_dir}" ]; then
-      local share_type_suffix="${share_current_dir#"${share_type_dir}"}"
-      local share_type_dest="${share_dest}/${share_type}"
-      local dir file
-      while IFS= read -r -d '' dir; do
-        local rel_dir="${dir#"${share_type_dir}"/}"
-        local target_dir="${share_type_dest}/${rel_dir}"
-        if [[ -z "${share_type_suffix}" ]] || [[ "${target_dir}" == *"${share_type_suffix}"* ]]; then
-          mkdir -p "${target_dir}" || result=1
-        fi
-      done < <(${FIND_CMD} "${share_type_dir}" -mindepth 1 -type d -print0)
-      while IFS= read -r -d '' file; do
-        local source_file="${file}"
-        local target_file="${share_type_dest}/${file#"${share_type_dir}"/}"
-        if [ -e "${target_file}" ]; then
-          local target_dir="${target_file%/*}"
-          local target_base="${target_file##*/}"
-          local target_name="${target_base%.*}"
-          local target_extension=""
-          [ "${target_name}" != "${target_base}" ] && target_extension=".${target_base##*.}"
-          local target_index=1
-          while [ -e "${target_dir}/${target_name}_${target_index}${target_extension}" ]; do
-            target_index=$((target_index + 1))
-          done
-          target_file="${target_dir}/${target_name}_${target_index}${target_extension}"
-          echo "Warning: Target file already exists, moving [${source_file}] to [${target_file}] instead"
-        fi
-        mv -vn "${source_file}" "${target_file}" || result=1
-      done < <(${FIND_CMD} "${share_current_dir}" -mindepth 1 -type f -print0)
-      [ -d "${share_current_dir}/.." ] && ${FIND_CMD} "${share_current_dir}/.." -type d -empty -delete >/dev/null 2>&1
+      while IFS= read -r -d '' share_type_dir; do
+        stow_type "${share_type_dir}" "${share_type_dir}" "${share_dest}/${share_type}" || result=1
+      done < <(${FIND_CMD} "${PWD}" -name "${share_type}" -type d -prune -print0)
     fi
   done
   return ${result}
@@ -683,8 +688,7 @@ command_space() {
   command_mount
   local dirs result=0
   case "${EXTENT}" in
-  file | media) dirs="${EXTENT_MEDIA_DIR}" ;;
-  share) dirs="${EXTENT_SHARE_DIR}" ;;
+  file | media | share) dirs="${EXTENT_SHARE_DIR}" ;;
   local) dirs="${SHARE_DIRS_LOCAL}" ;;
   esac
   echo "Space summary ... "
