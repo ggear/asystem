@@ -55,8 +55,14 @@ backup_bounded() {
   BACKUP_BOUNDED_SEQ=$(( BACKUP_BOUNDED_SEQ + 1 ))
   work="${root}/.bounded-${BASHPID}-${BACKUP_BOUNDED_SEQ}"
   BACKUP_BOUNDED_OUTPUT=""
-  rm -f "${work}.out" "${work}.rc"
-  { "$@" >"${work}.out" 2>&1; printf '%s' "$?" >"${work}.tmp"; mv "${work}.tmp" "${work}.rc"; } &
+  rm -f "${work}.out" "${work}.rc" "${work}.pid"
+  {
+    "$@" >"${work}.out" 2>&1 &
+    printf '%s' "$!" >"${work}.pid"
+    wait "$!"
+    printf '%s' "$?" >"${work}.tmp"
+    mv "${work}.tmp" "${work}.rc"
+  } 9>&- &
   pid=$!
   while [ ! -s "${work}.rc" ]; do
     [ "${waited}" -ge "${limit}" ] && break
@@ -66,12 +72,12 @@ backup_bounded() {
   if [ -s "${work}.rc" ]; then
     read -r status <"${work}.rc"
     BACKUP_BOUNDED_OUTPUT="$(cat "${work}.out" 2>/dev/null)"
-    rm -f "${work}.out" "${work}.rc"
+    rm -f "${work}.out" "${work}.rc" "${work}.pid"
     return "${status:-0}"
   fi
-  kill -KILL "${pid}" 2>/dev/null
-  rm -f "${work}.out" "${work}.rc"
-  backup_log WARN "abandoned [${label}] with no answer after [${limit}] s, it is blocked on a disk that stopped responding"
+  kill -KILL "${pid}" "$(cat "${work}.pid" 2>/dev/null)" 2>/dev/null
+  rm -f "${work}.out" "${work}.rc" "${work}.pid"
+  backup_log WARN "abandoned [${label}] with no answer after [${limit}] s, killed it, a process blocked on the disk may outlive the kill"
   return "${BACKUP_BOUNDED_ABANDONED}"
 }
 
@@ -967,7 +973,7 @@ backup_banner() {
 
 backup_rsync() {
   local capture="${BACKUP_STAGE_DIR}/.rsync-$$.out" status
-  rsync "$@" 2>&1 | tee "${capture}"
+  rsync "$@" 2>&1 9>&- | tee "${capture}"
   status="${PIPESTATUS[0]}"
   BACKUP_RSYNC_OUTPUT="$(cat "${capture}" 2>/dev/null)"
   rm -f "${capture}"
@@ -1082,8 +1088,12 @@ backup_mount() {
     backup_log ERROR "mount of [${target}] refused, not mounted and not in [${BACKUP_FSTAB}]"
     return 1
   }
-  local over=""
-  mountpoint -q "${target}" && over=" over [$(backup_sourced "${target}" || echo unknown)]"
+  local over="" raw
+  raw="$(findmnt -M "${target}" -n -o SOURCE 2>/dev/null | tail -n 1)"
+  case "${raw}" in
+  *\[*) ;;
+  *) mountpoint -q "${target}" && over=" over [$(backup_sourced "${target}" || echo unknown)]" ;;
+  esac
   backup_log INFO "mounting [${target}]${over}"
   kernel="$(dmesg 2>/dev/null | wc -l)"
   error="$(mount "${target}" 2>&1)" || ls "${target}" >/dev/null 2>&1 || true
@@ -1135,8 +1145,9 @@ backup_adopted() {
 }
 
 backup_usage() {
-  local uuid="" file allocation used=0 total=0 answered
+  local uuid="" file allocation used=0 total=0 answered verified="" usage=0
   case " ${BACKUP_USAGE_WEDGED} " in *" $1 "*) return 0 ;; esac
+  backup_verified "$1" && verified=1
   case " ${BACKUP_USAGE_UNIDENTIFIED} " in
   *" $1 "*) ;;
   *)
@@ -1149,6 +1160,7 @@ backup_usage() {
       backup_log WARN "holding [$(backup_percent "${BACKUP_USAGE}")] percent as the last usage of [$1], it stopped answering and this stage will not sample it again"
       return 0
     else
+      [ -n "${verified}" ] && ! backup_verified "$1" && return 0
       BACKUP_USAGE_UNIDENTIFIED="${BACKUP_USAGE_UNIDENTIFIED} $1"
       backup_log INFO "btrfs could not identify [$1], measuring it with [df] for the rest of this run"
     fi
@@ -1163,18 +1175,19 @@ backup_usage() {
     done
   fi
   if [ "${total}" -gt 0 ]; then
-    BACKUP_USAGE=$(( used * 100 / total ))
+    usage=$(( used * 100 / total ))
   elif backup_bounded "${BACKUP_BOUNDED_WAIT}" "df [$1]" df --output=used,size -B1 "$1"; then
     read -r used total <<<"$(printf '%s\n' "${BACKUP_BOUNDED_OUTPUT}" | tail -1)"
     used="${used:-0}"
     total="${total:-0}"
-    BACKUP_USAGE=0
-    [ "${total}" -gt 0 ] && BACKUP_USAGE=$(( used * 100 / total ))
+    [ "${total}" -gt 0 ] && usage=$(( used * 100 / total ))
   else
     BACKUP_USAGE_WEDGED="${BACKUP_USAGE_WEDGED} $1"
     backup_log WARN "holding [$(backup_percent "${BACKUP_USAGE}")] percent as the last usage of [$1], neither btrfs nor df answered and this stage will not sample it again"
     return 0
   fi
+  [ -n "${verified}" ] && ! backup_verified "$1" && return 0
+  BACKUP_USAGE="${usage}"
   printf '%s %s %s\n' "${BACKUP_USAGE}" "$(( used / 1048576 ))" "$(( total / 1048576 ))" \
     >"${BACKUP_STAGE_DIR}/disk-usage.tmp" 2>/dev/null &&
     mv "${BACKUP_STAGE_DIR}/disk-usage.tmp" "${BACKUP_STAGE_DIR}/disk-usage" 2>/dev/null || true
@@ -1404,7 +1417,7 @@ primary_start() {
     backup_marker primary "started [${service}] [${index}/${#enrolled[@]}] with [${script}], logging to [${dir}/output.log]"
     local rc=0
     BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}" BACKUP_SERVICE_RESTART=true BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS}" \
-      bash "${script}" >"${dir}/output.log" 2>&1 </dev/null || rc=$?
+      bash "${script}" >"${dir}/output.log" 2>&1 </dev/null 9>&- || rc=$?
     local state="${BACKUP_STATE_COMPLETE}" ok=true
     [ "${rc}" -eq 0 ] || { state="${BACKUP_STATE_FAILED}"; ok=false; failed=$(( failed + 1 )); }
     local newest size=0 files=0 kind=unknown version=unknown stamp file stem
@@ -1517,7 +1530,7 @@ secondary_start() {
     local prune="${BACKUP_INSTALL_ROOT}/${service}/latest/backup.sh"
     if [ -x "${prune}" ]; then
       backup_log INFO "thinning [${target}] with the module pruner [${prune}]"
-      bash "${prune}" --prune-gfs "${target}" || true
+      bash "${prune}" --prune-gfs "${target}" 9>&- || true
     else
       backup_log INFO "thinning [${target}] with backup_thin, the module ships no pruner"
       backup_thin "${target}"
@@ -1621,11 +1634,16 @@ backup_detach() {
   while read -r target; do
     backup_detachable "${target}" || continue
     backup_bounded "${BACKUP_BOUNDED_WAIT}" "sync [${target}]" sync -f "${target}" || true
-    local failure=""
-    backup_bounded "${BACKUP_BOUNDED_WAIT}" "umount [${target}]" umount "${target}" || true
+    local failure="" returned=0 mounts
+    backup_bounded "${BACKUP_BOUNDED_WAIT}" "umount [${target}]" umount "${target}" || returned=$?
     failure="${BACKUP_BOUNDED_OUTPUT}"
     backup_detachable "${target}" || continue
-    backup_log WARN "unmount of [${target}] failed with [${failure:-no reason reported}], detaching forcibly and lazily"
+    if [ "${returned}" -eq 0 ]; then
+      mounts="$(findmnt -rn -M "${target}" -o SOURCE,FSTYPE,PROPAGATION 2>/dev/null | paste -sd ',' -)"
+      backup_log WARN "unmount of [${target}] returned [0] yet it still reads as mounted with [${mounts:-no mount listed}] on device [$(stat -c %d "${target}" 2>/dev/null)] against home device [$(stat -c %d "${BACKUP_HOME_ROOT}" 2>/dev/null)], detaching forcibly and lazily"
+    else
+      backup_log WARN "unmount of [${target}] failed with [${failure:-no reason reported}], detaching forcibly and lazily"
+    fi
     backup_bounded "${BACKUP_BOUNDED_WAIT}" "umount -f -l [${target}]" umount -f -l "${target}" || true
     backup_detachable "${target}" &&
       backup_log WARN "could not detach [${target}], it is still mounted and will need the disk powered back on"
@@ -1793,9 +1811,9 @@ backup_scrub() {
   backup_log INFO "scrub [${action}] on [/backup] until [$(date --iso-8601=seconds -d @"${hard}")], polling every [${BACKUP_SCRUB_POLL}] s"
   if ! backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs scrub ${action} [/backup]" \
     btrfs scrub "${action}" -c 3 -n 15 /backup; then
-    backup_log ERROR "could not [${action}] the scrub on [/backup] with [${BACKUP_BOUNDED_OUTPUT:-no reason reported}]"
+    backup_log ERROR "could not [${action}] the scrub on [/backup] with [${BACKUP_BOUNDED_OUTPUT:-no reason reported}], the stage continues"
     backup_scrub_document "${BACKUP_STATE_FAILED}" false "${started}" 0 0 0 0 0
-    return 1
+    return 0
   fi
   local opened="" opened_at gained session
   opened_at="$(date +%s)"
@@ -1842,7 +1860,8 @@ backup_scrub() {
   if [ "${found}" -gt 0 ] || [ "${uncorrectable}" -gt 0 ] || [ "${BACKUP_DEVICE_ERRORS}" -gt 0 ]; then
     success=false
     count="$(backup_scrub_corrupt "${kernel}" | wc -l | tr -d ' ')"
-    files="$(backup_scrub_corrupt "${kernel}" | head -20 | paste -sd ',' - | sed 's/"/\\"/g')"
+    files="$(backup_scrub_corrupt "${kernel}" | head -20 | tr -d '\001-\011\013-\037' |
+      sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | paste -sd ',' -)"
     {
       backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs scrub status -R [/backup]" btrfs scrub status -R /backup &&
         printf '%s\n\n' "${BACKUP_BOUNDED_OUTPUT}"
@@ -1916,15 +1935,28 @@ tertiary_start() {
   if backup_verified /backup; then
     if command -v btrfs >/dev/null 2>&1 && backup_ready; then
       local subvolume name snapshots="/backup/.snapshots"
+      local shown
       for subvolume in /backup/share/*; do
         [ -d "${subvolume}" ] || continue
+        shown=0
         backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs subvolume show [${subvolume}]" \
-          btrfs subvolume show "${subvolume}" || continue
+          btrfs subvolume show "${subvolume}" || shown=$?
+        if [ "${shown}" -eq "${BACKUP_BOUNDED_ABANDONED}" ]; then
+          failed=1
+          continue
+        elif [ "${shown}" -ne 0 ]; then
+          backup_log WARN "[${subvolume}] is not a btrfs subvolume, so it cannot be snapshotted and keeps no history"
+          continue
+        fi
         name="$(basename "${subvolume}")"
         mkdir -p "${snapshots}/share/${name}"
-        backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs subvolume snapshot [${subvolume}]" \
-          btrfs subvolume snapshot -r "${subvolume}" "${snapshots}/share/${name}/${BACKUP_RUN_ID}" &&
-          backup_log INFO "snapshotted [${subvolume}] to [${snapshots}/share/${name}/${BACKUP_RUN_ID}]"
+        if ! backup_bounded "${BACKUP_BOUNDED_WAIT}" "btrfs subvolume snapshot [${subvolume}]" \
+          btrfs subvolume snapshot -r "${subvolume}" "${snapshots}/share/${name}/${BACKUP_RUN_ID}"; then
+          backup_log ERROR "snapshot of [${subvolume}] failed with [${BACKUP_BOUNDED_OUTPUT:-no reason reported}], keeping its history unpruned"
+          failed=1
+          continue
+        fi
+        backup_log INFO "snapshotted [${subvolume}] to [${snapshots}/share/${name}/${BACKUP_RUN_ID}]"
         backup_thin "${snapshots}/share/${name}"
       done
     fi

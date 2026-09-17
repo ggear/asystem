@@ -1215,6 +1215,45 @@ class BackupShellTest(unittest.TestCase):
         self.assertIn("abandoned [wedged probe] with no answer after [1] s", reported)
         self.assertTrue(reported.strip().endswith("124"), reported)
 
+    def test_detach_names_what_is_left_when_the_unmount_claims_success(self):
+        reported = self.shell('backup_targets() { echo /backup; }\n'
+                              'sync() { :; }\n'
+                              'backup_detachable() { return 0; }\n'
+                              'findmnt() { echo "/dev/sdc1 btrfs shared"; }\n'
+                              'umount() { return 0; }\n'
+                              'backup_detach 2>&1')
+        self.assertIn("unmount of [/backup] returned [0] yet it still reads as mounted with "
+                      "[/dev/sdc1 btrfs shared]", reported)
+        self.assertNotIn("failed with", reported)
+
+    def test_bounded_kills_the_command_it_abandons_not_only_its_wrapper(self):
+        marker = "bounded-orphan-{}".format(os.getpid())
+        self.shell('backup_bounded 1 "wedged probe" bash -c "exec -a {} sleep 30" >/dev/null 2>&1; sleep 1'
+                   .format(marker))
+        survivor = subprocess.run(["pgrep", "-f", marker], capture_output=True, text=True)
+        subprocess.run(["pkill", "-f", marker])
+        self.assertEqual(survivor.stdout.strip(), "", "abandoned command survived")
+
+    def test_bounded_never_hands_the_lock_descriptor_to_the_command(self):
+        lock = join(self.home, ".lock")
+        reported = self.shell('exec 9>>"{}"\n'
+                              'backup_bounded 5 "descriptor probe" bash -c "{{ true >&9; }} 2>/dev/null && echo OPEN || echo CLOSED"\n'
+                              'printf "%s" "${{BACKUP_BOUNDED_OUTPUT}}"'.format(lock))
+        self.assertEqual(reported, "CLOSED")
+
+    @NEEDS_GNU
+    def test_mount_does_not_call_a_bind_of_the_mountpoint_an_existing_mount(self):
+        table = self.fstab("/dev/sdz1  /backup  btrfs  noauto  0 2")
+        reported = self.shell('backup_declared() { echo /dev/sdz1; }\n'
+                              'backup_sourced() { echo /dev/dm-0; }\n'
+                              'findmnt() { echo "/dev/mapper/vg-root[/backup]"; }\n'
+                              'mountpoint() { return 0; }\n'
+                              'dmesg() { :; }\n'
+                              'mount() { return 0; }\n'
+                              '{ backup_mount /backup || true; } 2>&1', BACKUP_FSTAB=table)
+        self.assertIn("mounting [/backup]", reported)
+        self.assertNotIn(" over [", reported)
+
     def test_bounded_returns_the_status_and_output_of_a_command_that_answers(self):
         reported = self.shell('backup_bounded 5 "quick probe" printf "hello"\n'
                               'printf "%s/%s" "$?" "${BACKUP_BOUNDED_OUTPUT}"')
