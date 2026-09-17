@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -153,6 +154,47 @@ func TestProbeImplCluster_Health(t *testing.T) {
 			}
 			if faults := strings.Join(verdict.faults, ","); faults != tt.expectedFaults {
 				t.Errorf("faults: got %s want %s", faults, tt.expectedFaults)
+			}
+		})
+	}
+}
+
+func TestProbeImplCluster_Monitored(t *testing.T) {
+	tests := []struct {
+		name              string
+		services          map[string][]string
+		expectedMonitored []string
+		expectedError     bool
+	}{
+		{
+			name:              "host_running_services_is_monitored",
+			services:          map[string][]string{"mad": {"plex", "supervisor"}},
+			expectedMonitored: []string{"mad"},
+			expectedError:     false,
+		},
+		{
+			name:              "host_running_only_supervisor_is_excluded",
+			services:          map[string][]string{"jen": {"supervisor", "weewx"}, "jil": {"supervisor"}},
+			expectedMonitored: []string{"jen"},
+			expectedError:     false,
+		},
+		{
+			name:              "host_running_nothing_is_excluded",
+			services:          map[string][]string{"jil": {}},
+			expectedMonitored: nil,
+			expectedError:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hosts := make([]string, 0, len(tt.services))
+			for host := range tt.services {
+				hosts = append(hosts, host)
+			}
+			slices.Sort(hosts)
+			monitored := clusterMonitored(hosts, func(host string) []string { return tt.services[host] })
+			if !slices.Equal(monitored, tt.expectedMonitored) {
+				t.Errorf("monitored: got %v want %v", monitored, tt.expectedMonitored)
 			}
 		})
 	}

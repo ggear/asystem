@@ -340,7 +340,7 @@ func (c *leaderCampaign) vacate(now time.Time) {
 		return
 	}
 	c.mutex.Lock()
-	vacant := c.attached && !c.vacated && now.Sub(c.attachedAt) >= c.timing.settle &&
+	vacant := c.attached && !c.vacated && !c.leading && now.Sub(c.attachedAt) >= c.timing.settle &&
 		leaderElected(nil, c.candidates, c.lease, c.leaseArrived, now, c.timing.ttl) == "" && !c.leaseHeld(now)
 	c.mutex.Unlock()
 	if !vacant {

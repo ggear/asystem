@@ -658,7 +658,8 @@ def _artifacts_declared(metadata_df, module_name, options):
     generated["describe.sh"] = (describe_script(module_name, globs), True)
     generated["query.sh"] = (query_script(module_name), True)
     generated["verify.sh"] = (
-        verify_script(module_name, globs, sorted(topics.get("command_topic", []))), True)
+        verify_script(module_name, globs, sorted(set(topics.get("command_topic", [])) |
+                                                 {topic for topic, role in declared if role == ROLE_COLUMNS["command_topic"]})), True)
     return generated
 
 

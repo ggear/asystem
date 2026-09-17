@@ -80,9 +80,10 @@ func (p *clusterProbe) poll(_ context.Context, isPulse bool) error {
 }
 
 func (p *clusterProbe) cluster() (bool, derivation, error) {
-	hosts := config.Load(p.configPath).Hosts()
+	loaded := config.Load(p.configPath)
+	hosts := clusterMonitored(loaded.Hosts(), loaded.Services)
 	if len(hosts) == 0 {
-		return false, derivation{}, fmt.Errorf("no cluster status computed, [%s] configures no hosts [%w]", p.configPath, errEnvironment)
+		return false, derivation{}, fmt.Errorf("no cluster status computed, [%s] configures no hosts running a service besides [%s] [%w]", p.configPath, clusterSelfService, errEnvironment)
 	}
 	watch := p.watch.Load()
 	if watch == nil {
@@ -150,6 +151,16 @@ type clusterVerdict struct {
 	faults     []string
 }
 
+func clusterMonitored(hosts []string, services func(string) []string) []string {
+	var monitored []string
+	for _, host := range hosts {
+		if slices.ContainsFunc(services(host), func(service string) bool { return service != clusterSelfService }) {
+			monitored = append(monitored, host)
+		}
+	}
+	return monitored
+}
+
 func clusterHealth(hosts []string, retained map[string]string, now time.Time, stale time.Duration) clusterVerdict {
 	verdict := clusterVerdict{}
 	current := func(payload string) (metric.ValueData, string) {
@@ -208,6 +219,7 @@ func clusterHealth(hosts []string, retained map[string]string, now time.Time, st
 }
 
 const (
+	clusterSelfService     = "supervisor"
 	clusterStaleHeartbeats = 3
 	clusterRedialPolls     = 20
 )

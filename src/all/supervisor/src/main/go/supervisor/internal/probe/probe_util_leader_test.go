@@ -258,6 +258,17 @@ func TestProbeUtilLeader_VacantEstateMarksPresenceOffline(t *testing.T) {
 	}
 }
 
+func TestProbeUtilLeader_ClaimantDoesNotReportItsOwnVacancy(t *testing.T) {
+	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
+	campaign.role.presence = "test/presence"
+	now := time.Now()
+	campaign.attached, campaign.attachedAt, campaign.leading = true, now.Add(-time.Minute), true
+	campaign.vacate(now)
+	if published := campaign.client.(*leaderStubClient).published("test/presence", metric.AvailabilityOffline); published {
+		t.Errorf("offline: got published want none from a host that has just claimed before its lease arrived")
+	}
+}
+
 func TestProbeUtilLeader_LeadsWhileConfigsDisagree(t *testing.T) {
 	testutil.RequiresDocker(t)
 	if _, _, err := testutil.SetupBrokerContainer(t); err != nil {
