@@ -57,7 +57,13 @@ answer from the same view, and time bounds how long two views can disagree.
    host joining, restarting, or rolling out a config that drops it. Otherwise the lowest-named fresh
    candidate the receiver considers eligible leads.
 4. **Settle.** A host that decides it is elected must keep deciding so for `settle` before it writes
-   the lease or reports leading.
+   the lease or reports leading. **A graceful resignation shortens it to `refresh`**: when a live (not
+   retained) empty lease and a live empty candidacy from the previous holder arrive within
+   `leaderResignWindow` (5 s) of each other, and not more than `ttl` ago, the successor waits one
+   `refresh` instead. Only `Resign` produces that pair — a crash's will clears the candidacy alone, and a
+   retained empty payload is a flushed store, not a resignation — so the shortened path cannot run while
+   an old holder may still believe it leads. Once leading, a host is never re-subjected to the settle,
+   since its own lease arriving clears the resignation it settled on.
 5. **Self-deposition.** `Leading` answers true only while the session is open, the host is standing, and
    both the last renewal and the last lease write were acknowledged within `ackWindow`, checked on every
    call, and only while the last lease that *arrived* names this host. Two hosts whose claims land in the
@@ -99,13 +105,13 @@ than the broker's last packet from it.
 | Event | What happens | Bound |
 |---|---|---|
 | holder crashes or is `docker kill`ed | will clears its candidacy; the lowest remaining candidate settles and leads | ~15 s + `settle` |
-| holder stops gracefully | `Resign` clears candidacy and lease; successor settles and leads | `settle` |
+| holder stops gracefully | `Resign` clears candidacy and lease; successor settles for one `refresh` and leads | `refresh` + tick (~5-10 s) |
 | holder's host restarts and rejoins | it is lower-named but the incumbent keeps the lease | no change |
 | broker frozen or partitioned from the holder | holder deposes itself; nobody claims while nothing is acknowledged | `ackWindow` to yield |
 | **one-way loss** — holder's publishes arrive, acks do not | holder yields; its candidacy and lease still look fresh, so nobody else claims until paho closes the socket on a missed PINGRESP and the broker fires the will | no leader for ~15 s + `settle`; **never two** |
 | **vernemq release** (store flushed) | every session drops, every holder yields, every candidate reattaches to an empty store; the lowest-named host wins a fresh election | reconnect + `settle` |
 | broker restart (store persists) | same; every retained entry arrives fresh on reattach, so the old holder re-wins as incumbent if it reattaches within `ttl`, otherwise the lowest-named host wins; a retained `online` is cleared by the first attached non-holder that sees no lease | reconnect + `settle`, `offline` within `settle` + `refresh` |
-| **supervisor release** on any host | `install_pre.sh` sweeps only `supervisor/<host>/data|command|status`, never `all/`; the stopping `serve` resigns; the incoming one rejoins as a candidate | `settle` if it led |
+| **supervisor release** on any host | `install_pre.sh` sweeps only `supervisor/<host>/data|command|status`, never `all/`; the stopping `serve` resigns; the incoming one rejoins as a candidate | `refresh` + tick if it led |
 | clock skew or a stepped clock | freshness is measured on arrival, so the election is unaffected by any skew; a live candidacy stamped more than 5 s off the receiver's clock logs one WARN per host | none |
 | **`serve` hung** (poll loop stalled, session still up) | the holder is unfit, withdraws its candidacy and yields; a healthy host settles and leads | five pulses (30 s floor) + `settle` |
 | **config rolled out without a holder** | the holder is unfit by its own config and withdraws; peers still on the old config ignore its lease once its candidacy is gone | one `refresh` + `settle` |

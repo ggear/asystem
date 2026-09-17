@@ -154,6 +154,9 @@ type leaderCampaign struct {
 	observedFrom int64
 	staleHosts   map[string]bool
 	ticks        int
+	withdrawnAt  map[string]time.Time
+	resignedBy   string
+	resignedAt   time.Time
 	epoch        int64
 	claimed      time.Time
 }
@@ -196,7 +199,7 @@ func newLeaderCampaign(configPath, host string, election leaderElection, timing 
 }
 
 func newLeaderCampaignState(configPath, host string, election leaderElection, timing leaderTiming) *leaderCampaign {
-	return &leaderCampaign{election: election, host: host, configPath: configPath, timing: timing, candidates: map[string]time.Time{}, skewed: map[string]bool{}, staleHosts: map[string]bool{}}
+	return &leaderCampaign{election: election, host: host, configPath: configPath, timing: timing, candidates: map[string]time.Time{}, skewed: map[string]bool{}, staleHosts: map[string]bool{}, withdrawnAt: map[string]time.Time{}}
 }
 
 func (c *leaderCampaign) run(ctx context.Context) {
@@ -349,6 +352,8 @@ func (c *leaderCampaign) detach(reason string) {
 	c.candidates = map[string]time.Time{}
 	c.lease = leaderLease{}
 	c.leaseArrived = time.Time{}
+	c.resignedBy = ""
+	c.withdrawnAt = map[string]time.Time{}
 	c.mutex.Unlock()
 	if wasLeading {
 		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionDisconnect).Warnf("released", detachStart, "[%s] leadership yielded, %s", c.election.name, reason)
@@ -437,11 +442,15 @@ func (c *leaderCampaign) observe(_ mqtt.Client, message mqtt.Message) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if topic == c.election.leaseTopic() {
+		previous := c.lease.Host
 		c.lease = leaderLease{}
 		c.leaseArrived = time.Time{}
+		c.resignedBy = ""
 		if payload != "" && json.Unmarshal([]byte(payload), &c.lease) == nil && c.lease.Host != "" {
 			c.leaseArrived = received
 			c.vacated = false
+		} else if payload == "" && previous != "" && !message.Retained() {
+			c.resignedBy, c.resignedAt = previous, received
 		}
 		if c.lease.Host != c.observedHost || c.lease.Epoch != c.observedFrom {
 			c.observedHost, c.observedFrom = c.lease.Host, c.lease.Epoch
@@ -455,6 +464,9 @@ func (c *leaderCampaign) observe(_ mqtt.Client, message mqtt.Message) {
 	}
 	var candidacy leaderCandidacy
 	if payload == "" || json.Unmarshal([]byte(payload), &candidacy) != nil || candidacy.Host != host {
+		if payload == "" && !message.Retained() {
+			c.withdrawnAt[host] = received
+		}
 		if _, standing := c.candidates[host]; standing {
 			scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Infof("excluded", received, "[%s] election candidacy withdrawn or cleared by its will", c.election.name)
 		}
@@ -529,6 +541,11 @@ func (c *leaderCampaign) evaluate(now time.Time) {
 	if c.standing {
 		elected = leaderElected(c.election.eligible(), c.candidates, c.lease, c.leaseArrived, now, c.timing.ttl)
 	}
+	settle := c.timing.settle
+	if resigned, at := c.resignedBy, c.resignedAt; resigned != "" && resigned != c.host && now.Sub(at) <= c.timing.ttl &&
+		!c.withdrawnAt[resigned].IsZero() && at.Sub(c.withdrawnAt[resigned]).Abs() <= leaderResignWindow {
+		settle = c.timing.refresh
+	}
 	settleLog := ""
 	switch {
 	case elected != c.host:
@@ -540,8 +557,8 @@ func (c *leaderCampaign) evaluate(now time.Time) {
 		c.electedFrom = now
 		settleLog = "started"
 	}
-	settled := elected == c.host && now.Sub(c.electedFrom) >= c.timing.settle
 	wasLeading := c.leading
+	settled := elected == c.host && (wasLeading || now.Sub(c.electedFrom) >= settle)
 	generation := c.generation
 	epoch, claimed := c.epoch, c.claimed
 	if settled && !wasLeading {
@@ -553,7 +570,7 @@ func (c *leaderCampaign) evaluate(now time.Time) {
 	c.mutex.Unlock()
 	switch settleLog {
 	case "started":
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRegister).Infof("schedule", now, "[%s] election elects this host, settling for [%s] before claiming", c.election.name, c.timing.settle)
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRegister).Infof("schedule", now, "[%s] election elects this host, settling for [%s] before claiming, previous leader resigned [%v]", c.election.name, settle, settle != c.timing.settle)
 	case "abandoned":
 		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRegister).Infof("deferred", now, "[%s] election settle abandoned, [%s] elected instead", c.election.name, leaderNamed(elected))
 	}
@@ -690,6 +707,7 @@ const (
 	leaderSkewWarn     = 5 * time.Second
 	leaderResignBudget = 2 * time.Second
 	leaderCensusTicks  = 12
+	leaderResignWindow = 5 * time.Second
 )
 
 var leaderTimingProduction = leaderTiming{

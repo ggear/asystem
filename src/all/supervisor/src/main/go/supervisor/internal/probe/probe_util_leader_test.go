@@ -307,6 +307,51 @@ func TestProbeUtilLeader_WithdrawalLogsAHostFactAtInfo(t *testing.T) {
 	}
 }
 
+func TestProbeUtilLeader_GracefulResignationShortensTheSettle(t *testing.T) {
+	tests := []struct {
+		name              string
+		clearCandidacy    bool
+		clearLease        bool
+		retained          bool
+		expectedAfterTick bool
+		expectedError     bool
+	}{
+		{name: "resigned_leader_hands_over_after_one_refresh", clearCandidacy: true, clearLease: true, retained: false, expectedAfterTick: true, expectedError: false},
+		{name: "crashed_leader_will_keeps_the_full_settle", clearCandidacy: true, clearLease: false, retained: false, expectedAfterTick: false, expectedError: false},
+		{name: "lease_cleared_by_hand_keeps_the_full_settle", clearCandidacy: false, clearLease: true, retained: false, expectedAfterTick: false, expectedError: false},
+		{name: "retained_clears_on_attach_keep_the_full_settle", clearCandidacy: true, clearLease: true, retained: true, expectedAfterTick: false, expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "bravo")
+			start := time.Now()
+			campaign.attached, campaign.standing, campaign.lastAck = true, true, start.Add(time.Hour)
+			campaign.candidates["alpha"], campaign.candidates["bravo"] = start, start
+			alphaLease, _ := json.Marshal(leaderLease{Host: "alpha", Epoch: 1})
+			campaign.observe(nil, leaderStubMessage{topic: campaign.election.leaseTopic(), payload: alphaLease})
+			if tt.clearCandidacy {
+				campaign.observe(nil, leaderStubMessage{topic: campaign.election.candidateTopic("alpha"), retained: tt.retained})
+			}
+			if tt.clearLease {
+				campaign.observe(nil, leaderStubMessage{topic: campaign.election.leaseTopic(), retained: tt.retained})
+			}
+			if !tt.clearCandidacy {
+				delete(campaign.candidates, "alpha")
+			}
+			campaign.evaluate(start)
+			campaign.evaluate(start.Add(campaign.timing.refresh))
+			if leading, _ := campaign.holding(start.Add(campaign.timing.refresh)); leading != tt.expectedAfterTick {
+				t.Errorf("leading after one refresh: got %v want %v", leading, tt.expectedAfterTick)
+			}
+			campaign.evaluate(start.Add(campaign.timing.refresh + time.Millisecond))
+			campaign.evaluate(start.Add(campaign.timing.settle))
+			if leading, _ := campaign.holding(start.Add(campaign.timing.settle)); !leading {
+				t.Errorf("leading after the full settle: got false want true, a leader must not re-settle once its own lease arrives")
+			}
+		})
+	}
+}
+
 func TestProbeUtilLeader_LeadsWhileConfigsDisagree(t *testing.T) {
 	testutil.RequiresDocker(t)
 	if _, _, err := testutil.SetupBrokerContainer(t); err != nil {
