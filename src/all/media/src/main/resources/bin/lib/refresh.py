@@ -18,6 +18,7 @@ from plexapi.server import PlexServer
 API_TIMEOUT_SECONDS = 10
 API_COMMAND_TIMEOUT_SECONDS = 120
 API_COMMAND_POLL_SECONDS = 0.2
+SONARR_REFRESH_RETRY_SECONDS = 5
 PLEX_ADDED_WITHIN_DAYS = 1
 
 SONARR_QUALITY_PROFILE = "HD-1080p"
@@ -284,7 +285,11 @@ def _refresh_sonarr(_share_paths):
     for series in sonarr_series:
         try:
             wait_sonarr_command(name="RescanSeries", seriesId=series["id"])
-            wait_sonarr_command(name="RefreshSeries", seriesId=series["id"])
+            try:
+                wait_sonarr_command(name="RefreshSeries", seriesId=series["id"])
+            except Exception:
+                time.sleep(SONARR_REFRESH_RETRY_SECONDS)
+                wait_sonarr_command(name="RefreshSeries", seriesId=series["id"])
             series = get_sonarr(f"series/{series['id']}")
         except Exception as exception:
             _print_error(f"could not refresh sonarr series [{series['title']}]", exception)
