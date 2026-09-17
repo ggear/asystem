@@ -4,15 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 	"supervisor/internal/testutil"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -266,6 +269,41 @@ func TestProbeUtilLeader_ClaimantDoesNotReportItsOwnVacancy(t *testing.T) {
 	campaign.vacate(now)
 	if published := campaign.client.(*leaderStubClient).published("test/presence", metric.AvailabilityOffline); published {
 		t.Errorf("offline: got published want none from a host that has just claimed before its lease arrived")
+	}
+}
+
+func TestProbeUtilLeader_WithdrawalLogsAHostFactAtInfo(t *testing.T) {
+	tests := []struct {
+		name          string
+		eligible      []string
+		alive         bool
+		expectedLevel slog.Level
+		expectedError bool
+	}{
+		{name: "ineligible_by_config_is_a_host_fact", eligible: []string{"bravo"}, alive: true, expectedLevel: slog.LevelInfo, expectedError: false},
+		{name: "stalled_poll_loop_is_a_fault", eligible: []string{"alpha"}, alive: false, expectedLevel: slog.LevelWarn, expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buffer := scribe.EnableBuffer(slog.LevelDebug, 100)
+			t.Cleanup(func() { scribe.EnableStdout(slog.LevelDebug) })
+			campaign := leaderStubCampaign(tt.eligible, "alpha")
+			campaign.election.alive = func() bool { return tt.alive }
+			campaign.attached, campaign.standing = true, true
+			campaign.tick(time.Now())
+			found := false
+			for _, line := range buffer.Tail(100) {
+				if strings.Contains(line.Detail, "candidacy withdrawn") {
+					found = true
+					if line.Level != tt.expectedLevel {
+						t.Errorf("level: got %v want %v for [%s]", line.Level, tt.expectedLevel, line.Detail)
+					}
+				}
+			}
+			if !found {
+				t.Errorf("withdrawal: got no log line want one at %v", tt.expectedLevel)
+			}
+		})
 	}
 }
 

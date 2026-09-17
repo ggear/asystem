@@ -34,12 +34,12 @@ BROKER_ARGS=(-h "$BROKER_SERVICE" -p "$BROKER_PORT")
 if [ "${SCHEMA_PHASE}" != "publish" ]; then
 
 printf '\nEntity Metadata publish script [supervisor] dropping discovery topics on [%s]:\n' "$BROKER_SERVICE"
-mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config" -W 5 2>/dev/null | sort -u | \
+mosquitto_sub "${BROKER_ARGS[@]}" -F '%t' -t "homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config" -t "homeassistant/+/supervisor_all/+/config" -W 5 2>/dev/null | sort -u | \
   while read -r TOPIC; do
     printf '%s\n' "$TOPIC"
     mosquitto_pub "${BROKER_ARGS[@]}" -t "$TOPIC" -r -n
   done
-mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config" -W 5 2>/dev/null
+mosquitto_sub "${BROKER_ARGS[@]}" --remove-retained -F '%t' -t "homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config" -t "homeassistant/+/supervisor_all/+/config" -W 5 2>/dev/null
 
 printf '\nEntity Metadata publish script [supervisor] sleeping before dropping data topics ... ' && sleep 2 && printf 'done\n\n'
 
@@ -53,7 +53,7 @@ fi
 if [ "${SCHEMA_PHASE}" != "sweep" ]; then
 
 printf 'Entity Metadata publish script [supervisor] publishing discovery topics on [%s]:\n' "$BROKER_SERVICE"
-find "$ROOT_DIR" \( -path "*/homeassistant/*/supervisor_${SUPERVISOR_HOST}/*/config/*" \) -name "*.json" -print0 | sort -z | while read -r -d $'\0' METADATA_FILE; do
+find "$ROOT_DIR" \( -path "*/homeassistant/*/supervisor_${SUPERVISOR_HOST}/*/config/*" -o -path "*/homeassistant/*/supervisor_all/*/config/*" \) -name "*.json" -print0 | sort -z | while read -r -d $'\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${METADATA_FILE/$ROOT_DIR\//}")
   mosquitto_pub "${BROKER_ARGS[@]}" -t "$METADATA_TOPIC" -f "$METADATA_FILE" -r
   printf '%s\n' "$METADATA_TOPIC"

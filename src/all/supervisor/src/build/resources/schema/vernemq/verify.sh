@@ -133,6 +133,7 @@ declared > "${DECLARED_FILE}"
 printf '%s\n' ${COMMAND_TOPICS[@]+"${COMMAND_TOPICS[@]}"} | sed '/^$/d' | sort -u > "${COMMAND_FILE}"
 
 topics "homeassistant/+/+/+/config" "^homeassistant/[^/]+/supervisor_[^/]+/[^/]+/config$" >> "${RETAINED_FILE}"
+topics "homeassistant/+/supervisor_all/+/config" >> "${RETAINED_FILE}"
 topics "supervisor/+/data/#" >> "${RETAINED_FILE}"
 topics "supervisor/+/command/#" >> "${RETAINED_FILE}"
 topics "supervisor/+/status" >> "${RETAINED_FILE}"

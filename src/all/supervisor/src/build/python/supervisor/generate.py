@@ -33,7 +33,10 @@ if __name__ == "__main__":
             stages_host[host] = ["primary", "secondary", "tertiary"] if form_factor == "server" else ["primary", "secondary"]
     enrolled = sorted({basename(dirname(dirname(dirname(dirname(path))))) for path in glob.glob(join(DIR_ROOT, "../../*/*/src/build/resources/backup.sh"))})
     write_schema_broker(metadata_supervisor_df,
-                        broker_topic_glob_discovery="homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
+                        broker_topic_glob_discovery=[
+                            "homeassistant/+/supervisor_${SUPERVISOR_HOST}/+/config",
+                            "homeassistant/+/supervisor_all/+/config"
+                        ],
                         broker_topic_glob_data=[
                             "supervisor/${SUPERVISOR_HOST}/data/#",
                             "supervisor/${SUPERVISOR_HOST}/command/#",

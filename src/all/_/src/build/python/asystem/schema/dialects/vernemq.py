@@ -641,7 +641,7 @@ def _artifacts_declared(metadata_df, module_name, options):
     if not topics and not declared:
         return {}
     document = options.document
-    globs = [glob for glob in ([options.topic_glob_discovery] + _glob_list(options.topic_glob_data) + _glob_list(options.topic_glob_verify)) if glob]
+    globs = [glob for glob in (_glob_list(options.topic_glob_discovery) + _glob_list(options.topic_glob_data) + _glob_list(options.topic_glob_verify)) if glob]
     discoveries = _discoveries(metadata_df)
     generated = {}
     for column, column_topics in topics.items():

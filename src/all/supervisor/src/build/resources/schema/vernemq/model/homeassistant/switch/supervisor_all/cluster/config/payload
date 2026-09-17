@@ -1,0 +1,21 @@
+{
+  "default_entity_id": "switch.cluster",
+  "unique_id": "cluster",
+  "name": "Cluster",
+  "force_update": false,
+  "state_topic": "supervisor/all/data/cluster",
+  "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
+  "command_topic": "supervisor/all/command/cluster",
+  "availability_topic": "supervisor/all/status",
+  "qos": 1,
+  "device": {
+    "identifiers": [
+      "asystem-rack-supervisor"
+    ],
+    "name": "Rack Supervisor",
+    "model": "Custom",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}
