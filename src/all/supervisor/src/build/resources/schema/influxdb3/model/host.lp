@@ -11,7 +11,10 @@
 #     macmini-may,
 #     macmini-meg,
 #     raspbpi-jen,
-#     raspbpi-jil]
+#     raspbpi-jil,
+#     all]
+#   field cluster - 6s [every configured host is online and reporting, and every host and service status is ok]
+#   field cluster_trend - 6s [every configured host is online and reporting, and every host and service status is ok, smoothed across the trend window]
 #   field status - 6s [host is reporting metrics and all host metrics are ok]
 #   field status_trend - 6s [host is reporting metrics and all host metrics are ok, smoothed across the trend window]
 #   field used_processor % 6s [processor time used across all cores]
@@ -57,6 +60,8 @@
 supervisor,
   module=supervisor,
   host=<string>
+    cluster=<0|1>,
+    cluster_trend=<0|1>,
     status=<0|1>,
     status_trend=<0|1>,
     used_processor=<int>,

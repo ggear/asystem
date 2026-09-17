@@ -51,6 +51,18 @@ const (
 )
 
 var metricBuildersByID = []builder{
+	MetricCluster: {
+		id:          MetricCluster,
+		valueKind:   ValueBool,
+		label:       "Live CLS",
+		unit:        "",
+		description: "every host/service is reporting and all metrics are ok",
+		template:    "supervisor/$HOST/$SCOPE/cluster",
+		persisted:   true,
+		warming:     true,
+		pulseRule:   Truthy(),
+		trendRule:   Truthy(),
+	},
 	MetricHost: {
 		id:          MetricHost,
 		valueKind:   ValueBool,
@@ -587,6 +599,8 @@ var metricBuildersByTemplate = func() map[string]builder {
 			panic(fmt.Sprintf("error: invalid template [%s] for metric ID [%d]", metricBuildersByID[id].template, id))
 		}
 		switch {
+		case metricBuildersByID[id].template == templateCluster:
+			metricBuildersByID[id].metricKind = MetricKindCluster
 		case strings.HasPrefix(metricBuildersByID[id].template, "supervisor/$HOST/$SCOPE/service/supervisor"):
 			metricBuildersByID[id].metricKind = MetricKindSupervisor
 		case strings.HasPrefix(metricBuildersByID[id].template, "supervisor/$HOST/$SCOPE/services"):
@@ -661,11 +675,12 @@ func validateRule(owner builder, rule Rule) {
 
 var (
 	templateHostPrefix = "supervisor/$HOST/$SCOPE/host"
+	templateCluster    = "supervisor/$HOST/$SCOPE/cluster"
 
 	templateCommand  = "supervisor/$HOST/command"
 	templateSnapshot = "supervisor/$HOST/snapshot"
 
 	patternToken    = regexp.MustCompile(`^[a-z0-9-_]+$`)
-	patternTemplate = regexp.MustCompile(`^supervisor/\$HOST(/(command|snapshot)|/\$SCOPE/(host|services|service(/[^/]+)?)(/[A-Za-z0-9_]+)*)$`)
-	patternTopic    = regexp.MustCompile(`^supervisor/[a-z0-9-_]+(/(command|snapshot)|/(meta|data)/(host|services|service(/[a-z0-9-_]+)?)(/[a-z0-9-_]+)*)$`)
+	patternTemplate = regexp.MustCompile(`^supervisor/\$HOST(/(command|snapshot)|/\$SCOPE/(cluster|host|services|service(/[^/]+)?)(/[A-Za-z0-9_]+)*)$`)
+	patternTopic    = regexp.MustCompile(`^supervisor/[a-z0-9-_]+(/(command|snapshot)|/(meta|data)/(cluster|host|services|service(/[a-z0-9-_]+)?)(/[a-z0-9-_]+)*)$`)
 )

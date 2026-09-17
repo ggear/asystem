@@ -96,13 +96,18 @@ backups_timeout_hours() {
   printf '%s' "${hours}"
 }
 
+backups_header() {
+  printf '\033[1;35m== %s %s ==\033[0m' "$1" "$2"
+}
+
 # shellcheck disable=SC2029
 backups_dispatch() {
-  local host="$1" remote="$2" status=0
+  local host="$1" remote="$2" stage="$3" status=0 header
+  header="$(backups_header "${host}" "${stage}")"
   ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" "${remote}" 2>/dev/null |
-    awk -v host="${host}" '
+    awk -v header="${header}" '
       /^[[:space:]]*$/ { if (shown) pending = 1; next }
-      { if (!shown) { printf "\n== %s ==\n\n", host; shown = 1 }
+      { if (!shown) { printf "\n%s\n\n", header; shown = 1 }
         else if (pending) { print "" }
         pending = 0
         print }'
@@ -122,15 +127,15 @@ backups_start_one() {
 }
 
 backups_tail_one() {
-  backups_dispatch "$1" "${BACKUPS_REMOTE} tail"
+  backups_dispatch "$1" "${BACKUPS_REMOTE} tail" "tail"
 }
 
 backups_stop_one() {
-  backups_dispatch "$1" "${BACKUPS_REMOTE} stop"
+  backups_dispatch "$1" "${BACKUPS_REMOTE} stop" "stop"
 }
 
 backups_list_one() {
-  backups_dispatch "$1" "${BACKUPS_REMOTE} list"
+  backups_dispatch "$1" "${BACKUPS_REMOTE} list" "list"
 }
 
 # shellcheck disable=SC2329
@@ -161,7 +166,7 @@ backups_each() {
 
 backups_start() {
   local status=0
-  printf '\n== %s ==\n\n' "${BACKUPS_HOSTS_LABEL}"
+  printf '\n%s\n\n' "$(backups_header "${BACKUPS_HOSTS_LABEL}" "start")"
   BACKUPS_RUN_ID="$(date +%Y-%m-%d_%H-%M-%S)"
   BACKUPS_RUN_HOURS="$(backups_timeout_hours)"
   backups_each backups_start_one || status=$?

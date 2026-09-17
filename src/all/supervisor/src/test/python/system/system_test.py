@@ -4,7 +4,9 @@ import random
 import string
 import subprocess
 import sys
+import threading
 import time
+from datetime import datetime, timezone
 from os.path import abspath, dirname, join, realpath
 
 import paho.mqtt.client as mqtt
@@ -48,6 +50,23 @@ TOPIC_TEMPERATURE = "supervisor/{}/data/host/temperature".format(HOST)
 TOPIC_FAN = "supervisor/{}/data/host/spin_fan_speed".format(HOST)
 TOPIC_LOGS = "supervisor/{}/data/host/failed_log_messages".format(HOST)
 TOPIC_SHARES = "supervisor/{}/data/host/failed_shares".format(HOST)
+TOPIC_CLUSTER = "supervisor/all/data/cluster"
+TOPIC_ESTATE_STATUS = "supervisor/all/status"
+ROLES = ("cluster", "backup")
+RIVAL = "macmini-mad"
+TIMEOUT_ELECTION = 90
+
+
+def _lease(role):
+    return "supervisor/all/leader/{}/lease".format(role)
+
+
+def _candidate(role, host):
+    return "supervisor/all/leader/{}/candidate/{}".format(role, host)
+
+
+def _stamp():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def _configured():
@@ -207,6 +226,86 @@ def test_reports_a_ghost_and_an_unconfigured_service():
     _retry(assertion, TIMEOUT)
 
 
+def test_reports_the_cluster_not_ok_while_a_configured_host_is_silent():
+    def assertion():
+        received = _collect([TOPIC_CLUSTER], SETTLE)
+        assert TOPIC_CLUSTER in received, "the cluster status must be published under the cluster host"
+        cluster = json.loads(received[TOPIC_CLUSTER])
+        assert cluster["pulse"]["ok"] is False, "a cluster with configured hosts that never report must read not ok"
+        assert not cluster.get("failed"), "a silent host is measured, not unmeasurable, so the cluster must not read failed"
+
+    _retry(assertion, TIMEOUT_WARMUP)
+
+
+def test_wins_every_election_it_stands_in_alone():
+    topics = [_lease(role) for role in ROLES] + [_candidate(role, HOST) for role in ROLES] + [TOPIC_ESTATE_STATUS]
+
+    def assertion():
+        received = _collect(topics, SETTLE)
+        assert received.get(TOPIC_ESTATE_STATUS) == b"online", "the cluster holder must mark the estate online"
+        for role in ROLES:
+            assert _candidate(role, HOST) in received, "the host must stand in the [{}] election".format(role)
+            assert json.loads(received[_candidate(role, HOST)])["host"] == HOST, "a candidacy must name its own host"
+            assert _lease(role) in received, "the sole candidate must claim the [{}] lease".format(role)
+            lease = json.loads(received[_lease(role)])
+            assert lease["host"] == HOST, "the [{}] lease must name the sole candidate, not [{}]".format(role, lease["host"])
+            assert lease["epoch"] > 0, "a won lease must carry the epoch it was won at"
+
+    _retry(assertion, TIMEOUT_ELECTION)
+
+
+def test_defers_to_an_incumbent_and_reclaims_when_it_leaves():
+    role = "cluster"
+    rival_standing = threading.Event()
+    rival_standing.set()
+
+    def rival():
+        client = _client()
+        client.loop_start()
+        claimed = _stamp()
+        while rival_standing.is_set():
+            renewed = _stamp()
+            client.publish(_candidate(role, RIVAL), json.dumps({"host": RIVAL, "renewed_ts": renewed}), 1, True).wait_for_publish()
+            client.publish(_lease(role), json.dumps({"host": RIVAL, "epoch": 1, "claimed_ts": claimed, "renewed_ts": renewed}), 1, True).wait_for_publish()
+            time.sleep(1)
+        client.publish(_candidate(role, RIVAL), b"", 1, True).wait_for_publish()
+        client.publish(_lease(role), b"", 1, True).wait_for_publish()
+        client.loop_stop()
+        client.disconnect()
+
+    standing = threading.Thread(target=rival, daemon=True)
+    standing.start()
+    try:
+        time.sleep(10)
+        clearer = _client()
+        clearer.loop_start()
+        clearer.publish(TOPIC_CLUSTER, b"", 1, True).wait_for_publish()
+        clearer.loop_stop()
+        clearer.disconnect()
+        received, _, _ = _await([_lease(role), TOPIC_CLUSTER], lambda _seen: False, 15, lambda _client: None)
+        leases = [json.loads(payload)["host"] for payload in received.get(_lease(role), []) if payload]
+        assert leases, "the rival lease must be observed while it stands"
+        assert _collect([TOPIC_ESTATE_STATUS], SETTLE).get(TOPIC_ESTATE_STATUS) == b"offline", \
+            "a host that yields the cluster must mark the estate offline, the rival publishes no presence"
+        assert HOST not in leases, "the host must not write the lease while an incumbent holds it, saw [{}]".format(leases)
+        assert not [payload for payload in received.get(TOPIC_CLUSTER, []) if payload], \
+            "a host that does not lead the cluster must not publish its status"
+    finally:
+        rival_standing.clear()
+        standing.join(TIMEOUT)
+    released = int(time.time())
+
+    def assertion():
+        received = _collect([_lease(role), TOPIC_CLUSTER], SETTLE)
+        assert _lease(role) in received, "the lease must be claimed again once the incumbent leaves"
+        assert json.loads(received[_lease(role)])["host"] == HOST, "the remaining candidate must reclaim the lease"
+        assert TOPIC_CLUSTER in received, "a new leader must republish the cluster status at once"
+        assert _collect([TOPIC_ESTATE_STATUS], SETTLE).get(TOPIC_ESTATE_STATUS) == b"online", "the reclaiming holder must mark the estate online"
+        assert json.loads(received[TOPIC_CLUSTER])["timestamp"] >= released, "the cluster status must be republished, not left over"
+
+    _retry(assertion, TIMEOUT_ELECTION)
+
+
 def test_declares_every_published_topic():
     model_dir = join(DIR_SCHEMA, "model")
     declared = {os.path.relpath(directory, model_dir)
@@ -284,13 +383,21 @@ def test_registers_a_service_that_appears_and_removes_one_that_goes():
 
 def test_resumes_publishing_after_the_broker_restarts():
     published_before = int(time.time())
+    epochs_before = {role: json.loads(payload)["epoch"] for role, payload in
+                     ((role, _collect([_lease(role)], SETTLE).get(_lease(role))) for role in ROLES) if payload}
+    assert set(epochs_before) == set(ROLES), "every election must be held before the broker restarts"
     assert _docker("restart", BROKER_CONTAINER).returncode == 0
 
     def assertion():
-        received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR], SETTLE)
+        received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_ESTATE_STATUS] + [_lease(role) for role in ROLES], SETTLE)
+        assert received.get(TOPIC_ESTATE_STATUS) == b"online", "the estate must come back online after a broker restart"
         assert received.get(TOPIC_STATUS) == b"online", "the host must re-assert online after a broker restart"
         body = json.loads(received[TOPIC_PROCESSOR])
         assert body["timestamp"] >= published_before, "a stale retained value proves nothing, the host must publish again"
+        for role in ROLES:
+            lease = json.loads(received[_lease(role)])
+            assert lease["host"] == HOST, "the [{}] election must be won again after the broker restarts".format(role)
+            assert lease["epoch"] > epochs_before[role], "a lost session must settle and win a new epoch, not keep the old one"
 
     _retry(assertion, TIMEOUT_RESTART)
 
@@ -314,10 +421,14 @@ def test_removes_a_service_that_departs():
 def test_retains_its_records_across_a_graceful_stop():
     assert _docker("stop", CONTAINER).returncode == 0
     time.sleep(SETTLE)
-    received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_MEMORY, TOPIC_SELF], SETTLE)
+    elections = [_lease(role) for role in ROLES] + [_candidate(role, HOST) for role in ROLES]
+    received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_MEMORY, TOPIC_SELF] + elections, SETTLE)
     assert received.get(TOPIC_STATUS) == b"offline", "the offline status must be published"
     for topic in (TOPIC_PROCESSOR, TOPIC_MEMORY, TOPIC_SELF):
         assert topic in received, "retained [{}] must survive a graceful stop".format(topic)
+    for topic in elections:
+        assert topic not in received, "a graceful stop must resign, but [{}] is still retained".format(topic)
+    assert _collect([TOPIC_ESTATE_STATUS], SETTLE).get(TOPIC_ESTATE_STATUS) == b"offline", "a resigning holder must mark the estate offline"
 
 
 def test_rediscovers_and_clears_an_orphan_on_restart():
@@ -348,10 +459,14 @@ def test_publishes_its_will_and_keeps_its_records_when_killed():
     assert _docker("kill", CONTAINER).returncode == 0
 
     def assertion():
-        received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_SELF], SETTLE)
+        candidacies = [_candidate(role, HOST) for role in ROLES]
+        received = _collect([TOPIC_STATUS, TOPIC_PROCESSOR, TOPIC_SELF] + candidacies, SETTLE)
         assert received.get(TOPIC_STATUS) == b"offline", "the last will must mark a killed host offline"
         for topic in (TOPIC_PROCESSOR, TOPIC_SELF):
             assert topic in received, "a kill publishes nothing, so retained [{}] must survive".format(topic)
+        for topic in candidacies:
+            assert topic not in received, "the election will must clear [{}] when the host is killed".format(topic)
+        assert _collect([TOPIC_ESTATE_STATUS], SETTLE).get(TOPIC_ESTATE_STATUS) == b"offline", "the presence will must mark the estate offline"
 
     _retry(assertion, TIMEOUT_RESTART)
     assert _docker("start", CONTAINER).returncode == 0

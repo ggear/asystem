@@ -8,5 +8,7 @@
   "power_bool": <true|false>,
   "hosts_expected": <number>,
   "hosts_reported": <number>,
-  "hosts_failed": <number>
+  "hosts_failed": <number>,
+  "leader_host": "<text>",
+  "leader_epoch": <number>
 }

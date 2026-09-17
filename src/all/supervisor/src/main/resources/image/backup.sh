@@ -23,7 +23,8 @@
 #
 # Every state a status document carries, and every plug command, is a BACKUP_STATE_*/BACKUP_COMMAND_*
 # variable mirroring metric.BackupState*/Command* in src/main/go/supervisor/internal/metric/metric_schema.go
-# - a unit test holds the two sets equal, so an addition here left undeclared there fails the build.
+# - a unit test holds the two sets equal, so an addition here left undeclared there fails the build. The
+# same holds BACKUP_REAPER_TOPIC equal to clusterReaperTopic in probe_impl_backup.go.
 #
 # primary   never reads a data directory or knows a backup format - the module's own backup.sh owns both.
 # secondary is additive and never deletes, mounts the share on demand and never unmounts it.
@@ -186,7 +187,7 @@ BACKUP_STATE_INTERRUPTED="interrupted"
 BACKUP_COMMAND_ON="ON"
 BACKUP_COMMAND_OFF="OFF"
 BACKUP_RUNNING_MATCH='"state": "'"${BACKUP_STATE_RUNNING}"'"'
-BACKUP_REAPER_TOPIC="supervisor/cluster-all/backup/reaper"
+BACKUP_REAPER_TOPIC="supervisor/all/backup/reaper"
 BACKUP_SCHEDULED_HOUR=1
 BACKUP_BAR_WIDTH=18
 BACKUP_RATE_POINTS="${BACKUP_RATE_POINTS:-12}"

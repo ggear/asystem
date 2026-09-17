@@ -322,6 +322,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			return
 		}
 		hostName := tokens[1]
+		if hostName == metric.HostCluster {
+			return
+		}
 		payload := strings.TrimSpace(string(msg.Payload()))
 		rxCount.Add(1)
 		hostStatusMu.RLock()

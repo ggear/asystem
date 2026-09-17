@@ -264,3 +264,43 @@ func TestMetricBuild_HostAggregate(t *testing.T) {
 		})
 	}
 }
+
+func TestMetricBuild_ClusterTopic(t *testing.T) {
+	tests := []struct {
+		name          string
+		hostName      string
+		expectedTopic string
+		expectedError bool
+	}{
+		{
+			name:          "cluster_host",
+			hostName:      GetIDHost(MetricCluster, "labnode-one"),
+			expectedTopic: "supervisor/all/data/cluster",
+			expectedError: false,
+		},
+		{
+			name:          "host_metric_keeps_its_host",
+			hostName:      GetIDHost(MetricHost, "labnode-one"),
+			expectedTopic: "supervisor/labnode-one/data/host",
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id := MetricCluster
+			if tt.hostName != HostCluster {
+				id = MetricHost
+			}
+			topic, _, err := buildFromID(id, tt.hostName, ServiceNameUnset, ScopeData)
+			if (err != nil) != tt.expectedError {
+				t.Fatalf("err: got %v want error %t", err, tt.expectedError)
+			}
+			if topic != tt.expectedTopic {
+				t.Errorf("topic: got %s want %s", topic, tt.expectedTopic)
+			}
+			if GetIDKind(MetricCluster) != MetricKindCluster {
+				t.Errorf("kind: got %v want %v", GetIDKind(MetricCluster), MetricKindCluster)
+			}
+		})
+	}
+}

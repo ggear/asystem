@@ -39,7 +39,11 @@ if __name__ == "__main__":
                         ],
                         broker_topic_glob_verify=[
                             "supervisor/${SUPERVISOR_HOST}/backup/#",
-                            "supervisor/cluster-all/backup/#"
+                            "supervisor/all/status",
+                            "supervisor/all/data/cluster",
+                            "supervisor/all/command/#",
+                            "supervisor/all/backup/#",
+                            "supervisor/all/leader/#"
                         ],
                         broker_document=document,
                         broker_entities=[
@@ -47,6 +51,7 @@ if __name__ == "__main__":
                                 "HOST": host, "SERVICE": services,
                                 "STAGE": stages_host[host],
                                 "SCRUB_HOST": [host] if "tertiary" in stages_host[host] else [],
+                                "BACKUP_HOST": [host] if "tertiary" in stages_host[host] else [],
                                 "BACKUP_SERVICE": sorted(set(services) & set(enrolled))
                             }
                             for host, services in sorted(modules_server.items())
@@ -56,7 +61,7 @@ if __name__ == "__main__":
     write_schema_database(document,
                           database_dialect="influxdb3",
                           database_entities={
-                              "supervisor/host": sorted(modules_server.keys()),
+                              "supervisor/host": sorted(modules_server.keys()) + ["all"],
                               "supervisor/service": sorted({service for services in modules_server.values() for service in services})
                           },
                           database_archive_measures=[

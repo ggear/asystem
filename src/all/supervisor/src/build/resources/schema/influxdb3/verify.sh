@@ -186,6 +186,28 @@ verify_sql() {
 -- declared vocabulary against what the service actually wrote, rows come back only on drift
 SELECT
     'supervisor/host' AS relation,
+    'cluster'         AS measure,
+    '6s'              AS period,
+    '-'               AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'cluster') = 0
+UNION ALL
+SELECT
+    'supervisor/host' AS relation,
+    'cluster_trend'   AS measure,
+    '6s'              AS period,
+    '-'               AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'supervisor'
+HAVING count(*) FILTER (WHERE column_name = 'cluster_trend') = 0
+UNION ALL
+SELECT
+    'supervisor/host' AS relation,
     'status'          AS measure,
     '6s'              AS period,
     '-'               AS unit,
@@ -811,9 +833,9 @@ WHERE
     table_name = 'supervisor'
     AND column_name NOT IN (
         'allocated_memory', 'allocated_memory_trend', 'backup_status',
-        'backup_status_trend', 'configured_status', 'configured_status_trend',
-        'failed_backup_stages', 'failed_backup_stages_trend', 'failed_backups',
-        'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
+        'backup_status_trend', 'cluster', 'cluster_trend', 'configured_status',
+        'configured_status_trend', 'failed_backup_stages', 'failed_backup_stages_trend',
+        'failed_backups', 'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
         'failed_log_messages', 'failed_log_messages_trend', 'failed_shares',
         'failed_shares_trend', 'halted_backup_stages', 'halted_backup_stages_trend',
         'health_status', 'health_status_trend', 'host', 'life_used_drives',

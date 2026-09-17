@@ -11,7 +11,8 @@
 #     macmini-may,
 #     macmini-meg,
 #     raspbpi-jen,
-#     raspbpi-jil]
+#     raspbpi-jil,
+#     all]
 #   tag service* [name of the monitored service:
 #     cloudflare,
 #     grafana,

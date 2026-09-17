@@ -43,6 +43,9 @@ type backupProbe struct {
 	backupRunning   sync.Mutex
 	backupActive    atomic.Bool
 	reapRunning     sync.Mutex
+	leadRunning     sync.Mutex
+	leadWatch       *brokerWatcher
+	leadStale       int
 	reapIdle        int
 	reapNotice      int
 	reapStale       int
@@ -65,6 +68,13 @@ func (p *backupProbe) metrics() []metric.ID {
 }
 
 func (p *backupProbe) gates() []metric.GateID { return nil }
+
+func (p *backupProbe) campaigns() []leaderRole {
+	if !p.serverHost {
+		return nil
+	}
+	return []leaderRole{{name: metric.LeaderRoleBackup, eligible: func() []string { return backupExpectedServers(p.configPath) }}}
+}
 
 func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
 	p.cache = cache
@@ -249,7 +259,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	if p.reapWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, clusterLeaderTopic, clusterReaperTopic, "supervisor/+/backup/stage/tertiary/status")
+		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, clusterStatusTopic, clusterReaperTopic, "supervisor/+/backup/stage/tertiary/status")
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the estate, retrying on the next tick", err)
 			return
@@ -262,6 +272,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		p.reapStale++
 		if p.reapStale >= reaperStaleTicks {
 			p.reapStale = 0
+			p.reapWatch.close()
 			p.reapWatch = nil
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart,
 				"[%d] ticks with nothing watched, redialling the estate watch", reaperStaleTicks)
@@ -310,13 +321,15 @@ func (p *backupProbe) reap(ctx context.Context) {
 		}
 		return
 	}
-	var lease backupLease
-	if json.Unmarshal([]byte(retained[clusterLeaderTopic]), &lease) == nil && !lease.expired() {
-		if p.reapQuiet() {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
-				"[%s] holds the backup lease, leaving the disk powered", lease.Host)
+	var coordinated backupDocument
+	if json.Unmarshal([]byte(retained[clusterStatusTopic]), &coordinated) == nil && coordinated.State == metric.BackupStateRunning {
+		if started, perr := time.Parse(time.RFC3339, coordinated.StartedTS); perr == nil && time.Since(started) < backupRunCeiling {
+			if p.reapQuiet() {
+				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
+					"[%s] reports a run started [%s] still coordinating, leaving the disk powered", clusterStatusTopic, coordinated.StartedTS)
+			}
+			return
 		}
-		return
 	}
 	for topic, payload := range retained {
 		if !strings.HasSuffix(topic, "/backup/stage/tertiary/status") {
@@ -339,18 +352,28 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	p.reapIdle = reaperIdleTicks
-	isLeader, leaderClient := electBackupLeader(p.configPath, p.hostName, "reaper-"+time.Now().Format(backupRunStamp))
-	if !isLeader || leaderClient == nil {
+	if leading, _ := Leading(metric.LeaderRoleBackup); !leading {
+		if p.reapQuiet() {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
+				"[%s] election is not held by this host, leaving the power down to its leader", metric.LeaderRoleBackup)
+		}
 		return
 	}
-	defer leaderClient.close()
-	if err := leaderClient.publishCommand(commandTopic, metric.CommandOff); err != nil {
-		_ = leaderClient.publishRetained(clusterLeaderTopic, "")
+	client, err := brokerDial(p.configPath, "reaper")
+	if err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart,
+			"[%v] reaching the broker to power down [%s], retrying on the next tick", err, commandTopic)
+		return
+	}
+	defer client.close()
+	if leading, _ := Leading(metric.LeaderRoleBackup); !leading {
+		return
+	}
+	if err := client.publishCommand(commandTopic, metric.CommandOff); err != nil {
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", reapStart,
 			"[%v] powering down [%s], retrying on the next tick", err, commandTopic)
 		return
 	}
-	_ = leaderClient.publishRetained(clusterLeaderTopic, "")
 	p.reapIdle = 0
 	p.reapNotice = 0
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", reapStart, "[%s] backup disk powered down, no tertiary stage running for [%d] ticks", commandTopic, reaperIdleTicks)
@@ -450,6 +473,7 @@ func (p *backupProbe) refresh() {
 }
 
 func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
+	p.lead()
 	p.reap(ctx)
 	if !isHour || hour != backupScheduledHour {
 		return
@@ -485,31 +509,10 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 		return
 	}
 	stages := p.stages
-	isLeader := false
-	var leaderClient *brokerClient
 	if p.serverHost {
-		isLeader, leaderClient = electBackupLeader(p.configPath, p.hostName, runID)
 		p.powerBackupDisk(metric.CommandOn, runStart)
 	}
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("schedule", runStart, "[%s] backup run over [%d] stages", runID, len(stages))
-	leaseCancel := context.CancelFunc(func() {})
-	if isLeader && leaderClient != nil {
-		p.publishClusterStatus(leaderClient, runID, metric.BackupStateRunning, runStart, true, 0, 0)
-		var leaseCtx context.Context
-		leaseCtx, leaseCancel = context.WithCancel(ctx)
-		go func() {
-			ticker := time.NewTicker(leaderLeaseRefresh)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-leaseCtx.Done():
-					return
-				case <-ticker.C:
-					p.refreshLease(leaderClient, runID)
-				}
-			}
-		}()
-	}
 	failed, attempted := 0, 0
 	for _, stage := range stages {
 		attempted++
@@ -519,15 +522,10 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 			break
 		}
 	}
-	leaseCancel()
 	p.pruneRuns(runStart)
 	document := p.writeRunDocument(runPath, runID, attempted, failed, runStart)
 	p.publishHostStatus(document)
 	p.refresh()
-	if isLeader && leaderClient != nil {
-		p.finishLeadership(ctx, leaderClient, runID, runStart)
-		leaderClient.close()
-	}
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("finished", runStart, "[%s] backup run, [%d] of [%d] stages failed", runID, failed, len(stages))
 }
 
@@ -646,29 +644,90 @@ func (p *backupProbe) powerBackupDisk(state string, started time.Time) {
 	_ = client.publishCommand(topic, state)
 }
 
-func (p *backupProbe) refreshLease(client *brokerClient, runID string) {
-	payload, _ := json.Marshal(backupLeaseFor(p.hostName, runID))
-	_ = client.publishRetained(clusterLeaderTopic, string(payload))
-}
-
-func (p *backupProbe) publishClusterStatus(client *brokerClient, runID, state string, started time.Time, powered bool, reported, failed int) {
-	expected := backupExpectedServers(p.configPath)
-	document := map[string]any{
-		"run_id":         runID,
-		"state":          state,
-		"started_ts":     started.Format(time.RFC3339),
-		"duration_s":     int(time.Since(started).Seconds()),
-		"success_bool":   state == metric.BackupStateComplete,
-		"power_bool":     powered,
-		"hosts_expected": len(expected),
-		"hosts_reported": reported,
-		"hosts_failed":   failed,
+func (p *backupProbe) lead() {
+	if !p.serverHost || !p.leadRunning.TryLock() {
+		return
 	}
-	if state != metric.BackupStateRunning {
+	defer p.leadRunning.Unlock()
+	leading, epoch := Leading(metric.LeaderRoleBackup)
+	if !leading {
+		if p.leadWatch != nil {
+			p.leadWatch.close()
+			p.leadWatch = nil
+			p.leadStale = 0
+		}
+		return
+	}
+	leadStart := time.Now()
+	if p.leadWatch == nil {
+		watch, err := brokerWatch(p.configPath, p.hostName, "supervisor/+/backup/status", "supervisor/+/backup/stage/+/status", clusterStatusTopic)
+		if err != nil {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] watching the estate run, retrying on the next tick", err)
+			return
+		}
+		p.leadWatch = watch
+	}
+	retained, watching := p.leadWatch.readRetained()
+	if !watching {
+		p.leadStale++
+		if p.leadStale >= reaperStaleTicks {
+			p.leadStale = 0
+			p.leadWatch.close()
+			p.leadWatch = nil
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", leadStart, "[%d] ticks with the estate run unwatched, redialling", reaperStaleTicks)
+		}
+		return
+	}
+	p.leadStale = 0
+	expected := backupExpectedServers(p.configPath)
+	decision := backupEstateDecision(retained, expected, time.Now())
+	if decision.action == backupEstateIdle {
+		return
+	}
+	client, err := brokerDial(p.configPath, "coordinate")
+	if err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] reaching the broker to coordinate the estate run, retrying on the next tick", err)
+		return
+	}
+	defer client.close()
+	if leading, current := Leading(metric.LeaderRoleBackup); !leading || current != epoch {
+		return
+	}
+	if decision.action == backupEstateClose {
+		if topic := config.Load(p.configPath).BackupCommandTopic(); topic != "" {
+			if err := client.publishCommand(topic, metric.CommandOff); err != nil {
+				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", leadStart, "[%v] powering down [%s], retrying on the next tick", err, topic)
+				return
+			}
+		}
+	}
+	document := map[string]any{
+		"run_id":         decision.started.Format(backupRunStamp),
+		"state":          decision.state,
+		"started_ts":     decision.started.Format(time.RFC3339),
+		"duration_s":     int(time.Since(decision.started).Seconds()),
+		"success_bool":   decision.state == metric.BackupStateComplete,
+		"power_bool":     decision.action != backupEstateClose,
+		"hosts_expected": len(expected),
+		"hosts_reported": decision.reported,
+		"hosts_failed":   decision.failed,
+		"leader_host":    p.hostName,
+		"leader_epoch":   epoch,
+	}
+	if decision.action == backupEstateClose {
 		document["finished_ts"] = time.Now().Format(time.RFC3339)
 	}
 	payload, _ := json.Marshal(document)
-	_ = client.publishRetained(clusterStatusTopic, string(payload))
+	if err := client.publishRetained(clusterStatusTopic, string(payload)); err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", leadStart, "[%v] publishing the [%s] estate run, retrying on the next tick", err, decision.state)
+		return
+	}
+	switch decision.action {
+	case backupEstateOpen:
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionRegister).Infof("assigned", leadStart, "[%s] estate run opened at epoch [%d], [%d] of [%d] hosts reported", decision.started.Format(time.RFC3339), epoch, decision.reported, len(expected))
+	case backupEstateClose:
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("finished", leadStart, "[%s] estate run closed as [%s], disk powered down, [%d] of [%d] hosts reported", decision.started.Format(time.RFC3339), decision.state, decision.reported, len(expected))
+	}
 }
 
 func (p *backupProbe) publishHostStatus(document backupDocument) {
@@ -681,68 +740,81 @@ func (p *backupProbe) publishHostStatus(document backupDocument) {
 	_ = client.publishRetained("supervisor/"+p.hostName+"/backup/status", string(payload))
 }
 
-func (p *backupProbe) finishLeadership(ctx context.Context, client *brokerClient, runID string, started time.Time) {
-	expected := backupExpectedServers(p.configPath)
-	deadline := time.Now().Add(backupRunCeiling)
-	terminal := map[string]bool{metric.BackupStateComplete: true, metric.BackupStateFailed: true,
-		metric.BackupStateTimedout: true}
-	reported, failedHosts, timedOut := 0, 0, true
-	for time.Now().Before(deadline) {
-		reported, failedHosts = 0, 0
-		statuses, statusesErr := client.readRetained("supervisor/+/backup/status")
-		if statusesErr != nil {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionSubscribe).Warnf("deferred", started, "[%v] reading host statuses, retrying on the next poll", statusesErr)
-		}
+type backupEstateAction int
+
+type backupEstate struct {
+	action   backupEstateAction
+	state    string
+	started  time.Time
+	reported int
+	failed   int
+}
+
+func backupEstateDecision(retained map[string]string, expected []string, now time.Time) backupEstate {
+	terminal := map[string]bool{metric.BackupStateComplete: true, metric.BackupStateFailed: true, metric.BackupStateTimedout: true}
+	var estate backupDocument
+	estateStarted := time.Time{}
+	if json.Unmarshal([]byte(retained[clusterStatusTopic]), &estate) == nil {
+		estateStarted, _ = time.Parse(time.RFC3339, estate.StartedTS)
+	}
+	decision := backupEstate{action: backupEstateIdle}
+	switch {
+	case estate.State == metric.BackupStateRunning && !estateStarted.IsZero():
+		decision.action, decision.started = backupEstateRefresh, estateStarted
+	default:
 		for _, host := range expected {
-			var document backupDocument
-			if json.Unmarshal([]byte(statuses["supervisor/"+host+"/backup/status"]), &document) == nil &&
-				terminal[document.State] && reportedForRun(document, started.Add(-backupRunSkew)) {
-				reported++
-				if !document.SuccessBool {
-					failedHosts++
+			prefix := "supervisor/" + host + "/backup/stage/"
+			for topic, payload := range retained {
+				stage, found := strings.CutPrefix(topic, prefix)
+				if !found || strings.Count(stage, "/") != 1 || !strings.HasSuffix(stage, "/status") {
+					continue
+				}
+				var document backupDocument
+				if json.Unmarshal([]byte(payload), &document) != nil || document.State != metric.BackupStateRunning || document.Trigger != metric.BackupTriggerScheduled {
+					continue
+				}
+				expires, expiresErr := time.Parse(time.RFC3339, document.ExpiresTS)
+				if expiresErr != nil || !now.Before(expires) {
+					continue
+				}
+				started, startedOK := backupRunStarted(document)
+				if !startedOK || now.Sub(started) > backupRunCeiling || (!estateStarted.IsZero() && !started.After(estateStarted.Add(backupRunSkew))) {
+					continue
+				}
+				if decision.started.IsZero() || started.Before(decision.started) {
+					decision.action, decision.started = backupEstateOpen, started
 				}
 			}
 		}
-		if reported >= len(expected) {
-			timedOut = false
-			break
-		}
-		p.refreshLease(client, runID)
-		p.publishClusterStatus(client, runID, metric.BackupStateRunning, started, true, reported, failedHosts)
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(leaderPollInterval):
-		}
 	}
-	terminalState := metric.BackupStateComplete
-	if timedOut {
-		terminalState = metric.BackupStateTimedout
-	} else if failedHosts > 0 {
-		terminalState = metric.BackupStateFailed
+	if decision.action == backupEstateIdle {
+		return decision
 	}
-	if topic := config.Load(p.configPath).BackupCommandTopic(); topic != "" {
-		if err := client.publishCommand(topic, metric.CommandOff); err != nil {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] powering down [%s], the reaper takes it from here", err, topic)
-		} else {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] backup disk powered down after run [%s]", topic, runID)
+	earliest := decision.started.Add(-backupRunSkew)
+	for _, host := range expected {
+		var document backupDocument
+		if json.Unmarshal([]byte(retained["supervisor/"+host+"/backup/status"]), &document) == nil &&
+			terminal[document.State] && reportedForRun(document, earliest) {
+			decision.reported++
+			if !document.SuccessBool {
+				decision.failed++
+			}
 		}
 	}
-	p.publishClusterStatus(client, runID, terminalState, started, false, reported, failedHosts)
-	_ = client.publishRetained(clusterLeaderTopic, "")
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionRemove).Infof("released", started, "[%s] backup lease cleared, run [%s] ended [%s]", clusterLeaderTopic, runID, terminalState)
+	decision.state = metric.BackupStateRunning
+	switch {
+	case decision.reported >= len(expected) && decision.failed > 0:
+		decision.action, decision.state = backupEstateClose, metric.BackupStateFailed
+	case decision.reported >= len(expected):
+		decision.action, decision.state = backupEstateClose, metric.BackupStateComplete
+	case now.Sub(decision.started) > backupRunCeiling:
+		decision.action, decision.state = backupEstateClose, metric.BackupStateTimedout
+	}
+	return decision
 }
 
 type backupReaper struct {
 	State     string `json:"state"`
-	ExpiresTS string `json:"expires_ts"`
-}
-
-type backupLease struct {
-	Host      string `json:"host"`
-	Epoch     int64  `json:"epoch"`
-	RunID     string `json:"run_id"`
-	ClaimedTS string `json:"claimed_ts"`
 	ExpiresTS string `json:"expires_ts"`
 }
 
@@ -754,68 +826,17 @@ func (r backupReaper) paused() bool {
 	return err == nil && time.Now().Before(expires)
 }
 
+func backupRunStarted(document backupDocument) (time.Time, bool) {
+	if started, err := time.ParseInLocation(backupRunStamp, document.RunID, time.Local); err == nil {
+		return started, true
+	}
+	started, err := time.Parse(time.RFC3339, document.StartedTS)
+	return started, err == nil
+}
+
 func reportedForRun(document backupDocument, earliest time.Time) bool {
 	started, err := time.Parse(time.RFC3339, document.StartedTS)
 	return err == nil && !started.Before(earliest)
-}
-
-func (l backupLease) expired() bool {
-	expires, err := time.Parse(time.RFC3339, l.ExpiresTS)
-	return err != nil || time.Now().After(expires)
-}
-
-func backupLeaseFor(host, runID string) backupLease {
-	claimed := time.Now()
-	return backupLease{
-		Host:      host,
-		Epoch:     claimed.Unix(),
-		RunID:     runID,
-		ClaimedTS: claimed.Format(time.RFC3339),
-		ExpiresTS: claimed.Add(backupRunCeiling).Format(time.RFC3339),
-	}
-}
-
-func electBackupLeader(configPath, host, runID string) (bool, *brokerClient) {
-	electStart := config.NowIncludingSuspend()
-	client, err := brokerHold(configPath, "election", clusterLeaderTopic)
-	if err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(host), scribe.ActionConnect).Warnf("faulting", electStart, "[election] could not reach the broker with [%v], running unled", err)
-		return false, nil
-	}
-	existing, existingErr := client.readRetained(clusterLeaderTopic)
-	if existingErr != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(host), scribe.ActionSubscribe).Warnf("faulting", electStart, "[election] could not read the lease with [%v], running unled", existingErr)
-		client.close()
-		return false, nil
-	}
-	if raw, ok := existing[clusterLeaderTopic]; ok && strings.TrimSpace(raw) != "" {
-		var lease backupLease
-		if json.Unmarshal([]byte(raw), &lease) == nil && !lease.expired() && lease.Host != host {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(host), scribe.ActionConnect).Infof("deferred", electStart, "[%s] holds the backup lease until [%s]", lease.Host, lease.ExpiresTS)
-			client.close()
-			return false, nil
-		}
-	}
-	payload, _ := json.Marshal(backupLeaseFor(host, runID))
-	if err := client.publishRetained(clusterLeaderTopic, string(payload)); err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(host), scribe.ActionPublish).Warnf("faulting", electStart, "[election] claim failed with [%v], running unled", err)
-		client.close()
-		return false, nil
-	}
-	confirmed, confirmedErr := client.readRetained(clusterLeaderTopic)
-	if confirmedErr != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(host), scribe.ActionSubscribe).Warnf("faulting", electStart, "[election] could not confirm the lease with [%v], running unled", confirmedErr)
-		client.close()
-		return false, nil
-	}
-	var winner backupLease
-	if json.Unmarshal([]byte(confirmed[clusterLeaderTopic]), &winner) == nil && winner.Host == host {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(host), scribe.ActionRegister).Infof("assigned", electStart, "[%s] won the backup lease for run [%s]", host, runID)
-		return true, client
-	}
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(host), scribe.ActionConnect).Infof("deferred", electStart, "[%s] won the backup lease, yielding", winner.Host)
-	client.close()
-	return false, nil
 }
 
 func backupExpectedServers(configPath string) []string {
@@ -972,20 +993,24 @@ const (
 	backupStageKillGrace = 2 * time.Minute
 	backupStopDeadline   = 10 * time.Minute
 	backupRunSkew        = 10 * time.Minute
-	leaderPollInterval   = 30 * time.Second
-	leaderLeaseRefresh   = 15 * time.Minute
 	backupRunsKept       = 30
 	backupScheduledHour  = 1
 	reaperIdleTicks      = 2
 	reaperNoticeTicks    = 15
 	reaperStaleTicks     = 5
 
-	clusterLeaderTopic = "supervisor/cluster-all/backup/leader"
-	clusterReaperTopic = "supervisor/cluster-all/backup/reaper"
-	clusterStatusTopic = "supervisor/cluster-all/backup/status"
+	clusterReaperTopic = "supervisor/" + metric.HostCluster + "/backup/reaper"
+	clusterStatusTopic = "supervisor/" + metric.HostCluster + "/backup/status"
 )
 
 const backupStageTertiary = "tertiary"
+
+const (
+	backupEstateIdle backupEstateAction = iota
+	backupEstateOpen
+	backupEstateRefresh
+	backupEstateClose
+)
 
 var (
 	backupProbeInstance *backupProbe

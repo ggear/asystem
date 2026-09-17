@@ -22,7 +22,7 @@ import (
 func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.RecordCache) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())
-		cache.Store(metric.NewServiceSchemaRecordGUID(id, config.Load(configPath).Host(), 0), &record)
+		cache.Store(metric.NewServiceSchemaRecordGUID(id, metric.GetIDHost(id, config.Load(configPath).Host()), 0), &record)
 	}
 	periods := config.Periods{
 		PollMillis:   500,

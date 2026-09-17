@@ -1,7 +1,6 @@
 {
   "host": "<text>",
   "epoch": <number>,
-  "run_id": "<text>",
   "claimed_ts": "<text>",
-  "expires_ts": "<text>"
+  "renewed_ts": "<text>"
 }

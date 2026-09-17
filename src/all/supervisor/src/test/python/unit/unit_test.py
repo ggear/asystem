@@ -161,7 +161,7 @@ class BackupShellTest(unittest.TestCase):
         done = self.shell('backup_publish() { return 1; }\n'
                           'backup_auto off 2>&1 || echo "exit=$?"')
         self.assertIn('could not publish [{"state":"OFF"', done)
-        self.assertIn("to [supervisor/cluster-all/backup/reaper]", done)
+        self.assertIn("to [supervisor/all/backup/reaper]", done)
         self.assertIn("exit=1", done)
 
     def test_publish_says_when_it_cannot_reach_a_broker(self):
@@ -175,9 +175,9 @@ class BackupShellTest(unittest.TestCase):
                  'backup_auto {}')
         self.assertEqual(self.shell(probe.replace("{}", "")), "")
         self.assertTrue(self.shell(probe.replace("{}", "off")).startswith(
-            'supervisor/cluster-all/backup/reaper {"state":"OFF","expires_ts":"'))
+            'supervisor/all/backup/reaper {"state":"OFF","expires_ts":"'))
         self.assertEqual(self.shell(probe.replace("{}", "on")),
-                         'supervisor/cluster-all/backup/reaper {"state":"ON","expires_ts":""}')
+                         'supervisor/all/backup/reaper {"state":"ON","expires_ts":""}')
 
     def test_auto_keeps_its_argument_out_of_the_run_id_slot(self):
         self.assertEqual(self.parse("auto", "on"), "auto all - 0 0")

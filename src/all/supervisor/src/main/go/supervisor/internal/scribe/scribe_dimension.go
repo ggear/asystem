@@ -27,6 +27,8 @@ const (
 	SourceProbeServices
 	SourceProbeBackup
 	SourceProbeBroker
+	SourceProbeCluster
+	SourceProbeLeader
 	SourceEngine
 	SourceEngineBroker
 	SourceEngineDatabase
@@ -64,6 +66,10 @@ func (s Source) String() string {
 		return "probe[backup]"
 	case SourceProbeBroker:
 		return "probe[broker]"
+	case SourceProbeCluster:
+		return "probe[cluster]"
+	case SourceProbeLeader:
+		return "probe[leader]"
 	case SourceEngine:
 		return "engine"
 	case SourceEngineBroker:
@@ -231,6 +237,7 @@ func Vocabularies() string {
 	builder.WriteString("Log Sources:\n")
 	builder.WriteString(columned(sourceStrings(), cell/subjectSplit))
 	builder.WriteString("\nLog Subjects:\n")
+	builder.WriteString(grouped(cell, []string{labelled(metric.GetIDName(metric.MetricCluster))}))
 	builder.WriteString(grouped(cell, []string{labelled(subjectHosts)}, []string{labelled(subjectServices)}))
 	builder.WriteString(grouped(cell, hostMetrics, serviceMetrics))
 	builder.WriteString("\nLog Actions:\n")

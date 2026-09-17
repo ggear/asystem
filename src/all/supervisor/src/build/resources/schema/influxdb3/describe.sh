@@ -187,7 +187,7 @@ describe_sql() {
 SELECT
     'supervisor/host'          AS relation,
     'host*'                    AS dimension,
-    41                         AS measures,
+    43                         AS measures,
     '6s'                       AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -214,6 +214,36 @@ WHERE
 ORDER BY rows DESC;
 
 -- measures
+SELECT
+    'supervisor/host'                                             AS relation,
+    'cluster'                                                     AS measure,
+    'bool'                                                        AS kind,
+    '-'                                                           AS unit,
+    '6s'                                                          AS period,
+    count(cluster)                                                AS rows,
+    CAST(min(time) FILTER (WHERE cluster IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE cluster IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
+SELECT
+    'supervisor/host'                                                   AS relation,
+    'cluster_trend'                                                     AS measure,
+    'bool'                                                              AS kind,
+    '-'                                                                 AS unit,
+    '6s'                                                                AS period,
+    count(cluster_trend)                                                AS rows,
+    CAST(min(time) FILTER (WHERE cluster_trend IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE cluster_trend IS NOT NULL) AS VARCHAR) AS newest
+FROM supervisor
+WHERE
+    module = 'supervisor'
+    AND host IS NOT NULL
+    AND service IS NULL
+UNION ALL
 SELECT
     'supervisor/host'                                            AS relation,
     'status'                                                     AS measure,
@@ -1068,9 +1098,9 @@ WHERE
     table_name = 'supervisor'
     AND column_name NOT IN (
         'allocated_memory', 'allocated_memory_trend', 'backup_status',
-        'backup_status_trend', 'configured_status', 'configured_status_trend',
-        'failed_backup_stages', 'failed_backup_stages_trend', 'failed_backups',
-        'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
+        'backup_status_trend', 'cluster', 'cluster_trend', 'configured_status',
+        'configured_status_trend', 'failed_backup_stages', 'failed_backup_stages_trend',
+        'failed_backups', 'failed_backups_trend', 'failed_drives', 'failed_drives_trend',
         'failed_log_messages', 'failed_log_messages_trend', 'failed_shares',
         'failed_shares_trend', 'halted_backup_stages', 'halted_backup_stages_trend',
         'health_status', 'health_status_trend', 'host', 'life_used_drives',
@@ -1097,7 +1127,7 @@ SELECT
     host                       AS entity,
     CASE WHEN host IN (
         'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
-        'raspbpi-jil'
+        'raspbpi-jil', 'all'
     ) THEN 'yes' ELSE 'no' END AS declared,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -1109,7 +1139,7 @@ WHERE
     AND service IS NULL
 GROUP BY host, CASE WHEN host IN (
     'macmini-mad', 'macmini-max', 'macmini-may', 'macmini-meg', 'raspbpi-jen',
-    'raspbpi-jil'
+    'raspbpi-jil', 'all'
 ) THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT

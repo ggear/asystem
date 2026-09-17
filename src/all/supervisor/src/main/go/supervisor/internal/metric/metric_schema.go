@@ -88,8 +88,12 @@ func Topics() []schema.Topic {
 		if builder.template == "" {
 			continue
 		}
+		template := strings.ReplaceAll(builder.template, "$SCOPE", ScopeData)
+		if builder.metricKind == MetricKindCluster {
+			template = strings.ReplaceAll(template, "$HOST", HostCluster)
+		}
 		topics = append(topics, schema.Topic{
-			Template: strings.ReplaceAll(builder.template, "$SCOPE", ScopeData),
+			Template: template,
 			Role:     schema.RoleState,
 		})
 	}
@@ -98,12 +102,19 @@ func Topics() []schema.Topic {
 		"supervisor/$HOST/backup/stage/$STAGE/status",
 		"supervisor/$HOST/backup/stage/primary/service/$BACKUP_SERVICE/status",
 		"supervisor/$SCRUB_HOST/backup/stage/tertiary/scrub/status",
-		"supervisor/cluster-all/backup/leader",
-		"supervisor/cluster-all/backup/reaper",
-		"supervisor/cluster-all/backup/status",
+		"supervisor/" + HostCluster + "/backup/reaper",
+		"supervisor/" + HostCluster + "/backup/status",
+		TopicLeaderLease(LeaderRoleBackup),
+		TopicLeaderCandidate(LeaderRoleBackup, "$BACKUP_HOST"),
+		TopicLeaderLease(LeaderRoleCluster),
+		TopicLeaderCandidate(LeaderRoleCluster, "$HOST"),
 	} {
 		topics = append(topics, schema.Topic{Template: template, Role: schema.RoleState})
 	}
+	topics = append(topics,
+		schema.Topic{Template: TopicClusterStatus, Role: schema.RoleAvailability},
+		schema.Topic{Template: TopicClusterCommand, Role: schema.RoleCommand},
+	)
 	return topics
 }
 
@@ -121,6 +132,24 @@ const (
 	BackupTriggerScheduled = "scheduled"
 	BackupTriggerManual    = "manual"
 )
+
+const (
+	LeaderRoleBackup  = "backup"
+	LeaderRoleCluster = "cluster"
+
+	CommandScopeCluster = "cluster"
+
+	TopicClusterStatus  = "supervisor/" + HostCluster + "/status"
+	TopicClusterCommand = "supervisor/" + HostCluster + "/command/" + CommandScopeCluster
+)
+
+func TopicLeaderLease(role string) string {
+	return "supervisor/" + HostCluster + "/leader/" + role + "/lease"
+}
+
+func TopicLeaderCandidate(role, host string) string {
+	return "supervisor/" + HostCluster + "/leader/" + role + "/candidate/" + host
+}
 
 const (
 	CommandOn  = "ON"
@@ -167,18 +196,25 @@ func Payloads() []schema.Payload {
 	return []schema.Payload{
 		{
 			Role:  schema.RoleState,
-			Match: "*/backup/leader",
+			Match: "*/leader/*/lease",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "host", Kind: schema.KindStr},
 				{Key: "epoch", Kind: schema.KindInt},
-				{Key: "run_id", Kind: schema.KindStr},
 				{Key: "claimed_ts", Kind: schema.KindStr},
-				{Key: "expires_ts", Kind: schema.KindStr},
+				{Key: "renewed_ts", Kind: schema.KindStr},
 			}},
 		},
 		{
 			Role:  schema.RoleState,
-			Match: "*/cluster-all/backup/status",
+			Match: "*/leader/*/candidate/*",
+			Root: schema.Member{Members: []schema.Member{
+				{Key: "host", Kind: schema.KindStr},
+				{Key: "renewed_ts", Kind: schema.KindStr},
+			}},
+		},
+		{
+			Role:  schema.RoleState,
+			Match: "*/" + HostCluster + "/backup/status",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "run_id", Kind: schema.KindStr},
 				{Key: "state", Enum: []string{BackupStateRunning, BackupStateComplete,
@@ -191,6 +227,8 @@ func Payloads() []schema.Payload {
 				{Key: "hosts_expected", Kind: schema.KindInt},
 				{Key: "hosts_reported", Kind: schema.KindInt},
 				{Key: "hosts_failed", Kind: schema.KindInt},
+				{Key: "leader_host", Kind: schema.KindStr},
+				{Key: "leader_epoch", Kind: schema.KindInt},
 			}},
 		},
 		{Role: schema.RoleState, Match: "*/backup/status", Root: backupStatus},

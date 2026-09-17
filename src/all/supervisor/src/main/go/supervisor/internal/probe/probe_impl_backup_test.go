@@ -2,6 +2,7 @@ package probe
 
 import (
 	"encoding/json"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -12,8 +13,12 @@ import (
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/testutil"
+	"sync"
 	"testing"
 	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 func writeBackupRun(t *testing.T, root, stamp string, host *backupDocument, tertiary *backupDocument, services map[string]bool) {
@@ -301,26 +306,6 @@ func TestProbeImplBackup_HaltedBackupStages(t *testing.T) {
 	}
 }
 
-func TestProbeImplBackup_LeaseExpired(t *testing.T) {
-	tests := []struct {
-		name        string
-		expiresTS   string
-		wantExpired bool
-	}{
-		{"future is live", time.Now().Add(time.Hour).Format(time.RFC3339), false},
-		{"past is expired", time.Now().Add(-time.Hour).Format(time.RFC3339), true},
-		{"unparseable is expired", "not-a-time", true},
-		{"empty is expired", "", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := (backupLease{ExpiresTS: tt.expiresTS}).expired(); got != tt.wantExpired {
-				t.Errorf("expired: got %v want %v", got, tt.wantExpired)
-			}
-		})
-	}
-}
-
 func TestProbeImplBackup_ReapQuietRestatesAStandingCondition(t *testing.T) {
 	probe := &backupProbe{}
 	probe.reapIdle = 7
@@ -451,5 +436,337 @@ func TestProbeImplBackup_ReportedForRunIdentifiesAPeerByWindowNotRunID(t *testin
 				t.Errorf("reportedForRun(%q): got %v want %v", test.startedTS, got, test.expected)
 			}
 		})
+	}
+}
+
+func TestProbeImplBackup_ReaperTopicMatchesTheShell(t *testing.T) {
+	script, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "resources", "image", "backup.sh"))
+	if err != nil {
+		t.Fatalf("read backup.sh: %v", err)
+	}
+	match := regexp.MustCompile(`(?m)^BACKUP_REAPER_TOPIC="([^"]+)"$`).FindSubmatch(script)
+	if match == nil {
+		t.Fatal("found no BACKUP_REAPER_TOPIC in backup.sh, the parse has rotted")
+	}
+	if shell := string(match[1]); shell != clusterReaperTopic {
+		t.Errorf("reaper topic: got %s in backup.sh want %s", shell, clusterReaperTopic)
+	}
+}
+
+func TestProbeImplBackup_EstateDecision(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	expected := []string{"mad", "max"}
+	doc := func(state, trigger string, started time.Time, success bool) string {
+		payload, _ := json.Marshal(backupDocument{State: state, Trigger: trigger, StartedTS: started.Format(time.RFC3339), SuccessBool: success,
+			ExpiresTS: now.Add(time.Hour).Format(time.RFC3339)})
+		return string(payload)
+	}
+	stageOf := func(run, started, expires time.Time) string {
+		payload, _ := json.Marshal(backupDocument{RunID: run.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled,
+			StartedTS: started.Format(time.RFC3339), ExpiresTS: expires.Format(time.RFC3339)})
+		return string(payload)
+	}
+	tertiary := func(host string) string { return "supervisor/" + host + "/backup/stage/tertiary/status" }
+	stage := func(host string) string { return "supervisor/" + host + "/backup/stage/primary/status" }
+	host := func(host string) string { return "supervisor/" + host + "/backup/status" }
+	tonight := now.Add(-20 * time.Minute)
+	tests := []struct {
+		name             string
+		retained         map[string]string
+		expectedAction   backupEstateAction
+		expectedState    string
+		expectedStarted  time.Time
+		expectedReported int
+		expectedError    bool
+	}{
+		{
+			name:           "nothing_retained_is_idle",
+			retained:       map[string]string{},
+			expectedAction: backupEstateIdle,
+			expectedError:  false,
+		},
+		{
+			name: "scheduled_stage_running_opens_the_run_at_the_earliest_start",
+			retained: map[string]string{
+				stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight.Add(time.Minute), false),
+				stage("max"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false),
+			},
+			expectedAction:  backupEstateOpen,
+			expectedState:   metric.BackupStateRunning,
+			expectedStarted: tonight,
+			expectedError:   false,
+		},
+		{
+			name:           "manual_stage_never_opens_an_estate_run",
+			retained:       map[string]string{stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerManual, tonight, false)},
+			expectedAction: backupEstateIdle,
+			expectedError:  false,
+		},
+		{
+			name:           "stage_of_a_host_outside_the_expected_servers_is_ignored",
+			retained:       map[string]string{stage("jen"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false)},
+			expectedAction: backupEstateIdle,
+			expectedError:  false,
+		},
+		{
+			name:           "stage_running_past_the_ceiling_is_ignored",
+			retained:       map[string]string{stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, now.Add(-backupRunCeiling-time.Minute), false)},
+			expectedAction: backupEstateIdle,
+			expectedError:  false,
+		},
+		{
+			name: "closed_run_is_not_reopened_by_its_own_stuck_stage",
+			retained: map[string]string{
+				clusterStatusTopic: doc(metric.BackupStateComplete, "", tonight, true),
+				stage("mad"):       doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight.Add(time.Minute), false),
+			},
+			expectedAction: backupEstateIdle,
+			expectedError:  false,
+		},
+		{
+			name: "closed_run_from_last_night_lets_tonight_open",
+			retained: map[string]string{
+				clusterStatusTopic: doc(metric.BackupStateComplete, "", tonight.Add(-24*time.Hour), true),
+				stage("mad"):       doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false),
+			},
+			expectedAction:  backupEstateOpen,
+			expectedState:   metric.BackupStateRunning,
+			expectedStarted: tonight,
+			expectedError:   false,
+		},
+		{
+			name: "reopened_after_a_flush_dates_from_the_run_and_closes_on_its_reports",
+			retained: map[string]string{
+				tertiary("max"): stageOf(tonight, tonight.Add(15*time.Minute), now.Add(time.Hour)),
+				host("mad"):     doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				host("max"):     doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+			},
+			expectedAction:   backupEstateClose,
+			expectedState:    metric.BackupStateComplete,
+			expectedStarted:  tonight,
+			expectedReported: 2,
+			expectedError:    false,
+		},
+		{
+			name:           "expired_running_stage_never_opens_a_run",
+			retained:       map[string]string{tertiary("max"): stageOf(tonight, tonight, now.Add(-time.Minute))},
+			expectedAction: backupEstateIdle,
+			expectedError:  false,
+		},
+		{
+			name: "late_stage_of_a_closed_run_does_not_reopen_it",
+			retained: map[string]string{
+				clusterStatusTopic: doc(metric.BackupStateTimedout, "", tonight, false),
+				tertiary("max"):    stageOf(tonight, tonight.Add(15*time.Minute), now.Add(time.Hour)),
+			},
+			expectedAction: backupEstateIdle,
+			expectedError:  false,
+		},
+		{
+			name: "running_estate_with_a_partial_report_is_refreshed",
+			retained: map[string]string{
+				clusterStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+			},
+			expectedAction:   backupEstateRefresh,
+			expectedState:    metric.BackupStateRunning,
+			expectedStarted:  tonight,
+			expectedReported: 1,
+			expectedError:    false,
+		},
+		{
+			name: "every_expected_server_reported_closes_complete",
+			retained: map[string]string{
+				clusterStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				host("max"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight.Add(time.Minute), true),
+			},
+			expectedAction:   backupEstateClose,
+			expectedState:    metric.BackupStateComplete,
+			expectedStarted:  tonight,
+			expectedReported: 2,
+			expectedError:    false,
+		},
+		{
+			name: "a_failed_report_closes_failed",
+			retained: map[string]string{
+				clusterStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):        doc(metric.BackupStateFailed, metric.BackupTriggerScheduled, tonight, false),
+				host("max"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+			},
+			expectedAction:   backupEstateClose,
+			expectedState:    metric.BackupStateFailed,
+			expectedStarted:  tonight,
+			expectedReported: 2,
+			expectedError:    false,
+		},
+		{
+			name: "run_past_its_ceiling_closes_timedout",
+			retained: map[string]string{
+				clusterStatusTopic: doc(metric.BackupStateRunning, "", now.Add(-backupRunCeiling-time.Minute), false),
+			},
+			expectedAction:  backupEstateClose,
+			expectedState:   metric.BackupStateTimedout,
+			expectedStarted: now.Add(-backupRunCeiling - time.Minute),
+			expectedError:   false,
+		},
+		{
+			name: "last_nights_report_does_not_count_for_tonight",
+			retained: map[string]string{
+				clusterStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight.Add(-24*time.Hour), true),
+				host("max"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+			},
+			expectedAction:   backupEstateRefresh,
+			expectedState:    metric.BackupStateRunning,
+			expectedStarted:  tonight,
+			expectedReported: 1,
+			expectedError:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decision := backupEstateDecision(tt.retained, expected, now)
+			if decision.action != tt.expectedAction {
+				t.Fatalf("action: got %v want %v", decision.action, tt.expectedAction)
+			}
+			if decision.action == backupEstateIdle {
+				return
+			}
+			if decision.state != tt.expectedState {
+				t.Errorf("state: got %s want %s", decision.state, tt.expectedState)
+			}
+			if !decision.started.Equal(tt.expectedStarted) {
+				t.Errorf("started: got %v want %v", decision.started, tt.expectedStarted)
+			}
+			if decision.reported != tt.expectedReported {
+				t.Errorf("reported: got %d want %d", decision.reported, tt.expectedReported)
+			}
+		})
+	}
+}
+
+func TestProbeImplBackup_LeaderOpensAndClosesTheEstateRun(t *testing.T) {
+	testutil.RequiresDocker(t)
+	_, observer, err := testutil.SetupBrokerContainer(t)
+	if err != nil {
+		t.Fatalf("setup broker container failed: %v", err)
+	}
+	t.Cleanup(config.Reset)
+	plug := fmt.Sprintf("test/plug-%d/cmnd/POWER", time.Now().UnixNano())
+	configFile := filepath.Join(t.TempDir(), "config.json")
+	content := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","host":"mad","broker":{"host":%q,"port":%q},"backup":{"command_topic":%q},"schema":[{"host":"mad","stages":["primary","secondary","tertiary"]},{"host":"max","stages":["primary","secondary","tertiary"]}]}}`,
+		os.Getenv("VERNEMQ_HOST"), os.Getenv("VERNEMQ_API_PORT"), plug)
+	if err := os.WriteFile(configFile, []byte(content), 0644); err != nil {
+		t.Fatalf("write config file failed: %v", err)
+	}
+	holder := leaderStubCampaign([]string{"mad", "max"}, "mad")
+	holder.role.name = metric.LeaderRoleBackup
+	holder.attached, holder.standing, holder.leading, holder.epoch = true, true, true, 7
+	holder.lastAck, holder.lastLease = time.Now().Add(time.Hour), time.Now().Add(time.Hour)
+	holder.lease, holder.leaseArrived = leaderLease{Host: "mad", Epoch: 7}, time.Now()
+	leaderCampaignsMu.Lock()
+	leaderCampaigns[metric.LeaderRoleBackup] = holder
+	leaderCampaignsMu.Unlock()
+	t.Cleanup(func() {
+		leaderCampaignsMu.Lock()
+		delete(leaderCampaigns, metric.LeaderRoleBackup)
+		leaderCampaignsMu.Unlock()
+	})
+	var mutex sync.Mutex
+	seen := map[string]string{}
+	record := func(_ mqtt.Client, message mqtt.Message) {
+		mutex.Lock()
+		seen[message.Topic()] = string(message.Payload())
+		mutex.Unlock()
+	}
+	for _, topic := range []string{plug, clusterStatusTopic} {
+		if token := observer.Subscribe(topic, 1, record); !token.WaitTimeout(2*time.Second) || token.Error() != nil {
+			t.Fatalf("subscribe %s: got %v want nil", topic, token.Error())
+		}
+	}
+	publish := func(topic string, document backupDocument) {
+		payload, _ := json.Marshal(document)
+		if token := observer.Publish(topic, 1, true, payload); !token.WaitTimeout(2*time.Second) || token.Error() != nil {
+			t.Fatalf("publish %s: got %v want nil", topic, token.Error())
+		}
+	}
+	observer.Publish(clusterStatusTopic, 1, true, []byte{}).WaitTimeout(2 * time.Second)
+	started := time.Now().Add(-5 * time.Minute).Truncate(time.Second)
+	for _, host := range []string{"mad", "max"} {
+		publish("supervisor/"+host+"/backup/stage/primary/status", backupDocument{RunID: started.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled,
+			StartedTS: started.Format(time.RFC3339), ExpiresTS: time.Now().Add(time.Hour).Format(time.RFC3339)})
+	}
+	probe := &backupProbe{configPath: configFile, hostName: "mad", serverHost: true}
+	t.Cleanup(func() { probe.leadWatch.close() })
+	await := func(phase string, done func() bool) {
+		deadline := time.Now().Add(30 * time.Second)
+		for time.Now().Before(deadline) {
+			probe.lead()
+			mutex.Lock()
+			finished := done()
+			mutex.Unlock()
+			if finished {
+				return
+			}
+			time.Sleep(time.Second)
+		}
+		mutex.Lock()
+		defer mutex.Unlock()
+		t.Fatalf("%s: got %v want the phase reached", phase, seen)
+	}
+	estate := func() backupDocument {
+		var document backupDocument
+		_ = json.Unmarshal([]byte(seen[clusterStatusTopic]), &document)
+		return document
+	}
+	await("opened", func() bool { return estate().State == metric.BackupStateRunning })
+	if seen[plug] != "" {
+		t.Fatalf("plug: got %q want nothing sent while hosts are still running", seen[plug])
+	}
+	publish("supervisor/mad/backup/status", backupDocument{State: metric.BackupStateComplete, Trigger: metric.BackupTriggerScheduled, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
+	time.Sleep(time.Second)
+	probe.lead()
+	mutex.Lock()
+	partial := estate().State
+	mutex.Unlock()
+	if partial != metric.BackupStateRunning {
+		t.Fatalf("partial state: got %s want running until every expected server reports", partial)
+	}
+	publish("supervisor/max/backup/status", backupDocument{State: metric.BackupStateComplete, Trigger: metric.BackupTriggerScheduled, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
+	await("closed", func() bool { return estate().State == metric.BackupStateComplete && seen[plug] == metric.CommandOff })
+	var closed map[string]any
+	mutex.Lock()
+	_ = json.Unmarshal([]byte(seen[clusterStatusTopic]), &closed)
+	mutex.Unlock()
+	if closed["leader_host"] != "mad" || closed["leader_epoch"] != float64(7) {
+		t.Errorf("closed by: got [%v] epoch [%v] want mad at epoch 7", closed["leader_host"], closed["leader_epoch"])
+	}
+	mutex.Lock()
+	seen[plug] = ""
+	mutex.Unlock()
+	holder.mutex.Lock()
+	holder.leading = false
+	holder.mutex.Unlock()
+	publish("supervisor/max/backup/stage/primary/status", backupDocument{RunID: time.Now().Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled,
+		StartedTS: time.Now().Format(time.RFC3339), ExpiresTS: time.Now().Add(time.Hour).Format(time.RFC3339)})
+	time.Sleep(time.Second)
+	probe.lead()
+	mutex.Lock()
+	defer mutex.Unlock()
+	if seen[plug] != "" || estate().State != metric.BackupStateComplete {
+		t.Errorf("deposed holder: got plug [%q] state [%s] want no action from a host that no longer leads", seen[plug], estate().State)
+	}
+}
+
+func TestProbeImplBackup_LeadClosesItsWatchWhenNotLeading(t *testing.T) {
+	stub := &leaderStubClient{open: true}
+	probe := &backupProbe{serverHost: true, leadWatch: &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: stub}, leadStale: 3}
+	probe.lead()
+	if probe.leadWatch != nil || probe.leadStale != 0 {
+		t.Errorf("watch: got kept [%v] stale [%d] want closed once this host does not lead", probe.leadWatch != nil, probe.leadStale)
+	}
+	if stub.IsConnectionOpen() {
+		t.Errorf("session: got open want disconnected")
 	}
 }

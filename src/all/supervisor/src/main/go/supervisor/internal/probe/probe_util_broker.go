@@ -28,19 +28,6 @@ func brokerDial(configPath, role string) (*brokerClient, error) {
 	return &brokerClient{client: client}, nil
 }
 
-func brokerHold(configPath, role, willTopic string) (*brokerClient, error) {
-	options, err := brokerOptions(configPath, role)
-	if err != nil {
-		return nil, err
-	}
-	options.SetAutoReconnect(true).SetMaxReconnectInterval(brokerReconnectCap).SetWill(willTopic, "", 1, true)
-	client, err := brokerConnect(options)
-	if err != nil {
-		return nil, err
-	}
-	return &brokerClient{client: client}, nil
-}
-
 func (b *brokerClient) publishRetained(topic, payload string) error {
 	return b.publish(topic, payload, true)
 }
@@ -102,6 +89,12 @@ func brokerWatch(configPath, host string, filters ...string) (*brokerWatcher, er
 	}
 	watch.client = client
 	return watch, nil
+}
+
+func (w *brokerWatcher) close() {
+	if w != nil && w.client != nil {
+		w.client.Disconnect(250)
+	}
 }
 
 func (w *brokerWatcher) readRetained() (map[string]string, bool) {

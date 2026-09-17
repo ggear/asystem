@@ -1,0 +1,6 @@
+{
+  "host": "<text>",
+  "epoch": <number>,
+  "claimed_ts": "<text>",
+  "renewed_ts": "<text>"
+}

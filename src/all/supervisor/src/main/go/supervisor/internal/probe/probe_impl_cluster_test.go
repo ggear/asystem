@@ -1,0 +1,188 @@
+package probe
+
+import (
+	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"supervisor/internal/config"
+	"supervisor/internal/metric"
+)
+
+func TestProbeImplCluster_Health(t *testing.T) {
+	now := time.Unix(1_800_000_000, 0)
+	payload := func(ok, failed bool, age time.Duration) string {
+		value := metric.NewBoolValue(ok, ok)
+		value.Timestamp = now.Add(-age).Unix()
+		value.Failed = failed
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			t.Fatalf("marshal: got %v want nil", err)
+		}
+		return string(encoded)
+	}
+	healthy := func(hosts ...string) map[string]string {
+		retained := map[string]string{}
+		for _, host := range hosts {
+			retained["supervisor/"+host+"/status"] = metric.AvailabilityOnline
+			retained["supervisor/"+host+"/data/host"] = payload(true, false, 0)
+			retained["supervisor/"+host+"/data/service/plex"] = payload(true, false, 0)
+		}
+		return retained
+	}
+	with := func(retained map[string]string, topic, value string) map[string]string {
+		retained[topic] = value
+		return retained
+	}
+	tests := []struct {
+		name               string
+		hosts              []string
+		retained           map[string]string
+		expectedHostsOK    int
+		expectedServices   int
+		expectedServicesOK int
+		expectedFaults     string
+		expectedError      bool
+	}{
+		{
+			name:               "every_host_and_service_ok",
+			hosts:              []string{"mad", "max"},
+			retained:           healthy("mad", "max"),
+			expectedHostsOK:    2,
+			expectedServices:   2,
+			expectedServicesOK: 2,
+			expectedFaults:     "",
+			expectedError:      false,
+		},
+		{
+			name:               "configured_host_never_reported",
+			hosts:              []string{"mad", "max"},
+			retained:           healthy("mad"),
+			expectedHostsOK:    1,
+			expectedServices:   1,
+			expectedServicesOK: 1,
+			expectedFaults:     "max=offline",
+			expectedError:      false,
+		},
+		{
+			name:               "host_offline_with_retained_green_data",
+			hosts:              []string{"mad"},
+			retained:           with(healthy("mad"), "supervisor/mad/status", metric.AvailabilityOffline),
+			expectedHostsOK:    0,
+			expectedServices:   1,
+			expectedServicesOK: 1,
+			expectedFaults:     "mad=offline",
+			expectedError:      false,
+		},
+		{
+			name:               "host_aggregate_not_ok",
+			hosts:              []string{"mad"},
+			retained:           with(healthy("mad"), "supervisor/mad/data/host", payload(false, false, 0)),
+			expectedHostsOK:    0,
+			expectedServices:   1,
+			expectedServicesOK: 1,
+			expectedFaults:     "mad=not-ok",
+			expectedError:      false,
+		},
+		{
+			name:               "host_record_older_than_the_stale_window",
+			hosts:              []string{"mad"},
+			retained:           with(healthy("mad"), "supervisor/mad/data/host", payload(true, false, time.Hour)),
+			expectedHostsOK:    0,
+			expectedServices:   1,
+			expectedServicesOK: 1,
+			expectedFaults:     "mad=stale",
+			expectedError:      false,
+		},
+		{
+			name:               "service_failed_sample",
+			hosts:              []string{"mad"},
+			retained:           with(healthy("mad"), "supervisor/mad/data/service/plex", payload(true, true, 0)),
+			expectedHostsOK:    1,
+			expectedServices:   1,
+			expectedServicesOK: 0,
+			expectedFaults:     "mad/plex=not-ok",
+			expectedError:      false,
+		},
+		{
+			name:               "tombstoned_service_is_not_counted",
+			hosts:              []string{"mad"},
+			retained:           with(healthy("mad"), "supervisor/mad/data/service/plex", ""),
+			expectedHostsOK:    1,
+			expectedServices:   0,
+			expectedServicesOK: 0,
+			expectedFaults:     "",
+			expectedError:      false,
+		},
+		{
+			name:               "unconfigured_host_is_ignored",
+			hosts:              []string{"mad"},
+			retained:           with(healthy("mad"), "supervisor/old/status", metric.AvailabilityOffline),
+			expectedHostsOK:    1,
+			expectedServices:   1,
+			expectedServicesOK: 1,
+			expectedFaults:     "",
+			expectedError:      false,
+		},
+		{
+			name:               "service_metric_topics_are_not_services",
+			hosts:              []string{"mad"},
+			retained:           with(healthy("mad"), "supervisor/mad/data/service/plex/used_memory", payload(false, false, 0)),
+			expectedHostsOK:    1,
+			expectedServices:   1,
+			expectedServicesOK: 1,
+			expectedFaults:     "",
+			expectedError:      false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			verdict := clusterHealth(tt.hosts, tt.retained, now, 15*time.Minute)
+			if verdict.hostsOK != tt.expectedHostsOK {
+				t.Errorf("hostsOK: got %d want %d", verdict.hostsOK, tt.expectedHostsOK)
+			}
+			if verdict.services != tt.expectedServices {
+				t.Errorf("services: got %d want %d", verdict.services, tt.expectedServices)
+			}
+			if verdict.servicesOK != tt.expectedServicesOK {
+				t.Errorf("servicesOK: got %d want %d", verdict.servicesOK, tt.expectedServicesOK)
+			}
+			if faults := strings.Join(verdict.faults, ","); faults != tt.expectedFaults {
+				t.Errorf("faults: got %s want %s", faults, tt.expectedFaults)
+			}
+		})
+	}
+}
+
+func TestProbeImplCluster_RedialsADetachedWatch(t *testing.T) {
+	t.Cleanup(config.Reset)
+	configFile := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(configFile, []byte(`{"asystem":{"version":"10.100.6000","host":"mad","broker":{"host":"127.0.0.1","port":"1"},"schema":[{"host":"mad","services":["plex"]}]}}`), 0644); err != nil {
+		t.Fatalf("write config file failed: %v", err)
+	}
+	detached := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: &leaderStubClient{open: false}}
+	probe := &clusterProbe{configPath: configFile, watched: true}
+	probe.dialed.Store(time.Now().UnixNano())
+	probe.watch.Store(detached)
+	for poll := 1; poll < clusterRedialPolls; poll++ {
+		if _, _, err := probe.cluster(); !errors.Is(err, errEnvironment) {
+			t.Fatalf("poll %d error: got %v want an environment fault while detached", poll, err)
+		}
+		if probe.watch.Load() != detached {
+			t.Fatalf("poll %d watch: got it dropped want it kept until [%d] polls", poll, clusterRedialPolls)
+		}
+	}
+	if _, _, err := probe.cluster(); !errors.Is(err, errEnvironment) {
+		t.Fatalf("redial poll error: got %v want an environment fault", err)
+	}
+	if probe.watch.Load() != nil {
+		t.Fatalf("watch: got it kept want it dropped for a redial after [%d] detached polls", clusterRedialPolls)
+	}
+	if _, _, err := probe.cluster(); !errors.Is(err, errEnvironment) {
+		t.Fatalf("after redial error: got %v want an environment fault, not a warm-up that hides the outage", err)
+	}
+}

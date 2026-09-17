@@ -561,8 +561,8 @@ So, per run:
    **stop** — a stage whose predecessor did not finish has nothing sound to work from
 4. read the stage and module documents the scripts wrote, roll them into `<run>/status.json`, and
    republish
-5. on the leader alone (a `server`), once every expected `server` has reported a terminal state or
-   the lease has expired, switch the outlet off
+5. on the holder of the `backup` election alone (a `server`), once every expected `server` has
+   reported a terminal state or the run ceiling has passed, switch the outlet off
 
 **It also watches for runs it did not start.** A stage invoked by hand publishes the same topics, so
 the probe adopts it: an in-flight stage with an `expires_ts` in the future is a run in progress
@@ -609,8 +609,7 @@ It takes a phase, in the shape `broker.sh [sweep|publish]` already established:
 **The switch is not in the script.** `mount.sh` never touches the broker, and its whole subject is
 fstab and mountpoints. The publish is its caller's — as built, the probe's rather than a stage's,
 before the tertiary stage attaches the disk, which is what
-lets a manual stage run with no supervisor and no leader in the picture. `probe_impl_backup.go` keeps the
-same held session for the election and the switch-off. **Never publish
+lets a manual stage run with no supervisor and no leader in the picture. **Never publish
 to the device's `stat` topic** — that is the device's to write, and faking it is the same error as
 publishing `homeassistant/status` on Home Assistant's behalf. A plug already on answers immediately
 and costs one round trip.
@@ -682,103 +681,47 @@ secondary stage is additive and no data is lost by a skipped promotion.
 
 ### The cluster singleton
 
-**One `server` per day switches the outlet off. That is the whole of it.** Every `server` powers the
-outlet *on* for itself and runs its own tertiary stage without waiting for anybody — see *Stage
-scripts and the broker namespace* — so the singleton exists for the one decision that cannot be
-taken locally, because cutting power would take out another `server` mid-`rsync`. `edge` hosts are
-outside the election entirely: they never mount `/backup`, never run a tertiary stage, and never
-touch the plug. The election runs on the broker every host is already connected to, using only
-retained messages and a last will — no new dependency, no new service, and nothing a vernemq
-release carries over, since that release flushes the retained store, which is correct because a
-release should void a lease rather than preserve it. A plain broker *restart* now preserves the
-store, so a retained lease can outlive the session that held it — the will only fires while the
-broker is up to publish it — and what bounds it there is the lease's own `ExpiresTS`, checked by
-`expired()` at every read, not the volatility of the store.
+**One `server` switches the outlet off, and which one is decided by the estate election in
+[`leader.md`](leader.md), role `backup`.** Every `server` powers the outlet *on* for itself and runs
+its own tertiary stage without waiting for anybody; the singleton exists for the one decision that
+cannot be taken locally, because cutting power would take out another `server` mid-`rsync`. `edge`
+hosts never stand in the `backup` election, never mount `/backup` and never touch the plug.
 
-**It is deliberately more than the job appears to need.** A fixed host named in `config.json` would
-switch off too, until that host was down or decommissioned and the disks stayed powered with nothing
-reporting it. The lease also does a second job the switch-off does not: it bounds a run at
-`backupRunCeiling` and is what the staleness window is built from.
+**Only the holder coordinates, and it holds no state about the run.** Every minute, whoever holds
+`backup` reads a standing watch of `supervisor/+/backup/status`, `supervisor/+/backup/stage/+/status`
+and `supervisor/all/backup/status`, and `backupEstateDecision` derives one action from them alone:
 
-Four retained topics, all QoS 1, specified in full under *Stage scripts and the broker namespace*:
+- **open** — no running estate status, and an expected `server` has a *scheduled* stage running whose
+  `expires_ts` has not passed and whose run began after the last estate run. A run is dated from its
+  `run_id`, which every stage of one run shares, never from a stage's own start, so a run reopened after
+  a flush mid-tertiary still matches each host's report of the same run. A manual stage never opens one,
+  and a dead stage document — its final publish lost — cannot reopen anything once it expires;
+- **refresh** — the estate status is `running`; republish it with the current report count;
+- **close** — every expected `server` reported a terminal `supervisor/<host>/backup/status` for this
+  run, or `backupRunCeiling` has passed; power the plug off, then publish `complete`, `failed` or
+  `timedout`.
 
-| Topic | Payload | Written by | Cleared by |
-|---|---|---|---|
-| `supervisor/cluster-all/backup/leader` | the lease — `host`, `epoch`, `timestamp`, `expires_ts` | a candidate claiming it | the leader when done, or its last will |
-| `supervisor/cluster-all/backup/status` | the estate roll-up, including whether the plug is believed on | the leader | the leader when done |
-| `supervisor/<host>/backup/status` | that host's run document, replacing the old bare `done/<host>` timestamp | each host's `serve` | its own next run |
-| `supervisor/<host>/status` | `<online\|offline>` | **already exists** — each `serve` | its own last will |
+Because nothing is remembered between minutes, a holder that restarts, changes, or was idle at 01:00
+still finishes the run, and a publish the broker did not acknowledge is simply redone the next minute.
+Leadership is re-checked after the broker dial and before any action, and every estate status carries
+`leader_host` and `leader_epoch`.
 
-**There is no `power` topic.** It existed so a follower could learn that the leader had mounted the
-disks; the tertiary stage now waits for its own USB devices to appear, which is a better test than
-being told, and works identically for a manual run with no leader at all.
+**The reaper keys on the estate status, not on a lease.** A `running` estate status younger than
+`backupRunCeiling` defers the power-down; otherwise the host holding `backup` powers down after
+`reaperIdleTicks`. A standing election has a lease at all times, so a lease can no longer mean "a run
+is in progress".
 
-**These topics must be declared and must not be swept**, which is specified once in *Declaring this
-in the schema* and not repeated here. The part that matters to the lease: `broker_topic_glob_data`
-is `supervisor/${SUPERVISOR_HOST}/#` today and the `${VAR}` placeholder matches as a wildcard, so
-`broker.sh sweep` at a supervisor release would **delete a lease a different host is holding,
-mid-run**. Narrowing it to `.../data/#` is what puts the whole backup namespace outside the sweep.
+**Ruled out: the per-run lease this replaced.** Each `server` published a lease to
+`supervisor/all/backup/leader` at 01:00, waited `brokerSettle`, and read it back. Three
+properties killed it, all found while generalising it:
 
-**The client is supervisor's own, and it is not the engine's.** `probe_lib_broker.go` is a small
-short-lived client — connect with a last will, publish retained, read one retained payload back,
-close — used by the election and by the plug. It is not `engine`'s paho session: `probe` importing
-`engine` inverts the dependency, and the lease needs a will of its own that the engine's session
-cannot carry. Keeping it small is the point; it is not a second implementation of reconnect, backoff
-and SUBACK reading, because a run that cannot reach the broker for a few seconds should fail its
-election rather than retry for ten minutes.
-
-**Election is publish, settle, confirm — and it is a mutex, not a consensus protocol.** The broker
-serialises writes to one retained topic, so the last write wins and every reader converges on the
-same value. That is all this needs:
-
-1. Only `server` form-factor hosts are candidates — `mad`, `max`, `may`, `meg`, in that order — since
-   only they own a `/backup` disk and a `config.json` `backup` block. An `edge` host has no block, so
-   `probe_impl_backup.go` never enters the election on it.
-2. A candidate publishes the election payload retained to `supervisor/cluster-all/backup/leader`, with its
-   **last will set to an empty payload on that same topic**, so a crash clears the lease rather than
-   stranding it.
-3. It waits `brokerSettle` and reads the topic back. Its own value means it leads; anyone else's
-   means it follows. Two hosts publishing at once both read the same final value, so exactly one
-   leads and the other yields without a negotiation round.
-4. A candidate finding a lease that is **already held and not expired** follows immediately and does
-   not publish. One finding an **expired** lease claims it, which is what recovers a leader lost to
-   a hard reset before its will was delivered.
-5. If no lease can be established within `leaderTimeout`, the `server` **runs all its stages anyway**
-   and records that no leader was elected. A failed election costs the outlet being switched off at
-   the end, not a backup — the scripts need no leader to run, and the next day's leader finds an
-   expired lease and clears it. This is weaker than it was and deliberately so: when the stages
-   depended on `power=ready`, a failed election cost two of the three.
-
-**The lease is the timeout, and it is `backupRunCeiling` — five hours.** That one constant on
-`probe_impl_backup.go` does three jobs, which is why it is one constant and not three: it bounds the
-leader's hold, it is the ceiling on a whole run, and it is the allowance in the staleness window
-(`backupStaleWindow` = 24 h + `backupRunCeiling` = **29 hours**). A run that has not finished in
-five hours is not going to, and holding the outlet on past that is worse than cutting it.
-
-**The leader's init and destroy are the singleton, and nothing else is.** Everything between them is
-ordinary per-host work happening in parallel:
-
-- **init** — allocate the run timestamp and publish the lease. It no longer switches the plug on:
-  the tertiary stage's own attach step does that, so a manual tertiary run needs no leader.
-- **destroy** — switch the plug off, then clear `election` and `status`. Reached when every expected
-  `server`'s `supervisor/<host>/backup/status` reports a terminal state for this timestamp, or when
-  the lease expires, whichever is first. **Switching off is still the leader's alone**, because
-  another `server` may still be writing. `edge` hosts are not in the expected set — they never write
-  to `/backup`, so the leader does not wait on them.
-- **the expected set is read, not configured** — every `server` whose retained
-  `supervisor/<host>/status` is `online` and which carries a `backup` block in `config.json`. `edge`
-  hosts are excluded by having no block. So a `server` that is down does not hold the outlet on for
-  five hours, and no list has to be maintained anywhere.
-
-**The leader is an ordinary `server` in every other respect** — it runs the same three stages as
-every other `server`, on its own gate, and its own terminal state counts like any other.
-
-**The primary and secondary stages are outside all of this.** They write only to `/home/asystem` and
-an always-mounted `/share`, need no powered disk and no election, so they run immediately at
-`backupScheduledHour` on every `edge` and `server` host with no waiting and no dependency on the broker.
-Only the tertiary stage is wrapped. That is worth being explicit about, because it means **a total
-failure of the election still produces the day's backups on the share** — it only costs the mirror
-to `/backup`.
+- **Two hosts could both win.** MQTT has no compare-and-set, and a claimant reading back soon after
+  its own write can see that write before a concurrent claimant's lands. Backup survived it only
+  because a doubled power-down is idempotent.
+- **Nobody took over.** A candidacy existed only at 01:00, so a leader dying mid-run was cleared by
+  its will and never replaced until the next night.
+- **It conflated two meanings in one topic** — "who leads" and "a run is in progress" — which a
+  standing election cannot share.
 
 ### Surviving a hard reset
 
@@ -802,10 +745,10 @@ run killed part way leaves no status document, the day reads as failed, and the 
 what the interrupted one did not. Nothing needs a journal, a resume marker or a lock file surviving
 the reset.
 
-**A reset also strands the lease and the outlet**, and both are covered: the leader's last will
-clears `supervisor/cluster-all/backup/leader` if the broker notices, and the `expires_ts` lets the next day's
-candidate claim it if the broker does not. The outlet stays on in the meantime, which is the safe
-direction to fail.
+**A reset also strands the leadership and the outlet**, and both are covered: the holder's last will
+clears its candidacy if the broker notices and the ttl ages it out if the broker does not, so another
+`server` takes `backup` over within [`leader.md`](leader.md)'s bounds and finishes coordinating the
+run. The outlet stays on in the meantime, which is the safe direction to fail.
 
 ### The run's output
 
@@ -970,8 +913,8 @@ splits it, and it never prints the token.
 
 | Topic | Written by | Carries |
 |---|---|---|
-| `supervisor/cluster-all/backup/leader` | the candidate holding the lease | the lease |
-| `supervisor/cluster-all/backup/status` | the leader | the estate roll-up |
+| `supervisor/all/leader/backup/lease` | the holder of the `backup` election | the lease, see [`leader.md`](leader.md) |
+| `supervisor/all/backup/status` | the holder of the `backup` election | the estate roll-up |
 | `supervisor/<host>/backup/status` | that host's `serve` | the host's run document |
 | `supervisor/<host>/backup/<stage>/status` | that stage's `start.sh` | one stage's result |
 | `supervisor/<host>/backup/stage/primary/service/<service>/status` | `backup.sh primary` | one module's backup |
@@ -980,9 +923,9 @@ splits it, and it never prints the token.
 one host document. `primary`, `secondary` and `tertiary` are reserved words in this namespace and no
 module may take one as a name.
 
-**`supervisor/leader/` is a namespace, not a host**, and it is safe only while no host is called
-`leader`. It sits outside `supervisor/<host>/` deliberately: a lease is estate state, and a topic
-under one host's prefix would be swept by that host's own release.
+**`all` is a host-level namespace, not a host**, and it is safe only while no host is called
+`all`. It sits outside every `supervisor/<host>/` deliberately: a lease is estate state, and a
+topic under one host's prefix would be swept by that host's own release.
 
 #### Payload specifications
 
@@ -1003,10 +946,7 @@ the state payload every metric topic carries. Reusing the word for a `%Y-%m-%d_%
 would put one key name with two types in one module's declared payloads, and nothing would catch it:
 `verify.sh` checks that topics are declared, never that a payload matches its shape.
 
-`supervisor/cluster-all/backup/leader`
-
-
-`supervisor/cluster-all/backup/status`
+`supervisor/all/backup/status`
 
 
 `supervisor/<host>/backup/status`
@@ -1059,7 +999,7 @@ reserved words, and `$MODULE` is the enrolled set — the modules shipping a
 **One library change is needed: `broker_topic_glob_data` must accept a list.** It is a single string
 today, used for three things — validating that every declared topic falls inside it, generating the
 `broker.sh sweep`, and building the operator scripts' subscription filters — and
-`supervisor/cluster-all/backup/#` cannot be expressed alongside `supervisor/${SUPERVISOR_HOST}/#` in one
+`supervisor/all/backup/#` cannot be expressed alongside `supervisor/${SUPERVISOR_HOST}/#` in one
 glob. **Widening to `supervisor/#` is not an option**: the sweep would delete every other host's
 retained topics on any supervisor release. The change is contained — the validation already loops,
 and `describe`/`query`/`verify` already take a `globs` list — so the work is to accept a list at the
@@ -1551,7 +1491,7 @@ module's own knowledge of its own data.
 |---|---|---|
 | a module's `backup.sh` | what is safe to copy, how to produce it, its own throttle, its own pruning, its own vocabulary | know the schedule, the stages, `/share`, `/backup`, the status document or any metric |
 | `probe_impl_backup.go` | when to run, discovering the modules, ordering and timing the stages, the `/share` and `/backup` copies, deadlines, the lock, writing `status.json`, judging staleness, feeding the three metrics | inspect a data directory, choose an exclusion, parse a backup format, contain a module name, or know a device topic, an fstab line or a mountpoint |
-| `probe_lib_broker.go` | broker sessions for any probe — `brokerDial` to act and disconnect, `brokerHold` for a session carrying a will, `brokerWatch` for a standing subscription read from memory | know a stage, a module, a mountpoint, a lease, an election, or what any topic it is handed means |
+| `probe_lib_broker.go` | broker sessions for any probe — `brokerDial` to act and disconnect, `brokerWatch` for a standing subscription read from memory; the election is `probe_util_leader.go` | know a stage, a module, a mountpoint, a lease, an election, or what any topic it is handed means |
 | `backup_attach` / `backup_detach` | the readiness wait, the fstab entries, the `mountpoint` assertions | know a module, a stage, a backup format, the schedule, the status document or the broker |
 
 If any side reaches into another's right-hand column, the split has failed. The test for the probe
@@ -1966,10 +1906,9 @@ both backends as well as reading inconsistently on screen.
 
 ### 13 The cluster singleton — closed
 
-**Built** in Go, not shell: the lease, the election and the `cluster-all/backup/*` topics are backup
-policy in `probe_impl_backup.go`, over the `brokerHold` facility in `probe_lib_broker.go` — a held
-session being the only kind that can carry the will that clears the lease when a leader dies.
-Exercised against a broker in the systest, never against a live multi-host run.
+**Built, then replaced** by the estate election in [`leader.md`](leader.md), whose broker-level tests
+are the ones this section asked for — concurrent claims, a killed holder, an expired lease — plus a
+frozen broker. The per-run lease described below was ruled out; see *The cluster singleton*.
 
 The protocol was specified under *The cluster singleton* below. It is the one piece
 here with a genuine concurrency hazard, so it should be built and exercised before the secondary stage
@@ -2063,7 +2002,7 @@ already solved.
 **`broker_topic_glob_data` must accept a list** — a library change in
 `asystem/schema/dialects/vernemq.py`, not a supervisor one. It is one string today, driving
 validation, the `broker.sh sweep` and the operator scripts' filters, and
-`supervisor/cluster-all/backup/#` cannot be expressed alongside `supervisor/${SUPERVISOR_HOST}/#` in a
+`supervisor/all/backup/#` cannot be expressed alongside `supervisor/${SUPERVISOR_HOST}/#` in a
 single glob. Widening to `supervisor/#` would make one host's release sweep every other host's
 topics, so it is not a shortcut available here. The change is contained: the validation already
 loops per column, `describe`/`query`/`verify` already take a `globs` list, and only

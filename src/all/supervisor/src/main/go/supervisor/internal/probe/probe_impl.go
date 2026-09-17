@@ -91,6 +91,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(configPath).Host()), scribe.ActionStart).Debugf("prepared", createStart, "[%d] probes", len(probeMap))
 	verifyGates(probeMap)
 	execProbes = probeMap
+	execPolledAt.Store(time.Now().UnixNano())
 	execPeriods = periods
 	execConfigPath = configPath
 	return nil
@@ -135,6 +136,7 @@ func RunPoll(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 				onPulse(isHeartbeat)
 			}
 		}
+		execPolledAt.Store(time.Now().UnixNano())
 		scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionSample).Debugf("reported", tickStart, "[%3d] probes, pulse [%v]", len(execProbes), isPulse)
 	}
 	tick()
@@ -150,6 +152,14 @@ func RunPoll(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 
 func RunCycle(ctx context.Context) {
 	cycleStart := config.NowIncludingSuspend()
+	for p := range execProbes {
+		if campaigner, ok := p.(leaderCampaigner); ok {
+			for _, role := range campaigner.campaigns() {
+				role.alive = pollAlive
+				leaderCampaignStart(ctx, execConfigPath, config.Load(execConfigPath).Host(), role)
+			}
+		}
+	}
 	firedHour := cycleStart.Hour()
 	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionStart).Debugf("watching", cycleStart, "[%02d] hour seeded as already crossed, cycle ticks every [%s]", firedHour, cycleInterval)
 	ticker := time.NewTicker(cycleInterval)
@@ -182,8 +192,14 @@ func init() {
 		func() probe { return newServicesProbe() },
 		func() probe { return newHostProbe() },
 		func() probe { return newBackupProbe() },
+		func() probe { return newClusterProbe() },
 	)
 	verifyProbes()
+}
+
+func pollAlive() bool {
+	stale := max(time.Duration(execPeriods.PulseMillis)*time.Millisecond*pollStalePulses, pollStaleFloor)
+	return time.Since(time.Unix(0, execPolledAt.Load())) <= stale
 }
 
 func probeNamed(p probe) string {
@@ -423,7 +439,7 @@ func runCacheMetricTask(p probe, isPulse bool, gates gateSet, task cacheMetricTa
 		scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample).Errorf("unusable", taskStart, "[missing] the host name")
 		return metricStatusUnknown
 	}
-	guid := metric.NewServiceRecordGUID(task.metricID, hostName, task.serviceName)
+	guid := metric.NewServiceRecordGUID(task.metricID, metric.GetIDHost(task.metricID, hostName), task.serviceName)
 	pulse := task.pulseFunc()
 	if seeding || pulse == nil {
 		reportMetricStatus(task, taskStart, metricStatusUnknown, pulse, false, nil, nil, err)
@@ -589,6 +605,8 @@ func metricScope(task cacheMetricTask) string {
 const (
 	metricFaultRepeat = time.Minute
 	cycleInterval     = time.Minute
+	pollStalePulses   = 5
+	pollStaleFloor    = 30 * time.Second
 
 	bytesPerMiB = 1 << 20
 )
@@ -603,6 +621,7 @@ var (
 	execPeriods    config.Periods
 	execPulsing    atomic.Bool
 	execPulses     atomic.Int64
+	execPolledAt   atomic.Int64
 	execProbes     map[probe][metric.MetricMax]bool
 
 	metricFaults   = map[metricFaultKey]*metricFault{}

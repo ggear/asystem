@@ -707,7 +707,7 @@ func TestDisplay_Happy(t *testing.T) {
 					slices.Sort(ids)
 					for _, id := range ids {
 						if metric.GetIDKind(id) != metric.MetricKindService {
-							value := []int8{0, 100, 50}[int(id)%3]
+							value := []int8{0, 100, 50}[int(id-metric.MetricHost)%3]
 							record := metric.NewRecord(*metric.NewIntValue(true, value, true, value))
 							cache.Store(metric.NewRecordGUID(id, host), &record)
 						}
@@ -1704,7 +1704,7 @@ func TestDisplay_Failed(t *testing.T) {
 				slices.Sort(ids)
 				for _, id := range ids {
 					if metric.GetIDKind(id) != metric.MetricKindService {
-						value := []int8{0, 100, 50}[int(id)%3]
+						value := []int8{0, 100, 50}[int(id-metric.MetricHost)%3]
 						hostRecord := metric.NewRecord(*metric.NewIntValue(true, value, true, value))
 						hostRecord.Value.Failed = id == testCase.failedHostID
 						cache.Store(metric.NewRecordGUID(id, host), &hostRecord)

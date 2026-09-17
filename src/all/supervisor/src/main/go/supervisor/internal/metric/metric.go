@@ -6,7 +6,8 @@ type ID int
 
 // noinspection GoNameStartsWithPackageName
 const (
-	MetricHost ID = iota
+	MetricCluster ID = iota
+	MetricHost
 	MetricHostUsedProcessor
 	MetricHostUsedMemory
 	MetricHostAllocatedMemory
@@ -50,6 +51,7 @@ type MetricKind int
 // noinspection GoNameStartsWithPackageName
 const (
 	MetricKindUnset MetricKind = iota
+	MetricKindCluster
 	MetricKindHost
 	MetricKindServices
 	MetricKindService
@@ -57,6 +59,8 @@ const (
 )
 
 const (
+	HostCluster = "all"
+
 	ServiceNameUnset  = ""
 	ServiceNameSchema = "__SCHEMA"
 	ServiceIndexUnset = -1
