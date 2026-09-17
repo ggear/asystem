@@ -18,8 +18,12 @@ whose `serve` is dead but whose `watch` is alive would hold the role while doing
 
 | Role | Eligible | Declared by |
 |---|---|---|
-| `backup` | `server` hosts, from `config.json` stages | `backupProbe`, only on a `server` |
-| `cluster` | every host in `config.json` | `clusterProbe` |
+| `backup` | `server` hosts, by `form_factor` in `config.json` | `backupProbe`, only on a `server` |
+| `cluster` | `server` hosts, by `form_factor` in `config.json` | `clusterProbe` |
+
+**Only `server` hosts (the Mac minis) ever lead.** `generate.py` writes each host's `form_factor` from
+`.hosts` into `config.json`, and every role's eligible list is `leaderServers`, so an underpowered `edge`
+Pi never stands. It is still watched by the cluster status like any other host.
 
 **A caller asks `probe.Leading(role)` immediately before each side effect** and gets the answer and the
 epoch it was won at. Nothing in the facility fences the work itself; a caller whose effect must not

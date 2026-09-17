@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"supervisor/internal/testutil"
 	"testing"
 	"time"
@@ -1053,4 +1054,52 @@ func TestConfig_ResolvedVersion(t *testing.T) {
 			t.Errorf("version: got %v want %v", got, DefaultVersion)
 		}
 	})
+}
+
+func TestConfig_HostsByFormFactor(t *testing.T) {
+	tests := []struct {
+		name          string
+		schema        string
+		formFactor    string
+		expectedHosts []string
+		expectedError bool
+	}{
+		{
+			name:          "servers_only",
+			schema:        `[{"host":"macmini-mad","form_factor":"server"},{"host":"raspbpi-jen","form_factor":"edge"},{"host":"macmini-max","form_factor":"server"}]`,
+			formFactor:    FormFactorServer,
+			expectedHosts: []string{"macmini-mad", "macmini-max"},
+			expectedError: false,
+		},
+		{
+			name:          "undeclared_form_factor_matches_nothing",
+			schema:        `[{"host":"macmini-mad"}]`,
+			formFactor:    FormFactorServer,
+			expectedHosts: []string{},
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(Reset)
+			path := filepath.Join(t.TempDir(), "config.json")
+			if err := os.WriteFile(path, []byte(`{"asystem":{"version":"10.100.6000","host":"macmini-mad","schema":`+tt.schema+`}}`), 0644); err != nil {
+				t.Fatalf("write config file failed: %v", err)
+			}
+			if hosts := Load(path).HostsByFormFactor(tt.formFactor); !slices.Equal(hosts, tt.expectedHosts) {
+				t.Errorf("hosts: got %v want %v", hosts, tt.expectedHosts)
+			}
+		})
+	}
+}
+
+func TestConfig_GeneratedConfigDeclaresServers(t *testing.T) {
+	t.Cleanup(Reset)
+	path := filepath.Join("..", "..", "..", "..", "resources", "image", "config.json")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("stat generated config: got %v want the file fab generate writes", err)
+	}
+	if servers := Load(path).HostsByFormFactor(FormFactorServer); len(servers) == 0 {
+		t.Errorf("servers: got none want the generated config to declare [%s] hosts, so no role could elect a leader", FormFactorServer)
+	}
 }

@@ -228,3 +228,33 @@ func TestProbeImplCluster_RedialsADetachedWatch(t *testing.T) {
 		t.Fatalf("after redial error: got %v want an environment fault, not a warm-up that hides the outage", err)
 	}
 }
+
+func TestProbeImplCluster_OnlyServersStandForElection(t *testing.T) {
+	t.Cleanup(config.Reset)
+	configFile := filepath.Join(t.TempDir(), "config.json")
+	schema := `[{"host":"macmini-mad","form_factor":"server","stages":["primary","secondary","tertiary"],"services":["plex","supervisor"]},` +
+		`{"host":"raspbpi-jen","form_factor":"edge","stages":["primary","secondary"],"services":["supervisor","weewx"]}]`
+	if err := os.WriteFile(configFile, []byte(`{"asystem":{"version":"10.100.6000","host":"raspbpi-jen","schema":`+schema+`}}`), 0644); err != nil {
+		t.Fatalf("write config file failed: %v", err)
+	}
+	tests := []struct {
+		name             string
+		campaigner       leaderCampaigner
+		expectedEligible []string
+		expectedError    bool
+	}{
+		{name: "cluster_role", campaigner: &clusterProbe{configPath: configFile}, expectedEligible: []string{"macmini-mad"}, expectedError: false},
+		{name: "backup_role", campaigner: &backupProbe{configPath: configFile, serverHost: true}, expectedEligible: []string{"macmini-mad"}, expectedError: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			roles := tt.campaigner.campaigns()
+			if len(roles) != 1 {
+				t.Fatalf("roles: got %d want 1", len(roles))
+			}
+			if eligible := roles[0].eligible(); !slices.Equal(eligible, tt.expectedEligible) {
+				t.Errorf("eligible: got %v want %v, an edge host must never lead", eligible, tt.expectedEligible)
+			}
+		})
+	}
+}

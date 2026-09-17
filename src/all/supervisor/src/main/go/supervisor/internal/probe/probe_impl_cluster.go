@@ -45,7 +45,7 @@ func (p *clusterProbe) metrics() []metric.ID {
 func (p *clusterProbe) gates() []metric.GateID { return nil }
 
 func (p *clusterProbe) campaigns() []leaderRole {
-	return []leaderRole{{name: metric.LeaderRoleCluster, eligible: func() []string { return config.Load(p.configPath).Hosts() }, presence: metric.TopicClusterStatus}}
+	return []leaderRole{{name: metric.LeaderRoleCluster, eligible: leaderServers(p.configPath), presence: metric.TopicClusterStatus}}
 }
 
 func (p *clusterProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {

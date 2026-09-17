@@ -73,7 +73,7 @@ func (p *backupProbe) campaigns() []leaderRole {
 	if !p.serverHost {
 		return nil
 	}
-	return []leaderRole{{name: metric.LeaderRoleBackup, eligible: func() []string { return backupExpectedServers(p.configPath) }}}
+	return []leaderRole{{name: metric.LeaderRoleBackup, eligible: leaderServers(p.configPath)}}
 }
 
 func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {

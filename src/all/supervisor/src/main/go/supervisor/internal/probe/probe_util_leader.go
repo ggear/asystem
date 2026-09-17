@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 
@@ -73,6 +74,10 @@ type leaderRole struct {
 
 type leaderCampaigner interface {
 	campaigns() []leaderRole
+}
+
+func leaderServers(configPath string) func() []string {
+	return func() []string { return config.Load(configPath).HostsByFormFactor(config.FormFactorServer) }
 }
 
 type leaderLease struct {

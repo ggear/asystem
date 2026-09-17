@@ -24,10 +24,12 @@ if __name__ == "__main__":
     modules_all = _get_modules_by_hosts("docker-compose.yml")
     modules_server = {}
     stages_host = {}
+    form_factors = {}
     for host, services in modules_all.items():
         form_factor = HOSTS[_get_host_label(host)][4]
         if form_factor == "edge" or form_factor == "server":
             modules_server[host] = sorted(modules_all[host])
+            form_factors[host] = form_factor
             stages_host[host] = ["primary", "secondary", "tertiary"] if form_factor == "server" else ["primary", "secondary"]
     enrolled = sorted({basename(dirname(dirname(dirname(dirname(path))))) for path in glob.glob(join(DIR_ROOT, "../../*/*/src/build/resources/backup.sh"))})
     write_schema_broker(metadata_supervisor_df,
@@ -78,6 +80,7 @@ if __name__ == "__main__":
         host_schema = {"host": host}
         if host_index is not None:
             host_schema["index"] = host_index
+        host_schema["form_factor"] = form_factors[host]
         host_schema["stages"] = stages_host[host]
         host_schema["services"] = sorted(services)
         metadata_supervisor_schema.append(host_schema)

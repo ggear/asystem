@@ -131,6 +131,19 @@ func (c *Config) Hosts() []string {
 	return hosts
 }
 
+func (c *Config) HostsByFormFactor(formFactor string) []string {
+	if c == nil {
+		return []string{}
+	}
+	hosts := []string{}
+	for i := range c.asystem.Schema {
+		if c.asystem.Schema[i].FormFactor == formFactor {
+			hosts = append(hosts, c.asystem.Schema[i].Host)
+		}
+	}
+	return hosts
+}
+
 func (c *Config) HostStages(host string) []string {
 	if c == nil {
 		return nil
@@ -365,10 +378,11 @@ type configBackup struct {
 }
 
 type configServices struct {
-	Host     string
-	Index    *int
-	Stages   []string
-	Services []string
+	Host       string
+	Index      *int
+	FormFactor string `json:"form_factor"`
+	Stages     []string
+	Services   []string
 }
 
 type configEndpoint struct {
@@ -391,6 +405,8 @@ const (
 	DefaultCachePeriod = "1h"
 	DefaultVersion     = "00.000.0000-SNAPSHOT"
 	DefaultConfigPath  = "/var/lib/asystem/install/supervisor/latest/image/config.json"
+
+	FormFactorServer = "server"
 )
 
 var (
