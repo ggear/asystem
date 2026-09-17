@@ -1,11 +1,11 @@
 {
-  "default_entity_id": "switch.cluster",
-  "unique_id": "cluster",
-  "name": "Cluster",
+  "default_entity_id": "switch.host_all",
+  "unique_id": "host_all",
+  "name": "Host All",
   "force_update": false,
   "state_topic": "supervisor/all/data/cluster",
   "value_template": "{{ 'ON' if value_json is mapping and (value_json.pulse | default({})).ok | default(false) else 'OFF' }}",
-  "command_topic": "supervisor/all/command/cluster",
+  "command_topic": "supervisor/all/command/host/all",
   "availability_topic": "supervisor/all/status",
   "qos": 1,
   "device": {
