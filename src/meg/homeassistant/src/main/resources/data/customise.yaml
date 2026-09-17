@@ -582,8 +582,8 @@ switch.network_certificate:
 switch.network_domain:
   friendly_name: 'Domain'
   icon: 'mdi:archive-search-outline'
-switch.cluster:
-  friendly_name: 'Cluster'
+switch.host_all:
+  friendly_name: 'All'
 switch.host_mad:
   friendly_name: 'Mad'
   icon: 'mdi:heart-pulse'
