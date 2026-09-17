@@ -258,7 +258,7 @@ backup_tail() {
   path="${base}/${run}"
   while [ -n "${sequence}" ] && [ ! -d "${path}" ] && kill -0 "${sequence}" 2>/dev/null; do sleep 1; done
   [ -d "${path}" ] || { backup_log ERROR "no backup run at [${path}]"; return 1; }
-  [ "${BACKUP_COMMAND}" = "tail" ] && backup_log INFO "following run [${run}] under [${path}]"
+  [ "${BACKUP_COMMAND}" = "tail" ] && backup_log INFO "tracking run [${run}] under [${path}]"
   trap 'backup_interrupt' INT
   backup_await "${path}" "" "${sequence}"
   trap - INT
