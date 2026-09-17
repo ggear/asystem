@@ -5,4 +5,4 @@ Now {{ states('sensor.roof_temperature') | int(0) }}°C ({{ states('sensor.bom_d
 Home is {{ iif(is_state('input_boolean.home_security', 'off'), 'NOT secure', 'secure') }}
 
 {# Complication Bottom Template - Cluster #}
-Serves are NOT healthy
+Servers are NOT healthy
