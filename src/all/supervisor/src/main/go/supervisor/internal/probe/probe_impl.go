@@ -152,13 +152,15 @@ func RunPoll(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 
 func RunCycle(ctx context.Context) {
 	cycleStart := config.NowIncludingSuspend()
+	var duties []string
 	for p := range execProbes {
-		if campaigner, ok := p.(leaderCampaigner); ok {
-			for _, role := range campaigner.campaigns() {
-				role.alive = pollAlive
-				leaderCampaignStart(ctx, execConfigPath, config.Load(execConfigPath).Host(), role)
-			}
+		if leading, ok := p.(leadingProbe); ok {
+			duties = append(duties, leading.duties()...)
 		}
+	}
+	if len(duties) > 0 {
+		slices.Sort(duties)
+		leaderCampaignStart(ctx, execConfigPath, config.Load(execConfigPath).Host(), clusterElection(execConfigPath), duties)
 	}
 	firedHour := cycleStart.Hour()
 	scribe.Log(scribe.SourceProbe, scribe.SubjectHost(config.Load(execConfigPath).Host()), scribe.ActionStart).Debugf("watching", cycleStart, "[%02d] hour seeded as already crossed, cycle ticks every [%s]", firedHour, cycleInterval)

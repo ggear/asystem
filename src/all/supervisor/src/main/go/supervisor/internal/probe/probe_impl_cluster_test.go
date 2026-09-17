@@ -237,24 +237,52 @@ func TestProbeImplCluster_OnlyServersStandForElection(t *testing.T) {
 	if err := os.WriteFile(configFile, []byte(`{"asystem":{"version":"10.100.6000","host":"raspbpi-jen","schema":`+schema+`}}`), 0644); err != nil {
 		t.Fatalf("write config file failed: %v", err)
 	}
+	cluster := clusterElection(configFile)
+	if eligible := cluster.eligible(); !slices.Equal(eligible, []string{"macmini-mad"}) {
+		t.Errorf("eligible: got %v want [macmini-mad], an edge host must never lead", eligible)
+	}
+	if cluster.leaseTopic() != metric.TopicLeaderLease || cluster.candidateTopic("macmini-mad") != metric.TopicLeaderCandidate("macmini-mad") {
+		t.Errorf("topics: got [%s] [%s] want the declared cluster topics", cluster.leaseTopic(), cluster.candidateTopic("macmini-mad"))
+	}
+}
+
+func TestProbeImplCluster_EveryDutyAnswersFromTheClusterElection(t *testing.T) {
+	holder := leaderStubCampaign([]string{"alpha"}, "alpha")
+	now := time.Now()
+	holder.attached, holder.standing, holder.leading, holder.epoch = true, true, true, 9
+	holder.lastAck, holder.lastLease = now.Add(time.Hour), now.Add(time.Hour)
+	holder.lease, holder.leaseArrived = leaderLease{Host: "alpha", Epoch: 9}, now
+	leaderCampaignsMu.Lock()
+	for _, duty := range []string{metric.LeaderDutyBackup, metric.LeaderDutySentinel} {
+		leaderCampaigns[duty] = holder
+	}
+	leaderCampaignsMu.Unlock()
+	t.Cleanup(func() {
+		leaderCampaignsMu.Lock()
+		clear(leaderCampaigns)
+		leaderCampaignsMu.Unlock()
+	})
 	tests := []struct {
-		name             string
-		campaigner       leaderCampaigner
-		expectedEligible []string
-		expectedError    bool
+		name            string
+		duty            string
+		expectedLeading bool
+		expectedEpoch   int64
+		expectedError   bool
 	}{
-		{name: "cluster_role", campaigner: &clusterProbe{configPath: configFile}, expectedEligible: []string{"macmini-mad"}, expectedError: false},
-		{name: "backup_role", campaigner: &backupProbe{configPath: configFile, serverHost: true}, expectedEligible: []string{"macmini-mad"}, expectedError: false},
+		{name: "backup_duty", duty: metric.LeaderDutyBackup, expectedLeading: true, expectedEpoch: 9, expectedError: false},
+		{name: "cluster_duty", duty: metric.LeaderDutySentinel, expectedLeading: true, expectedEpoch: 9, expectedError: false},
+		{name: "undeclared_duty", duty: "undeclared", expectedLeading: false, expectedEpoch: 0, expectedError: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			roles := tt.campaigner.campaigns()
-			if len(roles) != 1 {
-				t.Fatalf("roles: got %d want 1", len(roles))
-			}
-			if eligible := roles[0].eligible(); !slices.Equal(eligible, tt.expectedEligible) {
-				t.Errorf("eligible: got %v want %v, an edge host must never lead", eligible, tt.expectedEligible)
+			if leading, epoch := Leading(tt.duty); leading != tt.expectedLeading || epoch != tt.expectedEpoch {
+				t.Errorf("leading: got [%v] epoch [%d] want [%v] epoch [%d]", leading, epoch, tt.expectedLeading, tt.expectedEpoch)
 			}
 		})
+	}
+	for _, probe := range []leadingProbe{&backupProbe{}, &clusterProbe{}} {
+		if duties := probe.duties(); len(duties) != 1 {
+			t.Errorf("duties: got %v want exactly one duty per singleton probe", duties)
+		}
 	}
 }

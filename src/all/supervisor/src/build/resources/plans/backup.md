@@ -205,7 +205,7 @@ the `:` the log conventions forbid are all consequences of the same choice.
 
 It carries **no zone and no offset**, and that is deliberate rather than an oversight. An identifier
 that has to match exactly cannot also be normalised, and portability here means *across the hosts of
-this estate*, all of which take one `TZ` from `.env_all` — Perth, which has no DST, so two hosts
+this cluster*, all of which take one `TZ` from `.env_all` — Perth, which has no DST, so two hosts
 producing the same instant produce the same string. It is **not** an instant to do arithmetic on:
 where a moment is measured rather than named, the field is an RFC 3339 instant with its offset (see
 *The run's output*), and the two are never interchanged.
@@ -444,7 +444,7 @@ a module's `backup.sh` and they answer different questions:
 | Invoker | When | Why |
 |---|---|---|
 | `install.sh`'s `run_backup` | at release, before the old home is replaced | a safety copy of the version being upgraded away from — built |
-| `supervisor`'s backup probe | daily, at `backupScheduledHour` | the estate's actual backup cadence — planned |
+| `supervisor`'s backup probe | daily, at `backupScheduledHour` | the cluster's actual backup cadence — planned |
 
 Per-module release hooks are gone: `run_backup` sits in the **root** `install.sh`, selects on
 `${SERVICE_INSTALL}/backup.sh` existing, runs only for `COMMAND=install` with
@@ -458,7 +458,7 @@ call in `supervisor/generate.py`, no `src/build/resources/backup.sh` snippet, no
 the enrolled-module set. It does ship **one** script of its own, `backup.sh`, the stage
 runner, and the distinction is worth stating precisely: it is not a backup, does not participate in
 the primary stage as a subject and is not produced by the backup generator — it runs the stages and
-makes the estate's disks *available*, which is a host-and-fstab job that shell does natively and Go
+makes the cluster's disks *available*, which is a host-and-fstab job that shell does natively and Go
 would only wrap. Nothing about producing,
 naming, promoting or thinning a backup is expressed in shell by supervisor. The
 previous design put the driver in supervisor's own generated script and let Go schedule it; that
@@ -501,9 +501,9 @@ interface in `probe.go`.
   than a second published concept, and a future plugin picks its cadence by which argument it reads.
 - **The hour is the plugin's const, not a flag.** `backupScheduledHour = 1` sits in
   `probe_impl_backup.go`'s const block beside the other backup constants. There is no `--daily-time`, no
-  `config.DefaultDailyTime`, no `Periods.DailyMinutes` and no HH:MM parsing — retiming the estate's
+  `config.DefaultDailyTime`, no `Periods.DailyMinutes` and no HH:MM parsing — retiming the cluster's
   backup is a code change and a release, the same policy an in-place `.env` edit already carries.
-  A flag was built first and removed: it made the estate's cadence an operator input that no
+  A flag was built first and removed: it made the cluster's cadence an operator input that no
   operator had ever changed, and put the one number that decides when the backup runs somewhere
   other than beside the backup.
 - **The loop owns the edge detection, so no plugin repeats it.** `scheduleSeed(now)` returns the
@@ -518,7 +518,7 @@ interface in `probe.go`.
   reading would miss it entirely across a suspend — the split the *Clocks* section of `CLAUDE.md`
   records.
 - **It runs for `serve` only.** `engine.RunAllProbesPublishLoop` starts `go probe.RunScheduled(ctx)`
-  and the watch loops do not, so a `watch` on the dev machine cannot fire the estate's backups and
+  and the watch loops do not, so a `watch` on the dev machine cannot fire the cluster's backups and
   `RunAllProbesOnce`'s three-pulse deadline cannot cancel a run mid-flight. It must sit below
   `probe.Create`, which is what sets the `execProbes`/`execConfigPath` package vars it reads.
 - **Only a crossing logs, at DEBUG.** Twenty-three of every twenty-four are no-ops for the one probe
@@ -561,7 +561,7 @@ So, per run:
    **stop** — a stage whose predecessor did not finish has nothing sound to work from
 4. read the stage and module documents the scripts wrote, roll them into `<run>/status.json`, and
    republish
-5. on the holder of the `backup` election alone (a `server`), once every expected `server` has
+5. on the leader alone (a `server`), once every expected `server` has
    reported a terminal state or the run ceiling has passed, switch the outlet off
 
 **It also watches for runs it did not start.** A stage invoked by hand publishes the same topics, so
@@ -614,7 +614,7 @@ to the device's `stat` topic** — that is the device's to write, and faking it 
 publishing `homeassistant/status` on Home Assistant's behalf. A plug already on answers immediately
 and costs one round trip.
 
-**The plug's topic comes from `config.json`, so no estate literal reaches the Go.** `generate.py`
+**The plug's topic comes from `config.json`, so no cluster literal reaches the Go.** `generate.py`
 writes a `backup` block beside `schema` — naming the plug's command and state topics — **for
 `server` form-factor hosts only**, the same hosts that own a `/backup` disk. The probe reads it
 through `config` as it reads everything else, and the boundary test below is unchanged — the driver
@@ -681,32 +681,32 @@ secondary stage is additive and no data is lost by a skipped promotion.
 
 ### The cluster singleton
 
-**One `server` switches the outlet off, and which one is decided by the estate election in
-[`leader.md`](leader.md), role `backup`.** Every `server` powers the outlet *on* for itself and runs
+**One `server` switches the outlet off, and which one is decided by the cluster election in
+[`leader.md`](leader.md), duty `backup`.** Every `server` powers the outlet *on* for itself and runs
 its own tertiary stage without waiting for anybody; the singleton exists for the one decision that
 cannot be taken locally, because cutting power would take out another `server` mid-`rsync`. `edge`
-hosts never stand in the `backup` election, never mount `/backup` and never touch the plug.
+hosts never stand in the election, never mount `/backup` and never touch the plug.
 
 **Only the holder coordinates, and it holds no state about the run.** Every minute, whoever holds
 `backup` reads a standing watch of `supervisor/+/backup/status`, `supervisor/+/backup/stage/+/status`
-and `supervisor/all/backup/status`, and `backupEstateDecision` derives one action from them alone:
+and `supervisor/all/backup/status`, and `backupClusterRunDecision` derives one action from them alone:
 
-- **open** — no running estate status, and an expected `server` has a *scheduled* stage running whose
-  `expires_ts` has not passed and whose run began after the last estate run. A run is dated from its
+- **open** — no running cluster backup status, and an expected `server` has a *scheduled* stage running whose
+  `expires_ts` has not passed and whose run began after the last cluster backup run. A run is dated from its
   `run_id`, which every stage of one run shares, never from a stage's own start, so a run reopened after
   a flush mid-tertiary still matches each host's report of the same run. A manual stage never opens one,
   and a dead stage document — its final publish lost — cannot reopen anything once it expires;
-- **refresh** — the estate status is `running`; republish it with the current report count;
+- **refresh** — the cluster backup status is `running`; republish it with the current report count;
 - **close** — every expected `server` reported a terminal `supervisor/<host>/backup/status` for this
   run, or `backupRunCeiling` has passed; power the plug off, then publish `complete`, `failed` or
   `timedout`.
 
 Because nothing is remembered between minutes, a holder that restarts, changes, or was idle at 01:00
 still finishes the run, and a publish the broker did not acknowledge is simply redone the next minute.
-Leadership is re-checked after the broker dial and before any action, and every estate status carries
+Leadership is re-checked after the broker dial and before any action, and every cluster backup status carries
 `leader_host` and `leader_epoch`.
 
-**The reaper keys on the estate status, not on a lease.** A `running` estate status younger than
+**The reaper keys on the cluster backup status, not on a lease.** A `running` cluster backup status younger than
 `backupRunCeiling` defers the power-down; otherwise the host holding `backup` powers down after
 `reaperIdleTicks`. A standing election has a lease at all times, so a lease can no longer mean "a run
 is in progress".
@@ -913,8 +913,8 @@ splits it, and it never prints the token.
 
 | Topic | Written by | Carries |
 |---|---|---|
-| `supervisor/all/leader/backup/lease` | the holder of the `backup` election | the lease, see [`leader.md`](leader.md) |
-| `supervisor/all/backup/status` | the holder of the `backup` election | the estate roll-up |
+| `supervisor/all/leader/lease` | the leader | the lease, see [`leader.md`](leader.md) |
+| `supervisor/all/backup/status` | the leader | the cluster backup roll-up |
 | `supervisor/<host>/backup/status` | that host's `serve` | the host's run document |
 | `supervisor/<host>/backup/<stage>/status` | that stage's `start.sh` | one stage's result |
 | `supervisor/<host>/backup/stage/primary/service/<service>/status` | `backup.sh primary` | one module's backup |
@@ -924,7 +924,7 @@ one host document. `primary`, `secondary` and `tertiary` are reserved words in t
 module may take one as a name.
 
 **`all` is a host-level namespace, not a host**, and it is safe only while no host is called
-`all`. It sits outside every `supervisor/<host>/` deliberately: a lease is estate state, and a
+`all`. It sits outside every `supervisor/<host>/` deliberately: a lease is cluster state, and a
 topic under one host's prefix would be swept by that host's own release.
 
 #### Payload specifications
@@ -1009,13 +1009,13 @@ call site and thread it through `publish_script`. See item **16**.
 `broker_topic_glob_data` to `supervisor/${SUPERVISOR_HOST}/data/#` so the lease survives a release;
 the same narrowing keeps every topic here out of the sweep. That is correct rather than convenient:
 a backup result is not a metric reading, nothing republishes it on a schedule, and a release must
-not silently blank the estate's backup history.
+not silently blank the cluster's backup history.
 
 **A vernemq release still wipes all of it, and only supervisor can restore it.** The retained store
 is flushed deliberately by `vernemq/install_pre.sh` on every release, so a release drops every
-payload above; the scripts run nightly and will not republish for up to a day, which would blank `Fail BKP` and `Used BKP` estate-wide. So each host's
+payload above; the scripts run nightly and will not republish for up to a day, which would blank `Fail BKP` and `Used BKP` cluster-wide. So each host's
 `serve` **re-asserts its own `supervisor/<host>/backup/**` topics from the local `status.json` on
-connect**, which is the replay-on-reconnect rule the estate already applies to every other
+connect**, which is the replay-on-reconnect rule the cluster already applies to every other
 publisher. Two writers therefore touch a stage topic — the script while it runs, supervisor when it
 reconnects — and the rule that keeps them honest is that **supervisor only ever republishes what is
 on disk**, never a newer timestamp or a state the document does not carry.
@@ -1038,7 +1038,7 @@ payloads in *Stage scripts and the broker namespace* are how a run becomes visib
 and to any other host, not how a host learns about itself. Its own answer is on its own disk: the
 document is authoritative, the broker's store is flushed by every vernemq release, and reading a
 retained topic back to compute a metric from a file three directories away would make a local
-reading depend on a round trip that a release empties. The estate view is the leader's roll-up; the per-host metric is the document.
+reading depend on a round trip that a release empties. The cluster view is the leader's roll-up; the per-host metric is the document.
 
 **A manual run must therefore write the document, not only the topic.** Each `start.sh` writes its
 own stage section of `status.json` as it goes, so a stage run by hand is indistinguishable to the
@@ -1245,7 +1245,7 @@ exclusion gone they can: a bad prune propagates on the next run, and there is no
 **That protection is restored by snapshots, not by the exclusion, and it is strictly better there.**
 A read-only snapshot survives a bad prune, a bad `--exclude` and a bad root, and it covers `media/`
 and `service/` — which the exclusion never did. See *Filesystem, tertiary stage*. Until snapshots
-exist the estate is running with one copy of a thinned backup and no history behind it, which is a
+exist the cluster is running with one copy of a thinned backup and no history behind it, which is a
 real regression against the previous design and the reason to treat that section as the next piece
 of work rather than a later one.
 
@@ -1269,9 +1269,9 @@ therefore reintroduces exactly the cost deltas exist to avoid, for the one modul
 Three ways to answer it, and the right one depends on growth rather than on today's size:
 
 - **shorter monthly depth for InfluxDB than for everything else** — the retention knobs should be
-  overridable per module (`<MODULE>_BACKUP_KEEP_MONTHLY` and friends) rather than one estate-wide
+  overridable per module (`<MODULE>_BACKUP_KEEP_MONTHLY` and friends) rather than one cluster-wide
   policy, which the env-driven convention already supports; this is the one taken, see *Depth is per
-  module, not per estate*
+  module, not per cluster*
 - **longer runs between fulls** — one full and many deltas, so the tail is cheap, at the cost of a slower
   restore and a larger blast radius if a link is corrupt
 - **deduplication** — a `restic`/`borg` repository fed from the secondary stage, which is where its value
@@ -1297,7 +1297,7 @@ A sparse restore point must be self-contained, so it must be a **`_full`** — w
 the filename suffix declares, and why the secondary stage can apply this policy without knowing which
 module it is looking at. Deltas are only ever retained inside the dense window.
 
-### Depth is per module, not per estate
+### Depth is per module, not per cluster
 
 **The tiers are the right shape; applying the same counts to every module is the mistake.** Five of
 the six are `FULL` and small — dumps, a zip, a tar — so 23 restore points is megabytes and the depth
@@ -1308,9 +1308,9 @@ modules, and they are the two where a deep tail is worth least:
   already produces roughly a full a week. The tiers then pin 4 weekly plus 12 monthly — **16 full
   copies of a continuously growing object store**, not the twelve the tension above assumes.
 - **`plex`** is a `FULL` tar whose bulk is metadata and thumbnails: large, and **regenerable**.
-  Twelve monthly copies of a cache is the worst ratio in the estate.
+  Twelve monthly copies of a cache is the worst ratio in the cluster.
 
-**Decided.** The estate-wide defaults stay as declared and these are the per-module overrides:
+**Decided.** The cluster-wide defaults stay as declared and these are the per-module overrides:
 
 | Module | daily | weekly | monthly | Why |
 |---|---|---|---|---|
@@ -1384,7 +1384,7 @@ changed.
 
 **History for `media/` and `service/`, which have none at all.** Those are `--delete` mirrors, so a
 file deleted or corrupted on the share reaches the only copy beyond the share at the next run and the
-previous state is gone estate-wide. Snapshots are the only mechanism in this design that protects
+previous state is gone cluster-wide. Snapshots are the only mechanism in this design that protects
 them, and they are the bulk of the disk. That also narrows what *Gaps and decisions* puts out of
 scope: media stays out of scope for **policy** while gaining a year of restore points for free.
 
@@ -1476,7 +1476,7 @@ item **7**.
 The normal path is already safe — `backup_detach` unmounts before the leader's destroy switches
 off — but **the lease-expiry path is not**: a leader hitting `backupRunCeiling` cuts power to hosts
 that may still be mid-`rsync`. On ext4 that is a fsck; on btrfs it is worse. Either have the expiry
-path `sync` and attempt an estate-wide detach before switching off, or accept the risk
+path `sync` and attempt a cluster-wide detach before switching off, or accept the risk
 explicitly. This wants deciding before the disks are converted, not after.
 
 **Mount options** are `noatime,compress=zstd:3`. Leave `autodefrag` off — it is the wrong trade for
@@ -1495,7 +1495,7 @@ module's own knowledge of its own data.
 | `backup_attach` / `backup_detach` | the readiness wait, the fstab entries, the `mountpoint` assertions | know a module, a stage, a backup format, the schedule, the status document or the broker |
 
 If any side reaches into another's right-hand column, the split has failed. The test for the probe
-is that it contains **no module-specific line and no estate-specific literal** — no
+is that it contains **no module-specific line and no cluster-specific literal** — no
 `rack_backup_plug`, no `/share/10`, no `cifs`. It switches the plug through a topic `config.json`
 gave it, and it execs `backup.sh <stage>` and reads an exit code. The
 test for the attach step is that it makes no decision that depends on which host it is running on. The
@@ -1560,7 +1560,7 @@ and extract the range that matters.
 
 HA's configuration lives in `homeassistant` but its recorder lives in `postgres`, so restoring HA to
 a day needs both at that day. A single daily pass produces same-day backups minutes apart: not
-transactional, but a loose estate-wide restore point, and a reason to keep every module on one
+transactional, but a loose cluster-wide restore point, and a reason to keep every module on one
 schedule rather than letting them drift onto their own. That is also why the primary stage runs
 **serially** rather than in parallel — the backups are minutes apart rather than concurrent, and a
 parallel run would put six modules' load on one host at once for no gain a nightly window needs.
@@ -1649,7 +1649,7 @@ executed in production**. The deadline is therefore sharper than "before this ru
 **before the next influxdb3 release**, which is what will first execute it.
 
 **The primary stage itself has run elsewhere, so this is an influxdb3 deployment lag rather than an
-estate-wide one.** The same survey found wrapper output on two hosts: `mad` holds four run
+cluster-wide one.** The same survey found wrapper output on two hosts: `mad` holds four run
 directories under `/home/asystem/plex/backup` from 18 August totalling **3.8 G**, and `jen` holds
 `/home/asystem/zigbee2mqtt/backup` at 84 K. No `postgres`, `mariadb` or `letsencrypt` backups exist
 yet, and `/share/*/backup` carries nothing from the secondary stage — only a hand-made
@@ -1747,7 +1747,7 @@ What the wipe genuinely does resolve:
 - **a clean baseline for item 1.** A restore test against a chain of known provenance is worth more
   than one against artefacts of uncertain age.
 
-**One risk it creates, and it is worth spending an hour to avoid.** Wiping leaves the estate with
+**One risk it creates, and it is worth spending an hour to avoid.** Wiping leaves the cluster with
 **no backups at all** until the first successful run of the new path — and that first run is also
 the first time any of this has been exercised, since item **1** is still open. `mad`'s 3.8 G of plex
 backups and the 2.4 G `plex-rescue` on `/share/10` are the only real backup artefacts that exist.
@@ -1771,7 +1771,7 @@ samba. They cannot be excluded, because a restore needs exactly those files.
 **Accepted, deliberately.** The two fixes considered were moving `backup` outside the published tree
 and giving it its own restricted share; both were rejected as cost without benefit at this trust
 boundary. The LAN is the boundary, `jen` reaches `mad`'s share as an ordinary samba client, and the
-same share already carries everything else this estate holds.
+same share already carries everything else this cluster holds.
 
 Two consequences to keep in view rather than act on. **Writable matters more than readable** —
 `read only = no` means a LAN client can *delete* a backup, so samba exposure is a availability risk
@@ -1821,7 +1821,7 @@ configuration and tooling, with no container and no service state.
 table. Three are safe on their own facts: apps from git, a broker store flushed and republished on
 deploy, and game settings. **`rhasspy` is the one that carries residual risk** — a trained voice profile is not
 reproducible from git, only retrainable from the same inputs — so if a profile is ever trained and
-valued, this row is the one to reopen. Nothing else in the estate depends on it.
+valued, this row is the one to reopen. Nothing else in the cluster depends on it.
 
 Two things this table changed. **`mlflow` was missed** by the original inventory because it holds no
 `${SERVICE_DATA_DIR}` — presence of a data directory is not the same as holding state, and any
@@ -1906,7 +1906,7 @@ both backends as well as reading inconsistently on screen.
 
 ### 13 The cluster singleton — closed
 
-**Built, then replaced** by the estate election in [`leader.md`](leader.md), whose broker-level tests
+**Built, then replaced** by the cluster election in [`leader.md`](leader.md), whose broker-level tests
 are the ones this section asked for — concurrent claims, a killed holder, an expired lease — plus a
 frozen broker. The per-run lease described below was ruled out; see *The cluster singleton*.
 
@@ -1958,7 +1958,7 @@ shape changes nothing in the Go and nothing in this document beyond the table.
 binds need the host's `/share` and `/backup` mountpoints to be **shared mounts** (`mount
 --make-shared`, or `/` shared), and each `server` needs a `/backup` `noauto` fstab entry for its
 local disk. Both are set by hand at host provisioning, the same way `jen`'s `/share/10` fstab line
-already is — deliberately kept out of `storage`/`_debian` so the estate's mount topology stays
+already is — deliberately kept out of `storage`/`_debian` so the cluster's mount topology stays
 something a person decides rather than something a deploy silently changes. The tertiary stage is
 dead until both exist on every `server`; that is a provisioning checklist item, not a code gap.
 
@@ -1967,7 +1967,7 @@ view is `/:/host:ro`. Binding `/home/asystem` read-write gives a supervisor bug 
 write access to every service's data directory on the host. Narrowing it — a `ro` bind of
 `/home/asystem` for reading module `backup/` trees plus a single `rw` bind of the supervisor run
 directory — was considered and rejected: it trades the "a path is a path, no prefix awareness"
-property for one saved capability, and the container is already the most privileged in the estate
+property for one saved capability, and the container is already the most privileged in the cluster
 (unconfined, docker socket, `SYS_ADMIN`, `SYS_RAWIO`). The one bound that does hold is that the
 same-path bind is `/home/asystem` and not `/`, so `/etc`, `/root` and the other hosts' install
 trees stay out of reach.
@@ -2053,14 +2053,14 @@ document's location derivable rather than remembered.
 
 **Stage scripts are plug-unaware; supervisor owns the plug.** The design had the tertiary stage
 switching its own outlet. It does not: the probe publishes `ON` at the head of the daily cycle and
-the cluster leader publishes `OFF` when the estate goes idle, so a stage never has to know whether
+the cluster leader publishes `OFF` when the cluster goes idle, so a stage never has to know whether
 another host is still writing. A hand run outside the daily window therefore powers the disk itself,
 which is why `tertiary_start` publishes `ON` before `backup_attach`.
 
 **The tertiary stage mirrors only locally-owned shares.** It reads `/proc/mounts` and keeps a
 mountpoint only if it matches `^/share/[0-9]+$` *and* is a local filesystem, so a peer's share
 mounted over cifs is never mirrored back onto this host's disk — which would otherwise have copied
-the estate onto every backup disk in it.
+the cluster onto every backup disk in it.
 
 **The stage timeout, heartbeat and reaper are one mechanism.** `BACKUP_TIMEOUT_HOURS` is enforced by
 the heartbeat rather than by a separate watchdog, because the heartbeat is already the thing that
@@ -2150,7 +2150,7 @@ signal the file is converging.
 
 ### Provisioning corrections found while writing the next steps
 
-Reading the estate's committed fstab files turned up three things the plan had wrong.
+Reading the cluster's committed fstab files turned up three things the plan had wrong.
 
 **The fstab is a repo artifact, not a host file.** Each host has one at
 `src/<host>/_<os>_<host>/src/main/resources/fstab`, and that host module's generated `volumes.sh`
@@ -2163,7 +2163,7 @@ the host module, not authoring one.
 **The identifier is a `PARTLABEL`, and `mount.sh` could not read one.** `mount_ready` handled
 `UUID=`, `LABEL=` and `/dev/*` and fell through `*)` for anything else — and `PARTLABEL=` does not
 match `LABEL=*`, so it took the silent no-op arm. Since **every** attached share and backup disk in
-the estate is declared by `PARTLABEL`, the readiness wait was inert everywhere it mattered: `up`
+the cluster is declared by `PARTLABEL`, the readiness wait was inert everywhere it mattered: `up`
 would go straight to `mount` without waiting for the disk to spin up and enumerate, which is the one
 thing it exists to do. `PARTLABEL=` and `PARTUUID=` now resolve through `/dev/disk/by-partlabel` and
 `/dev/disk/by-partuuid`.
@@ -2321,7 +2321,7 @@ an unknown stage and an unknown phase with exit 2; all three `<stage>_stop` path
 logging under a redirected run root; and differential runs of the extracted helpers against the
 originals over a fixture `fstab` (identical mount sets for both consumers) and a fixture run
 directory (`supervisor postgres` from three services of which one succeeded, one failed and one wrote
-no field, and `supervisor` alone from an empty run). `mapfile` needs bash 4, which the estate has and
+no field, and `supervisor` alone from an empty run). `mapfile` needs bash 4, which the cluster has and
 the macOS system bash does not — it was already a dependency of `backup_thin` and the primary stage,
 so the helper tests were run under `/opt/homebrew/bin/bash`.
 
@@ -2330,7 +2330,7 @@ primary's documents is inherent to a pipeline and is now merely visible rather t
 `install.sh` copies `data/*` forward without deleting, so **the `backup/` directory persists in every
 installed home until removed by hand** — the same lingering-script caveat already recorded above.
 
-### `backups.sh` — an estate-wide dispatcher, deliberately outside `backup.sh` — built
+### `backups.sh` — a cluster-wide dispatcher, deliberately outside `backup.sh` — built
 
 **A separate file, not a new command inside `backup.sh`.** `backups.sh` knows nothing about stages,
 runs, documents or the reaper's payload shape — it reads the enrolled host list out of this host's
@@ -2340,13 +2340,13 @@ serially. `backup.sh` did not change to make this possible, and that was the con
 accident: the per-host script is what a release, a probe and an operator all still drive directly,
 and folding suite-wide concerns into it would have meant every one of those callers threading a new
 "which other hosts" concept through a script that has no business knowing about the rest of the
-estate. Installed as `abackups` on every host, client and server alike (`install_post.sh`, beside the
-existing per-host `abackup`), so the same command dispatches the estate whether run from an edge/server
+cluster. Installed as `abackups` on every host, client and server alike (`install_post.sh`, beside the
+existing per-host `abackup`), so the same command dispatches the cluster whether run from an edge/server
 host or from a client like `rue` that has no local `backup.sh` to run at all.
 
 **`start` computes its own timeout, and does not reuse `backup_scheduled`'s.** `BACKUP_TIMEOUT_HOURS`
 defaults to 3 in `backup.sh`, which is what the single-host probe's scheduled run wants, and is far too
-short for a hand-driven multi-terabyte estate run kicked off in the evening. `backups.sh` instead
+short for a hand-driven multi-terabyte cluster backup run kicked off in the evening. `backups.sh` instead
 computes hours from *now* until the next local midnight and passes that as `BACKUP_TIMEOUT_HOURS` over
 `ssh`, so a long run is not killed early but is still guaranteed to stop itself before the 01:00
 scheduled run reaches `backup_active`'s already-running check — a manual run still active at 01:00
@@ -2358,12 +2358,12 @@ and the scheduled start. Computed with a portable `date`, GNU (`date -d`) tried 
 
 **`start` always scrubs and always dispatches detached; `stop` and `list` do neither.** `--scrub` is
 passed on every suite-wide `start`, overriding each host's own day-of-month eligibility window,
-because a hand-triggered estate run is exactly the kind of infrequent event worth scrubbing on. The
+because a hand-triggered cluster backup run is exactly the kind of infrequent event worth scrubbing on. The
 `start` dispatch is `nohup … & disown` inside the remote shell, so the local `ssh` returns as soon as
 the remote shell has backgrounded the job — `backup.sh`'s own `start` (via `backup_sequence`) still
 tails and waits on its background subshell exactly as it does today, but by the time it does that this
 process is already detached from the session `ssh` opened, so nothing here waits on it. This is what
-makes the loop serial in dispatch only: each host is contacted in turn, but the estate then runs
+makes the loop serial in dispatch only: each host is contacted in turn, but the cluster then runs
 concurrently, and closing the terminal or pressing Ctrl-C only stops the local loop from dispatching
 hosts it had not yet reached — every host already dispatched keeps running, unaffected, exactly as
 `for h in …; do ssh root@$h abackup start; done` would.
@@ -2376,7 +2376,7 @@ topic for any host reporting `state: running` with an unexpired `expires_ts`, an
 published and refreshed by `backup.sh`'s own heartbeat (`backup_document` at start, then every
 `BACKUP_HEARTBEAT_REFRESH`) regardless of who triggered the run — a hand run and a probe-scheduled run
 look identical to the reaper. Publishing `auto off` was therefore pausing a mechanism the run was
-already exempt from by a different path, and doing so estate-wide would have left the reaper armed but
+already exempt from by a different path, and doing so cluster-wide would have left the reaper armed but
 paused (via the switch) even on hosts whose stage had already finished, until the switch's own next
 01:00 expiry. The per-run `BACKUP_TIMEOUT_HOURS` computed against local midnight is unrelated to this
 and stays: it bounds the run itself, not the reaper's view of it.

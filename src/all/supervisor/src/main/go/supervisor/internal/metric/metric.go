@@ -59,7 +59,7 @@ const (
 )
 
 const (
-	HostCluster = "all"
+	HostAll = "all"
 
 	ServiceNameUnset  = ""
 	ServiceNameSchema = "__SCHEMA"

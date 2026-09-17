@@ -55,7 +55,7 @@ func GetIDField(id ID) string {
 
 func GetIDHost(id ID, hostName string) string {
 	if GetIDKind(id) == MetricKindCluster {
-		return HostCluster
+		return HostAll
 	}
 	return hostName
 }

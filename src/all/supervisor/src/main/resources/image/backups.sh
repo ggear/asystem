@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# An estate-wide dispatcher over ssh, deliberately outside backup.sh, which does not change for this.
+# A cluster-wide dispatcher over ssh, deliberately outside backup.sh, which does not change for this.
 #
 # The per-run timeout is computed here, not read from backup.sh's default: hours from now until local
 # midnight, so a suite-wide run is guaranteed to stop itself before the 01:00 scheduled run reaches

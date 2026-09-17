@@ -100,24 +100,24 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		onCommand := func(_ mqtt.Client, msg mqtt.Message) {
 			commandStart := time.Now()
 			tokens := strings.Split(msg.Topic(), "/")
-			if msg.Topic() != metric.TopicClusterCommand && (len(tokens) < 5 || tokens[1] == "" || tokens[3] == "" || tokens[4] == "") {
+			if msg.Topic() != metric.TopicAllCommand && (len(tokens) < 5 || tokens[1] == "" || tokens[3] == "" || tokens[4] == "") {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[malformed] topic of [%2d] levels", len(tokens))
 				return
 			}
 			var subject scribe.Subject
 			switch tokens[3] {
-			case metric.CommandScopeCluster:
-				if leading, _ := probe.Leading(metric.LeaderRoleCluster); !leading {
-					scribe.Log(scribe.SourceEngine, scribe.SubjectMetric(metric.MetricCluster), scribe.ActionSubscribe).Debugf("deferred", commandStart, "[%s] command left to the holder of role [%s]", string(msg.Payload()), metric.LeaderRoleCluster)
+			case metric.EntityCluster:
+				if leading, _ := probe.Leading(metric.LeaderDutySentinel); !leading {
+					scribe.Log(scribe.SourceEngine, scribe.SubjectMetric(metric.MetricCluster), scribe.ActionSubscribe).Debugf("deferred", commandStart, "[%s] command left to the holder of duty [%s]", string(msg.Payload()), metric.LeaderDutySentinel)
 					return
 				}
 				subject = scribe.SubjectMetric(metric.MetricCluster)
-			case commandScopeService:
+			case metric.EntityService:
 				subject = scribe.SubjectService(tokens[4])
-			case commandScopeHost:
+			case metric.EntityHost:
 				subject = scribe.SubjectHost(tokens[1])
 			default:
-				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[%s] scope, only [%s], [%s] and [%s] are commanded", tokens[3], metric.CommandScopeCluster, commandScopeHost, commandScopeService)
+				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(msg.Topic()), scribe.ActionSubscribe).Errorf("rejected", commandStart, "[%s] scope, only [%s], [%s] and [%s] are commanded", tokens[3], metric.EntityCluster, metric.EntityHost, metric.EntityService)
 				return
 			}
 
@@ -126,9 +126,9 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			scribe.Log(scribe.SourceEngine, subject, scribe.ActionSubscribe).Debugf("observed", commandStart, "[%s] host, [%s] scope, command [%s]", tokens[1], tokens[3], string(msg.Payload()))
 		}
 		commands := client.Subscribe(commandTopic, 1, onCommand)
-		estate := client.Subscribe(metric.TopicClusterCommand, 1, onCommand)
+		cluster := client.Subscribe(metric.TopicAllCommand, 1, onCommand)
 		subscribeStart := time.Now()
-		for topic, token := range map[string]mqtt.Token{serviceNameTopic: names, commandTopic: commands, metric.TopicClusterCommand: estate} {
+		for topic, token := range map[string]mqtt.Token{serviceNameTopic: names, commandTopic: commands, metric.TopicAllCommand: cluster} {
 			if refused, reason := subscribeRefused(token, map[string]byte{topic: 1}); len(refused) > 0 {
 				scribe.Log(scribe.SourceEngine, scribe.SubjectTopic(topic), scribe.ActionSubscribe).Errorf("rollback", subscribeStart, "[%s] topic, %s, rediscovery and commands lost", topic, reason)
 			}
@@ -202,7 +202,7 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 		if isHeartbeat {
 			publishLabel = "heartbeat"
 		}
-		leading, epoch := probe.Leading(metric.LeaderRoleCluster)
+		leading, epoch := probe.Leading(metric.LeaderDutySentinel)
 		published := func(guid metric.RecordGUID) bool {
 			return metric.GetIDKind(guid.ID) != metric.MetricKindCluster || leading
 		}
@@ -267,8 +267,8 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 			}
 			if leading && epoch != clusterEpoch {
 				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindCluster}) {
-					guid := metric.NewRecordGUID(id, metric.HostCluster)
-					if record, ok := cache.Load(guid); ok && !slices.ContainsFunc(taken, func(took metric.RecordGUID) bool { return took.ID == id && took.Host == metric.HostCluster }) {
+					guid := metric.NewRecordGUID(id, metric.HostAll)
+					if record, ok := cache.Load(guid); ok && !slices.ContainsFunc(taken, func(took metric.RecordGUID) bool { return took.ID == id && took.Host == metric.HostAll }) {
 						process(guid, record)
 					}
 				}
@@ -316,7 +316,4 @@ func (b *serveDeletesListener) MarkDelete(topic string) {
 
 const (
 	loopAllProbesPublish = "all probes publish"
-
-	commandScopeHost    = "host"
-	commandScopeService = "service"
 )

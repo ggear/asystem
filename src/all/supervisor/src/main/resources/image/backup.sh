@@ -24,7 +24,7 @@
 # Every state a status document carries, and every plug command, is a BACKUP_STATE_*/BACKUP_COMMAND_*
 # variable mirroring metric.BackupState*/Command* in src/main/go/supervisor/internal/metric/metric_schema.go
 # - a unit test holds the two sets equal, so an addition here left undeclared there fails the build. The
-# same holds BACKUP_REAPER_TOPIC equal to clusterReaperTopic in probe_impl_backup.go.
+# same holds BACKUP_REAPER_TOPIC equal to allReaperTopic in probe_impl_backup.go.
 #
 # primary   never reads a data directory or knows a backup format - the module's own backup.sh owns both.
 # secondary is additive and never deletes, mounts the share on demand and never unmounts it.
@@ -368,13 +368,13 @@ backup_auto() {
     state="$(printf '%s' "${held}" | jq -r '.state // empty' 2>/dev/null)"
     expires="$(printf '%s' "${held}" | jq -r '.expires_ts // empty' 2>/dev/null)"
     if [ -z "${held}" ]; then
-      backup_log INFO "reaper is undeclared, which the estate reads as armed, pass [on] to state it"
+      backup_log INFO "reaper is undeclared, which the cluster reads as armed, pass [on] to state it"
     elif [ "${state}" = "${BACKUP_COMMAND_OFF}" ] && [ -n "${expires}" ]; then
       backup_log INFO "reaper is paused until [${expires}], the backup disk stays powered until then"
     elif [ "${state}" = "${BACKUP_COMMAND_ON}" ]; then
       backup_log INFO "reaper is armed, the backup disk is powered down again when nothing needs it"
     else
-      backup_log WARN "reaper reads [${held}], which states no deadline, so the estate reads it as armed"
+      backup_log WARN "reaper reads [${held}], which states no deadline, so the cluster reads it as armed"
     fi
     return 0
   fi

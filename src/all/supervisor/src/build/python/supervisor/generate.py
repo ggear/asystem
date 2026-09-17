@@ -53,7 +53,7 @@ if __name__ == "__main__":
                                 "HOST": host, "SERVICE": services,
                                 "STAGE": stages_host[host],
                                 "SCRUB_HOST": [host] if "tertiary" in stages_host[host] else [],
-                                "BACKUP_HOST": [host] if "tertiary" in stages_host[host] else [],
+                                "LEADER_HOST": [host] if form_factors[host] == "server" else [],
                                 "BACKUP_SERVICE": sorted(set(services) & set(enrolled))
                             }
                             for host, services in sorted(modules_server.items())

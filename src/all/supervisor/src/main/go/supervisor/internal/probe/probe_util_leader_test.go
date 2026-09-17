@@ -130,7 +130,7 @@ func TestProbeUtilLeader_FreshnessIgnoresTheSendersClock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "alpha")
 			payload, _ := json.Marshal(leaderCandidacy{Host: "bravo", RenewedTS: time.Now().Add(tt.stampedOffset).Format(time.RFC3339Nano)})
-			campaign.observe(nil, leaderStubMessage{topic: metric.TopicLeaderCandidate(campaign.role.name, "bravo"), payload: payload})
+			campaign.observe(nil, leaderStubMessage{topic: campaign.election.candidateTopic("bravo"), payload: payload})
 			if leader := leaderElected([]string{"bravo"}, campaign.candidates, leaderLease{}, time.Time{}, time.Now(), campaign.timing.ttl); leader != "bravo" {
 				t.Errorf("leader: got %q want bravo, a renewal that just arrived is fresh whatever it is stamped", leader)
 			}
@@ -157,7 +157,7 @@ func TestProbeUtilLeader_ClaimAcrossAReattachIsDiscarded(t *testing.T) {
 			campaign.electedFrom = now.Add(-campaign.timing.settle - time.Second)
 			stub := campaign.client.(*leaderStubClient)
 			stub.onPublish = func(topic string) func() {
-				if topic != metric.TopicLeaderLease(campaign.role.name) || !tt.reattach {
+				if topic != campaign.election.leaseTopic() || !tt.reattach {
 					return nil
 				}
 				return func() {
@@ -187,7 +187,7 @@ func TestProbeUtilLeader_UnfitHostWithdrawsAndYields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			campaign := leaderStubCampaign(tt.eligible, "alpha")
-			campaign.role.alive = func() bool { return tt.alive }
+			campaign.election.alive = func() bool { return tt.alive }
 			now := time.Now()
 			campaign.attached, campaign.standing, campaign.leading = true, true, true
 			campaign.lastAck, campaign.lastLease, campaign.epoch = now, now, 1
@@ -198,14 +198,14 @@ func TestProbeUtilLeader_UnfitHostWithdrawsAndYields(t *testing.T) {
 			}
 			campaign.tick(now)
 			stub := campaign.client.(*leaderStubClient)
-			if !stub.published(metric.TopicLeaderCandidate(campaign.role.name, "alpha"), "") {
+			if !stub.published(campaign.election.candidateTopic("alpha"), "") {
 				t.Errorf("candidacy: got %v want an empty retained candidacy published", stub.publishes())
 			}
 			if leading, _ := campaign.holding(time.Now()); leading {
 				t.Errorf("leading: got true want false once unfit")
 			}
 			campaign.tick(time.Now())
-			if count := stub.count(metric.TopicLeaderCandidate(campaign.role.name, "alpha")); count != 1 {
+			if count := stub.count(campaign.election.candidateTopic("alpha")); count != 1 {
 				t.Errorf("withdrawals: got %d want 1, an unfit host withdraws once rather than every tick", count)
 			}
 		})
@@ -223,7 +223,7 @@ func TestProbeUtilLeader_TickAfterResignationIsInert(t *testing.T) {
 	}
 }
 
-func TestProbeUtilLeader_VacantEstateMarksPresenceOffline(t *testing.T) {
+func TestProbeUtilLeader_VacantClusterMarksPresenceOffline(t *testing.T) {
 	tests := []struct {
 		name            string
 		otherLease      bool
@@ -238,7 +238,7 @@ func TestProbeUtilLeader_VacantEstateMarksPresenceOffline(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "bravo")
-			campaign.role.presence = "test/presence"
+			campaign.election.presence = "test/presence"
 			now := time.Now()
 			campaign.attached, campaign.attachedAt = true, now.Add(-tt.attachedFor)
 			if tt.otherLease {
@@ -260,7 +260,7 @@ func TestProbeUtilLeader_VacantEstateMarksPresenceOffline(t *testing.T) {
 
 func TestProbeUtilLeader_ClaimantDoesNotReportItsOwnVacancy(t *testing.T) {
 	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
-	campaign.role.presence = "test/presence"
+	campaign.election.presence = "test/presence"
 	now := time.Now()
 	campaign.attached, campaign.attachedAt, campaign.leading = true, now.Add(-time.Minute), true
 	campaign.vacate(now)
@@ -287,7 +287,7 @@ func TestProbeUtilLeader_LeadsWhileConfigsDisagree(t *testing.T) {
 	campaigns := map[string]*leaderCampaign{}
 	for _, host := range []string{"alpha", "bravo", "charlie"} {
 		view := eligible[host]
-		campaign, err := newLeaderCampaign(configFile, host, leaderRole{name: name, eligible: func() []string { return view }}, timing)
+		campaign, err := newLeaderCampaign(configFile, host, leaderElection{name: name, root: "test/" + name, eligible: func() []string { return view }}, timing)
 		if err != nil {
 			t.Fatalf("join %s: got %v want nil", host, err)
 		}
@@ -359,7 +359,8 @@ func TestProbeUtilLeader_OneHolderAcrossFailover(t *testing.T) {
 		settle:         time.Second,
 	}
 	hosts := []string{"alpha", "bravo", "charlie"}
-	role := leaderRole{name: fmt.Sprintf("test-%d", time.Now().UnixNano()), eligible: func() []string { return hosts }}
+	name := fmt.Sprintf("test-%d", time.Now().UnixNano())
+	role := leaderElection{name: name, root: "test/" + name, eligible: func() []string { return hosts }}
 	role.presence = "test/" + role.name + "/status"
 	var mutex sync.Mutex
 	campaigns := map[string]*leaderCampaign{}
@@ -440,7 +441,7 @@ func TestProbeUtilLeader_OneHolderAcrossFailover(t *testing.T) {
 			return ""
 		}
 	}
-	lease := retainedOf(metric.TopicLeaderLease(role.name))
+	lease := retainedOf(role.leaseTopic())
 	if presence := retainedOf(role.presence); presence != metric.AvailabilityOnline {
 		t.Fatalf("presence: got %q want %q while a holder exists", presence, metric.AvailabilityOnline)
 	}
@@ -504,7 +505,8 @@ func TestProbeUtilLeader_YieldsWhenTheBrokerStopsAnswering(t *testing.T) {
 		settle:         time.Second,
 	}
 	hosts := []string{"alpha", "bravo"}
-	role := leaderRole{name: fmt.Sprintf("test-%d", time.Now().UnixNano()), eligible: func() []string { return hosts }}
+	name := fmt.Sprintf("test-%d", time.Now().UnixNano())
+	role := leaderElection{name: name, root: "test/" + name, eligible: func() []string { return hosts }}
 	campaigns := map[string]*leaderCampaign{}
 	for _, host := range hosts {
 		campaign, joinErr := newLeaderCampaign(configFile, host, role, timing)
@@ -572,7 +574,7 @@ func TestProbeUtilLeader_YieldsWhenTheBrokerStopsAnswering(t *testing.T) {
 }
 
 func leaderStubCampaign(eligible []string, host string) *leaderCampaign {
-	campaign := newLeaderCampaignState("", host, leaderRole{name: "test", eligible: func() []string { return eligible }}, leaderTiming{
+	campaign := newLeaderCampaignState("", host, leaderElection{name: "test", root: "test/election", eligible: func() []string { return eligible }}, leaderTiming{
 		refresh: 200 * time.Millisecond, publishTimeout: 150 * time.Millisecond, ackWindow: 550 * time.Millisecond,
 		keepAlive: 2 * time.Second, pingTimeout: time.Second, ttl: 4 * time.Second, settle: time.Second,
 	})
@@ -720,13 +722,13 @@ func TestProbeUtilLeader_ResignationMidTickPublishesNothingAfter(t *testing.T) {
 	campaign.electedFrom = now.Add(-campaign.timing.settle - time.Second)
 	stub := campaign.client.(*leaderStubClient)
 	stub.onPublish = func(topic string) func() {
-		if topic != metric.TopicLeaderCandidate(campaign.role.name, "alpha") {
+		if topic != campaign.election.candidateTopic("alpha") {
 			return nil
 		}
 		return func() { campaign.stopping.Store(true) }
 	}
 	campaign.tick(now)
-	if count := stub.count(metric.TopicLeaderLease(campaign.role.name)); count != 0 {
+	if count := stub.count(campaign.election.leaseTopic()); count != 0 {
 		t.Errorf("lease publishes: got %d want 0 once resignation began inside the tick", count)
 	}
 	if leading, _ := campaign.holding(time.Now()); leading {
@@ -742,7 +744,7 @@ func TestProbeUtilLeader_PresenceRequiresHoldingTheRole(t *testing.T) {
 	}
 	campaign := leaderStubCampaign([]string{"alpha"}, "alpha")
 	campaign.configPath = configFile
-	campaign.role.presence = "test/presence"
+	campaign.election.presence = "test/presence"
 	campaign.appear()
 	t.Cleanup(func() { campaign.vanish("test cleanup") })
 	campaign.presenceMu.Lock()

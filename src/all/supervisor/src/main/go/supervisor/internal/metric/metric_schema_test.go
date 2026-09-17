@@ -144,7 +144,7 @@ func TestMetricSchema_Topics(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for _, topic := range topics {
-		expectedRole := map[string]schema.Role{TopicClusterStatus: schema.RoleAvailability, TopicClusterCommand: schema.RoleCommand}[topic.Template]
+		expectedRole := map[string]schema.Role{TopicAllStatus: schema.RoleAvailability, TopicAllCommand: schema.RoleCommand}[topic.Template]
 		if expectedRole == "" {
 			expectedRole = schema.RoleState
 		}
@@ -166,7 +166,7 @@ func TestMetricSchema_Topics(t *testing.T) {
 		}
 		declared := strings.ReplaceAll(template, "$SCOPE", ScopeData)
 		if GetIDKind(id) == MetricKindCluster {
-			declared = strings.ReplaceAll(declared, "$HOST", HostCluster)
+			declared = strings.ReplaceAll(declared, "$HOST", HostAll)
 		}
 		if !seen[declared] {
 			t.Errorf("template: got none want one declared for %s", template)

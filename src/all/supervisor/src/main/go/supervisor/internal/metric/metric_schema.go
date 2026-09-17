@@ -90,7 +90,7 @@ func Topics() []schema.Topic {
 		}
 		template := strings.ReplaceAll(builder.template, "$SCOPE", ScopeData)
 		if builder.metricKind == MetricKindCluster {
-			template = strings.ReplaceAll(template, "$HOST", HostCluster)
+			template = strings.ReplaceAll(template, "$HOST", HostAll)
 		}
 		topics = append(topics, schema.Topic{
 			Template: template,
@@ -102,64 +102,19 @@ func Topics() []schema.Topic {
 		"supervisor/$HOST/backup/stage/$STAGE/status",
 		"supervisor/$HOST/backup/stage/primary/service/$BACKUP_SERVICE/status",
 		"supervisor/$SCRUB_HOST/backup/stage/tertiary/scrub/status",
-		"supervisor/" + HostCluster + "/backup/reaper",
-		"supervisor/" + HostCluster + "/backup/status",
-		TopicLeaderLease(LeaderRoleBackup),
-		TopicLeaderCandidate(LeaderRoleBackup, "$BACKUP_HOST"),
-		TopicLeaderLease(LeaderRoleCluster),
-		TopicLeaderCandidate(LeaderRoleCluster, "$HOST"),
+		"supervisor/" + HostAll + "/backup/reaper",
+		"supervisor/" + HostAll + "/backup/status",
+		TopicLeaderLease,
+		TopicLeaderCandidate("$LEADER_HOST"),
 	} {
 		topics = append(topics, schema.Topic{Template: template, Role: schema.RoleState})
 	}
 	topics = append(topics,
-		schema.Topic{Template: TopicClusterStatus, Role: schema.RoleAvailability},
-		schema.Topic{Template: TopicClusterCommand, Role: schema.RoleCommand},
+		schema.Topic{Template: TopicAllStatus, Role: schema.RoleAvailability},
+		schema.Topic{Template: TopicAllCommand, Role: schema.RoleCommand},
 	)
 	return topics
 }
-
-const (
-	BackupStateRunning     = "running"
-	BackupStateComplete    = "complete"
-	BackupStateSkipped     = "skipped"
-	BackupStateStopped     = "stopped"
-	BackupStateTimedout    = "timedout"
-	BackupStateHalted      = "halted"
-	BackupStateFailed      = "failed"
-	BackupStateFinished    = "finished"
-	BackupStateInterrupted = "interrupted"
-
-	BackupTriggerScheduled = "scheduled"
-	BackupTriggerManual    = "manual"
-)
-
-const (
-	LeaderRoleBackup  = "backup"
-	LeaderRoleCluster = "cluster"
-
-	CommandScopeCluster = "cluster"
-
-	TopicClusterStatus  = "supervisor/" + HostCluster + "/status"
-	TopicClusterCommand = "supervisor/" + HostCluster + "/command/" + CommandScopeCluster
-)
-
-func TopicLeaderLease(role string) string {
-	return "supervisor/" + HostCluster + "/leader/" + role + "/lease"
-}
-
-func TopicLeaderCandidate(role, host string) string {
-	return "supervisor/" + HostCluster + "/leader/" + role + "/candidate/" + host
-}
-
-const (
-	CommandOn  = "ON"
-	CommandOff = "OFF"
-)
-
-const (
-	AvailabilityOnline  = "online"
-	AvailabilityOffline = "offline"
-)
 
 func Payloads() []schema.Payload {
 	value := schema.Member{
@@ -196,7 +151,7 @@ func Payloads() []schema.Payload {
 	return []schema.Payload{
 		{
 			Role:  schema.RoleState,
-			Match: "*/leader/*/lease",
+			Match: "*/leader/lease",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "host", Kind: schema.KindStr},
 				{Key: "epoch", Kind: schema.KindInt},
@@ -206,7 +161,7 @@ func Payloads() []schema.Payload {
 		},
 		{
 			Role:  schema.RoleState,
-			Match: "*/leader/*/candidate/*",
+			Match: "*/leader/candidate/*",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "host", Kind: schema.KindStr},
 				{Key: "renewed_ts", Kind: schema.KindStr},
@@ -214,7 +169,7 @@ func Payloads() []schema.Payload {
 		},
 		{
 			Role:  schema.RoleState,
-			Match: "*/" + HostCluster + "/backup/status",
+			Match: "*/" + HostAll + "/backup/status",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "run_id", Kind: schema.KindStr},
 				{Key: "state", Enum: []string{BackupStateRunning, BackupStateComplete,
@@ -282,3 +237,47 @@ func Payloads() []schema.Payload {
 		},
 	}
 }
+
+func TopicLeaderCandidate(host string) string {
+	return TopicLeaderRoot + "/candidate/" + host
+}
+
+const (
+	BackupStateRunning     = "running"
+	BackupStateComplete    = "complete"
+	BackupStateSkipped     = "skipped"
+	BackupStateStopped     = "stopped"
+	BackupStateTimedout    = "timedout"
+	BackupStateHalted      = "halted"
+	BackupStateFailed      = "failed"
+	BackupStateFinished    = "finished"
+	BackupStateInterrupted = "interrupted"
+
+	BackupTriggerScheduled = "scheduled"
+	BackupTriggerManual    = "manual"
+)
+
+const (
+	LeaderElection     = "leader"
+	LeaderDutyBackup   = "backup"
+	LeaderDutySentinel = "sentinel"
+
+	EntityCluster = "cluster"
+	EntityHost    = "host"
+	EntityService = "service"
+
+	TopicAllStatus   = "supervisor/" + HostAll + "/status"
+	TopicLeaderRoot  = "supervisor/" + HostAll + "/leader"
+	TopicLeaderLease = TopicLeaderRoot + "/lease"
+	TopicAllCommand  = "supervisor/" + HostAll + "/command/" + EntityCluster
+)
+
+const (
+	CommandOn  = "ON"
+	CommandOff = "OFF"
+)
+
+const (
+	AvailabilityOnline  = "online"
+	AvailabilityOffline = "offline"
+)

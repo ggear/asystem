@@ -44,8 +44,8 @@ func (p *clusterProbe) metrics() []metric.ID {
 
 func (p *clusterProbe) gates() []metric.GateID { return nil }
 
-func (p *clusterProbe) campaigns() []leaderRole {
-	return []leaderRole{{name: metric.LeaderRoleCluster, eligible: leaderServers(p.configPath), presence: metric.TopicClusterStatus}}
+func (p *clusterProbe) duties() []string {
+	return []string{metric.LeaderDutySentinel}
 }
 
 func (p *clusterProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
@@ -89,10 +89,10 @@ func (p *clusterProbe) cluster() (bool, derivation, error) {
 	if watch == nil {
 		p.dial()
 		if failed := p.dialErr.Load(); failed != nil {
-			return false, derivation{}, fmt.Errorf("no cluster status computed, watching the estate failed with [%v] [%w]", *failed, errEnvironment)
+			return false, derivation{}, fmt.Errorf("no cluster status computed, watching the cluster failed with [%v] [%w]", *failed, errEnvironment)
 		}
 		if p.watched {
-			return false, derivation{}, fmt.Errorf("no cluster status computed, the estate watch is being redialled [%w]", errEnvironment)
+			return false, derivation{}, fmt.Errorf("no cluster status computed, the cluster watch is being redialled [%w]", errEnvironment)
 		}
 		return false, derivation{}, errProbeWarmingUp
 	}
@@ -103,13 +103,13 @@ func (p *clusterProbe) cluster() (bool, derivation, error) {
 			p.unready = 0
 			if p.watch.CompareAndSwap(watch, nil) {
 				watch.close()
-				scribe.Log(scribe.SourceProbeCluster, p.subject(), scribe.ActionConnect).Warnf("faulting", time.Now(), "[%d] polls with the estate watch detached, redialling", clusterRedialPolls)
+				scribe.Log(scribe.SourceProbeCluster, p.subject(), scribe.ActionConnect).Warnf("faulting", time.Now(), "[%d] polls with the cluster watch detached, redialling", clusterRedialPolls)
 			}
 		}
 		if !p.watched {
 			return false, derivation{}, errProbeWarmingUp
 		}
-		return false, derivation{}, fmt.Errorf("no cluster status computed, the estate watch is not attached to the broker [%w]", errEnvironment)
+		return false, derivation{}, fmt.Errorf("no cluster status computed, the cluster watch is not attached to the broker [%w]", errEnvironment)
 	}
 	p.unready = 0
 	p.watched = true
@@ -135,12 +135,12 @@ func (p *clusterProbe) dial() {
 		watch, err := brokerWatch(p.configPath, p.hostName, clusterStatusFilters...)
 		if err != nil {
 			p.dialErr.Store(&err)
-			scribe.Log(scribe.SourceProbeCluster, p.subject(), scribe.ActionConnect).Warnf("faulting", dialStart, "[%v] watching the estate, retrying in [%s]", err, brokerReconnectCap)
+			scribe.Log(scribe.SourceProbeCluster, p.subject(), scribe.ActionConnect).Warnf("faulting", dialStart, "[%v] watching the cluster, retrying in [%s]", err, brokerReconnectCap)
 			return
 		}
 		p.dialErr.Store(nil)
 		p.watch.Store(watch)
-		scribe.Log(scribe.SourceProbeCluster, p.subject(), scribe.ActionConnect).Infof("attached", dialStart, "[%d] filters watching the estate", len(clusterStatusFilters))
+		scribe.Log(scribe.SourceProbeCluster, p.subject(), scribe.ActionConnect).Infof("attached", dialStart, "[%d] filters watching the cluster", len(clusterStatusFilters))
 	}()
 }
 

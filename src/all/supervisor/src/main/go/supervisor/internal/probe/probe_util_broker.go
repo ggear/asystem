@@ -44,18 +44,6 @@ func (b *brokerClient) publish(topic, payload string, retained bool) error {
 	return nil
 }
 
-func (b *brokerClient) readRetained(filters ...string) (map[string]string, error) {
-	collected := &brokerPayloads{payloads: map[string]string{}}
-	if err := brokerSubscribe(b.client, collected, filters); err != nil {
-		return collected.snapshot(), err
-	}
-	time.Sleep(brokerSettle)
-	for _, filter := range filters {
-		b.client.Unsubscribe(filter).WaitTimeout(brokerTimeout)
-	}
-	return collected.snapshot(), nil
-}
-
 func (b *brokerClient) close() {
 	if b != nil && b.client != nil {
 		b.client.Disconnect(250)
@@ -81,7 +69,7 @@ func brokerWatch(configPath, host string, filters ...string) (*brokerWatcher, er
 		SetOnConnectHandler(watch.attach).
 		SetConnectionLostHandler(func(_ mqtt.Client, lost error) {
 			watch.forget()
-			scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(host), scribe.ActionDisconnect).Warnf("faulting", time.Now(), "[%v] watching the estate, reporting unknown until it is back", lost)
+			scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(host), scribe.ActionDisconnect).Warnf("faulting", time.Now(), "[%v] watching the cluster, reporting unknown until it is back", lost)
 		})
 	client, err := brokerConnect(options)
 	if err != nil {
@@ -118,7 +106,7 @@ func (w *brokerWatcher) attach(client mqtt.Client) {
 	w.forget()
 	attachStart := time.Now()
 	if err := brokerSubscribe(client, &w.brokerPayloads, w.filters); err != nil {
-		scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(w.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%v] watching the estate, retrying on the next tick", err)
+		scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(w.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%v] watching the cluster, retrying on the next tick", err)
 		return
 	}
 	time.Sleep(brokerSettle)
@@ -126,7 +114,7 @@ func (w *brokerWatcher) attach(client mqtt.Client) {
 	w.ready = true
 	held := len(w.payloads)
 	w.mutex.Unlock()
-	scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(w.host), scribe.ActionSubscribe).Debugf("attached", attachStart, "[%d] topics across [%d] filters, watching the estate", held, len(w.filters))
+	scribe.Log(scribe.SourceProbeBroker, scribe.SubjectHost(w.host), scribe.ActionSubscribe).Debugf("attached", attachStart, "[%d] topics across [%d] filters, watching the cluster", held, len(w.filters))
 }
 
 func (w *brokerWatcher) forget() {

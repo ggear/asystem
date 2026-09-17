@@ -448,12 +448,12 @@ func TestProbeImplBackup_ReaperTopicMatchesTheShell(t *testing.T) {
 	if match == nil {
 		t.Fatal("found no BACKUP_REAPER_TOPIC in backup.sh, the parse has rotted")
 	}
-	if shell := string(match[1]); shell != clusterReaperTopic {
-		t.Errorf("reaper topic: got %s in backup.sh want %s", shell, clusterReaperTopic)
+	if shell := string(match[1]); shell != allReaperTopic {
+		t.Errorf("reaper topic: got %s in backup.sh want %s", shell, allReaperTopic)
 	}
 }
 
-func TestProbeImplBackup_EstateDecision(t *testing.T) {
+func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	expected := []string{"mad", "max"}
 	doc := func(state, trigger string, started time.Time, success bool) string {
@@ -473,7 +473,7 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 	tests := []struct {
 		name             string
 		retained         map[string]string
-		expectedAction   backupEstateAction
+		expectedAction   backupClusterRunAction
 		expectedState    string
 		expectedStarted  time.Time
 		expectedReported int
@@ -482,7 +482,7 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 		{
 			name:           "nothing_retained_is_idle",
 			retained:       map[string]string{},
-			expectedAction: backupEstateIdle,
+			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
@@ -491,45 +491,45 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 				stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight.Add(time.Minute), false),
 				stage("max"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false),
 			},
-			expectedAction:  backupEstateOpen,
+			expectedAction:  backupClusterRunOpen,
 			expectedState:   metric.BackupStateRunning,
 			expectedStarted: tonight,
 			expectedError:   false,
 		},
 		{
-			name:           "manual_stage_never_opens_an_estate_run",
+			name:           "manual_stage_never_opens_a_cluster_backup_run",
 			retained:       map[string]string{stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerManual, tonight, false)},
-			expectedAction: backupEstateIdle,
+			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
 			name:           "stage_of_a_host_outside_the_expected_servers_is_ignored",
 			retained:       map[string]string{stage("jen"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false)},
-			expectedAction: backupEstateIdle,
+			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
 			name:           "stage_running_past_the_ceiling_is_ignored",
 			retained:       map[string]string{stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, now.Add(-backupRunCeiling-time.Minute), false)},
-			expectedAction: backupEstateIdle,
+			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
 			name: "closed_run_is_not_reopened_by_its_own_stuck_stage",
 			retained: map[string]string{
-				clusterStatusTopic: doc(metric.BackupStateComplete, "", tonight, true),
-				stage("mad"):       doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight.Add(time.Minute), false),
+				allBackupStatusTopic: doc(metric.BackupStateComplete, "", tonight, true),
+				stage("mad"):         doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight.Add(time.Minute), false),
 			},
-			expectedAction: backupEstateIdle,
+			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
 			name: "closed_run_from_last_night_lets_tonight_open",
 			retained: map[string]string{
-				clusterStatusTopic: doc(metric.BackupStateComplete, "", tonight.Add(-24*time.Hour), true),
-				stage("mad"):       doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false),
+				allBackupStatusTopic: doc(metric.BackupStateComplete, "", tonight.Add(-24*time.Hour), true),
+				stage("mad"):         doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false),
 			},
-			expectedAction:  backupEstateOpen,
+			expectedAction:  backupClusterRunOpen,
 			expectedState:   metric.BackupStateRunning,
 			expectedStarted: tonight,
 			expectedError:   false,
@@ -541,7 +541,7 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 				host("mad"):     doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
 				host("max"):     doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
 			},
-			expectedAction:   backupEstateClose,
+			expectedAction:   backupClusterRunClose,
 			expectedState:    metric.BackupStateComplete,
 			expectedStarted:  tonight,
 			expectedReported: 2,
@@ -550,25 +550,25 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 		{
 			name:           "expired_running_stage_never_opens_a_run",
 			retained:       map[string]string{tertiary("max"): stageOf(tonight, tonight, now.Add(-time.Minute))},
-			expectedAction: backupEstateIdle,
+			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
 			name: "late_stage_of_a_closed_run_does_not_reopen_it",
 			retained: map[string]string{
-				clusterStatusTopic: doc(metric.BackupStateTimedout, "", tonight, false),
-				tertiary("max"):    stageOf(tonight, tonight.Add(15*time.Minute), now.Add(time.Hour)),
+				allBackupStatusTopic: doc(metric.BackupStateTimedout, "", tonight, false),
+				tertiary("max"):      stageOf(tonight, tonight.Add(15*time.Minute), now.Add(time.Hour)),
 			},
-			expectedAction: backupEstateIdle,
+			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
-			name: "running_estate_with_a_partial_report_is_refreshed",
+			name: "running_cluster_backup_run_with_a_partial_report_is_refreshed",
 			retained: map[string]string{
-				clusterStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
-				host("mad"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
 			},
-			expectedAction:   backupEstateRefresh,
+			expectedAction:   backupClusterRunRefresh,
 			expectedState:    metric.BackupStateRunning,
 			expectedStarted:  tonight,
 			expectedReported: 1,
@@ -577,11 +577,11 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 		{
 			name: "every_expected_server_reported_closes_complete",
 			retained: map[string]string{
-				clusterStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
-				host("mad"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
-				host("max"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight.Add(time.Minute), true),
+				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				host("max"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight.Add(time.Minute), true),
 			},
-			expectedAction:   backupEstateClose,
+			expectedAction:   backupClusterRunClose,
 			expectedState:    metric.BackupStateComplete,
 			expectedStarted:  tonight,
 			expectedReported: 2,
@@ -590,11 +590,11 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 		{
 			name: "a_failed_report_closes_failed",
 			retained: map[string]string{
-				clusterStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
-				host("mad"):        doc(metric.BackupStateFailed, metric.BackupTriggerScheduled, tonight, false),
-				host("max"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):          doc(metric.BackupStateFailed, metric.BackupTriggerScheduled, tonight, false),
+				host("max"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
 			},
-			expectedAction:   backupEstateClose,
+			expectedAction:   backupClusterRunClose,
 			expectedState:    metric.BackupStateFailed,
 			expectedStarted:  tonight,
 			expectedReported: 2,
@@ -603,9 +603,9 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 		{
 			name: "run_past_its_ceiling_closes_timedout",
 			retained: map[string]string{
-				clusterStatusTopic: doc(metric.BackupStateRunning, "", now.Add(-backupRunCeiling-time.Minute), false),
+				allBackupStatusTopic: doc(metric.BackupStateRunning, "", now.Add(-backupRunCeiling-time.Minute), false),
 			},
-			expectedAction:  backupEstateClose,
+			expectedAction:  backupClusterRunClose,
 			expectedState:   metric.BackupStateTimedout,
 			expectedStarted: now.Add(-backupRunCeiling - time.Minute),
 			expectedError:   false,
@@ -613,11 +613,11 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 		{
 			name: "last_nights_report_does_not_count_for_tonight",
 			retained: map[string]string{
-				clusterStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
-				host("mad"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight.Add(-24*time.Hour), true),
-				host("max"):        doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight.Add(-24*time.Hour), true),
+				host("max"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
 			},
-			expectedAction:   backupEstateRefresh,
+			expectedAction:   backupClusterRunRefresh,
 			expectedState:    metric.BackupStateRunning,
 			expectedStarted:  tonight,
 			expectedReported: 1,
@@ -626,11 +626,11 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			decision := backupEstateDecision(tt.retained, expected, now)
+			decision := backupClusterRunDecision(tt.retained, expected, now)
 			if decision.action != tt.expectedAction {
 				t.Fatalf("action: got %v want %v", decision.action, tt.expectedAction)
 			}
-			if decision.action == backupEstateIdle {
+			if decision.action == backupClusterRunIdle {
 				return
 			}
 			if decision.state != tt.expectedState {
@@ -646,7 +646,7 @@ func TestProbeImplBackup_EstateDecision(t *testing.T) {
 	}
 }
 
-func TestProbeImplBackup_LeaderOpensAndClosesTheEstateRun(t *testing.T) {
+func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	testutil.RequiresDocker(t)
 	_, observer, err := testutil.SetupBrokerContainer(t)
 	if err != nil {
@@ -661,16 +661,16 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheEstateRun(t *testing.T) {
 		t.Fatalf("write config file failed: %v", err)
 	}
 	holder := leaderStubCampaign([]string{"mad", "max"}, "mad")
-	holder.role.name = metric.LeaderRoleBackup
+	holder.election.name = metric.LeaderElection
 	holder.attached, holder.standing, holder.leading, holder.epoch = true, true, true, 7
 	holder.lastAck, holder.lastLease = time.Now().Add(time.Hour), time.Now().Add(time.Hour)
 	holder.lease, holder.leaseArrived = leaderLease{Host: "mad", Epoch: 7}, time.Now()
 	leaderCampaignsMu.Lock()
-	leaderCampaigns[metric.LeaderRoleBackup] = holder
+	leaderCampaigns[metric.LeaderDutyBackup] = holder
 	leaderCampaignsMu.Unlock()
 	t.Cleanup(func() {
 		leaderCampaignsMu.Lock()
-		delete(leaderCampaigns, metric.LeaderRoleBackup)
+		delete(leaderCampaigns, metric.LeaderDutyBackup)
 		leaderCampaignsMu.Unlock()
 	})
 	var mutex sync.Mutex
@@ -680,7 +680,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheEstateRun(t *testing.T) {
 		seen[message.Topic()] = string(message.Payload())
 		mutex.Unlock()
 	}
-	for _, topic := range []string{plug, clusterStatusTopic} {
+	for _, topic := range []string{plug, allBackupStatusTopic} {
 		if token := observer.Subscribe(topic, 1, record); !token.WaitTimeout(2*time.Second) || token.Error() != nil {
 			t.Fatalf("subscribe %s: got %v want nil", topic, token.Error())
 		}
@@ -691,7 +691,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheEstateRun(t *testing.T) {
 			t.Fatalf("publish %s: got %v want nil", topic, token.Error())
 		}
 	}
-	observer.Publish(clusterStatusTopic, 1, true, []byte{}).WaitTimeout(2 * time.Second)
+	observer.Publish(allBackupStatusTopic, 1, true, []byte{}).WaitTimeout(2 * time.Second)
 	started := time.Now().Add(-5 * time.Minute).Truncate(time.Second)
 	for _, host := range []string{"mad", "max"} {
 		publish("supervisor/"+host+"/backup/stage/primary/status", backupDocument{RunID: started.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled,
@@ -715,12 +715,12 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheEstateRun(t *testing.T) {
 		defer mutex.Unlock()
 		t.Fatalf("%s: got %v want the phase reached", phase, seen)
 	}
-	estate := func() backupDocument {
+	cluster := func() backupDocument {
 		var document backupDocument
-		_ = json.Unmarshal([]byte(seen[clusterStatusTopic]), &document)
+		_ = json.Unmarshal([]byte(seen[allBackupStatusTopic]), &document)
 		return document
 	}
-	await("opened", func() bool { return estate().State == metric.BackupStateRunning })
+	await("opened", func() bool { return cluster().State == metric.BackupStateRunning })
 	if seen[plug] != "" {
 		t.Fatalf("plug: got %q want nothing sent while hosts are still running", seen[plug])
 	}
@@ -728,16 +728,16 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheEstateRun(t *testing.T) {
 	time.Sleep(time.Second)
 	probe.lead()
 	mutex.Lock()
-	partial := estate().State
+	partial := cluster().State
 	mutex.Unlock()
 	if partial != metric.BackupStateRunning {
 		t.Fatalf("partial state: got %s want running until every expected server reports", partial)
 	}
 	publish("supervisor/max/backup/status", backupDocument{State: metric.BackupStateComplete, Trigger: metric.BackupTriggerScheduled, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
-	await("closed", func() bool { return estate().State == metric.BackupStateComplete && seen[plug] == metric.CommandOff })
+	await("closed", func() bool { return cluster().State == metric.BackupStateComplete && seen[plug] == metric.CommandOff })
 	var closed map[string]any
 	mutex.Lock()
-	_ = json.Unmarshal([]byte(seen[clusterStatusTopic]), &closed)
+	_ = json.Unmarshal([]byte(seen[allBackupStatusTopic]), &closed)
 	mutex.Unlock()
 	if closed["leader_host"] != "mad" || closed["leader_epoch"] != float64(7) {
 		t.Errorf("closed by: got [%v] epoch [%v] want mad at epoch 7", closed["leader_host"], closed["leader_epoch"])
@@ -754,8 +754,8 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheEstateRun(t *testing.T) {
 	probe.lead()
 	mutex.Lock()
 	defer mutex.Unlock()
-	if seen[plug] != "" || estate().State != metric.BackupStateComplete {
-		t.Errorf("deposed holder: got plug [%q] state [%s] want no action from a host that no longer leads", seen[plug], estate().State)
+	if seen[plug] != "" || cluster().State != metric.BackupStateComplete {
+		t.Errorf("deposed holder: got plug [%q] state [%s] want no action from a host that no longer leads", seen[plug], cluster().State)
 	}
 }
 

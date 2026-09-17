@@ -17,7 +17,9 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// Leading reports whether this process currently holds the cluster singleton for role, and the epoch it was won at.
+// Leading reports whether this process currently holds the election that owns duty, and the epoch it was won at.
+// Every duty today belongs to the one cluster election, so every singleton moves together; a duty needing a
+// different eligible set would start a second election under its own name and topic root.
 //
 // The election runs over retained MQTT topics, which offer no compare-and-set, so correctness rests on every
 // candidate computing the same deterministic answer from the same view rather than on an atomic claim:
@@ -40,9 +42,9 @@ import (
 //     and a graceful stop resigns explicitly, so the next holder takes over within the settle.
 //   - Nothing here fences the work itself: a caller whose side effect must not repeat checks Leading again
 //     immediately before acting, and stamps the epoch on anything it publishes.
-func Leading(role string) (bool, int64) {
+func Leading(duty string) (bool, int64) {
 	leaderCampaignsMu.Lock()
-	campaign := leaderCampaigns[role]
+	campaign := leaderCampaigns[duty]
 	leaderCampaignsMu.Unlock()
 	if campaign == nil {
 		return false, 0
@@ -53,10 +55,12 @@ func Leading(role string) (bool, int64) {
 func Resign() {
 	leaderCampaignsMu.Lock()
 	campaigns := make([]*leaderCampaign, 0, len(leaderCampaigns))
-	for role, campaign := range leaderCampaigns {
-		campaigns = append(campaigns, campaign)
-		delete(leaderCampaigns, role)
+	for _, campaign := range leaderCampaigns {
+		if !slices.Contains(campaigns, campaign) {
+			campaigns = append(campaigns, campaign)
+		}
 	}
+	clear(leaderCampaigns)
 	leaderCampaignsMu.Unlock()
 	var resigning sync.WaitGroup
 	for _, campaign := range campaigns {
@@ -65,19 +69,35 @@ func Resign() {
 	resigning.Wait()
 }
 
-type leaderRole struct {
+type leaderElection struct {
 	name     string
+	root     string
 	eligible func() []string
 	presence string
 	alive    func() bool
 }
 
-type leaderCampaigner interface {
-	campaigns() []leaderRole
+func (e leaderElection) leaseTopic() string {
+	return e.root + "/lease"
 }
 
-func leaderServers(configPath string) func() []string {
-	return func() []string { return config.Load(configPath).HostsByFormFactor(config.FormFactorServer) }
+func (e leaderElection) candidateTopic(host string) string {
+	return e.root + "/candidate/" + host
+}
+
+type leadingProbe interface {
+	probe
+	duties() []string
+}
+
+func clusterElection(configPath string) leaderElection {
+	return leaderElection{
+		name:     metric.LeaderElection,
+		root:     metric.TopicLeaderRoot,
+		eligible: func() []string { return config.Load(configPath).HostsByFormFactor(config.FormFactorServer) },
+		presence: metric.TopicAllStatus,
+		alive:    pollAlive,
+	}
 }
 
 type leaderLease struct {
@@ -103,7 +123,7 @@ type leaderTiming struct {
 }
 
 type leaderCampaign struct {
-	role         leaderRole
+	election     leaderElection
 	host         string
 	timing       leaderTiming
 	client       mqtt.Client
@@ -132,33 +152,36 @@ type leaderCampaign struct {
 	claimed      time.Time
 }
 
-func leaderCampaignStart(ctx context.Context, configPath, host string, role leaderRole) {
+func leaderCampaignStart(ctx context.Context, configPath, host string, election leaderElection, duties []string) {
 	leaderCampaignsMu.Lock()
 	defer leaderCampaignsMu.Unlock()
-	if leaderCampaigns[role.name] != nil {
+	if len(duties) == 0 || leaderCampaigns[duties[0]] != nil {
 		return
 	}
 	startedAt := time.Now()
-	campaign, err := newLeaderCampaign(configPath, host, role, leaderTimingProduction)
+	campaign, err := newLeaderCampaign(configPath, host, election, leaderTimingProduction)
 	if err != nil {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionStart).Warnf("faulting", startedAt, "[%s] election not started with [%v], this host never leads it", role.name, err)
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionStart).Warnf("faulting", startedAt, "[%s] election not started with [%v], this host never leads it", election.name, err)
 		return
 	}
-	leaderCampaigns[role.name] = campaign
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionStart).Infof("schedule", startedAt, "[%s] election joined, eligible [%s]", role.name, strings.Join(role.eligible(), ","))
+	for _, duty := range duties {
+		leaderCampaigns[duty] = campaign
+	}
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionStart).Infof("schedule", startedAt, "[%s] election joined for duties [%s], eligible [%s]",
+		election.name, strings.Join(duties, ","), strings.Join(election.eligible(), ","))
 	go campaign.run(ctx)
 }
 
-func newLeaderCampaign(configPath, host string, role leaderRole, timing leaderTiming) (*leaderCampaign, error) {
-	options, err := brokerOptions(configPath, "leader-"+role.name)
+func newLeaderCampaign(configPath, host string, election leaderElection, timing leaderTiming) (*leaderCampaign, error) {
+	options, err := brokerOptions(configPath, "leader-"+election.name)
 	if err != nil {
 		return nil, err
 	}
-	campaign := newLeaderCampaignState(configPath, host, role, timing)
+	campaign := newLeaderCampaignState(configPath, host, election, timing)
 	options.SetAutoReconnect(true).SetMaxReconnectInterval(brokerReconnectCap).
 		SetConnectRetry(true).SetConnectRetryInterval(timing.refresh).
 		SetKeepAlive(timing.keepAlive).SetPingTimeout(timing.pingTimeout).
-		SetWill(metric.TopicLeaderCandidate(role.name, host), "", 1, true).
+		SetWill(election.candidateTopic(host), "", 1, true).
 		SetOnConnectHandler(func(client mqtt.Client) { campaign.attach(client) }).
 		SetConnectionLostHandler(func(_ mqtt.Client, lost error) { campaign.detach(fmt.Sprintf("connection lost with [%v]", lost)) })
 	campaign.client = mqtt.NewClient(options)
@@ -166,8 +189,8 @@ func newLeaderCampaign(configPath, host string, role leaderRole, timing leaderTi
 	return campaign, nil
 }
 
-func newLeaderCampaignState(configPath, host string, role leaderRole, timing leaderTiming) *leaderCampaign {
-	return &leaderCampaign{role: role, host: host, configPath: configPath, timing: timing, candidates: map[string]time.Time{}, skewed: map[string]bool{}}
+func newLeaderCampaignState(configPath, host string, election leaderElection, timing leaderTiming) *leaderCampaign {
+	return &leaderCampaign{election: election, host: host, configPath: configPath, timing: timing, candidates: map[string]time.Time{}, skewed: map[string]bool{}}
 }
 
 func (c *leaderCampaign) run(ctx context.Context) {
@@ -216,16 +239,16 @@ func (c *leaderCampaign) tick(now time.Time) {
 	if held, _ := c.holding(time.Now()); held {
 		c.appear()
 	} else {
-		c.vanish("this host no longer holds the role")
+		c.vanish("this host no longer holds the election")
 		c.vacate(now)
 	}
 }
 
 func (c *leaderCampaign) unfit() string {
-	if !slices.Contains(c.role.eligible(), c.host) {
+	if !slices.Contains(c.election.eligible(), c.host) {
 		return "this host is not eligible by its own config"
 	}
-	if c.role.alive != nil && !c.role.alive() {
+	if c.election.alive != nil && !c.election.alive() {
 		return "this host's poll loop has stalled"
 	}
 	return ""
@@ -239,18 +262,18 @@ func (c *leaderCampaign) attach(client mqtt.Client) {
 	attachStart := time.Now()
 	c.detach("reattaching")
 	filters := map[string]byte{
-		metric.TopicLeaderLease(c.role.name):          1,
-		metric.TopicLeaderCandidate(c.role.name, "+"): 1,
+		c.election.leaseTopic():        1,
+		c.election.candidateTopic("+"): 1,
 	}
 	token := client.SubscribeMultiple(filters, c.observe)
 	if !token.WaitTimeout(c.timing.publishTimeout) || token.Error() != nil {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%s] election subscribe failed with [%v], retrying", c.role.name, token.Error())
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%s] election subscribe failed with [%v], retrying", c.election.name, token.Error())
 		return
 	}
 	if granted, ok := token.(*mqtt.SubscribeToken); ok {
 		for filter, code := range granted.Result() {
 			if code > brokerQosMax {
-				scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%s] election subscribe refused [%s] with code [%d], retrying", c.role.name, filter, code)
+				scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Warnf("faulting", attachStart, "[%s] election subscribe refused [%s] with code [%d], retrying", c.election.name, filter, code)
 				return
 			}
 		}
@@ -268,7 +291,7 @@ func (c *leaderCampaign) attach(client mqtt.Client) {
 	c.attachedAt = attachStart
 	c.generation++
 	c.mutex.Unlock()
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Infof("attached", attachStart, "[%s] election, settling for [%s] before any claim", c.role.name, c.timing.settle)
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionSubscribe).Infof("attached", attachStart, "[%s] election, settling for [%s] before any claim", c.election.name, c.timing.settle)
 }
 
 func (c *leaderCampaign) detach(reason string) {
@@ -285,13 +308,13 @@ func (c *leaderCampaign) detach(reason string) {
 	c.leaseArrived = time.Time{}
 	c.mutex.Unlock()
 	if wasLeading {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionDisconnect).Warnf("released", detachStart, "[%s] leadership yielded, %s", c.role.name, reason)
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionDisconnect).Warnf("released", detachStart, "[%s] leadership yielded, %s", c.election.name, reason)
 	}
 	c.vanish(reason)
 }
 
 func (c *leaderCampaign) appear() {
-	if c.role.presence == "" || c.stopping.Load() {
+	if c.election.presence == "" || c.stopping.Load() {
 		return
 	}
 	c.presenceMu.Lock()
@@ -301,17 +324,17 @@ func (c *leaderCampaign) appear() {
 	}
 	if c.present != nil {
 		if c.present.IsConnectionOpen() {
-			c.present.Publish(c.role.presence, 1, true, []byte(metric.AvailabilityOnline))
+			c.present.Publish(c.election.presence, 1, true, []byte(metric.AvailabilityOnline))
 		}
 		return
 	}
 	appearStart := time.Now()
-	options, err := brokerOptions(c.configPath, "presence-"+c.role.name)
+	options, err := brokerOptions(c.configPath, "presence-"+c.election.name)
 	if err != nil {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionConnect).Warnf("faulting", appearStart, "[%s] presence not published with [%v]", c.role.presence, err)
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionConnect).Warnf("faulting", appearStart, "[%s] presence not published with [%v]", c.election.presence, err)
 		return
 	}
-	topic := c.role.presence
+	topic := c.election.presence
 	options.SetAutoReconnect(true).SetMaxReconnectInterval(brokerReconnectCap).
 		SetConnectRetry(true).SetConnectRetryInterval(c.timing.refresh).
 		SetKeepAlive(c.timing.keepAlive).SetPingTimeout(c.timing.pingTimeout).
@@ -319,7 +342,7 @@ func (c *leaderCampaign) appear() {
 		SetOnConnectHandler(func(client mqtt.Client) { client.Publish(topic, 1, true, []byte(metric.AvailabilityOnline)) })
 	c.present = mqtt.NewClient(options)
 	c.present.Connect()
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("assigned", appearStart, "[%s] presence [%s] held by this host for role [%s]", topic, metric.AvailabilityOnline, c.role.name)
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("assigned", appearStart, "[%s] presence [%s] held by this host for role [%s]", topic, metric.AvailabilityOnline, c.election.name)
 }
 
 func (c *leaderCampaign) vanish(reason string) {
@@ -333,15 +356,15 @@ func (c *leaderCampaign) vanish(reason string) {
 	vanishStart := time.Now()
 	cleared := false
 	if present.IsConnectionOpen() {
-		token := present.Publish(c.role.presence, 1, true, []byte(metric.AvailabilityOffline))
+		token := present.Publish(c.election.presence, 1, true, []byte(metric.AvailabilityOffline))
 		cleared = token.WaitTimeout(min(c.timing.publishTimeout, leaderResignBudget)) && token.Error() == nil
 	}
 	present.Disconnect(250)
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("released", vanishStart, "[%s] presence [%s] acknowledged [%v], %s", c.role.presence, metric.AvailabilityOffline, cleared, reason)
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("released", vanishStart, "[%s] presence [%s] acknowledged [%v], %s", c.election.presence, metric.AvailabilityOffline, cleared, reason)
 }
 
 func (c *leaderCampaign) vacate(now time.Time) {
-	if c.role.presence == "" {
+	if c.election.presence == "" {
 		return
 	}
 	c.mutex.Lock()
@@ -351,13 +374,13 @@ func (c *leaderCampaign) vacate(now time.Time) {
 	if !vacant {
 		return
 	}
-	if !c.publish(c.role.presence, []byte(metric.AvailabilityOffline)) {
+	if !c.publish(c.election.presence, []byte(metric.AvailabilityOffline)) {
 		return
 	}
 	c.mutex.Lock()
 	c.vacated = true
 	c.mutex.Unlock()
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("observed", now, "[%s] presence [%s], nobody has held role [%s] since this host attached", c.role.presence, metric.AvailabilityOffline, c.role.name)
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("observed", now, "[%s] presence [%s], nobody has held role [%s] since this host attached", c.election.presence, metric.AvailabilityOffline, c.election.name)
 }
 
 func (c *leaderCampaign) leaseHeld(now time.Time) bool {
@@ -370,7 +393,7 @@ func (c *leaderCampaign) observe(_ mqtt.Client, message mqtt.Message) {
 	payload := strings.TrimSpace(string(message.Payload()))
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if topic == metric.TopicLeaderLease(c.role.name) {
+	if topic == c.election.leaseTopic() {
 		c.lease = leaderLease{}
 		c.leaseArrived = time.Time{}
 		if payload != "" && json.Unmarshal([]byte(payload), &c.lease) == nil && c.lease.Host != "" {
@@ -379,7 +402,7 @@ func (c *leaderCampaign) observe(_ mqtt.Client, message mqtt.Message) {
 		}
 		return
 	}
-	host, found := strings.CutPrefix(topic, metric.TopicLeaderCandidate(c.role.name, ""))
+	host, found := strings.CutPrefix(topic, c.election.candidateTopic(""))
 	if !found || host == "" || strings.Contains(host, "/") {
 		return
 	}
@@ -392,7 +415,7 @@ func (c *leaderCampaign) observe(_ mqtt.Client, message mqtt.Message) {
 	renewed, parseErr := time.Parse(time.RFC3339Nano, candidacy.RenewedTS)
 	if skew := received.Sub(renewed).Abs(); parseErr == nil && !message.Retained() && skew > leaderSkewWarn && !c.skewed[host] {
 		c.skewed[host] = true
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Warnf("observed", received, "[%s] election candidacy stamped [%s] off this clock, freshness is judged on arrival so the election is unaffected", c.role.name, skew.Round(time.Millisecond))
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Warnf("observed", received, "[%s] election candidacy stamped [%s] off this clock, freshness is judged on arrival so the election is unaffected", c.election.name, skew.Round(time.Millisecond))
 	}
 }
 
@@ -402,8 +425,8 @@ func (c *leaderCampaign) renew() bool {
 	}
 	renewStart := time.Now()
 	payload, _ := json.Marshal(leaderCandidacy{Host: c.host, RenewedTS: renewStart.Format(time.RFC3339Nano)})
-	if !c.publish(metric.TopicLeaderCandidate(c.role.name, c.host), payload) {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Debugf("faulting", renewStart, "[%s] election candidacy unacknowledged within [%s]", c.role.name, c.timing.publishTimeout)
+	if !c.publish(c.election.candidateTopic(c.host), payload) {
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Debugf("faulting", renewStart, "[%s] election candidacy unacknowledged within [%s]", c.election.name, c.timing.publishTimeout)
 		return false
 	}
 	c.mutex.Lock()
@@ -412,7 +435,7 @@ func (c *leaderCampaign) renew() bool {
 	c.standing = true
 	c.mutex.Unlock()
 	if !wasStanding {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("restored", renewStart, "[%s] election candidacy standing for this host", c.role.name)
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Infof("restored", renewStart, "[%s] election candidacy standing for this host", c.election.name)
 	}
 	return true
 }
@@ -426,15 +449,15 @@ func (c *leaderCampaign) withdrawCandidacy(now time.Time, reason string, always 
 	if !wasStanding && !always {
 		return
 	}
-	cleared := c.publish(metric.TopicLeaderCandidate(c.role.name, c.host), []byte{})
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRemove).Warnf("excluded", now, "[%s] election candidacy withdrawn, acknowledged [%v], %s", c.role.name, cleared, reason)
+	cleared := c.publish(c.election.candidateTopic(c.host), []byte{})
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRemove).Warnf("excluded", now, "[%s] election candidacy withdrawn, acknowledged [%v], %s", c.election.name, cleared, reason)
 }
 
 func (c *leaderCampaign) evaluate(now time.Time) {
 	c.mutex.Lock()
 	elected := ""
 	if c.standing {
-		elected = leaderElected(c.role.eligible(), c.candidates, c.lease, c.leaseArrived, now, c.timing.ttl)
+		elected = leaderElected(c.election.eligible(), c.candidates, c.lease, c.leaseArrived, now, c.timing.ttl)
 	}
 	switch {
 	case elected != c.host:
@@ -455,7 +478,7 @@ func (c *leaderCampaign) evaluate(now time.Time) {
 	c.mutex.Unlock()
 	if !settled {
 		if wasLeading {
-			scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionStop).Infof("released", now, "[%s] leadership yielded to [%s]", c.role.name, leaderNamed(elected))
+			scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionStop).Infof("released", now, "[%s] leadership yielded to [%s]", c.election.name, leaderNamed(elected))
 		}
 		return
 	}
@@ -463,14 +486,14 @@ func (c *leaderCampaign) evaluate(now time.Time) {
 	if c.stopping.Load() {
 		return
 	}
-	if !c.publish(metric.TopicLeaderLease(c.role.name), payload) {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Warnf("faulting", now, "[%s] election lease unacknowledged within [%s]", c.role.name, c.timing.publishTimeout)
+	if !c.publish(c.election.leaseTopic(), payload) {
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Warnf("faulting", now, "[%s] election lease unacknowledged within [%s]", c.election.name, c.timing.publishTimeout)
 		return
 	}
 	c.mutex.Lock()
 	if c.generation != generation || !c.attached || !c.standing || c.stopping.Load() {
 		c.mutex.Unlock()
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Warnf("excluded", now, "[%s] election lease acknowledged across a reattach, discarding the claim", c.role.name)
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionPublish).Warnf("excluded", now, "[%s] election lease acknowledged across a reattach, discarding the claim", c.election.name)
 		return
 	}
 	c.lastLease = now
@@ -478,7 +501,7 @@ func (c *leaderCampaign) evaluate(now time.Time) {
 	c.leading = true
 	c.mutex.Unlock()
 	if !wasLeading {
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRegister).Infof("assigned", now, "[%s] leadership won at epoch [%d]", c.role.name, epoch)
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionRegister).Infof("assigned", now, "[%s] leadership won at epoch [%d]", c.election.name, epoch)
 	}
 }
 
@@ -511,9 +534,9 @@ func (c *leaderCampaign) withdraw() {
 	c.mutex.Unlock()
 	var tokens []mqtt.Token
 	if c.client.IsConnectionOpen() {
-		tokens = append(tokens, c.client.Publish(metric.TopicLeaderCandidate(c.role.name, c.host), 1, true, []byte{}))
+		tokens = append(tokens, c.client.Publish(c.election.candidateTopic(c.host), 1, true, []byte{}))
 		if holding {
-			tokens = append(tokens, c.client.Publish(metric.TopicLeaderLease(c.role.name), 1, true, []byte{}))
+			tokens = append(tokens, c.client.Publish(c.election.leaseTopic(), 1, true, []byte{}))
 		}
 	}
 	c.detach("the process is stopping")
@@ -525,7 +548,7 @@ func (c *leaderCampaign) withdraw() {
 		}
 	}
 	c.client.Disconnect(250)
-	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionStop).Infof("released", resignStart, "[%s] election resigned, leading [%v], cleared [%d/%d] retained topics", c.role.name, holding, cleared, len(tokens))
+	scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionStop).Infof("released", resignStart, "[%s] election resigned, leading [%v], cleared [%d/%d] retained topics", c.election.name, holding, cleared, len(tokens))
 }
 
 func (c *leaderCampaign) publish(topic string, payload []byte) bool {

@@ -288,7 +288,7 @@ func TestMetricBuild_ClusterTopic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id := MetricCluster
-			if tt.hostName != HostCluster {
+			if tt.hostName != HostAll {
 				id = MetricHost
 			}
 			topic, _, err := buildFromID(id, tt.hostName, ServiceNameUnset, ScopeData)

@@ -69,11 +69,8 @@ func (p *backupProbe) metrics() []metric.ID {
 
 func (p *backupProbe) gates() []metric.GateID { return nil }
 
-func (p *backupProbe) campaigns() []leaderRole {
-	if !p.serverHost {
-		return nil
-	}
-	return []leaderRole{{name: metric.LeaderRoleBackup, eligible: leaderServers(p.configPath)}}
+func (p *backupProbe) duties() []string {
+	return []string{metric.LeaderDutyBackup}
 }
 
 func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
@@ -213,18 +210,18 @@ func (p *backupProbe) armReaper(started time.Time) bool {
 	p.reapArming = true
 	client, err := brokerDial(p.configPath, "manual")
 	if err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, clusterReaperTopic)
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, allReaperTopic)
 		return false
 	}
 	defer client.close()
 	armed, _ := json.Marshal(backupReaper{State: metric.CommandOn})
-	if err := client.publishRetained(clusterReaperTopic, string(armed)); err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, clusterReaperTopic)
+	if err := client.publishRetained(allReaperTopic, string(armed)); err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, allReaperTopic)
 		return false
 	}
 	p.reapArming = false
 	p.reapNotice = 0
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] armed, the backup disk is powered down again when nothing needs it", clusterReaperTopic)
+	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] armed, the backup disk is powered down again when nothing needs it", allReaperTopic)
 	return true
 }
 
@@ -259,9 +256,9 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	if p.reapWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, clusterStatusTopic, clusterReaperTopic, "supervisor/+/backup/stage/tertiary/status")
+		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, allBackupStatusTopic, allReaperTopic, "supervisor/+/backup/stage/tertiary/status")
 		if err != nil {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the estate, retrying on the next tick", err)
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the cluster, retrying on the next tick", err)
 			return
 		}
 		p.reapWatch = watch
@@ -275,12 +272,12 @@ func (p *backupProbe) reap(ctx context.Context) {
 			p.reapWatch.close()
 			p.reapWatch = nil
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart,
-				"[%d] ticks with nothing watched, redialling the estate watch", reaperStaleTicks)
+				"[%d] ticks with nothing watched, redialling the cluster watch", reaperStaleTicks)
 		}
 		return
 	}
 	p.reapStale = 0
-	flag, declared := retained[clusterReaperTopic]
+	flag, declared := retained[allReaperTopic]
 	var reaper backupReaper
 	if declared {
 		_ = json.Unmarshal([]byte(flag), &reaper)
@@ -288,11 +285,11 @@ func (p *backupProbe) reap(ctx context.Context) {
 	switch {
 	case !declared:
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
-			"[%s] is absent, asserting the armed default the broker no longer carries", clusterReaperTopic)
+			"[%s] is absent, asserting the armed default the broker no longer carries", allReaperTopic)
 		p.armReaper(reapStart)
 	case strings.EqualFold(strings.TrimSpace(reaper.State), metric.CommandOff) && !reaper.paused():
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
-			"[%s] paused until [%s], which has passed, arming it again", clusterReaperTopic, reaper.ExpiresTS)
+			"[%s] paused until [%s], which has passed, arming it again", allReaperTopic, reaper.ExpiresTS)
 		p.armReaper(reapStart)
 	case p.reapArming:
 		p.armReaper(reapStart)
@@ -301,16 +298,16 @@ func (p *backupProbe) reap(ctx context.Context) {
 		p.reapPaused = paused
 		if paused {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("excluded", reapStart,
-				"[%s] is off until [%s], the backup disk stays powered", clusterReaperTopic, reaper.ExpiresTS)
+				"[%s] is off until [%s], the backup disk stays powered", allReaperTopic, reaper.ExpiresTS)
 		} else {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("restored", reapStart,
-				"[%s] is on, the backup disk is powered down again when nothing needs it", clusterReaperTopic)
+				"[%s] is on, the backup disk is powered down again when nothing needs it", allReaperTopic)
 		}
 	}
 	if p.reapPaused {
 		if p.reapQuiet() {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
-				"[%s] is still off until [%s], the backup disk stays powered", clusterReaperTopic, reaper.ExpiresTS)
+				"[%s] is still off until [%s], the backup disk stays powered", allReaperTopic, reaper.ExpiresTS)
 		}
 		return
 	}
@@ -322,11 +319,11 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	var coordinated backupDocument
-	if json.Unmarshal([]byte(retained[clusterStatusTopic]), &coordinated) == nil && coordinated.State == metric.BackupStateRunning {
+	if json.Unmarshal([]byte(retained[allBackupStatusTopic]), &coordinated) == nil && coordinated.State == metric.BackupStateRunning {
 		if started, perr := time.Parse(time.RFC3339, coordinated.StartedTS); perr == nil && time.Since(started) < backupRunCeiling {
 			if p.reapQuiet() {
 				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
-					"[%s] reports a run started [%s] still coordinating, leaving the disk powered", clusterStatusTopic, coordinated.StartedTS)
+					"[%s] reports a run started [%s] still coordinating, leaving the disk powered", allBackupStatusTopic, coordinated.StartedTS)
 			}
 			return
 		}
@@ -352,10 +349,10 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	p.reapIdle = reaperIdleTicks
-	if leading, _ := Leading(metric.LeaderRoleBackup); !leading {
+	if leading, _ := Leading(metric.LeaderDutyBackup); !leading {
 		if p.reapQuiet() {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
-				"[%s] election is not held by this host, leaving the power down to its leader", metric.LeaderRoleBackup)
+				"[%s] duty is not held by this host, leaving the power down to its leader", metric.LeaderDutyBackup)
 		}
 		return
 	}
@@ -366,7 +363,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	defer client.close()
-	if leading, _ := Leading(metric.LeaderRoleBackup); !leading {
+	if leading, _ := Leading(metric.LeaderDutyBackup); !leading {
 		return
 	}
 	if err := client.publishCommand(commandTopic, metric.CommandOff); err != nil {
@@ -649,7 +646,7 @@ func (p *backupProbe) lead() {
 		return
 	}
 	defer p.leadRunning.Unlock()
-	leading, epoch := Leading(metric.LeaderRoleBackup)
+	leading, epoch := Leading(metric.LeaderDutyBackup)
 	if !leading {
 		if p.leadWatch != nil {
 			p.leadWatch.close()
@@ -660,9 +657,9 @@ func (p *backupProbe) lead() {
 	}
 	leadStart := time.Now()
 	if p.leadWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, "supervisor/+/backup/status", "supervisor/+/backup/stage/+/status", clusterStatusTopic)
+		watch, err := brokerWatch(p.configPath, p.hostName, "supervisor/+/backup/status", "supervisor/+/backup/stage/+/status", allBackupStatusTopic)
 		if err != nil {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] watching the estate run, retrying on the next tick", err)
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] watching the cluster backup run, retrying on the next tick", err)
 			return
 		}
 		p.leadWatch = watch
@@ -674,26 +671,26 @@ func (p *backupProbe) lead() {
 			p.leadStale = 0
 			p.leadWatch.close()
 			p.leadWatch = nil
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", leadStart, "[%d] ticks with the estate run unwatched, redialling", reaperStaleTicks)
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", leadStart, "[%d] ticks with the cluster backup run unwatched, redialling", reaperStaleTicks)
 		}
 		return
 	}
 	p.leadStale = 0
 	expected := backupExpectedServers(p.configPath)
-	decision := backupEstateDecision(retained, expected, time.Now())
-	if decision.action == backupEstateIdle {
+	decision := backupClusterRunDecision(retained, expected, time.Now())
+	if decision.action == backupClusterRunIdle {
 		return
 	}
 	client, err := brokerDial(p.configPath, "coordinate")
 	if err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] reaching the broker to coordinate the estate run, retrying on the next tick", err)
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] reaching the broker to coordinate the cluster backup run, retrying on the next tick", err)
 		return
 	}
 	defer client.close()
-	if leading, current := Leading(metric.LeaderRoleBackup); !leading || current != epoch {
+	if leading, current := Leading(metric.LeaderDutyBackup); !leading || current != epoch {
 		return
 	}
-	if decision.action == backupEstateClose {
+	if decision.action == backupClusterRunClose {
 		if topic := config.Load(p.configPath).BackupCommandTopic(); topic != "" {
 			if err := client.publishCommand(topic, metric.CommandOff); err != nil {
 				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", leadStart, "[%v] powering down [%s], retrying on the next tick", err, topic)
@@ -707,26 +704,26 @@ func (p *backupProbe) lead() {
 		"started_ts":     decision.started.Format(time.RFC3339),
 		"duration_s":     int(time.Since(decision.started).Seconds()),
 		"success_bool":   decision.state == metric.BackupStateComplete,
-		"power_bool":     decision.action != backupEstateClose,
+		"power_bool":     decision.action != backupClusterRunClose,
 		"hosts_expected": len(expected),
 		"hosts_reported": decision.reported,
 		"hosts_failed":   decision.failed,
 		"leader_host":    p.hostName,
 		"leader_epoch":   epoch,
 	}
-	if decision.action == backupEstateClose {
+	if decision.action == backupClusterRunClose {
 		document["finished_ts"] = time.Now().Format(time.RFC3339)
 	}
 	payload, _ := json.Marshal(document)
-	if err := client.publishRetained(clusterStatusTopic, string(payload)); err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", leadStart, "[%v] publishing the [%s] estate run, retrying on the next tick", err, decision.state)
+	if err := client.publishRetained(allBackupStatusTopic, string(payload)); err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", leadStart, "[%v] publishing the [%s] cluster backup run, retrying on the next tick", err, decision.state)
 		return
 	}
 	switch decision.action {
-	case backupEstateOpen:
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionRegister).Infof("assigned", leadStart, "[%s] estate run opened at epoch [%d], [%d] of [%d] hosts reported", decision.started.Format(time.RFC3339), epoch, decision.reported, len(expected))
-	case backupEstateClose:
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("finished", leadStart, "[%s] estate run closed as [%s], disk powered down, [%d] of [%d] hosts reported", decision.started.Format(time.RFC3339), decision.state, decision.reported, len(expected))
+	case backupClusterRunOpen:
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionRegister).Infof("assigned", leadStart, "[%s] cluster backup run opened at epoch [%d], [%d] of [%d] hosts reported", decision.started.Format(time.RFC3339), epoch, decision.reported, len(expected))
+	case backupClusterRunClose:
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("finished", leadStart, "[%s] cluster backup run closed as [%s], disk powered down, [%d] of [%d] hosts reported", decision.started.Format(time.RFC3339), decision.state, decision.reported, len(expected))
 	}
 }
 
@@ -740,27 +737,27 @@ func (p *backupProbe) publishHostStatus(document backupDocument) {
 	_ = client.publishRetained("supervisor/"+p.hostName+"/backup/status", string(payload))
 }
 
-type backupEstateAction int
+type backupClusterRunAction int
 
-type backupEstate struct {
-	action   backupEstateAction
+type backupClusterRun struct {
+	action   backupClusterRunAction
 	state    string
 	started  time.Time
 	reported int
 	failed   int
 }
 
-func backupEstateDecision(retained map[string]string, expected []string, now time.Time) backupEstate {
+func backupClusterRunDecision(retained map[string]string, expected []string, now time.Time) backupClusterRun {
 	terminal := map[string]bool{metric.BackupStateComplete: true, metric.BackupStateFailed: true, metric.BackupStateTimedout: true}
-	var estate backupDocument
-	estateStarted := time.Time{}
-	if json.Unmarshal([]byte(retained[clusterStatusTopic]), &estate) == nil {
-		estateStarted, _ = time.Parse(time.RFC3339, estate.StartedTS)
+	var clusterRun backupDocument
+	clusterRunStarted := time.Time{}
+	if json.Unmarshal([]byte(retained[allBackupStatusTopic]), &clusterRun) == nil {
+		clusterRunStarted, _ = time.Parse(time.RFC3339, clusterRun.StartedTS)
 	}
-	decision := backupEstate{action: backupEstateIdle}
+	decision := backupClusterRun{action: backupClusterRunIdle}
 	switch {
-	case estate.State == metric.BackupStateRunning && !estateStarted.IsZero():
-		decision.action, decision.started = backupEstateRefresh, estateStarted
+	case clusterRun.State == metric.BackupStateRunning && !clusterRunStarted.IsZero():
+		decision.action, decision.started = backupClusterRunRefresh, clusterRunStarted
 	default:
 		for _, host := range expected {
 			prefix := "supervisor/" + host + "/backup/stage/"
@@ -778,16 +775,16 @@ func backupEstateDecision(retained map[string]string, expected []string, now tim
 					continue
 				}
 				started, startedOK := backupRunStarted(document)
-				if !startedOK || now.Sub(started) > backupRunCeiling || (!estateStarted.IsZero() && !started.After(estateStarted.Add(backupRunSkew))) {
+				if !startedOK || now.Sub(started) > backupRunCeiling || (!clusterRunStarted.IsZero() && !started.After(clusterRunStarted.Add(backupRunSkew))) {
 					continue
 				}
 				if decision.started.IsZero() || started.Before(decision.started) {
-					decision.action, decision.started = backupEstateOpen, started
+					decision.action, decision.started = backupClusterRunOpen, started
 				}
 			}
 		}
 	}
-	if decision.action == backupEstateIdle {
+	if decision.action == backupClusterRunIdle {
 		return decision
 	}
 	earliest := decision.started.Add(-backupRunSkew)
@@ -804,11 +801,11 @@ func backupEstateDecision(retained map[string]string, expected []string, now tim
 	decision.state = metric.BackupStateRunning
 	switch {
 	case decision.reported >= len(expected) && decision.failed > 0:
-		decision.action, decision.state = backupEstateClose, metric.BackupStateFailed
+		decision.action, decision.state = backupClusterRunClose, metric.BackupStateFailed
 	case decision.reported >= len(expected):
-		decision.action, decision.state = backupEstateClose, metric.BackupStateComplete
+		decision.action, decision.state = backupClusterRunClose, metric.BackupStateComplete
 	case now.Sub(decision.started) > backupRunCeiling:
-		decision.action, decision.state = backupEstateClose, metric.BackupStateTimedout
+		decision.action, decision.state = backupClusterRunClose, metric.BackupStateTimedout
 	}
 	return decision
 }
@@ -999,17 +996,17 @@ const (
 	reaperNoticeTicks    = 15
 	reaperStaleTicks     = 5
 
-	clusterReaperTopic = "supervisor/" + metric.HostCluster + "/backup/reaper"
-	clusterStatusTopic = "supervisor/" + metric.HostCluster + "/backup/status"
+	allReaperTopic       = "supervisor/" + metric.HostAll + "/backup/reaper"
+	allBackupStatusTopic = "supervisor/" + metric.HostAll + "/backup/status"
 )
 
 const backupStageTertiary = "tertiary"
 
 const (
-	backupEstateIdle backupEstateAction = iota
-	backupEstateOpen
-	backupEstateRefresh
-	backupEstateClose
+	backupClusterRunIdle backupClusterRunAction = iota
+	backupClusterRunOpen
+	backupClusterRunRefresh
+	backupClusterRunClose
 )
 
 var (

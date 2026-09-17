@@ -1425,7 +1425,7 @@ class BackupsShellTest(unittest.TestCase):
         self.shell(probe, BACKUPS_SETTLE_SECONDS=0)
         with open(capture) as handle:
             self.assertNotIn("--scrub", handle.read(),
-                             "an estate run must not force an hours-long scrub by default")
+                             "a cluster backup run must not force an hours-long scrub by default")
         os.remove(capture)
         self.shell(probe, BACKUPS_SCRUB=1, BACKUPS_SETTLE_SECONDS=0)
         with open(capture) as handle:
@@ -1567,7 +1567,7 @@ class BackupsShellTest(unittest.TestCase):
         probe = ('ssh() { echo "ssh: could not resolve hostname" >&2; return 255; }\n'
                  'backups_stop_one macmini-mad 2>&1 || printf "exit=%s" "$?"')
         reported = self.shell(probe)
-        self.assertNotIn("macmini-mad ==", reported, "an unreachable host prints no header")
+        self.assertNotIn("== macmini-mad", reported, "an unreachable host prints no header")
         self.assertNotIn("could not resolve", reported, "its ssh error is hidden too")
         self.assertIn("exit=255", reported, "but the status still records it")
 
@@ -1576,7 +1576,7 @@ class BackupsShellTest(unittest.TestCase):
         probe = ('ssh() { printf "\\n\\n+----+\\n| row |\\n\\n\\n| row |\\n+----+\\n\\n\\n"; }\n'
                  'backups_stop_one macmini-mad')
         lines = self.shell(probe, keep_blanks=True).split("\n")
-        self.assertEqual(lines, ["", "== macmini-mad ==", "", "+----+", "| row |", "", "| row |", "+----+"],
+        self.assertEqual(lines, ["", "\033[1;35m== macmini-mad stop ==\033[0m", "", "+----+", "| row |", "", "| row |", "+----+"],
                          "blank runs collapse to one and trailing blanks are dropped")
 
     def test_every_log_line_shares_one_format(self):
