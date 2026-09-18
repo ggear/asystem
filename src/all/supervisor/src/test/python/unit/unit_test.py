@@ -646,6 +646,18 @@ class BackupShellTest(unittest.TestCase):
                                  'BACKUP_TIMEOUT_HOURS=0 backup_started primary'),
                       "a disabled timeout states no deadline")
 
+    def test_every_service_line_is_the_same_length_whatever_the_service(self):
+        rendered = self.shell(
+            'backup_marker() { printf "%s\\n" "$2"; }\n'
+            'for s in plex postgres wrangle homeassistant; do backup_service_started "$s"; done')
+        lines = rendered.splitlines()
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(len(set(len(line) for line in lines)), 1,
+                         "one width for every service name:\n{}".format(rendered))
+        self.assertIn("[homeassistant]", lines[-1],
+                      "the widest enrolled module sets the width and is never padded past it")
+        self.assertIn("[plex         ]", lines[0])
+
     def test_rated_is_the_one_place_a_throughput_is_formed(self):
         for megabytes, seconds, expected in ((7047, 87, " 81"), (139455, 682, "204"), (723, 22, " 32"),
                                              (0, 5, "  0"), (0, 1, "  0"), (500, 0, "  -"),

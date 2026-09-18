@@ -190,6 +190,7 @@ BACKUP_RUNNING_MATCH='"state": "'"${BACKUP_STATE_RUNNING}"'"'
 BACKUP_REAPER_TOPIC="supervisor/all/backup/reaper"
 BACKUP_SCHEDULED_HOUR=1
 BACKUP_BAR_WIDTH=18
+BACKUP_SERVICE_WIDTH=13
 BACKUP_RATE_POINTS="${BACKUP_RATE_POINTS:-12}"
 BACKUP_RATE_QUANTUM="${BACKUP_RATE_QUANTUM:-104857600}"
 BACKUP_REAP_WAIT="${BACKUP_REAP_WAIT:-15}"
@@ -800,7 +801,7 @@ backup_finished() {
 
 backup_service_started() {
   local service="$1"
-  backup_marker primary "starting [${service}] backup"
+  backup_marker primary "$(printf 'starting [%-*s] backup' "${BACKUP_SERVICE_WIDTH}" "${service}")"
 }
 
 backup_service_finished() {
@@ -814,8 +815,8 @@ backup_service_finished() {
   version="$(backup_tail_field "${doc}" version)"
   rate="$(backup_throughput "-")"
   [ "${state}" = "${BACKUP_STATE_SUCCESS}" ] && rate="$(backup_rated "${moved:-0}" "${spent:-0}")"
-  backup_marker primary "$(printf 'finished [%s] as [%s] in [%s], kind [%s], version [%s], size [%s] MiB at [%s] MiB/s%s' \
-    "${service}" \
+  backup_marker primary "$(printf 'finished [%-*s] as [%s] in [%s], kind [%s], version [%s], size [%s] MiB at [%s] MiB/s%s' \
+    "${BACKUP_SERVICE_WIDTH}" "${service}" \
     "${state:-unknown}" \
     "$(backup_elapsed "${spent:-0}")" \
     "${kind:-unknown}" \
@@ -1510,12 +1511,12 @@ primary_start() {
     script="${BACKUP_INSTALL_ROOT}/${service}/latest/backup.sh"
     running="$(docker ps --filter "name=^/${service}$" --filter "status=running" --format '{{.Names}}')"
     if [ "${running}" != "${service}" ]; then
-      backup_log WARN "skipped [${service}] [${index}/${#enrolled[@]}], container is not running"
+      backup_log WARN "$(printf 'skipped [%-*s] [%s/%s], container is not running' "${BACKUP_SERVICE_WIDTH}" "${service}" "${index}" "${#enrolled[@]}")"
       continue
     fi
     health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "${service}" 2>/dev/null)"
     if [ "${health}" = "starting" ]; then
-      backup_log WARN "skipped [${service}] [${index}/${#enrolled[@]}], container is still starting"
+      backup_log WARN "$(printf 'skipped [%-*s] [%s/%s], container is still starting' "${BACKUP_SERVICE_WIDTH}" "${service}" "${index}" "${#enrolled[@]}")"
       continue
     fi
     count=$(( count + 1 ))
@@ -1523,7 +1524,7 @@ primary_start() {
     mkdir -p "${dir}"
     local started; started="$(date +%s)"
     local previous; previous="$(find "${BACKUP_HOME_ROOT}/${service}/backup" -mindepth 1 -maxdepth 1 -type d -name '20*' 2>/dev/null | sort | tail -1)"
-    backup_marker primary "started [${service}] [${index}/${#enrolled[@]}] with [${script}], logging to [${dir}/output.log]"
+    backup_marker primary "$(printf 'started [%-*s] [%s/%s] with [%s], logging to [%s]' "${BACKUP_SERVICE_WIDTH}" "${service}" "${index}" "${#enrolled[@]}" "${script}" "${dir}/output.log")"
     cat >"${dir}/status.json.tmp" <<JSON
 {
   "run_id": "${BACKUP_RUN_ID}",
