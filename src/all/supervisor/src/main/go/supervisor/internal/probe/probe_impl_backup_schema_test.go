@@ -3,6 +3,7 @@ package probe
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -188,6 +189,56 @@ func TestProbeImplBackupSchema_DocumentedShapeMatchesTheDeclaration(t *testing.T
 		if declared := declaredPayloadKeys(t, match); !slices.Equal(keys, declared) {
 			t.Errorf("%s: got documented %v want declared %v", name, keys, declared)
 		}
+	}
+}
+
+func TestProbeImplBackupSchema_RunStateRuleAgreesAcrossTheLanguages(t *testing.T) {
+	words := []string{"-", metric.BackupStateRunning, metric.BackupStateSuccess, metric.BackupStateSkipped,
+		metric.BackupStateStopped, metric.BackupStateTimeout, metric.BackupStateFailure}
+	var probe strings.Builder
+	probe.WriteString("for scrub in " + strings.Join(words, " ") + "; do\n")
+	probe.WriteString(" for one in " + strings.Join(words, " ") + "; do\n")
+	probe.WriteString("  for two in " + strings.Join(words, " ") + "; do\n")
+	probe.WriteString("   for three in " + strings.Join(words, " ") + "; do\n")
+	probe.WriteString(`    printf '%s %s %s %s %s\n' "${scrub}" "${one}" "${two}" "${three}" ` +
+		`"$(backup_resulted "${scrub}" "${one}" "${two}" "${three}")"` + "\n")
+	probe.WriteString("done; done; done; done\n")
+	script := "set -uo pipefail\nsource \"" + filepath.Join("..", "..", "..", "..", "resources", "image", "backup.sh") +
+		"\"\n" + probe.String()
+	command := exec.Command("bash", "-c", script)
+	command.Env = append(os.Environ(), "BACKUP_SOURCE_ONLY=1")
+	out, err := command.Output()
+	if err != nil {
+		t.Fatalf("run backup_resulted: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != len(words)*len(words)*len(words)*len(words) {
+		t.Fatalf("got %d combinations want %d, the probe has rotted", len(lines), len(words)*len(words)*len(words)*len(words))
+	}
+	mismatches := 0
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) != 5 {
+			t.Fatalf("got %q want five fields, the probe has rotted", line)
+		}
+		scrub, shelled := parts[0], parts[4]
+		if scrub == "-" {
+			scrub = ""
+		}
+		stages := map[string]string{}
+		for index, stage := range backupStages {
+			if parts[index+1] != "-" {
+				stages[stage] = parts[index+1]
+			}
+		}
+		if goes := backupResolvedState(stages, scrub); goes != shelled {
+			if mismatches++; mismatches <= 10 {
+				t.Errorf("scrub=%q stages=%v: shell says %q, go says %q", parts[0], parts[1:4], shelled, goes)
+			}
+		}
+	}
+	if mismatches > 10 {
+		t.Errorf("and %d further disagreements", mismatches-10)
 	}
 }
 

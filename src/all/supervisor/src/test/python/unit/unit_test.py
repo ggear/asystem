@@ -301,11 +301,11 @@ class BackupShellTest(unittest.TestCase):
 
     def test_marker_names_its_stage_beside_the_level(self):
         for stage, rendered in (("tertiary", "tertiary "), ("secondary", "secondary"), ("primary", "primary  ")):
-            self.assertRegex(self.shell('backup_marker {} "mirrored [ 1] GB"'.format(stage)),
-                             r"^\[INFO " + rendered + r" \d{2}:\d{2}:\d{2}\] mirrored \[ 1\] GB$")
+            self.assertRegex(self.shell('backup_marker {} "mirrored [ 1] GiB"'.format(stage)),
+                             r"^\[INFO " + rendered + r" \d{2}:\d{2}:\d{2}\] mirrored \[ 1\] GiB$")
 
     def test_log_matches_the_marker_column(self):
-        marker = self.shell('backup_marker tertiary "mirrored [ 1739] GB"')
+        marker = self.shell('backup_marker tertiary "mirrored [ 1739] GiB"')
         for level, rendered in (("WARN", "WARN"), ("ERROR", "ERRS"), ("INFO", "INFO")):
             line = self.shell('backup_log {} "no bytes copied" 2>&1'.format(level))
             self.assertRegex(line, r"^\[" + rendered + r" {11}\d{2}:\d{2}:\d{2}\] no bytes copied$")
@@ -390,16 +390,16 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("backup_bar"), "-")
 
     def test_megabytes_is_the_one_unit_the_table_shows(self):
-        for megabytes, expected in ((0, "0 MB"), (4, "4 MB"), (1024, "1,024 MB"),
-                                    (19940000, "19,940,000 MB")):
+        for megabytes, expected in ((0, "0 MiB"), (4, "4 MiB"), (1024, "1,024 MiB"),
+                                    (19940000, "19,940,000 MiB")):
             self.assertEqual(self.shell("backup_megabytes {}".format(megabytes)), expected)
         self.assertEqual(self.shell('backup_megabytes ""'), "-",
                          "a run with no stage document wrote an unknown amount, not zero")
         self.assertEqual(self.shell("backup_megabytes -"), "-")
 
     def test_terabytes_resolves_a_sub_terabyte_volume(self):
-        for megabytes, expected in ((0, "0.0 TB"), (75200, "0.1 TB"), (404403, "0.4 TB"),
-                                    (1020011, "1.0 TB"), (3815446, "3.6 TB"), (9537534, "9.1 TB")):
+        for megabytes, expected in ((0, "0.0 TiB"), (75200, "0.1 TiB"), (404403, "0.4 TiB"),
+                                    (1020011, "1.0 TiB"), (3815446, "3.6 TiB"), (9537534, "9.1 TiB")):
             self.assertEqual(self.shell("backup_terabytes {}".format(megabytes)), expected)
         self.assertEqual(self.shell('backup_terabytes ""'), "-")
         self.assertEqual(self.shell("backup_terabytes -"), "-")
@@ -504,19 +504,19 @@ class BackupShellTest(unittest.TestCase):
     def test_progressed_omits_trailing_unknowns_and_dashes_interior_ones(self):
         for name, args, expected in (
                 ("nothing beyond the bytes moved", "mirrored 5 - - - -- -",
-                 "mirrored [    5] GB"),
+                 "mirrored [    5] GiB"),
                 ("a rate with no total keeps the total as a placeholder", "mirrored 9 - - - -- 140",
-                 "mirrored [    9] GB of [    -] GB at [140] MB/s"),
+                 "mirrored [    9] GiB of [    -] GiB at [140] MiB/s"),
                 ("a total with no rate keeps the rate as a placeholder", "scrubbed 24 7419 0 162 00:05:48 -",
-                 "scrubbed [   24] GB of [ 7419] GB at [  -] MB/s at [ 0] percent complete "
+                 "scrubbed [   24] GiB of [ 7419] GiB at [  -] MiB/s at [ 0] percent complete "
                  "and estimated to complete in [ 162] min at [00:05:48]"),
                 ("everything measured", "mirrored 25 100 25 12 18:02:28 140",
-                 "mirrored [   25] GB of [  100] GB at [140] MB/s at [25] percent complete "
+                 "mirrored [   25] GiB of [  100] GiB at [140] MiB/s at [25] percent complete "
                  "and estimated to complete in [  12] min at [18:02:28]")):
             self.assertEqual(self.shell("backup_progressed " + args), expected, name)
 
     def test_progressed_puts_every_stage_in_one_field_order(self):
-        order = ("] GB of [", "] GB at [", "] MB/s at [", "] percent complete and estimated")
+        order = ("] GiB of [", "] GiB at [", "] MiB/s at [", "] percent complete and estimated")
         for verb in ("mirrored", "scrubbed", "exported", "promoted"):
             rendered = self.shell("backup_progressed {} 25 100 25 12 18:02:28 140".format(verb))
             self.assertTrue(rendered.startswith(verb + " ["), rendered)
@@ -570,7 +570,7 @@ class BackupShellTest(unittest.TestCase):
                                              ("-", 10, "  -"), ("", "", "  -")):
             rated = self.shell('printf "[%s]" "$(backup_rated "{}" "{}")"'.format(megabytes, seconds))
             self.assertEqual(rated, "[{}]".format(expected),
-                             "[{}] MB over [{}] s".format(megabytes, seconds))
+                             "[{}] MiB over [{}] s".format(megabytes, seconds))
             self.assertEqual(len(rated) - 2, 3, "every rate renders three characters wide")
         self.assertEqual(self.shell('printf "[%s]" "$(backup_rated 0 6)"'), "[  0]",
                          "nothing moved over a real duration is a measured zero, not an unknown")
@@ -583,12 +583,12 @@ class BackupShellTest(unittest.TestCase):
                             duration_s=87, size_mb=7047, file_count=31, disk_usage_perc=33)
         reported = self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
                               'backup_finished tertiary "' + doc + '"')
-        self.assertIn("size [7047] MB at [ 81] MB/s", reported)
+        self.assertIn("size [7047] MiB at [ 81] MiB/s", reported)
         self.assertIn("disk at [33] percent", reported)
         self.assertNotIn("files [", reported, "the file count is not part of a finish line")
         stalled = self.document("y", "tertiary", state="success", success_bool=True,
                                 duration_s=0, size_mb=0, file_count=0, disk_usage_perc=33)
-        self.assertIn("at [  -] MB/s", self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
+        self.assertIn("at [  -] MiB/s", self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
                                                 'backup_finished tertiary "' + stalled + '"'))
 
     def test_sampled_converges_on_the_rate_rather_than_averaging_from_the_start(self):
@@ -739,6 +739,18 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(document["stages_halted"], 1)
         self.assertEqual(document["state"], "timeout")
 
+    def test_rollup_publishes_its_verdict_like_every_other_document(self):
+        run = "2026-09-08_00-00-00"
+        self.document(run, "primary", state="success", success_bool=True)
+        path = join(self.home, "supervisor/backup", run)
+        published = self.shell('BACKUP_RUN_PATH="{}"; BACKUP_RUN_ID="{}"; BACKUP_TRIGGER=manual\n'
+                               'BACKUP_HOST=macmini-mad\n'
+                               'backup_publish() {{ printf "%s\\n%s\\n" "$1" "$3"; }}\n'
+                               'backup_rollup "$(date +%s)"'.format(path, run)).splitlines()
+        self.assertEqual(published[0], "supervisor/macmini-mad/backup/status",
+                         "a hand run must publish its verdict, not leave the topic on the last scheduled run")
+        self.assertEqual(published[1], "retained", "the run verdict is retained like every other document")
+
     @NEEDS_GNU
     def test_rollup_names_the_one_stage_that_stopped_when_nothing_actually_failed(self):
         run = "2026-09-08_01-00-00"
@@ -813,10 +825,10 @@ class BackupShellTest(unittest.TestCase):
             'backup_used() {{ echo $(( 4170 * 1073741824 )); }}\n'
             'backup_verified() {{ return 0; }}\n'
             'backup_progress "{}"'.format(join(self.home, "supervisor/backup", run)))
-        self.assertIn("scrubbed [   61] GB of [ 4170] GB", reported)
+        self.assertIn("scrubbed [   61] GiB of [ 4170] GiB", reported)
         self.assertIn("at [ 1] percent complete", reported)
         self.assertRegex(reported, r"estimated to complete in \[\s*4[67]\] min")
-        self.assertIn("of [ 4170] GB at [  -] MB/s at [ 1] percent complete", reported,
+        self.assertIn("of [ 4170] GiB at [  -] MiB/s at [ 1] percent complete", reported,
                       "an unmeasured rate that has fields after it holds its column with a dash")
         samples = join(self.home, "supervisor/backup", run, "stage/tertiary/scrub-samples")
         with open(samples, "w") as handle:
@@ -825,14 +837,14 @@ class BackupShellTest(unittest.TestCase):
             'backup_used() {{ echo $(( 4170 * 1073741824 )); }}\n'
             'backup_verified() {{ return 0; }}\n'
             'backup_progress "{}"'.format(join(self.home, "supervisor/backup", run)))
-        self.assertIn("at [245] MB/s", rated)
+        self.assertIn("at [245] MiB/s", rated)
 
     @NEEDS_GNU
     def test_progress_reports_the_mirror_when_no_scrub_is_running(self):
         run = "2026-09-08_00-00-00"
         self.document(run, "primary", state="running", size_mb=512, total_mb=1024, duration_s=64)
         reported = self.shell('backup_progress "{}"'.format(join(self.home, "supervisor/backup", run)))
-        self.assertIn("exported [    0] GB of [    1] GB", reported)
+        self.assertIn("exported [    0] GiB of [    1] GiB", reported)
         self.assertIn("at [50] percent complete", reported)
 
     @NEEDS_GNU
@@ -1068,7 +1080,7 @@ class BackupShellTest(unittest.TestCase):
             'backup_used() {{ echo $(( 4025 * 1073741824 )); }}\n'
             'backup_verified() {{ return 0; }}\n'
             'backup_progress "{}"'.format(path))
-        self.assertIn("mirrored [   25] GB of [  100] GB", reported)
+        self.assertIn("mirrored [   25] GiB of [  100] GiB", reported)
         self.assertIn("at [25] percent complete", reported)
 
     @NEEDS_GNU
