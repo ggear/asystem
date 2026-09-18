@@ -92,6 +92,7 @@ BACKUP_SCRUB_FORCED="${BACKUP_SCRUB_FORCED:-0}"
 BACKUP_SCRUB_DAY="${BACKUP_SCRUB_DAY:-1}"
 BACKUP_SCRUB_WINDOW="${BACKUP_SCRUB_WINDOW:-3}"
 BACKUP_BOUNDED_WAIT="${BACKUP_BOUNDED_WAIT:-60}"
+BACKUP_ALIVE_SECONDS="${BACKUP_ALIVE_SECONDS:-10}"
 BACKUP_BOUNDED_ABANDONED=124
 BACKUP_BOUNDED_SEQ=0
 BACKUP_BOUNDED_OUTPUT=""
@@ -1144,6 +1145,30 @@ backup_verified() {
   [ -n "${declared}" ] && [ -n "${current}" ] && [ "${declared}" = "${current}" ]
 }
 
+backup_alive() {
+  local target="$1" device options
+  device="$(backup_declared "${target}")" || return 0
+  case "${device}" in /dev/*) ;; *) return 0 ;; esac
+  backup_bounded "${BACKUP_ALIVE_SECONDS}" "read [${device}]" \
+    dd if="${device}" of=/dev/null bs=4096 count=1 iflag=direct || return 1
+  mountpoint -q "${target}" 2>/dev/null || return 0
+  options=",$(findmnt -M "${target}" -n -o OPTIONS 2>/dev/null | tail -n 1),"
+  case "${options}" in *,ro,*) return 1 ;; esac
+  return 0
+}
+
+backup_diagnosed() {
+  if ! backup_verified /backup; then
+    printf 'carries [%s] rather than the declared [%s]' \
+      "$(backup_sourced /backup || echo nothing)" "$(backup_declared /backup || echo nothing)"
+  elif ! backup_alive /backup; then
+    printf 'carries [%s] which is not answering reads, its device lost power or its link while mounted' \
+      "$(backup_sourced /backup || echo nothing)"
+  else
+    printf 'carries [%s] and is answering normally' "$(backup_sourced /backup || echo nothing)"
+  fi
+}
+
 backup_mount() {
   local target="$1" error="" kernel
   backup_verified "${target}" && return 0
@@ -1418,7 +1443,7 @@ backup_heartbeat() {
     now="$(date +%s)"
     kill -0 "${BACKUP_MAIN_PID}" 2>/dev/null || return 0
     if [ "${BACKUP_STAGE}" = "tertiary" ] && [ -f "${BACKUP_STAGE_DIR}/disk-device" ] && ! backup_attached; then
-      backup_log ERROR "[/backup] is no longer the backup disk, stopping this stage before it writes anywhere else"
+      backup_log ERROR "[/backup] $(backup_diagnosed), stopping this stage before it writes anywhere else"
       kill -TERM "${BACKUP_MAIN_PID}" 2>/dev/null
       stage_stop || true
       return 0
@@ -1620,6 +1645,7 @@ secondary_stop() {
 backup_attached() {
   local expected
   backup_verified /backup || return 1
+  backup_alive /backup || return 1
   [ -f "${BACKUP_STAGE_DIR}/disk-device" ] || return 0
   expected="$(cat "${BACKUP_STAGE_DIR}/disk-device" 2>/dev/null)"
   [ -n "${expected}" ] || return 0
@@ -1637,6 +1663,7 @@ backup_promotion() {
 backup_ready() {
   local fstype
   backup_verified /backup || return 1
+  backup_alive /backup || return 1
   fstype="$(findmnt -M /backup -n -o FSTYPE 2>/dev/null | tail -n 1)"
   backup_local "${fstype}"
 }
@@ -1974,7 +2001,7 @@ tertiary_start() {
     return 1
   fi
   if ! backup_ready; then
-    backup_log ERROR "[/backup] carries [$(backup_sourced /backup || echo nothing)] rather than the declared [$(backup_declared /backup || echo nothing)], refusing to mirror"
+    backup_log ERROR "[/backup] $(backup_diagnosed), refusing to mirror"
     return 1
   fi
   if [ "$(stat -c %d /backup 2>/dev/null)" = "$(stat -c %d "${BACKUP_HOME_ROOT}" 2>/dev/null)" ]; then
@@ -1994,7 +2021,7 @@ tertiary_start() {
     [[ "${index}" =~ ^[0-9]+$ ]] || continue
     target="/backup/share/${index}"
     mountpoint -q "${share}" || { backup_log ERROR "[${share}] vanished mid-run, skipping"; failed=1; continue; }
-    backup_attached || { backup_log ERROR "[/backup] is no longer the backup disk, aborting before writing anywhere else"; failed=1; break; }
+    backup_attached || { backup_log ERROR "[/backup] $(backup_diagnosed), aborting before writing anywhere else"; failed=1; break; }
     mkdir -p "${target}/.rsync"
     find "${target}/.rsync" -mindepth 1 -mtime +7 -delete 2>/dev/null
     backup_log INFO "mirroring [${share}] to [${target}]"

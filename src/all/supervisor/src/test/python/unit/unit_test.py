@@ -564,6 +564,54 @@ class BackupShellTest(unittest.TestCase):
                          "a setting defaults on its normalisation line at the top, or it is a "
                          "declared guard on a variable assigned unconditionally")
 
+    def alive(self, device="/dev/fake", reads=0, options="rw,noatime", mounted=True):
+        return self.shell(
+            'backup_declared() {{ printf "%s\\n" "{}"; }}\n'
+            'dd() {{ return {}; }}\n'
+            'mountpoint() {{ return {}; }}\n'
+            'findmnt() {{ printf "%s\\n" "{}"; }}\n'
+            'backup_alive /backup && echo alive || echo dead'.format(
+                device, reads, 0 if mounted else 1, options))
+
+    def test_alive_probes_the_device_rather_than_trusting_its_name(self):
+        self.assertEqual(self.alive(), "alive")
+        self.assertEqual(self.alive(reads=1), "dead", "a device that will not answer a read is dead")
+        self.assertEqual(self.alive(options="ro,noatime"), "dead", "a forced readonly mount is dead")
+        self.assertEqual(self.alive(device="//macmini-max/share-20"), "alive",
+                         "a remote source carries no block device to probe")
+        self.assertEqual(self.alive(reads=1, mounted=False), "dead",
+                         "an unmounted target is still probed for its device")
+        self.assertEqual(self.shell('backup_declared() { return 1; }\n'
+                                    'backup_alive /backup && echo alive || echo dead'), "alive",
+                         "liveness is inert with no device to probe, backup_verified owns that fault")
+
+    def test_a_disconnected_device_under_a_live_mount_is_neither_attached_nor_ready(self):
+        stubs = ('backup_verified() {{ return 0; }}\n'
+                 'backup_declared() {{ printf "/dev/fake\\n"; }}\n'
+                 'backup_sourced() {{ printf "/dev/fake\\n"; }}\n'
+                 'mountpoint() {{ return 0; }}\n'
+                 'findmnt() {{ case "$*" in *OPTIONS*) printf "rw,noatime\\n" ;; '
+                 '*FSTYPE*) printf "btrfs\\n" ;; esac; }}\n'
+                 'dd() {{ return {}; }}\n')
+        for reads, attached, ready in ((0, "attached", "ready"), (1, "detached", "unready")):
+            self.assertEqual(self.shell(stubs.format(reads) +
+                                        'backup_attached && echo attached || echo detached'),
+                             attached, "reads [{}]".format(reads))
+            self.assertEqual(self.shell(stubs.format(reads) +
+                                        'backup_ready && echo ready || echo unready'),
+                             ready, "reads [{}]".format(reads))
+
+    def test_diagnosed_tells_a_wrong_disk_apart_from_a_dead_one(self):
+        stubs = ('backup_sourced() {{ printf "/dev/fake\\n"; }}\n'
+                 'backup_declared() {{ printf "/dev/declared\\n"; }}\n'
+                 'mountpoint() {{ return 0; }}\n'
+                 'findmnt() {{ printf "rw,noatime\\n"; }}\n'
+                 'backup_verified() {{ return {}; }}\n'
+                 'dd() {{ return {}; }}\n')
+        self.assertIn("rather than the declared", self.shell(stubs.format(1, 0) + "backup_diagnosed"))
+        self.assertIn("not answering reads", self.shell(stubs.format(0, 1) + "backup_diagnosed"))
+        self.assertIn("answering normally", self.shell(stubs.format(0, 0) + "backup_diagnosed"))
+
     def test_rated_is_the_one_place_a_throughput_is_formed(self):
         for megabytes, seconds, expected in ((7047, 87, " 81"), (139455, 682, "204"), (723, 22, " 32"),
                                              (0, 5, "  0"), (0, 1, "  0"), (500, 0, "  -"),
