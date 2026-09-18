@@ -102,7 +102,7 @@ backups_header() {
 
 # shellcheck disable=SC2029
 backups_dispatch() {
-  local host="$1" remote="$2" stage="$3" status=0 header
+  local host="$1" remote="$2" stage="$3" header
   header="$(backups_header "${host}" "${stage}")"
   ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" "${remote}" 2>/dev/null |
     awk -v header="${header}" '
@@ -111,8 +111,6 @@ backups_dispatch() {
         else if (pending) { print "" }
         pending = 0
         print }'
-  status=$?
-  return "${status}"
 }
 
 # shellcheck disable=SC2029
@@ -188,13 +186,17 @@ backups_tail() {
 }
 
 backups_stop() {
-  backups_each backups_stop_one
+  local status=0
+  backups_each backups_stop_one || status=$?
   printf '\n'
+  return "${status}"
 }
 
 backups_list() {
-  backups_each backups_list_one
+  local status=0
+  backups_each backups_list_one || status=$?
   printf '\n'
+  return "${status}"
 }
 
 # shellcheck disable=SC2317

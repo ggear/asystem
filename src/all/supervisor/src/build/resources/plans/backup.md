@@ -691,15 +691,15 @@ hosts never stand in the election, never mount `/backup` and never touch the plu
 `backup` reads a standing watch of `supervisor/+/backup/status`, `supervisor/+/backup/stage/+/status`
 and `supervisor/all/backup/status`, and `backupClusterRunDecision` derives one action from them alone:
 
-- **open** — no running cluster backup status, and an expected `server` has a *scheduled* stage running whose
+- **open** — no running cluster backup status, and an expected `server` has a *system*-triggered stage running whose
   `expires_ts` has not passed and whose run began after the last cluster backup run. A run is dated from its
   `run_id`, which every stage of one run shares, never from a stage's own start, so a run reopened after
   a flush mid-tertiary still matches each host's report of the same run. A manual stage never opens one,
   and a dead stage document — its final publish lost — cannot reopen anything once it expires;
 - **refresh** — the cluster backup status is `running`; republish it with the current report count;
 - **close** — every expected `server` reported a terminal `supervisor/<host>/backup/status` for this
-  run, or `backupRunCeiling` has passed; power the plug off, then publish `complete`, `failed` or
-  `timedout`.
+  run, or `backupRunCeiling` has passed; power the plug off, then publish `success`, `failure` or
+  `timeout`.
 
 Because nothing is remembered between minutes, a holder that restarts, changes, or was idle at 01:00
 still finishes the run, and a publish the broker did not acknowledge is simply redone the next minute.

@@ -49,7 +49,7 @@ class BackupShellTest(unittest.TestCase):
 
     def parse(self, *arguments, **environment):
         return self.shell(
-            'printf "%s %s %s %s %s" "${BACKUP_COMMAND}" "${BACKUP_STAGE}" "${BACKUP_RUN_GIVEN:--}"'
+            'printf "%s %s %s %s %s" "${BACKUP_ACTION}" "${BACKUP_STAGE}" "${BACKUP_RUN_GIVEN:--}"'
             ' "${BACKUP_SCRUB}" "${BACKUP_SCRUB_FORCED}"',
             arguments=arguments, **environment)
 
@@ -206,7 +206,7 @@ class BackupShellTest(unittest.TestCase):
 
     def test_run_id_is_the_one_positional_after_the_command(self):
         self.assertEqual(self.parse("tail", "2026-09-08_00-00-00"), "tail all 2026-09-08_00-00-00 0 0")
-        self.document("2026-09-08_00-00-00", "primary", state="complete")
+        self.document("2026-09-08_00-00-00", "primary", state="success")
         self.assertEqual(self.parse("stop", "2026-09-08_00-00-00"), "stop all 2026-09-08_00-00-00 0 0")
 
     def test_stage_is_a_switch_rather_than_a_positional(self):
@@ -231,15 +231,36 @@ class BackupShellTest(unittest.TestCase):
                              "start all - {} 0".format(1 if armed else 0),
                              "day [{}] against window [{}..{}]".format(today, first, first + window - 1))
 
-    def test_scrub_state_reads_every_cancel_as_interrupted_not_failed(self):
-        for phase, state in (("finished", "interrupted"), ("aborted", "interrupted"),
-                             ("interrupted", "interrupted"), ("running", "interrupted")):
-            reported = self.shell('BACKUP_STATE_FINISHED=finished; BACKUP_STATE_INTERRUPTED=interrupted\n'
-                                  'backup_scrub_state "{}"'.format(phase))
-            want = "finished" if phase == "finished" else state
-            self.assertEqual(reported, want, "phase [{}]".format(phase))
+    def test_scrub_halted_resolves_its_cause_from_the_stage_markers(self):
+        for markers, expected in ((("",), "stopped"), ((".stopped",), "stopped"),
+                                  ((".timedout",), "timeout"), ((".stopped", ".timedout"), "timeout")):
+            self.scrub("2026-09-08_00-00-00", "tertiary", state="running", started_ts="2026-09-08T00:00:00+00:00",
+                      scrubbed_mb=10, progress_perc=5, errors_found=0, errors_corrected=0,
+                      errors_uncorrectable=0)
+            for marker in markers:
+                if marker:
+                    open(join(self.home, "supervisor/backup/2026-09-08_00-00-00/stage/tertiary", marker), "a").close()
+            reported = self.shell(
+                'BACKUP_STAGE_DIR="{}"\n'
+                'backup_scrub_halted\n'
+                'cat "${{BACKUP_STAGE_DIR}}/scrub.json"'.format(
+                    join(self.home, "supervisor/backup/2026-09-08_00-00-00/stage/tertiary")))
+            self.assertEqual(json.loads(reported)["state"], expected, "markers {}".format(markers))
+            shutil.rmtree(join(self.home, "supervisor/backup/2026-09-08_00-00-00"))
 
-    def test_scrub_reading_reports_a_cancelled_pass_as_aborted_so_it_is_resumed(self):
+    def test_scrub_cancel_passes_its_own_cause_through_ahead_of_any_marker(self):
+        self.scrub("2026-09-08_00-00-00", "tertiary", state="running", started_ts="2026-09-08T00:00:00+00:00",
+                  scrubbed_mb=10, progress_perc=5, errors_found=0, errors_corrected=0,
+                  errors_uncorrectable=0)
+        open(join(self.home, "supervisor/backup/2026-09-08_00-00-00/stage/tertiary/.stopped"), "a").close()
+        reported = self.shell(
+            'BACKUP_STAGE_DIR="{}"\n'
+            'backup_scrub_halted failure\n'
+            'cat "${{BACKUP_STAGE_DIR}}/scrub.json"'.format(
+                join(self.home, "supervisor/backup/2026-09-08_00-00-00/stage/tertiary")))
+        self.assertEqual(json.loads(reported)["state"], "failure")
+
+    def test_scrub_reading_treats_an_aborted_pass_as_not_running_so_the_loop_stops(self):
         status = ("UUID:             9e4a9990\n"
                   "Scrub started:    Mon Sep  1 01:00:59 2026\n"
                   "Status:           aborted\n"
@@ -248,7 +269,7 @@ class BackupShellTest(unittest.TestCase):
                               ' || printf "%s" "${STATUS}"; }\n'
                               'backup_scrub_reading && printf "%s" "${BACKUP_SCRUB_READING}"',
                               STATUS=status)
-        self.assertEqual(reported.split("\t")[-1], "aborted")
+        self.assertNotEqual(reported.split("\t")[-1], "running")
 
     def test_scrub_flag_arms_a_run_the_window_would_not(self):
         self.assertEqual(self.parse("start", "--scrub", BACKUP_RUN_ID_PASSED=1,
@@ -305,15 +326,14 @@ class BackupShellTest(unittest.TestCase):
             subprocess.run(["date", "-d", "2026-09-09 19:37:49", "+%s"], capture_output=True, text=True).stdout.strip())
 
     @NEEDS_GNU
-    def test_previous_defaults_to_complete_but_accepts_any_terminal_state(self):
-        self.document("2026-09-08_00-00-00", "tertiary", state="failed", duration_s=900, total_mb=2594000)
+    def test_previous_reads_only_a_run_that_succeeded(self):
+        self.document("2026-09-08_00-00-00", "tertiary", state="failure", duration_s=900, total_mb=2594000)
         self.assertEqual(self.shell('backup_previous tertiary total_mb'), "0")
-        self.assertEqual(self.shell('backup_previous tertiary total_mb ""'), "2594000")
 
     @NEEDS_GNU
     def test_previous_prefers_the_newest_completed_run(self):
-        self.document("2026-09-07_00-00-00", "tertiary", state="complete", duration_s=100, size_mb=1000)
-        self.document("2026-09-08_00-00-00", "tertiary", state="complete", duration_s=200, size_mb=8000)
+        self.document("2026-09-07_00-00-00", "tertiary", state="success", duration_s=100, size_mb=1000)
+        self.document("2026-09-08_00-00-00", "tertiary", state="success", duration_s=200, size_mb=8000)
         self.assertEqual(self.shell('backup_previous tertiary size_mb'), "8000")
 
     @NEEDS_GNU
@@ -333,18 +353,18 @@ class BackupShellTest(unittest.TestCase):
     @NEEDS_GNU
     def test_result_maps_a_status_document_to_one_word(self):
         run = "2026-09-08_00-00-00"
-        self.document(run, "primary", state="complete", success_bool=True)
-        self.document(run, "secondary", state="failed", success_bool=False)
+        self.document(run, "primary", state="success", success_bool=True)
+        self.document(run, "secondary", state="failure", success_bool=False)
         self.document(run, "tertiary", state="running", success_bool=False)
         base = join(self.home, "supervisor/backup", run, "stage")
         self.assertEqual(self.shell('backup_result "{}/primary/status.json"'.format(base)), "success")
-        self.assertEqual(self.shell('backup_result "{}/secondary/status.json"'.format(base)), "failed")
+        self.assertEqual(self.shell('backup_result "{}/secondary/status.json"'.format(base)), "failure")
         self.assertEqual(self.shell('backup_result "{}/tertiary/status.json"'.format(base)), "running")
         self.assertEqual(self.shell('backup_result "{}/absent/status.json"'.format(base)), "-")
 
-    def test_result_tells_stopped_and_timedout_from_a_genuine_failure(self):
-        for state in ("stopped", "timedout", "failed"):
-            document = self.document("2026-09-08_00-00-0{}".format(len(state)), "tertiary",
+    def test_result_reads_a_stage_state_verbatim(self):
+        for index, state in enumerate(("stopped", "timeout", "failure", "skipped")):
+            document = self.document("2026-09-08_00-00-0{}".format(index), "tertiary",
                                      state=state, success_bool=False)
             self.assertEqual(self.shell('backup_result "{}"'.format(document)), state)
 
@@ -353,9 +373,9 @@ class BackupShellTest(unittest.TestCase):
                  'stage_stop() { :; }\nbackup_settle() { :; }\nbackup_log() { :; }\n'
                  'backup_document() { printf "%s" "$1"; exit 0; }\n'
                  '{}\nbackup_interrupted')
-        self.assertEqual(self.shell(probe.replace("{}", ":")), "failed")
+        self.assertEqual(self.shell(probe.replace("{}", ":")), "failure")
         self.assertEqual(self.shell(probe.replace("{}", ': >"${BACKUP_HOME_ROOT}/.stopped"')), "stopped")
-        self.assertEqual(self.shell(probe.replace("{}", ': >"${BACKUP_HOME_ROOT}/.timedout"')), "timedout")
+        self.assertEqual(self.shell(probe.replace("{}", ': >"${BACKUP_HOME_ROOT}/.timedout"')), "timeout")
 
     def test_bar_fills_in_proportion_and_stays_one_width(self):
         widths = set()
@@ -370,16 +390,16 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("backup_bar"), "-")
 
     def test_megabytes_is_the_one_unit_the_table_shows(self):
-        for megabytes, expected in ((0, "0 MiB"), (4, "4 MiB"), (1024, "1,024 MiB"),
-                                    (19940000, "19,940,000 MiB")):
+        for megabytes, expected in ((0, "0 MB"), (4, "4 MB"), (1024, "1,024 MB"),
+                                    (19940000, "19,940,000 MB")):
             self.assertEqual(self.shell("backup_megabytes {}".format(megabytes)), expected)
         self.assertEqual(self.shell('backup_megabytes ""'), "-",
                          "a run with no stage document wrote an unknown amount, not zero")
         self.assertEqual(self.shell("backup_megabytes -"), "-")
 
     def test_terabytes_resolves_a_sub_terabyte_volume(self):
-        for megabytes, expected in ((0, "0.0 TiB"), (75200, "0.1 TiB"), (404403, "0.4 TiB"),
-                                    (1020011, "1.0 TiB"), (3815446, "3.6 TiB"), (9537534, "9.1 TiB")):
+        for megabytes, expected in ((0, "0.0 TB"), (75200, "0.1 TB"), (404403, "0.4 TB"),
+                                    (1020011, "1.0 TB"), (3815446, "3.6 TB"), (9537534, "9.1 TB")):
             self.assertEqual(self.shell("backup_terabytes {}".format(megabytes)), expected)
         self.assertEqual(self.shell('backup_terabytes ""'), "-")
         self.assertEqual(self.shell("backup_terabytes -"), "-")
@@ -442,13 +462,13 @@ class BackupShellTest(unittest.TestCase):
         stage = join(self.home, "supervisor/backup/y/stage/tertiary")
         os.makedirs(stage, exist_ok=True)
         with open(join(stage, "scrub.json"), "w") as handle:
-            json.dump({"state": "finished", "scrubbed_mb": 7419000}, handle)
+            json.dump({"state": "success", "scrubbed_mb": 7419000}, handle)
         self.shell('BACKUP_STAGE_DIR="' + stage + '"\n'
                    'BACKUP_DEVICE_ERRORS=0; BACKUP_RELOCATED=0\n'
                    'backup_log() { :; }\n'
                    'backup_scrub_halted')
         with open(join(stage, "scrub.json")) as handle:
-            self.assertEqual(json.load(handle)["state"], "finished")
+            self.assertEqual(json.load(handle)["state"], "success")
 
     @NEEDS_GNU
     def test_bounded_never_mints_a_run_directory_it_was_only_reading(self):
@@ -504,25 +524,45 @@ class BackupShellTest(unittest.TestCase):
             self.assertEqual(positions, sorted(positions),
                              "every stage renders the same fields in the same order: " + rendered)
 
-    def test_resulted_is_the_one_place_a_run_state_is_decided(self):
-        for ran, halted, broke, expected in ((1, 0, 0, "complete"), (3, 0, 0, "complete"),
-                                             (1, 1, 0, "halted"), (3, 2, 0, "halted"),
-                                             (1, 0, 1, "failed"), (1, 1, 1, "failed"),
-                                             (0, 0, 0, "-")):
-            self.assertEqual(self.shell('backup_resulted {} {} {}'.format(ran, halted, broke)), expected,
-                             "ran [{}] halted [{}] broke [{}]".format(ran, halted, broke))
+    def test_resulted_reports_success_only_when_every_stage_and_the_scrub_did(self):
+        for scrub, stages, expected in (
+            ("-", ("success", "success"), "success"),
+            ("skipped", ("success", "success"), "success"),
+            ("success", ("success", "success"), "success"),
+            ("-", ("success", "stopped"), "stopped"),
+            ("-", ("timeout", "success"), "timeout"),
+            ("-", ("success", "failure"), "failure"),
+            ("failure", ("success", "success"), "failure"),
+            ("-", ("success", "-", "success"), "success"),
+            ("-", (), "success")):
+            self.assertEqual(self.shell('backup_resulted "{}" {}'.format(
+                scrub, " ".join('"{}"'.format(state) for state in stages))), expected,
+                "scrub [{}] stages {}".format(scrub, stages))
+
+    def test_resulted_reports_running_over_any_other_stage(self):
+        for scrub, stages in (("-", ("success", "running")),
+                              ("running", ("success", "failure"))):
+            self.assertEqual(self.shell('backup_resulted "{}" {}'.format(
+                scrub, " ".join('"{}"'.format(state) for state in stages))), "running",
+                "scrub [{}] stages {}".format(scrub, stages))
 
     def test_settings_carry_their_default_once_and_not_at_every_use(self):
         with open(BACKUP_SCRIPT) as handle:
             source = handle.read()
-        for setting in ("BACKUP_TAIL_PROGRESS", "BACKUP_TAIL_POLL", "BACKUP_TAIL_STALE",
-                        "BACKUP_TAIL_STALL", "BACKUP_STOP_SECONDS", "BACKUP_SCRUB_POLL",
-                        "BACKUP_HEARTBEAT_REFRESH", "BACKUP_REAP_WAIT", "BACKUP_RATE_POINTS"):
+        normalised = dict(re.findall(r'(?m)^(BACKUP_\w+)="\$\{\1:-([^}]*)\}"$', source))
+        self.assertTrue(normalised, "found no normalised settings in [{}]".format(BACKUP_SCRIPT))
+        for setting in normalised:
             defaults = re.findall(r"\$\{" + setting + r":-[^}]*\}", source)
             self.assertEqual(len(defaults), 1,
                              "[{}] should default once, found {}".format(setting, defaults))
-            self.assertRegex(source, r"(?m)^" + setting + r'="\$\{' + setting + r':-[^}]*\}"$',
-                             "[{}] should be normalised at the top".format(setting))
+        guards = {"BACKUP_RUN_GIVEN", "BACKUP_RUN_PATH", "BACKUP_TRIGGER", "BACKUP_USAGE",
+                  "BACKUP_USAGE_USED_MB", "BACKUP_USAGE_TOTAL_MB", "BACKUP_BOUNDED_OUTPUT",
+                  "BACKUP_DURATION", "BACKUP_MOVED"}
+        inline = {name for name, _ in re.findall(r"\$\{(BACKUP_\w+):-([^}]+)\}", source)
+                  if name not in normalised}
+        self.assertEqual(inline, guards,
+                         "a setting defaults on its normalisation line at the top, or it is a "
+                         "declared guard on a variable assigned unconditionally")
 
     def test_rated_is_the_one_place_a_throughput_is_formed(self):
         for megabytes, seconds, expected in ((7047, 87, " 81"), (139455, 682, "204"), (723, 22, " 32"),
@@ -539,14 +579,14 @@ class BackupShellTest(unittest.TestCase):
 
     @NEEDS_GNU
     def test_finished_reports_the_rate_the_stage_achieved(self):
-        doc = self.document("x", "tertiary", state="complete", success_bool=True,
+        doc = self.document("x", "tertiary", state="success", success_bool=True,
                             duration_s=87, size_mb=7047, file_count=31, disk_usage_perc=33)
         reported = self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
                               'backup_finished tertiary "' + doc + '"')
         self.assertIn("size [7047] MB at [ 81] MB/s", reported)
         self.assertIn("disk at [33] percent", reported)
         self.assertNotIn("files [", reported, "the file count is not part of a finish line")
-        stalled = self.document("y", "tertiary", state="complete", success_bool=True,
+        stalled = self.document("y", "tertiary", state="success", success_bool=True,
                                 duration_s=0, size_mb=0, file_count=0, disk_usage_perc=33)
         self.assertIn("at [  -] MB/s", self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
                                                 'backup_finished tertiary "' + stalled + '"'))
@@ -577,8 +617,8 @@ class BackupShellTest(unittest.TestCase):
         self.assertEqual(self.shell("\n".join(script)), "-")
 
     def test_primary_counts_only_what_this_run_actually_wrote(self):
-        for state, expected in (("complete", "1 512 4096"), ("skipped", "0 0 0"),
-                                ("failed", "0 0 0"), ("stopped", "0 0 0")):
+        for state, expected in (("success", "512 512 4096"), ("skipped", "0 0 0"),
+                                ("failure", "0 0 0"), ("stopped", "0 0 0")):
             self.assertEqual(
                 self.shell('BACKUP_FILES=0; BACKUP_SIZE=0; BACKUP_FILES_CREATED=0\n'
                            'primary_counted "{}" 512 4096\n'
@@ -613,10 +653,10 @@ class BackupShellTest(unittest.TestCase):
     def test_list_draws_one_aligned_row_per_run(self):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
         for stage in ("primary", "secondary", "tertiary"):
-            self.document("2026-09-08_00-00-00", stage, state="complete", success_bool=True,
-                          trigger="scheduled", size_mb=2048, disk_usage_perc=61,
+            self.document("2026-09-08_00-00-00", stage, state="success", success_bool=True,
+                          trigger="system", size_mb=2048, disk_usage_perc=61,
                           finished_ts="2026-09-08T00:10:00+08:00")
-        self.document("2026-09-08_01-00-00", "primary", state="complete", success_bool=True, trigger="manual")
+        self.document("2026-09-08_01-00-00", "primary", state="success", success_bool=True, trigger="manual")
         self.document("2026-09-08_01-00-00", "tertiary", state="stopped", success_bool=False, trigger="manual")
         os.makedirs(join(self.home, "supervisor/backup", "2026-09-08_02-00-00"), exist_ok=True)
         listed = self.shell('backup_running() { return 1; }\nbackup_list')
@@ -625,17 +665,17 @@ class BackupShellTest(unittest.TestCase):
         self.assertIn("| STARTED (RUN-ID)  ", listed)
         self.assertIn("| FINISHED ", listed)
         self.assertEqual(len(self.shell(
-            'backup_row a b c d "${BACKUP_STATE_TIMEDOUT}" "${BACKUP_STATE_COMPLETE}" '
-            '"${BACKUP_STATE_INTERRUPTED:0:9}" e h i j k l')), len(listed.splitlines()[0]))
+            'backup_row a b c d "${BACKUP_STATE_TIMEOUT}" "${BACKUP_STATE_SUCCESS}" '
+            '"${BACKUP_STATE_STOPPED:0:9}" e h i j k l')), len(listed.splitlines()[0]))
         self.assertRegex(listed, r"2026-09-08_02-00-00 .*\|\s+-\s+\|")
-        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*success .*\[#+\.*\]\s+61%.*complete")
-        self.assertRegex(listed, r"2026-09-08_01-00-00 .*success .*-  .*stopped .*halted")
+        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*success .*\[#+\.*\]\s+61%.*success")
+        self.assertRegex(listed, r"2026-09-08_01-00-00 .*success .*-  .*stopped .*stopped")
 
     @NEEDS_GNU
     def test_list_keeps_every_stage_column_on_a_host_that_runs_only_two(self):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
-        self.document("2026-09-08_00-00-00", "primary", state="complete", success_bool=True)
-        self.document("2026-09-08_00-00-00", "secondary", state="complete", success_bool=True)
+        self.document("2026-09-08_00-00-00", "primary", state="success", success_bool=True)
+        self.document("2026-09-08_00-00-00", "secondary", state="success", success_bool=True)
         listed = self.shell('backup_running() { return 1; }\n'
                             'backup_stages() { printf "primary\\nsecondary\\n"; }\n'
                             'backup_list')
@@ -673,8 +713,8 @@ class BackupShellTest(unittest.TestCase):
     @NEEDS_GNU
     def test_list_finishes_nothing_on_a_stamp_date_cannot_read(self):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
-        self.document("2026-09-08_00-00-00", "primary", state="complete", success_bool=True, finished_ts="")
-        self.document("2026-09-08_01-00-00", "primary", state="complete", success_bool=True,
+        self.document("2026-09-08_00-00-00", "primary", state="success", success_bool=True, finished_ts="")
+        self.document("2026-09-08_01-00-00", "primary", state="success", success_bool=True,
                       finished_ts="2026-09-08T01-00-00+08:00")
         listed = self.shell('backup_running() { return 1; }\nbackup_list')
         for line in listed.splitlines():
@@ -684,25 +724,25 @@ class BackupShellTest(unittest.TestCase):
             self.assertEqual(line.split("|")[3].strip(), "-", line)
 
     @NEEDS_GNU
-    def test_rollup_counts_halted_apart_from_failed(self):
+    def test_rollup_counts_halted_stages_apart_from_failed_but_names_the_first_that_broke(self):
         run = "2026-09-08_00-00-00"
-        self.document(run, "primary", state="complete", success_bool=True)
-        self.document(run, "secondary", state="timedout", success_bool=False)
-        self.document(run, "tertiary", state="failed", success_bool=False)
+        self.document(run, "primary", state="success", success_bool=True)
+        self.document(run, "secondary", state="timeout", success_bool=False)
+        self.document(run, "tertiary", state="failure", success_bool=False)
         path = join(self.home, "supervisor/backup", run)
-        self.shell('BACKUP_RUN_PATH="{}"; BACKUP_RUN_ID="{}"; BACKUP_TRIGGER=scheduled\n'
+        self.shell('BACKUP_RUN_PATH="{}"; BACKUP_RUN_ID="{}"; BACKUP_TRIGGER=system\n'
                    'backup_rollup "$(date +%s)"'.format(path, run))
         with open(join(path, "status.json")) as handle:
             document = json.load(handle)
         self.assertEqual(document["stages_run"], 3)
         self.assertEqual(document["stages_failed"], 1)
         self.assertEqual(document["stages_halted"], 1)
-        self.assertEqual(document["state"], "failed")
+        self.assertEqual(document["state"], "timeout")
 
     @NEEDS_GNU
-    def test_rollup_calls_a_run_halted_when_nothing_actually_failed(self):
+    def test_rollup_names_the_one_stage_that_stopped_when_nothing_actually_failed(self):
         run = "2026-09-08_01-00-00"
-        self.document(run, "primary", state="complete", success_bool=True)
+        self.document(run, "primary", state="success", success_bool=True)
         self.document(run, "tertiary", state="stopped", success_bool=False)
         path = join(self.home, "supervisor/backup", run)
         self.shell('BACKUP_RUN_PATH="{}"; BACKUP_RUN_ID="{}"; BACKUP_TRIGGER=manual\n'
@@ -711,7 +751,7 @@ class BackupShellTest(unittest.TestCase):
             document = json.load(handle)
         self.assertEqual(document["stages_failed"], 0)
         self.assertEqual(document["stages_halted"], 1)
-        self.assertEqual(document["state"], "halted")
+        self.assertEqual(document["state"], "stopped")
         self.assertFalse(document["success_bool"])
 
     @NEEDS_GNU
@@ -719,35 +759,35 @@ class BackupShellTest(unittest.TestCase):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
         run = "2026-09-08_00-00-00"
         for stage in ("primary", "secondary", "tertiary"):
-            self.document(run, stage, state="complete", success_bool=True)
+            self.document(run, stage, state="success", success_bool=True)
         with open(join(self.home, "supervisor/backup", run, "status.json"), "w") as handle:
-            json.dump({"run_id": run, "state": "halted", "success_bool": False,
+            json.dump({"run_id": run, "state": "stopped", "success_bool": False,
                        "stages_run": 3, "stages_halted": 1}, handle)
         listed = self.shell('backup_running() { return 1; }\nbackup_list')
-        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*success .*halted")
+        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*success .*success .*stopped")
 
     @NEEDS_GNU
     def test_list_still_computes_a_verdict_for_a_run_that_never_rolled_up(self):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
         run = "2026-09-08_00-00-00"
-        self.document(run, "primary", state="complete", success_bool=True)
-        self.document(run, "tertiary", state="timedout", success_bool=False)
+        self.document(run, "primary", state="success", success_bool=True)
+        self.document(run, "tertiary", state="timeout", success_bool=False)
         listed = self.shell('backup_running() { return 1; }\nbackup_list')
-        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*timedout .*halted")
+        self.assertRegex(listed, r"2026-09-08_00-00-00 .*success .*timeout .*timeout")
 
     @NEEDS_GNU
-    def test_list_ranks_running_over_failed_over_halted(self):
+    def test_list_ranks_running_over_the_first_stage_that_broke(self):
         shutil.rmtree(join(self.home, "supervisor/backup/x"))
-        for name, states in (("2026-09-08_00-00-00", ("complete", "stopped", "complete")),
-                             ("2026-09-08_01-00-00", ("failed", "stopped", "complete")),
-                             ("2026-09-08_02-00-00", ("failed", "running", "complete"))):
+        for name, states in (("2026-09-08_00-00-00", ("success", "stopped", "success")),
+                             ("2026-09-08_01-00-00", ("failure", "stopped", "success")),
+                             ("2026-09-08_02-00-00", ("failure", "running", "success"))):
             for stage, state in zip(("primary", "secondary", "tertiary"), states):
-                self.document(name, stage, state=state, success_bool=state == "complete")
+                self.document(name, stage, state=state, success_bool=state == "success")
         listed = self.shell('backup_running() { return 1; }\nbackup_list')
         rows = {line.split("|")[1].strip(): line.split("|")[-2].strip()
                 for line in listed.splitlines() if "2026-09-08_" in line}
-        self.assertEqual(rows["2026-09-08_00-00-00"], "halted")
-        self.assertEqual(rows["2026-09-08_01-00-00"], "failed")
+        self.assertEqual(rows["2026-09-08_00-00-00"], "stopped")
+        self.assertEqual(rows["2026-09-08_01-00-00"], "failure")
         self.assertEqual(rows["2026-09-08_02-00-00"], "running")
 
     @NEEDS_GNU
@@ -799,12 +839,12 @@ class BackupShellTest(unittest.TestCase):
     def test_expected_is_what_the_mirror_last_moved_not_the_disk_against_the_sources(self):
         detached = 'backup_mounted() { :; }\nbackup_verified() { return 1; }\n'
         self.assertEqual(self.shell(detached + 'backup_expected'), "0")
-        self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=4096, duration_s=600)
+        self.document("2026-09-08_00-00-00", "tertiary", state="success", size_mb=4096, duration_s=600)
         self.assertEqual(self.shell(detached + 'backup_expected'), str(4096 * 1048576))
 
     @NEEDS_GNU
     def test_expected_reads_zero_from_an_in_sync_run_rather_than_calling_it_no_history(self):
-        self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=0, duration_s=31)
+        self.document("2026-09-08_00-00-00", "tertiary", state="success", size_mb=0, duration_s=31)
         self.assertEqual(self.shell('backup_mounted() { echo /share/40; }\n'
                                     'backup_verified() { return 1; }\n'
                                     'backup_used() { echo $(( 200 * 1073741824 )); }\n'
@@ -812,7 +852,7 @@ class BackupShellTest(unittest.TestCase):
 
     @NEEDS_GNU
     def test_expected_prefers_what_is_left_over_what_a_big_earlier_run_moved(self):
-        self.document("2026-09-08_00-00-00", "tertiary", state="complete", size_mb=5000000, duration_s=36000)
+        self.document("2026-09-08_00-00-00", "tertiary", state="success", size_mb=5000000, duration_s=36000)
         expected = self.shell('backup_mounted() { echo /share/40; }\n'
                               'backup_verified() { return 0; }\n'
                               'backup_used() { case "$1" in /backup) echo $(( 190 * 1073741824 ));; '
@@ -828,14 +868,6 @@ class BackupShellTest(unittest.TestCase):
                               '*) echo $(( 200 * 1073741824 ));; esac; }\n'
                               'backup_expected')
         self.assertEqual(expected, str(170 * 1073741824))
-
-    @NEEDS_GNU
-    def test_expected_falls_back_to_the_whole_source_for_a_first_mirror(self):
-        mirrored = self.shell('backup_mounted() { echo /share/40; }\n'
-                            'backup_verified() { return 1; }\n'
-                            'backup_used() { echo $(( 200 * 1073741824 )); }\n'
-                            'backup_expected')
-        self.assertEqual(mirrored, str(200 * 1073741824))
 
     @NEEDS_GNU
     def test_counted_floors_the_size_by_what_the_disk_actually_grew(self):
@@ -918,7 +950,7 @@ class BackupShellTest(unittest.TestCase):
         base = join(self.home, "supervisor", "backup", "run")
         os.makedirs(join(base, "stage", "tertiary"), exist_ok=True)
         with open(join(base, "stage", "tertiary", "status.json"), "w") as handle:
-            handle.write('{"state": "complete", "success_bool": true}')
+            handle.write('{"state": "success", "success_bool": true}')
         out = self.shell('backup_status "{}"'.format(base))
         self.assertNotIn("never started", out)
         self.assertNotIn("primary", out)
@@ -1083,6 +1115,62 @@ class BackupShellTest(unittest.TestCase):
         named = {"BACKUP_{}_{}".format("STATE" if kind == "BackupState" else "COMMAND", word.upper()): value
                  for kind, word, value in declared}
         self.assertEqual(shelled, named)
+
+    def declared_members(self, name):
+        source = join(DIR_ROOT, "src/main/go/supervisor/internal/metric/metric_schema.go")
+        with open(source) as handle:
+            block = re.search(name + r" := schema\.Member\{Members: \[\]schema\.Member\{\n(.*?)\n\t\}\}",
+                              handle.read(), re.S)
+        self.assertIsNotNone(block, "found no [{}] declaration in [{}]".format(name, source))
+        keys = re.findall(r'\{Key: "([a-z_]+)"', block.group(1))
+        self.assertTrue(keys, "found no keys in the [{}] declaration".format(name))
+        return keys
+
+    def written_members(self, opener):
+        with open(BACKUP_SCRIPT) as handle:
+            blocks = re.findall(re.escape(opener) + r" <<JSON\n\{\n(.*?)\n\}\nJSON", handle.read(), re.S)
+        self.assertTrue(blocks, "found no [{}] heredoc in [{}]".format(opener, BACKUP_SCRIPT))
+        return [re.findall(r'^\s*"([a-z_]+)":', block, re.M) for block in blocks]
+
+    def test_every_stage_document_field_is_declared_in_the_go_schema(self):
+        written = self.written_members('cat >"${BACKUP_STAGE_DIR}/status.json.tmp"')
+        self.assertEqual(len(written), 1, "the stage document is written in exactly one place")
+        self.assertEqual(sorted(written[0]), sorted(self.declared_members("backupStageStatus")),
+                         "every field backup_document writes must be declared, and nothing else")
+
+    def test_every_service_document_field_is_declared_in_the_go_schema(self):
+        written = self.written_members('cat >"${dir}/status.json.tmp"')
+        self.assertEqual(len(written), 2, "primary_start opens a running document then rewrites it terminal")
+        opening, terminal = written
+        declared = self.declared_members("backupServiceStatus")
+        self.assertEqual(sorted(terminal), sorted(declared),
+                         "every field primary_start writes must be declared, and nothing else")
+        self.assertLessEqual(set(opening), set(declared),
+                             "the running document must be a subset of the declared shape")
+
+    def test_every_field_the_shell_reads_back_is_declared_in_the_go_schema(self):
+        source = join(DIR_ROOT, "src/main/go/supervisor/internal/metric/metric_schema.go")
+        with open(source) as handle:
+            declared = set(re.findall(r'\{Key: "([a-z_]+)"', handle.read()))
+        self.assertTrue(declared, "found no declared keys in [{}]".format(source))
+        with open(BACKUP_SCRIPT) as handle:
+            script = handle.read()
+        read = set(re.findall(r'backup_tail_field "[^"]*" ([a-z_]+)', script))
+        read.update(re.findall(r"jq -r '\.([a-z_]+)", script))
+        self.assertTrue(read, "found no field reads in [{}], the parse has rotted".format(BACKUP_SCRIPT))
+        self.assertEqual(read - declared, set(),
+                         "a field read back but declared nowhere returns empty and fails silently")
+
+    def test_every_scrub_document_field_is_declared_in_the_go_schema(self):
+        written = self.written_members('cat >"${BACKUP_STAGE_DIR}/scrub.json.tmp"')
+        self.assertEqual(len(written), 1, "the scrub document is written in exactly one place")
+        source = join(DIR_ROOT, "src/main/go/supervisor/internal/metric/metric_schema.go")
+        with open(source) as handle:
+            block = re.search(r'Match: "\*/backup/stage/tertiary/scrub/status",\n\s*Root: schema\.Member'
+                              r"\{Members: \[\]schema\.Member\{\n(.*?)\n\t\t\t\}\}", handle.read(), re.S)
+        self.assertIsNotNone(block, "found no scrub payload declaration in [{}]".format(source))
+        self.assertEqual(sorted(written[0]), sorted(re.findall(r'\{Key: "([a-z_]+)"', block.group(1))),
+                         "every field backup_scrub_document writes must be declared, and nothing else")
 
     @NEEDS_GNU
     def test_auto_reports_the_reaper_rather_than_pausing_it_when_given_nothing(self):
@@ -1360,7 +1448,7 @@ class BackupShellTest(unittest.TestCase):
 
     @NEEDS_GNU
     def test_tail_field_reads_json(self):
-        document = self.document("2026-09-08_00-00-00", "primary", state="complete", size_mb=388)
+        document = self.document("2026-09-08_00-00-00", "primary", state="success", size_mb=388)
         self.assertEqual(self.shell('backup_tail_field "{}" size_mb'.format(document)), "388")
         self.assertEqual(self.shell('backup_tail_field "{}" absent'.format(document)), "")
 
@@ -1596,6 +1684,16 @@ class BackupsShellTest(unittest.TestCase):
         self.assertIn("reached root@h3", lines)
         self.assertNotIn("reached root@h2", lines)
         self.assertEqual(lines[-1], "exit=3", "a host that did not answer must reach the exit code")
+
+    def test_every_command_carries_a_failing_host_through_to_its_exit_code(self):
+        self.hosts("h1", "h2")
+        for command in ("backups_stop", "backups_list", "backups_tail"):
+            self.assertEqual(self.shell('ssh() { return 255; }\n'
+                                        + command + ' >/dev/null 2>&1; printf "exit=%s" "$?"'),
+                             "exit=3", "[{}] must not swallow a host that did not answer".format(command))
+            self.assertEqual(self.shell('ssh() { echo reached; }\n'
+                                        + command + ' >/dev/null 2>&1; printf "exit=%s" "$?"'),
+                             "exit=0", "[{}] must exit clean when every host answered".format(command))
 
     def test_start_dispatches_every_host_then_tails_every_host(self):
         self.hosts("h1", "h2", "h3")

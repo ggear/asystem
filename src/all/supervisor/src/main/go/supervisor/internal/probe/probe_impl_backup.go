@@ -24,7 +24,6 @@ import (
 type backupProbe struct {
 	cache      *metric.RecordCache
 	mask       [metric.MetricMax]bool
-	periods    config.Periods
 	configPath string
 	hostName   string
 	serverHost bool
@@ -36,22 +35,21 @@ type backupProbe struct {
 	haltedBackupStagesInt *stats.IntStats
 	usedBackupSpaceInt    *stats.IntStats
 
-	snapshotMu      sync.Mutex
-	snapshot        *backupSnapshot
-	snapshotTakenAt time.Time
-	snapshotPrint   string
-	backupRunning   sync.Mutex
-	backupActive    atomic.Bool
-	reapRunning     sync.Mutex
-	leadRunning     sync.Mutex
-	leadWatch       *brokerWatcher
-	leadStale       int
-	reapIdle        int
-	reapNotice      int
-	reapStale       int
-	reapArming      bool
-	reapPaused      bool
-	reapWatch       *brokerWatcher
+	snapshotMu    sync.Mutex
+	snapshot      *backupSnapshot
+	snapshotPrint string
+	backupRunning sync.Mutex
+	backupActive  atomic.Bool
+	reapRunning   sync.Mutex
+	leadRunning   sync.Mutex
+	leadWatch     *brokerWatcher
+	leadStale     int
+	reapIdle      int
+	reapNotice    int
+	reapStale     int
+	reapArming    bool
+	reapPaused    bool
+	reapWatch     *brokerWatcher
 }
 
 func newBackupProbe() *backupProbe {
@@ -76,7 +74,6 @@ func (p *backupProbe) duties() []string {
 func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask [metric.MetricMax]bool, periods config.Periods) error {
 	p.cache = cache
 	p.mask = mask
-	p.periods = periods
 	p.configPath = configPath
 	loaded := config.Load(configPath)
 	p.hostName = loaded.Host()
@@ -256,7 +253,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	if p.reapWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, allBackupStatusTopic, allReaperTopic, "supervisor/+/backup/stage/tertiary/status")
+		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, allBackupStatusTopic, allReaperTopic, metric.TopicBackupStage(anyHost, backupStageTertiary))
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the cluster, retrying on the next tick", err)
 			return
@@ -329,7 +326,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		}
 	}
 	for topic, payload := range retained {
-		if !strings.HasSuffix(topic, "/backup/stage/tertiary/status") {
+		if !strings.HasSuffix(topic, tertiaryStatusSuffix) {
 			continue
 		}
 		var document backupDocument
@@ -403,7 +400,7 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 		}
 		stopCancel()
 		stale := *document
-		stale.State = metric.BackupStateTimedout
+		stale.State = metric.BackupStateTimeout
 		stale.FinishedTS = time.Now().Format(time.RFC3339)
 		stale.ExpiresTS = ""
 		writeDocumentAtomic(stageStatusPath(runPath, stage), stale)
@@ -418,13 +415,11 @@ func (p *backupProbe) documents() *backupSnapshot {
 	p.snapshotMu.Lock()
 	defer p.snapshotMu.Unlock()
 	printed := p.fingerprint()
-	if p.snapshot != nil && printed == p.snapshotPrint &&
-		config.SinceIncludingSuspend(p.snapshotTakenAt) < config.CacheWindow(p.periods.CacheMins) {
+	if p.snapshot != nil && printed == p.snapshotPrint {
 		return p.snapshot
 	}
 	p.snapshot = readNewestRun(p.root)
 	p.snapshotPrint = printed
-	p.snapshotTakenAt = config.NowIncludingSuspend()
 	return p.snapshot
 }
 
@@ -510,9 +505,8 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 		p.powerBackupDisk(metric.CommandOn, runStart)
 	}
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("schedule", runStart, "[%s] backup run over [%d] stages", runID, len(stages))
-	failed, attempted := 0, 0
+	failed := 0
 	for _, stage := range stages {
-		attempted++
 		if err := p.runStage(ctx, stage, runID, runPath); err != nil {
 			failed++
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Warnf("faulting", runStart, "[%s] backup stage failed with [%v], stopping the run", stage, err)
@@ -520,7 +514,7 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 		}
 	}
 	p.pruneRuns(runStart)
-	document := p.writeRunDocument(runPath, runID, attempted, failed, runStart)
+	document := p.writeRunDocument(runPath, runID, runStart)
 	p.publishHostStatus(document)
 	p.refresh()
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("finished", runStart, "[%s] backup run, [%d] of [%d] stages failed", runID, failed, len(stages))
@@ -592,25 +586,23 @@ func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string
 	return nil
 }
 
-func (p *backupProbe) writeRunDocument(runPath, runID string, stagesRun, stagesFailed int, started time.Time) backupDocument {
-	state := metric.BackupStateFailed
-	if stagesFailed == 0 {
-		state = metric.BackupStateComplete
-	}
-	document := backupDocument{
-		RunID:        runID,
-		State:        state,
-		StartedTS:    started.Format(time.RFC3339),
-		FinishedTS:   time.Now().Format(time.RFC3339),
-		DurationS:    int(time.Since(started).Seconds()),
-		SuccessBool:  stagesFailed == 0,
-		StagesRun:    stagesRun,
-		StagesFailed: stagesFailed,
-	}
+func (p *backupProbe) writeRunDocument(runPath, runID string, started time.Time) backupDocument {
+	stagesRun, stagesFailed, stagesHalted := 0, 0, 0
+	states := map[string]string{}
+	document := backupDocument{RunID: runID, StartedTS: started.Format(time.RFC3339)}
 	for _, stage := range backupStages {
 		staged := readStageDocument(stageStatusPath(runPath, stage))
 		if staged == nil {
 			continue
+		}
+		stagesRun++
+		states[stage] = staged.State
+		switch staged.State {
+		case metric.BackupStateSuccess:
+		case metric.BackupStateStopped, metric.BackupStateTimeout:
+			stagesHalted++
+		default:
+			stagesFailed++
 		}
 		document.FileCount += staged.FileCount
 		document.SizeMB += staged.SizeMB
@@ -623,8 +615,40 @@ func (p *backupProbe) writeRunDocument(runPath, runID string, stagesRun, stagesF
 			document.SizeHeldMB = staged.SizeHeldMB
 		}
 	}
+	scrubState := ""
+	if scrubDoc := readStageDocument(filepath.Join(runPath, "stage", backupStageTertiary, "scrub.json")); scrubDoc != nil {
+		scrubState = scrubDoc.State
+	}
+	state := backupResolvedState(states, scrubState)
+	document.State = state
+	document.FinishedTS = time.Now().Format(time.RFC3339)
+	document.DurationS = int(time.Since(started).Seconds())
+	document.SuccessBool = state == metric.BackupStateSuccess
+	document.StagesRun = stagesRun
+	document.StagesFailed = stagesFailed
+	document.StagesHalted = stagesHalted
 	writeDocumentAtomic(filepath.Join(runPath, "status.json"), document)
 	return document
+}
+
+func backupResolvedState(stages map[string]string, scrub string) string {
+	for _, stage := range backupStages {
+		if stages[stage] == metric.BackupStateRunning {
+			return metric.BackupStateRunning
+		}
+	}
+	if scrub == metric.BackupStateRunning {
+		return metric.BackupStateRunning
+	}
+	for _, stage := range backupStages {
+		if state, ok := stages[stage]; ok && state != metric.BackupStateSuccess {
+			return state
+		}
+	}
+	if scrub != "" && scrub != metric.BackupStateSuccess && scrub != metric.BackupStateSkipped {
+		return scrub
+	}
+	return metric.BackupStateSuccess
 }
 
 func (p *backupProbe) powerBackupDisk(state string, started time.Time) {
@@ -657,7 +681,7 @@ func (p *backupProbe) lead() {
 	}
 	leadStart := time.Now()
 	if p.leadWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, "supervisor/+/backup/status", "supervisor/+/backup/stage/+/status", allBackupStatusTopic)
+		watch, err := brokerWatch(p.configPath, p.hostName, metric.TopicBackupStatus(anyHost), metric.TopicBackupStage(anyHost, anyLevel), allBackupStatusTopic)
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] watching the cluster backup run, retrying on the next tick", err)
 			return
@@ -698,21 +722,21 @@ func (p *backupProbe) lead() {
 			}
 		}
 	}
-	document := map[string]any{
-		"run_id":         decision.started.Format(backupRunStamp),
-		"state":          decision.state,
-		"started_ts":     decision.started.Format(time.RFC3339),
-		"duration_s":     int(time.Since(decision.started).Seconds()),
-		"success_bool":   decision.state == metric.BackupStateComplete,
-		"power_bool":     decision.action != backupClusterRunClose,
-		"hosts_expected": len(expected),
-		"hosts_reported": decision.reported,
-		"hosts_failed":   decision.failed,
-		"leader_host":    p.hostName,
-		"leader_epoch":   epoch,
+	document := backupClusterDocument{
+		RunID:         decision.started.Format(backupRunStamp),
+		State:         decision.state,
+		StartedTS:     decision.started.Format(time.RFC3339),
+		DurationS:     int(time.Since(decision.started).Seconds()),
+		SuccessBool:   decision.state == metric.BackupStateSuccess,
+		PowerBool:     decision.action != backupClusterRunClose,
+		HostsExpected: len(expected),
+		HostsReported: decision.reported,
+		HostsFailed:   decision.failed,
+		LeaderHost:    p.hostName,
+		LeaderEpoch:   epoch,
 	}
 	if decision.action == backupClusterRunClose {
-		document["finished_ts"] = time.Now().Format(time.RFC3339)
+		document.FinishedTS = time.Now().Format(time.RFC3339)
 	}
 	payload, _ := json.Marshal(document)
 	if err := client.publishRetained(allBackupStatusTopic, string(payload)); err != nil {
@@ -734,7 +758,7 @@ func (p *backupProbe) publishHostStatus(document backupDocument) {
 	}
 	defer client.close()
 	payload, _ := json.Marshal(document)
-	_ = client.publishRetained("supervisor/"+p.hostName+"/backup/status", string(payload))
+	_ = client.publishRetained(metric.TopicBackupStatus(p.hostName), string(payload))
 }
 
 type backupClusterRunAction int
@@ -748,7 +772,6 @@ type backupClusterRun struct {
 }
 
 func backupClusterRunDecision(retained map[string]string, expected []string, now time.Time) backupClusterRun {
-	terminal := map[string]bool{metric.BackupStateComplete: true, metric.BackupStateFailed: true, metric.BackupStateTimedout: true}
 	var clusterRun backupDocument
 	clusterRunStarted := time.Time{}
 	if json.Unmarshal([]byte(retained[allBackupStatusTopic]), &clusterRun) == nil {
@@ -760,14 +783,14 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 		decision.action, decision.started = backupClusterRunRefresh, clusterRunStarted
 	default:
 		for _, host := range expected {
-			prefix := "supervisor/" + host + "/backup/stage/"
+			prefix := metric.TopicBackupStagePrefix(host)
 			for topic, payload := range retained {
 				stage, found := strings.CutPrefix(topic, prefix)
 				if !found || strings.Count(stage, "/") != 1 || !strings.HasSuffix(stage, "/status") {
 					continue
 				}
 				var document backupDocument
-				if json.Unmarshal([]byte(payload), &document) != nil || document.State != metric.BackupStateRunning || document.Trigger != metric.BackupTriggerScheduled {
+				if json.Unmarshal([]byte(payload), &document) != nil || document.State != metric.BackupStateRunning || document.Trigger != metric.BackupTriggerSystem {
 					continue
 				}
 				expires, expiresErr := time.Parse(time.RFC3339, document.ExpiresTS)
@@ -790,8 +813,8 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 	earliest := decision.started.Add(-backupRunSkew)
 	for _, host := range expected {
 		var document backupDocument
-		if json.Unmarshal([]byte(retained["supervisor/"+host+"/backup/status"]), &document) == nil &&
-			terminal[document.State] && reportedForRun(document, earliest) {
+		if json.Unmarshal([]byte(retained[metric.TopicBackupStatus(host)]), &document) == nil &&
+			backupTerminal(document.State) && reportedForRun(document, earliest) {
 			decision.reported++
 			if !document.SuccessBool {
 				decision.failed++
@@ -801,11 +824,11 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 	decision.state = metric.BackupStateRunning
 	switch {
 	case decision.reported >= len(expected) && decision.failed > 0:
-		decision.action, decision.state = backupClusterRunClose, metric.BackupStateFailed
+		decision.action, decision.state = backupClusterRunClose, metric.BackupStateFailure
 	case decision.reported >= len(expected):
-		decision.action, decision.state = backupClusterRunClose, metric.BackupStateComplete
+		decision.action, decision.state = backupClusterRunClose, metric.BackupStateSuccess
 	case now.Sub(decision.started) > backupRunCeiling:
-		decision.action, decision.state = backupClusterRunClose, metric.BackupStateTimedout
+		decision.action, decision.state = backupClusterRunClose, metric.BackupStateTimeout
 	}
 	return decision
 }
@@ -821,6 +844,10 @@ func (r backupReaper) paused() bool {
 	}
 	expires, err := time.Parse(time.RFC3339, r.ExpiresTS)
 	return err == nil && time.Now().Before(expires)
+}
+
+func backupTerminal(state string) bool {
+	return state != "" && state != metric.BackupStateRunning
 }
 
 func backupRunStarted(document backupDocument) (time.Time, bool) {
@@ -848,6 +875,91 @@ func backupExpectedServers(configPath string) []string {
 	return servers
 }
 
+type backupClusterDocument struct {
+	RunID         string `json:"run_id"`
+	State         string `json:"state"`
+	StartedTS     string `json:"started_ts"`
+	FinishedTS    string `json:"finished_ts,omitempty"`
+	DurationS     int    `json:"duration_s"`
+	SuccessBool   bool   `json:"success_bool"`
+	PowerBool     bool   `json:"power_bool"`
+	HostsExpected int    `json:"hosts_expected"`
+	HostsReported int    `json:"hosts_reported"`
+	HostsFailed   int    `json:"hosts_failed"`
+	LeaderHost    string `json:"leader_host"`
+	LeaderEpoch   int64  `json:"leader_epoch"`
+}
+
+// backupDocument is every status document a backup run writes. The run directory is the topic namespace,
+// so <run>/<path>.json publishes at supervisor/<host>/backup/<path>, four documents in all:
+//
+//	<run>/status.json                                  RUN        Go, or backup_rollup on a hand run
+//	<run>/stage/<stage>/status.json                    STAGE      backup.sh, rewritten by reapLocalStale
+//	<run>/stage/primary/service/<service>/status.json  SERVICE    backup.sh
+//	<run>/stage/tertiary/scrub.json                    SCRUB      backup.sh
+//
+// Every field is omitempty but [state] and [success_bool], so a zero reads as absent rather than as a
+// measurement of zero. The shapes are declared in metric.Payloads(), one payload per document, and tests
+// hold that declaration equal to what these writers emit:
+//
+//	{
+//	    "run_id":                "<stamp>",    ALL                Run directory name, [YYYY-MM-DD_hh-mm-ss]
+//	    "state":                 "<state>",    ALL                Enum differs per document, only SCRUB carries all six
+//	    "started_ts":            "<rfc3339>",  ALL
+//	    "finished_ts":           "<rfc3339>",  ALL
+//	    "duration_s":            <number>,     ALL
+//	    "success_bool":          <true|false>, ALL
+//	    "trigger":               "<trigger>",  RUN STAGE          [system|manual], absent when Go writes the RUN
+//	    "expires_ts":            "<rfc3339>",  STAGE SCRUB        Liveness, the reaper stops a run found past it
+//	    "timeout_hours":         <number>,     STAGE              Read back rather than resolved by the reader
+//	    "file_count":            <number>,     RUN STAGE SERVICE
+//	    "size_mb":               <number>,     RUN STAGE SERVICE
+//	    "disk_usage_perc":       <number>,     RUN STAGE          Backup volume, tertiary alone measures it
+//	    "files_held":            <number>,     RUN STAGE
+//	    "files_created":         <number>,     RUN STAGE          Files, never services, in every stage
+//	    "files_deleted":         <number>,     RUN STAGE
+//	    "size_held_mb":          <number>,     RUN STAGE
+//	    "sent_mb":               <number>,     RUN STAGE
+//	    "stages_run":            <number>,     RUN
+//	    "stages_failed":         <number>,     RUN                Excludes a stop or a timeout
+//	    "stages_halted":         <number>,     RUN                A stop or a timeout alone
+//	    "disk_used_mb":          <number>,     STAGE
+//	    "disk_total_mb":         <number>,     STAGE
+//	    "disk_unclean_bool":     <true|false>, STAGE              The mount replayed its log
+//	    "total_mb":              <number>,     STAGE              Expected, against which size_mb is progress
+//	    "backup_id":             "<stamp>",    SERVICE            Artefact the run points at, reused when skipped
+//	    "kind":                  "<kind>",     SERVICE            [full|delta|unknown]
+//	    "version":               "<text>",     SERVICE
+//	    "scrubbed_mb":           <number>,     SCRUB              Cumulative, carried across a resume
+//	    "progress_perc":         <number>,     SCRUB
+//	    "errors_found":          <number>,     SCRUB              Checksum, verify and super errors
+//	    "errors_corrected":      <number>,     SCRUB
+//	    "errors_uncorrectable":  <number>,     SCRUB
+//	    "files_to_delete":       "<text>",     SCRUB              First 20, comma separated
+//	    "files_to_delete_count": <number>,     SCRUB
+//	    "device_errors":         <number>,     SCRUB              Since the last scrub, zeroed after reporting
+//	    "chunks_relocated":      <number>      SCRUB              From the balance that follows a clean scrub
+//	}
+//
+// backup.sh owns the run tree and Go owns the schedule; neither writes the other's documents, and the
+// shapes above belong to metric.Payloads() alone, with the [state] enums and topic templates coming from
+// metric too rather than being spelled here:
+//
+//	backup.sh writes  every STAGE, SERVICE and SCRUB document, and RUN on a hand run [backup_rollup].
+//	                  The only writer of [timeout_hours] [disk_used_mb] [disk_total_mb]
+//	                  [disk_unclean_bool] [total_mb] [trigger] on a RUN
+//	backup.sh reads   its own documents back through [backup_tail_field] and [jq], for the progress
+//	                  lines, [abackup list] and the stage verdict; an undeclared key reads empty
+//	Go writes         RUN on a scheduled run [writeRunDocument], and STAGE when the reaper stops a run
+//	                  found past its [expires_ts] [reapLocalStale]
+//	Go reads          [state] [trigger] [expires_ts] for liveness, [success_bool] per SERVICE for
+//	                  service/backup_status, [stages_*] and [disk_usage_perc] for the three host metrics
+//	The leader reads  every host's RUN [state] [started_ts] [success_bool] off the broker, never off
+//	                  another host's tree, and publishes the cluster rollup [backupClusterDocument]
+//
+// So RUN has two writers with different fields and its payload declares the union, and this struct
+// carries the whole STAGE shape even where Go reads none of a field, because reapLocalStale round-trips
+// a stage document through it and anything missing is dropped from the reaped run.
 type backupDocument struct {
 	RunID         string  `json:"run_id"`
 	State         string  `json:"state"`
@@ -855,11 +967,15 @@ type backupDocument struct {
 	StartedTS     string  `json:"started_ts,omitempty"`
 	FinishedTS    string  `json:"finished_ts,omitempty"`
 	ExpiresTS     string  `json:"expires_ts,omitempty"`
+	TimeoutHours  int     `json:"timeout_hours,omitempty"`
 	DurationS     int     `json:"duration_s,omitempty"`
 	SuccessBool   bool    `json:"success_bool"`
 	DiskUsagePerc float64 `json:"disk_usage_perc,omitempty"`
-	FileCount     int     `json:"file_count,omitempty"`
+	DiskUsedMB    int     `json:"disk_used_mb,omitempty"`
+	DiskTotalMB   int     `json:"disk_total_mb,omitempty"`
+	DiskUnclean   bool    `json:"disk_unclean_bool,omitempty"`
 	TotalMB       int     `json:"total_mb,omitempty"`
+	FileCount     int     `json:"file_count,omitempty"`
 	SizeMB        int     `json:"size_mb,omitempty"`
 	FilesHeld     int     `json:"files_held,omitempty"`
 	FilesCreated  int     `json:"files_created,omitempty"`
@@ -908,21 +1024,21 @@ func readNewestRun(root string) *backupSnapshot {
 	sort.Strings(runs)
 	newest := readRun(root, runs[len(runs)-1])
 	started := newest.host == nil && newest.staged > 0
-	running := started && newest.age() <= backupRunCeiling
-	abandoned := started && !running && newest.trigger == metric.BackupTriggerScheduled
-	snapshot := newest
-	for index := len(runs) - 2; !abandoned && snapshot.host == nil && index >= 0; index-- {
+	newest.running = started && newest.age() <= backupRunCeiling
+	newest.abandoned = started && !newest.running && newest.trigger == metric.BackupTriggerSystem
+	if newest.host != nil || newest.abandoned {
+		return newest
+	}
+	for index := len(runs) - 2; index >= 0; index-- {
 		candidate := readRun(root, runs[index])
 		if candidate.age() > backupStaleWindow {
 			break
 		}
 		if candidate.host != nil {
-			snapshot = candidate
+			return candidate
 		}
 	}
-	snapshot.running = running
-	snapshot.abandoned = abandoned
-	return snapshot
+	return newest
 }
 
 func readRun(root, dir string) *backupSnapshot {
@@ -996,8 +1112,8 @@ const (
 	reaperNoticeTicks    = 15
 	reaperStaleTicks     = 5
 
-	allReaperTopic       = "supervisor/" + metric.HostAll + "/backup/reaper"
-	allBackupStatusTopic = "supervisor/" + metric.HostAll + "/backup/status"
+	anyHost  = "+"
+	anyLevel = "+"
 )
 
 const backupStageTertiary = "tertiary"
@@ -1013,6 +1129,10 @@ var (
 	backupProbeInstance *backupProbe
 
 	backupStages = []string{"primary", "secondary", backupStageTertiary}
+
+	allReaperTopic       = metric.TopicBackupReaper()
+	allBackupStatusTopic = metric.TopicBackupStatus(metric.HostAll)
+	tertiaryStatusSuffix = strings.TrimPrefix(metric.TopicBackupStage(anyHost, backupStageTertiary), metric.TopicBackupRoot(anyHost))
 
 	backupRunDirPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`)
 )

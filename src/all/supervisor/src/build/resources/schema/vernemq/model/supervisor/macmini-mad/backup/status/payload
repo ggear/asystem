@@ -1,20 +1,20 @@
 {
   "run_id": "<text>",
-  "state": <running|complete|skipped|stopped|timedout|halted|failed>,
-  "trigger": <scheduled|manual>,
+  "state": <running|success|stopped|timeout|failure>,
+  "trigger": <system|manual>,
   "started_ts": "<text>",
   "finished_ts": "<text>",
-  "expires_ts": "<text>",
   "duration_s": <number>,
   "success_bool": <true|false>,
   "disk_usage_perc": <number>,
-  "disk_unclean_bool": <true|false>,
-  "total_mb": <number>,
   "file_count": <number>,
   "size_mb": <number>,
   "files_held": <number>,
   "files_created": <number>,
   "files_deleted": <number>,
   "size_held_mb": <number>,
-  "sent_mb": <number>
+  "sent_mb": <number>,
+  "stages_run": <number>,
+  "stages_failed": <number>,
+  "stages_halted": <number>
 }

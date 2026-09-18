@@ -1,9 +1,10 @@
 {
   "run_id": "<text>",
-  "state": <finished|interrupted|skipped|failed|running>,
+  "state": <success|skipped|stopped|timeout|failure|running>,
   "started_ts": "<text>",
   "finished_ts": "<text>",
   "duration_s": <number>,
+  "expires_ts": "<text>",
   "success_bool": <true|false>,
   "scrubbed_mb": <number>,
   "progress_perc": <number>,

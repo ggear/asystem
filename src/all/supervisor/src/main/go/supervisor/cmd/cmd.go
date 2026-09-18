@@ -26,6 +26,7 @@ func Execute() {
 }
 
 func init() {
+	cobra.AddTemplateFunc("formatAliases", formatAliases)
 	cobra.AddTemplateFunc("formatFlagUsages", formatFlagUsages)
 	cobra.AddTemplateFunc("helpAllVocabularies", helpAllVocabularies)
 	rootCmd.SetUsageTemplate(usageTemplate)
@@ -56,6 +57,7 @@ func addAdvancedFlags(cmd *cobra.Command, advanced []string) {
 }
 
 var rootCmd = &cobra.Command{
+	Use:           rootName,
 	Short:         rootDescription,
 	Long:          rootDescription,
 	SilenceUsage:  true,
@@ -175,6 +177,10 @@ func helpAllVocabularies() string {
 	return scribe.Vocabularies()
 }
 
+func formatAliases(aliases []string) string {
+	return strings.Join(aliases, ", ")
+}
+
 func formatFlagUsages(flags *pflag.FlagSet) string {
 	lines := strings.Split(strings.TrimRight(flags.FlagUsages(), "\n"), "\n")
 	for index, line := range lines {
@@ -185,6 +191,7 @@ func formatFlagUsages(flags *pflag.FlagSet) string {
 
 const (
 	helpAllFlag     = "help-all"
+	rootName        = "supervisor"
 	rootDescription = "Run supervisor processes"
 
 	logLevelEnv = "SUPERVISOR_LOG_LEVEL"
@@ -199,7 +206,7 @@ const usageTemplate = `Usage:{{if .Runnable}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 
 Aliases:
-  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+  {{formatAliases .Aliases}}{{end}}{{if .HasExample}}
 
 Examples:
 {{.Example}}{{end}}{{if .HasAvailableSubCommands}}

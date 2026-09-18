@@ -60,6 +60,65 @@ func writeBackupStage(t *testing.T, root, stamp, stage string, document backupDo
 	}
 }
 
+func writeBackupScrub(t *testing.T, root, stamp, state string) {
+	t.Helper()
+	path := filepath.Join(root, stamp, "stage", backupStageTertiary, "scrub.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := json.MarshalIndent(backupDocument{State: state}, "", "  ")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProbeImplBackup_WriteRunDocumentNamesTheFirstStageThatBroke(t *testing.T) {
+	tests := []struct {
+		name        string
+		stages      map[string]string
+		scrub       string
+		wantState   string
+		wantSuccess bool
+		wantFailed  int
+		wantHalted  int
+	}{
+		{"every stage and a skipped scrub is success", map[string]string{
+			"primary": metric.BackupStateSuccess, "secondary": metric.BackupStateSuccess,
+			"tertiary": metric.BackupStateSuccess}, metric.BackupStateSkipped, metric.BackupStateSuccess, true, 0, 0},
+		{"secondary timed out ahead of a failed tertiary", map[string]string{
+			"primary": metric.BackupStateSuccess, "secondary": metric.BackupStateTimeout,
+			"tertiary": metric.BackupStateFailure}, "", metric.BackupStateTimeout, false, 1, 1},
+		{"a failed scrub still fails a fully successful run", map[string]string{
+			"primary": metric.BackupStateSuccess, "secondary": metric.BackupStateSuccess,
+			"tertiary": metric.BackupStateSuccess}, metric.BackupStateFailure, metric.BackupStateFailure, false, 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			stamp := time.Now().Format(backupRunStamp)
+			for _, stage := range backupStages {
+				state, ok := tt.stages[stage]
+				if !ok {
+					continue
+				}
+				writeBackupStage(t, root, stamp, stage, backupDocument{State: state, SuccessBool: state == metric.BackupStateSuccess})
+			}
+			if tt.scrub != "" {
+				writeBackupScrub(t, root, stamp, tt.scrub)
+			}
+			p := &backupProbe{}
+			document := p.writeRunDocument(filepath.Join(root, stamp), stamp, time.Now())
+			if document.State != tt.wantState || document.SuccessBool != tt.wantSuccess {
+				t.Errorf("got (%s,%v) want (%s,%v)", document.State, document.SuccessBool, tt.wantState, tt.wantSuccess)
+			}
+			if document.StagesFailed != tt.wantFailed || document.StagesHalted != tt.wantHalted {
+				t.Errorf("stages: got (failed %d, halted %d) want (failed %d, halted %d)",
+					document.StagesFailed, document.StagesHalted, tt.wantFailed, tt.wantHalted)
+			}
+		})
+	}
+}
+
 func TestProbeImplBackup_FailedBackups(t *testing.T) {
 	fresh := time.Now().Format(backupRunStamp)
 	stale := time.Now().Add(-40 * time.Hour).Format(backupRunStamp)
@@ -103,10 +162,14 @@ func TestProbeImplBackup_FailedBackups(t *testing.T) {
 			writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
 			writeBackupStage(t, root, abandoned, "secondary", backupDocument{State: "complete"})
 		}, 100, false, false},
-		{"a hand stage in flight is still inert over an older roll-up", func(root string) {
+		{"a stage in flight reports the last roll-up rather than hiding it", func(root string) {
 			writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
 			writeBackupStage(t, root, fresh, "secondary", backupDocument{State: "running"})
-		}, 0, true, false},
+		}, 0, false, false},
+		{"a stage in flight cannot mask a roll-up that failed", func(root string) {
+			writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 3}, nil, nil)
+			writeBackupStage(t, root, fresh, "secondary", backupDocument{State: "running"})
+		}, 100, false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -223,10 +286,10 @@ func TestProbeImplBackup_AbandonedScheduledRunIsNotWalkedPast(t *testing.T) {
 	writeBackupRun(t, root, yesterday, &backupDocument{StagesRun: 3}, nil, nil)
 	stuck := time.Now().Add(-8 * time.Hour).Format(backupRunStamp)
 	writeBackupStage(t, root, stuck, "primary", backupDocument{
-		State: metric.BackupStateComplete, Trigger: metric.BackupTriggerScheduled})
+		State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem})
 	writeBackupStage(t, root, stuck, "tertiary", backupDocument{
-		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled, DiskUsagePerc: 26})
-	p := &backupProbe{root: root, serverHost: true, periods: config.Periods{CacheMins: 60}}
+		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem, DiskUsagePerc: 26})
+	p := &backupProbe{root: root, serverHost: true}
 	value, _, err := p.failedBackupStages()
 	if err != nil || value != 100 {
 		t.Fatalf("failedBackupStages: got (%v,%v) want (100,nil)", value, err)
@@ -243,18 +306,34 @@ func TestProbeImplBackup_AbandonedHandRunIsStillWalkedPast(t *testing.T) {
 	handed := time.Now().Add(-8 * time.Hour).Format(backupRunStamp)
 	writeBackupStage(t, root, handed, "tertiary", backupDocument{
 		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerManual})
-	p := &backupProbe{root: root, serverHost: true, periods: config.Periods{CacheMins: 60}}
+	p := &backupProbe{root: root, serverHost: true}
 	value, _, err := p.failedBackupStages()
 	if err != nil || value != 0 {
 		t.Errorf("failedBackupStages: got (%v,%v) want (0,nil)", value, err)
 	}
 }
 
-func TestProbeImplBackup_SnapshotFollowsAHandRunWithinTheCacheWindow(t *testing.T) {
+func TestProbeImplBackup_SnapshotFlagsBelongToTheRunItNames(t *testing.T) {
+	root := t.TempDir()
+	rolled := time.Now().Add(-25 * time.Hour).Format(backupRunStamp)
+	writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
+	inflight := time.Now().Add(-10 * time.Minute).Format(backupRunStamp)
+	writeBackupStage(t, root, inflight, "primary", backupDocument{
+		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem})
+	snapshot := readNewestRun(root)
+	if snapshot.running && snapshot.dir != inflight {
+		t.Fatalf("running: got dir %s want %s, the flag must describe the run it is stamped on", snapshot.dir, inflight)
+	}
+	if snapshot.dir != rolled {
+		t.Fatalf("dir: got %s want %s, the walk-back must surface the run that rolled up", snapshot.dir, rolled)
+	}
+}
+
+func TestProbeImplBackup_SnapshotFollowsTheTreeRatherThanAClock(t *testing.T) {
 	root := t.TempDir()
 	stale := time.Now().Add(-3 * time.Hour).Format(backupRunStamp)
 	writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 1}, nil, nil)
-	p := &backupProbe{root: root, serverHost: true, periods: config.Periods{CacheMins: 60}}
+	p := &backupProbe{root: root, serverHost: true}
 	value, _, err := p.failedBackupStages()
 	if err != nil || value != 33 {
 		t.Fatalf("before: got (%v,%v) want (33,nil)", value, err)
@@ -354,10 +433,10 @@ func TestProbeImplBackup_RunnerInvocationsSpeakTheRunnerCli(t *testing.T) {
 		t.Fatalf("read backup.sh: %v", err)
 	}
 	commands := map[string]bool{}
-	dispatch := regexp.MustCompile(`case "\$\{BACKUP_COMMAND\}" in\n((?:[a-z]+ \| )+[a-z]+)\) ;;`)
+	dispatch := regexp.MustCompile(`case "\$\{BACKUP_ACTION\}" in\n((?:[a-z]+ \| )+[a-z]+)\) ;;`)
 	match := dispatch.FindStringSubmatch(string(script))
 	if match == nil {
-		t.Fatal("found no BACKUP_COMMAND dispatch in backup.sh, the parse has rotted")
+		t.Fatal("found no BACKUP_ACTION dispatch in backup.sh, the parse has rotted")
 	}
 	for word := range strings.SplitSeq(match[1], " | ") {
 		commands[word] = true
@@ -462,7 +541,7 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 		return string(payload)
 	}
 	stageOf := func(run, started, expires time.Time) string {
-		payload, _ := json.Marshal(backupDocument{RunID: run.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled,
+		payload, _ := json.Marshal(backupDocument{RunID: run.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
 			StartedTS: started.Format(time.RFC3339), ExpiresTS: expires.Format(time.RFC3339)})
 		return string(payload)
 	}
@@ -488,8 +567,8 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 		{
 			name: "scheduled_stage_running_opens_the_run_at_the_earliest_start",
 			retained: map[string]string{
-				stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight.Add(time.Minute), false),
-				stage("max"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false),
+				stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerSystem, tonight.Add(time.Minute), false),
+				stage("max"): doc(metric.BackupStateRunning, metric.BackupTriggerSystem, tonight, false),
 			},
 			expectedAction:  backupClusterRunOpen,
 			expectedState:   metric.BackupStateRunning,
@@ -504,21 +583,21 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 		},
 		{
 			name:           "stage_of_a_host_outside_the_expected_servers_is_ignored",
-			retained:       map[string]string{stage("jen"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false)},
+			retained:       map[string]string{stage("jen"): doc(metric.BackupStateRunning, metric.BackupTriggerSystem, tonight, false)},
 			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
 			name:           "stage_running_past_the_ceiling_is_ignored",
-			retained:       map[string]string{stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, now.Add(-backupRunCeiling-time.Minute), false)},
+			retained:       map[string]string{stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerSystem, now.Add(-backupRunCeiling-time.Minute), false)},
 			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
 		{
 			name: "closed_run_is_not_reopened_by_its_own_stuck_stage",
 			retained: map[string]string{
-				allBackupStatusTopic: doc(metric.BackupStateComplete, "", tonight, true),
-				stage("mad"):         doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight.Add(time.Minute), false),
+				allBackupStatusTopic: doc(metric.BackupStateSuccess, "", tonight, true),
+				stage("mad"):         doc(metric.BackupStateRunning, metric.BackupTriggerSystem, tonight.Add(time.Minute), false),
 			},
 			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
@@ -526,8 +605,8 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 		{
 			name: "closed_run_from_last_night_lets_tonight_open",
 			retained: map[string]string{
-				allBackupStatusTopic: doc(metric.BackupStateComplete, "", tonight.Add(-24*time.Hour), true),
-				stage("mad"):         doc(metric.BackupStateRunning, metric.BackupTriggerScheduled, tonight, false),
+				allBackupStatusTopic: doc(metric.BackupStateSuccess, "", tonight.Add(-24*time.Hour), true),
+				stage("mad"):         doc(metric.BackupStateRunning, metric.BackupTriggerSystem, tonight, false),
 			},
 			expectedAction:  backupClusterRunOpen,
 			expectedState:   metric.BackupStateRunning,
@@ -538,11 +617,11 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 			name: "reopened_after_a_flush_dates_from_the_run_and_closes_on_its_reports",
 			retained: map[string]string{
 				tertiary("max"): stageOf(tonight, tonight.Add(15*time.Minute), now.Add(time.Hour)),
-				host("mad"):     doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
-				host("max"):     doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				host("mad"):     doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight, true),
+				host("max"):     doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight, true),
 			},
 			expectedAction:   backupClusterRunClose,
-			expectedState:    metric.BackupStateComplete,
+			expectedState:    metric.BackupStateSuccess,
 			expectedStarted:  tonight,
 			expectedReported: 2,
 			expectedError:    false,
@@ -556,7 +635,7 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 		{
 			name: "late_stage_of_a_closed_run_does_not_reopen_it",
 			retained: map[string]string{
-				allBackupStatusTopic: doc(metric.BackupStateTimedout, "", tonight, false),
+				allBackupStatusTopic: doc(metric.BackupStateTimeout, "", tonight, false),
 				tertiary("max"):      stageOf(tonight, tonight.Add(15*time.Minute), now.Add(time.Hour)),
 			},
 			expectedAction: backupClusterRunIdle,
@@ -566,7 +645,7 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 			name: "running_cluster_backup_run_with_a_partial_report_is_refreshed",
 			retained: map[string]string{
 				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
-				host("mad"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				host("mad"):          doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight, true),
 			},
 			expectedAction:   backupClusterRunRefresh,
 			expectedState:    metric.BackupStateRunning,
@@ -578,24 +657,50 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 			name: "every_expected_server_reported_closes_complete",
 			retained: map[string]string{
 				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
-				host("mad"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
-				host("max"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight.Add(time.Minute), true),
+				host("mad"):          doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight, true),
+				host("max"):          doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight.Add(time.Minute), true),
 			},
 			expectedAction:   backupClusterRunClose,
-			expectedState:    metric.BackupStateComplete,
+			expectedState:    metric.BackupStateSuccess,
 			expectedStarted:  tonight,
 			expectedReported: 2,
+			expectedError:    false,
+		},
+		{
+			name: "a_stopped_report_still_counts_as_a_report",
+			retained: map[string]string{
+				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):          doc(metric.BackupStateStopped, metric.BackupTriggerSystem, tonight, false),
+				host("max"):          doc(metric.BackupStateSkipped, metric.BackupTriggerSystem, tonight, true),
+			},
+			expectedAction:   backupClusterRunClose,
+			expectedState:    metric.BackupStateFailure,
+			expectedStarted:  tonight,
+			expectedReported: 2,
+			expectedError:    false,
+		},
+		{
+			name: "a_host_still_running_is_not_a_report",
+			retained: map[string]string{
+				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
+				host("mad"):          doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight, true),
+				host("max"):          doc(metric.BackupStateRunning, metric.BackupTriggerSystem, tonight, false),
+			},
+			expectedAction:   backupClusterRunRefresh,
+			expectedState:    metric.BackupStateRunning,
+			expectedStarted:  tonight,
+			expectedReported: 1,
 			expectedError:    false,
 		},
 		{
 			name: "a_failed_report_closes_failed",
 			retained: map[string]string{
 				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
-				host("mad"):          doc(metric.BackupStateFailed, metric.BackupTriggerScheduled, tonight, false),
-				host("max"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				host("mad"):          doc(metric.BackupStateFailure, metric.BackupTriggerSystem, tonight, false),
+				host("max"):          doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight, true),
 			},
 			expectedAction:   backupClusterRunClose,
-			expectedState:    metric.BackupStateFailed,
+			expectedState:    metric.BackupStateFailure,
 			expectedStarted:  tonight,
 			expectedReported: 2,
 			expectedError:    false,
@@ -606,7 +711,7 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 				allBackupStatusTopic: doc(metric.BackupStateRunning, "", now.Add(-backupRunCeiling-time.Minute), false),
 			},
 			expectedAction:  backupClusterRunClose,
-			expectedState:   metric.BackupStateTimedout,
+			expectedState:   metric.BackupStateTimeout,
 			expectedStarted: now.Add(-backupRunCeiling - time.Minute),
 			expectedError:   false,
 		},
@@ -614,8 +719,8 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 			name: "last_nights_report_does_not_count_for_tonight",
 			retained: map[string]string{
 				allBackupStatusTopic: doc(metric.BackupStateRunning, "", tonight, false),
-				host("mad"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight.Add(-24*time.Hour), true),
-				host("max"):          doc(metric.BackupStateComplete, metric.BackupTriggerScheduled, tonight, true),
+				host("mad"):          doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight.Add(-24*time.Hour), true),
+				host("max"):          doc(metric.BackupStateSuccess, metric.BackupTriggerSystem, tonight, true),
 			},
 			expectedAction:   backupClusterRunRefresh,
 			expectedState:    metric.BackupStateRunning,
@@ -694,7 +799,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	observer.Publish(allBackupStatusTopic, 1, true, []byte{}).WaitTimeout(2 * time.Second)
 	started := time.Now().Add(-5 * time.Minute).Truncate(time.Second)
 	for _, host := range []string{"mad", "max"} {
-		publish("supervisor/"+host+"/backup/stage/primary/status", backupDocument{RunID: started.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled,
+		publish("supervisor/"+host+"/backup/stage/primary/status", backupDocument{RunID: started.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
 			StartedTS: started.Format(time.RFC3339), ExpiresTS: time.Now().Add(time.Hour).Format(time.RFC3339)})
 	}
 	probe := &backupProbe{configPath: configFile, hostName: "mad", serverHost: true}
@@ -724,7 +829,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	if seen[plug] != "" {
 		t.Fatalf("plug: got %q want nothing sent while hosts are still running", seen[plug])
 	}
-	publish("supervisor/mad/backup/status", backupDocument{State: metric.BackupStateComplete, Trigger: metric.BackupTriggerScheduled, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
+	publish("supervisor/mad/backup/status", backupDocument{State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
 	time.Sleep(time.Second)
 	probe.lead()
 	mutex.Lock()
@@ -733,8 +838,8 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	if partial != metric.BackupStateRunning {
 		t.Fatalf("partial state: got %s want running until every expected server reports", partial)
 	}
-	publish("supervisor/max/backup/status", backupDocument{State: metric.BackupStateComplete, Trigger: metric.BackupTriggerScheduled, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
-	await("closed", func() bool { return cluster().State == metric.BackupStateComplete && seen[plug] == metric.CommandOff })
+	publish("supervisor/max/backup/status", backupDocument{State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
+	await("closed", func() bool { return cluster().State == metric.BackupStateSuccess && seen[plug] == metric.CommandOff })
 	var closed map[string]any
 	mutex.Lock()
 	_ = json.Unmarshal([]byte(seen[allBackupStatusTopic]), &closed)
@@ -748,13 +853,13 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	holder.mutex.Lock()
 	holder.leading = false
 	holder.mutex.Unlock()
-	publish("supervisor/max/backup/stage/primary/status", backupDocument{RunID: time.Now().Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerScheduled,
+	publish("supervisor/max/backup/stage/primary/status", backupDocument{RunID: time.Now().Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
 		StartedTS: time.Now().Format(time.RFC3339), ExpiresTS: time.Now().Add(time.Hour).Format(time.RFC3339)})
 	time.Sleep(time.Second)
 	probe.lead()
 	mutex.Lock()
 	defer mutex.Unlock()
-	if seen[plug] != "" || cluster().State != metric.BackupStateComplete {
+	if seen[plug] != "" || cluster().State != metric.BackupStateSuccess {
 		t.Errorf("deposed holder: got plug [%q] state [%s] want no action from a host that no longer leads", seen[plug], cluster().State)
 	}
 }

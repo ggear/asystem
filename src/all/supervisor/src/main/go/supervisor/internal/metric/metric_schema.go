@@ -98,12 +98,12 @@ func Topics() []schema.Topic {
 		})
 	}
 	for _, template := range []string{
-		"supervisor/$HOST/backup/status",
-		"supervisor/$HOST/backup/stage/$STAGE/status",
-		"supervisor/$HOST/backup/stage/primary/service/$BACKUP_SERVICE/status",
-		"supervisor/$SCRUB_HOST/backup/stage/tertiary/scrub/status",
-		"supervisor/" + HostAll + "/backup/reaper",
-		"supervisor/" + HostAll + "/backup/status",
+		TopicBackupStatus("$HOST"),
+		TopicBackupStage("$HOST", "$STAGE"),
+		TopicBackupService("$HOST", "$BACKUP_SERVICE"),
+		TopicBackupScrub("$SCRUB_HOST"),
+		TopicBackupReaper(),
+		TopicBackupStatus(HostAll),
 		TopicLeaderLease,
 		TopicLeaderCandidate("$LEADER_HOST"),
 	} {
@@ -127,17 +127,26 @@ func Payloads() []schema.Payload {
 			value,
 		}}
 	}
-	backupStatus := schema.Member{Members: []schema.Member{
+	backupSettled := []string{
+		BackupStateRunning,
+		BackupStateSuccess,
+		BackupStateStopped,
+		BackupStateTimeout,
+		BackupStateFailure,
+	}
+	backupStageStatus := schema.Member{Members: []schema.Member{
 		{Key: "run_id", Kind: schema.KindStr},
-		{Key: "state", Enum: []string{BackupStateRunning, BackupStateComplete, BackupStateSkipped,
-			BackupStateStopped, BackupStateTimedout, BackupStateHalted, BackupStateFailed}},
-		{Key: "trigger", Enum: []string{BackupTriggerScheduled, BackupTriggerManual}},
+		{Key: "state", Enum: backupSettled},
+		{Key: "trigger", Enum: []string{BackupTriggerSystem, BackupTriggerManual}},
 		{Key: "started_ts", Kind: schema.KindStr},
 		{Key: "finished_ts", Kind: schema.KindStr},
 		{Key: "expires_ts", Kind: schema.KindStr},
+		{Key: "timeout_hours", Kind: schema.KindInt},
 		{Key: "duration_s", Kind: schema.KindInt},
 		{Key: "success_bool", Kind: schema.KindBool},
 		{Key: "disk_usage_perc", Kind: schema.KindFloat},
+		{Key: "disk_used_mb", Kind: schema.KindInt},
+		{Key: "disk_total_mb", Kind: schema.KindInt},
 		{Key: "disk_unclean_bool", Kind: schema.KindBool},
 		{Key: "total_mb", Kind: schema.KindInt},
 		{Key: "file_count", Kind: schema.KindInt},
@@ -147,6 +156,44 @@ func Payloads() []schema.Payload {
 		{Key: "files_deleted", Kind: schema.KindInt},
 		{Key: "size_held_mb", Kind: schema.KindInt},
 		{Key: "sent_mb", Kind: schema.KindInt},
+	}}
+	backupHostStatus := schema.Member{Members: []schema.Member{
+		{Key: "run_id", Kind: schema.KindStr},
+		{Key: "state", Enum: backupSettled},
+		{Key: "trigger", Enum: []string{BackupTriggerSystem, BackupTriggerManual}},
+		{Key: "started_ts", Kind: schema.KindStr},
+		{Key: "finished_ts", Kind: schema.KindStr},
+		{Key: "duration_s", Kind: schema.KindInt},
+		{Key: "success_bool", Kind: schema.KindBool},
+		{Key: "disk_usage_perc", Kind: schema.KindFloat},
+		{Key: "file_count", Kind: schema.KindInt},
+		{Key: "size_mb", Kind: schema.KindInt},
+		{Key: "files_held", Kind: schema.KindInt},
+		{Key: "files_created", Kind: schema.KindInt},
+		{Key: "files_deleted", Kind: schema.KindInt},
+		{Key: "size_held_mb", Kind: schema.KindInt},
+		{Key: "sent_mb", Kind: schema.KindInt},
+		{Key: "stages_run", Kind: schema.KindInt},
+		{Key: "stages_failed", Kind: schema.KindInt},
+		{Key: "stages_halted", Kind: schema.KindInt},
+	}}
+	backupServiceStatus := schema.Member{Members: []schema.Member{
+		{Key: "run_id", Kind: schema.KindStr},
+		{Key: "backup_id", Kind: schema.KindStr},
+		{Key: "state", Enum: []string{
+			BackupStateRunning,
+			BackupStateSuccess,
+			BackupStateSkipped,
+			BackupStateFailure,
+		}},
+		{Key: "started_ts", Kind: schema.KindStr},
+		{Key: "finished_ts", Kind: schema.KindStr},
+		{Key: "duration_s", Kind: schema.KindInt},
+		{Key: "success_bool", Kind: schema.KindBool},
+		{Key: "kind", Kind: schema.KindStr},
+		{Key: "version", Kind: schema.KindStr},
+		{Key: "file_count", Kind: schema.KindInt},
+		{Key: "size_mb", Kind: schema.KindInt},
 	}}
 	return []schema.Payload{
 		{
@@ -172,8 +219,12 @@ func Payloads() []schema.Payload {
 			Match: "*/" + HostAll + "/backup/status",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "run_id", Kind: schema.KindStr},
-				{Key: "state", Enum: []string{BackupStateRunning, BackupStateComplete,
-					BackupStateFailed, BackupStateTimedout}},
+				{Key: "state", Enum: []string{
+					BackupStateRunning,
+					BackupStateSuccess,
+					BackupStateFailure,
+					BackupStateTimeout,
+				}},
 				{Key: "started_ts", Kind: schema.KindStr},
 				{Key: "finished_ts", Kind: schema.KindStr},
 				{Key: "duration_s", Kind: schema.KindInt},
@@ -186,17 +237,24 @@ func Payloads() []schema.Payload {
 				{Key: "leader_epoch", Kind: schema.KindInt},
 			}},
 		},
-		{Role: schema.RoleState, Match: "*/backup/status", Root: backupStatus},
+		{Role: schema.RoleState, Match: "*/backup/status", Root: backupHostStatus},
 		{
 			Role:  schema.RoleState,
 			Match: "*/backup/stage/tertiary/scrub/status",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "run_id", Kind: schema.KindStr},
-				{Key: "state", Enum: []string{BackupStateFinished, BackupStateInterrupted,
-					BackupStateSkipped, BackupStateFailed, BackupStateRunning}},
+				{Key: "state", Enum: []string{
+					BackupStateSuccess,
+					BackupStateSkipped,
+					BackupStateStopped,
+					BackupStateTimeout,
+					BackupStateFailure,
+					BackupStateRunning,
+				}},
 				{Key: "started_ts", Kind: schema.KindStr},
 				{Key: "finished_ts", Kind: schema.KindStr},
 				{Key: "duration_s", Kind: schema.KindInt},
+				{Key: "expires_ts", Kind: schema.KindStr},
 				{Key: "success_bool", Kind: schema.KindBool},
 				{Key: "scrubbed_mb", Kind: schema.KindInt},
 				{Key: "progress_perc", Kind: schema.KindFloat},
@@ -209,7 +267,8 @@ func Payloads() []schema.Payload {
 				{Key: "chunks_relocated", Kind: schema.KindInt},
 			}},
 		},
-		{Role: schema.RoleState, Match: "*/backup/stage/*/status", Root: backupStatus},
+		{Role: schema.RoleState, Match: "*/backup/stage/*/service/*/status", Root: backupServiceStatus},
+		{Role: schema.RoleState, Match: "*/backup/stage/*/status", Root: backupStageStatus},
 		{
 			Role: schema.RoleState,
 			Root: schema.Member{Members: []schema.Member{
@@ -242,19 +301,44 @@ func TopicLeaderCandidate(host string) string {
 	return TopicLeaderRoot + "/candidate/" + host
 }
 
-const (
-	BackupStateRunning     = "running"
-	BackupStateComplete    = "complete"
-	BackupStateSkipped     = "skipped"
-	BackupStateStopped     = "stopped"
-	BackupStateTimedout    = "timedout"
-	BackupStateHalted      = "halted"
-	BackupStateFailed      = "failed"
-	BackupStateFinished    = "finished"
-	BackupStateInterrupted = "interrupted"
+func TopicBackupRoot(host string) string {
+	return "supervisor/" + host + "/backup"
+}
 
-	BackupTriggerScheduled = "scheduled"
-	BackupTriggerManual    = "manual"
+func TopicBackupStatus(host string) string {
+	return TopicBackupRoot(host) + "/status"
+}
+
+func TopicBackupStage(host, stage string) string {
+	return TopicBackupRoot(host) + "/stage/" + stage + "/status"
+}
+
+func TopicBackupStagePrefix(host string) string {
+	return TopicBackupRoot(host) + "/stage/"
+}
+
+func TopicBackupService(host, service string) string {
+	return TopicBackupRoot(host) + "/stage/primary/service/" + service + "/status"
+}
+
+func TopicBackupScrub(host string) string {
+	return TopicBackupRoot(host) + "/stage/tertiary/scrub/status"
+}
+
+func TopicBackupReaper() string {
+	return TopicBackupRoot(HostAll) + "/reaper"
+}
+
+const (
+	BackupStateRunning = "running"
+	BackupStateSuccess = "success"
+	BackupStateSkipped = "skipped"
+	BackupStateStopped = "stopped"
+	BackupStateTimeout = "timeout"
+	BackupStateFailure = "failure"
+
+	BackupTriggerSystem = "system"
+	BackupTriggerManual = "manual"
 )
 
 const (

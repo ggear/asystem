@@ -27,36 +27,30 @@ Add big ass temps for deck
 retire nginx and use cloudflared for homeasistant?
 improve sys tests with datbase/broker asserts
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 rename storage to be drives drives mount|space?
 consider moving fstabs? volumes.sh?
 design space align with abackup list
-fix ha complication
-
-
-test run-id trace through all levels, list, thinned out at all levels, reflected in list, check logs and json output all look nice, layout is good - add a delete run?
-test timeout, other failure modes?, is 3 hours suffcient?
-release, clean history, ssh root@macmini-mad 'rm -rf /share/{10,20,30,40}/backup/supervisor/*'
-test end to end
-check backups working on all servers
-release supervisor with dorment set to false
-test new watch logs, add/remove etc
-test primary
-test sedondary
-format all /backup drives, test volumes.sh
-test tertiary
-test supervisor backup enable release, validate 384M memeory footprint during backup, make smaller again if possible?
-add abackup to client too, backup photos etc?
-implement PLAN_BACKUP.md and delete
-
+write plan for space/mount
 
 write plan to reimplement backup.sh as go program in plans/gobackup.md
 implement a cmd/cmd_backup.go that calls a new engine func in new file engine_impl_backup.go
 make backup cli match existing watch/server cli impl, but incorporate backup.sh but modifying to be more go like and matching existing watch/server style, show suggestion of how to do this
 preserve all existing backup.sh functionality, error handling, edge cases, logging style, cli 
 
-implement media cli.md and delete plan
 
-tune fan/tem and test fans scale up on all hosts, mbfan in _fedora_max? should be in all? sync temp with fan/temp metrics
 check all metrics working 
 
 adjust memeory allocs
