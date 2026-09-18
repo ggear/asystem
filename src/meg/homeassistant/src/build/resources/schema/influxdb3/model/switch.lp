@@ -15,6 +15,7 @@
 #     deck_freezer_plug_none,
 #     garden_sewerage_blower_plug,
 #     garden_sewerage_blower_plug_none,
+#     host_all,
 #     host_jen,
 #     host_mad,
 #     host_max,

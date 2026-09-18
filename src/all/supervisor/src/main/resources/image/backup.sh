@@ -223,6 +223,9 @@ BACKUP_STALL_WARNED=0
 BACKUP_STOPPING="${BACKUP_STOPPING:-}"
 BACKUP_SEEN_STAGES=""
 BACKUP_DONE_STAGES=""
+BACKUP_SEEN_SERVICES=""
+BACKUP_DONE_SERVICES=""
+BACKUP_DONE_SCRUB=0
 
 backup_epoch() {
   local run="$1" stamp clock
@@ -584,7 +587,7 @@ backup_running() {
 }
 
 backup_await() {
-  local path="$1" stage doc deadline=0 sequence="${3:-}" started now due stamped
+  local path="$1" stage doc deadline=0 sequence="${3:-}" started now due stamped service sdoc scrub_doc
   started="$(date +%s)"
   due=$(( started + BACKUP_TAIL_PROGRESS ))
   [ -n "${2:-}" ] && deadline=$(( started + $2 ))
@@ -604,6 +607,29 @@ backup_await() {
             backup_progress "${path}" "${stage}"
           ;;
         esac
+        if [ "${stage}" = "primary" ]; then
+          for sdoc in "${path}/stage/primary/service"/*/status.json; do
+            [ -f "${sdoc}" ] || continue
+            service="$(basename "$(dirname "${sdoc}")")"
+            case " ${BACKUP_SEEN_SERVICES} " in
+            *" ${service} "*) ;;
+            *)
+              BACKUP_SEEN_SERVICES="${BACKUP_SEEN_SERVICES} ${service}"
+              backup_service_started "${service}"
+              ;;
+            esac
+            [ "$(backup_tail_field "${sdoc}" state)" = "${BACKUP_STATE_RUNNING}" ] && continue
+            case " ${BACKUP_DONE_SERVICES} " in *" ${service} "*) continue ;; esac
+            BACKUP_DONE_SERVICES="${BACKUP_DONE_SERVICES} ${service}"
+            backup_service_finished "${service}" "${sdoc}"
+          done
+        elif [ "${stage}" = "tertiary" ] && [ "${BACKUP_DONE_SCRUB}" -eq 0 ]; then
+          scrub_doc="${path}/stage/tertiary/scrub.json"
+          if [ -f "${scrub_doc}" ] && [ "$(backup_tail_field "${scrub_doc}" state)" != "${BACKUP_STATE_RUNNING}" ]; then
+            BACKUP_DONE_SCRUB=1
+            backup_scrub_finished "${scrub_doc}"
+          fi
+        fi
         [ "$(backup_tail_field "${doc}" state)" = "${BACKUP_STATE_RUNNING}" ] && continue
         case " ${BACKUP_DONE_STAGES} " in *" ${stage} "*) continue ;; esac
         BACKUP_DONE_STAGES="${BACKUP_DONE_STAGES} ${stage}"
@@ -758,6 +784,60 @@ backup_finished() {
     "${rate}" \
     "$(backup_percent "$(backup_tail_field "${doc}" disk_usage_perc)")" \
     "${pointer}")"
+}
+
+backup_service_started() {
+  local service="$1"
+  backup_marker primary "starting [${service}] backup"
+}
+
+backup_service_finished() {
+  local service="$1" doc="$2" state pointer="" spent moved kind version rate
+  state="$(backup_tail_field "${doc}" state)"
+  [ "$(backup_tail_field "${doc}" success_bool)" = "true" ] ||
+    pointer=", see [$(dirname "${doc}")/output.log]"
+  spent="$(backup_tail_field "${doc}" duration_s)"
+  moved="$(backup_tail_field "${doc}" size_mb)"
+  kind="$(backup_tail_field "${doc}" kind)"
+  version="$(backup_tail_field "${doc}" version)"
+  rate="$(backup_throughput "-")"
+  [ "${state}" = "${BACKUP_STATE_COMPLETE}" ] && rate="$(backup_rated "${moved:-0}" "${spent:-0}")"
+  backup_marker primary "$(printf 'finished [%s] as [%s] in [%s], kind [%s], version [%s], size [%s] MB at [%s] MB/s%s' \
+    "${service}" \
+    "${state:-unknown}" \
+    "$(backup_elapsed "${spent:-0}")" \
+    "${kind:-unknown}" \
+    "${version:-unknown}" \
+    "$(backup_sized "${moved:-0}")" \
+    "${rate}" \
+    "${pointer}")"
+}
+
+backup_scrub_finished() {
+  local doc="$1" state success found uncorrectable devices count scrubbed progress
+  state="$(backup_tail_field "${doc}" state)"
+  success="$(backup_tail_field "${doc}" success_bool)"
+  [ "${state}" = "${BACKUP_STATE_SKIPPED}" ] && [ "${success}" = "true" ] && return 0
+  if [ "${success}" = "true" ]; then
+    scrubbed="$(backup_tail_field "${doc}" scrubbed_mb)"
+    progress="$(backup_tail_field "${doc}" progress_perc)"
+    backup_marker tertiary "$(printf 'scrub [%s] at [%s] percent having scrubbed [%s] MB' \
+      "${state}" "$(backup_percent "${progress:-0}")" "$(backup_sized "${scrubbed:-0}")")"
+    return 0
+  fi
+  found="$(backup_tail_field "${doc}" errors_found)"
+  uncorrectable="$(backup_tail_field "${doc}" errors_uncorrectable)"
+  devices="$(backup_tail_field "${doc}" device_errors)"
+  count="$(backup_tail_field "${doc}" files_to_delete_count)"
+  if [ "${found:-0}" -gt 0 ] || [ "${uncorrectable:-0}" -gt 0 ]; then
+    backup_marker tertiary "$(printf 'scrub found [%s] errors with [%s] uncorrectable across [%s] files and [%s] device errors, delete them and re-mirror, listed in [%s/scrub.log]' \
+      "${found:-0}" "${uncorrectable:-0}" "${count:-0}" "${devices:-0}" "$(dirname "${doc}")")"
+  elif [ "${devices:-0}" -gt 0 ]; then
+    backup_marker tertiary "$(printf 'scrub found [%s] device errors accumulated since the last scrub with no checksum error this pass, counters in [%s/scrub.log]' \
+      "${devices}" "$(dirname "${doc}")")"
+  else
+    backup_marker tertiary "$(printf 'scrub [%s], see [%s/output.log]' "${state:-failed}" "$(dirname "${doc}")")"
+  fi
 }
 
 backup_verb() {
@@ -1416,6 +1496,14 @@ primary_start() {
     local started; started="$(date +%s)"
     local previous; previous="$(find "${BACKUP_HOME_ROOT}/${service}/backup" -mindepth 1 -maxdepth 1 -type d -name '20*' 2>/dev/null | sort | tail -1)"
     backup_marker primary "started [${service}] [${index}/${#enrolled[@]}] with [${script}], logging to [${dir}/output.log]"
+    cat >"${dir}/status.json.tmp" <<JSON
+{
+  "run_id": "${BACKUP_RUN_ID}",
+  "state": "${BACKUP_STATE_RUNNING}",
+  "started_ts": "$(date --iso-8601=seconds -d @"${started}")"
+}
+JSON
+    mv "${dir}/status.json.tmp" "${dir}/status.json"
     local rc=0
     BACKUP_SKIP_HOURS="${BACKUP_SKIP_HOURS:-1}" BACKUP_SERVICE_RESTART=true BACKUP_TIMEOUT_HOURS="${BACKUP_TIMEOUT_HOURS}" \
       bash "${script}" >"${dir}/output.log" 2>&1 </dev/null 9>&- || rc=$?
