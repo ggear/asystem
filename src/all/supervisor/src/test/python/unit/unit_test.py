@@ -484,14 +484,14 @@ class BackupShellTest(unittest.TestCase):
         reported = self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
                               'backup_started primary "' + doc + '"', BACKUP_TIMEOUT_HOURS=3, TZ="UTC")
         self.assertIn("timeout [ 840] min", reported, "must read the document, not the reader's environment")
-        self.assertIn("until [00:19:40]", reported)
+        self.assertIn("at [00:19:40]", reported)
 
     @NEEDS_GNU
     def test_started_says_unknown_when_the_run_recorded_no_timeout(self):
         doc = self.document("y", "primary", state="running", started_ts="2026-09-15T10:19:40+00:00")
         reported = self.shell('backup_marker() { printf "%s\\n" "$2"; }\n'
                               'backup_started primary "' + doc + '"', BACKUP_TIMEOUT_HOURS=3, TZ="UTC")
-        self.assertIn("timeout [   -] min until [unknown]", reported)
+        self.assertIn("timeout [   -] min at [unknown]", reported)
 
     def test_sized_and_percent_pad_to_a_floor_and_overflow_past_it(self):
         for value, expected in ((0, "   0"), (7, "   7"), (801, " 801"), (7047, "7047"), (35407, "35407")):
@@ -557,7 +557,7 @@ class BackupShellTest(unittest.TestCase):
                              "[{}] should default once, found {}".format(setting, defaults))
         guards = {"BACKUP_RUN_GIVEN", "BACKUP_RUN_PATH", "BACKUP_TRIGGER", "BACKUP_USAGE",
                   "BACKUP_USAGE_USED_MB", "BACKUP_USAGE_TOTAL_MB", "BACKUP_BOUNDED_OUTPUT",
-                  "BACKUP_DURATION", "BACKUP_MOVED"}
+                  "BACKUP_DURATION", "BACKUP_MOVED", "BACKUP_STARTED"}
         inline = {name for name, _ in re.findall(r"\$\{(BACKUP_\w+):-([^}]+)\}", source)
                   if name not in normalised}
         self.assertEqual(inline, guards,
@@ -611,6 +611,40 @@ class BackupShellTest(unittest.TestCase):
         self.assertIn("rather than the declared", self.shell(stubs.format(1, 0) + "backup_diagnosed"))
         self.assertIn("not answering reads", self.shell(stubs.format(0, 1) + "backup_diagnosed"))
         self.assertIn("answering normally", self.shell(stubs.format(0, 0) + "backup_diagnosed"))
+
+    @NEEDS_GNU
+    def test_commenced_reads_the_run_start_out_of_the_run_id(self):
+        self.assertEqual(self.shell('backup_commenced 2026-09-18_14-08-49'),
+                         self.shell('date -d "2026-09-18 14:08:49" +%s'))
+        self.assertEqual(self.shell('BACKUP_STARTED=99; backup_commenced not-a-run-id'), "99",
+                         "an unparseable run id falls back to this process start")
+        self.assertEqual(self.shell('BACKUP_STARTED=99; backup_commenced ""'),
+                         self.shell('BACKUP_STARTED=99; backup_commenced "${BACKUP_RUN_ID}"'),
+                         "no argument reads the current run")
+
+    @NEEDS_GNU
+    def test_every_stage_of_a_run_shares_one_deadline(self):
+        run = "2026-09-18_14-08-49"
+        started = int(self.shell('date -d "2026-09-18 14:08:49" +%s'))
+        self.assertEqual(self.shell('backup_expires "{}" 10'.format(run)), str(started + 10 * 3600))
+        self.assertEqual(self.shell('backup_expires "{}" 0'.format(run)), "0",
+                         "a disabled timeout carries no deadline")
+        later = self.shell('BACKUP_STARTED=$(date -d "2026-09-18 19:00:00" +%s)\n'
+                           'backup_expires "{}" 10'.format(run))
+        self.assertEqual(later, str(started + 10 * 3600),
+                         "a stage starting hours later inherits the run deadline, not a fresh window")
+
+    @NEEDS_GNU
+    def test_started_renders_the_shared_deadline_as_a_time(self):
+        run = "2026-09-18_14-08-49"
+        line = self.shell('backup_marker() {{ printf "%s" "$2"; }}\n'
+                          'BACKUP_RUN_ID="{}" BACKUP_TIMEOUT_HOURS=10 backup_started primary'.format(run))
+        self.assertEqual(line, "starting with timeout [ 600] min at [00:08:49]")
+        self.assertNotIn("until", line, "a deadline is rendered as [at], never [until]")
+        self.assertIn("min at [unknown]",
+                      self.shell('backup_marker() { printf "%s" "$2"; }\n'
+                                 'BACKUP_TIMEOUT_HOURS=0 backup_started primary'),
+                      "a disabled timeout states no deadline")
 
     def test_rated_is_the_one_place_a_throughput_is_formed(self):
         for megabytes, seconds, expected in ((7047, 87, " 81"), (139455, 682, "204"), (723, 22, " 32"),

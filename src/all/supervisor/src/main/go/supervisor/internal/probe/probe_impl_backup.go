@@ -505,9 +505,13 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 		p.powerBackupDisk(metric.CommandOn, runStart)
 	}
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("schedule", runStart, "[%s] backup run over [%d] stages", runID, len(stages))
+	expires := time.Time{}
+	if hours := config.Load(p.configPath).BackupTimeoutHours(); hours > 0 {
+		expires = runStart.Add(time.Duration(hours) * time.Hour)
+	}
 	failed := 0
 	for _, stage := range stages {
-		if err := p.runStage(ctx, stage, runID, runPath); err != nil {
+		if err := p.runStage(ctx, stage, runID, runPath, expires); err != nil {
 			failed++
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Warnf("faulting", runStart, "[%s] backup stage failed with [%v], stopping the run", stage, err)
 			break
@@ -544,7 +548,7 @@ func (p *backupProbe) pruneRuns(started time.Time) {
 	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionRemove).Debugf("expunged", started, "[%d] backup run directories beyond the newest [%d] under [%s]", len(pruned), backupRunsKept, p.root)
 }
 
-func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string) error {
+func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string, expires time.Time) error {
 	if _, err := os.Stat(p.runner); err != nil {
 		return fmt.Errorf("stage runner [%s] is absent [%w]", p.runner, err)
 	}
@@ -559,9 +563,13 @@ func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string
 	}
 	defer logFile.Close()
 	stageCtx := ctx
-	if hours := config.Load(p.configPath).BackupTimeoutHours(); hours > 0 {
+	if !expires.IsZero() {
+		deadline := expires
+		if !time.Now().Before(deadline) {
+			deadline = time.Now().Add(backupExpiredGrace)
+		}
 		var cancel context.CancelFunc
-		stageCtx, cancel = context.WithTimeout(ctx, time.Duration(hours)*time.Hour)
+		stageCtx, cancel = context.WithDeadline(ctx, deadline)
 		defer cancel()
 	}
 	command := exec.CommandContext(stageCtx, "bash", p.runner, "start", runID, "--stage", stage)
@@ -1104,6 +1112,7 @@ const (
 	backupRunCeiling     = 5 * time.Hour
 	backupStaleWindow    = 24*time.Hour + backupRunCeiling
 	backupStageKillGrace = 2 * time.Minute
+	backupExpiredGrace   = 1 * time.Minute
 	backupStopDeadline   = 10 * time.Minute
 	backupRunSkew        = 10 * time.Minute
 	backupRunsKept       = 30

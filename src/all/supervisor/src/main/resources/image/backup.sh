@@ -746,17 +746,38 @@ backup_stopping() {
   backup_marker "${BACKUP_STAGE}" "$*"
 }
 
+backup_commenced() {
+  local id="${1:-}" stamp="${2:-}" fallback day clock
+  [ -n "${id}" ] || [ -n "${stamp}" ] || id="${BACKUP_RUN_ID}"
+  fallback="${BACKUP_STARTED:-$(date +%s)}"
+  [ -n "${stamp}" ] && fallback="$(date -d "${stamp}" +%s 2>/dev/null || printf '%s' "${fallback}")"
+  case "${id}" in
+  [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_[0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+  *) printf '%s' "${fallback}"; return 0 ;;
+  esac
+  day="${id%%_*}"
+  clock="${id##*_}"
+  date -d "${day} ${clock//-/:}" +%s 2>/dev/null || printf '%s' "${fallback}"
+}
+
+backup_expires() {
+  local run="${1:-}" hours="${2:-${BACKUP_TIMEOUT_HOURS}}"
+  [ "${hours:-0}" -gt 0 ] 2>/dev/null || { printf '0'; return 0; }
+  printf '%s' "$(( $(backup_commenced "${run}") + hours * 3600 ))"
+}
+
 backup_started() {
-  local stage="$1" doc="${2:-}" began="" hours="${BACKUP_TIMEOUT_HOURS}" minutes="-" until="unknown"
+  local stage="$1" doc="${2:-}" run="${BACKUP_RUN_ID}" began="" hours="${BACKUP_TIMEOUT_HOURS}" minutes="-" at="unknown"
   if [ -n "${doc}" ]; then
+    run="$(backup_tail_field "${doc}" run_id)"
     began="$(backup_tail_field "${doc}" started_ts)"
     hours="$(backup_tail_field "${doc}" timeout_hours)"
   fi
   if [ "${hours:-0}" -gt 0 ] 2>/dev/null; then
     minutes=$(( hours * 60 ))
-    until="$(date -d "${began:-now} + ${hours} hours" '+%H:%M:%S' 2>/dev/null || echo unknown)"
+    at="$(date -d @"$(( $(backup_commenced "${run}" "${began}") + hours * 3600 ))" '+%H:%M:%S' 2>/dev/null || echo unknown)"
   fi
-  backup_marker "${stage}" "$(printf 'starting with timeout [%4s] min until [%s]' "${minutes}" "${until:-unknown}")"
+  backup_marker "${stage}" "$(printf 'starting with timeout [%4s] min at [%s]' "${minutes}" "${at:-unknown}")"
 }
 
 backup_finished() {
@@ -1433,7 +1454,7 @@ backup_heartbeat() {
   trap '[ -n "${nap}" ] && kill "${nap}" 2>/dev/null; exit 0' TERM
   tick="${BACKUP_TAIL_PROGRESS}"
   [ "${tick}" -gt 0 ] 2>/dev/null || tick=10
-  [ "${BACKUP_TIMEOUT_HOURS}" -gt 0 ] 2>/dev/null && hard=$(( BACKUP_STARTED + BACKUP_TIMEOUT_HOURS * 3600 ))
+  hard="$(backup_expires)"
   due=$(( $(date +%s) + BACKUP_HEARTBEAT_REFRESH ))
   while :; do
     sleep "${tick}" &
@@ -1851,7 +1872,7 @@ backup_scrub_halted() {
   backup_scrub_document "${cause}" false "${began}" "${scrubbed:-0}" "${progress:-0}" \
     "$(backup_tail_field "${doc}" errors_found)" "$(backup_tail_field "${doc}" errors_corrected)" \
     "$(backup_tail_field "${doc}" errors_uncorrectable)"
-  backup_log WARN "scrub cancelled as [${cause}] at [$(backup_percent "${progress:-0}")] percent having scrubbed [$(backup_sized "${scrubbed:-0}")] MiB, the next armed run resumes it"
+  backup_log WARN "scrub cancelled as [${cause}] at [$(backup_percent "${progress:-0}")] percent having scrubbed [$(backup_sized "${scrubbed:-0}")] MiB, resumed when next run"
 }
 
 backup_scrub() {
@@ -1893,9 +1914,8 @@ backup_scrub() {
     fi
     ;;
   esac
-  hard=0
-  [ "${BACKUP_TIMEOUT_HOURS}" -gt 0 ] 2>/dev/null &&
-    hard=$(( BACKUP_STARTED + BACKUP_TIMEOUT_HOURS * 3600 - BACKUP_SCRUB_MARGIN ))
+  hard="$(backup_expires)"
+  [ "${hard}" -gt 0 ] && hard=$(( hard - BACKUP_SCRUB_MARGIN ))
   [ "${hard}" -gt 0 ] || hard=$(( started + 3600 ))
   if [ "${hard}" -le "${started}" ]; then
     backup_log WARN "scrub skipped, no time left inside the stage timeout"
@@ -1917,7 +1937,7 @@ backup_scrub() {
   while :; do
     sleep "${BACKUP_SCRUB_POLL}"
     if [ "$(date +%s)" -ge "${hard}" ]; then
-      backup_log WARN "scrub ran past [$(date --iso-8601=seconds -d @"${hard}")], cancelling it, the next armed run resumes it"
+      backup_log WARN "scrub ran past [$(date --iso-8601=seconds -d @"${hard}")], cancelling it, resumed when next run"
       cause="${BACKUP_STATE_TIMEOUT}"
       backup_scrub_cancel "${cause}"
       break
@@ -2229,6 +2249,14 @@ trap 'backup_interrupted' TERM INT
 [ -n "${BACKUP_RUN_GIVEN}" ] || [ -n "${BACKUP_RUN_ID_PASSED:-}" ] ||
   backup_log WARN "started as its own run [${BACKUP_RUN_ID}], pass a run id to join the stages of one run"
 backup_started "${BACKUP_STAGE}"
+BACKUP_EXPIRES="$(backup_expires)"
+if [ "${BACKUP_EXPIRES}" -gt 0 ] && [ "${BACKUP_STARTED}" -ge "${BACKUP_EXPIRES}" ]; then
+  mkdir -p "${BACKUP_STAGE_DIR}"
+  backup_log ERROR "run [${BACKUP_RUN_ID}] expired at [$(date -d @"${BACKUP_EXPIRES}" '+%H:%M:%S' 2>/dev/null || echo unknown)] before [${BACKUP_STAGE}] could start, refusing so the next scheduled run is not blocked"
+  : >"${BACKUP_STAGE_DIR}/.timedout"
+  backup_document "${BACKUP_STATE_TIMEOUT}" false "${BACKUP_STARTED}" "${BACKUP_EXPIRES}"
+  exit 4
+fi
 backup_banner "starting [${BACKUP_STAGE}] of run [${BACKUP_RUN_ID}]" \
   "host      [${BACKUP_HOST}]" \
   "trigger   [${BACKUP_TRIGGER}]" \
