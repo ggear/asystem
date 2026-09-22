@@ -261,4 +261,4 @@ var watchAdvancedFlags = []string{
 	"log-action",
 }
 
-const watchDescription = "Show real-time system stats"
+const watchDescription = "Collect and show real-time system stats"

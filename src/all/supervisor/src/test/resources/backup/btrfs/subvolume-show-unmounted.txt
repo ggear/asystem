@@ -1,0 +1,3 @@
+$ btrfs subvolume show /backup
+ERROR: not a btrfs filesystem: /backup
+[exit 1]

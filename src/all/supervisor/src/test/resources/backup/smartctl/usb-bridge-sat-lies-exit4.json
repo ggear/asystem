@@ -1,0 +1,47 @@
+{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "smartctl": {
+    "version": [
+      7,
+      5
+    ],
+    "pre_release": false,
+    "svn_revision": "5714",
+    "platform_info": "aarch64-linux-6.14.2-401.asahi.fc42.aarch64+16k",
+    "build_info": "(local build)",
+    "argv": [
+      "smartctl",
+      "--json",
+      "-i",
+      "-A",
+      "-d",
+      "sat",
+      "/dev/sdb"
+    ],
+    "drive_database_version": {
+      "string": "7.5/5852"
+    },
+    "exit_status": 4
+  },
+  "local_time": {
+    "time_t": 1790034360,
+    "asctime": "Tue Sep 22 07:46:00 2026 AWST"
+  },
+  "device": {
+    "name": "/dev/sdb",
+    "info_name": "/dev/sdb [SAT]",
+    "type": "sat",
+    "protocol": "ATA"
+  },
+  "model_name": "Lexar SSD NM790 4TB",
+  "serial_number": "REDACTED",
+  "firmware_version": "X0828A",
+  "trim": {
+    "supported": false
+  },
+  "in_smartctl_database": false
+}
+[exit 4]

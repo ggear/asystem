@@ -1,0 +1,23 @@
+{
+  "run_id": "2026-09-18_14-08-49",
+  "state": "stopped",
+  "trigger": "manual",
+  "started_ts": "2026-09-18T14:09:01+08:00",
+  "finished_ts": "2026-09-18T14:24:56+08:00",
+  "expires_ts": "",
+  "timeout_hours": 10,
+  "duration_s": 955,
+  "success_bool": false,
+  "disk_usage_perc": 26,
+  "disk_used_mb": 1020018,
+  "disk_total_mb": 3815446,
+  "disk_unclean_bool": false,
+  "total_mb": 0,
+  "file_count": 22,
+  "size_mb": 0,
+  "files_held": 2513,
+  "files_created": 27,
+  "files_deleted": 25,
+  "size_held_mb": 1018005,
+  "sent_mb": 0
+}

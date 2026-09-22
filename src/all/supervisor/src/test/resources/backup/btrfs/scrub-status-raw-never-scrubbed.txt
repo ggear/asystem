@@ -1,0 +1,19 @@
+$ btrfs scrub status -R /
+UUID:             ff55f331-1d06-4a57-a65f-89e457b3a3d0
+	no stats available
+	data_extents_scrubbed: 0
+	tree_extents_scrubbed: 0
+	data_bytes_scrubbed: 0
+	tree_bytes_scrubbed: 0
+	read_errors: 0
+	csum_errors: 0
+	verify_errors: 0
+	no_csum: 0
+	csum_discards: 0
+	super_errors: 0
+	malloc_errors: 0
+	uncorrectable_errors: 0
+	unverified_errors: 0
+	corrected_errors: 0
+	last_physical: 0
+[exit 0]

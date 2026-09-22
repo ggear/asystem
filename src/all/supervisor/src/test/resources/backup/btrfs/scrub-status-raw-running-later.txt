@@ -1,0 +1,21 @@
+$ btrfs scrub status -R /backup
+UUID:             619d6da6-ca70-473b-9d2c-b3c105b153cc
+Scrub resumed:    Tue Sep 22 07:55:04 2026
+Status:           running
+Duration:         9:55:35
+	data_extents_scrubbed: 16107761
+	tree_extents_scrubbed: 261005
+	data_bytes_scrubbed: 1054196064256
+	tree_bytes_scrubbed: 4276305920
+	read_errors: 0
+	csum_errors: 0
+	verify_errors: 0
+	no_csum: 0
+	csum_discards: 0
+	super_errors: 0
+	malloc_errors: 0
+	uncorrectable_errors: 0
+	unverified_errors: 0
+	corrected_errors: 0
+	last_physical: 1067019403264
+[exit 0]

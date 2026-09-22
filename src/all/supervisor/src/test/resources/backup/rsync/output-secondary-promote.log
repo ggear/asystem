@@ -1,0 +1,255 @@
+[INFO secondary 01:01:54] starting with timeout [ 180] min at [04:00:35]
+[INFO           01:01:54] starting [secondary] of run [2026-09-22_01-00-35]
+[INFO           01:01:54]   host      [macmini-mad]
+[INFO           01:01:54]   trigger   [system]
+[INFO           01:01:54]   runner    [/asystem/etc/backup.sh]
+[INFO           01:01:54]   log       [/home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/secondary/output.log]
+[INFO           01:01:54]   run path  [/home/asystem/supervisor/backup/2026-09-22_01-00-35]
+[INFO           01:01:54]   home root [/home/asystem]
+[INFO           01:01:54]   installs  [/var/lib/asystem/install]
+[INFO           01:01:54]   config    [/var/lib/asystem/install/supervisor/latest/image/config.json]
+[INFO           01:01:54]   timeout   [3] hours
+[INFO           01:01:54]   retention [7] daily, [4] weekly, [3] monthly
+[INFO           01:01:54]   heartbeat [600] s refresh, [3600] s grace
+[INFO           01:01:55] resolved share [/share/10] from [1]
+[INFO           01:01:55] expecting [   0] MiB of [promotion] to transfer
+[INFO           01:01:55] promoting [4] services to [/share/10/backup]
+[INFO           01:01:55] promoting [supervisor] [1/4] from [/home/asystem/supervisor/backup/] to [/share/10/backup/supervisor/macmini-mad]
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/. 276
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02 32
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02/stage 48
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02/stage/primary 92
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02/stage/primary/service 38
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02/stage/primary/service/plex 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02/stage/primary/service/postgres 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02/stage/primary/service/wrangle 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02/stage/secondary 78
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_12-46-02/stage/tertiary 132
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49 32
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49/stage 48
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49/stage/primary 108
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49/stage/primary/service 38
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49/stage/primary/service/plex 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49/stage/primary/service/postgres 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49/stage/primary/service/wrangle 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49/stage/secondary 94
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-08-49/stage/tertiary 174
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52 32
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52/stage 48
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52/stage/primary 92
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52/stage/primary/service 38
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52/stage/primary/service/plex 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52/stage/primary/service/postgres 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52/stage/primary/service/wrangle 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52/stage/secondary 78
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-18_14-41-52/stage/tertiary 132
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35 32
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35/stage 48
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35/stage/primary 92
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35/stage/primary/service 38
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35/stage/primary/service/plex 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35/stage/primary/service/postgres 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35/stage/primary/service/wrangle 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35/stage/secondary 78
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-19_01-00-35/stage/tertiary 132
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35 32
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35/stage 48
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35/stage/primary 92
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35/stage/primary/service 38
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35/stage/primary/service/plex 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35/stage/primary/service/postgres 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35/stage/primary/service/wrangle 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35/stage/secondary 78
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-20_01-00-35/stage/tertiary 132
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35 32
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/status.json 393
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage 48
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/primary 92
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/primary/service 38
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/primary/service/plex 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/primary/service/postgres 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/primary/service/wrangle 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/secondary 78
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/secondary/counters 28
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/secondary/disk-usage 19
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/secondary/output.log 10588
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/secondary/status.json 533
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/tertiary 132
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/tertiary/counters 35
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/tertiary/disk-start 13
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/tertiary/disk-usage 20
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/tertiary/output.log 5311
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/tertiary/samples 25
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/tertiary/scrub.json 433
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-21_01-00-35/stage/tertiary/status.json 542
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35 10
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage 32
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary 92
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/counters 20
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/disk-usage 16
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/output.log 3030
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/status.json 523
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service 38
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/plex 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/plex/output.log 319
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/plex/status.json 316
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/postgres 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/postgres/output.log 1997
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/postgres/status.json 316
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/wrangle 42
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/wrangle/output.log 322
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/primary/service/wrangle/status.json 313
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/secondary 90
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/secondary/counters 16
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/secondary/output.log 1280
+2026/09/22 01:01:55 send home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/secondary/status.json 534
+
+Number of files: 212 (reg: 149, dir: 63)
+Number of created files: 31 (reg: 22, dir: 9)
+Number of deleted files: 0
+Number of regular files transferred: 25
+Total file size: 179,736 bytes
+Total transferred file size: 26,942 bytes
+Literal data: 35,523 bytes
+Matched data: 0 bytes
+File list size: 0
+File list generation time: 0.001 seconds
+File list transfer time: 0.000 seconds
+Total bytes sent: 43,294
+Total bytes received: 1,122
+
+sent 43,294 bytes  received 1,122 bytes  88,832.00 bytes/sec
+total size is 179,736  speedup is 4.05
+[INFO           01:01:55] promoted [supervisor] in [00h00m00s], running total [   0] MiB
+[INFO           01:01:55] thinning [/share/10/backup/supervisor/macmini-mad] with backup_thin, the module ships no pruner
+[INFO           01:01:56] pruned [2026-09-18_09-02-35] from [/share/10/backup/supervisor/macmini-mad] outside the grandfather father son window
+[INFO           01:01:56] promoting [plex] [2/4] from [/home/asystem/plex/backup/] to [/share/10/backup/plex]
+2026/09/22 01:01:56 send home/asystem/plex/backup/. 570
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-15_10-19-41 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-15_16-36-37 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-15_18-19-42 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-16_01-00-40 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-17_01-01-02 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-17_16-38-23 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-17_18-35-19 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-18_01-00-57 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-18_09-02-37 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-18_12-46-04 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-18_14-08-50 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-19_01-00-36 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-20_01-00-36 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-21_01-00-36 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-22_01-00-36 112
+2026/09/22 01:01:56 send home/asystem/plex/backup/2026-09-22_01-00-36/plex_at_2026-09-22_01-00-36_from_10.200.1621_full.tar.gz 508928633
+
+Number of files: 31 (reg: 15, dir: 16)
+Number of created files: 2 (reg: 1, dir: 1)
+Number of deleted files: 0
+Number of regular files transferred: 1
+Total file size: 7,631,376,876 bytes
+Total transferred file size: 508,928,633 bytes
+Literal data: 508,928,633 bytes
+Matched data: 0 bytes
+File list size: 0
+File list generation time: 0.001 seconds
+File list transfer time: 0.000 seconds
+Total bytes sent: 509,054,774
+Total bytes received: 144
+
+sent 509,054,774 bytes  received 144 bytes  339,369,945.33 bytes/sec
+total size is 7,631,376,876  speedup is 14.99
+[INFO           01:01:57] promoted [plex] in [00h00m01s], running total [ 485] MiB
+[INFO           01:01:57] thinning [/share/10/backup/plex] with the module pruner [/var/lib/asystem/install/plex/latest/backup.sh]
+Pruned backup [2026-09-15_01-00-30] outside the grandfather-father-son window
+Pruned backup [2026-09-15_10-19-41] outside the grandfather-father-son window
+Pruned backup [2026-09-15_16-36-37] outside the grandfather-father-son window
+Pruned backup [2026-09-15_18-19-42] outside the grandfather-father-son window
+[INFO           01:01:57] promoting [postgres] [3/4] from [/home/asystem/postgres/backup/] to [/share/10/backup/postgres]
+2026/09/22 01:01:57 send home/asystem/postgres/backup/. 532
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-15_10-20-00 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-15_16-36-55 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-15_18-20-00 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-16_01-01-02 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-17_01-01-22 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-17_18-35-38 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-18_01-01-16 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-18_09-02-55 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-18_12-46-22 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-18_14-09-09 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-19_01-00-57 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-20_01-00-55 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-21_01-00-56 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-22_01-00-57 120
+2026/09/22 01:01:57 send home/asystem/postgres/backup/2026-09-22_01-00-57/postgres_at_2026-09-22_01-00-57_from_10.200.1604_full.sql.gz 506989281
+
+Number of files: 29 (reg: 14, dir: 15)
+Number of created files: 2 (reg: 1, dir: 1)
+Number of deleted files: 0
+Number of regular files transferred: 1
+Total file size: 5,621,277,118 bytes
+Total transferred file size: 506,989,281 bytes
+Literal data: 506,989,281 bytes
+Matched data: 0 bytes
+File list size: 0
+File list generation time: 0.001 seconds
+File list transfer time: 0.000 seconds
+Total bytes sent: 507,114,886
+Total bytes received: 137
+
+sent 507,114,886 bytes  received 137 bytes  338,076,682.00 bytes/sec
+total size is 5,621,277,118  speedup is 11.08
+[INFO           01:01:58] promoted [postgres] in [00h00m01s], running total [ 968] MiB
+[INFO           01:01:58] thinning [/share/10/backup/postgres] with the module pruner [/var/lib/asystem/install/postgres/latest/backup.sh]
+Pruned backup [2026-09-15_01-00-53] outside the grandfather-father-son window
+Pruned backup [2026-09-15_10-20-00] outside the grandfather-father-son window
+Pruned backup [2026-09-15_16-36-55] outside the grandfather-father-son window
+Pruned backup [2026-09-15_18-20-00] outside the grandfather-father-son window
+[INFO           01:01:58] promoting [wrangle] [4/4] from [/home/asystem/wrangle/backup/] to [/share/10/backup/wrangle]
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/. 532
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-15_10-20-38 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-15_16-37-33 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-15_18-20-38 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-16_01-01-40 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-17_01-02-03 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-17_18-36-21 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-18_01-01-59 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-18_09-03-40 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-18_12-47-08 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-18_14-09-55 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-19_01-01-43 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-20_01-01-44 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-21_01-01-49 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-22_01-01-52 118
+2026/09/22 01:01:58 send home/asystem/wrangle/backup/2026-09-22_01-01-52/wrangle_at_2026-09-22_01-01-52_from_10.200.1493_full.tar.gz 36407
+
+Number of files: 29 (reg: 14, dir: 15)
+Number of created files: 2 (reg: 1, dir: 1)
+Number of deleted files: 0
+Number of regular files transferred: 1
+Total file size: 490,537 bytes
+Total transferred file size: 36,407 bytes
+Literal data: 36,407 bytes
+Matched data: 0 bytes
+File list size: 0
+File list generation time: 0.001 seconds
+File list transfer time: 0.000 seconds
+Total bytes sent: 38,220
+Total bytes received: 137
+
+sent 38,220 bytes  received 137 bytes  76,714.00 bytes/sec
+total size is 490,537  speedup is 12.79
+[INFO           01:01:59] promoted [wrangle] in [00h00m01s], running total [ 968] MiB
+[INFO           01:01:59] thinning [/share/10/backup/wrangle] with the module pruner [/var/lib/asystem/install/wrangle/latest/backup.sh]
+Pruned backup [2026-09-15_01-01-28] outside the grandfather-father-son window
+Pruned backup [2026-09-15_10-20-38] outside the grandfather-father-son window
+Pruned backup [2026-09-15_16-37-33] outside the grandfather-father-son window
+Pruned backup [2026-09-15_18-20-38] outside the grandfather-father-son window
+[INFO           01:02:00] btrfs could not identify [/share/10], measuring it with [df] for the rest of this run
+[INFO           01:02:01] finished [secondary] of run [2026-09-22_01-00-35] as [success]
+[INFO           01:02:01]   elapsed   [00h00m07s]
+[INFO           01:02:01]   files     [28] transferred, [37] created, [0] deleted, [301] held
+[INFO           01:02:01]   size      [ 968] MiB transferred, [ 968] MiB sent, [12637] MiB held
+[INFO           01:02:01]   rate      [138] MiB/s transferred
+[INFO           01:02:01]   disk      [70] percent used
+[INFO           01:02:01]   status    [/home/asystem/supervisor/backup/2026-09-22_01-00-35/stage/secondary/status.json]
+[INFO secondary 01:02:01] finished with status [success] in [00h00m07s] with size [ 968] MiB at [138] MiB/s and disk at [70] percent

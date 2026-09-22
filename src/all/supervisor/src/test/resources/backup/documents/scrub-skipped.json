@@ -1,0 +1,18 @@
+{
+  "run_id": "2026-09-20_01-00-35",
+  "state": "skipped",
+  "started_ts": "2026-09-20T01:02:45+08:00",
+  "finished_ts": "2026-09-20T01:02:45+08:00",
+  "duration_s": 0,
+  "expires_ts": "",
+  "success_bool": true,
+  "scrubbed_mb": 0,
+  "progress_perc": 0,
+  "errors_found": 0,
+  "errors_corrected": 0,
+  "errors_uncorrectable": 0,
+  "files_to_delete": "",
+  "files_to_delete_count": 0,
+  "device_errors": 0,
+  "chunks_relocated": 0
+}

@@ -1,0 +1,3 @@
+$ btrfs filesystem show /backup
+ERROR: not a valid btrfs filesystem: /backup
+[exit 1]

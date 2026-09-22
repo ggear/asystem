@@ -1,0 +1,6 @@
+$ df --output=used,size,target -B1 / /home /backup
+       Used    1B-blocks Mounted on
+81259540480 424047280128 /
+81259540480 424047280128 /home
+81259540480 424047280128 /
+[exit 0]

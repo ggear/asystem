@@ -1,0 +1,4 @@
+$ btrfs scrub cancel /backup
+scrub cancelled
+Starting scrub on devid 1
+[exit 0]

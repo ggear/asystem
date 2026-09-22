@@ -1,0 +1,4 @@
+$ df --output=used -B1 /backup
+      Used
+7871442944
+[exit 0]

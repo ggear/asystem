@@ -1,0 +1,7 @@
+$ btrfs scrub status /
+UUID:             ff55f331-1d06-4a57-a65f-89e457b3a3d0
+	no stats available
+Total to scrub:   75.58GiB
+Rate:             0.00B/s
+Error summary:    no errors found
+[exit 0]

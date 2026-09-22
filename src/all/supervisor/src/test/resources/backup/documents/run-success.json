@@ -1,0 +1,17 @@
+{
+  "run_id": "2026-09-22_01-00-35",
+  "state": "success",
+  "started_ts": "2026-09-22T01:00:35+08:00",
+  "finished_ts": "2026-09-22T01:03:03+08:00",
+  "duration_s": 147,
+  "success_bool": true,
+  "disk_usage_perc": 33,
+  "file_count": 79,
+  "size_mb": 4653,
+  "files_held": 21406,
+  "files_created": 102,
+  "files_deleted": 66,
+  "size_held_mb": 7632435,
+  "sent_mb": 3683,
+  "stages_run": 3
+}

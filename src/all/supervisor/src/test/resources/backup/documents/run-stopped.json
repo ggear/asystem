@@ -1,0 +1,12 @@
+{
+  "run_id": "2026-09-18_14-08-49",
+  "state": "stopped",
+  "trigger": "manual",
+  "started_ts": "2026-09-18T14:08:50+08:00",
+  "finished_ts": "2026-09-18T14:24:58+08:00",
+  "duration_s": 968,
+  "success_bool": false,
+  "stages_run": 3,
+  "stages_failed": 0,
+  "stages_halted": 1
+}

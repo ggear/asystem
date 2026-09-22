@@ -1838,6 +1838,7 @@ backup_scrub_reading() {
   status="${BACKUP_BOUNDED_OUTPUT}"
   scrubbed=$(( $(backup_scrub_counter "${raw}" "data_bytes_scrubbed") / 1048576 ))
   progress="$(printf '%s\n' "${status}" | sed -n 's/.*(\([0-9.]*\)%).*/\1/p' | head -1)"
+  [ "${progress%%.*}" -ge 100 ] 2>/dev/null && progress=100
   corrected="$(backup_scrub_counter "${raw}" "corrected_errors")"
   uncorrectable="$(backup_scrub_counter "${raw}" "uncorrectable_errors")"
   found=$(( $(backup_scrub_counter "${raw}" "csum_errors") +
@@ -1878,7 +1879,7 @@ backup_scrub_halted() {
 
 backup_scrub() {
   local action started hard since state="${BACKUP_STATE_SUCCESS}" success=true cause="" phase="${BACKUP_STATE_RUNNING}"
-  local scrubbed=0 progress=0 found=0 corrected=0 uncorrectable=0
+  local scrubbed=0 progress=0 reached=0 found=0 corrected=0 uncorrectable=0
   local kernel=0 files="" count=0 status devices
   started="$(date +%s)"
   if [ "${BACKUP_SCRUB}" != "1" ]; then
@@ -1954,12 +1955,12 @@ backup_scrub() {
     fi
     silent=0
     IFS=$'\t' read -r scrubbed progress found corrected uncorrectable phase <<<"${BACKUP_SCRUB_READING}"
-    backup_log INFO "scrub at [$(backup_percent "${progress}")] percent, scrubbed [$(backup_sized "${scrubbed}")] MiB"
-    backup_scrub_document "${BACKUP_STATE_RUNNING}" false "${started}" "${scrubbed}" "${progress}" \
+    [ "${progress%%.*}" -eq 0 ] 2>/dev/null || reached="${progress}"
+    backup_log INFO "scrub at [$(backup_percent "${reached}")] percent, scrubbed [$(backup_sized "${scrubbed}")] MiB"
+    backup_scrub_document "${BACKUP_STATE_RUNNING}" false "${started}" "${scrubbed}" "${reached}" \
       "${found}" "${corrected}" "${uncorrectable}" "" 0 "${hard}"
     [ "${phase}" = "${BACKUP_STATE_RUNNING}" ] || break
   done
-  local reached="${progress}"
   backup_scrub_reading && IFS=$'\t' read -r scrubbed progress found corrected uncorrectable _ <<<"${BACKUP_SCRUB_READING}"
   if [ -z "${cause}" ]; then
     if [ -f "${BACKUP_STAGE_DIR}/.timedout" ]; then cause="${BACKUP_STATE_TIMEOUT}"

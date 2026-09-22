@@ -1,0 +1,13 @@
+{
+  "run_id": "2026-09-18_14-41-52",
+  "backup_id": "2026-09-18_14-09-55",
+  "state": "skipped",
+  "started_ts": "2026-09-18T14:41:55+08:00",
+  "finished_ts": "2026-09-18T14:41:55+08:00",
+  "duration_s": 0,
+  "success_bool": true,
+  "kind": "full",
+  "version": "10.200.1493",
+  "file_count": 1,
+  "size_mb": 1
+}

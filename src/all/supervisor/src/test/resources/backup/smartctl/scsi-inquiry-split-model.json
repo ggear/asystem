@@ -1,0 +1,80 @@
+{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "smartctl": {
+    "version": [
+      7,
+      5
+    ],
+    "pre_release": false,
+    "svn_revision": "5714",
+    "platform_info": "aarch64-linux-6.14.2-401.asahi.fc42.aarch64+16k",
+    "build_info": "(local build)",
+    "argv": [
+      "smartctl",
+      "--json",
+      "-i",
+      "-A",
+      "-d",
+      "scsi",
+      "/dev/sda"
+    ],
+    "exit_status": 0
+  },
+  "local_time": {
+    "time_t": 1790034360,
+    "asctime": "Tue Sep 22 07:46:00 2026 AWST"
+  },
+  "device": {
+    "name": "/dev/sda",
+    "info_name": "/dev/sda",
+    "type": "scsi",
+    "protocol": "SCSI"
+  },
+  "scsi_vendor": "CT4000MX",
+  "scsi_product": "500SSD1",
+  "model_name": "CT4000MX 500SSD1",
+  "scsi_model_name": "CT4000MX 500SSD1",
+  "scsi_revision": "1.02",
+  "scsi_version": "SPC-4",
+  "user_capacity": {
+    "blocks": 7814037168,
+    "bytes": 4000787030016
+  },
+  "logical_block_size": 512,
+  "physical_block_size": 4096,
+  "scsi_lb_provisioning": {
+    "name": "not reported",
+    "value": 0,
+    "management_enabled": {
+      "name": "LBPME",
+      "value": 1
+    },
+    "read_zeros": {
+      "name": "LBPRZ",
+      "value": 0
+    }
+  },
+  "rotation_rate": 0,
+  "form_factor": {
+    "scsi_value": 3,
+    "name": "2.5 inches"
+  },
+  "logical_unit_id": "0x3001237923792379",
+  "serial_number": "REDACTED",
+  "device_type": {
+    "scsi_terminology": "Peripheral Device Type [PDT]",
+    "scsi_value": 0,
+    "name": "disk"
+  },
+  "smart_support": {
+    "available": true,
+    "enabled": true
+  },
+  "temperature_warning": {
+    "enabled": false
+  }
+}
+[exit 0]

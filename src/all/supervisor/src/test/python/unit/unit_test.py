@@ -10,6 +10,7 @@ from os.path import abspath, dirname, join, realpath
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 BACKUP_SCRIPT = join(DIR_ROOT, "src/main/resources/image/backup.sh")
+FIXTURES = join(DIR_ROOT, "src/test/resources/backup")
 CLOCK = 1789000000
 
 
@@ -270,6 +271,106 @@ class BackupShellTest(unittest.TestCase):
                               'backup_scrub_reading && printf "%s" "${BACKUP_SCRUB_READING}"',
                               STATUS=status)
         self.assertNotEqual(reported.split("\t")[-1], "running")
+
+    def fixture(self, name):
+        with open(join(FIXTURES, name)) as handle:
+            lines = handle.read().splitlines()
+        return "\n".join(lines[1:-1])
+
+    def reading(self, raw, status):
+        return self.shell('btrfs() { [ "$3" = "-R" ] && printf "%s" "${RAW}" || printf "%s" "${STATUS}"; }\n'
+                          'backup_scrub_reading && printf "%s" "${BACKUP_SCRUB_READING}"',
+                          RAW=self.fixture(raw), STATUS=self.fixture(status)).split("\t")
+
+    def test_scrub_reading_parses_a_real_running_pass(self):
+        held = self.reading("btrfs/scrub-status-raw-running.txt", "btrfs/scrub-status-running.txt")
+        self.assertEqual(held[1], "98.44")
+        self.assertEqual(held[5], "running")
+        self.assertEqual(held[0], str(1050725752832 // 1048576))
+
+    def test_scrub_reading_parses_the_real_pass_twenty_seconds_later(self):
+        held = self.reading("btrfs/scrub-status-raw-running-later.txt", "btrfs/scrub-status-running-later.txt")
+        self.assertEqual(held[1], "98.76")
+        self.assertEqual(held[5], "running")
+
+    def test_scrub_reading_treats_a_real_aborted_pass_as_ended_with_no_percentage(self):
+        held = self.reading("btrfs/scrub-status-raw-aborted.txt", "btrfs/scrub-status-aborted.txt")
+        self.assertEqual(held[5], "ended")
+        self.assertEqual(held[1], "0", "an aborted pass stops printing a percentage")
+
+    def test_scrub_reading_treats_a_never_scrubbed_volume_as_ended(self):
+        held = self.reading("btrfs/scrub-status-raw-never-scrubbed.txt", "btrfs/scrub-status-never-scrubbed.txt")
+        self.assertEqual(held[5], "ended")
+        self.assertEqual(held[0], "0")
+
+    @NEEDS_GNU
+    def test_scrub_records_the_last_real_percentage_rather_than_the_zero_that_ends_it(self):
+        count = join(self.home, "btrfs-calls")
+        stub = (
+            'BACKUP_STAGE_DIR="{home}/stage"; mkdir -p "${{BACKUP_STAGE_DIR}}"\n'
+            'BACKUP_RUN_ID=2026-09-22_07-55-04; BACKUP_SCRUB=1; BACKUP_SCRUB_FORCED=1\n'
+            'BACKUP_SCRUB_POLL=0; BACKUP_TIMEOUT_HOURS=100000; BACKUP_SCRUB_MARGIN=0\n'
+            'backup_balance() {{ :; }}\n'
+            'dmesg() {{ printf ""; }}\n'
+            'btrfs() {{\n'
+            '  case "$*" in\n'
+            '  *"filesystem show"*) printf "uuid: 619d6da6"; return 0 ;;\n'
+            '  *"device stats"*) printf ""; return 0 ;;\n'
+            '  *"scrub resume"* | *"scrub start"*) printf "scrub resumed"; return 0 ;;\n'
+            '  esac\n'
+            '  n=$(( $(cat "{count}" 2>/dev/null || echo 0) + 1 )); printf "%s" "${{n}}" >"{count}"\n'
+            '  if [ "${{n}}" -ge 2 ] && [ "${{n}}" -le 5 ]; then\n'
+            '    [ "$3" = "-R" ] && printf "%s" "${{RAWRUN}}" || printf "%s" "${{RUN}}"\n'
+            '  else\n'
+            '    [ "$3" = "-R" ] && printf "%s" "${{RAWEND}}" || printf "%s" "${{END}}"\n'
+            '  fi\n'
+            '  return 0\n'
+            '}}\n'
+            'backup_scrub >/dev/null 2>&1\n'
+            'cat "${{BACKUP_STAGE_DIR}}/scrub.json"'
+        ).format(home=self.home, count=count)
+        written = json.loads(self.shell(
+            stub,
+            RUN=self.fixture("btrfs/scrub-status-running.txt"),
+            RAWRUN=self.fixture("btrfs/scrub-status-raw-running.txt"),
+            END=self.fixture("btrfs/scrub-status-aborted.txt"),
+            RAWEND=self.fixture("btrfs/scrub-status-raw-aborted.txt")))
+        self.assertEqual(written["progress_perc"], 98.44,
+                         "a finished pass stops printing a percentage, so the last real reading is the verdict")
+        self.assertGreater(written["scrubbed_mb"], 0)
+
+    def test_scrub_reading_clamps_a_resumed_pass_that_rates_itself_past_100(self):
+        status = ("UUID:             9e4a9990\n"
+                  "Scrub resumed:    Fri Sep 18 15:23:01 2026\n"
+                  "Status:           running\n"
+                  "Duration:         2:23:58\n"
+                  "\t4.21TiB (100.15%)\n")
+        reported = self.shell('btrfs() { [ "$3" = "-R" ] &&'
+                              ' printf "%s" "data_bytes_scrubbed: 4630905028608\nStatus: running"'
+                              ' || printf "%s" "${STATUS}"; }\n'
+                              'backup_scrub_reading && printf "%s" "${BACKUP_SCRUB_READING}"',
+                              STATUS=status)
+        self.assertEqual(reported.split("\t")[1], "100",
+                         "btrfs rates a resumed pass against the whole filesystem, so it reports past 100")
+
+    def test_scrub_reading_leaves_a_percentage_inside_the_range_alone(self):
+        status = "Status:           running\n\t2.10TiB (49.87%)\n"
+        reported = self.shell('btrfs() { [ "$3" = "-R" ] &&'
+                              ' printf "%s" "data_bytes_scrubbed: 2308305028608\nStatus: running"'
+                              ' || printf "%s" "${STATUS}"; }\n'
+                              'backup_scrub_reading && printf "%s" "${BACKUP_SCRUB_READING}"',
+                              STATUS=status)
+        self.assertEqual(reported.split("\t")[1], "49.87")
+
+    def test_scrub_reading_reports_no_percentage_once_the_pass_has_finished(self):
+        status = "Status:           finished\nDuration:         2:23:58\n"
+        reported = self.shell('btrfs() { [ "$3" = "-R" ] &&'
+                              ' printf "%s" "data_bytes_scrubbed: 4630905028608"'
+                              ' || printf "%s" "${STATUS}"; }\n'
+                              'backup_scrub_reading && printf "%s" "${BACKUP_SCRUB_READING}"',
+                              STATUS=status)
+        self.assertEqual(reported.split("\t")[1], "0",
+                         "a finished pass stops printing a percentage, which is why reached exists")
 
     def test_scrub_flag_arms_a_run_the_window_would_not(self):
         self.assertEqual(self.parse("start", "--scrub", BACKUP_RUN_ID_PASSED=1,

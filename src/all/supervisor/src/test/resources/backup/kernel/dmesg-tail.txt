@@ -1,0 +1,60 @@
+[6365683.551322] sd 3:0:0:0: [sdd] Attached SCSI disk
+[6365737.338084] BTRFS: device label backup_06 devid 1 transid 1585 /dev/sdd1 (8:49) scanned by mount (2517915)
+[6365737.341185] BTRFS info (device sdd1): first mount of filesystem 4a417a45-20e8-433d-9ebe-6ffdeffbfc5a
+[6365737.341870] BTRFS info (device sdd1): using xxhash64 (xxhash64-generic) checksum algorithm
+[6365737.342542] BTRFS info (device sdd1): forcing free space tree for sector size 4096 with page size 16384
+[6365737.343198] BTRFS info (device sdd1): using free-space-tree
+[6365737.343834] BTRFS warning (device sdd1): read-write for sector size 4096 with page size 16384 is experimental
+[6365790.532225] BTRFS info (device sdd1): last unmount of filesystem 4a417a45-20e8-433d-9ebe-6ffdeffbfc5a
+[6365834.815165] usb 2-1: USB disconnect, device number 73
+[6365834.857175] sd 3:0:0:0: [sdd] Synchronizing SCSI cache
+[6365835.018155] sd 3:0:0:0: [sdd] Synchronize Cache(10) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK
+[6452055.932085] usb 2-1: new SuperSpeed USB device number 74 using xhci_hcd
+[6452055.951666] usb 2-1: New USB device found, idVendor=0bc2, idProduct=2038, bcdDevice=18.02
+[6452055.953457] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[6452055.955235] usb 2-1: Product: Expansion HDD
+[6452055.956957] usb 2-1: Manufacturer: Seagate
+[6452055.958616] usb 2-1: SerialNumber: 00000000NT17WDKF
+[6452055.989156] scsi host3: uas
+[6452055.990478] scsi 3:0:0:0: Direct-Access     Seagate  Expansion HDD    1802 PQ: 0 ANSI: 6
+[6452055.993747] sd 3:0:0:0: Attached scsi generic sg3 type 0
+[6452083.800217] sd 3:0:0:0: [sdd] 46875541503 512-byte logical blocks: (24.0 TB/21.8 TiB)
+[6452083.800764] sd 3:0:0:0: [sdd] 4096-byte physical blocks
+[6452083.801153] sd 3:0:0:0: [sdd] Write Protect is off
+[6452083.801416] sd 3:0:0:0: [sdd] Mode Sense: 53 00 00 08
+[6452083.801661] sd 3:0:0:0: [sdd] Write cache: enabled, read cache: enabled, doesn't support DPO or FUA
+[6452083.830814] sd 3:0:0:0: [sdd] Preferred minimum I/O size 4096 bytes
+[6452083.831074] sd 3:0:0:0: [sdd] Optimal transfer size 33553920 bytes not a multiple of preferred minimum block size (4096 bytes)
+[6452084.004510]  sdd: sdd1
+[6452084.004810] sd 3:0:0:0: [sdd] Attached SCSI disk
+[6452140.579225] BTRFS: device label backup_06 devid 1 transid 1589 /dev/sdd1 (8:49) scanned by mount (2720436)
+[6452140.582833] BTRFS info (device sdd1): first mount of filesystem 4a417a45-20e8-433d-9ebe-6ffdeffbfc5a
+[6452140.583577] BTRFS info (device sdd1): using xxhash64 (xxhash64-generic) checksum algorithm
+[6452140.584244] BTRFS info (device sdd1): forcing free space tree for sector size 4096 with page size 16384
+[6452140.584902] BTRFS info (device sdd1): using free-space-tree
+[6452140.585544] BTRFS warning (device sdd1): read-write for sector size 4096 with page size 16384 is experimental
+[6452200.517089] BTRFS info (device sdd1): last unmount of filesystem 4a417a45-20e8-433d-9ebe-6ffdeffbfc5a
+[6452235.017747] usb 2-1: USB disconnect, device number 74
+[6452235.040783] sd 3:0:0:0: [sdd] Synchronizing SCSI cache
+[6452235.200742] sd 3:0:0:0: [sdd] Synchronize Cache(10) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK
+[6476221.650374] usb 2-1: new SuperSpeed USB device number 75 using xhci_hcd
+[6476221.669911] usb 2-1: New USB device found, idVendor=0bc2, idProduct=2038, bcdDevice=18.02
+[6476221.671709] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[6476221.673501] usb 2-1: Product: Expansion HDD
+[6476221.675219] usb 2-1: Manufacturer: Seagate
+[6476221.676881] usb 2-1: SerialNumber: 00000000NT17WDKF
+[6476221.707627] scsi host3: uas
+[6476221.708800] scsi 3:0:0:0: Direct-Access     Seagate  Expansion HDD    1802 PQ: 0 ANSI: 6
+[6476221.712334] sd 3:0:0:0: Attached scsi generic sg3 type 0
+[6476249.515411] sd 3:0:0:0: [sdd] 46875541503 512-byte logical blocks: (24.0 TB/21.8 TiB)
+[6476249.517924] sd 3:0:0:0: [sdd] 4096-byte physical blocks
+[6476249.519300] sd 3:0:0:0: [sdd] Write Protect is off
+[6476249.520510] sd 3:0:0:0: [sdd] Mode Sense: 53 00 00 08
+[6476249.520798] sd 3:0:0:0: [sdd] Write cache: enabled, read cache: enabled, doesn't support DPO or FUA
+[6476249.547174] sd 3:0:0:0: [sdd] Preferred minimum I/O size 4096 bytes
+[6476249.548382] sd 3:0:0:0: [sdd] Optimal transfer size 33553920 bytes not a multiple of preferred minimum block size (4096 bytes)
+[6476249.728082]  sdd: sdd1
+[6476249.729363] sd 3:0:0:0: [sdd] Attached SCSI disk
+[6476355.056995] usb 2-1: USB disconnect, device number 75
+[6476355.080977] sd 3:0:0:0: [sdd] Synchronizing SCSI cache
+[6476355.242972] sd 3:0:0:0: [sdd] Synchronize Cache(10) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK

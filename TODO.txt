@@ -1,8 +1,6 @@
 ###############################################################################################################################################################
 # All
 ###############################################################################################################################################################
-Should src/all/_fedora/src/main/resources/pyenv be in git?
-Move all executables to have a prefix, eg media-* amedia-*
 Upgrade mad Asahi to latest, update macos?, delete current Asahi volumes, reinstall, https://asahilinux.org/docs/sw/partitioning-cheatsheet
 Update max to latest Fedora
 Port may/meg to Fedora
@@ -12,7 +10,7 @@ Make smart physical light switch
 Repair TPLink KP115 smart plugs and deploy
 Google home remediation
 Add compensators for all batteries, calibrated to lifetime of rechargables, add push notifcations, load data from files with query creating csv, select polynomial order by using BIC, polars test, maybe just ensure non noisy data by averaging bins and removing outliers
-Isolate TV from internet, use apple tv
+Isolate TV from internet
 Hack Telstra modem to get 5g backup, add aerial
 Rename Basement Netatmo module to Deck
 Fix fedora resolution so screen works on reboot
@@ -40,15 +38,13 @@ improve sys tests with datbase/broker asserts
 
 
 
-rename storage to be drives drives mount|space?
-consider moving fstabs? volumes.sh?
-design space align with abackup list
-write plan for space/mount
 
-write plan to reimplement backup.sh as go program in plans/gobackup.md
-implement a cmd/cmd_backup.go that calls a new engine func in new file engine_impl_backup.go
-make backup cli match existing watch/server cli impl, but incorporate backup.sh but modifying to be more go like and matching existing watch/server style, show suggestion of how to do this
-preserve all existing backup.sh functionality, error handling, edge cases, logging style, cli 
+
+
+
+show when dmesg message will age out in 24 hr time
+12:40:24 DEBUG probe[logs]      host/failed_log_messages  sample          5ms measured [1] kernel errors, first [2026-09-18T13:16:17+08:00] last [2026-09-18T13:16:17+08:00] ageing out at [2026-09-18T13:16:17+08:00]
+
 
 
 check all metrics working 

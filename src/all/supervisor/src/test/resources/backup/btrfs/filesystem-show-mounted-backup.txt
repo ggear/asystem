@@ -1,0 +1,5 @@
+$ btrfs filesystem show /backup
+Label: 'backup_02'  uuid: 619d6da6-ca70-473b-9d2c-b3c105b153cc
+	Total devices 1 FS bytes used 996.11GiB
+	devid    1 size 3.64TiB used 1011.02GiB path /dev/sdb1
+[exit 0]

@@ -1,0 +1,12 @@
+$ btrfs scrub status /backup
+UUID:             619d6da6-ca70-473b-9d2c-b3c105b153cc
+Scrub resumed:    Tue Sep 22 07:55:04 2026
+Status:           running
+Duration:         9:55:35
+Time left:        0:07:26
+ETA:              Tue Sep 22 08:03:10 2026
+Total to scrub:   998.11GiB
+Bytes scrubbed:   985.78GiB  (98.76%)
+Rate:             28.25MiB/s
+Error summary:    no errors found
+[exit 0]

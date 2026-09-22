@@ -1,0 +1,3 @@
+$ btrfs scrub status /backup
+ERROR: not a btrfs filesystem: /backup
+[exit 1]
