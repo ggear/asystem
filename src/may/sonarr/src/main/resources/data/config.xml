@@ -7,7 +7,7 @@
     <ApiKey>$SONARR_API_KEY</ApiKey>
     <AuthenticationMethod>External</AuthenticationMethod>
     <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
-    <AllowedHosts>sonarr.proxy.janeandgraham.com</AllowedHosts>
+    <AllowedHosts>sonarr.proxy.janeandgraham.com,sonarr.local.janeandgraham.com,localhost</AllowedHosts>
     <Branch>main</Branch>
     <LogLevel>Warn</LogLevel>
     <SslCertPath></SslCertPath>
