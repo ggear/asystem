@@ -119,6 +119,7 @@ var backupVerbs = []backupVerb{
 	{command: engine.BackupCommandTail, use: "tail [run-id]", short: "follow the newest, or the given, run's progress", arguments: 1},
 	{command: engine.BackupCommandList, use: "list", short: "show the recent runs and their result"},
 	{command: engine.BackupCommandAuto, use: "auto [on|off]", short: "query or set the reaper's power-management switch", arguments: 1},
+	{command: engine.BackupCommandClean, use: "clean", short: "remove every run from the history and any unfinished scrub"},
 }
 
 const (

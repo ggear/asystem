@@ -19,6 +19,11 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	homeRoot := backupHomeRoot()
 	stagePath := stageDir(request.RunPath, metric.BackupStageTertiary)
 
+	if len(backupTargets()) == 0 {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("excluded", time.Now(),
+			"[%s] is declared by no entry in [%s], so this host mirrors nothing and the stage is skipped", config.DirBackup, backupFstabPath)
+		return stageResult{skipped: true}, nil
+	}
 	if err := powerBackupDisk(request.ConfigPath, metric.CommandOn); err != nil {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionPublish).Warnf("faulting", time.Now(),
 			"[%v] powering the backup disk on, carrying on in case it is already powered", err)

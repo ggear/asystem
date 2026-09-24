@@ -284,3 +284,26 @@ func TestProbeUtilBackupStageScrub_TotalAgreesWithTheScrubbedCellAndThePercentag
 		})
 	}
 }
+
+func TestProbeUtilBackupStageScrub_OriginNamesWhatThePassIsContinuing(t *testing.T) {
+	tests := []struct {
+		name     string
+		action   string
+		status   string
+		expected string
+	}{
+		{name: "a_fresh_pass_says_so", action: scrubActionStart, status: "Scrub started:    Mon Sep 22 01:00:00 2026",
+			expected: "of a fresh pass"},
+		{name: "a_resume_names_the_date_it_reads", action: scrubActionResume, status: "Scrub started:    Mon Sep 22 01:00:00 2026",
+			expected: "of the pass left unfinished since [Mon Sep 22 01:00:00 2026]"},
+		{name: "a_resume_with_no_date_stays_honest", action: scrubActionResume, status: "no stats available",
+			expected: "of the pass left unfinished by an earlier run"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if origin := scrubOrigin(testCase.action, testCase.status); origin != testCase.expected {
+				t.Errorf("scrubOrigin() = %q, want %q", origin, testCase.expected)
+			}
+		})
+	}
+}

@@ -3,6 +3,7 @@ package probe
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"supervisor/internal/config"
@@ -61,6 +62,31 @@ func publishRunStatus(configPath string, document backupSummary) error {
 	return client.publishRetained(metric.TopicBackupStatus(configHost(configPath)), string(payload))
 }
 
+func clearRetainedBackup(configPath string) (int, error) {
+	host := configHost(configPath)
+	watch, err := brokerWatch(configPath, host, metric.TopicBackupRoot(host)+"/#")
+	if err != nil {
+		return 0, err
+	}
+	defer watch.close()
+	payloads, err := reaperSettled(watch)
+	if err != nil {
+		return 0, err
+	}
+	client, err := brokerDial(configPath, "clean")
+	if err != nil {
+		return 0, err
+	}
+	defer client.close()
+	cleared := 0
+	for topic := range payloads {
+		if client.publishRetained(topic, "") == nil {
+			cleared++
+		}
+	}
+	return cleared, nil
+}
+
 func powerBackupDisk(configPath, state string) error {
 	topic := config.Load(configPath).BackupCommandTopic()
 	if topic == "" {
@@ -80,23 +106,30 @@ func backupReaperState(configPath string) (state, expiresTS string, found bool, 
 		return "", "", false, dialErr
 	}
 	defer watch.close()
+	payloads, settleErr := reaperSettled(watch)
+	if settleErr != nil {
+		return "", "", false, settleErr
+	}
+	raw, ok := payloads[metric.TopicBackupReaper()]
+	if !ok {
+		return "", "", false, nil
+	}
+	var reaper backupReaperSummary
+	if json.Unmarshal([]byte(raw), &reaper) != nil {
+		return "", "", false, nil
+	}
+	return reaper.State, reaper.ExpiresTS, true, nil
+}
+
+func reaperSettled(watch *brokerWatcher) (map[string]string, error) {
 	deadline := time.Now().Add(reaperQueryTimeout)
 	for time.Now().Before(deadline) {
-		payloads, ready := watch.readRetained()
-		if ready {
-			raw, ok := payloads[metric.TopicBackupReaper()]
-			if !ok {
-				return "", "", false, nil
-			}
-			var reaper backupReaperSummary
-			if json.Unmarshal([]byte(raw), &reaper) != nil {
-				return "", "", false, nil
-			}
-			return reaper.State, reaper.ExpiresTS, true, nil
+		if payloads, ready := watch.readRetained(); ready {
+			return payloads, nil
 		}
 		time.Sleep(reaperQueryPoll)
 	}
-	return "", "", false, fmt.Errorf("broker did not settle within [%s]", reaperQueryTimeout)
+	return nil, fmt.Errorf("broker did not settle within [%s]", reaperQueryTimeout)
 }
 
 func backupReaperSet(configPath, state, expiresTS string) error {
@@ -115,6 +148,19 @@ func backupReaperPauseUntil(now time.Time) time.Time {
 		next = next.AddDate(0, 0, 1)
 	}
 	return next
+}
+
+type backupReaperSummary struct {
+	State     string `json:"state"`
+	ExpiresTS string `json:"expires_ts"`
+}
+
+func (r backupReaperSummary) Paused() bool {
+	if !strings.EqualFold(strings.TrimSpace(r.State), metric.CommandOff) {
+		return false
+	}
+	expires, err := time.Parse(time.RFC3339, r.ExpiresTS)
+	return err == nil && time.Now().Before(expires)
 }
 
 const (

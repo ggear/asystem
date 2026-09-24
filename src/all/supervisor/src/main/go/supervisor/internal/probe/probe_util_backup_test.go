@@ -265,6 +265,13 @@ func TestProbeUtilBackup_ASecondRunIsRefusedWhileTheLockIsHeld(t *testing.T) {
 	if err := os.WriteFile(configPath, []byte(`{"asystem":{"host":"testhost"}}`), 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
+	runPath := backupRunPath(root, "2026-09-22_01-00-00")
+	if err := os.MkdirAll(runPath, 0o755); err != nil {
+		t.Fatalf("mkdir run: %v", err)
+	}
+	if err := os.WriteFile(runLogPath(runPath), []byte("logging opened before the lock was taken\n"), 0o644); err != nil {
+		t.Fatalf("write run log: %v", err)
+	}
 	err = Backup(t.Context(), BackupRequest{Command: BackupCommandStart, Trigger: metric.BackupTriggerManual,
 		Config: configPath, RunID: "2026-09-22_01-00-00"})
 	if err == nil || !strings.Contains(err.Error(), "refusing to start") {
@@ -272,5 +279,118 @@ func TestProbeUtilBackup_ASecondRunIsRefusedWhileTheLockIsHeld(t *testing.T) {
 	}
 	if runs := backupRuns(root); len(runs) != 0 {
 		t.Errorf("backupRuns() = %v, want a refused run to mint no directory", runs)
+	}
+}
+
+func TestProbeUtilBackup_ResolveRunPrefersTheRunStillGoing(t *testing.T) {
+	tests := []struct {
+		name     string
+		running  string
+		given    string
+		expected string
+	}{
+		{name: "the_newest_when_none_is_running", expected: "2026-09-22_03-00-00"},
+		{name: "the_running_one_under_a_newer_finished_one", running: "2026-09-22_02-00-00", expected: "2026-09-22_02-00-00"},
+		{name: "the_given_run_whatever_is_running", running: "2026-09-22_02-00-00", given: "2026-09-22_01-00-00", expected: "2026-09-22_01-00-00"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root := t.TempDir()
+			for _, run := range []string{"2026-09-22_01-00-00", "2026-09-22_02-00-00", "2026-09-22_03-00-00"} {
+				state := metric.BackupStateSuccess
+				if run == testCase.running {
+					state = metric.BackupStateRunning
+				}
+				path := stageStatusPath(backupRunPath(root, run), metric.BackupStagePrimary)
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatalf("mkdir stage: %v", err)
+				}
+				if err := writeAtomic(path, backupSummary{RunID: run, State: state}); err != nil {
+					t.Fatalf("write stage: %v", err)
+				}
+			}
+			resolved, err := backupResolveRun(root, testCase.given)
+			if err != nil {
+				t.Fatalf("backupResolveRun() error = %v", err)
+			}
+			if resolved != testCase.expected {
+				t.Errorf("backupResolveRun() = %q, want %q", resolved, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackup_APendingRunIsFollowedBeforeItHasWrittenAnything(t *testing.T) {
+	root := t.TempDir()
+	fresh := time.Now().Format(backupTimestampFormat)
+	stale := time.Now().Add(-2 * backupTailSettle).Format(backupTimestampFormat)
+	for _, run := range []string{fresh, stale} {
+		if err := os.MkdirAll(backupRunPath(root, run), 0o755); err != nil {
+			t.Fatalf("mkdir run: %v", err)
+		}
+	}
+	if !backupRunPending(root, fresh) {
+		t.Errorf("backupRunPending(%q) = false, want a run dispatched moments ago to be waited on", fresh)
+	}
+	if backupRunPending(root, stale) {
+		t.Errorf("backupRunPending(%q) = true, want a run that never wrote a document to be given up on", stale)
+	}
+}
+
+func TestProbeUtilBackup_CleanRemovesTheHistoryAndTheScrubItWouldResume(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(config.BackupHomeEnvVar, home)
+	root := backupRunRoot()
+	for _, run := range []string{"2026-09-22_01-00-00", "2026-09-23_01-00-00"} {
+		if err := os.MkdirAll(backupRunPath(root, run), 0o755); err != nil {
+			t.Fatalf("mkdir run: %v", err)
+		}
+	}
+	stateDir := t.TempDir()
+	original := scrubStateDirectory
+	t.Cleanup(func() { scrubStateDirectory = original })
+	scrubStateDirectory = stateDir
+	if err := os.WriteFile(filepath.Join(stateDir, "scrub.status.abc"), []byte("resume me"), 0o644); err != nil {
+		t.Fatalf("write scrub state: %v", err)
+	}
+	stageExecReturns(t, "", 1, false)
+
+	if err := Backup(t.Context(), BackupRequest{Command: BackupCommandClean, Trigger: metric.BackupTriggerManual,
+		Config: filepath.Join(home, "config.json")}); err != nil {
+		t.Fatalf("Backup(clean) error = %v", err)
+	}
+	if runs := backupRuns(root); len(runs) != 0 {
+		t.Errorf("backupRuns() = %v, want every run removed", runs)
+	}
+	if left, _ := filepath.Glob(filepath.Join(stateDir, scrubStateLeaves)); len(left) != 0 {
+		t.Errorf("scrub state = %v, want the next run to start a fresh pass", left)
+	}
+}
+
+func TestProbeUtilBackup_CleanIsRefusedWhileARunHoldsTheLock(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(config.BackupHomeEnvVar, home)
+	root := backupRunRoot()
+	run := "2026-09-22_01-00-00"
+	if err := os.MkdirAll(backupRunPath(root, run), 0o755); err != nil {
+		t.Fatalf("mkdir run: %v", err)
+	}
+	held, err := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		t.Fatalf("open lock: %v", err)
+	}
+	defer func() { _ = held.Close() }()
+	if err := syscall.Flock(int(held.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		t.Fatalf("hold lock: %v", err)
+	}
+	defer func() { _ = syscall.Flock(int(held.Fd()), syscall.LOCK_UN) }()
+
+	err = Backup(t.Context(), BackupRequest{Command: BackupCommandClean, Trigger: metric.BackupTriggerManual,
+		Config: filepath.Join(home, "config.json")})
+	if err == nil || !strings.Contains(err.Error(), "stop it before cleaning") {
+		t.Errorf("Backup(clean) error = %v, want a refusal naming the held lock", err)
+	}
+	if runs := backupRuns(root); len(runs) != 1 {
+		t.Errorf("backupRuns() = %v, want the history left alone while a run owns it", runs)
 	}
 }

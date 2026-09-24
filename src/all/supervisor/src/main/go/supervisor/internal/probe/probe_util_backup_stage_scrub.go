@@ -52,7 +52,8 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 
 	cursor := kernelCursor(ctx)
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("scrubbed", started,
-		"[%s] scrub [%s] at [%s], polling every [%s]", config.DirBackup, action, hard.Format(backupTimeFormat), scrubPollInterval)
+		"[%s] scrub [%s] %s at [%s], polling every [%s]", config.DirBackup, action, scrubOrigin(action, statusOut),
+		hard.Format(backupTimeFormat), scrubPollInterval)
 	if out, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "scrub", action, "-c", "3", "-n", "15", config.DirBackup); abandoned || code != 0 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
 			"[%s] scrub [%s] exited [%d] abandoned [%t] reporting [%s], the disk was not scrubbed", config.DirBackup, action, code,
@@ -60,6 +61,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		writeScrubSummary(request, host, scrubDocument(request, metric.BackupStateFailure, false, started, scrubReading{}))
 		return false
 	}
+	resumed := action == scrubActionResume
 	baseline, _ := scrubReadNow(ctx)
 
 	reached := 0.0
@@ -103,6 +105,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		display := reading
 		display.progress = reached
 		running := scrubDocument(request, metric.BackupStateRunning, false, started, display)
+		running.ResumedBool = resumed
 		running.ExpiresTS = hard.Format(time.RFC3339)
 		writeScrubSummary(request, host, running)
 		now := time.Now()
@@ -166,6 +169,7 @@ finished:
 		relocated = runBalance(ctx, subject)
 	}
 	document := scrubDocument(request, state, success, started, lastReading)
+	document.ResumedBool = resumed
 	document.DeviceErrors = deviceErrors
 	document.ChunksRelocated = relocated
 	document.FilesToDeleteCount = len(corrupt)
@@ -183,7 +187,7 @@ finished:
 func scrubAction(forced bool, trigger, status string, now time.Time) (action, reason string) {
 	lower := strings.ToLower(status)
 	if strings.Contains(lower, "interrupted") || strings.Contains(lower, "aborted") {
-		return "resume", ""
+		return scrubActionResume, ""
 	}
 	if !forced && (trigger != metric.BackupTriggerSystem || now.Day() < scrubWindowDay || now.Day() >= scrubWindowDay+scrubWindowDays) {
 		return "", fmt.Sprintf("a [%s] run outside days [%d] to [%d] of the month does not scrub, pass [--scrub] to force one",
@@ -192,7 +196,31 @@ func scrubAction(forced bool, trigger, status string, now time.Time) (action, re
 	if since := scrubStartedField(status); !forced && since != "" && sameScrubMonth(since, now) {
 		return "", fmt.Sprintf("the last pass started [%s] in this month already, pass [--scrub] to force one", since)
 	}
-	return "start", ""
+	return scrubActionStart, ""
+}
+
+func scrubOrigin(action, status string) string {
+	if action != scrubActionResume {
+		return "of a fresh pass"
+	}
+	if since := scrubStartedField(status); since != "" {
+		return fmt.Sprintf("of the pass left unfinished since [%s]", since)
+	}
+	return "of the pass left unfinished by an earlier run"
+}
+
+func scrubStateCleared(ctx context.Context) int {
+	if commandAvailable("btrfs") && mountpointCheck(ctx, config.DirBackup) {
+		cancelScrub(ctx)
+	}
+	states, _ := filepath.Glob(filepath.Join(scrubStateDirectory, scrubStateLeaves))
+	cleared := 0
+	for _, state := range states {
+		if os.Remove(state) == nil {
+			cleared++
+		}
+	}
+	return cleared
 }
 
 func scrubHalt(stagePath string, cancelled bool) string {
@@ -377,6 +405,8 @@ type scrubReading struct {
 }
 
 var (
+	scrubStateDirectory = "/var/lib/btrfs"
+
 	scrubProgressPattern = regexp.MustCompile(`\(([0-9.]+)%\)`)
 
 	scrubStartedPattern = regexp.MustCompile(`(?m)^Scrub started:\s*(.+)$`)
@@ -410,4 +440,9 @@ const (
 	scrubBalanceWait  = time.Hour
 
 	scrubLogLeaf = "scrub.log"
+
+	scrubActionStart  = "start"
+	scrubActionResume = "resume"
+
+	scrubStateLeaves = "scrub.status.*"
 )

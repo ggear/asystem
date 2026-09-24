@@ -3,7 +3,6 @@ package probe
 import (
 	"encoding/json"
 	"os"
-	"strings"
 	"time"
 
 	"supervisor/internal/metric"
@@ -23,7 +22,7 @@ import (
 //
 //	{
 //	    "run_id":                "<timestamp>", ALL               Run directory name, [YYYY-MM-DD_hh-mm-ss]
-//	    "state":                 "<state>",     ALL               Enum differs per document, only SCRUB carries all six
+//	    "state":                 "<state>",     ALL               Enum differs per document, only STAGE and SCRUB carry all six
 //	    "started_ts":            "<rfc3339>",   ALL
 //	    "finished_ts":           "<rfc3339>",   ALL
 //	    "duration_s":            <number>,      ALL
@@ -49,6 +48,7 @@ import (
 //	    "backup_id":             "<timestamp>", SERVICE           Artefact the run points at, reused when skipped
 //	    "kind":                  "<kind>",      SERVICE           [full|delta|unknown]
 //	    "version":               "<text>",      SERVICE
+//	    "resumed_bool":          <true|false>,  SCRUB             Resumed an unfinished pass rather than starting one
 //	    "scrubbed_mb":           <number>,      SCRUB             Cumulative, carried across a resume
 //	    "progress_perc":         <number>,      SCRUB
 //	    "errors_found":          <number>,      SCRUB             Checksum, verify and super errors
@@ -110,6 +110,7 @@ type scrubSummary struct {
 	ExpiresTS           string  `json:"expires_ts,omitempty"`
 	DurationS           int     `json:"duration_s,omitempty"`
 	SuccessBool         bool    `json:"success_bool"`
+	ResumedBool         bool    `json:"resumed_bool,omitempty"`
 	ScrubbedMB          int     `json:"scrubbed_mb,omitempty"`
 	ProgressPerc        float64 `json:"progress_perc,omitempty"`
 	ErrorsFound         int     `json:"errors_found,omitempty"`
@@ -150,19 +151,6 @@ type backupClusterSummary struct {
 	LeaderEpoch   int64  `json:"leader_epoch"`
 }
 
-type backupReaperSummary struct {
-	State     string `json:"state"`
-	ExpiresTS string `json:"expires_ts"`
-}
-
-func (r backupReaperSummary) Paused() bool {
-	if !strings.EqualFold(strings.TrimSpace(r.State), metric.CommandOff) {
-		return false
-	}
-	expires, err := time.Parse(time.RFC3339, r.ExpiresTS)
-	return err == nil && time.Now().Before(expires)
-}
-
 func finishRun(root, runID string, started time.Time) backupSummary {
 	runPath := backupRunPath(root, runID)
 	document := backupSummary{RunID: runID, StartedTS: started.Format(time.RFC3339)}
@@ -178,7 +166,7 @@ func finishRun(root, runID string, started time.Time) backupSummary {
 			document.Trigger = staged.Trigger
 		}
 		switch staged.State {
-		case metric.BackupStateSuccess:
+		case metric.BackupStateSuccess, metric.BackupStateSkipped:
 		case metric.BackupStateStopped, metric.BackupStateTimeout:
 			document.StagesHalted++
 		default:
@@ -200,6 +188,9 @@ func finishRun(root, runID string, started time.Time) backupSummary {
 		scrubState = scrubbed.State
 	}
 	state := resolvedState(states, scrubState)
+	if document.StagesRun == 0 {
+		state = metric.BackupStateFailure
+	}
 	document.State = state
 	document.FinishedTS = time.Now().Format(time.RFC3339)
 	document.DurationS = int(time.Since(started).Seconds())
@@ -218,7 +209,7 @@ func resolvedState(stages map[metric.BackupStage]string, scrub string) string {
 		return metric.BackupStateRunning
 	}
 	for _, stage := range backupStages {
-		if state, ok := stages[stage]; ok && state != metric.BackupStateSuccess {
+		if state, ok := stages[stage]; ok && state != metric.BackupStateSuccess && state != metric.BackupStateSkipped {
 			return state
 		}
 	}

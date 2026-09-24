@@ -299,7 +299,7 @@ def _pull(context):
         _run_pinned(context, "go mod download", go_deps_path, "go")
         _run_pinned(context, "go mod tidy", go_deps_path, "go")
     for rust_deps_path in rust_deps_paths:
-        _run_pinned(context, "cargo fetch --locked", rust_deps_path, "rust")
+        _run_pinned(context, "cargo fetch", rust_deps_path, "rust")
     _print_footer("asystem", "pull dependencies install")
     _generate(context, filter_changes=False, is_pull=True)
     _print_header("asystem", "pull package versions to update")

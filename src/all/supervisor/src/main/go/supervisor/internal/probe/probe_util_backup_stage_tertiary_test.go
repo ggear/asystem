@@ -206,3 +206,31 @@ func TestProbeUtilBackupStageTertiary_MirrorCellsAgreeWithEachOther(t *testing.T
 		})
 	}
 }
+
+func TestProbeUtilBackupStageTertiary_AHostDeclaringNoBackupDiskSkipsTheStage(t *testing.T) {
+	fstab := filepath.Join(t.TempDir(), "fstab")
+	if err := os.WriteFile(fstab, []byte("UUID=abc  /share/10  ext4  defaults  0 2\n"), 0o644); err != nil {
+		t.Fatalf("write fstab: %v", err)
+	}
+	original := backupFstabPath
+	t.Cleanup(func() { backupFstabPath = original })
+	backupFstabPath = fstab
+	originalExec := stageExec
+	t.Cleanup(func() { stageExec = originalExec })
+	stageExec = func(_ context.Context, _ string, _ ...string) (string, int, bool) {
+		t.Error("a host with no backup target shelled out, want the stage to end before it powers or mounts anything")
+		return "", 1, false
+	}
+
+	result, err := runTertiaryStage(t.Context(), stageRequest{Stage: metric.BackupStageTertiary, RunPath: t.TempDir(),
+		RunID: "2026-09-22_01-00-00", ConfigPath: filepath.Join(t.TempDir(), "config.json")}, &stageCounters{})
+	if err != nil {
+		t.Fatalf("runTertiaryStage() error = %v, want a skip rather than a fault", err)
+	}
+	if !result.skipped {
+		t.Errorf("runTertiaryStage() skipped = false, want a host mirroring nowhere to skip the stage")
+	}
+	if state, success := stageVerdict(nil, err, result.skipped); state != metric.BackupStateSkipped || !success {
+		t.Errorf("stageVerdict() = (%q, %v), want (%q, true)", state, success, metric.BackupStateSkipped)
+	}
+}

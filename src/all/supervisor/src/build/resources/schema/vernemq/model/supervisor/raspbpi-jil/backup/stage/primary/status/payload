@@ -1,6 +1,6 @@
 {
   "run_id": "<text>",
-  "state": <running|success|stopped|timeout|failure>,
+  "state": <running|success|stopped|timeout|failure|skipped>,
   "trigger": <system|manual>,
   "started_ts": "<text>",
   "finished_ts": "<text>",

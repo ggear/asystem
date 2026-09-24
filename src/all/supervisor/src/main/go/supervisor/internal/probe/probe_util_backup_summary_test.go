@@ -176,6 +176,7 @@ func TestProbeUtilBackupSummary_ResolvedState(t *testing.T) {
 		{name: "scrub_skipped_does_not_taint_success", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateSuccess}, scrub: metric.BackupStateSkipped, expected: metric.BackupStateSuccess},
 		{name: "scrub_failure_taints_an_otherwise_successful_run", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateSuccess}, scrub: metric.BackupStateFailure, expected: metric.BackupStateFailure},
 		{name: "no_stages_no_scrub", stages: map[metric.BackupStage]string{}, expected: metric.BackupStateSuccess},
+		{name: "a_skipped_stage_does_not_taint_success", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateSkipped}, expected: metric.BackupStateSuccess},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -212,12 +213,13 @@ func TestProbeUtilBackupSummary_ResolvedStateInvariantsHoldAcrossEveryCombinatio
 							primary, secondary, tertiary, scrub, result)
 					}
 					if !anyRunning {
-						allClean := (primary == "" || primary == metric.BackupStateSuccess) &&
-							(secondary == "" || secondary == metric.BackupStateSuccess) &&
-							(tertiary == "" || tertiary == metric.BackupStateSuccess) &&
-							(scrub == "" || scrub == metric.BackupStateSuccess || scrub == metric.BackupStateSkipped)
+						clean := func(state string) bool {
+							return state == "" || state == metric.BackupStateSuccess || state == metric.BackupStateSkipped
+						}
+						allClean := clean(primary) && clean(secondary) && clean(tertiary) &&
+							clean(scrub)
 						if allClean && result != metric.BackupStateSuccess {
-							t.Fatalf("primary=%q secondary=%q tertiary=%q scrub=%q: got %q, want success when every stage succeeded and scrub was success or skipped",
+							t.Fatalf("primary=%q secondary=%q tertiary=%q scrub=%q: got %q, want success when every stage succeeded or skipped and scrub was success or skipped",
 								primary, secondary, tertiary, scrub, result)
 						}
 					}
@@ -352,8 +354,34 @@ func TestProbeUtilBackupSummary_FinishRunOverAStageThatWroteNothing(t *testing.T
 		t.Fatalf("mkdir run: %v", err)
 	}
 	document := finishRun(root, run, time.Now())
-	if document.StagesRun != 0 || document.State != metric.BackupStateSuccess {
-		t.Errorf("state = (%q, %d stages), want a success over nothing rather than a fault",
+	if document.StagesRun != 0 || document.State != metric.BackupStateFailure {
+		t.Errorf("state = (%q, %d stages), want a failure rather than a success over nothing",
 			document.State, document.StagesRun)
+	}
+}
+
+func TestProbeUtilBackupSummary_ASkippedStageIsNeitherFailedNorHalted(t *testing.T) {
+	root, run := t.TempDir(), "2026-09-22_01-00-00"
+	states := map[metric.BackupStage]string{
+		metric.BackupStagePrimary:   metric.BackupStateSuccess,
+		metric.BackupStageSecondary: metric.BackupStateSuccess,
+		metric.BackupStageTertiary:  metric.BackupStateSkipped,
+	}
+	for stage, state := range states {
+		path := stageStatusPath(backupRunPath(root, run), stage)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("mkdir stage: %v", err)
+		}
+		if err := writeAtomic(path, backupSummary{RunID: run, State: state, Trigger: metric.BackupTriggerSystem}); err != nil {
+			t.Fatalf("write stage: %v", err)
+		}
+	}
+	document := finishRun(root, run, time.Now())
+	if document.StagesRun != 3 || document.StagesFailed != 0 || document.StagesHalted != 0 {
+		t.Errorf("finishRun() = (run %d, failed %d, halted %d), want a host mirroring nowhere to read no fault",
+			document.StagesRun, document.StagesFailed, document.StagesHalted)
+	}
+	if document.State != metric.BackupStateSuccess {
+		t.Errorf("finishRun() state = %q, want %q", document.State, metric.BackupStateSuccess)
 	}
 }

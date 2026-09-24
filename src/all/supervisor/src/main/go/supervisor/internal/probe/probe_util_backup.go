@@ -92,11 +92,13 @@ func Backup(ctx context.Context, request BackupRequest) error {
 	case BackupCommandStop:
 		return runBackupStop(ctx, request)
 	case BackupCommandTail:
-		return runBackupTail(request)
+		return runBackupTail(ctx, request)
 	case BackupCommandList:
 		return runBackupList()
 	case BackupCommandAuto:
 		return runBackupAuto(request)
+	case BackupCommandClean:
+		return runBackupClean(ctx, request)
 	default:
 		return fmt.Errorf("unknown backup command [%d]", request.Command)
 	}
@@ -122,6 +124,7 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 	}
 	defer func() { _ = lock.Close() }()
 	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		discardRun(runPath)
 		return fmt.Errorf("another backup run holds [%s], refusing to start", locked)
 	}
 	defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()
@@ -220,6 +223,45 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 	return nil
 }
 
+func runBackupClean(ctx context.Context, request BackupRequest) error {
+	started := time.Now()
+	root := backupRunRoot()
+	report := func(verb, detail string, args ...any) {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionRemove).Infof(verb, started, detail, args...)
+	}
+	locked := lockPath(root)
+	lock, err := os.OpenFile(locked, os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return fmt.Errorf("backup run lock [%s] could not be opened [%w]", locked, err)
+	}
+	defer func() { _ = lock.Close() }()
+	if syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil {
+		return fmt.Errorf("a backup run holds [%s], stop it before cleaning", locked)
+	}
+	defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()
+	runs := backupRuns(root)
+	removed := 0
+	for _, run := range runs {
+		if err := os.RemoveAll(backupRunPath(root, run)); err != nil {
+			scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionRemove).Warnf("faulting", started,
+				"[%s] backup run directory could not be removed with [%v]", run, err)
+			continue
+		}
+		removed++
+	}
+	report("expunged", "[%d] of [%d] backup run directories under [%s]", removed, len(runs), root)
+	report("expunged", "[%d] scrub state file(s) under [%s], so the next run starts a fresh pass",
+		scrubStateCleared(ctx), scrubStateDirectory)
+	topics, err := clearRetainedBackup(request.Config)
+	if err != nil {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionRemove).Warnf("faulting", started,
+			"[%v] retained backup topics could not be cleared, they hold the runs just removed", err)
+		return nil
+	}
+	report("expunged", "[%d] retained backup topics for this host, the runs they reported are gone", topics)
+	return nil
+}
+
 func backupResolveRun(root, runID string) (string, error) {
 	if runID != "" {
 		return runID, nil
@@ -228,7 +270,39 @@ func backupResolveRun(root, runID string) (string, error) {
 	if len(runs) == 0 {
 		return "", fmt.Errorf("[none] backup run found under [%s]", root)
 	}
+	for _, run := range slices.Backward(runs) {
+		if backupRunActive(root, run) {
+			return run, nil
+		}
+	}
 	return runs[len(runs)-1], nil
+}
+
+func backupRunActive(root, run string) bool {
+	snapshot := readBackupRun(root, run)
+	if snapshot.host != nil {
+		return false
+	}
+	for _, stage := range backupStages {
+		if document := snapshot.stages[stage]; document != nil && document.State == metric.BackupStateRunning {
+			return true
+		}
+	}
+	document := readScrubSummary(scrubStatusPath(backupRunPath(root, run)))
+	return document != nil && document.State == metric.BackupStateRunning
+}
+
+func backupRunPending(root, run string) bool {
+	snapshot := readBackupRun(root, run)
+	if snapshot.host != nil || snapshot.staged > 0 {
+		return false
+	}
+	return snapshot.age() < backupTailSettle
+}
+
+func discardRun(runPath string) {
+	_ = os.Remove(runLogPath(runPath))
+	_ = os.Remove(runPath)
 }
 
 func backupExpiry(configPath string, started time.Time, timeout time.Duration) time.Time {
@@ -285,8 +359,9 @@ const (
 	BackupCommandTail
 	BackupCommandList
 	BackupCommandAuto
+	BackupCommandClean
 	backupCommandFirst = BackupCommandStart
-	backupCommandLast  = BackupCommandAuto
+	backupCommandLast  = BackupCommandClean
 )
 
 const (
@@ -322,5 +397,6 @@ var (
 		BackupCommandTail:  "tail",
 		BackupCommandList:  "list",
 		BackupCommandAuto:  "auto",
+		BackupCommandClean: "clean",
 	}
 )

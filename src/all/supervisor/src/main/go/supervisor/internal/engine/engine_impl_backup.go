@@ -49,4 +49,5 @@ const (
 	BackupCommandTail  = probe.BackupCommandTail
 	BackupCommandList  = probe.BackupCommandList
 	BackupCommandAuto  = probe.BackupCommandAuto
+	BackupCommandClean = probe.BackupCommandClean
 )

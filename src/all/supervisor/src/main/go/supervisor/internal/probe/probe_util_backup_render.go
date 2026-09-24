@@ -1,6 +1,8 @@
 package probe
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"math"
@@ -29,7 +31,7 @@ func runBackupList() error {
 	return nil
 }
 
-func runBackupTail(request BackupRequest) error {
+func runBackupTail(ctx context.Context, request BackupRequest) error {
 	root := backupRunRoot()
 	runID, err := backupResolveRun(root, request.RunID)
 	if err != nil {
@@ -37,25 +39,17 @@ func runBackupTail(request BackupRequest) error {
 	}
 	scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStart).Infof("followed", time.Now(),
 		"[%s] tracking this run under [%s]", runID, backupRunPath(root, runID))
-	running := func() bool {
-		snapshot := readBackupRun(root, runID)
-		if snapshot.host != nil {
-			return false
-		}
-		for _, stage := range backupStages {
-			if document := snapshot.stages[stage]; document != nil && document.State == metric.BackupStateRunning {
-				return true
-			}
-		}
-		return false
-	}
 	offset := int64(0)
 	for {
 		offset = tailLog(runLogPath(backupRunPath(root, runID)), offset)
-		if !running() {
+		if !backupRunActive(root, runID) && !backupRunPending(root, runID) {
 			break
 		}
-		time.Sleep(backupTailPoll)
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(backupTailPoll):
+		}
 	}
 	offset = tailLog(runLogPath(backupRunPath(root, runID)), offset)
 	fmt.Println()
@@ -81,8 +75,17 @@ func tailLog(path string, offset int64) int64 {
 	if err != nil || len(data) == 0 {
 		return offset
 	}
-	fmt.Print(string(data))
-	return offset + int64(len(data))
+	complete := bytes.LastIndexByte(data, '\n') + 1
+	if complete == 0 {
+		return offset
+	}
+	for line := range strings.SplitSeq(strings.TrimSuffix(string(data[:complete]), "\n"), "\n") {
+		if scribe.Headed(line) {
+			continue
+		}
+		fmt.Println(line)
+	}
+	return offset + int64(complete)
 }
 
 func backupHeading() []string {
@@ -120,7 +123,7 @@ func backupTable(root string) []string {
 func backupListRow(root, run string) string {
 	snapshot := readBackupRun(root, run)
 	runPath := backupRunPath(root, run)
-	trigger := unknownCell
+	trigger := backupUnknownCell
 	cells := make([]string, 0, len(backupStages))
 	states := map[metric.BackupStage]string{}
 	sized, size := false, 0
@@ -132,25 +135,28 @@ func backupListRow(root, run string) string {
 			continue
 		}
 		states[stage] = document.State
-		if trigger == unknownCell && document.Trigger != "" {
+		if trigger == backupUnknownCell && document.Trigger != "" {
 			trigger = document.Trigger
 		}
 		size += document.SizeMB
 		sized = true
-		if stage == metric.BackupStageTertiary {
+		if stage == metric.BackupStageTertiary && document.DiskTotalMB > 0 {
 			usedDiskMB, totalDiskMB = document.DiskUsedMB, document.DiskTotalMB
 		}
 	}
-	scrubState, scrubDeclared := unknownCell, ""
+	scrubState, scrubDeclared := backupUnknownCell, ""
 	if document := readScrubSummary(scrubStatusPath(runPath)); document != nil {
-		scrubState, scrubDeclared = document.State, document.State
+		scrubState, scrubDeclared = scrubWord(*document), document.State
 	}
 	result := resolvedState(states, scrubDeclared)
+	if len(states) == 0 && scrubDeclared == "" {
+		result = backupUnknownCell
+	}
 	if snapshot.host != nil {
 		result = snapshot.host.State
 	}
 	began, _ := runStarted(backupSummary{RunID: run})
-	finished, elapsed := unknownCell, unknownCell
+	finished, elapsed := backupUnknownCell, backupUnknownCell
 	latest := latestFinished(snapshot)
 	if result == metric.BackupStateRunning {
 		elapsed = backupElapsed(int64(time.Since(began).Seconds()))
@@ -173,7 +179,7 @@ func backupListRow(root, run string) string {
 	if usedDiskMB >= 0 && totalDiskMB >= 0 {
 		freeReading = intReading(int64(totalDiskMB - usedDiskMB))
 	}
-	if snapshot.tertiary != nil {
+	if totalDiskMB > 0 && snapshot.tertiary != nil {
 		volume = floatReading(snapshot.tertiary.DiskUsagePerc)
 	}
 	return backupRow(append([]string{run, finished, elapsed, trigger}, append(cells, scrubState,
@@ -207,12 +213,22 @@ func backupRule(joined string, fill byte) string {
 	return out.String()
 }
 
+func scrubWord(document scrubSummary) string {
+	if document.State == "" {
+		return backupUnknownState
+	}
+	if document.State == metric.BackupStateRunning && document.ResumedBool {
+		return backupResumedCell
+	}
+	return document.State
+}
+
 func backupStateWord(document *backupSummary) string {
 	if document == nil {
-		return unknownCell
+		return backupUnknownCell
 	}
 	if document.State == "" {
-		return unknownState
+		return backupUnknownState
 	}
 	return document.State
 }
@@ -263,10 +279,10 @@ func backupProgressed(verb string, copied, total, percent, remaining reading, et
 		line += fmt.Sprintf(" at [%s] MiB/s", backupThroughput(rate))
 	}
 	if last >= 3 {
-		line += fmt.Sprintf(" at [%s] percent complete", backupPercent(percent))
+		line += fmt.Sprintf(" and [%s] percent complete", backupPercent(percent))
 	}
 	if last >= 4 {
-		line += fmt.Sprintf(" and estimated to complete in [%s] min at [%s]%s", backupMinutes(remaining), eta, bounded)
+		line += fmt.Sprintf(", finished in [%s] min at [%s]%s", backupMinutes(remaining), eta, bounded)
 	}
 	return line
 }
@@ -286,7 +302,7 @@ func backupVerb(stage metric.BackupStage) string {
 
 func backupEta(now time.Time, remainingMinutes reading) string {
 	if !remainingMinutes.known || remainingMinutes.value < 0 {
-		return unknownEta
+		return backupUnknownEta
 	}
 	return now.Add(time.Duration(remainingMinutes.Rounded()) * time.Minute).Format(backupTimeFormat)
 }
@@ -308,14 +324,14 @@ func backupMinutes(r reading) string { return padLeft(digits(r), backupMinutesWi
 
 func backupMegabytes(r reading) string {
 	if !r.known || r.value < 0 {
-		return unknownCell
+		return backupUnknownCell
 	}
 	return groupedDigits(r.Rounded()) + " MiB"
 }
 
 func backupTerabytes(r reading) string {
 	if !r.known || r.value < 0 {
-		return unknownCell
+		return backupUnknownCell
 	}
 	tenths := int64(math.Round(r.value * 10 / mebibytesPerTebibyte))
 	return fmt.Sprintf("%d.%d TiB", tenths/10, tenths%10)
@@ -327,7 +343,7 @@ func backupElapsed(seconds int64) string {
 
 func backupBar(percent reading) string {
 	if !percent.known || percent.value < 0 {
-		return unknownCell
+		return backupUnknownCell
 	}
 	clamped := min(percent.Rounded(), 100)
 	filled := int(clamped) * backupBarWidth / 100
@@ -349,7 +365,7 @@ func groupedDigits(value int64) string {
 
 func digits(r reading) string {
 	if !r.known {
-		return unknownCell
+		return backupUnknownCell
 	}
 	return strconv.FormatInt(r.Rounded(), 10)
 }
@@ -462,9 +478,10 @@ const (
 	backupMinutesWidth    = 4
 	backupBarWidth        = 18
 
-	unknownEta   = "--:--:--"
-	unknownCell  = "-"
-	unknownState = "unknown"
+	backupUnknownEta   = "--:--:--"
+	backupUnknownCell  = "-"
+	backupUnknownState = "unknown"
+	backupResumedCell  = "resumed"
 
 	ringMinimum = 3
 	ringPoints  = 12
@@ -472,4 +489,5 @@ const (
 
 	backupProgressHeartbeat = 10 * time.Second
 	backupTailPoll          = 2 * time.Second
+	backupTailSettle        = 2 * time.Minute
 )

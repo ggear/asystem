@@ -249,7 +249,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	if p.reapWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, allBackupStatusTopic, allReaperTopic, metric.TopicBackupStage(anyHost, metric.BackupStageTertiary))
+		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, allBackupStatusTopic, allReaperTopic, metric.TopicBackupStage(backupAnyHost, metric.BackupStageTertiary))
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the cluster, retrying on the next tick", err)
 			return
@@ -483,7 +483,7 @@ func (p *backupProbe) lead() {
 	}
 	leadStart := time.Now()
 	if p.leadWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, metric.TopicBackupStatus(anyHost), metric.TopicBackupStage(anyHost, anyLevel), allBackupStatusTopic)
+		watch, err := brokerWatch(p.configPath, p.hostName, metric.TopicBackupStatus(backupAnyHost), metric.TopicBackupStage(backupAnyHost, backupAnyLevel), allBackupStatusTopic)
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] watching the cluster backup run, retrying on the next tick", err)
 			return
@@ -672,8 +672,8 @@ const (
 )
 
 const (
-	anyHost  = "+"
-	anyLevel = "+"
+	backupAnyHost  = "+"
+	backupAnyLevel = "+"
 )
 
 const (
@@ -688,5 +688,5 @@ var (
 
 	allReaperTopic       = metric.TopicBackupReaper()
 	allBackupStatusTopic = metric.TopicBackupStatus(metric.HostAll)
-	tertiaryStatusSuffix = strings.TrimPrefix(metric.TopicBackupStage(anyHost, metric.BackupStageTertiary), metric.TopicBackupRoot(anyHost))
+	tertiaryStatusSuffix = strings.TrimPrefix(metric.TopicBackupStage(backupAnyHost, metric.BackupStageTertiary), metric.TopicBackupRoot(backupAnyHost))
 )

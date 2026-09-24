@@ -294,6 +294,9 @@ func mountedLocalShares(ctx context.Context) []string {
 }
 
 func measureUsage(ctx context.Context, target string) (percent float64, usedMB, totalMB int, ok bool) {
+	if !mountpointCheck(ctx, target) {
+		return 0, 0, 0, false
+	}
 	uuid, found, wedged := btrfsUUID(ctx, target)
 	if wedged {
 		return 0, 0, 0, false

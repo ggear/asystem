@@ -1289,3 +1289,19 @@ func TestScribe_SubjectTerms(t *testing.T) {
 	}
 	ResetFilters()
 }
+
+func TestScribe_HeaderNamesTheDetailColumnOnceAndIsRecognisedBack(t *testing.T) {
+	header := headerFor(layoutFor(sinkFile()))
+	if strings.Contains(header, "VERB") {
+		t.Errorf("header = %q, want the verb and detail columns headed by [DETAIL] alone", header)
+	}
+	if strings.Count(header, "DETAIL") != 1 {
+		t.Errorf("header = %q, want exactly one [DETAIL]", header)
+	}
+	if !Headed(header) || !Headed(header+"   ") {
+		t.Errorf("Headed(%q) = false, want a streamed log's own header to be recognised", header)
+	}
+	if Headed("") || Headed(strings.Replace(header, "TIME", "XIME", 1)) {
+		t.Errorf("Headed() accepted a line that is not the header")
+	}
+}

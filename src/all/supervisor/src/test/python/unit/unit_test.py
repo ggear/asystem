@@ -89,10 +89,10 @@ class BackupsShellTest(unittest.TestCase):
     def test_dispatch_returns_the_status_ssh_gave_it(self):
         self.hosts()
         self.assertEqual(self.shell('ssh() { return 255; }\n'
-                                    'backups_stop_one macmini-mad >/dev/null 2>&1; printf "exit=%s" "$?"'),
+                                    'backups_dispatch macmini-mad stop >/dev/null 2>&1; printf "exit=%s" "$?"'),
                          "exit=255")
         self.assertEqual(self.shell('ssh() { return 0; }\n'
-                                    'backups_stop_one macmini-mad >/dev/null 2>&1; printf "exit=%s" "$?"'),
+                                    'backups_dispatch macmini-mad stop >/dev/null 2>&1; printf "exit=%s" "$?"'),
                          "exit=0")
 
     def test_timeout_never_outlives_the_scheduled_run(self):
@@ -191,15 +191,23 @@ class BackupsShellTest(unittest.TestCase):
         self.assertNotIn("raspbpi-jil", reported.replace("exit=255", ""))
         self.assertIn("exit=255", reported)
 
-    def test_stop_one_and_list_one_send_the_plain_subcommand(self):
+    def test_dispatch_sends_the_plain_subcommand_for_every_read_verb(self):
         self.hosts()
-        probe = 'ssh() {{ shift 5; echo "$*"; }}\nbackups_{command}_one macmini-mad'
-        self.assertIn("/usr/local/bin/abackup stop", self.shell(probe.format(command="stop")))
-        self.assertIn("/usr/local/bin/abackup list", self.shell(probe.format(command="list")))
+        probe = 'ssh() {{ shift 5; echo "$*"; }}\nbackups_dispatch macmini-mad {command}'
+        for command in ("tail", "stop", "list", "clean"):
+            self.assertIn("/usr/local/bin/abackup " + command, self.shell(probe.format(command=command)),
+                          "[{}] must reach the host as the bare remote subcommand".format(command))
+
+    def test_each_hands_its_extra_arguments_to_the_action_after_the_host(self):
+        self.hosts("h1", "h2")
+        reached = self.shell('names() { printf "%s/%s\\n" "$1" "$2"; }\n'
+                             'backups_each names clean')
+        self.assertEqual(reached.split(), ["h1/clean", "h2/clean"],
+                         "one dispatch serves every verb, so the verb travels with the host")
 
     def test_dispatch_connects_as_root_with_a_bounded_connect_timeout(self):
         self.hosts()
-        probe = 'ssh() { printf "ARG %s\\n" "$@"; }\nbackups_stop_one macmini-mad'
+        probe = 'ssh() { printf "ARG %s\\n" "$@"; }\nbackups_dispatch macmini-mad stop'
         args = [line[4:] for line in self.shell(probe).splitlines() if line.startswith("ARG ")]
         self.assertEqual(args[:5], ["-n", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"],
                          "stdin must be closed so a host list read by the loop is never swallowed")
@@ -208,7 +216,7 @@ class BackupsShellTest(unittest.TestCase):
     def test_dispatch_hides_a_host_that_did_not_answer(self):
         self.hosts()
         probe = ('ssh() { echo "ssh: could not resolve hostname" >&2; return 255; }\n'
-                 'backups_stop_one macmini-mad 2>&1 || printf "exit=%s" "$?"')
+                 'backups_dispatch macmini-mad stop 2>&1 || printf "exit=%s" "$?"')
         reported = self.shell(probe)
         self.assertNotIn("== macmini-mad", reported, "an unreachable host prints no header")
         self.assertNotIn("could not resolve", reported, "its ssh error is hidden too")
@@ -217,7 +225,7 @@ class BackupsShellTest(unittest.TestCase):
     def test_dispatch_prints_one_blank_line_around_a_host_block(self):
         self.hosts()
         probe = ('ssh() { printf "\\n\\n+----+\\n| row |\\n\\n\\n| row |\\n+----+\\n\\n\\n"; }\n'
-                 'backups_stop_one macmini-mad')
+                 'backups_dispatch macmini-mad stop')
         lines = self.shell(probe, keep_blanks=True).split("\n")
         self.assertEqual(lines, ["", "\033[1;35m== macmini-mad stop ==\033[0m", "", "+----+", "| row |", "", "| row |", "+----+"],
                          "blank runs collapse to one and trailing blanks are dropped")
@@ -233,7 +241,7 @@ class BackupsShellTest(unittest.TestCase):
         self.hosts("h1", "h2", "h3")
         probe = ('ssh() { local d; for d; do case "${d}" in *@*) break ;; esac; done\n'
                  '  case "${d}" in *h2) return 1 ;; *) echo "reached ${d}" ;; esac; }\n'
-                 'backups_each backups_stop_one; echo "exit=$?"')
+                 'backups_each backups_dispatch stop; echo "exit=$?"')
         lines = self.shell(probe).splitlines()
         self.assertIn("reached root@h1", lines)
         self.assertIn("reached root@h3", lines)

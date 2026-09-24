@@ -6,6 +6,7 @@
   "duration_s": <number>,
   "expires_ts": "<text>",
   "success_bool": <true|false>,
+  "resumed_bool": <true|false>,
   "scrubbed_mb": <number>,
   "progress_perc": <number>,
   "errors_found": <number>,

@@ -134,9 +134,17 @@ func Payloads() []schema.Payload {
 		BackupStateTimeout,
 		BackupStateFailure,
 	}
+	backupStaged := []string{
+		BackupStateRunning,
+		BackupStateSuccess,
+		BackupStateStopped,
+		BackupStateTimeout,
+		BackupStateFailure,
+		BackupStateSkipped,
+	}
 	backupStageStatus := schema.Member{Members: []schema.Member{
 		{Key: "run_id", Kind: schema.KindStr},
-		{Key: "state", Enum: backupSettled},
+		{Key: "state", Enum: backupStaged},
 		{Key: "trigger", Enum: []string{BackupTriggerSystem, BackupTriggerManual}},
 		{Key: "started_ts", Kind: schema.KindStr},
 		{Key: "finished_ts", Kind: schema.KindStr},
@@ -256,6 +264,7 @@ func Payloads() []schema.Payload {
 				{Key: "duration_s", Kind: schema.KindInt},
 				{Key: "expires_ts", Kind: schema.KindStr},
 				{Key: "success_bool", Kind: schema.KindBool},
+				{Key: "resumed_bool", Kind: schema.KindBool},
 				{Key: "scrubbed_mb", Kind: schema.KindInt},
 				{Key: "progress_perc", Kind: schema.KindFloat},
 				{Key: "errors_found", Kind: schema.KindInt},

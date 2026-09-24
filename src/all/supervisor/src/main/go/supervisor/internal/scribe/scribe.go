@@ -347,6 +347,18 @@ func OverlayHeader(width int) string {
 	return headerFor(layoutFor(sinkOverlay(width)))
 }
 
+func Detailed() int {
+	return layoutFor(sinkFile()).detail
+}
+
+func Header() string {
+	return headerFor(layoutFor(sinkFile()))
+}
+
+func Headed(line string) bool {
+	return strings.TrimRight(line, " ") == Header()
+}
+
 func OverlayLines(line LogLine, width int) []string {
 	return wrapped(line, layoutFor(sinkOverlay(width)))
 }
@@ -554,7 +566,7 @@ func attrsToAny(attrs []slog.Attr) []any {
 }
 
 func headerFor(l layout) string {
-	return render(LogLine{Source: "SOURCE", Subject: "SUBJECT", Action: "ACTION", Duration: "DURATION", Verb: "VERB", Detail: "DETAIL"},
+	return render(LogLine{Source: "SOURCE", Subject: "SUBJECT", Action: "ACTION", Duration: "DURATION", Verb: "DETAIL"},
 		l, pad("TIME", l.time), "LEVEL")
 }
 

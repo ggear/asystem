@@ -50,6 +50,7 @@ backups_help() {
     echo "  stop     stop every active run on every host"
     echo "  tail     follow every host's newest run until interrupted"
     echo "  list     list every host's run history"
+    echo "  clean    remove every host's run history and any unfinished scrub"
     echo "  help     this text, default command when given none"
     echo
     echo "  --scrub  scrub each host's backup disk"
@@ -102,9 +103,9 @@ backups_header() {
 
 # shellcheck disable=SC2029
 backups_dispatch() {
-  local host="$1" remote="$2" stage="$3" header
-  header="$(backups_header "${host}" "${stage}")"
-  ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" "${remote}" 2>/dev/null |
+  local host="$1" verb="$2" header
+  header="$(backups_header "${host}" "${verb}")"
+  ssh "${BACKUPS_SSH_OPTS[@]}" "${BACKUPS_SSH_USER}@${host}" "${BACKUPS_REMOTE} ${verb}" 2>/dev/null |
     awk -v header="${header}" '
       /^[[:space:]]*$/ { if (shown) pending = 1; next }
       { if (!shown) { printf "\n%s\n\n", header; shown = 1 }
@@ -124,18 +125,6 @@ backups_start_one() {
   backups_log INFO "dispatched run [${BACKUPS_RUN_ID}] to [${host}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]"
 }
 
-backups_tail_one() {
-  backups_dispatch "$1" "${BACKUPS_REMOTE} tail" "tail"
-}
-
-backups_stop_one() {
-  backups_dispatch "$1" "${BACKUPS_REMOTE} stop" "stop"
-}
-
-backups_list_one() {
-  backups_dispatch "$1" "${BACKUPS_REMOTE} list" "list"
-}
-
 # shellcheck disable=SC2329
 backups_interrupt() {
   BACKUPS_INTERRUPTED=1
@@ -146,13 +135,14 @@ backups_interrupt() {
 
 backups_each() {
   local action="$1" host found=0 failed=0 hosts=() enrolled
+  shift
   enrolled="$(backups_hosts)" || return 1
   mapfile -t hosts <<<"${enrolled}"
   for host in ${hosts[@]+"${hosts[@]}"}; do
     [ -n "${host}" ] || continue
     [ "${BACKUPS_INTERRUPTED}" -eq 0 ] || return 130
     found=$((found + 1))
-    "${action}" "${host}" </dev/null || failed=$((failed + 1))
+    "${action}" "${host}" "$@" </dev/null || failed=$((failed + 1))
   done
   if [ "${found}" -eq 0 ]; then
     backups_log ERRS "no enrolled hosts found in [${BACKUPS_CONFIG}]"
@@ -178,7 +168,7 @@ backups_start() {
 backups_tail() {
   local status=0
   trap 'backups_interrupt' INT
-  backups_each backups_tail_one || status=$?
+  backups_each backups_dispatch tail || status=$?
   trap - INT
   [ "${status}" -eq 130 ] && status=0
   printf '\n'
@@ -187,14 +177,21 @@ backups_tail() {
 
 backups_stop() {
   local status=0
-  backups_each backups_stop_one || status=$?
+  backups_each backups_dispatch stop || status=$?
   printf '\n'
   return "${status}"
 }
 
 backups_list() {
   local status=0
-  backups_each backups_list_one || status=$?
+  backups_each backups_dispatch list || status=$?
+  printf '\n'
+  return "${status}"
+}
+
+backups_clean() {
+  local status=0
+  backups_each backups_dispatch clean || status=$?
   printf '\n'
   return "${status}"
 }
@@ -228,7 +225,7 @@ help)
   backups_help help
   exit 0
   ;;
-start | stop | tail | list)
+start | stop | tail | list | clean)
   command -v ssh >/dev/null 2>&1 || {
     backups_log ERRS "ssh is required and was not found"
     exit 1

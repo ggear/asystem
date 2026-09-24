@@ -214,3 +214,42 @@ func TestProbeUtilBackupMount_AliveProbesTheDeviceRatherThanAskingAboutIt(t *tes
 		})
 	}
 }
+
+func TestProbeUtilBackupMount_UsageIsOnlyMeasuredWhileTheTargetIsMounted(t *testing.T) {
+	tests := []struct {
+		name          string
+		mounted       bool
+		expectedKnown bool
+		expectedTotal int
+	}{
+		{name: "a_mounted_target_is_measured", mounted: true, expectedKnown: true, expectedTotal: 2},
+		{name: "an_unmounted_target_reports_nothing", mounted: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			btrfsUnidentified.Clear()
+			original := stageExec
+			t.Cleanup(func() { stageExec = original })
+			stageExec = func(_ context.Context, name string, _ ...string) (string, int, bool) {
+				switch name {
+				case "mountpoint":
+					if testCase.mounted {
+						return "", 0, false
+					}
+					return "", 1, false
+				case "df":
+					return "used size\n1048576 2097152", 0, false
+				default:
+					return "ERROR: not a valid btrfs filesystem", 1, false
+				}
+			}
+			percent, usedMB, totalMB, ok := measureUsage(t.Context(), "/backup")
+			if ok != testCase.expectedKnown {
+				t.Fatalf("measureUsage() ok = %v, want %v, an unmounted path measures whatever lies under it", ok, testCase.expectedKnown)
+			}
+			if ok && (totalMB != testCase.expectedTotal || usedMB != 1 || percent != 50) {
+				t.Errorf("measureUsage() = (%v, %d, %d), want (50, 1, %d)", percent, usedMB, totalMB, testCase.expectedTotal)
+			}
+		})
+	}
+}

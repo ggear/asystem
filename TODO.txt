@@ -30,19 +30,578 @@ improve sys tests with datbase/broker asserts
 
 
 
+
+
+
+
+
+
+fix this:
+Requirement already satisfied: pure-eval in /Users/graham/.pyenv/versions/3.12.14/envs/asystem/lib/python3.12/site-packages (from stack_data>=0.6.0->ipython>=7.23.1->ipykernel!=6.30.0,>=6.5.0->jupyterlab==4.6.4->-r /Users/graham/Code/asystem/.py_deps_prod.txt (line 51)) (0.2.3)
+Requirement already satisfied: pyobjc-framework-UniformTypeIdentifiers>=10.0 in /Users/graham/.pyenv/versions/3.12.14/envs/asystem/lib/python3.12/site-packages (from utitools>=0.3.0->osxphotos==0.77.1->-r /Users/graham/Code/asystem/.py_deps_prod.txt (line 76)) (12.2.2)
+Requirement already satisfied: arrow>=0.15.0 in /Users/graham/.pyenv/versions/3.12.14/envs/asystem/lib/python3.12/site-packages (from isoduration->jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.19.0->notebook==7.6.3->-r /Users/graham/Code/asystem/.py_deps_prod.txt (line 49)) (1.4.0)
+cd ./. && . /Users/graham/Code/asystem/.env_fab && pip install --ignore-requires-python --no-deps --default-timeout=1000 -r /Users/graham/Code/asystem/.py_deps_dev.txt
+Requirement already satisfied: hassapi==0.3.0 in /Users/graham/.pyenv/versions/3.12.14/envs/asystem/lib/python3.12/site-packages (from -r /Users/graham/Code/asystem/.py_deps_dev.txt (line 11)) (0.3.0)
+Requirement already satisfied: homeassistant==2026.9.3 in /Users/graham/.pyenv/versions/3.12.14/envs/asystem/lib/python3.12/site-packages (from -r /Users/graham/Code/asystem/.py_deps_dev.txt (line 12)) (2026.9.3)
+Requirement already satisfied: mlserver==1.7.1 in /Users/graham/.pyenv/versions/3.12.14/envs/asystem/lib/python3.12/site-packages (from -r /Users/graham/Code/asystem/.py_deps_dev.txt (line 15)) (1.7.1)
+cd ./. && . /Users/graham/Code/asystem/.env_fab && pwd
+cd /Users/graham/Code/asystem/src/all/storage/src/main/go/storage && . /Users/graham/Code/asystem/.env_fab && go mod download
+go: no module dependencies to download
+cd /Users/graham/Code/asystem/src/all/storage/src/main/go/storage && . /Users/graham/Code/asystem/.env_fab && go mod tidy
+cd /Users/graham/Code/asystem/src/all/supervisor/src/main/go/supervisor && . /Users/graham/Code/asystem/.env_fab && go mod download
+cd /Users/graham/Code/asystem/src/all/supervisor/src/main/go/supervisor && . /Users/graham/Code/asystem/.env_fab && go mod tidy
+cd /Users/graham/Code/asystem/src/mad/network/src/main/go/network && . /Users/graham/Code/asystem/.env_fab && go mod download
+cd /Users/graham/Code/asystem/src/mad/network/src/main/go/network && . /Users/graham/Code/asystem/.env_fab && go mod tidy
+cd /Users/graham/Code/asystem/src/zzz/solaredge/src/main/rust/solaredge && . /Users/graham/Code/asystem/.env_fab && cargo fetch --locked
+    Updating crates.io index
+error: cannot create the lock file /Users/graham/Code/asystem/src/zzz/solaredge/src/main/rust/solaredge/Cargo.lock because --locked was passed to prevent this
+help: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
+------------------------------------------------------------
+PULL HALTED BY RUST TOOLCHAIN: asystem-10.200.1710-SNAPSHOT
+------------------------------------------------------------
+The [rust] command [cargo fetch --locked] failed in [/Users/graham/Code/asystem/src/zzz/solaredge/src/main/rust/solaredge]
+The pinned toolchain is [rust] version [1.98.0] declared as [RUST_VERSION] in [.env_fab]
+A dependency that now requires a newer toolchain than the pinned version will fail exactly here, look above for a line naming a version higher than [1.98.0]
+The pull was halted at this point, no later module was updated, nothing was generated and no outdated package report was printed
+To upgrade, take the latest release from [https://doc.rust-lang.org/beta/releases.html], set [RUST_VERSION] in [.env_fab], run [fab setup] and re-run [fab pull]
+The upgrade process is documented under [Upgrading a pinned toolchain] in [CLAUDE.md]
+
+
+
+if a single host is running a backup and then a backups.sh tail is performed, it doesnt tail all the latest runs on those hosts, and seems to stop the one that is running. fix. it should tail to the running one until complete then move onto the next, tail them if finiahsed or again tail until complete and on and on
+
+
+
+
+
+getting this on max, with one backup currently running after trying to start another one:
+root@macmini-max:~$ abackup list
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_12-51-25 | -                   |         - | -         | -         | -         | -         | -         |           - |        - |        - |                         - | success    |
+| 2026-09-24_12-50-34 | -                   | 00h04m49s | manual    | success   | success   | running   | running   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | running    |
+| 2026-09-24_12-45-12 | 2026-09-24_12-46-47 | 00h01m35s | manual    | success   | success   | stopped   | -         |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+
+root@macmini-max:~$ abackup tail
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T12:55:29 INFO  backup                                     start           0ms followed [2026-09-24_12-51-25] tracking this run under [/home/asystem/supervisor/backup/2026-09-24_12-51-25]
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T12:51:25 ERROR backup                                     stop            0ms faulting [start] command did not complete cleanly, another backup run holds [/home/asystem/supervisor/backup/.lock], refusing to start
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_12-51-25 | -                   |         - | -         | -         | -         | -         | -         |           - |        - |        - |                         - | success    |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+
+
+
+
+
+
+when a scrub is resumed and running, show resumed in list or running if its the first time from:
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_12-45-12 | -                   | 00h01m14s | manual    | success   | success   | running   | -         |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | running    |
+to
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_12-45-12 | -                   | 00h01m14s | manual    | success   | success   | running   | resumed   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | running    |
+or
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_12-45-12 | -                   | 00h01m14s | manual    | success   | success   | running   | running   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | running    |
+
+
+size/free/used are wrong in latest verion as seen with mad latest run is new go version, other runs were with backup.sh
+graham@macbook-rue:~/Code/asystem/src/all/supervisor$ abackups list
+
+== macmini-mad list ==
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_11-57-48 | 2026-09-24_12-01-41 | 00h03m53s | manual    | success   | success   | failure   | stopped   |   5,525 MiB |  0.1 TiB |  0.3 TiB |  [###...............] 20% | failure    |
+| 2026-09-24_01-00-35 | 2026-09-24_01-05-28 | 00h04m53s | system    | success   | success   | success   | skipped   |  23,489 MiB |  7.4 TiB | 14.4 TiB |  [#####.............] 33% | success    |
+| 2026-09-23_01-00-35 | 2026-09-23_01-05-25 | 00h04m50s | system    | success   | success   | success   | skipped   |  22,225 MiB |  7.4 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-22_01-00-35 | 2026-09-22_01-03-02 | 00h02m27s | system    | success   | success   | success   | skipped   |   4,653 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-21_01-00-35 | 2026-09-21_01-02-53 | 00h02m18s | system    | success   | success   | success   | skipped   |   2,832 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-20_01-00-35 | 2026-09-20_01-02-52 | 00h02m17s | system    | success   | success   | success   | skipped   |   2,754 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-19_01-00-35 | 2026-09-19_01-02-53 | 00h02m18s | system    | success   | success   | success   | skipped   |   2,679 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-18_14-41-52 | 2026-09-18_14-43-24 | 00h01m32s | manual    | success   | success   | success   | skipped   |   2,164 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-18_14-08-49 | 2026-09-18_14-24-42 | 00h15m53s | manual    | success   | success   | stopped   | stopped   |   4,807 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | stopped    |
+| 2026-09-18_12-46-02 | 2026-09-18_12-48-23 | 00h02m21s | manual    | success   | success   | success   | skipped   |   7,072 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+
+likewise max, old version ran at 1am, all new ones are new version and wrong:
+== macmini-max list ==
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_12-04-03 | -                   | 00h09m48s | manual    | success   | success   | running   | running   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | running    |
+| 2026-09-24_11-57-48 | 2026-09-24_12-01-49 | 00h04m01s | manual    | success   | success   | stopped   | failure   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_11-04-13 | 2026-09-24_11-12-25 | 00h08m12s | manual    | success   | success   | stopped   | success   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_10-52-29 | 2026-09-24_10-59-02 | 00h06m33s | manual    | success   | success   | stopped   | success   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_10-48-49 | 2026-09-24_10-48-56 | 00h00m07s | manual    | success   | success   | success   | skipped   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 27% | success    |
+| 2026-09-24_10-48-31 | 2026-09-24_10-48-33 | 00h00m02s | manual    | success   | success   | stopped   | -         |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_10-45-00 | 2026-09-24_10-45-06 | 00h00m06s | manual    | success   | success   | success   | skipped   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 27% | success    |
+| 2026-09-24_10-32-23 | 2026-09-24_10-44-17 | 00h11m54s | manual    | success   | success   | stopped   | -         |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_10-19-26 | 2026-09-24_10-20-48 | 00h01m22s | manual    | success   | success   | failure   | failure   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 27% | failure    |
+| 2026-09-24_10-00-17 | 2026-09-24_10-01-37 | 00h01m20s | manual    | success   | success   | stopped   | failure   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_09-47-04 | 2026-09-24_09-47-23 | 00h00m19s | manual    | success   | success   | failure   | failure   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 27% | failure    |
+| 2026-09-24_09-39-36 | 2026-09-24_09-39-46 | 00h00m10s | manual    | success   | success   | stopped   | -         |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_01-00-39 | 2026-09-24_01-01-14 | 00h00m35s | system    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+
+
+
+
+
+
+
+
+combine VERB     DETAIL header to just DETAIL in logs
+
+
+
+
+
+avoid duplicate TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL header nicely in the code.
+graham@macbook-rue:~/Code/asystem/src/all/supervisor$ abackups start
+
+== *******-*** start ==
+
+[INFO           11:57:48] dispatched run [2026-09-24_11-57-48] to [macmini-mad] with timeout [13] hours and scrub [off]
+[INFO           11:57:48] dispatched run [2026-09-24_11-57-48] to [macmini-max] with timeout [13] hours and scrub [off]
+[INFO           11:57:48] dispatched run [2026-09-24_11-57-48] to [macmini-may] with timeout [13] hours and scrub [off]
+[INFO           11:57:49] dispatched run [2026-09-24_11-57-48] to [macmini-meg] with timeout [13] hours and scrub [off]
+[INFO           11:57:50] dispatched run [2026-09-24_11-57-48] to [raspbpi-jen] with timeout [13] hours and scrub [off]
+
+== macmini-mad tail ==
+
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:57:55 INFO  backup                                     start           0ms followed [2026-09-24_11-57-48] tracking this run under [/home/asystem/supervisor/backup/2026-09-24_11-57-48]
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [10.200.1709] version [env]
+
+
+
+Reduce line size for scrub and all other reporting lines that look the same so they dont wrap
+
+FROM
+
+09-24T12:05:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 204] GiB of [ 988] GiB at [185] MiB/s at [21] percent complete and estimated to complete in [  72] min at [13:17:53] within timeout time ~
+09-24T12:05:53 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+
+TO
+
+09-24T12:05:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 204] GiB of [ 988] GiB at [185] MiB/s and [21] percent complete, finished in [  72] min at [13:17:53] within timeout time [14:49:03]
+
+
+
+
+ctrl-c does not exit a tail. in this case this is local backup started that had been bg and disowned.
+root@macmini-max:~$ abackup tail
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T12:11:12 INFO  backup                                     start           0ms followed [2026-09-24_12-04-03] tracking this run under [/home/asystem/supervisor/backup/2026-09-24_12-04-03]
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T12:04:03 INFO  scribe                                     remove          0ms removals [  1] purged, [  0] kept as live
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [10.200.1709] version [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [macmini-max] host [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [/host] mount [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [vernemq.local.janeandgraham.com] broker host [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [32404] broker port [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [***] broker token [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [influxdb3.local.janeandgraham.com] database host [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [32420] database port [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [home] database name [env]
+09-24T12:04:03 INFO  config                                     resolve         0ms resolved [***] database token [env]
+09-24T12:04:03 INFO  backup           host/macmini-max          start           0ms schedule [2026-09-24_12-04-03] backup run over [3] stages triggered by [manual]
+09-24T12:04:03 INFO  backup           stage/primary             start           0ms starting [2026-09-24_12-04-03] stage [primary] timeout [15:04:03]
+09-24T12:04:03 INFO  backup           stage/primary             start           0ms enrolled [5] configured services, of which [1] ship a backup.sh
+09-24T12:04:03 INFO  backup           service/letsencrypt       start           0ms starting [letsencrypt] started [1/1]
+09-24T12:04:03 INFO  backup           service/letsencrypt       stop           18ms finished [letsencrypt] finished as [skipped], kind [full], version [10.200.1501], size [0] MiB
+09-24T12:04:03 INFO  backup           stage/primary             stop            0ms reported [1] services attempted with [0] failed
+09-24T12:04:03 INFO  backup           stage/primary             stop           65ms finished [2026-09-24_12-04-03] stage [primary] finished as [success], [   0] MiB at [  -] MiB/s
+09-24T12:04:03 INFO  backup           stage/secondary           start           0ms starting [2026-09-24_12-04-03] stage [secondary] timeout [15:04:03]
+09-24T12:04:03 INFO  backup           stage/secondary           start           0ms resolved [/share/20] resolved share
+09-24T12:04:03 INFO  backup           stage/secondary           start           0ms promoted [2] services promoting to [/share/20/backup]
+09-24T12:04:03 INFO  backup           service/supervisor        start           0ms promoted [supervisor] promoting [1/2] from [/home/asystem/supervisor/backup/] to [/share/20/backup/supervisor/macmini-max]
+09-24T12:04:03 INFO  backup           service/supervisor        stop           65ms promoted [supervisor] promoted in [0s], running total [0] MiB
+09-24T12:04:03 INFO  backup           service/supervisor        compute         0ms thinning [/share/20/backup/supervisor/macmini-max] thinning with the generic pruner, the module ships none
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-18_12-46-02] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-18_14-08-49] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-18_14-41-52] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-19_01-00-39] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-21_01-00-39] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-22_01-00-39] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-22_07-43-09] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-23_01-00-39] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-24_01-00-39] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-24_09-39-36] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-24_09-47-04] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-24_10-00-17] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-24_10-19-26] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup                                     remove          0ms expunged [2026-09-24_10-32-23] pruned from [/share/20/backup/supervisor/macmini-max] outside the grandfather father son window
+09-24T12:04:03 INFO  backup           service/letsencrypt       start           0ms promoted [letsencrypt] promoting [2/2] from [/home/asystem/letsencrypt/backup/] to [/share/20/backup/letsencrypt]
+09-24T12:04:03 INFO  backup           service/letsencrypt       stop           48ms promoted [letsencrypt] promoted in [0s], running total [0] MiB
+09-24T12:04:03 INFO  backup           service/letsencrypt       compute         0ms thinning [/share/20/backup/letsencrypt] thinning with the module pruner
+09-24T12:04:03 INFO  backup                                     compute         0ms resolved [/share/20] btrfs cannot identify this path from in here, measuring it with df for the rest of this run
+09-24T12:04:03 INFO  backup           stage/secondary           stop          293ms finished [2026-09-24_12-04-03] stage [secondary] finished as [success], [   0] MiB at [  -] MiB/s
+09-24T12:04:03 INFO  backup           stage/tertiary            start           0ms starting [2026-09-24_12-04-03] stage [tertiary] timeout [15:04:03]
+09-24T12:04:15 INFO  backup                                     start           0ms mounting [/backup] mounting
+09-24T12:04:16 INFO  backup           stage/tertiary            start           0ms mirrored [/share/21] mirroring to [/backup/share/21]
+09-24T12:04:16 INFO  backup           stage/tertiary            stop          470ms mirrored [/share/21] mirrored in [0s], running total [0] MiB
+09-24T12:04:16 INFO  backup           stage/tertiary            start           0ms mirrored [/share/20] mirroring to [/backup/share/20]
+09-24T12:04:18 INFO  backup           stage/tertiary            stop         1525ms mirrored [/share/20] mirrored in [2s], running total [0] MiB
+09-24T12:04:20 INFO  backup           stage/tertiary            compute         0ms snapshot [/backup/share/20] snapshotted to [/backup/.snapshots/share/20/2026-09-24_12-04-03]
+09-24T12:04:20 INFO  backup                                     remove          0ms expunged [2026-09-24_10-00-17] pruned from [/backup/.snapshots/share/20] outside the grandfather father son window
+09-24T12:04:21 INFO  backup           stage/tertiary            compute         0ms snapshot [/backup/share/21] snapshotted to [/backup/.snapshots/share/21/2026-09-24_12-04-03]
+09-24T12:04:21 INFO  backup                                     remove          0ms expunged [2026-09-24_10-00-17] pruned from [/backup/.snapshots/share/21] outside the grandfather father son window
+09-24T12:04:21 INFO  backup           stage/tertiary            start          23ms scrubbed [/backup] scrub [resume] at [14:49:03], polling every [30s]
+09-24T12:04:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 193] GiB of [ 987] GiB at [  -] MiB/s at [20] percent complete
+09-24T12:05:23 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 199] GiB of [ 988] GiB at [  -] MiB/s at [20] percent complete
+09-24T12:05:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 204] GiB of [ 988] GiB at [185] MiB/s at [21] percent complete and estimated to complete in [  72] min at [13:17:53] within timeout time ~
+09-24T12:05:53 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:06:23 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 210] GiB of [ 988] GiB at [186] MiB/s at [21] percent complete and estimated to complete in [  71] min at [13:17:23] within timeout time ~
+09-24T12:06:23 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:06:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 215] GiB of [ 988] GiB at [187] MiB/s at [22] percent complete and estimated to complete in [  71] min at [13:17:53] within timeout time ~
+09-24T12:06:53 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:07:23 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 220] GiB of [ 989] GiB at [186] MiB/s at [22] percent complete and estimated to complete in [  71] min at [13:18:23] within timeout time ~
+09-24T12:07:23 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:07:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 226] GiB of [ 989] GiB at [185] MiB/s at [23] percent complete and estimated to complete in [  70] min at [13:17:53] within timeout time ~
+09-24T12:07:53 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:08:23 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 231] GiB of [ 989] GiB at [184] MiB/s at [23] percent complete and estimated to complete in [  70] min at [13:18:23] within timeout time ~
+09-24T12:08:23 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:08:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 236] GiB of [ 989] GiB at [184] MiB/s at [24] percent complete and estimated to complete in [  70] min at [13:18:53] within timeout time ~
+09-24T12:08:53 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:09:23 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 242] GiB of [ 989] GiB at [184] MiB/s at [24] percent complete and estimated to complete in [  69] min at [13:18:23] within timeout time ~
+09-24T12:09:23 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:09:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 247] GiB of [ 990] GiB at [184] MiB/s at [25] percent complete and estimated to complete in [  69] min at [13:18:53] within timeout time ~
+09-24T12:09:53 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:10:23 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 253] GiB of [ 990] GiB at [184] MiB/s at [26] percent complete and estimated to complete in [  68] min at [13:18:23] within timeout time ~
+09-24T12:10:23 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:10:53 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 258] GiB of [ 990] GiB at [183] MiB/s at [26] percent complete and estimated to complete in [  68] min at [13:18:53] within timeout time ~
+09-24T12:10:53 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+09-24T12:11:23 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 263] GiB of [ 990] GiB at [183] MiB/s at [27] percent complete and estimated to complete in [  68] min at [13:19:23] within timeout time ~
+09-24T12:11:23 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+09-24T12:11:23 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 263] GiB of [ 990] GiB at [183] MiB/s at [27] percent complete and estimated to complete in [  68] min at [13:19:23] within timeout time ~
+09-24T12:11:23 INFO  backup           stage/tertiary            compute         0ms          [14:49:03]
+^C
+^C^C^C^C^C^C^C^C^C^C^C^C^C^C
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+backup on jen should skip tertiaray and suceed as such only do rprimary/secondary using first mounted /share it can find to do secondary.
+root@raspbpi-jen:~$ abackup start
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T12:05:03 INFO  scribe                                     remove          0ms removals [  1] purged, [  0] kept as live
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [10.200.1709] version [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [raspbpi-jen] host [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [/host] mount [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [vernemq.local.janeandgraham.com] broker host [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [32404] broker port [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [***] broker token [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [influxdb3.local.janeandgraham.com] database host [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [32420] database port [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [home] database name [env]
+09-24T12:05:03 INFO  config                                     resolve         0ms resolved [***] database token [env]
+09-24T12:05:03 INFO  backup           host/raspbpi-jen          start           7ms schedule [2026-09-24_12-05-03] backup run over [3] stages triggered by [manual]
+09-24T12:05:03 INFO  backup           stage/primary             start           0ms starting [2026-09-24_12-05-03] stage [primary] timeout [15:05:03]
+09-24T12:05:03 INFO  backup           stage/primary             start           0ms enrolled [3] configured services, of which [1] ship a backup.sh
+09-24T12:05:04 INFO  backup           service/zigbee2mqtt       start           0ms starting [zigbee2mqtt] started [1/1]
+09-24T12:05:04 INFO  backup           service/zigbee2mqtt       stop          143ms finished [zigbee2mqtt] finished as [skipped], kind [full], version [10.200.1473], size [0] MiB
+09-24T12:05:04 INFO  backup           stage/primary             stop            0ms reported [1] services attempted with [0] failed
+09-24T12:05:04 INFO  backup           stage/primary             stop          436ms finished [2026-09-24_12-05-03] stage [primary] finished as [success], [   0] MiB at [  -] MiB/s
+09-24T12:05:04 INFO  backup           stage/secondary           start           0ms starting [2026-09-24_12-05-03] stage [secondary] timeout [15:05:03]
+09-24T12:05:04 INFO  backup           stage/secondary           start           0ms resolved [/share/10] resolved share
+09-24T12:05:04 INFO  backup           stage/secondary           start           0ms promoted [2] services promoting to [/share/10/backup]
+09-24T12:05:04 INFO  backup           service/supervisor        start           0ms promoted [supervisor] promoting [1/2] from [/home/asystem/supervisor/backup/] to [/share/10/backup/supervisor/raspbpi-jen]
+09-24T12:05:05 INFO  backup           service/supervisor        stop          989ms promoted [supervisor] promoted in [1s], running total [0] MiB
+09-24T12:05:05 INFO  backup           service/supervisor        compute         0ms thinning [/share/10/backup/supervisor/raspbpi-jen] thinning with the generic pruner, the module ships none
+09-24T12:05:05 INFO  backup                                     remove          0ms expunged [2026-09-18_12-46-02] pruned from [/share/10/backup/supervisor/raspbpi-jen] outside the grandfather father son window
+09-24T12:05:05 INFO  backup                                     remove          0ms expunged [2026-09-18_14-08-49] pruned from [/share/10/backup/supervisor/raspbpi-jen] outside the grandfather father son window
+09-24T12:05:05 INFO  backup                                     remove          0ms expunged [2026-09-18_14-41-52] pruned from [/share/10/backup/supervisor/raspbpi-jen] outside the grandfather father son window
+09-24T12:05:05 INFO  backup                                     remove          0ms expunged [2026-09-19_01-00-03] pruned from [/share/10/backup/supervisor/raspbpi-jen] outside the grandfather father son window
+09-24T12:05:05 INFO  backup           service/zigbee2mqtt       start           0ms promoted [zigbee2mqtt] promoting [2/2] from [/home/asystem/zigbee2mqtt/backup/] to [/share/10/backup/zigbee2mqtt]
+09-24T12:05:05 INFO  backup           service/zigbee2mqtt       stop          159ms promoted [zigbee2mqtt] promoted in [0s], running total [0] MiB
+09-24T12:05:05 INFO  backup           service/zigbee2mqtt       compute         0ms thinning [/share/10/backup/zigbee2mqtt] thinning with the module pruner
+09-24T12:05:06 INFO  backup                                     compute         0ms resolved [/share/10] btrfs cannot identify this path from in here, measuring it with df for the rest of this run
+09-24T12:05:06 INFO  backup           stage/secondary           stop         2384ms finished [2026-09-24_12-05-03] stage [secondary] finished as [success], [   0] MiB at [  0] MiB/s
+09-24T12:05:06 INFO  backup           stage/tertiary            start           0ms starting [2026-09-24_12-05-03] stage [tertiary] timeout [15:05:03]
+09-24T12:05:07 WARN  backup           stage/tertiary            stop          659ms faulting [2026-09-24_12-05-03] stage [tertiary] finished as [failure] with [[/backup] is declared by no entry in [/etc/fstab], refusing to mirror]
+09-24T12:05:07 INFO  backup           host/raspbpi-jen          stop         3502ms finished [2026-09-24_12-05-03] backup run resolved as [failure]
+09-24T12:05:07 ERROR backup                                     stop            0ms faulting [start] command did not complete cleanly, run [2026-09-24_12-05-03] did not complete cleanly [stage [tertiary] failed [[/backup] is declared by no entry in ~
+09-24T12:05:07 ERROR backup                                     stop            0ms          [/etc/fstab], refusing to mirror]]
+
+
+
+
+
+whys is scrub resumed when it was not started previously? issue with json of old version or other? have a stop command explicity cancel scrub command so that it doesnt resume next.
+graham@macbook-rue:~/Code/asystem/src/all/supervisor$ abackups list
+
+== macmini-mad list ==
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_01-00-35 | 2026-09-24_01-05-28 | 00h04m53s | system    | success   | success   | success   | skipped   |  23,489 MiB |  7.4 TiB | 14.4 TiB |  [#####.............] 33% | success    |
+| 2026-09-23_01-00-35 | 2026-09-23_01-05-25 | 00h04m50s | system    | success   | success   | success   | skipped   |  22,225 MiB |  7.4 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-22_01-00-35 | 2026-09-22_01-03-02 | 00h02m27s | system    | success   | success   | success   | skipped   |   4,653 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-21_01-00-35 | 2026-09-21_01-02-53 | 00h02m18s | system    | success   | success   | success   | skipped   |   2,832 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-20_01-00-35 | 2026-09-20_01-02-52 | 00h02m17s | system    | success   | success   | success   | skipped   |   2,754 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-19_01-00-35 | 2026-09-19_01-02-53 | 00h02m18s | system    | success   | success   | success   | skipped   |   2,679 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-18_14-41-52 | 2026-09-18_14-43-24 | 00h01m32s | manual    | success   | success   | success   | skipped   |   2,164 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
+| 2026-09-18_14-08-49 | 2026-09-18_14-24-42 | 00h15m53s | manual    | success   | success   | stopped   | stopped   |   4,807 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | stopped    |
+| 2026-09-18_12-46-02 | 2026-09-18_12-48-23 | 00h02m21s | manual    | success   | success   | success   | skipped   |   7,072 MiB |  7.3 TiB | 14.5 TiB |  [#####.............] 33% | success    |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+
+== macmini-max list ==
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_11-04-13 | 2026-09-24_11-12-25 | 00h08m12s | manual    | success   | success   | stopped   | success   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_10-52-29 | 2026-09-24_10-59-02 | 00h06m33s | manual    | success   | success   | stopped   | success   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_10-48-49 | 2026-09-24_10-48-56 | 00h00m07s | manual    | success   | success   | success   | skipped   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 27% | success    |
+| 2026-09-24_10-48-31 | 2026-09-24_10-48-33 | 00h00m02s | manual    | success   | success   | stopped   | -         |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_10-45-00 | 2026-09-24_10-45-06 | 00h00m06s | manual    | success   | success   | success   | skipped   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 27% | success    |
+| 2026-09-24_10-32-23 | 2026-09-24_10-44-17 | 00h11m54s | manual    | success   | success   | stopped   | -         |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_10-19-26 | 2026-09-24_10-20-48 | 00h01m22s | manual    | success   | success   | failure   | failure   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 27% | failure    |
+| 2026-09-24_10-00-17 | 2026-09-24_10-01-37 | 00h01m20s | manual    | success   | success   | stopped   | failure   |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_09-47-04 | 2026-09-24_09-47-23 | 00h00m19s | manual    | success   | success   | failure   | failure   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 27% | failure    |
+| 2026-09-24_09-39-36 | 2026-09-24_09-39-46 | 00h00m10s | manual    | success   | success   | stopped   | -         |       0 MiB |  0.0 TiB |  0.0 TiB |  [..................]  0% | stopped    |
+| 2026-09-24_01-00-39 | 2026-09-24_01-01-14 | 00h00m35s | system    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+| 2026-09-23_01-00-39 | 2026-09-23_01-01-13 | 00h00m34s | system    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+| 2026-09-22_07-43-09 | 2026-09-22_07-43-58 | 00h00m49s | manual    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+| 2026-09-22_01-00-39 | 2026-09-22_01-01-12 | 00h00m33s | system    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+| 2026-09-21_01-00-39 | 2026-09-21_01-01-12 | 00h00m33s | system    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+| 2026-09-20_01-00-39 | 2026-09-20_01-01-12 | 00h00m33s | system    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+| 2026-09-19_01-00-39 | 2026-09-19_01-01-12 | 00h00m33s | system    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+| 2026-09-18_14-41-52 | 2026-09-18_14-42-37 | 00h00m45s | manual    | success   | success   | success   | skipped   |       0 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
+| 2026-09-18_14-08-49 | 2026-09-18_14-24-56 | 00h16m07s | manual    | success   | success   | stopped   | stopped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | stopped    |
+| 2026-09-18_12-46-02 | 2026-09-18_12-46-37 | 00h00m35s | manual    | success   | success   | success   | skipped   |       1 MiB |  1.0 TiB |  2.7 TiB |  [####..............] 26% | success    |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+
+== macmini-may list ==
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_01-00-39 | 2026-09-24_01-01-51 | 00h01m12s | system    | success   | success   | success   | skipped   |      46 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
+| 2026-09-23_01-00-39 | 2026-09-23_01-01-51 | 00h01m12s | system    | success   | success   | success   | skipped   |      37 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
+| 2026-09-22_01-00-39 | 2026-09-22_01-01-50 | 00h01m11s | system    | success   | success   | success   | skipped   |      31 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
+| 2026-09-21_01-00-39 | 2026-09-21_01-01-51 | 00h01m12s | system    | success   | success   | success   | skipped   |      22 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
+| 2026-09-20_01-00-39 | 2026-09-20_01-01-51 | 00h01m12s | system    | success   | success   | success   | skipped   |      13 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
+| 2026-09-19_01-00-39 | 2026-09-19_01-01-52 | 00h01m13s | system    | success   | success   | success   | skipped   |     283 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
+| 2026-09-18_15-21-39 | 2026-09-18_17-47-07 | 02h25m28s | manual    | success   | success   | success   | success   |      58 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
+| 2026-09-18_14-41-52 | 2026-09-18_14-43-12 | 00h01m20s | manual    | success   | success   | success   | skipped   |       0 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
+| 2026-09-18_14-08-49 | 2026-09-18_14-25-08 | 00h16m19s | manual    | success   | success   | stopped   | stopped   |      58 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | stopped    |
+| 2026-09-18_12-46-02 | 2026-09-18_12-46-48 | 00h00m46s | manual    | success   | success   | success   | skipped   |      58 MiB |  4.2 TiB |  4.9 TiB |  [########..........] 46% | success    |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+
+== macmini-meg list ==
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_01-00-39 | 2026-09-24_01-01-42 | 00h01m03s | system    | success   | success   | success   | skipped   |       4 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | success    |
+| 2026-09-23_01-00-39 | 2026-09-23_01-01-43 | 00h01m04s | system    | success   | success   | success   | skipped   |       4 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | success    |
+| 2026-09-22_01-00-39 | 2026-09-22_01-01-44 | 00h01m05s | system    | success   | success   | success   | skipped   |       4 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | success    |
+| 2026-09-21_01-00-39 | 2026-09-21_01-01-43 | 00h01m04s | system    | success   | success   | success   | skipped   |       4 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | success    |
+| 2026-09-20_01-00-39 | 2026-09-20_01-01-39 | 00h01m00s | system    | success   | success   | success   | skipped   |       4 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | success    |
+| 2026-09-19_01-00-39 | 2026-09-19_01-01-44 | 00h01m05s | system    | success   | success   | success   | skipped   |       4 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | success    |
+| 2026-09-18_14-41-52 | 2026-09-18_14-43-08 | 00h01m16s | manual    | success   | success   | success   | skipped   |       1 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | success    |
+| 2026-09-18_14-08-49 | 2026-09-18_14-25-29 | 00h16m40s | manual    | success   | success   | stopped   | stopped   |       5 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | stopped    |
+| 2026-09-18_12-46-02 | 2026-09-18_12-46-52 | 00h00m50s | manual    | success   | success   | success   | skipped   |       5 MiB |  4.1 TiB |  1.4 TiB |  [#############.....] 74% | success    |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+
+== raspbpi-jen list ==
+
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+| STARTED (RUN-ID)    | FINISHED            |  DURATION | TRIGGER   | PRIMARY   | SECONDARY | TERTIARY  | SCRUB     |       DELTA |     SIZE |     FREE |                      USED | RESULT     |
++=====================+=====================+===========+===========+===========+===========+===========+===========+=============+==========+==========+===========================+============+
+| 2026-09-24_01-00-03 | 2026-09-24_01-00-34 | 00h00m31s | system    | success   | success   | -         | -         |       1 MiB |        - |        - |                         - | success    |
+| 2026-09-23_01-00-03 | 2026-09-23_01-00-34 | 00h00m31s | system    | success   | success   | -         | -         |       1 MiB |        - |        - |                         - | success    |
+| 2026-09-22_01-00-03 | 2026-09-22_01-00-34 | 00h00m31s | system    | success   | success   | -         | -         |       1 MiB |        - |        - |                         - | success    |
+| 2026-09-21_01-00-03 | 2026-09-21_01-00-34 | 00h00m31s | system    | success   | success   | -         | -         |       1 MiB |        - |        - |                         - | success    |
+| 2026-09-20_01-00-03 | 2026-09-20_01-00-34 | 00h00m31s | system    | success   | success   | -         | -         |       1 MiB |        - |        - |                         - | success    |
+| 2026-09-19_01-00-03 | 2026-09-19_01-00-36 | 00h00m33s | system    | success   | success   | -         | -         |       1 MiB |        - |        - |                         - | success    |
+| 2026-09-18_14-41-52 | 2026-09-18_14-42-18 | 00h00m26s | manual    | success   | success   | -         | -         |       0 MiB |        - |        - |                         - | success    |
+| 2026-09-18_14-08-49 | 2026-09-18_14-09-27 | 00h00m38s | manual    | success   | success   | -         | -         |       1 MiB |        - |        - |                         - | success    |
+| 2026-09-18_12-46-02 | 2026-09-18_12-46-38 | 00h00m36s | manual    | success   | success   | -         | -         |       1 MiB |        - |        - |                         - | success    |
++---------------------+---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-------------+----------+----------+---------------------------+------------+
+
+graham@macbook-rue:~/Code/asystem/src/all/supervisor$ abackups 
+Usage: backups.sh [command] [options]
+
+  start    start runs on all hosts, then follow them until interrupted
+  stop     stop every active run on every host
+  tail     follow every host's newest run until interrupted
+  list     list every host's run history
+  help     this text, default command when given none
+
+  --scrub  scrub each host's backup disk
+graham@macbook-rue:~/Code/asystem/src/all/supervisor$ abackups stop
+
+== macmini-mad stop ==
+
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:56:32 INFO  backup                                     stop            0ms reported [2026-09-24_01-00-35] carries no active stage, so there is nothing to stop
+
+== macmini-max stop ==
+
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:56:32 INFO  backup                                     stop            0ms reported [2026-09-24_11-04-13] carries no active stage, so there is nothing to stop
+
+== macmini-may stop ==
+
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:56:32 INFO  backup                                     stop            0ms reported [2026-09-24_01-00-39] carries no active stage, so there is nothing to stop
+
+== macmini-meg stop ==
+
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:56:33 INFO  backup                                     stop            0ms reported [2026-09-24_01-00-39] carries no active stage, so there is nothing to stop
+
+== raspbpi-jen stop ==
+
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:56:34 INFO  backup                                     stop            1ms reported [2026-09-24_01-00-03] carries no active stage, so there is nothing to stop
+
+graham@macbook-rue:~/Code/asystem/src/all/supervisor$ abackups start
+
+== *******-*** start ==
+
+[INFO           11:57:48] dispatched run [2026-09-24_11-57-48] to [macmini-mad] with timeout [13] hours and scrub [off]
+[INFO           11:57:48] dispatched run [2026-09-24_11-57-48] to [macmini-max] with timeout [13] hours and scrub [off]
+[INFO           11:57:48] dispatched run [2026-09-24_11-57-48] to [macmini-may] with timeout [13] hours and scrub [off]
+[INFO           11:57:49] dispatched run [2026-09-24_11-57-48] to [macmini-meg] with timeout [13] hours and scrub [off]
+[INFO           11:57:50] dispatched run [2026-09-24_11-57-48] to [raspbpi-jen] with timeout [13] hours and scrub [off]
+
+== macmini-mad tail ==
+
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:57:55 INFO  backup                                     start           0ms followed [2026-09-24_11-57-48] tracking this run under [/home/asystem/supervisor/backup/2026-09-24_11-57-48]
+TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION VERB     DETAIL
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [10.200.1709] version [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [macmini-mad] host [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [/host] mount [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [vernemq.local.janeandgraham.com] broker host [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [32404] broker port [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [***] broker token [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [influxdb3.local.janeandgraham.com] database host [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [32420] database port [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [home] database name [env]
+09-24T11:57:48 INFO  config                                     resolve         0ms resolved [***] database token [env]
+09-24T11:57:48 INFO  backup           host/macmini-mad          start           0ms schedule [2026-09-24_11-57-48] backup run over [3] stages triggered by [manual]
+09-24T11:57:48 INFO  backup           stage/primary             start           0ms starting [2026-09-24_11-57-48] stage [primary] timeout [00:57:48]
+09-24T11:57:48 INFO  backup           stage/primary             start           0ms enrolled [6] configured services, of which [3] ship a backup.sh
+09-24T11:57:48 INFO  backup           service/plex              start           0ms starting [plex] started [1/3]
+09-24T11:58:06 INFO  backup           service/plex              stop            17s finished [plex] finished as [success], kind [full], version [10.200.1621], size [485] MiB
+09-24T11:58:06 INFO  backup           service/postgres          start           0ms starting [postgres] started [2/3]
+09-24T11:59:07 INFO  backup           service/postgres          stop            61s finished [postgres] finished as [success], kind [full], version [10.200.1702], size [545] MiB
+09-24T11:59:07 INFO  backup           service/wrangle           start           0ms starting [wrangle] started [3/3]
+09-24T11:59:07 INFO  backup           service/wrangle           stop           61ms finished [wrangle] finished as [success], kind [full], version [10.200.1493], size [0] MiB
+09-24T11:59:07 INFO  backup           stage/primary             stop            0ms reported [3] services attempted with [0] failed
+09-24T11:59:07 INFO  backup           stage/primary             stop            79s finished [2026-09-24_11-57-48] stage [primary] finished as [success], [1030] MiB at [ 13] MiB/s
+09-24T11:59:07 INFO  backup           stage/secondary           start           0ms starting [2026-09-24_11-57-48] stage [secondary] timeout [00:57:48]
+09-24T11:59:07 INFO  backup           stage/secondary           start           0ms resolved [/share/10] resolved share
+09-24T11:59:07 INFO  backup           stage/secondary           start           0ms promoted [4] services promoting to [/share/10/backup]
+09-24T11:59:07 INFO  backup           service/supervisor        start           0ms promoted [supervisor] promoting [1/4] from [/home/asystem/supervisor/backup/] to [/share/10/backup/supervisor/macmini-mad]
+09-24T11:59:07 INFO  backup           service/supervisor        stop           59ms promoted [supervisor] promoted in [0s], running total [0] MiB
+09-24T11:59:07 INFO  backup           service/supervisor        compute         0ms thinning [/share/10/backup/supervisor/macmini-mad] thinning with the generic pruner, the module ships none
+09-24T11:59:07 INFO  backup                                     remove          0ms expunged [2026-09-18_12-46-02] pruned from [/share/10/backup/supervisor/macmini-mad] outside the grandfather father son window
+09-24T11:59:07 INFO  backup                                     remove          0ms expunged [2026-09-18_14-08-49] pruned from [/share/10/backup/supervisor/macmini-mad] outside the grandfather father son window
+09-24T11:59:07 INFO  backup                                     remove          0ms expunged [2026-09-18_14-41-52] pruned from [/share/10/backup/supervisor/macmini-mad] outside the grandfather father son window
+09-24T11:59:07 INFO  backup           service/plex              start           0ms promoted [plex] promoting [2/4] from [/home/asystem/plex/backup/] to [/share/10/backup/plex]
+09-24T11:59:08 INFO  backup           service/plex              stop          811ms promoted [plex] promoted in [1s], running total [1457] MiB
+09-24T11:59:08 INFO  backup           service/plex              compute         0ms thinning [/share/10/backup/plex] thinning with the module pruner
+09-24T11:59:08 INFO  backup           service/postgres          start           0ms promoted [postgres] promoting [3/4] from [/home/asystem/postgres/backup/] to [/share/10/backup/postgres]
+09-24T11:59:09 INFO  backup           service/postgres          stop          919ms promoted [postgres] promoted in [1s], running total [2920] MiB
+09-24T11:59:09 INFO  backup           service/postgres          compute         0ms thinning [/share/10/backup/postgres] thinning with the module pruner
+09-24T11:59:09 INFO  backup           service/wrangle           start           0ms promoted [wrangle] promoting [4/4] from [/home/asystem/wrangle/backup/] to [/share/10/backup/wrangle]
+09-24T11:59:09 INFO  backup           service/wrangle           stop           46ms promoted [wrangle] promoted in [0s], running total [2920] MiB
+09-24T11:59:09 INFO  backup           service/wrangle           compute         0ms thinning [/share/10/backup/wrangle] thinning with the module pruner
+09-24T11:59:10 INFO  backup                                     compute         0ms resolved [/share/10] btrfs cannot identify this path from in here, measuring it with df for the rest of this run
+09-24T11:59:10 INFO  backup           stage/secondary           stop         3018ms finished [2026-09-24_11-57-48] stage [secondary] finished as [success], [2920] MiB at [973] MiB/s
+09-24T11:59:10 INFO  backup           stage/tertiary            start           0ms starting [2026-09-24_11-57-48] stage [tertiary] timeout [00:57:48]
+09-24T11:59:10 INFO  backup                                     start           0ms mounting [/backup] mounting
+09-24T11:59:12 INFO  backup           stage/tertiary            start           0ms mirrored [/share/10] mirroring to [/backup/share/10]
+09-24T11:59:20 INFO  backup           stage/tertiary            stop         7887ms mirrored [/share/10] mirrored in [8s], running total [1575] MiB
+09-24T11:59:20 INFO  backup           stage/tertiary            start           0ms mirrored [/share/11] mirroring to [/backup/share/11]
+09-24T11:59:22 INFO  backup           stage/tertiary            compute         2ms mirrored mirrored [   0] GiB of [  20] GiB at [  -] MiB/s at [ 0] percent complete
+09-24T11:59:24 INFO  backup           stage/tertiary            stop         3285ms mirrored [/share/11] mirrored in [3s], running total [1575] MiB
+09-24T11:59:24 INFO  backup           stage/tertiary            start           0ms mirrored [/share/12] mirroring to [/backup/share/12]
+09-24T11:59:25 INFO  backup           stage/tertiary            stop         1322ms mirrored [/share/12] mirrored in [1s], running total [1575] MiB
+09-24T11:59:38 INFO  backup           stage/tertiary            compute         0ms snapshot [/backup/share/10] snapshotted to [/backup/.snapshots/share/10/2026-09-24_11-57-48]
+09-24T11:59:38 INFO  backup                                     remove          0ms expunged [2026-09-18_14-41-52] pruned from [/backup/.snapshots/share/10] outside the grandfather father son window
+09-24T11:59:39 INFO  backup           stage/tertiary            compute         0ms snapshot [/backup/share/11] snapshotted to [/backup/.snapshots/share/11/2026-09-24_11-57-48]
+09-24T11:59:39 INFO  backup                                     remove          0ms expunged [2026-09-18_14-41-52] pruned from [/backup/.snapshots/share/11] outside the grandfather father son window
+09-24T11:59:39 INFO  backup           stage/tertiary            compute         0ms snapshot [/backup/share/12] snapshotted to [/backup/.snapshots/share/12/2026-09-24_11-57-48]
+09-24T11:59:39 INFO  backup                                     remove          0ms expunged [2026-09-18_14-41-52] pruned from [/backup/.snapshots/share/12] outside the grandfather father son window
+09-24T11:59:39 INFO  backup           stage/tertiary            start          23ms scrubbed [/backup] scrub [resume] at [00:42:48], polling every [30s]
+
+09-24T12:00:11 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 698] GiB of [7518] GiB at [  -] MiB/s at [ 9] percent complete
+09-24T12:00:41 INFO  backup           stage/tertiary            compute         0ms scrubbed scrubbed [ 705] GiB of [7519] GiB at [  -] MiB/s at [ 9] percent complete
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 code review entire patch which is not in git yet. Make sure project guidleines are followed. Check for simplications, dead code, unit tests gaps, unit tests arent valuable. reorganise struct/var/funcs by project guidleines eg func publishRunStatus( comes before BackupReaperState. group const appropriately and have correct/consistent prefixes.
 
 
-
-
-
-
-
-
-
-
-show when dmesg message will age out in 24 hr time
-12:40:24 DEBUG probe[logs]      host/failed_log_messages  sample          5ms measured [1] kernel errors, first [2026-09-18T13:16:17+08:00] last [2026-09-18T13:16:17+08:00] ageing out at [2026-09-18T13:16:17+08:00]
 
 
 put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols

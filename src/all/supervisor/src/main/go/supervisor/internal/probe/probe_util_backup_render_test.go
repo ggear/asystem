@@ -1,12 +1,15 @@
 package probe
 
 import (
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 )
 
 func TestProbeUtilBackupRender_RateIsUnknownBelowThreePoints(t *testing.T) {
@@ -148,5 +151,150 @@ func TestProbeUtilBackupRender_BoundedStatesWhetherTheEstimateBeatsTheDeadline(t
 				t.Errorf("backupBounded() = %q, want %q", got, test.expected)
 			}
 		})
+	}
+}
+
+func TestProbeUtilBackupRender_AProgressLineFitsOneDetailColumn(t *testing.T) {
+	tests := []struct {
+		name     string
+		verb     string
+		copied   reading
+		total    reading
+		percent  reading
+		remains  reading
+		rate     reading
+		deadline time.Time
+	}{
+		{name: "every_field_at_its_widest", verb: backupVerb(metric.BackupStageTertiary), copied: intReading(9999),
+			total: intReading(9999), percent: intReading(100), remains: intReading(9999), rate: intReading(999),
+			deadline: time.Date(2026, 9, 24, 23, 59, 59, 0, time.Local)},
+		{name: "a_deadline_it_will_miss", verb: backupVerb(metric.BackupStageTertiary), copied: intReading(9999),
+			total: intReading(9999), percent: intReading(100), remains: intReading(9999), rate: intReading(999),
+			deadline: time.Date(2026, 9, 24, 12, 6, 0, 0, time.Local)},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			now := time.Date(2026, 9, 24, 12, 5, 53, 0, time.Local)
+			line := backupProgressed(testCase.verb, testCase.copied, testCase.total, testCase.percent, testCase.remains,
+				backupEta(now, testCase.remains), testCase.rate, backupBounded(now, testCase.remains, testCase.deadline))
+			if len(line) > scribe.Detailed() {
+				t.Errorf("progress line is [%d] characters against a [%d] detail column, so it wraps\n%s",
+					len(line), scribe.Detailed(), line)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupRender_ScrubWordSeparatesAResumedPassFromAFreshOne(t *testing.T) {
+	tests := []struct {
+		name     string
+		document scrubSummary
+		expected string
+	}{
+		{name: "a_fresh_pass_is_running", document: scrubSummary{State: metric.BackupStateRunning}, expected: metric.BackupStateRunning},
+		{name: "a_resumed_pass_says_so", document: scrubSummary{State: metric.BackupStateRunning, ResumedBool: true}, expected: backupResumedCell},
+		{name: "a_finished_pass_keeps_its_state", document: scrubSummary{State: metric.BackupStateSuccess, ResumedBool: true}, expected: metric.BackupStateSuccess},
+		{name: "an_empty_state_is_unknown", document: scrubSummary{}, expected: backupUnknownState},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if word := scrubWord(testCase.document); word != testCase.expected {
+				t.Errorf("scrubWord() = %q, want %q", word, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupRender_TailDropsTheHeaderTheStreamedLogCarries(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "run.log")
+	header := scribe.Header()
+	body := header + "\n09-24T12:50:34 INFO  backup   host   start   0ms starting [a run]\n"
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatalf("write run log: %v", err)
+	}
+	printed, offset := capturedStdout(t, func() int64 { return tailLog(path, 0) })
+	if strings.Contains(printed, "DETAIL") {
+		t.Errorf("tailLog() printed a second header\n%s", printed)
+	}
+	if !strings.Contains(printed, "starting [a run]") {
+		t.Errorf("tailLog() dropped the line it was following\n%s", printed)
+	}
+	if offset != int64(len(body)) {
+		t.Errorf("tailLog() = %d, want the whole file consumed at %d", offset, len(body))
+	}
+	if _, again := capturedStdout(t, func() int64 { return tailLog(path, offset) }); again != offset {
+		t.Errorf("tailLog() moved past the end of the file")
+	}
+	if err := os.WriteFile(path, []byte(body+"09-24T12:50:35 INFO  backup   host   start   0ms half a li"), 0o644); err != nil {
+		t.Fatalf("append partial line: %v", err)
+	}
+	printed, held := capturedStdout(t, func() int64 { return tailLog(path, offset) })
+	if printed != "" || held != offset {
+		t.Errorf("tailLog() = (%q, %d), want a line still being written withheld until its newline arrives", printed, held)
+	}
+}
+
+func capturedStdout(t *testing.T, body func() int64) (string, int64) {
+	t.Helper()
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	original := os.Stdout
+	os.Stdout = writer
+	offset := body()
+	os.Stdout = original
+	_ = writer.Close()
+	printed, _ := io.ReadAll(reader)
+	return string(printed), offset
+}
+
+func TestProbeUtilBackupRender_AnUnmeasuredBackupDiskRendersNoSizeFreeOrUsed(t *testing.T) {
+	tests := []struct {
+		name          string
+		diskTotalMB   int
+		diskUsedMB    int
+		diskUsagePerc float64
+		expectedCells int
+	}{
+		{name: "a_stage_that_measured_the_disk", diskTotalMB: 900, diskUsedMB: 700, diskUsagePerc: 77.8},
+		{name: "a_stage_that_never_mounted_it", expectedCells: 3},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root, run := t.TempDir(), "2026-09-22_01-00-00"
+			path := stageStatusPath(backupRunPath(root, run), metric.BackupStageTertiary)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatalf("mkdir stage: %v", err)
+			}
+			if err := writeAtomic(path, backupSummary{RunID: run, State: metric.BackupStateSuccess, SizeMB: 12,
+				DiskTotalMB: testCase.diskTotalMB, DiskUsedMB: testCase.diskUsedMB, DiskUsagePerc: testCase.diskUsagePerc}); err != nil {
+				t.Fatalf("write stage: %v", err)
+			}
+			row := backupListRow(root, run)
+			columns := strings.Split(row, "|")
+			unknown := 0
+			for _, column := range columns[len(columns)-5 : len(columns)-2] {
+				if strings.TrimSpace(column) == backupUnknownCell {
+					unknown++
+				}
+			}
+			if unknown != testCase.expectedCells {
+				t.Errorf("backupListRow() = %q, want [%d] of SIZE, FREE and USED unreported, got [%d]",
+					row, testCase.expectedCells, unknown)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupRender_ARunWithNoDocumentAtAllReportsNoResult(t *testing.T) {
+	root, run := t.TempDir(), "2026-09-22_01-00-00"
+	if err := os.MkdirAll(backupRunPath(root, run), 0o755); err != nil {
+		t.Fatalf("mkdir run: %v", err)
+	}
+	row := backupListRow(root, run)
+	columns := strings.Split(row, "|")
+	if result := strings.TrimSpace(columns[len(columns)-2]); result != backupUnknownCell {
+		t.Errorf("backupListRow() RESULT = %q, want %q rather than a success over nothing", result, backupUnknownCell)
 	}
 }
