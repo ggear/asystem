@@ -120,18 +120,31 @@ func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, ma
 	return nil
 }
 
-func EnableStdoutAndFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
+func EnableStdoutAndFile(level slog.Level, cmd, version, kept string, maxSizeMB, maxBackups, maxAgeDays int) error {
 	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
+	}
+	writers := []io.Writer{os.Stdout, writer}
+	var keptLog *os.File
+	if kept != "" {
+		if err := os.MkdirAll(filepath.Dir(kept), 0755); err != nil {
+			_ = writer.Close()
+			return fmt.Errorf("create kept log directory failed [%s] [%w]", filepath.Dir(kept), err)
+		}
+		keptLog, err = os.OpenFile(kept, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			_ = writer.Close()
+			return fmt.Errorf("open kept log failed [%s] [%w]", kept, err)
+		}
+		writers = append(writers, keptLog)
 	}
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout+file"
-	multi := io.MultiWriter(os.Stdout, writer)
-	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: multi, sink: sinkFile()})
+	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: io.MultiWriter(writers...), sink: sinkFile()})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)

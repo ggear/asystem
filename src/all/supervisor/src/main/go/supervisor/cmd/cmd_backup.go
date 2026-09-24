@@ -81,7 +81,7 @@ func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
 		defer func() { _ = closer.Close() }()
 	case request.Command == engine.BackupCommandStart:
 		if enableErr := scribe.EnableStdoutAndFile(level, backupCommandName, config.ResolvedVersion(request.Config),
-			logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {
+			engine.BackupRunLog(request), logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {
 			return fmt.Errorf("file logging could not be enabled [%w]", enableErr)
 		}
 	default:

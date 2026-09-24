@@ -80,6 +80,8 @@ func serviceHomeDir(service string) string {
 
 func lockPath(root string) string { return filepath.Join(root, treeLockLeaf) }
 
+func runLogPath(runPath string) string { return filepath.Join(runPath, treeRunLogLeaf) }
+
 func statusPath(runPath string) string { return filepath.Join(runPath, treeStatusLeaf) }
 
 func stageDir(runPath string, stage metric.BackupStage) string {
@@ -140,6 +142,7 @@ const (
 	treeScrubLeaf  = "scrub.json"
 	treeLogLeaf    = "output.log"
 	treeLockLeaf   = ".lock"
+	treeRunLogLeaf = "run.log"
 )
 
 var treeRunPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`)

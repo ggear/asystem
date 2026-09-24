@@ -47,7 +47,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	_ = os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), fmt.Appendf(nil, "%d", deviceID(config.DirBackup)), 0o644)
 	expected := expectedMirrorBytes(ctx, filepath.Dir(request.RunPath), request.RunID)
 	counters.addTotal(int(expected / bytesPerMebibyte))
-	stopProgress := reportMirrorProgress(ctx, usedBytes(ctx, config.DirBackup), expected)
+	stopProgress := reportMirrorProgress(ctx, usedBytes(ctx, config.DirBackup), expected, request.Expires)
 	defer stopProgress()
 
 	failed := false
@@ -111,7 +111,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	return result, nil
 }
 
-func reportMirrorProgress(ctx context.Context, opened, expected int64) func() {
+func reportMirrorProgress(ctx context.Context, opened, expected int64, deadline time.Time) func() {
 	progressCtx, stop := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
@@ -130,7 +130,7 @@ func reportMirrorProgress(ctx context.Context, opened, expected int64) func() {
 				remaining := mirrorRemaining(moved, expected, rate)
 				scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionCompute).Infof("mirrored", now,
 					"%s", backupProgressed(backupVerb(metric.BackupStageTertiary), intReading(moved/bytesPerGibibyte), mirrorTotal(expected),
-						mirrorPercent(moved, expected), remaining, backupEta(now, remaining), rate))
+						mirrorPercent(moved, expected), remaining, backupEta(now, remaining), rate, backupBounded(now, remaining, deadline)))
 			}
 		}
 	}()

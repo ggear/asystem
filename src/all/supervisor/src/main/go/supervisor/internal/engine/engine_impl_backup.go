@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,9 +19,22 @@ func BackupPrepared(request BackupRequest) (BackupRequest, error) {
 
 func BackupStageLog(request BackupRequest) string { return probe.BackupStageLog(request) }
 
+func BackupRunLog(request BackupRequest) string { return probe.BackupRunLog(request) }
+
 func RunBackup(request BackupRequest) error {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(signals)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		select {
+		case <-signals:
+			fmt.Println()
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
 	return probe.Backup(ctx, request)
 }
 

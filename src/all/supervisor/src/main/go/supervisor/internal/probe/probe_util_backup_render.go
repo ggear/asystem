@@ -2,7 +2,9 @@ package probe
 
 import (
 	"fmt"
+	"io"
 	"math"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -47,20 +49,40 @@ func runBackupTail(request BackupRequest) error {
 		}
 		return false
 	}
-	fmt.Println()
-	for _, heading := range backupHeading() {
-		fmt.Println(heading)
-	}
+	offset := int64(0)
 	for {
-		fmt.Println(backupListRow(root, runID))
+		offset = tailLog(runLogPath(backupRunPath(root, runID)), offset)
 		if !running() {
 			break
 		}
 		time.Sleep(backupTailPoll)
 	}
+	offset = tailLog(runLogPath(backupRunPath(root, runID)), offset)
+	fmt.Println()
+	for _, heading := range backupHeading() {
+		fmt.Println(heading)
+	}
+	fmt.Println(backupListRow(root, runID))
 	fmt.Println(backupRule("+", '-'))
 	fmt.Println()
 	return nil
+}
+
+func tailLog(path string, offset int64) int64 {
+	file, err := os.Open(path)
+	if err != nil {
+		return offset
+	}
+	defer func() { _ = file.Close() }()
+	if _, err := file.Seek(offset, io.SeekStart); err != nil {
+		return offset
+	}
+	data, err := io.ReadAll(file)
+	if err != nil || len(data) == 0 {
+		return offset
+	}
+	fmt.Print(string(data))
+	return offset + int64(len(data))
 }
 
 func backupHeading() []string {
@@ -209,7 +231,17 @@ func latestFinished(snapshot *backupSnapshot) time.Time {
 	return latest
 }
 
-func backupProgressed(verb string, copied, total, percent, remaining reading, eta string, rate reading) string {
+func backupBounded(now time.Time, remaining reading, deadline time.Time) string {
+	if !remaining.Known() || remaining.Value() < 0 || deadline.IsZero() {
+		return ""
+	}
+	if now.Add(time.Duration(remaining.Rounded()) * time.Minute).After(deadline) {
+		return fmt.Sprintf(" BEYOND timeout time [%s]", deadline.Format(backupTimeFormat))
+	}
+	return fmt.Sprintf(" within timeout time [%s]", deadline.Format(backupTimeFormat))
+}
+
+func backupProgressed(verb string, copied, total, percent, remaining reading, eta string, rate reading, bounded string) string {
 	last := 0
 	if total.known {
 		last = 1
@@ -234,7 +266,7 @@ func backupProgressed(verb string, copied, total, percent, remaining reading, et
 		line += fmt.Sprintf(" at [%s] percent complete", backupPercent(percent))
 	}
 	if last >= 4 {
-		line += fmt.Sprintf(" and estimated to complete in [%s] min at [%s]", backupMinutes(remaining), eta)
+		line += fmt.Sprintf(" and estimated to complete in [%s] min at [%s]%s", backupMinutes(remaining), eta, bounded)
 	}
 	return line
 }

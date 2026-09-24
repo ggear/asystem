@@ -65,12 +65,14 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 	reached := 0.0
 	silent := 0
 	halt := ""
+	cancelled := false
 	samples := newSampleRing(ringPoints, ringQuantum)
 	var lastReading scrubReading
 	for {
 		select {
 		case <-ctx.Done():
 			cancelScrub(ctx)
+			cancelled = true
 			goto finished
 		case <-time.After(scrubPollInterval):
 		}
@@ -109,7 +111,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		remaining := scrubRemaining(reading, reached, rate)
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("scrubbed", now,
 			"%s", backupProgressed("scrubbed", intReading(int64(reading.scrubbedMB)/mebibytesPerGibibyte), scrubTotal(reading, reached),
-				scrubPercent(reached), remaining, backupEta(now, remaining), rate))
+				scrubPercent(reached), remaining, backupEta(now, remaining), rate, backupBounded(now, remaining, hard)))
 		if !reading.running {
 			break
 		}
@@ -121,7 +123,7 @@ finished:
 		lastReading = final
 	}
 	if halt == "" {
-		halt = scrubHalt(stagePath)
+		halt = scrubHalt(stagePath, cancelled)
 	}
 	if lastReading.progress == 0 {
 		lastReading.progress = reached
@@ -193,11 +195,14 @@ func scrubAction(forced bool, trigger, status string, now time.Time) (action, re
 	return "start", ""
 }
 
-func scrubHalt(stagePath string) string {
+func scrubHalt(stagePath string, cancelled bool) string {
 	if _, err := os.Stat(filepath.Join(stagePath, stageTimedOutMarker)); err == nil {
 		return metric.BackupStateTimeout
 	}
 	if _, err := os.Stat(filepath.Join(stagePath, stageStoppedMarker)); err == nil {
+		return metric.BackupStateStopped
+	}
+	if cancelled {
 		return metric.BackupStateStopped
 	}
 	return ""
@@ -214,7 +219,11 @@ func scrubTotal(reading scrubReading, reached float64) reading {
 	if reached <= 0 {
 		return unknownReading()
 	}
-	return intReading(int64(float64(reading.scrubbedMB)*100/math.Round(reached)) / mebibytesPerGibibyte)
+	scrubbed := int64(reading.scrubbedMB) / mebibytesPerGibibyte
+	if math.Round(reached) >= 100 {
+		return intReading(scrubbed)
+	}
+	return intReading(int64(float64(reading.scrubbedMB)*100/reached) / mebibytesPerGibibyte)
 }
 
 func scrubPercent(reached float64) reading {

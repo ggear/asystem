@@ -70,6 +70,13 @@ func BackupPrepared(request BackupRequest) (BackupRequest, error) {
 	return request, nil
 }
 
+func BackupRunLog(request BackupRequest) string {
+	if request.RunID == "" {
+		return ""
+	}
+	return runLogPath(backupRunPath(backupRunRoot(), request.RunID))
+}
+
 func BackupStageLog(request BackupRequest) string {
 	return stageLogPath(backupRunPath(backupRunRoot(), request.RunID), request.Stage)
 }

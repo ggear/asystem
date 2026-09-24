@@ -87,7 +87,7 @@ func TestProbeUtilBackupRender_ProgressCutsTheLineAtTheLastMeasuredField(t *test
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			got := backupProgressed(backupVerb(metric.BackupStageTertiary), intReading(5), testCase.total, testCase.percent, testCase.remain,
-				backupEta(time.Now(), testCase.remain), testCase.rate)
+				backupEta(time.Now(), testCase.remain), testCase.rate, "")
 			if got != testCase.expected {
 				t.Errorf("backupProgressed() = %q, want %q", got, testCase.expected)
 			}
@@ -123,5 +123,30 @@ func TestProbeUtilBackupRender_EveryRowCarriesOneCellPerDeclaredColumn(t *testin
 	}
 	if got := cells(backupListRow(root, run)); got != len(backupListWidths) {
 		t.Errorf("backupListRow() carries %d cells, want %d", got, len(backupListWidths))
+	}
+}
+
+func TestProbeUtilBackupRender_BoundedStatesWhetherTheEstimateBeatsTheDeadline(t *testing.T) {
+	now := time.Date(2026, 9, 24, 10, 54, 19, 0, time.Local)
+	deadline := now.Add(2 * time.Hour)
+	cases := []struct {
+		name      string
+		remaining reading
+		deadline  time.Time
+		expected  string
+	}{
+		{name: "an_estimate_inside_the_deadline_is_within", remaining: floatReading(78), deadline: deadline,
+			expected: " within timeout time [12:54:19]"},
+		{name: "an_estimate_past_the_deadline_is_beyond", remaining: floatReading(200), deadline: deadline,
+			expected: " BEYOND timeout time [12:54:19]"},
+		{name: "no_estimate_states_nothing", remaining: unknownReading(), deadline: deadline},
+		{name: "no_deadline_states_nothing", remaining: floatReading(78)},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := backupBounded(now, test.remaining, test.deadline); got != test.expected {
+				t.Errorf("backupBounded() = %q, want %q", got, test.expected)
+			}
+		})
 	}
 }

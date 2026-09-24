@@ -182,13 +182,16 @@ func TestProbeUtilBackupStageScrub_ActionScrubsOnlyWhenAskedOrDue(t *testing.T) 
 
 func TestProbeUtilBackupStageScrub_HaltReadsTheMarkerTheStageLeft(t *testing.T) {
 	tests := []struct {
-		name     string
-		marker   string
-		expected string
+		name      string
+		marker    string
+		cancelled bool
+		expected  string
 	}{
-		{name: "no_marker_is_no_halt", expected: ""},
+		{name: "no_marker_and_no_cancel_is_no_halt", expected: ""},
 		{name: "a_timed_out_marker", marker: stageTimedOutMarker, expected: metric.BackupStateTimeout},
 		{name: "a_stopped_marker", marker: stageStoppedMarker, expected: metric.BackupStateStopped},
+		{name: "an_interrupt_leaves_no_marker_and_still_halts", cancelled: true, expected: metric.BackupStateStopped},
+		{name: "a_marker_outranks_a_cancel", marker: stageTimedOutMarker, cancelled: true, expected: metric.BackupStateTimeout},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -198,7 +201,7 @@ func TestProbeUtilBackupStageScrub_HaltReadsTheMarkerTheStageLeft(t *testing.T) 
 					t.Fatalf("write marker: %v", err)
 				}
 			}
-			if got := scrubHalt(stagePath); got != testCase.expected {
+			if got := scrubHalt(stagePath, testCase.cancelled); got != testCase.expected {
 				t.Errorf("scrubHalt() = %q, want %q", got, testCase.expected)
 			}
 		})
@@ -257,7 +260,8 @@ func TestProbeUtilBackupStageScrub_TotalAgreesWithTheScrubbedCellAndThePercentag
 		expectedTotal int64
 	}{
 		{name: "a_tail_rounding_to_one_hundred_percent_reports_the_scrubbed_figure", scrubbedMB: 1020417, reached: 99.94, expectedTotal: 996},
-		{name: "a_half_way_pass_scales_by_the_rounded_percentage", scrubbedMB: 512000, reached: 50.0, expectedTotal: 1000},
+		{name: "a_half_way_pass_scales_by_the_percentage", scrubbedMB: 512000, reached: 50.0, expectedTotal: 1000},
+		{name: "an_early_pass_keeps_the_unrounded_percentage_rather_than_shrinking_the_disk", scrubbedMB: 8644, reached: 0.87, expectedTotal: 970},
 		{name: "nothing_scrubbed_yet_is_unknown", scrubbedMB: 0, reached: 0, expectedTotal: 0},
 	}
 	for _, test := range cases {
