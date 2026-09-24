@@ -2,6 +2,7 @@ package probe
 
 import (
 	"context"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -244,6 +245,30 @@ func TestProbeUtilBackupStageScrub_DeadlineLeavesAMarginInsideTheRun(t *testing.
 			got := scrubDeadline(stageRequest{Expires: testCase.expires}, started)
 			if !got.Equal(testCase.expected) {
 				t.Errorf("scrubDeadline() = %s, want %s", got, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupStageScrub_TotalAgreesWithTheRenderedPercentage(t *testing.T) {
+	cases := []struct {
+		name          string
+		scrubbedMB    int
+		reached       float64
+		expectedTotal int64
+	}{
+		{name: "a_tail_rounding_to_one_hundred_reports_the_scrubbed_figure", scrubbedMB: 1020417, reached: 99.94, expectedTotal: 996},
+		{name: "a_half_way_pass_scales_by_the_rounded_percentage", scrubbedMB: 512000, reached: 50.0, expectedTotal: 1000},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			total := scrubTotal(scrubReading{scrubbedMB: test.scrubbedMB}, test.reached)
+			percent := scrubPercent(test.reached)
+			if !total.Known() || total.Rounded() != test.expectedTotal {
+				t.Errorf("scrubTotal: got %v want %d", total.Rounded(), test.expectedTotal)
+			}
+			if got := int64(float64(test.scrubbedMB) / mebibytesPerGibibyte * 100 / float64(percent.Rounded())); total.Rounded() != int64(math.Round(float64(got))) && total.Rounded() != got {
+				t.Errorf("scrubTotal disagrees with rendered percent %d: got %d", percent.Rounded(), total.Rounded())
 			}
 		})
 	}
