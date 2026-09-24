@@ -2,6 +2,9 @@ package engine
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
@@ -15,7 +18,11 @@ func BackupPrepared(request BackupRequest) (BackupRequest, error) {
 
 func BackupStageLog(request BackupRequest) string { return probe.BackupStageLog(request) }
 
-func RunBackup(request BackupRequest) error { return probe.Backup(context.Background(), request) }
+func RunBackup(request BackupRequest) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return probe.Backup(ctx, request)
+}
 
 type (
 	BackupCommand = probe.BackupCommand

@@ -2,7 +2,6 @@ package probe
 
 import (
 	"context"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -250,25 +249,33 @@ func TestProbeUtilBackupStageScrub_DeadlineLeavesAMarginInsideTheRun(t *testing.
 	}
 }
 
-func TestProbeUtilBackupStageScrub_TotalAgreesWithTheRenderedPercentage(t *testing.T) {
+func TestProbeUtilBackupStageScrub_TotalAgreesWithTheScrubbedCellAndThePercentage(t *testing.T) {
 	cases := []struct {
 		name          string
 		scrubbedMB    int
 		reached       float64
 		expectedTotal int64
 	}{
-		{name: "a_tail_rounding_to_one_hundred_reports_the_scrubbed_figure", scrubbedMB: 1020417, reached: 99.94, expectedTotal: 996},
+		{name: "a_tail_rounding_to_one_hundred_percent_reports_the_scrubbed_figure", scrubbedMB: 1020417, reached: 99.94, expectedTotal: 996},
 		{name: "a_half_way_pass_scales_by_the_rounded_percentage", scrubbedMB: 512000, reached: 50.0, expectedTotal: 1000},
+		{name: "nothing_scrubbed_yet_is_unknown", scrubbedMB: 0, reached: 0, expectedTotal: 0},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			total := scrubTotal(scrubReading{scrubbedMB: test.scrubbedMB}, test.reached)
-			percent := scrubPercent(test.reached)
-			if !total.Known() || total.Rounded() != test.expectedTotal {
-				t.Errorf("scrubTotal: got %v want %d", total.Rounded(), test.expectedTotal)
+			reading := scrubReading{scrubbedMB: test.scrubbedMB}
+			total := scrubTotal(reading, test.reached)
+			if test.reached <= 0 {
+				if total.Known() {
+					t.Errorf("scrubTotal: got %v want unknown", total.Rounded())
+				}
+				return
 			}
-			if got := int64(float64(test.scrubbedMB) / mebibytesPerGibibyte * 100 / float64(percent.Rounded())); total.Rounded() != int64(math.Round(float64(got))) && total.Rounded() != got {
-				t.Errorf("scrubTotal disagrees with rendered percent %d: got %d", percent.Rounded(), total.Rounded())
+			if !total.Known() || total.Rounded() != test.expectedTotal {
+				t.Errorf("scrubTotal: got %d want %d", total.Rounded(), test.expectedTotal)
+			}
+			scrubbed := intReading(int64(reading.scrubbedMB) / mebibytesPerGibibyte)
+			if scrubPercent(test.reached).Rounded() == 100 && total.Rounded() != scrubbed.Rounded() {
+				t.Errorf("scrubTotal at 100 percent: got %d want the scrubbed cell %d", total.Rounded(), scrubbed.Rounded())
 			}
 		})
 	}

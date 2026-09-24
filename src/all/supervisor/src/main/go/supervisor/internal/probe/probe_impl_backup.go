@@ -389,11 +389,9 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 		if stopErr != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] did not stop within [%s], abandoning it with [%v]", stage, snapshot.dir, backupStopDeadline, stopErr)
 		}
-		stale := *document
-		stale.State = metric.BackupStateTimeout
-		stale.FinishedTS = time.Now().Format(time.RFC3339)
-		stale.ExpiresTS = ""
+		stale := haltedStage(*document, metric.BackupStateTimeout)
 		_ = writeAtomic(stageStatusPath(runPath, stage), stale)
+		publishStageStatus(p.configPath, stage, stale)
 		reaped = true
 	}
 	if reaped {

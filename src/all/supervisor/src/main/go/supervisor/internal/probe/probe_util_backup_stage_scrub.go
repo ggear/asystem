@@ -214,7 +214,7 @@ func scrubTotal(reading scrubReading, reached float64) reading {
 	if reached <= 0 {
 		return unknownReading()
 	}
-	return floatReading(float64(reading.scrubbedMB) / mebibytesPerGibibyte * 100 / math.Round(reached))
+	return intReading(int64(float64(reading.scrubbedMB)*100/math.Round(reached)) / mebibytesPerGibibyte)
 }
 
 func scrubPercent(reached float64) reading {

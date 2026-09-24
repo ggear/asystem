@@ -55,14 +55,7 @@ func runStage(ctx context.Context, request stageRequest) error {
 		"[%s] stage [%s] timeout [%s]", request.RunID, request.Stage, deadlineText)
 
 	announce := func(document backupSummary) {
-		client, dialErr := brokerDial(request.ConfigPath, "stages")
-		if dialErr != nil {
-			return
-		}
-		defer client.close()
-		if payload, marshalErr := json.Marshal(document); marshalErr == nil {
-			_ = client.publishRetained(metric.TopicBackupStage(configHost(request.ConfigPath), request.Stage), string(payload))
-		}
+		publishStageStatus(request.ConfigPath, request.Stage, document)
 	}
 	beat := func(quiet bool) backupSummary {
 		document := backupSummary{
@@ -165,7 +158,7 @@ func stageVerdict(cause, runErr error, skipped bool) (string, bool) {
 	switch {
 	case errors.Is(cause, errStageTimedOut):
 		return metric.BackupStateTimeout, false
-	case errors.Is(cause, errStageStopped), errors.Is(cause, errStageDetached):
+	case errors.Is(cause, errStageStopped), errors.Is(cause, errStageDetached), errors.Is(cause, context.Canceled):
 		return metric.BackupStateStopped, false
 	case runErr != nil:
 		return metric.BackupStateFailure, false
@@ -174,6 +167,26 @@ func stageVerdict(cause, runErr error, skipped bool) (string, bool) {
 	default:
 		return metric.BackupStateSuccess, true
 	}
+}
+
+func publishStageStatus(configPath string, stage metric.BackupStage, document backupSummary) {
+	client, dialErr := brokerDial(configPath, "stages")
+	if dialErr != nil {
+		return
+	}
+	defer client.close()
+	if payload, marshalErr := json.Marshal(document); marshalErr == nil {
+		_ = client.publishRetained(metric.TopicBackupStage(configHost(configPath), stage), string(payload))
+	}
+}
+
+func haltedStage(document backupSummary, state string) backupSummary {
+	halted := document
+	halted.State = state
+	halted.FinishedTS = time.Now().Format(time.RFC3339)
+	halted.ExpiresTS = ""
+	halted.SuccessBool = false
+	return halted
 }
 
 func stopStage(ctx context.Context, request stageRequest) error {

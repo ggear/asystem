@@ -177,3 +177,32 @@ func TestProbeUtilBackupStageTertiary_AttachedHoldsUntilTheStageClaimsADisk(t *t
 		})
 	}
 }
+
+func TestProbeUtilBackupStageTertiary_MirrorCellsAgreeWithEachOther(t *testing.T) {
+	cases := []struct {
+		name            string
+		moved, expected int64
+		expectedCopied  int64
+		expectedTotal   int64
+		expectedPercent int64
+	}{
+		{name: "a_complete_mirror_reports_the_same_figure_twice", moved: 1045008384, expected: 1045008384, expectedCopied: 0, expectedTotal: 0, expectedPercent: 100},
+		{name: "a_part_mirror_truncates_both_cells_alike", moved: 600 * bytesPerGibibyte, expected: 1000 * bytesPerGibibyte, expectedCopied: 600, expectedTotal: 1000, expectedPercent: 60},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			copied := intReading(test.moved / bytesPerGibibyte)
+			total := mirrorTotal(test.expected)
+			percent := mirrorPercent(test.moved, test.expected)
+			if copied.Rounded() != test.expectedCopied || total.Rounded() != test.expectedTotal {
+				t.Errorf("mirror cells: got copied %d total %d want %d %d", copied.Rounded(), total.Rounded(), test.expectedCopied, test.expectedTotal)
+			}
+			if percent.Rounded() != test.expectedPercent {
+				t.Errorf("mirrorPercent: got %d want %d", percent.Rounded(), test.expectedPercent)
+			}
+			if percent.Rounded() == 100 && copied.Rounded() != total.Rounded() {
+				t.Errorf("mirror at 100 percent: copied %d disagrees with total %d", copied.Rounded(), total.Rounded())
+			}
+		})
+	}
+}

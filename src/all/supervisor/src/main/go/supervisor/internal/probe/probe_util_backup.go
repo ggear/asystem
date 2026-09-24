@@ -161,6 +161,14 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 		return err
 	}
 	runPath := backupRunPath(root, runID)
+	orphaned := false
+	if lock, lockErr := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644); lockErr == nil {
+		defer func() { _ = lock.Close() }()
+		if syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) == nil {
+			orphaned = true
+			defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()
+		}
+	}
 	stopped, refused := 0, 0
 	for _, stage := range backupStages {
 		document := readBackupSummary(stageStatusPath(runPath, stage))
@@ -174,6 +182,11 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 			refused++
 			continue
 		}
+		if orphaned {
+			halted := haltedStage(*document, metric.BackupStateStopped)
+			_ = writeAtomic(stageStatusPath(runPath, stage), halted)
+			publishStageStatus(request.Config, stage, halted)
+		}
 		stopped++
 	}
 	if stopped == 0 && refused == 0 {
@@ -181,8 +194,19 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 			"[%s] carries no active stage, so there is nothing to stop", runID)
 		return nil
 	}
+	if orphaned && stopped > 0 {
+		if runStart, ok := runStarted(backupSummary{RunID: runID}); ok {
+			document := finishRun(root, runID, runStart)
+			_ = publishRunStatus(request.Config, document)
+		}
+	}
 	if refused > 0 {
 		return fmt.Errorf("stopped [%d] of [%d] active stage(s) of run [%s]", stopped, stopped+refused, runID)
+	}
+	if orphaned {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("finished", started,
+			"[%s] held [%d] stage(s) of a run no process owns, finalised as [%s]", runID, stopped, metric.BackupStateStopped)
+		return nil
 	}
 	scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("finished", started,
 		"[%s] stopped [%d] active stage(s)", runID, stopped)

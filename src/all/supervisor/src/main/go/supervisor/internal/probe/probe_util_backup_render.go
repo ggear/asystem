@@ -47,13 +47,40 @@ func runBackupTail(request BackupRequest) error {
 		}
 		return false
 	}
+	fmt.Println()
+	for _, heading := range backupHeading() {
+		fmt.Println(heading)
+	}
 	for {
 		fmt.Println(backupListRow(root, runID))
 		if !running() {
-			return nil
+			break
 		}
 		time.Sleep(backupTailPoll)
 	}
+	fmt.Println(backupRule("+", '-'))
+	fmt.Println()
+	return nil
+}
+
+func backupHeading() []string {
+	return []string{backupRule("+", '-'),
+		backupRow(
+			"STARTED (RUN-ID)",
+			"FINISHED",
+			"DURATION",
+			"TRIGGER",
+			"PRIMARY",
+			"SECONDARY",
+			"TERTIARY",
+			"SCRUB",
+			"DELTA",
+			"SIZE",
+			"FREE",
+			"USED",
+			"RESULT",
+		),
+		backupRule("+", '=')}
 }
 
 func backupTable(root string) []string {
@@ -61,10 +88,7 @@ func backupTable(root string) []string {
 	if len(runs) == 0 {
 		return nil
 	}
-	rows := []string{backupRule("+", '-'),
-		backupRow("STARTED (RUN-ID)", "FINISHED", "DURATION", "TRIGGER", "PRIMARY", "SECONDARY",
-			"TERTIARY", "SCRUB", "DELTA", "SIZE", "FREE", "USED", "RESULT"),
-		backupRule("+", '=')}
+	rows := backupHeading()
 	for _, run := range slices.Backward(runs) {
 		rows = append(rows, backupListRow(root, run))
 	}
