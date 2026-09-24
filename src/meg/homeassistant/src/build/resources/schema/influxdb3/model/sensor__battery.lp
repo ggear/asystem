@@ -8,6 +8,7 @@
 #   tag entity_id* [Home Assistant entity_id:
 #     back_door_lock_battery,
 #     back_door_sensor_battery,
+#     edwin_tanlet_battery_level,
 #     front_door_lock_battery,
 #     ipad_graham_battery_level,
 #     iphone_graham_battery_level,

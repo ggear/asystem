@@ -283,25 +283,32 @@ def _pull(context):
                 .format(join(ROOT_DIR, ".py_deps_prod.txt")), ".", "python")
     _run_pinned(context, "pip install --ignore-requires-python --no-deps --default-timeout=1000 -r {}"
                 .format(join(ROOT_DIR, ".py_deps_dev.txt")), ".", "python")
-    _print_footer("asystem", "pull dependencies install")
-    _print_header("asystem", "pull dependencies update")
+    go_deps_paths = []
+    rust_deps_paths = []
     for module in _get_modules(context, filter_changes=False):
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
         if isdir(module_go_main_path):
-            _run_pinned(context, "go get -u ./...", module_go_main_path, "go")
-            _run_pinned(context, "go mod tidy", module_go_main_path, "go")
+            go_deps_paths.append(module_go_main_path)
         module_go_test_path = join(ROOT_MODULE_DIR, module, "src/test/go", _get_service(module) + "_test")
         if isdir(module_go_test_path):
-            _run_pinned(context, "go get -u ./...", module_go_test_path, "go")
-            _run_pinned(context, "go mod tidy", module_go_test_path, "go")
+            go_deps_paths.append(module_go_test_path)
         module_rust_main_path = join(ROOT_MODULE_DIR, module, "src/main/rust", _get_service(module))
         if isfile(join(module_rust_main_path, "Cargo.toml")):
-            _run_pinned(context, "cargo update --verbose", module_rust_main_path, "rust")
-    _print_footer("asystem", "pull dependencies update")
+            rust_deps_paths.append(module_rust_main_path)
+    for go_deps_path in go_deps_paths:
+        _run_pinned(context, "go mod download", go_deps_path, "go")
+        _run_pinned(context, "go mod tidy", go_deps_path, "go")
+    for rust_deps_path in rust_deps_paths:
+        _run_pinned(context, "cargo fetch --locked", rust_deps_path, "rust")
+    _print_footer("asystem", "pull dependencies install")
     _generate(context, filter_changes=False, is_pull=True)
     _print_header("asystem", "pull package versions to update")
     py_deps_names = sorted({re.escape(re.sub(r"\[.*?\]", "", name)) for name in py_deps_dict})
     _run_local(context, "pip list --outdated | grep -iE '^(Package|{})[[:space:]]'".format("|".join(py_deps_names)))
+    for go_deps_path in go_deps_paths:
+        _run_local(context, "go list -m -u -f '{}' all | awk 'NF'".format(GO_OUTDATED_FORMAT), go_deps_path)
+    for rust_deps_path in rust_deps_paths:
+        _run_local(context, "cargo update --dry-run", rust_deps_path)
     _print_footer("asystem", "pull package versions to update")
     _print_header("asystem", "pull package versions to check")
     _check(context, py_deps_nodeps)
@@ -1640,6 +1647,8 @@ TOOLCHAINS = {
 
 HOSTS = {line.split("=")[0]: line.split("=")[-1].split(",")
          for line in Path(join(dirname(abspath(__file__)), ".hosts")).read_text().strip().split("\n")}
+
+GO_OUTDATED_FORMAT = "{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}"
 
 HEADER = \
     "------------------------------------------------------------\n" \

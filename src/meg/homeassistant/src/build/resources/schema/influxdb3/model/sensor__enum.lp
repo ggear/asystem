@@ -9,6 +9,7 @@
 #     ada_health_index,
 #     backup_backup_manager_state,
 #     edwin_health_index,
+#     edwin_tanlet_charger_type,
 #     laundry_health_index,
 #     parents_health_index,
 #     pixel_tablet_charger_type,
