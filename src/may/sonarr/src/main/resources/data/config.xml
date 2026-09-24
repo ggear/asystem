@@ -5,8 +5,8 @@
     <EnableSsl>False</EnableSsl>
     <LaunchBrowser>True</LaunchBrowser>
     <ApiKey>$SONARR_API_KEY</ApiKey>
-    <AuthenticationMethod>None</AuthenticationMethod>
-    <AuthenticationRequired>Disabled</AuthenticationRequired>
+<!--    <AuthenticationMethod>None</AuthenticationMethod>-->
+<!--    <AuthenticationRequired>Disabled</AuthenticationRequired>-->
     <Branch>main</Branch>
     <LogLevel>Warn</LogLevel>
     <SslCertPath></SslCertPath>
