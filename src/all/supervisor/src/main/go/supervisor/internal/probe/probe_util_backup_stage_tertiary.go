@@ -225,9 +225,6 @@ func ready(ctx context.Context) bool {
 }
 
 func attached(ctx context.Context, stagePath string) bool {
-	if !verified(ctx, config.DirBackup) || !alive(ctx, config.DirBackup) {
-		return false
-	}
 	data, err := os.ReadFile(filepath.Join(stagePath, tertiaryDeviceMarker))
 	if err != nil {
 		return true
@@ -235,6 +232,9 @@ func attached(ctx context.Context, stagePath string) bool {
 	expected := strings.TrimSpace(string(data))
 	if expected == "" {
 		return true
+	}
+	if !verified(ctx, config.DirBackup) || !alive(ctx, config.DirBackup) {
+		return false
 	}
 	return fmt.Sprintf("%d", deviceID(config.DirBackup)) == expected
 }

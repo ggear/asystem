@@ -74,16 +74,21 @@ func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
 	if err != nil {
 		return err
 	}
-	version := config.ResolvedVersion(request.Config)
-	if request.Stage != "" {
-		closer, enableErr := scribe.EnableBackupAndFile(level, backupCommandName, version, engine.BackupStageLog(request),
-			opts.quiet, logFileSizeMB, logFileBackups, logFileAgeDays)
+	switch {
+	case request.Stage != "":
+		closer, enableErr := scribe.EnableBackupAndFile(level, backupCommandName, config.ResolvedVersion(request.Config),
+			engine.BackupStageLog(request), opts.quiet, logFileSizeMB, logFileBackups, logFileAgeDays)
 		if enableErr != nil {
 			return fmt.Errorf("backup logging could not be enabled [%w]", enableErr)
 		}
 		defer func() { _ = closer.Close() }()
-	} else if err := scribe.EnableStdoutAndFile(level, backupCommandName, version, logFileSizeMB, logFileBackups, logFileAgeDays); err != nil {
-		return fmt.Errorf("file logging could not be enabled [%w]", err)
+	case request.Command == engine.BackupCommandStart:
+		if enableErr := scribe.EnableStdoutAndFile(level, backupCommandName, config.ResolvedVersion(request.Config),
+			logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {
+			return fmt.Errorf("file logging could not be enabled [%w]", enableErr)
+		}
+	default:
+		scribe.EnableStdout(level)
 	}
 	if err := setLogFilters(&opts.logOptions); err != nil {
 		return err

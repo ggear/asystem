@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -150,4 +151,29 @@ func TestProbeUtilBackupStageTertiary_PruneStaleRemovesOnlyEntriesOlderThanTheAg
 
 func TestProbeUtilBackupStageTertiary_PruneStaleAgainstAMissingDirectory(t *testing.T) {
 	pruneStale(filepath.Join(t.TempDir(), "missing"), time.Hour)
+}
+
+func TestProbeUtilBackupStageTertiary_AttachedHoldsUntilTheStageClaimsADisk(t *testing.T) {
+	cases := []struct {
+		name     string
+		marker   string
+		written  bool
+		expected bool
+	}{
+		{name: "no_marker_yet_so_the_disk_is_still_enumerating", expected: true},
+		{name: "an_empty_marker_claims_nothing", written: true, expected: true},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			stagePath := t.TempDir()
+			if test.written {
+				if err := os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), []byte(test.marker), 0o644); err != nil {
+					t.Fatalf("write marker: %v", err)
+				}
+			}
+			if got := attached(context.Background(), stagePath); got != test.expected {
+				t.Errorf("attached: got %v want %v", got, test.expected)
+			}
+		})
+	}
 }

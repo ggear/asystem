@@ -36,14 +36,17 @@ func fstabEntries() [][2]string {
 	return entries
 }
 
-func declaredDevice(target string) (string, bool) {
-	spec := ""
+func declaredSpec(target string) string {
 	for _, entry := range fstabEntries() {
 		if entry[1] == target {
-			spec = entry[0]
-			break
+			return entry[0]
 		}
 	}
+	return ""
+}
+
+func declaredDevice(target string) (string, bool) {
+	spec := declaredSpec(target)
 	if spec == "" {
 		return "", false
 	}
@@ -138,14 +141,18 @@ func alive(ctx context.Context, target string) bool {
 
 func diagnosed(ctx context.Context, target string) string {
 	source, sourced := sourcedDevice(ctx, target)
-	if !sourced {
-		source = "nothing"
-	}
 	declared, wanted := declaredDevice(target)
-	if !wanted {
-		declared = "nothing"
-	}
-	if !sourced || !wanted || source != declared {
+	spec := declaredSpec(target)
+	switch {
+	case spec == "":
+		return "is declared by no entry in [" + backupFstabPath + "]"
+	case !wanted && !sourced:
+		return "declares [" + spec + "] which has not enumerated, so its disk is powered down or unplugged"
+	case !wanted:
+		return "carries [" + source + "] while its declared [" + spec + "] has not enumerated"
+	case !sourced:
+		return "carries nothing rather than the declared [" + declared + "]"
+	case source != declared:
 		return "carries [" + source + "] rather than the declared [" + declared + "]"
 	}
 	if !alive(ctx, target) {
