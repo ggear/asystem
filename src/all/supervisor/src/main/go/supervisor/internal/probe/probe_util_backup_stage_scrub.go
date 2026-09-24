@@ -321,7 +321,7 @@ func deviceStatsSum(ctx context.Context) (int, bool) {
 		return 0, false
 	}
 	total := 0
-	for _, pattern := range deviceStatsPatterns {
+	for _, pattern := range scrubDeviceStatsPatterns {
 		for _, match := range pattern.FindAllStringSubmatch(out, -1) {
 			value, _ := strconv.Atoi(match[1])
 			total += value
@@ -339,7 +339,7 @@ func runBalance(ctx context.Context, subject scribe.Subject) int {
 		return 0
 	}
 	relocated := 0
-	if match := balanceRelocatedPattern.FindStringSubmatch(out); match != nil {
+	if match := scrubBalanceRelocatedPattern.FindStringSubmatch(out); match != nil {
 		relocated, _ = strconv.Atoi(match[1])
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("balanced", started,
@@ -411,7 +411,7 @@ var (
 
 	scrubStartedPattern = regexp.MustCompile(`(?m)^Scrub started:\s*(.+)$`)
 
-	balanceRelocatedPattern = regexp.MustCompile(`relocate (\d+) out of`)
+	scrubBalanceRelocatedPattern = regexp.MustCompile(`relocate (\d+) out of`)
 
 	scrubCounterPatterns = func() map[string]*regexp.Regexp {
 		patterns := map[string]*regexp.Regexp{}
@@ -421,7 +421,7 @@ var (
 		return patterns
 	}()
 
-	deviceStatsPatterns = func() []*regexp.Regexp {
+	scrubDeviceStatsPatterns = func() []*regexp.Regexp {
 		var patterns []*regexp.Regexp
 		for _, key := range []string{"write_io_errs", "read_io_errs", "flush_io_errs", "corruption_errs", "generation_errs"} {
 			patterns = append(patterns, regexp.MustCompile(`\]\.`+regexp.QuoteMeta(key)+`\s+(\d+)`))

@@ -203,18 +203,18 @@ func (p *backupProbe) armReaper(started time.Time) bool {
 	p.reapArming = true
 	client, err := brokerDial(p.configPath, "manual")
 	if err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, allReaperTopic)
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, backupAllReaperTopic)
 		return false
 	}
 	defer client.close()
 	armed, _ := json.Marshal(backupReaperSummary{State: metric.CommandOn})
-	if err := client.publishRetained(allReaperTopic, string(armed)); err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, allReaperTopic)
+	if err := client.publishRetained(backupAllReaperTopic, string(armed)); err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, backupAllReaperTopic)
 		return false
 	}
 	p.reapArming = false
 	p.reapNotice = 0
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] armed, the backup disk is powered down again when nothing needs it", allReaperTopic)
+	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("released", started, "[%s] armed, the backup disk is powered down again when nothing needs it", backupAllReaperTopic)
 	return true
 }
 
@@ -249,7 +249,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	if p.reapWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, allBackupStatusTopic, allReaperTopic, metric.TopicBackupStage(backupAnyHost, metric.BackupStageTertiary))
+		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, backupAllStatusTopic, backupAllReaperTopic, metric.TopicBackupStage(backupAnyHost, metric.BackupStageTertiary))
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the cluster, retrying on the next tick", err)
 			return
@@ -270,7 +270,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	p.reapStale = 0
-	flag, declared := retained[allReaperTopic]
+	flag, declared := retained[backupAllReaperTopic]
 	var reaper backupReaperSummary
 	if declared {
 		_ = json.Unmarshal([]byte(flag), &reaper)
@@ -278,11 +278,11 @@ func (p *backupProbe) reap(ctx context.Context) {
 	switch {
 	case !declared:
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
-			"[%s] is absent, asserting the armed default the broker no longer carries", allReaperTopic)
+			"[%s] is absent, asserting the armed default the broker no longer carries", backupAllReaperTopic)
 		p.armReaper(reapStart)
 	case strings.EqualFold(strings.TrimSpace(reaper.State), metric.CommandOff) && !reaper.Paused():
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
-			"[%s] paused until [%s], which has passed, arming it again", allReaperTopic, reaper.ExpiresTS)
+			"[%s] paused until [%s], which has passed, arming it again", backupAllReaperTopic, reaper.ExpiresTS)
 		p.armReaper(reapStart)
 	case p.reapArming:
 		p.armReaper(reapStart)
@@ -291,16 +291,16 @@ func (p *backupProbe) reap(ctx context.Context) {
 		p.reapPaused = paused
 		if paused {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("excluded", reapStart,
-				"[%s] is off until [%s], the backup disk stays powered", allReaperTopic, reaper.ExpiresTS)
+				"[%s] is off until [%s], the backup disk stays powered", backupAllReaperTopic, reaper.ExpiresTS)
 		} else {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("restored", reapStart,
-				"[%s] is on, the backup disk is powered down again when nothing needs it", allReaperTopic)
+				"[%s] is on, the backup disk is powered down again when nothing needs it", backupAllReaperTopic)
 		}
 	}
 	if p.reapPaused {
 		if p.reapQuiet() {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
-				"[%s] is still off until [%s], the backup disk stays powered", allReaperTopic, reaper.ExpiresTS)
+				"[%s] is still off until [%s], the backup disk stays powered", backupAllReaperTopic, reaper.ExpiresTS)
 		}
 		return
 	}
@@ -312,17 +312,17 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	var coordinated backupSummary
-	if json.Unmarshal([]byte(retained[allBackupStatusTopic]), &coordinated) == nil && coordinated.State == metric.BackupStateRunning {
+	if json.Unmarshal([]byte(retained[backupAllStatusTopic]), &coordinated) == nil && coordinated.State == metric.BackupStateRunning {
 		if started, perr := time.Parse(time.RFC3339, coordinated.StartedTS); perr == nil && time.Since(started) < backupRunCeiling {
 			if p.reapQuiet() {
 				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
-					"[%s] reports a run started [%s] still coordinating, leaving the disk powered", allBackupStatusTopic, coordinated.StartedTS)
+					"[%s] reports a run started [%s] still coordinating, leaving the disk powered", backupAllStatusTopic, coordinated.StartedTS)
 			}
 			return
 		}
 	}
 	for topic, payload := range retained {
-		if !strings.HasSuffix(topic, tertiaryStatusSuffix) {
+		if !strings.HasSuffix(topic, backupTertiaryStatusSuffix) {
 			continue
 		}
 		var document backupSummary
@@ -483,7 +483,7 @@ func (p *backupProbe) lead() {
 	}
 	leadStart := time.Now()
 	if p.leadWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, metric.TopicBackupStatus(backupAnyHost), metric.TopicBackupStage(backupAnyHost, backupAnyLevel), allBackupStatusTopic)
+		watch, err := brokerWatch(p.configPath, p.hostName, metric.TopicBackupStatus(backupAnyHost), metric.TopicBackupStage(backupAnyHost, backupAnyLevel), backupAllStatusTopic)
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("deferred", leadStart, "[%v] watching the cluster backup run, retrying on the next tick", err)
 			return
@@ -541,7 +541,7 @@ func (p *backupProbe) lead() {
 		document.FinishedTS = time.Now().Format(time.RFC3339)
 	}
 	payload, _ := json.Marshal(document)
-	if err := client.publishRetained(allBackupStatusTopic, string(payload)); err != nil {
+	if err := client.publishRetained(backupAllStatusTopic, string(payload)); err != nil {
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", leadStart, "[%v] publishing the [%s] cluster backup run, retrying on the next tick", err, decision.state)
 		return
 	}
@@ -566,7 +566,7 @@ type backupClusterRun struct {
 func backupClusterRunDecision(retained map[string]string, expected []string, now time.Time) backupClusterRun {
 	var clusterRun backupSummary
 	clusterRunStarted := time.Time{}
-	if json.Unmarshal([]byte(retained[allBackupStatusTopic]), &clusterRun) == nil {
+	if json.Unmarshal([]byte(retained[backupAllStatusTopic]), &clusterRun) == nil {
 		clusterRunStarted, _ = time.Parse(time.RFC3339, clusterRun.StartedTS)
 	}
 	decision := backupClusterRun{action: backupClusterRunIdle}
@@ -686,7 +686,7 @@ const (
 var (
 	backupProbeInstance *backupProbe
 
-	allReaperTopic       = metric.TopicBackupReaper()
-	allBackupStatusTopic = metric.TopicBackupStatus(metric.HostAll)
-	tertiaryStatusSuffix = strings.TrimPrefix(metric.TopicBackupStage(backupAnyHost, metric.BackupStageTertiary), metric.TopicBackupRoot(backupAnyHost))
+	backupAllReaperTopic       = metric.TopicBackupReaper()
+	backupAllStatusTopic       = metric.TopicBackupStatus(metric.HostAll)
+	backupTertiaryStatusSuffix = strings.TrimPrefix(metric.TopicBackupStage(backupAnyHost, metric.BackupStageTertiary), metric.TopicBackupRoot(backupAnyHost))
 )
