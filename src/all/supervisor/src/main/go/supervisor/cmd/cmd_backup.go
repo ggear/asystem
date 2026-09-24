@@ -57,10 +57,7 @@ func newBackupVerbCmd(verb backupVerb, opts *backupOptions) *cobra.Command {
 				}
 				request.Stage = stage
 			}
-			if err := executeBackup(request, opts); err != nil {
-				return fmt.Errorf("backup failed [%w]", err)
-			}
-			return nil
+			return executeBackup(request, opts)
 		},
 	}
 }
@@ -93,7 +90,12 @@ func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
 	if err := setLogFilters(&opts.logOptions); err != nil {
 		return err
 	}
-	return engine.RunBackup(request)
+	if err := engine.RunBackup(request); err != nil {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", time.Now(),
+			"[%s] command did not complete cleanly, %v", request.Command, err)
+		return errCommandReported
+	}
+	return nil
 }
 
 type backupOptions struct {

@@ -52,9 +52,10 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 	cursor := kernelCursor(ctx)
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("scrubbed", started,
 		"[%s] scrub [%s] at [%s], polling every [%s]", config.DirBackup, action, hard.Format(backupTimeFormat), scrubPollInterval)
-	if _, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "scrub", action, "-c", "3", "-n", "15", config.DirBackup); abandoned || code != 0 {
+	if out, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "scrub", action, "-c", "3", "-n", "15", config.DirBackup); abandoned || code != 0 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-			"[%s] scrub [%s] exited [%d] abandoned [%t], the disk was not scrubbed", config.DirBackup, action, code, abandoned)
+			"[%s] scrub [%s] exited [%d] abandoned [%t] reporting [%s], the disk was not scrubbed", config.DirBackup, action, code,
+			abandoned, strings.Join(strings.Fields(out), " "))
 		writeScrubSummary(request, host, scrubDocument(request, metric.BackupStateFailure, false, started, scrubReading{}))
 		return false
 	}

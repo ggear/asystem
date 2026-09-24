@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -17,9 +18,8 @@ import (
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		_, err := fmt.Fprintln(os.Stderr, err)
-		if err != nil {
-			return
+		if !errors.Is(err, errCommandReported) {
+			_, _ = fmt.Fprintln(os.Stderr, err)
 		}
 		os.Exit(1)
 	}
@@ -39,15 +39,23 @@ func init() {
 
 func addAdvancedFlags(cmd *cobra.Command, advanced []string) {
 	cmd.Flags().Bool(helpAllFlag, false, "show every flag, including the advanced ones, and the log vocabularies")
+	declared := func(command *cobra.Command, name string) *pflag.Flag {
+		if flag := command.Flags().Lookup(name); flag != nil {
+			return flag
+		}
+		return command.PersistentFlags().Lookup(name)
+	}
 	for _, name := range advanced {
-		_ = cmd.Flags().MarkHidden(name)
+		if flag := declared(cmd, name); flag != nil {
+			flag.Hidden = true
+		}
 	}
 	cmd.PreRun = func(command *cobra.Command, _ []string) {
 		if all, _ := command.Flags().GetBool(helpAllFlag); !all {
 			return
 		}
 		for _, name := range advanced {
-			if flag := command.Flags().Lookup(name); flag != nil {
+			if flag := declared(command, name); flag != nil {
 				flag.Hidden = false
 			}
 		}
@@ -87,10 +95,10 @@ func addLogFlags(cmd *cobra.Command, opts *logOptions, level string) {
 	if configured := os.Getenv(logLevelEnv); configured != "" {
 		level = configured
 	}
-	cmd.Flags().StringVarP(&opts.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
-	cmd.Flags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source comma-separated prefixes (see below)")
-	cmd.Flags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject comma-separated prefixes (see below)")
-	cmd.Flags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action comma-separated prefixes (see below)")
+	cmd.PersistentFlags().StringVarP(&opts.logLevel, "log-level", "L", level, "log level [debug, info, warn, error]")
+	cmd.PersistentFlags().StringVarP(&opts.logSource, "log-source", "O", "", "log filter source comma-separated prefixes (see below)")
+	cmd.PersistentFlags().StringVarP(&opts.logSubject, "log-subject", "U", "", "log filter subject comma-separated prefixes (see below)")
+	cmd.PersistentFlags().StringVarP(&opts.logAction, "log-action", "A", "", "log filter action comma-separated prefixes (see below)")
 }
 
 func setLogFilters(opts *logOptions) error {
@@ -228,4 +236,8 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `
 
-var flagDefaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)
+var (
+	errCommandReported = errors.New("the command reported its own failure")
+
+	flagDefaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)
+)

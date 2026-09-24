@@ -191,9 +191,9 @@ func bounded(ctx context.Context, limit time.Duration, name string, args ...stri
 func realStageExec(ctx context.Context, name string, args ...string) (string, int, bool) {
 	command := exec.CommandContext(ctx, name, args...)
 	command.Stdin = nil
-	var buffer bytes.Buffer
-	command.Stdout = &buffer
-	command.Stderr = &buffer
+	buffer := &lockedBuffer{}
+	command.Stdout = buffer
+	command.Stderr = buffer
 	command.WaitDelay = stageExecAbandon
 	runErr := command.Run()
 	if ctx.Err() != nil {
@@ -205,7 +205,22 @@ func realStageExec(ctx context.Context, name string, args ...string) (string, in
 	if exitErr, ok := errors.AsType[*exec.ExitError](runErr); ok {
 		return buffer.String(), exitErr.ExitCode(), false
 	}
+	if errors.Is(runErr, exec.ErrWaitDelay) && command.ProcessState != nil {
+		return buffer.String(), command.ProcessState.ExitCode(), false
+	}
 	return buffer.String(), -1, false
+}
+
+func (b *lockedBuffer) Write(data []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buffer.Write(data)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buffer.String()
 }
 
 func moduleBackupScript(service string) string {
@@ -279,6 +294,11 @@ func (c *stageCounters) snapshotSizeMB() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.sizeMB
+}
+
+type lockedBuffer struct {
+	mu     sync.Mutex
+	buffer bytes.Buffer
 }
 
 type execFunc func(ctx context.Context, name string, args ...string) (stdout string, exitCode int, abandoned bool)

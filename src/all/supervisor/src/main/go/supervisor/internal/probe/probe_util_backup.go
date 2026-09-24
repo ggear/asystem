@@ -154,6 +154,7 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 }
 
 func runBackupStop(ctx context.Context, request BackupRequest) error {
+	started := time.Now()
 	root := backupRunRoot()
 	runID, err := backupResolveRun(root, request.RunID)
 	if err != nil {
@@ -176,13 +177,15 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 		stopped++
 	}
 	if stopped == 0 && refused == 0 {
-		fmt.Printf("no active stage found for run [%s]\n", runID)
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("reported", started,
+			"[%s] carries no active stage, so there is nothing to stop", runID)
 		return nil
 	}
 	if refused > 0 {
 		return fmt.Errorf("stopped [%d] of [%d] active stage(s) of run [%s]", stopped, stopped+refused, runID)
 	}
-	fmt.Printf("stopped [%d] active stage(s) of run [%s]\n", stopped, runID)
+	scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("finished", started,
+		"[%s] stopped [%d] active stage(s)", runID, stopped)
 	return nil
 }
 

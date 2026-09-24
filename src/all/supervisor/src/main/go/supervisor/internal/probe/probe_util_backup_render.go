@@ -33,7 +33,8 @@ func runBackupTail(request BackupRequest) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("tracking run [%s] under [%s]\n", runID, backupRunPath(root, runID))
+	scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStart).Infof("followed", time.Now(),
+		"[%s] tracking this run under [%s]", runID, backupRunPath(root, runID))
 	running := func() bool {
 		snapshot := readBackupRun(root, runID)
 		if snapshot.host != nil {

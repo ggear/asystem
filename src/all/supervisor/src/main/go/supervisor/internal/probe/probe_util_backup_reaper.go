@@ -7,10 +7,15 @@ import (
 
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 )
 
 func runBackupAuto(request BackupRequest) error {
+	started := time.Now()
 	configPath, want := request.Config, request.Argument
+	report := func(verb, detail string, args ...any) {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionPublish).Infof(verb, started, detail, args...)
+	}
 	if want == "" {
 		state, expires, found, err := backupReaperState(configPath)
 		if err != nil {
@@ -18,13 +23,13 @@ func runBackupAuto(request BackupRequest) error {
 		}
 		switch {
 		case !found:
-			fmt.Println("reaper is undeclared, which the cluster reads as armed")
+			report("reported", "[undeclared] reaper, which the cluster reads as armed")
 		case state == metric.CommandOff && expires != "":
-			fmt.Printf("reaper is paused until [%s], the backup disk stays powered until then\n", expires)
+			report("reported", "[%s] reaper is paused until then, the backup disk stays powered", expires)
 		case state == metric.CommandOn:
-			fmt.Println("reaper is armed, the backup disk is powered down again when nothing needs it")
+			report("reported", "[armed] reaper, the backup disk is powered down again when nothing needs it")
 		default:
-			fmt.Printf("reaper reads [%s/%s], which states no deadline, so the cluster reads it as armed\n", state, expires)
+			report("reported", "[%s/%s] reaper states no deadline, so the cluster reads it as armed", state, expires)
 		}
 		return nil
 	}
@@ -33,13 +38,13 @@ func runBackupAuto(request BackupRequest) error {
 		if err := backupReaperSet(configPath, metric.CommandOff, expires); err != nil {
 			return err
 		}
-		fmt.Printf("reaper paused until [%s], the backup disk stays powered until then whatever else happens\n", expires)
+		report("switched", "[%s] reaper is paused until then, the backup disk stays powered whatever else happens", expires)
 		return nil
 	}
 	if err := backupReaperSet(configPath, metric.CommandOn, ""); err != nil {
 		return err
 	}
-	fmt.Println("reaper armed, the backup disk is powered down again when nothing needs it")
+	report("switched", "[armed] reaper, the backup disk is powered down again when nothing needs it")
 	return nil
 }
 
