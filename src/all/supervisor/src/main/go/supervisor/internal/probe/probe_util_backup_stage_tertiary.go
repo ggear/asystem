@@ -86,6 +86,8 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 			"[%s] mirrored in [%s], running total [%d] MiB", share, time.Since(mirrorStarted).Round(time.Second), counters.snapshotSizeMB())
 	}
 
+	stopProgress()
+
 	scrubOK := true
 	if verified(ctx, config.DirBackup) {
 		snapshotShares(ctx, request, loaded)

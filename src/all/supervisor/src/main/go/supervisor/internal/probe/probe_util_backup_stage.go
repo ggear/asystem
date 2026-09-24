@@ -54,7 +54,17 @@ func runStage(ctx context.Context, request stageRequest) error {
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("starting", started,
 		"[%s] stage [%s] timeout [%s]", request.RunID, request.Stage, deadlineText)
 
-	beat := func(quiet bool) {
+	announce := func(document backupSummary) {
+		client, dialErr := brokerDial(request.ConfigPath, "stages")
+		if dialErr != nil {
+			return
+		}
+		defer client.close()
+		if payload, marshalErr := json.Marshal(document); marshalErr == nil {
+			_ = client.publishRetained(metric.TopicBackupStage(configHost(request.ConfigPath), request.Stage), string(payload))
+		}
+	}
+	beat := func(quiet bool) backupSummary {
 		document := backupSummary{
 			RunID: request.RunID, State: metric.BackupStateRunning, Trigger: request.Trigger,
 			StartedTS: started.Format(time.RFC3339), DurationS: int(time.Since(started).Seconds()),
@@ -66,8 +76,9 @@ func runStage(ctx context.Context, request stageRequest) error {
 				"[%s] stage [%s] still running, liveness refreshed to [%s]", request.RunID, request.Stage,
 				time.Now().Add(stageLivenessGrace).Format(backupTimeFormat))
 		}
+		return document
 	}
-	beat(true)
+	announce(beat(true))
 	refreshed := time.Now()
 	backgroundDone := make(chan struct{})
 	backgroundCtx, stopBackground := context.WithCancel(stageCtx)
@@ -92,9 +103,10 @@ func runStage(ctx context.Context, request stageRequest) error {
 					continue
 				}
 				loud := time.Since(refreshed) >= stageHeartbeatRefresh
-				beat(!loud)
+				document := beat(!loud)
 				if loud {
 					refreshed = time.Now()
+					announce(document)
 				}
 			}
 		}
@@ -134,11 +146,8 @@ func runStage(ctx context.Context, request stageRequest) error {
 	if writeErr := writeAtomic(path, document); writeErr != nil {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionPublish).Warnf("faulting", time.Now(),
 			"[%s] stage document could not be written [%v]", path, writeErr)
-	} else if client, dialErr := brokerDial(request.ConfigPath, "stages"); dialErr == nil {
-		if payload, marshalErr := json.Marshal(document); marshalErr == nil {
-			_ = client.publishRetained(metric.TopicBackupStage(configHost(request.ConfigPath), request.Stage), string(payload))
-		}
-		client.close()
+	} else {
+		announce(document)
 	}
 
 	if runErr != nil {
