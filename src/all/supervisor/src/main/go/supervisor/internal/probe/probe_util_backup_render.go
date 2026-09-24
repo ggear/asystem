@@ -147,6 +147,8 @@ func backupListRow(root, run string) string {
 	scrubState, scrubDeclared := backupUnknownCell, ""
 	if document := readScrubSummary(scrubStatusPath(runPath)); document != nil {
 		scrubState, scrubDeclared = scrubWord(*document), document.State
+	} else if states[metric.BackupStageTertiary] == metric.BackupStateSkipped {
+		scrubState = metric.BackupStateSkipped
 	}
 	result := resolvedState(states, scrubDeclared)
 	if len(states) == 0 && scrubDeclared == "" {
@@ -257,7 +259,7 @@ func backupBounded(now time.Time, remaining reading, deadline time.Time) string 
 	return fmt.Sprintf(" within timeout time [%s]", deadline.Format(backupTimeFormat))
 }
 
-func backupProgressed(verb string, copied, total, percent, remaining reading, eta string, rate reading, bounded string) string {
+func backupProgressed(copied, total, percent, remaining reading, eta string, rate reading, bounded string) string {
 	last := 0
 	if total.known {
 		last = 1
@@ -271,7 +273,7 @@ func backupProgressed(verb string, copied, total, percent, remaining reading, et
 	if remaining.known {
 		last = 4
 	}
-	line := fmt.Sprintf("%s [%s] GiB", verb, backupSized(copied))
+	line := fmt.Sprintf("[%s] GiB", backupSized(copied))
 	if last >= 1 {
 		line += fmt.Sprintf(" of [%s] GiB", backupSized(total))
 	}

@@ -81,15 +81,15 @@ func TestProbeUtilBackupRender_ProgressCutsTheLineAtTheLastMeasuredField(t *test
 		expected string
 	}{
 		{name: "copied_only", total: unknownReading(), percent: unknownReading(), remain: unknownReading(), rate: unknownReading(),
-			expected: "mirrored [   5] GiB"},
+			expected: "[   5] GiB"},
 		{name: "total_known", total: intReading(90), percent: unknownReading(), remain: unknownReading(), rate: unknownReading(),
-			expected: "mirrored [   5] GiB of [  90] GiB"},
+			expected: "[   5] GiB of [  90] GiB"},
 		{name: "rate_known_holds_an_unknown_total_with_a_dash", total: unknownReading(), percent: unknownReading(), remain: unknownReading(), rate: floatReading(102),
-			expected: "mirrored [   5] GiB of [   -] GiB at [102] MiB/s"},
+			expected: "[   5] GiB of [   -] GiB at [102] MiB/s"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := backupProgressed(backupVerb(metric.BackupStageTertiary), intReading(5), testCase.total, testCase.percent, testCase.remain,
+			got := backupProgressed(intReading(5), testCase.total, testCase.percent, testCase.remain,
 				backupEta(time.Now(), testCase.remain), testCase.rate, "")
 			if got != testCase.expected {
 				t.Errorf("backupProgressed() = %q, want %q", got, testCase.expected)
@@ -175,8 +175,14 @@ func TestProbeUtilBackupRender_AProgressLineFitsOneDetailColumn(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			now := time.Date(2026, 9, 24, 12, 5, 53, 0, time.Local)
-			line := backupProgressed(testCase.verb, testCase.copied, testCase.total, testCase.percent, testCase.remains,
+			line := backupProgressed(testCase.copied, testCase.total, testCase.percent, testCase.remains,
 				backupEta(now, testCase.remains), testCase.rate, backupBounded(now, testCase.remains, testCase.deadline))
+			if strings.HasPrefix(line, testCase.verb) {
+				t.Errorf("progress line repeats the verb column it sits beside\n%s", line)
+			}
+			if !strings.HasPrefix(line, "[") {
+				t.Errorf("progress line does not lead with a bracketed value\n%s", line)
+			}
 			if len(line) > scribe.Detailed() {
 				t.Errorf("progress line is [%d] characters against a [%d] detail column, so it wraps\n%s",
 					len(line), scribe.Detailed(), line)
@@ -296,5 +302,34 @@ func TestProbeUtilBackupRender_ARunWithNoDocumentAtAllReportsNoResult(t *testing
 	columns := strings.Split(row, "|")
 	if result := strings.TrimSpace(columns[len(columns)-2]); result != backupUnknownCell {
 		t.Errorf("backupListRow() RESULT = %q, want %q rather than a success over nothing", result, backupUnknownCell)
+	}
+}
+
+func TestProbeUtilBackupRender_AStageThatNeverReachedTheScrubSaysWhy(t *testing.T) {
+	tests := []struct {
+		name           string
+		tertiaryState  string
+		expectedColumn string
+	}{
+		{name: "a_host_mirroring_nowhere_skipped_its_scrub_too", tertiaryState: metric.BackupStateSkipped,
+			expectedColumn: metric.BackupStateSkipped},
+		{name: "a_tertiary_that_failed_before_the_scrub_is_unknown", tertiaryState: metric.BackupStateFailure,
+			expectedColumn: backupUnknownCell},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			root, run := t.TempDir(), "2026-09-24_16-30-37"
+			path := stageStatusPath(backupRunPath(root, run), metric.BackupStageTertiary)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatalf("mkdir stage: %v", err)
+			}
+			if err := writeAtomic(path, backupSummary{RunID: run, State: testCase.tertiaryState}); err != nil {
+				t.Fatalf("write stage: %v", err)
+			}
+			columns := strings.Split(backupListRow(root, run), "|")
+			if scrub := strings.TrimSpace(columns[8]); scrub != testCase.expectedColumn {
+				t.Errorf("SCRUB = %q, want %q", scrub, testCase.expectedColumn)
+			}
+		})
 	}
 }

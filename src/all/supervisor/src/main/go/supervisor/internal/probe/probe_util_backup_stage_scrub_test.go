@@ -307,3 +307,64 @@ func TestProbeUtilBackupStageScrub_OriginNamesWhatThePassIsContinuing(t *testing
 		})
 	}
 }
+
+func TestProbeUtilBackupStageScrub_APassOpensItsDocumentBeforeTheFirstPoll(t *testing.T) {
+	tests := []struct {
+		name            string
+		status          string
+		expectedResumed bool
+	}{
+		{name: "a_fresh_pass_opens_as_running", status: "no stats available"},
+		{name: "a_resumed_pass_says_so_from_the_first_document",
+			status: "Status:           interrupted\nScrub started:    Mon Sep 22 01:00:00 2026", expectedResumed: true},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			originalExec, originalAvailable := stageExec, commandAvailable
+			t.Cleanup(func() { stageExec, commandAvailable = originalExec, originalAvailable })
+			commandAvailable = func(string) bool { return true }
+			stageExec = func(_ context.Context, _ string, args ...string) (string, int, bool) {
+				if len(args) > 1 && args[1] == "status" {
+					return testCase.status, 0, false
+				}
+				return "", 0, false
+			}
+			request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-09-24_16-23-57",
+				RunPath: t.TempDir(), Expires: time.Now().Add(time.Hour), Scrub: true,
+				Trigger: metric.BackupTriggerManual, ConfigPath: filepath.Join(t.TempDir(), "config.json")}
+			ctx, cancel := context.WithCancel(context.Background())
+			finished := make(chan struct{})
+			go func() { defer close(finished); _ = runScrub(ctx, request) }()
+			t.Cleanup(func() { cancel(); <-finished })
+
+			path := scrubStatusPath(request.RunPath)
+			var document *scrubSummary
+			for attempt := 0; attempt < 200 && document == nil; attempt++ {
+				document = readScrubSummary(path)
+				if document == nil {
+					time.Sleep(10 * time.Millisecond)
+				}
+			}
+			if document == nil {
+				t.Fatalf("scrub wrote no document before its first [%s] poll, so list renders [%s]",
+					scrubPollInterval, backupUnknownCell)
+			}
+			if document.State != metric.BackupStateRunning {
+				t.Errorf("state = %q, want %q", document.State, metric.BackupStateRunning)
+			}
+			if document.ResumedBool != testCase.expectedResumed {
+				t.Errorf("resumed_bool = %v, want %v", document.ResumedBool, testCase.expectedResumed)
+			}
+			if document.ExpiresTS == "" {
+				t.Errorf("expires_ts is empty, want the scrub deadline the reaper and list read")
+			}
+			expected := metric.BackupStateRunning
+			if testCase.expectedResumed {
+				expected = backupResumedCell
+			}
+			if word := scrubWord(*document); word != expected {
+				t.Errorf("scrubWord() = %q, want %q so list never shows a blank cell for a live pass", word, expected)
+			}
+		})
+	}
+}

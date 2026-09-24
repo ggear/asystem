@@ -230,6 +230,17 @@ class BackupsShellTest(unittest.TestCase):
         self.assertEqual(lines, ["", "\033[1;35m== macmini-mad stop ==\033[0m", "", "+----+", "| row |", "", "| row |", "+----+"],
                          "blank runs collapse to one and trailing blanks are dropped")
 
+    def test_messages_name_the_installed_command_not_the_script_path(self):
+        self.hosts()
+        helped = self.shell('backups_help help 2>&1', keep_blanks=True)
+        self.assertIn("Usage: abackups [command]", helped,
+                      "help must name the command an operator can type, not the script it reaches")
+        interrupted = self.shell('backups_interrupt 2>&1')
+        self.assertIn("[abackups tail]", interrupted)
+        self.assertIn("[abackups stop]", interrupted)
+        self.assertNotIn("backups.sh", helped + interrupted,
+                         "the script path is not a command anyone can run")
+
     def test_every_log_line_shares_one_format(self):
         self.hosts()
         self.assertRegex(self.shell('backups_log INFO "a message"'),

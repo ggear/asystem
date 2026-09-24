@@ -253,11 +253,6 @@ func configHost(configPath string) string {
 	return config.Load(configPath).Host()
 }
 
-func commandAvailable(name string) bool {
-	_, err := exec.LookPath(name)
-	return err == nil
-}
-
 func directoryStats(dir string) (files, sizeMB int) {
 	var total int64
 	_ = filepath.Walk(dir, func(_ string, info os.FileInfo, err error) error {
@@ -326,6 +321,11 @@ type lockedBuffer struct {
 type execFunc func(ctx context.Context, name string, args ...string) (stdout string, exitCode int, abandoned bool)
 
 var stageExec = execFunc(realStageExec)
+
+var commandAvailable = func(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
 
 var (
 	errStageTimedOut = errors.New("stage timed out")

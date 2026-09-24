@@ -83,7 +83,7 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 		if err != nil {
 			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Errorf("faulting", probeCreateStart, "[create] failed with [%v]", err)
 			delete(probeMap, p)
-			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Debugf("removals", probeCreateStart, "[removed] from the poll set")
+			scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Debugf("removals", probeCreateStart, "[poll set] no longer carries this probe, its create failed")
 			continue
 		}
 		scribe.Log(scribe.SourceProbe, p.subject(), scribe.ActionStart).Debugf("prepared", probeCreateStart, "[%d] metrics", len(p.metrics()))

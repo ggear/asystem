@@ -701,8 +701,29 @@ func TestScribe_DetailLeadsWithValue(t *testing.T) {
 	}
 }
 
+func TestScribe_DetailDoesNotRestateItsVerb(t *testing.T) {
+	stem := func(word string) string {
+		word = strings.ToLower(strings.Trim(word, "[]().,"))
+		if len(word) > 4 {
+			return word[:4]
+		}
+		return word
+	}
+	for _, detail := range detailCalls(t, "../..") {
+		first, _, _ := strings.Cut(strings.TrimSpace(detail.text), " ")
+		if detail.verb == "" || first == "" || strings.HasPrefix(first, "%") {
+			continue
+		}
+		if stem(detail.verb) == stem(first) {
+			t.Errorf("%s: verb %q and detail %q say the same word twice in adjacent columns",
+				detail.position, detail.verb, detail.text)
+		}
+	}
+}
+
 type detailCall struct {
 	position string
+	verb     string
 	text     string
 }
 
@@ -736,13 +757,11 @@ func detailCalls(t *testing.T, root string) []detailCall {
 			if !ok || !slices.Contains([]string{"Debugf", "Infof", "Warnf", "Errorf"}, selector.Sel.Name) {
 				return true
 			}
-
 			if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Name == "fmt" {
-
 				return true
-
 			}
-			if _, ok := call.Args[0].(*ast.BasicLit); !ok {
+			verbLiteral, ok := call.Args[0].(*ast.BasicLit)
+			if !ok {
 				return true
 			}
 			literal, ok := call.Args[2].(*ast.BasicLit)
@@ -753,7 +772,8 @@ func detailCalls(t *testing.T, root string) []detailCall {
 			if unquoteErr != nil {
 				return true
 			}
-			details = append(details, detailCall{position: fileSet.Position(literal.Pos()).String(), text: text})
+			verb, _ := strconv.Unquote(verbLiteral.Value)
+			details = append(details, detailCall{position: fileSet.Position(literal.Pos()).String(), verb: verb, text: text})
 			return true
 		})
 		return nil

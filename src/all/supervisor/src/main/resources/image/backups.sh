@@ -18,6 +18,7 @@ BACKUPS_CONFIG="${BACKUPS_CONFIG:-${BACKUPS_ROOT}/config.json}"
 BACKUPS_SSH_USER="${BACKUPS_SSH_USER:-root}"
 BACKUPS_SSH_OPTS=(-n -o BatchMode=yes -o ConnectTimeout=10)
 BACKUPS_REMOTE="${BACKUPS_REMOTE:-/usr/local/bin/abackup}"
+BACKUPS_NAME="${BACKUPS_NAME:-abackups}"
 BACKUPS_TIMEOUT_DEFAULT="${BACKUPS_TIMEOUT_DEFAULT:-6}"
 BACKUPS_TIMEOUT_HOURS="${BACKUPS_TIMEOUT_HOURS:-}"
 BACKUPS_SCHEDULED_HOUR=1
@@ -44,7 +45,7 @@ backups_help() {
   local out=2
   [ "${1:-}" = "help" ] && out=1
   {
-    echo "Usage: ${0##*/} [command] [options]"
+    echo "Usage: ${BACKUPS_NAME} [command] [options]"
     echo
     echo "  start    start runs on all hosts, then follow them until interrupted"
     echo "  stop     stop every active run on every host"
@@ -130,7 +131,7 @@ backups_interrupt() {
   BACKUPS_INTERRUPTED=1
   echo >&2
   backups_log WARN "tailing stopped, every dispatched run continues on its own host"
-  backups_log WARN "follow them again with [${0##*/} tail] or end them with [${0##*/} stop]"
+  backups_log WARN "follow them again with [${BACKUPS_NAME} tail] or end them with [${BACKUPS_NAME} stop]"
 }
 
 backups_each() {

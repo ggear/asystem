@@ -134,7 +134,7 @@ func reportMirrorProgress(ctx context.Context, opened, expected int64, deadline 
 				rate := samples.rate()
 				remaining := mirrorRemaining(moved, expected, rate)
 				scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionCompute).Infof("mirrored", now,
-					"%s", backupProgressed(backupVerb(metric.BackupStageTertiary), intReading(moved/bytesPerGibibyte), mirrorTotal(expected),
+					"%s", backupProgressed(intReading(moved/bytesPerGibibyte), mirrorTotal(expected),
 						mirrorPercent(moved, expected), remaining, backupEta(now, remaining), rate, backupBounded(now, remaining, deadline)))
 			}
 		}

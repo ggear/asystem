@@ -62,6 +62,10 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		return false
 	}
 	resumed := action == scrubActionResume
+	opening := scrubDocument(request, metric.BackupStateRunning, false, started, scrubReading{})
+	opening.ResumedBool = resumed
+	opening.ExpiresTS = hard.Format(time.RFC3339)
+	writeScrubSummary(request, host, opening)
 	baseline, _ := scrubReadNow(ctx)
 
 	reached := 0.0
@@ -113,7 +117,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		rate := samples.rate()
 		remaining := scrubRemaining(reading, reached, rate)
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("scrubbed", now,
-			"%s", backupProgressed("scrubbed", intReading(int64(reading.scrubbedMB)/mebibytesPerGibibyte), scrubTotal(reading, reached),
+			"%s", backupProgressed(intReading(int64(reading.scrubbedMB)/mebibytesPerGibibyte), scrubTotal(reading, reached),
 				scrubPercent(reached), remaining, backupEta(now, remaining), rate, backupBounded(now, remaining, hard)))
 		if !reading.running {
 			break
