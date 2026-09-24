@@ -5,8 +5,9 @@
     <EnableSsl>False</EnableSsl>
     <LaunchBrowser>True</LaunchBrowser>
     <ApiKey>$SONARR_API_KEY</ApiKey>
-<!--    <AuthenticationMethod>Forms</AuthenticationMethod>-->
-<!--    <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>-->
+    <AuthenticationMethod>External</AuthenticationMethod>
+    <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+    <AllowedHosts>sonarr.proxy.janeandgraham.com</AllowedHosts>
     <Branch>main</Branch>
     <LogLevel>Warn</LogLevel>
     <SslCertPath></SslCertPath>
