@@ -1,0 +1,153 @@
+package probe
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"supervisor/internal/metric"
+)
+
+func TestProbeUtilBackupStageTertiary_MirrorTotal(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected int64
+		known    bool
+		value    int64
+	}{
+		{name: "unknown_when_expected_is_zero", expected: 0, known: false},
+		{name: "unknown_when_expected_is_negative", expected: -1, known: false},
+		{name: "known_converts_bytes_to_gibibytes", expected: 3 * bytesPerGibibyte, known: true, value: 3},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := mirrorTotal(testCase.expected)
+			if got.Known() != testCase.known {
+				t.Fatalf("mirrorTotal() known = %v, want %v", got.Known(), testCase.known)
+			}
+			if testCase.known && got.Rounded() != testCase.value {
+				t.Errorf("mirrorTotal() = %d, want %d", got.Rounded(), testCase.value)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_MirrorPercent(t *testing.T) {
+	tests := []struct {
+		name     string
+		moved    int64
+		expected int64
+		known    bool
+		value    float64
+	}{
+		{name: "unknown_when_expected_is_zero", moved: 10, expected: 0, known: false},
+		{name: "unknown_when_moved_exceeds_expected", moved: 200, expected: 100, known: false},
+		{name: "halfway", moved: 50, expected: 100, known: true, value: 50},
+		{name: "moved_equal_to_expected_is_complete", moved: 100, expected: 100, known: true, value: 100},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := mirrorPercent(testCase.moved, testCase.expected)
+			if got.Known() != testCase.known {
+				t.Fatalf("mirrorPercent() known = %v, want %v", got.Known(), testCase.known)
+			}
+			if testCase.known && got.Value() != testCase.value {
+				t.Errorf("mirrorPercent() = %v, want %v", got.Value(), testCase.value)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_MirrorRemaining(t *testing.T) {
+	tests := []struct {
+		name     string
+		moved    int64
+		expected int64
+		rate     reading
+		known    bool
+	}{
+		{name: "unknown_when_expected_is_zero", moved: 10, expected: 0, rate: floatReading(10), known: false},
+		{name: "unknown_when_moved_exceeds_expected", moved: 200, expected: 100, rate: floatReading(10), known: false},
+		{name: "unknown_when_rate_is_unknown", moved: 10, expected: 100, rate: unknownReading(), known: false},
+		{name: "unknown_when_rate_is_zero", moved: 10, expected: 100, rate: floatReading(0), known: false},
+		{name: "unknown_when_rate_is_negative", moved: 10, expected: 100, rate: floatReading(-1), known: false},
+		{name: "known_with_a_positive_rate", moved: 10 * bytesPerMebibyte, expected: 110 * bytesPerMebibyte, rate: floatReading(10), known: true},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := mirrorRemaining(testCase.moved, testCase.expected, testCase.rate)
+			if got.Known() != testCase.known {
+				t.Fatalf("mirrorRemaining() known = %v, want %v", got.Known(), testCase.known)
+			}
+		})
+	}
+}
+
+func writeTertiaryStatus(t *testing.T, root, runID string, sizeMB int) {
+	t.Helper()
+	path := stageStatusPath(backupRunPath(root, runID), metric.BackupStageTertiary)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := writeAtomic(path, backupSummary{RunID: runID, State: metric.BackupStateSuccess, SizeMB: sizeMB}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_PreviousTertiaryBytesSkipsTheCurrentAndLaterRuns(t *testing.T) {
+	root := t.TempDir()
+	writeTertiaryStatus(t, root, "2026-09-20_01-00-00", 100)
+	writeTertiaryStatus(t, root, "2026-09-21_01-00-00", 200)
+	writeTertiaryStatus(t, root, "2026-09-22_01-00-00", 300)
+	got := previousTertiaryBytes(root, "2026-09-21_01-00-00")
+	expected := int64(100) * 1048576
+	if got != expected {
+		t.Errorf("previousTertiaryBytes() = %d, want %d taken from the newest run strictly before [2026-09-21_01-00-00]", got, expected)
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_PreviousTertiaryBytesSkipsAZeroSizedRun(t *testing.T) {
+	root := t.TempDir()
+	writeTertiaryStatus(t, root, "2026-09-20_01-00-00", 150)
+	writeTertiaryStatus(t, root, "2026-09-21_01-00-00", 0)
+	got := previousTertiaryBytes(root, "2026-09-22_01-00-00")
+	expected := int64(150) * 1048576
+	if got != expected {
+		t.Errorf("previousTertiaryBytes() = %d, want %d, skipping the zero-sized run", got, expected)
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_PreviousTertiaryBytesAgainstNoPriorRun(t *testing.T) {
+	root := t.TempDir()
+	if got := previousTertiaryBytes(root, "2026-09-22_01-00-00"); got != 0 {
+		t.Errorf("previousTertiaryBytes() = %d, want 0 with no prior runs", got)
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_PruneStaleRemovesOnlyEntriesOlderThanTheAge(t *testing.T) {
+	dir := t.TempDir()
+	fresh := filepath.Join(dir, "fresh")
+	stale := filepath.Join(dir, "stale")
+	if err := os.Mkdir(fresh, 0o755); err != nil {
+		t.Fatalf("mkdir fresh: %v", err)
+	}
+	if err := os.Mkdir(stale, 0o755); err != nil {
+		t.Fatalf("mkdir stale: %v", err)
+	}
+	old := time.Now().Add(-48 * time.Hour)
+	if err := os.Chtimes(stale, old, old); err != nil {
+		t.Fatalf("chtimes: %v", err)
+	}
+	pruneStale(dir, 24*time.Hour)
+	if _, err := os.Stat(fresh); err != nil {
+		t.Errorf("fresh entry was pruned, want it kept")
+	}
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Errorf("stale entry survived, want it pruned")
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_PruneStaleAgainstAMissingDirectory(t *testing.T) {
+	pruneStale(filepath.Join(t.TempDir(), "missing"), time.Hour)
+}

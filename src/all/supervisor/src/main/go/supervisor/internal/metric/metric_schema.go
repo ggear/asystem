@@ -99,7 +99,7 @@ func Topics() []schema.Topic {
 	}
 	for _, template := range []string{
 		TopicBackupStatus("$HOST"),
-		TopicBackupStage("$HOST", "$STAGE"),
+		TopicBackupStage("$HOST", backupStagePlaceholder),
 		TopicBackupService("$HOST", "$BACKUP_SERVICE"),
 		TopicBackupScrub("$SCRUB_HOST"),
 		TopicBackupReaper(),
@@ -240,7 +240,7 @@ func Payloads() []schema.Payload {
 		{Role: schema.RoleState, Match: "*/backup/status", Root: backupHostStatus},
 		{
 			Role:  schema.RoleState,
-			Match: "*/backup/stage/tertiary/scrub/status",
+			Match: "*/backup/stage/" + string(BackupStageTertiary) + "/scrub/status",
 			Root: schema.Member{Members: []schema.Member{
 				{Key: "run_id", Kind: schema.KindStr},
 				{Key: "state", Enum: []string{
@@ -301,6 +301,8 @@ func TopicLeaderCandidate(host string) string {
 	return TopicLeaderRoot + "/candidate/" + host
 }
 
+type BackupStage string
+
 func TopicBackupRoot(host string) string {
 	return "supervisor/" + host + "/backup"
 }
@@ -309,8 +311,8 @@ func TopicBackupStatus(host string) string {
 	return TopicBackupRoot(host) + "/status"
 }
 
-func TopicBackupStage(host, stage string) string {
-	return TopicBackupRoot(host) + "/stage/" + stage + "/status"
+func TopicBackupStage(host string, stage BackupStage) string {
+	return TopicBackupRoot(host) + "/stage/" + string(stage) + "/status"
 }
 
 func TopicBackupStagePrefix(host string) string {
@@ -318,11 +320,11 @@ func TopicBackupStagePrefix(host string) string {
 }
 
 func TopicBackupService(host, service string) string {
-	return TopicBackupRoot(host) + "/stage/primary/service/" + service + "/status"
+	return TopicBackupRoot(host) + "/stage/" + string(BackupStagePrimary) + "/service/" + service + "/status"
 }
 
 func TopicBackupScrub(host string) string {
-	return TopicBackupRoot(host) + "/stage/tertiary/scrub/status"
+	return TopicBackupRoot(host) + "/stage/" + string(BackupStageTertiary) + "/scrub/status"
 }
 
 func TopicBackupReaper() string {
@@ -330,6 +332,12 @@ func TopicBackupReaper() string {
 }
 
 const (
+	BackupStagePrimary   BackupStage = "primary"
+	BackupStageSecondary BackupStage = "secondary"
+	BackupStageTertiary  BackupStage = "tertiary"
+
+	backupStagePlaceholder BackupStage = "$STAGE"
+
 	BackupStateRunning = "running"
 	BackupStateSuccess = "success"
 	BackupStateSkipped = "skipped"

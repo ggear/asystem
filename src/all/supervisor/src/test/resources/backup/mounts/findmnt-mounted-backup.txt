@@ -1,3 +1,0 @@
-$ findmnt -M /backup -n -o SOURCE,FSTYPE,OPTIONS,PROPAGATION
-/dev/sdb1 btrfs rw,noatime,compress=zstd:1,nossd,space_cache=v2,subvolid=5,subvol=/ shared
-[exit 0]

@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -17,7 +15,6 @@ import (
 	"supervisor/internal/stats"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 )
 
@@ -27,9 +24,8 @@ type backupProbe struct {
 	configPath string
 	hostName   string
 	serverHost bool
-	stages     []string
+	stages     []metric.BackupStage
 	root       string
-	runner     string
 
 	failedBackupStagesInt *stats.IntStats
 	haltedBackupStagesInt *stats.IntStats
@@ -53,7 +49,7 @@ type backupProbe struct {
 }
 
 func newBackupProbe() *backupProbe {
-	backupProbeInstance = &backupProbe{root: backupRunRoot, runner: backupRunner}
+	backupProbeInstance = &backupProbe{root: backupRunRoot()}
 	return backupProbeInstance
 }
 
@@ -78,13 +74,13 @@ func (p *backupProbe) create(configPath string, cache *metric.RecordCache, mask 
 	loaded := config.Load(configPath)
 	p.hostName = loaded.Host()
 	createStart := config.NowIncludingSuspend()
-	p.stages = loaded.HostStages(p.hostName)
+	p.stages = backupStagesOf(loaded.HostStages(p.hostName))
 	if len(p.stages) == 0 {
-		p.stages = backupStages[:2]
+		p.stages = []metric.BackupStage{metric.BackupStagePrimary, metric.BackupStageSecondary}
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Warnf("faulting", createStart,
-			"[%s] declares no backup stages, assuming [%s]", p.configPath, strings.Join(p.stages, ","))
+			"[%s] declares no backup stages, assuming [%s]", p.configPath, backupStagesNamed(p.stages))
 	}
-	p.serverHost = slices.Contains(p.stages, backupStageTertiary)
+	p.serverHost = slices.Contains(p.stages, metric.BackupStageTertiary)
 	p.failedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.haltedBackupStagesInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
 	p.usedBackupSpaceInt = stats.NewIntStats(periods.TrendHours, float64(periods.PulseMillis)/1000.0, float64(periods.PollMillis)/1000.0)
@@ -154,7 +150,7 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 }
 
 func (p *backupProbe) everRolled() bool {
-	rolled, _ := filepath.Glob(filepath.Join(p.root, "*", "status.json"))
+	rolled, _ := filepath.Glob(statusPath(backupRunPath(p.root, "*")))
 	return len(rolled) > 0
 }
 
@@ -211,7 +207,7 @@ func (p *backupProbe) armReaper(started time.Time) bool {
 		return false
 	}
 	defer client.close()
-	armed, _ := json.Marshal(backupReaper{State: metric.CommandOn})
+	armed, _ := json.Marshal(backupReaperSummary{State: metric.CommandOn})
 	if err := client.publishRetained(allReaperTopic, string(armed)); err != nil {
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%v] arming [%s], retrying on every reaper tick until it is reached", err, allReaperTopic)
 		return false
@@ -253,7 +249,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	if p.reapWatch == nil {
-		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, allBackupStatusTopic, allReaperTopic, metric.TopicBackupStage(anyHost, backupStageTertiary))
+		watch, err := brokerWatch(p.configPath, p.hostName, stateTopic, allBackupStatusTopic, allReaperTopic, metric.TopicBackupStage(anyHost, metric.BackupStageTertiary))
 		if err != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionConnect).Warnf("faulting", reapStart, "[%v] watching the cluster, retrying on the next tick", err)
 			return
@@ -275,7 +271,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 	}
 	p.reapStale = 0
 	flag, declared := retained[allReaperTopic]
-	var reaper backupReaper
+	var reaper backupReaperSummary
 	if declared {
 		_ = json.Unmarshal([]byte(flag), &reaper)
 	}
@@ -284,14 +280,14 @@ func (p *backupProbe) reap(ctx context.Context) {
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
 			"[%s] is absent, asserting the armed default the broker no longer carries", allReaperTopic)
 		p.armReaper(reapStart)
-	case strings.EqualFold(strings.TrimSpace(reaper.State), metric.CommandOff) && !reaper.paused():
+	case strings.EqualFold(strings.TrimSpace(reaper.State), metric.CommandOff) && !reaper.Paused():
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Infof("restored", reapStart,
 			"[%s] paused until [%s], which has passed, arming it again", allReaperTopic, reaper.ExpiresTS)
 		p.armReaper(reapStart)
 	case p.reapArming:
 		p.armReaper(reapStart)
 	}
-	if paused := reaper.paused(); paused != p.reapPaused {
+	if paused := reaper.Paused(); paused != p.reapPaused {
 		p.reapPaused = paused
 		if paused {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("excluded", reapStart,
@@ -308,14 +304,14 @@ func (p *backupProbe) reap(ctx context.Context) {
 		}
 		return
 	}
-	if !strings.EqualFold(strings.TrimSpace(retained[stateTopic]), "on") {
+	if !strings.EqualFold(strings.TrimSpace(retained[stateTopic]), metric.CommandOn) {
 		if p.reapQuiet() {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
 				"[%s] does not report the disk on, so there is nothing to power down", stateTopic)
 		}
 		return
 	}
-	var coordinated backupDocument
+	var coordinated backupSummary
 	if json.Unmarshal([]byte(retained[allBackupStatusTopic]), &coordinated) == nil && coordinated.State == metric.BackupStateRunning {
 		if started, perr := time.Parse(time.RFC3339, coordinated.StartedTS); perr == nil && time.Since(started) < backupRunCeiling {
 			if p.reapQuiet() {
@@ -329,7 +325,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		if !strings.HasSuffix(topic, tertiaryStatusSuffix) {
 			continue
 		}
-		var document backupDocument
+		var document backupSummary
 		if json.Unmarshal([]byte(payload), &document) != nil || document.State != metric.BackupStateRunning || document.ExpiresTS == "" {
 			continue
 		}
@@ -374,9 +370,6 @@ func (p *backupProbe) reap(ctx context.Context) {
 }
 
 func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapshot) {
-	if _, statErr := os.Stat(p.runner); statErr != nil {
-		return
-	}
 	reaped := false
 	runPath := filepath.Join(p.root, snapshot.dir)
 	for _, stage := range backupStages {
@@ -391,19 +384,16 @@ func (p *backupProbe) reapLocalStale(ctx context.Context, snapshot *backupSnapsh
 		staleStart := config.NowIncludingSuspend()
 		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] still running with liveness expired at [%s], stopping it", stage, snapshot.dir, document.ExpiresTS)
 		stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), backupStopDeadline)
-		stop := exec.CommandContext(stopCtx, "bash", p.runner, "stop", snapshot.dir, "--stage", stage)
-		stop.Env = append(os.Environ(), "BACKUP_RUN_ID="+snapshot.dir, "BACKUP_RUN_PATH="+runPath, "BACKUP_RUN_ID_PASSED=1")
-		stop.Cancel = func() error { return stop.Process.Signal(syscall.SIGTERM) }
-		stop.WaitDelay = backupStageKillGrace
-		if stopErr := stop.Run(); stopErr != nil {
+		stopErr := stopStage(stopCtx, stageRequest{Stage: stage, RunID: snapshot.dir, RunPath: runPath, ConfigPath: p.configPath})
+		stopCancel()
+		if stopErr != nil {
 			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", staleStart, "[%-9s] stage of run [%s] did not stop within [%s], abandoning it with [%v]", stage, snapshot.dir, backupStopDeadline, stopErr)
 		}
-		stopCancel()
 		stale := *document
 		stale.State = metric.BackupStateTimeout
 		stale.FinishedTS = time.Now().Format(time.RFC3339)
 		stale.ExpiresTS = ""
-		writeDocumentAtomic(stageStatusPath(runPath, stage), stale)
+		_ = writeAtomic(stageStatusPath(runPath, stage), stale)
 		reaped = true
 	}
 	if reaped {
@@ -424,22 +414,18 @@ func (p *backupProbe) documents() *backupSnapshot {
 }
 
 func (p *backupProbe) fingerprint() string {
-	entries, err := os.ReadDir(p.root)
-	if err != nil {
+	runs := backupRuns(p.root)
+	if len(runs) == 0 {
 		return ""
 	}
-	newest := ""
-	for _, entry := range entries {
-		if entry.IsDir() && backupRunDirPattern.MatchString(entry.Name()) && entry.Name() > newest {
-			newest = entry.Name()
-		}
+	newest := runs[len(runs)-1]
+	runPath := backupRunPath(p.root, newest)
+	paths := []string{statusPath(runPath)}
+	for _, stage := range backupStages {
+		paths = append(paths, stageStatusPath(runPath, stage))
 	}
-	if newest == "" {
-		return ""
-	}
-	runPath := filepath.Join(p.root, newest)
 	marks := []string{newest}
-	for _, path := range append([]string{filepath.Join(runPath, "status.json")}, stageStatusPaths(runPath)...) {
+	for _, path := range paths {
 		info, err := os.Stat(path)
 		if err != nil {
 			marks = append(marks, "-")
@@ -448,14 +434,6 @@ func (p *backupProbe) fingerprint() string {
 		marks = append(marks, info.ModTime().UTC().Format(time.RFC3339Nano))
 	}
 	return strings.Join(marks, "/")
-}
-
-func stageStatusPaths(runPath string) []string {
-	paths := make([]string, 0, len(backupStages))
-	for _, stage := range backupStages {
-		paths = append(paths, stageStatusPath(runPath, stage))
-	}
-	return paths
 }
 
 func (p *backupProbe) refresh() {
@@ -478,199 +456,17 @@ func (p *backupProbe) cycle(ctx context.Context, hour int, isHour bool) {
 	defer p.backupActive.Store(false)
 	runStart := time.Now()
 	p.armReaper(runStart)
-	if err := os.MkdirAll(p.root, 0o755); err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Errorf("faulting", runStart, "[%s] backup run root could not be created with [%v]", p.root, err)
-		return
-	}
-	lock, err := os.OpenFile(filepath.Join(p.root, ".lock"), os.O_CREATE|os.O_RDWR, 0o644)
-	if err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Errorf("faulting", runStart, "[%s] backup run lock could not be opened with [%v]", p.root, err)
-		return
-	}
-	defer lock.Close()
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Debugf("deferred", runStart, "[held] backup run lock, another run is in progress, skipping")
-		return
-	}
-	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
-
-	runID := time.Now().Format(backupRunStamp)
-	runPath := filepath.Join(p.root, runID)
-	if err := os.MkdirAll(runPath, 0o755); err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Errorf("faulting", runStart, "[%s] backup run directory could not be created with [%v]", runPath, err)
-		return
-	}
-	stages := p.stages
 	if p.serverHost {
-		p.powerBackupDisk(metric.CommandOn, runStart)
-	}
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Infof("schedule", runStart, "[%s] backup run over [%d] stages", runID, len(stages))
-	expires := time.Time{}
-	if hours := config.Load(p.configPath).BackupTimeoutHours(); hours > 0 {
-		expires = runStart.Add(time.Duration(hours) * time.Hour)
-	}
-	failed := 0
-	for _, stage := range stages {
-		if err := p.runStage(ctx, stage, runID, runPath, expires); err != nil {
-			failed++
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStart).Warnf("faulting", runStart, "[%s] backup stage failed with [%v], stopping the run", stage, err)
-			break
+		if err := powerBackupDisk(p.configPath, metric.CommandOn); err != nil {
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", runStart,
+				"[%v] powering the backup disk on, the run mounts it anyway in case it is already powered", err)
 		}
 	}
-	p.pruneRuns(runStart)
-	document := p.writeRunDocument(runPath, runID, runStart)
-	p.publishHostStatus(document)
+	request := BackupRequest{Command: BackupCommandStart, Trigger: metric.BackupTriggerSystem, Config: p.configPath}
+	if err := Backup(ctx, request); err != nil {
+		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Warnf("faulting", runStart, "[%v] scheduled backup run did not complete cleanly", err)
+	}
 	p.refresh()
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("finished", runStart, "[%s] backup run, [%d] of [%d] stages failed", runID, failed, len(stages))
-}
-
-func (p *backupProbe) pruneRuns(started time.Time) {
-	entries, err := os.ReadDir(p.root)
-	if err != nil {
-		return
-	}
-	var runs []string
-	for _, entry := range entries {
-		if entry.IsDir() && backupRunDirPattern.MatchString(entry.Name()) {
-			runs = append(runs, entry.Name())
-		}
-	}
-	if len(runs) <= backupRunsKept {
-		return
-	}
-	sort.Strings(runs)
-	pruned := runs[:len(runs)-backupRunsKept]
-	for _, run := range pruned {
-		if err := os.RemoveAll(filepath.Join(p.root, run)); err != nil {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionRemove).Warnf("faulting", started, "[%s] backup run directory could not be removed with [%v]", run, err)
-		}
-	}
-	scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionRemove).Debugf("expunged", started, "[%d] backup run directories beyond the newest [%d] under [%s]", len(pruned), backupRunsKept, p.root)
-}
-
-func (p *backupProbe) runStage(ctx context.Context, stage, runID, runPath string, expires time.Time) error {
-	if _, err := os.Stat(p.runner); err != nil {
-		return fmt.Errorf("stage runner [%s] is absent [%w]", p.runner, err)
-	}
-	stagePath := filepath.Join(runPath, "stage", stage)
-	if err := os.MkdirAll(stagePath, 0o755); err != nil {
-		return fmt.Errorf("stage directory [%s] could not be created [%w]", stagePath, err)
-	}
-	logPath := filepath.Join(stagePath, "output.log")
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		return fmt.Errorf("stage log [%s] could not be created [%w]", logPath, err)
-	}
-	defer logFile.Close()
-	stageCtx := ctx
-	if !expires.IsZero() {
-		deadline := expires
-		if !time.Now().Before(deadline) {
-			deadline = time.Now().Add(backupExpiredGrace)
-		}
-		var cancel context.CancelFunc
-		stageCtx, cancel = context.WithDeadline(ctx, deadline)
-		defer cancel()
-	}
-	command := exec.CommandContext(stageCtx, "bash", p.runner, "start", runID, "--stage", stage)
-	command.Env = append(os.Environ(), "BACKUP_RUN_ID="+runID, "BACKUP_RUN_PATH="+runPath, "BACKUP_RUN_ID_PASSED=1")
-	command.Cancel = func() error { return command.Process.Signal(syscall.SIGTERM) }
-	command.WaitDelay = backupStageKillGrace
-	command.Stdout = logFile
-	command.Stderr = logFile
-	runErr := command.Run()
-	if runErr != nil {
-		stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), backupStopDeadline)
-		defer stopCancel()
-		stop := exec.CommandContext(stopCtx, "bash", p.runner, "stop", runID, "--stage", stage)
-		stop.Env = command.Env
-		stop.Cancel = func() error { return stop.Process.Signal(syscall.SIGTERM) }
-		stop.WaitDelay = backupStageKillGrace
-		stop.Stdout = logFile
-		stop.Stderr = logFile
-		_ = stop.Run()
-		return fmt.Errorf("stage [%s] exited with [%w]", stage, runErr)
-	}
-	return nil
-}
-
-func (p *backupProbe) writeRunDocument(runPath, runID string, started time.Time) backupDocument {
-	stagesRun, stagesFailed, stagesHalted := 0, 0, 0
-	states := map[string]string{}
-	document := backupDocument{RunID: runID, StartedTS: started.Format(time.RFC3339)}
-	for _, stage := range backupStages {
-		staged := readStageDocument(stageStatusPath(runPath, stage))
-		if staged == nil {
-			continue
-		}
-		stagesRun++
-		states[stage] = staged.State
-		switch staged.State {
-		case metric.BackupStateSuccess:
-		case metric.BackupStateStopped, metric.BackupStateTimeout:
-			stagesHalted++
-		default:
-			stagesFailed++
-		}
-		document.FileCount += staged.FileCount
-		document.SizeMB += staged.SizeMB
-		document.FilesCreated += staged.FilesCreated
-		document.FilesDeleted += staged.FilesDeleted
-		document.SentMB += staged.SentMB
-		if stage == backupStageTertiary {
-			document.DiskUsagePerc = staged.DiskUsagePerc
-			document.FilesHeld = staged.FilesHeld
-			document.SizeHeldMB = staged.SizeHeldMB
-		}
-	}
-	scrubState := ""
-	if scrubDoc := readStageDocument(filepath.Join(runPath, "stage", backupStageTertiary, "scrub.json")); scrubDoc != nil {
-		scrubState = scrubDoc.State
-	}
-	state := backupResolvedState(states, scrubState)
-	document.State = state
-	document.FinishedTS = time.Now().Format(time.RFC3339)
-	document.DurationS = int(time.Since(started).Seconds())
-	document.SuccessBool = state == metric.BackupStateSuccess
-	document.StagesRun = stagesRun
-	document.StagesFailed = stagesFailed
-	document.StagesHalted = stagesHalted
-	writeDocumentAtomic(filepath.Join(runPath, "status.json"), document)
-	return document
-}
-
-func backupResolvedState(stages map[string]string, scrub string) string {
-	for _, stage := range backupStages {
-		if stages[stage] == metric.BackupStateRunning {
-			return metric.BackupStateRunning
-		}
-	}
-	if scrub == metric.BackupStateRunning {
-		return metric.BackupStateRunning
-	}
-	for _, stage := range backupStages {
-		if state, ok := stages[stage]; ok && state != metric.BackupStateSuccess {
-			return state
-		}
-	}
-	if scrub != "" && scrub != metric.BackupStateSuccess && scrub != metric.BackupStateSkipped {
-		return scrub
-	}
-	return metric.BackupStateSuccess
-}
-
-func (p *backupProbe) powerBackupDisk(state string, started time.Time) {
-	topic := config.Load(p.configPath).BackupCommandTopic()
-	if topic == "" {
-		return
-	}
-	client, err := brokerDial(p.configPath, "power")
-	if err != nil {
-		scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionPublish).Warnf("faulting", started, "[%s] backup disk power [%s] not sent, broker unreachable with [%v]", topic, state, err)
-		return
-	}
-	defer client.close()
-	_ = client.publishCommand(topic, state)
 }
 
 func (p *backupProbe) lead() {
@@ -730,8 +526,8 @@ func (p *backupProbe) lead() {
 			}
 		}
 	}
-	document := backupClusterDocument{
-		RunID:         decision.started.Format(backupRunStamp),
+	document := backupClusterSummary{
+		RunID:         decision.started.Format(backupTimestampFormat),
 		State:         decision.state,
 		StartedTS:     decision.started.Format(time.RFC3339),
 		DurationS:     int(time.Since(decision.started).Seconds()),
@@ -759,16 +555,6 @@ func (p *backupProbe) lead() {
 	}
 }
 
-func (p *backupProbe) publishHostStatus(document backupDocument) {
-	client, err := brokerDial(p.configPath, "status")
-	if err != nil {
-		return
-	}
-	defer client.close()
-	payload, _ := json.Marshal(document)
-	_ = client.publishRetained(metric.TopicBackupStatus(p.hostName), string(payload))
-}
-
 type backupClusterRunAction int
 
 type backupClusterRun struct {
@@ -780,7 +566,7 @@ type backupClusterRun struct {
 }
 
 func backupClusterRunDecision(retained map[string]string, expected []string, now time.Time) backupClusterRun {
-	var clusterRun backupDocument
+	var clusterRun backupSummary
 	clusterRunStarted := time.Time{}
 	if json.Unmarshal([]byte(retained[allBackupStatusTopic]), &clusterRun) == nil {
 		clusterRunStarted, _ = time.Parse(time.RFC3339, clusterRun.StartedTS)
@@ -797,7 +583,7 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 				if !found || strings.Count(stage, "/") != 1 || !strings.HasSuffix(stage, "/status") {
 					continue
 				}
-				var document backupDocument
+				var document backupSummary
 				if json.Unmarshal([]byte(payload), &document) != nil || document.State != metric.BackupStateRunning || document.Trigger != metric.BackupTriggerSystem {
 					continue
 				}
@@ -805,7 +591,7 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 				if expiresErr != nil || !now.Before(expires) {
 					continue
 				}
-				started, startedOK := backupRunStarted(document)
+				started, startedOK := runStarted(document)
 				if !startedOK || now.Sub(started) > backupRunCeiling || (!clusterRunStarted.IsZero() && !started.After(clusterRunStarted.Add(backupRunSkew))) {
 					continue
 				}
@@ -820,7 +606,7 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 	}
 	earliest := decision.started.Add(-backupRunSkew)
 	for _, host := range expected {
-		var document backupDocument
+		var document backupSummary
 		if json.Unmarshal([]byte(retained[metric.TopicBackupStatus(host)]), &document) == nil &&
 			backupTerminal(document.State) && reportedForRun(document, earliest) {
 			decision.reported++
@@ -841,41 +627,11 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 	return decision
 }
 
-type backupReaper struct {
-	State     string `json:"state"`
-	ExpiresTS string `json:"expires_ts"`
-}
-
-func (r backupReaper) paused() bool {
-	if !strings.EqualFold(strings.TrimSpace(r.State), metric.CommandOff) {
-		return false
-	}
-	expires, err := time.Parse(time.RFC3339, r.ExpiresTS)
-	return err == nil && time.Now().Before(expires)
-}
-
-func backupTerminal(state string) bool {
-	return state != "" && state != metric.BackupStateRunning
-}
-
-func backupRunStarted(document backupDocument) (time.Time, bool) {
-	if started, err := time.ParseInLocation(backupRunStamp, document.RunID, time.Local); err == nil {
-		return started, true
-	}
-	started, err := time.Parse(time.RFC3339, document.StartedTS)
-	return started, err == nil
-}
-
-func reportedForRun(document backupDocument, earliest time.Time) bool {
-	started, err := time.Parse(time.RFC3339, document.StartedTS)
-	return err == nil && !started.Before(earliest)
-}
-
 func backupExpectedServers(configPath string) []string {
 	var servers []string
 	loaded := config.Load(configPath)
 	for _, host := range loaded.Hosts() {
-		if slices.Contains(loaded.HostStages(host), backupStageTertiary) {
+		if slices.Contains(backupStagesOf(loaded.HostStages(host)), metric.BackupStageTertiary) {
 			servers = append(servers, host)
 		}
 	}
@@ -883,154 +639,12 @@ func backupExpectedServers(configPath string) []string {
 	return servers
 }
 
-type backupClusterDocument struct {
-	RunID         string `json:"run_id"`
-	State         string `json:"state"`
-	StartedTS     string `json:"started_ts"`
-	FinishedTS    string `json:"finished_ts,omitempty"`
-	DurationS     int    `json:"duration_s"`
-	SuccessBool   bool   `json:"success_bool"`
-	PowerBool     bool   `json:"power_bool"`
-	HostsExpected int    `json:"hosts_expected"`
-	HostsReported int    `json:"hosts_reported"`
-	HostsFailed   int    `json:"hosts_failed"`
-	LeaderHost    string `json:"leader_host"`
-	LeaderEpoch   int64  `json:"leader_epoch"`
-}
-
-// backupDocument is every status document a backup run writes. The run directory is the topic namespace,
-// so <run>/<path>.json publishes at supervisor/<host>/backup/<path>, four documents in all:
-//
-//	<run>/status.json                                  RUN        Go, or backup_rollup on a hand run
-//	<run>/stage/<stage>/status.json                    STAGE      backup.sh, rewritten by reapLocalStale
-//	<run>/stage/primary/service/<service>/status.json  SERVICE    backup.sh
-//	<run>/stage/tertiary/scrub.json                    SCRUB      backup.sh
-//
-// Every field is omitempty but [state] and [success_bool], so a zero reads as absent rather than as a
-// measurement of zero. The shapes are declared in metric.Payloads(), one payload per document, and tests
-// hold that declaration equal to what these writers emit:
-//
-//	{
-//	    "run_id":                "<stamp>",    ALL                Run directory name, [YYYY-MM-DD_hh-mm-ss]
-//	    "state":                 "<state>",    ALL                Enum differs per document, only SCRUB carries all six
-//	    "started_ts":            "<rfc3339>",  ALL
-//	    "finished_ts":           "<rfc3339>",  ALL
-//	    "duration_s":            <number>,     ALL
-//	    "success_bool":          <true|false>, ALL
-//	    "trigger":               "<trigger>",  RUN STAGE          [system|manual], absent when Go writes the RUN
-//	    "expires_ts":            "<rfc3339>",  STAGE SCRUB        Liveness, the reaper stops a run found past it
-//	    "timeout_hours":         <number>,     STAGE              Read back rather than resolved by the reader
-//	    "file_count":            <number>,     RUN STAGE SERVICE
-//	    "size_mb":               <number>,     RUN STAGE SERVICE
-//	    "disk_usage_perc":       <number>,     RUN STAGE          Backup volume, tertiary alone measures it
-//	    "files_held":            <number>,     RUN STAGE
-//	    "files_created":         <number>,     RUN STAGE          Files, never services, in every stage
-//	    "files_deleted":         <number>,     RUN STAGE
-//	    "size_held_mb":          <number>,     RUN STAGE
-//	    "sent_mb":               <number>,     RUN STAGE
-//	    "stages_run":            <number>,     RUN
-//	    "stages_failed":         <number>,     RUN                Excludes a stop or a timeout
-//	    "stages_halted":         <number>,     RUN                A stop or a timeout alone
-//	    "disk_used_mb":          <number>,     STAGE
-//	    "disk_total_mb":         <number>,     STAGE
-//	    "disk_unclean_bool":     <true|false>, STAGE              The mount replayed its log
-//	    "total_mb":              <number>,     STAGE              Expected, against which size_mb is progress
-//	    "backup_id":             "<stamp>",    SERVICE            Artefact the run points at, reused when skipped
-//	    "kind":                  "<kind>",     SERVICE            [full|delta|unknown]
-//	    "version":               "<text>",     SERVICE
-//	    "scrubbed_mb":           <number>,     SCRUB              Cumulative, carried across a resume
-//	    "progress_perc":         <number>,     SCRUB
-//	    "errors_found":          <number>,     SCRUB              Checksum, verify and super errors
-//	    "errors_corrected":      <number>,     SCRUB
-//	    "errors_uncorrectable":  <number>,     SCRUB
-//	    "files_to_delete":       "<text>",     SCRUB              First 20, comma separated
-//	    "files_to_delete_count": <number>,     SCRUB
-//	    "device_errors":         <number>,     SCRUB              Since the last scrub, zeroed after reporting
-//	    "chunks_relocated":      <number>      SCRUB              From the balance that follows a clean scrub
-//	}
-//
-// backup.sh owns the run tree and Go owns the schedule; neither writes the other's documents, and the
-// shapes above belong to metric.Payloads() alone, with the [state] enums and topic templates coming from
-// metric too rather than being spelled here:
-//
-//	backup.sh writes  every STAGE, SERVICE and SCRUB document, and RUN on a hand run [backup_rollup].
-//	                  The only writer of [timeout_hours] [disk_used_mb] [disk_total_mb]
-//	                  [disk_unclean_bool] [total_mb] [trigger] on a RUN
-//	backup.sh reads   its own documents back through [backup_tail_field] and [jq], for the progress
-//	                  lines, [abackup list] and the stage verdict; an undeclared key reads empty
-//	Go writes         RUN on a scheduled run [writeRunDocument], and STAGE when the reaper stops a run
-//	                  found past its [expires_ts] [reapLocalStale]
-//	Go reads          [state] [trigger] [expires_ts] for liveness, [success_bool] per SERVICE for
-//	                  service/backup_status, [stages_*] and [disk_usage_perc] for the three host metrics
-//	The leader reads  every host's RUN [state] [started_ts] [success_bool] off the broker, never off
-//	                  another host's tree, and publishes the cluster rollup [backupClusterDocument]
-//
-// So RUN has two writers with different fields and its payload declares the union, and this struct
-// carries the whole STAGE shape even where Go reads none of a field, because reapLocalStale round-trips
-// a stage document through it and anything missing is dropped from the reaped run.
-type backupDocument struct {
-	RunID         string  `json:"run_id"`
-	State         string  `json:"state"`
-	Trigger       string  `json:"trigger,omitempty"`
-	StartedTS     string  `json:"started_ts,omitempty"`
-	FinishedTS    string  `json:"finished_ts,omitempty"`
-	ExpiresTS     string  `json:"expires_ts,omitempty"`
-	TimeoutHours  int     `json:"timeout_hours,omitempty"`
-	DurationS     int     `json:"duration_s,omitempty"`
-	SuccessBool   bool    `json:"success_bool"`
-	DiskUsagePerc float64 `json:"disk_usage_perc,omitempty"`
-	DiskUsedMB    int     `json:"disk_used_mb,omitempty"`
-	DiskTotalMB   int     `json:"disk_total_mb,omitempty"`
-	DiskUnclean   bool    `json:"disk_unclean_bool,omitempty"`
-	TotalMB       int     `json:"total_mb,omitempty"`
-	FileCount     int     `json:"file_count,omitempty"`
-	SizeMB        int     `json:"size_mb,omitempty"`
-	FilesHeld     int     `json:"files_held,omitempty"`
-	FilesCreated  int     `json:"files_created,omitempty"`
-	FilesDeleted  int     `json:"files_deleted,omitempty"`
-	SizeHeldMB    int     `json:"size_held_mb,omitempty"`
-	SentMB        int     `json:"sent_mb,omitempty"`
-	StagesRun     int     `json:"stages_run,omitempty"`
-	StagesFailed  int     `json:"stages_failed,omitempty"`
-	StagesHalted  int     `json:"stages_halted,omitempty"`
-}
-
-type backupSnapshot struct {
-	dir       string
-	at        time.Time
-	staged    int
-	running   bool
-	abandoned bool
-	trigger   string
-	host      *backupDocument
-	tertiary  *backupDocument
-	stages    map[string]*backupDocument
-	services  map[string]bool
-}
-
-func (s *backupSnapshot) age() time.Duration {
-	if s == nil || s.at.IsZero() {
-		return backupStaleWindow * 100
-	}
-	return config.SinceIncludingSuspend(s.at)
-}
-
 func readNewestRun(root string) *backupSnapshot {
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		return nil
-	}
-	var runs []string
-	for _, entry := range entries {
-		if entry.IsDir() && backupRunDirPattern.MatchString(entry.Name()) {
-			runs = append(runs, entry.Name())
-		}
-	}
+	runs := backupRuns(root)
 	if len(runs) == 0 {
 		return nil
 	}
-	sort.Strings(runs)
-	newest := readRun(root, runs[len(runs)-1])
+	newest := readBackupRun(root, runs[len(runs)-1])
 	started := newest.host == nil && newest.staged > 0
 	newest.running = started && newest.age() <= backupRunCeiling
 	newest.abandoned = started && !newest.running && newest.trigger == metric.BackupTriggerSystem
@@ -1038,7 +652,7 @@ func readNewestRun(root string) *backupSnapshot {
 		return newest
 	}
 	for index := len(runs) - 2; index >= 0; index-- {
-		candidate := readRun(root, runs[index])
+		candidate := readBackupRun(root, runs[index])
 		if candidate.age() > backupStaleWindow {
 			break
 		}
@@ -1049,83 +663,20 @@ func readNewestRun(root string) *backupSnapshot {
 	return newest
 }
 
-func readRun(root, dir string) *backupSnapshot {
-	at, _ := time.ParseInLocation(backupRunStamp, dir, time.Local)
-	snapshot := &backupSnapshot{dir: dir, at: at, stages: map[string]*backupDocument{}, services: map[string]bool{}}
-	runPath := filepath.Join(root, dir)
-	snapshot.host = readStageDocument(filepath.Join(runPath, "status.json"))
-	staged, _ := filepath.Glob(filepath.Join(runPath, "stage", "*", "status.json"))
-	snapshot.staged = len(staged)
-	for _, path := range staged {
-		if document := readStageDocument(path); document != nil {
-			snapshot.stages[filepath.Base(filepath.Dir(path))] = document
-		}
-	}
-	snapshot.tertiary = snapshot.stages[backupStageTertiary]
-	for _, stage := range backupStages {
-		if document := snapshot.stages[stage]; document != nil && document.Trigger != "" {
-			snapshot.trigger = document.Trigger
-			break
-		}
-	}
-	documents, _ := filepath.Glob(filepath.Join(runPath, "stage", "primary", "service", "*", "status.json"))
-	for _, path := range documents {
-		if document := readStageDocument(path); document != nil {
-			snapshot.services[filepath.Base(filepath.Dir(path))] = document.SuccessBool
-		}
-	}
-	return snapshot
-}
-
-func stageStatusPath(runPath, stage string) string {
-	return filepath.Join(runPath, "stage", stage, "status.json")
-}
-
-func readStageDocument(path string) *backupDocument {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil
-	}
-	var document backupDocument
-	if json.Unmarshal(data, &document) != nil {
-		return nil
-	}
-	return &document
-}
-
-func writeDocumentAtomic(path string, document backupDocument) {
-	data, err := json.MarshalIndent(document, "", "  ")
-	if err != nil {
-		return
-	}
-	temporary := path + ".tmp"
-	if os.WriteFile(temporary, data, 0o644) != nil {
-		return
-	}
-	_ = os.Rename(temporary, path)
-}
+const (
+	backupRunCeiling   = 5 * time.Hour
+	backupStaleWindow  = 24*time.Hour + backupRunCeiling
+	backupStopDeadline = 10 * time.Minute
+	backupRunSkew      = 10 * time.Minute
+	reaperIdleTicks    = 2
+	reaperNoticeTicks  = 15
+	reaperStaleTicks   = 5
+)
 
 const (
-	backupRunRoot        = "/home/asystem/supervisor/backup"
-	backupRunner         = "/asystem/etc/backup.sh"
-	backupRunStamp       = "2006-01-02_15-04-05"
-	backupRunCeiling     = 5 * time.Hour
-	backupStaleWindow    = 24*time.Hour + backupRunCeiling
-	backupStageKillGrace = 2 * time.Minute
-	backupExpiredGrace   = 1 * time.Minute
-	backupStopDeadline   = 10 * time.Minute
-	backupRunSkew        = 10 * time.Minute
-	backupRunsKept       = 30
-	backupScheduledHour  = 1
-	reaperIdleTicks      = 2
-	reaperNoticeTicks    = 15
-	reaperStaleTicks     = 5
-
 	anyHost  = "+"
 	anyLevel = "+"
 )
-
-const backupStageTertiary = "tertiary"
 
 const (
 	backupClusterRunIdle backupClusterRunAction = iota
@@ -1137,11 +688,7 @@ const (
 var (
 	backupProbeInstance *backupProbe
 
-	backupStages = []string{"primary", "secondary", backupStageTertiary}
-
 	allReaperTopic       = metric.TopicBackupReaper()
 	allBackupStatusTopic = metric.TopicBackupStatus(metric.HostAll)
-	tertiaryStatusSuffix = strings.TrimPrefix(metric.TopicBackupStage(anyHost, backupStageTertiary), metric.TopicBackupRoot(anyHost))
-
-	backupRunDirPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`)
+	tertiaryStatusSuffix = strings.TrimPrefix(metric.TopicBackupStage(anyHost, metric.BackupStageTertiary), metric.TopicBackupRoot(anyHost))
 )

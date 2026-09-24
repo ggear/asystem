@@ -146,7 +146,7 @@ func TestProbeUtilLogs_ParseLogRecord(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			stamp, message, ok := parseLogRecord(testCase.line, boot)
+			timestamp, message, ok := parseLogRecord(testCase.line, boot)
 			if ok != testCase.expectedOK {
 				t.Fatalf("parseLogRecord ok: got %v want %v", ok, testCase.expectedOK)
 			}
@@ -156,7 +156,7 @@ func TestProbeUtilLogs_ParseLogRecord(t *testing.T) {
 			if message != testCase.expectedMessage {
 				t.Fatalf("parseLogRecord message: got %q want %q", message, testCase.expectedMessage)
 			}
-			if elapsed := stamp.Sub(boot); elapsed != testCase.expectedElapsed {
+			if elapsed := timestamp.Sub(boot); elapsed != testCase.expectedElapsed {
 				t.Fatalf("parseLogRecord elapsed: got %v want %v", elapsed, testCase.expectedElapsed)
 			}
 		})

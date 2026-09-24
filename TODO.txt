@@ -30,8 +30,7 @@ improve sys tests with datbase/broker asserts
 
 
 
-
-
+code review entire patch which is not in git yet. Make sure project guidleines are followed. Check for simplications, dead code, unit tests gaps, unit tests arent valuable. reorganise struct/var/funcs by project guidleines eg func publishRunStatus( comes before BackupReaperState. group const appropriately and have correct/consistent prefixes.
 
 
 
@@ -46,6 +45,7 @@ show when dmesg message will age out in 24 hr time
 12:40:24 DEBUG probe[logs]      host/failed_log_messages  sample          5ms measured [1] kernel errors, first [2026-09-18T13:16:17+08:00] last [2026-09-18T13:16:17+08:00] ageing out at [2026-09-18T13:16:17+08:00]
 
 
+put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols
 
 check all metrics working 
 

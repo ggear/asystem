@@ -1,2 +1,0 @@
-Dirty:             27072 kB
-Writeback:             0 kB

@@ -121,18 +121,18 @@ func TestProbeUtilLeader_Elected(t *testing.T) {
 
 func TestProbeUtilLeader_FreshnessIgnoresTheSendersClock(t *testing.T) {
 	tests := []struct {
-		name          string
-		stampedOffset time.Duration
-		expectedError bool
+		name            string
+		timestampOffset time.Duration
+		expectedError   bool
 	}{
-		{name: "sender_an_hour_ahead", stampedOffset: time.Hour, expectedError: false},
-		{name: "sender_an_hour_behind", stampedOffset: -time.Hour, expectedError: false},
-		{name: "sender_in_step", stampedOffset: 0, expectedError: false},
+		{name: "sender_an_hour_ahead", timestampOffset: time.Hour, expectedError: false},
+		{name: "sender_an_hour_behind", timestampOffset: -time.Hour, expectedError: false},
+		{name: "sender_in_step", timestampOffset: 0, expectedError: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			campaign := leaderStubCampaign([]string{"alpha", "bravo"}, "alpha")
-			payload, _ := json.Marshal(leaderCandidacy{Host: "bravo", RenewedTS: time.Now().Add(tt.stampedOffset).Format(time.RFC3339Nano)})
+			payload, _ := json.Marshal(leaderCandidacy{Host: "bravo", RenewedTS: time.Now().Add(tt.timestampOffset).Format(time.RFC3339Nano)})
 			campaign.observe(nil, leaderStubMessage{topic: campaign.election.candidateTopic("bravo"), payload: payload})
 			if leader := leaderElected([]string{"bravo"}, campaign.candidates, leaderLease{}, time.Time{}, time.Now(), campaign.timing.ttl); leader != "bravo" {
 				t.Errorf("leader: got %q want bravo, a renewal that just arrived is fresh whatever it is stamped", leader)

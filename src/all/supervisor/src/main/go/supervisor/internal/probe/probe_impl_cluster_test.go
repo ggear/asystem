@@ -206,7 +206,7 @@ func TestProbeImplCluster_RedialsADetachedWatch(t *testing.T) {
 	if err := os.WriteFile(configFile, []byte(`{"asystem":{"version":"10.100.6000","host":"mad","broker":{"host":"127.0.0.1","port":"1"},"schema":[{"host":"mad","services":["plex"]}]}}`), 0644); err != nil {
 		t.Fatalf("write config file failed: %v", err)
 	}
-	detached := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: &leaderStubClient{open: false}}
+	detached := brokerWatcherWith(&leaderStubClient{open: false}, map[string]string{})
 	probe := &clusterProbe{configPath: configFile, watched: true}
 	probe.dialed.Store(time.Now().UnixNano())
 	probe.watch.Store(detached)

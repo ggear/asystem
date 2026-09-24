@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"supervisor/internal/config"
 )
 
 func TestProbeUtilMounts_Classification(t *testing.T) {
@@ -461,7 +463,7 @@ func writeMountTree(t *testing.T, mounts, fstab string, extra map[string]string)
 		writeMountFile(t, filepath.Join(root, mountTablePath), mountTableAt(root, mounts))
 		for line := range strings.SplitSeq(mounts, "\n") {
 			fields := strings.Fields(line)
-			if len(fields) < 3 || !strings.HasPrefix(fields[1], mountShareRoot+"/") || fields[2] == "autofs" {
+			if len(fields) < 3 || !strings.HasPrefix(fields[1], config.DirShare+"/") || fields[2] == "autofs" {
 				continue
 			}
 			if err := os.MkdirAll(filepath.Join(root, fields[1], mountContentDir), 0o755); err != nil {

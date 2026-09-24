@@ -1,16 +1,11 @@
 package probe
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/testutil"
@@ -21,13 +16,13 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-func writeBackupRun(t *testing.T, root, stamp string, host *backupDocument, tertiary *backupDocument, services map[string]bool) {
+func writeBackupRun(t *testing.T, root, timestamp string, host *backupSummary, tertiary *backupSummary, services map[string]bool) {
 	t.Helper()
-	runPath := filepath.Join(root, stamp)
+	runPath := filepath.Join(root, timestamp)
 	if err := os.MkdirAll(runPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	write := func(path string, document backupDocument) {
+	write := func(path string, document backupSummary) {
 		data, _ := json.MarshalIndent(document, "", "  ")
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
@@ -44,13 +39,13 @@ func writeBackupRun(t *testing.T, root, stamp string, host *backupDocument, tert
 	}
 	for service, success := range services {
 		write(filepath.Join(runPath, "stage", "primary", "service", service, "status.json"),
-			backupDocument{RunID: stamp, SuccessBool: success})
+			backupSummary{RunID: timestamp, SuccessBool: success})
 	}
 }
 
-func writeBackupStage(t *testing.T, root, stamp, stage string, document backupDocument) {
+func writeBackupStage(t *testing.T, root, timestamp string, stage metric.BackupStage, document backupSummary) {
 	t.Helper()
-	path := stageStatusPath(filepath.Join(root, stamp), stage)
+	path := stageStatusPath(filepath.Join(root, timestamp), stage)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -60,54 +55,53 @@ func writeBackupStage(t *testing.T, root, stamp, stage string, document backupDo
 	}
 }
 
-func writeBackupScrub(t *testing.T, root, stamp, state string) {
+func writeBackupScrub(t *testing.T, root, timestamp, state string) {
 	t.Helper()
-	path := filepath.Join(root, stamp, "stage", backupStageTertiary, "scrub.json")
+	path := filepath.Join(root, timestamp, "stage", string(metric.BackupStageTertiary), "scrub.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	data, _ := json.MarshalIndent(backupDocument{State: state}, "", "  ")
+	data, _ := json.MarshalIndent(backupSummary{State: state}, "", "  ")
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestProbeImplBackup_WriteRunDocumentNamesTheFirstStageThatBroke(t *testing.T) {
+func TestProbeImplBackup_RunSummaryNamesTheFirstStageThatBroke(t *testing.T) {
 	tests := []struct {
 		name        string
-		stages      map[string]string
+		stages      map[metric.BackupStage]string
 		scrub       string
 		wantState   string
 		wantSuccess bool
 		wantFailed  int
 		wantHalted  int
 	}{
-		{"every stage and a skipped scrub is success", map[string]string{
-			"primary": metric.BackupStateSuccess, "secondary": metric.BackupStateSuccess,
-			"tertiary": metric.BackupStateSuccess}, metric.BackupStateSkipped, metric.BackupStateSuccess, true, 0, 0},
-		{"secondary timed out ahead of a failed tertiary", map[string]string{
-			"primary": metric.BackupStateSuccess, "secondary": metric.BackupStateTimeout,
-			"tertiary": metric.BackupStateFailure}, "", metric.BackupStateTimeout, false, 1, 1},
-		{"a failed scrub still fails a fully successful run", map[string]string{
-			"primary": metric.BackupStateSuccess, "secondary": metric.BackupStateSuccess,
-			"tertiary": metric.BackupStateSuccess}, metric.BackupStateFailure, metric.BackupStateFailure, false, 0, 0},
+		{"every stage and a skipped scrub is success", map[metric.BackupStage]string{
+			metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess,
+			metric.BackupStageTertiary: metric.BackupStateSuccess}, metric.BackupStateSkipped, metric.BackupStateSuccess, true, 0, 0},
+		{"secondary timed out ahead of a failed tertiary", map[metric.BackupStage]string{
+			metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateTimeout,
+			metric.BackupStageTertiary: metric.BackupStateFailure}, "", metric.BackupStateTimeout, false, 1, 1},
+		{"a failed scrub still fails a fully successful run", map[metric.BackupStage]string{
+			metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess,
+			metric.BackupStageTertiary: metric.BackupStateSuccess}, metric.BackupStateFailure, metric.BackupStateFailure, false, 0, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			root := t.TempDir()
-			stamp := time.Now().Format(backupRunStamp)
+			timestamp := time.Now().Format(backupTimestampFormat)
 			for _, stage := range backupStages {
 				state, ok := tt.stages[stage]
 				if !ok {
 					continue
 				}
-				writeBackupStage(t, root, stamp, stage, backupDocument{State: state, SuccessBool: state == metric.BackupStateSuccess})
+				writeBackupStage(t, root, timestamp, stage, backupSummary{State: state, SuccessBool: state == metric.BackupStateSuccess})
 			}
 			if tt.scrub != "" {
-				writeBackupScrub(t, root, stamp, tt.scrub)
+				writeBackupScrub(t, root, timestamp, tt.scrub)
 			}
-			p := &backupProbe{}
-			document := p.writeRunDocument(filepath.Join(root, stamp), stamp, time.Now())
+			document := finishRun(root, timestamp, time.Now())
 			if document.State != tt.wantState || document.SuccessBool != tt.wantSuccess {
 				t.Errorf("got (%s,%v) want (%s,%v)", document.State, document.SuccessBool, tt.wantState, tt.wantSuccess)
 			}
@@ -120,10 +114,10 @@ func TestProbeImplBackup_WriteRunDocumentNamesTheFirstStageThatBroke(t *testing.
 }
 
 func TestProbeImplBackup_FailedBackups(t *testing.T) {
-	fresh := time.Now().Format(backupRunStamp)
-	stale := time.Now().Add(-40 * time.Hour).Format(backupRunStamp)
-	abandoned := time.Now().Add(-6 * time.Hour).Format(backupRunStamp)
-	rolled := time.Now().Add(-7 * time.Hour).Format(backupRunStamp)
+	fresh := time.Now().Format(backupTimestampFormat)
+	stale := time.Now().Add(-40 * time.Hour).Format(backupTimestampFormat)
+	abandoned := time.Now().Add(-6 * time.Hour).Format(backupTimestampFormat)
+	rolled := time.Now().Add(-7 * time.Hour).Format(backupTimestampFormat)
 	tests := []struct {
 		name          string
 		setup         func(root string)
@@ -132,43 +126,43 @@ func TestProbeImplBackup_FailedBackups(t *testing.T) {
 		expectedError bool
 	}{
 		{"run in flight is inert until it writes its roll-up", func(root string) {
-			writeBackupStage(t, root, fresh, "primary", backupDocument{State: "complete"})
+			writeBackupStage(t, root, fresh, "primary", backupSummary{State: "complete"})
 		}, 0, true, false},
 		{"run abandoned beyond the ceiling with no roll-up ever cannot be measured", func(root string) {
-			writeBackupStage(t, root, abandoned, "primary", backupDocument{State: "running"})
+			writeBackupStage(t, root, abandoned, "primary", backupSummary{State: "running"})
 		}, 0, false, true},
 		{"no runs at all cannot be measured", func(string) {}, 0, false, true},
 		{"an abandoned run on a host that has rolled up before reads fully failed", func(root string) {
-			writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
-			writeBackupStage(t, root, abandoned, "primary", backupDocument{State: "running"})
+			writeBackupRun(t, root, stale, &backupSummary{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupStage(t, root, abandoned, "primary", backupSummary{State: "running"})
 		}, 100, false, false},
 		{"stale run reads fully failed", func(root string) {
-			writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupRun(t, root, stale, &backupSummary{StagesRun: 3, StagesFailed: 0}, nil, nil)
 		}, 100, false, false},
 		{"clean current run reads zero", func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 3, StagesFailed: 0}, nil, nil)
 		}, 0, false, false},
 		{"one failed stage of three", func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3, StagesFailed: 1}, nil, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 3, StagesFailed: 1}, nil, nil)
 		}, 33, false, false},
 		{"failed secondary on edge host", func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 2, StagesFailed: 1}, nil, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 2, StagesFailed: 1}, nil, nil)
 		}, 50, false, false},
 		{"a hand stage newer than the last roll-up does not mask it", func(root string) {
-			writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
-			writeBackupStage(t, root, abandoned, "secondary", backupDocument{State: "complete"})
+			writeBackupRun(t, root, rolled, &backupSummary{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupStage(t, root, abandoned, "secondary", backupSummary{State: "complete"})
 		}, 0, false, false},
 		{"a hand stage newer than a stale roll-up still reads fully failed", func(root string) {
-			writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
-			writeBackupStage(t, root, abandoned, "secondary", backupDocument{State: "complete"})
+			writeBackupRun(t, root, stale, &backupSummary{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupStage(t, root, abandoned, "secondary", backupSummary{State: "complete"})
 		}, 100, false, false},
 		{"a stage in flight reports the last roll-up rather than hiding it", func(root string) {
-			writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
-			writeBackupStage(t, root, fresh, "secondary", backupDocument{State: "running"})
+			writeBackupRun(t, root, rolled, &backupSummary{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupStage(t, root, fresh, "secondary", backupSummary{State: "running"})
 		}, 0, false, false},
 		{"a stage in flight cannot mask a roll-up that failed", func(root string) {
-			writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 3}, nil, nil)
-			writeBackupStage(t, root, fresh, "secondary", backupDocument{State: "running"})
+			writeBackupRun(t, root, rolled, &backupSummary{StagesRun: 3, StagesFailed: 3}, nil, nil)
+			writeBackupStage(t, root, fresh, "secondary", backupSummary{State: "running"})
 		}, 100, false, false},
 	}
 	for _, tt := range tests {
@@ -191,7 +185,7 @@ func TestProbeImplBackup_FailedBackups(t *testing.T) {
 }
 
 func TestProbeImplBackup_UsedBackupSpace(t *testing.T) {
-	fresh := time.Now().Format(backupRunStamp)
+	fresh := time.Now().Format(backupTimestampFormat)
 	tests := []struct {
 		name          string
 		serverHost    bool
@@ -201,19 +195,19 @@ func TestProbeImplBackup_UsedBackupSpace(t *testing.T) {
 		expectedError bool
 	}{
 		{"no tertiary document on a server errors", true, func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 2}, nil, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 2}, nil, nil)
 		}, 0, false, true},
 		{"no tertiary document on an edge host is inert", false, func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 2}, nil, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 2}, nil, nil)
 		}, 0, true, false},
 		{"reads tertiary disk usage", true, func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3}, &backupDocument{DiskUsagePerc: 72}, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 3}, &backupSummary{DiskUsagePerc: 72}, nil)
 		}, 72, false, false},
 		{"run in flight on a server is inert", true, func(root string) {
-			writeBackupStage(t, root, fresh, "primary", backupDocument{State: "complete"})
+			writeBackupStage(t, root, fresh, "primary", backupSummary{State: "complete"})
 		}, 0, true, false},
 		{"tertiary still running is inert rather than zero", true, func(root string) {
-			writeBackupStage(t, root, fresh, "tertiary", backupDocument{State: "running", DiskUsagePerc: 0})
+			writeBackupStage(t, root, fresh, "tertiary", backupSummary{State: "running", DiskUsagePerc: 0})
 		}, 0, true, false},
 	}
 	for _, tt := range tests {
@@ -237,8 +231,8 @@ func TestProbeImplBackup_UsedBackupSpace(t *testing.T) {
 
 func TestProbeImplBackup_ServiceSuccess(t *testing.T) {
 	root := t.TempDir()
-	fresh := time.Now().Format(backupRunStamp)
-	writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3}, nil, map[string]bool{"postgres": true, "plex": false})
+	fresh := time.Now().Format(backupTimestampFormat)
+	writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 3}, nil, map[string]bool{"postgres": true, "plex": false})
 	p := &backupProbe{root: root}
 	tests := []struct {
 		service   string
@@ -264,10 +258,10 @@ func TestProbeImplBackup_ServiceSuccess(t *testing.T) {
 
 func TestProbeImplBackup_ServiceSuccessSurvivesAHandRun(t *testing.T) {
 	root := t.TempDir()
-	rolled := time.Now().Add(-7 * time.Hour).Format(backupRunStamp)
-	handed := time.Now().Add(-6 * time.Hour).Format(backupRunStamp)
-	writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3}, nil, map[string]bool{"mariadb": true})
-	writeBackupStage(t, root, handed, "secondary", backupDocument{State: "complete"})
+	rolled := time.Now().Add(-7 * time.Hour).Format(backupTimestampFormat)
+	handed := time.Now().Add(-6 * time.Hour).Format(backupTimestampFormat)
+	writeBackupRun(t, root, rolled, &backupSummary{StagesRun: 3}, nil, map[string]bool{"mariadb": true})
+	writeBackupStage(t, root, handed, "secondary", backupSummary{State: "complete"})
 	p := &backupProbe{root: root}
 	value, found, run := p.serviceSuccess("mariadb")
 	if !value || !found {
@@ -280,14 +274,14 @@ func TestProbeImplBackup_ServiceSuccessSurvivesAHandRun(t *testing.T) {
 
 func TestProbeImplBackup_AbandonedScheduledRunIsNotWalkedPast(t *testing.T) {
 	root := t.TempDir()
-	rolled := time.Now().Add(-30 * time.Hour).Format(backupRunStamp)
-	writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3}, nil, nil)
-	yesterday := time.Now().Add(-25 * time.Hour).Format(backupRunStamp)
-	writeBackupRun(t, root, yesterday, &backupDocument{StagesRun: 3}, nil, nil)
-	stuck := time.Now().Add(-8 * time.Hour).Format(backupRunStamp)
-	writeBackupStage(t, root, stuck, "primary", backupDocument{
+	rolled := time.Now().Add(-30 * time.Hour).Format(backupTimestampFormat)
+	writeBackupRun(t, root, rolled, &backupSummary{StagesRun: 3}, nil, nil)
+	yesterday := time.Now().Add(-25 * time.Hour).Format(backupTimestampFormat)
+	writeBackupRun(t, root, yesterday, &backupSummary{StagesRun: 3}, nil, nil)
+	stuck := time.Now().Add(-8 * time.Hour).Format(backupTimestampFormat)
+	writeBackupStage(t, root, stuck, "primary", backupSummary{
 		State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem})
-	writeBackupStage(t, root, stuck, "tertiary", backupDocument{
+	writeBackupStage(t, root, stuck, "tertiary", backupSummary{
 		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem, DiskUsagePerc: 26})
 	p := &backupProbe{root: root, serverHost: true}
 	value, _, err := p.failedBackupStages()
@@ -301,10 +295,10 @@ func TestProbeImplBackup_AbandonedScheduledRunIsNotWalkedPast(t *testing.T) {
 
 func TestProbeImplBackup_AbandonedHandRunIsStillWalkedPast(t *testing.T) {
 	root := t.TempDir()
-	rolled := time.Now().Add(-9 * time.Hour).Format(backupRunStamp)
-	writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3}, nil, nil)
-	handed := time.Now().Add(-8 * time.Hour).Format(backupRunStamp)
-	writeBackupStage(t, root, handed, "tertiary", backupDocument{
+	rolled := time.Now().Add(-9 * time.Hour).Format(backupTimestampFormat)
+	writeBackupRun(t, root, rolled, &backupSummary{StagesRun: 3}, nil, nil)
+	handed := time.Now().Add(-8 * time.Hour).Format(backupTimestampFormat)
+	writeBackupStage(t, root, handed, "tertiary", backupSummary{
 		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerManual})
 	p := &backupProbe{root: root, serverHost: true}
 	value, _, err := p.failedBackupStages()
@@ -315,10 +309,10 @@ func TestProbeImplBackup_AbandonedHandRunIsStillWalkedPast(t *testing.T) {
 
 func TestProbeImplBackup_SnapshotFlagsBelongToTheRunItNames(t *testing.T) {
 	root := t.TempDir()
-	rolled := time.Now().Add(-25 * time.Hour).Format(backupRunStamp)
-	writeBackupRun(t, root, rolled, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
-	inflight := time.Now().Add(-10 * time.Minute).Format(backupRunStamp)
-	writeBackupStage(t, root, inflight, "primary", backupDocument{
+	rolled := time.Now().Add(-25 * time.Hour).Format(backupTimestampFormat)
+	writeBackupRun(t, root, rolled, &backupSummary{StagesRun: 3, StagesFailed: 0}, nil, nil)
+	inflight := time.Now().Add(-10 * time.Minute).Format(backupTimestampFormat)
+	writeBackupStage(t, root, inflight, "primary", backupSummary{
 		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem})
 	snapshot := readNewestRun(root)
 	if snapshot.running && snapshot.dir != inflight {
@@ -331,15 +325,15 @@ func TestProbeImplBackup_SnapshotFlagsBelongToTheRunItNames(t *testing.T) {
 
 func TestProbeImplBackup_SnapshotFollowsTheTreeRatherThanAClock(t *testing.T) {
 	root := t.TempDir()
-	stale := time.Now().Add(-3 * time.Hour).Format(backupRunStamp)
-	writeBackupRun(t, root, stale, &backupDocument{StagesRun: 3, StagesFailed: 1}, nil, nil)
+	stale := time.Now().Add(-3 * time.Hour).Format(backupTimestampFormat)
+	writeBackupRun(t, root, stale, &backupSummary{StagesRun: 3, StagesFailed: 1}, nil, nil)
 	p := &backupProbe{root: root, serverHost: true}
 	value, _, err := p.failedBackupStages()
 	if err != nil || value != 33 {
 		t.Fatalf("before: got (%v,%v) want (33,nil)", value, err)
 	}
-	handed := time.Now().Format(backupRunStamp)
-	writeBackupRun(t, root, handed, &backupDocument{StagesRun: 3}, nil, nil)
+	handed := time.Now().Format(backupTimestampFormat)
+	writeBackupRun(t, root, handed, &backupSummary{StagesRun: 3}, nil, nil)
 	value, _, err = p.failedBackupStages()
 	if err != nil || value != 0 {
 		t.Errorf("after hand run: got (%v,%v) want (0,nil), the snapshot did not follow the tree", value, err)
@@ -347,7 +341,7 @@ func TestProbeImplBackup_SnapshotFollowsTheTreeRatherThanAClock(t *testing.T) {
 }
 
 func TestProbeImplBackup_HaltedBackupStages(t *testing.T) {
-	fresh := time.Now().Format(backupRunStamp)
+	fresh := time.Now().Format(backupTimestampFormat)
 	tests := []struct {
 		name          string
 		setup         func(root string)
@@ -357,13 +351,13 @@ func TestProbeImplBackup_HaltedBackupStages(t *testing.T) {
 	}{
 		{"no runs is inert rather than a fault", func(string) {}, 0, true, false},
 		{"a clean run reads zero", func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3, StagesFailed: 0}, nil, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 3, StagesFailed: 0}, nil, nil)
 		}, 0, false, false},
 		{"one stage halted of three", func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3, StagesHalted: 1}, nil, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 3, StagesHalted: 1}, nil, nil)
 		}, 33, false, false},
 		{"every stage halted", func(root string) {
-			writeBackupRun(t, root, fresh, &backupDocument{StagesRun: 3, StagesHalted: 3}, nil, nil)
+			writeBackupRun(t, root, fresh, &backupSummary{StagesRun: 3, StagesHalted: 3}, nil, nil)
 		}, 100, false, false},
 	}
 	for _, tt := range tests {
@@ -419,116 +413,11 @@ func TestProbeImplBackup_ReaperPausedFailsSafeToArmed(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reaper := backupReaper{State: tt.state, ExpiresTS: tt.expiresTS}
-			if got := reaper.paused(); got != tt.wantPaused {
+			reaper := backupReaperSummary{State: tt.state, ExpiresTS: tt.expiresTS}
+			if got := reaper.Paused(); got != tt.wantPaused {
 				t.Errorf("paused: got %v want %v", got, tt.wantPaused)
 			}
 		})
-	}
-}
-
-func TestProbeImplBackup_RunnerInvocationsSpeakTheRunnerCli(t *testing.T) {
-	script, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "resources", "image", "backup.sh"))
-	if err != nil {
-		t.Fatalf("read backup.sh: %v", err)
-	}
-	commands := map[string]bool{}
-	dispatch := regexp.MustCompile(`case "\$\{BACKUP_ACTION\}" in\n((?:[a-z]+ \| )+[a-z]+)\) ;;`)
-	match := dispatch.FindStringSubmatch(string(script))
-	if match == nil {
-		t.Fatal("found no BACKUP_ACTION dispatch in backup.sh, the parse has rotted")
-	}
-	for word := range strings.SplitSeq(match[1], " | ") {
-		commands[word] = true
-	}
-	for _, required := range []string{"start", "stop", "tail", "list"} {
-		if !commands[required] {
-			t.Fatalf("parsed no [%s] out of the backup.sh dispatch, the parse has rotted", required)
-		}
-	}
-	parsed, err := parser.ParseFile(token.NewFileSet(), "probe_impl_backup.go", nil, 0)
-	if err != nil {
-		t.Fatalf("parse probe_impl_backup.go: %v", err)
-	}
-	invocations := 0
-	ast.Inspect(parsed, func(node ast.Node) bool {
-		call, isCall := node.(*ast.CallExpr)
-		if !isCall {
-			return true
-		}
-		if function, isFunction := call.Fun.(*ast.SelectorExpr); !isFunction ||
-			!strings.HasPrefix(function.Sel.Name, "Command") {
-			return true
-		}
-		for index, argument := range call.Args {
-			selector, isSelector := argument.(*ast.SelectorExpr)
-			if !isSelector || selector.Sel.Name != "runner" || index+1 >= len(call.Args) {
-				continue
-			}
-			invocations++
-			literal, isLiteral := call.Args[index+1].(*ast.BasicLit)
-			if !isLiteral || literal.Kind != token.STRING {
-				t.Errorf("invocation of the runner passes a non-literal command, want one of %v", sortedKeys(commands))
-				continue
-			}
-			command := strings.Trim(literal.Value, `"`)
-			if !commands[command] {
-				t.Errorf("invocation of the runner passes the command [%s], want one of %v", command, sortedKeys(commands))
-			}
-		}
-		return true
-	})
-	if invocations == 0 {
-		t.Fatal("found no runner invocations to check, the walk has rotted")
-	}
-}
-
-func sortedKeys(set map[string]bool) []string {
-	keys := make([]string, 0, len(set))
-	for key := range set {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func TestProbeImplBackup_ReportedForRunIdentifiesAPeerByWindowNotRunID(t *testing.T) {
-	runStart := time.Date(2026, 9, 13, 1, 0, 25, 0, time.Local)
-	earliest := runStart.Add(-backupRunSkew)
-	cases := []struct {
-		name      string
-		startedTS string
-		expected  bool
-	}{
-		{"the leader's own run", runStart.Format(time.RFC3339), true},
-		{"a peer that minted its own id seconds later", runStart.Add(30 * time.Second).Format(time.RFC3339), true},
-		{"a peer at the far edge of the skew", earliest.Format(time.RFC3339), true},
-		{"a peer that started before the skew", earliest.Add(-time.Second).Format(time.RFC3339), false},
-		{"yesterday's run still retained", runStart.Add(-24 * time.Hour).Format(time.RFC3339), false},
-		{"a document carrying no start", "", false},
-		{"a document carrying an unparseable start", "not a timestamp", false},
-	}
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			got := reportedForRun(backupDocument{RunID: "whatever", StartedTS: test.startedTS}, earliest)
-			if got != test.expected {
-				t.Errorf("reportedForRun(%q): got %v want %v", test.startedTS, got, test.expected)
-			}
-		})
-	}
-}
-
-func TestProbeImplBackup_ReaperTopicMatchesTheShell(t *testing.T) {
-	script, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "resources", "image", "backup.sh"))
-	if err != nil {
-		t.Fatalf("read backup.sh: %v", err)
-	}
-	match := regexp.MustCompile(`(?m)^BACKUP_REAPER_TOPIC="([^"]+)"$`).FindSubmatch(script)
-	if match == nil {
-		t.Fatal("found no BACKUP_REAPER_TOPIC in backup.sh, the parse has rotted")
-	}
-	if shell := string(match[1]); shell != allReaperTopic {
-		t.Errorf("reaper topic: got %s in backup.sh want %s", shell, allReaperTopic)
 	}
 }
 
@@ -536,12 +425,12 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	expected := []string{"mad", "max"}
 	doc := func(state, trigger string, started time.Time, success bool) string {
-		payload, _ := json.Marshal(backupDocument{State: state, Trigger: trigger, StartedTS: started.Format(time.RFC3339), SuccessBool: success,
+		payload, _ := json.Marshal(backupSummary{State: state, Trigger: trigger, StartedTS: started.Format(time.RFC3339), SuccessBool: success,
 			ExpiresTS: now.Add(time.Hour).Format(time.RFC3339)})
 		return string(payload)
 	}
 	stageOf := func(run, started, expires time.Time) string {
-		payload, _ := json.Marshal(backupDocument{RunID: run.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
+		payload, _ := json.Marshal(backupSummary{RunID: run.Format(backupTimestampFormat), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
 			StartedTS: started.Format(time.RFC3339), ExpiresTS: expires.Format(time.RFC3339)})
 		return string(payload)
 	}
@@ -790,7 +679,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 			t.Fatalf("subscribe %s: got %v want nil", topic, token.Error())
 		}
 	}
-	publish := func(topic string, document backupDocument) {
+	publish := func(topic string, document backupSummary) {
 		payload, _ := json.Marshal(document)
 		if token := observer.Publish(topic, 1, true, payload); !token.WaitTimeout(2*time.Second) || token.Error() != nil {
 			t.Fatalf("publish %s: got %v want nil", topic, token.Error())
@@ -799,7 +688,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	observer.Publish(allBackupStatusTopic, 1, true, []byte{}).WaitTimeout(2 * time.Second)
 	started := time.Now().Add(-5 * time.Minute).Truncate(time.Second)
 	for _, host := range []string{"mad", "max"} {
-		publish("supervisor/"+host+"/backup/stage/primary/status", backupDocument{RunID: started.Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
+		publish("supervisor/"+host+"/backup/stage/primary/status", backupSummary{RunID: started.Format(backupTimestampFormat), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
 			StartedTS: started.Format(time.RFC3339), ExpiresTS: time.Now().Add(time.Hour).Format(time.RFC3339)})
 	}
 	probe := &backupProbe{configPath: configFile, hostName: "mad", serverHost: true}
@@ -820,8 +709,8 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 		defer mutex.Unlock()
 		t.Fatalf("%s: got %v want the phase reached", phase, seen)
 	}
-	cluster := func() backupDocument {
-		var document backupDocument
+	cluster := func() backupSummary {
+		var document backupSummary
 		_ = json.Unmarshal([]byte(seen[allBackupStatusTopic]), &document)
 		return document
 	}
@@ -829,7 +718,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	if seen[plug] != "" {
 		t.Fatalf("plug: got %q want nothing sent while hosts are still running", seen[plug])
 	}
-	publish("supervisor/mad/backup/status", backupDocument{State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
+	publish("supervisor/mad/backup/status", backupSummary{State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
 	time.Sleep(time.Second)
 	probe.lead()
 	mutex.Lock()
@@ -838,7 +727,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	if partial != metric.BackupStateRunning {
 		t.Fatalf("partial state: got %s want running until every expected server reports", partial)
 	}
-	publish("supervisor/max/backup/status", backupDocument{State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
+	publish("supervisor/max/backup/status", backupSummary{State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem, StartedTS: started.Format(time.RFC3339), SuccessBool: true})
 	await("closed", func() bool { return cluster().State == metric.BackupStateSuccess && seen[plug] == metric.CommandOff })
 	var closed map[string]any
 	mutex.Lock()
@@ -853,7 +742,7 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 	holder.mutex.Lock()
 	holder.leading = false
 	holder.mutex.Unlock()
-	publish("supervisor/max/backup/stage/primary/status", backupDocument{RunID: time.Now().Format(backupRunStamp), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
+	publish("supervisor/max/backup/stage/primary/status", backupSummary{RunID: time.Now().Format(backupTimestampFormat), State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
 		StartedTS: time.Now().Format(time.RFC3339), ExpiresTS: time.Now().Add(time.Hour).Format(time.RFC3339)})
 	time.Sleep(time.Second)
 	probe.lead()
@@ -866,12 +755,55 @@ func TestProbeImplBackup_LeaderOpensAndClosesTheClusterBackupRun(t *testing.T) {
 
 func TestProbeImplBackup_LeadClosesItsWatchWhenNotLeading(t *testing.T) {
 	stub := &leaderStubClient{open: true}
-	probe := &backupProbe{serverHost: true, leadWatch: &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, client: stub}, leadStale: 3}
+	probe := &backupProbe{serverHost: true, leadWatch: brokerWatcherWith(stub, map[string]string{}), leadStale: 3}
 	probe.lead()
 	if probe.leadWatch != nil || probe.leadStale != 0 {
 		t.Errorf("watch: got kept [%v] stale [%d] want closed once this host does not lead", probe.leadWatch != nil, probe.leadStale)
 	}
 	if stub.IsConnectionOpen() {
 		t.Errorf("session: got open want disconnected")
+	}
+}
+
+func TestProbeImplBackup_ReapLocalStaleKeepsEveryFieldItRewrites(t *testing.T) {
+	original := stageExec
+	t.Cleanup(func() { stageExec = original })
+	stageExec = func(_ context.Context, _ string, _ ...string) (string, int, bool) { return "", 0, false }
+
+	root := t.TempDir()
+	run := "2026-09-22_01-00-00"
+	runPath := backupRunPath(root, run)
+	if err := os.MkdirAll(stageDir(runPath, metric.BackupStagePrimary), 0o755); err != nil {
+		t.Fatalf("mkdir primary: %v", err)
+	}
+	wedged := backupSummary{
+		RunID: run, State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
+		StartedTS:    time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+		ExpiresTS:    time.Now().Add(-time.Hour).Format(time.RFC3339),
+		TimeoutHours: 3, DurationS: 7200, FileCount: 12, SizeMB: 340, TotalMB: 900,
+		FilesCreated: 12, SizeHeldMB: 80, SentMB: 341, DiskUsedMB: 700, DiskTotalMB: 900, DiskUsagePerc: 77.8,
+	}
+	if err := writeAtomic(stageStatusPath(runPath, metric.BackupStagePrimary), wedged); err != nil {
+		t.Fatalf("write primary: %v", err)
+	}
+	probe := &backupProbe{root: root, configPath: filepath.Join(root, "config.json"), hostName: "testhost"}
+	snapshot := readNewestRun(root)
+	if snapshot == nil {
+		t.Fatalf("readNewestRun() found no run under [%s]", root)
+	}
+	probe.reapLocalStale(t.Context(), snapshot)
+
+	reaped := readBackupSummary(stageStatusPath(runPath, metric.BackupStagePrimary))
+	if reaped == nil {
+		t.Fatalf("the reaped stage document is gone from [%s]", runPath)
+	}
+	if reaped.State != metric.BackupStateTimeout || reaped.ExpiresTS != "" || reaped.FinishedTS == "" {
+		t.Errorf("reaped = (%q, expires %q, finished %q), want a timeout with its liveness cleared and a finish stamped",
+			reaped.State, reaped.ExpiresTS, reaped.FinishedTS)
+	}
+	expected := wedged
+	expected.State, expected.ExpiresTS, expected.FinishedTS = reaped.State, reaped.ExpiresTS, reaped.FinishedTS
+	if *reaped != expected {
+		t.Errorf("reaped document = %+v, want every other field carried over from %+v", *reaped, expected)
 	}
 }

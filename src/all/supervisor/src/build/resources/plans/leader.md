@@ -138,9 +138,9 @@ cluster side mirrors the host side wherever both exist, so one wildcard shape re
 | `supervisor/<host>/data/service/<service>[/<metric>]` | host | that host's `serve` | yes |
 | `supervisor/<host>/command/…` | host | Home Assistant | no |
 | `supervisor/<host>/backup/status` | host | that host's `serve` | yes |
-| `supervisor/<host>/backup/stage/<stage>/status` | host | `backup.sh` | yes |
-| `supervisor/<host>/backup/stage/primary/service/<service>/status` | host | `backup.sh` | yes |
-| `supervisor/<host>/backup/stage/tertiary/scrub/status` | host | `backup.sh` | yes |
+| `supervisor/<host>/backup/stage/<stage>/status` | host | that host's backup run | yes |
+| `supervisor/<host>/backup/stage/primary/service/<service>/status` | host | that host's backup run | yes |
+| `supervisor/<host>/backup/stage/tertiary/scrub/status` | host | that host's backup run | yes |
 | `supervisor/all/status` | cluster | the leader's presence session and its will | yes |
 | `supervisor/all/data/cluster` | cluster | the leader | yes |
 | `supervisor/all/command/cluster` | cluster | Home Assistant; acted on by the leader alone | no |

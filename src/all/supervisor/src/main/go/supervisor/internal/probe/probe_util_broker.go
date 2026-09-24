@@ -59,6 +59,10 @@ type brokerWatcher struct {
 	ready     bool
 }
 
+func brokerWatcherWith(client mqtt.Client, payloads map[string]string) *brokerWatcher {
+	return &brokerWatcher{brokerPayloads: brokerPayloads{payloads: payloads}, client: client}
+}
+
 func brokerWatch(configPath, host string, filters ...string) (*brokerWatcher, error) {
 	watch := &brokerWatcher{brokerPayloads: brokerPayloads{payloads: map[string]string{}}, host: host, filters: filters}
 	options, err := brokerOptions(configPath, "watch")
@@ -145,13 +149,13 @@ func (p *brokerPayloads) snapshot() map[string]string {
 
 func brokerOptions(configPath, role string) (*mqtt.ClientOptions, error) {
 	loaded := config.Load(configPath)
-	broker := loaded.Broker()
-	if broker == "" {
+	address := loaded.Broker()
+	if address == "" {
 		return nil, fmt.Errorf("no broker address in config [%s]", configPath)
 	}
 	token := loaded.BrokerToken()
 	options := mqtt.NewClientOptions().
-		AddBroker("tcp://" + broker).
+		AddBroker("tcp://" + address).
 		SetClientID(fmt.Sprintf("supervisor-%s-%d", role, time.Now().UnixNano())).
 		SetCleanSession(true).
 		SetConnectTimeout(brokerTimeout).

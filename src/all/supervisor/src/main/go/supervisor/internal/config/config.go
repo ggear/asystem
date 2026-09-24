@@ -189,6 +189,27 @@ func (c *Config) BackupStateTopic() string {
 	return c.asystem.Backup.StateTopic
 }
 
+func (c *Config) BackupKeepDaily() int {
+	if c == nil {
+		return 0
+	}
+	return c.asystem.Backup.KeepDaily
+}
+
+func (c *Config) BackupKeepWeekly() int {
+	if c == nil {
+		return 0
+	}
+	return c.asystem.Backup.KeepWeekly
+}
+
+func (c *Config) BackupKeepMonthly() int {
+	if c == nil {
+		return 0
+	}
+	return c.asystem.Backup.KeepMonthly
+}
+
 func (c *Config) Services(host string) []string {
 	if c == nil {
 		return []string{}
@@ -375,6 +396,9 @@ type configBackup struct {
 	CommandTopic string `json:"command_topic"`
 	StateTopic   string `json:"state_topic"`
 	TimeoutHours int    `json:"timeout_hours"`
+	KeepDaily    int    `json:"keep_daily"`
+	KeepWeekly   int    `json:"keep_weekly"`
+	KeepMonthly  int    `json:"keep_monthly"`
 }
 
 type configServices struct {
@@ -404,8 +428,18 @@ const (
 	DefaultTrendPeriod = "24h"
 	DefaultCachePeriod = "1h"
 	DefaultVersion     = "00.000.0000-SNAPSHOT"
-	DefaultConfigPath  = "/var/lib/asystem/install/supervisor/latest/image/config.json"
+	DefaultConfigPath  = DirInstall + "/supervisor/" + DirInstallLatestLink + "/image/config.json"
 
+	DirInstall           = "/var/lib/asystem/install"
+	DirInstallLatestLink = "latest"
+	DirBackup            = "/backup"
+	DirServiceHome       = "/home/asystem"
+	DirShare             = "/share"
+
+	BackupHomeEnvVar = "BACKUP_HOME_ROOT"
+
+	FormFactorEdge   = "edge"
+	FormFactorClient = "client"
 	FormFactorServer = "server"
 )
 

@@ -26,6 +26,7 @@ const (
 	SourceProbeSensors
 	SourceProbeServices
 	SourceProbeBackup
+	SourceBackup
 	SourceProbeBroker
 	SourceProbeCluster
 	SourceProbeLeader
@@ -64,6 +65,8 @@ func (s Source) String() string {
 		return "probe[services]"
 	case SourceProbeBackup:
 		return "probe[backup]"
+	case SourceBackup:
+		return "backup"
 	case SourceProbeBroker:
 		return "probe[broker]"
 	case SourceProbeCluster:
@@ -166,6 +169,13 @@ func SubjectService(name string) Subject {
 	return Subject{text: subjectServices + "/" + name}
 }
 
+func SubjectStage(stage metric.BackupStage) Subject {
+	if stage == "" {
+		return SubjectNone
+	}
+	return Subject{text: subjectStages + "/" + string(stage)}
+}
+
 func SubjectTopic(topic string) Subject {
 	id, ok := metric.IDFromTopic(topic)
 	if !ok {
@@ -239,6 +249,7 @@ func Vocabularies() string {
 	builder.WriteString("\nLog Subjects:\n")
 	builder.WriteString(grouped(cell, []string{labelled(metric.GetIDName(metric.MetricCluster))}))
 	builder.WriteString(grouped(cell, []string{labelled(subjectHosts)}, []string{labelled(subjectServices)}))
+	builder.WriteString(grouped(cell, []string{labelled(subjectStages)}))
 	builder.WriteString(grouped(cell, hostMetrics, serviceMetrics))
 	builder.WriteString("\nLog Actions:\n")
 	builder.WriteString(columned(actionStrings(), cell/subjectSplit))

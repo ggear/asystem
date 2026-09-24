@@ -6,7 +6,7 @@
 # Build/test
 mock==5.2.0
 fabric==3.2.3
-ruff==0.16.7
+ruff==0.16.8
 pytest==9.1.1
 dotenv==0.9.9
 varsubst==2.0.0
@@ -32,7 +32,7 @@ sortedcontainers==2.4.0
 # Data serialisation
 pyyaml==6.0.3
 jinja2==3.1.6
-pandas==3.0.5
+pandas==3.0.6
 openpyxl==3.1.5
 polars==1.44.2
 orjson==3.12.0
@@ -42,22 +42,22 @@ jproperties==2.1.2
 python-calamine==0.8.2
 
 # Machine learning/visualisation
-notebook==7.6.2
+notebook==7.6.3
 pdftotext==4.0.0
-jupyterlab==4.6.3
+jupyterlab==4.6.4
 matplotlib==3.11.2
 matplotlib-inline==0.2.2
 anyio==4.15.1
 # NOTES: HELD, not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
 fastapi==0.115.14
-virtualenv==21.7.9
+virtualenv==21.10.0
 mlflow==$MLFLOW_VERSION
 
 # Storage/databases
-dropbox==12.2.1
+dropbox==12.2.2
 gspread==6.2.1
 gspread-pandas==4.2.1
-psycopg[binary]==3.3.5
+psycopg[binary]==3.3.6
 psycopg2-binary==2.9.13
 influxdb3-python==0.21.0
 adbc-driver-postgresql==1.12.0
@@ -69,7 +69,7 @@ yfinance==1.7.0
 dnspython==2.8.0
 paho-mqtt==2.1.0
 pydigitemp==1.4.1
-osxphotos==0.76.1
+osxphotos==0.77.0
 python-kasa==0.10.2
 speedtest-cli==2.1.3
 ffmpeg-python==0.2.0

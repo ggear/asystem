@@ -122,7 +122,7 @@ func TestEngineImplServer_RunAllProbesPublishLoop(t *testing.T) {
 					t.Fatalf("Got pulse %v in the form before the empty payload, expected a nil pulse", value.Pulse)
 				}
 				if value.Timestamp <= 0 {
-					t.Fatalf("timestamp: got %d want a stamp proving the host alive", value.Timestamp)
+					t.Fatalf("timestamp: got %d want a timestamp proving the host alive", value.Timestamp)
 				}
 				retained := subscribeRetained(t, mqttClient, topic)
 				if len(retained[topic]) != 0 {

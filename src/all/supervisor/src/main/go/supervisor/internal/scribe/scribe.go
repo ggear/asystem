@@ -69,18 +69,26 @@ type streamHandler struct {
 	headerOnce sync.Once
 }
 
+type backupHandler struct {
+	level  slog.Level
+	writer io.Writer
+	stdout io.Writer
+	stderr io.Writer
+	mutex  sync.Mutex
+}
+
 type span struct {
 	ideal int
 	min   int
 }
 
 type sink struct {
-	stamp string
-	width int
+	timestampFormat string
+	width           int
 }
 
 type layout struct {
-	stamp                                          string
+	timestampFormat                                string
 	time, level, source, subject, action, duration int
 	verb, detail                                   int
 }
@@ -172,6 +180,39 @@ func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSiz
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
 	return buf, nil
+}
+
+func EnableBackupAndFile(level slog.Level, cmd, version, stageLogPath string, quiet bool, maxSizeMB, maxBackups, maxAgeDays int) (io.Closer, error) {
+	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(filepath.Dir(stageLogPath), 0755); err != nil {
+		_ = writer.Close()
+		return nil, fmt.Errorf("create stage log directory failed [%s] [%w]", filepath.Dir(stageLogPath), err)
+	}
+	stageLog, err := os.OpenFile(stageLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		_ = writer.Close()
+		return nil, fmt.Errorf("open stage log failed [%s] [%w]", stageLogPath, err)
+	}
+	scribeLoggerMu.Lock()
+	defer scribeLoggerMu.Unlock()
+	closeLoggerWriter()
+	scribeLoggerLevel = level
+	scribeLoggerMode = "backup+file"
+	handlers := []slog.Handler{
+		&streamHandler{level: level, writer: writer, sink: sinkFile()},
+		&backupHandler{level: level, writer: stageLog},
+	}
+	if !quiet {
+		handlers = append(handlers, &backupHandler{level: level, stdout: os.Stdout, stderr: os.Stderr})
+	}
+	scribeLoggerInstance = slog.New(&multiHandler{handlers: handlers})
+	scribeLoggerWriter = writer
+	slog.SetDefault(scribeLoggerInstance)
+	purgeLogFiles(path)
+	return stageLog, nil
 }
 
 func BufferLines(rows int) int {
@@ -431,6 +472,53 @@ func (h *streamHandler) WithGroup(name string) slog.Handler {
 	return &contextualHandler{handler: h, groups: []string{name}}
 }
 
+func (h *backupHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= h.level
+}
+
+func (h *backupHandler) Handle(_ context.Context, record slog.Record) error {
+	source, subject, action, _, _ := dimensions(record)
+	if !allowed(source, subject, action) {
+		return nil
+	}
+	target := h.writer
+	if target == nil {
+		target = h.stdout
+		if record.Level == slog.LevelWarn || record.Level == slog.LevelError {
+			target = h.stderr
+		}
+	}
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	_, err := io.WriteString(target, renderBackup(lineOf(record))+"\n")
+	return err
+}
+
+func (h *backupHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return (&contextualHandler{handler: h}).WithAttrs(attrs)
+}
+
+func (h *backupHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
+	return &contextualHandler{handler: h, groups: []string{name}}
+}
+
+var backupLevelWords = map[slog.Level]string{
+	slog.LevelDebug: "DEBG",
+	slog.LevelError: "ERRS",
+}
+
+func renderBackup(line LogLine) string {
+	level, ok := backupLevelWords[line.Level]
+	if !ok {
+		level = line.Level.String()
+	}
+	stage := strings.TrimPrefix(line.Subject, subjectStages+"/")
+	return fmt.Sprintf("[%s %s %8s] %s", pad(level, spanBackupLevel), pad(stage, spanBackupStage), line.Time.Format(logTimestampOverlayFormat), line.Detail)
+}
+
 func recordWithAttrs(record slog.Record, attrs []slog.Attr, groups []string) slog.Record {
 	if len(attrs) == 0 {
 		return record
@@ -457,12 +545,12 @@ func headerFor(l layout) string {
 		l, pad("TIME", l.time), "LEVEL")
 }
 
-func render(line LogLine, l layout, stamp, level string) string {
+func render(line LogLine, l layout, timestamp, level string) string {
 	detail := line.Detail
 	if detail != "" {
 		detail = " " + detail
 	}
-	return strings.TrimRight(stamp+" "+pad(level, l.level)+" "+
+	return strings.TrimRight(timestamp+" "+pad(level, l.level)+" "+
 		pad(stemmed(line.Source, l.source), l.source)+" "+
 		pad(tokens(line.Subject, l.subject), l.subject)+" "+
 		pad(head(line.Action, l.action), l.action)+" "+
@@ -471,8 +559,8 @@ func render(line LogLine, l layout, stamp, level string) string {
 }
 
 func wrapped(line LogLine, l layout) []string {
-	stamp, level := line.Time.Format(l.stamp), line.Level.String()
-	single := render(line, l, stamp, level)
+	timestamp, level := line.Time.Format(l.timestampFormat), line.Level.String()
+	single := render(line, l, timestamp, level)
 	if l.detail < spanDetail.min || utf8.RuneCountInString(line.Detail) <= l.detail {
 		return []string{single}
 	}
@@ -483,7 +571,7 @@ func wrapped(line LogLine, l layout) []string {
 		if index > 0 {
 			part.Verb = ""
 		}
-		lines = append(lines, render(part, l, stamp, level))
+		lines = append(lines, render(part, l, timestamp, level))
 	}
 	return lines
 }
@@ -626,9 +714,11 @@ func pad(text string, width int) string {
 	return text + strings.Repeat(" ", width-count)
 }
 
-func sinkFile() sink { return sink{stamp: logTimestampFile, width: widthFile} }
+func sinkFile() sink { return sink{timestampFormat: logTimestampFileFormat, width: widthFile} }
 
-func sinkOverlay(width int) sink { return sink{stamp: logTimestampOverlay, width: width} }
+func sinkOverlay(width int) sink {
+	return sink{timestampFormat: logTimestampOverlayFormat, width: width}
+}
 
 func (l layout) prefix() int {
 	return l.time + 1 + l.level + 1 + l.source + 1 + l.subject + 1 + l.action + 1 + l.duration + 1 + l.verb + 1
@@ -639,10 +729,10 @@ func (l layout) width() int {
 }
 
 func layoutFor(s sink) layout {
-	if s.stamp == "" || s.width <= 0 {
+	if s.timestampFormat == "" || s.width <= 0 {
 		s = sinkFile()
 	}
-	l := layout{stamp: s.stamp, time: len(s.stamp), level: spanLevel.ideal, source: spanSource.min,
+	l := layout{timestampFormat: s.timestampFormat, time: len(s.timestampFormat), level: spanLevel.ideal, source: spanSource.min,
 		subject: spanSubject.min, action: spanAction.min, duration: spanDuration.ideal, verb: spanVerb.ideal}
 	for _, rung := range []struct {
 		column *int
@@ -802,11 +892,11 @@ const (
 	logDirUserMac = "Library/Logs/supervisor"
 	logDirRoot    = "/var/log/supervisor"
 
-	logFileSuffix       = ".log"
-	logFileArchive      = ".gz"
-	logFilePIDMarker    = "-pid-"
-	logTimestampFile    = "01-02T15:04:05"
-	logTimestampOverlay = "15:04:05"
+	logFileSuffix             = ".log"
+	logFileArchive            = ".gz"
+	logFilePIDMarker          = "-pid-"
+	logTimestampFileFormat    = "01-02T15:04:05"
+	logTimestampOverlayFormat = "15:04:05"
 
 	widthFile       = 250
 	widthHelpIndent = 2
@@ -818,6 +908,7 @@ const (
 	subjectSplit    = 2
 	subjectHosts    = "host"
 	subjectServices = "service"
+	subjectStages   = "stage"
 
 	clipMarker = "~"
 	clipTokens = "-_"
@@ -830,13 +921,15 @@ const (
 )
 
 var (
-	spanLevel    = span{ideal: 5, min: 5}
-	spanSource   = span{ideal: 16}
-	spanSubject  = span{ideal: 24, min: 8}
-	spanAction   = span{ideal: 10, min: 9}
-	spanDuration = span{ideal: 8, min: 8}
-	spanVerb     = span{ideal: 8, min: 8}
-	spanDetail   = span{ideal: 60, min: 40}
+	spanLevel       = span{ideal: 5, min: 5}
+	spanSource      = span{ideal: 16}
+	spanSubject     = span{ideal: 24, min: 8}
+	spanAction      = span{ideal: 10, min: 9}
+	spanDuration    = span{ideal: 8, min: 8}
+	spanVerb        = span{ideal: 8, min: 8}
+	spanDetail      = span{ideal: 60, min: 40}
+	spanBackupLevel = 4
+	spanBackupStage = 9
 
 	scribeLoggerMu       sync.Mutex
 	scribeLoggerLevel    slog.Level

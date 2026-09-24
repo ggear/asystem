@@ -105,7 +105,9 @@ func (s *logSet) report(censusStart time.Time, window time.Duration) {
 		if index >= logCensusMax {
 			return
 		}
-		logger.Debugf("measured", censusStart, "[%d] kernel errors, first [%s] last [%s] at dmesg [%s]", entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339), logElapsed(entry.last.Sub(s.boot)))
+		logger.Debugf("measured", censusStart, "[%d] kernel errors, first [%s] last [%s] at dmesg [%s], ageing out at [%s]",
+			entry.count, entry.first.Format(time.RFC3339), entry.last.Format(time.RFC3339),
+			logElapsed(entry.last.Sub(s.boot)), entry.last.Add(window).Format(time.RFC3339))
 		logger.Debugf("observed", censusStart, "[%s]", entry.message)
 		logger.Debugf("suppress", censusStart, "[%s]", logSuppression(entry.message))
 	}
@@ -116,13 +118,13 @@ func (s *logSet) census() []logCount {
 	for _, record := range s.records {
 		seen, found := counts[record.message]
 		if !found {
-			seen = logCount{message: record.message, first: record.stamp, last: record.stamp}
+			seen = logCount{message: record.message, first: record.timestamp, last: record.timestamp}
 		}
-		if record.stamp.Before(seen.first) {
-			seen.first = record.stamp
+		if record.timestamp.Before(seen.first) {
+			seen.first = record.timestamp
 		}
-		if record.stamp.After(seen.last) {
-			seen.last = record.stamp
+		if record.timestamp.After(seen.last) {
+			seen.last = record.timestamp
 		}
 		seen.count++
 		counts[record.message] = seen
@@ -191,8 +193,8 @@ func (s *logSet) consume() {
 }
 
 type logRecord struct {
-	stamp   time.Time
-	message string
+	timestamp time.Time
+	message   string
 }
 
 type logCount struct {
@@ -226,22 +228,22 @@ func (s *logSet) scan(shouts int) int {
 		}
 		line := string(s.carry[:end])
 		s.carry = s.carry[end+1:]
-		stamp, message, ok := parseLogRecord(line, s.boot)
+		timestamp, message, ok := parseLogRecord(line, s.boot)
 		if !ok {
 			continue
 		}
-		if len(s.records) >= logStampsMax {
+		if len(s.records) >= logRecordsMax {
 			continue
 		}
 		clipped := strings.TrimSpace(message)
 		if len(clipped) > logMessageMax {
 			clipped = clipped[:logMessageMax-3] + "..."
 		}
-		s.records = append(s.records, logRecord{stamp: stamp, message: clipped})
+		s.records = append(s.records, logRecord{timestamp: timestamp, message: clipped})
 		if s.drained && shouts < logShoutsMax {
 			shouts++
 			logger := scribe.Log(scribe.SourceProbeLogs, scribe.SubjectMetric(metric.MetricHostFailedLogs), scribe.ActionSample)
-			logger.Warnf("observed", time.Now(), "[%s] kernel error at dmesg [%s]", stamp.Format(time.RFC3339), logElapsed(stamp.Sub(s.boot)))
+			logger.Warnf("observed", time.Now(), "[%s] kernel error at dmesg [%s]", timestamp.Format(time.RFC3339), logElapsed(timestamp.Sub(s.boot)))
 			logger.Warnf("reported", time.Now(), "[%s]", clipped)
 			logger.Warnf("suppress", time.Now(), "[%s]", logSuppression(clipped))
 		}
@@ -250,7 +252,7 @@ func (s *logSet) scan(shouts int) int {
 
 func (s *logSet) evict(cutoff time.Time) {
 	keep := 0
-	for keep < len(s.records) && s.records[keep].stamp.Before(cutoff) {
+	for keep < len(s.records) && s.records[keep].timestamp.Before(cutoff) {
 		keep++
 	}
 	if keep > 0 {
@@ -380,7 +382,7 @@ const (
 	logLevelError  = 3
 	logBufferBytes = 8192
 	logReadsMax    = 4096
-	logStampsMax   = 4096
+	logRecordsMax  = 4096
 	logShoutsMax   = 5
 	logCensusMax   = 10
 	logNoMessage   = "no message"
@@ -392,11 +394,12 @@ var (
 		// Linux driver pl2303 incompatible with the tempstat chipset which results in 15m benign errors
 		regexp.MustCompile(`^pl2303 ttyUSB\d+: .*`),
 
-		// Noisy backup HDDs on detection, not really errors
+		// Noisy drive and host-controllers, not really errors
 		regexp.MustCompile(`^\.ready`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Asking for cache data failed$`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Read Capacity\(\d+\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Synchronize Cache\(10\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
+		regexp.MustCompile(`^xhci_hcd [0-9a-f]+:[0-9a-f]+:[0-9a-f]+\.\d+: ERROR Unknown event condition \d+ for slot \d+ ep \d+ , HC probably busted$`),
 
 		// Non-errors
 		regexp.MustCompile(`^RAS: Correctable Errors collector initialized\.`),

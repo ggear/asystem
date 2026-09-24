@@ -154,7 +154,7 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 			continue
 		}
 		systems++
-		if mount.mountpoint != "/" && mountHomeRoot != mount.mountpoint && !strings.HasPrefix(mountHomeRoot, mount.mountpoint+"/") {
+		if mount.mountpoint != "/" && config.DirServiceHome != mount.mountpoint && !strings.HasPrefix(config.DirServiceHome, mount.mountpoint+"/") {
 			continue
 		}
 		if home == nil || len(mount.mountpoint) > len(home.mountpoint) {
@@ -163,15 +163,15 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 	}
 	if home == nil {
 		return 0, derivation{}, fmt.Errorf("no home filesystem found holding [%s] of [%d] classed system and [%d] mounts scanned from [%s] [%w]",
-			mountHomeRoot, systems, len(taken.mounts), filepath.Join(s.root, mountTablePath), errEnvironment)
+			config.DirServiceHome, systems, len(taken.mounts), filepath.Join(s.root, mountTablePath), errEnvironment)
 	}
 	if !home.measured || home.total == 0 {
 		return 0, derivation{}, fmt.Errorf("no home filesystem measured of [%s] holding [%s], failures [%s] [%w]",
-			home.mountpoint, mountHomeRoot, mountReasons(taken.mounts, false), errEnvironment)
+			home.mountpoint, config.DirServiceHome, mountReasons(taken.mounts, false), errEnvironment)
 	}
 	used := float64(home.used) / float64(home.total) * 100.0
 	return percentValue(used), derivedf(scribe.ActionSample, "computed [%d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
-		percentValue(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, mountHomeRoot, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
+		percentValue(used), home.used/bytesPerMiB, home.total/bytesPerMiB, home.mountpoint, config.DirServiceHome, systems, config.SinceIncludingSuspend(taken.taken).Truncate(time.Second)), nil
 }
 
 func (s *mountSet) usedShareSpace() (int8, derivation, error) {
@@ -376,7 +376,7 @@ func (s *mountSet) parseFstab() []string {
 			continue
 		}
 		mountpoint := mountUnescape(fields[1])
-		if !strings.HasPrefix(mountpoint, mountShareRoot+"/") {
+		if !strings.HasPrefix(mountpoint, config.DirShare+"/") {
 			continue
 		}
 		noauto := false
@@ -536,12 +536,12 @@ func mountBase(root string) string {
 
 func mountClass(fstype, mountpoint string) (bool, bool, bool) {
 	if mountRemoteTypes[fstype] {
-		return true, true, strings.HasPrefix(mountpoint, mountShareRoot+"/")
+		return true, true, strings.HasPrefix(mountpoint, config.DirShare+"/")
 	}
 	if !mountLocalTypes[fstype] {
 		return false, false, false
 	}
-	if strings.HasPrefix(mountpoint, mountShareRoot+"/") {
+	if strings.HasPrefix(mountpoint, config.DirShare+"/") {
 		return true, false, true
 	}
 	if mountpoint == mountBootRoot || strings.HasPrefix(mountpoint, mountBootRoot+"/") {
@@ -564,8 +564,6 @@ func mountUnescape(field string) string {
 const (
 	mountTablePath   = "proc/mounts"
 	mountFstabPath   = "etc/fstab"
-	mountShareRoot   = "/share"
-	mountHomeRoot    = "/home/asystem"
 	mountOutsideRoot = "outside-root"
 	mountContentDir  = "media"
 	mountBootRoot    = "/boot"

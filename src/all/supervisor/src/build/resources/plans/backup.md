@@ -3,6 +3,12 @@
 How every stateful module is backed up, where the copies live, how long they are kept, and how to
 restore. Status is marked per section: **built** is in the repo today, **planned** is not.
 
+**The stage bodies are Go, not shell.** This document describes what the backup system *does* and why,
+and that is unchanged — but the `image/backup.sh` runner it was written against has been replaced by
+`probe`'s `probe_util_backup*.go`. Where a section below says the driver "execs" a stage script, read it as calling
+`runStage`; a **module's own** `backup.sh` is untouched and every reference to one still holds.
+`src/build/resources/plans/goimpl.md` is the record of that port.
+
 **This work is built.** Collapsed from 4003 lines on 2026-09-09, once every stage, the driver, the
 operator surface and the tests were in the repo. What was dropped is the planning apparatus — the
 step-by-step implementation log, the next-steps runbook, the generated-stage-script design that was
@@ -425,7 +431,7 @@ A 7 day window therefore retains around 12 days and two fulls. Correct, not wast
 4. **Run `fab generate`.** It writes `src/main/resources/backup.sh` with the build banner and
    the executable bit. Never edit that file; edit the snippet.
 5. **Wire nothing.** The driver finds the module by the generated script existing at
-   `${SERVICE_INSTALL}/backup.sh` — which `probe_lib_install.go` already records as
+   `${SERVICE_INSTALL}/backup.sh` — which `probe_util_install.go` already records as
    `installService.backupEnabled`. Do not add an `install_pre.sh` or `install_prep.sh`; per-module
    release hooks are retired and `install.sh`'s own `run_backup` covers the release-time call for
    every module at once.
@@ -452,7 +458,8 @@ Per-module release hooks are gone: `run_backup` sits in the **root** `install.sh
 the backup fails. That is one call site for every module and needs nothing from this plan.
 
 **Supervisor has no `backup.sh` of its own.** The whole driver is
-`internal/probe/probe_impl_backup.go` and the broker facility beside it, `internal/probe/probe_lib_broker.go` — no
+`internal/probe` — `probe_impl_backup.go` for the probe and `probe_util_backup*.go` for the run, with
+the broker facility in `probe_util_broker.go` — no
 `write_container_backup()`
 call in `supervisor/generate.py`, no `src/build/resources/backup.sh` snippet, no supervisor entry in
 the enrolled-module set. It does ship **one** script of its own, `backup.sh`, the stage
@@ -542,7 +549,7 @@ second config file and no `/etc/fstab` discovery:
 - `.asystem.host` → this host and, via `.asystem.schema[]`, its share `index`
 - `.asystem.schema[] | select(.host == $host) | .services[]` → the modules configured for this host
 
-Participation is `installService.backupEnabled` from `probe_lib_install.go`, which already `Lstat`s
+Participation is `installService.backupEnabled` from `probe_util_install.go`, which already `Lstat`s
 `<install>/<service>/latest/backup.sh` on every snapshot — so the probe reuses the install snapshot
 rather than walking the tree itself, and a module enrolling or leaving is picked up by the existing
 stat fingerprint with nothing new to invalidate.
@@ -555,9 +562,8 @@ mirror until the secondary stage has been written and thinned. An `edge` host ru
 So, per run:
 
 1. allocate the `run_id`, create the run directory, publish `supervisor/<host>/backup/status`
-2. for each stage this host runs, in order, exec `/asystem/mnt/backup.sh <stage> start` with the
-   `run_id`, and wait
-3. on a stage exceeding its deadline, exec that stage's `stop.sh`, record the stage failed and
+2. for each stage this host runs, in order, call `runStage` with the `run_id`, and wait
+3. on a stage exceeding its deadline, call `StopStage`, record the stage failed and
    **stop** — a stage whose predecessor did not finish has nothing sound to work from
 4. read the stage and module documents the scripts wrote, roll them into `<run>/status.json`, and
    republish
@@ -1107,7 +1113,7 @@ rather than two that can disagree.
 
 **The reads are cache-period work, not per-poll work.** `status.json` changes at most once a day, so
 the probe parses it on the `--cache-period` refresh and on the pulse following a run it performed
-itself, exactly as `probe_lib_mounts.go` treats its snapshot. **Only the two host metrics may declare
+itself, exactly as `probe_util_mounts.go` treats its snapshot. **Only the two host metrics may declare
 `warming: true`** — the table's `init()` panics on a service-scoped metric that declares it, so
 `service/backup_status` reports `false` before the first read rather than warming, which is also the
 honest reading for a module whose backup has not been observed. The derivation names the run
@@ -1179,8 +1185,8 @@ Three consequences, all simplifications:
   `docker stop` a *different* container without dying, so stop-copy-start needs no sidecar, no
   separate execution mode and no driver involvement
 
-**The probes keep reading `/host`.** `probe_lib_mounts.go`, `probe_lib_logs.go`, `probe_lib_sensors.go` and
-`probe_lib_install.go` all rebase through `$SUPERVISOR_MOUNT`, so the read-only root bind stays; the
+**The probes keep reading `/host`.** `probe_util_mounts.go`, `probe_util_logs.go`, `probe_util_sensors.go` and
+`probe_util_install.go` all rebase through `$SUPERVISOR_MOUNT`, so the read-only root bind stays; the
 four mounts above are added beside it rather than replacing it.
 
 ### How a module's script is executed
@@ -1456,13 +1462,13 @@ the stronger of the two.
 preference — and on btrfs it cannot be a `statfs`.** Two reasons, and
 only the second is about the filesystem. The disk is unmounted between runs, and a `statfs` of an
 unmounted mountpoint succeeds while silently reporting the root filesystem — the same trap
-`probe_lib_mounts.go` documents for automount shares, which is why nothing there stats an unmounted
+`probe_util_mounts.go` documents for automount shares, which is why nothing there stats an unmounted
 path. So the reading has to be taken while the disk is up and carried on a snapshot, which makes it
 `backupProbe`'s even though the metric is host-scoped. Then: btrfs free space depends on chunk
 allocation and the profile, and snapshots pin extents `statfs` attributes to nobody, so a filesystem
 can report headroom and still fail writes with `ENOSPC`. The reading must come from the allocation
 tree — `/sys/fs/btrfs/<uuid>/allocation/{data,metadata,system}/{total_bytes,bytes_used}` against the
-device size — which needs no `btrfs` binary and follows the sysfs habit `probe_lib_sensors.go` and
+device size — which needs no `btrfs` binary and follows the sysfs habit `probe_util_sensors.go` and
 `used_network` already have. A `statfs` implementation written for ext4 would under-report silently
 once snapshots exist.
 
@@ -1490,14 +1496,15 @@ module's own knowledge of its own data.
 | | Owns | Must not |
 |---|---|---|
 | a module's `backup.sh` | what is safe to copy, how to produce it, its own throttle, its own pruning, its own vocabulary | know the schedule, the stages, `/share`, `/backup`, the status document or any metric |
-| `probe_impl_backup.go` | when to run, discovering the modules, ordering and timing the stages, the `/share` and `/backup` copies, deadlines, the lock, writing `status.json`, judging staleness, feeding the three metrics | inspect a data directory, choose an exclusion, parse a backup format, contain a module name, or know a device topic, an fstab line or a mountpoint |
-| `probe_lib_broker.go` | broker sessions for any probe — `brokerDial` to act and disconnect, `brokerWatch` for a standing subscription read from memory; the election is `probe_util_leader.go` | know a stage, a module, a mountpoint, a lease, an election, or what any topic it is handed means |
+| `probe_impl_backup.go` | when to run, judging staleness, feeding the three metrics, the leader and the reaper | inspect a data directory, choose an exclusion, parse a backup format, or run a stage itself |
+| `probe_util_backup*.go` | discovering the modules, ordering and timing the stages, the `/share` and `/backup` copies, deadlines, the lock, writing `status.json` | know when a run is due, own a metric, or decide the cluster's leader |
+| `probe_util_broker.go` | broker sessions for any caller — `brokerDial` to act and disconnect, `brokerWatch` for a standing subscription read from memory; the election is `probe_util_leader.go` | know a stage, a module, a mountpoint, a lease, an election, or what any topic it is handed means |
 | `backup_attach` / `backup_detach` | the readiness wait, the fstab entries, the `mountpoint` assertions | know a module, a stage, a backup format, the schedule, the status document or the broker |
 
 If any side reaches into another's right-hand column, the split has failed. The test for the probe
 is that it contains **no module-specific line and no cluster-specific literal** — no
 `rack_backup_plug`, no `/share/10`, no `cifs`. It switches the plug through a topic `config.json`
-gave it, and it execs `backup.sh <stage>` and reads an exit code. The
+gave it, and it asks `runStage` for a stage and reads an error. The
 test for the attach step is that it makes no decision that depends on which host it is running on. The
 test for a module script is that it still runs correctly by hand with no supervisor process
 anywhere.
@@ -2011,7 +2018,7 @@ loops per column, `describe`/`query`/`verify` already take a `globs` list, and o
 **A host-side script reaches the broker directly, and everything it needs is already there** —
 **closed**, verified rather than assumed. `mosquitto_pub` is at `/usr/bin/mosquitto_pub` on all five
 hosts (`mad`, `max`, `may`, `meg`, `jen`), and `BROKER_HOST`, `BROKER_PORT` and `BROKER_TOKEN` are
-all present in `<install>/supervisor/latest/.env`, which is the same file `probe_lib_install.go` already
+all present in `<install>/supervisor/latest/.env`, which is the same file `probe_util_install.go` already
 reads. So a stage script sources that `.env` and publishes, with no new package, no new secret path
 and no dependency on the container. That last part is the point: publishing through
 `docker exec supervisor mosquitto_pub` was the alternative, and it would have made a backup script
@@ -2042,7 +2049,7 @@ connect, a subscribe and a settle every 60 s for a job that acts a few times a d
 `brokerWatcher` created lazily inside `reap`, so a `watch` on a dev machine never opens one.
 
 **`internal/probe` is grouped by role, not by subject.** `probe_impl_*` for the probes that produce
-metrics, `probe_lib_*` for the shared readers, so a new probe has one obvious home and the shared
+metrics, `probe_util_*` for the shared readers, so a new probe has one obvious home and the shared
 readers cannot quietly become per-probe.
 
 **The backup namespace sits outside `data/`, and module was disentangled from service.** Backup

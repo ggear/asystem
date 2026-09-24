@@ -75,7 +75,7 @@ def _configured():
 
 
 def _client():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1,
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                          client_id="".join(random.choice(string.ascii_lowercase) for _ in range(10)),
                          clean_session=True)
     client.connect(BROKER, PORT)
@@ -85,10 +85,10 @@ def _client():
 def _collect(topics, timeout):
     received = {}
 
-    def on_connect(client, _user_data, _flags, return_code):
+    def on_connect(client, _user_data, _flags, reason_code, _properties):
         for topic in topics:
             client.subscribe(topic, 1)
-        print("Connected [code={}]".format(return_code))
+        print("Connected [code={}]".format(reason_code))
 
     def on_message(_client, _user_data, message):
         if message.payload:
@@ -111,10 +111,10 @@ def _await(topics, predicate, timeout, on_ready):
     received = {}
     matched = [False]
 
-    def on_connect(client, _user_data, _flags, return_code):
+    def on_connect(client, _user_data, _flags, reason_code, _properties):
         for topic in topics:
             client.subscribe(topic, 1)
-        print("Connected [code={}]".format(return_code))
+        print("Connected [code={}]".format(reason_code))
         on_ready(client)
 
     def on_message(_client, _user_data, message):
@@ -320,6 +320,19 @@ def test_declares_every_published_topic():
         assert topic in declared, "published topic [{}] is not declared".format(topic)
 
 
+def test_the_packaged_image_carries_the_backup_command_and_no_shell_runner():
+    listed = _docker("exec", CONTAINER, "/asystem/bin/supervisor", "backup", "list")
+    assert listed.returncode == 0, "backup list exited [{}] [{}] [{}]".format(
+        listed.returncode, listed.stdout.strip(), listed.stderr.strip())
+    printed = listed.stdout + listed.stderr
+    assert "backup runs under" in printed or "STARTED (RUN-ID)" in printed, "backup list reported [{}] [{}]".format(
+        listed.stdout.strip(), listed.stderr.strip())
+    refused = _docker("exec", CONTAINER, "/asystem/bin/supervisor", "backup", "start", "--stage", "quaternary")
+    assert refused.returncode != 0, "an unknown stage was accepted [{}]".format(refused.stdout.strip())
+    retired = _docker("exec", CONTAINER, "test", "-e", "/asystem/etc/backup.sh")
+    assert retired.returncode != 0, "the image still ships the retired shell runner at /asystem/etc/backup.sh"
+
+
 def test_passes_its_own_health_check():
     def assertion():
         result = _docker("exec", CONTAINER, "/asystem/etc/checkexecuting.sh")
@@ -479,7 +492,7 @@ def test_retained_delivery_precedes_a_barrier_published_after_the_subscribe():
     def barrier_round():
         order = []
 
-        def on_connect(client, _user_data, _flags, _return_code):
+        def on_connect(client, _user_data, _flags, _reason_code, _properties):
             client.subscribe([(data + "/#", 0), (nonce_topic, 0)])
             client.publish(nonce_topic, "barrier", 0, False)
 

@@ -1,6 +1,6 @@
 aenum==3.1.17
 pyyaml==6.0.3
-pandas==3.0.5
+pandas==3.0.6
 polars==1.44.2
 pyarrow==25.0.1
 requests==2.34.2

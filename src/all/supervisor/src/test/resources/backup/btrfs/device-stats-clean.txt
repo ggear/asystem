@@ -1,7 +1,0 @@
-$ btrfs device stats /
-[/dev/nvme0n1p6].write_io_errs    0
-[/dev/nvme0n1p6].read_io_errs     0
-[/dev/nvme0n1p6].flush_io_errs    0
-[/dev/nvme0n1p6].corruption_errs  0
-[/dev/nvme0n1p6].generation_errs  0
-[exit 0]

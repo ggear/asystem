@@ -1,3 +1,0 @@
-$ btrfs scrub resume -c 3 -n 15 /backup
-scrub resumed on /backup, fsid 619d6da6-ca70-473b-9d2c-b3c105b153cc (pid=960440)
-[exit 0]

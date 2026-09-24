@@ -3,7 +3,6 @@ package probe
 import (
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -47,7 +46,7 @@ func marshalledKeys(t *testing.T, data []byte) []string {
 }
 
 func TestProbeImplBackupSchema_ClusterDocumentWritesWhatItDeclares(t *testing.T) {
-	document := backupClusterDocument{
+	document := backupClusterSummary{
 		RunID: "2026-09-18_01-00-00", State: metric.BackupStateSuccess,
 		StartedTS: time.Now().Format(time.RFC3339), FinishedTS: time.Now().Format(time.RFC3339),
 		DurationS: 1, SuccessBool: true, PowerBool: true,
@@ -67,21 +66,20 @@ func TestProbeImplBackupSchema_ClusterDocumentWritesWhatItDeclares(t *testing.T)
 
 func TestProbeImplBackupSchema_HostDocumentWritesWhatItDeclares(t *testing.T) {
 	root := t.TempDir()
-	stamp := time.Now().Format(backupRunStamp)
-	states := map[string]string{
-		"primary": metric.BackupStateFailure, "secondary": metric.BackupStateStopped,
-		backupStageTertiary: metric.BackupStateSuccess,
+	timestamp := time.Now().Format(backupTimestampFormat)
+	states := map[metric.BackupStage]string{
+		metric.BackupStagePrimary: metric.BackupStateFailure, metric.BackupStageSecondary: metric.BackupStateStopped,
+		metric.BackupStageTertiary: metric.BackupStateSuccess,
 	}
 	for _, stage := range backupStages {
-		writeBackupStage(t, root, stamp, stage, backupDocument{
-			State: states[stage], SuccessBool: states[stage] == metric.BackupStateSuccess, DiskUsagePerc: 61,
+		writeBackupStage(t, root, timestamp, stage, backupSummary{
+			State: states[stage], Trigger: metric.BackupTriggerSystem, SuccessBool: states[stage] == metric.BackupStateSuccess, DiskUsagePerc: 61,
 			FileCount: 3, SizeMB: 4, FilesHeld: 5, FilesCreated: 6, FilesDeleted: 7,
 			SizeHeldMB: 8, SentMB: 9,
 		})
 	}
-	runPath := filepath.Join(root, stamp)
-	p := &backupProbe{}
-	p.writeRunDocument(runPath, stamp, time.Now().Add(-time.Minute))
+	runPath := filepath.Join(root, timestamp)
+	finishRun(root, timestamp, time.Now().Add(-time.Minute))
 	data, err := os.ReadFile(filepath.Join(runPath, "status.json"))
 	if err != nil {
 		t.Fatalf("read run document: %v", err)
@@ -93,78 +91,54 @@ func TestProbeImplBackupSchema_HostDocumentWritesWhatItDeclares(t *testing.T) {
 			t.Errorf("host payload: go writes undeclared key %q", key)
 		}
 	}
-	union := append(slices.Clone(written), shellHeredocKeys(t, `cat >"${BACKUP_RUN_PATH}/status.json.tmp"`)...)
-	slices.Sort(union)
-	union = slices.Compact(union)
-	if !slices.Equal(union, declared) {
-		t.Errorf("host payload: got both writers %v want declared %v", union, declared)
+	if !slices.Equal(written, declared) {
+		t.Errorf("host payload: got written %v want declared %v", written, declared)
 	}
-}
-
-func shellHeredocKeys(t *testing.T, opener string) []string {
-	t.Helper()
-	script, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "resources", "image", "backup.sh"))
-	if err != nil {
-		t.Fatalf("read backup.sh: %v", err)
-	}
-	block := regexp.MustCompile(regexp.QuoteMeta(opener) + ` <<JSON\n\{\n((?s).*?)\n\}\nJSON`).
-		FindSubmatch(script)
-	if block == nil {
-		t.Fatalf("found no %q heredoc in backup.sh, the parse has rotted", opener)
-	}
-	var keys []string
-	for _, key := range regexp.MustCompile(`(?m)^\s*"([a-z_]+)":`).FindAllSubmatch(block[1], -1) {
-		keys = append(keys, string(key[1]))
-	}
-	if len(keys) == 0 {
-		t.Fatalf("found no keys in the %q heredoc, the parse has rotted", opener)
-	}
-	return keys
 }
 
 func TestProbeImplBackupSchema_ReapingAStageKeepsEveryFieldItCarried(t *testing.T) {
 	root := t.TempDir()
-	stamp := time.Now().Format(backupRunStamp)
-	carried := backupDocument{
-		RunID: stamp, State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
+	timestamp := time.Now().Format(backupTimestampFormat)
+	carried := backupSummary{
+		RunID: timestamp, State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem,
 		StartedTS: "s", FinishedTS: "f", ExpiresTS: "e", TimeoutHours: 3, DurationS: 2,
-		SuccessBool: true, DiskUsagePerc: 61, DiskUsedMB: 11, DiskTotalMB: 22, DiskUnclean: true,
+		SuccessBool: true, DiskUsagePerc: 61, DiskUsedMB: 11, DiskTotalMB: 22, DiskUncleanBool: true,
 		TotalMB: 33, FileCount: 44, SizeMB: 55, FilesHeld: 66, FilesCreated: 77,
 		FilesDeleted: 88, SizeHeldMB: 99, SentMB: 100,
 	}
-	writeBackupStage(t, root, stamp, "primary", carried)
-	runPath := filepath.Join(root, stamp)
-	reread := readStageDocument(stageStatusPath(runPath, "primary"))
+	writeBackupStage(t, root, timestamp, "primary", carried)
+	runPath := filepath.Join(root, timestamp)
+	reread := readBackupSummary(stageStatusPath(runPath, "primary"))
 	if reread == nil {
 		t.Fatal("read back: got nil, want the document just written")
 	}
 	stale := *reread
 	stale.State = metric.BackupStateTimeout
 	stale.ExpiresTS = ""
-	writeDocumentAtomic(stageStatusPath(runPath, "primary"), stale)
+	_ = writeAtomic(stageStatusPath(runPath, "primary"), stale)
 	data, err := os.ReadFile(stageStatusPath(runPath, "primary"))
 	if err != nil {
 		t.Fatalf("read reaped document: %v", err)
 	}
 	kept := marshalledKeys(t, data)
-	for _, key := range shellHeredocKeys(t, `cat >"${BACKUP_STAGE_DIR}/status.json.tmp"`) {
+	for _, key := range declaredPayloadKeys(t, "*/backup/stage/*/status") {
 		if key == "expires_ts" {
 			continue
 		}
 		if !slices.Contains(kept, key) {
-			t.Errorf("reaped stage document dropped %q, which backup_document wrote", key)
+			t.Errorf("reaped stage document dropped %q, which the STAGE payload declares", key)
 		}
 	}
 }
 
 func TestProbeImplBackupSchema_DocumentedShapeMatchesTheDeclaration(t *testing.T) {
-	source, err := os.ReadFile("probe_impl_backup.go")
+	source, err := os.ReadFile("probe_util_backup_summary.go")
 	if err != nil {
-		t.Fatalf("read probe_impl_backup.go: %v", err)
+		t.Fatalf("read probe_util_backup_summary.go: %v", err)
 	}
 	block := regexp.MustCompile(`(?s)//\t\{\n(.*?)//\t\}\n`).FindSubmatch(source)
 	if block == nil {
-		t.Fatal("found no documented shape on backupDocument, the parse has rotted")
+		t.Fatal("found no documented shape on backupSummary, the parse has rotted")
 	}
 	documented := map[string][]string{}
 	field := regexp.MustCompile(`"([a-z_]+)":\s*\S+?,?\s+((?:ALL|RUN|STAGE|SERVICE|SCRUB)(?: (?:ALL|RUN|STAGE|SERVICE|SCRUB))*)`)
@@ -189,56 +163,6 @@ func TestProbeImplBackupSchema_DocumentedShapeMatchesTheDeclaration(t *testing.T
 		if declared := declaredPayloadKeys(t, match); !slices.Equal(keys, declared) {
 			t.Errorf("%s: got documented %v want declared %v", name, keys, declared)
 		}
-	}
-}
-
-func TestProbeImplBackupSchema_RunStateRuleAgreesAcrossTheLanguages(t *testing.T) {
-	words := []string{"-", metric.BackupStateRunning, metric.BackupStateSuccess, metric.BackupStateSkipped,
-		metric.BackupStateStopped, metric.BackupStateTimeout, metric.BackupStateFailure}
-	var probe strings.Builder
-	probe.WriteString("for scrub in " + strings.Join(words, " ") + "; do\n")
-	probe.WriteString(" for one in " + strings.Join(words, " ") + "; do\n")
-	probe.WriteString("  for two in " + strings.Join(words, " ") + "; do\n")
-	probe.WriteString("   for three in " + strings.Join(words, " ") + "; do\n")
-	probe.WriteString(`    printf '%s %s %s %s %s\n' "${scrub}" "${one}" "${two}" "${three}" ` +
-		`"$(backup_resulted "${scrub}" "${one}" "${two}" "${three}")"` + "\n")
-	probe.WriteString("done; done; done; done\n")
-	script := "set -uo pipefail\nsource \"" + filepath.Join("..", "..", "..", "..", "resources", "image", "backup.sh") +
-		"\"\n" + probe.String()
-	command := exec.Command("bash", "-c", script)
-	command.Env = append(os.Environ(), "BACKUP_SOURCE_ONLY=1")
-	out, err := command.Output()
-	if err != nil {
-		t.Fatalf("run backup_resulted: %v", err)
-	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(lines) != len(words)*len(words)*len(words)*len(words) {
-		t.Fatalf("got %d combinations want %d, the probe has rotted", len(lines), len(words)*len(words)*len(words)*len(words))
-	}
-	mismatches := 0
-	for _, line := range lines {
-		parts := strings.Fields(line)
-		if len(parts) != 5 {
-			t.Fatalf("got %q want five fields, the probe has rotted", line)
-		}
-		scrub, shelled := parts[0], parts[4]
-		if scrub == "-" {
-			scrub = ""
-		}
-		stages := map[string]string{}
-		for index, stage := range backupStages {
-			if parts[index+1] != "-" {
-				stages[stage] = parts[index+1]
-			}
-		}
-		if goes := backupResolvedState(stages, scrub); goes != shelled {
-			if mismatches++; mismatches <= 10 {
-				t.Errorf("scrub=%q stages=%v: shell says %q, go says %q", parts[0], parts[1:4], shelled, goes)
-			}
-		}
-	}
-	if mismatches > 10 {
-		t.Errorf("and %d further disagreements", mismatches-10)
 	}
 }
 

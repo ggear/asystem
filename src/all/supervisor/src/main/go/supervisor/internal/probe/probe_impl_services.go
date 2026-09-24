@@ -885,7 +885,7 @@ func (p *servicesProbe) version(snapshot *installSnapshot, containerInfo contain
 		return installed.version, derivedf(scribe.ActionSample, "computed [%s] version, service [%s] read from the install tree since the image tag carries none", installed.version, name), nil
 	}
 	return servicesVersionUnknown, derivedf(scribe.ActionSample, "computed [%s] version, service [%s] has no image tag and no version in the install tree under [%s]",
-		servicesVersionUnknown, name, installRoot), nil
+		servicesVersionUnknown, name, config.DirInstall), nil
 }
 
 func (p *servicesProbe) sleep(snapshot *installSnapshot, containerInfo container.InspectResponse) (bool, error) {
@@ -903,7 +903,7 @@ func (p *servicesProbe) maxMemory(snapshot *installSnapshot, name string) (float
 	}
 	installed, _ := snapshot.service(name)
 	if installed.maxMemoryBytes <= 0 {
-		return 0, derivation{}, fmt.Errorf("no memory ceiling read, service [%s] declares no [deploy.resources.limits.memory] in its compose file under [%s]", name, installRoot)
+		return 0, derivation{}, fmt.Errorf("no memory ceiling read, service [%s] declares no [deploy.resources.limits.memory] in its compose file under [%s]", name, config.DirInstall)
 	}
 	return float64(installed.maxMemoryBytes) / bytesPerMiB, derivedf(scribe.ActionSample, "computed [%.0f] MiB ceiling, service [%s] read from [deploy.resources.limits.memory] in its compose file",
 		float64(installed.maxMemoryBytes)/bytesPerMiB, name), nil

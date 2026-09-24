@@ -55,12 +55,12 @@ type installSnapshot struct {
 }
 
 type installTree struct {
-	mount      string
-	mutex      sync.Mutex
-	buffer     []byte
-	cached     *installSnapshot
-	stamp      uint64
-	generation uint64
+	mount         string
+	mutex         sync.Mutex
+	buffer        []byte
+	cached        *installSnapshot
+	fingerprinted uint64
+	generation    uint64
 }
 
 func loadInstallTree(mount string) *installTree {
@@ -90,14 +90,14 @@ func (t *installTree) snapshot(configured []string) *installSnapshot {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	scanStart := time.Now()
-	stamp := t.fingerprint()
-	if t.cached != nil && stamp == t.stamp {
+	fingerprinted := t.fingerprint()
+	if t.cached != nil && fingerprinted == t.fingerprinted {
 		return t.cached
 	}
-	t.stamp = stamp
+	t.fingerprinted = fingerprinted
 	t.generation++
 	t.cached = t.parse(configured)
-	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectNone, scribe.ActionDiscover).Debugf("snapshot", scanStart, "[%d] services, generation [%d] under [%s]", len(t.cached.services), t.generation, t.mount+installRoot)
+	scribe.Log(scribe.SourceProbeInstall, scribe.SubjectNone, scribe.ActionDiscover).Debugf("snapshot", scanStart, "[%d] services, generation [%d] under [%s]", len(t.cached.services), t.generation, t.mount+config.DirInstall)
 	t.cached.report(scanStart, configured)
 	return t.cached
 }
@@ -112,7 +112,7 @@ func (s *installSnapshot) service(name string) (installService, bool) {
 
 func (s *installSnapshot) allocation(names []string) (int64, int, error) {
 	if len(names) == 0 {
-		return 0, 0, fmt.Errorf("no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [%s] [%w]", installRoot, errEnvironment)
+		return 0, 0, fmt.Errorf("no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [%s] [%w]", config.DirInstall, errEnvironment)
 	}
 	total := int64(0)
 	installed := 0
@@ -131,7 +131,7 @@ func (s *installSnapshot) allocation(names []string) (int64, int, error) {
 	}
 	if installed == 0 {
 		return 0, 0, fmt.Errorf("no memory ceiling summed, none of the [%d] configured services are installed as service modules under [%s], absent [%s]",
-			len(names), installRoot, strings.Join(missing, ","))
+			len(names), config.DirInstall, strings.Join(missing, ","))
 	}
 	return total, installed, nil
 }
@@ -175,7 +175,7 @@ func (t *installTree) bases() []string {
 }
 
 func (t *installTree) home(base, name string) string {
-	latest := base + installRoot + "/" + name + "/" + installLatestLink
+	latest := base + config.DirInstall + "/" + name + "/" + config.DirInstallLatestLink
 	if base == "" {
 		return latest
 	}
@@ -195,7 +195,7 @@ func (t *installTree) fingerprint() uint64 {
 	}
 	stamp := make([]byte, 0, 16)
 	for _, base := range t.bases() {
-		root := base + installRoot
+		root := base + config.DirInstall
 		entries, err := os.ReadDir(root)
 		if err != nil {
 			writeHash([]byte(root))
@@ -203,7 +203,7 @@ func (t *installTree) fingerprint() uint64 {
 			continue
 		}
 		for _, entry := range entries {
-			for _, suffix := range []string{"/" + installLatestLink, "/" + installSleepMarker} {
+			for _, suffix := range []string{"/" + config.DirInstallLatestLink, "/" + installSleepMarker} {
 				t.buffer = t.buffer[:0]
 				t.buffer = append(t.buffer, root...)
 				t.buffer = append(t.buffer, '/')
@@ -236,7 +236,7 @@ func (t *installTree) parse(configured []string) *installSnapshot {
 	}
 	snapshot := &installSnapshot{services: map[string]installService{}}
 	for _, base := range t.bases() {
-		root := base + installRoot
+		root := base + config.DirInstall
 		entries, err := os.ReadDir(root)
 		if err != nil {
 			continue
@@ -363,8 +363,6 @@ type installComposeService struct {
 }
 
 const (
-	installRoot            = "/var/lib/asystem/install"
-	installLatestLink      = "latest"
 	installSleepMarker     = ".sleep"
 	installEnvironmentFile = ".env"
 	installComposeFile     = "docker-compose.yml"

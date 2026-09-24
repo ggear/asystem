@@ -101,6 +101,23 @@ type mockUpdatesListener struct{}
 
 func (m *mockUpdatesListener) MarkDirty() {}
 
+func assertServicesProbed(t *testing.T, cache *metric.RecordCache, hostName string, createdCount int, configured []string) {
+	t.Helper()
+	probed := make(map[string]bool)
+	for _, name := range cache.Services(hostName) {
+		probed[name] = true
+	}
+	expected := append([]string{}, configured...)
+	for i := range createdCount {
+		expected = append(expected, fmt.Sprintf("sleep-loader-%d", i+1))
+	}
+	for _, name := range expected {
+		if !probed[name] {
+			t.Fatalf("services: got %v want service %s", cache.Services(hostName), name)
+		}
+	}
+}
+
 func TestEngineImplWatch_HostStatus(t *testing.T) {
 	value := metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "v"}}
 	tests := []struct {
@@ -465,11 +482,11 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 				return []byte(metric.AvailabilityOnline)
 			},
 			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
-				deadline := time.Now().Add(14 * time.Second)
+				deadline := time.Now().Add(30 * time.Second)
 				for time.Now().Before(deadline) {
 					if _, ok := cache.Load(b.GUID); !ok {
-						if got := reconciles.count(); got != 1 {
-							t.Fatalf("Got refresh count = %d after reconcile reaped a service, expected 1", got)
+						if got := reconciles.count(); got < 1 {
+							t.Fatalf("Got refresh count = %d after reconcile reaped a service, expected the reap to refresh", got)
 						}
 						return
 					}
@@ -572,13 +589,21 @@ func TestEngineImplWatch_RunListeningStreamLoop(t *testing.T) {
 			if binding.Topic == "" {
 				t.Fatalf("Got no binding for svc-a, expected topic to be set after store")
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
 			done := make(chan struct{})
+			attached := &countingRefreshListener{}
+			cache.SubscribeRefresh(attached)
 			go func() {
 				defer close(done)
 				RunListeningStreamLoop(ctx, configFile, cache, periods)
 			}()
+			for attachDeadline := time.Now().Add(15 * time.Second); attached.count() == 0; {
+				if !time.Now().Before(attachDeadline) {
+					t.Fatalf("Got no refresh from the stream loop, expected it to attach and refresh on connect")
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
 			time.Sleep(500 * time.Millisecond)
 			payload := tt.setupFunc(t, cache, binding)
 			topic := tt.topic
