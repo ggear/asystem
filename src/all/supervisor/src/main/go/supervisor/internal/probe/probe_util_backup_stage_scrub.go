@@ -59,6 +59,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		writeScrubSummary(request, host, scrubDocument(request, metric.BackupStateFailure, false, started, scrubReading{}))
 		return false
 	}
+	baseline, _ := scrubReadNow(ctx)
 
 	reached := 0.0
 	silent := 0
@@ -124,6 +125,9 @@ finished:
 	if lastReading.progress == 0 {
 		lastReading.progress = reached
 	}
+	lastReading.found = max(lastReading.found-baseline.found, 0)
+	lastReading.corrected = max(lastReading.corrected-baseline.corrected, 0)
+	lastReading.uncorrectable = max(lastReading.uncorrectable-baseline.uncorrectable, 0)
 
 	deviceErrors, counted := deviceStatsSum(ctx)
 	state, success := metric.BackupStateSuccess, true
@@ -141,9 +145,15 @@ finished:
 		logged := kernelSince(ctx, cursor)
 		corrupt = kernelCorrupted(logged)
 		scrubLog(ctx, stagePath, corrupt, kernelFaulted(logged))
-		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-			"[%s] scrub found [%d] errors with [%d] uncorrectable across [%d] files and [%d] device errors, delete them and re-mirror, listed in [%s]",
-			config.DirBackup, lastReading.found, lastReading.uncorrectable, len(corrupt), deviceErrors, filepath.Join(stagePath, scrubLogLeaf))
+		if len(corrupt) > 0 {
+			scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
+				"[%s] scrub found [%d] errors with [%d] uncorrectable and [%d] device errors across [%d] files, delete them and re-mirror, listed in [%s]",
+				config.DirBackup, lastReading.found, lastReading.uncorrectable, deviceErrors, len(corrupt), filepath.Join(stagePath, scrubLogLeaf))
+		} else {
+			scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
+				"[%s] scrub found [%d] errors with [%d] uncorrectable and [%d] device errors naming no corrupt file, so the disk read badly rather than held bad data, see [%s]",
+				config.DirBackup, lastReading.found, lastReading.uncorrectable, deviceErrors, filepath.Join(stagePath, scrubLogLeaf))
+		}
 	}
 	if deviceErrors > 0 || lastReading.found > 0 {
 		_, _, _ = bounded(ctx, stageBoundedWait, "btrfs", "device", "stats", "-z", config.DirBackup)
