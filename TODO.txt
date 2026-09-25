@@ -22,8 +22,23 @@ Install door cameras, use for gates?
 Setup outdoor air quality monitor
 Implement Coral/Frigate
 Add big ass temps for deck
-retire nginx and use cloudflared for homeasistant?
-improve sys tests with datbase/broker asserts
+Retire nginx and use cloudflared for homeasistant?
+Improve sys tests with datbase/broker asserts for all modules
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
