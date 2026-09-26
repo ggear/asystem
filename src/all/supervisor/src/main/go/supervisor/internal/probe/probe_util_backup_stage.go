@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -211,11 +212,18 @@ func bounded(ctx context.Context, limit time.Duration, name string, args ...stri
 	return stageExec(boundedCtx, name, args...)
 }
 
-func realStageExec(ctx context.Context, name string, args ...string) (string, int, bool) {
+func stageExec(ctx context.Context, name string, args ...string) (string, int, bool) {
+	return stageStream(ctx, nil, name, args...)
+}
+
+func realStageStream(ctx context.Context, sink io.Writer, name string, args ...string) (string, int, bool) {
 	command := exec.CommandContext(ctx, name, args...)
 	command.Stdin = nil
 	buffer := &lockedBuffer{}
 	command.Stdout = buffer
+	if sink != nil {
+		command.Stdout = io.MultiWriter(buffer, sink)
+	}
 	command.Stderr = buffer
 	command.WaitDelay = stageExecAbandon
 	runErr := command.Run()
@@ -319,9 +327,9 @@ type lockedBuffer struct {
 	buffer bytes.Buffer
 }
 
-type execFunc func(ctx context.Context, name string, args ...string) (stdout string, exitCode int, abandoned bool)
+type streamFunc func(ctx context.Context, sink io.Writer, name string, args ...string) (stdout string, exitCode int, abandoned bool)
 
-var stageExec = execFunc(realStageExec)
+var stageStream = streamFunc(realStageStream)
 
 var commandAvailable = func(name string) bool {
 	_, err := exec.LookPath(name)

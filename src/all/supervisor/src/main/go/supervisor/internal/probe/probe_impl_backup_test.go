@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"supervisor/internal/config"
@@ -766,9 +767,9 @@ func TestProbeImplBackup_LeadClosesItsWatchWhenNotLeading(t *testing.T) {
 }
 
 func TestProbeImplBackup_ReapLocalStaleKeepsEveryFieldItRewrites(t *testing.T) {
-	original := stageExec
-	t.Cleanup(func() { stageExec = original })
-	stageExec = func(_ context.Context, _ string, _ ...string) (string, int, bool) { return "", 0, false }
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(_ context.Context, _ io.Writer, _ string, _ ...string) (string, int, bool) { return "", 0, false }
 
 	root := t.TempDir()
 	run := "2026-09-22_01-00-00"

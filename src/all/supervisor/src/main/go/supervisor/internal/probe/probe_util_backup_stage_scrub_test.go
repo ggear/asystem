@@ -2,6 +2,7 @@ package probe
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,21 @@ import (
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 )
+
+func TestProbeUtilBackupStageScrub_TheReportingCadencesHoldTheirRelations(t *testing.T) {
+	if scrubPublishInterval < backupProgressHeartbeat {
+		t.Errorf("scrubPublishInterval [%s] is shorter than backupProgressHeartbeat [%s], so every tick dials the broker",
+			scrubPublishInterval, backupProgressHeartbeat)
+	}
+	if scrubSilenceGrace <= backupProgressHeartbeat {
+		t.Errorf("scrubSilenceGrace [%s] is within one heartbeat [%s], so a single unanswered poll fails the scrub",
+			scrubSilenceGrace, backupProgressHeartbeat)
+	}
+	if scrubSilenceGrace >= scrubMargin {
+		t.Errorf("scrubSilenceGrace [%s] outlasts the margin [%s] the scrub reserves inside the run deadline",
+			scrubSilenceGrace, scrubMargin)
+	}
+}
 
 func fixtureStages(t *testing.T, relPath string) string {
 	t.Helper()
@@ -34,9 +50,9 @@ func fixtureStages(t *testing.T, relPath string) string {
 
 func fakeExec(t *testing.T, table map[string]string) {
 	t.Helper()
-	original := stageExec
-	t.Cleanup(func() { stageExec = original })
-	stageExec = func(_ context.Context, name string, args ...string) (string, int, bool) {
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
 		key := name + " " + strings.Join(args, " ")
 		if output, ok := table[key]; ok {
 			return output, 0, false
@@ -209,7 +225,7 @@ func TestProbeUtilBackupStageScrub_HaltReadsTheMarkerTheStageLeft(t *testing.T) 
 }
 
 func TestProbeUtilBackupStageScrub_DeviceStatsSumCannotCountWhenBtrfsDoesNotAnswer(t *testing.T) {
-	stageExecReturns(t, "", 1, false)
+	stageStreamReturns(t, "", 1, false)
 	if sum, counted := deviceStatsSum(context.Background()); sum != 0 || counted {
 		t.Errorf("deviceStatsSum() = (%d, %t), want (0, false) so the scrub cannot report a clean disk", sum, counted)
 	}
@@ -225,7 +241,7 @@ func TestProbeUtilBackupStageScrub_BalanceReportsTheChunksItRelocated(t *testing
 }
 
 func TestProbeUtilBackupStageScrub_BalanceReportsNothingWhenItCouldNotRun(t *testing.T) {
-	stageExecReturns(t, "ERROR: error during balancing", 1, false)
+	stageStreamReturns(t, "ERROR: error during balancing", 1, false)
 	if got := runBalance(context.Background(), scribe.SubjectStage(metric.BackupStageTertiary)); got != 0 {
 		t.Errorf("runBalance() = %d, want 0 when the balance did not run", got)
 	}
@@ -320,10 +336,10 @@ func TestProbeUtilBackupStageScrub_APassOpensItsDocumentBeforeTheFirstPoll(t *te
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			originalExec, originalAvailable := stageExec, commandAvailable
-			t.Cleanup(func() { stageExec, commandAvailable = originalExec, originalAvailable })
+			originalStream, originalAvailable := stageStream, commandAvailable
+			t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
 			commandAvailable = func(string) bool { return true }
-			stageExec = func(_ context.Context, _ string, args ...string) (string, int, bool) {
+			stageStream = func(_ context.Context, _ io.Writer, _ string, args ...string) (string, int, bool) {
 				if len(args) > 1 && args[1] == "status" {
 					return testCase.status, 0, false
 				}
@@ -347,7 +363,7 @@ func TestProbeUtilBackupStageScrub_APassOpensItsDocumentBeforeTheFirstPoll(t *te
 			}
 			if document == nil {
 				t.Fatalf("scrub wrote no document before its first [%s] poll, so list renders [%s]",
-					scrubPollInterval, backupUnknownCell)
+					backupProgressHeartbeat, backupUnknownCell)
 			}
 			if document.State != metric.BackupStateRunning {
 				t.Errorf("state = %q, want %q", document.State, metric.BackupStateRunning)

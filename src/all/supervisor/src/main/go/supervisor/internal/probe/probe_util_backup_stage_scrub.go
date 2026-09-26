@@ -24,7 +24,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 	subject := scribe.SubjectStage(request.Stage)
 	skipped := func(reason string, args ...any) bool {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("excluded", started, reason, args...)
-		writeScrubSummary(request, host, scrubDocument(request, metric.BackupStateSkipped, true, started, scrubReading{}))
+		publishScrubSummary(request, host, scrubDocument(request, metric.BackupStateSkipped, true, started, scrubReading{}))
 		return true
 	}
 
@@ -53,26 +53,27 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 	cursor := kernelCursor(ctx)
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("scrubbed", started,
 		"[%s] scrub [%s] %s at [%s], polling every [%s]", config.DirBackup, action, scrubOrigin(action, statusOut),
-		hard.Format(backupTimeFormat), scrubPollInterval)
+		hard.Format(backupTimeFormat), backupProgressHeartbeat)
 	if out, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "scrub", action, "-c", "3", "-n", "15", config.DirBackup); abandoned || code != 0 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
 			"[%s] scrub [%s] exited [%d] abandoned [%t] reporting [%s], the disk was not scrubbed", config.DirBackup, action, code,
 			abandoned, strings.Join(strings.Fields(out), " "))
-		writeScrubSummary(request, host, scrubDocument(request, metric.BackupStateFailure, false, started, scrubReading{}))
+		publishScrubSummary(request, host, scrubDocument(request, metric.BackupStateFailure, false, started, scrubReading{}))
 		return false
 	}
 	resumed := action == scrubActionResume
 	opening := scrubDocument(request, metric.BackupStateRunning, false, started, scrubReading{})
 	opening.ResumedBool = resumed
 	opening.ExpiresTS = hard.Format(time.RFC3339)
-	writeScrubSummary(request, host, opening)
+	publishScrubSummary(request, host, opening)
 	baseline, _ := scrubReadNow(ctx)
 
 	reached := 0.0
-	silent := 0
+	var silent time.Time
 	halt := ""
 	cancelled := false
 	samples := newSampleRing(ringPoints, ringQuantum)
+	published := time.Now()
 	var lastReading scrubReading
 	for {
 		select {
@@ -80,7 +81,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 			cancelScrub(ctx)
 			cancelled = true
 			goto finished
-		case <-time.After(scrubPollInterval):
+		case <-time.After(backupProgressHeartbeat):
 		}
 		if time.Now().After(hard) {
 			scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", started,
@@ -91,17 +92,20 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		}
 		reading, ok := scrubReadNow(ctx)
 		if !ok {
-			silent++
+			if silent.IsZero() {
+				silent = time.Now()
+			}
 			scribe.Log(scribe.SourceBackup, subject, scribe.ActionSample).Warnf("faulting", started,
-				"[%s] scrub status unanswered [%d] of [%d] times, the disk may have gone", config.DirBackup, silent, scrubSilenceLimit)
-			if silent < scrubSilenceLimit {
+				"[%s] scrub status unanswered for [%s] of [%s], the disk may have gone", config.DirBackup,
+				time.Since(silent).Round(time.Second), scrubSilenceGrace)
+			if time.Since(silent) < scrubSilenceGrace {
 				continue
 			}
 			halt = metric.BackupStateFailure
 			cancelScrub(ctx)
 			break
 		}
-		silent = 0
+		silent = time.Time{}
 		lastReading = reading
 		if reading.progress >= 1 {
 			reached = reading.progress
@@ -111,8 +115,13 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		running := scrubDocument(request, metric.BackupStateRunning, false, started, display)
 		running.ResumedBool = resumed
 		running.ExpiresTS = hard.Format(time.RFC3339)
-		writeScrubSummary(request, host, running)
 		now := time.Now()
+		if now.Sub(published) >= scrubPublishInterval {
+			published = now
+			publishScrubSummary(request, host, running)
+		} else {
+			_ = writeScrubSummary(request, running)
+		}
 		samples.push(now, int64(reading.scrubbedMB)*bytesPerMebibyte)
 		rate := samples.rate()
 		remaining := scrubRemaining(reading, reached, rate)
@@ -181,7 +190,7 @@ finished:
 		corrupt = corrupt[:kernelCorruptNamed]
 	}
 	document.FilesToDelete = strings.Join(corrupt, ",")
-	writeScrubSummary(request, host, document)
+	publishScrubSummary(request, host, document)
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("scrubbed", started,
 		"[%s] scrub finished as [%s] at [%s] percent having scrubbed [%s] MiB with [%d] chunks relocated",
 		config.DirBackup, state, backupPercent(floatReading(lastReading.progress)), backupSized(intReading(int64(lastReading.scrubbedMB))), relocated)
@@ -388,10 +397,14 @@ func scrubDocument(request stageRequest, state string, success bool, started tim
 	}
 }
 
-func writeScrubSummary(request stageRequest, host string, document scrubSummary) {
+func writeScrubSummary(request stageRequest, document scrubSummary) error {
 	path := scrubStatusPath(request.RunPath)
 	_ = os.MkdirAll(filepath.Dir(path), 0o755)
-	if err := writeAtomic(path, document); err != nil {
+	return writeAtomic(path, document)
+}
+
+func publishScrubSummary(request stageRequest, host string, document scrubSummary) {
+	if err := writeScrubSummary(request, document); err != nil {
 		return
 	}
 	if client, err := brokerDial(request.ConfigPath, "scrub"); err == nil {
@@ -438,10 +451,10 @@ const (
 	scrubWindowDay  = 1
 	scrubWindowDays = 3
 
-	scrubPollInterval = 30 * time.Second
-	scrubSilenceLimit = 3
-	scrubMargin       = 15 * time.Minute
-	scrubBalanceWait  = time.Hour
+	scrubPublishInterval = 30 * time.Second
+	scrubSilenceGrace    = 90 * time.Second
+	scrubMargin          = 15 * time.Minute
+	scrubBalanceWait     = time.Hour
 
 	scrubLogLeaf = "scrub.log"
 

@@ -1,12 +1,15 @@
 package probe
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
+	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"supervisor/internal/config"
@@ -14,7 +17,7 @@ import (
 	"supervisor/internal/scribe"
 )
 
-func runTertiaryStage(ctx context.Context, request stageRequest, counters *stageCounters) (stageResult, error) {
+func runTertiaryStage(ctx context.Context, request stageRequest, counters *stageCounters) (result stageResult, runErr error) {
 	loaded := config.Load(request.ConfigPath)
 	homeRoot := backupHomeRoot()
 	stagePath := stageDir(request.RunPath, metric.BackupStageTertiary)
@@ -31,34 +34,41 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	defer tertiaryCleanup(ctx, request)
 
 	cursor := kernelCursor(ctx)
+	defer func() {
+		if percent, usedMB, totalMB, ok := measureUsage(context.WithoutCancel(ctx), config.DirBackup); ok {
+			result.diskUsagePerc, result.diskUsedMB, result.diskTotalMB = percent, usedMB, totalMB
+		}
+	}()
 	if err := attachBackupDisk(ctx); err != nil {
-		return stageResult{}, err
+		return result, err
 	}
-	unclean := kernelReplayed(kernelSince(ctx, cursor))
-	if unclean {
+	result.diskUnclean = kernelReplayed(kernelSince(ctx, cursor))
+	if result.diskUnclean {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Warnf("faulting", time.Now(),
 			"[%s] replayed its log at mount, so the previous unmount was unclean", config.DirBackup)
 	}
 	if !ready(ctx) {
-		return stageResult{}, fmt.Errorf("[/backup] %s, refusing to mirror", diagnosed(ctx, config.DirBackup))
+		return result, fmt.Errorf("[%s] %s, refusing to mirror", config.DirBackup, diagnosed(ctx, config.DirBackup))
 	}
 	if deviceID(config.DirBackup) == deviceID(homeRoot) {
-		return stageResult{}, fmt.Errorf("[/backup] shares a filesystem with [%s], refusing to mirror onto the host", homeRoot)
+		return result, fmt.Errorf("[%s] shares a filesystem with [%s], refusing to mirror onto the host", config.DirBackup, homeRoot)
 	}
 
 	for _, share := range backupShares() {
 		_ = mountTarget(ctx, share)
 	}
 	_ = os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), fmt.Appendf(nil, "%d", deviceID(config.DirBackup)), 0o644)
-	expected := expectedMirrorBytes(ctx, filepath.Dir(request.RunPath), request.RunID)
+	shares := mountedLocalShares(ctx)
+	expected := mirrorExpectation(ctx, shares)
 	counters.addTotal(int(expected / bytesPerMebibyte))
-	stopProgress := reportMirrorProgress(ctx, usedBytes(ctx, config.DirBackup), expected, request.Expires)
+	progress := &rsyncProgress{}
+	stopProgress := reportMirrorProgress(ctx, progress, expected, request.Expires)
 	defer stopProgress()
 
 	failed := false
-	for _, share := range mountedLocalShares(ctx) {
+	for _, share := range shares {
 		if err := ctx.Err(); err != nil {
-			return stageResult{}, err
+			return result, err
 		}
 		index := strings.TrimPrefix(share, config.DirShare+"/")
 		target := filepath.Join(config.DirBackup, tertiaryShareDirectory, index)
@@ -79,9 +89,9 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 
 		mirrorStarted := time.Now()
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("mirrored", mirrorStarted, "[%s] mirroring to [%s]", share, target)
-		stats, rsyncErr := runRsync(ctx, "-a", "--delete", "--stats",
-			"--exclude", "/tmp/", "--exclude", ".rsync/", "--exclude", ".rsync-*", "--exclude", "/.lock",
-			"--partial-dir="+rsyncTemp, "--", share+"/", target+"/")
+		stats, rsyncErr := runRsync(ctx, progress,
+			mirrorArguments(share, target, "--info=progress2", "--partial-dir="+rsyncTemp)...)
+		progress.completed(int64(stats.totalTransferredBytes))
 		if rsyncErr != nil {
 			failed = true
 		}
@@ -103,12 +113,6 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		failed = true
 	}
 
-	percent, usedMB, totalMB, ok := measureUsage(ctx, config.DirBackup)
-	result := stageResult{diskUnclean: unclean}
-	if ok {
-		result.diskUsagePerc, result.diskUsedMB, result.diskTotalMB = percent, usedMB, totalMB
-	}
-
 	switch {
 	case failed && !scrubOK:
 		return result, errStageMirrorAndScrub
@@ -120,7 +124,39 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	return result, nil
 }
 
-func reportMirrorProgress(ctx context.Context, opened, expected int64, deadline time.Time) func() {
+func mirrorArguments(share, target string, extra ...string) []string {
+	arguments := []string{"-a", "--delete", "--stats",
+		"--exclude", "/tmp/", "--exclude", ".rsync/", "--exclude", ".rsync-*", "--exclude", "/.lock"}
+	arguments = append(arguments, extra...)
+	return append(arguments, "--", share+"/", target+"/")
+}
+
+func mirrorExpectation(ctx context.Context, shares []string) int64 {
+	started := time.Now()
+	subject := scribe.SubjectStage(metric.BackupStageTertiary)
+	total, files := int64(0), 0
+	for _, share := range shares {
+		shareStarted := time.Now()
+		target := filepath.Join(config.DirBackup, tertiaryShareDirectory, strings.TrimPrefix(share, config.DirShare+"/"))
+		stats, err := runRsync(ctx, nil, mirrorArguments(share, target, "--dry-run")...)
+		if err != nil {
+			scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Warnf("faulting", shareStarted,
+				"[%s] could not be measured before mirroring, so this stage reports no total [%v]", share, err)
+			return 0
+		}
+		total += int64(stats.totalTransferredBytes)
+		files += stats.filesTransferred
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("measured", shareStarted,
+			"[%s] will send [%s] GiB over [%d] files", share, backupSized(intReading(int64(stats.totalTransferredBytes)/bytesPerGibibyte)), stats.filesTransferred)
+	}
+	if len(shares) > 1 {
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("measured", started,
+			"[%s] GiB over [%d] files across [%d] shares is what this mirror will send", backupSized(intReading(total/bytesPerGibibyte)), files, len(shares))
+	}
+	return total
+}
+
+func reportMirrorProgress(ctx context.Context, progress *rsyncProgress, expected int64, deadline time.Time) func() {
 	progressCtx, stop := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
@@ -133,12 +169,12 @@ func reportMirrorProgress(ctx context.Context, opened, expected int64, deadline 
 			case <-progressCtx.Done():
 				return
 			case now := <-ticker.C:
-				moved := max(usedBytes(progressCtx, config.DirBackup)-opened, 0)
+				moved := progress.bytes()
 				samples.push(now, moved)
 				rate := samples.rate()
 				remaining := mirrorRemaining(moved, expected, rate)
 				scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionCompute).Infof("mirrored", now,
-					"%s", backupProgressed(intReading(moved/bytesPerGibibyte), mirrorTotal(expected),
+					"%s", backupProgressed(intReading(moved/bytesPerGibibyte), mirrorTotal(moved, expected),
 						mirrorPercent(moved, expected), remaining, backupEta(now, remaining), rate, backupBounded(now, remaining, deadline)))
 			}
 		}
@@ -149,8 +185,8 @@ func reportMirrorProgress(ctx context.Context, opened, expected int64, deadline 
 	}
 }
 
-func mirrorTotal(expected int64) reading {
-	if expected <= 0 {
+func mirrorTotal(moved, expected int64) reading {
+	if expected <= 0 || moved > expected {
 		return unknownReading()
 	}
 	return intReading(expected / bytesPerGibibyte)
@@ -269,34 +305,6 @@ func pruneStale(dir string, age time.Duration) {
 	}
 }
 
-func expectedMirrorBytes(ctx context.Context, root, runID string) int64 {
-	var sources int64
-	for _, share := range mountedLocalShares(ctx) {
-		sources += usedBytes(ctx, share)
-	}
-	if verified(ctx, config.DirBackup) {
-		remaining := sources - usedBytes(ctx, config.DirBackup)
-		if remaining > sources/100 {
-			return remaining
-		}
-	}
-	return previousTertiaryBytes(root, runID)
-}
-
-func previousTertiaryBytes(root, runID string) int64 {
-	runs := backupRuns(root)
-	for _, run := range slices.Backward(runs) {
-		if run >= runID {
-			continue
-		}
-		document := readBackupSummary(stageStatusPath(backupRunPath(root, run), metric.BackupStageTertiary))
-		if document != nil && document.SizeMB > 0 {
-			return int64(document.SizeMB) * bytesPerMebibyte
-		}
-	}
-	return 0
-}
-
 func snapshotShares(ctx context.Context, request stageRequest, loaded *config.Config) {
 	if !commandAvailable("btrfs") {
 		return
@@ -352,6 +360,59 @@ func reapProcesses(ctx context.Context, pattern string) {
 	}
 }
 
+type rsyncProgress struct {
+	mu      sync.Mutex
+	tail    []byte
+	sending atomic.Int64
+	sent    atomic.Int64
+}
+
+func (p *rsyncProgress) Write(data []byte) (int, error) {
+	p.mu.Lock()
+	p.tail = append(p.tail, data...)
+	for {
+		cut := bytes.IndexAny(p.tail, "\r\n")
+		if cut < 0 {
+			break
+		}
+		line := string(p.tail[:cut])
+		p.tail = p.tail[cut+1:]
+		if sent, ok := rsyncSent(line); ok {
+			p.sending.Store(sent)
+		}
+	}
+	if len(p.tail) > rsyncProgressTail {
+		p.tail = nil
+	}
+	p.mu.Unlock()
+	return len(data), nil
+}
+
+func (p *rsyncProgress) completed(sent int64) {
+	p.sent.Add(max(sent, p.sending.Load()))
+	p.sending.Store(0)
+}
+
+func (p *rsyncProgress) bytes() int64 {
+	return p.sent.Load() + p.sending.Load()
+}
+
+func rsyncSent(line string) (int64, bool) {
+	if !strings.Contains(line, "%") {
+		return 0, false
+	}
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return 0, false
+	}
+	digits := onlyDigits(fields[0])
+	if digits == "0" {
+		return 0, false
+	}
+	sent, _ := strconv.ParseInt(digits, 10, 64)
+	return sent, true
+}
+
 const (
 	tertiaryDiskWait    = 120 * time.Second
 	tertiaryDiskPoll    = time.Second
@@ -362,4 +423,6 @@ const (
 	tertiaryDeviceMarker      = "disk-device"
 	tertiaryShareDirectory    = "share"
 	tertiarySnapshotDirectory = ".snapshots"
+
+	rsyncProgressTail = 4096
 )

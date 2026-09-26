@@ -52,6 +52,10 @@ func runBackupTail(ctx context.Context, request BackupRequest) error {
 		}
 	}
 	offset = tailLog(runLogPath(backupRunPath(root, runID)), offset)
+	if offset == 0 {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionCensus).Infof("reported", time.Now(),
+			"[%s] wrote no run log, so only its result is shown", runID)
+	}
 	fmt.Println()
 	for _, heading := range backupHeading() {
 		fmt.Println(heading)
@@ -487,7 +491,7 @@ const (
 
 	ringMinimum = 3
 	ringPoints  = 12
-	ringQuantum = 100 * bytesPerMebibyte
+	ringQuantum = bytesPerMebibyte
 
 	backupProgressHeartbeat = 10 * time.Second
 	backupTailPoll          = 2 * time.Second

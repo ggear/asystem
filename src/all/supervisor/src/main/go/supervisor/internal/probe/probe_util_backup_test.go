@@ -378,7 +378,7 @@ func TestProbeUtilBackup_CleanRemovesTheHistoryAndTheScrubItWouldResume(t *testi
 	if err := os.WriteFile(filepath.Join(stateDir, "scrub.status.abc"), []byte("resume me"), 0o644); err != nil {
 		t.Fatalf("write scrub state: %v", err)
 	}
-	stageExecReturns(t, "", 1, false)
+	stageStreamReturns(t, "", 1, false)
 
 	if err := Backup(t.Context(), BackupRequest{Command: BackupCommandClean, Trigger: metric.BackupTriggerManual,
 		Config: filepath.Join(home, "config.json")}); err != nil {

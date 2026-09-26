@@ -136,12 +136,12 @@ func TestProbeUtilBackupStage_RunStageWritesTheVerdictItResolved(t *testing.T) {
 	}
 }
 
-func TestProbeUtilBackupStage_RealStageExecTakesTheExitStatusOfACommandLeavingAChildOnItsPipes(t *testing.T) {
-	out, code, abandoned := realStageExec(context.Background(), "sh", "-c", "echo started; sleep 3 & exit 0")
+func TestProbeUtilBackupStage_RealStageStreamTakesTheExitStatusOfACommandLeavingAChildOnItsPipes(t *testing.T) {
+	out, code, abandoned := realStageStream(context.Background(), nil, "sh", "-c", "echo started; sleep 3 & exit 0")
 	if code != 0 || abandoned {
-		t.Errorf("realStageExec: got code %d abandoned %v want 0 false", code, abandoned)
+		t.Errorf("realStageStream: got code %d abandoned %v want 0 false", code, abandoned)
 	}
 	if !strings.Contains(out, "started") {
-		t.Errorf("realStageExec output: got %q want it to contain started", out)
+		t.Errorf("realStageStream output: got %q want it to contain started", out)
 	}
 }

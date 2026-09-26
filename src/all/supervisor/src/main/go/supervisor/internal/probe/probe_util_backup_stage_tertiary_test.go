@@ -2,8 +2,10 @@ package probe
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -13,17 +15,19 @@ import (
 func TestProbeUtilBackupStageTertiary_MirrorTotal(t *testing.T) {
 	tests := []struct {
 		name     string
+		moved    int64
 		expected int64
 		known    bool
 		value    int64
 	}{
 		{name: "unknown_when_expected_is_zero", expected: 0, known: false},
 		{name: "unknown_when_expected_is_negative", expected: -1, known: false},
+		{name: "unknown_once_the_copy_has_passed_the_estimate", moved: 89 * bytesPerGibibyte, expected: 79 * bytesPerGibibyte, known: false},
 		{name: "known_converts_bytes_to_gibibytes", expected: 3 * bytesPerGibibyte, known: true, value: 3},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := mirrorTotal(testCase.expected)
+			got := mirrorTotal(testCase.moved, testCase.expected)
 			if got.Known() != testCase.known {
 				t.Fatalf("mirrorTotal() known = %v, want %v", got.Known(), testCase.known)
 			}
@@ -85,44 +89,110 @@ func TestProbeUtilBackupStageTertiary_MirrorRemaining(t *testing.T) {
 	}
 }
 
-func writeTertiaryStatus(t *testing.T, root, runID string, sizeMB int) {
-	t.Helper()
-	path := stageStatusPath(backupRunPath(root, runID), metric.BackupStageTertiary)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
+func TestProbeUtilBackupStageTertiary_RsyncSentReadsTheProgressCounter(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		expected int64
+		known    bool
+	}{
+		{name: "a_progress2_line_carries_grouped_digits", line: "  1,234,567,890  12%   45.67MB/s    0:01:23", expected: 1234567890, known: true},
+		{name: "a_completed_line_still_parses", line: "85,899,345,920 100%  205.31MB/s    0:06:39 (xfr#12, to-chk=0/99)", expected: 85899345920, known: true},
+		{name: "a_stats_line_is_not_progress", line: "Total transferred file size: 1,234 bytes"},
+		{name: "a_bare_percentage_with_no_count_is_not_progress", line: "  ...  50%"},
+		{name: "an_empty_line_is_not_progress", line: ""},
 	}
-	if err := writeAtomic(path, backupSummary{RunID: runID, State: metric.BackupStateSuccess, SizeMB: sizeMB}); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-}
-
-func TestProbeUtilBackupStageTertiary_PreviousTertiaryBytesSkipsTheCurrentAndLaterRuns(t *testing.T) {
-	root := t.TempDir()
-	writeTertiaryStatus(t, root, "2026-09-20_01-00-00", 100)
-	writeTertiaryStatus(t, root, "2026-09-21_01-00-00", 200)
-	writeTertiaryStatus(t, root, "2026-09-22_01-00-00", 300)
-	got := previousTertiaryBytes(root, "2026-09-21_01-00-00")
-	expected := int64(100) * 1048576
-	if got != expected {
-		t.Errorf("previousTertiaryBytes() = %d, want %d taken from the newest run strictly before [2026-09-21_01-00-00]", got, expected)
-	}
-}
-
-func TestProbeUtilBackupStageTertiary_PreviousTertiaryBytesSkipsAZeroSizedRun(t *testing.T) {
-	root := t.TempDir()
-	writeTertiaryStatus(t, root, "2026-09-20_01-00-00", 150)
-	writeTertiaryStatus(t, root, "2026-09-21_01-00-00", 0)
-	got := previousTertiaryBytes(root, "2026-09-22_01-00-00")
-	expected := int64(150) * 1048576
-	if got != expected {
-		t.Errorf("previousTertiaryBytes() = %d, want %d, skipping the zero-sized run", got, expected)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, ok := rsyncSent(test.line)
+			if ok != test.known {
+				t.Fatalf("rsyncSent(%q) ok = %v, want %v", test.line, ok, test.known)
+			}
+			if test.known && got != test.expected {
+				t.Errorf("rsyncSent(%q) = %d, want %d", test.line, got, test.expected)
+			}
+		})
 	}
 }
 
-func TestProbeUtilBackupStageTertiary_PreviousTertiaryBytesAgainstNoPriorRun(t *testing.T) {
-	root := t.TempDir()
-	if got := previousTertiaryBytes(root, "2026-09-22_01-00-00"); got != 0 {
-		t.Errorf("previousTertiaryBytes() = %d, want 0 with no prior runs", got)
+func TestProbeUtilBackupStageTertiary_ProgressCarriesCompletedSharesPastTheNextInvocation(t *testing.T) {
+	progress := &rsyncProgress{}
+	if _, err := progress.Write([]byte("  1,000  1%  10MB/s\r  2,000  2%  10MB/s\r")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if got := progress.bytes(); got != 2000 {
+		t.Errorf("bytes() = %d, want the newest counter 2000", got)
+	}
+	progress.completed(3000)
+	if got := progress.bytes(); got != 3000 {
+		t.Errorf("bytes() = %d, want the share's own figure 3000 once it finished", got)
+	}
+	if _, err := progress.Write([]byte("  500  1%  10MB/s\r")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if got := progress.bytes(); got != 3500 {
+		t.Errorf("bytes() = %d, want the finished share plus the one in flight", got)
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_ProgressSurvivesAChunkSplitMidLine(t *testing.T) {
+	progress := &rsyncProgress{}
+	for _, chunk := range []string{"  9,", "999  5%  1MB/s", "\r"} {
+		if _, err := progress.Write([]byte(chunk)); err != nil {
+			t.Fatalf("Write: %v", err)
+		}
+	}
+	if got := progress.bytes(); got != 9999 {
+		t.Errorf("bytes() = %d, want 9999 reassembled across chunks", got)
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_MirrorArgumentsKeepEveryOptionBeforeTheTerminator(t *testing.T) {
+	arguments := mirrorArguments("/share/10", "/backup/share/10", "--dry-run", "--info=progress2")
+	tail := arguments[len(arguments)-3:]
+	if !slices.Equal(tail, []string{"--", "/share/10/", "/backup/share/10/"}) {
+		t.Fatalf("mirrorArguments() ends %v, want the terminator then the source then the target, since rsync takes its last argument as the destination and an option after [--] is silently mirrored into a directory of that name", tail)
+	}
+	for _, option := range []string{"--dry-run", "--info=progress2", "--delete", "--stats"} {
+		if slices.Index(arguments, option) > slices.Index(arguments, "--") {
+			t.Errorf("mirrorArguments() places [%s] after the terminator, where rsync reads it as a path", option)
+		}
+	}
+	if slices.Contains(mirrorArguments("/share/10", "/backup/share/10"), "--dry-run") {
+		t.Errorf("mirrorArguments() carries [--dry-run] with no extra option asked for, so the real mirror would write nothing")
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_ExpectationSumsTheDryRunAndFailsClosed(t *testing.T) {
+	tests := []struct {
+		name     string
+		exit     int
+		expected int64
+	}{
+		{name: "the_dry_run_of_each_share_is_summed", exit: 0, expected: 2 * 4096},
+		{name: "a_dry_run_that_failed_reports_no_total_at_all", exit: 1, expected: 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			original := stageStream
+			t.Cleanup(func() { stageStream = original })
+			dryRuns := 0
+			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+				share := []string{"/share/10", "/share/11"}[dryRuns]
+				if name != "rsync" || !slices.Equal(args, mirrorArguments(share, filepath.Join("/backup", tertiaryShareDirectory, filepath.Base(share)), "--dry-run")) {
+					t.Errorf("expectation shelled out to [%s %v], want exactly the mirror arguments plus [--dry-run]", name, args)
+				}
+				dryRuns++
+				return "Number of regular files transferred: 3\nTotal transferred file size: 4,096 bytes\n", test.exit, false
+			}
+			got := mirrorExpectation(context.Background(), []string{"/share/10", "/share/11"})
+			if got != test.expected {
+				t.Errorf("mirrorExpectation() = %d, want %d", got, test.expected)
+			}
+			if test.exit == 0 && dryRuns != 2 {
+				t.Errorf("dry runs = %d, want one per share", dryRuns)
+			}
+		})
 	}
 }
 
@@ -196,7 +266,7 @@ func TestProbeUtilBackupStageTertiary_MirrorCellsAgreeWithEachOther(t *testing.T
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			copied := intReading(test.moved / bytesPerGibibyte)
-			total := mirrorTotal(test.expected)
+			total := mirrorTotal(test.moved, test.expected)
 			percent := mirrorPercent(test.moved, test.expected)
 			if copied.Rounded() != test.expectedCopied || total.Rounded() != test.expectedTotal {
 				t.Errorf("mirror cells: got copied %d total %d want %d %d", copied.Rounded(), total.Rounded(), test.expectedCopied, test.expectedTotal)
@@ -219,9 +289,9 @@ func TestProbeUtilBackupStageTertiary_AHostDeclaringNoBackupDiskSkipsTheStage(t 
 	original := backupFstabPath
 	t.Cleanup(func() { backupFstabPath = original })
 	backupFstabPath = fstab
-	originalExec := stageExec
-	t.Cleanup(func() { stageExec = originalExec })
-	stageExec = func(_ context.Context, _ string, _ ...string) (string, int, bool) {
+	originalExec := stageStream
+	t.Cleanup(func() { stageStream = originalExec })
+	stageStream = func(_ context.Context, _ io.Writer, _ string, _ ...string) (string, int, bool) {
 		t.Error("a host with no backup target shelled out, want the stage to end before it powers or mounts anything")
 		return "", 1, false
 	}

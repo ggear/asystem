@@ -64,10 +64,14 @@ func TestProbeUtilBackupRender_QuantumSuppressesSamplesTooSmallToMeasure(t *test
 	base := time.Now()
 	ring.push(base, 0)
 	for index := 1; index <= 5; index++ {
-		ring.push(base.Add(time.Duration(index)*time.Second), int64(index)*bytesPerMebibyte)
+		ring.push(base.Add(time.Duration(index)*time.Second), int64(index)*bytesPerMebibyte/10)
 	}
 	if got := len(ring.points); got != 1 {
 		t.Errorf("points = %d, want 1 with every sample below the quantum dropped", got)
+	}
+	ring.push(base.Add(6*time.Second), 2*bytesPerMebibyte)
+	if got := len(ring.points); got != 2 {
+		t.Errorf("points = %d, want a sample at the quantum admitted", got)
 	}
 }
 

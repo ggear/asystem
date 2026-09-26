@@ -331,23 +331,6 @@ func measureUsage(ctx context.Context, target string) (percent float64, usedMB, 
 	return float64(used) * 100 / float64(total), int(used / bytesPerMebibyte), int(total / bytesPerMebibyte), true
 }
 
-func usedBytes(ctx context.Context, target string) int64 {
-	out, code, abandoned := bounded(ctx, stageBoundedWait, "df", "--output=used", "-B1", target)
-	if abandoned || code != 0 {
-		return 0
-	}
-	lines := strings.Split(strings.TrimSpace(out), "\n")
-	if len(lines) == 0 {
-		return 0
-	}
-	fields := strings.Fields(lines[len(lines)-1])
-	if len(fields) == 0 {
-		return 0
-	}
-	value, _ := strconv.ParseInt(fields[0], 10, 64)
-	return value
-}
-
 func btrfsUUID(ctx context.Context, target string) (uuid string, found, wedged bool) {
 	if _, unidentified := btrfsUnidentified.Load(target); unidentified {
 		return "", false, false

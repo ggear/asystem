@@ -2,6 +2,7 @@ package probe
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +31,7 @@ func TestProbeUtilBackupMount_BtrfsUUIDAgainstCapturedFilesystemShow(t *testing.
 			btrfsUnidentified.Clear()
 			output := fixtureStages(t, testCase.fixture)
 			target := "/backup/" + testCase.name
-			stageExecReturns(t, output, testCase.code, testCase.abandoned)
+			stageStreamReturns(t, output, testCase.code, testCase.abandoned)
 			uuid, found, wedged := btrfsUUID(t.Context(), target)
 			if found != testCase.expectedFound {
 				t.Fatalf("btrfsUUID() found = %v, want %v", found, testCase.expectedFound)
@@ -51,9 +52,9 @@ func TestProbeUtilBackupMount_BtrfsUUIDAgainstCapturedFilesystemShow(t *testing.
 func TestProbeUtilBackupMount_AnUnidentifiedPathIsAskedOfBtrfsOnlyOnce(t *testing.T) {
 	btrfsUnidentified.Clear()
 	calls := 0
-	original := stageExec
-	t.Cleanup(func() { stageExec = original })
-	stageExec = func(_ context.Context, _ string, _ ...string) (string, int, bool) {
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(_ context.Context, _ io.Writer, _ string, _ ...string) (string, int, bool) {
 		calls++
 		return "ERROR: not a valid btrfs filesystem", 1, false
 	}
@@ -105,20 +106,13 @@ func TestProbeUtilBackupMount_ShareMountPatternTakesOnlyDigitedShares(t *testing
 	}
 }
 
-func TestProbeUtilBackupMount_UsedBytesAgainstCapturedDfOutput(t *testing.T) {
-	stageExecReturns(t, fixtureStages(t, "mounts/df-used-size.txt"), 0, false)
-	if got := usedBytes(t.Context(), "/backup"); got != 81259540480 {
-		t.Errorf("usedBytes() = %d, want 81259540480 from the captured df", got)
-	}
-}
-
 func TestProbeUtilBackupMount_MeasureUsageFallsBackToCapturedDfWhenBtrfsCannotIdentify(t *testing.T) {
 	btrfsUnidentified.Clear()
 	showOutput := fixtureStages(t, "btrfs/filesystem-show-unmounted.txt")
 	dfOutput := fixtureStages(t, "mounts/df-mounted-backup.txt")
-	original := stageExec
-	t.Cleanup(func() { stageExec = original })
-	stageExec = func(_ context.Context, name string, _ ...string) (string, int, bool) {
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(_ context.Context, _ io.Writer, name string, _ ...string) (string, int, bool) {
 		if name == "btrfs" {
 			return showOutput, 1, false
 		}
@@ -138,24 +132,17 @@ func TestProbeUtilBackupMount_MeasureUsageFallsBackToCapturedDfWhenBtrfsCannotId
 
 func TestProbeUtilBackupMount_MeasureUsageCannotAnswerWhenTheFilesystemIsWedged(t *testing.T) {
 	btrfsUnidentified.Clear()
-	stageExecReturns(t, "", stageBoundedAbandoned, true)
+	stageStreamReturns(t, "", stageBoundedAbandoned, true)
 	if _, _, _, ok := measureUsage(t.Context(), "/backup"); ok {
 		t.Errorf("measureUsage() ok = true, want a wedged filesystem to report no reading rather than a df guess")
 	}
 }
 
-func TestProbeUtilBackupMount_UsedBytesIsZeroWhenDfCannotAnswer(t *testing.T) {
-	stageExecReturns(t, "", 1, false)
-	if got := usedBytes(t.Context(), "/backup"); got != 0 {
-		t.Errorf("usedBytes() = %d, want 0 when df fails", got)
-	}
-}
-
-func stageExecReturns(t *testing.T, output string, code int, abandoned bool) {
+func stageStreamReturns(t *testing.T, output string, code int, abandoned bool) {
 	t.Helper()
-	original := stageExec
-	t.Cleanup(func() { stageExec = original })
-	stageExec = func(_ context.Context, _ string, _ ...string) (string, int, bool) {
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(_ context.Context, _ io.Writer, _ string, _ ...string) (string, int, bool) {
 		return output, code, abandoned
 	}
 }
@@ -191,9 +178,9 @@ func TestProbeUtilBackupMount_AliveProbesTheDeviceRatherThanAskingAboutIt(t *tes
 			original := backupFstabPath
 			t.Cleanup(func() { backupFstabPath = original })
 			backupFstabPath = fstab
-			originalExec := stageExec
-			t.Cleanup(func() { stageExec = originalExec })
-			stageExec = func(_ context.Context, name string, args ...string) (string, int, bool) {
+			originalExec := stageStream
+			t.Cleanup(func() { stageStream = originalExec })
+			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
 				switch name {
 				case "dd":
 					return "", testCase.readCode, testCase.abandoned
@@ -228,9 +215,9 @@ func TestProbeUtilBackupMount_UsageIsOnlyMeasuredWhileTheTargetIsMounted(t *test
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			btrfsUnidentified.Clear()
-			original := stageExec
-			t.Cleanup(func() { stageExec = original })
-			stageExec = func(_ context.Context, name string, _ ...string) (string, int, bool) {
+			original := stageStream
+			t.Cleanup(func() { stageStream = original })
+			stageStream = func(_ context.Context, _ io.Writer, name string, _ ...string) (string, int, bool) {
 				switch name {
 				case "mountpoint":
 					if testCase.mounted {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -106,7 +107,7 @@ func promoteOneService(ctx context.Context, request stageRequest, share, host, s
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStart).Infof("promoted", started,
 		"[%s] promoting [%d/%d] from [%s] to [%s]", service, index, total, source, target)
 
-	stats, rsyncErr := runRsync(ctx, "-a", "--stats", "--out-format=%t %o %f %l",
+	stats, rsyncErr := runRsync(ctx, nil, "-a", "--stats", "--out-format=%t %o %f %l",
 		"--exclude", "/.lock", "--exclude", ".rsync/", "--exclude", ".rsync-*",
 		"--temp-dir="+rsyncTemp, "--", source, target+"/")
 	counters.addTransfer(stats.filesTransferred, stats.totalTransferredBytes/bytesPerMebibyte, stats.filesCreated,
@@ -286,8 +287,8 @@ type rsyncStats struct {
 	totalTransferredBytes, totalFileSizeBytes, totalBytesSent int
 }
 
-func runRsync(ctx context.Context, args ...string) (rsyncStats, error) {
-	out, code, abandoned := stageExec(ctx, "rsync", args...)
+func runRsync(ctx context.Context, sink io.Writer, args ...string) (rsyncStats, error) {
+	out, code, abandoned := stageStream(ctx, sink, "rsync", args...)
 	if abandoned {
 		return rsyncStats{}, errors.New("[abandoned] rsync did not answer within its bound")
 	}
