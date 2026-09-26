@@ -1325,3 +1325,42 @@ func TestScribe_HeaderNamesTheDetailColumnOnceAndIsRecognisedBack(t *testing.T) 
 		t.Errorf("Headed() accepted a line that is not the header")
 	}
 }
+
+func TestScribe_AttachCarriesOnlyTheNamedSourcesUntilClosed(t *testing.T) {
+	t.Cleanup(func() { Disable() })
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	EnableStdout(slog.LevelInfo)
+	path := filepath.Join(dir, "run", "run.log")
+	attached, err := Attach(path, SourceBackup)
+	if err != nil {
+		t.Fatalf("Attach() error = %v", err)
+	}
+	Log(SourceBackup, SubjectNone, ActionStart).Infof("started", time.Now(), "[run] carried")
+	Log(SourceEngine, SubjectNone, ActionStart).Infof("started", time.Now(), "[engine] dropped")
+	Log(SourceBackup, SubjectNone, ActionStop).Infof("finished", time.Now(), "[run] carried again")
+	if err := attached.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	Log(SourceBackup, SubjectNone, ActionStop).Infof("finished", time.Now(), "[run] after close")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("attached log not written: %v", err)
+	}
+	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("attached log = %q, want the header and the two backup lines", data)
+	}
+	if !Headed(lines[0]) {
+		t.Errorf("first line = %q, want the header", lines[0])
+	}
+	for index, want := range []string{"[run] carried", "[run] carried again"} {
+		if !strings.Contains(lines[index+1], want) {
+			t.Errorf("line %d = %q, want it to carry %q", index+1, lines[index+1], want)
+		}
+	}
+	if strings.Contains(string(data), "[engine]") || strings.Contains(string(data), "after close") {
+		t.Errorf("attached log = %q, want no unnamed source and nothing after the close", data)
+	}
+}

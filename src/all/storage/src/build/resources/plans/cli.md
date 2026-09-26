@@ -40,7 +40,7 @@ Aliases:
   astorage, astorages
 
 Flags:
-  -m, --mode string      mode to operate in: local, remote (default [remote])
+  -m, --mode string      mode to operate in: local, remote, auto (default [auto])
   -d, --drives string    mounts to include: comma separated list of mount reg-exps (default [/,/share*,/backup])
   -s, --symbols string   define output character set: auto, ascii or unicode (default [auto])
   -t, --theme string     colour theme: auto, colour or mono (default [auto])
@@ -48,6 +48,7 @@ Flags:
   -h, --help             help for space
 ```
 
+mode `auto` is set to local when /share/* exist as mounts and remote when no /share/* local mounts exist - so jen/mad/max/may/meg all set to local and rue to remote  
 `storage mount` takes over `amedia mount` and needs no flags beyond the persistent ones; it mounts
 what this host should have mounted and prints one line per mountpoint, as `amedia` does today.
 

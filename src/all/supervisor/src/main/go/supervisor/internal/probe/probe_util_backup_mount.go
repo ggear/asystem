@@ -139,26 +139,30 @@ func alive(ctx context.Context, target string) bool {
 	return !strings.Contains(options, ",ro,")
 }
 
-func diagnosed(ctx context.Context, target string) string {
+func inspected(ctx context.Context, target string) (bool, string) {
 	source, sourced := sourcedDevice(ctx, target)
 	declared, wanted := declaredDevice(target)
 	spec := declaredSpec(target)
 	switch {
 	case spec == "":
-		return "is declared by no entry in [" + backupFstabPath + "]"
+		return false, "is declared by no entry in [" + backupFstabPath + "]"
 	case !wanted && !sourced:
-		return "declares [" + spec + "] which has not enumerated, so its disk is powered down or unplugged"
+		return false, "declares [" + spec + "] which has not enumerated, so its disk is powered down or unplugged"
 	case !wanted:
-		return "carries [" + source + "] while its declared [" + spec + "] has not enumerated"
+		return false, "carries [" + source + "] while its declared [" + spec + "] has not enumerated"
 	case !sourced:
-		return "carries nothing rather than the declared [" + declared + "]"
+		return false, "carries nothing rather than the declared [" + declared + "]"
 	case source != declared:
-		return "carries [" + source + "] rather than the declared [" + declared + "]"
+		return false, "carries [" + source + "] rather than the declared [" + declared + "]"
+	case !alive(ctx, target):
+		return false, "carries [" + source + "] which is not answering reads, its device lost power or its link while mounted"
 	}
-	if !alive(ctx, target) {
-		return "carries [" + source + "] which is not answering reads, its device lost power or its link while mounted"
-	}
-	return "carries [" + source + "] and is answering normally"
+	return true, "carries [" + source + "] and is answering normally"
+}
+
+func diagnosed(ctx context.Context, target string) string {
+	_, reason := inspected(ctx, target)
+	return reason
 }
 
 func mountTarget(ctx context.Context, target string) error {

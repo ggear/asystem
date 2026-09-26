@@ -13,7 +13,8 @@
 #     nesthubfb4d,
 #     pixel_tablet,
 #     pixel_tablet_2,
-#     pixel_tablet_3]
+#     pixel_tablet_3,
+#     pixel_tablet_4]
 #   field state - <on-change> [Home Assistant value]
 #   field value - <on-change> [Home Assistant value]
 

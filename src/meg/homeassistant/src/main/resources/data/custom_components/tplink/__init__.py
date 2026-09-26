@@ -58,10 +58,7 @@ from .const import (
 )
 from .coordinator import TPLinkConfigEntry, TPLinkData, TPLinkDataUpdateCoordinator
 
-# HACK-GRAHAM-Start: Increase discovery polling interval from 15m to 7d
-DISCOVERY_INTERVAL = timedelta(days=7)
-# HACK-GRAHAM-Finish
-
+DISCOVERY_INTERVAL = timedelta(minutes=15)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)
@@ -113,51 +110,8 @@ async def async_discover_devices(hass: HomeAssistant) -> dict[str, Device]:
     for device_list in await asyncio.gather(*tasks):
         for device in device_list.values():
             discovered_devices[dr.format_mac(device.mac)] = device
-
-    # HACK-GRAHAM-Start: Inject devices defined in static config into discovery workflow
-    discovered_devices.update(await get_manually_configured_devices())
-    # HACK-GRAHAM-Finish
-
     return discovered_devices
 
-# HACK-GRAHAM-Start: Inject devices defined in static config into discovery workflow
-async def get_manually_configured_devices(config_path="/config/network_devices.json"):
-    import os
-    import json
-    from kasa import SmartDevice, DeviceConfig
-    _LOGGER.debug("Preparing manual configuration")
-    device_instances = {}
-    if os.path.isfile(config_path):
-        with open(config_path, 'r') as file:
-            try:
-                for device_network_config in json.load(file):
-                    if ( \
-                                    "IP" in device_network_config and device_network_config["IP"] != "" and \
-                                    "MAC" in device_network_config and device_network_config["MAC"] != "" and \
-                                    "Manufacturer" in device_network_config and device_network_config["Manufacturer"] == "TPLink"
-                    ):
-                        device_instance = SmartDevice(device_network_config["IP"])
-                        try:
-                            await device_instance.connect(config=DeviceConfig(
-                                host=device_network_config["IP"],
-                                timeout=5,
-                            ))
-                            await device_instance.update()
-                            await device_instance.disconnect()
-                            device_instances[device_network_config["MAC"]] = device_instance
-                            _LOGGER.debug("Device found with alias [%s] and IP address [%s]",
-                                          device_instance.alias, device_network_config["IP"])
-                        except Exception as error:
-                            _LOGGER.warning("Manual network configration for device [%s] found, "
-                                            "but failed with connection error: %s",
-                                            device_network_config["IP"], error)
-                _LOGGER.debug("Completed manual configuration, found [%s] devices", len(device_instances))
-            except Exception as error:
-                _LOGGER.error("Error reading JSON file [%s] with error: %s", config_path, error)
-    else:
-        _LOGGER.warning("Error reading JSON file [%s]: File not found", config_path)
-    return device_instances
-# HACK-GRAHAM-Finish
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the TP-Link component."""

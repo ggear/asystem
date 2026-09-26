@@ -116,9 +116,13 @@ func enableBackupFixture(t *testing.T, quiet bool) (stageLog string, stdout, std
 	stdout, stderr = &bytes.Buffer{}, &bytes.Buffer{}
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
-	multi, ok := scribeLoggerInstance.Handler().(*multiHandler)
+	attaching, attached := scribeLoggerInstance.Handler().(*attachHandler)
+	if !attached {
+		t.Fatalf("installed handler = %T, want an attachHandler wrapping the backup sinks", scribeLoggerInstance.Handler())
+	}
+	multi, ok := attaching.handler.(*multiHandler)
 	if !ok {
-		t.Fatalf("installed handler = %T, want a multiHandler carrying the backup sinks", scribeLoggerInstance.Handler())
+		t.Fatalf("wrapped handler = %T, want a multiHandler carrying the backup sinks", attaching.handler)
 	}
 	retargeted := 0
 	for _, handler := range multi.handlers {

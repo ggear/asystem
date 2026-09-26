@@ -77,13 +77,13 @@ class BackupsShellTest(unittest.TestCase):
     def test_scrub_is_refused_against_a_command_that_cannot_scrub(self):
         self.hosts("h1")
         done = self.invoke("list", "--scrub", BACKUPS_CONFIG=self.config)
-        self.assertIn("only start scrubs", done.stdout + done.stderr)
+        self.assertIn("[--scrub] is only valid for [start]", done.stdout + done.stderr)
         self.assertEqual(done.returncode, 2)
 
     def test_an_unknown_option_is_refused_with_exit_2(self):
         self.hosts("h1")
         done = self.invoke("start", "--nope", BACKUPS_CONFIG=self.config)
-        self.assertIn("unknown option [--nope]", done.stdout + done.stderr)
+        self.assertIn("[--nope] is not an option", done.stdout + done.stderr)
         self.assertEqual(done.returncode, 2)
 
     def test_dispatch_returns_the_status_ssh_gave_it(self):
@@ -146,13 +146,13 @@ class BackupsShellTest(unittest.TestCase):
     def test_unknown_command_is_refused_with_exit_2(self):
         done = self.invoke("bogus")
         self.assertEqual(done.returncode, 2)
-        self.assertIn("unknown command [bogus]", done.stderr)
+        self.assertIn("[bogus] is not a command", done.stderr)
 
     def test_start_reports_no_enrolled_hosts_rather_than_silently_doing_nothing(self):
         self.hosts()
         done = self.invoke("start", BACKUPS_CONFIG=self.config)
         self.assertEqual(done.returncode, 1)
-        self.assertIn("no enrolled hosts found", done.stderr)
+        self.assertIn("[none] enrolled hosts found", done.stderr)
 
     def test_start_one_dispatches_a_detached_run_with_the_computed_timeout(self):
         self.hosts()
@@ -178,9 +178,9 @@ class BackupsShellTest(unittest.TestCase):
         probe = ('ssh() { return 0; }\n'
                  'BACKUPS_RUN_ID=2026-09-15_00-00-00 BACKUPS_RUN_HOURS=9\n'
                  'backups_start_one macmini-mad')
-        self.assertRegex(self.shell(probe),
-                         r"^\[INFO\s+\d\d:\d\d:\d\d\] dispatched run \[2026-09-15_00-00-00\] "
-                         r"to \[macmini-mad\] with timeout \[9\] hours and scrub \[off\]$")
+        self.assertRegex(self.shell(probe).split("\n")[-1],
+                         r"^\d\d-\d\dT\d\d:\d\d:\d\d INFO  backup\s+start\s+0ms launched "
+                         r"\[2026-09-15_00-00-00\] dispatched to \[macmini-mad\] with timeout \[9\] hours and scrub \[off\]$")
 
     def test_start_one_says_nothing_about_a_host_that_did_not_answer(self):
         self.hosts()
@@ -241,12 +241,26 @@ class BackupsShellTest(unittest.TestCase):
         self.assertNotIn("backups.sh", helped + interrupted,
                          "the script path is not a command anyone can run")
 
-    def test_every_log_line_shares_one_format(self):
+    def test_every_log_line_shares_the_supervisor_column_layout(self):
         self.hosts()
-        self.assertRegex(self.shell('backups_log INFO "a message"'),
-                         r"^\[INFO\s+\d\d:\d\d:\d\d\] a message$")
-        self.assertRegex(self.shell('backups_log WARN "a warning" 2>&1'),
-                         r"^\[WARN\s+\d\d:\d\d:\d\d\] a warning$")
+        header = "TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION DETAIL"
+        lines = self.shell('backups_log INFO start launched "[a] message"').split("\n")
+        self.assertEqual(lines[0], header,
+                         "the header must match scribe's own, since abackups tail interleaves both scripts' output")
+        self.assertRegex(lines[1],
+                         r"^\d\d-\d\dT\d\d:\d\d:\d\d INFO  backup                                     "
+                         r"start           0ms launched \[a\] message$")
+        warned = self.shell('backups_log WARN stop faulting "[b] warning" 2>&1').split("\n")
+        self.assertEqual(warned[0], header)
+        self.assertRegex(warned[1],
+                         r"^\d\d-\d\dT\d\d:\d\d:\d\d WARN  backup                                     "
+                         r"stop            0ms faulting \[b\] warning$")
+
+    def test_the_header_is_printed_once_however_many_lines_follow(self):
+        self.hosts()
+        lines = self.shell('backups_log INFO start launched "[a] one"\nbackups_log INFO stop finished "[a] two"').split("\n")
+        self.assertEqual(len(lines), 3, "one header and two lines")
+        self.assertNotIn("SUBJECT", lines[2])
 
     def test_each_continues_past_a_failing_host_and_still_reaches_every_other(self):
         self.hosts("h1", "h2", "h3")

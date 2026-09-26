@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -61,6 +62,17 @@ type multiHandler struct {
 	handlers []slog.Handler
 }
 
+type attachHandler struct {
+	handler slog.Handler
+}
+
+type attachment struct {
+	mutex      sync.Mutex
+	file       *os.File
+	sources    []string
+	headerOnce sync.Once
+}
+
 type streamHandler struct {
 	level      slog.Level
 	writer     io.Writer
@@ -99,7 +111,7 @@ func EnableStdout(level slog.Level) {
 	closeLoggerWriter()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout"
-	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: os.Stdout, sink: sinkFile()})
+	scribeLoggerInstance = installed(&streamHandler{level: level, writer: os.Stdout, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
 }
 
@@ -113,38 +125,25 @@ func EnableFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, ma
 	closeLoggerWriter()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "file"
-	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: writer, sink: sinkFile()})
+	scribeLoggerInstance = installed(&streamHandler{level: level, writer: writer, sink: sinkFile()})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
 	return nil
 }
 
-func EnableStdoutAndFile(level slog.Level, cmd, version, kept string, maxSizeMB, maxBackups, maxAgeDays int) error {
+func EnableStdoutAndFile(level slog.Level, cmd, version string, maxSizeMB, maxBackups, maxAgeDays int) error {
 	writer, path, err := fileWriter(cmd, version, maxSizeMB, maxBackups, maxAgeDays)
 	if err != nil {
 		return err
 	}
 	writers := []io.Writer{os.Stdout, writer}
-	var keptLog *os.File
-	if kept != "" {
-		if err := os.MkdirAll(filepath.Dir(kept), 0755); err != nil {
-			_ = writer.Close()
-			return fmt.Errorf("create kept log directory failed [%s] [%w]", filepath.Dir(kept), err)
-		}
-		keptLog, err = os.OpenFile(kept, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-		if err != nil {
-			_ = writer.Close()
-			return fmt.Errorf("open kept log failed [%s] [%w]", kept, err)
-		}
-		writers = append(writers, keptLog)
-	}
 	scribeLoggerMu.Lock()
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
 	scribeLoggerLevel = level
 	scribeLoggerMode = "stdout+file"
-	scribeLoggerInstance = slog.New(&streamHandler{level: level, writer: io.MultiWriter(writers...), sink: sinkFile()})
+	scribeLoggerInstance = installed(&streamHandler{level: level, writer: io.MultiWriter(writers...), sink: sinkFile()})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
@@ -156,8 +155,25 @@ func Disable() {
 	defer scribeLoggerMu.Unlock()
 	closeLoggerWriter()
 	scribeLoggerMode = "disabled"
-	scribeLoggerInstance = slog.New(&streamHandler{level: slog.LevelError + 1, writer: io.Discard, sink: sinkFile()})
+	scribeLoggerInstance = installed(&streamHandler{level: slog.LevelError + 1, writer: io.Discard, sink: sinkFile()})
 	slog.SetDefault(scribeLoggerInstance)
+}
+
+func Attach(path string, sources ...Source) (io.Closer, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return nil, fmt.Errorf("create attached log directory failed [%s] [%w]", filepath.Dir(path), err)
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("open attached log failed [%s] [%w]", path, err)
+	}
+	carried := make([]string, len(sources))
+	for index, source := range sources {
+		carried[index] = source.String()
+	}
+	attached := &attachment{file: file, sources: carried}
+	scribeAttachment.Store(attached)
+	return attached, nil
 }
 
 func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
@@ -168,7 +184,7 @@ func EnableBuffer(level slog.Level, capacity int) *LogBuffer {
 	scribeLoggerLevel = level
 	scribeLoggerMode = "buffer"
 	buf := &LogBuffer{lines: make([]LogLine, capacity)}
-	scribeLoggerInstance = slog.New(&bufferHandler{level: level, buffer: buf})
+	scribeLoggerInstance = installed(&bufferHandler{level: level, buffer: buf})
 	slog.SetDefault(scribeLoggerInstance)
 	return buf
 }
@@ -185,7 +201,7 @@ func EnableBufferAndFile(level slog.Level, cmd, version string, capacity, maxSiz
 	scribeLoggerLevel = level
 	scribeLoggerMode = "buffer+file"
 	buf := &LogBuffer{lines: make([]LogLine, capacity)}
-	scribeLoggerInstance = slog.New(&multiHandler{handlers: []slog.Handler{
+	scribeLoggerInstance = installed(&multiHandler{handlers: []slog.Handler{
 		&bufferHandler{level: level, buffer: buf},
 		&streamHandler{level: level, writer: writer, sink: sinkFile()},
 	}})
@@ -221,7 +237,7 @@ func EnableBackupAndFile(level slog.Level, cmd, version, stageLogPath string, qu
 	if !quiet {
 		handlers = append(handlers, &backupHandler{level: level, stdout: os.Stdout, stderr: os.Stderr})
 	}
-	scribeLoggerInstance = slog.New(&multiHandler{handlers: handlers})
+	scribeLoggerInstance = installed(&multiHandler{handlers: handlers})
 	scribeLoggerWriter = writer
 	slog.SetDefault(scribeLoggerInstance)
 	purgeLogFiles(path)
@@ -374,6 +390,62 @@ func (l Logger) log(level slog.Level, verb string, started time.Time, detail str
 	rendered = flattened.Replace(rendered)
 	slog.Log(context.Background(), level, verb, keySource, l.source.String(), keySubject, l.subject.String(),
 		keyAction, l.action.String(), keyDuration, time.Since(started), keyDetail, rendered)
+}
+
+func installed(handler slog.Handler) *slog.Logger {
+	return slog.New(&attachHandler{handler: handler})
+}
+
+func (h *attachHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.handler.Enabled(ctx, level)
+}
+
+func (h *attachHandler) Handle(ctx context.Context, record slog.Record) error {
+	if attached := scribeAttachment.Load(); attached != nil {
+		attached.write(lineOf(record))
+	}
+	return h.handler.Handle(ctx, record)
+}
+
+func (h *attachHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return (&contextualHandler{handler: h}).WithAttrs(attrs)
+}
+
+func (h *attachHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
+	return &contextualHandler{handler: h, groups: []string{name}}
+}
+
+func (a *attachment) write(line LogLine) {
+	if len(a.sources) > 0 && !slices.Contains(a.sources, line.Source) {
+		return
+	}
+	if !allowed(line.Source, line.Subject, line.Action) {
+		return
+	}
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	if a.file == nil {
+		return
+	}
+	a.headerOnce.Do(func() { _, _ = io.WriteString(a.file, Header()+"\n") })
+	for _, text := range wrapped(line, layoutFor(sinkFile())) {
+		_, _ = io.WriteString(a.file, text+"\n")
+	}
+}
+
+func (a *attachment) Close() error {
+	scribeAttachment.CompareAndSwap(a, nil)
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	file := a.file
+	a.file = nil
+	if file == nil {
+		return nil
+	}
+	return file.Close()
 }
 
 func (h *bufferHandler) Enabled(_ context.Context, level slog.Level) bool {
@@ -961,6 +1033,7 @@ var (
 	scribeLoggerMode     string
 	scribeLoggerInstance *slog.Logger
 	scribeLoggerWriter   io.Closer
+	scribeAttachment     atomic.Pointer[attachment]
 
 	flattened = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ", "\t", " ")
 )

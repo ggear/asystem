@@ -67,9 +67,9 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 			failed = true
 			continue
 		}
-		if !attached(ctx, stagePath) {
+		if held, reason := attached(ctx, stagePath); !held {
 			scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Errorf("faulting", time.Now(),
-				"[/backup] %s, aborting before writing anywhere else", diagnosed(ctx, config.DirBackup))
+				"[%s] %s, aborting before writing anywhere else", config.DirBackup, reason)
 			failed = true
 			break
 		}
@@ -109,9 +109,13 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		result.diskUsagePerc, result.diskUsedMB, result.diskTotalMB = percent, usedMB, totalMB
 	}
 
-	if failed || !scrubOK {
-		return result, fmt.Errorf("[%s] stage did not complete cleanly, mirror failed [%t] scrub failed [%t]",
-			metric.BackupStageTertiary, failed, !scrubOK)
+	switch {
+	case failed && !scrubOK:
+		return result, errStageMirrorAndScrub
+	case failed:
+		return result, errStageMirror
+	case !scrubOK:
+		return result, errStageScrub
 	}
 	return result, nil
 }
@@ -231,19 +235,23 @@ func ready(ctx context.Context) bool {
 	return len(lines) > 0 && isLocalFilesystem(strings.TrimSpace(lines[len(lines)-1]))
 }
 
-func attached(ctx context.Context, stagePath string) bool {
+func attached(ctx context.Context, stagePath string) (bool, string) {
 	data, err := os.ReadFile(filepath.Join(stagePath, tertiaryDeviceMarker))
 	if err != nil {
-		return true
+		return true, ""
 	}
 	expected := strings.TrimSpace(string(data))
 	if expected == "" {
-		return true
+		return true, ""
 	}
-	if !verified(ctx, config.DirBackup) || !alive(ctx, config.DirBackup) {
-		return false
+	held, reason := inspected(ctx, config.DirBackup)
+	if !held {
+		return false, reason
 	}
-	return fmt.Sprintf("%d", deviceID(config.DirBackup)) == expected
+	if fmt.Sprintf("%d", deviceID(config.DirBackup)) != expected {
+		return false, "carries a filesystem other than the one this stage claimed"
+	}
+	return true, reason
 }
 
 func pruneStale(dir string, age time.Duration) {

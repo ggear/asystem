@@ -475,7 +475,7 @@ const (
 	mebibytesPerTebibyte = 1024 * mebibytesPerGibibyte
 
 	backupSizedWidth      = 4
-	backupPercentWidth    = 2
+	backupPercentWidth    = 3
 	backupThroughputWidth = 3
 	backupMinutesWidth    = 4
 	backupBarWidth        = 18

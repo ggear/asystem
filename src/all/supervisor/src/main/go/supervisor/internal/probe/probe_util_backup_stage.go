@@ -88,12 +88,13 @@ func runStage(ctx context.Context, request stageRequest) error {
 					cancel(errStageStopped)
 					continue
 				}
-				if request.Stage == metric.BackupStageTertiary && !attached(backgroundCtx, stagePath) {
-					scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Errorf("faulting", started,
-						"[%s] %s, stopping this stage before it writes anywhere else", config.DirBackup,
-						diagnosed(backgroundCtx, config.DirBackup))
-					cancel(errStageDetached)
-					continue
+				if request.Stage == metric.BackupStageTertiary {
+					if held, reason := attached(backgroundCtx, stagePath); !held {
+						scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Errorf("faulting", started,
+							"[%s] %s, stopping this stage before it writes anywhere else", config.DirBackup, reason)
+						cancel(errStageDetached)
+						continue
+					}
 				}
 				loud := time.Since(refreshed) >= stageHeartbeatRefresh
 				document := beat(!loud)
@@ -146,7 +147,7 @@ func runStage(ctx context.Context, request stageRequest) error {
 	if runErr != nil {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", started,
 			"[%s] stage [%s] finished as [%s] with [%v]", request.RunID, request.Stage, state, runErr)
-		return fmt.Errorf("stage [%s] failed [%w]", request.Stage, runErr)
+		return fmt.Errorf("stage [%s] %w", request.Stage, runErr)
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("finished", started,
 		"[%s] stage [%s] finished as [%s], [%s] MiB at [%s] MiB/s", request.RunID, request.Stage, state,
@@ -331,6 +332,10 @@ var (
 	errStageTimedOut = errors.New("stage timed out")
 	errStageStopped  = errors.New("stage stopped")
 	errStageDetached = errors.New("backup disk detached mid stage")
+
+	errStageMirror         = errors.New("the mirror failed")
+	errStageScrub          = errors.New("the scrub failed")
+	errStageMirrorAndScrub = errors.New("the mirror and the scrub failed")
 )
 
 const (

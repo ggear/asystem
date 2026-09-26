@@ -26,66 +26,6 @@ Retire nginx and use cloudflared for homeasistant?
 Improve sys tests with datbase/broker asserts for all modules
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-code review entire patch which is not in git yet. Make sure project guidleines are followed. Check for simplications, dead code, unit tests gaps, unit tests arent valuable. reorganise struct/var/funcs by project guidleines eg func publishRunStatus( comes before BackupReaperState. group const appropriately and have correct/consistent prefixes.
-
-
-
-
-put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols
-
-check all metrics working 
-
-adjust memeory allocs
-
-check metric attribution works by metric filter when multiple probe_* feed single metric
-verify caching hour and all metrics performance, increase poll frequency?
-Add host status to ha, combine backup temp etc
-add restore.sh and test 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###############################################################################################################################################################
 # Tasmota
 ###############################################################################################################################################################
@@ -111,6 +51,7 @@ Integrate Withings scale direcltly, locally, it has been done here https://didac
 ###############################################################################################################################################################
 # Media
 ###############################################################################################################################################################
+Have a 2-thread media transcode script, maybe do even/odd/every so can launch in two windows?
 Implement syncart.py to store artwork in /shares and save download after failure
 Formalise subtitle download and sync, add missing subtitles to common series
 Drop closed captioning [] sounds from subtitles, just have text of spoken words
@@ -200,6 +141,18 @@ Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-N
 ###############################################################################################################################################################
 # Supervisor
 ###############################################################################################################################################################
+
+code review entire patch which is not in git yet. Make sure project guidleines are followed. Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements). reorganise struct/var/funcs by project guidleines 
+
+put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols
+check all metrics working 
+adjust memeory allocs
+check metric attribution works by metric filter when multiple probe_* feed single metric
+verify caching hour and all metrics performance, increase poll frequency?
+add restore.sh and test 
+
+
+
 display_terminal.go: hide tcell namespace completely - tcell.Event?
 Make database persistance off-loop so not using loop budget on database
 Why a reconcile in 10s detail=observed [raspbpi-jen], status [online], trigger [restart], resubscribed [47] topics, reconcile in [10000] ms?
@@ -230,7 +183,21 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 # Storage
 ###############################################################################################################################################################
-impl aspace, that does repotrting ala duf, work on /shares, /home/asystem, /backup and perhaps / of servers? work on rue and servers
+
+Update cli.md:
+  1. for new local/remote mode designs, totals only on remote, shares files are for when --drives /shares/*
+  2. use a ssh go lang client for remote, no shelling out
+  3. use backup json on file system specified in supervisor to determine /backup stats, use most recent, nil out if none available
+  4. implement display intelligently, use duf as an example and use supervisor display_test_layouts.go as an example to test
+  5. colour the used values like duf does and use a theme
+  6. dont use supervisor scribe like functionality, stdout is the only feedback, no logs
+  7. have an internal/space with impl/util like mount to support mount cmd
+  8. --symbols auto to be decided like supervisor does
+  9. media script in all/media should replace duf with astorage space --mode local --drives /shares/* --symbols ascii --theme mono
+  10. can theme auto be implemented well? if not re,pve ad default to colour
+impl cli.md
+
+
 make health script easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
 Binaries for media-space to call it, also have a adu and abench?
 Add quirks to asahi install

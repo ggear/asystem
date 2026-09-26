@@ -232,11 +232,11 @@ dispatch_action() {
     print_header "$(hostname)" "${verb}" 0
     local action
     MEDIA_SEPARATE=""
-    while IFS= read -r -d '' action; do
+    while IFS= read -r -d '' action <&3; do
       [ -n "${MEDIA_SEPARATE}" ] && echo ""
       MEDIA_SEPARATE=1
       "${action}" || result=1
-    done < <(${FIND_CMD} . -name "${verb}.sh" -print0)
+    done 3< <(${FIND_CMD} . -name "${verb}.sh" -print0)
     ;;
   share | local)
     local dirs
@@ -552,7 +552,7 @@ command_move() {
       local share_current_dir_host=". ${MEDIA_BIN_INSTALL}/.env_media; echo \${SHARE_DIRS_LOCAL} | grep \${SHARE_ROOT}/${SHARE_PATH_INDEX} | wc -l"
       if host "${share_host}" >/dev/null 2>&1; then
         # shellcheck disable=SC2029
-        if [ "$(ssh "root@${share_host}" "${share_current_dir_host}")" -gt 0 ]; then
+        if [ "$(ssh -n "root@${share_host}" "${share_current_dir_host}")" -gt 0 ]; then
           share_ssh=(ssh "root@${share_host}")
           share_ssh_host="${share_host}"
         fi
@@ -710,7 +710,7 @@ mount_darwin() {
       if [[ ! -d "${share_dir}/tmp" ]]; then
         echo -n "Mounting [${share_samba}] ... "
         diskutil unmount force "${share_dir}" &>/dev/null
-        if mount_smbfs -o soft,nodatacache "${share_samba}" "${share_dir}"; then
+        if mount_smbfs -o soft,nodatacache "${share_samba}" "${share_dir}" </dev/null; then
           echo "done"
         else
           echo "failed"

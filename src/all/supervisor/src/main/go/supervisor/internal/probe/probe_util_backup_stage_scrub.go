@@ -144,7 +144,7 @@ finished:
 	if halt != "" {
 		state, success = halt, false
 	}
-	if !counted {
+	if !counted && halt == "" {
 		state, success = metric.BackupStateFailure, false
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
 			"[%s] device stats could not be read, so this scrub cannot report the disk clean", config.DirBackup)

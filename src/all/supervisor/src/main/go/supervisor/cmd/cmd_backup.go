@@ -81,7 +81,7 @@ func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
 		defer func() { _ = closer.Close() }()
 	case request.Command == engine.BackupCommandStart:
 		if enableErr := scribe.EnableStdoutAndFile(level, backupCommandName, config.ResolvedVersion(request.Config),
-			engine.BackupRunLog(request), logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {
+			logFileSizeMB, logFileBackups, logFileAgeDays); enableErr != nil {
 			return fmt.Errorf("file logging could not be enabled [%w]", enableErr)
 		}
 	default:
@@ -92,7 +92,7 @@ func executeBackup(request engine.BackupRequest, opts *backupOptions) error {
 	}
 	if err := engine.RunBackup(request); err != nil {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Errorf("faulting", time.Now(),
-			"[%s] command did not complete cleanly, %v", request.Command, err)
+			"[%s] %v", request.Command, err)
 		return errCommandReported
 	}
 	return nil

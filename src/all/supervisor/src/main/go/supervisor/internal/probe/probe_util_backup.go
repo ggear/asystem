@@ -70,13 +70,6 @@ func BackupPrepared(request BackupRequest) (BackupRequest, error) {
 	return request, nil
 }
 
-func BackupRunLog(request BackupRequest) string {
-	if request.RunID == "" {
-		return ""
-	}
-	return runLogPath(backupRunPath(backupRunRoot(), request.RunID))
-}
-
 func BackupStageLog(request BackupRequest) string {
 	return stageLogPath(backupRunPath(backupRunRoot(), request.RunID), request.Stage)
 }
@@ -131,6 +124,12 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 	if err := os.MkdirAll(runPath, 0o755); err != nil {
 		return fmt.Errorf("backup run directory [%s] could not be created [%w]", runPath, err)
 	}
+	if attached, attachErr := scribe.Attach(runLogPath(runPath), scribe.SourceBackup); attachErr != nil {
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStart).Warnf("faulting", time.Now(),
+			"[%s] run log could not be opened, this run will not be tailable, %v", runLogPath(runPath), attachErr)
+	} else {
+		defer func() { _ = attached.Close() }()
+	}
 
 	stages := backupStages
 	if request.Stage != "" {
@@ -158,7 +157,7 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 	scribe.Log(scribe.SourceBackup, host, scribe.ActionStop).Infof("finished", started,
 		"[%s] backup run resolved as [%s]", request.RunID, document.State)
 	if stageErr != nil {
-		return fmt.Errorf("run [%s] did not complete cleanly [%w]", request.RunID, stageErr)
+		return fmt.Errorf("run [%s] %w", request.RunID, stageErr)
 	}
 	return nil
 }

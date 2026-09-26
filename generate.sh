@@ -41,20 +41,32 @@ function pull_repo() {
   elif [ "${PULL_LATEST}" == "True" ]; then
     cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}" || return 1
     echo "Pulling latest ${MODULE_NAME}/${REPO_NAME} ..."
+    if [ -f .git/MERGE_HEAD ] || [ -d .git/rebase-apply ] || [ -d .git/rebase-merge ]; then
+      echo "" && echo "Module repository [${MODULE_NAME}/${REPO_NAME}] has an unresolved merge/rebase from a previous run; resolve it (or 'git merge --abort'/'git rebase --abort') by hand in [$(pwd)] before pulling again" && echo ""
+      return 1
+    fi
     for BRANCH in master main development dev; do
       if [ "$(git branch | grep -c "${BRANCH}")" -eq 1 ]; then
-        git checkout "${BRANCH}"
+        git checkout "${BRANCH}" || return 1
         git branch --set-upstream-to "origin/${BRANCH}" 2>/dev/null
         # Fork upkeep: rebase our default branch onto real upstream, replay our
         # patch branch (FORKED_LABEL) on top, force-push so CHECKOUT_LABEL tracks both.
         if [ "${FORKED_UPSTREAM}" != "" ] && [ "${FORKED_LABEL}" != "" ]; then
           git remote add upstream "${FORKED_UPSTREAM}" 2>/dev/null
-          git fetch upstream
-          git rebase "upstream/${BRANCH}"
-          git checkout "${CHECKOUT_LABEL}"
-          git merge "${FORKED_LABEL}"
+          git fetch upstream || return 1
+          if ! git rebase "upstream/${BRANCH}"; then
+            git rebase --abort
+            echo "" && echo "Module repository [${MODULE_NAME}/${REPO_NAME}] failed to rebase [${BRANCH}] onto [upstream/${BRANCH}]" && echo ""
+            return 1
+          fi
+          git checkout "${CHECKOUT_LABEL}" || return 1
+          if ! git merge "${FORKED_LABEL}"; then
+            git merge --abort
+            echo "" && echo "Module repository [${MODULE_NAME}/${REPO_NAME}] failed to merge [${FORKED_LABEL}] into [${CHECKOUT_LABEL}]; resolve it by hand in [$(pwd)]" && echo ""
+            return 1
+          fi
           git push --all --force
-          git checkout "${BRANCH}" 2>/dev/null
+          git checkout "${BRANCH}" || return 1
         fi
         break
       fi
@@ -62,14 +74,24 @@ function pull_repo() {
     # Force origin to ssh however it was cloned (https or ssh).
     git remote set-url origin "git@github.com:$(git remote get-url origin | sed 's|https://github.com/||;s|git@github.com:||')"
     echo "Remote set to [$(git remote get-url origin)]"
-    # GitHub throttling is transient; retry forever with a backoff.
-    until git pull --all; do
-      echo "Git pull failed, sleeping to avoid Github throttling ..."
+    # GitHub throttling is transient; retry forever with a backoff. A fetch
+    # (not pull) is enough: the fork-upkeep merge above already advanced
+    # CHECKOUT_LABEL, and the final step below checks it out by name rather
+    # than relying on the current branch being merged - so there is nothing
+    # left here that should ever attempt a merge, and nothing to retry but
+    # the network fetch itself.
+    until git fetch --all; do
+      echo "Git fetch failed, sleeping to avoid Github throttling ..."
       sleep 90
     done
     REPO_DIR="$(cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}" && pwd)"
     REPO_LABEL="$(basename "$(dirname "${INVOKING_DIR}")")"/"$(basename "${INVOKING_DIR}"):${REPO_NAME}"
-    git -c advice.detachedHead=false checkout "${CHECKOUT_LABEL}"
+    # Force: some upstream repos (home-assistant/core) carry a file whose
+    # checked-in line endings disagree with their own .gitattributes, so a
+    # plain checkout of any commit containing it leaves it "modified" via
+    # normalize-on-checkout - blocking every subsequent checkout forever
+    # with nothing for a human to actually resolve.
+    git -c advice.detachedHead=false checkout -f "${CHECKOUT_LABEL}"
     if ! git status | grep -q "${CHECKOUT_LABEL}"; then
       echo "" && echo "Module repository [${REPO_LABEL}] failed to checkout [${CHECKOUT_LABEL}]" && echo ""
     else

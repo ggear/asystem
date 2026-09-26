@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -279,6 +280,30 @@ func TestProbeUtilBackup_ASecondRunIsRefusedWhileTheLockIsHeld(t *testing.T) {
 	}
 	if runs := backupRuns(root); len(runs) != 0 {
 		t.Errorf("backupRuns() = %v, want a refused run to mint no directory", runs)
+	}
+}
+
+func TestProbeUtilBackup_AScheduledRunWritesTheRunLogItIsTailedFrom(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(config.BackupHomeEnvVar, home)
+	configPath := filepath.Join(home, "config.json")
+	if err := os.WriteFile(configPath, []byte(`{"asystem":{"host":"testhost"}}`), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	scribe.EnableStdout(slog.LevelInfo)
+	t.Cleanup(func() { scribe.Disable() })
+	if err := Backup(t.Context(), BackupRequest{Command: BackupCommandStart, Trigger: metric.BackupTriggerSystem,
+		Config: configPath, RunID: "2026-09-22_01-00-00", Stage: metric.BackupStagePrimary}); err != nil {
+		t.Fatalf("Backup() error = %v", err)
+	}
+	data, err := os.ReadFile(runLogPath(backupRunPath(backupRunRoot(), "2026-09-22_01-00-00")))
+	if err != nil {
+		t.Fatalf("run log not written: %v", err)
+	}
+	for _, want := range []string{"backup run over [1] stages triggered by [system]", "backup run resolved as [success]"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("run log = %q, want it to carry %q", data, want)
+		}
 	}
 }
 

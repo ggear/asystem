@@ -171,8 +171,12 @@ func TestProbeUtilBackupStageTertiary_AttachedHoldsUntilTheStageClaimsADisk(t *t
 					t.Fatalf("write marker: %v", err)
 				}
 			}
-			if got := attached(context.Background(), stagePath); got != test.expected {
+			got, reason := attached(context.Background(), stagePath)
+			if got != test.expected {
 				t.Errorf("attached: got %v want %v", got, test.expected)
+			}
+			if reason != "" {
+				t.Errorf("attached reason: got %q want it silent while the stage has claimed nothing", reason)
 			}
 		})
 	}
