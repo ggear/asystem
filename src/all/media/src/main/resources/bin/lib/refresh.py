@@ -197,11 +197,6 @@ def _refresh_sabnzbd(_share_paths):
     _print_messages([f"Error: download [{slot['name']}] failed [{slot['fail_message']}]"
                      for slot in failed_slots])
     if failed_slots:
-        try:
-            get_sabnzbd(mode="history", name="delete", value="failed", archive=1)
-        except Exception as exception:
-            _print_error("could not archive failed sabnzbd downloads", exception)
-            return Exit.FAIL_SABNZBD_ARCHIVE
         return Exit.FAIL_SABNZBD_DOWNLOAD
     return Exit.PASS
 
