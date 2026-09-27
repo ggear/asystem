@@ -530,7 +530,7 @@ command_stow() {
 space_shares() {
   local drives="${1}"
   shift
-  "$@" astorage space --mode local --drives "${drives}" --symbols ascii --theme mono || true
+  "$@" aspace --mode local --drives "${drives}" --symbols ascii --theme mono || true
 }
 
 command_move() {

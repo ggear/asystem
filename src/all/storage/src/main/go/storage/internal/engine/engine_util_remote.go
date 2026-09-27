@@ -105,7 +105,7 @@ func dialHost(host string) (*ssh.Client, error) {
 		HostKeyCallback: callback,
 		Timeout:         remoteDialTimeout,
 	}
-	address := net.JoinHostPort(host+".local", remoteSSHPort)
+	address := net.JoinHostPort(host, remoteSSHPort)
 	return ssh.Dial("tcp", address, config)
 }
 

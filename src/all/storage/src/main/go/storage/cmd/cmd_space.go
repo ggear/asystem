@@ -22,7 +22,7 @@ func newSpaceCmd() *cobra.Command {
 	opts := &spaceOptions{}
 	cmd := &cobra.Command{
 		Use:     "space",
-		Aliases: []string{"astorage", "astorages"},
+		Aliases: []string{"aspace", "aspaces"},
 		Short:   spaceDescription,
 		Long:    spaceDescription,
 		RunE: func(cmd *cobra.Command, args []string) error {
