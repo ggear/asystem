@@ -6,7 +6,7 @@
 # Build/test
 mock==5.2.0
 fabric==3.2.3
-ruff==0.16.8
+ruff== 0.16.9
 pytest==9.1.1
 dotenv==0.9.9
 varsubst==2.0.0
@@ -50,7 +50,7 @@ matplotlib-inline==0.2.2
 anyio==4.15.1
 # NOTES: HELD, not stale, mlserver requires fastapi<0.116.0, unblocks with MLSERVER_VERSION
 fastapi==0.115.14
-virtualenv==21.12.0
+virtualenv==21.13.0
 mlflow==$MLFLOW_VERSION
 
 # Storage/databases
@@ -75,7 +75,7 @@ speedtest-cli==2.1.3
 ffmpeg-python==0.2.0
 subtitle-filter==1.5.1
 decode-config==15.6.0.0
-google-auth==2.58.0
+google-auth==2.58.1
 google-auth-httplib2==0.4.2
 google-auth-oauthlib==1.4.1
 google-api-python-client==2.200.0

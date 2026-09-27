@@ -26,6 +26,32 @@ Retire nginx and use cloudflared for homeasistant?
 Improve sys tests with datbase/broker asserts for all modules
 
 
+have go and rust update in global fab pull not just dry run. dont update go/rust deps otherwise
+PULL PACKAGE VERSIONS TO UPDATE STARTING: asystem-10.200.1725
+------------------------------------------------------------
+cd ./. && . /Users/graham/Code/asystem/.env_fab && pip list --outdated | grep -iE '^(Package|adbc\-driver\-postgresql|aenum|anyio|datetime|decode\-config|dnspython|docker|dotenv|dropbox|fabric|fastapi|ffmpeg\-python|google\-api\-python\-client|google\-auth|google\-auth\-httplib2|google\-auth\-oauthlib|gspread|gspread\-pandas|hassapi|homeassistant|in
+Package                          Version  Latest  Type
+fastapi                          0.115.14 0.141.1 wheel
+google-auth                      2.58.0   2.58.1  wheel
+mlflow                           3.16.0   3.16.1  wheel
+ruff                             0.16.8   0.16.9  wheel
+virtualenv                       21.12.0  21.13.0 wheel
+cd /Users/graham/Code/asystem/src/all/storage/src/main/go/storage && . /Users/graham/Code/asystem/.env_fab && go list -m -u -f '{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}' all | awk 'NF'
+cd /Users/graham/Code/asystem/src/all/supervisor/src/main/go/supervisor && . /Users/graham/Code/asystem/.env_fab && go list -m -u -f '{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}' all | awk 'NF'
+cd /Users/graham/Code/asystem/src/mad/network/src/main/go/network && . /Users/graham/Code/asystem/.env_fab && go list -m -u -f '{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}' all | awk 'NF'
+cd /Users/graham/Code/asystem/src/zzz/solaredge/src/main/rust/solaredge && . /Users/graham/Code/asystem/.env_fab && cargo update --dry-run
+    Updating crates.io index
+     Locking 0 packages to latest compatible versions
+warning: not updating lockfile due to dry run
+cd /Users/graham/Code/asystem/src/may/tempstat/src/main/rust/tempstat && . /Users/graham/Code/asystem/.env_fab && cargo update --dry-run
+    Updating crates.io index
+     Locking 0 packages to latest compatible versions
+note: pass `--verbose` to see 1 unchanged dependencies behind latest
+warning: not updating lockfile due to dry run
+
+
+
+
 ###############################################################################################################################################################
 # Tasmota
 ###############################################################################################################################################################
@@ -142,7 +168,12 @@ Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-N
 # Supervisor
 ###############################################################################################################################################################
 
-code review this patch which is not in git yet. Make sure project guidleines are followed. Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements). reorganise struct/var/funcs by project guidleines 
+code review this patch which is not in git yet.
+Make sure project guidleines are followed.
+Check all logic.
+No comments except for clear excpetions eg document interface/complicated process.
+Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements).
+reorganise struct/var/funcs by project guidleines 
 
 put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols
 check all metrics working 
@@ -185,6 +216,7 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 
 
+any display inconsistcies remain? any logic code simplications possible in display now that inconsistencies have been resolved?
 check and then impl cli.md
 
 
