@@ -85,15 +85,17 @@ func TestProbeUtilBackupRender_ProgressCutsTheLineAtTheLastMeasuredField(t *test
 		expected string
 	}{
 		{name: "copied_only", total: unknownReading(), percent: unknownReading(), remain: unknownReading(), rate: unknownReading(),
-			expected: "[   5] GiB"},
-		{name: "total_known", total: intReading(90), percent: unknownReading(), remain: unknownReading(), rate: unknownReading(),
-			expected: "[   5] GiB of [  90] GiB"},
+			expected: "[   5.0] GiB"},
+		{name: "total_known", total: intReading(90 * mebibytesPerGibibyte), percent: unknownReading(), remain: unknownReading(), rate: unknownReading(),
+			expected: "[   5.0] GiB of [  90.0] GiB"},
+		{name: "a_part_gibibyte_keeps_its_tenth", total: intReading(mebibytesPerGibibyte / 2), percent: unknownReading(), remain: unknownReading(), rate: unknownReading(),
+			expected: "[   5.0] GiB of [   0.5] GiB"},
 		{name: "rate_known_holds_an_unknown_total_with_a_dash", total: unknownReading(), percent: unknownReading(), remain: unknownReading(), rate: floatReading(102),
-			expected: "[   5] GiB of [   -] GiB at [102] MiB/s"},
+			expected: "[   5.0] GiB of [     -] GiB at [102] MiB/s"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := backupProgressed(intReading(5), testCase.total, testCase.percent, testCase.remain,
+			got := backupProgressed(intReading(5*mebibytesPerGibibyte), testCase.total, testCase.percent, testCase.remain,
 				backupEta(time.Now(), testCase.remain), testCase.rate, "")
 			if got != testCase.expected {
 				t.Errorf("backupProgressed() = %q, want %q", got, testCase.expected)

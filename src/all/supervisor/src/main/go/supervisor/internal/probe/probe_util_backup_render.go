@@ -189,7 +189,7 @@ func backupListRow(root, run string) string {
 		volume = floatReading(snapshot.tertiary.DiskUsagePerc)
 	}
 	return backupRow(append([]string{run, finished, elapsed, trigger}, append(cells, scrubState,
-		backupMegabytes(sizeReading), backupTerabytes(usedReading), backupTerabytes(freeReading), backupBar(volume), result)...)...)
+		backupGibibytes(sizeReading), backupTerabytes(usedReading), backupTerabytes(freeReading), backupBar(volume), result)...)...)
 }
 
 func backupRow(values ...string) string {
@@ -277,9 +277,9 @@ func backupProgressed(copied, total, percent, remaining reading, eta string, rat
 	if remaining.known {
 		last = 4
 	}
-	line := fmt.Sprintf("[%s] GiB", backupSized(copied))
+	line := fmt.Sprintf("[%s] GiB", backupSizedGibibytes(copied))
 	if last >= 1 {
-		line += fmt.Sprintf(" of [%s] GiB", backupSized(total))
+		line += fmt.Sprintf(" of [%s] GiB", backupSizedGibibytes(total))
 	}
 	if last >= 2 {
 		line += fmt.Sprintf(" at [%s] MiB/s", backupThroughput(rate))
@@ -320,27 +320,36 @@ func backupRated(megabytes, seconds reading) reading {
 	return floatReading(megabytes.value / seconds.value)
 }
 
-func backupSized(r reading) string { return padLeft(digits(r), backupSizedWidth) }
-
 func backupPercent(r reading) string { return padLeft(digits(r), backupPercentWidth) }
 
 func backupThroughput(r reading) string { return padLeft(digits(r), backupThroughputWidth) }
 
 func backupMinutes(r reading) string { return padLeft(digits(r), backupMinutesWidth) }
 
-func backupMegabytes(r reading) string {
+func backupSizedGibibytes(r reading) string {
+	return padLeft(tenthsOf(r, mebibytesPerGibibyte), backupGibibytesWidth)
+}
+
+func backupGibibytes(r reading) string {
 	if !r.known || r.value < 0 {
 		return backupUnknownCell
 	}
-	return groupedDigits(r.Rounded()) + " MiB"
+	return tenthsOf(r, mebibytesPerGibibyte) + " GiB"
 }
 
 func backupTerabytes(r reading) string {
 	if !r.known || r.value < 0 {
 		return backupUnknownCell
 	}
-	tenths := int64(math.Round(r.value * 10 / mebibytesPerTebibyte))
-	return fmt.Sprintf("%d.%d TiB", tenths/10, tenths%10)
+	return tenthsOf(r, mebibytesPerTebibyte) + " TiB"
+}
+
+func tenthsOf(r reading, mebibytes float64) string {
+	if !r.known || r.value < 0 {
+		return backupUnknownCell
+	}
+	tenths := int64(math.Round(r.value * 10 / mebibytes))
+	return fmt.Sprintf("%d.%d", tenths/10, tenths%10)
 }
 
 func backupElapsed(seconds int64) string {
@@ -354,19 +363,6 @@ func backupBar(percent reading) string {
 	clamped := min(percent.Rounded(), 100)
 	filled := int(clamped) * backupBarWidth / 100
 	return fmt.Sprintf("[%s%s] %s%%", strings.Repeat("#", filled), strings.Repeat(".", backupBarWidth-filled), backupPercent(intReading(clamped)))
-}
-
-func groupedDigits(value int64) string {
-	text := strconv.FormatInt(value, 10)
-	if len(text) <= 3 {
-		return text
-	}
-	var parts []string
-	for len(text) > 3 {
-		parts = append([]string{text[len(text)-3:]}, parts...)
-		text = text[:len(text)-3]
-	}
-	return strings.Join(append([]string{text}, parts...), ",")
 }
 
 func digits(r reading) string {
@@ -478,7 +474,7 @@ const (
 	mebibytesPerGibibyte = 1024
 	mebibytesPerTebibyte = 1024 * mebibytesPerGibibyte
 
-	backupSizedWidth      = 4
+	backupGibibytesWidth  = 6
 	backupPercentWidth    = 3
 	backupThroughputWidth = 3
 	backupMinutesWidth    = 4

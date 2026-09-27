@@ -193,6 +193,12 @@ func detachAll(ctx context.Context, homeRoot string) {
 		if abandoned {
 			continue
 		}
+		if code == 0 && detachable(ctx, target, homeRoot) {
+			select {
+			case <-ctx.Done():
+			case <-time.After(mountDetachSettle):
+			}
+		}
 		if detachable(ctx, target, homeRoot) {
 			if code == 0 {
 				scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Warnf("faulting", time.Now(),
@@ -389,6 +395,8 @@ var (
 )
 
 const (
+	mountDetachSettle = 2 * time.Second
+
 	backupAliveWait  = 10 * time.Second
 	backupSysfsBtrfs = "/sys/fs/btrfs"
 )

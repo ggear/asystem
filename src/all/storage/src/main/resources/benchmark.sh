@@ -58,23 +58,6 @@ cleanup() {
   find /share -name "$TEST_NAME" -delete 2>/dev/null
 }
 
-color_val() {
-  local v=$1 w=$2 c
-  if awk -v v="$v" 'BEGIN { exit !(v > 300) }'; then
-    c=$'\033[32m'
-  elif awk -v v="$v" 'BEGIN { exit !(v >= 100) }'; then
-    c=$'\033[33m'
-  else
-    c=$'\033[31m'
-  fi
-  # shellcheck disable=SC2183
-  printf '%s%-*.1f\033[0m' "$c" "$w" "$v"
-}
-
-note_row() {
-  printf '\r\033[K  %-12s %-12s %-12s %s\n' "$1" '' '' "$2"
-}
-
 read_looped() {
   awk -v r="$1" -v t="$2" -v s="$3" 'BEGIN { exit !(r * 1000000 * t > s) }'
 }
@@ -105,20 +88,10 @@ draw_row() {
   printf '\r\033[K  %-12s %-12s %-12s %s' "$mount" "$rfield" "$wfield" "$rnote" >&2
 }
 
-commit_row() {
-  printf '\r\033[K  %-12s %-12s %-12s %s\n' "$mount" "$rfield" "$wfield" "$rnote"
-}
-
-emit_csv() {
-  [ -n "$CSV" ] || return 0
-  printf '"%s","%s","%s","%s","%s","%s"\n' \
-    "$mount" "${usepct:-}" "$(date '+%Y/%m/%d')" "$(date '+%H:%M:%S')" "${rmbps:-}" "${wmbps:-}" >&3
-}
-
 run_col() {
   local col=$1 secs=$2
   shift 2
-  local outfile pid i remaining
+  local outfile pid i remaining colour
   outfile=$(mktemp)
   "$@" >"$outfile" 2>/dev/null &
   pid=$!
@@ -135,7 +108,15 @@ run_col() {
   col_mbps=$(python3 -c "$PARSER" "$col" <"$outfile" 2>/dev/null)
   rm -f "$outfile"
   if [ -n "$col_mbps" ]; then
-    set_col "$col" "$(color_val "$col_mbps" 12)"
+    if awk -v v="$col_mbps" 'BEGIN { exit !(v > 300) }'; then
+      colour=$'\033[32m'
+    elif awk -v v="$col_mbps" 'BEGIN { exit !(v >= 100) }'; then
+      colour=$'\033[33m'
+    else
+      colour=$'\033[31m'
+    fi
+    # shellcheck disable=SC2183
+    set_col "$col" "$(printf '%s%-*.1f\033[0m' "$colour" 12 "$col_mbps")"
   else
     set_col "$col" '--'
   fi
@@ -356,8 +337,11 @@ while read -r mount fstype; do
     [ -n "$rnote" ] && rnote="$rnote | "
     rnote="${rnote}${write_note}"
   fi
-  commit_row
-  emit_csv
+  printf '\r\033[K  %-12s %-12s %-12s %s\n' "$mount" "$rfield" "$wfield" "$rnote"
+  if [ -n "$CSV" ]; then
+    printf '"%s","%s","%s","%s","%s","%s"\n' \
+      "$mount" "${usepct:-}" "$(date '+%Y/%m/%d')" "$(date '+%H:%M:%S')" "${rmbps:-}" "${wmbps:-}" >&3
+  fi
 
   results+=("$mount")
 done < <(awk '$2 ~ /^\/share\// { print $2, $3 }' /proc/self/mounts | sort -u)

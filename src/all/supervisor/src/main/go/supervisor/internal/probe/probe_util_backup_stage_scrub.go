@@ -126,7 +126,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		rate := samples.rate()
 		remaining := scrubRemaining(reading, reached, rate)
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("scrubbed", now,
-			"%s", backupProgressed(intReading(int64(reading.scrubbedMB)/mebibytesPerGibibyte), scrubTotal(reading, reached),
+			"%s", backupProgressed(intReading(int64(reading.scrubbedMB)), scrubTotal(reading, reached),
 				scrubPercent(reached), remaining, backupEta(now, remaining), rate, backupBounded(now, remaining, hard)))
 		if !reading.running {
 			break
@@ -192,8 +192,8 @@ finished:
 	document.FilesToDelete = strings.Join(corrupt, ",")
 	publishScrubSummary(request, host, document)
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("scrubbed", started,
-		"[%s] scrub finished as [%s] at [%s] percent having scrubbed [%s] MiB with [%d] chunks relocated",
-		config.DirBackup, state, backupPercent(floatReading(lastReading.progress)), backupSized(intReading(int64(lastReading.scrubbedMB))), relocated)
+		"[%s] scrub finished as [%s] at [%s] percent having scrubbed [%s] GiB with [%d] chunks relocated",
+		config.DirBackup, state, backupPercent(floatReading(lastReading.progress)), backupSizedGibibytes(intReading(int64(lastReading.scrubbedMB))), relocated)
 	return success
 }
 
@@ -260,11 +260,10 @@ func scrubTotal(reading scrubReading, reached float64) reading {
 	if reached <= 0 {
 		return unknownReading()
 	}
-	scrubbed := int64(reading.scrubbedMB) / mebibytesPerGibibyte
 	if math.Round(reached) >= 100 {
-		return intReading(scrubbed)
+		return intReading(int64(reading.scrubbedMB))
 	}
-	return intReading(int64(float64(reading.scrubbedMB)*100/reached) / mebibytesPerGibibyte)
+	return intReading(int64(float64(reading.scrubbedMB) * 100 / reached))
 }
 
 func scrubPercent(reached float64) reading {

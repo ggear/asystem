@@ -98,7 +98,8 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		counters.addTransfer(stats.filesTransferred, stats.totalTransferredBytes/bytesPerMebibyte, stats.filesCreated,
 			stats.filesDeleted, stats.filesListed, stats.totalFileSizeBytes/bytesPerMebibyte, stats.totalBytesSent/bytesPerMebibyte)
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Infof("mirrored", mirrorStarted,
-			"[%s] mirrored in [%s], running total [%d] MiB", share, time.Since(mirrorStarted).Round(time.Second), counters.snapshotSizeMB())
+			"[%s] mirrored in [%s], running total [%s] GiB", share, time.Since(mirrorStarted).Round(time.Second),
+			backupSizedGibibytes(intReading(int64(counters.snapshotSizeMB()))))
 	}
 
 	stopProgress()
@@ -147,11 +148,13 @@ func mirrorExpectation(ctx context.Context, shares []string) int64 {
 		total += int64(stats.totalTransferredBytes)
 		files += stats.filesTransferred
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("measured", shareStarted,
-			"[%s] will send [%s] GiB over [%d] files", share, backupSized(intReading(int64(stats.totalTransferredBytes)/bytesPerGibibyte)), stats.filesTransferred)
+			"[%s] will send [%s] GiB over [%d] files", share,
+			backupSizedGibibytes(intReading(int64(stats.totalTransferredBytes)/bytesPerMebibyte)), stats.filesTransferred)
 	}
 	if len(shares) > 1 {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("measured", started,
-			"[%s] GiB over [%d] files across [%d] shares is what this mirror will send", backupSized(intReading(total/bytesPerGibibyte)), files, len(shares))
+			"[%s] GiB over [%d] files across [%d] shares is what this mirror will send",
+			backupSizedGibibytes(intReading(total/bytesPerMebibyte)), files, len(shares))
 	}
 	return total
 }
@@ -174,7 +177,7 @@ func reportMirrorProgress(ctx context.Context, progress *rsyncProgress, expected
 				rate := samples.rate()
 				remaining := mirrorRemaining(moved, expected, rate)
 				scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionCompute).Infof("mirrored", now,
-					"%s", backupProgressed(intReading(moved/bytesPerGibibyte), mirrorTotal(moved, expected),
+					"%s", backupProgressed(intReading(moved/bytesPerMebibyte), mirrorTotal(moved, expected),
 						mirrorPercent(moved, expected), remaining, backupEta(now, remaining), rate, backupBounded(now, remaining, deadline)))
 			}
 		}
@@ -189,7 +192,7 @@ func mirrorTotal(moved, expected int64) reading {
 	if expected <= 0 || moved > expected {
 		return unknownReading()
 	}
-	return intReading(expected / bytesPerGibibyte)
+	return intReading(expected / bytesPerMebibyte)
 }
 
 func mirrorPercent(moved, expected int64) reading {

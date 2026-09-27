@@ -275,9 +275,9 @@ func TestProbeUtilBackupStageScrub_TotalAgreesWithTheScrubbedCellAndThePercentag
 		reached       float64
 		expectedTotal int64
 	}{
-		{name: "a_tail_rounding_to_one_hundred_percent_reports_the_scrubbed_figure", scrubbedMB: 1020417, reached: 99.94, expectedTotal: 996},
-		{name: "a_half_way_pass_scales_by_the_percentage", scrubbedMB: 512000, reached: 50.0, expectedTotal: 1000},
-		{name: "an_early_pass_keeps_the_unrounded_percentage_rather_than_shrinking_the_disk", scrubbedMB: 8644, reached: 0.87, expectedTotal: 970},
+		{name: "a_tail_rounding_to_one_hundred_percent_reports_the_scrubbed_figure", scrubbedMB: 1020417, reached: 99.94, expectedTotal: 1020417},
+		{name: "a_half_way_pass_scales_by_the_percentage", scrubbedMB: 512000, reached: 50.0, expectedTotal: 1024000},
+		{name: "an_early_pass_keeps_the_unrounded_percentage_rather_than_shrinking_the_disk", scrubbedMB: 8644, reached: 0.87, expectedTotal: 993563},
 		{name: "nothing_scrubbed_yet_is_unknown", scrubbedMB: 0, reached: 0, expectedTotal: 0},
 	}
 	for _, test := range cases {
@@ -293,7 +293,7 @@ func TestProbeUtilBackupStageScrub_TotalAgreesWithTheScrubbedCellAndThePercentag
 			if !total.Known() || total.Rounded() != test.expectedTotal {
 				t.Errorf("scrubTotal: got %d want %d", total.Rounded(), test.expectedTotal)
 			}
-			scrubbed := intReading(int64(reading.scrubbedMB) / mebibytesPerGibibyte)
+			scrubbed := intReading(int64(reading.scrubbedMB))
 			if scrubPercent(test.reached).Rounded() == 100 && total.Rounded() != scrubbed.Rounded() {
 				t.Errorf("scrubTotal at 100 percent: got %d want the scrubbed cell %d", total.Rounded(), scrubbed.Rounded())
 			}

@@ -151,8 +151,8 @@ func runStage(ctx context.Context, request stageRequest) error {
 		return fmt.Errorf("stage [%s] %w", request.Stage, runErr)
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("finished", started,
-		"[%s] stage [%s] finished as [%s], [%s] MiB at [%s] MiB/s", request.RunID, request.Stage, state,
-		backupSized(intReading(int64(document.SizeMB))), backupThroughput(backupRated(intReading(int64(document.SizeMB)), intReading(int64(document.DurationS)))))
+		"[%s] stage [%s] finished as [%s], [%s] GiB at [%s] MiB/s", request.RunID, request.Stage, state,
+		backupSizedGibibytes(intReading(int64(document.SizeMB))), backupThroughput(backupRated(intReading(int64(document.SizeMB)), intReading(int64(document.DurationS)))))
 	return nil
 }
 

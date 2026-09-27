@@ -179,7 +179,7 @@ class BackupsShellTest(unittest.TestCase):
                  'BACKUPS_RUN_ID=2026-09-15_00-00-00 BACKUPS_RUN_HOURS=9\n'
                  'backups_start_one macmini-mad')
         self.assertRegex(self.shell(probe).split("\n")[-1],
-                         r"^\d\d-\d\dT\d\d:\d\d:\d\d INFO  backup\s+start\s+0ms launched "
+                         r"^\d\d-\d\dT\d\d:\d\d:\d\d INFO  backup           host/macmini-mad\s+start\s+0ms launched "
                          r"\[2026-09-15_00-00-00\] dispatched to \[macmini-mad\] with timeout \[9\] hours and scrub \[off\]$")
 
     def test_start_one_says_nothing_about_a_host_that_did_not_answer(self):
@@ -244,21 +244,22 @@ class BackupsShellTest(unittest.TestCase):
     def test_every_log_line_shares_the_supervisor_column_layout(self):
         self.hosts()
         header = "TIME           LEVEL SOURCE           SUBJECT                   ACTION     DURATION DETAIL"
-        lines = self.shell('backups_log INFO start launched "[a] message"').split("\n")
+        lines = self.shell('backups_log INFO host/macmini-mad start launched "[a] message"').split("\n")
         self.assertEqual(lines[0], header,
                          "the header must match scribe's own, since abackups tail interleaves both scripts' output")
         self.assertRegex(lines[1],
-                         r"^\d\d-\d\dT\d\d:\d\d:\d\d INFO  backup                                     "
+                         r"^\d\d-\d\dT\d\d:\d\d:\d\d INFO  backup           host/macmini-mad          "
                          r"start           0ms launched \[a\] message$")
-        warned = self.shell('backups_log WARN stop faulting "[b] warning" 2>&1').split("\n")
+        warned = self.shell('backups_log WARN "" stop faulting "[b] warning" 2>&1').split("\n")
         self.assertEqual(warned[0], header)
         self.assertRegex(warned[1],
                          r"^\d\d-\d\dT\d\d:\d\d:\d\d WARN  backup                                     "
-                         r"stop            0ms faulting \[b\] warning$")
+                         r"stop            0ms faulting \[b\] warning$",
+                         "a line about the cluster rather than one host names no subject")
 
     def test_the_header_is_printed_once_however_many_lines_follow(self):
         self.hosts()
-        lines = self.shell('backups_log INFO start launched "[a] one"\nbackups_log INFO stop finished "[a] two"').split("\n")
+        lines = self.shell('backups_log INFO "" start launched "[a] one"\nbackups_log INFO "" stop finished "[a] two"').split("\n")
         self.assertEqual(len(lines), 3, "one header and two lines")
         self.assertNotIn("SUBJECT", lines[2])
 

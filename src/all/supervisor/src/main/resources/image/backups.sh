@@ -36,8 +36,8 @@ BACKUPS_LOG_SOURCE="backup"
 BACKUPS_LOG_DURATION="0ms"
 
 backups_log() {
-  local level="$1" action="$2" verb="$3" stream=1
-  shift 3
+  local level="$1" subject="$2" action="$3" verb="$4" stream=1
+  shift 4
   case "${level}" in
   WARN | ERROR) stream=2 ;;
   esac
@@ -47,7 +47,7 @@ backups_log() {
       printf '%-14s %-5s %-16s %-25s %-10s %8s %s\n' "TIME" "LEVEL" "SOURCE" "SUBJECT" "ACTION" "DURATION" "DETAIL"
     fi
     printf '%-14s %-5s %-16s %-25s %-10s %8s %-8s %s\n' "$(date '+%m-%dT%H:%M:%S')" "${level}" \
-      "${BACKUPS_LOG_SOURCE}" "" "${action}" "${BACKUPS_LOG_DURATION}" "${verb}" "$*"
+      "${BACKUPS_LOG_SOURCE}" "${subject}" "${action}" "${BACKUPS_LOG_DURATION}" "${verb}" "$*"
   } >&"${stream}"
 }
 
@@ -70,7 +70,7 @@ backups_help() {
 
 backups_hosts() {
   [ -f "${BACKUPS_CONFIG}" ] || {
-    backups_log ERROR resolve faulting "[${BACKUPS_CONFIG}] could not be read to resolve the enrolled hosts"
+    backups_log ERROR "" resolve faulting "[${BACKUPS_CONFIG}] could not be read to resolve the enrolled hosts"
     return 1
   }
   jq -r '.asystem.schema[]?.host // empty' "${BACKUPS_CONFIG}" 2>/dev/null
@@ -95,7 +95,7 @@ backups_timeout_hours() {
   now="$(date +%s)"
   scheduled="$(backups_scheduled)"
   if [ -z "${scheduled}" ]; then
-    backups_log WARN compute faulting "[$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] could not be resolved to bound the run timeout, using [${BACKUPS_TIMEOUT_DEFAULT}] hours"
+    backups_log WARN "" compute faulting "[$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] could not be resolved to bound the run timeout, using [${BACKUPS_TIMEOUT_DEFAULT}] hours"
     printf '%s' "${BACKUPS_TIMEOUT_DEFAULT}"
     return 0
   fi
@@ -103,7 +103,7 @@ backups_timeout_hours() {
   hours=$(((seconds - 1) / 3600))
   if [ "${hours}" -lt 1 ]; then
     hours=1
-    backups_log WARN compute faulting "[$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] is less than an hour away, so this run cannot expire before it"
+    backups_log WARN "" compute faulting "[$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] is less than an hour away, so this run cannot expire before it"
   fi
   printf '%s' "${hours}"
 }
@@ -133,15 +133,15 @@ backups_start_one() {
     "set -m; nohup env BACKUP_TIMEOUT_HOURS=${BACKUPS_RUN_HOURS} ${BACKUPS_REMOTE} start ${BACKUPS_RUN_ID}${scrub} </dev/null >/dev/null 2>&1 & disown" \
     >/dev/null 2>&1 || status=$?
   [ "${status}" -eq 0 ] || return "${status}"
-  backups_log INFO start launched "[${BACKUPS_RUN_ID}] dispatched to [${host}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]"
+  backups_log INFO "host/${host}" start launched "[${BACKUPS_RUN_ID}] dispatched to [${host}] with timeout [${BACKUPS_RUN_HOURS}] hours and scrub [$([ "${BACKUPS_SCRUB}" = "1" ] && echo on || echo off)]"
 }
 
 # shellcheck disable=SC2329
 backups_interrupt() {
   BACKUPS_INTERRUPTED=1
   echo >&2
-  backups_log WARN stop faulting "[interrupted] tailing stopped, every dispatched run continues on its own host"
-  backups_log WARN stop faulting "[${BACKUPS_NAME} tail] follows them again, [${BACKUPS_NAME} stop] ends them"
+  backups_log WARN "" stop faulting "[interrupted] tailing stopped, every dispatched run continues on its own host"
+  backups_log WARN "" stop faulting "[${BACKUPS_NAME} tail] follows them again, [${BACKUPS_NAME} stop] ends them"
 }
 
 backups_each() {
@@ -156,7 +156,7 @@ backups_each() {
     "${action}" "${host}" "$@" </dev/null || failed=$((failed + 1))
   done
   if [ "${found}" -eq 0 ]; then
-    backups_log ERROR resolve faulting "[none] enrolled hosts found in [${BACKUPS_CONFIG}]"
+    backups_log ERROR "" resolve faulting "[none] enrolled hosts found in [${BACKUPS_CONFIG}]"
     return 1
   fi
   [ "${failed}" -eq 0 ] || return "${BACKUPS_EXIT_PARTIAL}"
@@ -220,14 +220,14 @@ while [ "$#" -gt 0 ]; do
 done
 set -- ${BACKUPS_GIVEN[@]+"${BACKUPS_GIVEN[@]}"}
 if [ -n "${BACKUPS_REJECT}" ]; then
-  backups_log ERROR resolve faulting "[${BACKUPS_REJECT}] is not an option this dispatcher takes"
+  backups_log ERROR "" resolve faulting "[${BACKUPS_REJECT}] is not an option this dispatcher takes"
   backups_help
   exit 2
 fi
 
 BACKUPS_COMMAND="${1:-help}"
 if [ "${BACKUPS_SCRUB}" = "1" ] && [ "${BACKUPS_COMMAND}" != "start" ]; then
-  backups_log ERROR resolve faulting "[--scrub] is only valid for [start], not [${BACKUPS_COMMAND}]"
+  backups_log ERROR "" resolve faulting "[--scrub] is only valid for [start], not [${BACKUPS_COMMAND}]"
   backups_help
   exit 2
 fi
@@ -238,17 +238,17 @@ help)
   ;;
 start | stop | tail | list | clean)
   command -v ssh >/dev/null 2>&1 || {
-    backups_log ERROR resolve faulting "[ssh] is required and was not found on the path"
+    backups_log ERROR "" resolve faulting "[ssh] is required and was not found on the path"
     exit 1
   }
   command -v jq >/dev/null 2>&1 || {
-    backups_log ERROR resolve faulting "[jq] is required and was not found on the path"
+    backups_log ERROR "" resolve faulting "[jq] is required and was not found on the path"
     exit 1
   }
   "backups_${BACKUPS_COMMAND}"
   ;;
 *)
-  backups_log ERROR resolve faulting "[${BACKUPS_COMMAND}] is not a command this dispatcher takes"
+  backups_log ERROR "" resolve faulting "[${BACKUPS_COMMAND}] is not a command this dispatcher takes"
   backups_help
   exit 2
   ;;

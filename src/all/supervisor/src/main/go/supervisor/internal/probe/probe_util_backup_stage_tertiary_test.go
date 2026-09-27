@@ -23,7 +23,7 @@ func TestProbeUtilBackupStageTertiary_MirrorTotal(t *testing.T) {
 		{name: "unknown_when_expected_is_zero", expected: 0, known: false},
 		{name: "unknown_when_expected_is_negative", expected: -1, known: false},
 		{name: "unknown_once_the_copy_has_passed_the_estimate", moved: 89 * bytesPerGibibyte, expected: 79 * bytesPerGibibyte, known: false},
-		{name: "known_converts_bytes_to_gibibytes", expected: 3 * bytesPerGibibyte, known: true, value: 3},
+		{name: "known_converts_bytes_to_mebibytes_for_the_formatter", expected: 3 * bytesPerGibibyte, known: true, value: 3 * mebibytesPerGibibyte},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -260,12 +260,13 @@ func TestProbeUtilBackupStageTertiary_MirrorCellsAgreeWithEachOther(t *testing.T
 		expectedTotal   int64
 		expectedPercent int64
 	}{
-		{name: "a_complete_mirror_reports_the_same_figure_twice", moved: 1045008384, expected: 1045008384, expectedCopied: 0, expectedTotal: 0, expectedPercent: 100},
-		{name: "a_part_mirror_truncates_both_cells_alike", moved: 600 * bytesPerGibibyte, expected: 1000 * bytesPerGibibyte, expectedCopied: 600, expectedTotal: 1000, expectedPercent: 60},
+		{name: "a_complete_mirror_reports_the_same_figure_twice", moved: 1045008384, expected: 1045008384, expectedCopied: 996, expectedTotal: 996, expectedPercent: 100},
+		{name: "a_part_mirror_reports_both_cells_alike", moved: 600 * bytesPerGibibyte, expected: 1000 * bytesPerGibibyte,
+			expectedCopied: 600 * mebibytesPerGibibyte, expectedTotal: 1000 * mebibytesPerGibibyte, expectedPercent: 60},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			copied := intReading(test.moved / bytesPerGibibyte)
+			copied := intReading(test.moved / bytesPerMebibyte)
 			total := mirrorTotal(test.moved, test.expected)
 			percent := mirrorPercent(test.moved, test.expected)
 			if copied.Rounded() != test.expectedCopied || total.Rounded() != test.expectedTotal {
