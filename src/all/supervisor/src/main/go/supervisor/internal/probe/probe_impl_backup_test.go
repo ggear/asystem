@@ -17,6 +17,11 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+const (
+	testRunCeiling  = 5*time.Hour + backupRunGrace
+	testStaleWindow = backupStaleCadence + testRunCeiling
+)
+
 func writeBackupRun(t *testing.T, root, timestamp string, host *backupSummary, tertiary *backupSummary, services map[string]bool) {
 	t.Helper()
 	runPath := filepath.Join(root, timestamp)
@@ -308,6 +313,29 @@ func TestProbeImplBackup_AbandonedHandRunIsStillWalkedPast(t *testing.T) {
 	}
 }
 
+func TestProbeImplBackup_ARunUsingItsWholeDeadlineIsNotAbandoned(t *testing.T) {
+	root := t.TempDir()
+	home := t.TempDir()
+	t.Setenv(config.BackupHomeEnvVar, home)
+	configPath := filepath.Join(home, "config.json")
+	if err := os.WriteFile(configPath, []byte(`{"asystem":{"host":"testhost","backup":{"timeout_hours":5}}}`), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	p := &backupProbe{root: root, serverHost: true, configPath: configPath}
+	ceiling := p.runCeiling()
+	if ceiling <= 5*time.Hour {
+		t.Fatalf("runCeiling() = %s, want it past the configured [5] hour deadline so a run using all of it is not presumed dead", ceiling)
+	}
+	inflight := time.Now().Add(-5 * time.Hour).Add(time.Minute).Format(backupTimestampFormat)
+	writeBackupStage(t, root, inflight, "tertiary", backupSummary{
+		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem})
+	snapshot := readNewestRun(root, ceiling, p.staleWindow())
+	if snapshot == nil || snapshot.abandoned || !snapshot.running {
+		t.Errorf("snapshot running [%v] abandoned [%v], want a scheduled run at its own deadline still reported running",
+			snapshot != nil && snapshot.running, snapshot != nil && snapshot.abandoned)
+	}
+}
+
 func TestProbeImplBackup_SnapshotFlagsBelongToTheRunItNames(t *testing.T) {
 	root := t.TempDir()
 	rolled := time.Now().Add(-25 * time.Hour).Format(backupTimestampFormat)
@@ -315,7 +343,7 @@ func TestProbeImplBackup_SnapshotFlagsBelongToTheRunItNames(t *testing.T) {
 	inflight := time.Now().Add(-10 * time.Minute).Format(backupTimestampFormat)
 	writeBackupStage(t, root, inflight, "primary", backupSummary{
 		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem})
-	snapshot := readNewestRun(root)
+	snapshot := readNewestRun(root, testRunCeiling, testStaleWindow)
 	if snapshot.running && snapshot.dir != inflight {
 		t.Fatalf("running: got dir %s want %s, the flag must describe the run it is stamped on", snapshot.dir, inflight)
 	}
@@ -479,7 +507,7 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 		},
 		{
 			name:           "stage_running_past_the_ceiling_is_ignored",
-			retained:       map[string]string{stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerSystem, now.Add(-backupRunCeiling-time.Minute), false)},
+			retained:       map[string]string{stage("mad"): doc(metric.BackupStateRunning, metric.BackupTriggerSystem, now.Add(-testRunCeiling-time.Minute), false)},
 			expectedAction: backupClusterRunIdle,
 			expectedError:  false,
 		},
@@ -598,11 +626,11 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 		{
 			name: "run_past_its_ceiling_closes_timedout",
 			retained: map[string]string{
-				backupAllStatusTopic: doc(metric.BackupStateRunning, "", now.Add(-backupRunCeiling-time.Minute), false),
+				backupAllStatusTopic: doc(metric.BackupStateRunning, "", now.Add(-testRunCeiling-time.Minute), false),
 			},
 			expectedAction:  backupClusterRunClose,
 			expectedState:   metric.BackupStateTimeout,
-			expectedStarted: now.Add(-backupRunCeiling - time.Minute),
+			expectedStarted: now.Add(-testRunCeiling - time.Minute),
 			expectedError:   false,
 		},
 		{
@@ -621,7 +649,7 @@ func TestProbeImplBackup_ClusterRunDecision(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			decision := backupClusterRunDecision(tt.retained, expected, now)
+			decision := backupClusterRunDecision(tt.retained, expected, now, testRunCeiling)
 			if decision.action != tt.expectedAction {
 				t.Fatalf("action: got %v want %v", decision.action, tt.expectedAction)
 			}
@@ -788,7 +816,7 @@ func TestProbeImplBackup_ReapLocalStaleKeepsEveryFieldItRewrites(t *testing.T) {
 		t.Fatalf("write primary: %v", err)
 	}
 	probe := &backupProbe{root: root, configPath: filepath.Join(root, "config.json"), hostName: "testhost"}
-	snapshot := readNewestRun(root)
+	snapshot := readNewestRun(root, testRunCeiling, testStaleWindow)
 	if snapshot == nil {
 		t.Fatalf("readNewestRun() found no run under [%s]", root)
 	}

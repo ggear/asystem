@@ -135,7 +135,9 @@ class BackupsShellTest(unittest.TestCase):
     def test_timeout_hours_falls_back_when_the_scheduled_run_cannot_be_resolved(self):
         self.hosts()
         broken = 'backups_scheduled() { printf ""; }\nbackups_timeout_hours 2>/dev/null'
-        self.assertEqual(self.shell(broken), str(6))
+        self.assertEqual(self.shell(broken, BACKUPS_UNRESOLVED_HOURS="11"), "11",
+                         "the fallback is its own variable, never the scheduled run's timeout_hours")
+        self.assertEqual(self.shell(broken), "6", "and it carries its own default")
 
     def test_help_lists_start_stop_list_help(self):
         done = self.invoke("help")

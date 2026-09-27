@@ -114,7 +114,7 @@
     "backup": {
       "command_topic": "tasmota/device/rack_backup_plug/cmnd/POWER",
       "state_topic": "tasmota/device/rack_backup_plug/stat/POWER",
-      "timeout_hours": 3,
+      "timeout_hours": 5,
       "keep_daily": 7,
       "keep_weekly": 4,
       "keep_monthly": 12

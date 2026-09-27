@@ -130,18 +130,18 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	snapshot := p.documents()
 	if snapshot != nil && snapshot.abandoned {
 		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, scheduled run [%s] started [%s] ago wrote no roll-up and stopped reporting past the [%s] ceiling, so every stage it owns is unaccounted for",
-			snapshot.dir, snapshot.age().Round(time.Minute), backupRunCeiling), nil
+			snapshot.dir, snapshot.age().Round(time.Minute), p.runCeiling()), nil
 	}
 	if snapshot != nil && snapshot.running {
 		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct failed, run [%s] started [%s] ago has not written its roll-up yet so the metric is inert and always ok",
 			snapshot.dir, snapshot.age().Round(time.Minute)), nil
 	}
-	if snapshot == nil || snapshot.host == nil || snapshot.age() > backupStaleWindow {
+	if snapshot == nil || snapshot.host == nil || snapshot.age() > p.staleWindow() {
 		if !p.everRolled() {
 			return 0, derivation{}, fmt.Errorf("no backup verdict, no scheduled run has ever rolled up under [%s], so no stage ratio can be computed [%w]", p.root, errEnvironment)
 		}
 		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, no run directory under [%s] holds a status document inside the [%s] window",
-			p.root, backupStaleWindow), nil
+			p.root, p.staleWindow()), nil
 	}
 	run := max(snapshot.host.StagesRun, 1)
 	value := percentValue(float64(snapshot.host.StagesFailed) / float64(run) * 100.0)
@@ -160,9 +160,9 @@ func (p *backupProbe) haltedBackupStages() (int8, derivation, error) {
 		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, run [%s] started [%s] ago has not written its roll-up yet so the metric is inert and always ok",
 			snapshot.dir, snapshot.age().Round(time.Minute)), nil
 	}
-	if snapshot == nil || snapshot.host == nil || snapshot.age() > backupStaleWindow {
+	if snapshot == nil || snapshot.host == nil || snapshot.age() > p.staleWindow() {
 		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, no run directory under [%s] holds a status document inside the [%s] window so the metric is inert and always ok",
-			p.root, backupStaleWindow), nil
+			p.root, p.staleWindow()), nil
 	}
 	run := max(snapshot.host.StagesRun, 1)
 	value := percentValue(float64(snapshot.host.StagesHalted) / float64(run) * 100.0)
@@ -192,7 +192,7 @@ func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 
 func (p *backupProbe) serviceSuccess(service string) (bool, bool, string) {
 	snapshot := p.documents()
-	if snapshot == nil || snapshot.age() > backupStaleWindow {
+	if snapshot == nil || snapshot.age() > p.staleWindow() {
 		return false, false, ""
 	}
 	success, found := snapshot.services[service]
@@ -233,7 +233,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 		return
 	}
 	defer p.reapRunning.Unlock()
-	if snapshot := readNewestRun(p.root); snapshot != nil {
+	if snapshot := readNewestRun(p.root, p.runCeiling(), p.staleWindow()); snapshot != nil {
 		p.reapLocalStale(ctx, snapshot)
 	}
 	if !p.serverHost {
@@ -313,7 +313,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 	}
 	var coordinated backupSummary
 	if json.Unmarshal([]byte(retained[backupAllStatusTopic]), &coordinated) == nil && coordinated.State == metric.BackupStateRunning {
-		if started, perr := time.Parse(time.RFC3339, coordinated.StartedTS); perr == nil && time.Since(started) < backupRunCeiling {
+		if started, perr := time.Parse(time.RFC3339, coordinated.StartedTS); perr == nil && time.Since(started) < p.runCeiling() {
 			if p.reapQuiet() {
 				scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
 					"[%s] reports a run started [%s] still coordinating, leaving the disk powered", backupAllStatusTopic, coordinated.StartedTS)
@@ -406,7 +406,7 @@ func (p *backupProbe) documents() *backupSnapshot {
 	if p.snapshot != nil && printed == p.snapshotPrint {
 		return p.snapshot
 	}
-	p.snapshot = readNewestRun(p.root)
+	p.snapshot = readNewestRun(p.root, p.runCeiling(), p.staleWindow())
 	p.snapshotPrint = printed
 	return p.snapshot
 }
@@ -503,7 +503,7 @@ func (p *backupProbe) lead() {
 	}
 	p.leadStale = 0
 	expected := backupExpectedServers(p.configPath)
-	decision := backupClusterRunDecision(retained, expected, time.Now())
+	decision := backupClusterRunDecision(retained, expected, time.Now(), p.runCeiling())
 	if decision.action == backupClusterRunIdle {
 		return
 	}
@@ -563,7 +563,7 @@ type backupClusterRun struct {
 	failed   int
 }
 
-func backupClusterRunDecision(retained map[string]string, expected []string, now time.Time) backupClusterRun {
+func backupClusterRunDecision(retained map[string]string, expected []string, now time.Time, ceiling time.Duration) backupClusterRun {
 	var clusterRun backupSummary
 	clusterRunStarted := time.Time{}
 	if json.Unmarshal([]byte(retained[backupAllStatusTopic]), &clusterRun) == nil {
@@ -590,7 +590,7 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 					continue
 				}
 				started, startedOK := runStarted(document)
-				if !startedOK || now.Sub(started) > backupRunCeiling || (!clusterRunStarted.IsZero() && !started.After(clusterRunStarted.Add(backupRunSkew))) {
+				if !startedOK || now.Sub(started) > ceiling || (!clusterRunStarted.IsZero() && !started.After(clusterRunStarted.Add(backupRunSkew))) {
 					continue
 				}
 				if decision.started.IsZero() || started.Before(decision.started) {
@@ -619,7 +619,7 @@ func backupClusterRunDecision(retained map[string]string, expected []string, now
 		decision.action, decision.state = backupClusterRunClose, metric.BackupStateFailure
 	case decision.reported >= len(expected):
 		decision.action, decision.state = backupClusterRunClose, metric.BackupStateSuccess
-	case now.Sub(decision.started) > backupRunCeiling:
+	case now.Sub(decision.started) > ceiling:
 		decision.action, decision.state = backupClusterRunClose, metric.BackupStateTimeout
 	}
 	return decision
@@ -637,21 +637,29 @@ func backupExpectedServers(configPath string) []string {
 	return servers
 }
 
-func readNewestRun(root string) *backupSnapshot {
+func (p *backupProbe) runCeiling() time.Duration {
+	return time.Duration(config.Load(p.configPath).BackupTimeoutHours())*time.Hour + backupRunGrace
+}
+
+func (p *backupProbe) staleWindow() time.Duration {
+	return backupStaleCadence + p.runCeiling()
+}
+
+func readNewestRun(root string, ceiling, stale time.Duration) *backupSnapshot {
 	runs := backupRuns(root)
 	if len(runs) == 0 {
 		return nil
 	}
 	newest := readBackupRun(root, runs[len(runs)-1])
 	started := newest.host == nil && newest.staged > 0
-	newest.running = started && newest.age() <= backupRunCeiling
+	newest.running = started && newest.age() <= ceiling
 	newest.abandoned = started && !newest.running && newest.trigger == metric.BackupTriggerSystem
 	if newest.host != nil || newest.abandoned {
 		return newest
 	}
 	for index := len(runs) - 2; index >= 0; index-- {
 		candidate := readBackupRun(root, runs[index])
-		if candidate.age() > backupStaleWindow {
+		if candidate.age() > stale {
 			break
 		}
 		if candidate.host != nil {
@@ -662,8 +670,8 @@ func readNewestRun(root string) *backupSnapshot {
 }
 
 const (
-	backupRunCeiling   = 5 * time.Hour
-	backupStaleWindow  = 24*time.Hour + backupRunCeiling
+	backupRunGrace     = time.Hour
+	backupStaleCadence = 24 * time.Hour
 	backupStopDeadline = 10 * time.Minute
 	backupRunSkew      = 10 * time.Minute
 	reaperIdleTicks    = 2

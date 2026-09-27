@@ -127,12 +127,14 @@ type backupSnapshot struct {
 
 func (s *backupSnapshot) age() time.Duration {
 	if s == nil || s.at.IsZero() {
-		return backupStaleWindow * 100
+		return backupAgeUnknown
 	}
 	return config.SinceIncludingSuspend(s.at)
 }
 
 const (
+	backupAgeUnknown = 1000 * time.Hour
+
 	treeModule           = "supervisor"
 	treeBackupDirectory  = "backup"
 	treeStageDirectory   = "stage"

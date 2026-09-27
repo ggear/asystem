@@ -245,6 +245,35 @@ func TestProbeUtilBackup_TheShippedConfigDeclaresAThinningWindow(t *testing.T) {
 	}
 }
 
+func TestProbeUtilBackup_TheShippedConfigBoundsAScheduledRunBeforeTheNextOne(t *testing.T) {
+	path, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "resources", "image", "config.json"))
+	if err != nil {
+		t.Fatalf("resolve config.json: %v", err)
+	}
+	loaded := config.Load(path)
+	if loaded == nil {
+		t.Fatalf("read the shipped config at %s: got nil", path)
+	}
+	hours := loaded.BackupTimeoutHours()
+	if hours <= 0 {
+		t.Fatalf("the shipped config declares timeout_hours [%d], so a scheduled run carries no deadline at all", hours)
+	}
+	started := time.Date(2026, 10, 1, backupScheduledHour, 0, 0, 0, time.Local)
+	expires := backupExpiry(path, started, 0)
+	if expires != started.Add(time.Duration(hours)*time.Hour) {
+		t.Errorf("backupExpiry() = %s, want the shipped timeout_hours [%d] applied to the start", expires, hours)
+	}
+	scheduled := started.Add(24 * time.Hour)
+	if !expires.Before(scheduled) {
+		t.Errorf("a run started at [%02d:00] expires [%s], which is not before the next scheduled run at [%s]",
+			backupScheduledHour, expires, scheduled)
+	}
+	staged := stageRequest{Expires: expires}
+	if hard := scrubDeadline(staged, started); !hard.Before(expires) || hard != expires.Add(-scrubMargin) {
+		t.Errorf("scrubDeadline() = %s, want the run deadline less the [%s] margin", hard, scrubMargin)
+	}
+}
+
 func TestProbeUtilBackup_ASecondRunIsRefusedWhileTheLockIsHeld(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv(config.BackupHomeEnvVar, home)

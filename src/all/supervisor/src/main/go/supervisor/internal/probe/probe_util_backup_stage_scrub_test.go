@@ -13,6 +13,20 @@ import (
 	"supervisor/internal/scribe"
 )
 
+func TestProbeUtilBackupStageScrub_TheWindowFallsFourTimesAYear(t *testing.T) {
+	scrubbed := 0
+	for month := time.January; month <= time.December; month++ {
+		action, _ := scrubAction(false, metric.BackupTriggerSystem, "",
+			time.Date(2026, month, scrubWindowDay, 2, 0, 0, 0, time.Local))
+		if action == scrubActionStart {
+			scrubbed++
+		}
+	}
+	if scrubbed != 12/scrubWindowMonths {
+		t.Errorf("scrubbed in [%d] months of the year, want [%d] from a [%d] month window", scrubbed, 12/scrubWindowMonths, scrubWindowMonths)
+	}
+}
+
 func TestProbeUtilBackupStageScrub_TheReportingCadencesHoldTheirRelations(t *testing.T) {
 	if scrubPublishInterval < backupProgressHeartbeat {
 		t.Errorf("scrubPublishInterval [%s] is shorter than backupProgressHeartbeat [%s], so every tick dials the broker",
@@ -156,10 +170,12 @@ func TestProbeUtilBackupStageScrub_DeviceStatsSumCountsNonZero(t *testing.T) {
 }
 
 func TestProbeUtilBackupStageScrub_ActionScrubsOnlyWhenAskedOrDue(t *testing.T) {
-	inWindow := time.Date(2026, 9, scrubWindowDay+1, 2, 0, 0, 0, time.Local)
-	outsideWindow := time.Date(2026, 9, scrubWindowDay+scrubWindowDays, 2, 0, 0, 0, time.Local)
-	scrubbedThisMonth := "Scrub started:    Tue Sep  1 01:05:00 2026"
-	scrubbedLastMonth := "Scrub started:    Sat Aug  1 01:05:00 2026"
+	scrubMonth := scrubWindowFrom + time.Month(scrubWindowMonths)
+	inWindow := time.Date(2026, scrubMonth, scrubWindowDay+1, 2, 0, 0, 0, time.Local)
+	outsideWindow := time.Date(2026, scrubMonth, scrubWindowDay+scrubWindowDays, 2, 0, 0, 0, time.Local)
+	outsideMonth := time.Date(2026, scrubMonth+1, scrubWindowDay+1, 2, 0, 0, 0, time.Local)
+	scrubbedThisMonth := "Scrub started:    " + inWindow.Format(time.ANSIC)
+	scrubbedLastMonth := "Scrub started:    " + inWindow.AddDate(0, -1, 0).Format(time.ANSIC)
 	tests := []struct {
 		name           string
 		forced         bool
@@ -171,8 +187,12 @@ func TestProbeUtilBackupStageScrub_ActionScrubsOnlyWhenAskedOrDue(t *testing.T) 
 	}{
 		{name: "a_scheduled_run_inside_the_window_scrubs", trigger: metric.BackupTriggerSystem, status: scrubbedLastMonth, now: inWindow,
 			expectedAction: "start"},
-		{name: "a_scheduled_run_outside_the_window_does_not", trigger: metric.BackupTriggerSystem, status: scrubbedLastMonth, now: outsideWindow,
+		{name: "a_scheduled_run_outside_the_day_window_does_not", trigger: metric.BackupTriggerSystem, status: scrubbedLastMonth, now: outsideWindow,
 			expectedReason: true},
+		{name: "a_scheduled_run_in_a_month_between_scrubs_does_not", trigger: metric.BackupTriggerSystem, status: scrubbedLastMonth, now: outsideMonth,
+			expectedReason: true},
+		{name: "an_interrupted_pass_resumes_in_a_month_between_scrubs", trigger: metric.BackupTriggerSystem, status: "Status:           interrupted", now: outsideMonth,
+			expectedAction: "resume"},
 		{name: "a_hand_run_does_not_scrub_unasked", trigger: metric.BackupTriggerManual, status: scrubbedLastMonth, now: inWindow,
 			expectedReason: true},
 		{name: "a_hand_run_asked_for_it_scrubs", forced: true, trigger: metric.BackupTriggerManual, status: scrubbedLastMonth, now: outsideWindow,

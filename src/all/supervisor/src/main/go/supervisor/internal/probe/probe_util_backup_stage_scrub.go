@@ -202,9 +202,16 @@ func scrubAction(forced bool, trigger, status string, now time.Time) (action, re
 	if strings.Contains(lower, "interrupted") || strings.Contains(lower, "aborted") {
 		return scrubActionResume, ""
 	}
-	if !forced && (trigger != metric.BackupTriggerSystem || now.Day() < scrubWindowDay || now.Day() >= scrubWindowDay+scrubWindowDays) {
-		return "", fmt.Sprintf("a [%s] run outside days [%d] to [%d] of the month does not scrub, pass [--scrub] to force one",
-			trigger, scrubWindowDay, scrubWindowDay+scrubWindowDays-1)
+	if !forced && trigger != metric.BackupTriggerSystem {
+		return "", fmt.Sprintf("a [%s] run does not scrub, pass [--scrub] to force one", trigger)
+	}
+	if !forced && (int(now.Month())-int(scrubWindowFrom))%scrubWindowMonths != 0 {
+		return "", fmt.Sprintf("a scrub falls every [%d] months from [%s], and [%s] is not one, pass [--scrub] to force one",
+			scrubWindowMonths, scrubWindowFrom, now.Month())
+	}
+	if !forced && (now.Day() < scrubWindowDay || now.Day() >= scrubWindowDay+scrubWindowDays) {
+		return "", fmt.Sprintf("day [%d] is outside days [%d] to [%d] of a scrub month, pass [--scrub] to force one",
+			now.Day(), scrubWindowDay, scrubWindowDay+scrubWindowDays-1)
 	}
 	if since := scrubStartedField(status); !forced && since != "" && sameScrubMonth(since, now) {
 		return "", fmt.Sprintf("the last pass started [%s] in this month already, pass [--scrub] to force one", since)
@@ -447,8 +454,10 @@ var (
 )
 
 const (
-	scrubWindowDay  = 1
-	scrubWindowDays = 3
+	scrubWindowDay    = 1
+	scrubWindowDays   = 3
+	scrubWindowMonths = 3
+	scrubWindowFrom   = time.January
 
 	scrubPublishInterval = 30 * time.Second
 	scrubSilenceGrace    = 90 * time.Second

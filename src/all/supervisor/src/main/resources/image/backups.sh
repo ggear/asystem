@@ -19,7 +19,7 @@ BACKUPS_SSH_USER="${BACKUPS_SSH_USER:-root}"
 BACKUPS_SSH_OPTS=(-n -o BatchMode=yes -o ConnectTimeout=10)
 BACKUPS_REMOTE="${BACKUPS_REMOTE:-/usr/local/bin/abackup}"
 BACKUPS_NAME="${BACKUPS_NAME:-abackups}"
-BACKUPS_TIMEOUT_DEFAULT="${BACKUPS_TIMEOUT_DEFAULT:-6}"
+BACKUPS_UNRESOLVED_HOURS="${BACKUPS_UNRESOLVED_HOURS:-6}"
 BACKUPS_TIMEOUT_HOURS="${BACKUPS_TIMEOUT_HOURS:-}"
 BACKUPS_SCHEDULED_HOUR=1
 BACKUPS_HOSTS_LABEL="*******-***"
@@ -95,8 +95,8 @@ backups_timeout_hours() {
   now="$(date +%s)"
   scheduled="$(backups_scheduled)"
   if [ -z "${scheduled}" ]; then
-    backups_log WARN "" compute faulting "[$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] could not be resolved to bound the run timeout, using [${BACKUPS_TIMEOUT_DEFAULT}] hours"
-    printf '%s' "${BACKUPS_TIMEOUT_DEFAULT}"
+    backups_log WARN "" compute faulting "[$(printf '%02d' "${BACKUPS_SCHEDULED_HOUR}"):00] could not be resolved to bound the run timeout, so this run is bounded at [${BACKUPS_UNRESOLVED_HOURS}] hours instead"
+    printf '%s' "${BACKUPS_UNRESOLVED_HOURS}"
     return 0
   fi
   seconds=$((scheduled - now))
