@@ -24,14 +24,14 @@ func Mount(cfg *config.Config) []MountResult {
 			continue
 		}
 		if _, err := os.Stat(dir + "/tmp"); err == nil {
-			results = append(results, MountResult{Message: fmt.Sprintf("Mount [%s] already", dir)})
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounted already", dir)})
 			continue
 		}
 		_ = boundedRun("diskutil", "unmount", "force", dir)
 		if boundedRun("mount_smbfs", "-o", "soft,nodatacache", samba, dir) == nil {
-			results = append(results, MountResult{Message: fmt.Sprintf("Mounting [%s] ... done", samba)})
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounting ... done", dir)})
 		} else {
-			results = append(results, MountResult{Message: fmt.Sprintf("Mounting [%s] ... failed", samba), Failed: true})
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounting ... failed", dir), Failed: true})
 		}
 	}
 	return results

@@ -24,7 +24,7 @@ func Mount(_ *config.Config) []MountResult {
 			continue
 		}
 		if mountActive(entry.Mountpoint) {
-			results = append(results, MountResult{Message: fmt.Sprintf("Mount [%s] already", entry.Mountpoint)})
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounted already", entry.Mountpoint)})
 			continue
 		}
 		if entry.isCifs() {
@@ -33,9 +33,9 @@ func Mount(_ *config.Config) []MountResult {
 			_ = boundedRun("mount", entry.Mountpoint)
 		}
 		if mountActive(entry.Mountpoint) {
-			results = append(results, MountResult{Message: fmt.Sprintf("Mounting [%s] ... done", entry.Mountpoint)})
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounting ... done", entry.Mountpoint)})
 		} else {
-			results = append(results, MountResult{Message: fmt.Sprintf("Mounting [%s] ... failed", entry.Mountpoint), Failed: true})
+			results = append(results, MountResult{Message: fmt.Sprintf("Share [%s] mounting ... failed", entry.Mountpoint), Failed: true})
 		}
 	}
 	return results

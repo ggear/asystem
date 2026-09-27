@@ -533,6 +533,18 @@ space_shares() {
   "$@" aspace --mode local --drives "${drives}" --symbols ascii --theme mono || true
 }
 
+process_drives() {
+  if [ "${EXTENT}" = "local" ]; then
+    local _dir drives=""
+    for _dir in ${SHARE_DIRS_LOCAL}; do
+      drives="${drives:+${drives},}/share/$(basename "${_dir}")"
+    done
+    echo "${drives}"
+  else
+    echo "/share/$(basename "${EXTENT_SHARE_DIR}")"
+  fi
+}
+
 command_move() {
   local dest="${1:-}"
   [ -n "${dest}" ] || refuse "move requires a <share> argument"
@@ -585,6 +597,7 @@ command_move() {
   fi
   local share_drives="/share/${SHARE_PATH_INDEX},/share/${dest}"
   space_shares "${share_drives}" "${share_ssh[@]}"
+  echo ""
   # shellcheck disable=SC2064
   trap "${share_ssh[*]} pkill -9 -f 'rsync .*/share/${dest}/'; echo; exit" INT
   "${share_ssh[@]}" bash -s -- "${share_args[@]}" <<'EOF' || result=1
@@ -626,6 +639,7 @@ else
 fi
 exit ${result}
 EOF
+  echo ""
   space_shares "${share_drives}" "${share_ssh[@]}"
   return ${result}
 }
@@ -699,7 +713,11 @@ command_home() {
 run_stage() {
   case "${1}" in
   stow) command_stow "${PROCESS_SCOPE}" ;;
-  refresh) command_refresh ;;
+  refresh)
+    echo ""
+    space_shares "$(process_drives)"
+    command_refresh
+    ;;
   normalise) dispatch_library normalise "" ;;
   analyse) command_analyse ;;
   *)
