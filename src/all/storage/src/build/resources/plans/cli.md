@@ -656,9 +656,20 @@ what the table contains.
   `ssh.ParsePrivateKey`, agent forwarding via `SSH_AUTH_SOCK` when the file is passphrase-protected.
   Passwordless root ssh to every host is how `deploy.sh` and `install_post.sh` reach hosts, so this
   needs no new mechanism, no new key and no daemon.
-- **Host keys are checked against `~/.ssh/known_hosts`** via `knownhosts.New`, and an unknown host is
-  that host's row failing with the reason — not a prompt, and not `InsecureIgnoreHostKey`. A CLI that
-  silently accepts any key on a home LAN is still a CLI that cannot report a changed one.
+- **Host keys are not checked** — `ssh.InsecureIgnoreHostKey()`. This reverses the original decision,
+  which was `knownhosts.New` against `~/.ssh/known_hosts` with an unknown host failing its row, on the
+  grounds that a CLI which accepts any key cannot report a *changed* one. What settled it was that the
+  estate never provisioned the entries: root's `known_hosts` on `mad` held the four macminis and not
+  `raspbpi-jen`, so `aspaces` failed on a host it reaches every other way, and the same gap exists in
+  some direction for every pair. The alternatives were a `ssh-keyscan` of the shipped `hosts` file from
+  `install_post.sh`, or accept-new semantics in `dialHost`; both were rejected as machinery in service
+  of a check whose threat model does not survive the rest of the release path — `_release` already
+  `scp`s and executes binaries over `StrictHostKeyChecking=no`, and `deploy.sh` does the same, so a
+  verified fan-out would have been the one strict link in an otherwise trusting chain. What is given up
+  is real and should be said plainly: a swapped or re-imaged host is dialled without complaint, and the
+  worst case is a fabricated storage table rather than a stolen key, since public-key auth never
+  discloses it. If host-key verification is ever wanted back, the keyscan in `install_post.sh` is the
+  way in — the shipped `hosts` file already lists every host.
 - **Fan out in parallel, bounded, and never let one host hold the table.** One goroutine per host, a
   hard per-host timeout on dial *and* on the session, and a host that fails renders its block as a
   single row of `--` carrying the reason. Same verdict as the release rule: *treat a timeout as an

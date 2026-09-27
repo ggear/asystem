@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 func collectRemote(cfg *config.Config, drives []string) []HostDoc {
@@ -95,14 +94,10 @@ func dialHost(host string) (*ssh.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	callback, err := knownHostsCallback()
-	if err != nil {
-		return nil, err
-	}
 	config := &ssh.ClientConfig{
 		User:            "root",
 		Auth:            auth,
-		HostKeyCallback: callback,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         remoteDialTimeout,
 	}
 	address := net.JoinHostPort(host, remoteSSHPort)
@@ -126,14 +121,6 @@ func sshAuth() ([]ssh.AuthMethod, error) {
 		return []ssh.AuthMethod{ssh.PublicKeys(signer)}, nil
 	}
 	return nil, fmt.Errorf("no usable private key found under [~/.ssh]")
-}
-
-func knownHostsCallback() (ssh.HostKeyCallback, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-	return knownhosts.New(filepath.Join(home, ".ssh", "known_hosts"))
 }
 
 func shellQuote(value string) string {
