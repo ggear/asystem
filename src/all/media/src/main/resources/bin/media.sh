@@ -530,18 +530,18 @@ command_stow() {
 space_shares() {
   local drives="${1}"
   shift
-  "$@" aspace --mode local --drives "${drives}" --symbols ascii --theme mono || true
+  "$@" aspace --mode local --filter "${drives}" --symbols ascii --theme mono || true
 }
 
 process_drives() {
   if [ "${EXTENT}" = "local" ]; then
     local _dir drives=""
     for _dir in ${SHARE_DIRS_LOCAL}; do
-      drives="${drives:+${drives},}/share/$(basename "${_dir}")"
+      drives="${drives:+${drives},}${_dir}"
     done
     echo "${drives}"
   else
-    echo "/share/$(basename "${EXTENT_SHARE_DIR}")"
+    echo "${EXTENT_SHARE_DIR}"
   fi
 }
 
@@ -714,7 +714,7 @@ run_stage() {
   case "${1}" in
   stow) command_stow "${PROCESS_SCOPE}" ;;
   refresh)
-    echo ""
+    print_header "$(hostname)" "space" 0
     space_shares "$(process_drives)"
     command_refresh
     ;;
