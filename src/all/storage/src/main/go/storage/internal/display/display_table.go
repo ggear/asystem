@@ -9,122 +9,77 @@ import (
 )
 
 func Render(rows []Row, useUnicode, useColour bool) string {
-	hostWidth := columnWidth(headerHost, rowValues(rows, func(r Row) string { return r.Host }))
-	mountWidth := columnWidth(headerMount, rowValues(rows, func(r Row) string { return r.Mount }))
 	var b strings.Builder
-	writeTopBorder(&b, useUnicode, hostWidth, mountWidth)
-	writeHeaderLabels(&b, useUnicode, hostWidth, mountWidth)
-	writeHeaderRule(&b, useUnicode, hostWidth, mountWidth)
+	writeTopBorder(&b, useUnicode)
+	writeHeaderLabels(&b, useUnicode)
+	writeHeaderRule(&b, useUnicode)
 	for index, row := range rows {
 		if index > 0 {
-			writeRowRule(&b, useUnicode, hostWidth, mountWidth, row)
+			writeRowRule(&b, useUnicode, row)
 		}
-		writeDataRow(&b, useUnicode, useColour, hostWidth, mountWidth, row)
+		writeDataRow(&b, useUnicode, useColour, row)
 	}
-	writeBottomBorder(&b, useUnicode, hostWidth, mountWidth)
+	writeBottomBorder(&b, useUnicode)
 	return b.String()
 }
 
-func rowValues(rows []Row, pick func(Row) string) []string {
-	values := make([]string, len(rows))
-	for i, row := range rows {
-		values[i] = pick(row)
-	}
-	return values
+func writeTopBorder(b *strings.Builder, useUnicode bool) {
+	writeRuleRow(b, textTopLeft, textTopMid, textTopRight, textHRule, useUnicode, widthsSpanned)
 }
 
-func columnWidth(header string, values []string) int {
-	width := runewidth.StringWidth(header)
-	for _, value := range values {
-		if w := runewidth.StringWidth(value); w > width {
-			width = w
+func writeBottomBorder(b *strings.Builder, useUnicode bool) {
+	writeRuleRow(b, textBotLeft, textBotMid, textBotRight, textHRule, useUnicode, widthsColumns)
+}
+
+func writeHeaderRule(b *strings.Builder, useUnicode bool) {
+	b.WriteString(textMidLeft.pick(useUnicode))
+	for index, width := range widthsColumns {
+		if index > 0 {
+			divider := textMidMid
+			if index >= len(widthsSpanned) {
+				divider = textTopMid
+			}
+			b.WriteString(divider.pick(useUnicode))
 		}
+		b.WriteString(strings.Repeat(textDRule.pick(useUnicode), width))
 	}
-	return width + 2*border
-}
-
-func writeTopBorder(b *strings.Builder, useUnicode bool, hostWidth, mountWidth int) {
-	rule := textHRule.pick(useUnicode)
-	widths := []int{hostWidth, mountWidth, bytesCellWidth(), bytesCellWidth(), usedSpanWidth()}
-	mid := textTopMid.pick(useUnicode)
-	junctions := []string{mid, mid, mid, mid}
-	writeRuleRow(b, textTopLeft.pick(useUnicode), junctions, textTopRight.pick(useUnicode), rule, widths)
-}
-
-func writeBottomBorder(b *strings.Builder, useUnicode bool, hostWidth, mountWidth int) {
-	rule := textHRule.pick(useUnicode)
-	mid := textBotMid.pick(useUnicode)
-	junctions := []string{mid, mid, mid, mid, mid, mid}
-	writeRuleRow(b, textBotLeft.pick(useUnicode), junctions, textBotRight.pick(useUnicode), rule, columnWidths(hostWidth, mountWidth))
-}
-
-func writeHeaderRule(b *strings.Builder, useUnicode bool, hostWidth, mountWidth int) {
-	rule := textDRule.pick(useUnicode)
-	cross := textMidMid.pick(useUnicode)
-	down := textTopMid.pick(useUnicode)
-	junctions := []string{cross, cross, cross, cross, down, down}
-	writeRuleRow(b, textMidLeft.pick(useUnicode), junctions, textMidRight.pick(useUnicode), rule, columnWidths(hostWidth, mountWidth))
-}
-
-func writeRowRule(b *strings.Builder, useUnicode bool, hostWidth, mountWidth int, row Row) {
-	rule := textHRule.pick(useUnicode)
-	cross := textMidMid.pick(useUnicode)
-	if row.NewHost {
-		junctions := []string{cross, cross, cross, cross, cross, cross}
-		writeRuleRow(b, textMidLeft.pick(useUnicode), junctions, textMidRight.pick(useUnicode), rule, columnWidths(hostWidth, mountWidth))
-		return
-	}
-	if row.NewClass {
-		b.WriteString(textVert.pick(useUnicode))
-		b.WriteString(strings.Repeat(" ", hostWidth))
-		junctions := []string{cross, cross, cross, cross, cross}
-		widths := columnWidths(hostWidth, mountWidth)[1:]
-		writeRuleRow(b, textMidLeft.pick(useUnicode), junctions, textMidRight.pick(useUnicode), rule, widths)
-	}
-}
-
-func columnWidths(hostWidth, mountWidth int) []int {
-	bytesWidth := bytesCellWidth()
-	return []int{hostWidth, mountWidth, bytesWidth, bytesWidth, bytesWidth, barContentWidth + 2*border, pctContentWidth + 2*border}
-}
-
-func writeRuleRow(b *strings.Builder, left string, junctions []string, right, fill string, widths []int) {
-	b.WriteString(left)
-	for i, width := range widths {
-		b.WriteString(strings.Repeat(fill, width))
-		if i < len(widths)-1 {
-			b.WriteString(junctions[i])
-		}
-	}
-	b.WriteString(right)
+	b.WriteString(textMidRight.pick(useUnicode))
 	b.WriteString("\n")
 }
 
-func bytesCellWidth() int {
-	return bytesContentWidth + 2*border
+func writeRowRule(b *strings.Builder, useUnicode bool, row Row) {
+	widths := widthsColumns
+	switch {
+	case row.NewHost:
+	case row.NewClass:
+		b.WriteString(textVert.pick(useUnicode))
+		b.WriteString(strings.Repeat(" ", hostCellWidth))
+		widths = widthsColumns[1:]
+	default:
+		return
+	}
+	writeRuleRow(b, textMidLeft, textMidMid, textMidRight, textHRule, useUnicode, widths)
 }
 
-func usedSpanWidth() int {
-	barWidth := barContentWidth + 2*border
-	pctWidth := pctContentWidth + 2*border
-	return bytesCellWidth() + 1 + barWidth + 1 + pctWidth
+func writeRuleRow(b *strings.Builder, left, junction, right, fill text, useUnicode bool, widths []int) {
+	b.WriteString(left.pick(useUnicode))
+	for index, width := range widths {
+		if index > 0 {
+			b.WriteString(junction.pick(useUnicode))
+		}
+		b.WriteString(strings.Repeat(fill.pick(useUnicode), width))
+	}
+	b.WriteString(right.pick(useUnicode))
+	b.WriteString("\n")
 }
 
-func writeHeaderLabels(b *strings.Builder, useUnicode bool, hostWidth, mountWidth int) {
+func writeHeaderLabels(b *strings.Builder, useUnicode bool) {
 	vert := textVert.pick(useUnicode)
-	sizeWidth := bytesCellWidth()
-	usedWidth := usedSpanWidth()
 	b.WriteString(vert)
-	b.WriteString(center(headerHost, hostWidth))
-	b.WriteString(vert)
-	b.WriteString(center(headerMount, mountWidth))
-	b.WriteString(vert)
-	b.WriteString(center(headerSize, sizeWidth))
-	b.WriteString(vert)
-	b.WriteString(center(headerFree, sizeWidth))
-	b.WriteString(vert)
-	b.WriteString(center(headerUsed, usedWidth))
-	b.WriteString(vert)
+	for index, header := range []string{headerHost, headerMount, headerSize, headerFree, headerUsed} {
+		b.WriteString(center(header, widthsSpanned[index]))
+		b.WriteString(vert)
+	}
 	b.WriteString("\n")
 }
 
@@ -138,12 +93,12 @@ func center(text string, width int) string {
 	return strings.Repeat(" ", left) + text + strings.Repeat(" ", right)
 }
 
-func writeDataRow(b *strings.Builder, useUnicode, useColour bool, hostWidth, mountWidth int, row Row) {
+func writeDataRow(b *strings.Builder, useUnicode, useColour bool, row Row) {
 	vert := textVert.pick(useUnicode)
 	b.WriteString(vert)
-	b.WriteString(leftCell(row.Host, hostWidth-2*border))
+	b.WriteString(leftCell(row.Host, hostContentWidth))
 	b.WriteString(vert)
-	b.WriteString(leftCell(row.Mount, mountWidth-2*border))
+	b.WriteString(leftCell(row.Mount, mountContentWidth))
 	b.WriteString(vert)
 	b.WriteString(rightCell(bytesOrDash(row.Unmeasured, row.Size), bytesContentWidth))
 	b.WriteString(vert)
@@ -166,7 +121,7 @@ func bytesOrDash(unmeasured bool, bytes uint64) string {
 }
 
 func leftCell(value string, content int) string {
-	return wrapBorder(padRight(value, content))
+	return wrapBorder(padRight(clip(value, content), content))
 }
 
 func rightCell(value string, content int) string {
@@ -265,10 +220,19 @@ func (t text) pick(useUnicode bool) string {
 }
 
 const (
+	hostContentWidth  = 3
+	mountContentWidth = 9
 	bytesContentWidth = 10
 	pctContentWidth   = 6
 	barContentWidth   = 20
 	border            = 1
+
+	hostCellWidth  = hostContentWidth + 2*border
+	mountCellWidth = mountContentWidth + 2*border
+	bytesCellWidth = bytesContentWidth + 2*border
+	barCellWidth   = barContentWidth + 2*border
+	pctCellWidth   = pctContentWidth + 2*border
+	usedSpanWidth  = bytesCellWidth + 1 + barCellWidth + 1 + pctCellWidth
 
 	severityAmber = 70.0
 	severityRed   = 90.0
@@ -277,6 +241,11 @@ const (
 	colourAmber = "\033[33m"
 	colourRed   = "\033[31m"
 	colourReset = "\033[0m"
+)
+
+var (
+	widthsSpanned = []int{hostCellWidth, mountCellWidth, bytesCellWidth, bytesCellWidth, usedSpanWidth}
+	widthsColumns = []int{hostCellWidth, mountCellWidth, bytesCellWidth, bytesCellWidth, bytesCellWidth, barCellWidth, pctCellWidth}
 )
 
 var (
