@@ -1,16 +1,6 @@
 package engine
 
-import (
-	"slices"
-	"strings"
-)
-
-type fstabEntry struct {
-	Identifier string
-	Mountpoint string
-	FSType     string
-	Options    []string
-}
+import "strings"
 
 func parseFstab(contents string) []fstabEntry {
 	var entries []fstabEntry
@@ -33,10 +23,13 @@ func parseFstab(contents string) []fstabEntry {
 	return entries
 }
 
-func (e fstabEntry) hasOption(name string) bool {
-	return slices.Contains(e.Options, name)
-}
-
 func (e fstabEntry) isCifs() bool {
 	return e.FSType == "cifs"
+}
+
+type fstabEntry struct {
+	Identifier string
+	Mountpoint string
+	FSType     string
+	Options    []string
 }

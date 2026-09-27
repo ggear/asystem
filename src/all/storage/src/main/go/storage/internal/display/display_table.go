@@ -8,42 +8,6 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-const (
-	bytesContentWidth = 10
-	pctContentWidth   = 6
-	barContentWidth   = 20
-	border            = 1
-
-	severityAmber = 70.0
-	severityRed   = 90.0
-)
-
-var (
-	textVert  = text{ascii: "|", unicode: "│"}
-	textBar   = text{ascii: "#", unicode: "■"}
-	textHRule = text{ascii: "-", unicode: "─"}
-	textDRule = text{ascii: "=", unicode: "─"}
-
-	textTopLeft  = text{ascii: "+", unicode: "╭"}
-	textTopMid   = text{ascii: "+", unicode: "┬"}
-	textTopRight = text{ascii: "+", unicode: "╮"}
-
-	textBotLeft  = text{ascii: "+", unicode: "╰"}
-	textBotMid   = text{ascii: "+", unicode: "┴"}
-	textBotRight = text{ascii: "+", unicode: "╯"}
-
-	textMidLeft  = text{ascii: "+", unicode: "├"}
-	textMidMid   = text{ascii: "+", unicode: "┼"}
-	textMidRight = text{ascii: "+", unicode: "┤"}
-)
-
-const (
-	colourGreen = "\033[32m"
-	colourAmber = "\033[33m"
-	colourRed   = "\033[31m"
-	colourReset = "\033[0m"
-)
-
 func Render(rows []Row, useUnicode, useColour bool) string {
 	hostWidth := columnWidth(headerHost, rowValues(rows, func(r Row) string { return r.Host }))
 	mountWidth := columnWidth(headerMount, rowValues(rows, func(r Row) string { return r.Mount }))
@@ -299,3 +263,37 @@ func (t text) pick(useUnicode bool) string {
 	}
 	return t.ascii
 }
+
+const (
+	bytesContentWidth = 10
+	pctContentWidth   = 6
+	barContentWidth   = 20
+	border            = 1
+
+	severityAmber = 70.0
+	severityRed   = 90.0
+
+	colourGreen = "\033[32m"
+	colourAmber = "\033[33m"
+	colourRed   = "\033[31m"
+	colourReset = "\033[0m"
+)
+
+var (
+	textVert  = text{ascii: "|", unicode: "│"}
+	textBar   = text{ascii: "#", unicode: "■"}
+	textHRule = text{ascii: "-", unicode: "─"}
+	textDRule = text{ascii: "=", unicode: "─"}
+
+	textTopLeft  = text{ascii: "+", unicode: "╭"}
+	textTopMid   = text{ascii: "+", unicode: "┬"}
+	textTopRight = text{ascii: "+", unicode: "╮"}
+
+	textBotLeft  = text{ascii: "+", unicode: "╰"}
+	textBotMid   = text{ascii: "+", unicode: "┴"}
+	textBotRight = text{ascii: "+", unicode: "╯"}
+
+	textMidLeft  = text{ascii: "+", unicode: "├"}
+	textMidMid   = text{ascii: "+", unicode: "┼"}
+	textMidRight = text{ascii: "+", unicode: "┤"}
+)

@@ -6,34 +6,33 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 )
 
 func Load(path string) *Config {
-	configCacheMu.RLock()
-	if cached, ok := configCache[path]; ok {
-		configCacheMu.RUnlock()
-		return cached
+	result := &Config{}
+	if path != "" {
+		if data, err := os.ReadFile(path); err == nil {
+			var raw struct{ Asystem configData }
+			if json.Unmarshal(data, &raw) == nil {
+				result.asystem = raw.Asystem
+			}
+		}
 	}
-	configCacheMu.RUnlock()
-	loaded := load(path)
-	configCacheMu.Lock()
-	configCache[path] = loaded
-	configCacheMu.Unlock()
-	return loaded
-}
-
-func Reset() {
-	configCacheMu.Lock()
-	defer configCacheMu.Unlock()
-	clear(configCache)
+	result.asystem.Version = resolve("SERVICE_VERSION_ABSOLUTE", result.asystem.Version)
+	result.asystem.Host = resolve("STORAGE_HOST", result.asystem.Host)
+	if result.asystem.Host == "" {
+		if hostName, err := os.Hostname(); err == nil {
+			result.asystem.Host = hostName
+		}
+	}
+	return result
 }
 
 func (c *Config) Version() string {
-	if c != nil && DefaultVersionPattern.MatchString(c.asystem.Version) {
+	if c != nil && versionPattern.MatchString(c.asystem.Version) {
 		return c.asystem.Version
 	}
-	return DefaultVersion
+	return defaultVersion
 }
 
 func (c *Config) Name() string {
@@ -96,6 +95,19 @@ func (c *Config) MountLabel(mount string) string {
 	return ""
 }
 
+func (c *Config) ServedElsewhere(mount string) bool {
+	host := c.own()
+	if host == nil {
+		return false
+	}
+	for _, share := range host.Shares {
+		if share.Mount == mount {
+			return share.ServedBy != "" && share.ServedBy != c.asystem.Host
+		}
+	}
+	return false
+}
+
 func (c *Config) EstateShares() []ShareEntry {
 	if c == nil {
 		return nil
@@ -124,43 +136,17 @@ func (c *Config) own() *HostEntry {
 	return nil
 }
 
-func load(path string) *Config {
-	result := &Config{}
-	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			var raw struct{ Asystem configData }
-			if json.Unmarshal(data, &raw) == nil {
-				result.asystem = raw.Asystem
-			}
-		}
+func resolve(env, value string) string {
+	if resolved := os.Getenv(env); resolved != "" {
+		return resolved
 	}
-	result.asystem.Version = resolve("SERVICE_VERSION_ABSOLUTE", result.asystem.Version)
-	result.asystem.Host = resolve("STORAGE_HOST", result.asystem.Host)
-	if result.asystem.Host == "" {
-		if hostName, err := os.Hostname(); err == nil {
-			result.asystem.Host = hostName
-		}
+	if strings.HasPrefix(value, "$") {
+		return os.Getenv(value[1:])
 	}
-	return result
-}
-
-func resolve(env, key string) string {
-	if value := os.Getenv(env); value != "" {
-		return value
-	}
-	if strings.HasPrefix(key, "$") {
-		return os.Getenv(key[1:])
-	}
-	return key
+	return value
 }
 
 type Config struct{ asystem configData }
-
-type configData struct {
-	Version string
-	Host    string
-	Schema  []HostEntry
-}
 
 type HostEntry struct {
 	Index      *int
@@ -185,21 +171,16 @@ type BackupEntry struct {
 	Label string
 }
 
+type configData struct {
+	Version string
+	Host    string
+	Schema  []HostEntry
+}
+
 const (
-	DefaultVersion    = "00.000.0000-SNAPSHOT"
-	DefaultConfigPath = DirInstall + "/storage/" + DirInstallLatestLink + "/image/config.json"
+	DefaultConfigPath = "/var/lib/asystem/install/storage/latest/image/config.json"
 
-	DirInstall           = "/var/lib/asystem/install"
-	DirInstallLatestLink = "latest"
-
-	FormFactorEdge   = "edge"
-	FormFactorClient = "client"
-	FormFactorServer = "server"
+	defaultVersion = "00.000.0000-SNAPSHOT"
 )
 
-var DefaultVersionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}(-SNAPSHOT)?$`)
-
-var (
-	configCacheMu sync.RWMutex
-	configCache   = map[string]*Config{}
-)
+var versionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}(-SNAPSHOT)?$`)

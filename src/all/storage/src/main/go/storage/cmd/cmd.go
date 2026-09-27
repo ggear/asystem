@@ -28,20 +28,6 @@ func init() {
 	rootCmd.InheritedFlags().SortFlags = false
 }
 
-var rootCmd = &cobra.Command{
-	Use:           rootName,
-	Short:         rootDescription,
-	Long:          rootDescription,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return cmd.Help()
-		}
-		return nil
-	},
-}
-
 func formatAliases(aliases []string) string {
 	return strings.Join(aliases, ", ")
 }
@@ -85,3 +71,17 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 `
 
 var flagDefaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)
+
+var rootCmd = &cobra.Command{
+	Use:           rootName,
+	Short:         rootDescription,
+	Long:          rootDescription,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		return nil
+	},
+}

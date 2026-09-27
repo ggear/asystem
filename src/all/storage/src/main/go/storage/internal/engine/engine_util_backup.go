@@ -9,31 +9,6 @@ import (
 	"storage/internal/config"
 )
 
-const (
-	backupHomeEnvVar    = "BACKUP_HOME_ROOT"
-	backupServiceHome   = "/home/asystem"
-	backupTreeModule    = "supervisor"
-	backupTreeDirectory = "backup"
-	backupTertiaryLeaf  = "stage/tertiary/status.json"
-)
-
-var backupRunPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`)
-
-type backupReading struct {
-	RunID      string
-	MeasuredTS string
-	TotalBytes uint64
-	UsedBytes  uint64
-}
-
-type tertiaryStatus struct {
-	FinishedTS  string  `json:"finished_ts"`
-	StartedTS   string  `json:"started_ts"`
-	DiskTotalMB int     `json:"disk_total_mb"`
-	DiskUsedMB  int     `json:"disk_used_mb"`
-	DiskPerc    float64 `json:"disk_usage_perc"`
-}
-
 func newestBackupReading(root string) *backupReading {
 	entries, err := os.ReadDir(root)
 	if err != nil {
@@ -95,3 +70,27 @@ func backupMounts(cfg *config.Config, drives []string) []MountDoc {
 		Backup: &BackupInfo{RunID: reading.RunID, MeasuredTS: reading.MeasuredTS},
 	}}
 }
+
+type backupReading struct {
+	RunID      string
+	MeasuredTS string
+	TotalBytes uint64
+	UsedBytes  uint64
+}
+
+type tertiaryStatus struct {
+	FinishedTS  string `json:"finished_ts"`
+	StartedTS   string `json:"started_ts"`
+	DiskTotalMB int    `json:"disk_total_mb"`
+	DiskUsedMB  int    `json:"disk_used_mb"`
+}
+
+const (
+	backupHomeEnvVar    = "BACKUP_HOME_ROOT"
+	backupServiceHome   = "/home/asystem"
+	backupTreeModule    = "supervisor"
+	backupTreeDirectory = "backup"
+	backupTertiaryLeaf  = "stage/tertiary/status.json"
+)
+
+var backupRunPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`)

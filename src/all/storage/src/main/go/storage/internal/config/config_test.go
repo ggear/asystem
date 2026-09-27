@@ -37,7 +37,6 @@ const fixtureDocument = `{
 }`
 
 func TestConfig_Load(t *testing.T) {
-	Reset()
 	path := writeFixture(t, fixtureDocument)
 	t.Setenv("STORAGE_HOST", "")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
@@ -67,6 +66,15 @@ func TestConfig_Load(t *testing.T) {
 	if got := len(cfg.Hosts()); got != 2 {
 		t.Errorf("Hosts: got %d want 2", got)
 	}
+	if cfg.ServedElsewhere("/share/10") {
+		t.Errorf("ServedElsewhere(/share/10): got true want false, this host serves it")
+	}
+	if !cfg.ServedElsewhere("/share/20") {
+		t.Errorf("ServedElsewhere(/share/20): got false want true, another host serves it")
+	}
+	if cfg.ServedElsewhere("/share/99") {
+		t.Errorf("ServedElsewhere(/share/99): got true want false, it is undeclared")
+	}
 	estate := cfg.EstateShares()
 	if len(estate) != 2 {
 		t.Fatalf("EstateShares: got %d want 2, got %+v", len(estate), estate)
@@ -77,7 +85,6 @@ func TestConfig_Load(t *testing.T) {
 }
 
 func TestConfig_Load_UnknownAndMissingFields(t *testing.T) {
-	Reset()
 	path := writeFixture(t, `{"asystem": {"version": "10.200.1725", "host": "macmini-mad", "unexpected_field": true, "schema": [{"host": "macmini-mad", "label": "mad"}]}}`)
 	t.Setenv("STORAGE_HOST", "")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
@@ -94,7 +101,6 @@ func TestConfig_Load_UnknownAndMissingFields(t *testing.T) {
 }
 
 func TestConfig_Load_EnvOverridesFile(t *testing.T) {
-	Reset()
 	path := writeFixture(t, fixtureDocument)
 	t.Setenv("STORAGE_HOST", "macmini-max")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "10.200.9999")
@@ -108,7 +114,6 @@ func TestConfig_Load_EnvOverridesFile(t *testing.T) {
 }
 
 func TestConfig_Load_UnresolvedHostFallsBackToHostname(t *testing.T) {
-	Reset()
 	path := writeFixture(t, `{"asystem": {"version": "10.200.1725", "host": "$STORAGE_HOST", "schema": []}}`)
 	t.Setenv("STORAGE_HOST", "")
 	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")

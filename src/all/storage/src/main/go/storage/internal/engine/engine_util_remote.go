@@ -17,13 +17,6 @@ import (
 	"golang.org/x/crypto/ssh/knownhosts"
 )
 
-const (
-	remoteInstallPath = "/var/lib/asystem/install/storage/latest/storage"
-	remoteDialTimeout = 5 * time.Second
-	remoteRunMargin   = 6 * time.Second
-	remoteSSHPort     = "22"
-)
-
 func CollectRemote(cfg *config.Config, drives []string) []HostDoc {
 	hosts := cfg.Hosts()
 	docs := make([]HostDoc, len(hosts))
@@ -65,7 +58,7 @@ func collectOneHost(host config.HostEntry, drives []string) HostDoc {
 }
 
 func remoteRunBudget(host config.HostEntry) time.Duration {
-	mounts := len(host.Shares) + 2 // root and backup, beyond the declared shares
+	mounts := len(host.Shares) + remoteRunExtraMounts
 	return remoteRunMargin + time.Duration(mounts)*statfsTimeout
 }
 
@@ -146,3 +139,12 @@ func knownHostsCallback() (ssh.HostKeyCallback, error) {
 func shellQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
 }
+
+const (
+	remoteInstallPath = "/var/lib/asystem/install/storage/latest/storage"
+	remoteDialTimeout = 5 * time.Second
+	remoteRunMargin   = 6 * time.Second
+	remoteSSHPort     = "22"
+
+	remoteRunExtraMounts = 2
+)

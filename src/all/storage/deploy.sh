@@ -2,7 +2,8 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-export $(xargs <${ROOT_DIR}/.env) 2>/dev/null
+# shellcheck disable=SC2046
+export $(xargs <"${ROOT_DIR}/.env") 2>/dev/null
 
 HOSTS=$(echo "${STORAGE_HOST_PROD}" | tr ',' ' ')
 
@@ -13,7 +14,7 @@ mkdir -p "$(dirname "${CSV_FILE}")"
 [ -s "${CSV_FILE}" ] || printf '"Host","Mount","Used %%","Date","Time","Read MB/s","Write MB/s"\n' >"${CSV_FILE}"
 
 cleanup_remote() {
-  [ -n "${HOST:-}" ] && ssh -o StrictHostKeyChecking=no root@${HOST}.local \
+  [ -n "${HOST:-}" ] && ssh -o StrictHostKeyChecking=no root@"${HOST}".local \
     'pkill -TERM -f benchmark.sh; pkill -TERM fio' 2>/dev/null
   exit 130
 }
@@ -26,7 +27,7 @@ for HOST in ${HOSTS}; do
   esac
   LABEL="${HOST#*-}"
   printf '\033[1;36m==> Benchmarking %s\033[0m\n' "${HOST}"
-  ssh -o StrictHostKeyChecking=no root@${HOST}.local \
+  ssh -o StrictHostKeyChecking=no root@"${HOST}".local \
     "[ -f ${REMOTE_BENCH} ] && ${REMOTE_BENCH} --csv" \
     | while IFS= read -r ROW; do
         printf '"%s",%s\n' "${LABEL}" "${ROW}" >>"${CSV_FILE}"

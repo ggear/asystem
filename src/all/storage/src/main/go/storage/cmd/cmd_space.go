@@ -89,7 +89,7 @@ func executeSpace(configPath string, opts *spaceOptions) error {
 		}
 		fmt.Println(string(encoded))
 	} else {
-		rows := rowsFor(hosts, mode)
+		rows := rowsFor(hosts)
 		if mode == "remote" {
 			rows = append(rows, estateRows(hosts)...)
 		}
@@ -101,7 +101,7 @@ func executeSpace(configPath string, opts *spaceOptions) error {
 	return nil
 }
 
-func rowsFor(hosts []engine.HostDoc, mode string) []display.Row {
+func rowsFor(hosts []engine.HostDoc) []display.Row {
 	var rows []display.Row
 	for _, host := range hosts {
 		firstOfHost := true
@@ -137,11 +137,15 @@ func estateRows(hosts []engine.HostDoc) []display.Row {
 	totals := map[string]*total{}
 	order := []string{engine.ClassRoot, engine.ClassShare, engine.ClassBackup}
 	for _, host := range hosts {
+		subtotalled := false
+		for _, mount := range host.Mounts {
+			subtotalled = subtotalled || (mount.Class == engine.ClassShare && mount.Mount == "/share")
+		}
 		for _, mount := range host.Mounts {
 			if mount.State != engine.MountStateMeasured || mount.Space == nil {
 				continue
 			}
-			if mount.Class == engine.ClassShare && mount.Mount != "/share" {
+			if mount.Class == engine.ClassShare && subtotalled != (mount.Mount == "/share") {
 				continue
 			}
 			if mount.Class == engine.ClassRoot && mount.Mount != "/" {
@@ -186,7 +190,7 @@ func percentOf(used, size uint64) float64 {
 
 func reportFaults(hosts []engine.HostDoc, envelopeVersion string) (fault, anyUnreachable bool) {
 	for _, host := range hosts {
-		if host.State != "" && host.State != "measured" {
+		if host.State != "" && host.State != engine.HostStateMeasured {
 			fmt.Fprintf(os.Stderr, "%s\n", host.Error)
 			fault = true
 			anyUnreachable = true
@@ -196,7 +200,7 @@ func reportFaults(hosts []engine.HostDoc, envelopeVersion string) (fault, anyUnr
 			fmt.Fprintf(os.Stderr, "version skew [%s] running [%s] against [%s]\n", host.Name, host.Version, envelopeVersion)
 		}
 		for _, mount := range host.Mounts {
-			if mount.State != "" && mount.State != "measured" {
+			if mount.State != "" && mount.State != engine.MountStateMeasured {
 				fmt.Fprintf(os.Stderr, "%s\n", mount.Error)
 				fault = true
 			}
@@ -207,7 +211,7 @@ func reportFaults(hosts []engine.HostDoc, envelopeVersion string) (fault, anyUnr
 
 func anyMeasured(hosts []engine.HostDoc) bool {
 	for _, host := range hosts {
-		if host.State == "measured" || host.State == "" {
+		if host.State == engine.HostStateMeasured || host.State == "" {
 			return true
 		}
 	}

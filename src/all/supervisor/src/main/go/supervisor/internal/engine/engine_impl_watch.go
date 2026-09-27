@@ -154,7 +154,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		storeHostStatus(hostName, true)
 		scheduleReconcile(hostName, false)
 		topics := resubscribeHost(client, hostName)
-		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reviveStart, "[online] resub [%2d], retry [%2d]s", topics, int64(reconcileDelay.Seconds()))
+		scribe.Log(scribe.SourceEngine, scribe.SubjectHost(hostName), scribe.ActionConnect).Infof("observed", reviveStart, "[online] resub [%2d], retry [%2d] s", topics, int64(reconcileDelay.Seconds()))
 		return true
 	}
 	onData := func(client mqtt.Client, msg mqtt.Message) {
