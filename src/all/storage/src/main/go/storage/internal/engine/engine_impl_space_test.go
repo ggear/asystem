@@ -115,7 +115,9 @@ func TestEngineImplSpace_ClassifyMount(t *testing.T) {
 		{name: "first match wins", mountpoint: "/share/10", filters: []string{"/share/10", "/share/*"}, wantClass: ClassShare, wantMatched: true},
 		{name: "an unclaimed mount joins the root amalgam", mountpoint: "/home", filters: DefaultFilters, wantClass: ClassRoot, wantMatched: true},
 		{name: "a filters set with no root pattern claims nothing else", mountpoint: "/home", filters: []string{"/share/*"}, wantMatched: false},
-		{name: "anchored pattern does not prefix match", mountpoint: "/share/10", filters: []string{"/share/1"}, wantMatched: false},
+		{name: "a partial level does not prefix match", mountpoint: "/share/10", filters: []string{"/share/1"}, wantMatched: false},
+		{name: "a whole level above claims the mounts below it", mountpoint: "/share/10", filters: []string{"/share"}, wantClass: ClassShare, wantMatched: true},
+		{name: "a trailing star spanning levels", mountpoint: "/share/10", filters: []string{"/share*"}, wantClass: ClassShare, wantMatched: true},
 		{name: "a share pattern still wins over the root amalgam", mountpoint: "/share/10", filters: DefaultFilters, wantClass: ClassShare, wantMatched: true},
 	}
 	for _, c := range cases {

@@ -251,7 +251,7 @@ func FoldRoot(members []RootMember) (SpaceFigures, *Folded) {
 
 func matchGlob(pattern, candidate string) bool {
 	escaped := strings.ReplaceAll(regexp.QuoteMeta(pattern), `\*`, ".*")
-	re, err := regexp.Compile("^" + escaped + "$")
+	re, err := regexp.Compile("^" + escaped + "(/.*)?$")
 	if err != nil {
 		return false
 	}
