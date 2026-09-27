@@ -1,11 +1,7 @@
 package main
 
-import (
-	"fmt"
-	"os"
-)
+import "storage/cmd"
 
 func main() {
-	fmt.Fprintln(os.Stdout, "storage: not yet implemented")
-	os.Exit(0)
+	cmd.Execute()
 }

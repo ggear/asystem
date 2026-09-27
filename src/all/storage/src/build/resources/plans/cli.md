@@ -403,11 +403,10 @@ its siblings, with the leading newline trimmed on comparison. The test renders a
 diffs against the var, so a layout regression prints as a table-against-table diff rather than as a byte
 offset.
 
-**One test binds those vars to the six committed samples**, asserting each equals its
-`design/display/<name>.txt` file, so the spec in the repo and the expectation in the test cannot drift and
-neither becomes a third copy. Keep the fixture numbers as they are — the committed samples are the expected
-output, including `max`'s deliberate `99.9 TiB / 100.0%` row and `jen`'s single-class block with no
-`/backup`.
+**There is no separate `design/display/<name>.txt` file any more — see Adjustments.** The named vars
+in `display_test_layouts.go` are the golden copy directly; keep the fixture numbers as they are, since
+they're the expected output, including `max`'s deliberate `99.9 TiB / 100.0%` row and `jen`'s
+single-class block with no `/backup`.
 
 The fixture set is a **declared table of rows**, not a live read: `display` imports nothing internal
 (*Layout*), so the renderer is tested with no filesystem, no network, no clock and no config.
@@ -1037,3 +1036,101 @@ the mechanism behind them, the measurements the constants rest on and any reusab
 phases and the build order — and what belongs in `src/all/storage/CLAUDE.md` afterwards is the short list:
 no logs, `display` imports nothing, `/backup` comes from the newest backup document, the six samples are
 the golden output, and `--json` is the contract with the doc comment on it.
+
+## Adjustments made building this
+
+**Status at the end of this pass: steps 1–7 are all in the repo and `fab b`/`fab ut` are green** (43
+tests), including a live smoke test of `storage space --mode local` against this laptop's own APFS
+container and against the real generated `config.json`. Kept unresolved rather than guessed at
+further: the ssh fan-out and both `mount` platform paths compile and were reviewed against the spec
+but were never run against a real host, since that needs the estate reachable from this checkout.
+Below is where an implementation choice had to fill in something the prose above did not pin down
+precisely enough to code against, found only by reproducing the six samples byte-for-byte.
+
+- **`src/build/resources/design/display/*.txt` no longer exists — `display_test_layouts.go` is now
+  the only golden copy.** The original design put the spec in the committed `.txt` files and had a
+  test assert the Go vars equal them, on the theory that "the spec in the repo and the expectation in
+  the test cannot drift apart and neither becomes a third copy" (*Testing the renderer*). In practice
+  that was two copies of the same nine tables (the files, and the vars generated from them) with a
+  test whose only job was proving they still agreed — the vars alone are just as much "the spec, not
+  a sketch" once you accept that a `_test.go` file **is** part of the repo. Deleted the directory and
+  the file-comparison test (`TestDisplay_LayoutsMatchSamples` and its `designDisplayDir` helper);
+  every other reference to `design/display/*.txt` elsewhere in this document is now historical.
+- **The three numeric columns are fixed-width, not measured.** *Reading the mount table* and
+  *Display* both describe every column as measured from its widest cell, but the six samples show
+  the bytes columns holding steady at a 9-character content width (`"999.9 TiB"`) even in
+  `ascii_local.txt`, whose widest actual value is 8 characters — measuring would have produced an
+  10-wide cell there, not the 11 the sample carries. `bytesContentWidth` (9), `pctContentWidth` (6,
+  bordered by 2 spaces rather than 1) and `barContentWidth` (20) are therefore compile-time
+  constants in `display_table.go`, and a value that overflows one is clipped with `...` — the same
+  posture the SQL query renderer in the root `CLAUDE.md` takes on an oversized text cell — rather
+  than stretching the column. Verified with an injected 123 456.7 TiB row: every row in the table
+  stayed the same total width, and the oversized cell read `123456...`. Only `HOST` and `MOUNT` are
+  genuinely measured per render, since those are the columns whose content is real variable text
+  rather than a fixed numeric format.
+- **The bar's fill count rounds half to even, not half away from zero.** `66.7% → 13` and
+  `69.2% → 14` are unambiguous, but the two exact `.5` cases in the samples disagree with ordinary
+  rounding: `37.5% → 8` (rounds up) and `62.5% → 12` (rounds down). `8` and `12` are both even,
+  `13.5` is not in either sample, so this is banker's rounding rather than a typo — `roundHalfEven`
+  in `display_table.go` implements exactly that, and only for this one calculation.
+- **The header centering bias was a symptom of an odd bytes-column width, not a real rule — fixed by
+  widening the column rather than by keeping two centering functions.** At `bytesContentWidth = 9`,
+  `SIZE`/`FREE` (11-wide cell, 4-char label) had an odd 7-space remainder, and `USED`'s merged span
+  (43-wide, since it summed three odd-based widths) had an odd 39-space remainder — and the two
+  samples split their remainders in *opposite* directions (`SIZE` right-heavy, `USED` left-heavy),
+  so reproducing them byte-for-byte briefly needed two centering functions, `center` and `centerCeil`.
+  Widening `bytesContentWidth` to `10` (see below) makes every one of these remainders even — `SIZE`'s
+  8, `USED`'s 40 — so left and right are always equal and the bias never mattered in the first place;
+  once real, `centerCeil` is gone and `center` alone is used everywhere, with no `leftHeavy` parameter.
+- **The bytes columns (`SIZE`, `FREE`, the `USED` bytes sub-column) are 12 wide, not 11**, i.e.
+  `bytesContentWidth = 10` rather than `9`. This was a deliberate widening (not a reproduction of any
+  sample) specifically to make `SIZE`/`FREE`'s 4-char headers and `USED`'s merged span center with an
+  even remainder every time, which is what let the centering bias above be deleted rather than kept.
+  `"999.9 TiB"` (9 chars) is still the widest value the format ever emits, so the extra column-width
+  is headroom, not a requirement — an intentional trade of one blank column-inch for simpler code.
+- **The percent cell was originally a 2-space border, deliberately changed to 1.** The six samples as
+  first reproduced had the percent column padded 2 spaces each side (`"   66.7%  "`, a 10-wide cell)
+  while every other bordered column (bytes, bar, host, mount) used 1. That asymmetry was reproduced
+  faithfully but then deliberately dropped for consistency: every column now shares one `border = 1`
+  constant, and `pctContentWidth` stays `6` so `100.0%` — the maximum a percentage can ever read —
+  still fits with no truncation risk. Once every column agreed on the same border, the separate
+  `cellBorder`/`barBorder`/`pctBorder` constants carried no distinct value any more and were
+  collapsed into the one `border` (`rightCell` also dropped its now-constant border parameter). The
+  six `design/display/*.txt` samples were regenerated from the renderer itself to match (each
+  percent cell is 8 wide now, not 10), and `display_test_layouts.go` was regenerated from those
+  files in turn, so nothing hand-edited the samples independently of the code that produces them.
+- **`HOST` was shortened to `HST`.** With every host label in the estate three characters (`jen`,
+  `mad`, `max`, `may`, `meg`), the host column's width was governed entirely by the header
+  (`max(len("HOST"), 3) = 4`, plus border, `= 6`); shortening the header to `HST` (3 characters, tied
+  with the labels) narrows the column to 5 (`"| jen |"` instead of `"| jen  |"`) with no other
+  renderer change. Regenerated the same way as the border fix above — samples from the renderer,
+  `display_test_layouts.go` from the samples.
+- **`config.json`'s mount map is generated by parsing the six committed `fstab` files directly** —
+  `generate.py` has its own small `parse_fstab`, keyed off a `share_\d+`/`backup_\d+` regex run
+  against the *identifier* column (which matches a bare `PARTLABEL=share_08` as well as an LVM path
+  like `/dev/mapper/macmini--may--vg-share_04`, since the token is embedded in both forms) — this was
+  necessary to reproduce `max`'s `/share/20` (`/dev/fedora_macmini-max/share_06`, no `PARTLABEL` at
+  all) with the same `share_06` label `drives.xlsx` uses. A global mount→owner registry is built once
+  across all six hosts from each host's *self-sourced* (non-cifs) `/share/NN` lines, then every host's
+  own `shares` list (self and cifs alike) is annotated from that registry — verified against the real
+  fstab files in the repo, producing exactly the eleven-share layout `ascii_remote.txt` assumes.
+- **The domain filter is the hardcoded constant `dar`, not a dynamically resolved "host being
+  generated for".** `generate.py` runs once from a dev checkout with no fixed identity of its own,
+  and ships one `config.json` to the whole estate (the same shape supervisor already uses), so
+  "the host being generated for" has no single answer at generate time. `FSTAB_DOMAIN = "dar"`
+  reproduces the committed sample's five-host schema (`jen mad max may meg`, `jil` excluded) exactly;
+  revisit this if a second domain of edge/server hosts is ever added.
+- **The ssh fan-out has no fake-collector seam yet.** `CollectRemote` dials real hosts with
+  `golang.org/x/crypto/ssh` and has no injected collector, so the fake-driven verdict tests the plan
+  asks for (a host timing out, malformed JSON, a version-skewed host, every host failing) are not
+  written — only compiled and read against the spec. The seam the plan names
+  (`collect(hosts) (Document, error)`) is not yet factored out; `collectOneHost` is the natural seam
+  to promote to an interface if those tests are added.
+- **Mode/symbols/theme resolution has no dedicated test file.** It lives inline in
+  `cmd_space.go` (`resolveSymbols`/`resolveTheme`) rather than as a separately tested pure function,
+  so the "table over the environment" test the plan calls for under *What the tests must cover* is
+  not yet written.
+- **The estate rollup sums each host's own `/` and `/share` subtotal rows, not the per-share rows
+  underneath.** A host missing a `/share` subtotal (single-class block) would be undercounted by the
+  estate roll-up; this matches every host in the committed sample (all of which carry the subtotal)
+  but is worth checking if a share-only host is ever added to remote mode.

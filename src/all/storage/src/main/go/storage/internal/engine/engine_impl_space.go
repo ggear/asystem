@@ -1,0 +1,372 @@
+package engine
+
+import (
+	"context"
+	"fmt"
+	"regexp"
+	"sort"
+	"storage/internal/config"
+	"strings"
+	"time"
+
+	"github.com/shirou/gopsutil/v4/disk"
+)
+
+// Document is the wire format storage space prints with --json and the format one host sends
+// another in remote mode. It has three levels:
+//
+//	envelope  one document per invocation, whichever mode produced it
+//	host      one block per host, local mode carries exactly one
+//	mount     one measured or faulted mountpoint inside a host's block
+//
+//	"version":     "<text>",     ENVELOPE  This binary's own version
+//	"mode":        "<mode>",     ENVELOPE  local or remote
+//	"started_ts":  "<rfc3339>",  ENVELOPE
+//	"duration_s":  <number>,     ENVELOPE
+//	"hosts": [{
+//	    "index":    <number>,    HOST      Absent on a host that owns no share
+//	    "label":    "<text>",    HOST      The estate label, e.g. mad
+//	    "name":     "<text>",    HOST      The machine-label hostname, e.g. macmini-mad
+//	    "version":  "<text>",    HOST      That host's own version, for the skew check
+//	    "state":    "<state>",   HOST      measured or unreachable
+//	    "error":    "<text>",    HOST      Present exactly when state is not measured
+//	    "mounts": [{
+//	        "mount":   "<text>",   MOUNT   The mountpoint, or a synthetic subtotal/grand-total row
+//	        "label":   "<text>",   MOUNT   The declared PARTLABEL, absent when the spec is a UUID
+//	        "class":   "<class>",  MOUNT   root, share or backup
+//	        "state":   "<state>",  MOUNT   measured, unmounted or timedout
+//	        "error":   "<text>",   MOUNT   Present exactly when state is not measured
+//	        "space": {             MOUNT   Absent when state is not measured
+//	            "size_bytes": <number>,
+//	            "used_bytes": <number>,
+//	            "free_bytes": <number>
+//	        },
+//	        "folded": {            MOUNT   Rides on the root row alone
+//	            "identity": "<text>",
+//	            "mounts": ["<text>", ...]
+//	        },
+//	        "backup": {            MOUNT   Rides on the backup row alone
+//	            "run_id":      "<text>",
+//	            "measured_ts": "<rfc3339>"
+//	        }
+//	    }]
+//	}]
+//
+// Ownership: storage space writes it, engine_util_remote.go's fan-out reads another host's copy of
+// it, and the repo's own storage on another host is the only other reader.
+type Document struct {
+	Version   string    `json:"version"`
+	Mode      string    `json:"mode"`
+	StartedTS string    `json:"started_ts"`
+	DurationS int       `json:"duration_s"`
+	Hosts     []HostDoc `json:"hosts"`
+}
+
+type HostDoc struct {
+	Index   *int       `json:"index,omitempty"`
+	Label   string     `json:"label"`
+	Name    string     `json:"name"`
+	Version string     `json:"version,omitempty"`
+	State   string     `json:"state"`
+	Error   string     `json:"error,omitempty"`
+	Mounts  []MountDoc `json:"mounts,omitempty"`
+}
+
+type MountDoc struct {
+	Mount  string        `json:"mount"`
+	Label  string        `json:"label,omitempty"`
+	Class  string        `json:"class"`
+	State  string        `json:"state"`
+	Error  string        `json:"error,omitempty"`
+	Space  *SpaceFigures `json:"space,omitempty"`
+	Folded *Folded       `json:"folded,omitempty"`
+	Backup *BackupInfo   `json:"backup,omitempty"`
+}
+
+type SpaceFigures struct {
+	SizeBytes uint64 `json:"size_bytes"`
+	UsedBytes uint64 `json:"used_bytes"`
+	FreeBytes uint64 `json:"free_bytes"`
+}
+
+type Folded struct {
+	Identity string   `json:"identity"`
+	Mounts   []string `json:"mounts"`
+}
+
+type BackupInfo struct {
+	RunID      string `json:"run_id"`
+	MeasuredTS string `json:"measured_ts"`
+}
+
+const (
+	ClassRoot   = "root"
+	ClassShare  = "share"
+	ClassBackup = "backup"
+
+	MountStateMeasured  = "measured"
+	MountStateUnmounted = "unmounted"
+	MountStateTimedout  = "timedout"
+
+	HostStateMeasured    = "measured"
+	HostStateUnreachable = "unreachable"
+)
+
+const statfsTimeout = 2 * time.Second
+
+var DefaultDrives = []string{"/", "/share/*", "/backup"}
+
+var excludedRootPrefixes = []string{"/boot", "/efi", "/System/Volumes", "/Volumes"}
+
+var pseudoFsTypes = map[string]bool{
+	"proc": true, "sysfs": true, "cgroup": true, "cgroup2": true,
+	"devtmpfs": true, "overlay": true, "squashfs": true, "tmpfs": true,
+	"devfs": true, "autofs": true,
+}
+
+func CollectLocal(cfg *config.Config, drives []string) []MountDoc {
+	partitions, err := disk.Partitions(false)
+	if err != nil {
+		return nil
+	}
+	var roots []RootMember
+	var others []rawMount
+	for _, partition := range partitions {
+		if pseudoFsTypes[partition.Fstype] {
+			continue
+		}
+		class, matched := ClassifyDrive(partition.Mountpoint, drives)
+		if !matched {
+			continue
+		}
+		if class == ClassRoot {
+			if excludedRoot(partition.Mountpoint) {
+				continue
+			}
+			usage, err := boundedUsage(partition.Mountpoint)
+			if err != nil {
+				others = append(others, rawMount{mount: partition.Mountpoint, class: class, err: err})
+				continue
+			}
+			roots = append(roots, RootMember{
+				Mount:      partition.Mountpoint,
+				Identity:   identityKey(partition.Device),
+				TotalBytes: usage.Total,
+				AvailBytes: usage.Free,
+			})
+			continue
+		}
+		others = append(others, rawMount{mount: partition.Mountpoint, fstype: partition.Fstype, class: class})
+	}
+	var docs []MountDoc
+	if len(roots) > 0 {
+		figures, folded := FoldRoot(roots)
+		docs = append(docs, MountDoc{
+			Mount:  "/",
+			Class:  ClassRoot,
+			State:  MountStateMeasured,
+			Space:  &figures,
+			Folded: folded,
+			Label:  cfg.MountLabel("/"),
+		})
+	}
+	sort.Slice(others, func(i, j int) bool { return others[i].mount < others[j].mount })
+	for _, m := range others {
+		if m.err != nil {
+			docs = append(docs, MountDoc{Mount: m.mount, Class: m.class, State: MountStateTimedout, Error: fmt.Sprintf("statfs timed out [%s] after [%s]", m.mount, statfsTimeout)})
+			continue
+		}
+		usage, err := boundedUsage(m.mount)
+		if err != nil {
+			docs = append(docs, MountDoc{Mount: m.mount, Class: m.class, State: MountStateTimedout, Error: fmt.Sprintf("statfs timed out [%s] after [%s]", m.mount, statfsTimeout)})
+			continue
+		}
+		used := uint64(0)
+		if usage.Total > usage.Free {
+			used = usage.Total - usage.Free
+		}
+		docs = append(docs, MountDoc{
+			Mount: m.mount,
+			Label: cfg.MountLabel(m.mount),
+			Class: m.class,
+			State: MountStateMeasured,
+			Space: &SpaceFigures{SizeBytes: usage.Total, UsedBytes: used, FreeBytes: usage.Total - used},
+		})
+	}
+	docs = append(docs, declaredMissing(cfg, docs)...)
+	docs = append(docs, backupMounts(cfg, drives)...)
+	docs = append(docs, shareSubtotal(docs)...)
+	return docs
+}
+
+func ClassifyDrive(mountpoint string, drives []string) (class string, matched bool) {
+	for _, pattern := range drives {
+		if matchGlob(pattern, mountpoint) {
+			switch {
+			case pattern == "/":
+				return ClassRoot, true
+			case pattern == "/backup" || strings.HasSuffix(pattern, "/backup"):
+				return ClassBackup, true
+			default:
+				return ClassShare, true
+			}
+		}
+	}
+	return "", false
+}
+
+func matchGlob(pattern, candidate string) bool {
+	escaped := regexp.QuoteMeta(pattern)
+	escaped = strings.ReplaceAll(escaped, `\*`, ".*")
+	re, err := regexp.Compile("^" + escaped + "$")
+	if err != nil {
+		return false
+	}
+	return re.MatchString(candidate)
+}
+
+func excludedRoot(mountpoint string) bool {
+	for _, prefix := range excludedRootPrefixes {
+		if mountpoint == prefix || strings.HasPrefix(mountpoint, prefix+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+func boundedUsage(mountpoint string) (*disk.UsageStat, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), statfsTimeout)
+	defer cancel()
+	result := make(chan *disk.UsageStat, 1)
+	errs := make(chan error, 1)
+	go func() {
+		usage, err := disk.Usage(mountpoint)
+		if err != nil {
+			errs <- err
+			return
+		}
+		result <- usage
+	}()
+	select {
+	case usage := <-result:
+		return usage, nil
+	case err := <-errs:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func declaredMissing(cfg *config.Config, present []MountDoc) []MountDoc {
+	seen := map[string]bool{}
+	for _, m := range present {
+		seen[m.Mount] = true
+	}
+	var missing []MountDoc
+	for _, share := range cfg.Shares() {
+		if seen[share.Mount] {
+			continue
+		}
+		missing = append(missing, MountDoc{
+			Mount: share.Mount,
+			Label: share.Label,
+			Class: ClassShare,
+			State: MountStateUnmounted,
+			Error: fmt.Sprintf("declared and not mounted [%s]", share.Mount),
+		})
+	}
+	return missing
+}
+
+func shareSubtotal(docs []MountDoc) []MountDoc {
+	classes := map[string]bool{}
+	var shares []MountDoc
+	for _, m := range docs {
+		classes[m.Class] = true
+		if m.Class == ClassShare && m.State == MountStateMeasured {
+			shares = append(shares, m)
+		}
+	}
+	if len(classes) < 2 || len(shares) == 0 {
+		return nil
+	}
+	var size, used uint64
+	for _, m := range shares {
+		size += m.Space.SizeBytes
+		used += m.Space.UsedBytes
+	}
+	return []MountDoc{{
+		Mount: "/share",
+		Class: ClassShare,
+		State: MountStateMeasured,
+		Space: &SpaceFigures{SizeBytes: size, UsedBytes: used, FreeBytes: size - used},
+	}}
+}
+
+type rawMount struct {
+	mount  string
+	fstype string
+	class  string
+	err    error
+}
+
+type RootMember struct {
+	Mount      string
+	Identity   string
+	TotalBytes uint64
+	AvailBytes uint64
+}
+
+func FoldRoot(members []RootMember) (SpaceFigures, *Folded) {
+	if len(members) == 0 {
+		return SpaceFigures{}, nil
+	}
+	type group struct {
+		identity string
+		mounts   []string
+		total    uint64
+		avail    uint64
+		seeded   bool
+	}
+	order := make([]string, 0, len(members))
+	groups := map[string]*group{}
+	for _, m := range members {
+		key := m.Identity
+		if key == "" {
+			key = "mount:" + m.Mount
+		}
+		g, ok := groups[key]
+		if !ok {
+			g = &group{identity: m.Identity}
+			groups[key] = g
+			order = append(order, key)
+		}
+		g.mounts = append(g.mounts, m.Mount)
+		if !g.seeded {
+			g.total = m.TotalBytes
+			g.avail = m.AvailBytes
+			g.seeded = true
+		}
+	}
+	var sizeSum, usedSum uint64
+	var biggest *group
+	for _, key := range order {
+		g := groups[key]
+		used := uint64(0)
+		if g.total > g.avail {
+			used = g.total - g.avail
+		}
+		sizeSum += g.total
+		usedSum += used
+		if len(g.mounts) > 1 && (biggest == nil || len(g.mounts) > len(biggest.mounts)) {
+			biggest = g
+		}
+	}
+	figures := SpaceFigures{SizeBytes: sizeSum, UsedBytes: usedSum, FreeBytes: sizeSum - usedSum}
+	if biggest == nil {
+		return figures, nil
+	}
+	mounts := append([]string(nil), biggest.mounts...)
+	sort.Strings(mounts)
+	return figures, &Folded{Identity: biggest.identity, Mounts: mounts}
+}
