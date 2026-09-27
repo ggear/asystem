@@ -21,17 +21,26 @@ func init() {
 func newSpaceCmd() *cobra.Command {
 	opts := &spaceOptions{}
 	cmd := &cobra.Command{
-		Use:     "space",
+		Use:     "space [filter ...]",
 		Aliases: []string{"aspace"},
 		Short:   spaceDescription,
 		Long:    spaceDescription,
+		Args:    cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
-			return executeSpace(configPath, opts)
+			var filters []string
+			if cmd.Flags().Changed("filter") {
+				filters = strings.Split(opts.filter, ",")
+			}
+			filters = append(filters, args...)
+			if len(filters) == 0 {
+				filters = engine.DefaultFilters
+			}
+			return executeSpace(configPath, opts, filters)
 		},
 	}
 	cmd.Flags().StringVarP(&opts.mode, "mode", "m", engine.ModeAuto, "mode to operate in: local, remote, auto")
-	cmd.Flags().StringVarP(&opts.drives, "drives", "d", strings.Join(engine.DefaultDrives, ","), "mounts to include: comma separated list of mount globs")
+	cmd.Flags().StringVarP(&opts.filter, "filter", "f", strings.Join(engine.DefaultFilters, ","), "mounts to include: comma separated list of mount globs, also taken as arguments")
 	cmd.Flags().StringVarP(&opts.symbols, "symbols", "s", "auto", "define output character set: auto, ascii or unicode")
 	cmd.Flags().StringVarP(&opts.theme, "theme", "t", "auto", "colour theme: auto, colour or mono")
 	cmd.Flags().BoolVarP(&opts.json, "json", "j", false, "output json not tabular text")
@@ -39,7 +48,7 @@ func newSpaceCmd() *cobra.Command {
 	return cmd
 }
 
-func executeSpace(configPath string, opts *spaceOptions) error {
+func executeSpace(configPath string, opts *spaceOptions, filters []string) error {
 	started := time.Now()
 	cfg := config.Load(configPath)
 	useUnicode, err := resolveSymbols(opts.symbols)
@@ -50,7 +59,7 @@ func executeSpace(configPath string, opts *spaceOptions) error {
 	if err != nil {
 		return err
 	}
-	hosts, mode, err := engine.Collect(cfg, strings.Split(opts.drives, ","), opts.mode)
+	hosts, mode, err := engine.Collect(cfg, filters, opts.mode)
 	if err != nil {
 		return err
 	}
@@ -73,7 +82,7 @@ func executeSpace(configPath string, opts *spaceOptions) error {
 		fmt.Println(string(encoded))
 	} else {
 		rows := rowsFor(hosts)
-		if mode == engine.ModeRemote {
+		if mode == engine.ModeRemote && !engine.Filtered(filters) {
 			rows = append(rows, estateRows(hosts)...)
 		}
 		fmt.Print(display.Render(rows, useUnicode, useColour))
@@ -231,7 +240,7 @@ func resolveTheme(theme string) (bool, error) {
 
 type spaceOptions struct {
 	mode    string
-	drives  string
+	filter  string
 	symbols string
 	theme   string
 	json    bool

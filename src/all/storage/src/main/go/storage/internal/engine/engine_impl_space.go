@@ -13,7 +13,7 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
-func Collect(cfg *config.Config, drives []string, requested string) ([]HostDoc, string, error) {
+func Collect(cfg *config.Config, filters []string, requested string) ([]HostDoc, string, error) {
 	mode := requested
 	if mode == ModeAuto {
 		mode = ModeRemote
@@ -34,10 +34,10 @@ func Collect(cfg *config.Config, drives []string, requested string) ([]HostDoc, 
 			Name:    cfg.Name(),
 			Version: cfg.Version(),
 			State:   HostStateMeasured,
-			Mounts:  collectLocal(cfg, drives),
+			Mounts:  collectLocal(cfg, filters),
 		}}, mode, nil
 	case ModeRemote:
-		hosts := collectRemote(cfg, drives)
+		hosts := collectRemote(cfg, filters)
 		if len(hosts) == 0 {
 			return nil, mode, fmt.Errorf("no hosts declared [%s]", cfg.Name())
 		}
@@ -47,14 +47,14 @@ func Collect(cfg *config.Config, drives []string, requested string) ([]HostDoc, 
 	}
 }
 
-func collectLocal(cfg *config.Config, drives []string) []MountDoc {
+func collectLocal(cfg *config.Config, filters []string) []MountDoc {
 	partitions, err := disk.Partitions(false)
 	if err != nil {
 		return nil
 	}
 	var readings []reading
 	for _, partition := range partitions {
-		class, ok := selected(cfg, drives, partition.Mountpoint, partition.Fstype)
+		class, ok := selected(cfg, filters, partition.Mountpoint, partition.Fstype)
 		if !ok {
 			continue
 		}
@@ -71,14 +71,14 @@ func collectLocal(cfg *config.Config, drives []string) []MountDoc {
 			avail:    usage.Free,
 		})
 	}
-	return assemble(cfg, drives, readings, backupMounts(cfg, drives))
+	return assemble(cfg, filters, readings, backupMounts(cfg, filters))
 }
 
-func selected(cfg *config.Config, drives []string, mountpoint, fstype string) (class string, ok bool) {
+func selected(cfg *config.Config, filters []string, mountpoint, fstype string) (class string, ok bool) {
 	if pseudoFsTypes[fstype] {
 		return "", false
 	}
-	class, matched := ClassifyDrive(mountpoint, drives)
+	class, matched := ClassifyMount(mountpoint, filters)
 	if !matched || class == ClassBackup {
 		return "", false
 	}
@@ -88,7 +88,7 @@ func selected(cfg *config.Config, drives []string, mountpoint, fstype string) (c
 	return class, !cfg.ServedElsewhere(mountpoint)
 }
 
-func assemble(cfg *config.Config, drives []string, readings []reading, backup []MountDoc) []MountDoc {
+func assemble(cfg *config.Config, filters []string, readings []reading, backup []MountDoc) []MountDoc {
 	var roots []RootMember
 	var rootFaults, shares []MountDoc
 	for _, r := range readings {
@@ -128,7 +128,7 @@ func assemble(cfg *config.Config, drives []string, readings []reading, backup []
 		if mounted[share.Mount] || share.ServedBy != cfg.Name() {
 			continue
 		}
-		if class, matched := ClassifyDrive(share.Mount, drives); !matched || class != ClassShare {
+		if class, matched := ClassifyMount(share.Mount, filters); !matched || class != ClassShare {
 			continue
 		}
 		shares = append(shares, MountDoc{
@@ -157,7 +157,7 @@ func assemble(cfg *config.Config, drives []string, readings []reading, backup []
 			size += share.Space.SizeBytes
 			used += share.Space.UsedBytes
 		}
-		if classes < 2 || measured == 0 {
+		if Filtered(filters) || classes < 2 || measured == 0 {
 			return nil
 		}
 		return []MountDoc{{
@@ -178,8 +178,8 @@ func assemble(cfg *config.Config, drives []string, readings []reading, backup []
 	return append(docs, backup...)
 }
 
-func ClassifyDrive(mountpoint string, drives []string) (class string, matched bool) {
-	for _, pattern := range drives {
+func ClassifyMount(mountpoint string, filters []string) (class string, matched bool) {
+	for _, pattern := range filters {
 		if pattern == rootPattern || !matchGlob(pattern, mountpoint) {
 			continue
 		}
@@ -188,10 +188,14 @@ func ClassifyDrive(mountpoint string, drives []string) (class string, matched bo
 		}
 		return ClassShare, true
 	}
-	if slices.Contains(drives, rootPattern) {
+	if slices.Contains(filters, rootPattern) {
 		return ClassRoot, true
 	}
 	return "", false
+}
+
+func Filtered(filters []string) bool {
+	return !slices.Equal(filters, DefaultFilters)
 }
 
 func FoldRoot(members []RootMember) (SpaceFigures, *Folded) {
@@ -411,7 +415,7 @@ const (
 	statfsTimeout = 2 * time.Second
 )
 
-var DefaultDrives = []string{"/", "/share/*", "/backup"}
+var DefaultFilters = []string{"/", "/share/*", "/backup"}
 
 var excludedRootPrefixes = []string{"/boot", "/efi", "/System/Volumes", "/Volumes"}
 

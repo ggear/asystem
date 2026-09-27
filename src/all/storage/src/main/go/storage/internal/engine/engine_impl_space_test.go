@@ -97,30 +97,30 @@ func TestEngineImplSpace_FoldRoot(t *testing.T) {
 	}
 }
 
-func TestEngineImplSpace_ClassifyDrive(t *testing.T) {
+func TestEngineImplSpace_ClassifyMount(t *testing.T) {
 	cases := []struct {
 		name          string
 		mountpoint    string
-		drives        []string
+		filters       []string
 		wantClass     string
 		wantMatched   bool
 		expectedError bool
 	}{
-		{name: "default root", mountpoint: "/", drives: DefaultDrives, wantClass: ClassRoot, wantMatched: true},
-		{name: "default share", mountpoint: "/share/10", drives: DefaultDrives, wantClass: ClassShare, wantMatched: true},
-		{name: "default backup", mountpoint: "/backup", drives: DefaultDrives, wantClass: ClassBackup, wantMatched: true},
-		{name: "shares only set excludes root", mountpoint: "/", drives: []string{"/share/*"}, wantMatched: false},
-		{name: "shares only set matches a share", mountpoint: "/share/10", drives: []string{"/share/*"}, wantClass: ClassShare, wantMatched: true},
-		{name: "a home path glob", mountpoint: "/Users/rue/Desktop/share/10", drives: []string{"/Users/rue/Desktop/share/*"}, wantClass: ClassShare, wantMatched: true},
-		{name: "first match wins", mountpoint: "/share/10", drives: []string{"/share/10", "/share/*"}, wantClass: ClassShare, wantMatched: true},
-		{name: "an unclaimed mount joins the root amalgam", mountpoint: "/home", drives: DefaultDrives, wantClass: ClassRoot, wantMatched: true},
-		{name: "a drives set with no root pattern claims nothing else", mountpoint: "/home", drives: []string{"/share/*"}, wantMatched: false},
-		{name: "anchored pattern does not prefix match", mountpoint: "/share/10", drives: []string{"/share/1"}, wantMatched: false},
-		{name: "a share pattern still wins over the root amalgam", mountpoint: "/share/10", drives: DefaultDrives, wantClass: ClassShare, wantMatched: true},
+		{name: "default root", mountpoint: "/", filters: DefaultFilters, wantClass: ClassRoot, wantMatched: true},
+		{name: "default share", mountpoint: "/share/10", filters: DefaultFilters, wantClass: ClassShare, wantMatched: true},
+		{name: "default backup", mountpoint: "/backup", filters: DefaultFilters, wantClass: ClassBackup, wantMatched: true},
+		{name: "shares only set excludes root", mountpoint: "/", filters: []string{"/share/*"}, wantMatched: false},
+		{name: "shares only set matches a share", mountpoint: "/share/10", filters: []string{"/share/*"}, wantClass: ClassShare, wantMatched: true},
+		{name: "a home path glob", mountpoint: "/Users/rue/Desktop/share/10", filters: []string{"/Users/rue/Desktop/share/*"}, wantClass: ClassShare, wantMatched: true},
+		{name: "first match wins", mountpoint: "/share/10", filters: []string{"/share/10", "/share/*"}, wantClass: ClassShare, wantMatched: true},
+		{name: "an unclaimed mount joins the root amalgam", mountpoint: "/home", filters: DefaultFilters, wantClass: ClassRoot, wantMatched: true},
+		{name: "a filters set with no root pattern claims nothing else", mountpoint: "/home", filters: []string{"/share/*"}, wantMatched: false},
+		{name: "anchored pattern does not prefix match", mountpoint: "/share/10", filters: []string{"/share/1"}, wantMatched: false},
+		{name: "a share pattern still wins over the root amalgam", mountpoint: "/share/10", filters: DefaultFilters, wantClass: ClassShare, wantMatched: true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			class, matched := ClassifyDrive(c.mountpoint, c.drives)
+			class, matched := ClassifyMount(c.mountpoint, c.filters)
 			if matched != c.wantMatched {
 				t.Fatalf("matched: got %v want %v", matched, c.wantMatched)
 			}
@@ -136,29 +136,29 @@ func TestEngineImplSpace_Selected(t *testing.T) {
 		name          string
 		mountpoint    string
 		fstype        string
-		drives        []string
+		filters       []string
 		wantClass     string
 		wantSelected  bool
 		expectedError bool
 	}{
-		{name: "the root filesystem", mountpoint: "/", fstype: "btrfs", drives: DefaultDrives, wantClass: ClassRoot, wantSelected: true},
-		{name: "a subvolume of the root pool", mountpoint: "/home", fstype: "btrfs", drives: DefaultDrives, wantClass: ClassRoot, wantSelected: true},
-		{name: "a pseudo filesystem", mountpoint: "/proc", fstype: "proc", drives: DefaultDrives},
-		{name: "a boot partition", mountpoint: "/boot", fstype: "ext4", drives: DefaultDrives},
-		{name: "an efi partition below boot", mountpoint: "/boot/efi", fstype: "vfat", drives: DefaultDrives},
-		{name: "a share this host serves", mountpoint: "/share/10", fstype: "ext4", drives: DefaultDrives, wantClass: ClassShare, wantSelected: true},
-		{name: "a share another host serves", mountpoint: "/share/20", fstype: "cifs", drives: DefaultDrives},
-		{name: "the backup mount is never measured live", mountpoint: "/backup", fstype: "btrfs", drives: DefaultDrives},
-		{name: "an unclaimed local mount joins the root amalgam", mountpoint: "/mnt/spare", fstype: "ext4", drives: DefaultDrives, wantClass: ClassRoot, wantSelected: true},
-		{name: "an unclaimed network mount is not local storage", mountpoint: "/Users/rue/Desktop/share/20", fstype: "smbfs", drives: DefaultDrives},
-		{name: "a network mount a share pattern claims is still a share", mountpoint: "/share/10", fstype: "cifs", drives: DefaultDrives, wantClass: ClassShare, wantSelected: true},
-		{name: "an unclaimed mount with no root pattern in the set", mountpoint: "/mnt/spare", fstype: "ext4", drives: []string{"/share/*"}},
-		{name: "an undeclared mount outside the share namespace", mountpoint: "/Users/rue/Desktop/share/20", fstype: "smbfs", drives: []string{"/Users/rue/Desktop/share/*"}, wantClass: ClassShare, wantSelected: true},
+		{name: "the root filesystem", mountpoint: "/", fstype: "btrfs", filters: DefaultFilters, wantClass: ClassRoot, wantSelected: true},
+		{name: "a subvolume of the root pool", mountpoint: "/home", fstype: "btrfs", filters: DefaultFilters, wantClass: ClassRoot, wantSelected: true},
+		{name: "a pseudo filesystem", mountpoint: "/proc", fstype: "proc", filters: DefaultFilters},
+		{name: "a boot partition", mountpoint: "/boot", fstype: "ext4", filters: DefaultFilters},
+		{name: "an efi partition below boot", mountpoint: "/boot/efi", fstype: "vfat", filters: DefaultFilters},
+		{name: "a share this host serves", mountpoint: "/share/10", fstype: "ext4", filters: DefaultFilters, wantClass: ClassShare, wantSelected: true},
+		{name: "a share another host serves", mountpoint: "/share/20", fstype: "cifs", filters: DefaultFilters},
+		{name: "the backup mount is never measured live", mountpoint: "/backup", fstype: "btrfs", filters: DefaultFilters},
+		{name: "an unclaimed local mount joins the root amalgam", mountpoint: "/mnt/spare", fstype: "ext4", filters: DefaultFilters, wantClass: ClassRoot, wantSelected: true},
+		{name: "an unclaimed network mount is not local storage", mountpoint: "/Users/rue/Desktop/share/20", fstype: "smbfs", filters: DefaultFilters},
+		{name: "a network mount a share pattern claims is still a share", mountpoint: "/share/10", fstype: "cifs", filters: DefaultFilters, wantClass: ClassShare, wantSelected: true},
+		{name: "an unclaimed mount with no root pattern in the set", mountpoint: "/mnt/spare", fstype: "ext4", filters: []string{"/share/*"}},
+		{name: "an undeclared mount outside the share namespace", mountpoint: "/Users/rue/Desktop/share/20", fstype: "smbfs", filters: []string{"/Users/rue/Desktop/share/*"}, wantClass: ClassShare, wantSelected: true},
 	}
 	cfg := fixtureConfig(t)
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			class, ok := selected(cfg, c.drives, c.mountpoint, c.fstype)
+			class, ok := selected(cfg, c.filters, c.mountpoint, c.fstype)
 			if ok != c.wantSelected {
 				t.Fatalf("selected: got %v want %v", ok, c.wantSelected)
 			}
@@ -186,7 +186,7 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 		Error: "declared and not mounted [/share/11]"}
 	cases := []struct {
 		name          string
-		drives        []string
+		filters       []string
 		readings      []reading
 		backup        []MountDoc
 		want          []MountDoc
@@ -194,7 +194,7 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 	}{
 		{
 			name:     "a server host, its own shares only, subtotal between the shares and backup",
-			drives:   DefaultDrives,
+			filters:  DefaultFilters,
 			readings: []reading{pool("/"), pool("/home"), pool("/var"), share("/share/12", 400, 100), share("/share/10", 400, 300)},
 			backup:   []MountDoc{backupDoc},
 			want: []MountDoc{
@@ -208,7 +208,7 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 		},
 		{
 			name:     "a single class carries no subtotal",
-			drives:   []string{"/share/*"},
+			filters:  []string{"/share/*"},
 			readings: []reading{share("/share/10", 400, 300), share("/share/11", 400, 100), share("/share/12", 400, 100)},
 			want: []MountDoc{
 				{Mount: "/share/10", Label: "share_08", Class: ClassShare, State: MountStateMeasured, Space: space(400, 100)},
@@ -217,8 +217,17 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 			},
 		},
 		{
+			name:     "a filtered set carries no subtotal",
+			filters:  []string{"/", "/share/10"},
+			readings: []reading{pool("/"), share("/share/10", 400, 300)},
+			want: []MountDoc{
+				{Mount: "/", Class: ClassRoot, State: MountStateMeasured, Space: space(1000, 400)},
+				{Mount: "/share/10", Label: "share_08", Class: ClassShare, State: MountStateMeasured, Space: space(400, 100)},
+			},
+		},
+		{
 			name:     "a faulted share keeps its place in the order and leaves the subtotal",
-			drives:   DefaultDrives,
+			filters:  DefaultFilters,
 			readings: []reading{pool("/"), {mount: "/share/10", class: ClassShare, err: context.DeadlineExceeded}, share("/share/12", 400, 100)},
 			backup:   []MountDoc{backupDoc},
 			want: []MountDoc{
@@ -233,7 +242,7 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 		},
 		{
 			name:     "a faulted root member sits directly below the root row",
-			drives:   []string{"/"},
+			filters:  []string{"/"},
 			readings: []reading{pool("/"), {mount: "/var", class: ClassRoot, err: context.DeadlineExceeded}},
 			want: []MountDoc{
 				{Mount: "/", Class: ClassRoot, State: MountStateMeasured, Space: space(1000, 400)},
@@ -245,7 +254,7 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 	cfg := fixtureConfig(t)
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := assemble(cfg, c.drives, c.readings, c.backup)
+			got := assemble(cfg, c.filters, c.readings, c.backup)
 			if len(got) != len(c.want) {
 				t.Fatalf("rows: got %d want %d, got %+v", len(got), len(c.want), got)
 			}
@@ -345,7 +354,7 @@ func TestEngineImplSpace_Amalgam(t *testing.T) {
 				if len(fields) != 5 {
 					t.Fatalf("malformed fixture line [%s]", line)
 				}
-				class, ok := selected(cfg, DefaultDrives, fields[0], fields[1])
+				class, ok := selected(cfg, DefaultFilters, fields[0], fields[1])
 				if !ok {
 					continue
 				}
@@ -359,7 +368,7 @@ func TestEngineImplSpace_Amalgam(t *testing.T) {
 				}
 				readings = append(readings, reading{mount: fields[0], class: class, identity: fields[2], total: size, avail: avail})
 			}
-			docs := assemble(cfg, DefaultDrives, readings, nil)
+			docs := assemble(cfg, DefaultFilters, readings, nil)
 			var mounts []string
 			var share *SpaceFigures
 			for _, doc := range docs {

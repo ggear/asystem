@@ -48,12 +48,12 @@ func backupRunRoot() string {
 	return filepath.Join(backupServiceHome, backupTreeModule, backupTreeDirectory)
 }
 
-func backupMounts(cfg *config.Config, drives []string) []MountDoc {
+func backupMounts(cfg *config.Config, filters []string) []MountDoc {
 	backup := cfg.Backup()
 	if backup == nil {
 		return nil
 	}
-	if class, matched := ClassifyDrive(backup.Mount, drives); !matched || class != ClassBackup {
+	if class, matched := ClassifyMount(backup.Mount, filters); !matched || class != ClassBackup {
 		return nil
 	}
 	reading := newestBackupReading(backupRunRoot())

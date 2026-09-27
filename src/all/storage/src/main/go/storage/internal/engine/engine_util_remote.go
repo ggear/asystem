@@ -16,7 +16,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func collectRemote(cfg *config.Config, drives []string) []HostDoc {
+func collectRemote(cfg *config.Config, filters []string) []HostDoc {
 	hosts := cfg.Hosts()
 	docs := make([]HostDoc, len(hosts))
 	var wg sync.WaitGroup
@@ -24,7 +24,7 @@ func collectRemote(cfg *config.Config, drives []string) []HostDoc {
 		wg.Add(1)
 		go func(i int, host config.HostEntry) {
 			defer wg.Done()
-			docs[i] = collectOneHost(host, drives)
+			docs[i] = collectOneHost(host, filters)
 		}(i, host)
 	}
 	wg.Wait()
@@ -32,9 +32,9 @@ func collectRemote(cfg *config.Config, drives []string) []HostDoc {
 	return docs
 }
 
-func collectOneHost(host config.HostEntry, drives []string) HostDoc {
+func collectOneHost(host config.HostEntry, filters []string) HostDoc {
 	base := HostDoc{Index: host.Index, Label: host.Label, Name: host.Host}
-	output, err := runRemote(host.Host, remoteRunBudget(host), drives)
+	output, err := runRemote(host.Host, remoteRunBudget(host), filters)
 	if err != nil {
 		base.State = HostStateUnreachable
 		base.Error = err.Error()
@@ -61,7 +61,7 @@ func remoteRunBudget(host config.HostEntry) time.Duration {
 	return remoteRunMargin + time.Duration(mounts)*statfsTimeout
 }
 
-func runRemote(host string, budget time.Duration, drives []string) ([]byte, error) {
+func runRemote(host string, budget time.Duration, filters []string) ([]byte, error) {
 	client, err := dialHost(host)
 	if err != nil {
 		return nil, fmt.Errorf("ssh dial failed [%s] [%w]", host, err)
@@ -75,7 +75,7 @@ func runRemote(host string, budget time.Duration, drives []string) ([]byte, erro
 	var stdout, stderr bytes.Buffer
 	session.Stdout = &stdout
 	session.Stderr = &stderr
-	command := fmt.Sprintf("%s space -m %s -d %s --json", remoteInstallPath, ModeLocal, shellQuote(strings.Join(drives, ",")))
+	command := fmt.Sprintf("%s space -m %s -f %s --json", remoteInstallPath, ModeLocal, shellQuote(strings.Join(filters, ",")))
 	done := make(chan error, 1)
 	go func() { done <- session.Run(command) }()
 	select {
