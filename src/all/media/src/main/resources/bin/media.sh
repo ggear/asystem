@@ -694,72 +694,12 @@ command_space() {
   local) dirs="${SHARE_DIRS_LOCAL}" ;;
   esac
   echo "Space summary ... "
-  # shellcheck disable=SC2086
-  duf -width 250 -style ascii -output mountpoint,size,used,avail,usage ${dirs} || result=1
-  return ${result}
-}
-
-mount_darwin() {
-  local result=0
-  if [[ -f "${MEDIA_SHARES_FILE}" ]] && ! grep -q "^${HOSTNAME}," "${MEDIA_SHARES_FILE}"; then
-    while IFS=',' read -r share_host share_index; do
-      [[ -z "${share_host}" || -z "${share_index}" ]] && continue
-      local share_dir="${HOME}/Desktop/share/${share_index}"
-      local share_samba="//GUEST:@${share_host}/share-${share_index}"
-      mkdir -p "${share_dir}"
-      if [[ ! -d "${share_dir}/tmp" ]]; then
-        echo -n "Mounting [${share_samba}] ... "
-        diskutil unmount force "${share_dir}" &>/dev/null
-        if mount_smbfs -o soft,nodatacache "${share_samba}" "${share_dir}" </dev/null; then
-          echo "done"
-        else
-          echo "failed"
-          result=1
-        fi
-      else
-        echo "Mount [${share_dir}] already"
-      fi
-    done <"${MEDIA_SHARES_FILE}"
-  fi
-  return ${result}
-}
-
-mount_active() {
-  local mountpoint="${1}"
-  mount | grep -qE " on ${mountpoint} " && ls "${mountpoint}" >/dev/null 2>&1
-}
-
-mount_linux() {
-  local result=0
-  local mountpoint fstype
-  while read -r _dev mountpoint fstype _opts _dump _pass; do
-    [[ "${mountpoint}" == /share/* ]] || continue
-    if mount_active "${mountpoint}"; then
-      echo "Mount [${mountpoint}] already"
-      continue
-    fi
-    echo -n "Mounting [${mountpoint}] ... "
-    if [ "${fstype}" == "cifs" ]; then
-      ls "${mountpoint}" >/dev/null 2>&1
-    else
-      mount "${mountpoint}" >/dev/null 2>&1
-    fi
-    if mount_active "${mountpoint}"; then
-      echo "done"
-    else
-      echo "failed"
-      result=1
-    fi
-  done < <(grep -v '^#' /etc/fstab)
+  astorage space --mode local --drives "${dirs// /,}" --symbols ascii --theme mono || result=1
   return ${result}
 }
 
 command_mount() {
-  if [ "$(uname)" = "Darwin" ]; then
-    mount_darwin
-  else
-    mount_linux
-  fi
+  amount
 }
 
 command_home() {

@@ -6,7 +6,7 @@ from os.path import abspath, basename, dirname, isdir, isfile, join, realpath
 
 from pathlib2 import Path
 
-BACKUP_TIMEOUT_HOURS_DEFAULT = "3"
+BACKUP_TIMEOUT_HOURS_DEFAULT = "5"
 BACKUP_KEEP_DAILY_DEFAULT = "7"
 BACKUP_KEEP_WEEKLY_DEFAULT = "4"
 BACKUP_KEEP_MONTHLY_DEFAULT = "12"
