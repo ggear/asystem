@@ -10,6 +10,13 @@ The verdict: replacing `SerialUart` with a userspace PL2303 implementation over 
 **preferred** answer and the only software one that works. Everything else either reduces the rate
 or needs different hardware.
 
+**Phase 0 is built and Phase 1 passed on `may` on 2026-09-27**, finally from a physically cold
+plug — 600 scratchpad transactions, zero failures, zero CRC retries, temperatures matching the tty
+path, and **not one new `pl2303_get_line_request` line**. It took four bugs to get there, all in
+`UsbUart`: two found by the soak and two more by review afterwards, of which one would have failed
+Phase 2 outright. Nothing is deployed, the host is back as it was, and production still runs
+`SerialUart` through the kernel driver. **Phase 2 is the next step.**
+
 ---
 
 ## Root cause, measured
@@ -99,10 +106,12 @@ retries at a rock-steady 2473 ms**. This is not writing a driver for an unknown 
 reimplementing a request sequence demonstrably working on this exact device, and omitting the one
 request that is not.
 
-Two further de-risking facts, both measured: 9600 and 115200 are in `pl2303_standard_rates`, so
-the direct 4-byte encoding applies and the divisor-encoding path is never reached; and
-`vendor_write(8,0)` / `vendor_write(9,0)` reset the upstream and downstream data pipes, which is a
-real hardware equivalent of the `tcflush` behind `Uart::clear()` rather than a best-effort drain.
+One further de-risking fact, measured: 9600 and 115200 are in `pl2303_standard_rates`, so the
+direct 4-byte encoding applies and the divisor-encoding path is never reached.
+
+It was also assumed that `vendor_write(8,0)` / `vendor_write(9,0)` — the upstream and downstream
+pipe reset `pl2303_open` issues — would serve as the hardware equivalent of the `tcflush` behind
+`Uart::clear()`. **Phase 1 disproved that on the real device; see the gate result below.**
 
 ### The seam already exists
 
@@ -270,16 +279,33 @@ fails cheap *and* proves nothing. The real stack brings its own correctness orac
 scratchpad reads are CRC-8 checked in `read_scratchpad`, so a CRC-valid scratchpad is strong
 evidence the byte framing is right, and `read_temperature` already counts retries.
 
-**Phase 0 — `UsbUart`, plus a cheap pre-gate.** `driver/usb.rs` implementing `Uart` against
-`nusb`, `usb:VVVV:PPPP` parsing in `lib.rs` selecting `UsbUart` or `SerialUart`. Unit tests via the
-existing `MockUart` — the trait is the seam, so coverage above it is unchanged.
-`cargo clippy --workspace --all-targets` clean, files comment-free per the module convention.
+**Phase 0 — `UsbUart`, plus a cheap pre-gate. Built.** `driver/usb.rs` implements `Uart` against
+`nusb` 0.2.7 — the eleven-step `pl2303_startup` table, `SET_LINE_REQUEST` line coding, bulk
+`0x02`/`0x83` transfers via `transfer_blocking`, `clear()` as the `vendor_write(8,0)`/`(9,0)` pipe
+reset, and break as the class request. `lib.rs` parses `usb:VVVV:PPPP` and selects `UsbUart` or
+`SerialUart`; `open_device` hands back a `Ds2480b<Box<dyn Uart>>`, which is what a new
+`impl Uart for Box<dyn Uart>` passthrough in `uart.rs` buys, so `select_adapter` and everything
+above the trait is untouched.
 
-Before anything else runs, a `--probe` mode does the 20-minute kill check: claim the interface,
-run the full `pl2303_startup` sequence, set the line coding to 9600 then 115200. If the clone
-stalls a vendor request the project is dead there and the cost was an afternoon. This is the part
-the previous version of this plan omitted from its spike, and without it a failure reads as "chip
+`nusb` needed no blocking bridge in the end — `MaybeFuture::wait()` and
+`Endpoint::transfer_blocking` are native, so neither `tokio` nor `blocking` is enabled. On Linux it
+pulls only `futures-core`, `linux-raw-sys`, `log`, `once_cell`, `rustix` and `slab` (verified with
+`cargo tree --target x86_64-unknown-linux-gnu`); the `tokio` in the lock file is rumqttc's and
+predates this. Nothing entered `docker_deps_*`.
+
+`--probe` is the 20-minute kill check: claim the interface, run the full startup sequence, set the
+line coding to 9600 then 115200, touch the bus not at all. It reuses `ds9097::BAUD_RESET` and
+`BAUD_SLOTS`, now `pub(crate)`, so the probe cannot drift from the driver. If the clone stalls a
+vendor request the project is dead there and the cost was an afternoon. This is the part the
+previous version of this plan omitted from its spike, and without it a failure reads as "chip
 quirks defeat it" when it was a missing setup step.
+
+Four tests cover what can be covered without hardware — `usb_target` accepting a path, parsing
+upper and lower case ids, and rejecting five malformed forms, plus a `Box<dyn Uart>` driving the
+real `Ds9097`/`Ds18b20` stack against `MockDs9097` end to end. 125 tests pass, `cargo clippy
+--workspace --all-targets -- -D warnings` is clean and `fab build` is green. The three CLI error
+paths were exercised by hand on the dev machine: a serial path is refused, `usb:zzz` reports
+`invalid device [usb:zzz]`, and absent hardware reports `no usb device [067B:2303]`.
 
 **Phase 1 — the gate, on `may`.** Build `linux/amd64`, stop the tempstat container (it holds the
 tty, and unbinding under it gives it I/O errors it would take three failed polls to recover from),
@@ -307,6 +333,162 @@ one byte occasionally", which the plan costs at weeks to notice and days to find
 its zero-retry threshold are the point of the phase.
 
 Rebind `pl2303` afterwards, restart tempstat and confirm it recovers.
+
+**Phase 1 result, measured on `may` 2026-09-27. Passed, on the third run.**
+
+*The kill check passed outright, first time.* All eleven `pl2303_startup` transfers completed
+`status=0` — the vendor reads returning `actual_length=1` on ep 80, the vendor writes
+`actual_length=0` on ep 0 — and both line codings applied with `actual_length=7`. **Not one
+control request stalled.** The counterfeit accepts every request the kernel makes except the GET,
+exactly as argued.
+
+*Two bugs, both caught by the soak and neither reachable any other way.*
+
+The first was `clear()`. Reset echo reads came back desynchronised: a 1-byte echo read submitted
+as a 64-byte bulk IN returned `actual_length=6` on one reset and `actual_length=62` on the next,
+with a stale first byte, so `reset()` classified the bus `Shorted` then `Absent`. Both vendor
+writes had completed `status=0` immediately before, so **`vendor_write(8,0)` /
+`vendor_write(9,0)` do not purge the PL2303 receive FIFO** — the assumption this plan carried as a
+de-risking fact was simply wrong. `clear()` now issues the two vendor writes and then drains the
+IN endpoint until a short-timeout read returns nothing, which is what `tcflush(TCIOFLUSH)` does
+for the tty path.
+
+The instrumented run names the culprit precisely: across the whole soak **2465 clears discarded 0
+bytes and exactly two discarded anything — one 72 bytes and one 12 bytes.** Those 84 bytes are
+unconsumed echo left by the `Ds2480b` detect probe, which writes command bytes a passive adapter
+echoes and never reads them all back. One un-flushed byte shifts every subsequent transaction by
+one for the life of the process, which is why the symptom looked like random bus faults rather
+than a startup bug.
+
+The second was transfer sizing. **`nusb` rejects a bulk IN whose length is not a multiple of
+`wMaxPacketSize`** — a 72-byte scratchpad read failed with `invalid or unsupported argument` under
+a `Submitting transfer with length 72 which is not a multiple of max packet size 64` warning. The
+original `.max(PACKET_SIZE)` hid this for short reads and exposed it for long ones; `read_exact`
+now rounds the request up with `div_ceil(PACKET_SIZE) * PACKET_SIZE` and buffers the surplus.
+
+*The passing run.* The adapter resolved to `DS9097`, the same path production takes — but see the
+caveat below: that was a forced fallback, not a detection. Opening
+reads 16.75 / 22.875 / 16.75 °C and closing reads 16.75 / 23 / 16.8125 °C, against a tty baseline
+of 16.6875 / 22.9375 / 16.875 °C taken minutes earlier — every sensor inside 0.125 °C, well within
+the ±0.5 °C criterion, and the drift is the real room. **300 soak iterations, 0 failures, and not
+one `scratchpad crc failed` warning.** Each iteration is *two* CRC-checked scratchpad
+transactions, not one — `Ds18b20::attach` reads the scratchpad itself to learn the resolution
+before the explicit read — so the soak was **600 transactions at ~80 ms each**, not the 300 at
+~160 ms the counter reports. The counter undercounts by half; the coverage is twice what was
+claimed and the per-transaction cost is half. `dmesg` gained no `pl2303_get_line_request` line: the last
+one on the host predates the run, and the only new kernel lines are the unbind and rebind notices.
+Nothing drained interrupt endpoint `0x81` for 48 s of continuous traffic and the chip did not care.
+
+*The cost, measured.* A full sensor read took ~970 ms against the tty path's ~825 ms, and the soak
+ran 48 147 ms for 300 scratchpad reads, ~160 ms each. The overhead is the drain: nearly every
+`clear()` finds nothing and pays the full `DRAIN_TIMEOUT` (10 ms), and a poll makes roughly thirty
+of them. A poll would therefore land near 2.9 s against today's 2473 ms. The lever is obvious if
+that matters — shorten the timeout, or skip the drain when the preceding transaction consumed
+every byte it wrote — but neither is needed to pass.
+
+*Two findings that simplify the plan.* `nusb`'s `detach_and_claim_interface` detaches the kernel
+driver itself and **re-attaches it when the process exits** (observed: `Reattached kernel drivers
+for interface 0`, with `ttyUSB0` and the udev symlink back immediately). So the manual unbind is
+unnecessary, and **`blacklist pl2303` is optional** rather than required — a bound-but-unopened
+`pl2303` logs nothing, since the message only comes from `set_termios`. That removes the manual
+host edit this plan flagged as having no home in `fab`, and means a crashing container hands the
+tty back rather than orphaning the device.
+
+*Recovery was clean, twice.* Rebind, `chmod 666`, `docker start tempstat` — the service came back
+on the serial path first try both times, at 2474 ms against 2473 ms, reading values matching the
+baseline. Roughly fifteen minutes of downtime across the whole exercise.
+
+*Two defects the first gate could not catch, found by review afterwards and since fixed and
+re-gated from a cold plug.*
+
+**`UsbUart::open` set no initial line coding, so DS2480B auto-detection could not work.**
+`SerialUart::open` opens at 9600 and `Ds2480b` never calls `set_baud` — the detect sequence
+depends on the UART already sitting there. `UsbUart::open` ran the startup table and returned,
+leaving whatever coding the chip last held, so in the first gate the DS2480B probe ran at 115200,
+could not succeed, and fell through to `Ds9097` — the right answer on `may`, reached for the wrong
+reason. `UsbUart::open` now issues `set_baud`, and the value is a `pub(crate) const BAUD_OPEN` in
+`uart.rs` read by both implementations so they cannot drift.
+
+**DTR and RTS were never asserted.** `SerialUart::open` raises both; `UsbUart` issued only the
+vendor request, `SET_LINE` and `BREAK`, never `SET_CONTROL` (`0x22`, class/interface,
+`CONTROL_DTR|CONTROL_RTS`). The first gate passed only because the kernel driver had asserted the
+lines at its last tty open and the chip retained them — a passive DS9097 adapter commonly draws
+bus power from those lines, so a cold plug under a blacklisted `pl2303` would have found an
+unpowered adapter with no diagnostic.
+
+**Re-gated cold, 2026-09-27 20:40, and this is the run that matters.** The probe was physically
+unplugged and replugged with tempstat stopped, so nothing opened the tty and the kernel never
+asserted the control lines — verified before the run with `fuser -v /dev/ttyUSB0` returning no
+holder. The adapter came back as **device 038 on hub port `1-2.2`, a different physical port from
+the `1-2.1` it had occupied**. Result: **600 scratchpad transactions, 0 failures, no CRC-retry
+warning, exit 0**, temperatures 16.75 / 22.5625 / 16.8125 °C opening and 16.75 / 22.5 / 16.8125 °C
+closing against a tty baseline of 16.6875 / 23 / 16.8125 °C taken 25 minutes earlier. `dmesg` held
+at 1457 pl2303 lines across the whole run, the last `get_line_request` timestamped before the
+replug. So the USB path works from cold, which is the state Phase 2 creates.
+
+The new diagnostics confirm the rest: `PL2303 packet size [64] flow control [0x0044]` — the packet
+size now read from the endpoint rather than assumed, and the flow-control byte chosen at runtime
+from `bMaxPacketSize0` rather than hardcoded to HX — followed by `PL2303 asserted DTR and RTS`.
+**Across 2467 clears, every one discarded 0 bytes**, against the two poisoned clears (72 and 12
+bytes) of the first gate: with the detect probe now running at its intended 9600 it no longer
+leaves unconsumed echo, so the drain has become a backstop rather than the thing holding the
+stream together. No drain hit the packet cap.
+
+**The port change was an accident and a useful one.** It is the case a path-based identity would
+have failed: `1-2.1` is now wrong, and anything keyed on the usbfs node or the bus path would have
+needed re-provisioning. Selection by `067B:2303` survived untouched, and so did the udev symlink,
+which matches on vendor, product and product string rather than on path. It also means the plan's
+recorded binding of `1-2.1:1.0` is now `1-2.2:1.0` — the address is not stable and nothing should
+be keyed to it.
+
+*Also fixed from the same review, not individually re-gated beyond the passing run above.*
+Enumeration now errors with `found [n] usb devices [...], expected one` instead of silently taking
+an arbitrary match; the drain distinguishes `TransferError::Cancelled` from real errors, which now
+propagate rather than being swallowed into an `Ok`, and warns when it hits `DRAIN_PACKETS` instead
+of returning success over a still-desynchronised stream; a malformed `usb:` device string is
+validated once at the top of `run()` so a config typo fails immediately rather than being retried
+forever as a transient hardware fault; and the soak counter now reports both transactions per
+iteration, since `Ds18b20::attach` reads the scratchpad itself — the first gate's "300 reads at
+~160 ms" was really 600 at ~80 ms.
+
+*Still untested, and this is the gap that stands between here and a release.* **No run has ever
+exercised `UsbUart` together with the poll loop and the MQTT publish.** Every hardware run used
+`--probe`, which reads sensors but never publishes; every publish test (`fab st`, `fab exe`) used
+the mock serial path. The deployed shape of Phase 2 — the compose mount, the cgroup rule, the
+`--device` flag and `TEMPSTAT_DEVICE=usb:067B:2303` — has likewise never been executed, only
+written. Hotplug recovery under `UsbUart` is also untested, and the 16M memory cap is unmeasured
+with nusb in the process. Close those before releasing, not after.
+
+**The transport seam, built.** Three of the first four bugs lived in protocol logic that only real
+hardware could reach, so `driver/transport.rs` now sits under `UsbUart`: a `UsbTransport` trait of
+six methods (`control_in`, `control_out`, `bulk_out`, `bulk_in`, `packet_size`,
+`max_packet_size_0`) over a `UsbSetup` that mirrors the USB setup packet, with `NusbTransport`
+for production and `mock::MockTransport` for tests. It is the same shape the crate already uses
+twice — `Uart`/`MockUart` and `Publisher`/`MockPublisher` — so `usb.rs` became pure PL2303
+protocol and `transport.rs` owns every nusb call. `UsbUart` is generic over the trait;
+`UsbUart::open` builds the nusb transport and `UsbUart::new` takes any transport, which is the
+entry point tests drive.
+
+One simplification fell out: `bulk_in` maps `TransferError::Cancelled` to `Ok(vec![])`, so a
+timeout and an empty read are the same thing to the caller and real errors propagate. `clear()`
+lost its error-swallowing match arm as a result and simply checks `is_empty()`.
+
+**Thirteen tests, and each historical bug was replanted to prove they bite.** Every one fails
+exactly one named test and the suite restores to 138 passing:
+
+| Replanted bug | Test that caught it |
+|---|---|
+| no initial line coding | `open_sets_the_line_coding_then_asserts_dtr_and_rts` |
+| DTR/RTS never asserted | `open_sets_the_line_coding_then_asserts_dtr_and_rts` |
+| bulk IN not a packet multiple | `read_exact_rounds_the_request_up_to_a_packet_multiple` |
+| `clear()` swallows transport errors | `clear_propagates_a_transport_error_rather_than_reporting_success` |
+| hardcoded HX flow byte | `startup_picks_the_flow_control_byte_from_the_control_endpoint_size` |
+
+So the three bugs that previously needed a production outage and a physical replug to find are now
+caught in 1.5 s on the dev machine. The rest of the suite covers the startup table's order and
+request types, little-endian baud encoding, surplus buffering across reads, the read timeout, the
+pipe-reset pair, the drain's packet cap, and the break toggle. **Re-gated on `may` after the
+refactor: 600 transactions, 0 failures, `dmesg` unchanged.**
 
 **Phase 2 — host plumbing.** `blacklist pl2303`; `install_prep.sh` loses the `chmod`;
 `docker-compose.yml` gains the mount and the cgroup rule; `.env_prod` keeps a placeholder

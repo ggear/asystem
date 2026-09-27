@@ -37,6 +37,7 @@ COPY --from=image_base /asystem/bin/tempstat/target/release/tempstat /asystem/bi
 COPY --from=image_base /asystem/bin/tempstat/target/release/mockdev /asystem/bin/mockdev
 COPY src/main/resources/image /asystem/etc
 WORKDIR /asystem/etc
+ENV TEMPSTAT_DEVICE=/dev/ttyUSB0
 ENV TEMPSTAT_POLL_PERIOD=15m
 ENV TEMPSTAT_LOG_LEVEL=info
 ENTRYPOINT ["/asystem/etc/entrypoint.sh"]

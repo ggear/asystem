@@ -11,6 +11,8 @@ use serialport::{ClearBuffer, DataBits, FlowControl, Parity, SerialPort, StopBit
 
 use super::Result;
 
+pub(crate) const BAUD_OPEN: u32 = 9_600;
+
 pub trait Uart {
     fn write_all(&mut self, data: &[u8]) -> Result<()>;
     fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()>;
@@ -19,13 +21,35 @@ pub trait Uart {
     fn set_baud(&mut self, baud: u32) -> Result<()>;
 }
 
+impl Uart for Box<dyn Uart> {
+    fn write_all(&mut self, data: &[u8]) -> Result<()> {
+        (**self).write_all(data)
+    }
+
+    fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+        (**self).read_exact(buffer)
+    }
+
+    fn send_break(&mut self) -> Result<()> {
+        (**self).send_break()
+    }
+
+    fn clear(&mut self) -> Result<()> {
+        (**self).clear()
+    }
+
+    fn set_baud(&mut self, baud: u32) -> Result<()> {
+        (**self).set_baud(baud)
+    }
+}
+
 pub struct SerialUart {
     port: Box<dyn SerialPort>,
 }
 
 impl SerialUart {
     pub fn open(path: &str, timeout: Duration) -> Result<Self> {
-        let mut port = serialport::new(path, 9600)
+        let mut port = serialport::new(path, BAUD_OPEN)
             .data_bits(DataBits::Eight)
             .parity(Parity::None)
             .stop_bits(StopBits::One)

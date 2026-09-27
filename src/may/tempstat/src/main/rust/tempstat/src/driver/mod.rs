@@ -9,7 +9,9 @@ pub mod mock;
 pub mod onewire;
 pub mod rom;
 pub mod sensor;
+pub mod transport;
 pub mod uart;
+pub mod usb;
 
 pub use crc::crc8;
 pub use onewire::{OneWire, Presence};
@@ -22,6 +24,11 @@ use std::io;
 pub enum Error {
     Io(io::Error),
     Serial(serialport::Error),
+    Usb(nusb::Error),
+    UsbTransfer(nusb::transfer::TransferError),
+    UsbNotFound { vendor: u16, product: u16 },
+    UsbAmbiguous { vendor: u16, product: u16, count: usize },
+    InvalidDevice(String),
     NotDetected([u8; 5]),
     InvalidResponse { operation: &'static str, response: u8 },
     EchoMismatch,
@@ -38,6 +45,16 @@ impl fmt::Display for Error {
         match self {
             Error::Io(err) => write!(f, "io error [{err}]"),
             Error::Serial(err) => write!(f, "serial error [{err}]"),
+            Error::Usb(err) => write!(f, "usb error [{err}]"),
+            Error::UsbTransfer(err) => write!(f, "usb transfer error [{err}]"),
+            Error::UsbNotFound { vendor, product } => write!(f, "no usb device [{vendor:04X}:{product:04X}]"),
+            Error::UsbAmbiguous { vendor, product, count } => {
+                write!(
+                    f,
+                    "found [{count}] usb devices [{vendor:04X}:{product:04X}], expected one"
+                )
+            }
+            Error::InvalidDevice(value) => write!(f, "invalid device [{value}]"),
             Error::NotDetected(response) => write!(f, "DS2480B not detected, response [{response:02X?}]"),
             Error::InvalidResponse { operation, response } => {
                 write!(f, "invalid response [{operation}] [{response:#04X}]")
@@ -58,6 +75,8 @@ impl std::error::Error for Error {
         match self {
             Error::Io(err) => Some(err),
             Error::Serial(err) => Some(err),
+            Error::Usb(err) => Some(err),
+            Error::UsbTransfer(err) => Some(err),
             _ => None,
         }
     }
@@ -72,6 +91,18 @@ impl From<io::Error> for Error {
 impl From<serialport::Error> for Error {
     fn from(err: serialport::Error) -> Self {
         Error::Serial(err)
+    }
+}
+
+impl From<nusb::Error> for Error {
+    fn from(err: nusb::Error) -> Self {
+        Error::Usb(err)
+    }
+}
+
+impl From<nusb::transfer::TransferError> for Error {
+    fn from(err: nusb::transfer::TransferError) -> Self {
+        Error::UsbTransfer(err)
     }
 }
 

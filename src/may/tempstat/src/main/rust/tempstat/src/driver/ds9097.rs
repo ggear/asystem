@@ -10,8 +10,8 @@ use super::onewire::{OneWire, Presence};
 use super::uart::{SerialUart, Uart};
 use super::{Error, Result};
 
-const BAUD_RESET: u32 = 9_600;
-const BAUD_SLOTS: u32 = 115_200;
+pub(crate) const BAUD_RESET: u32 = 9_600;
+pub(crate) const BAUD_SLOTS: u32 = 115_200;
 const RESET_PULSE: u8 = 0xF0;
 const RESET_SHORTED: u8 = 0x00;
 const SLOT_ONE: u8 = 0xFF;

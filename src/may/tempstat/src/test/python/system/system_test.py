@@ -40,7 +40,11 @@ def test_publishes_readings():
                 body = message.payload.decode(errors="replace")
             print("Message [{}]\n{}".format(message.topic, body))
 
-        client = mqtt.Client("".join(random.choice(string.ascii_lowercase) for _ in range(10)), True)
+        client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION1,
+            "".join(random.choice(string.ascii_lowercase) for _ in range(10)),
+            True,
+        )
         client.on_connect = on_connect
         client.on_message = on_message
         client.connect(HOST, PORT)

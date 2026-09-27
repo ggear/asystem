@@ -4,6 +4,7 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - TEMPSTAT_MOCK
+    - TEMPSTAT_DEVICE
     - TEMPSTAT_MOCK_ADAPTER
     - TEMPSTAT_POLL_PERIOD
     - TEMPSTAT_LOG_LEVEL
@@ -13,8 +14,11 @@ x-common: &common
     - BROKER_TOKEN
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
+    - /dev/bus/usb:/dev/bus/usb
   devices:
     - ${TEMPSTAT_DEVICE_MAP}
+  device_cgroup_rules:
+    - 'c 189:* rmw'
   logging:
     driver: "json-file"
     options:
@@ -35,4 +39,4 @@ services:
     deploy:
       resources:
         limits:
-          memory: 16M
+          memory: 128M

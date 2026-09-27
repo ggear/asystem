@@ -21,10 +21,11 @@ use serde_json::{json, Map, Value};
 use crate::broker::{MqttPublisher, Publisher};
 use crate::config::{load_sensors, SensorConfig};
 use crate::driver::ds2480b::Ds2480b;
-use crate::driver::ds9097::Ds9097;
+use crate::driver::ds9097::{Ds9097, BAUD_RESET, BAUD_SLOTS};
 use crate::driver::sensor::{Ds18b20, Resolution};
-use crate::driver::uart::SerialUart;
-use crate::driver::OneWire;
+use crate::driver::uart::{SerialUart, Uart};
+use crate::driver::usb::UsbUart;
+use crate::driver::{self as bus_driver, OneWire};
 
 static LEVEL_NAMES: LazyLock<Vec<String>> =
     LazyLock::new(|| LevelFilter::iter().map(|level| level.as_str().to_lowercase()).collect());
@@ -48,6 +49,10 @@ pub struct Cli {
     pub poll_period: String,
     #[arg(short = 'D', long = "device", value_name = "PATH", default_value = "/dev/ttyUSB0")]
     pub device: String,
+    #[arg(long = "probe", default_value_t = false)]
+    pub probe: bool,
+    #[arg(long = "probe-reads", value_name = "COUNT", default_value_t = 0)]
+    pub probe_reads: usize,
     #[arg(short = 'T', long = "timeout", value_name = "PERIOD", default_value = "1s")]
     pub timeout: String,
     #[arg(
@@ -112,6 +117,10 @@ impl Cli {
             })
             .try_init();
         let timeout = parse_duration(&self.timeout)?;
+        usb_target(&self.device).map_err(|err| err.to_string())?;
+        if self.probe {
+            return self.probe_device(timeout);
+        }
         let sensors = load_sensors(&self.sensors)?;
         let mock = std::env::var("TEMPSTAT_MOCK").as_deref() == Ok("1");
         debug!(
@@ -183,12 +192,98 @@ impl Cli {
         }
     }
 
-    fn open_device(&self, timeout: Duration) -> driver::Result<Ds2480b<SerialUart>> {
-        Ok(Ds2480b::from_uart(SerialUart::open(&self.device, timeout)?))
+    fn open_device(&self, timeout: Duration) -> driver::Result<Ds2480b<Box<dyn Uart>>> {
+        let uart: Box<dyn Uart> = match usb_target(&self.device)? {
+            Some((vendor, product)) => Box::new(UsbUart::open(vendor, product, timeout)?),
+            None => Box::new(SerialUart::open(&self.device, timeout)?),
+        };
+        Ok(Ds2480b::from_uart(uart))
+    }
+
+    fn probe_device(&self, timeout: Duration) -> Result<(), String> {
+        let Some((vendor, product)) = usb_target(&self.device).map_err(|err| err.to_string())? else {
+            return Err(format!("probe requires a usb device [{}]", self.device));
+        };
+        let mut uart = UsbUart::open(vendor, product, timeout).map_err(|err| err.to_string())?;
+        info!(
+            "{}",
+            log_line("probed usb device", &format!("{vendor:04X}:{product:04X}"))
+        );
+        for baud in [BAUD_RESET, BAUD_SLOTS] {
+            uart.set_baud(baud).map_err(|err| err.to_string())?;
+            info!("{}", log_line("probed line coding", &format!("{baud}")));
+        }
+        if self.probe_reads == 0 {
+            return Ok(());
+        }
+        let sensors = load_sensors(&self.sensors)?;
+        let boxed: Box<dyn Uart> = Box::new(uart);
+        let mut bus = select_adapter(Ds2480b::from_uart(boxed)).map_err(|err| err.to_string())?;
+        let sample = |bus: &mut dyn OneWire, label: &str| {
+            let mut failures = 0usize;
+            for sensor in &sensors {
+                match read_sensor(bus, sensor) {
+                    Ok(temp) => info!(
+                        "{}",
+                        log_line(
+                            &format!("probed {label} sensor [{}]", sensor.unique_id),
+                            &format!("{temp}°C")
+                        )
+                    ),
+                    Err(err) => {
+                        failures += 1;
+                        error!("probed {label} sensor [{}] failed [{err}]", sensor.unique_id);
+                    }
+                }
+            }
+            failures
+        };
+        let mut failed = sample(bus.as_mut(), "opening");
+        let start = Instant::now();
+        let mut transactions = 0usize;
+        for iteration in 0..self.probe_reads {
+            for sensor in &sensors {
+                let read = Ds18b20::attach(bus.as_mut(), Some(sensor.rom))
+                    .and_then(|device| device.read_scratchpad(bus.as_mut()));
+                match read {
+                    Ok(_) => transactions += 2,
+                    Err(err) => {
+                        failed += 1;
+                        error!("probed soak [{iteration}] sensor [{}] failed [{err}]", sensor.unique_id);
+                    }
+                }
+            }
+        }
+        let elapsed = start.elapsed();
+        failed += sample(bus.as_mut(), "closing");
+        info!(
+            "{}",
+            log_line("probed scratchpad transactions", &format!("{transactions}"))
+        );
+        info!("{}", log_line("probed failures", &format!("{failed}")));
+        info!(
+            "{}",
+            log_line("probed soak elapsed", &format!("{}ms", elapsed.as_millis()))
+        );
+        if failed > 0 {
+            return Err(format!("probe had [{failed}] failure(s)"));
+        }
+        Ok(())
     }
 }
 
-fn select_adapter(mut ds2480b: Ds2480b<SerialUart>) -> driver::Result<Box<dyn OneWire>> {
+fn usb_target(device: &str) -> bus_driver::Result<Option<(u16, u16)>> {
+    let Some(target) = device.strip_prefix("usb:") else {
+        return Ok(None);
+    };
+    let invalid = || bus_driver::Error::InvalidDevice(device.to_string());
+    let (vendor, product) = target.split_once(':').ok_or_else(invalid)?;
+    let vendor = u16::from_str_radix(vendor, 16).map_err(|_| invalid())?;
+    let product = u16::from_str_radix(product, 16).map_err(|_| invalid())?;
+    Ok(Some((vendor, product)))
+}
+
+fn select_adapter(mut ds2480b: Ds2480b<Box<dyn Uart>>) -> driver::Result<Box<dyn OneWire>> {
     match ds2480b.probe() {
         Ok(()) => {
             info!("{}", log_line("detected adapter chipset", "DS2480B"));
@@ -350,6 +445,35 @@ mod tests {
     use crate::driver::uart::mock::MockUart;
 
     const DETECT_READS: [u8; 5] = [0x16, 0x44, 0x5A, 0x00, 0x93];
+
+    #[test]
+    fn usb_target_ignores_a_device_path() {
+        assert_eq!(usb_target("/dev/ttyUSB0").unwrap(), None);
+        assert_eq!(usb_target("/dev/ttyUSBTempProbe").unwrap(), None);
+    }
+
+    #[test]
+    fn usb_target_parses_vendor_and_product() {
+        assert_eq!(usb_target("usb:067B:2303").unwrap(), Some((0x067B, 0x2303)));
+        assert_eq!(usb_target("usb:067b:2303").unwrap(), Some((0x067B, 0x2303)));
+    }
+
+    #[test]
+    fn usb_target_rejects_a_malformed_id() {
+        for device in ["usb:", "usb:067B", "usb:067B:", "usb:zzzz:2303", "usb:067B:2303:0"] {
+            let err = usb_target(device).unwrap_err().to_string();
+            assert!(err.contains(device), "device {device}: got {err}");
+        }
+    }
+
+    #[test]
+    fn boxed_uart_drives_the_ds9097_stack() {
+        let uart: Box<dyn Uart> = Box::new(FsmUart::new(MockDs9097::new()));
+        let mut bus = Ds9097::new(uart).unwrap();
+        let device = Ds18b20::attach(&mut bus, None).unwrap();
+        let temperature = device.get_temperature(&mut bus).unwrap();
+        assert!((temperature - 25.0625).abs() < 0.001, "temperature: got {temperature}");
+    }
 
     fn test_rom() -> Rom {
         "28FF641E870006AE".parse().unwrap()
