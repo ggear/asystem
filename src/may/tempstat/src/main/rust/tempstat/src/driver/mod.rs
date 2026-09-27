@@ -3,15 +3,15 @@
 //! - [Guide to 1-Wire Communication](https://www.analog.com/en/resources/technical-articles/guide-to-1wire-communication.html)
 
 pub mod crc;
+pub mod ds18b20;
 pub mod ds2480b;
 pub mod ds9097;
 pub mod mock;
 pub mod onewire;
+pub mod pl2303;
 pub mod rom;
-pub mod sensor;
 pub mod transport;
 pub mod uart;
-pub mod usb;
 
 pub use crc::crc8;
 pub use onewire::{OneWire, Presence};

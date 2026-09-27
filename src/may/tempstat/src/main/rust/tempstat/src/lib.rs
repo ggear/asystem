@@ -20,11 +20,11 @@ use serde_json::{json, Map, Value};
 
 use crate::broker::{MqttPublisher, Publisher};
 use crate::config::{load_sensors, SensorConfig};
+use crate::driver::ds18b20::{Ds18b20, Resolution};
 use crate::driver::ds2480b::Ds2480b;
 use crate::driver::ds9097::{Ds9097, BAUD_RESET, BAUD_SLOTS};
-use crate::driver::sensor::{Ds18b20, Resolution};
+use crate::driver::pl2303::Pl2303Uart;
 use crate::driver::uart::{SerialUart, Uart};
-use crate::driver::usb::UsbUart;
 use crate::driver::{self as bus_driver, OneWire};
 
 static LEVEL_NAMES: LazyLock<Vec<String>> =
@@ -194,7 +194,7 @@ impl Cli {
 
     fn open_device(&self, timeout: Duration) -> driver::Result<Ds2480b<Box<dyn Uart>>> {
         let uart: Box<dyn Uart> = match usb_target(&self.device)? {
-            Some((vendor, product)) => Box::new(UsbUart::open(vendor, product, timeout)?),
+            Some((vendor, product)) => Box::new(Pl2303Uart::open(vendor, product, timeout)?),
             None => Box::new(SerialUart::open(&self.device, timeout)?),
         };
         Ok(Ds2480b::from_uart(uart))
@@ -204,7 +204,7 @@ impl Cli {
         let Some((vendor, product)) = usb_target(&self.device).map_err(|err| err.to_string())? else {
             return Err(format!("probe requires a usb device [{}]", self.device));
         };
-        let mut uart = UsbUart::open(vendor, product, timeout).map_err(|err| err.to_string())?;
+        let mut uart = Pl2303Uart::open(vendor, product, timeout).map_err(|err| err.to_string())?;
         info!(
             "{}",
             log_line("probed usb device", &format!("{vendor:04X}:{product:04X}"))

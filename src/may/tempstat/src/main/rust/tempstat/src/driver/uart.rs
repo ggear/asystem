@@ -1,4 +1,6 @@
-//! UART abstraction for the DS2480B serial interface.
+//! UART abstraction shared by the 1-Wire bus masters — the `Uart` trait, its `SerialUart`
+//! implementation over a kernel tty, and a `Box<dyn Uart>` passthrough so the adapter and the
+//! transport can each be chosen at runtime.
 //!
 //! - [Reading and Writing 1-Wire Devices Through Serial Interfaces](https://www.analog.com/en/resources/app-notes/reading-and-writing-1wirereg-devices-through-serial-interfaces.html)
 

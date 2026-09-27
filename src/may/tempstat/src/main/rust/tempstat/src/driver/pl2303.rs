@@ -56,20 +56,20 @@ const STARTUP: [Startup; 10] = [
     Startup::Write(0x0001, 0x0000),
 ];
 
-pub struct UsbUart<T: UsbTransport> {
+pub struct Pl2303Uart<T: UsbTransport> {
     transport: T,
     flow_control: u16,
     timeout: Duration,
     pending: VecDeque<u8>,
 }
 
-impl UsbUart<NusbTransport> {
+impl Pl2303Uart<NusbTransport> {
     pub fn open(vendor: u16, product: u16, timeout: Duration) -> Result<Self> {
-        UsbUart::new(NusbTransport::open(vendor, product, timeout)?, timeout)
+        Pl2303Uart::new(NusbTransport::open(vendor, product, timeout)?, timeout)
     }
 }
 
-impl<T: UsbTransport> UsbUart<T> {
+impl<T: UsbTransport> Pl2303Uart<T> {
     pub fn new(transport: T, timeout: Duration) -> Result<Self> {
         let (flow_control, variant) = if transport.max_packet_size_0() == MAX_PACKET_SIZE_0_HX {
             (STARTUP_FLOW_HX, "HX")
@@ -86,7 +86,7 @@ impl<T: UsbTransport> UsbUart<T> {
                 )
             )
         );
-        let mut uart = UsbUart {
+        let mut uart = Pl2303Uart {
             transport,
             flow_control,
             timeout,
@@ -141,7 +141,7 @@ fn vendor_setup(value: u16, index: u16) -> UsbSetup {
     }
 }
 
-impl<T: UsbTransport> Uart for UsbUart<T> {
+impl<T: UsbTransport> Uart for Pl2303Uart<T> {
     fn write_all(&mut self, data: &[u8]) -> Result<()> {
         debug!("uart tx [{data:02X?}]");
         self.transport.bulk_out(data)
@@ -212,8 +212,8 @@ mod tests {
 
     const TIMEOUT: Duration = Duration::from_millis(50);
 
-    fn opened(transport: MockTransport) -> UsbUart<MockTransport> {
-        UsbUart::new(transport, TIMEOUT).unwrap()
+    fn opened(transport: MockTransport) -> Pl2303Uart<MockTransport> {
+        Pl2303Uart::new(transport, TIMEOUT).unwrap()
     }
 
     #[test]

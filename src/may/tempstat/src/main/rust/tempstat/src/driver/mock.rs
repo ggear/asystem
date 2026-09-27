@@ -306,10 +306,10 @@ pub mod fsm {
 
 #[cfg(test)]
 mod tests {
+    use super::super::ds18b20::{Ds18b20, Resolution};
     use super::super::ds2480b::Ds2480b;
     use super::super::ds9097::Ds9097;
     use super::super::onewire::OneWire;
-    use super::super::sensor::{Ds18b20, Resolution};
     use super::fsm::FsmUart;
     use super::*;
 

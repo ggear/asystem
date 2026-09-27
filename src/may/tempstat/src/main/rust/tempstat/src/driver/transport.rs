@@ -1,4 +1,5 @@
-//! USB transport for the PL2303 bridge — the seam between the protocol and raw usbfs.
+//! USB transport for the PL2303 bridge — the seam between the protocol and the host USB stack,
+//! and the only place `nusb` is called.
 //!
 //! - [USB 2.0 specification, section 9.3 USB Device Requests](https://www.usb.org/document-library/usb-20-specification)
 
