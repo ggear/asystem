@@ -4,7 +4,7 @@ set -uo pipefail
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-MEDIA_COMMANDS=(process analyse clean normalise ingress stow move refresh truncate find metadata space mount home completion help)
+MEDIA_COMMANDS=(process analyse clean normalise ingress stow move refresh truncate find metadata home completion help)
 
 MEDIA_OPTIONS=(--share --force --persistent --quiet --verbose --dryrun)
 
@@ -78,10 +78,8 @@ EOF
   Inspect
     find      <token>  find a media artefact
     metadata           print this media artefact's spec and probes
-    space              print share usage
 
   Tool
-    mount              mount the remote shares
     home               print the install bin directory
     completion         print the bash completion, eval it in a profile
     help               this text, and a bare ${prog} prints it
@@ -529,6 +527,12 @@ command_stow() {
   return ${result}
 }
 
+space_shares() {
+  local drives="${1}"
+  shift
+  "$@" astorage space --mode local --drives "${drives}" --symbols ascii --theme mono || true
+}
+
 command_move() {
   local dest="${1:-}"
   [ -n "${dest}" ] || refuse "move requires a <share> argument"
@@ -579,6 +583,8 @@ command_move() {
   else
     print_header "$(hostname)" "move" 0
   fi
+  local share_drives="/share/${SHARE_PATH_INDEX},/share/${dest}"
+  space_shares "${share_drives}" "${share_ssh[@]}"
   # shellcheck disable=SC2064
   trap "${share_ssh[*]} pkill -9 -f 'rsync .*/share/${dest}/'; echo; exit" INT
   "${share_ssh[@]}" bash -s -- "${share_args[@]}" <<'EOF' || result=1
@@ -620,6 +626,7 @@ else
 fi
 exit ${result}
 EOF
+  space_shares "${share_drives}" "${share_ssh[@]}"
   return ${result}
 }
 
@@ -685,23 +692,6 @@ EOF
   return 0
 }
 
-command_space() {
-  print_header "$(hostname)" "space" 0
-  command_mount
-  local dirs result=0
-  case "${EXTENT}" in
-  file | media | share) dirs="${EXTENT_SHARE_DIR}" ;;
-  local) dirs="${SHARE_DIRS_LOCAL}" ;;
-  esac
-  echo "Space summary ... "
-  astorage space --mode local --drives "${dirs// /,}" --symbols ascii --theme mono || result=1
-  return ${result}
-}
-
-command_mount() {
-  amount
-}
-
 command_home() {
   echo "${ROOT_DIR}"
 }
@@ -712,7 +702,6 @@ run_stage() {
   refresh) command_refresh ;;
   normalise) dispatch_library normalise "" ;;
   analyse) command_analyse ;;
-  space) command_space ;;
   *)
     in_list "${1}" "${MEDIA_ACTIONS[@]}" || refuse "unknown stage [${1}]"
     dispatch_action "${1}"
@@ -781,7 +770,7 @@ command_accepts_option() {
   --force) [ "${command}" = "analyse" ] ;;
   --persistent) [ "${command}" = "process" ] ;;
   --dryrun) [ "${command}" = "move" ] ;;
-  --share) in_list "${command}" analyse process clean normalise ingress space "${MEDIA_ACTIONS[@]}" ;;
+  --share) in_list "${command}" analyse process clean normalise ingress "${MEDIA_ACTIONS[@]}" ;;
   --quiet | --verbose) in_list "${command}" analyse process "${MEDIA_ACTIONS[@]}" ;;
   *) return 1 ;;
   esac
@@ -899,7 +888,7 @@ main() {
     exit 0
     ;;
   process) command_process "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
-  analyse | refresh | space) run_stage "${COMMAND}" ;;
+  analyse | refresh) run_stage "${COMMAND}" ;;
   clean | normalise) dispatch_library "${COMMAND}" "${POSITIONAL}" ;;
   ingress) command_ingress "${POSITIONAL}" ;;
   stow) command_stow "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
@@ -907,7 +896,6 @@ main() {
   truncate) command_truncate ;;
   find) command_find "${POSITIONAL}" ;;
   metadata) command_metadata ;;
-  mount) command_mount ;;
   home) command_home ;;
   *)
     in_list "${COMMAND}" "${MEDIA_ACTIONS[@]}" || refuse "unknown command [${COMMAND}]"
