@@ -17,15 +17,15 @@ func TestEngineUtilBackup_NewestBackupReading(t *testing.T) {
 		{
 			name: "newest of several runs wins",
 			runs: map[string]*tertiaryStatus{
-				"2026-09-01_01-00-00": {DiskTotalMB: 100, DiskUsedMB: 50, FinishedTS: "2026-09-01T02:00:00Z"},
-				"2026-09-25_01-00-00": {DiskTotalMB: 200, DiskUsedMB: 80, FinishedTS: "2026-09-25T02:00:00Z"},
+				"2026-09-01_01-00-00": {DiskTotalMiB: 100, DiskUsedMiB: 50, FinishedTS: "2026-09-01T02:00:00Z"},
+				"2026-09-25_01-00-00": {DiskTotalMiB: 200, DiskUsedMiB: 80, FinishedTS: "2026-09-25T02:00:00Z"},
 			},
 			want: &backupReading{RunID: "2026-09-25_01-00-00", MeasuredTS: "2026-09-25T02:00:00Z", TotalBytes: 200 * 1024 * 1024, UsedBytes: 80 * 1024 * 1024},
 		},
 		{
 			name: "a newer run with no tertiary document falls to the next, not to zero",
 			runs: map[string]*tertiaryStatus{
-				"2026-09-01_01-00-00": {DiskTotalMB: 100, DiskUsedMB: 50, FinishedTS: "2026-09-01T02:00:00Z"},
+				"2026-09-01_01-00-00": {DiskTotalMiB: 100, DiskUsedMiB: 50, FinishedTS: "2026-09-01T02:00:00Z"},
 				"2026-09-25_01-00-00": nil,
 			},
 			want: &backupReading{RunID: "2026-09-01_01-00-00", MeasuredTS: "2026-09-01T02:00:00Z", TotalBytes: 100 * 1024 * 1024, UsedBytes: 50 * 1024 * 1024},
@@ -33,7 +33,7 @@ func TestEngineUtilBackup_NewestBackupReading(t *testing.T) {
 		{
 			name: "a disk_total_mb of zero is not a reading",
 			runs: map[string]*tertiaryStatus{
-				"2026-09-25_01-00-00": {DiskTotalMB: 0, DiskUsedMB: 0, FinishedTS: "2026-09-25T02:00:00Z"},
+				"2026-09-25_01-00-00": {DiskTotalMiB: 0, DiskUsedMiB: 0, FinishedTS: "2026-09-25T02:00:00Z"},
 			},
 			want: nil,
 		},

@@ -30,7 +30,7 @@ func newSpaceCmd() *cobra.Command {
 			return executeSpace(configPath, opts)
 		},
 	}
-	cmd.Flags().StringVarP(&opts.mode, "mode", "m", "auto", "mode to operate in: local, remote, auto")
+	cmd.Flags().StringVarP(&opts.mode, "mode", "m", engine.ModeAuto, "mode to operate in: local, remote, auto")
 	cmd.Flags().StringVarP(&opts.drives, "drives", "d", strings.Join(engine.DefaultDrives, ","), "mounts to include: comma separated list of mount globs")
 	cmd.Flags().StringVarP(&opts.symbols, "symbols", "s", "auto", "define output character set: auto, ascii or unicode")
 	cmd.Flags().StringVarP(&opts.theme, "theme", "t", "auto", "colour theme: auto, colour or mono")
@@ -42,15 +42,6 @@ func newSpaceCmd() *cobra.Command {
 func executeSpace(configPath string, opts *spaceOptions) error {
 	started := time.Now()
 	cfg := config.Load(configPath)
-	drives := strings.Split(opts.drives, ",")
-	mode := opts.mode
-	if mode == "auto" {
-		if engine.HasLocalShares() {
-			mode = "local"
-		} else {
-			mode = "remote"
-		}
-	}
 	useUnicode, err := resolveSymbols(opts.symbols)
 	if err != nil {
 		return err
@@ -59,17 +50,9 @@ func executeSpace(configPath string, opts *spaceOptions) error {
 	if err != nil {
 		return err
 	}
-	var hosts []engine.HostDoc
-	switch mode {
-	case "local":
-		hosts = []engine.HostDoc{engine.LocalHost(cfg, drives)}
-	case "remote":
-		hosts = engine.CollectRemote(cfg, drives)
-		if len(hosts) == 0 {
-			return fmt.Errorf("no reachable hosts")
-		}
-	default:
-		return fmt.Errorf("invalid mode [%s]", mode)
+	hosts, mode, err := engine.Collect(cfg, strings.Split(opts.drives, ","), opts.mode)
+	if err != nil {
+		return err
 	}
 	fault, unreachable := reportFaults(hosts, cfg.Version())
 	if unreachable && !anyMeasured(hosts) {
@@ -90,7 +73,7 @@ func executeSpace(configPath string, opts *spaceOptions) error {
 		fmt.Println(string(encoded))
 	} else {
 		rows := rowsFor(hosts)
-		if mode == "remote" {
+		if mode == engine.ModeRemote {
 			rows = append(rows, estateRows(hosts)...)
 		}
 		fmt.Print(display.Render(rows, useUnicode, useColour))
@@ -191,17 +174,17 @@ func percentOf(used, size uint64) float64 {
 func reportFaults(hosts []engine.HostDoc, envelopeVersion string) (fault, anyUnreachable bool) {
 	for _, host := range hosts {
 		if host.State != "" && host.State != engine.HostStateMeasured {
-			fmt.Fprintf(os.Stderr, "%s\n", host.Error)
+			_, _ = fmt.Fprintf(os.Stderr, "%s%s\n", prefixError, host.Error)
 			fault = true
 			anyUnreachable = true
 			continue
 		}
 		if host.Version != "" && host.Version != envelopeVersion {
-			fmt.Fprintf(os.Stderr, "version skew [%s] running [%s] against [%s]\n", host.Name, host.Version, envelopeVersion)
+			_, _ = fmt.Fprintf(os.Stderr, "%sversion skew [%s] running [%s] against [%s]\n", prefixWarning, host.Name, host.Version, envelopeVersion)
 		}
 		for _, mount := range host.Mounts {
 			if mount.State != "" && mount.State != engine.MountStateMeasured {
-				fmt.Fprintf(os.Stderr, "%s\n", mount.Error)
+				_, _ = fmt.Fprintf(os.Stderr, "%s%s\n", prefixError, mount.Error)
 				fault = true
 			}
 		}

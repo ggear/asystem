@@ -27,15 +27,15 @@ func newestBackupReading(root string) *backupReading {
 			continue
 		}
 		var status tertiaryStatus
-		if json.Unmarshal(data, &status) != nil || status.DiskTotalMB <= 0 {
+		if json.Unmarshal(data, &status) != nil || status.DiskTotalMiB <= 0 {
 			continue
 		}
 		measured := status.FinishedTS
 		if measured == "" {
 			measured = status.StartedTS
 		}
-		totalBytes := uint64(status.DiskTotalMB) * 1024 * 1024
-		usedBytes := uint64(status.DiskUsedMB) * 1024 * 1024
+		totalBytes := uint64(status.DiskTotalMiB) * 1024 * 1024
+		usedBytes := uint64(status.DiskUsedMiB) * 1024 * 1024
 		return &backupReading{RunID: run, MeasuredTS: measured, TotalBytes: totalBytes, UsedBytes: usedBytes}
 	}
 	return nil
@@ -53,7 +53,7 @@ func backupMounts(cfg *config.Config, drives []string) []MountDoc {
 	if backup == nil {
 		return nil
 	}
-	if _, matched := ClassifyDrive(backup.Mount, drives); !matched {
+	if class, matched := ClassifyDrive(backup.Mount, drives); !matched || class != ClassBackup {
 		return nil
 	}
 	reading := newestBackupReading(backupRunRoot())
@@ -79,10 +79,10 @@ type backupReading struct {
 }
 
 type tertiaryStatus struct {
-	FinishedTS  string `json:"finished_ts"`
-	StartedTS   string `json:"started_ts"`
-	DiskTotalMB int    `json:"disk_total_mb"`
-	DiskUsedMB  int    `json:"disk_used_mb"`
+	FinishedTS   string `json:"finished_ts"`
+	StartedTS    string `json:"started_ts"`
+	DiskTotalMiB int    `json:"disk_total_mb"`
+	DiskUsedMiB  int    `json:"disk_used_mb"`
 }
 
 const (

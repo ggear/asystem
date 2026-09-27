@@ -313,8 +313,8 @@ def _pull(context):
     for go_deps_path in go_deps_paths:
         _run_local(context, "go list -m -u -f '{}' all | awk 'NF'".format(GO_OUTDATED_FORMAT), go_deps_path)
     for rust_deps_path in rust_deps_paths:
-        _run_local(context, "cargo update --dry-run --verbose 2>&1 | sed -nE '{}'"
-                   .format(RUST_OUTDATED_FILTER), rust_deps_path)
+        _run_local(context, "cargo update --dry-run --verbose 2>&1 | awk '{}'"
+                   .format(RUST_OUTDATED_FORMAT), rust_deps_path)
     _print_footer("asystem", "pull package versions to update")
     _print_header("asystem", "pull package versions to check")
     _check(context, py_deps_nodeps)
@@ -1655,9 +1655,15 @@ HOSTS = {line.split("=")[0]: line.split("=")[-1].split(",")
 
 GO_OUTDATED_FORMAT = "{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}"
 
-RUST_OUTDATED_FILTER = \
-    r"s/^[[:space:]]*Unchanged ([^ ]+) v([^ ]+) \(available: v([^)]+)\)$/\1 \2 \3/p; " \
-    r"s/^[[:space:]]*Updating ([^ ]+) v([^ ]+) -> v([^ ]+)$/\1 \2 \3/p"
+RUST_OUTDATED_COLUMNS = '"%-32s %-8s %-7s %s\\n"'
+
+RUST_OUTDATED_FORMAT = \
+    '($1 == "Unchanged" || $1 == "Updating") && $3 ~ /^v[0-9]/ && $5 ~ /^v[0-9]/ { ' \
+    'if (!listed++) printf ' + RUST_OUTDATED_COLUMNS + ', "Package", "Version", "Latest", "Type"; ' \
+    'held = $3; sub(/^v/, "", held); ' \
+    'available = $5; sub(/^v/, "", available); sub(/\\)$/, "", available); ' \
+    'printf ' + RUST_OUTDATED_COLUMNS + ', $2, held, available, ' \
+    '($1 == "Unchanged" ? "latent" : "pending") }'
 
 HEADER = \
     "------------------------------------------------------------\n" \

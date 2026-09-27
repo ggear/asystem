@@ -127,6 +127,29 @@ func TestConfig_Load_UnresolvedHostFallsBackToHostname(t *testing.T) {
 	}
 }
 
+func TestConfig_Label_FallsBackToTheHostnameSuffix(t *testing.T) {
+	cases := []struct {
+		name          string
+		host          string
+		want          string
+		expectedError bool
+	}{
+		{name: "a host the schema declares", host: "macmini-mad", want: "mad"},
+		{name: "a host the schema does not declare", host: "macbook-rue", want: "rue"},
+		{name: "a hostname carrying no estate suffix", host: "localhost", want: "localhost"},
+	}
+	path := writeFixture(t, fixtureDocument)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("STORAGE_HOST", c.host)
+			t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
+			if got := Load(path).Label(); got != c.want {
+				t.Errorf("Label: got %v want %v", got, c.want)
+			}
+		})
+	}
+}
+
 func writeFixture(t *testing.T, contents string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.json")

@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/ssh/knownhosts"
 )
 
-func CollectRemote(cfg *config.Config, drives []string) []HostDoc {
+func collectRemote(cfg *config.Config, drives []string) []HostDoc {
 	hosts := cfg.Hosts()
 	docs := make([]HostDoc, len(hosts))
 	var wg sync.WaitGroup
@@ -76,7 +76,7 @@ func runRemote(host string, budget time.Duration, drives []string) ([]byte, erro
 	var stdout, stderr bytes.Buffer
 	session.Stdout = &stdout
 	session.Stderr = &stderr
-	command := fmt.Sprintf("%s space -m local -d %s --json", remoteInstallPath, shellQuote(strings.Join(drives, ",")))
+	command := fmt.Sprintf("%s space -m %s -d %s --json", remoteInstallPath, ModeLocal, shellQuote(strings.Join(drives, ",")))
 	done := make(chan error, 1)
 	go func() { done <- session.Run(command) }()
 	select {

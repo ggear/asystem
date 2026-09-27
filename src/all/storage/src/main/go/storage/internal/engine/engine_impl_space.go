@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"storage/internal/config"
 	"strings"
@@ -12,62 +13,111 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
-func CollectLocal(cfg *config.Config, drives []string) []MountDoc {
+func Collect(cfg *config.Config, drives []string, requested string) ([]HostDoc, string, error) {
+	mode := requested
+	if mode == ModeAuto {
+		mode = ModeRemote
+		if partitions, err := disk.Partitions(false); err == nil {
+			for _, partition := range partitions {
+				if strings.HasPrefix(partition.Mountpoint, shareNamespace) {
+					mode = ModeLocal
+					break
+				}
+			}
+		}
+	}
+	switch mode {
+	case ModeLocal:
+		return []HostDoc{{
+			Index:   cfg.Index(),
+			Label:   cfg.Label(),
+			Name:    cfg.Name(),
+			Version: cfg.Version(),
+			State:   HostStateMeasured,
+			Mounts:  collectLocal(cfg, drives),
+		}}, mode, nil
+	case ModeRemote:
+		hosts := collectRemote(cfg, drives)
+		if len(hosts) == 0 {
+			return nil, mode, fmt.Errorf("no hosts declared [%s]", cfg.Name())
+		}
+		return hosts, mode, nil
+	default:
+		return nil, mode, fmt.Errorf("invalid mode [%s]", requested)
+	}
+}
+
+func collectLocal(cfg *config.Config, drives []string) []MountDoc {
 	partitions, err := disk.Partitions(false)
 	if err != nil {
 		return nil
 	}
-	faulted := func(mountpoint, class string, err error) MountDoc {
-		return MountDoc{
-			Mount: mountpoint,
-			Label: cfg.MountLabel(mountpoint),
-			Class: class,
-			State: MountStateTimedout,
-			Error: fmt.Sprintf("statfs failed [%s] after [%s] [%v]", mountpoint, statfsTimeout, err),
-		}
-	}
-	var roots []RootMember
-	var rootFaults, shares []MountDoc
+	var readings []reading
 	for _, partition := range partitions {
-		if pseudoFsTypes[partition.Fstype] {
-			continue
-		}
-		class, matched := ClassifyDrive(partition.Mountpoint, drives)
-		if !matched || class == ClassBackup {
-			continue
-		}
-		if class == ClassRoot {
-			if excludedRoot(partition.Mountpoint) {
-				continue
-			}
-			usage, err := boundedUsage(partition.Mountpoint)
-			if err != nil {
-				rootFaults = append(rootFaults, faulted(partition.Mountpoint, class, err))
-				continue
-			}
-			roots = append(roots, RootMember{
-				Mount:      partition.Mountpoint,
-				Identity:   identityKey(partition.Device),
-				TotalBytes: usage.Total,
-				AvailBytes: usage.Free,
-			})
-			continue
-		}
-		if cfg.ServedElsewhere(partition.Mountpoint) {
+		class, ok := selected(cfg, drives, partition.Mountpoint, partition.Fstype)
+		if !ok {
 			continue
 		}
 		usage, err := boundedUsage(partition.Mountpoint)
 		if err != nil {
-			shares = append(shares, faulted(partition.Mountpoint, class, err))
+			readings = append(readings, reading{mount: partition.Mountpoint, class: class, err: err})
 			continue
 		}
-		used := usage.Total - min(usage.Free, usage.Total)
+		readings = append(readings, reading{
+			mount:    partition.Mountpoint,
+			class:    class,
+			identity: identityKey(partition.Device),
+			total:    usage.Total,
+			avail:    usage.Free,
+		})
+	}
+	return assemble(cfg, drives, readings, backupMounts(cfg, drives))
+}
+
+func selected(cfg *config.Config, drives []string, mountpoint, fstype string) (class string, ok bool) {
+	if pseudoFsTypes[fstype] {
+		return "", false
+	}
+	class, matched := ClassifyDrive(mountpoint, drives)
+	if !matched || class == ClassBackup {
+		return "", false
+	}
+	if class == ClassRoot {
+		return class, !excludedRoot(mountpoint) && !networkFsTypes[fstype]
+	}
+	return class, !cfg.ServedElsewhere(mountpoint)
+}
+
+func assemble(cfg *config.Config, drives []string, readings []reading, backup []MountDoc) []MountDoc {
+	var roots []RootMember
+	var rootFaults, shares []MountDoc
+	for _, r := range readings {
+		if r.err != nil {
+			doc := MountDoc{
+				Mount: r.mount,
+				Label: cfg.MountLabel(r.mount),
+				Class: r.class,
+				State: MountStateTimedout,
+				Error: fmt.Sprintf("statfs failed [%s] after [%s] [%v]", r.mount, statfsTimeout, r.err),
+			}
+			if r.class == ClassRoot {
+				rootFaults = append(rootFaults, doc)
+			} else {
+				shares = append(shares, doc)
+			}
+			continue
+		}
+		if r.class == ClassRoot {
+			roots = append(roots, RootMember{Mount: r.mount, Identity: r.identity, TotalBytes: r.total, AvailBytes: r.avail})
+			continue
+		}
+		used := r.total - min(r.avail, r.total)
 		shares = append(shares, MountDoc{
-			Mount: partition.Mountpoint,
-			Label: cfg.MountLabel(partition.Mountpoint),
-			Class: class,
+			Mount: r.mount,
+			Label: cfg.MountLabel(r.mount),
+			Class: r.class,
 			State: MountStateMeasured,
-			Space: &SpaceFigures{SizeBytes: usage.Total, UsedBytes: used, FreeBytes: usage.Total - used},
+			Space: &SpaceFigures{SizeBytes: r.total, UsedBytes: used, FreeBytes: r.total - used},
 		})
 	}
 	mounted := map[string]bool{}
@@ -78,7 +128,7 @@ func CollectLocal(cfg *config.Config, drives []string) []MountDoc {
 		if mounted[share.Mount] || share.ServedBy != cfg.Name() {
 			continue
 		}
-		if _, matched := ClassifyDrive(share.Mount, drives); !matched {
+		if class, matched := ClassifyDrive(share.Mount, drives); !matched || class != ClassShare {
 			continue
 		}
 		shares = append(shares, MountDoc{
@@ -90,7 +140,6 @@ func CollectLocal(cfg *config.Config, drives []string) []MountDoc {
 		})
 	}
 	sort.Slice(shares, func(i, j int) bool { return shares[i].Mount < shares[j].Mount })
-	backup := backupMounts(cfg, drives)
 	classes := 0
 	for _, populated := range []bool{len(roots)+len(rootFaults) > 0, len(shares) > 0, len(backup) > 0} {
 		if populated {
@@ -131,16 +180,16 @@ func CollectLocal(cfg *config.Config, drives []string) []MountDoc {
 
 func ClassifyDrive(mountpoint string, drives []string) (class string, matched bool) {
 	for _, pattern := range drives {
-		if matchGlob(pattern, mountpoint) {
-			switch {
-			case pattern == "/":
-				return ClassRoot, true
-			case strings.HasSuffix(pattern, "/backup"):
-				return ClassBackup, true
-			default:
-				return ClassShare, true
-			}
+		if pattern == rootPattern || !matchGlob(pattern, mountpoint) {
+			continue
 		}
+		if strings.HasSuffix(pattern, "/backup") {
+			return ClassBackup, true
+		}
+		return ClassShare, true
+	}
+	if slices.Contains(drives, rootPattern) {
+		return ClassRoot, true
 	}
 	return "", false
 }
@@ -324,6 +373,15 @@ type BackupInfo struct {
 	MeasuredTS string `json:"measured_ts"`
 }
 
+type reading struct {
+	mount    string
+	class    string
+	identity string
+	total    uint64
+	avail    uint64
+	err      error
+}
+
 type RootMember struct {
 	Mount      string
 	Identity   string
@@ -343,6 +401,13 @@ const (
 	HostStateMeasured    = "measured"
 	HostStateUnreachable = "unreachable"
 
+	ModeAuto   = "auto"
+	ModeLocal  = "local"
+	ModeRemote = "remote"
+
+	shareNamespace = "/share/"
+	rootPattern    = "/"
+
 	statfsTimeout = 2 * time.Second
 )
 
@@ -350,8 +415,17 @@ var DefaultDrives = []string{"/", "/share/*", "/backup"}
 
 var excludedRootPrefixes = []string{"/boot", "/efi", "/System/Volumes", "/Volumes"}
 
+var networkFsTypes = map[string]bool{
+	"smbfs": true, "cifs": true, "nfs": true, "nfs4": true,
+	"afpfs": true, "webdav": true, "sshfs": true, "ftp": true,
+}
+
 var pseudoFsTypes = map[string]bool{
 	"proc": true, "sysfs": true, "cgroup": true, "cgroup2": true,
 	"devtmpfs": true, "overlay": true, "squashfs": true, "tmpfs": true,
-	"devfs": true, "autofs": true,
+	"devfs": true, "autofs": true, "devpts": true, "ramfs": true,
+	"securityfs": true, "efivarfs": true, "configfs": true, "debugfs": true,
+	"tracefs": true, "pstore": true, "bpf": true, "fusectl": true,
+	"mqueue": true, "hugetlbfs": true, "nsfs": true, "binfmt_misc": true,
+	"rpc_pipefs": true, "selinuxfs": true, "fuse.portal": true,
 }

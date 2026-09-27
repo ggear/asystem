@@ -43,10 +43,14 @@ func (c *Config) Name() string {
 }
 
 func (c *Config) Label() string {
-	if host := c.own(); host != nil {
+	if host := c.own(); host != nil && host.Label != "" {
 		return host.Label
 	}
-	return ""
+	name := c.Name()
+	if _, suffix, found := strings.Cut(name, "-"); found {
+		return suffix
+	}
+	return name
 }
 
 func (c *Config) Index() *int {

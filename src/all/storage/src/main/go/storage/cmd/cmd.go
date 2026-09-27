@@ -13,7 +13,7 @@ import (
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintf(os.Stderr, "%s%v\n", prefixError, err)
 		os.Exit(1)
 	}
 }
@@ -43,6 +43,9 @@ func formatFlagUsages(flags *pflag.FlagSet) string {
 const (
 	rootName        = "storage"
 	rootDescription = "Show storage metrics"
+
+	prefixError   = "Error: "
+	prefixWarning = "Warning: "
 )
 
 const usageTemplate = `Usage:{{if .Runnable}}
