@@ -215,24 +215,65 @@ assuming.
 
 ### Phases
 
-**Phase 0 — the spike, and the gate.** Nothing else starts until this passes. On `may`, outside
-the container: a throwaway binary that unbinds `pl2303`, opens `067b:2303` with `nusb`, **runs the
-full `pl2303_startup` sequence above**, sets the line coding to 9600 then 115200, sends `0xF0` and
-reads the echo. Assert the echo is not `0xF0` (a presence pulse pulled it low) and that `dmesg`
-gains no new lines. The init sequence is the part the previous version of this plan omitted, and
-without it the chip may not transmit at all — a failure would then read as "chip quirks defeat it"
-when it was a missing setup step. Rebind `pl2303` afterwards and confirm tempstat recovers.
+**The gate must exercise 115200 slot traffic, not just the reset.** The obvious spike — unbind,
+init, set both bauds, send `0xF0`, read the echo — proves the plumbing and none of the risk. It
+never sends a time slot, never reads a temperature, never calls `clear()` and runs once, so it
+would pass while telling you nothing about the two things most likely to be wrong: the 160-byte
+full-duplex echo at 115200, and intermittent byte-level desync. `touch_slots` does
+`write_all(chunk)` then `read_exact(chunk)` for up to `UART_FIFO_SIZE` 160 bytes, and today the
+kernel tty layer buffers the inbound echo while the write is in flight. With raw bulk that becomes
+a bulk OUT followed by a bulk IN against a 64-byte endpoint and an unknown RX FIFO on a clone.
+That is the question the gate exists to answer.
 
-**Phase 1 — `UsbUart` on the dev machine.** `driver/usb.rs` implementing `Uart` against `nusb`,
-`usb:VVVV:PPPP` parsing in `lib.rs` selecting `UsbUart` or `SerialUart`. Unit tests via the
+**So write `UsbUart` first and spike with the real driver stack.** Reversing the usual order is
+right here because a throwaway that tests the reset only is not cheaper in any useful sense — it
+fails cheap *and* proves nothing. The real stack brings its own correctness oracle: DS18B20
+scratchpad reads are CRC-8 checked in `read_scratchpad`, so a CRC-valid scratchpad is strong
+evidence the byte framing is right, and `read_temperature` already counts retries.
+
+**Phase 0 — `UsbUart`, plus a cheap pre-gate.** `driver/usb.rs` implementing `Uart` against
+`nusb`, `usb:VVVV:PPPP` parsing in `lib.rs` selecting `UsbUart` or `SerialUart`. Unit tests via the
 existing `MockUart` — the trait is the seam, so coverage above it is unchanged.
 `cargo clippy --workspace --all-targets` clean, files comment-free per the module convention.
-Nothing is proven by this phase beyond compilation and shape.
+
+Before anything else runs, a `--probe` mode does the 20-minute kill check: claim the interface,
+run the full `pl2303_startup` sequence, set the line coding to 9600 then 115200. If the clone
+stalls a vendor request the project is dead there and the cost was an afternoon. This is the part
+the previous version of this plan omitted from its spike, and without it a failure reads as "chip
+quirks defeat it" when it was a missing setup step.
+
+**Phase 1 — the gate, on `may`.** Build `linux/amd64`, stop the tempstat container (it holds the
+tty, and unbinding under it gives it I/O errors it would take three failed polls to recover from),
+capture `dmesg | wc -l`, and run against the real probe. Pass criteria, all of them:
+
+| Check | Pass |
+|---|---|
+| Reset at 9600 | echo is not `0xF0` — a presence pulse pulled it low |
+| One `match_rom` + `read_scratchpad` at 115200 | CRC-8 valid — this is the real gate |
+| All three sensors read | within ±0.5 °C of the tty baseline below |
+| Soak, a few hundred reads back to back | **zero** CRC retries and zero errors, against a production baseline of zero in 9 days |
+| `clear()` between chunks | no desync across the soak |
+| Per-sensor duration | recorded against the 825 ms tty baseline; poll total against 2473 ms |
+| `dmesg` delta | exactly zero new lines |
+| Interrupt endpoint `0x81` | nothing drains it across the soak and the chip keeps working |
+
+The baseline oracle, measured 2026-09-27 16:56 AWST over the tty path — ROMs and readings:
+`28FF641E870006AE` utility 16.3125 °C, `28FF641E87CB3CF9` rack_top 22.8125 °C,
+`28FF641E870576A9` rack_bottom 16.75 °C. Compare against the live `tempstat/data` at the time of
+the run rather than these numbers, which move with the weather; what matters is agreement with the
+tty path, not the absolute value.
+
+A single successful read is not a pass. The failure mode this gate exists to catch is "wrong by
+one byte occasionally", which the plan costs at weeks to notice and days to find, so the soak and
+its zero-retry threshold are the point of the phase.
+
+Rebind `pl2303` afterwards, restart tempstat and confirm it recovers.
 
 **Phase 2 — host plumbing.** `blacklist pl2303`; `install_prep.sh` loses the `chmod`;
 `docker-compose.yml` gains the mount and the cgroup rule; `.env_prod` keeps a placeholder
 `TEMPSTAT_DEVICE_MAP` and names the USB id. `.env_test`/`.env_exec` keep the socat mock. Verify the
-container enumerates the device without `privileged`, and re-measure the 16M cap.
+container enumerates the device without `privileged`, confirm the cgroup v2 eBPF path actually
+grants it, and re-measure the 16M cap.
 
 **Phase 3 — deploy and observe.** Over a full 24 h window: `dmesg` gains no pl2303 lines,
 `tempstat/data` carries three samples on cadence with no new CRC retries, and a deliberate replug
@@ -240,8 +281,8 @@ recovers without a container restart. That last is the hotplug risk and is the o
 it. If any fail, revert — the serial path is still in the binary, though reverting also needs the
 blacklist removed and udev re-triggered on the host.
 
-**There is a test loop, and it is on `may`.** The image already builds `linux/amd64`, so a test
-binary runs on the host against the real device. Slower than `cargo test`, not blind.
+**The test loop is on `may`, and that is workable.** The image already builds `linux/amd64`, so a
+test binary runs on the host against the real device. Slower than `cargo test`, not blind.
 
 ---
 
