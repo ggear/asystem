@@ -285,6 +285,7 @@ def _pull(context):
                 .format(join(ROOT_DIR, ".py_deps_dev.txt")), ".", "python")
     go_deps_paths = []
     rust_deps_paths = []
+    pull_all_modules = os.getcwd() in [ROOT_DIR, ROOT_MODULE_DIR]
     for module in _get_modules(context, filter_changes=False):
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
         if isdir(module_go_main_path):
@@ -296,9 +297,13 @@ def _pull(context):
         if isfile(join(module_rust_main_path, "Cargo.toml")):
             rust_deps_paths.append(module_rust_main_path)
     for go_deps_path in go_deps_paths:
+        if pull_all_modules:
+            _run_pinned(context, "go get -u ./...", go_deps_path, "go")
         _run_pinned(context, "go mod download", go_deps_path, "go")
         _run_pinned(context, "go mod tidy", go_deps_path, "go")
     for rust_deps_path in rust_deps_paths:
+        if pull_all_modules:
+            _run_pinned(context, "cargo update", rust_deps_path, "rust")
         _run_pinned(context, "cargo fetch", rust_deps_path, "rust")
     _print_footer("asystem", "pull dependencies install")
     _generate(context, filter_changes=False, is_pull=True)

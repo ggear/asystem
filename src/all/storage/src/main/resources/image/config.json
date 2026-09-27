@@ -9,12 +9,6 @@
         "form_factor": "edge",
         "os": "linux",
         "arch": "arm64",
-        "system": [
-          {
-            "mount": "/",
-            "identity": "LABEL=RASPIROOT"
-          }
-        ],
         "shares": [
           {
             "mount": "/share/10",
@@ -31,20 +25,6 @@
         "form_factor": "server",
         "os": "linux",
         "arch": "arm64",
-        "system": [
-          {
-            "mount": "/",
-            "identity": "UUID=ff55f331-1d06-4a57-a65f-89e457b3a3d0"
-          },
-          {
-            "mount": "/home",
-            "identity": "UUID=ff55f331-1d06-4a57-a65f-89e457b3a3d0"
-          },
-          {
-            "mount": "/var",
-            "identity": "UUID=ff55f331-1d06-4a57-a65f-89e457b3a3d0"
-          }
-        ],
         "shares": [
           {
             "mount": "/share/10",
@@ -125,24 +105,6 @@
         "form_factor": "server",
         "os": "linux",
         "arch": "x86_64",
-        "system": [
-          {
-            "mount": "/",
-            "identity": "UUID=9aa3b0bd-0d59-4978-9651-2722f8932975"
-          },
-          {
-            "mount": "/home",
-            "identity": "UUID=c24d7487-a95c-4dec-a625-0a744ed66193"
-          },
-          {
-            "mount": "/var",
-            "identity": "UUID=893aaf88-2b15-453d-ad24-3a9b81aa7323"
-          },
-          {
-            "mount": "/tmp",
-            "identity": "UUID=6552bdfb-05db-4758-b224-5168bbb00c28"
-          }
-        ],
         "shares": [
           {
             "mount": "/share/20",
@@ -223,24 +185,6 @@
         "form_factor": "server",
         "os": "linux",
         "arch": "x86_64",
-        "system": [
-          {
-            "mount": "/",
-            "identity": "/dev/mapper/macmini--may--vg-root"
-          },
-          {
-            "mount": "/home",
-            "identity": "/dev/mapper/macmini--may--vg-home"
-          },
-          {
-            "mount": "/tmp",
-            "identity": "/dev/mapper/macmini--may--vg-tmp"
-          },
-          {
-            "mount": "/var",
-            "identity": "/dev/mapper/macmini--may--vg-var"
-          }
-        ],
         "shares": [
           {
             "mount": "/share/30",
@@ -321,24 +265,6 @@
         "form_factor": "server",
         "os": "linux",
         "arch": "x86_64",
-        "system": [
-          {
-            "mount": "/",
-            "identity": "/dev/mapper/macmini--meg--vg-root"
-          },
-          {
-            "mount": "/home",
-            "identity": "/dev/mapper/macmini--meg--vg-home"
-          },
-          {
-            "mount": "/tmp",
-            "identity": "/dev/mapper/macmini--meg--vg-tmp"
-          },
-          {
-            "mount": "/var",
-            "identity": "/dev/mapper/macmini--meg--vg-var"
-          }
-        ],
         "shares": [
           {
             "mount": "/share/40",

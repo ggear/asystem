@@ -5,7 +5,6 @@ package engine
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"storage/internal/config"
 	"strings"
 )
@@ -28,8 +27,8 @@ func Mount(cfg *config.Config) []MountResult {
 			results = append(results, MountResult{Mountpoint: dir, Message: fmt.Sprintf("Mount [%s] already", dir)})
 			continue
 		}
-		_ = exec.Command("diskutil", "unmount", "force", dir).Run()
-		if exec.Command("mount_smbfs", "-o", "soft,nodatacache", samba, dir).Run() == nil {
+		_ = boundedRun("diskutil", "unmount", "force", dir)
+		if boundedRun("mount_smbfs", "-o", "soft,nodatacache", samba, dir) == nil {
 			results = append(results, MountResult{Mountpoint: dir, Message: fmt.Sprintf("Mounting [%s] ... done", samba)})
 		} else {
 			results = append(results, MountResult{Mountpoint: dir, Message: fmt.Sprintf("Mounting [%s] ... failed", samba), Failed: true})

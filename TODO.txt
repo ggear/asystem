@@ -26,32 +26,6 @@ Retire nginx and use cloudflared for homeasistant?
 Improve sys tests with datbase/broker asserts for all modules
 
 
-have go and rust update in global fab pull not just dry run. dont update go/rust deps otherwise
-PULL PACKAGE VERSIONS TO UPDATE STARTING: asystem-10.200.1725
-------------------------------------------------------------
-cd ./. && . /Users/graham/Code/asystem/.env_fab && pip list --outdated | grep -iE '^(Package|adbc\-driver\-postgresql|aenum|anyio|datetime|decode\-config|dnspython|docker|dotenv|dropbox|fabric|fastapi|ffmpeg\-python|google\-api\-python\-client|google\-auth|google\-auth\-httplib2|google\-auth\-oauthlib|gspread|gspread\-pandas|hassapi|homeassistant|in
-Package                          Version  Latest  Type
-fastapi                          0.115.14 0.141.1 wheel
-google-auth                      2.58.0   2.58.1  wheel
-mlflow                           3.16.0   3.16.1  wheel
-ruff                             0.16.8   0.16.9  wheel
-virtualenv                       21.12.0  21.13.0 wheel
-cd /Users/graham/Code/asystem/src/all/storage/src/main/go/storage && . /Users/graham/Code/asystem/.env_fab && go list -m -u -f '{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}' all | awk 'NF'
-cd /Users/graham/Code/asystem/src/all/supervisor/src/main/go/supervisor && . /Users/graham/Code/asystem/.env_fab && go list -m -u -f '{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}' all | awk 'NF'
-cd /Users/graham/Code/asystem/src/mad/network/src/main/go/network && . /Users/graham/Code/asystem/.env_fab && go list -m -u -f '{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}' all | awk 'NF'
-cd /Users/graham/Code/asystem/src/zzz/solaredge/src/main/rust/solaredge && . /Users/graham/Code/asystem/.env_fab && cargo update --dry-run
-    Updating crates.io index
-     Locking 0 packages to latest compatible versions
-warning: not updating lockfile due to dry run
-cd /Users/graham/Code/asystem/src/may/tempstat/src/main/rust/tempstat && . /Users/graham/Code/asystem/.env_fab && cargo update --dry-run
-    Updating crates.io index
-     Locking 0 packages to latest compatible versions
-note: pass `--verbose` to see 1 unchanged dependencies behind latest
-warning: not updating lockfile due to dry run
-
-
-
-
 ###############################################################################################################################################################
 # Tasmota
 ###############################################################################################################################################################
@@ -168,6 +142,25 @@ Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-N
 # Supervisor
 ###############################################################################################################################################################
 
+
+Update all log statements to have unit following [] value and make all fixed width so that they line up. eg FROM
+
+09-27T11:31:09 INFO  backup           stage/tertiary            stop            17s mirrored [/share/10] mirrored in [18s], running total [   4.9] GiB
+09-27T11:31:09 INFO  backup           stage/tertiary            start           0ms mirrored [/share/11] mirroring to [/backup/share/11]
+09-27T11:31:09 INFO  backup           stage/tertiary            stop          366ms mirrored [/share/11] mirrored in [0s], running total [   4.9] GiB
+09-27T11:31:09 INFO  backup           stage/tertiary            start           0ms mirrored [/share/12] mirroring to [/backup/share/12]
+09-27T11:31:10 INFO  backup           stage/tertiary            stop          277ms mirrored [/share/12] mirrored in [0s], running total [   4.9] GiB
+
+TO
+
+09-27T11:31:09 INFO  backup           stage/tertiary            stop            17s mirrored [/share/10] mirrored in [ 18] s, running total [   4.9] GiB
+09-27T11:31:09 INFO  backup           stage/tertiary            start           0ms mirrored [/share/11] mirroring to [/backup/share/11]
+09-27T11:31:09 INFO  backup           stage/tertiary            stop          366ms mirrored [/share/11] mirrored in [  0] s, running total [   4.9] GiB
+09-27T11:31:09 INFO  backup           stage/tertiary            start           0ms mirrored [/share/12] mirroring to [/backup/share/12]
+09-27T11:31:10 INFO  backup           stage/tertiary            stop          277ms mirrored [/share/12] mirrored in [  0] s, running total [   4.9] GiB
+
+
+
 code review this patch which is not in git yet.
 Make sure project guidleines are followed.
 Check all logic.
@@ -239,6 +232,7 @@ increase commit timeout PARTLABEL=share_08    /share/10    ext4    noatime,commi
 should i extend the benchmark read period to 2min? 4xfiles? likewise should 4GiB write be increased?
 Upgrade other ssd enclosure
 Rewrite other disks
+
 
 ###############################################################################################################################################################
 # Home Assistant

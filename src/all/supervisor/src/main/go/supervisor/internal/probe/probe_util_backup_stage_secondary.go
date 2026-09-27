@@ -113,7 +113,7 @@ func promoteOneService(ctx context.Context, request stageRequest, share, host, s
 	counters.addTransfer(stats.filesTransferred, stats.totalTransferredBytes/bytesPerMebibyte, stats.filesCreated,
 		stats.filesDeleted, stats.filesListed, stats.totalFileSizeBytes/bytesPerMebibyte, stats.totalBytesSent/bytesPerMebibyte)
 	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof("promoted", started,
-		"[%s] promoted in [%s], running total [%s] GiB", service, time.Since(started).Round(time.Second),
+		"[%s] promoted in [%s] s, running total [%s] GiB", service, elapsedSeconds(time.Since(started)),
 		backupSizedGibibytes(intReading(int64(counters.snapshotSizeMB()))))
 
 	pruner := moduleBackupScript(service)

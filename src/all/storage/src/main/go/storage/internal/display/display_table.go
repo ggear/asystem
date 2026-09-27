@@ -81,7 +81,7 @@ func columnWidth(header string, values []string) int {
 
 func writeTopBorder(b *strings.Builder, useUnicode bool, hostWidth, mountWidth int) {
 	rule := textHRule.pick(useUnicode)
-	widths := []int{hostWidth, mountWidth, bytesContentWidth + 2*border, bytesContentWidth + 2*border, usedSpanWidth()}
+	widths := []int{hostWidth, mountWidth, bytesCellWidth(), bytesCellWidth(), usedSpanWidth()}
 	mid := textTopMid.pick(useUnicode)
 	junctions := []string{mid, mid, mid, mid}
 	writeRuleRow(b, textTopLeft.pick(useUnicode), junctions, textTopRight.pick(useUnicode), rule, widths)
@@ -120,7 +120,7 @@ func writeRowRule(b *strings.Builder, useUnicode bool, hostWidth, mountWidth int
 }
 
 func columnWidths(hostWidth, mountWidth int) []int {
-	bytesWidth := bytesContentWidth + 2*border
+	bytesWidth := bytesCellWidth()
 	return []int{hostWidth, mountWidth, bytesWidth, bytesWidth, bytesWidth, barContentWidth + 2*border, pctContentWidth + 2*border}
 }
 
@@ -136,16 +136,19 @@ func writeRuleRow(b *strings.Builder, left string, junctions []string, right, fi
 	b.WriteString("\n")
 }
 
+func bytesCellWidth() int {
+	return bytesContentWidth + 2*border
+}
+
 func usedSpanWidth() int {
-	bytesWidth := bytesContentWidth + 2*border
 	barWidth := barContentWidth + 2*border
 	pctWidth := pctContentWidth + 2*border
-	return bytesWidth + 1 + barWidth + 1 + pctWidth
+	return bytesCellWidth() + 1 + barWidth + 1 + pctWidth
 }
 
 func writeHeaderLabels(b *strings.Builder, useUnicode bool, hostWidth, mountWidth int) {
 	vert := textVert.pick(useUnicode)
-	sizeWidth := bytesContentWidth + 2*border
+	sizeWidth := bytesCellWidth()
 	usedWidth := usedSpanWidth()
 	b.WriteString(vert)
 	b.WriteString(center(headerHost, hostWidth))
@@ -174,30 +177,40 @@ func center(text string, width int) string {
 func writeDataRow(b *strings.Builder, useUnicode, useColour bool, hostWidth, mountWidth int, row Row) {
 	vert := textVert.pick(useUnicode)
 	b.WriteString(vert)
-	b.WriteString(leftCell(row.Host, hostWidth))
+	b.WriteString(leftCell(row.Host, hostWidth-2*border))
 	b.WriteString(vert)
-	b.WriteString(leftCell(row.Mount, mountWidth))
+	b.WriteString(leftCell(row.Mount, mountWidth-2*border))
 	b.WriteString(vert)
-	b.WriteString(rightCell(clip(formatTiB(row.Size), bytesContentWidth), bytesContentWidth))
+	b.WriteString(rightCell(bytesOrDash(row.Unmeasured, row.Size), bytesContentWidth))
 	b.WriteString(vert)
-	b.WriteString(rightCell(clip(formatTiB(row.Free), bytesContentWidth), bytesContentWidth))
+	b.WriteString(rightCell(bytesOrDash(row.Unmeasured, row.Free), bytesContentWidth))
 	b.WriteString(vert)
-	b.WriteString(rightCell(clip(formatTiB(row.Used), bytesContentWidth), bytesContentWidth))
+	b.WriteString(rightCell(bytesOrDash(row.Unmeasured, row.Used), bytesContentWidth))
 	b.WriteString(vert)
-	b.WriteString(barCell(useUnicode, useColour, row.Percent))
+	b.WriteString(barCell(useUnicode, useColour, row))
 	b.WriteString(vert)
-	b.WriteString(pctCell(useColour, row.Percent))
+	b.WriteString(pctCell(useColour, row))
 	b.WriteString(vert)
 	b.WriteString("\n")
 }
 
-func leftCell(value string, width int) string {
-	content := width - 2*border
-	return strings.Repeat(" ", border) + padRight(value, content) + strings.Repeat(" ", border)
+func bytesOrDash(unmeasured bool, bytes uint64) string {
+	if unmeasured {
+		return "--"
+	}
+	return clip(formatTiB(bytes), bytesContentWidth)
+}
+
+func leftCell(value string, content int) string {
+	return wrapBorder(padRight(value, content))
 }
 
 func rightCell(value string, content int) string {
-	return strings.Repeat(" ", border) + padLeft(value, content) + strings.Repeat(" ", border)
+	return wrapBorder(padLeft(value, content))
+}
+
+func wrapBorder(content string) string {
+	return strings.Repeat(" ", border) + content + strings.Repeat(" ", border)
 }
 
 func padRight(value string, width int) string {
@@ -226,22 +239,28 @@ func formatTiB(bytes uint64) string {
 	return strconv.FormatFloat(tib, 'f', 1, 64) + " TiB"
 }
 
-func barCell(useUnicode, useColour bool, percent float64) string {
-	filled := min(max(roundHalfEven(percent/5), 0), barContentWidth)
+func barCell(useUnicode, useColour bool, row Row) string {
+	if row.Unmeasured {
+		return wrapBorder(strings.Repeat(" ", barContentWidth))
+	}
+	filled := min(max(roundHalfEven(row.Percent/5), 0), barContentWidth)
 	bar := strings.Repeat(textBar.pick(useUnicode), filled) + strings.Repeat(" ", barContentWidth-filled)
 	if useColour {
-		bar = severityColour(percent) + bar + colourReset
+		bar = severityColour(row.Percent) + bar + colourReset
 	}
-	return strings.Repeat(" ", border) + bar + strings.Repeat(" ", border)
+	return wrapBorder(bar)
 }
 
-func pctCell(useColour bool, percent float64) string {
-	value := strconv.FormatFloat(percent, 'f', 1, 64) + "%"
+func pctCell(useColour bool, row Row) string {
+	if row.Unmeasured {
+		return wrapBorder(padLeft("--", pctContentWidth))
+	}
+	value := strconv.FormatFloat(row.Percent, 'f', 1, 64) + "%"
 	padded := padLeft(value, pctContentWidth)
 	if useColour {
-		padded = severityColour(percent) + padded + colourReset
+		padded = severityColour(row.Percent) + padded + colourReset
 	}
-	return strings.Repeat(" ", border) + padded + strings.Repeat(" ", border)
+	return wrapBorder(padded)
 }
 
 func roundHalfEven(value float64) int {

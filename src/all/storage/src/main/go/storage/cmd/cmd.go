@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -14,9 +13,7 @@ import (
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		if !errors.Is(err, errCommandReported) {
-			_, _ = fmt.Fprintln(os.Stderr, err)
-		}
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -87,8 +84,4 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `
 
-var (
-	errCommandReported = errors.New("the command reported its own failure")
-
-	flagDefaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)
-)
+var flagDefaultPattern = regexp.MustCompile(`\(default "?(.*?)"?\)$`)

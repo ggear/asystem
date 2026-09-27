@@ -20,11 +20,11 @@ import (
 const (
 	remoteInstallPath = "/var/lib/asystem/install/storage/latest/storage"
 	remoteDialTimeout = 5 * time.Second
-	remoteRunTimeout  = 10 * time.Second
+	remoteRunMargin   = 6 * time.Second
 	remoteSSHPort     = "22"
 )
 
-func CollectRemote(cfg *config.Config, envelopeVersion string, drives []string) []HostDoc {
+func CollectRemote(cfg *config.Config, drives []string) []HostDoc {
 	hosts := cfg.Hosts()
 	docs := make([]HostDoc, len(hosts))
 	var wg sync.WaitGroup
@@ -32,7 +32,7 @@ func CollectRemote(cfg *config.Config, envelopeVersion string, drives []string) 
 		wg.Add(1)
 		go func(i int, host config.HostEntry) {
 			defer wg.Done()
-			docs[i] = collectOneHost(host, envelopeVersion, drives)
+			docs[i] = collectOneHost(host, drives)
 		}(i, host)
 	}
 	wg.Wait()
@@ -40,9 +40,9 @@ func CollectRemote(cfg *config.Config, envelopeVersion string, drives []string) 
 	return docs
 }
 
-func collectOneHost(host config.HostEntry, envelopeVersion string, drives []string) HostDoc {
+func collectOneHost(host config.HostEntry, drives []string) HostDoc {
 	base := HostDoc{Index: host.Index, Label: host.Label, Name: host.Host}
-	output, err := runRemote(host.Host, drives)
+	output, err := runRemote(host.Host, remoteRunBudget(host), drives)
 	if err != nil {
 		base.State = HostStateUnreachable
 		base.Error = err.Error()
@@ -64,7 +64,12 @@ func collectOneHost(host config.HostEntry, envelopeVersion string, drives []stri
 	return remote
 }
 
-func runRemote(host string, drives []string) ([]byte, error) {
+func remoteRunBudget(host config.HostEntry) time.Duration {
+	mounts := len(host.Shares) + 2 // root and backup, beyond the declared shares
+	return remoteRunMargin + time.Duration(mounts)*statfsTimeout
+}
+
+func runRemote(host string, budget time.Duration, drives []string) ([]byte, error) {
 	client, err := dialHost(host)
 	if err != nil {
 		return nil, fmt.Errorf("ssh dial failed [%s] [%w]", host, err)
@@ -87,8 +92,8 @@ func runRemote(host string, drives []string) ([]byte, error) {
 			return nil, fmt.Errorf("ssh command failed [%s] [%v] [%s]", host, err, strings.TrimSpace(stderr.String()))
 		}
 		return stdout.Bytes(), nil
-	case <-time.After(remoteRunTimeout):
-		return nil, fmt.Errorf("ssh command timed out [%s] after [%s]", host, remoteRunTimeout)
+	case <-time.After(budget):
+		return nil, fmt.Errorf("ssh command timed out [%s] after [%s]", host, budget)
 	}
 }
 

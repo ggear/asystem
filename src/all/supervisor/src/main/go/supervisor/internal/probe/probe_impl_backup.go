@@ -129,24 +129,24 @@ func (p *backupProbe) poll(ctx context.Context, isPulse bool) error {
 func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	snapshot := p.documents()
 	if snapshot != nil && snapshot.abandoned {
-		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, scheduled run [%s] started [%s] ago wrote no roll-up and stopped reporting past the [%s] ceiling, so every stage it owns is unaccounted for",
-			snapshot.dir, snapshot.age().Round(time.Minute), p.runCeiling()), nil
+		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, scheduled run [%s] started [%s] min ago wrote no roll-up and stopped reporting past the [%s] min ceiling, so every stage it owns is unaccounted for",
+			snapshot.dir, elapsedMinutes(snapshot.age()), elapsedMinutes(p.runCeiling())), nil
 	}
 	if snapshot != nil && snapshot.running {
-		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct failed, run [%s] started [%s] ago has not written its roll-up yet so the metric is inert and always ok",
-			snapshot.dir, snapshot.age().Round(time.Minute)), nil
+		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct failed, run [%s] started [%s] min ago has not written its roll-up yet so the metric is inert and always ok",
+			snapshot.dir, elapsedMinutes(snapshot.age())), nil
 	}
 	if snapshot == nil || snapshot.host == nil || snapshot.age() > p.staleWindow() {
 		if !p.everRolled() {
 			return 0, derivation{}, fmt.Errorf("no backup verdict, no scheduled run has ever rolled up under [%s], so no stage ratio can be computed [%w]", p.root, errEnvironment)
 		}
-		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, no run directory under [%s] holds a status document inside the [%s] window",
-			p.root, p.staleWindow()), nil
+		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, no run directory under [%s] holds a status document inside the [%s] min window",
+			p.root, elapsedMinutes(p.staleWindow())), nil
 	}
 	run := max(snapshot.host.StagesRun, 1)
 	value := percentValue(float64(snapshot.host.StagesFailed) / float64(run) * 100.0)
-	return value, derivedf(scribe.ActionCompute, "computed [%d] pct failed, run [%s] aged [%s] reported [%d] of [%d] stages failed",
-		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.host.StagesFailed, run), nil
+	return value, derivedf(scribe.ActionCompute, "computed [%d] pct failed, run [%s] aged [%s] min reported [%d] of [%d] stages failed",
+		value, snapshot.dir, elapsedMinutes(snapshot.age()), snapshot.host.StagesFailed, run), nil
 }
 
 func (p *backupProbe) everRolled() bool {
@@ -157,17 +157,17 @@ func (p *backupProbe) everRolled() bool {
 func (p *backupProbe) haltedBackupStages() (int8, derivation, error) {
 	snapshot := p.documents()
 	if snapshot != nil && snapshot.running {
-		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, run [%s] started [%s] ago has not written its roll-up yet so the metric is inert and always ok",
-			snapshot.dir, snapshot.age().Round(time.Minute)), nil
+		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, run [%s] started [%s] min ago has not written its roll-up yet so the metric is inert and always ok",
+			snapshot.dir, elapsedMinutes(snapshot.age())), nil
 	}
 	if snapshot == nil || snapshot.host == nil || snapshot.age() > p.staleWindow() {
-		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, no run directory under [%s] holds a status document inside the [%s] window so the metric is inert and always ok",
-			p.root, p.staleWindow()), nil
+		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, no run directory under [%s] holds a status document inside the [%s] min window so the metric is inert and always ok",
+			p.root, elapsedMinutes(p.staleWindow())), nil
 	}
 	run := max(snapshot.host.StagesRun, 1)
 	value := percentValue(float64(snapshot.host.StagesHalted) / float64(run) * 100.0)
-	return value, derivedf(scribe.ActionCompute, "computed [%d] pct halted, run [%s] aged [%s] reported [%d] of [%d] stages halted by a stop or a timeout",
-		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.host.StagesHalted, run), nil
+	return value, derivedf(scribe.ActionCompute, "computed [%d] pct halted, run [%s] aged [%s] min reported [%d] of [%d] stages halted by a stop or a timeout",
+		value, snapshot.dir, elapsedMinutes(snapshot.age()), snapshot.host.StagesHalted, run), nil
 }
 
 func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
@@ -177,17 +177,17 @@ func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, host [%s] owns no share index so it runs no tertiary stage and holds no backup disk, so the metric is inert and always ok", p.hostName), nil
 		}
 		if snapshot != nil && snapshot.running {
-			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, run [%s] started [%s] ago has not measured the backup disk yet so the metric is inert and always ok",
-				snapshot.dir, snapshot.age().Round(time.Minute)), nil
+			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, run [%s] started [%s] min ago has not measured the backup disk yet so the metric is inert and always ok",
+				snapshot.dir, elapsedMinutes(snapshot.age())), nil
 		}
 		if snapshot != nil && snapshot.abandoned {
-			return 0, derivation{}, fmt.Errorf("no backup volume reading, scheduled run [%s] stopped reporting [%s] ago so its last disk usage cannot be trusted [%w]", snapshot.dir, snapshot.age().Round(time.Minute), errEnvironment)
+			return 0, derivation{}, fmt.Errorf("no backup volume reading, scheduled run [%s] stopped reporting [%s] min ago so its last disk usage cannot be trusted [%w]", snapshot.dir, elapsedMinutes(snapshot.age()), errEnvironment)
 		}
 		return 0, derivation{}, fmt.Errorf("no backup volume reading, this host has written no tertiary stage document under [%s] [%w]", p.root, errEnvironment)
 	}
 	value := percentValue(snapshot.tertiary.DiskUsagePerc)
-	return value, derivedf(scribe.ActionCompute, "computed [%d] pct used, tertiary stage of run [%s] aged [%s] measured [%.1f] pct disk usage on /backup",
-		value, snapshot.dir, snapshot.age().Round(time.Minute), snapshot.tertiary.DiskUsagePerc), nil
+	return value, derivedf(scribe.ActionCompute, "computed [%d] pct used, tertiary stage of run [%s] aged [%s] min measured [%.1f] pct disk usage on /backup",
+		value, snapshot.dir, elapsedMinutes(snapshot.age()), snapshot.tertiary.DiskUsagePerc), nil
 }
 
 func (p *backupProbe) serviceSuccess(service string) (bool, bool, string) {

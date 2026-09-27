@@ -10,7 +10,6 @@ FSTAB_DOMAIN = "dar"
 FSTAB_FORM_FACTORS = ("edge", "server")
 SHARE_TOKEN = re.compile(r"(share|backup)_\d+")
 SHARE_MOUNT = re.compile(r"^/share/\d+$")
-EXCLUDED_MOUNT_PREFIXES = ("/boot", "/proc", "/backup")
 
 
 def parse_fstab(path):
@@ -75,11 +74,6 @@ if __name__ == "__main__":
             continue
         machine_host = "{}-{}".format(HOSTS[label][0], label)
         entries = fstabs[label]
-        system = [
-            {"mount": entry["mount"], "identity": entry["identifier"]}
-            for entry in entries
-            if not entry["mount"].startswith(EXCLUDED_MOUNT_PREFIXES) and not SHARE_MOUNT.match(entry["mount"])
-        ]
         shares = []
         for entry in entries:
             if not SHARE_MOUNT.match(entry["mount"]):
@@ -104,7 +98,6 @@ if __name__ == "__main__":
         host_schema["form_factor"] = HOSTS[label][4]
         host_schema["os"] = HOSTS[label][3]
         host_schema["arch"] = HOSTS[label][1]
-        host_schema["system"] = system
         host_schema["shares"] = shares
         if backup is not None:
             host_schema["backup"] = backup

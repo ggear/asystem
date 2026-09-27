@@ -356,6 +356,18 @@ func backupElapsed(seconds int64) string {
 	return fmt.Sprintf("%02dh%02dm%02ds", seconds/3600, seconds%3600/60, seconds%60)
 }
 
+func elapsedSeconds(d time.Duration) string {
+	return padLeft(strconv.FormatInt(int64(d.Round(time.Second)/time.Second), 10), elapsedSecondsWidth)
+}
+
+func elapsedMinutes(d time.Duration) string {
+	return padLeft(strconv.FormatInt(int64(d.Round(time.Minute)/time.Minute), 10), backupMinutesWidth)
+}
+
+func elapsedMillis(d time.Duration) string {
+	return padLeft(strconv.FormatInt(int64(d.Round(time.Millisecond)/time.Millisecond), 10), elapsedMillisWidth)
+}
+
 func backupBar(percent reading) string {
 	if !percent.known || percent.value < 0 {
 		return backupUnknownCell
@@ -479,6 +491,9 @@ const (
 	backupThroughputWidth = 3
 	backupMinutesWidth    = 4
 	backupBarWidth        = 18
+
+	elapsedSecondsWidth = 3
+	elapsedMillisWidth  = 5
 
 	backupUnknownEta   = "--:--:--"
 	backupUnknownCell  = "-"

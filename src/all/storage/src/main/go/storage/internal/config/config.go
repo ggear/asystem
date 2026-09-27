@@ -80,13 +80,6 @@ func (c *Config) Backup() *BackupEntry {
 	return nil
 }
 
-func (c *Config) System() []SystemEntry {
-	if host := c.own(); host != nil {
-		return host.System
-	}
-	return nil
-}
-
 func (c *Config) MountLabel(mount string) string {
 	host := c.own()
 	if host == nil {
@@ -143,6 +136,11 @@ func load(path string) *Config {
 	}
 	result.asystem.Version = resolve("SERVICE_VERSION_ABSOLUTE", result.asystem.Version)
 	result.asystem.Host = resolve("STORAGE_HOST", result.asystem.Host)
+	if result.asystem.Host == "" {
+		if hostName, err := os.Hostname(); err == nil {
+			result.asystem.Host = hostName
+		}
+	}
 	return result
 }
 
@@ -171,14 +169,8 @@ type HostEntry struct {
 	FormFactor string `json:"form_factor"`
 	OS         string
 	Arch       string
-	System     []SystemEntry
 	Shares     []ShareEntry
 	Backup     *BackupEntry
-}
-
-type SystemEntry struct {
-	Mount    string
-	Identity string
 }
 
 type ShareEntry struct {

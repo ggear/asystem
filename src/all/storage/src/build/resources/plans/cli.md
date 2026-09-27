@@ -751,18 +751,19 @@ for line. Every fact this module needs is in them:
 | `PARTLABEL=backup_06 /backup btrfs …` | the backup mount |
 | `UUID=… / btrfs subvol=root`, `/home`, `/var` | the per-host `/` amalgam expectation |
 
-That last row is the useful one and is why this beats every alternative source: on `mad` the three
-system lines carry **one UUID across three subvolumes**, which is the identity fold of *Reading the
-mount table* stated in the declaration, so the runtime fold can be checked against it rather than only
-against itself.
+That last row confirms this beats every alternative source: on `mad` the three system lines carry
+**one UUID across three subvolumes**, which is the identity fold of *Reading the mount table* stated
+in the declaration. **Ruled out — shipping those system/identity lines in `config.json`** to check the
+runtime fold against them: nothing ever read the shipped `system` array back (`Config.System()` had no
+caller), so it was dead weight carried through the schema, the generator and the Go config for no
+benefit. The runtime fold is verified against itself only (the fixtures in
+`engine_impl_space_test.go`), and a declared cross-check can be reintroduced if a real drift is ever
+found that fixtures alone would miss.
 
 So `generate.py` parses those six files and emits, per host:
 
 ```json
 {"index": 1, "host": "macmini-mad", "label": "mad", "form_factor": "server",
- "system": [{"mount": "/", "identity": "UUID=ff55f331-…"},
-            {"mount": "/home", "identity": "UUID=ff55f331-…"},
-            {"mount": "/var", "identity": "UUID=ff55f331-…"}],
  "shares": [{"mount": "/share/10", "label": "share_08", "served_by": "macmini-mad", "smb": "share-10"},
             {"mount": "/share/20", "label": "share_06", "served_by": "macmini-max", "smb": "share-20"}],
  "backup": {"mount": "/backup", "label": "backup_06"}}

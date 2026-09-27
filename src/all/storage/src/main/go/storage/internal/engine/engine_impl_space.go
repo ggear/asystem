@@ -193,7 +193,7 @@ func CollectLocal(cfg *config.Config, drives []string) []MountDoc {
 			Space: &SpaceFigures{SizeBytes: usage.Total, UsedBytes: used, FreeBytes: usage.Total - used},
 		})
 	}
-	docs = append(docs, declaredMissing(cfg, docs)...)
+	docs = append(docs, declaredMissing(cfg, docs, drives)...)
 	docs = append(docs, backupMounts(cfg, drives)...)
 	docs = append(docs, shareSubtotal(docs)...)
 	return docs
@@ -257,7 +257,7 @@ func boundedUsage(mountpoint string) (*disk.UsageStat, error) {
 	}
 }
 
-func declaredMissing(cfg *config.Config, present []MountDoc) []MountDoc {
+func declaredMissing(cfg *config.Config, present []MountDoc, drives []string) []MountDoc {
 	seen := map[string]bool{}
 	for _, m := range present {
 		seen[m.Mount] = true
@@ -265,6 +265,9 @@ func declaredMissing(cfg *config.Config, present []MountDoc) []MountDoc {
 	var missing []MountDoc
 	for _, share := range cfg.Shares() {
 		if seen[share.Mount] {
+			continue
+		}
+		if _, matched := ClassifyDrive(share.Mount, drives); !matched {
 			continue
 		}
 		missing = append(missing, MountDoc{

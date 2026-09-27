@@ -96,8 +96,8 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 				silent = time.Now()
 			}
 			scribe.Log(scribe.SourceBackup, subject, scribe.ActionSample).Warnf("faulting", started,
-				"[%s] scrub status unanswered for [%s] of [%s], the disk may have gone", config.DirBackup,
-				time.Since(silent).Round(time.Second), scrubSilenceGrace)
+				"[%s] scrub status unanswered for [%s] s of [%s] s, the disk may have gone", config.DirBackup,
+				elapsedSeconds(time.Since(silent)), elapsedSeconds(scrubSilenceGrace))
 			if time.Since(silent) < scrubSilenceGrace {
 				continue
 			}

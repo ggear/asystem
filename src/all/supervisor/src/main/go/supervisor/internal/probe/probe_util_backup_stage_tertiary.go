@@ -98,7 +98,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		counters.addTransfer(stats.filesTransferred, stats.totalTransferredBytes/bytesPerMebibyte, stats.filesCreated,
 			stats.filesDeleted, stats.filesListed, stats.totalFileSizeBytes/bytesPerMebibyte, stats.totalBytesSent/bytesPerMebibyte)
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Infof("mirrored", mirrorStarted,
-			"[%s] mirrored in [%s], running total [%s] GiB", share, time.Since(mirrorStarted).Round(time.Second),
+			"[%s] mirrored in [%s] s, running total [%s] GiB", share, elapsedSeconds(time.Since(mirrorStarted)),
 			backupSizedGibibytes(intReading(int64(counters.snapshotSizeMB()))))
 	}
 

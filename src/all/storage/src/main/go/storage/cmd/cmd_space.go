@@ -64,7 +64,7 @@ func executeSpace(configPath string, opts *spaceOptions) error {
 	case "local":
 		hosts = []engine.HostDoc{engine.LocalHost(cfg, drives)}
 	case "remote":
-		hosts = engine.CollectRemote(cfg, cfg.Version(), drives)
+		hosts = engine.CollectRemote(cfg, drives)
 		if len(hosts) == 0 {
 			return fmt.Errorf("no reachable hosts")
 		}
@@ -116,6 +116,8 @@ func rowsFor(hosts []engine.HostDoc, mode string) []display.Row {
 				row.Used = mount.Space.UsedBytes
 				row.Free = mount.Space.FreeBytes
 				row.Percent = percentOf(row.Used, row.Size)
+			} else {
+				row.Unmeasured = true
 			}
 			row.NewHost = firstOfHost
 			row.NewClass = firstOfHost || mount.Class != lastClass

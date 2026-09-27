@@ -3,6 +3,7 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -27,9 +28,9 @@ func Mount(_ *config.Config) []MountResult {
 			continue
 		}
 		if entry.isCifs() {
-			_ = exec.Command("ls", entry.Mountpoint).Run()
+			_ = boundedRun("ls", entry.Mountpoint)
 		} else {
-			_ = exec.Command("mount", entry.Mountpoint).Run()
+			_ = boundedRun("mount", entry.Mountpoint)
 		}
 		if mountActive(entry.Mountpoint) {
 			results = append(results, MountResult{Mountpoint: entry.Mountpoint, Message: fmt.Sprintf("Mounting [%s] ... done", entry.Mountpoint)})
@@ -41,9 +42,11 @@ func Mount(_ *config.Config) []MountResult {
 }
 
 func mountActive(mountpoint string) bool {
-	output, err := exec.Command("mount").Output()
+	ctx, cancel := context.WithTimeout(context.Background(), mountTimeout)
+	defer cancel()
+	output, err := exec.CommandContext(ctx, "mount").Output()
 	if err != nil || !strings.Contains(string(output), " on "+mountpoint+" ") {
 		return false
 	}
-	return exec.Command("ls", mountpoint).Run() == nil
+	return boundedRun("ls", mountpoint) == nil
 }

@@ -18,7 +18,6 @@ const fixtureDocument = `{
         "form_factor": "server",
         "os": "linux",
         "arch": "arm64",
-        "system": [{"mount": "/", "identity": "UUID=ff55f331"}],
         "shares": [
           {"mount": "/share/10", "label": "share_08", "served_by": "macmini-mad", "smb": "share-10"},
           {"mount": "/share/20", "label": "share_06", "served_by": "macmini-max", "smb": "share-20"}
@@ -105,6 +104,21 @@ func TestConfig_Load_EnvOverridesFile(t *testing.T) {
 	}
 	if got := cfg.Label(); got != "max" {
 		t.Errorf("Label: got %v want max (env-selected host)", got)
+	}
+}
+
+func TestConfig_Load_UnresolvedHostFallsBackToHostname(t *testing.T) {
+	Reset()
+	path := writeFixture(t, `{"asystem": {"version": "10.200.1725", "host": "$STORAGE_HOST", "schema": []}}`)
+	t.Setenv("STORAGE_HOST", "")
+	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
+	cfg := Load(path)
+	wantHostname, err := os.Hostname()
+	if err != nil {
+		t.Fatalf("os.Hostname failed [%v]", err)
+	}
+	if got := cfg.Name(); got != wantHostname {
+		t.Errorf("Name: got %v want os.Hostname() %v", got, wantHostname)
 	}
 }
 
