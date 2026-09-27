@@ -20,14 +20,14 @@ struct RawSensor {
 
 pub fn load_sensors(path: &Path) -> Result<Vec<SensorConfig>, String> {
     let data =
-        fs::read_to_string(path).map_err(|err| format!("failed to read sensors file [{}]: {err}", path.display()))?;
+        fs::read_to_string(path).map_err(|err| format!("failed to read sensors file [{}] [{err}]", path.display()))?;
     let raw: Vec<RawSensor> = serde_json::from_str(&data)
-        .map_err(|err| format!("failed to parse sensors file [{}]: {err}", path.display()))?;
+        .map_err(|err| format!("failed to parse sensors file [{}] [{err}]", path.display()))?;
     raw.into_iter()
         .map(|sensor| {
             let code = sensor.rom.trim_start_matches("0x").trim_start_matches("0X");
             code.parse::<Rom>()
-                .map_err(|err| format!("invalid rom [{code}] for sensor [{}]: {err}", sensor.unique_id))
+                .map_err(|err| format!("invalid rom [{code}] for sensor [{}] [{err}]", sensor.unique_id))
                 .map(|rom| SensorConfig {
                     unique_id: sensor.unique_id,
                     rom,

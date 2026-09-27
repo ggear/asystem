@@ -209,7 +209,7 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 			},
 		},
 		{
-			name:     "a single class carries no subtotal",
+			name:     "a glob below the share level carries no subtotal",
 			filters:  []string{"/share/*"},
 			readings: []reading{share("/share/10", 400, 300), share("/share/11", 400, 100), share("/share/12", 400, 100)},
 			want: []MountDoc{
@@ -219,12 +219,23 @@ func TestEngineImplSpace_Assemble(t *testing.T) {
 			},
 		},
 		{
-			name:     "a filtered set carries no subtotal",
+			name:     "a filter naming one share carries no subtotal",
 			filters:  []string{"/", "/share/10"},
 			readings: []reading{pool("/"), share("/share/10", 400, 300)},
 			want: []MountDoc{
 				{Mount: "/", Class: ClassRoot, State: MountStateMeasured, Space: space(1000, 400)},
 				{Mount: "/share/10", Label: "share_08", Class: ClassShare, State: MountStateMeasured, Space: space(400, 100)},
+			},
+		},
+		{
+			name:     "a filter naming the share level carries the subtotal alone",
+			filters:  []string{"/share"},
+			readings: []reading{share("/share/10", 400, 300), share("/share/11", 400, 100), share("/share/12", 400, 100)},
+			want: []MountDoc{
+				{Mount: "/share/10", Label: "share_08", Class: ClassShare, State: MountStateMeasured, Space: space(400, 100)},
+				{Mount: "/share/11", Label: "share_09", Class: ClassShare, State: MountStateMeasured, Space: space(400, 300)},
+				{Mount: "/share/12", Label: "share_10", Class: ClassShare, State: MountStateMeasured, Space: space(400, 300)},
+				{Mount: "/share", Class: ClassShare, State: MountStateMeasured, Space: space(1200, 700)},
 			},
 		},
 		{

@@ -82,8 +82,8 @@ func executeSpace(configPath string, opts *spaceOptions, filters []string) error
 		fmt.Println(string(encoded))
 	} else {
 		rows := rowsFor(hosts)
-		if mode == engine.ModeRemote && !engine.Filtered(filters) {
-			rows = append(rows, estateRows(hosts)...)
+		if mode == engine.ModeRemote {
+			rows = append(rows, estateRows(hosts, filters)...)
 		}
 		fmt.Print(display.Render(rows, useUnicode, useColour))
 	}
@@ -121,7 +121,7 @@ func rowsFor(hosts []engine.HostDoc) []display.Row {
 	return rows
 }
 
-func estateRows(hosts []engine.HostDoc) []display.Row {
+func estateRows(hosts []engine.HostDoc, filters []string) []display.Row {
 	if len(hosts) < 2 {
 		return nil
 	}
@@ -158,7 +158,7 @@ func estateRows(hosts []engine.HostDoc) []display.Row {
 	mountName := map[string]string{engine.ClassRoot: "/", engine.ClassShare: "/share", engine.ClassBackup: "/backup"}
 	for _, class := range order {
 		t, ok := totals[class]
-		if !ok {
+		if !ok || !engine.Claims(filters, mountName[class], class) {
 			continue
 		}
 		rows = append(rows, display.Row{Mount: mountName[class], Size: t.size, Used: t.used, Free: t.size - t.used, Percent: percentOf(t.used, t.size), NewHost: first, NewClass: true})
@@ -166,8 +166,8 @@ func estateRows(hosts []engine.HostDoc) []display.Row {
 		grandSize += t.size
 		grandUsed += t.used
 	}
-	if len(rows) == 0 {
-		return nil
+	if len(rows) < 2 {
+		return rows
 	}
 	rows = append(rows, display.Row{Mount: "", Size: grandSize, Used: grandUsed, Free: grandSize - grandUsed, Percent: percentOf(grandUsed, grandSize), NewClass: true})
 	return rows

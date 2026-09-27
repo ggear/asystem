@@ -123,7 +123,7 @@ impl<U: Uart> Ds2480b<U> {
                 }
                 Err(err) if attempt >= attempts => return Err(err),
                 Err(err) => {
-                    debug!("DS2480B detect attempt [{attempt}] failed: {err}");
+                    debug!("DS2480B detect attempt [{attempt}] failed [{err}]");
                 }
             }
         }

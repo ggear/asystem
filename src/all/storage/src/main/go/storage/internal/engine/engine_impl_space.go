@@ -140,12 +140,6 @@ func assemble(cfg *config.Config, filters []string, readings []reading, backup [
 		})
 	}
 	sort.Slice(shares, func(i, j int) bool { return shares[i].Mount < shares[j].Mount })
-	classes := 0
-	for _, populated := range []bool{len(roots)+len(rootFaults) > 0, len(shares) > 0, len(backup) > 0} {
-		if populated {
-			classes++
-		}
-	}
 	subtotal := func() []MountDoc {
 		var size, used uint64
 		measured := 0
@@ -157,11 +151,11 @@ func assemble(cfg *config.Config, filters []string, readings []reading, backup [
 			size += share.Space.SizeBytes
 			used += share.Space.UsedBytes
 		}
-		if Filtered(filters) || classes < 2 || measured == 0 {
+		if measured == 0 || !Claims(filters, shareMount, ClassShare) {
 			return nil
 		}
 		return []MountDoc{{
-			Mount: "/share",
+			Mount: shareMount,
 			Class: ClassShare,
 			State: MountStateMeasured,
 			Space: &SpaceFigures{SizeBytes: size, UsedBytes: used, FreeBytes: size - used},
@@ -194,8 +188,9 @@ func ClassifyMount(mountpoint string, filters []string) (class string, matched b
 	return "", false
 }
 
-func Filtered(filters []string) bool {
-	return !slices.Equal(filters, DefaultFilters)
+func Claims(filters []string, mountpoint, class string) bool {
+	claimed, matched := ClassifyMount(mountpoint, filters)
+	return matched && claimed == class
 }
 
 func FoldRoot(members []RootMember) (SpaceFigures, *Folded) {
@@ -410,12 +405,13 @@ const (
 	ModeRemote = "remote"
 
 	shareNamespace = "/share/"
+	shareMount     = "/share"
 	rootPattern    = "/"
 
 	statfsTimeout = 2 * time.Second
 )
 
-var DefaultFilters = []string{"/", "/share/*", "/backup"}
+var DefaultFilters = []string{"/", "/share*", "/backup"}
 
 var excludedRootPrefixes = []string{"/boot", "/efi", "/System/Volumes", "/Volumes"}
 

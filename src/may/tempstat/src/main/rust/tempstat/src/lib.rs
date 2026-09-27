@@ -127,9 +127,9 @@ impl Cli {
                 Ok(device) => device,
                 Err(err) => {
                     if period.is_zero() {
-                        return Err(format!("failed to open device [{}]: {err}", self.device));
+                        return Err(format!("failed to open device [{}] [{err}]", self.device));
                     }
-                    error!("device unavailable [{}]: {err}, retrying in {period:?}", self.device);
+                    error!("device unavailable [{}] [{err}], retrying in [{period:?}]", self.device);
                     thread::sleep(period);
                     continue;
                 }
@@ -149,7 +149,7 @@ impl Cli {
                         if period.is_zero() {
                             return Err(err.to_string());
                         }
-                        error!("broker unavailable: {err}, retrying in {period:?}");
+                        error!("broker unavailable [{err}], retrying in [{period:?}]");
                         thread::sleep(period);
                         continue;
                     }
@@ -159,9 +159,9 @@ impl Cli {
                 Err(err) => {
                     let _ = publisher.close(&status_topic);
                     if period.is_zero() {
-                        return Err(format!("failed to open device [{}]: {err}", self.device));
+                        return Err(format!("failed to open device [{}] [{err}]", self.device));
                     }
-                    error!("device unavailable [{}]: {err}, retrying in {period:?}", self.device);
+                    error!("device unavailable [{}] [{err}], retrying in [{period:?}]", self.device);
                     thread::sleep(period);
                     continue;
                 }
@@ -177,7 +177,7 @@ impl Cli {
                 return combined;
             }
             if let Err(ref err) = combined {
-                error!("{err}, reinitializing in {period:?}");
+                error!("[{err}], reinitializing in [{period:?}]");
             }
             thread::sleep(period);
         }
@@ -195,7 +195,7 @@ fn select_adapter(mut ds2480b: Ds2480b<SerialUart>) -> driver::Result<Box<dyn On
             Ok(Box::new(ds2480b))
         }
         Err(err) => {
-            debug!("DS2480B not detected ({err}), probing for DS9097");
+            debug!("DS2480B not detected [{err}], probing for DS9097");
             let mut ds9097 = Ds9097::new(ds2480b.into_uart())?;
             ds9097.redetect()?;
             info!("{}", log_line("detected adapter chipset", "DS9097"));
@@ -221,7 +221,7 @@ pub fn parse_duration(raw: &str) -> Result<Duration, String> {
     if trimmed == "0" {
         return Ok(Duration::ZERO);
     }
-    humantime::parse_duration(trimmed).map_err(|err| format!("invalid duration [{trimmed}]: {err}"))
+    humantime::parse_duration(trimmed).map_err(|err| format!("invalid duration [{trimmed}] [{err}]"))
 }
 
 fn poll<P: Publisher>(
@@ -257,13 +257,13 @@ fn poll<P: Publisher>(
             total_failures = if failed == sensors.len() { total_failures + 1 } else { 0 };
             if total_failures >= MAX_CONSECUTIVE_TOTAL_FAILURES {
                 return Err(format!(
-                    "all {} sensor(s) failed on [{total_failures}] consecutive poll(s)",
+                    "all [{}] sensor(s) failed on [{total_failures}] consecutive poll(s)",
                     sensors.len()
                 ));
             }
             warn!("poll had [{failed}] failure(s), attempting bus re-detection before next iteration");
             bus.redetect()
-                .map_err(|err| format!("bus re-detection failed: {err}"))?;
+                .map_err(|err| format!("bus re-detection failed [{err}]"))?;
         }
         debug!("sleeping [{period:?}] until iteration [{}]", iteration + 1);
         thread::sleep(period);
@@ -310,7 +310,7 @@ fn poll_once<P: Publisher>(
                 samples.insert(format!("{}_celsius", sensor.unique_id), json!(f64::from(temp)));
             }
             Err(err) => {
-                error!("sensor [{}] ROM [{}] failed: {err}", sensor.unique_id, sensor.rom);
+                error!("sensor [{}] ROM [{}] failed [{err}]", sensor.unique_id, sensor.rom);
                 failed += 1;
             }
         }
@@ -322,11 +322,11 @@ fn poll_once<P: Publisher>(
         "period_ms": period_ms,
         "samples": samples,
     });
-    let payload_bytes = serde_json::to_vec(&payload).map_err(|err| format!("failed to serialize payload: {err}"))?;
+    let payload_bytes = serde_json::to_vec(&payload).map_err(|err| format!("failed to serialize payload [{err}]"))?;
 
     publisher
         .publish(state_topic, &payload_bytes)
-        .map_err(|err| format!("failed to publish: {err}"))?;
+        .map_err(|err| format!("failed to publish [{err}]"))?;
 
     info!(
         "{}",

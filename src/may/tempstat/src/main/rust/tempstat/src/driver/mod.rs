@@ -36,11 +36,11 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Io(err) => write!(f, "io error: {err}"),
-            Error::Serial(err) => write!(f, "serial error: {err}"),
-            Error::NotDetected(response) => write!(f, "DS2480B not detected, response {response:02X?}"),
+            Error::Io(err) => write!(f, "io error [{err}]"),
+            Error::Serial(err) => write!(f, "serial error [{err}]"),
+            Error::NotDetected(response) => write!(f, "DS2480B not detected, response [{response:02X?}]"),
             Error::InvalidResponse { operation, response } => {
-                write!(f, "invalid {operation} response [{response:#04X}]")
+                write!(f, "invalid response [{operation}] [{response:#04X}]")
             }
             Error::EchoMismatch => write!(f, "echo mismatch"),
             Error::NoDevice => write!(f, "no device present"),
@@ -94,7 +94,7 @@ mod tests {
                 response: 0xC1
             }
             .to_string(),
-            "invalid reset response [0xC1]"
+            "invalid response [reset] [0xC1]"
         );
         assert_eq!(
             Error::InvalidRom("nope".to_string()).to_string(),

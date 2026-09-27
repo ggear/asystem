@@ -132,6 +132,6 @@ fn search<B: OneWire + ?Sized>(bus: &mut B, command: u8) -> Result<Vec<Rom>> {
         debug!("search found [{rom}]");
         roms.push(rom);
     }
-    debug!("search found {} device(s)", roms.len());
+    debug!("search found [{}] device(s)", roms.len());
     Ok(roms)
 }

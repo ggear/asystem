@@ -213,6 +213,45 @@ assuming.
 - **Portability.** This ties tempstat to PL2303. Buying a different adapter would then break it
   rather than fix it.
 
+### How the code must read
+
+`driver/usb.rs` sits beside `ds9097.rs` and `uart.rs` and must be indistinguishable from them. The
+crate's existing conventions are the specification; none of this is new policy.
+
+- **No inline comments.** The only prose is the `//!` module header carrying source links, the same
+  exception every `driver/` file already takes. For `usb.rs` that is the PL2303 references — the
+  kernel driver and the CDC line-coding shape — and nothing else.
+- **No new error crate.** `driver::Error` is a hand-rolled enum with `Display`, `source()` and
+  `From` impls, and there is no `thiserror` or `anyhow` anywhere in the crate. `UsbUart`'s failures
+  become new `Error` variants plus a `From` impl for the nusb error type. Their `Display` text
+  follows the repo convention — every interpolated value wrapped in `[...]`, no `:` or dash
+  separators. The pre-existing `io error: {err}` forms predate that rule; leave them alone, they
+  are not this change's business.
+- **Dependencies stay lean.** `serialport`, `rumqttc` and `chrono` are all `default-features =
+  false`; `nusb` takes neither `tokio` nor `blocking` unless the blocking bridge genuinely needs
+  one, and if it does, say so rather than pulling an executor in quietly.
+- **No `unsafe`.** Needing none is the whole reason `nusb` was chosen over `rusb`. A patch that
+  wants `unsafe` is a signal that the wrong crate or the wrong abstraction is in play.
+- **Layout mirrors the sibling file** — `//!` header, `use`, consts, struct, `impl` blocks, then a
+  colocated `#[cfg(test)] mod tests` at the bottom, which every driver file has. Exported items
+  come before unexported helpers.
+- **A function called from exactly one place is a jump, not an abstraction.** The repo-wide rule
+  applies here specifically: resist splitting the eleven-transfer `pl2303_startup` sequence into
+  eleven named helpers. It is one sequence with one call site and it reads better spelled out.
+- **Naming splits between code and text.** Types stay Rust-cased — `UsbUart`, matching `Ds2480b`
+  and `Ds9097` — while log and error *text* spells the chipset upper-case, `PL2303`, as the
+  existing log convention requires.
+- **Logging matches `SerialUart`.** `log_line(label, value)` for the aligned INFO lines, INFO
+  reserved for the one-line-per-event summary a human watching the service wants, and every
+  byte-level transfer detail at DEBUG exactly as the existing `uart tx` / `uart rx` lines are.
+- **Thin binaries.** If the `--probe` pre-gate needs an entrypoint it belongs in the library behind
+  a thin shim, as `main.rs` and `mockdev.rs` are. Prefer a flag on the existing `Cli` over a third
+  binary, since `mockdev` already ships in the image; if it must not ship, make it a workspace
+  member the way `tools/schema` is.
+- **`cargo fmt` and `cargo clippy --workspace --all-targets -- -D warnings` are gates, not
+  suggestions.** `fab build` runs both, `rustfmt.toml` pins `max_width = 120`, and warnings are
+  errors. Keeping files comment-free is what makes a build's formatting pass only ever reflow code.
+
 ### Phases
 
 **The gate must exercise 115200 slot traffic, not just the reset.** The obvious spike — unbind,

@@ -36,7 +36,7 @@ impl SerialUart {
             .write_data_terminal_ready(true)
             .and_then(|()| port.write_request_to_send(true))
         {
-            debug!("uart modem lines not asserted on [{path}]: {err}");
+            debug!("uart modem lines not asserted on [{path}] [{err}]");
         }
         Ok(SerialUart { port })
     }
@@ -44,7 +44,7 @@ impl SerialUart {
 
 impl Uart for SerialUart {
     fn write_all(&mut self, data: &[u8]) -> Result<()> {
-        debug!("uart tx {:02X?}", data);
+        debug!("uart tx [{:02X?}]", data);
         self.port.write_all(data)?;
         self.port.flush()?;
         Ok(())
@@ -52,7 +52,7 @@ impl Uart for SerialUart {
 
     fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
         self.port.read_exact(buffer)?;
-        debug!("uart rx {:02X?}", buffer);
+        debug!("uart rx [{:02X?}]", buffer);
         Ok(())
     }
 

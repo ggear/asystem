@@ -100,6 +100,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 	cases := []struct {
 		name          string
 		hosts         []engine.HostDoc
+		filters       []string
 		want          []display.Row
 		expectedError bool
 	}{
@@ -139,8 +140,30 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 			},
 			want: []display.Row{
 				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewHost: true, NewClass: true},
-				{Mount: "", Size: 1000, Used: 400, Free: 600, Percent: 40, NewClass: true},
 			},
+		},
+		{
+			name:    "a filter naming the share level keeps its rollup and drops the grand total",
+			filters: []string{"/share"},
+			hosts: []engine.HostDoc{
+				host("mad",
+					engine.MountDoc{Mount: "/share/10", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(600, 300)},
+					engine.MountDoc{Mount: "/share", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(600, 300)}),
+				host("max",
+					engine.MountDoc{Mount: "/share", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
+			},
+			want: []display.Row{
+				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewHost: true, NewClass: true},
+			},
+		},
+		{
+			name:    "a filter naming one share claims no rollup and no grand total",
+			filters: []string{"/share/10"},
+			hosts: []engine.HostDoc{
+				host("mad", engine.MountDoc{Mount: "/share/10", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(600, 300)}),
+				host("max", engine.MountDoc{Mount: "/share/10", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
+			},
+			want: nil,
 		},
 		{
 			name: "an unreachable host contributes nothing",
@@ -150,13 +173,16 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 			},
 			want: []display.Row{
 				{Mount: "/", Size: 100, Used: 40, Free: 60, Percent: 40, NewHost: true, NewClass: true},
-				{Mount: "", Size: 100, Used: 40, Free: 60, Percent: 40, NewClass: true},
 			},
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := estateRows(c.hosts)
+			filters := c.filters
+			if filters == nil {
+				filters = engine.DefaultFilters
+			}
+			got := estateRows(c.hosts, filters)
 			if len(got) != len(c.want) {
 				t.Fatalf("rows: got %d want %d, got %+v", len(got), len(c.want), got)
 			}
