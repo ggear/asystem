@@ -1,7 +1,7 @@
 # The pl2303 kernel log noise
 
 **Built and released 2026-09-27** in `10.200.1748`. The durable rules — why the probe is driven
-over raw USB, the two-baud arithmetic, the five `pl2303.rs`/`transport.rs` invariants and the
+over raw USB, the two-baud arithmetic, the five `pl2303.rs`/`usb.rs` invariants and the
 hardware gate procedure — live in the module `CLAUDE.md`. What is kept here is what does not
 belong there: the measurements the decision rests on, and the designs that were rejected, with
 the mechanism that rejected each. The rejected design is the one that will be proposed again.

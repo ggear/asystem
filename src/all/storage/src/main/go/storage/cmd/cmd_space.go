@@ -103,7 +103,7 @@ func rowsFor(hosts []engine.HostDoc) []display.Row {
 			if !firstOfHost {
 				row.Host = ""
 			}
-			if mount.Space != nil {
+			if mount.Measured() {
 				row.Size = mount.Space.SizeBytes
 				row.Used = mount.Space.UsedBytes
 				row.Free = mount.Space.FreeBytes
@@ -111,8 +111,8 @@ func rowsFor(hosts []engine.HostDoc) []display.Row {
 			} else {
 				row.Unmeasured = true
 			}
-			row.NewHost = firstOfHost
-			row.NewClass = firstOfHost || mount.Class != lastClass
+			row.NewBlock = firstOfHost
+			row.NewGroup = firstOfHost || mount.Class != lastClass
 			firstOfHost = false
 			lastClass = mount.Class
 			rows = append(rows, row)
@@ -134,7 +134,7 @@ func estateRows(hosts []engine.HostDoc, filters []string) []display.Row {
 			subtotalled = subtotalled || (mount.Class == engine.ClassShare && mount.Mount == "/share")
 		}
 		for _, mount := range host.Mounts {
-			if mount.State != engine.MountStateMeasured || mount.Space == nil {
+			if !mount.Measured() {
 				continue
 			}
 			if mount.Class == engine.ClassShare && subtotalled != (mount.Mount == "/share") {
@@ -161,7 +161,7 @@ func estateRows(hosts []engine.HostDoc, filters []string) []display.Row {
 		if !ok || !engine.Claims(filters, mountName[class], class) {
 			continue
 		}
-		rows = append(rows, display.Row{Mount: mountName[class], Size: t.size, Used: t.used, Free: t.size - t.used, Percent: percentOf(t.used, t.size), NewHost: first, NewClass: true})
+		rows = append(rows, display.Row{Mount: mountName[class], Size: t.size, Used: t.used, Free: t.size - t.used, Percent: percentOf(t.used, t.size), NewBlock: first, NewGroup: true})
 		first = false
 		grandSize += t.size
 		grandUsed += t.used
@@ -169,7 +169,7 @@ func estateRows(hosts []engine.HostDoc, filters []string) []display.Row {
 	if len(rows) < 2 {
 		return rows
 	}
-	rows = append(rows, display.Row{Mount: "", Size: grandSize, Used: grandUsed, Free: grandSize - grandUsed, Percent: percentOf(grandUsed, grandSize), NewClass: true})
+	rows = append(rows, display.Row{Mount: "", Size: grandSize, Used: grandUsed, Free: grandSize - grandUsed, Percent: percentOf(grandUsed, grandSize), NewGroup: true})
 	return rows
 }
 

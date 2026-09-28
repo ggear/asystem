@@ -144,7 +144,7 @@ func assemble(cfg *config.Config, filters []string, readings []reading, backup [
 		var size, used uint64
 		measured := 0
 		for _, share := range shares {
-			if share.State != MountStateMeasured {
+			if !share.Measured() {
 				continue
 			}
 			measured++
@@ -354,6 +354,10 @@ type MountDoc struct {
 	Space  *SpaceFigures `json:"space,omitempty"`
 	Folded *Folded       `json:"folded,omitempty"`
 	Backup *BackupInfo   `json:"backup,omitempty"`
+}
+
+func (m MountDoc) Measured() bool {
+	return m.State == MountStateMeasured && m.Space != nil
 }
 
 type SpaceFigures struct {

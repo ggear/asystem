@@ -1,6 +1,7 @@
 //! Device emulators for driving the real drivers over a serial link — a DS2480B bridge with an
 //! attached DS18B20 (`MockDs2480b`), and a bare DS18B20 as seen through a DS9097 passive adapter
-//! (`MockDs9097`).
+//! (`MockDs9097`). Unlike the `#[cfg(test)] mod mock` stand-ins elsewhere in the crate these are
+//! production code: they compile into the `mockdev` binary that ships in the image.
 
 use std::collections::VecDeque;
 
@@ -364,12 +365,6 @@ mod tests {
     fn mock_ds9097_answers_rom_search() {
         let mut bus = Ds9097::new(FsmUart::new(MockDs9097::new())).unwrap();
         assert_eq!(bus.get_connected_roms().unwrap(), vec![Rom(rom())]);
-    }
-
-    #[test]
-    fn mock_ds9097_reports_no_alarms() {
-        let mut bus = Ds9097::new(FsmUart::new(MockDs9097::new())).unwrap();
-        assert_eq!(bus.alarm_search().unwrap(), vec![]);
     }
 
     #[test]

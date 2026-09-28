@@ -4,7 +4,7 @@ set -uo pipefail
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-MEDIA_COMMANDS=(process analyse clean normalise ingress stow move refresh truncate find metadata home completion help)
+MEDIA_COMMANDS=(process analyse clean normalise ingress stow move refresh truncate space find metadata home completion help)
 
 MEDIA_OPTIONS=(--share --force --persistent --quiet --verbose --dryrun)
 
@@ -55,7 +55,7 @@ Usage: ${prog} [command] [argument] [options]
   Pipeline
     process   [scope]  stow, normalise, analyse, rename,
                        check, upscale, reformat, transcode,
-                       downscale, analyse, merge, refresh        (default: parents)
+                       downscale, analyse, merge, space, refresh (default: parents)
     analyse            probe the library, write the scripts
 
   Actions
@@ -76,6 +76,7 @@ EOF
     truncate           trim the online shared history
 
   Inspect
+    space              print the share space this host holds
     find      <token>  find a media artefact
     metadata           print this media artefact's spec and probes
 
@@ -644,6 +645,11 @@ EOF
   return ${result}
 }
 
+command_space() {
+  print_header "$(hostname)" "space" 0
+  space_shares "$(process_drives)"
+}
+
 command_refresh() {
   print_header "$(hostname)" "refresh" 0
   export SABNZBD_URL SABNZBD_API_KEY
@@ -713,11 +719,8 @@ command_home() {
 run_stage() {
   case "${1}" in
   stow) command_stow "${PROCESS_SCOPE}" ;;
-  refresh)
-    print_header "$(hostname)" "space" 0
-    space_shares "$(process_drives)"
-    command_refresh
-    ;;
+  space) command_space ;;
+  refresh) command_refresh ;;
   normalise) dispatch_library normalise "" ;;
   analyse) command_analyse ;;
   *)
@@ -747,7 +750,7 @@ run_pipeline() {
 
 command_process() {
   PROCESS_SCOPE="${1:-${MEDIA_SCOPE_DEFAULT}}"
-  run_pipeline stow normalise analyse rename check upscale reformat transcode downscale analyse merge refresh
+  run_pipeline stow normalise analyse rename check upscale reformat transcode downscale analyse merge space refresh
 }
 
 parse_args() {
@@ -788,7 +791,7 @@ command_accepts_option() {
   --force) [ "${command}" = "analyse" ] ;;
   --persistent) [ "${command}" = "process" ] ;;
   --dryrun) [ "${command}" = "move" ] ;;
-  --share) in_list "${command}" analyse process clean normalise ingress "${MEDIA_ACTIONS[@]}" ;;
+  --share) in_list "${command}" analyse process clean normalise ingress space "${MEDIA_ACTIONS[@]}" ;;
   --quiet | --verbose) in_list "${command}" analyse process "${MEDIA_ACTIONS[@]}" ;;
   *) return 1 ;;
   esac
@@ -906,7 +909,7 @@ main() {
     exit 0
     ;;
   process) command_process "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
-  analyse | refresh) run_stage "${COMMAND}" ;;
+  analyse | refresh | space) run_stage "${COMMAND}" ;;
   clean | normalise) dispatch_library "${COMMAND}" "${POSITIONAL}" ;;
   ingress) command_ingress "${POSITIONAL}" ;;
   stow) command_stow "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;

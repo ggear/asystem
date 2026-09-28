@@ -27,6 +27,38 @@ Improve sys tests with datbase/broker asserts for all modules
 
 
 ###############################################################################################################################################################
+# Supervisor
+###############################################################################################################################################################
+
+code review this patch which is not in git yet.
+Make sure project guidleines are followed.
+Check all logic.
+No comments except for clear excpetions eg document interface/complicated process.
+Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements).
+reorganise struct/var/funcs by project guidleines 
+
+put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols
+check all metrics working 
+adjust memeory allocs
+check metric attribution works by metric filter when multiple probe_* feed single metric
+verify caching hour and all metrics performance, increase poll frequency?
+add restore.sh and test 
+
+
+
+display_terminal.go: hide tcell namespace completely - tcell.Event?
+Make database persistance off-loop so not using loop budget on database
+Why a reconcile in 10s detail=observed [raspbpi-jen], status [online], trigger [restart], resubscribed [47] topics, reconcile in [10000] ms?
+implement commands to restart services, to work through ui when selected with popup and through HASS, add install restart CLI option that manages a .restart, flushed on install start and read into RST fields
+Add a go linter to pickup IntelliJ style warnings?
+when maximise host, update update freq to 1s
+Add a host level metric for network/internet usage? maybe only later?
+Convert from influxdb to postgres?
+Add sys test?
+Impl a tab option expander for bash
+
+
+###############################################################################################################################################################
 # Tasmota
 ###############################################################################################################################################################
 Fix web console, make status work over MQTT
@@ -139,64 +171,6 @@ Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-N
 
 
 ###############################################################################################################################################################
-# Supervisor
-###############################################################################################################################################################
-
-
-Update all log statements to have unit following [] value and make all fixed width so that they line up. eg FROM
-
-09-27T11:31:09 INFO  backup           stage/tertiary            stop            17s mirrored [/share/10] mirrored in [18s], running total [   4.9] GiB
-09-27T11:31:09 INFO  backup           stage/tertiary            start           0ms mirrored [/share/11] mirroring to [/backup/share/11]
-09-27T11:31:09 INFO  backup           stage/tertiary            stop          366ms mirrored [/share/11] mirrored in [0s], running total [   4.9] GiB
-09-27T11:31:09 INFO  backup           stage/tertiary            start           0ms mirrored [/share/12] mirroring to [/backup/share/12]
-09-27T11:31:10 INFO  backup           stage/tertiary            stop          277ms mirrored [/share/12] mirrored in [0s], running total [   4.9] GiB
-
-TO
-
-09-27T11:31:09 INFO  backup           stage/tertiary            stop            17s mirrored [/share/10] mirrored in [ 18] s, running total [   4.9] GiB
-09-27T11:31:09 INFO  backup           stage/tertiary            start           0ms mirrored [/share/11] mirroring to [/backup/share/11]
-09-27T11:31:09 INFO  backup           stage/tertiary            stop          366ms mirrored [/share/11] mirrored in [  0] s, running total [   4.9] GiB
-09-27T11:31:09 INFO  backup           stage/tertiary            start           0ms mirrored [/share/12] mirroring to [/backup/share/12]
-09-27T11:31:10 INFO  backup           stage/tertiary            stop          277ms mirrored [/share/12] mirrored in [  0] s, running total [   4.9] GiB
-
-
-
-code review this patch which is not in git yet.
-Make sure project guidleines are followed.
-Check all logic.
-No comments except for clear excpetions eg document interface/complicated process.
-Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements).
-reorganise struct/var/funcs by project guidleines 
-
-put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols
-check all metrics working 
-adjust memeory allocs
-check metric attribution works by metric filter when multiple probe_* feed single metric
-verify caching hour and all metrics performance, increase poll frequency?
-add restore.sh and test 
-
-
-
-display_terminal.go: hide tcell namespace completely - tcell.Event?
-Make database persistance off-loop so not using loop budget on database
-Why a reconcile in 10s detail=observed [raspbpi-jen], status [online], trigger [restart], resubscribed [47] topics, reconcile in [10000] ms?
-implement commands to restart services, to work through ui when selected with popup and through HASS, add install restart CLI option that manages a .restart, flushed on install start and read into RST fields
-Add a go linter to pickup IntelliJ style warnings?
-when maximise host, update update freq to 1s
-Add a host level metric for network/internet usage? maybe only later?
-Convert from influxdb to postgres?
-Add sys test?
-Impl a tab option expander for bash
-
-
-###############################################################################################################################################################
-# Tempstat
-###############################################################################################################################################################
-Validate rust code
-Bypassing the kernel serial driver to avoid noisy dmesg logs and drop filter on Fail LOG
-
-
-###############################################################################################################################################################
 # Finance
 ###############################################################################################################################################################
 Super:
@@ -207,12 +181,6 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 # Storage
 ###############################################################################################################################################################
-
-
-any display inconsistcies remain? any logic code simplications possible in display now that inconsistencies have been resolved?
-check and then impl cli.md
-
-
 make health script easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
 Binaries for media-space to call it, also have a adu and abench?
 Add quirks to asahi install

@@ -1,5 +1,5 @@
-//! USB transport for the PL2303 bridge — the seam between the protocol and the host USB stack,
-//! and the only place `nusb` is called.
+//! USB transport — the seam between a chip's protocol and the host USB stack, and the only place
+//! `nusb` is called. The endpoints are the caller's, so nothing here is specific to one bridge.
 //!
 //! - [USB 2.0 specification, section 9.3 USB Device Requests](https://www.usb.org/document-library/usb-20-specification)
 
@@ -12,9 +12,12 @@ use nusb::{Endpoint, Interface, MaybeFuture};
 use super::{Error, Result};
 use crate::log_line;
 
-const INTERFACE: u8 = 0;
-const ENDPOINT_IN: u8 = 0x83;
-const ENDPOINT_OUT: u8 = 0x02;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UsbEndpoints {
+    pub interface: u8,
+    pub input: u8,
+    pub output: u8,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UsbRequest {
@@ -49,7 +52,7 @@ pub struct NusbTransport {
 }
 
 impl NusbTransport {
-    pub fn open(vendor: u16, product: u16, timeout: Duration) -> Result<Self> {
+    pub fn open(vendor: u16, product: u16, endpoints: UsbEndpoints, timeout: Duration) -> Result<Self> {
         debug!("opening USB device [{vendor:04X}:{product:04X}]");
         let matched: Vec<_> = nusb::list_devices()
             .wait()?
@@ -91,9 +94,9 @@ impl NusbTransport {
         );
         let device = info.open().wait()?;
         let max_packet_size_0 = device.device_descriptor().max_packet_size_0();
-        let interface = device.detach_and_claim_interface(INTERFACE).wait()?;
-        let reader = interface.endpoint::<Bulk, In>(ENDPOINT_IN)?;
-        let writer = interface.endpoint::<Bulk, Out>(ENDPOINT_OUT)?;
+        let interface = device.detach_and_claim_interface(endpoints.interface).wait()?;
+        let reader = interface.endpoint::<Bulk, In>(endpoints.input)?;
+        let writer = interface.endpoint::<Bulk, Out>(endpoints.output)?;
         let packet_size = reader.max_packet_size();
         Ok(NusbTransport {
             interface,
@@ -103,13 +106,6 @@ impl NusbTransport {
             max_packet_size_0,
             timeout,
         })
-    }
-}
-
-fn control_type(kind: UsbRequest) -> (ControlType, Recipient) {
-    match kind {
-        UsbRequest::Vendor => (ControlType::Vendor, Recipient::Device),
-        UsbRequest::Class => (ControlType::Class, Recipient::Interface),
     }
 }
 
@@ -175,6 +171,30 @@ impl UsbTransport for NusbTransport {
 
     fn max_packet_size_0(&self) -> u8 {
         self.max_packet_size_0
+    }
+}
+
+fn control_type(kind: UsbRequest) -> (ControlType, Recipient) {
+    match kind {
+        UsbRequest::Vendor => (ControlType::Vendor, Recipient::Device),
+        UsbRequest::Class => (ControlType::Class, Recipient::Interface),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn control_type_maps_vendor_to_device_and_class_to_interface() {
+        assert_eq!(
+            control_type(UsbRequest::Vendor),
+            (ControlType::Vendor, Recipient::Device)
+        );
+        assert_eq!(
+            control_type(UsbRequest::Class),
+            (ControlType::Class, Recipient::Interface)
+        );
     }
 }
 

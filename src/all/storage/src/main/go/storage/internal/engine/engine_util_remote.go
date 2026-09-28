@@ -53,6 +53,11 @@ func collectOneHost(host config.HostEntry, filters []string) HostDoc {
 	if remote.State == "" {
 		remote.State = HostStateMeasured
 	}
+	for index := range remote.Mounts {
+		if remote.Mounts[index].State == "" {
+			remote.Mounts[index].State = MountStateMeasured
+		}
+	}
 	return remote
 }
 

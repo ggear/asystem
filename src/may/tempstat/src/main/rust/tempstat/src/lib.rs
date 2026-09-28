@@ -20,7 +20,7 @@ use serde_json::{json, Map, Value};
 
 use crate::broker::{MqttPublisher, Publisher};
 use crate::config::{load_sensors, SensorConfig};
-use crate::driver::ds18b20::{Ds18b20, Resolution};
+use crate::driver::ds18b20::{Ds18b20, Resolution, FAMILY_CODE};
 use crate::driver::ds2480b::Ds2480b;
 use crate::driver::ds9097::{Ds9097, BAUD_RESET, BAUD_SLOTS};
 use crate::driver::pl2303::Pl2303Uart;
@@ -34,12 +34,6 @@ const STATE_TOPIC: &str = "tempstat/data";
 const STATUS_TOPIC: &str = "tempstat/status";
 const LOG_LABEL_WIDTH: usize = 48;
 const MAX_CONSECUTIVE_TOTAL_FAILURES: u32 = 3;
-
-pub(crate) fn log_line(label: &str, value: &str) -> String {
-    let leader = format!("{label} ");
-    format!("{leader:.<width$} [{value}]", width = LOG_LABEL_WIDTH)
-}
-
 pub const DEFAULT_POLL_PERIOD: &str = "0";
 
 #[derive(Debug, Parser)]
@@ -49,6 +43,8 @@ pub struct Cli {
     pub poll_period: String,
     #[arg(short = 'D', long = "device", value_name = "PATH", default_value = "/dev/ttyUSB0")]
     pub device: String,
+    #[arg(long = "discover", default_value_t = false, conflicts_with = "probe")]
+    pub discover: bool,
     #[arg(long = "probe", default_value_t = false)]
     pub probe: bool,
     #[arg(long = "probe-reads", value_name = "COUNT", default_value_t = 0)]
@@ -118,6 +114,9 @@ impl Cli {
             .try_init();
         let timeout = parse_duration(&self.timeout)?;
         usb_target(&self.device).map_err(|err| err.to_string())?;
+        if self.discover {
+            return self.discover_devices(timeout);
+        }
         if self.probe {
             return self.probe_device(timeout);
         }
@@ -200,6 +199,41 @@ impl Cli {
         Ok(Ds2480b::from_uart(uart))
     }
 
+    fn discover_devices(&self, timeout: Duration) -> Result<(), String> {
+        let opened = self.open_device(timeout).map_err(|err| err.to_string())?;
+        let mut bus = select_adapter(opened).map_err(|err| err.to_string())?;
+        let roms = bus.get_connected_roms().map_err(|err| err.to_string())?;
+        let mut sensors = Vec::new();
+        for rom in &roms {
+            if rom.family() == FAMILY_CODE {
+                info!("{}", log_line("discovered DS18B20 ROM", &rom.to_string()));
+                sensors.push(rom);
+            } else {
+                warn!("ignoring non-DS18B20 device ROM [{rom}] family [{:#04X}]", rom.family());
+            }
+        }
+        info!(
+            "{}",
+            log_line(
+                "discovered DS18B20 devices",
+                &format!("{} of {} on the bus", sensors.len(), roms.len())
+            )
+        );
+        if sensors.is_empty() {
+            return Err(format!(
+                "no DS18B20 devices on the bus, found [{}] device(s)",
+                roms.len()
+            ));
+        }
+        let entries = sensors
+            .iter()
+            .map(|rom| format!("  {{ \"unique_id\": \"<name>\", \"rom\": \"{rom}\" }}"))
+            .collect::<Vec<_>>()
+            .join(",\n");
+        println!("[\n{entries}\n]");
+        Ok(())
+    }
+
     fn probe_device(&self, timeout: Duration) -> Result<(), String> {
         let Some((vendor, product)) = usb_target(&self.device).map_err(|err| err.to_string())? else {
             return Err(format!("probe requires a usb device [{}]", self.device));
@@ -272,6 +306,19 @@ impl Cli {
     }
 }
 
+pub(crate) fn log_line(label: &str, value: &str) -> String {
+    let leader = format!("{label} ");
+    format!("{leader:.<width$} [{value}]", width = LOG_LABEL_WIDTH)
+}
+
+pub fn parse_duration(raw: &str) -> Result<Duration, String> {
+    let trimmed = raw.trim();
+    if trimmed == "0" {
+        return Ok(Duration::ZERO);
+    }
+    humantime::parse_duration(trimmed).map_err(|err| format!("invalid duration [{trimmed}] [{err}]"))
+}
+
 fn usb_target(device: &str) -> bus_driver::Result<Option<(u16, u16)>> {
     let Some(target) = device.strip_prefix("usb:") else {
         return Ok(None);
@@ -309,14 +356,6 @@ fn log_sensors(sensors: &[SensorConfig]) {
             )
         );
     }
-}
-
-pub fn parse_duration(raw: &str) -> Result<Duration, String> {
-    let trimmed = raw.trim();
-    if trimmed == "0" {
-        return Ok(Duration::ZERO);
-    }
-    humantime::parse_duration(trimmed).map_err(|err| format!("invalid duration [{trimmed}] [{err}]"))
 }
 
 fn poll<P: Publisher>(
@@ -439,8 +478,8 @@ mod tests {
     use super::*;
     use crate::broker::mock::MockPublisher;
     use crate::driver::crc8;
-    use crate::driver::mock::fsm::FsmUart;
-    use crate::driver::mock::MockDs9097;
+    use crate::driver::emulator::fsm::FsmUart;
+    use crate::driver::emulator::MockDs9097;
     use crate::driver::rom::Rom;
     use crate::driver::uart::mock::MockUart;
 

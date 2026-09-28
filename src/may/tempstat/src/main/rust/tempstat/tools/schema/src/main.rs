@@ -5,8 +5,10 @@ use std::process;
 use tempstat::config::load_sensors;
 use tempstat::schema::{reflect, TempStat, MODULE};
 
+const CONFIG_DEFAULT: &str = "src/main/resources/image/sensors.json";
+
 fn main() {
-    let path = config_path();
+    let path = PathBuf::from(flag("--config", CONFIG_DEFAULT));
     let sensors = match load_sensors(&path) {
         Ok(sensors) => sensors,
         Err(err) => {
@@ -22,10 +24,6 @@ fn main() {
     }
 }
 
-fn config_path() -> PathBuf {
-    PathBuf::from(flag("--config", CONFIG_DEFAULT))
-}
-
 fn flag(name: &str, fallback: &str) -> String {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -37,5 +35,3 @@ fn flag(name: &str, fallback: &str) -> String {
     }
     fallback.to_string()
 }
-
-const CONFIG_DEFAULT: &str = "src/main/resources/image/sensors.json";

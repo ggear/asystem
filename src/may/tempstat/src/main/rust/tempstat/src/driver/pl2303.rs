@@ -9,11 +9,16 @@ use std::time::{Duration, Instant};
 
 use log::{debug, info, warn};
 
-use super::transport::{NusbTransport, UsbRequest, UsbSetup, UsbTransport};
 use super::uart::{Uart, BAUD_OPEN};
+use super::usb::{NusbTransport, UsbEndpoints, UsbRequest, UsbSetup, UsbTransport};
 use super::{Error, Result};
 use crate::log_line;
 
+const ENDPOINTS: UsbEndpoints = UsbEndpoints {
+    interface: 0,
+    input: 0x83,
+    output: 0x02,
+};
 const BREAK_HOLD: Duration = Duration::from_millis(2);
 const DRAIN_TIMEOUT: Duration = Duration::from_millis(10);
 const DRAIN_PACKETS_MAX: usize = 16;
@@ -65,7 +70,7 @@ pub struct Pl2303Uart<T: UsbTransport> {
 
 impl Pl2303Uart<NusbTransport> {
     pub fn open(vendor: u16, product: u16, timeout: Duration) -> Result<Self> {
-        Pl2303Uart::new(NusbTransport::open(vendor, product, timeout)?, timeout)
+        Pl2303Uart::new(NusbTransport::open(vendor, product, ENDPOINTS, timeout)?, timeout)
     }
 }
 
@@ -129,15 +134,6 @@ impl<T: UsbTransport> Pl2303Uart<T> {
             },
             data,
         )
-    }
-}
-
-fn vendor_setup(value: u16, index: u16) -> UsbSetup {
-    UsbSetup {
-        kind: UsbRequest::Vendor,
-        request: REQUEST_VENDOR,
-        value,
-        index,
     }
 }
 
@@ -205,9 +201,18 @@ impl<T: UsbTransport> Uart for Pl2303Uart<T> {
     }
 }
 
+fn vendor_setup(value: u16, index: u16) -> UsbSetup {
+    UsbSetup {
+        kind: UsbRequest::Vendor,
+        request: REQUEST_VENDOR,
+        value,
+        index,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::super::transport::mock::MockTransport;
+    use super::super::usb::mock::MockTransport;
     use super::*;
 
     const TIMEOUT: Duration = Duration::from_millis(50);

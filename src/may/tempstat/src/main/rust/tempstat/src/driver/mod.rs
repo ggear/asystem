@@ -6,12 +6,12 @@ pub mod crc;
 pub mod ds18b20;
 pub mod ds2480b;
 pub mod ds9097;
-pub mod mock;
+pub mod emulator;
 pub mod onewire;
 pub mod pl2303;
 pub mod rom;
-pub mod transport;
 pub mod uart;
+pub mod usb;
 
 pub use crc::crc8;
 pub use onewire::{OneWire, Presence};
@@ -113,24 +113,46 @@ mod tests {
     use super::*;
 
     #[test]
-    fn error_display_is_descriptive() {
-        assert_eq!(Error::NoDevice.to_string(), "no device present");
-        assert_eq!(Error::Shorted.to_string(), "bus shorted");
-        assert_eq!(Error::EchoMismatch.to_string(), "echo mismatch");
-        assert_eq!(Error::Crc.to_string(), "crc check failed");
-        assert_eq!(Error::Timeout.to_string(), "timed out waiting for device");
-        assert_eq!(
+    fn error_display_brackets_every_interpolated_value() {
+        let rom: Rom = "28FF641E870006AE".parse().unwrap();
+        let carrying = [
+            Error::Io(io::Error::other("boom")),
+            Error::Serial(serialport::Error::new(serialport::ErrorKind::NoDevice, "boom")),
+            Error::UsbTransfer(nusb::transfer::TransferError::Stall),
+            Error::NotDetected([0x16, 0x44, 0x5A, 0x00, 0x93]),
             Error::InvalidResponse {
                 operation: "reset",
-                response: 0xC1
-            }
-            .to_string(),
-            "invalid response [reset] [0xC1]"
-        );
-        assert_eq!(
-            Error::InvalidRom("nope".to_string()).to_string(),
-            "invalid rom code [nope]"
-        );
+                response: 0xC1,
+            },
+            Error::WrongFamily(rom),
+            Error::InvalidRom("nope".to_string()),
+            Error::UsbNotFound {
+                vendor: 0x067B,
+                product: 0x2303,
+            },
+            Error::UsbAmbiguous {
+                vendor: 0x067B,
+                product: 0x2303,
+                count: 2,
+            },
+            Error::InvalidDevice("usb:zzz".to_string()),
+        ];
+        for error in carrying {
+            let text = error.to_string();
+            assert!(text.contains('['), "no bracketed value: {text}");
+            assert!(!text.contains(": "), "colon separator: {text}");
+            assert!(!text.contains(" - "), "dash separator: {text}");
+        }
+        for error in [
+            Error::NoDevice,
+            Error::Shorted,
+            Error::Crc,
+            Error::Timeout,
+            Error::EchoMismatch,
+        ] {
+            let text = error.to_string();
+            assert!(!text.is_empty() && !text.contains('['), "unexpected value: {text}");
+        }
     }
 
     #[test]

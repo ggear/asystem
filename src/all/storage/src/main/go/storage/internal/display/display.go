@@ -8,8 +8,8 @@ type Row struct {
 	Used       uint64
 	Percent    float64
 	Unmeasured bool
-	NewHost    bool
-	NewClass   bool
+	NewBlock   bool
+	NewGroup   bool
 }
 
 const (

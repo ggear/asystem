@@ -76,9 +76,9 @@ func TestCmdSpace_RowsFor(t *testing.T) {
 		{Label: "max", State: engine.HostStateUnreachable},
 	})
 	want := []display.Row{
-		{Host: "mad", Mount: "/", Size: 400, Used: 100, Free: 300, Percent: 25, NewHost: true, NewClass: true},
-		{Mount: "/share/10", Unmeasured: true, NewClass: true},
-		{Mount: "/backup", Size: 200, Used: 50, Free: 150, Percent: 25, NewClass: true},
+		{Host: "mad", Mount: "/", Size: 400, Used: 100, Free: 300, Percent: 25, NewBlock: true, NewGroup: true},
+		{Mount: "/share/10", Unmeasured: true, NewGroup: true},
+		{Mount: "/backup", Size: 200, Used: 50, Free: 150, Percent: 25, NewGroup: true},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("rows: got %d want %d, an unreachable host contributes none", len(rows), len(want))
@@ -123,10 +123,10 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 					engine.MountDoc{Mount: "/share", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
 			},
 			want: []display.Row{
-				{Mount: "/", Size: 200, Used: 100, Free: 100, Percent: 50, NewHost: true, NewClass: true},
-				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewClass: true},
-				{Mount: "/backup", Size: 200, Used: 100, Free: 100, Percent: 50, NewClass: true},
-				{Mount: "", Size: 1400, Used: 600, Free: 800, Percent: 600.0 / 1400 * 100, NewClass: true},
+				{Mount: "/", Size: 200, Used: 100, Free: 100, Percent: 50, NewBlock: true, NewGroup: true},
+				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewGroup: true},
+				{Mount: "/backup", Size: 200, Used: 100, Free: 100, Percent: 50, NewGroup: true},
+				{Mount: "", Size: 1400, Used: 600, Free: 800, Percent: 600.0 / 1400 * 100, NewGroup: true},
 			},
 		},
 		{
@@ -139,7 +139,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 					engine.MountDoc{Mount: "/share/20", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
 			},
 			want: []display.Row{
-				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewHost: true, NewClass: true},
+				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewBlock: true, NewGroup: true},
 			},
 		},
 		{
@@ -153,7 +153,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 					engine.MountDoc{Mount: "/share", Class: engine.ClassShare, State: engine.MountStateMeasured, Space: measured(400, 100)}),
 			},
 			want: []display.Row{
-				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewHost: true, NewClass: true},
+				{Mount: "/share", Size: 1000, Used: 400, Free: 600, Percent: 40, NewBlock: true, NewGroup: true},
 			},
 		},
 		{
@@ -172,7 +172,7 @@ func TestCmdSpace_EstateRows(t *testing.T) {
 				{Label: "max", State: engine.HostStateUnreachable},
 			},
 			want: []display.Row{
-				{Mount: "/", Size: 100, Used: 40, Free: 60, Percent: 40, NewHost: true, NewClass: true},
+				{Mount: "/", Size: 100, Used: 40, Free: 60, Percent: 40, NewBlock: true, NewGroup: true},
 			},
 		},
 	}
