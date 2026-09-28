@@ -538,11 +538,11 @@ process_drives() {
   if [ "${EXTENT}" = "local" ]; then
     local _dir drives=""
     for _dir in ${SHARE_DIRS_LOCAL}; do
-      drives="${drives:+${drives},}${_dir}"
+      drives="${drives:+${drives},}/share/$(basename "${_dir}")"
     done
     echo "${drives}"
   else
-    echo "${EXTENT_SHARE_DIR}"
+    echo "/share/$(basename "${EXTENT_SHARE_DIR}")"
   fi
 }
 

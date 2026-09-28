@@ -54,17 +54,18 @@ func collectLocal(cfg *config.Config, filters []string) []MountDoc {
 	}
 	var readings []reading
 	for _, partition := range partitions {
-		class, ok := selected(cfg, filters, partition.Mountpoint, partition.Fstype)
+		mount := canonicalMount(partition.Mountpoint)
+		class, ok := selected(cfg, filters, mount, partition.Fstype)
 		if !ok {
 			continue
 		}
 		usage, err := boundedUsage(partition.Mountpoint)
 		if err != nil {
-			readings = append(readings, reading{mount: partition.Mountpoint, class: class, err: err})
+			readings = append(readings, reading{mount: mount, class: class, err: err})
 			continue
 		}
 		readings = append(readings, reading{
-			mount:    partition.Mountpoint,
+			mount:    mount,
 			class:    class,
 			identity: identityKey(partition.Device),
 			total:    usage.Total,
