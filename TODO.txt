@@ -30,6 +30,7 @@ Improve sys tests with datbase/broker asserts for all modules
 # Supervisor
 ###############################################################################################################################################################
 
+
 code review this patch which is not in git yet.
 Make sure project guidleines are followed.
 Check all logic.
@@ -181,10 +182,8 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 # Storage
 ###############################################################################################################################################################
-make health script easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
-Binaries for media-space to call it, also have a adu and abench?
+Reformat all partitions to BTRFS
 Add quirks to asahi install
-add storage format to here, if host== and shared funcs. maybe add sftab here too? or storage into each mod wheere fstab is today, move shared media mounting stuff here too?
 Implement TRIM on all SSDs
 enable TRIM:
     tee /etc/udev/rules.d/60-usb-ssd-trim.rules <<'EOF'
@@ -198,8 +197,6 @@ add journals on shares, as per /share/10
 add read ahead tuning blockdev --setra 8192 /dev/sda
 increase commit timeout PARTLABEL=share_08    /share/10    ext4    noatime,commit=60,errors=remount-ro,x-systemd.device-timeout=10s,nofail    0      2
 should i extend the benchmark read period to 2min? 4xfiles? likewise should 4GiB write be increased?
-Upgrade other ssd enclosure
-Rewrite other disks
 
 
 ###############################################################################################################################################################
