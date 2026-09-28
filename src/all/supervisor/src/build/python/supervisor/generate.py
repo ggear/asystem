@@ -40,14 +40,14 @@ if __name__ == "__main__":
                         broker_topic_glob_data=[
                             "supervisor/${SUPERVISOR_HOST}/data/#",
                             "supervisor/${SUPERVISOR_HOST}/command/#",
-                            "supervisor/${SUPERVISOR_HOST}/status"
+                            "supervisor/${SUPERVISOR_HOST}/status",
+                            "supervisor/${SUPERVISOR_HOST}/backup/#",
+                            "supervisor/all/backup/#"
                         ],
                         broker_topic_glob_verify=[
-                            "supervisor/${SUPERVISOR_HOST}/backup/#",
                             "supervisor/all/status",
                             "supervisor/all/data/cluster",
                             "supervisor/all/command/#",
-                            "supervisor/all/backup/#",
                             "supervisor/all/leader/#"
                         ],
                         broker_document=document,

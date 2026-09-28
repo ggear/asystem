@@ -106,24 +106,24 @@ Issues today: mounts all work, mlflow creates a share/1, sonarr requires mad to 
 ###############################################################################################################################################################
 # InfluxDB3
 ###############################################################################################################################################################
-tune influxdb compactor given real world inputs
+Tune influxdb compactor given real world inputs
 Rename to InfluxDB
 Move to mad and remove emulation env test/exec vars
 Update HASS to use
-add explorer module for influxdb, call is influxdb3ui or explorer?
+Add explorer module for influxdb, call is influxdb3ui or explorer?
 
 
 
 ###############################################################################################################################################################
 # Postgres
 ###############################################################################################################################################################
-add schema describe to src/build/resources/schemas/postgres|timescaledb
+Add schema describe to src/build/resources/schemas/postgres|timescaledb
 
 
 ###############################################################################################################################################################
 # Vernemq
 ###############################################################################################################################################################
-add schema describe to src/build/resources/schemas/vernemq
+Add schema describe to src/build/resources/schemas/vernemq
 
 
 ###############################################################################################################################################################
@@ -132,24 +132,24 @@ add schema describe to src/build/resources/schemas/vernemq
 Fix tests, drive permission error on delete in test fixtures? acdc_2018.csv
 all:
 Add src/build/resources/schemas/sql for influxdb/postgres/timescaledb schema describes and sample queries sql and scripts to run, genrated from source (ie per plugin), source is like xlsx for mqtt schema, perhaps shared function
-add verifcation sections to all plugins like quity
-check comments, nicely blocked, consistent accross all plugins
-check all sheet references added to repo structs, eq equity indexes etc
+Add verifcation sections to all plugins like quity
+Check comments, nicely blocked, consistent accross all plugins
+Check all sheet references added to repo structs, eq equity indexes etc
 Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
 Build health wrangle/dashboards, add Streaks
 Optimise indexes, have a single composite index (entity, period, type - no unit) rather than individual, consider compression 10y segment after batch insert and dropping all index entirely - cost is have to decompress on upsert on current 10y segment
 
-bank:
-implement balances
-implement transactions
+Bank:
+Implement balances
+Implement transactions
 
-equity:
-added new mio statement, ran normal run through web ui, hung with lots of cpu, on reboot was fine?
-add cash into bank portfolio?
-move sheets to delta like database? perhaps brek aout sheet/database upload timings, keeping rollup for html display but good for profiling?
-add dividend to create a new total return, bring in from manual data in sheets or another source?
-implement cleanup, dead stock files, dead -current, dead month files, add local tests
-add additional local tests
+Equity:
+Added new mio statement, ran normal run through web ui, hung with lots of cpu, on reboot was fine?
+Add cash into bank portfolio?
+Move sheets to delta like database? perhaps brek aout sheet/database upload timings, keeping rollup for html display but good for profiling?
+Add dividend to create a new total return, bring in from manual data in sheets or another source?
+Implement cleanup, dead stock files, dead -current, dead month files, add local tests
+Add additional local tests
 
 
 ###############################################################################################################################################################

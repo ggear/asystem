@@ -22,6 +22,7 @@
 #     kitchen_move_microphone,
 #     lounge_air_purifier_replace_filter,
 #     lounge_arc_microphone,
+#     parents_air_purifier_replace_filter,
 #     parents_move_microphone,
 #     template_back_door_state,
 #     template_bathroom_rails_plug_proxy,
@@ -36,6 +37,7 @@
 #     template_landing_festoons_plug_proxy,
 #     template_lounge_air_purifier_proxy,
 #     template_lounge_tv_plug_proxy,
+#     template_parents_air_purifier_proxy,
 #     template_rack_outlet_plug_proxy,
 #     template_server_jen_plug_proxy,
 #     workday_sensor]

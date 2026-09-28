@@ -7,7 +7,8 @@
 #   tag module [always 'homeassistant']
 #   tag entity_id* [Home Assistant entity_id:
 #     dining_air_purifier_pm25,
-#     lounge_air_purifier_pm25]
+#     lounge_air_purifier_pm25,
+#     parents_air_purifier_pm25]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     μg/m³]
 #   field value - <on-change> [Home Assistant value]
