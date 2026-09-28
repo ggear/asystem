@@ -1,6 +1,7 @@
 mock
 pandas
 polars
+pyarrow
 jinja2
 orjson
 tabulate

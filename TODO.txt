@@ -38,7 +38,6 @@ No comments except for clear excpetions eg document interface/complicated proces
 Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements).
 reorganise struct/var/funcs by project guidleines 
 
-put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols
 check all metrics working 
 adjust memeory allocs
 check metric attribution works by metric filter when multiple probe_* feed single metric
@@ -62,7 +61,6 @@ Impl a tab option expander for bash
 ###############################################################################################################################################################
 # Tasmota
 ###############################################################################################################################################################
-Fix web console, make status work over MQTT
 Fix deck_festoons_plug, temp/himmidty look dead?
 Centre col on ios portrait/landscape
 Add fields to UI
@@ -129,10 +127,9 @@ Add schema describe to src/build/resources/schemas/vernemq
 ###############################################################################################################################################################
 # Wrangle
 ###############################################################################################################################################################
-Fix tests, drive permission error on delete in test fixtures? acdc_2018.csv
 all:
 Add src/build/resources/schemas/sql for influxdb/postgres/timescaledb schema describes and sample queries sql and scripts to run, genrated from source (ie per plugin), source is like xlsx for mqtt schema, perhaps shared function
-Add verifcation sections to all plugins like quity
+Add verifcation sections to all plugins like equity
 Check comments, nicely blocked, consistent accross all plugins
 Check all sheet references added to repo structs, eq equity indexes etc
 Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
@@ -202,6 +199,7 @@ should i extend the benchmark read period to 2min? 4xfiles? likewise should 4GiB
 ###############################################################################################################################################################
 # Home Assistant
 ###############################################################################################################################################################
+Fix all bootup errors/warns
 Fix dep powercalc-component, requires rebase/merge
 Fix dep ha_bom_australia-component, requires rebase/merge, moved to a vVERSION scheme
 Submit pull requests for bom-radar-map, test all options first

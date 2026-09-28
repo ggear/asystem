@@ -8,6 +8,7 @@
 #   tag entity_id* [Home Assistant entity_id:
 #     coffee_machine_turn_off_coffee_machine,
 #     coffee_machine_turn_off_coffee_machine_fail_safe,
+#     rack_backup_plug_overrides_reaper,
 #     routine_attempt_to_put_home_into_secure_mode_at_regular_intervals,
 #     routine_back_door_state_all_off,
 #     routine_back_door_state_all_on,

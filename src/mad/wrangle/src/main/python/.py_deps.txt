@@ -1,6 +1,7 @@
 mock==5.2.0
 pandas==3.0.6
 polars==1.44.2
+pyarrow==25.0.1
 jinja2==3.1.6
 orjson==3.12.0
 tabulate==0.10.0
