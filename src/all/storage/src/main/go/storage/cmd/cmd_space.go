@@ -98,11 +98,17 @@ func rowsFor(hosts []engine.HostDoc) []display.Row {
 	for _, host := range hosts {
 		firstOfHost := true
 		lastClass := ""
+		lastLabel := ""
 		for _, mount := range host.Mounts {
-			row := display.Row{Host: host.Label, Mount: mount.Mount}
-			if !firstOfHost {
-				row.Host = ""
+			label := host.Label
+			if mount.ServedBy != "" {
+				label = mount.ServedBy
 			}
+			row := display.Row{Mount: mount.Mount}
+			if label != lastLabel {
+				row.Host = label
+			}
+			lastLabel = label
 			if mount.Measured() {
 				row.Size = mount.Space.SizeBytes
 				row.Used = mount.Space.UsedBytes

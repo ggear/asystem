@@ -150,6 +150,30 @@ func TestConfig_Label_FallsBackToTheHostnameSuffix(t *testing.T) {
 	}
 }
 
+func TestConfig_HostLabel(t *testing.T) {
+	cases := []struct {
+		name string
+		host string
+		want string
+	}{
+		{name: "a different host the schema declares", host: "macmini-max", want: "max"},
+		{name: "the host running this binary", host: "macmini-mad", want: "mad"},
+		{name: "a host the schema does not declare", host: "raspbpi-jen", want: "jen"},
+		{name: "a hostname carrying no estate suffix", host: "localhost", want: "localhost"},
+	}
+	path := writeFixture(t, fixtureDocument)
+	t.Setenv("STORAGE_HOST", "macmini-mad")
+	t.Setenv("SERVICE_VERSION_ABSOLUTE", "")
+	cfg := Load(path)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := cfg.HostLabel(c.host); got != c.want {
+				t.Errorf("HostLabel: got %v want %v", got, c.want)
+			}
+		})
+	}
+}
+
 func writeFixture(t *testing.T, contents string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.json")

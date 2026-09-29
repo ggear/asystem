@@ -741,11 +741,7 @@ ORDER BY time
 
         except Exception as exception:
             self.print_log("Unexpected error processing equity dataframe", exception=exception)
-            processed = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
-            skipped = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
-            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED, -processed)
-            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED, -skipped)
-            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, processed + skipped)
+            self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         try:
 
@@ -966,15 +962,10 @@ ORDER BY time
 
         except Exception as exception:
             self.print_log("Unexpected error processing equity data", exception=exception)
-            processed = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED)
-            skipped = self.get_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED)
-            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_PROCESSED, -processed)
-            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_SKIPPED, -skipped)
-            self.add_counter(plugin.CTR_SRC_FILES, plugin.CTR_ACT_ERRORED, processed + skipped)
+            self.counters_set_all_errored(plugin.CTR_SRC_FILES)
 
         if not len(equity_delta_df):
             self.print_log("No new data found")
-        self.counter_write()
 
     def __init__(self):
         super().__init__("Equity", order=40, repos=REPOS_EQUITY, database=True)

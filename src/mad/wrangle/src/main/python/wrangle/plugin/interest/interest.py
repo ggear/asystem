@@ -164,7 +164,6 @@ class Interest(plugin.Plugin):
 
         if not len(interest_delta_df):
             self.print_log("No new data found")
-        self.counter_write()
 
     def __init__(self):
         super().__init__("Interest", order=20, repos=REPOS_INTEREST, database=True)

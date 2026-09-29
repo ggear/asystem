@@ -68,6 +68,8 @@ func collectLocal(cfg *config.Config, filters []string) []MountDoc {
 			mount:    mount,
 			class:    class,
 			identity: identityKey(partition.Device),
+			fstype:   partition.Fstype,
+			device:   partition.Device,
 			total:    usage.Total,
 			avail:    usage.Free,
 		})
@@ -114,11 +116,12 @@ func assemble(cfg *config.Config, filters []string, readings []reading, backup [
 		}
 		used := r.total - min(r.avail, r.total)
 		shares = append(shares, MountDoc{
-			Mount: r.mount,
-			Label: cfg.MountLabel(r.mount),
-			Class: r.class,
-			State: MountStateMeasured,
-			Space: &SpaceFigures{SizeBytes: r.total, UsedBytes: used, FreeBytes: r.total - used},
+			Mount:    r.mount,
+			Label:    cfg.MountLabel(r.mount),
+			Class:    r.class,
+			State:    MountStateMeasured,
+			ServedBy: servedByLabel(cfg, r.fstype, r.device),
+			Space:    &SpaceFigures{SizeBytes: r.total, UsedBytes: used, FreeBytes: r.total - used},
 		})
 	}
 	mounted := map[string]bool{}
@@ -171,6 +174,31 @@ func assemble(cfg *config.Config, filters []string, readings []reading, backup [
 	docs = append(docs, shares...)
 	docs = append(docs, subtotal()...)
 	return append(docs, backup...)
+}
+
+func servedByLabel(cfg *config.Config, fstype, device string) string {
+	if !networkFsTypes[fstype] {
+		return ""
+	}
+	host := sourceHost(device)
+	if host == "" {
+		return ""
+	}
+	return cfg.HostLabel(host)
+}
+
+func sourceHost(device string) string {
+	device = strings.TrimPrefix(device, "//")
+	if at := strings.LastIndex(device, "@"); at != -1 {
+		device = device[at+1:]
+	}
+	if slash := strings.Index(device, "/"); slash != -1 {
+		device = device[:slash]
+	}
+	if colon := strings.Index(device, ":"); colon != -1 {
+		device = device[:colon]
+	}
+	return device
 }
 
 func ClassifyMount(mountpoint string, filters []string) (class string, matched bool) {
@@ -310,6 +338,9 @@ func boundedUsage(mountpoint string) (*disk.UsageStat, error) {
 //	        "class":   "<class>",  MOUNT   root, share or backup
 //	        "state":   "<state>",  MOUNT   measured, unmounted or timedout
 //	        "error":   "<text>",   MOUNT   Present exactly when state is not measured
+//	        "served_by": "<text>", MOUNT   The label of the host actually behind a network-mounted
+//	                               share (e.g. a samba client's own mount); absent for a directly
+//	                               attached mount, which is behind the host block's own label
 //	        "space": {             MOUNT   Absent when state is not measured
 //	            "size_bytes": <number>,
 //	            "used_bytes": <number>,
@@ -347,14 +378,15 @@ type HostDoc struct {
 }
 
 type MountDoc struct {
-	Mount  string        `json:"mount"`
-	Label  string        `json:"label,omitempty"`
-	Class  string        `json:"class"`
-	State  string        `json:"state"`
-	Error  string        `json:"error,omitempty"`
-	Space  *SpaceFigures `json:"space,omitempty"`
-	Folded *Folded       `json:"folded,omitempty"`
-	Backup *BackupInfo   `json:"backup,omitempty"`
+	Mount    string        `json:"mount"`
+	Label    string        `json:"label,omitempty"`
+	Class    string        `json:"class"`
+	State    string        `json:"state"`
+	Error    string        `json:"error,omitempty"`
+	ServedBy string        `json:"served_by,omitempty"`
+	Space    *SpaceFigures `json:"space,omitempty"`
+	Folded   *Folded       `json:"folded,omitempty"`
+	Backup   *BackupInfo   `json:"backup,omitempty"`
 }
 
 func (m MountDoc) Measured() bool {
@@ -381,6 +413,8 @@ type reading struct {
 	mount    string
 	class    string
 	identity string
+	fstype   string
+	device   string
 	total    uint64
 	avail    uint64
 	err      error

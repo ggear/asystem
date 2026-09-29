@@ -171,6 +171,30 @@ func TestEngineImplSpace_Selected(t *testing.T) {
 	}
 }
 
+func TestEngineImplSpace_ServedByLabel(t *testing.T) {
+	cases := []struct {
+		name       string
+		fstype     string
+		device     string
+		wantServed string
+	}{
+		{name: "a macOS smbfs mount names its serving host", fstype: "smbfs", device: "//GUEST:@macmini-mad/share-10", wantServed: "mad"},
+		{name: "a linux cifs mount names its serving host", fstype: "cifs", device: "//macmini-max/share-20", wantServed: "max"},
+		{name: "an nfs mount names its serving host", fstype: "nfs", device: "macmini-may:/share/30", wantServed: "may"},
+		{name: "a served host not in schema falls back to the dash suffix", fstype: "smbfs", device: "//GUEST:@raspbpi-jen/share-50", wantServed: "jen"},
+		{name: "a directly attached share carries no served-by host", fstype: "ext4", device: "/dev/sda1"},
+		{name: "a directly attached btrfs root carries no served-by host", fstype: "btrfs", device: "/dev/nvme0n1p6"},
+	}
+	cfg := fixtureConfig(t)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := servedByLabel(cfg, c.fstype, c.device); got != c.wantServed {
+				t.Errorf("servedByLabel: got %q want %q", got, c.wantServed)
+			}
+		})
+	}
+}
+
 func TestEngineImplSpace_Assemble(t *testing.T) {
 	pool := func(mount string) reading {
 		return reading{mount: mount, class: ClassRoot, identity: "/dev/nvme0n1p6", total: 1000, avail: 600}

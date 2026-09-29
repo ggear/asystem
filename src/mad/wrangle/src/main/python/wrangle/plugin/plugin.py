@@ -26,7 +26,8 @@ class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, metaclass
         for csv_path, csv_df in self._db_cache_dfs.items():
             self.csv_write(csv_df, csv_path)
         if not config.disable_drive_uploads:
-            self.drive_synchronise(self.remote_repos.drive_folder, self.local_cache, check=True, download=False, upload=True)
+            drive_folder = self.remote_repos.drive_folder if self.remote_repos is not None else None
+            self.drive_synchronise(drive_folder, self.local_cache, check=True, download=False, upload=True)
         total_elapsed_ms = int((time.perf_counter() - total_start) * 1000)
         marshall_ms = self.get_counter(CTR_SRC_TIMING, CTR_ACT_MARSHALL_MILLIS)
         egress_ms = self.get_counter(CTR_SRC_TIMING, CTR_ACT_EGRESS_MILLIS)
@@ -51,9 +52,6 @@ class Plugin(CountersMixin, SourcesMixin, DataFramesMixin, StateMixin, metaclass
             else:
                 messages[-1] = messages[-1] + str(data)
         print_log(self.name, messages, exception, level=level)
-
-    def counter_write(self):
-        pass
 
     def file_list(self, file_dir: str, file_prefix: str, quiet: bool = True) -> dict[str, DownloadResult]:
         files: dict[str, DownloadResult] = {}

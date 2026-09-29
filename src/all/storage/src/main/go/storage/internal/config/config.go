@@ -43,14 +43,21 @@ func (c *Config) Name() string {
 }
 
 func (c *Config) Label() string {
-	if host := c.own(); host != nil && host.Label != "" {
-		return host.Label
+	return c.HostLabel(c.Name())
+}
+
+func (c *Config) HostLabel(host string) string {
+	if c != nil {
+		for i := range c.asystem.Schema {
+			if c.asystem.Schema[i].Host == host && c.asystem.Schema[i].Label != "" {
+				return c.asystem.Schema[i].Label
+			}
+		}
 	}
-	name := c.Name()
-	if _, suffix, found := strings.Cut(name, "-"); found {
+	if _, suffix, found := strings.Cut(host, "-"); found {
 		return suffix
 	}
-	return name
+	return host
 }
 
 func (c *Config) Index() *int {

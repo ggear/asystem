@@ -166,7 +166,6 @@ class Currency(plugin.Plugin):
 
         if not len(rba_delta_df):
             self.print_log("No new data found")
-        self.counter_write()
 
     def __init__(self):
         super().__init__("Currency", order=10, repos=REPOS_CURRENCY, database=True)

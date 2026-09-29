@@ -599,8 +599,9 @@ command_move() {
   local share_drives="/share/${SHARE_PATH_INDEX},/share/${dest}"
   space_shares "${share_drives}" "${share_ssh[@]}"
   echo ""
+  local share_kill_remote="pkill -9 -f 'rsync .*/share/${dest}/'"
   # shellcheck disable=SC2064
-  trap "${share_ssh[*]} pkill -9 -f 'rsync .*/share/${dest}/'; echo; exit" INT
+  trap "${share_ssh[*]} \"${share_kill_remote}\"; echo; exit" INT
   "${share_ssh[@]}" bash -s -- "${share_args[@]}" <<'EOF' || result=1
 share_src="${1}"
 share_dest="${2}"

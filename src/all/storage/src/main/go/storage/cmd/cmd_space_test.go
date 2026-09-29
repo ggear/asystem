@@ -90,6 +90,31 @@ func TestCmdSpace_RowsFor(t *testing.T) {
 	}
 }
 
+func TestCmdSpace_RowsFor_ServedBy(t *testing.T) {
+	rows := rowsFor([]engine.HostDoc{
+		{Label: "rue", State: engine.HostStateMeasured, Mounts: []engine.MountDoc{
+			{Mount: "/share/10", Class: engine.ClassShare, State: engine.MountStateMeasured, ServedBy: "mad", Space: &engine.SpaceFigures{SizeBytes: 400, UsedBytes: 100, FreeBytes: 300}},
+			{Mount: "/share/11", Class: engine.ClassShare, State: engine.MountStateMeasured, ServedBy: "mad", Space: &engine.SpaceFigures{SizeBytes: 400, UsedBytes: 100, FreeBytes: 300}},
+			{Mount: "/share/20", Class: engine.ClassShare, State: engine.MountStateMeasured, ServedBy: "max", Space: &engine.SpaceFigures{SizeBytes: 400, UsedBytes: 100, FreeBytes: 300}},
+			{Mount: "/", Class: engine.ClassRoot, State: engine.MountStateMeasured, Space: &engine.SpaceFigures{SizeBytes: 400, UsedBytes: 100, FreeBytes: 300}},
+		}},
+	})
+	want := []display.Row{
+		{Host: "mad", Mount: "/share/10", Size: 400, Used: 100, Free: 300, Percent: 25, NewBlock: true, NewGroup: true},
+		{Mount: "/share/11", Size: 400, Used: 100, Free: 300, Percent: 25},
+		{Host: "max", Mount: "/share/20", Size: 400, Used: 100, Free: 300, Percent: 25},
+		{Host: "rue", Mount: "/", Size: 400, Used: 100, Free: 300, Percent: 25, NewGroup: true},
+	}
+	if len(rows) != len(want) {
+		t.Fatalf("rows: got %d want %d, got %+v", len(rows), len(want), rows)
+	}
+	for i, row := range rows {
+		if row != want[i] {
+			t.Errorf("row %d: got %+v want %+v", i, row, want[i])
+		}
+	}
+}
+
 func TestCmdSpace_EstateRows(t *testing.T) {
 	measured := func(size, used uint64) *engine.SpaceFigures {
 		return &engine.SpaceFigures{SizeBytes: size, UsedBytes: used, FreeBytes: size - used}

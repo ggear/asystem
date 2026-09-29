@@ -160,6 +160,8 @@ def configure(argv=None):
         for plugin_name in (name.strip() for name in filter_plugins_csv.split(",")):
             if plugin_name and plugin_name not in filter_plugins:
                 filter_plugins.append(plugin_name)
+        if len(filter_plugins) == 0:
+            parser.error("argument --filter-plugins: CSV must name at least one plugin")
         available_plugins = set(_get_plugins())
         missing_plugins = [plugin_name for plugin_name in filter_plugins if plugin_name not in available_plugins]
         if missing_plugins:
@@ -410,7 +412,7 @@ def _record_plugin_run(plugin_results, plugin_count, plugin_errored_count, run_s
     plugin_counters = {name: data["counters"] for name, data in plugin_results.items()}
     sum_plugin_ms = sum(data["counters"].get(CTR_SRC_TIMING, {}).get(CTR_ACT_TOTAL_MILLIS, 0) for data in plugin_results.values())
     overhead_ms = int((time.perf_counter() - run_start) * 1000) - sum_plugin_ms + extra_overhead_ms
-    print_log("Wrangle", "Starting ...")
+    print_log("Wrangle", "Recording run ...")
     record_started = time.perf_counter()
     record_fn(plugin_counters, overhead_ms)
     record_elapsed_ms = int((time.perf_counter() - record_started) * 1000)

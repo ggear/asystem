@@ -177,7 +177,6 @@ class Balances(plugin.Plugin):
                 self.print_log("Unexpected error processing balances data", exception=exception)
         else:
             self.print_log("No new data found")
-        self.counter_write()
 
     def __init__(self):
         super().__init__("Balances", order=30, repos=REPOS_BALANCES, disabled=True)
