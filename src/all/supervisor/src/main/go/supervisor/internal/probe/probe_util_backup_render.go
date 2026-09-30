@@ -293,6 +293,14 @@ func backupProgressed(copied, total, percent, remaining reading, eta string, rat
 	return line
 }
 
+func backupMoved(sizeMB reading, elapsed time.Duration) string {
+	return fmt.Sprintf("[%s] GiB in [%s] s", backupSizedGibibytes(sizeMB), elapsedSeconds(elapsed))
+}
+
+func backupHeld(sizeMB reading, elapsed time.Duration) string {
+	return fmt.Sprintf("[%s] GiB held after [%s] s", backupSizedGibibytes(sizeMB), elapsedSeconds(elapsed))
+}
+
 func backupVerb(stage metric.BackupStage) string {
 	switch stage {
 	case metric.BackupStagePrimary:
@@ -319,6 +327,8 @@ func backupRated(megabytes, seconds reading) reading {
 	}
 	return floatReading(megabytes.value / seconds.value)
 }
+
+func backupCounted(r reading) string { return padLeft(digits(r), backupCountedWidth) }
 
 func backupPercent(r reading) string { return padLeft(digits(r), backupPercentWidth) }
 
@@ -487,6 +497,7 @@ const (
 	mebibytesPerTebibyte = 1024 * mebibytesPerGibibyte
 
 	backupGibibytesWidth  = 6
+	backupCountedWidth    = 5
 	backupPercentWidth    = 3
 	backupThroughputWidth = 3
 	backupMinutesWidth    = 4

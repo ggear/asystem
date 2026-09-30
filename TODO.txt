@@ -128,7 +128,6 @@ Add schema describe to src/build/resources/schemas/vernemq
 # Wrangle
 ###############################################################################################################################################################
 all:
-Add src/build/resources/schemas/sql for influxdb/postgres/timescaledb schema describes and sample queries sql and scripts to run, genrated from source (ie per plugin), source is like xlsx for mqtt schema, perhaps shared function
 Add verifcation sections to all plugins like equity
 Check comments, nicely blocked, consistent accross all plugins
 Check all sheet references added to repo structs, eq equity indexes etc

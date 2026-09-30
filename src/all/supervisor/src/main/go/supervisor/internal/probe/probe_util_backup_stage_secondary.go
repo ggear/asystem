@@ -112,9 +112,8 @@ func promoteOneService(ctx context.Context, request stageRequest, share, host, s
 		"--temp-dir="+rsyncTemp, "--", source, target+"/")
 	counters.addTransfer(stats.filesTransferred, stats.totalTransferredBytes/bytesPerMebibyte, stats.filesCreated,
 		stats.filesDeleted, stats.filesListed, stats.totalFileSizeBytes/bytesPerMebibyte, stats.totalBytesSent/bytesPerMebibyte)
-	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof("promoted", started,
-		"[%s] promoted in [%s] s, running total [%s] GiB", service, elapsedSeconds(time.Since(started)),
-		backupSizedGibibytes(intReading(int64(counters.snapshotSizeMB()))))
+	scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionStop).Infof(backupVerb(metric.BackupStageSecondary), started,
+		"%s from [%s]", backupMoved(intReading(int64(stats.totalTransferredBytes/bytesPerMebibyte)), time.Since(started)), service)
 
 	pruner := moduleBackupScript(service)
 	if info, statErr := os.Stat(pruner); statErr == nil && info.Mode()&0o111 != 0 {

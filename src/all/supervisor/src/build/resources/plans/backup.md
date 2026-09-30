@@ -1239,6 +1239,15 @@ bites:**
 | `tmp/` | — | not replicated at all; scratch, and large enough to be worth skipping |
 | `backup/` | **yes** | a backup the secondary stage has thinned away disappears here too, on the next run |
 
+**Deletion is its own pass, and that is an accounting decision rather than a copy rule.** The tertiary
+stage runs three rsyncs per share — a `--dry-run` measure, an `--delete --existing --ignore-existing`
+expunge, then an additive mirror with `--force` and no `--delete`. What `--delete` deletes is unchanged;
+what changed is that its bytes and its minutes are no longer netted into the mirror's, so `expunged` and
+`mirrored` each carry their own GiB, their own clock and their own denominator. The mechanism, the
+pricing caveat (rsync reports no size for a deletion, so the sizes come from the measure pass) and the
+reason `--force` is compulsory are in the module `CLAUDE.md`. The mirror's own `files_deleted` is now ~0
+by construction, and a non-zero one means something changed between the two passes.
+
 So **the GFS policy bounds both stages, because one policy applied at the secondary stage is mirrored
 into the other**. The tertiary stage owns no retention of its own, needs no ceiling of its own, and
 cannot grow unbounded — every question about how deep the history goes is answered in one place.

@@ -120,9 +120,12 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 	}
 	_ = writeAtomic(statusPath, document)
 
-	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("finished", started,
-		"[%s] finished as [%s], kind [%s], version [%s], size [%s] GiB", service, state, kind, version,
-		backupSizedGibibytes(intReading(int64(sizeMB))))
+	sized := backupMoved(intReading(int64(sizeMB)), time.Since(started))
+	if state != metric.BackupStateSuccess {
+		sized = backupHeld(intReading(int64(sizeMB)), time.Since(started))
+	}
+	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof(backupVerb(metric.BackupStagePrimary), started,
+		"%s from [%s] as [%s], kind [%s], version [%s]", sized, service, state, kind, version)
 
 	if state == metric.BackupStateSuccess {
 		counters.addTransfer(files, sizeMB, files, 0, 0, 0, 0)

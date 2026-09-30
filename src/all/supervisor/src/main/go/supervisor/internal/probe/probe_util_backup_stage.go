@@ -151,8 +151,9 @@ func runStage(ctx context.Context, request stageRequest) error {
 		return fmt.Errorf("stage [%s] %w", request.Stage, runErr)
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("finished", started,
-		"[%s] stage [%s] finished as [%s], [%s] GiB at [%s] MiB/s", request.RunID, request.Stage, state,
-		backupSizedGibibytes(intReading(int64(document.SizeMB))), backupThroughput(backupRated(intReading(int64(document.SizeMB)), intReading(int64(document.DurationS)))))
+		"%s at [%s] MiB/s from stage [%s] of run [%s] as [%s]", backupMoved(intReading(int64(document.SizeMB)), time.Duration(document.DurationS)*time.Second),
+		backupThroughput(backupRated(intReading(int64(document.SizeMB)), intReading(int64(document.DurationS)))),
+		request.Stage, request.RunID, state)
 	return nil
 }
 
@@ -314,12 +315,6 @@ func (c *stageCounters) addTransfer(files, sizeMB, filesCreated, filesDeleted, f
 	c.sizeHeldMB += sizeHeldMB
 	c.sentMB += sentMB
 	c.mu.Unlock()
-}
-
-func (c *stageCounters) snapshotSizeMB() int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.sizeMB
 }
 
 type lockedBuffer struct {
