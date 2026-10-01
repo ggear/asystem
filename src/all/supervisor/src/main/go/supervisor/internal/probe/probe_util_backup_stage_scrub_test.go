@@ -384,9 +384,9 @@ func TestProbeUtilBackupStageScrub_OriginNamesWhatThePassIsContinuing(t *testing
 		{name: "a_fresh_pass_says_so", action: scrubActionStart, status: "Scrub started:    Mon Sep 22 01:00:00 2026",
 			expected: "of a fresh pass"},
 		{name: "a_resume_names_the_date_it_reads", action: scrubActionResume, status: "Scrub started:    Mon Sep 22 01:00:00 2026",
-			expected: "of the pass left unfinished since [Mon Sep 22 01:00:00 2026]"},
+			expected: "of the pass from [Mon Sep 22 01:00:00 2026]"},
 		{name: "a_resume_with_no_date_stays_honest", action: scrubActionResume, status: "no stats available",
-			expected: "of the pass left unfinished by an earlier run"},
+			expected: "of an unfinished pass"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {

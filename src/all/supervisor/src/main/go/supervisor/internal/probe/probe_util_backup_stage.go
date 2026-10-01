@@ -92,7 +92,7 @@ func runStage(ctx context.Context, request stageRequest) error {
 				if request.Stage == metric.BackupStageTertiary {
 					if held, reason := attached(backgroundCtx, stagePath); !held {
 						scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Errorf("faulting", started,
-							"[%s] %s, stopping this stage before it writes anywhere else", config.DirBackup, reason)
+							"[%s] %s, stopping the stage before it writes elsewhere", config.DirBackup, reason)
 						cancel(errStageDetached)
 						continue
 					}

@@ -58,7 +58,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 	out, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "scrub", action, "-c", "3", "-n", "15", config.DirBackup)
 	if !abandoned && code != 0 && action == scrubActionResume {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Warnf("faulting", started,
-			"[%s] scrub [resume] exited [%d] reporting [%s], starting a fresh pass rather than retrying a resume btrfs refuses",
+			"[%s] scrub [resume] exited [%d] reporting [%s], starting a fresh pass instead",
 			config.DirBackup, code, strings.Join(strings.Fields(out), " "))
 		action = scrubActionStart
 		out, code, abandoned = bounded(ctx, stageBoundedWait, "btrfs", "scrub", action, "-c", "3", "-n", "15", config.DirBackup)
@@ -71,8 +71,8 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 		return false
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("scrubbed", started,
-		"[%s] scrub [%s] %s, pausing at [%s] if unfinished to resume on the next run, reporting progress every [%s]",
-		config.DirBackup, action, scrubOrigin(action, statusOut), hard.Format(backupTimeFormat), backupProgressHeartbeat)
+		"[%s] scrub [%s] %s, pausing at [%s] to resume next run",
+		config.DirBackup, action, scrubOrigin(action, statusOut), hard.Format(backupTimeFormat))
 	resumed := action == scrubActionResume
 	opening := scrubDocument(request, metric.BackupStateRunning, false, started, scrubReading{})
 	opening.ResumedBool = resumed
@@ -155,9 +155,12 @@ finished:
 	held := ok && scrubbing != "" && final.uuid == scrubbing
 	if held {
 		lastReading = final
+	} else if cancelled {
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("excluded", started,
+			"[%s] released by the stop, keeping the last reading, skipping device stats", config.DirBackup)
 	} else {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Warnf("faulting", started,
-			"[%s] no longer carries the filesystem [%s] this scrub ran on, keeping its last reading and leaving its device stats alone",
+			"[%s] lost filesystem [%s] mid scrub, keeping the last reading, skipping device stats",
 			config.DirBackup, scrubbing)
 	}
 	if halt == "" {
@@ -186,7 +189,7 @@ finished:
 	if paused && lastReading.scrubbedMB <= baseline.scrubbedMB {
 		state, success = metric.BackupStateFailure, false
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-			"[%s] scrub made no progress past [%s] GiB before its deadline, so resuming it would never finish", config.DirBackup,
+			"[%s] scrub made no progress past [%s] GiB, so resuming would never finish", config.DirBackup,
 			backupSizedGibibytes(intReading(int64(baseline.scrubbedMB))))
 	}
 	var corrupt []string
@@ -197,12 +200,12 @@ finished:
 		scrubLog(ctx, stagePath, corrupt, kernelFaulted(logged))
 		if len(corrupt) > 0 {
 			scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-				"[%s] scrub found [%d] errors with [%d] uncorrectable and [%d] device errors across [%d] files, delete them and re-mirror, listed in [%s]",
-				config.DirBackup, lastReading.found, lastReading.uncorrectable, deviceErrors, len(corrupt), filepath.Join(stagePath, scrubLogLeaf))
+				"[%s] scrub found [%d] errors, [%d] uncorrectable, [%d] on the device, in [%d] files to delete and re-mirror, see stage [%s]",
+				config.DirBackup, lastReading.found, lastReading.uncorrectable, deviceErrors, len(corrupt), scrubLogLeaf)
 		} else {
 			scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-				"[%s] scrub found [%d] errors with [%d] uncorrectable and [%d] device errors naming no corrupt file, so the disk read badly rather than held bad data, see [%s]",
-				config.DirBackup, lastReading.found, lastReading.uncorrectable, deviceErrors, filepath.Join(stagePath, scrubLogLeaf))
+				"[%s] scrub found [%d] errors, [%d] uncorrectable, [%d] on the device, naming no file so the disk read badly, see stage [%s]",
+				config.DirBackup, lastReading.found, lastReading.uncorrectable, deviceErrors, scrubLogLeaf)
 		}
 	}
 	if deviceErrors > 0 || lastReading.found > 0 {
@@ -251,9 +254,9 @@ func scrubOrigin(action, status string) string {
 		return "of a fresh pass"
 	}
 	if since := scrubStartedField(status); since != "" {
-		return fmt.Sprintf("of the pass left unfinished since [%s]", since)
+		return fmt.Sprintf("of the pass from [%s]", since)
 	}
-	return "of the pass left unfinished by an earlier run"
+	return "of an unfinished pass"
 }
 
 func scrubStateCleared(ctx context.Context) int {

@@ -129,7 +129,7 @@ func (p *backupProbe) poll(ctx context.Context, isPulse bool) error {
 func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	snapshot := p.documents()
 	if snapshot != nil && snapshot.abandoned {
-		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, scheduled run [%s] started [%s] min ago wrote no roll-up and stopped reporting past the [%s] min ceiling, so every stage it owns is unaccounted for",
+		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, scheduled run [%s] started [%s] min ago went silent past the [%s] min ceiling with no roll-up",
 			snapshot.dir, elapsedMinutes(snapshot.age()), elapsedMinutes(p.runCeiling())), nil
 	}
 	if snapshot != nil && snapshot.running {
@@ -161,7 +161,7 @@ func (p *backupProbe) haltedBackupStages() (int8, derivation, error) {
 			snapshot.dir, elapsedMinutes(snapshot.age())), nil
 	}
 	if snapshot == nil || snapshot.host == nil || snapshot.age() > p.staleWindow() {
-		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, no run directory under [%s] holds a status document inside the [%s] min window so the metric is inert and always ok",
+		return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct halted, no status document under [%s] inside the [%s] min window, so inert and always ok",
 			p.root, elapsedMinutes(p.staleWindow())), nil
 	}
 	run := max(snapshot.host.StagesRun, 1)
@@ -174,7 +174,7 @@ func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 	snapshot := p.documents()
 	if snapshot == nil || snapshot.tertiary == nil || snapshot.tertiary.State == metric.BackupStateRunning {
 		if !p.serverHost {
-			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, host [%s] owns no share index so it runs no tertiary stage and holds no backup disk, so the metric is inert and always ok", p.hostName), nil
+			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, host [%s] owns no share index so holds no backup disk, so inert and always ok", p.hostName), nil
 		}
 		if snapshot != nil && snapshot.running {
 			return 0, derivedInertf(scribe.ActionCompute, "computed [0] pct used, run [%s] started [%s] min ago has not measured the backup disk yet so the metric is inert and always ok",

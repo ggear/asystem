@@ -147,7 +147,7 @@ func inspected(ctx context.Context, target string) (bool, string) {
 	case spec == "":
 		return false, "is declared by no entry in [" + backupFstabPath + "]"
 	case !wanted && !sourced:
-		return false, "declares [" + spec + "] which has not enumerated, so its disk is powered down or unplugged"
+		return false, "declares [" + spec + "] which has not enumerated, its disk powered down or unplugged"
 	case !wanted:
 		return false, "carries [" + source + "] while its declared [" + spec + "] has not enumerated"
 	case !sourced:
@@ -155,7 +155,7 @@ func inspected(ctx context.Context, target string) (bool, string) {
 	case source != declared:
 		return false, "carries [" + source + "] rather than the declared [" + declared + "]"
 	case !alive(ctx, target):
-		return false, "carries [" + source + "] which is not answering reads, its device lost power or its link while mounted"
+		return false, "carries [" + source + "] which answers no reads, its device lost power or link"
 	}
 	return true, "carries [" + source + "] and is answering normally"
 }
@@ -203,7 +203,7 @@ func detachAll(ctx context.Context, subject scribe.Subject, homeRoot string) {
 			if code == 0 {
 				remaining, _, _ := bounded(ctx, stageBoundedWait, "findmnt", "-n", "-o", "ID,SOURCE,FSTYPE,PROPAGATION", target)
 				scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", time.Now(),
-					"[%s] unmount returned 0 yet it still reads as mounted by [%s] with device [%d] against home [%d], detaching forcibly and lazily",
+					"[%s] still mounted by [%s] after unmount returned 0, device [%d] home [%d], detaching lazily",
 					target, strings.Join(strings.Fields(remaining), " "), deviceID(target), deviceID(homeRoot))
 			} else {
 				scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", time.Now(),

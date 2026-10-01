@@ -217,8 +217,30 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 			"[%s] held [%d] stage(s) of a run no process owns, finalised as [%s]", runID, stopped, metric.BackupStateStopped)
 		return nil
 	}
+	deadline := time.Now().Add(backupStopWait)
+	for {
+		if lock, lockErr := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644); lockErr == nil {
+			released := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) == nil
+			if released {
+				_ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+			}
+			_ = lock.Close()
+			if released {
+				break
+			}
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("stopped [%d] active stage(s) of run [%s] yet it still holds [%s] after [%s]",
+				stopped, runID, lockPath(root), backupStopWait)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backupStopPoll):
+		}
+	}
 	scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("finished", started,
-		"[%s] stopped [%d] active stage(s)", runID, stopped)
+		"[%s] stopped [%d] active stage(s) and the run has ended", runID, stopped)
 	return nil
 }
 
@@ -373,6 +395,8 @@ const (
 	backupRunsKept        = 30
 	backupScheduledHour   = 1
 	backupTimeoutVariable = "BACKUP_TIMEOUT_HOURS"
+	backupStopWait        = tertiaryCleanupWait + time.Minute
+	backupStopPoll        = 500 * time.Millisecond
 
 	backupCommandUnnamed = "unnamed"
 )

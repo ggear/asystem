@@ -1,6 +1,8 @@
 package probe
 
 import (
+	"context"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -446,5 +448,50 @@ func TestProbeUtilBackup_CleanIsRefusedWhileARunHoldsTheLock(t *testing.T) {
 	}
 	if runs := backupRuns(root); len(runs) != 1 {
 		t.Errorf("backupRuns() = %v, want the history left alone while a run owns it", runs)
+	}
+}
+
+func TestProbeUtilBackup_StopReturnsOnlyOnceTheRunHasReleasedItsLock(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(config.BackupHomeEnvVar, home)
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	stageStream = func(context.Context, io.Writer, string, ...string) (string, int, bool) { return "", 0, false }
+	root := backupRunRoot()
+	runID := "2026-10-01_13-59-54"
+	runPath := backupRunPath(root, runID)
+	if err := os.MkdirAll(stageDir(runPath, metric.BackupStageSecondary), 0o755); err != nil {
+		t.Fatalf("mkdir stage: %v", err)
+	}
+	if err := writeAtomic(stageStatusPath(runPath, metric.BackupStageSecondary),
+		backupSummary{RunID: runID, State: metric.BackupStateRunning}); err != nil {
+		t.Fatalf("write stage: %v", err)
+	}
+	held, err := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		t.Fatalf("open lock: %v", err)
+	}
+	defer func() { _ = held.Close() }()
+	if err := syscall.Flock(int(held.Fd()), syscall.LOCK_EX); err != nil {
+		t.Fatalf("hold lock: %v", err)
+	}
+
+	returned := make(chan error, 1)
+	go func() { returned <- runBackupStop(t.Context(), BackupRequest{RunID: runID}) }()
+	select {
+	case err := <-returned:
+		t.Fatalf("runBackupStop() returned [%v] while the run still held its lock, so a start straight after it is refused", err)
+	case <-time.After(3 * backupStopPoll):
+	}
+	if err := syscall.Flock(int(held.Fd()), syscall.LOCK_UN); err != nil {
+		t.Fatalf("release lock: %v", err)
+	}
+	select {
+	case err := <-returned:
+		if err != nil {
+			t.Errorf("runBackupStop() = %v, want nil once the run released its lock", err)
+		}
+	case <-time.After(5 * backupStopPoll):
+		t.Fatalf("runBackupStop() did not return after the run released its lock")
 	}
 }
