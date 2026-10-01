@@ -88,7 +88,13 @@ func TestProbeImplBackup_RunSummaryNamesTheFirstStageThatBroke(t *testing.T) {
 			metric.BackupStageTertiary: metric.BackupStateSuccess}, metric.BackupStateSkipped, metric.BackupStateSuccess, true, 0, 0},
 		{"secondary timed out ahead of a failed tertiary", map[metric.BackupStage]string{
 			metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateTimeout,
-			metric.BackupStageTertiary: metric.BackupStateFailure}, "", metric.BackupStateTimeout, false, 1, 1},
+			metric.BackupStageTertiary: metric.BackupStateFailure}, "", metric.BackupStateTimeout, false, 2, 1},
+		{"a timed out stage counts as failed as well as halted", map[metric.BackupStage]string{
+			metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess,
+			metric.BackupStageTertiary: metric.BackupStateTimeout}, "", metric.BackupStateTimeout, false, 1, 1},
+		{"a stopped stage counts as halted alone", map[metric.BackupStage]string{
+			metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess,
+			metric.BackupStageTertiary: metric.BackupStateStopped}, "", metric.BackupStateStopped, false, 0, 1},
 		{"a failed scrub still fails a fully successful run", map[metric.BackupStage]string{
 			metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess,
 			metric.BackupStageTertiary: metric.BackupStateSuccess}, metric.BackupStateFailure, metric.BackupStateFailure, false, 0, 0},

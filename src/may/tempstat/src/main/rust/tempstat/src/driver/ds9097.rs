@@ -10,8 +10,8 @@ use super::onewire::{OneWire, Presence};
 use super::uart::{SerialUart, Uart};
 use super::{Error, Result};
 
-const BAUD_RESET: u32 = 9_600;
-const BAUD_SLOTS: u32 = 115_200;
+pub(crate) const BAUD_RESET: u32 = 9_600;
+pub(crate) const BAUD_SLOTS: u32 = 115_200;
 const RESET_PULSE: u8 = 0xF0;
 const RESET_SHORTED: u8 = 0x00;
 const SLOT_ONE: u8 = 0xFF;
@@ -59,14 +59,6 @@ impl<U: Uart> Ds9097<U> {
                     .fold(0u8, |byte, (bit, &echo)| byte | ((echo & 0x01) << bit))
             })
             .collect())
-    }
-}
-
-fn slot(bit: bool) -> u8 {
-    if bit {
-        SLOT_ONE
-    } else {
-        SLOT_ZERO
     }
 }
 
@@ -141,6 +133,14 @@ impl<U: Uart> OneWire for Ds9097<U> {
             bits[i] = direction;
         }
         Ok((bits, discrepancies))
+    }
+}
+
+fn slot(bit: bool) -> u8 {
+    if bit {
+        SLOT_ONE
+    } else {
+        SLOT_ZERO
     }
 }
 
@@ -241,13 +241,6 @@ mod tests {
         assert!(!bus.touch_bit(true).unwrap());
         assert!(!bus.touch_bit(false).unwrap());
         assert_eq!(bus.uart.written, [0xFF, 0xFF, 0x00]);
-    }
-
-    #[test]
-    fn write_bit_rejects_echo_mismatch() {
-        let mut bus = Ds9097::new(MockUart::new()).unwrap();
-        bus.uart.queue_read(&[0xFE]);
-        assert!(matches!(bus.write_bit(true), Err(Error::EchoMismatch)));
     }
 
     #[test]
@@ -364,33 +357,5 @@ mod tests {
         let mut bus = Ds9097::new(MockUart::new()).unwrap();
         bus.uart.queue_read(&[0xF0]);
         assert_eq!(bus.get_connected_roms().unwrap(), vec![]);
-    }
-
-    #[test]
-    fn alarm_search_without_alarming_devices_is_empty() {
-        let mut bus = Ds9097::new(MockUart::new()).unwrap();
-        bus.uart.queue_read(&[0xE0]);
-        queue_echo(&mut bus.uart, &[0xEC]);
-        bus.uart.queue_read(&[0xFF, 0xFF]);
-        assert_eq!(bus.alarm_search().unwrap(), vec![]);
-        assert!(bus.uart.reads.is_empty());
-    }
-
-    #[test]
-    fn is_connected_detects_device() {
-        let rom = rom_with_serial([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
-        let mut bus = Ds9097::new(MockUart::new()).unwrap();
-        bus.uart.queue_read(&[0xE0]);
-        queue_echo(&mut bus.uart, &[0xF0]);
-        queue_search_response(&mut bus.uart, &rom);
-        assert!(bus.is_connected(&rom).unwrap());
-    }
-
-    #[test]
-    fn is_connected_is_false_when_bus_absent() {
-        let rom = rom_with_serial([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
-        let mut bus = Ds9097::new(MockUart::new()).unwrap();
-        bus.uart.queue_read(&[0xF0]);
-        assert!(!bus.is_connected(&rom).unwrap());
     }
 }

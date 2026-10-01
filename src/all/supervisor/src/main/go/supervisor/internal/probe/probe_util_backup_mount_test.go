@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"supervisor/internal/config"
+	"supervisor/internal/scribe"
 )
 
 func TestProbeUtilBackupMount_BtrfsUUIDAgainstCapturedFilesystemShow(t *testing.T) {
@@ -32,7 +33,7 @@ func TestProbeUtilBackupMount_BtrfsUUIDAgainstCapturedFilesystemShow(t *testing.
 			output := fixtureStages(t, testCase.fixture)
 			target := "/backup/" + testCase.name
 			stageStreamReturns(t, output, testCase.code, testCase.abandoned)
-			uuid, found, wedged := btrfsUUID(t.Context(), target)
+			uuid, found, wedged := btrfsUUID(t.Context(), scribe.SubjectNone, target)
 			if found != testCase.expectedFound {
 				t.Fatalf("btrfsUUID() found = %v, want %v", found, testCase.expectedFound)
 			}
@@ -59,7 +60,7 @@ func TestProbeUtilBackupMount_AnUnidentifiedPathIsAskedOfBtrfsOnlyOnce(t *testin
 		return "ERROR: not a valid btrfs filesystem", 1, false
 	}
 	for range 3 {
-		if _, found, wedged := btrfsUUID(t.Context(), "/backup"); found || wedged {
+		if _, found, wedged := btrfsUUID(t.Context(), scribe.SubjectNone, "/backup"); found || wedged {
 			t.Fatalf("btrfsUUID() found = %v wedged = %v, want neither", found, wedged)
 		}
 	}
@@ -118,7 +119,7 @@ func TestProbeUtilBackupMount_MeasureUsageFallsBackToCapturedDfWhenBtrfsCannotId
 		}
 		return dfOutput, 0, false
 	}
-	percent, usedMB, totalMB, ok := measureUsage(t.Context(), "/backup")
+	percent, usedMB, totalMB, ok := measureUsage(t.Context(), scribe.SubjectNone, "/backup")
 	if !ok {
 		t.Fatalf("measureUsage() ok = false, want the df fallback to answer")
 	}
@@ -133,7 +134,7 @@ func TestProbeUtilBackupMount_MeasureUsageFallsBackToCapturedDfWhenBtrfsCannotId
 func TestProbeUtilBackupMount_MeasureUsageCannotAnswerWhenTheFilesystemIsWedged(t *testing.T) {
 	btrfsUnidentified.Clear()
 	stageStreamReturns(t, "", stageBoundedAbandoned, true)
-	if _, _, _, ok := measureUsage(t.Context(), "/backup"); ok {
+	if _, _, _, ok := measureUsage(t.Context(), scribe.SubjectNone, "/backup"); ok {
 		t.Errorf("measureUsage() ok = true, want a wedged filesystem to report no reading rather than a df guess")
 	}
 }
@@ -230,7 +231,7 @@ func TestProbeUtilBackupMount_UsageIsOnlyMeasuredWhileTheTargetIsMounted(t *test
 					return "ERROR: not a valid btrfs filesystem", 1, false
 				}
 			}
-			percent, usedMB, totalMB, ok := measureUsage(t.Context(), "/backup")
+			percent, usedMB, totalMB, ok := measureUsage(t.Context(), scribe.SubjectNone, "/backup")
 			if ok != testCase.expectedKnown {
 				t.Fatalf("measureUsage() ok = %v, want %v, an unmounted path measures whatever lies under it", ok, testCase.expectedKnown)
 			}

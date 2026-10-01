@@ -295,15 +295,24 @@ class SourcesMixin(ContractMixin):
                         data_df.index = data_df.index.tz_localize(None)  # type: ignore[union-attr]
                     if "Capital Gains" in data_df.columns:
                         data_df = data_df.drop(columns=["Capital Gains"])
+                    in_range = (data_df.index.date >= start_date) & (data_df.index.date < end_exclusive)  # type: ignore[union-attr]
+                    if not in_range.all():
+                        self.print_log(f"File [{label}] stock query returned [{(~in_range).sum()}] rows outside [{start}] to [{end_exclusive}] for ticker [{ticker}], dropped",
+                                       level="warn")
+                        data_df = data_df.loc[in_range]
                     if (now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1])
                             and len(data_df) > 0 and data_df.index[-1].date() == now.date()  # type: ignore[union-attr]
                             and now.strftime('%H:%M') < end_of_day):
                         data_df = data_df[:-1]
                     if len(data_df) == 0:
-                        if ignore:
-                            self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warn")
-                        else:
+                        if not ignore:
                             raise Exception(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]")
+                        self.print_log(f"File [{label}] stock query returned no data for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warn")
+                        if isfile(local_path):
+                            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
+                            return DownloadResult(DownloadStatus.CACHED, local_path)
+                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_SKIPPED)
+                        return DownloadResult(DownloadStatus.SKIPPED, None)
                     elif len(data_df.columns) == 0:
                         self.print_log(f"File [{label}] stock query returned only dates (no price columns) for ticker [{ticker}] between [{start}] and [{end_exclusive}]", level="warn")
                     if not exists(dirname(local_path)):

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
 	"supervisor/internal/config"
+	"supervisor/internal/scribe"
 )
 
 func TestProbeUtilBackupStageSecondary_RsyncFieldAgainstCapturedTertiaryMirror(t *testing.T) {
@@ -76,7 +78,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinKeepsTheDailyWeeklyAndMonthlyWindo
 		}
 	}
 
-	gfsThin(t.Context(), dir, loadedWithKeep(t, 3, 2, 2))
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 3, 2, 2))
 
 	survived := map[string]bool{}
 	remaining, err := os.ReadDir(dir)
@@ -121,7 +123,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinLeavesASingleEntryAlone(t *testing
 	if err := os.MkdirAll(filepath.Join(dir, timestamp), 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	gfsThin(t.Context(), dir, loadedWithKeep(t, 1, 1, 1))
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 1, 1, 1))
 	if _, err := os.Stat(filepath.Join(dir, timestamp)); err != nil {
 		t.Errorf("a single entry must never be pruned, count <= 1 is a no-op")
 	}
@@ -149,7 +151,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinPrunesNothingWithNoDeclaredWindow(
 			t.Fatalf("mkdir %s: %v", name, err)
 		}
 	}
-	gfsThin(t.Context(), dir, loadedWithKeep(t, 0, 0, 0))
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 0, 0, 0))
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("read dir: %v", err)
@@ -166,7 +168,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinPrunesNothingWithNoConfigAtAll(t *
 			t.Fatalf("mkdir %s: %v", name, err)
 		}
 	}
-	gfsThin(t.Context(), dir, nil)
+	gfsThin(t.Context(), scribe.SubjectNone, dir, nil)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("read dir: %v", err)
@@ -185,7 +187,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinPrunesOnlyDatedDirectories(t *test
 			t.Fatalf("mkdir [%s]: %v", name, err)
 		}
 	}
-	gfsThin(t.Context(), dir, loadedWithKeep(t, 1, 0, 0))
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 1, 0, 0))
 	for _, name := range kept {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			t.Errorf("[%s] was pruned, want a name outside the dated form left alone", name)
@@ -196,5 +198,38 @@ func TestProbeUtilBackupStageSecondary_GFSThinPrunesOnlyDatedDirectories(t *test
 	}
 	if _, err := os.Stat(filepath.Join(dir, dated[0])); err == nil {
 		t.Errorf("[%s] survived, want a dated directory outside every window pruned", dated[0])
+	}
+}
+
+func TestProbeUtilBackupStageSecondary_GFSThinCountsDailyInDaysNotRuns(t *testing.T) {
+	dir := t.TempDir()
+	planted := []string{
+		"2026-09-13_09-52-44", "2026-09-19_01-00-40", "2026-09-20_01-00-39", "2026-09-24_01-00-41", "2026-09-25_01-00-41", "2026-09-26_01-00-41",
+		"2026-09-27_01-00-10", "2026-09-27_15-14-09", "2026-09-28_01-00-54", "2026-09-29_01-00-54",
+		"2026-09-30_01-00-54", "2026-10-01_01-00-13", "2026-10-01_11-10-26", "2026-10-01_12-05-50",
+		"2026-10-01_12-48-04", "2026-10-01_12-51-35",
+	}
+	for _, name := range planted {
+		if err := os.MkdirAll(filepath.Join(dir, name), 0o755); err != nil {
+			t.Fatalf("mkdir [%s]: %v", name, err)
+		}
+	}
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 7, 4, 12))
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read dir: %v", err)
+	}
+	var survived []string
+	for _, entry := range entries {
+		survived = append(survived, entry.Name())
+	}
+	expected := []string{
+		"2026-09-13_09-52-44", "2026-09-20_01-00-39", "2026-09-25_01-00-41", "2026-09-26_01-00-41",
+		"2026-09-27_01-00-10", "2026-09-27_15-14-09", "2026-09-28_01-00-54", "2026-09-29_01-00-54",
+		"2026-09-30_01-00-54", "2026-10-01_01-00-13", "2026-10-01_11-10-26", "2026-10-01_12-05-50",
+		"2026-10-01_12-48-04", "2026-10-01_12-51-35",
+	}
+	if !slices.Equal(survived, expected) {
+		t.Errorf("survived %q, want every run on the newest seven days kept however many ran today, and the weekly and monthly heads before them", survived)
 	}
 }

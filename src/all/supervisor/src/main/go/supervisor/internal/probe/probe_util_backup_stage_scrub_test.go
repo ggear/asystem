@@ -2,10 +2,14 @@ package probe
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,7 +21,7 @@ func TestProbeUtilBackupStageScrub_TheWindowFallsFourTimesAYear(t *testing.T) {
 	scrubbed := 0
 	for month := time.January; month <= time.December; month++ {
 		action, _ := scrubAction(false, metric.BackupTriggerSystem, "",
-			time.Date(2026, month, scrubWindowDay, 2, 0, 0, 0, time.Local))
+			time.Date(2026, month, 1, 2, 0, 0, 0, time.Local))
 		if action == scrubActionStart {
 			scrubbed++
 		}
@@ -100,6 +104,51 @@ func TestProbeUtilBackupStageScrub_ReadNowAgainstCapturedRunningStatus(t *testin
 	}
 }
 
+func TestProbeUtilBackupStageScrub_ProgressIsMeasuredFromTheFirstPollWhenBtrfsNamesATotal(t *testing.T) {
+	tests := []struct {
+		name             string
+		status           string
+		raw              string
+		expectedProgress float64
+		expectedMeasured bool
+	}{
+		{name: "a_fresh_pass_seconds_in_is_measured_against_the_named_total",
+			status:           "Status:           running\nTotal to scrub:   7.69TiB\nBytes scrubbed:   1.70GiB  (0.02%)",
+			raw:              "\tdata_bytes_scrubbed: 1825361100\n\ttree_bytes_scrubbed: 0",
+			expectedProgress: 1825361100 / (7.69 * 1099511627776) * 100, expectedMeasured: true},
+		{name: "every_binary_unit_btrfs_prints_is_understood",
+			status:           "Status:           running\nTotal to scrub:   512.00MiB\nBytes scrubbed:   256.00MiB  (50.00%)",
+			raw:              "\tdata_bytes_scrubbed: 201326592\n\ttree_bytes_scrubbed: 67108864",
+			expectedProgress: 50, expectedMeasured: true},
+		{name: "no_named_total_falls_back_to_the_printed_percentage",
+			status:           "Status:           running\nBytes scrubbed:   982.55GiB  (98.44%)",
+			raw:              "\tdata_bytes_scrubbed: 1050725752832\n\ttree_bytes_scrubbed: 4276305920",
+			expectedProgress: 98.44, expectedMeasured: false},
+		{name: "an_unparseable_total_falls_back_to_the_printed_percentage",
+			status:           "Status:           running\nTotal to scrub:   lots\nBytes scrubbed:   982.55GiB  (98.44%)",
+			raw:              "\tdata_bytes_scrubbed: 1050725752832\n\ttree_bytes_scrubbed: 4276305920",
+			expectedProgress: 98.44, expectedMeasured: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			fakeExec(t, map[string]string{
+				"btrfs scrub status -R /backup": testCase.raw,
+				"btrfs scrub status /backup":    testCase.status,
+			})
+			reading, ok := scrubReadNow(context.Background())
+			if !ok {
+				t.Fatalf("scrubReadNow() not ok")
+			}
+			if reading.measured != testCase.expectedMeasured {
+				t.Errorf("measured = %t, want %t", reading.measured, testCase.expectedMeasured)
+			}
+			if diff := reading.progress - testCase.expectedProgress; diff > 0.0001 || diff < -0.0001 {
+				t.Errorf("progress = %.6f, want %.6f", reading.progress, testCase.expectedProgress)
+			}
+		})
+	}
+}
+
 func TestProbeUtilBackupStageScrub_ReadNowAgainstCapturedAbortedStatusIsNotRunning(t *testing.T) {
 	fakeExec(t, map[string]string{
 		"btrfs scrub status -R /backup": fixtureStages(t, "btrfs/scrub-status-raw-aborted.txt"),
@@ -171,11 +220,12 @@ func TestProbeUtilBackupStageScrub_DeviceStatsSumCountsNonZero(t *testing.T) {
 
 func TestProbeUtilBackupStageScrub_ActionScrubsOnlyWhenAskedOrDue(t *testing.T) {
 	scrubMonth := scrubWindowFrom + time.Month(scrubWindowMonths)
-	inWindow := time.Date(2026, scrubMonth, scrubWindowDay+1, 2, 0, 0, 0, time.Local)
-	outsideWindow := time.Date(2026, scrubMonth, scrubWindowDay+scrubWindowDays, 2, 0, 0, 0, time.Local)
-	outsideMonth := time.Date(2026, scrubMonth+1, scrubWindowDay+1, 2, 0, 0, 0, time.Local)
+	inWindow := time.Date(2026, scrubMonth, 2, 2, 0, 0, 0, time.Local)
+	lateInWindow := time.Date(2026, scrubMonth, 20, 2, 0, 0, 0, time.Local)
+	outsideMonth := time.Date(2026, scrubMonth+1, 2, 2, 0, 0, 0, time.Local)
 	scrubbedThisMonth := "Scrub started:    " + inWindow.Format(time.ANSIC)
 	scrubbedLastMonth := "Scrub started:    " + inWindow.AddDate(0, -1, 0).Format(time.ANSIC)
+	resumedThisMonth := "Scrub resumed:    " + inWindow.Format(time.ANSIC) + "\nStatus:           finished"
 	tests := []struct {
 		name           string
 		forced         bool
@@ -187,7 +237,9 @@ func TestProbeUtilBackupStageScrub_ActionScrubsOnlyWhenAskedOrDue(t *testing.T) 
 	}{
 		{name: "a_scheduled_run_inside_the_window_scrubs", trigger: metric.BackupTriggerSystem, status: scrubbedLastMonth, now: inWindow,
 			expectedAction: "start"},
-		{name: "a_scheduled_run_outside_the_day_window_does_not", trigger: metric.BackupTriggerSystem, status: scrubbedLastMonth, now: outsideWindow,
+		{name: "a_scheduled_run_late_in_a_scrub_month_catches_up_a_missed_pass", trigger: metric.BackupTriggerSystem, status: scrubbedLastMonth, now: lateInWindow,
+			expectedAction: "start"},
+		{name: "a_scheduled_run_late_in_a_scrub_month_after_its_pass_does_not", trigger: metric.BackupTriggerSystem, status: scrubbedThisMonth, now: lateInWindow,
 			expectedReason: true},
 		{name: "a_scheduled_run_in_a_month_between_scrubs_does_not", trigger: metric.BackupTriggerSystem, status: scrubbedLastMonth, now: outsideMonth,
 			expectedReason: true},
@@ -195,15 +247,17 @@ func TestProbeUtilBackupStageScrub_ActionScrubsOnlyWhenAskedOrDue(t *testing.T) 
 			expectedAction: "resume"},
 		{name: "a_hand_run_does_not_scrub_unasked", trigger: metric.BackupTriggerManual, status: scrubbedLastMonth, now: inWindow,
 			expectedReason: true},
-		{name: "a_hand_run_asked_for_it_scrubs", forced: true, trigger: metric.BackupTriggerManual, status: scrubbedLastMonth, now: outsideWindow,
+		{name: "a_hand_run_asked_for_it_scrubs", forced: true, trigger: metric.BackupTriggerManual, status: scrubbedLastMonth, now: lateInWindow,
 			expectedAction: "start"},
 		{name: "a_pass_this_month_already_is_skipped", trigger: metric.BackupTriggerSystem, status: scrubbedThisMonth, now: inWindow,
 			expectedReason: true},
+		{name: "a_pass_finished_by_a_resume_this_month_is_skipped", trigger: metric.BackupTriggerSystem, status: resumedThisMonth, now: inWindow,
+			expectedReason: true},
 		{name: "asking_forces_past_a_pass_this_month", forced: true, trigger: metric.BackupTriggerSystem, status: scrubbedThisMonth, now: inWindow,
 			expectedAction: "start"},
-		{name: "an_interrupted_pass_resumes_whatever_the_window_says", trigger: metric.BackupTriggerSystem, status: "Status:           interrupted", now: outsideWindow,
+		{name: "an_interrupted_pass_resumes_whatever_the_window_says", trigger: metric.BackupTriggerSystem, status: "Status:           interrupted", now: lateInWindow,
 			expectedAction: "resume"},
-		{name: "an_aborted_pass_resumes_on_a_hand_run_too", trigger: metric.BackupTriggerManual, status: "Status:           aborted", now: outsideWindow,
+		{name: "an_aborted_pass_resumes_on_a_hand_run_too", trigger: metric.BackupTriggerManual, status: "Status:           aborted", now: lateInWindow,
 			expectedAction: "resume"},
 	}
 	for _, testCase := range tests {
@@ -331,9 +385,9 @@ func TestProbeUtilBackupStageScrub_OriginNamesWhatThePassIsContinuing(t *testing
 		{name: "a_fresh_pass_says_so", action: scrubActionStart, status: "Scrub started:    Mon Sep 22 01:00:00 2026",
 			expected: "of a fresh pass"},
 		{name: "a_resume_names_the_date_it_reads", action: scrubActionResume, status: "Scrub started:    Mon Sep 22 01:00:00 2026",
-			expected: "of the pass left unfinished since [Mon Sep 22 01:00:00 2026]"},
+			expected: "of the pass from [Mon Sep 22 01:00:00 2026]"},
 		{name: "a_resume_with_no_date_stays_honest", action: scrubActionResume, status: "no stats available",
-			expected: "of the pass left unfinished by an earlier run"},
+			expected: "of an unfinished pass"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -402,5 +456,176 @@ func TestProbeUtilBackupStageScrub_APassOpensItsDocumentBeforeTheFirstPoll(t *te
 				t.Errorf("scrubWord() = %q, want %q so list never shows a blank cell for a live pass", word, expected)
 			}
 		})
+	}
+}
+
+func TestProbeUtilBackupStageScrub_APassPausedAtItsDeadlineLeavesTheStageHealthy(t *testing.T) {
+	tests := []struct {
+		name            string
+		statusCode      int
+		deviceStats     string
+		stalled         bool
+		expectedHealthy bool
+		expectedState   string
+	}{
+		{name: "a_clean_pass_paused_at_its_deadline_resumes_next_run", deviceStats: "btrfs/device-stats-mounted-backup.txt",
+			expectedHealthy: true, expectedState: metric.BackupStatePausing},
+		{name: "a_paused_pass_that_made_no_progress_fails", deviceStats: "btrfs/device-stats-mounted-backup.txt", stalled: true,
+			expectedHealthy: false, expectedState: metric.BackupStateFailure},
+		{name: "a_paused_pass_with_device_errors_fails", deviceStats: "",
+			expectedHealthy: false, expectedState: metric.BackupStateFailure},
+		{name: "an_unreadable_scrub_status_fails_rather_than_skips", statusCode: 1,
+			expectedHealthy: false, expectedState: metric.BackupStateFailure},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			deviceStats := "[/dev/sdb1].read_io_errs    3"
+			if testCase.deviceStats != "" {
+				deviceStats = fixtureStages(t, testCase.deviceStats)
+			}
+			outputs := map[string]string{
+				"btrfs scrub status /backup":    fixtureStages(t, "btrfs/scrub-status-running.txt"),
+				"btrfs scrub status -R /backup": fixtureStages(t, "btrfs/scrub-status-raw-running.txt"),
+				"btrfs device stats /backup":    deviceStats,
+			}
+			request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-10-01_01-00-10",
+				RunPath: t.TempDir(), Expires: time.Now().Add(scrubMargin + time.Millisecond), Scrub: true,
+				Trigger: metric.BackupTriggerSystem, ConfigPath: filepath.Join(t.TempDir(), "config.json")}
+			originalStream, originalAvailable := stageStream, commandAvailable
+			t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
+			commandAvailable = func(string) bool { return true }
+			polled := 0
+			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+				key := name + " " + strings.Join(args, " ")
+				if key == "btrfs scrub status /backup" && testCase.statusCode != 0 {
+					return "ERROR: not a btrfs filesystem: /backup", testCase.statusCode, false
+				}
+				if key == "btrfs scrub status -R /backup" {
+					polled++
+					if polled == 1 && !testCase.stalled {
+						return strings.Replace(outputs[key], "data_bytes_scrubbed: 1050725752832", "data_bytes_scrubbed: 1040725752832", 1), 0, false
+					}
+				}
+				return outputs[key], 0, false
+			}
+
+			healthy := runScrub(context.Background(), request)
+			if healthy != testCase.expectedHealthy {
+				t.Errorf("runScrub() = %t, want %t", healthy, testCase.expectedHealthy)
+			}
+			document := readScrubSummary(scrubStatusPath(request.RunPath))
+			if document == nil || document.State != testCase.expectedState {
+				t.Fatalf("scrub document = %+v, want state %q", document, testCase.expectedState)
+			}
+			if document.SuccessBool {
+				t.Errorf("success_bool = true, want false since no pass finished")
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupStageScrub_AResumeBtrfsRefusesStartsAFreshPass(t *testing.T) {
+	originalStream, originalAvailable := stageStream, commandAvailable
+	t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
+	commandAvailable = func(string) bool { return true }
+	var issued []string
+	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+		key := name + " " + strings.Join(args, " ")
+		switch key {
+		case "btrfs scrub status /backup":
+			return "Scrub resumed:    Thu Oct  1 11:11:16 2026\nStatus:           aborted", 0, false
+		case "btrfs scrub resume -c 3 -n 15 /backup":
+			issued = append(issued, "resume")
+			return "ERROR: no scrub to resume", 1, false
+		case "btrfs scrub start -c 3 -n 15 /backup":
+			issued = append(issued, "start")
+			return "", 0, false
+		case "btrfs device stats /backup":
+			return fixtureStages(t, "btrfs/device-stats-mounted-backup.txt"), 0, false
+		}
+		return "", 0, false
+	}
+	request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-10-02_01-00-10",
+		RunPath: t.TempDir(), Expires: time.Now().Add(time.Hour), Trigger: metric.BackupTriggerSystem,
+		ConfigPath: filepath.Join(t.TempDir(), "config.json")}
+
+	_ = runScrub(context.Background(), request)
+	if !slices.Equal(issued, []string{"resume", "start"}) {
+		t.Errorf("issued %v, want a refused resume followed by a fresh start", issued)
+	}
+	if document := readScrubSummary(scrubStatusPath(request.RunPath)); document == nil || document.ResumedBool {
+		t.Errorf("scrub document = %+v, want resumed_bool false for the fresh pass that replaced the refused resume", document)
+	}
+}
+
+func TestProbeUtilBackupStageScrub_AStopThatUnmountsTheDiskLeavesTheFilesystemBeneathAlone(t *testing.T) {
+	for _, cancelled := range []bool{true, false} {
+		t.Run(fmt.Sprintf("cancelled_%t", cancelled), func(t *testing.T) {
+			stopScrubUnderneath(t, cancelled)
+		})
+	}
+}
+
+func stopScrubUnderneath(t *testing.T, cancelled bool) {
+	originalStream, originalAvailable := stageStream, commandAvailable
+	t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
+	commandAvailable = func(string) bool { return true }
+	var unmounted atomic.Bool
+	var touched []string
+	var touchedMu sync.Mutex
+	root := "UUID:             ff55f331-1d06-4a57-a65f-89e457b3a3d0\n\tno stats available"
+	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+		key := name + " " + strings.Join(args, " ")
+		if strings.HasPrefix(key, "btrfs device stats") {
+			touchedMu.Lock()
+			touched = append(touched, key)
+			touchedMu.Unlock()
+		}
+		switch key {
+		case "btrfs scrub status /backup":
+			if unmounted.Load() {
+				return root, 0, false
+			}
+			return fixtureStages(t, "btrfs/scrub-status-running.txt"), 0, false
+		case "btrfs scrub status -R /backup":
+			if unmounted.Load() {
+				return root, 0, false
+			}
+			return fixtureStages(t, "btrfs/scrub-status-raw-running.txt"), 0, false
+		case "btrfs device stats /backup":
+			return fixtureStages(t, "btrfs/device-stats-mounted-backup.txt"), 0, false
+		}
+		return "", 0, false
+	}
+	request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-10-01_12-48-04",
+		RunPath: t.TempDir(), Expires: time.Now().Add(time.Hour), Scrub: true, Trigger: metric.BackupTriggerManual,
+		ConfigPath: filepath.Join(t.TempDir(), "config.json")}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stagePath := stageDir(request.RunPath, request.Stage)
+	if err := os.MkdirAll(stagePath, 0o755); err != nil {
+		t.Fatalf("mkdir stage: %v", err)
+	}
+	go func() {
+		time.Sleep(backupProgressHeartbeat + time.Second)
+		_ = os.WriteFile(filepath.Join(stagePath, stageStoppedMarker), nil, 0o644)
+		unmounted.Store(true)
+		if cancelled {
+			cancel()
+		}
+	}()
+
+	if runScrub(ctx, request) {
+		t.Errorf("runScrub() = true, want false for a stopped pass")
+	}
+	document := readScrubSummary(scrubStatusPath(request.RunPath))
+	wantScrubbedMB := 1050725752832 / 1048576
+	if document == nil || document.State != metric.BackupStateStopped || document.ScrubbedMB != wantScrubbedMB {
+		t.Errorf("scrub document = %+v, want stopped with scrubbed_mb [%d] from its own last reading, not the filesystem beneath", document, wantScrubbedMB)
+	}
+	touchedMu.Lock()
+	defer touchedMu.Unlock()
+	if len(touched) != 0 {
+		t.Errorf("issued %q, want no device stats read or reset once the scrubbed filesystem is gone", touched)
 	}
 }

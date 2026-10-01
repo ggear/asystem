@@ -266,7 +266,7 @@ func (c *leaderCampaign) census(now time.Time) {
 		age := now.Sub(arrived)
 		stale := age > c.timing.ttl
 		if stale && !c.staleHosts[host] {
-			scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionCensus).Infof("observed", arrived, "[%s] election candidacy unheard for [%s], counted stale", c.election.name, age.Round(time.Second))
+			scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionCensus).Infof("observed", arrived, "[%s] election candidacy unheard for [%s] s, counted stale", c.election.name, elapsedSeconds(age))
 		}
 		c.staleHosts[host] = stale
 		if report {
@@ -285,8 +285,8 @@ func (c *leaderCampaign) census(now time.Time) {
 	}
 	if report {
 		slices.Sort(standing)
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionCensus).Debugf("reported", now, "[%s] election, holding [%v], attached [%v], standing [%v], settling [%s], lease [%s] aged [%s], candidates [%s]",
-			c.election.name, held, attached, standingSelf, settling, leaseHost, leaseAge, strings.Join(standing, ","))
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(c.host), scribe.ActionCensus).Debugf("reported", now, "[%s] election, holding [%v], attached [%v], standing [%v], settling [%s] s, lease [%s] aged [%s] s, candidates [%s]",
+			c.election.name, held, attached, standingSelf, elapsedSeconds(settling), leaseHost, elapsedSeconds(leaseAge), strings.Join(standing, ","))
 	}
 }
 
@@ -481,7 +481,7 @@ func (c *leaderCampaign) observe(_ mqtt.Client, message mqtt.Message) {
 	renewed, parseErr := time.Parse(time.RFC3339Nano, candidacy.RenewedTS)
 	if skew := received.Sub(renewed).Abs(); parseErr == nil && !message.Retained() && skew > leaderSkewWarn && !c.skewed[host] {
 		c.skewed[host] = true
-		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Warnf("observed", received, "[%s] election candidacy stamped [%s] off this clock, freshness is judged on arrival so the election is unaffected", c.election.name, skew.Round(time.Millisecond))
+		scribe.Log(scribe.SourceProbeLeader, scribe.SubjectHost(host), scribe.ActionSubscribe).Warnf("observed", received, "[%s] election candidacy stamped [%s] ms off this clock, freshness is judged on arrival so the election is unaffected", c.election.name, elapsedMillis(skew))
 	}
 }
 
@@ -625,9 +625,9 @@ func (c *leaderCampaign) lapse(now time.Time) string {
 	case c.lease.Host != c.host:
 		return "the lease names [" + leaderNamed(c.lease.Host) + "]"
 	case now.Sub(c.lastAck) > c.timing.ackWindow:
-		return "candidacy renewals unacknowledged for [" + now.Sub(c.lastAck).Round(time.Second).String() + "]"
+		return "candidacy renewals unacknowledged for [" + elapsedSeconds(now.Sub(c.lastAck)) + "] s"
 	case now.Sub(c.lastLease) > c.timing.ackWindow:
-		return "lease writes unacknowledged for [" + now.Sub(c.lastLease).Round(time.Second).String() + "]"
+		return "lease writes unacknowledged for [" + elapsedSeconds(now.Sub(c.lastLease)) + "] s"
 	case !c.client.IsConnectionOpen():
 		return "the broker session is closed"
 	}

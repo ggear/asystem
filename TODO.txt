@@ -27,9 +27,40 @@ Improve sys tests with datbase/broker asserts for all modules
 
 
 ###############################################################################################################################################################
+# Supervisor
+###############################################################################################################################################################
+
+
+code review this patch which is not in git yet.
+Make sure project guidleines are followed.
+Check all logic.
+No comments except for clear excpetions eg document interface/complicated process.
+Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements).
+reorganise struct/var/funcs by project guidleines 
+
+check all metrics working 
+adjust memeory allocs
+check metric attribution works by metric filter when multiple probe_* feed single metric
+verify caching hour and all metrics performance, increase poll frequency?
+add restore.sh and test 
+
+
+
+display_terminal.go: hide tcell namespace completely - tcell.Event?
+Make database persistance off-loop so not using loop budget on database
+Why a reconcile in 10s detail=observed [raspbpi-jen], status [online], trigger [restart], resubscribed [47] topics, reconcile in [10000] ms?
+implement commands to restart services, to work through ui when selected with popup and through HASS, add install restart CLI option that manages a .restart, flushed on install start and read into RST fields
+Add a go linter to pickup IntelliJ style warnings?
+when maximise host, update update freq to 1s
+Add a host level metric for network/internet usage? maybe only later?
+Convert from influxdb to postgres?
+Add sys test?
+Impl a tab option expander for bash
+
+
+###############################################################################################################################################################
 # Tasmota
 ###############################################################################################################################################################
-Fix web console, make status work over MQTT
 Fix deck_festoons_plug, temp/himmidty look dead?
 Centre col on ios portrait/landscape
 Add fields to UI
@@ -73,50 +104,48 @@ Issues today: mounts all work, mlflow creates a share/1, sonarr requires mad to 
 ###############################################################################################################################################################
 # InfluxDB3
 ###############################################################################################################################################################
-tune influxdb compactor given real world inputs
+Tune influxdb compactor given real world inputs
 Rename to InfluxDB
 Move to mad and remove emulation env test/exec vars
 Update HASS to use
-add explorer module for influxdb, call is influxdb3ui or explorer?
+Add explorer module for influxdb, call is influxdb3ui or explorer?
 
 
 
 ###############################################################################################################################################################
 # Postgres
 ###############################################################################################################################################################
-add schema describe to src/build/resources/schemas/postgres|timescaledb
+Add schema describe to src/build/resources/schemas/postgres|timescaledb
 
 
 ###############################################################################################################################################################
 # Vernemq
 ###############################################################################################################################################################
-add schema describe to src/build/resources/schemas/vernemq
+Add schema describe to src/build/resources/schemas/vernemq
 
 
 ###############################################################################################################################################################
 # Wrangle
 ###############################################################################################################################################################
-Fix tests, drive permission error on delete in test fixtures? acdc_2018.csv
 all:
-Add src/build/resources/schemas/sql for influxdb/postgres/timescaledb schema describes and sample queries sql and scripts to run, genrated from source (ie per plugin), source is like xlsx for mqtt schema, perhaps shared function
-add verifcation sections to all plugins like quity
-check comments, nicely blocked, consistent accross all plugins
-check all sheet references added to repo structs, eq equity indexes etc
+Add verifcation sections to all plugins like equity
+Check comments, nicely blocked, consistent accross all plugins
+Check all sheet references added to repo structs, eq equity indexes etc
 Replace release sheets with new ones, eg Banks_ARCHIVE sync with preview/release repos
 Build health wrangle/dashboards, add Streaks
 Optimise indexes, have a single composite index (entity, period, type - no unit) rather than individual, consider compression 10y segment after batch insert and dropping all index entirely - cost is have to decompress on upsert on current 10y segment
 
-bank:
-implement balances
-implement transactions
+Bank:
+Implement balances
+Implement transactions
 
-equity:
-added new mio statement, ran normal run through web ui, hung with lots of cpu, on reboot was fine?
-add cash into bank portfolio?
-move sheets to delta like database? perhaps brek aout sheet/database upload timings, keeping rollup for html display but good for profiling?
-add dividend to create a new total return, bring in from manual data in sheets or another source?
-implement cleanup, dead stock files, dead -current, dead month files, add local tests
-add additional local tests
+Equity:
+Added new mio statement, ran normal run through web ui, hung with lots of cpu, on reboot was fine?
+Add cash into bank portfolio?
+Move sheets to delta like database? perhaps brek aout sheet/database upload timings, keeping rollup for html display but good for profiling?
+Add dividend to create a new total return, bring in from manual data in sheets or another source?
+Implement cleanup, dead stock files, dead -current, dead month files, add local tests
+Add additional local tests
 
 
 ###############################################################################################################################################################
@@ -139,40 +168,6 @@ Log firewall events - https://github.com/opustecnica/public/wiki/UDM-&-UDM-PRO-N
 
 
 ###############################################################################################################################################################
-# Supervisor
-###############################################################################################################################################################
-
-code review this patch which is not in git yet. Make sure project guidleines are followed. Check for simplications, dead code, unit tests gaps, unit tests that arent valuable (eg test log statements). reorganise struct/var/funcs by project guidleines 
-
-put reaper on/off switch into ha using only existing topics, or updated to the bare mininum. show xlsx sheet cols
-check all metrics working 
-adjust memeory allocs
-check metric attribution works by metric filter when multiple probe_* feed single metric
-verify caching hour and all metrics performance, increase poll frequency?
-add restore.sh and test 
-
-
-
-display_terminal.go: hide tcell namespace completely - tcell.Event?
-Make database persistance off-loop so not using loop budget on database
-Why a reconcile in 10s detail=observed [raspbpi-jen], status [online], trigger [restart], resubscribed [47] topics, reconcile in [10000] ms?
-implement commands to restart services, to work through ui when selected with popup and through HASS, add install restart CLI option that manages a .restart, flushed on install start and read into RST fields
-Add a go linter to pickup IntelliJ style warnings?
-when maximise host, update update freq to 1s
-Add a host level metric for network/internet usage? maybe only later?
-Convert from influxdb to postgres?
-Add sys test?
-Impl a tab option expander for bash
-
-
-###############################################################################################################################################################
-# Tempstat
-###############################################################################################################################################################
-Validate rust code
-Bypassing the kernel serial driver to avoid noisy dmesg logs and drop filter on Fail LOG
-
-
-###############################################################################################################################################################
 # Finance
 ###############################################################################################################################################################
 Super:
@@ -183,15 +178,8 @@ https://www.afr.com/wealth/personal-finance/the-eofy-super-strategy-that-could-g
 ###############################################################################################################################################################
 # Storage
 ###############################################################################################################################################################
-
-
-check and then impl cli.md
-
-
-make health script easliy run accross cluster, export to XLSX easily. do same with health script, move from other module
-Binaries for media-space to call it, also have a adu and abench?
+Reformat all partitions to BTRFS
 Add quirks to asahi install
-add storage format to here, if host== and shared funcs. maybe add sftab here too? or storage into each mod wheere fstab is today, move shared media mounting stuff here too?
 Implement TRIM on all SSDs
 enable TRIM:
     tee /etc/udev/rules.d/60-usb-ssd-trim.rules <<'EOF'
@@ -205,12 +193,12 @@ add journals on shares, as per /share/10
 add read ahead tuning blockdev --setra 8192 /dev/sda
 increase commit timeout PARTLABEL=share_08    /share/10    ext4    noatime,commit=60,errors=remount-ro,x-systemd.device-timeout=10s,nofail    0      2
 should i extend the benchmark read period to 2min? 4xfiles? likewise should 4GiB write be increased?
-Upgrade other ssd enclosure
-Rewrite other disks
+
 
 ###############################################################################################################################################################
 # Home Assistant
 ###############################################################################################################################################################
+Fix all bootup errors/warns
 Fix dep powercalc-component, requires rebase/merge
 Fix dep ha_bom_australia-component, requires rebase/merge, moved to a vVERSION scheme
 Submit pull requests for bom-radar-map, test all options first

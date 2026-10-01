@@ -285,6 +285,7 @@ def _pull(context):
                 .format(join(ROOT_DIR, ".py_deps_dev.txt")), ".", "python")
     go_deps_paths = []
     rust_deps_paths = []
+    pull_all_modules = os.getcwd() in [ROOT_DIR, ROOT_MODULE_DIR]
     for module in _get_modules(context, filter_changes=False):
         module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
         if isdir(module_go_main_path):
@@ -296,9 +297,13 @@ def _pull(context):
         if isfile(join(module_rust_main_path, "Cargo.toml")):
             rust_deps_paths.append(module_rust_main_path)
     for go_deps_path in go_deps_paths:
+        if pull_all_modules:
+            _run_pinned(context, "go get -u ./...", go_deps_path, "go")
         _run_pinned(context, "go mod download", go_deps_path, "go")
         _run_pinned(context, "go mod tidy", go_deps_path, "go")
     for rust_deps_path in rust_deps_paths:
+        if pull_all_modules:
+            _run_pinned(context, "cargo update", rust_deps_path, "rust")
         _run_pinned(context, "cargo fetch", rust_deps_path, "rust")
     _print_footer("asystem", "pull dependencies install")
     _generate(context, filter_changes=False, is_pull=True)
@@ -308,7 +313,8 @@ def _pull(context):
     for go_deps_path in go_deps_paths:
         _run_local(context, "go list -m -u -f '{}' all | awk 'NF'".format(GO_OUTDATED_FORMAT), go_deps_path)
     for rust_deps_path in rust_deps_paths:
-        _run_local(context, "cargo update --dry-run", rust_deps_path)
+        _run_local(context, "cargo update --dry-run --verbose 2>&1 | awk '{}'"
+                   .format(RUST_OUTDATED_FORMAT), rust_deps_path)
     _print_footer("asystem", "pull package versions to update")
     _print_header("asystem", "pull package versions to check")
     _check(context, py_deps_nodeps)
@@ -826,7 +832,6 @@ def _clean(context, filter_module=None, filter_host=None):
         _run_local(context, "{} '__pycache__' -exec rm -rf {{}} \\+".format(find_command))
         _run_local(context, "{} '.pytest_cache' -exec rm -rf {{}} \\+".format(find_command))
         _run_local(context, "{} '.coverage' -exec rm -rf {{}} \\+".format(find_command))
-        _run_local(context, "{} 'Cargo.lock' -exec rm -rf {{}} \\+".format(find_command))
 
         # TODO: Disable deleting .env, leave last build in place for running push.py scripts
         # _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))
@@ -1649,6 +1654,16 @@ HOSTS = {line.split("=")[0]: line.split("=")[-1].split(",")
          for line in Path(join(dirname(abspath(__file__)), ".hosts")).read_text().strip().split("\n")}
 
 GO_OUTDATED_FORMAT = "{{if and .Update (not .Indirect)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}"
+
+RUST_OUTDATED_COLUMNS = '"%-32s %-8s %-7s %s\\n"'
+
+RUST_OUTDATED_FORMAT = \
+    '($1 == "Unchanged" || $1 == "Updating") && $3 ~ /^v[0-9]/ && $5 ~ /^v[0-9]/ { ' \
+    'if (!listed++) printf ' + RUST_OUTDATED_COLUMNS + ', "Package", "Version", "Latest", "Type"; ' \
+    'held = $3; sub(/^v/, "", held); ' \
+    'available = $5; sub(/^v/, "", available); sub(/\\)$/, "", available); ' \
+    'printf ' + RUST_OUTDATED_COLUMNS + ', $2, held, available, ' \
+    '($1 == "Unchanged" ? "latent" : "pending") }'
 
 HEADER = \
     "------------------------------------------------------------\n" \

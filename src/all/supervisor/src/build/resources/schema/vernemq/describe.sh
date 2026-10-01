@@ -137,6 +137,9 @@ printf '\n'
 printf -- '\n-- %s\n\n' "supervisor/+/backup/#"
 topics "supervisor/+/backup/#" | listed
 printf '\n'
+printf -- '\n-- %s\n\n' "supervisor/all/backup/#"
+topics "supervisor/all/backup/#" | listed
+printf '\n'
 printf -- '\n-- %s\n\n' "supervisor/all/status"
 topics "supervisor/all/status" | listed
 printf '\n'
@@ -145,9 +148,6 @@ topics "supervisor/all/data/cluster" | listed
 printf '\n'
 printf -- '\n-- %s\n\n' "supervisor/all/command/#"
 topics "supervisor/all/command/#" | listed
-printf '\n'
-printf -- '\n-- %s\n\n' "supervisor/all/backup/#"
-topics "supervisor/all/backup/#" | listed
 printf '\n'
 printf -- '\n-- %s\n\n' "supervisor/all/leader/#"
 topics "supervisor/all/leader/#" | listed

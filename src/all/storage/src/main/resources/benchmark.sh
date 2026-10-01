@@ -27,8 +27,11 @@
 #   - Writes use fio O_DIRECT to a temp file (WRITE_SIZE, 4 GiB), removed after,
 #     with a single end-of-run fsync (--end_fsync, not per-block) so the number is
 #     streaming write bandwidth including the final device-cache flush. A mount is
-#     skipped when it has under 5 GiB (MIN_FREE_BYTES) free. Sizes on the write
-#     side are GiB (fio's G suffix and the free-space check are both 1024-based).
+#     skipped when it has under 5 GiB (MIN_FREE_BYTES) free.
+#   - Every size is binary and spelled as such — GiB, MiB, 1024 as the only
+#     divisor. Throughput is the one exception: MB/s stays decimal, because that
+#     is how every drive and link is rated, and READ_MAX_MBPS and the runtime
+#     arithmetic derived from it are rates rather than sizes.
 #   - --csv splits streams (exec 3>&1 1>&2): the live table goes to stderr and
 #     machine-readable rows go to fd 3 (stdout), so the two never interleave.
 set -u
@@ -41,8 +44,8 @@ READ_RUNTIME=30
 WRITE_SIZE='4G'
 READ_MAX_MBPS=1000
 READ_MIN_BYTES=$((READ_RUNTIME * READ_MAX_MBPS * 1000000))
-READ_FLOOR_BYTES=$((6 * 1000000000))
-SET_FILE_MIN=$((500 * 1000000))
+READ_FLOOR_BYTES=$((6 * 1024 * 1024 * 1024))
+SET_FILE_MIN=$((500 * 1024 * 1024))
 READ_POOL_MIN=50
 RECENT_WRITE_DAYS=5
 TRIM_SETTLE=5
@@ -274,10 +277,10 @@ while read -r mount fstype; do
       read_note="Read: skipped (pool $pool_count < $READ_POOL_MIN files)"
     elif [ "$read_bytes" -lt "$READ_FLOOR_BYTES" ]; then
       rfield='--'
-      read_note="Read: skipped (<$((READ_FLOOR_BYTES / 1000000000)) GB media)"
+      read_note="Read: skipped (<$((READ_FLOOR_BYTES / 1024 / 1024 / 1024)) GiB media)"
     else
       read_hash=$(printf '%s' "$read_target" | md5sum 2>/dev/null | cut -c1-6)
-      read_label="$read_count/$pool_count files ($((read_bytes / 1000000000)) GB) #$read_hash"
+      read_label="$read_count/$pool_count files ($((read_bytes / 1024 / 1024 / 1024)) GiB) #$read_hash"
       read_rt=$(awk -v s="$read_bytes" -v c="$READ_MAX_MBPS" -v m="$READ_RUNTIME" 'BEGIN { t = int(s / (c * 1000000)); if (t > m) t = m; if (t < 1) t = 1; print t }')
       drop_caches
       run_col read "$read_rt" run_read "$read_target" "$read_rt"
@@ -295,7 +298,7 @@ while read -r mount fstype; do
       if [ -n "$looped" ]; then
         rfield='--'
         rmbps=''
-        read_note="Read: failed (looped $((read_bytes / 1000000000)) GB at ${read_rt}s)"
+        read_note="Read: failed (looped $((read_bytes / 1024 / 1024 / 1024)) GiB at ${read_rt}s)"
       elif [ -z "$rmbps" ]; then
         rfield='--'
         read_note='Read: failed (no parseable output)'

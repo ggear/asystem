@@ -1,4 +1,4 @@
-mlflow==3.16.0
+mlflow==3.16.1
 anyio==4.15.1
 fastapi==0.115.14
 scipy==1.18.1

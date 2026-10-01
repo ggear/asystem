@@ -123,7 +123,7 @@ impl<U: Uart> Ds2480b<U> {
                 }
                 Err(err) if attempt >= attempts => return Err(err),
                 Err(err) => {
-                    debug!("DS2480B detect attempt [{attempt}] failed: {err}");
+                    debug!("DS2480B detect attempt [{attempt}] failed [{err}]");
                 }
             }
         }
@@ -455,8 +455,8 @@ mod tests {
         bus.uart.queue_read(&[0x97, 0x94, 0x97, 0x84]);
         assert!(bus.read_bit().unwrap());
         assert!(!bus.read_bit().unwrap());
-        bus.write_bit(true).unwrap();
-        bus.write_bit(false).unwrap();
+        bus.touch_bit(true).unwrap();
+        bus.touch_bit(false).unwrap();
         assert_eq!(written(&bus), [0x95, 0x95, 0x95, 0x85]);
     }
 
@@ -465,13 +465,6 @@ mod tests {
         let mut bus = make_bus();
         bus.uart.queue_read(&[0x17]);
         assert!(matches!(bus.read_bit(), Err(Error::InvalidResponse { .. })));
-    }
-
-    #[test]
-    fn write_bit_rejects_echo_mismatch() {
-        let mut bus = make_bus();
-        bus.uart.queue_read(&[0x94]);
-        assert!(matches!(bus.write_bit(true), Err(Error::EchoMismatch)));
     }
 
     #[test]
@@ -684,54 +677,5 @@ mod tests {
         bus.uart.queue_read(&[0xCD, 0xF0]);
         bus.uart.queue_read(&response);
         assert!(matches!(bus.get_connected_roms(), Err(Error::Crc)));
-    }
-
-    #[test]
-    fn alarm_search_uses_alarm_command() {
-        let rom = rom_with_serial([0, 0, 0, 0, 0, 0]);
-        let mut bus = make_bus();
-        let (response, _) = search_response(&[], &[rom]);
-        bus.uart.queue_read(&[0xCD, 0xEC]);
-        bus.uart.queue_read(&response);
-        assert_eq!(bus.alarm_search().unwrap(), vec![rom]);
-        assert_eq!(written(&bus)[2], 0xEC);
-    }
-
-    #[test]
-    fn alarm_search_without_alarming_devices_is_empty() {
-        let mut bus = make_bus();
-        let (response, _) = search_response(&[], &[]);
-        bus.uart.queue_read(&[0xCD, 0xEC]);
-        bus.uart.queue_read(&response);
-        assert_eq!(bus.alarm_search().unwrap(), vec![]);
-    }
-
-    #[test]
-    fn is_connected_detects_device() {
-        let rom = rom_with_serial([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
-        let mut bus = make_bus();
-        let (response, _) = search_response(&rom.bits(), &[rom]);
-        bus.uart.queue_read(&[0xCD, 0xF0]);
-        bus.uart.queue_read(&response);
-        assert!(bus.is_connected(&rom).unwrap());
-    }
-
-    #[test]
-    fn is_connected_detects_missing_device() {
-        let rom = rom_with_serial([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
-        let other = rom_with_serial([0x00, 0x00, 0x00, 0x00, 0x00, 0x01]);
-        let mut bus = make_bus();
-        let (response, _) = search_response(&rom.bits(), &[other]);
-        bus.uart.queue_read(&[0xCD, 0xF0]);
-        bus.uart.queue_read(&response);
-        assert!(!bus.is_connected(&rom).unwrap());
-    }
-
-    #[test]
-    fn is_connected_is_false_when_bus_absent() {
-        let rom = rom_with_serial([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
-        let mut bus = make_bus();
-        bus.uart.queue_read(&[0xCF]);
-        assert!(!bus.is_connected(&rom).unwrap());
     }
 }

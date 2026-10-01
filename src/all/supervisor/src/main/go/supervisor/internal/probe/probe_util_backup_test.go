@@ -1,6 +1,8 @@
 package probe
 
 import (
+	"context"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -15,6 +17,46 @@ import (
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 )
+
+func TestProbeUtilBackup_ExpiryNeverReachesTheNextScheduledRun(t *testing.T) {
+	tests := []struct {
+		name           string
+		started        time.Time
+		configHours    int
+		environment    string
+		timeout        time.Duration
+		expected       time.Time
+		expectedCapped bool
+	}{
+		{name: "a_hand_run_at_22_is_capped_before_01", started: time.Date(2026, 10, 1, 22, 0, 0, 0, time.Local), configHours: 5,
+			expected: time.Date(2026, 10, 2, 0, 50, 0, 0, time.Local), expectedCapped: true},
+		{name: "a_flag_reaching_past_01_is_capped", started: time.Date(2026, 10, 1, 14, 0, 0, 0, time.Local), configHours: 5,
+			timeout: 12 * time.Hour, expected: time.Date(2026, 10, 2, 0, 50, 0, 0, time.Local), expectedCapped: true},
+		{name: "an_environment_reaching_past_01_is_capped", started: time.Date(2026, 10, 1, 23, 30, 0, 0, time.Local), configHours: 5,
+			environment: "2", expected: time.Date(2026, 10, 2, 0, 50, 0, 0, time.Local), expectedCapped: true},
+		{name: "a_run_inside_the_margin_expires_at_once", started: time.Date(2026, 10, 2, 0, 55, 0, 0, time.Local), configHours: 5,
+			expected: time.Date(2026, 10, 2, 0, 55, 0, 0, time.Local), expectedCapped: true},
+		{name: "the_scheduled_run_keeps_its_full_timeout", started: time.Date(2026, 10, 2, 1, 0, 0, 0, time.Local), configHours: 5,
+			expected: time.Date(2026, 10, 2, 6, 0, 0, 0, time.Local)},
+		{name: "a_morning_hand_run_ending_before_01_is_untouched", started: time.Date(2026, 10, 1, 11, 0, 0, 0, time.Local), configHours: 5,
+			expected: time.Date(2026, 10, 1, 16, 0, 0, 0, time.Local)},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.json")
+			body := `{"asystem":{"host":"testhost","backup":{"timeout_hours":` + strconv.Itoa(testCase.configHours) + `}}}`
+			if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+				t.Fatalf("write config: %v", err)
+			}
+			t.Setenv(backupTimeoutVariable, testCase.environment)
+			expires, capped := backupExpiry(path, testCase.started, testCase.timeout)
+			if !expires.Equal(testCase.expected) || capped != testCase.expectedCapped {
+				t.Errorf("backupExpiry() = (%s, %t), want (%s, %t)", expires.Format(time.DateTime), capped,
+					testCase.expected.Format(time.DateTime), testCase.expectedCapped)
+			}
+		})
+	}
+}
 
 func TestProbeUtilBackup_ExpiryPrefersTheFlagThenTheEnvironmentThenTheConfig(t *testing.T) {
 	started := time.Date(2026, 9, 22, 1, 0, 0, 0, time.Local)
@@ -43,7 +85,7 @@ func TestProbeUtilBackup_ExpiryPrefersTheFlagThenTheEnvironmentThenTheConfig(t *
 				t.Fatalf("write config: %v", err)
 			}
 			t.Setenv(backupTimeoutVariable, testCase.environment)
-			expires := backupExpiry(path, started, testCase.timeout)
+			expires, _ := backupExpiry(path, started, testCase.timeout)
 			if testCase.expectedNil {
 				if !expires.IsZero() {
 					t.Errorf("backupExpiry() = %s, want no deadline", expires)
@@ -259,7 +301,7 @@ func TestProbeUtilBackup_TheShippedConfigBoundsAScheduledRunBeforeTheNextOne(t *
 		t.Fatalf("the shipped config declares timeout_hours [%d], so a scheduled run carries no deadline at all", hours)
 	}
 	started := time.Date(2026, 10, 1, backupScheduledHour, 0, 0, 0, time.Local)
-	expires := backupExpiry(path, started, 0)
+	expires, _ := backupExpiry(path, started, 0)
 	if expires != started.Add(time.Duration(hours)*time.Hour) {
 		t.Errorf("backupExpiry() = %s, want the shipped timeout_hours [%d] applied to the start", expires, hours)
 	}
@@ -446,5 +488,60 @@ func TestProbeUtilBackup_CleanIsRefusedWhileARunHoldsTheLock(t *testing.T) {
 	}
 	if runs := backupRuns(root); len(runs) != 1 {
 		t.Errorf("backupRuns() = %v, want the history left alone while a run owns it", runs)
+	}
+}
+
+func TestProbeUtilBackup_StopReturnsOnlyOnceTheRunHasReleasedItsLock(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(config.BackupHomeEnvVar, home)
+	original := stageStream
+	t.Cleanup(func() { stageStream = original })
+	var forced []string
+	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+		forced = append(forced, name+" "+strings.Join(args, " "))
+		return "", 0, false
+	}
+	root := backupRunRoot()
+	runID := "2026-10-01_13-59-54"
+	runPath := backupRunPath(root, runID)
+	if err := os.MkdirAll(stageDir(runPath, metric.BackupStageSecondary), 0o755); err != nil {
+		t.Fatalf("mkdir stage: %v", err)
+	}
+	if err := writeAtomic(stageStatusPath(runPath, metric.BackupStageSecondary),
+		backupSummary{RunID: runID, State: metric.BackupStateRunning}); err != nil {
+		t.Fatalf("write stage: %v", err)
+	}
+	held, err := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		t.Fatalf("open lock: %v", err)
+	}
+	defer func() { _ = held.Close() }()
+	if err := syscall.Flock(int(held.Fd()), syscall.LOCK_EX); err != nil {
+		t.Fatalf("hold lock: %v", err)
+	}
+
+	returned := make(chan error, 1)
+	go func() { returned <- runBackupStop(t.Context(), BackupRequest{RunID: runID}) }()
+	select {
+	case err := <-returned:
+		t.Fatalf("runBackupStop() returned [%v] while the run still held its lock, so a start straight after it is refused", err)
+	case <-time.After(3 * backupStopPoll):
+	}
+	if err := syscall.Flock(int(held.Fd()), syscall.LOCK_UN); err != nil {
+		t.Fatalf("release lock: %v", err)
+	}
+	select {
+	case err := <-returned:
+		if err != nil {
+			t.Errorf("runBackupStop() = %v, want nil once the run released its lock", err)
+		}
+	case <-time.After(5 * backupStopPoll):
+		t.Fatalf("runBackupStop() did not return after the run released its lock")
+	}
+	if len(forced) != 0 {
+		t.Errorf("runBackupStop() issued %q against a live run, want it to signal and leave the run to stop itself", forced)
+	}
+	if _, err := os.Stat(filepath.Join(stageDir(runPath, metric.BackupStageSecondary), stageStoppedMarker)); err != nil {
+		t.Errorf("runBackupStop() left no stop marker for the live run to act on [%v]", err)
 	}
 }

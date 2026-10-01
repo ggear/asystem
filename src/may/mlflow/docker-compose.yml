@@ -33,7 +33,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 3.5G
   mlflow_bootstrap:
     container_name: mlflow_bootstrap
     <<: *common

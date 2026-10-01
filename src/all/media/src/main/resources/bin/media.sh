@@ -4,7 +4,7 @@ set -uo pipefail
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-MEDIA_COMMANDS=(process analyse clean normalise ingress stow move refresh truncate find metadata space mount home completion help)
+MEDIA_COMMANDS=(process analyse clean normalise ingress stow move refresh truncate space find metadata home completion help)
 
 MEDIA_OPTIONS=(--share --force --persistent --quiet --verbose --dryrun)
 
@@ -55,7 +55,7 @@ Usage: ${prog} [command] [argument] [options]
   Pipeline
     process   [scope]  stow, normalise, analyse, rename,
                        check, upscale, reformat, transcode,
-                       downscale, analyse, merge, refresh        (default: parents)
+                       downscale, analyse, merge, space, refresh (default: parents)
     analyse            probe the library, write the scripts
 
   Actions
@@ -76,12 +76,11 @@ EOF
     truncate           trim the online shared history
 
   Inspect
+    space              print the share space this host holds
     find      <token>  find a media artefact
     metadata           print this media artefact's spec and probes
-    space              print share usage
 
   Tool
-    mount              mount the remote shares
     home               print the install bin directory
     completion         print the bash completion, eval it in a profile
     help               this text, and a bare ${prog} prints it
@@ -529,6 +528,24 @@ command_stow() {
   return ${result}
 }
 
+space_shares() {
+  local drives="${1}"
+  shift
+  "$@" aspace --mode local --filter "${drives}" --symbols ascii --theme mono || true
+}
+
+process_drives() {
+  if [ "${EXTENT}" = "local" ]; then
+    local _dir drives=""
+    for _dir in ${SHARE_DIRS_LOCAL}; do
+      drives="${drives:+${drives},}/share/$(basename "${_dir}")"
+    done
+    echo "${drives}"
+  else
+    echo "/share/$(basename "${EXTENT_SHARE_DIR}")"
+  fi
+}
+
 command_move() {
   local dest="${1:-}"
   [ -n "${dest}" ] || refuse "move requires a <share> argument"
@@ -579,8 +596,12 @@ command_move() {
   else
     print_header "$(hostname)" "move" 0
   fi
+  local share_drives="/share/${SHARE_PATH_INDEX},/share/${dest}"
+  space_shares "${share_drives}" "${share_ssh[@]}"
+  echo ""
+  local share_kill_remote="pkill -9 -f 'rsync .*/share/${dest}/'"
   # shellcheck disable=SC2064
-  trap "${share_ssh[*]} pkill -9 -f 'rsync .*/share/${dest}/'; echo; exit" INT
+  trap "${share_ssh[*]} \"${share_kill_remote}\"; echo; exit" INT
   "${share_ssh[@]}" bash -s -- "${share_args[@]}" <<'EOF' || result=1
 share_src="${1}"
 share_dest="${2}"
@@ -620,7 +641,14 @@ else
 fi
 exit ${result}
 EOF
+  echo ""
+  space_shares "${share_drives}" "${share_ssh[@]}"
   return ${result}
+}
+
+command_space() {
+  print_header "$(hostname)" "space" 0
+  space_shares "$(process_drives)"
 }
 
 command_refresh() {
@@ -685,23 +713,6 @@ EOF
   return 0
 }
 
-command_space() {
-  print_header "$(hostname)" "space" 0
-  command_mount
-  local dirs result=0
-  case "${EXTENT}" in
-  file | media | share) dirs="${EXTENT_SHARE_DIR}" ;;
-  local) dirs="${SHARE_DIRS_LOCAL}" ;;
-  esac
-  echo "Space summary ... "
-  astorage space --mode local --drives "${dirs// /,}" --symbols ascii --theme mono || result=1
-  return ${result}
-}
-
-command_mount() {
-  amount
-}
-
 command_home() {
   echo "${ROOT_DIR}"
 }
@@ -709,10 +720,10 @@ command_home() {
 run_stage() {
   case "${1}" in
   stow) command_stow "${PROCESS_SCOPE}" ;;
+  space) command_space ;;
   refresh) command_refresh ;;
   normalise) dispatch_library normalise "" ;;
   analyse) command_analyse ;;
-  space) command_space ;;
   *)
     in_list "${1}" "${MEDIA_ACTIONS[@]}" || refuse "unknown stage [${1}]"
     dispatch_action "${1}"
@@ -740,7 +751,7 @@ run_pipeline() {
 
 command_process() {
   PROCESS_SCOPE="${1:-${MEDIA_SCOPE_DEFAULT}}"
-  run_pipeline stow normalise analyse rename check upscale reformat transcode downscale analyse merge refresh
+  run_pipeline stow normalise analyse rename check upscale reformat transcode downscale analyse merge space refresh
 }
 
 parse_args() {
@@ -907,7 +918,6 @@ main() {
   truncate) command_truncate ;;
   find) command_find "${POSITIONAL}" ;;
   metadata) command_metadata ;;
-  mount) command_mount ;;
   home) command_home ;;
   *)
     in_list "${COMMAND}" "${MEDIA_ACTIONS[@]}" || refuse "unknown command [${COMMAND}]"

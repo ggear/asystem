@@ -1,0 +1,26 @@
+- id: rack_backup_plug_reaper_override
+  alias: Rack Backup Plug Overrides Reaper
+  description: >-
+    Turn on the backup switch and disable the supervisor reaper until the 
+    next scheduled backup. Turning off does the reverse.
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: switch.rack_backup_plug
+      to: "on"
+    - trigger: state
+      entity_id: switch.rack_backup_plug
+      to: "off"
+  conditions:
+    - condition: template
+      value_template: "{{ trigger.to_state.context.user_id is not none }}"
+  actions:
+    - action: mqtt.publish
+      data:
+        topic: supervisor/all/backup/reaper
+        retain: true
+        qos: 1
+        payload: |-
+          {% set pausing = trigger.to_state.state == "on" %}
+          {% set expires = (now() + timedelta(days=3650)).isoformat(timespec='seconds') if pausing else "" %}
+          {{ {"state": "OFF" if pausing else "ON", "expires_ts": expires} | to_json }}

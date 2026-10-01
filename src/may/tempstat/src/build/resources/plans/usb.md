@@ -1,243 +1,122 @@
-# Bypassing the kernel serial driver
+# The pl2303 kernel log noise
 
-Why `may`'s kernel log fills with `pl2303_get_line_request - failed: -32`, what it actually costs,
-and what it would take for tempstat to drive the probe over raw USB instead of a serial device.
-Status is marked per section: **built** is in the repo today, **planned** is not, **measured** is a
-number taken off `may` rather than reasoned about.
-
-Read *Root cause* and *Cheaper answers* first. The implementation below is the **third-choice**
-option and this plan says so throughout — it exists so the decision is made against a real design
-rather than a guess at one.
+**Built and released 2026-09-27** in `10.200.1748`. The durable rules — why the probe is driven
+over raw USB, the two-baud arithmetic, the five `pl2303.rs`/`usb.rs` invariants and the
+hardware gate procedure — live in the module `CLAUDE.md`. What is kept here is what does not
+belong there: the measurements the decision rests on, and the designs that were rejected, with
+the mechanism that rejected each. The rejected design is the one that will be proposed again.
 
 ---
 
-## Root cause, measured
+## What it cost, measured before the change
 
-The message is not a fault in the probe, the driver, or the wiring. It is the Linux `pl2303`
-driver asking the adapter a question the adapter refuses to answer:
+`may`'s kernel log carried **1728 `pl2303_get_line_request - failed: -32` lines a day** — exactly
+18 per poll in every 15-minute bucket, 96 polls, no variance; 12060 of 13717 kernel lines over
+seven days, **88% of `dmesg`**. Plus 21 `error sending break = -32` from the `Ds2480b` detect,
+which matters below.
 
-```
-3,92299,5121083047322,-;pl2303 ttyUSB0: pl2303_get_line_request - failed: -32
-```
+Only two things ever suffered. Supervisor's `host/failed_log_messages` was pegged red, and that
+was **fixed independently** by a `logIgnore` entry in `probe_util_logs.go` (2026-09-14) — the
+metric read `pulse 0 / trend 0 / ok` long before this work landed, and `/var/log/supervisor` was
+12K with zero pl2303 lines. Disk was never a factor: ~1.3 MB/week against a 2.9 GB journal.
 
-`-32` is `-EPIPE` — the USB control endpoint **stalled**. `pl2303_set_termios()` calls
-`pl2303_get_line_request()` purely to read back the port's current line coding before applying a
-new one; on failure it logs `dev_err` and carries on, then issues `SET_LINE_REQUEST`, which the
-chip does honour. So the *set* direction works, which is why readings are correct and nothing is
-broken. The device is `067b:2303` and is almost certainly a counterfeit — genuine HXD/TA/TB parts
-answer the request.
+**So by the time this was built the only remaining cost was that `dmesg` on `may` was unreadable.**
+That is a real cost for anyone debugging that host, and it is the whole justification. Keep the
+`logIgnore` entry: it is cheap, and it is what holds the metric honest if the USB path is ever
+reverted.
 
-**The rate is entirely ours, and it is arithmetic, not luck.** The kernel emits one line per
-*hardware* termios change. `Ds9097::reset` (`src/main/rust/tempstat/src/driver/ds9097.rs:78-90`)
-changes baud twice per bus reset — `BAUD_RESET` 9600 for the `0xF0` reset pulse, `BAUD_SLOTS`
-115200 for the time slots — and `read_sensor` (`src/main/rust/tempstat/src/lib.rs:273-286`) costs
-three resets per sensor per poll:
+After release: **zero kernel lines of any kind**, `pl2303` unbound, no `/dev/ttyUSB0` at all. The
+messages are not suppressed, they can no longer be generated.
 
-| Step | Resets |
-|---|---|
-| `Ds18b20::attach` → `read_scratchpad`, to learn the resolution | 1 |
-| `convert_t` → `select` | 1 |
-| `read_temperature` → `read_scratchpad` | 1 |
+## Ruled out
 
-3 sensors x 3 resets x 2 baud changes x 96 polls/day at `TEMPSTAT_POLL_PERIOD=15m` = **1728/day**,
-against a measured **1728** pl2303 lines in 24 h out of 1807 kernel lines total (96%).
+**Break-based reset** — hold the line low with `TIOCSBRK` instead of dropping to 9600, removing
+the baud change entirely. It survives the mock (`Ds2480b::try_detect` already sends a break and
+`FsmUart::send_break` is a no-op both `fab st` and the native tests tolerate), so the early
+objection that it "cannot cross socat's pty" was wrong. It loses two other ways, both decisive.
+*Presence detection is irrecoverable*: `Ds9097::reset` classifies the bus purely from the echo
+byte and `OneWire::select` maps that to `NoDevice`/`Shorted`, which is what drives the recovery
+ladder; a break returns no echo, and the presence pulse (15-60us after release, 60-240us long) is
+long gone by the time USB frame scheduling could deliver a read slot ~1ms later. *And the clone
+stalls the break too* — **measured**, not assumed: the host log carries 21
+`pl2303 ttyUSB0: error sending break = -32` lines from the serial path's adapter detect. A
+break-based reset would have logged at the same rate under a different message.
 
-**Caching the baud in `SerialUart` would save exactly zero lines.** `pl2303_set_termios()` opens
-with `if (old_termios && !tty_termios_hw_change(...)) return;`, so a redundant set is already free,
-and `reset()` always alternates — every call is a genuine change.
+**A multi-byte reset at 115200** — `0x00` gives `9T = 78us` of low, so six frames would reach
+480us. Each frame ends with a stop bit that releases the line for 8.68us; the bus is open-drain
+with a pull-up and rises in well under a microsecond, and the DS18B20's reset detector restarts on
+a rising edge, so the 480us never accumulates.
 
-## What it actually costs, measured
+**OS-level suppression** — no mechanism exists. `dev_err` reaches the kmsg ring buffer
+unconditionally and the kernel has no content filter. Debian 12 runs journald only, which cannot
+drop by content. `kernel.printk` and `dmesg -n` set the *console* loglevel and leave the ring
+buffer untouched. Dynamic debug controls `pr_debug`/`dev_dbg`, not `dev_err`. `modinfo pl2303`
+reports no module parameters and no `usbcore.quirks` flag suppresses control-transfer errors.
+Rebuilding `pl2303.ko` without the `dev_err` works and breaks on every Debian kernel update.
 
-Not disk. `/var` on `may` is 50% used and the lines are ~260 KB/day.
+**The generic `usbserial` driver** — `modprobe usbserial vendor=0x067b product=0x2303` does
+silence it, because that driver implements no `set_termios` at all, which is exactly why it cannot
+work: baud changes become silent no-ops and the bus needs both rates.
 
-The cost is **supervisor's `host/failed_log_messages`**, which counts kernel errors in a 24 h trend
-window against `FailedLogsBudget = 10` (`internal/metric/metric_build.go:29`). `may` reports
-**1710 errors across 1 distinct message** — 17100% of budget, so the metric is pegged red
-permanently, and supervisor shouts a WARN per error, which is what bloats the watch logs under
-`/var/log/supervisor`.
+**A hybrid** — keeping the tty for data and issuing only the baud change over usbfs is impossible.
+usbfs control transfers require `USBDEVFS_CLAIMINTERFACE`, which requires the kernel driver gone.
 
-## Cheaper answers, ranked above this plan
+**Dropping `SerialUart`** — it is the mock path and the revert path. Reverting is two lines in
+`.env_prod` (`TEMPSTAT_DEVICE_MAP` and `TEMPSTAT_DEVICE`) plus a redeploy, with no broker or Home
+Assistant migration since the MQTT topics are byte-identical either way.
 
-1. **`logIgnore` in supervisor** (`internal/probe/probe_lib_logs.go:389`, currently an empty
-   `[]*regexp.Regexp`). The mechanism exists for exactly this and supervisor prints the line to
-   paste beside every counted error:
+## Cheaper alternatives, still valid if this is ever reverted
 
-   ```go
-   regexp.MustCompile(`^pl2303 ttyUSB0: pl2303_get_line_request - failed: -\d+`),
-   ```
+1. **A DS2480B adapter (DS9097U).** `Ds2480b` configures the bridge chip's own baud with a command
+   byte and never calls `set_baud`, so the port stays at 9600 for the life of the process — one
+   message at open, silence after. `open_bus` already auto-selects it and `MockDs2480b` covers it,
+   so this is **zero code**. It is also better hardware: strong pullup means real parasite
+   detection and completion polling instead of blind `t_conv` waits. Never run against real
+   DS2480B silicon.
+2. **A different UART chip.** The chip is what stalls. Measured: `jen` runs **two** CP210x bridges
+   (`10c4:ea60`) with zero serial-driver noise — its top repeated kernel lines are all docker
+   bridge churn. `cp210x_set_termios` is silent on success; only the udev rule's VID:PID changes.
+   Whether it is a cable swap depends on the physical form.
+3. **Fewer resets per poll.** Caching `attach` and using one SKIP ROM broadcast conversion takes 9
+   resets to 4 — 18 lines per poll to 8 — and collapses three 750 ms `t_conv` waits into one.
+   Reduces rather than removes, but worth doing on its own merits whatever else is true.
+4. **`dmesg -T | grep -v pl2303`.** Free, and composes with everything.
 
-   One line, no risk, fixes the actual pain. Cost: genuine pl2303 faults on `may` go unreported.
-2. **A genuine PL2303, or a CH340/FT232.** The chip is what stalls; a real one answers and the
-   message never appears. ~$5, no code.
-3. **A DS2480B adapter.** The bridge chip does the 1-Wire timing itself, so `Ds2480b` never calls
-   `set_baud` after open — one message per process start at most. tempstat already implements and
-   auto-detects this path (`lib.rs:191-205`), so it is zero code.
-4. **Fewer resets per poll.** Cache `attach` across polls and use one SKIP ROM broadcast
-   conversion: 18 lines/poll to ~8, and faster polls. Worth doing on its own merits; does not move
-   the metric, which needs a ~170x reduction.
-5. **Raise `TEMPSTAT_POLL_PERIOD`.** Divides the count linearly, costs resolution, env-only.
+## Measurements worth keeping
 
-Nothing at the OS level helps: Debian 12 on `may` runs journald only, and **journald cannot drop
-messages by content** — there is no filter rule to write. `dmesg -n 3` quietens the console while
-the lines still land in the journal. `pl2303` has no module parameter, and dynamic debug controls
-`pr_debug`, not `dev_err`.
+- The chip is a counterfeit reporting as **TYPE_HXD**: `067B:2303`, `bcdUSB 1.10`,
+  `bcdDevice 4.00`, `bMaxPacketSize0 64`, empty `iSerial`. Endpoints bulk OUT `0x02`, bulk IN
+  `0x83`, interrupt IN `0x81` (10 bytes, `bInterval` 1). **Nothing drains `0x81` and the chip does
+  not care** — 48 s of continuous traffic, no ill effect.
+- 9600 and 115200 are both in `pl2303_standard_rates`, so the direct 4-byte encoding applies and
+  the divisor-encoding path is never reached.
+- Gate result from a physically cold plug: **600 scratchpad transactions, 0 failures, 0 CRC
+  retries**, temperatures within 0.125 °C of the tty path. Across 2467 `clear()` calls, **two**
+  discarded anything — 72 bytes and 12 bytes, both the `Ds2480b` detect's unconsumed echo. With
+  the detect running at its intended 9600 it leaves none, so the drain is a backstop rather than
+  the thing holding the stream together.
+- Post-release: poll 2887 ms against 2474 ms on the tty path; memory 1.9 MB against a cap that had
+  been 16M — `nusb` cost essentially nothing.
+- Service reliability on the serial path beforehand, for comparison: 864 consecutive polls over 9
+  days, zero warnings, zero errors, rock-steady 2473 ms.
 
-## Why the two in-code alternatives lose
+## What the process taught, which is the reusable part
 
-**Break-based reset** — hold the line low with `TIOCSBRK` (an ioctl, not a termios change) instead
-of dropping to 9600 — is ~20 lines and fails three ways. It may silence nothing: `pl2303_break_ctl`
-is *also* a vendor request the clone may stall, and that failure is `dev_err` too, so the same rate
-of a different message. It blinds the bus: `OneWire::select` maps `Presence::Absent`/`Shorted` to
-`Error::NoDevice`/`Error::Shorted` (`driver/onewire.rs:53-55`) on every sensor operation, and a
-break returns no echo to classify, so an unplugged probe would surface as garbled data rather than
-a clean fault. And it breaks the mock irreparably — `driver/mock.rs` is built on `feed(byte)` with
-`RESET_PULSE = 0xF0` *as* the reset, and a break is an electrical condition that cannot cross
-socat's pty at all, taking `fab st`, `fab exe` and the `driver::mock` end-to-end tests with it.
+Four bugs, and **only two were reachable by the gate**. `clear()` not flushing and the bulk-IN
+packet-multiple rule were found by soaking real hardware; the missing initial line coding and the
+unasserted DTR/RTS were found by a reviewer reading `SerialUart` beside `Pl2303Uart` and asking
+what the tty path does that the USB path does not. The DTR/RTS one would have failed the first
+cold boot in production.
 
-**Doing nothing in code** is the recommendation. What follows is the design if that is overruled.
+The first gate was also a **false pass**: it set 9600 then 115200 before adapter selection, so the
+DS2480B probe ran at the wrong rate and fell through to `Ds9097` — the right answer for the wrong
+reason. Re-gating had to be done from a *physically* cold plug, because the chip retains DTR/RTS
+from the kernel driver's last tty open and masks the defect otherwise. **When a test can pass
+because of state the system happened to be left in, it is not a test of the thing you think.**
 
----
-
-## Design, planned
-
-### The seam already exists
-
-`driver::uart::Uart` (`driver/uart.rs:15-21`) is five methods — `write_all`, `read_exact`,
-`send_break`, `clear`, `set_baud` — and `SerialUart` is its only production implementation. A
-second implementation talking USB directly is a drop-in: `Ds9097`, `Ds2480b`, `Ds18b20`, the poll
-loop and every unit test above the trait are untouched. This is the whole reason the option is
-tractable.
-
-`UsbUart::set_baud` issues the PL2303 `SET_LINE_REQUEST` control transfer itself and **never issues
-the GET**. No kernel driver is in the path, so there is nothing to log. Elimination is total, not
-partial — that is the one thing this option has over every other.
-
-### Use `nusb`, not `rusb`/libusb
-
-`nusb` is pure Rust and talks to usbfs directly, so nothing new enters `docker_deps_base.txt` or
-`docker_deps_build.txt`, there is no C library to pin, and the builder stage is unchanged. `rusb`
-would drag in `libusb-1.0` and its headers for no benefit.
-
-### Device identity
-
-The path-based identity goes away. `/dev/ttyUSBTempProbe` is a udev symlink to `ttyUSB0`; the usbfs
-node is `/dev/bus/usb/001/037` (char 189:36) and **the device number climbs on every replug** — 037
-already, so no fixed node can be mapped. Selection is by USB id `067b:2303`, which is unique on
-`may` (measured, one match in `lsusb`). `-D`/`--device` grows a `usb:VVVV:PPPP` form alongside the
-existing path form, so mock mode keeps a path and production takes an id.
-
-### Releasing the kernel driver
-
-`pl2303` is bound at `1-2.1:1.0` and `/sys/bus/usb/drivers/pl2303/unbind` exists (measured). Two
-placements, and the first is preferred:
-
-- **Host, at deploy time.** One line in `install_prep.sh` beside the `chmod 666` already there,
-  plus a udev rule so it survives a replug or reboot. Keeps the privileged act on the host.
-- **Container, at startup.** `USBDEVFS_DISCONNECT` works as root with write access to the node, but
-  it mutates *host* kernel state from inside a container.
-
-### Compose
-
-`docker-compose.yml:16-17` hands the container exactly one device via `${TEMPSTAT_DEVICE_MAP}`.
-USB needs the tree instead:
-
-```yaml
-volumes:
-  - /dev/bus/usb:/dev/bus/usb
-device_cgroup_rules:
-  - 'c 189:* rmw'
-```
-
-The container already runs as `root` and is **not** privileged (measured), and would not need to
-be. `TEMPSTAT_DEVICE_MAP` stays for mock mode (`/dev/null:/dev/null` in `.env_test`/`.env_exec`)
-and is dropped from `.env_prod`.
-
-**This is the cost that is not obvious: `/dev/bus/usb` exposes every USB device on `may`, not the
-probe.** The cgroup rule grants the whole 189 major. Today the container can touch one device and
-nothing else. There is no way to narrow it, because the device number moves.
-
-### The mock keeps the serial path
-
-Nothing can present itself as a USB device inside a container — socat can fake a serial port, not a
-bus. `SerialUart` stays, mock mode selects it, production selects `UsbUart`. The `Uart` trait keeps
-both honest and every unit test in `driver::mock` still runs.
-
-**Accept plainly what this costs:** `fab st` would then exercise a path production does not use.
-The system test stops being end-to-end proof of the shipped configuration.
-
----
-
-## What could refuse
-
-In rough order of likelihood. The first is the one that decides the plan.
-
-1. **No local test loop.** Neither `cargo test` on the dev Mac nor `fab st` can reach a USB device.
-   Development becomes edit-blind, deploy to `may`, read logs — against the one adapter in the
-   house, which is also the live one. Every risk below is worse for it.
-2. **Chip quirks.** `pl2303.c` is fifteen years of variant handling — a dozen chip types, two baud
-   encodings, per-variant init sequences. This adapter is by definition an odd one; it refuses a
-   standard request. A from-scratch implementation may hit an undocumented quirk findable only on
-   the host.
-3. **Buffering and timing bugs present as flaky readings, not failures.** The DS9097 reads bits by
-   echo, and today the kernel keeps the bulk endpoint drained and buffered; `UART_FIFO_SIZE = 160`
-   exists to match the chip. All of that becomes ours: draining the IN endpoint, flushing stale
-   bytes before a reset (`clear()` is currently `tcflush`), timeouts. Wrong by one byte
-   occasionally is an odd temperature or a CRC retry — weeks to notice, days to find.
-4. **Hotplug and recovery.** USB resets, suspend/resume and replugs are the kernel driver's job
-   today; re-claiming and re-detaching become ours. `may` has ~60 days uptime, so this path would
-   be rarely exercised and therefore rarely correct.
-5. **Portability, which is a certainty rather than a risk.** This ties tempstat to PL2303
-   permanently. Buying the $5 genuine adapter — the cheapest real fix — would then *break*
-   tempstat instead of fixing it.
-
----
-
-## Phases
-
-### Phase 0 — the spike, and the gate
-
-**Nothing else starts until this passes.** On `may`, outside the container, outside the repo: a
-throwaway Rust binary that unbinds `pl2303`, opens `067b:2303` with `nusb`, sets the line coding to
-9600 and then 115200, sends `0xF0`, and reads the echo back. Assert the echo is not `0xF0` (a
-presence pulse pulled it low) and that `dmesg` gains no new lines.
-
-This settles risks 2 and 3 and most of the plumbing in about an hour. If the chip's quirks defeat
-it, the answer is `logIgnore` and a new adapter, and the cost was an hour.
-
-Rebind `pl2303` afterwards and confirm tempstat recovers.
-
-### Phase 1 — `UsbUart`, on the dev machine
-
-`driver/usb.rs` implementing `Uart` against `nusb`, with the PL2303 line-coding and bulk transfers.
-`-D usb:VVVV:PPPP` parsing in `lib.rs`, selecting `UsbUart` or `SerialUart`. Unit tests via the
-existing `MockUart` — the trait is the seam, so coverage above it is unchanged. `cargo clippy
---workspace --all-targets` clean, files comment-free per the module convention.
-
-Nothing is deployed in this phase and nothing is proven by it beyond compilation and the shape.
-
-### Phase 2 — host plumbing
-
-`install_prep.sh` gains the unbind; a udev rule makes it survive replug and reboot.
-`docker-compose.yml` gains the `/dev/bus/usb` mount and the cgroup rule. `.env_prod` drops
-`TEMPSTAT_DEVICE_MAP` and names the USB id; `.env_test`/`.env_exec` are untouched, so `fab st` and
-`fab exe` keep the socat mock and the serial path.
-
-Verify on `may` that the container can enumerate the device without `privileged`.
-
-### Phase 3 — deploy and observe
-
-Release, then confirm over a full 24 h window: `dmesg` gains no `pl2303` lines,
-`host/failed_log_messages` returns green, `tempstat/data` carries three samples on cadence with no
-new CRC retries, and a deliberate replug of the probe recovers without a container restart. That
-last one is risk 4 and is the only way to test it.
-
-If any of those fail, revert. The serial path is still in the binary, so revert is an env change.
-
-## Not doing
-
-- **Break-based reset.** See above — may silence nothing, blinds fault detection, breaks the mock.
-- **Removing `SerialUart`.** It is the mock path and the revert path; it stays.
-- **A `logIgnore` entry as well.** If this works there is nothing left to ignore, and an entry would
-  then be masking a message that ought to be impossible.
-- **Narrowing the USB exposure.** There is no mechanism; the device number moves. Either accept the
-  widening or do not do this.
+Finally, a pre-existing bug surfaced on the way: `system_test.py` used the paho-mqtt **1.x**
+`Client(client_id, clean_session)` signature against a `paho-mqtt==2.1.0` pin, so the client id was
+being passed as `callback_api_version`. tempstat's systest had been failing since that upgrade. The
+root `CLAUDE.md` had reasoned the 1→2 migration through for weewx and concluded the default made
+it safe — true for weewx's *keyword* call, not for a positional one. **A migration note verified
+against one call site is not verified.**

@@ -1,4 +1,6 @@
-//! UART abstraction for the DS2480B serial interface.
+//! UART abstraction shared by the 1-Wire bus masters — the `Uart` trait, its `SerialUart`
+//! implementation over a kernel tty, and a `Box<dyn Uart>` passthrough so the adapter and the
+//! transport can each be chosen at runtime.
 //!
 //! - [Reading and Writing 1-Wire Devices Through Serial Interfaces](https://www.analog.com/en/resources/app-notes/reading-and-writing-1wirereg-devices-through-serial-interfaces.html)
 
@@ -11,6 +13,8 @@ use serialport::{ClearBuffer, DataBits, FlowControl, Parity, SerialPort, StopBit
 
 use super::Result;
 
+pub(crate) const BAUD_OPEN: u32 = 9_600;
+
 pub trait Uart {
     fn write_all(&mut self, data: &[u8]) -> Result<()>;
     fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()>;
@@ -19,13 +23,35 @@ pub trait Uart {
     fn set_baud(&mut self, baud: u32) -> Result<()>;
 }
 
+impl Uart for Box<dyn Uart> {
+    fn write_all(&mut self, data: &[u8]) -> Result<()> {
+        (**self).write_all(data)
+    }
+
+    fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+        (**self).read_exact(buffer)
+    }
+
+    fn send_break(&mut self) -> Result<()> {
+        (**self).send_break()
+    }
+
+    fn clear(&mut self) -> Result<()> {
+        (**self).clear()
+    }
+
+    fn set_baud(&mut self, baud: u32) -> Result<()> {
+        (**self).set_baud(baud)
+    }
+}
+
 pub struct SerialUart {
     port: Box<dyn SerialPort>,
 }
 
 impl SerialUart {
     pub fn open(path: &str, timeout: Duration) -> Result<Self> {
-        let mut port = serialport::new(path, 9600)
+        let mut port = serialport::new(path, BAUD_OPEN)
             .data_bits(DataBits::Eight)
             .parity(Parity::None)
             .stop_bits(StopBits::One)
@@ -36,7 +62,7 @@ impl SerialUart {
             .write_data_terminal_ready(true)
             .and_then(|()| port.write_request_to_send(true))
         {
-            debug!("uart modem lines not asserted on [{path}]: {err}");
+            debug!("uart modem lines not asserted on [{path}] [{err}]");
         }
         Ok(SerialUart { port })
     }
@@ -44,7 +70,7 @@ impl SerialUart {
 
 impl Uart for SerialUart {
     fn write_all(&mut self, data: &[u8]) -> Result<()> {
-        debug!("uart tx {:02X?}", data);
+        debug!("uart tx [{:02X?}]", data);
         self.port.write_all(data)?;
         self.port.flush()?;
         Ok(())
@@ -52,7 +78,7 @@ impl Uart for SerialUart {
 
     fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
         self.port.read_exact(buffer)?;
-        debug!("uart rx {:02X?}", buffer);
+        debug!("uart rx [{:02X?}]", buffer);
         Ok(())
     }
 

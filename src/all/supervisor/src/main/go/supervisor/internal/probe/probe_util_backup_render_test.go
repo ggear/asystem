@@ -205,6 +205,7 @@ func TestProbeUtilBackupRender_ScrubWordSeparatesAResumedPassFromAFreshOne(t *te
 	}{
 		{name: "a_fresh_pass_is_running", document: scrubSummary{State: metric.BackupStateRunning}, expected: metric.BackupStateRunning},
 		{name: "a_resumed_pass_says_so", document: scrubSummary{State: metric.BackupStateRunning, ResumedBool: true}, expected: backupResumedCell},
+		{name: "a_pass_paused_at_its_deadline_says_pausing_even_when_resumed", document: scrubSummary{State: metric.BackupStatePausing, ResumedBool: true}, expected: metric.BackupStatePausing},
 		{name: "a_finished_pass_keeps_its_state", document: scrubSummary{State: metric.BackupStateSuccess, ResumedBool: true}, expected: metric.BackupStateSuccess},
 		{name: "an_empty_state_is_unknown", document: scrubSummary{}, expected: backupUnknownState},
 	}
@@ -337,5 +338,34 @@ func TestProbeUtilBackupRender_AStageThatNeverReachedTheScrubSaysWhy(t *testing.
 				t.Errorf("SCRUB = %q, want %q", scrub, testCase.expectedColumn)
 			}
 		})
+	}
+}
+
+func TestProbeUtilBackupRender_APausingScrubReadsPausingBesideASuccessfulRun(t *testing.T) {
+	root, run := t.TempDir(), "2026-10-02_01-00-10"
+	runPath := backupRunPath(root, run)
+	for _, stage := range backupStages {
+		path := stageStatusPath(runPath, stage)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("mkdir stage: %v", err)
+		}
+		if err := writeAtomic(path, backupSummary{RunID: run, State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem}); err != nil {
+			t.Fatalf("write stage: %v", err)
+		}
+	}
+	if err := writeAtomic(scrubStatusPath(runPath), scrubSummary{RunID: run, State: metric.BackupStatePausing, ResumedBool: true}); err != nil {
+		t.Fatalf("write scrub: %v", err)
+	}
+	columns := strings.Split(backupListRow(root, run), "|")
+	cells := map[string]string{"TERTIARY": columns[7], "SCRUB": columns[8], "RESULT": columns[len(columns)-2]}
+	expected := map[string]string{"TERTIARY": metric.BackupStateSuccess, "SCRUB": metric.BackupStatePausing, "RESULT": metric.BackupStateSuccess}
+	for column, want := range expected {
+		if got := strings.TrimSpace(cells[column]); got != want {
+			t.Errorf("%s = %q, want %q", column, got, want)
+		}
+	}
+	if document := finishRun(root, run, time.Now()); document.State != metric.BackupStateSuccess || document.StagesFailed != 0 || document.StagesHalted != 0 {
+		t.Errorf("finishRun() = state %q failed %d halted %d, want success with nothing failed or halted, agreeing with the row",
+			document.State, document.StagesFailed, document.StagesHalted)
 	}
 }

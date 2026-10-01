@@ -22,7 +22,7 @@ import (
 //
 //	{
 //	    "run_id":                "<timestamp>", ALL               Run directory name, [YYYY-MM-DD_hh-mm-ss]
-//	    "state":                 "<state>",     ALL               Enum differs per document, only STAGE and SCRUB carry all six
+//	    "state":                 "<state>",     ALL               Enum differs per document, SCRUB alone carries pausing
 //	    "started_ts":            "<rfc3339>",   ALL
 //	    "finished_ts":           "<rfc3339>",   ALL
 //	    "duration_s":            <number>,      ALL
@@ -39,7 +39,7 @@ import (
 //	    "size_held_mb":          <number>,      RUN STAGE
 //	    "sent_mb":               <number>,      RUN STAGE
 //	    "stages_run":            <number>,      RUN
-//	    "stages_failed":         <number>,      RUN               Excludes a stop or a timeout
+//	    "stages_failed":         <number>,      RUN               Excludes a stop, includes a timeout
 //	    "stages_halted":         <number>,      RUN               A stop or a timeout alone
 //	    "disk_used_mb":          <number>,      STAGE
 //	    "disk_total_mb":         <number>,      STAGE
@@ -167,8 +167,11 @@ func finishRun(root, runID string, started time.Time) backupSummary {
 		}
 		switch staged.State {
 		case metric.BackupStateSuccess, metric.BackupStateSkipped:
-		case metric.BackupStateStopped, metric.BackupStateTimeout:
+		case metric.BackupStateStopped:
 			document.StagesHalted++
+		case metric.BackupStateTimeout:
+			document.StagesHalted++
+			document.StagesFailed++
 		default:
 			document.StagesFailed++
 		}
@@ -213,7 +216,7 @@ func resolvedState(stages map[metric.BackupStage]string, scrub string) string {
 			return state
 		}
 	}
-	if scrub != "" && scrub != metric.BackupStateSuccess && scrub != metric.BackupStateSkipped {
+	if scrub != "" && scrub != metric.BackupStateSuccess && scrub != metric.BackupStateSkipped && scrub != metric.BackupStatePausing {
 		return scrub
 	}
 	return metric.BackupStateSuccess

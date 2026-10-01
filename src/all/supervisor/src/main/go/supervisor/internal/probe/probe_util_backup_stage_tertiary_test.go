@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"supervisor/internal/config"
 	"supervisor/internal/metric"
 )
 
-func TestProbeUtilBackupStageTertiary_MirrorTotal(t *testing.T) {
+func TestProbeUtilBackupStageTertiary_ProgressTotal(t *testing.T) {
 	tests := []struct {
 		name     string
 		moved    int64
@@ -27,18 +28,18 @@ func TestProbeUtilBackupStageTertiary_MirrorTotal(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := mirrorTotal(testCase.moved, testCase.expected)
+			got := progressTotal(testCase.moved, testCase.expected)
 			if got.Known() != testCase.known {
-				t.Fatalf("mirrorTotal() known = %v, want %v", got.Known(), testCase.known)
+				t.Fatalf("progressTotal() known = %v, want %v", got.Known(), testCase.known)
 			}
 			if testCase.known && got.Rounded() != testCase.value {
-				t.Errorf("mirrorTotal() = %d, want %d", got.Rounded(), testCase.value)
+				t.Errorf("progressTotal() = %d, want %d", got.Rounded(), testCase.value)
 			}
 		})
 	}
 }
 
-func TestProbeUtilBackupStageTertiary_MirrorPercent(t *testing.T) {
+func TestProbeUtilBackupStageTertiary_ProgressPercent(t *testing.T) {
 	tests := []struct {
 		name     string
 		moved    int64
@@ -53,18 +54,18 @@ func TestProbeUtilBackupStageTertiary_MirrorPercent(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := mirrorPercent(testCase.moved, testCase.expected)
+			got := progressPercent(testCase.moved, testCase.expected)
 			if got.Known() != testCase.known {
-				t.Fatalf("mirrorPercent() known = %v, want %v", got.Known(), testCase.known)
+				t.Fatalf("progressPercent() known = %v, want %v", got.Known(), testCase.known)
 			}
 			if testCase.known && got.Value() != testCase.value {
-				t.Errorf("mirrorPercent() = %v, want %v", got.Value(), testCase.value)
+				t.Errorf("progressPercent() = %v, want %v", got.Value(), testCase.value)
 			}
 		})
 	}
 }
 
-func TestProbeUtilBackupStageTertiary_MirrorRemaining(t *testing.T) {
+func TestProbeUtilBackupStageTertiary_ProgressRemaining(t *testing.T) {
 	tests := []struct {
 		name     string
 		moved    int64
@@ -81,9 +82,9 @@ func TestProbeUtilBackupStageTertiary_MirrorRemaining(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := mirrorRemaining(testCase.moved, testCase.expected, testCase.rate)
+			got := progressRemaining(testCase.moved, testCase.expected, testCase.rate)
 			if got.Known() != testCase.known {
-				t.Fatalf("mirrorRemaining() known = %v, want %v", got.Known(), testCase.known)
+				t.Fatalf("progressRemaining() known = %v, want %v", got.Known(), testCase.known)
 			}
 		})
 	}
@@ -147,52 +148,153 @@ func TestProbeUtilBackupStageTertiary_ProgressSurvivesAChunkSplitMidLine(t *test
 	}
 }
 
-func TestProbeUtilBackupStageTertiary_MirrorArgumentsKeepEveryOptionBeforeTheTerminator(t *testing.T) {
-	arguments := mirrorArguments("/share/10", "/backup/share/10", "--dry-run", "--info=progress2")
-	tail := arguments[len(arguments)-3:]
-	if !slices.Equal(tail, []string{"--", "/share/10/", "/backup/share/10/"}) {
-		t.Fatalf("mirrorArguments() ends %v, want the terminator then the source then the target, since rsync takes its last argument as the destination and an option after [--] is silently mirrored into a directory of that name", tail)
+func TestProbeUtilBackupStageTertiary_ArgumentsKeepEveryOptionBeforeTheTerminator(t *testing.T) {
+	builders := map[string]func(string, string, ...string) []string{
+		"mirror":  mirrorArguments,
+		"expunge": expungeArguments,
+		"measure": measureArguments,
 	}
-	for _, option := range []string{"--dry-run", "--info=progress2", "--delete", "--stats"} {
-		if slices.Index(arguments, option) > slices.Index(arguments, "--") {
-			t.Errorf("mirrorArguments() places [%s] after the terminator, where rsync reads it as a path", option)
+	for name, builder := range builders {
+		t.Run(name, func(t *testing.T) {
+			arguments := builder("/share/10", "/backup/share/10", "--info=progress2")
+			tail := arguments[len(arguments)-3:]
+			if !slices.Equal(tail, []string{"--", "/share/10/", "/backup/share/10/"}) {
+				t.Fatalf("%sArguments() ends %v, want the terminator then the source then the target, since rsync takes its last argument as the destination and an option after [--] is silently mirrored into a directory of that name", name, tail)
+			}
+			for _, option := range []string{"-a", "--stats", "--info=progress2", "--exclude"} {
+				if slices.Index(arguments, option) > slices.Index(arguments, "--") {
+					t.Errorf("%sArguments() places [%s] after the terminator, where rsync reads it as a path", name, option)
+				}
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_OnlyTheExpungePassDeletesAndOnlyTheMeasurePassIsDry(t *testing.T) {
+	mirror := mirrorArguments("/share/10", "/backup/share/10")
+	if slices.Contains(mirror, "--delete") {
+		t.Errorf("mirrorArguments() carries [--delete], so a deletion would be counted against the addition it was netted out of, which is what the expunge pass exists to separate")
+	}
+	if !slices.Contains(mirror, "--force") {
+		t.Errorf("mirrorArguments() carries no [--force], so a directory the source has replaced with a file cannot be overwritten now that the mirror no longer deletes")
+	}
+	for name, arguments := range map[string][]string{"expunge": expungeArguments("/share/10", "/backup/share/10"), "measure": measureArguments("/share/10", "/backup/share/10")} {
+		for _, option := range []string{"--delete", "--info=del"} {
+			if !slices.Contains(arguments, option) {
+				t.Errorf("%sArguments() carries no [%s], so the pass reports no deletion at all", name, option)
+			}
 		}
 	}
-	if slices.Contains(mirrorArguments("/share/10", "/backup/share/10"), "--dry-run") {
-		t.Errorf("mirrorArguments() carries [--dry-run] with no extra option asked for, so the real mirror would write nothing")
+	for _, option := range []string{"--existing", "--ignore-existing"} {
+		if !slices.Contains(expungeArguments("/share/10", "/backup/share/10"), option) {
+			t.Errorf("expungeArguments() carries no [%s], so the expunge pass would transfer as well as delete", option)
+		}
+	}
+	if slices.Contains(expungeArguments("/share/10", "/backup/share/10"), "--dry-run") {
+		t.Errorf("expungeArguments() carries [--dry-run], so the expunge pass would delete nothing")
+	}
+	if !slices.Contains(measureArguments("/share/10", "/backup/share/10"), "--dry-run") {
+		t.Errorf("measureArguments() carries no [--dry-run], so measuring the stage would mutate the mirror")
 	}
 }
 
 func TestProbeUtilBackupStageTertiary_ExpectationSumsTheDryRunAndFailsClosed(t *testing.T) {
 	tests := []struct {
-		name     string
-		exit     int
-		expected int64
+		name        string
+		exit        int
+		mirrorBytes int64
+		mirrorFiles int
+		expungeFile int
 	}{
-		{name: "the_dry_run_of_each_share_is_summed", exit: 0, expected: 2 * 4096},
-		{name: "a_dry_run_that_failed_reports_no_total_at_all", exit: 1, expected: 0},
+		{name: "the_dry_run_of_each_share_is_summed", exit: 0, mirrorBytes: 2 * 4096, mirrorFiles: 6, expungeFile: 4},
+		{name: "a_dry_run_that_failed_reports_no_total_at_all", exit: 1},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			original := stageStream
 			t.Cleanup(func() { stageStream = original })
+			shares := []string{"/share/10", "/share/11"}
 			dryRuns := 0
-			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
-				share := []string{"/share/10", "/share/11"}[dryRuns]
-				if name != "rsync" || !slices.Equal(args, mirrorArguments(share, filepath.Join("/backup", tertiaryShareDirectory, filepath.Base(share)), "--dry-run")) {
-					t.Errorf("expectation shelled out to [%s %v], want exactly the mirror arguments plus [--dry-run]", name, args)
+			stageStream = func(_ context.Context, sink io.Writer, name string, args ...string) (string, int, bool) {
+				share := shares[dryRuns]
+				target := filepath.Join(config.DirBackup, tertiaryShareDirectory, filepath.Base(share))
+				if name != "rsync" || !slices.Equal(args, measureArguments(share, target)) {
+					t.Errorf("expectation shelled out to [%s %v], want exactly the measure arguments", name, args)
 				}
 				dryRuns++
-				return "Number of regular files transferred: 3\nTotal transferred file size: 4,096 bytes\n", test.exit, false
+				if sink != nil {
+					_, _ = sink.Write([]byte("deleting gone/\ndeleting stale.txt\n"))
+				}
+				return "Number of regular files transferred: 3\nNumber of deleted files: 2\nTotal transferred file size: 4,096 bytes\n", test.exit, false
 			}
-			got := mirrorExpectation(context.Background(), []string{"/share/10", "/share/11"})
-			if got != test.expected {
-				t.Errorf("mirrorExpectation() = %d, want %d", got, test.expected)
+			got := measureStage(context.Background(), shares)
+			if got.mirrorBytes != test.mirrorBytes || got.mirrorFiles != test.mirrorFiles || got.expungeFiles != test.expungeFile {
+				t.Errorf("measureStage() = mirror %d bytes over %d files, expunge %d files, want %d %d %d",
+					got.mirrorBytes, got.mirrorFiles, got.expungeFiles, test.mirrorBytes, test.mirrorFiles, test.expungeFile)
 			}
 			if test.exit == 0 && dryRuns != 2 {
 				t.Errorf("dry runs = %d, want one per share", dryRuns)
 			}
+			if test.exit != 0 && got.expungeSizes != nil {
+				t.Errorf("measureStage() kept a deletion set after a failed dry run, want no figure at all rather than a partial one")
+			}
 		})
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_ExpungeSizesPriceOnlyTheFilesStillOnTheMirror(t *testing.T) {
+	target := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(target, "media", "old"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(target, "media", "one.mkv"), []byte("eleven byt"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	sizes, total := expungeSizes(target, []string{"media/one.mkv", "media/old/", "media/vanished.mkv"})
+	if total != 10 {
+		t.Errorf("expungeSizes() total = %d, want the 10 bytes of the one file that is there, since a directory and a vanished path cost nothing", total)
+	}
+	if len(sizes) != 1 || sizes["media/one.mkv"] != 10 {
+		t.Errorf("expungeSizes() = %v, want only the sized file", sizes)
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_ExpungeProgressPricesEachDeletionFromTheMeasuredSet(t *testing.T) {
+	progress := &expungeProgress{sizes: map[string]int64{"media/one.mkv": 1000, "media/two.mkv": 2000}}
+	if _, err := progress.Write([]byte("deleting media/one.mkv\ndeleting media/old/\ndeleting media/tw")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if got := progress.bytes(); got != 1000 {
+		t.Errorf("bytes() = %d, want only the priced deletion 1000, since a directory carries no size and a split line is not a deletion yet", got)
+	}
+	if _, err := progress.Write([]byte("o.mkv\n")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if got := progress.bytes(); got != 3000 {
+		t.Errorf("bytes() = %d, want 3000 once the split line reassembled", got)
+	}
+}
+
+func TestProbeUtilBackupStageTertiary_RsyncDeletedReadsOnlyADeletionLine(t *testing.T) {
+	tests := []struct {
+		line, path string
+		known      bool
+	}{
+		{line: "deleting media/one.mkv", path: "media/one.mkv", known: true},
+		{line: "deleting media/old/", path: "media/old/", known: true},
+		{line: "deleting ", known: false},
+		{line: "media/one.mkv", known: false},
+		{line: "        1,000  1%  10MB/s", known: false},
+		{line: "", known: false},
+	}
+	for _, test := range tests {
+		got, ok := rsyncDeleted(test.line)
+		if ok != test.known {
+			t.Fatalf("rsyncDeleted(%q) ok = %v, want %v", test.line, ok, test.known)
+		}
+		if test.known && got != test.path {
+			t.Errorf("rsyncDeleted(%q) = %q, want %q", test.line, got, test.path)
+		}
 	}
 }
 
@@ -267,13 +369,13 @@ func TestProbeUtilBackupStageTertiary_MirrorCellsAgreeWithEachOther(t *testing.T
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			copied := intReading(test.moved / bytesPerMebibyte)
-			total := mirrorTotal(test.moved, test.expected)
-			percent := mirrorPercent(test.moved, test.expected)
+			total := progressTotal(test.moved, test.expected)
+			percent := progressPercent(test.moved, test.expected)
 			if copied.Rounded() != test.expectedCopied || total.Rounded() != test.expectedTotal {
 				t.Errorf("mirror cells: got copied %d total %d want %d %d", copied.Rounded(), total.Rounded(), test.expectedCopied, test.expectedTotal)
 			}
 			if percent.Rounded() != test.expectedPercent {
-				t.Errorf("mirrorPercent: got %d want %d", percent.Rounded(), test.expectedPercent)
+				t.Errorf("progressPercent: got %d want %d", percent.Rounded(), test.expectedPercent)
 			}
 			if percent.Rounded() == 100 && copied.Rounded() != total.Rounded() {
 				t.Errorf("mirror at 100 percent: copied %d disagrees with total %d", copied.Rounded(), total.Rounded())

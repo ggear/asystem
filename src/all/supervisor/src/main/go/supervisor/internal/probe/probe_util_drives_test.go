@@ -162,15 +162,20 @@ func TestProbeUtilDrives_DriveKinds(t *testing.T) {
 	tests := []struct {
 		name          string
 		physical      string
+		bridge        string
 		expectedKinds []string
 		expectedError bool
 	}{
 		{name: "happy nvme asks for the nvme protocol", physical: "nvme0", expectedKinds: []string{driveKindNVME}, expectedError: false},
-		{name: "happy sata tries ata pass through then the bridges then scsi", physical: "sda", expectedKinds: []string{driveKindSAT, driveKindRealtek, driveKindJMicron, driveKindASMedia, driveKindSCSI}, expectedError: false},
+		{name: "happy realtek bridge tries ata then its own pass through then scsi", physical: "sdb", bridge: "0bda", expectedKinds: []string{driveKindSAT, driveKindRealtek, driveKindSCSI}, expectedError: false},
+		{name: "happy jmicron bridge tries ata then its own pass through then scsi", physical: "sdb", bridge: "152d", expectedKinds: []string{driveKindSAT, driveKindJMicron, driveKindSCSI}, expectedError: false},
+		{name: "happy asmedia bridge tries ata then its own pass through then scsi", physical: "sdb", bridge: "174c", expectedKinds: []string{driveKindSAT, driveKindASMedia, driveKindSCSI}, expectedError: false},
+		{name: "happy seagate bridge is never sent another vendor's pass through", physical: "sdc", bridge: "0bc2", expectedKinds: []string{driveKindSAT, driveKindSCSI}, expectedError: false},
+		{name: "happy internal sata is never sent a bridge pass through", physical: "sda", expectedKinds: []string{driveKindSAT, driveKindSCSI}, expectedError: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			if got := driveKinds(testCase.physical); !slices.Equal(got, testCase.expectedKinds) {
+			if got := driveKinds(testCase.physical, testCase.bridge); !slices.Equal(got, testCase.expectedKinds) {
 				t.Errorf("kinds: got %v want %v", got, testCase.expectedKinds)
 			}
 		})
@@ -220,11 +225,12 @@ func TestProbeUtilDrives_TopologyReadsThroughTheNamespace(t *testing.T) {
 		rotational        string
 		expectedHardware  string
 		expectedNode      string
+		bridge            string
 		expectedTransport string
 		expectedError     bool
 	}{
-		{name: "happy nvme controller reads its namespace attributes", physical: "nvme0", block: "nvme0n1", device: "devices/platform/soc/34bcc0000.nvme/nvme/nvme0/nvme0n1", model: "APPLE SSD AP0512Z                       ", rotational: "0", expectedHardware: "APPLE SSD AP0512Z", expectedNode: "nvme0n1", expectedTransport: driveTransportInternal, expectedError: false},
-		{name: "happy sata reads its own attributes", physical: "sda", block: "sda", device: "devices/platform/soc/f02280000.usb/xhci-hcd.0.auto/usb4/4-1/4-1:1.0/host0/target0:0:0/0:0:0:0/block/sda", vendor: "ATA     ", model: "CT4000MX500SSD1 ", rotational: "1", expectedHardware: "CT4000MX500SSD1", expectedNode: "sda", expectedTransport: driveTransportUSB, expectedError: false},
+		{name: "happy nvme controller reads its namespace attributes", physical: "nvme0", block: "nvme0n1", device: "sys/devices/platform/soc/34bcc0000.nvme/nvme/nvme0/nvme0n1", model: "APPLE SSD AP0512Z                       ", rotational: "0", expectedHardware: "APPLE SSD AP0512Z", expectedNode: "nvme0n1", expectedTransport: driveTransportInternal, expectedError: false},
+		{name: "happy sata reads its own attributes", physical: "sda", block: "sda", device: "sys/devices/platform/soc/f02280000.usb/xhci-hcd.0.auto/usb4/4-1/4-1:1.0/host0/target0:0:0/0:0:0:0/block/sda", vendor: "ATA     ", model: "CT4000MX500SSD1 ", rotational: "1", bridge: "0bda", expectedHardware: "CT4000MX500SSD1", expectedNode: "sda", expectedTransport: driveTransportUSB, expectedError: false},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -243,6 +249,9 @@ func TestProbeUtilDrives_TopologyReadsThroughTheNamespace(t *testing.T) {
 			}
 			if testCase.vendor != "" {
 				written[filepath.Join(device, driveVendorPath)] = testCase.vendor
+			}
+			if testCase.bridge != "" {
+				written[filepath.Join(root, "sys/devices/platform/soc/f02280000.usb/xhci-hcd.0.auto/usb4/4-1", driveBridgeVendorPath)] = testCase.bridge
 			}
 			for path, content := range written {
 				if err := os.WriteFile(path, []byte(content+"\n"), 0o644); err != nil {
@@ -270,6 +279,9 @@ func TestProbeUtilDrives_TopologyReadsThroughTheNamespace(t *testing.T) {
 			}
 			if identity.transport != testCase.expectedTransport {
 				t.Errorf("transport: got %q want %q", identity.transport, testCase.expectedTransport)
+			}
+			if identity.bridge != testCase.bridge {
+				t.Errorf("bridge: got %q want %q", identity.bridge, testCase.bridge)
 			}
 			if identity.rotational != (testCase.rotational == driveFlagSet) {
 				t.Errorf("rotational: got %v want %v", identity.rotational, testCase.rotational == driveFlagSet)

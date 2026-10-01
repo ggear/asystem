@@ -161,8 +161,12 @@ def database_upsert(long_df, table_name, conn, dsn):
                 WHERE {table_name}.{value_column["column"]} IS DISTINCT FROM EXCLUDED.{value_column["column"]}
             """)
             conn.commit()
+    except Exception:
+        with contextlib.suppress(Exception):
+            conn.rollback()
+        raise
     finally:
-        with conn.cursor() as cur:
+        with contextlib.suppress(Exception), conn.cursor() as cur:
             cur.execute(f"TRUNCATE {stage}")
             conn.commit()
 

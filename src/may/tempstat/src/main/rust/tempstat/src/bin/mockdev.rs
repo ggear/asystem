@@ -1,6 +1,6 @@
 use std::io::{self, Read, Write};
 
-use tempstat::driver::mock::{Emulator, MockDs2480b, MockDs9097};
+use tempstat::driver::emulator::{Emulator, MockDs2480b, MockDs9097};
 
 fn main() -> io::Result<()> {
     let mut mock: Box<dyn Emulator> = match std::env::var("TEMPSTAT_MOCK_ADAPTER").as_deref() {

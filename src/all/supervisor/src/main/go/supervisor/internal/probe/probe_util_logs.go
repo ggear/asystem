@@ -294,10 +294,11 @@ func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
 	if err != nil {
 		return time.Time{}, "", false
 	}
-	if !isLogError(priority, after) {
+	message := strings.TrimSpace(after)
+	if !isLogError(priority, message) {
 		return time.Time{}, "", false
 	}
-	return boot.Add(time.Duration(micros) * time.Microsecond), after, true
+	return boot.Add(time.Duration(micros) * time.Microsecond), message, true
 }
 
 func isLogError(priority int, message string) bool {
@@ -391,17 +392,24 @@ const (
 
 var (
 	logIgnore = []*regexp.Regexp{
-		// Linux driver pl2303 incompatible with the tempstat chipset which results in 15m benign errors
-		regexp.MustCompile(`^pl2303 ttyUSB\d+: .*`),
-
-		// Noisy drive and host-controllers, not really errors
+		// Noisy drive and host-controllers
 		regexp.MustCompile(`^\.ready`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Asking for cache data failed$`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Read Capacity\(\d+\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
 		regexp.MustCompile(`^sd \d+:\d+:\d+:\d+: \[sd[a-z]+\] Synchronize Cache\(10\) failed: Result: hostbyte=DID_ERROR driverbyte=DRIVER_OK$`),
 		regexp.MustCompile(`^xhci_hcd [0-9a-f]+:[0-9a-f]+:[0-9a-f]+\.\d+: ERROR Unknown event condition \d+ for slot \d+ ep \d+ , HC probably busted$`),
 
-		// Non-errors
+		// Stack-dump scaffolding, the headline line still counts
+		regexp.MustCompile(`^CPU: \d+ UID: \d+ PID: \d+ Comm: `),
+		regexp.MustCompile(`^Tainted: `),
+		regexp.MustCompile(`^Hardware name: `),
+		regexp.MustCompile(`^Call trace:$`),
+		regexp.MustCompile(`^[A-Za-z0-9_.]+\+0x[0-9a-f]+/0x[0-9a-f]+( \[[^\]]+\])?( \(C\))?$`),
+
+		// A noisy signal interrupted an SMB close
+		regexp.MustCompile(`^CIFS: VFS: \\\\[^\\]+\\\S+ Close interrupted close$`),
+
+		// A boot-time RAS announcement, not an error
 		regexp.MustCompile(`^RAS: Correctable Errors collector initialized\.`),
 	}
 

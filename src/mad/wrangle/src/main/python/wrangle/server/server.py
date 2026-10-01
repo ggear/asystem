@@ -154,8 +154,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._send_error_json(error.status, error.code, error.message)
 
     def _serve_plugins(self):
-        snapshot = self._history.snapshot()
-        self._send_json({"plugins": snapshot.plugins})
+        self._send_json({"plugins": self._history.plugins})
 
     def _serve_counters(self):
         self._send_json({"counters": {f"{src}|{act}": dataclasses.asdict(counter) for (src, act), counter in COUNTERS.items()}})
@@ -240,8 +239,6 @@ class _Handler(BaseHTTPRequestHandler):
             pass
 
     def _serve_health_json(self):
-        snapshot = self._history.snapshot()
-
         def status_for(plugin_name):
             result = self._history.is_errored(plugin_name)
             if result is None:
@@ -249,7 +246,7 @@ class _Handler(BaseHTTPRequestHandler):
             return "unhealthy" if result else "healthy"
 
         overall = status_for("summary")
-        plugins_status = {name: status_for(name) for name in snapshot.plugins}
+        plugins_status = {name: status_for(name) for name in self._history.plugins}
         self._send_json({"status": overall, "plugins": plugins_status}, 200)
 
     def _serve_dashboard(self):

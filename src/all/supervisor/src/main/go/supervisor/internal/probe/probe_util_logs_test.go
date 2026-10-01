@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -103,6 +104,57 @@ func TestProbeUtilLogs_IgnoredMessagesAreNotErrors(t *testing.T) {
 	}
 	if !isLogError(3, "ata1.00: failed command") {
 		t.Fatalf("isLogError on a kept message: got false want true")
+	}
+}
+
+func TestProbeUtilLogs_AnOOMKillCountsOnceAndItsStackDumpNotAtAll(t *testing.T) {
+	captured := `0,12514,7226955548360,-;CPU: 8 UID: 0 PID: 1327866 Comm: polars-0 Tainted: G S                 6.14.2-401.asahi.fc42.aarch64+16k #1
+0,12515,7226955548361,-;Tainted: [S]=CPU_OUT_OF_SPEC
+0,12516,7226955548362,-;Hardware name: Apple Mac mini (M2 Pro, 2023) (DT)
+0,12517,7226955548363,-;Call trace:
+0,12518,7226955548364,-; show_stack+0x30/0x98 (C)
+0,12519,7226955548365,-; dump_stack_lvl+0x7c/0xa0
+0,12520,7226955548366,-; dump_stack+0x18/0x2c
+0,12521,7226955548367,-; dump_header+0x48/0x190
+0,12522,7226955548368,-; oom_kill_process+0x2ac/0x350
+0,12523,7226955548369,-; out_of_memory+0xdc/0x350
+0,12524,7226955548370,-; mem_cgroup_out_of_memory+0x138/0x160
+0,12525,7226955548371,-; try_charge_memcg+0x3fc/0x6c0
+0,12526,7226955548372,-; charge_memcg+0x4c/0xa0
+0,12527,7226955548373,-; mem_cgroup_swapin_charge_folio+0x74/0x1c8
+0,12528,7226955548374,-; __read_swap_cache_async+0x27c/0x308
+0,12529,7226955548375,-; swap_vma_readahead+0x240/0x4a8
+0,12530,7226955548376,-; swapin_readahead+0x88/0x180
+0,12531,7226955548377,-; do_swap_page+0x56c/0xd60
+0,12532,7226955548378,-; handle_pte_fault+0x188/0x220
+0,12533,7226955548379,-; __handle_mm_fault+0x1b0/0x420
+0,12534,7226955548380,-; handle_mm_fault+0xbc/0x340
+0,12535,7226955548381,-; do_page_fault+0x148/0x630
+0,12536,7226955548382,-; do_translation_fault+0x54/0xa0
+0,12537,7226955548383,-; do_mem_abort+0x48/0xa0
+0,12538,7226955548384,-; el0_da+0x3c/0x160
+0,12539,7226955548385,-; el0t_64_sync_handler+0xc4/0x140
+0,12540,7226955548386,-; el0t_64_sync+0x1b0/0x1b8
+3,12616,7226955566694,-;Memory cgroup out of memory: Killed process 1327212 (wrangle) total-vm:8633456kB, anon-rss:2049920kB, file-rss:31008kB, shmem-rss:0kB, UID:0 pgtables:3520kB oom_score_adj:0
+3,12700,7300000000000,-;CIFS: VFS: \\macmini-max\share-20 Close interrupted close
+4,12800,7400000000000,-;BTRFS warning (device sdd1): read-write for sector size 4096 with page size 16384 is experimental`
+	var counted []string
+	for line := range strings.SplitSeq(captured, "\n") {
+		if _, message, ok := parseLogRecord(line, time.Now()); ok {
+			counted = append(counted, message)
+		}
+	}
+	if len(counted) != 1 || !strings.HasPrefix(counted[0], "Memory cgroup out of memory: Killed process") {
+		t.Errorf("counted %q, want the OOM kill alone", counted)
+	}
+	for _, kept := range []string{
+		"1,1,1,-;BUG: kernel NULL pointer dereference, address: 0000000000000008",
+		"3,3,3,-;systemd-journald[637]: Failed to create new system journal: No space left on device",
+		"3,4,4,-;CIFS: VFS: \\\\macmini-max\\share-20 error -5 on ioctl to get interface list",
+	} {
+		if _, _, ok := parseLogRecord(kept, time.Now()); !ok {
+			t.Errorf("parseLogRecord(%q) dropped it, want a headline or a real share fault still counted", kept)
+		}
 	}
 }
 

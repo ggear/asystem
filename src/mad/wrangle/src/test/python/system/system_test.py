@@ -78,8 +78,10 @@ def test_schema_ddl_applies_and_is_idempotent():
 
 
 def test_schema_statements_execute():
-    for sql_name in ("describe.sql", "verify.sql", *[f"query_{table}.sql" for table in _database_plugin_tables()]):
-        for statement in _statements(_read_generated(join("query", sql_name))):
+    sources = {"describe.sql": _read_heredoc_sql("describe.sh"), "verify.sql": _read_heredoc_sql("verify.sh")}
+    sources.update({f"{table}.sql": _read_generated(join("query", f"{table}.sql")) for table in _database_plugin_tables()})
+    for sql_name, sql_text in sources.items():
+        for statement in _statements(sql_text):
             with connect() as database_connection, database_connection.cursor() as database_cursor:
                 try:
                     _execute(database_cursor, statement)
@@ -118,7 +120,7 @@ def test_rerun():
 
 def test_schema_verify_reports_no_drift():
     faults = []
-    for statement in _statements(_read_generated(join("query", "verify.sql"))):
+    for statement in _statements(_read_heredoc_sql("verify.sh")):
         with connect() as database_connection, database_connection.cursor() as database_cursor:
             _execute(database_cursor, statement)
             faults.extend(database_cursor.fetchall())
@@ -181,6 +183,13 @@ def _read_generated(relative_path: str) -> str:
     assert os.path.isfile(generated_path), f"missing generated artifact [{generated_path}]"
     with open(generated_path) as generated_file:
         return generated_file.read()
+
+
+def _read_heredoc_sql(script_name: str) -> str:
+    lines = _read_generated(script_name).splitlines()
+    start = next(index for index, line in enumerate(lines) if line.strip() == "cat <<'SCHEMA_SQL'") + 1
+    end = next(index for index in range(start, len(lines)) if lines[index] == "SCHEMA_SQL")
+    return "\n".join(lines[start:end])
 
 
 def _execute(database_cursor, statement: str) -> None:

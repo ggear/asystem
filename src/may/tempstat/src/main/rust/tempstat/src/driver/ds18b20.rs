@@ -11,7 +11,7 @@ use super::onewire::OneWire;
 use super::rom::Rom;
 use super::{Error, Result};
 
-const FAMILY_CODE: u8 = 0x28;
+pub const FAMILY_CODE: u8 = 0x28;
 const CONVERT_T: u8 = 0x44;
 const WRITE_SCRATCHPAD: u8 = 0x4E;
 const READ_SCRATCHPAD: u8 = 0xBE;
@@ -77,7 +77,13 @@ impl Ds18b20 {
             parasitic: false,
             resolution: Resolution::Bits12,
         };
-        device.parasitic = bus.supports_strong_pullup() && device.read_power_supply(bus)?;
+        device.parasitic = if bus.supports_strong_pullup() {
+            device.select(bus)?;
+            bus.write_byte(READ_POWER_SUPPLY)?;
+            !bus.read_bit()?
+        } else {
+            false
+        };
         let scratchpad = device.read_scratchpad(bus)?;
         device.resolution = Resolution::from_config(scratchpad[4]);
         debug!(
@@ -140,12 +146,6 @@ impl Ds18b20 {
         }
     }
 
-    fn read_power_supply(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<bool> {
-        self.select(bus)?;
-        bus.write_byte(READ_POWER_SUPPLY)?;
-        Ok(!bus.read_bit()?)
-    }
-
     pub fn read_scratchpad(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<[u8; SCRATCHPAD_LEN]> {
         self.select(bus)?;
         bus.write_byte(READ_SCRATCHPAD)?;
@@ -194,22 +194,6 @@ impl Ds18b20 {
                 Err(err) => return Err(err),
             }
         }
-    }
-
-    pub fn get_alarms(&self, bus: &mut (impl OneWire + ?Sized)) -> Result<(i8, i8)> {
-        let scratchpad = self.read_scratchpad(bus)?;
-        Ok((scratchpad[2] as i8, scratchpad[3] as i8))
-    }
-
-    pub fn set_alarms(&self, bus: &mut (impl OneWire + ?Sized), high: Option<i8>, low: Option<i8>) -> Result<()> {
-        let scratchpad = self.read_scratchpad(bus)?;
-        self.write_scratchpad(
-            bus,
-            high.unwrap_or(scratchpad[2] as i8),
-            low.unwrap_or(scratchpad[3] as i8),
-            scratchpad[4],
-        )?;
-        self.copy_scratchpad(bus)
     }
 
     pub fn set_resolution(&mut self, bus: &mut (impl OneWire + ?Sized), resolution: Resolution) -> Result<()> {
@@ -480,27 +464,6 @@ mod tests {
             make_device_with_config(&mut bus, 0x7F).t_conv(),
             Duration::from_millis(750)
         );
-    }
-
-    #[test]
-    fn get_alarms_reads_signed_thresholds() {
-        let mut bus = make_bus();
-        let device = make_device(&mut bus);
-        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0xC0, 0x7F));
-        assert_eq!(device.get_alarms(&mut bus).unwrap(), (75, -64));
-    }
-
-    #[test]
-    fn set_alarms_preserves_unspecified_values() {
-        let mut bus = make_bus();
-        let device = make_device(&mut bus);
-        queue_scratchpad(&mut bus.uart, &scratchpad([0x91, 0x01], 0x4B, 0x46, 0x7F));
-        queue_skip_select(&mut bus.uart);
-        bus.uart.queue_read(&[0x4E, 50, 0x46, 0x7F]);
-        queue_skip_select(&mut bus.uart);
-        bus.uart.queue_read(&[0x48, 0x97]);
-        device.set_alarms(&mut bus, Some(50), None).unwrap();
-        assert!(written(&bus).windows(4).any(|window| window == [0x4E, 50, 0x46, 0x7F]));
     }
 
     #[test]

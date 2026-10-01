@@ -47,7 +47,6 @@ src/*/*/.env
 CLAUDE.md
 license
 nohup.out
-Cargo.lock
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup

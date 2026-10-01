@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"supervisor/internal/config"
@@ -27,6 +28,7 @@ func runStage(ctx context.Context, request stageRequest) error {
 	started := time.Now()
 	stoppedMarker := filepath.Join(stagePath, stageStoppedMarker)
 	_ = os.Remove(stoppedMarker)
+	_ = os.Remove(filepath.Join(stagePath, stageTimedOutMarker))
 
 	stageCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
@@ -80,19 +82,21 @@ func runStage(ctx context.Context, request stageRequest) error {
 		defer close(backgroundDone)
 		ticker := time.NewTicker(stageLivenessInterval)
 		defer ticker.Stop()
+		polled := time.NewTicker(stageStopPoll)
+		defer polled.Stop()
 		for {
 			select {
 			case <-backgroundCtx.Done():
 				return
-			case <-ticker.C:
+			case <-polled.C:
 				if _, err := os.Stat(stoppedMarker); err == nil {
 					cancel(errStageStopped)
-					continue
 				}
+			case <-ticker.C:
 				if request.Stage == metric.BackupStageTertiary {
 					if held, reason := attached(backgroundCtx, stagePath); !held {
 						scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Errorf("faulting", started,
-							"[%s] %s, stopping this stage before it writes anywhere else", config.DirBackup, reason)
+							"[%s] %s, stopping the stage before it writes elsewhere", config.DirBackup, reason)
 						cancel(errStageDetached)
 						continue
 					}
@@ -125,7 +129,14 @@ func runStage(ctx context.Context, request stageRequest) error {
 		runErr = fmt.Errorf("unknown stage [%s]", request.Stage)
 	}
 
-	state, success := stageVerdict(context.Cause(stageCtx), runErr, result.skipped)
+	cause := context.Cause(stageCtx)
+	if _, err := os.Stat(filepath.Join(stagePath, stageTimedOutMarker)); cause == nil && err == nil {
+		cause = errStageTimedOut
+	}
+	if _, err := os.Stat(filepath.Join(stagePath, stageStoppedMarker)); cause == nil && err == nil {
+		cause = errStageStopped
+	}
+	state, success := stageVerdict(cause, runErr, result.skipped)
 
 	document := backupSummary{
 		RunID: request.RunID, State: state, Trigger: request.Trigger,
@@ -146,13 +157,23 @@ func runStage(ctx context.Context, request stageRequest) error {
 	}
 
 	if runErr != nil {
-		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", started,
-			"[%s] stage [%s] finished as [%s] with [%v]", request.RunID, request.Stage, state, runErr)
+		reason := runErr
+		if state != metric.BackupStateFailure && cause != nil {
+			reason = cause
+		}
+		if state == metric.BackupStateStopped {
+			scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("finished", started,
+				"[%s] stage [%s] finished as [%s] with [%v]", request.RunID, request.Stage, state, reason)
+		} else {
+			scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", started,
+				"[%s] stage [%s] finished as [%s] with [%v]", request.RunID, request.Stage, state, reason)
+		}
 		return fmt.Errorf("stage [%s] %w", request.Stage, runErr)
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("finished", started,
-		"[%s] stage [%s] finished as [%s], [%s] GiB at [%s] MiB/s", request.RunID, request.Stage, state,
-		backupSizedGibibytes(intReading(int64(document.SizeMB))), backupThroughput(backupRated(intReading(int64(document.SizeMB)), intReading(int64(document.DurationS)))))
+		"%s at [%s] MiB/s from stage [%s] of run [%s] as [%s]", backupMoved(intReading(int64(document.SizeMB)), time.Duration(document.DurationS)*time.Second),
+		backupThroughput(backupRated(intReading(int64(document.SizeMB)), intReading(int64(document.DurationS)))),
+		request.Stage, request.RunID, state)
 	return nil
 }
 
@@ -218,6 +239,8 @@ func stageExec(ctx context.Context, name string, args ...string) (string, int, b
 
 func realStageStream(ctx context.Context, sink io.Writer, name string, args ...string) (string, int, bool) {
 	command := exec.CommandContext(ctx, name, args...)
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
 	command.Stdin = nil
 	buffer := &lockedBuffer{}
 	command.Stdout = buffer
@@ -316,12 +339,6 @@ func (c *stageCounters) addTransfer(files, sizeMB, filesCreated, filesDeleted, f
 	c.mu.Unlock()
 }
 
-func (c *stageCounters) snapshotSizeMB() int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.sizeMB
-}
-
 type lockedBuffer struct {
 	mu     sync.Mutex
 	buffer bytes.Buffer
@@ -349,6 +366,7 @@ var (
 const (
 	moduleSkipHoursDefault  = 1
 	moduleSkipHoursVariable = "BACKUP_SKIP_HOURS"
+	moduleStopGrace         = time.Minute
 	moduleRestartVariable   = "BACKUP_SERVICE_RESTART"
 	moduleBackupPruneFlag   = "--prune-gfs"
 	moduleBackupLeaf        = "backup.sh"
@@ -359,6 +377,7 @@ const (
 const (
 	stageExpiredGrace     = time.Minute
 	stageLivenessInterval = 10 * time.Second
+	stageStopPoll         = time.Second
 	stageLivenessGrace    = time.Hour
 	stageHeartbeatRefresh = 10 * time.Minute
 

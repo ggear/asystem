@@ -38,6 +38,7 @@ type driveIdentity struct {
 	excluded   string
 	rotational bool
 	removable  bool
+	bridge     string
 	model      string
 	rating     float64
 	baseline   int64
@@ -230,11 +231,14 @@ func (s *mountSet) namespace(physical string) string {
 	return names[0]
 }
 
-func driveKinds(physical string) []string {
+func driveKinds(physical, bridge string) []string {
 	if strings.HasPrefix(physical, drivePrefixNVME) {
 		return []string{driveKindNVME}
 	}
-	return []string{driveKindSAT, driveKindRealtek, driveKindJMicron, driveKindASMedia, driveKindSCSI}
+	if kind, found := driveBridgeKinds[bridge]; found {
+		return []string{driveKindSAT, kind, driveKindSCSI}
+	}
+	return []string{driveKindSAT, driveKindSCSI}
 }
 
 func (s *mountSet) mapper(name string) string {
@@ -331,20 +335,30 @@ func (s *mountSet) identifyFromReport(identity *driveIdentity, report smartRepor
 	}
 }
 
-func (s *mountSet) topology(block string) (bool, bool, string, string) {
+func (s *mountSet) topology(block string) (bool, bool, string, string, string) {
 	rotational := s.flagged(block, driveRotationalPath)
 	removable := s.flagged(block, driveRemovablePath)
-	transport := driveTransportInternal
-	if target, err := os.Readlink(filepath.Join(s.root, driveBlockPath, block)); err == nil {
+	transport, bridge := driveTransportInternal, ""
+	link := filepath.Join(s.root, driveBlockPath, block)
+	if target, err := os.Readlink(link); err == nil {
 		for segment := range strings.SplitSeq(target, "/") {
 			if strings.HasPrefix(segment, driveTransportUSB) {
 				transport = driveTransportUSB
 				break
 			}
 		}
+		if transport == driveTransportUSB {
+			devices := filepath.Join(s.root, driveDevicesPath) + string(filepath.Separator)
+			for directory := filepath.Join(filepath.Dir(link), target); strings.HasPrefix(directory, devices); directory = filepath.Dir(directory) {
+				if vendor, err := os.ReadFile(filepath.Join(directory, driveBridgeVendorPath)); err == nil {
+					bridge = strings.TrimSpace(string(vendor))
+					break
+				}
+			}
+		}
 	}
 	hardware := driveHardware(s.described(block, driveVendorPath), s.described(block, driveModelPath))
-	return rotational, removable, transport, hardware
+	return rotational, removable, transport, hardware, bridge
 }
 
 func (s *mountSet) described(block, path string) string {
@@ -397,11 +411,12 @@ func (s *mountSet) identity(physical string) *driveIdentity {
 	}
 	topologyStart := time.Now()
 	block := s.namespace(physical)
-	identity := &driveIdentity{kernel: physical, node: filepath.Join(s.root, "dev", block), kinds: driveKinds(physical)}
-	identity.rotational, identity.removable, identity.transport, identity.hardware = s.topology(block)
+	identity := &driveIdentity{kernel: physical, node: filepath.Join(s.root, "dev", block)}
+	identity.rotational, identity.removable, identity.transport, identity.hardware, identity.bridge = s.topology(block)
+	identity.kinds = driveKinds(physical, identity.bridge)
 	s.identities[physical] = identity
-	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionDiscover).Debugf("topology", topologyStart, "[%s] as [%s] over [%s], rotational [%v] removable [%v], node [%s], probing as [%s]",
-		physical, identity.hardware, identity.transport, identity.rotational, identity.removable, identity.node, strings.Join(identity.kinds, ","))
+	scribe.Log(scribe.SourceProbeDrives, scribe.SubjectMetric(metric.MetricHostUsedDriveLife), scribe.ActionDiscover).Debugf("topology", topologyStart, "[%s] as [%s] over [%s] bridge [%s], rotational [%v] removable [%v], node [%s], probing as [%s]",
+		physical, identity.hardware, identity.transport, identity.bridge, identity.rotational, identity.removable, identity.node, strings.Join(identity.kinds, ","))
 	return identity
 }
 
@@ -579,6 +594,8 @@ const (
 	driveKindJMicron         = "sntjmicron"
 	driveKindASMedia         = "sntasmedia"
 	driveKindSCSI            = "scsi"
+	driveBridgeVendorPath    = "idVendor"
+	driveDevicesPath         = "sys/devices"
 	driveResolveMax          = 8
 	driveAttributeErrors     = 1
 	driveAttributeWritten    = 241
@@ -606,6 +623,12 @@ var driveRatings = map[string]float64{
 }
 
 var (
+	driveBridgeKinds = map[string]string{
+		"0bda": driveKindRealtek,
+		"152d": driveKindJMicron,
+		"174c": driveKindASMedia,
+	}
+
 	driveIgnoredPattern    = regexp.MustCompile(`(?i)flash drive`)
 	driveControllerPattern = regexp.MustCompile(`^nvme[0-9]+$`)
 	driveNamespacePattern  = regexp.MustCompile(`^nvme[0-9]+n[0-9]+$`)

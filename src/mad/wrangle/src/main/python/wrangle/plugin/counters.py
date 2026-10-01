@@ -595,6 +595,10 @@ class RunHistory:
                 self._adhoc_current = None
             current.done.set()
 
+    @property
+    def plugins(self) -> list[str]:
+        return list(self._all_plugins)
+
     def snapshot(self) -> Snapshot:
         with self._lock:
             counters_dict = {f"{source}|{action}": {"source": c.source, "action": c.action, "label": c.label, "aggregator": c.aggregator, "format": c.format, "error": c.error} for (source, action), c

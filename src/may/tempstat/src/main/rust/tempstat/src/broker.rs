@@ -25,7 +25,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Mqtt(msg) => write!(f, "mqtt error: {msg}"),
+            Error::Mqtt(msg) => write!(f, "mqtt error [{msg}]"),
             Error::Timeout => write!(f, "timed out connecting to broker"),
         }
     }
@@ -113,8 +113,8 @@ impl MqttPublisher {
                         if thread_shutdown.load(Ordering::SeqCst) {
                             break;
                         }
-                        warn!("broker error [{address}]: {err}");
-                        info!("broker reconnecting [{}] in {:?}", address, RECONNECT_DELAY);
+                        warn!("broker error [{address}] [{err}]");
+                        info!("broker reconnecting [{}] in [{:?}]", address, RECONNECT_DELAY);
                         thread::sleep(RECONNECT_DELAY);
                     }
                 }
@@ -158,8 +158,8 @@ impl MqttPublisher {
 impl Publisher for MqttPublisher {
     fn publish(&mut self, topic: &str, payload: &[u8]) -> Result<()> {
         match std::str::from_utf8(payload) {
-            Ok(text) => debug!("publish [{topic}] -> {text}"),
-            Err(_) => debug!("publish [{topic}] -> ({} bytes)", payload.len()),
+            Ok(text) => debug!("publish [{topic}] -> [{text}]"),
+            Err(_) => debug!("publish [{topic}] -> [{}] bytes", payload.len()),
         }
         if topic != self.status_topic {
             match self.retained.lock() {

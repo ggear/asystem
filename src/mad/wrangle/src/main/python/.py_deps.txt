@@ -1,6 +1,7 @@
 mock==5.2.0
 pandas==3.0.6
 polars==1.44.2
+pyarrow==25.0.1
 jinja2==3.1.6
 orjson==3.12.0
 tabulate==0.10.0
@@ -12,5 +13,5 @@ psycopg[binary]==3.3.6
 python-calamine==0.8.2
 adbc-driver-postgresql==1.12.0
 gspread==6.2.1
-google-auth==2.58.0
+google-auth==2.59.0
 google-api-python-client==2.200.0
