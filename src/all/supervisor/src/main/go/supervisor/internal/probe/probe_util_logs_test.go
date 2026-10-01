@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -103,6 +104,61 @@ func TestProbeUtilLogs_IgnoredMessagesAreNotErrors(t *testing.T) {
 	}
 	if !isLogError(3, "ata1.00: failed command") {
 		t.Fatalf("isLogError on a kept message: got false want true")
+	}
+}
+
+func TestProbeUtilLogs_AnOOMKillCountsOnceAndItsStackDumpNotAtAll(t *testing.T) {
+	captured := `CPU: 8 UID: 0 PID: 1327866 Comm: polars-0 Tainted: G S                 6.14.2-401.asahi.fc42.aarch64+16k #1
+Tainted: [S]=CPU_OUT_OF_SPEC
+Hardware name: Apple Mac mini (M2 Pro, 2023) (DT)
+Call trace:
+show_stack+0x30/0x98 (C)
+dump_stack_lvl+0x7c/0xa0
+dump_stack+0x18/0x2c
+dump_header+0x48/0x190
+oom_kill_process+0x2ac/0x350
+out_of_memory+0xdc/0x350
+mem_cgroup_out_of_memory+0x138/0x160
+try_charge_memcg+0x3fc/0x6c0
+charge_memcg+0x4c/0xa0
+mem_cgroup_swapin_charge_folio+0x74/0x1c8
+__read_swap_cache_async+0x27c/0x308
+swap_vma_readahead+0x240/0x4a8
+swapin_readahead+0x88/0x180
+do_swap_page+0x56c/0xd60
+handle_pte_fault+0x188/0x220
+__handle_mm_fault+0x1b0/0x420
+handle_mm_fault+0xbc/0x340
+do_page_fault+0x148/0x630
+do_translation_fault+0x54/0xa0
+do_mem_abort+0x48/0xa0
+el0_da+0x3c/0x160
+el0t_64_sync_handler+0xc4/0x140
+el0t_64_sync+0x1b0/0x1b8
+Memory cgroup out of memory: Killed process 1327212 (wrangle) total-vm:8633456kB, anon-rss:2049920kB, file-rss:31008kB, shmem-rss:0kB, UID:0 pgtables:3520kB oom_score_adj:0
+CIFS: VFS: \\macmini-max\share-20 Close interrupted close
+CIFS: VFS: \\macmini-max\share-20 Close interrupted close`
+	var counted []string
+	for line := range strings.SplitSeq(captured, "\n") {
+		if isLogError(3, line) {
+			counted = append(counted, line)
+		}
+	}
+	if len(counted) != 1 || !strings.HasPrefix(counted[0], "Memory cgroup out of memory: Killed process") {
+		t.Errorf("counted %q, want the OOM kill alone", counted)
+	}
+	for _, kept := range []string{
+		"BUG: kernel NULL pointer dereference, address: 0000000000000008",
+		"WARNING: CPU: 3 PID: 1 at mm/page_alloc.c:4416 __alloc_pages+0x2d0/0x3c0",
+		"systemd-journald[637]: Failed to create new system journal: No space left on device",
+		"CIFS: VFS: \\\\macmini-max\\share-20 error -5 on ioctl to get interface list",
+	} {
+		if !isLogError(3, kept) {
+			t.Errorf("isLogError(%q) = false, want a headline or a real share fault still counted", kept)
+		}
+	}
+	if warning := "BTRFS warning (device sdd1): read-write for sector size 4096 with page size 16384 is experimental"; isLogError(4, warning) {
+		t.Errorf("isLogError(4, %q) = true, want a warning-priority line without the word error left uncounted", warning)
 	}
 }
 

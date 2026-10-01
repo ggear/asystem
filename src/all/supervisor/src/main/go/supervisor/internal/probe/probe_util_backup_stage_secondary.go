@@ -28,7 +28,7 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 		return stageResult{}, err
 	}
 	scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageSecondary), scribe.ActionStart).Infof("resolved", time.Now(), "[%s] resolved share", share)
-	if err := mountTarget(ctx, share); err != nil {
+	if err := mountTarget(ctx, scribe.SubjectStage(metric.BackupStageSecondary), share); err != nil {
 		return stageResult{}, err
 	}
 	if err := os.MkdirAll(filepath.Join(share, treeBackupDirectory), 0o755); err != nil {
@@ -78,7 +78,7 @@ func runSecondaryStage(ctx context.Context, request stageRequest, counters *stag
 		}
 	}
 
-	percent, usedMB, totalMB, ok := measureUsage(ctx, share)
+	percent, usedMB, totalMB, ok := measureUsage(ctx, scribe.SubjectStage(metric.BackupStageSecondary), share)
 	result := stageResult{}
 	if ok {
 		result.diskUsagePerc, result.diskUsedMB, result.diskTotalMB = percent, usedMB, totalMB
@@ -128,7 +128,7 @@ func promoteOneService(ctx context.Context, request stageRequest, share, host, s
 	} else {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectService(service), scribe.ActionCompute).Infof("thinning", time.Now(),
 			"[%s] thinning with the generic pruner, the module ships none", target)
-		gfsThin(ctx, target, config.Load(request.ConfigPath))
+		gfsThin(ctx, scribe.SubjectStage(metric.BackupStageSecondary), target, config.Load(request.ConfigPath))
 	}
 	return rsyncErr
 }
@@ -220,10 +220,10 @@ func clearDirectory(dir string) {
 	}
 }
 
-func gfsThin(ctx context.Context, dir string, loaded *config.Config) {
+func gfsThin(ctx context.Context, subject scribe.Subject, dir string, loaded *config.Config) {
 	keepDaily, keepWeekly, keepMonthly := loaded.BackupKeepDaily(), loaded.BackupKeepWeekly(), loaded.BackupKeepMonthly()
 	if keepDaily+keepWeekly+keepMonthly <= 0 {
-		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionRemove).Warnf("excluded", time.Now(),
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("excluded", time.Now(),
 			"[%s] is not thinned, the config declares no grandfather father son window so every dated directory would be pruned", dir)
 		return
 	}
@@ -272,12 +272,12 @@ func gfsThin(ctx context.Context, dir string, loaded *config.Config) {
 		_, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "subvolume", "delete", path)
 		if abandoned || code != 0 {
 			if err := os.RemoveAll(path); err != nil {
-				scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionRemove).Warnf("faulting", time.Now(),
+				scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Warnf("faulting", time.Now(),
 					"[%s] could not be pruned from [%s] with [%v]", name, dir, err)
 				continue
 			}
 		}
-		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionRemove).Infof("expunged", time.Now(),
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionRemove).Infof("expunged", time.Now(),
 			"[%s] pruned from [%s] outside the grandfather father son window", name, dir)
 	}
 }

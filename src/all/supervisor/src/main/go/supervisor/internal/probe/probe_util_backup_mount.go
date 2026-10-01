@@ -165,14 +165,14 @@ func diagnosed(ctx context.Context, target string) string {
 	return reason
 }
 
-func mountTarget(ctx context.Context, target string) error {
+func mountTarget(ctx context.Context, subject scribe.Subject, target string) error {
 	if verified(ctx, target) {
 		return nil
 	}
 	if _, ok := declaredDevice(target); !ok {
 		return errMountUndeclared
 	}
-	scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStart).Infof("mounting", time.Now(), "[%s] mounting", target)
+	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStart).Infof("mounting", time.Now(), "[%s] mounting", target)
 	_, code, abandoned := bounded(ctx, stageBoundedWait, "mount", target)
 	if abandoned {
 		return errMountAbandoned
@@ -183,7 +183,7 @@ func mountTarget(ctx context.Context, target string) error {
 	return fmt.Errorf("[%s] mount exited [%d] yet it does not carry the declared device", target, code)
 }
 
-func detachAll(ctx context.Context, homeRoot string) {
+func detachAll(ctx context.Context, subject scribe.Subject, homeRoot string) {
 	for _, target := range backupTargets() {
 		if !detachable(ctx, target, homeRoot) {
 			continue
@@ -202,16 +202,16 @@ func detachAll(ctx context.Context, homeRoot string) {
 		if detachable(ctx, target, homeRoot) {
 			if code == 0 {
 				remaining, _, _ := bounded(ctx, stageBoundedWait, "findmnt", "-n", "-o", "ID,SOURCE,FSTYPE,PROPAGATION", target)
-				scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Warnf("faulting", time.Now(),
+				scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", time.Now(),
 					"[%s] unmount returned 0 yet it still reads as mounted by [%s] with device [%d] against home [%d], detaching forcibly and lazily",
 					target, strings.Join(strings.Fields(remaining), " "), deviceID(target), deviceID(homeRoot))
 			} else {
-				scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Warnf("faulting", time.Now(),
+				scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", time.Now(),
 					"[%s] unmount failed, detaching forcibly and lazily", target)
 			}
 			_, _, _ = bounded(ctx, stageBoundedWait, "umount", "-f", "-l", target)
 			if detachable(ctx, target, homeRoot) {
-				scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Warnf("faulting", time.Now(),
+				scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", time.Now(),
 					"[%s] could not detach, it is still mounted and will need the disk powered back on", target)
 			}
 		}
@@ -305,11 +305,11 @@ func mountedLocalShares(ctx context.Context) []string {
 	return mounts
 }
 
-func measureUsage(ctx context.Context, target string) (percent float64, usedMB, totalMB int, ok bool) {
+func measureUsage(ctx context.Context, subject scribe.Subject, target string) (percent float64, usedMB, totalMB int, ok bool) {
 	if !mountpointCheck(ctx, target) {
 		return 0, 0, 0, false
 	}
-	uuid, found, wedged := btrfsUUID(ctx, target)
+	uuid, found, wedged := btrfsUUID(ctx, subject, target)
 	if wedged {
 		return 0, 0, 0, false
 	}
@@ -339,19 +339,19 @@ func measureUsage(ctx context.Context, target string) (percent float64, usedMB, 
 	return float64(used) * 100 / float64(total), int(used / bytesPerMebibyte), int(total / bytesPerMebibyte), true
 }
 
-func btrfsUUID(ctx context.Context, target string) (uuid string, found, wedged bool) {
+func btrfsUUID(ctx context.Context, subject scribe.Subject, target string) (uuid string, found, wedged bool) {
 	if _, unidentified := btrfsUnidentified.Load(target); unidentified {
 		return "", false, false
 	}
 	out, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "filesystem", "show", target)
 	if abandoned {
-		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionCompute).Warnf("faulting", time.Now(),
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Warnf("faulting", time.Now(),
 			"[%s] btrfs filesystem show was abandoned, the filesystem is not answering", target)
 		return "", false, true
 	}
 	if code != 0 {
 		if _, loaded := btrfsUnidentified.LoadOrStore(target, true); !loaded {
-			scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionCompute).Infof("resolved", time.Now(),
+			scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("resolved", time.Now(),
 				"[%s] btrfs cannot identify this path from in here, measuring it with df for the rest of this run", target)
 		}
 		return "", false, false

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"supervisor/internal/config"
+	"supervisor/internal/scribe"
 )
 
 func TestProbeUtilBackupStageSecondary_RsyncFieldAgainstCapturedTertiaryMirror(t *testing.T) {
@@ -76,7 +77,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinKeepsTheDailyWeeklyAndMonthlyWindo
 		}
 	}
 
-	gfsThin(t.Context(), dir, loadedWithKeep(t, 3, 2, 2))
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 3, 2, 2))
 
 	survived := map[string]bool{}
 	remaining, err := os.ReadDir(dir)
@@ -121,7 +122,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinLeavesASingleEntryAlone(t *testing
 	if err := os.MkdirAll(filepath.Join(dir, timestamp), 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	gfsThin(t.Context(), dir, loadedWithKeep(t, 1, 1, 1))
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 1, 1, 1))
 	if _, err := os.Stat(filepath.Join(dir, timestamp)); err != nil {
 		t.Errorf("a single entry must never be pruned, count <= 1 is a no-op")
 	}
@@ -149,7 +150,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinPrunesNothingWithNoDeclaredWindow(
 			t.Fatalf("mkdir %s: %v", name, err)
 		}
 	}
-	gfsThin(t.Context(), dir, loadedWithKeep(t, 0, 0, 0))
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 0, 0, 0))
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("read dir: %v", err)
@@ -166,7 +167,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinPrunesNothingWithNoConfigAtAll(t *
 			t.Fatalf("mkdir %s: %v", name, err)
 		}
 	}
-	gfsThin(t.Context(), dir, nil)
+	gfsThin(t.Context(), scribe.SubjectNone, dir, nil)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("read dir: %v", err)
@@ -185,7 +186,7 @@ func TestProbeUtilBackupStageSecondary_GFSThinPrunesOnlyDatedDirectories(t *test
 			t.Fatalf("mkdir [%s]: %v", name, err)
 		}
 	}
-	gfsThin(t.Context(), dir, loadedWithKeep(t, 1, 0, 0))
+	gfsThin(t.Context(), scribe.SubjectNone, dir, loadedWithKeep(t, 1, 0, 0))
 	for _, name := range kept {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			t.Errorf("[%s] was pruned, want a name outside the dated form left alone", name)

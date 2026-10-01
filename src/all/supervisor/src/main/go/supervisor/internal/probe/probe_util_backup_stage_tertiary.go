@@ -36,7 +36,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 
 	cursor := kernelCursor(ctx)
 	defer func() {
-		if percent, usedMB, totalMB, ok := measureUsage(context.WithoutCancel(ctx), config.DirBackup); ok {
+		if percent, usedMB, totalMB, ok := measureUsage(context.WithoutCancel(ctx), scribe.SubjectStage(metric.BackupStageTertiary), config.DirBackup); ok {
 			result.diskUsagePerc, result.diskUsedMB, result.diskTotalMB = percent, usedMB, totalMB
 		}
 	}()
@@ -56,7 +56,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	}
 
 	for _, share := range backupShares() {
-		_ = mountTarget(ctx, share)
+		_ = mountTarget(ctx, scribe.SubjectStage(metric.BackupStageTertiary), share)
 	}
 	_ = os.WriteFile(filepath.Join(stagePath, tertiaryDeviceMarker), fmt.Appendf(nil, "%d", deviceID(config.DirBackup)), 0o644)
 	shares := mountedLocalShares(ctx)
@@ -282,7 +282,7 @@ func tertiaryCleanup(parent context.Context, request stageRequest) {
 	_, _, _ = bounded(ctx, stageBoundedWait, "pkill", "-TERM", "-f", pattern)
 	reapProcesses(ctx, pattern)
 	_, _, _ = bounded(ctx, stageBoundedWait, "sync", "-f", config.DirBackup)
-	detachAll(ctx, homeRoot)
+	detachAll(ctx, scribe.SubjectStage(metric.BackupStageTertiary), homeRoot)
 }
 
 func attachBackupDisk(ctx context.Context) error {
@@ -308,7 +308,7 @@ func attachBackupDisk(ctx context.Context) error {
 	}
 	var failed error
 	for _, target := range backupTargets() {
-		if err := mountTarget(ctx, target); err != nil {
+		if err := mountTarget(ctx, scribe.SubjectStage(metric.BackupStageTertiary), target); err != nil {
 			failed = err
 		}
 	}
@@ -394,7 +394,7 @@ func snapshotShares(ctx context.Context, request stageRequest, loaded *config.Co
 		}
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionCompute).Infof("snapshot", time.Now(),
 			"[%s] snapshotted to [%s]", subvolume, target)
-		gfsThin(ctx, snapshots, loaded)
+		gfsThin(ctx, scribe.SubjectStage(metric.BackupStageTertiary), snapshots, loaded)
 	}
 }
 
