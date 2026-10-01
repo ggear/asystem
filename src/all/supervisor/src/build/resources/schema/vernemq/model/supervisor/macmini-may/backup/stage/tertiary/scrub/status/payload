@@ -1,6 +1,6 @@
 {
   "run_id": "<text>",
-  "state": <success|skipped|stopped|timeout|failure|running>,
+  "state": <success|skipped|stopped|timeout|pausing|failure|running>,
   "started_ts": "<text>",
   "finished_ts": "<text>",
   "duration_s": <number>,

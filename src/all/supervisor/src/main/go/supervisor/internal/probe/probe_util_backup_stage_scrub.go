@@ -100,7 +100,7 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 			scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("scrubbed", started,
 				"[%s] scrub reached [%s], pausing it at [%s] percent to resume on the next run", config.DirBackup,
 				hard.Format(backupTimeFormat), backupPercent(floatReading(reached)))
-			halt = metric.BackupStateTimeout
+			halt = metric.BackupStatePausing
 			paused = true
 			cancelScrub(ctx)
 			break
@@ -168,7 +168,7 @@ finished:
 	if halt != "" {
 		state, success = halt, false
 	}
-	if !counted && halt == "" {
+	if !counted && (halt == "" || paused) {
 		state, success = metric.BackupStateFailure, false
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
 			"[%s] device stats could not be read, so this scrub cannot report the disk clean", config.DirBackup)
@@ -215,7 +215,7 @@ finished:
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("scrubbed", started,
 		"[%s] scrub finished as [%s] at [%s] percent having scrubbed [%s] GiB with [%d] chunks relocated",
 		config.DirBackup, state, backupPercent(floatReading(lastReading.progress)), backupSizedGibibytes(intReading(int64(lastReading.scrubbedMB))), relocated)
-	return success || (paused && counted && state == metric.BackupStateTimeout)
+	return success || state == metric.BackupStatePausing
 }
 
 func scrubAction(forced bool, trigger, status string, now time.Time) (action, reason string) {

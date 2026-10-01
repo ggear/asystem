@@ -256,6 +256,7 @@ func Payloads() []schema.Payload {
 					BackupStateSkipped,
 					BackupStateStopped,
 					BackupStateTimeout,
+					BackupStatePausing,
 					BackupStateFailure,
 					BackupStateRunning,
 				}},
@@ -352,6 +353,7 @@ const (
 	BackupStateSkipped = "skipped"
 	BackupStateStopped = "stopped"
 	BackupStateTimeout = "timeout"
+	BackupStatePausing = "pausing"
 	BackupStateFailure = "failure"
 
 	BackupTriggerSystem = "system"

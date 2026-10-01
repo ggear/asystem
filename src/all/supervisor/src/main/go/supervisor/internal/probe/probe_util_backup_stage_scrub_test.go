@@ -466,7 +466,7 @@ func TestProbeUtilBackupStageScrub_APassPausedAtItsDeadlineLeavesTheStageHealthy
 		expectedState   string
 	}{
 		{name: "a_clean_pass_paused_at_its_deadline_resumes_next_run", deviceStats: "btrfs/device-stats-mounted-backup.txt",
-			expectedHealthy: true, expectedState: metric.BackupStateTimeout},
+			expectedHealthy: true, expectedState: metric.BackupStatePausing},
 		{name: "a_paused_pass_that_made_no_progress_fails", deviceStats: "btrfs/device-stats-mounted-backup.txt", stalled: true,
 			expectedHealthy: false, expectedState: metric.BackupStateFailure},
 		{name: "a_paused_pass_with_device_errors_fails", deviceStats: "",
