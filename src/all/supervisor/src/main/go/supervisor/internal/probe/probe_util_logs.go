@@ -294,10 +294,11 @@ func parseLogRecord(line string, boot time.Time) (time.Time, string, bool) {
 	if err != nil {
 		return time.Time{}, "", false
 	}
-	if !isLogError(priority, after) {
+	message := strings.TrimSpace(after)
+	if !isLogError(priority, message) {
 		return time.Time{}, "", false
 	}
-	return boot.Add(time.Duration(micros) * time.Microsecond), after, true
+	return boot.Add(time.Duration(micros) * time.Microsecond), message, true
 }
 
 func isLogError(priority int, message string) bool {

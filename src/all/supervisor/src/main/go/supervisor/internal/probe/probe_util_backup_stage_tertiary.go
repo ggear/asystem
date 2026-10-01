@@ -124,6 +124,9 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 	scrubOK := true
 	if verified(ctx, config.DirBackup) {
 		snapshotShares(ctx, request, loaded)
+		if percent, usedMB, totalMB, ok := measureUsage(ctx, scribe.SubjectStage(metric.BackupStageTertiary), config.DirBackup); ok {
+			result.diskUsagePerc, result.diskUsedMB, result.diskTotalMB = percent, usedMB, totalMB
+		}
 		scrubOK = runScrub(ctx, request)
 	} else {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Errorf("faulting", time.Now(),

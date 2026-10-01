@@ -146,8 +146,12 @@ func runStage(ctx context.Context, request stageRequest) error {
 	}
 
 	if runErr != nil {
+		reason := runErr
+		if cause := context.Cause(stageCtx); state != metric.BackupStateFailure && cause != nil {
+			reason = cause
+		}
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", started,
-			"[%s] stage [%s] finished as [%s] with [%v]", request.RunID, request.Stage, state, runErr)
+			"[%s] stage [%s] finished as [%s] with [%v]", request.RunID, request.Stage, state, reason)
 		return fmt.Errorf("stage [%s] %w", request.Stage, runErr)
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("finished", started,
