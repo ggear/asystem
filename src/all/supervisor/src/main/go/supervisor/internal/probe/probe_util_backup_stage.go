@@ -171,8 +171,7 @@ func runStage(ctx context.Context, request stageRequest) error {
 		return fmt.Errorf("stage [%s] %w", request.Stage, runErr)
 	}
 	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("finished", started,
-		"%s at [%s] MiB/s from stage [%s] of run [%s] as [%s]", backupMoved(intReading(int64(document.SizeMB)), time.Duration(document.DurationS)*time.Second),
-		backupThroughput(backupRated(intReading(int64(document.SizeMB)), intReading(int64(document.DurationS)))),
+		"%s from stage [%s] of run [%s] as [%s]", backupMoved(intReading(int64(document.SizeMB)), time.Since(started)),
 		request.Stage, request.RunID, state)
 	return nil
 }

@@ -294,7 +294,11 @@ func backupProgressed(copied, total, percent, remaining reading, eta string, rat
 }
 
 func backupMoved(sizeMB reading, elapsed time.Duration) string {
-	return fmt.Sprintf("[%s] GiB in [%s] s", backupSizedGibibytes(sizeMB), elapsedSeconds(elapsed))
+	rate := unknownReading()
+	if sizeMB.known && sizeMB.value > 0 {
+		rate = backupRated(sizeMB, floatReading(elapsed.Seconds()))
+	}
+	return fmt.Sprintf("[%s] GiB in [%s] s at [%s] MiB/s", backupSizedGibibytes(sizeMB), elapsedSeconds(elapsed), backupThroughput(rate))
 }
 
 func backupHeld(sizeMB reading, elapsed time.Duration) string {
@@ -499,7 +503,7 @@ const (
 	backupGibibytesWidth  = 6
 	backupCountedWidth    = 5
 	backupPercentWidth    = 3
-	backupThroughputWidth = 3
+	backupThroughputWidth = 4
 	backupMinutesWidth    = 4
 	backupBarWidth        = 18
 

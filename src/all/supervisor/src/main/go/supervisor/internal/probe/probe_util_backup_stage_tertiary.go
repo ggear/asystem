@@ -86,7 +86,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 
 		expunging := &expungeProgress{sizes: expected.expungeSizes[share]}
 		expungeStarted := time.Now()
-		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("expunged", expungeStarted, "[%s] against [%s] to expunge", share, target)
+		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("expunged", expungeStarted, "[%s] starting", share)
 		stopExpunging := reportStageProgress(ctx, "expunged",
 			func() int64 { return expungedBytes + expunging.bytes() }, expected.expungeBytes, request.Expires)
 		expungeStats, expungeErr := runRsync(ctx, expunging, expungeArguments(share, target)...)
@@ -97,14 +97,14 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		}
 		counters.addTransfer(0, 0, 0, expungeStats.filesDeleted, 0, 0, 0)
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Infof("expunged", expungeStarted,
-			"[%s] having %s to expunge", share, backupMoved(intReading(expunging.bytes()/bytesPerMebibyte), time.Since(expungeStarted)))
+			"[%s] stopping with %s", share, backupMoved(intReading(expunging.bytes()/bytesPerMebibyte), time.Since(expungeStarted)))
 
 		rsyncTemp := filepath.Join(target, ".rsync")
 		_ = os.MkdirAll(rsyncTemp, 0o755)
 		pruneStale(rsyncTemp, tertiaryPartialKeep)
 
 		mirrorStarted := time.Now()
-		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("mirrored", mirrorStarted, "[%s] against [%s] to mirror", share, target)
+		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStart).Infof("mirrored", mirrorStarted, "[%s] starting", share)
 		stopMirroring := reportStageProgress(ctx, "mirrored", mirroring.bytes, expected.mirrorBytes, request.Expires)
 		stats, rsyncErr := runRsync(ctx, mirroring,
 			mirrorArguments(share, target, "--info=progress2", "--partial-dir="+rsyncTemp)...)
@@ -118,7 +118,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		counters.addTransfer(stats.filesTransferred, stats.totalTransferredBytes/bytesPerMebibyte, stats.filesCreated,
 			stats.filesDeleted, stats.filesListed, stats.totalFileSizeBytes/bytesPerMebibyte, stats.totalBytesSent/bytesPerMebibyte)
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Infof("mirrored", mirrorStarted,
-			"[%s] having %s to mirror", share, backupMoved(intReading(int64(stats.totalTransferredBytes)/bytesPerMebibyte), time.Since(mirrorStarted)))
+			"[%s] stopping with %s", share, backupMoved(intReading(int64(stats.totalTransferredBytes)/bytesPerMebibyte), time.Since(mirrorStarted)))
 	}
 
 	if err := ctx.Err(); err != nil {

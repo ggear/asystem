@@ -91,7 +91,7 @@ func TestProbeUtilBackupRender_ProgressCutsTheLineAtTheLastMeasuredField(t *test
 		{name: "a_part_gibibyte_keeps_its_tenth", total: intReading(mebibytesPerGibibyte / 2), percent: unknownReading(), remain: unknownReading(), rate: unknownReading(),
 			expected: "[   5.0] GiB of [   0.5] GiB"},
 		{name: "rate_known_holds_an_unknown_total_with_a_dash", total: unknownReading(), percent: unknownReading(), remain: unknownReading(), rate: floatReading(102),
-			expected: "[   5.0] GiB of [     -] GiB at [102] MiB/s"},
+			expected: "[   5.0] GiB of [     -] GiB at [ 102] MiB/s"},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -367,5 +367,30 @@ func TestProbeUtilBackupRender_APausingScrubReadsPausingBesideASuccessfulRun(t *
 	if document := finishRun(root, run, time.Now()); document.State != metric.BackupStateSuccess || document.StagesFailed != 0 || document.StagesHalted != 0 {
 		t.Errorf("finishRun() = state %q failed %d halted %d, want success with nothing failed or halted, agreeing with the row",
 			document.State, document.StagesFailed, document.StagesHalted)
+	}
+}
+
+func TestProbeUtilBackupRender_MovedStatesTheSizeTheSecondsAndTheRate(t *testing.T) {
+	tests := []struct {
+		name     string
+		sizeMB   reading
+		elapsed  time.Duration
+		expected string
+	}{
+		{name: "nothing_moved_has_no_rate", sizeMB: intReading(0), elapsed: 106 * time.Millisecond,
+			expected: "[   0.0] GiB in [  0] s at [   -] MiB/s"},
+		{name: "a_subsecond_copy_still_rates_from_the_exact_duration", sizeMB: intReading(1229), elapsed: 2243 * time.Millisecond,
+			expected: "[   1.2] GiB in [  2] s at [ 548] MiB/s"},
+		{name: "a_zero_duration_has_no_rate_rather_than_infinity", sizeMB: intReading(1229), elapsed: 0,
+			expected: "[   1.2] GiB in [  0] s at [   -] MiB/s"},
+		{name: "an_unknown_size_has_no_rate", sizeMB: unknownReading(), elapsed: time.Minute,
+			expected: "[     -] GiB in [ 60] s at [   -] MiB/s"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := backupMoved(testCase.sizeMB, testCase.elapsed); got != testCase.expected {
+				t.Errorf("backupMoved() = %q, want %q", got, testCase.expected)
+			}
+		})
 	}
 }
