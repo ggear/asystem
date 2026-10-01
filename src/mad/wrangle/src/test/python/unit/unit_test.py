@@ -28,6 +28,7 @@ from unittest import mock
 
 import csv_diff  # type: ignore
 import google.oauth2.service_account
+import pandas as pd
 import polars as pl
 import pytest
 import tomllib
@@ -423,6 +424,32 @@ class WrangleTest(unittest.TestCase):
                         file_asserts={
                             "__equity_current.csv": [
                                 assert_file_does_not_exist(),
+                            ],
+                        })
+
+    # No current data, month files whose successor repeats their last bar, no remote source data downloads, no remote data repo downloads or uploads
+    def test_equity_local_corrupt_3(self):
+        fixture = _load_fixture("local", "equity", "corrupt_3")
+        self.run_plugin("equity", plugin.RepoScope.LOCAL, "corrupt_3", log_level="fatal",
+                        disable_sheet_downloads=True, disable_database_downloads=True, disable_drive_downloads=True, disable_source_downloads=True,
+                        disable_sheet_uploads=True, disable_database_uploads=True, disable_drive_uploads=True,
+                        enable_rerun=False, force_reprocessing=True, force_downloads=False,
+                        counter_asserts=merge_asserts(ASSERT_RUN, {
+                            "counter_equals": {
+                                plugin.CTR_SRC_FILES: {
+                                    plugin.CTR_ACT_PROCESSED: fixture["files_processed"],
+                                    plugin.CTR_ACT_ERRORED: fixture["expected_errors"],
+                                },
+                                plugin.CTR_SRC_DATA: {
+                                    plugin.CTR_ACT_CURRENT_COLUMNS: fixture["cols_data"],
+                                    plugin.CTR_ACT_DELTA_ROWS: fixture["rows_delta"],
+                                },
+                            },
+                        }),
+                        file_asserts={
+                            "__equity_current.csv": [
+                                assert_file_size(),
+                                assert_file_dates(start_date="2025-09-01", end_date=fixture["end_date"], contiguous="days"),
                             ],
                         })
 
@@ -1327,6 +1354,26 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={"SOME UNKNOWN COLUMN": pl.Utf8})))
         self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_data[0]})))
         self.assertEqual(df_lots_rows, len(test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_lots[0]})))
+
+    def test_library_stock(self):
+        test = PluginStub("Test", "SOME_NON_EXISTANT_GUID")
+        plugin.config.disable_source_downloads = False
+        plugin.config.force_downloads = False
+
+        def _history(dates):
+            index = pd.DatetimeIndex([pd.Timestamp(stock_date) for stock_date in dates]).tz_localize("Australia/Sydney")
+            return pd.DataFrame({"Open": 1.0, "High": 1.0, "Low": 1.0, "Close": 1.0, "Volume": 1, "Dividends": 0.0, "Stock Splits": 0.0}, index=index)
+
+        with tempfile.TemporaryDirectory() as cache_dir, mock.patch("wrangle.plugin._sources.yf.Ticker") as ticker:
+            ticker.return_value.history.return_value = _history(["2025-09-30"])
+            result = test.stock_download(join(cache_dir, "yahoo_aord_2025-10.csv"), "^AORD", "2025-10-01", "2025-10-31", check=False)
+            self.assertEqual(DownloadStatus.SKIPPED, result.status)
+            self.assertFalse(isfile(join(cache_dir, "yahoo_aord_2025-10.csv")))
+
+            ticker.return_value.history.return_value = _history(["2025-08-29", "2025-09-01", "2025-09-30", "2025-10-01"])
+            result = test.stock_download(join(cache_dir, "yahoo_aord_2025-09.csv"), "^AORD", "2025-09-01", "2025-09-30", check=False)
+            self.assertEqual(DownloadStatus.DOWNLOADED, result.status)
+            self.assertEqual(["2025-09-01", "2025-09-30"], pl.read_csv(result.file_path).get_column("Date").to_list())
 
     ########################################################################################################################
     # State

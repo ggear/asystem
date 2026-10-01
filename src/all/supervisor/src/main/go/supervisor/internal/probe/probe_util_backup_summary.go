@@ -213,7 +213,7 @@ func resolvedState(stages map[metric.BackupStage]string, scrub string) string {
 			return state
 		}
 	}
-	if scrub != "" && scrub != metric.BackupStateSuccess && scrub != metric.BackupStateSkipped {
+	if scrub != "" && scrub != metric.BackupStateSuccess && scrub != metric.BackupStateSkipped && scrub != metric.BackupStateTimeout {
 		return scrub
 	}
 	return metric.BackupStateSuccess

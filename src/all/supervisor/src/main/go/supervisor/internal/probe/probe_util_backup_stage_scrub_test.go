@@ -404,3 +404,58 @@ func TestProbeUtilBackupStageScrub_APassOpensItsDocumentBeforeTheFirstPoll(t *te
 		})
 	}
 }
+
+func TestProbeUtilBackupStageScrub_APassPausedAtItsDeadlineLeavesTheStageHealthy(t *testing.T) {
+	tests := []struct {
+		name            string
+		statusCode      int
+		deviceStats     string
+		expectedHealthy bool
+		expectedState   string
+	}{
+		{name: "a_clean_pass_paused_at_its_deadline_resumes_next_run", deviceStats: "btrfs/device-stats-mounted-backup.txt",
+			expectedHealthy: true, expectedState: metric.BackupStateTimeout},
+		{name: "a_paused_pass_with_device_errors_fails", deviceStats: "",
+			expectedHealthy: false, expectedState: metric.BackupStateFailure},
+		{name: "an_unreadable_scrub_status_fails_rather_than_skips", statusCode: 1,
+			expectedHealthy: false, expectedState: metric.BackupStateFailure},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			deviceStats := "[/dev/sdb1].read_io_errs    3"
+			if testCase.deviceStats != "" {
+				deviceStats = fixtureStages(t, testCase.deviceStats)
+			}
+			outputs := map[string]string{
+				"btrfs scrub status /backup":    fixtureStages(t, "btrfs/scrub-status-running.txt"),
+				"btrfs scrub status -R /backup": fixtureStages(t, "btrfs/scrub-status-raw-running.txt"),
+				"btrfs device stats /backup":    deviceStats,
+			}
+			request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-10-01_01-00-10",
+				RunPath: t.TempDir(), Expires: time.Now().Add(scrubMargin + time.Millisecond), Scrub: true,
+				Trigger: metric.BackupTriggerSystem, ConfigPath: filepath.Join(t.TempDir(), "config.json")}
+			originalStream, originalAvailable := stageStream, commandAvailable
+			t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
+			commandAvailable = func(string) bool { return true }
+			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+				key := name + " " + strings.Join(args, " ")
+				if key == "btrfs scrub status /backup" && testCase.statusCode != 0 {
+					return "ERROR: not a btrfs filesystem: /backup", testCase.statusCode, false
+				}
+				return outputs[key], 0, false
+			}
+
+			healthy := runScrub(context.Background(), request)
+			if healthy != testCase.expectedHealthy {
+				t.Errorf("runScrub() = %t, want %t", healthy, testCase.expectedHealthy)
+			}
+			document := readScrubSummary(scrubStatusPath(request.RunPath))
+			if document == nil || document.State != testCase.expectedState {
+				t.Fatalf("scrub document = %+v, want state %q", document, testCase.expectedState)
+			}
+			if document.SuccessBool {
+				t.Errorf("success_bool = true, want false since no pass finished")
+			}
+		})
+	}
+}

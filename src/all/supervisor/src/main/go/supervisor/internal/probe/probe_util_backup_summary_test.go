@@ -175,6 +175,9 @@ func TestProbeUtilBackupSummary_ResolvedState(t *testing.T) {
 		{name: "first_non_success_stage_in_declared_order", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateFailure, metric.BackupStageTertiary: metric.BackupStateStopped}, expected: metric.BackupStateFailure},
 		{name: "scrub_skipped_does_not_taint_success", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateSuccess}, scrub: metric.BackupStateSkipped, expected: metric.BackupStateSuccess},
 		{name: "scrub_failure_taints_an_otherwise_successful_run", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateSuccess}, scrub: metric.BackupStateFailure, expected: metric.BackupStateFailure},
+		{name: "scrub_paused_at_its_deadline_does_not_taint_success", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateSuccess}, scrub: metric.BackupStateTimeout, expected: metric.BackupStateSuccess},
+		{name: "scrub_stopped_taints_an_otherwise_successful_run", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateSuccess}, scrub: metric.BackupStateStopped, expected: metric.BackupStateStopped},
+		{name: "a_timed_out_stage_still_reads_timeout_beside_a_paused_scrub", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateTimeout}, scrub: metric.BackupStateTimeout, expected: metric.BackupStateTimeout},
 		{name: "no_stages_no_scrub", stages: map[metric.BackupStage]string{}, expected: metric.BackupStateSuccess},
 		{name: "a_skipped_stage_does_not_taint_success", stages: map[metric.BackupStage]string{metric.BackupStagePrimary: metric.BackupStateSuccess, metric.BackupStageSecondary: metric.BackupStateSuccess, metric.BackupStageTertiary: metric.BackupStateSkipped}, expected: metric.BackupStateSuccess},
 	}
@@ -217,7 +220,7 @@ func TestProbeUtilBackupSummary_ResolvedStateInvariantsHoldAcrossEveryCombinatio
 							return state == "" || state == metric.BackupStateSuccess || state == metric.BackupStateSkipped
 						}
 						allClean := clean(primary) && clean(secondary) && clean(tertiary) &&
-							clean(scrub)
+							(clean(scrub) || scrub == metric.BackupStateTimeout)
 						if allClean && result != metric.BackupStateSuccess {
 							t.Fatalf("primary=%q secondary=%q tertiary=%q scrub=%q: got %q, want success when every stage succeeded or skipped and scrub was success or skipped",
 								primary, secondary, tertiary, scrub, result)

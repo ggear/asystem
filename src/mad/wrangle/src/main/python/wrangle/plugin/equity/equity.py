@@ -4,7 +4,7 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from os.path import abspath, basename, dirname, isfile, join
 from typing import cast
 
@@ -341,6 +341,16 @@ class Equity(plugin.Plugin):
                         missing = required_columns - set(stock_df.columns)
                         if missing:
                             raise Exception(f"File [{stock_file_name}] missing required columns {sorted(missing)}")
+                        stock_period = basename(stock_file_name).removesuffix(".csv").rpartition("_")[2]
+                        stock_period_start = datetime.strptime(stock_period, "%Y-%m" if "-" in stock_period else "%Y").date()
+                        stock_period_end = stock_period_start.replace(year=stock_period_start.year + 1) if "-" not in stock_period else \
+                            (stock_period_start + timedelta(days=32)).replace(day=1)
+                        stock_dates = stock_df.get_column("Date").drop_nulls()
+                        stock_dates_outside = stock_dates.filter(~stock_dates.is_between(stock_period_start, stock_period_end, closed="left"))
+                        if len(stock_dates_outside):
+                            raise Exception(f"File [{stock_file_name}] has [{len(stock_dates_outside)}] rows outside its period [{stock_period_start}] to [{stock_period_end}]")
+                        if stock_dates.n_unique() != len(stock_dates):
+                            raise Exception(f"File [{stock_file_name}] has [{len(stock_dates) - stock_dates.n_unique()}] duplicate dates")
                         stock_df = stock_df.with_columns([pl.lit("AUD").alias("Base"), pl.lit(1.0).alias("Rate")])
                         stock_new_names = ["Date"] + [f"{stock_ticker} {column}" for column in DIMENSIONS_PRICE_AUX]
                         stock_df = stock_df.rename(dict(zip(stock_df.columns, stock_new_names, strict=False)))
@@ -554,7 +564,7 @@ class Equity(plugin.Plugin):
                 started_time = time.time()
                 for ticker in stocks_df:
                     if ticker.upper().strip() in {key.strip().upper() for key in STOCK}:
-                        equity_df = equity_df.join(stocks_df[ticker], on="Date", how="full", coalesce=True)
+                        equity_df = equity_df.join(stocks_df[ticker].unique(subset=["Date"], keep="last", maintain_order=True), on="Date", how="full", coalesce=True)
                 equity_df = _equity_upsample(equity_df)
                 _equity_print(equity_df, print_label="Stocks", print_verb="concatenated", started=started_time)
                 started_time = time.time()
