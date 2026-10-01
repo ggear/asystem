@@ -242,8 +242,15 @@ func gfsThin(ctx context.Context, subject scribe.Subject, dir string, loaded *co
 	}
 	sort.Strings(names)
 	count := len(names)
-	keep := map[string]bool{}
-	for index := count - 1; index >= 0 && index >= count-keepDaily; index-- {
+	keep, daySeen := map[string]bool{}, map[string]bool{}
+	for index := count - 1; index >= 0; index-- {
+		day := names[index][:10]
+		if !daySeen[day] {
+			if len(daySeen) >= keepDaily {
+				break
+			}
+			daySeen[day] = true
+		}
 		keep[names[index]] = true
 	}
 	weekSeen, monthSeen := map[string]bool{}, map[string]bool{}

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -552,5 +554,61 @@ func TestProbeUtilBackupStageScrub_AResumeBtrfsRefusesStartsAFreshPass(t *testin
 	}
 	if document := readScrubSummary(scrubStatusPath(request.RunPath)); document == nil || document.ResumedBool {
 		t.Errorf("scrub document = %+v, want resumed_bool false for the fresh pass that replaced the refused resume", document)
+	}
+}
+
+func TestProbeUtilBackupStageScrub_AStopThatUnmountsTheDiskLeavesTheFilesystemBeneathAlone(t *testing.T) {
+	originalStream, originalAvailable := stageStream, commandAvailable
+	t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
+	commandAvailable = func(string) bool { return true }
+	var unmounted atomic.Bool
+	var touched []string
+	var touchedMu sync.Mutex
+	root := "UUID:             ff55f331-1d06-4a57-a65f-89e457b3a3d0\n\tno stats available"
+	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+		key := name + " " + strings.Join(args, " ")
+		if strings.HasPrefix(key, "btrfs device stats") {
+			touchedMu.Lock()
+			touched = append(touched, key)
+			touchedMu.Unlock()
+		}
+		switch key {
+		case "btrfs scrub status /backup":
+			if unmounted.Load() {
+				return root, 0, false
+			}
+			return fixtureStages(t, "btrfs/scrub-status-running.txt"), 0, false
+		case "btrfs scrub status -R /backup":
+			if unmounted.Load() {
+				return root, 0, false
+			}
+			return fixtureStages(t, "btrfs/scrub-status-raw-running.txt"), 0, false
+		case "btrfs device stats /backup":
+			return fixtureStages(t, "btrfs/device-stats-mounted-backup.txt"), 0, false
+		}
+		return "", 0, false
+	}
+	request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-10-01_12-48-04",
+		RunPath: t.TempDir(), Expires: time.Now().Add(time.Hour), Scrub: true, Trigger: metric.BackupTriggerManual,
+		ConfigPath: filepath.Join(t.TempDir(), "config.json")}
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(backupProgressHeartbeat + time.Second)
+		unmounted.Store(true)
+		cancel()
+	}()
+
+	if runScrub(ctx, request) {
+		t.Errorf("runScrub() = true, want false for a stopped pass")
+	}
+	document := readScrubSummary(scrubStatusPath(request.RunPath))
+	wantScrubbedMB := 1050725752832 / 1048576
+	if document == nil || document.State != metric.BackupStateStopped || document.ScrubbedMB != wantScrubbedMB {
+		t.Errorf("scrub document = %+v, want stopped with scrubbed_mb [%d] from its own last reading, not the filesystem beneath", document, wantScrubbedMB)
+	}
+	touchedMu.Lock()
+	defer touchedMu.Unlock()
+	if len(touched) != 0 {
+		t.Errorf("issued %q, want no device stats read or reset once the scrubbed filesystem is gone", touched)
 	}
 }

@@ -150,8 +150,15 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 
 finished:
 	ctx = context.WithoutCancel(ctx)
-	if final, ok := scrubReadNow(ctx); ok {
+	scrubbing := scrubUUID(statusOut)
+	final, ok := scrubReadNow(ctx)
+	held := ok && scrubbing != "" && final.uuid == scrubbing
+	if held {
 		lastReading = final
+	} else {
+		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Warnf("faulting", started,
+			"[%s] no longer carries the filesystem [%s] this scrub ran on, keeping its last reading and leaving its device stats alone",
+			config.DirBackup, scrubbing)
 	}
 	if halt == "" {
 		halt = scrubHalt(stagePath, cancelled)
@@ -163,7 +170,10 @@ finished:
 	lastReading.corrected = max(lastReading.corrected-baseline.corrected, 0)
 	lastReading.uncorrectable = max(lastReading.uncorrectable-baseline.uncorrectable, 0)
 
-	deviceErrors, counted := deviceStatsSum(ctx)
+	deviceErrors, counted := 0, false
+	if held {
+		deviceErrors, counted = deviceStatsSum(ctx)
+	}
 	state, success := metric.BackupStateSuccess, true
 	if halt != "" {
 		state, success = halt, false
@@ -199,7 +209,7 @@ finished:
 		_, _, _ = bounded(ctx, stageBoundedWait, "btrfs", "device", "stats", "-z", config.DirBackup)
 	}
 	relocated := 0
-	if state == metric.BackupStateSuccess && time.Now().Before(hard) {
+	if held && state == metric.BackupStateSuccess && time.Now().Before(hard) {
 		relocated = runBalance(ctx, subject)
 	}
 	document := scrubDocument(request, state, success, started, lastReading)
@@ -322,6 +332,7 @@ func scrubReadNow(ctx context.Context) (scrubReading, bool) {
 		return scrubReading{}, false
 	}
 	reading := scrubReading{
+		uuid:          scrubUUID(statusOut),
 		scrubbedMB:    int(scrubCounter(rawOut, "data_bytes_scrubbed") / bytesPerMebibyte),
 		corrected:     int(scrubCounter(rawOut, "corrected_errors")),
 		uncorrectable: int(scrubCounter(rawOut, "uncorrectable_errors")),
@@ -344,6 +355,14 @@ func scrubReadNow(ctx context.Context) (scrubReading, bool) {
 		reading.running = strings.Contains(rawLower, "status:") && strings.Contains(rawLower, "running")
 	}
 	return reading, true
+}
+
+func scrubUUID(status string) string {
+	match := scrubUUIDPattern.FindStringSubmatch(status)
+	if match == nil {
+		return ""
+	}
+	return match[1]
 }
 
 func scrubTotalBytes(status string) float64 {
@@ -455,6 +474,7 @@ func publishScrubSummary(request stageRequest, host string, document scrubSummar
 }
 
 type scrubReading struct {
+	uuid                                        string
 	scrubbedMB, found, corrected, uncorrectable int
 	progress                                    float64
 	measured, running                           bool
@@ -464,6 +484,8 @@ var (
 	scrubStateDirectory = "/var/lib/btrfs"
 
 	scrubProgressPattern = regexp.MustCompile(`\(([0-9.]+)%\)`)
+
+	scrubUUIDPattern = regexp.MustCompile(`(?m)^UUID:\s*(\S+)\s*$`)
 
 	scrubTotalPattern = regexp.MustCompile(`(?m)^Total to scrub:\s*([0-9.]+)\s*(B|KiB|MiB|GiB|TiB|PiB)\s*$`)
 
