@@ -1373,7 +1373,7 @@ class WrangleTest(unittest.TestCase):
             ticker.return_value.history.return_value = _history(["2025-08-29", "2025-09-01", "2025-09-30", "2025-10-01"])
             result = test.stock_download(join(cache_dir, "yahoo_aord_2025-09.csv"), "^AORD", "2025-09-01", "2025-09-30", check=False)
             self.assertEqual(DownloadStatus.DOWNLOADED, result.status)
-            self.assertEqual(["2025-09-01", "2025-09-30"], pl.read_csv(result.file_path).get_column("Date").to_list())
+            self.assertEqual(["2025-09-01", "2025-09-30"], pl.read_csv(join(cache_dir, "yahoo_aord_2025-09.csv")).get_column("Date").to_list())
 
     ########################################################################################################################
     # State
