@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"supervisor/internal/config"
@@ -27,6 +28,7 @@ func runStage(ctx context.Context, request stageRequest) error {
 	started := time.Now()
 	stoppedMarker := filepath.Join(stagePath, stageStoppedMarker)
 	_ = os.Remove(stoppedMarker)
+	_ = os.Remove(filepath.Join(stagePath, stageTimedOutMarker))
 
 	stageCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
@@ -80,15 +82,17 @@ func runStage(ctx context.Context, request stageRequest) error {
 		defer close(backgroundDone)
 		ticker := time.NewTicker(stageLivenessInterval)
 		defer ticker.Stop()
+		polled := time.NewTicker(stageStopPoll)
+		defer polled.Stop()
 		for {
 			select {
 			case <-backgroundCtx.Done():
 				return
-			case <-ticker.C:
+			case <-polled.C:
 				if _, err := os.Stat(stoppedMarker); err == nil {
 					cancel(errStageStopped)
-					continue
 				}
+			case <-ticker.C:
 				if request.Stage == metric.BackupStageTertiary {
 					if held, reason := attached(backgroundCtx, stagePath); !held {
 						scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Errorf("faulting", started,
@@ -125,7 +129,14 @@ func runStage(ctx context.Context, request stageRequest) error {
 		runErr = fmt.Errorf("unknown stage [%s]", request.Stage)
 	}
 
-	state, success := stageVerdict(context.Cause(stageCtx), runErr, result.skipped)
+	cause := context.Cause(stageCtx)
+	if _, err := os.Stat(filepath.Join(stagePath, stageTimedOutMarker)); cause == nil && err == nil {
+		cause = errStageTimedOut
+	}
+	if _, err := os.Stat(filepath.Join(stagePath, stageStoppedMarker)); cause == nil && err == nil {
+		cause = errStageStopped
+	}
+	state, success := stageVerdict(cause, runErr, result.skipped)
 
 	document := backupSummary{
 		RunID: request.RunID, State: state, Trigger: request.Trigger,
@@ -147,7 +158,7 @@ func runStage(ctx context.Context, request stageRequest) error {
 
 	if runErr != nil {
 		reason := runErr
-		if cause := context.Cause(stageCtx); state != metric.BackupStateFailure && cause != nil {
+		if state != metric.BackupStateFailure && cause != nil {
 			reason = cause
 		}
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", started,
@@ -223,6 +234,8 @@ func stageExec(ctx context.Context, name string, args ...string) (string, int, b
 
 func realStageStream(ctx context.Context, sink io.Writer, name string, args ...string) (string, int, bool) {
 	command := exec.CommandContext(ctx, name, args...)
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
 	command.Stdin = nil
 	buffer := &lockedBuffer{}
 	command.Stdout = buffer
@@ -348,6 +361,7 @@ var (
 const (
 	moduleSkipHoursDefault  = 1
 	moduleSkipHoursVariable = "BACKUP_SKIP_HOURS"
+	moduleStopGrace         = time.Minute
 	moduleRestartVariable   = "BACKUP_SERVICE_RESTART"
 	moduleBackupPruneFlag   = "--prune-gfs"
 	moduleBackupLeaf        = "backup.sh"
@@ -358,6 +372,7 @@ const (
 const (
 	stageExpiredGrace     = time.Minute
 	stageLivenessInterval = 10 * time.Second
+	stageStopPoll         = time.Second
 	stageLivenessGrace    = time.Hour
 	stageHeartbeatRefresh = 10 * time.Minute
 

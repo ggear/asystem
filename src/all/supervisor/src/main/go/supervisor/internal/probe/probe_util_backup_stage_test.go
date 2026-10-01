@@ -145,3 +145,21 @@ func TestProbeUtilBackupStage_RealStageStreamTakesTheExitStatusOfACommandLeaving
 		t.Errorf("realStageStream output: got %q want it to contain started", out)
 	}
 }
+
+func TestProbeUtilBackupStage_ACancelledCommandTerminatesItsWholeProcessGroup(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "orphan")
+	ctx, cancel := context.WithCancel(t.Context())
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		cancel()
+	}()
+	script := `trap 'echo terminated; exit 0' TERM; (sleep 3; touch ` + marker + `) & wait`
+	out, _, abandoned := realStageStream(ctx, nil, "bash", "-c", script)
+	if !abandoned || !strings.Contains(out, "terminated") {
+		t.Errorf("realStageStream() = (%q, abandoned %t), want the child to run its TERM trap", out, abandoned)
+	}
+	time.Sleep(4 * time.Second)
+	if _, err := os.Stat(marker); err == nil {
+		t.Errorf("a grandchild outlived the cancelled command, want the whole process group terminated")
+	}
+}

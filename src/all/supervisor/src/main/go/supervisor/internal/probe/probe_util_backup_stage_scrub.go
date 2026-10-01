@@ -121,6 +121,9 @@ func runScrub(ctx context.Context, request stageRequest) bool {
 			break
 		}
 		silent = time.Time{}
+		if scrubbing := scrubUUID(statusOut); scrubbing != "" && reading.uuid != scrubbing {
+			break
+		}
 		lastReading = reading
 		if reading.progress >= 1 || (reading.measured && reading.progress > 0) {
 			reached = reading.progress
@@ -153,18 +156,18 @@ finished:
 	scrubbing := scrubUUID(statusOut)
 	final, ok := scrubReadNow(ctx)
 	held := ok && scrubbing != "" && final.uuid == scrubbing
+	if halt == "" {
+		halt = scrubHalt(stagePath, cancelled)
+	}
 	if held {
 		lastReading = final
-	} else if cancelled {
+	} else if halt == metric.BackupStateStopped || halt == metric.BackupStateTimeout {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Infof("excluded", started,
-			"[%s] released by the stop, keeping the last reading, skipping device stats", config.DirBackup)
+			"[%s] released by the [%s] stage, keeping the last reading, skipping device stats", config.DirBackup, halt)
 	} else {
 		scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Warnf("faulting", started,
 			"[%s] lost filesystem [%s] mid scrub, keeping the last reading, skipping device stats",
 			config.DirBackup, scrubbing)
-	}
-	if halt == "" {
-		halt = scrubHalt(stagePath, cancelled)
 	}
 	if lastReading.progress == 0 {
 		lastReading.progress = reached

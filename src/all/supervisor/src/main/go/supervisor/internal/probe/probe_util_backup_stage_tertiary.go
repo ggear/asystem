@@ -121,6 +121,9 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 			"%s from [%s]", backupMoved(intReading(int64(stats.totalTransferredBytes)/bytesPerMebibyte), time.Since(mirrorStarted)), share)
 	}
 
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
 	scrubOK := true
 	if verified(ctx, config.DirBackup) {
 		snapshotShares(ctx, request, loaded)

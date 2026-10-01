@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -136,10 +137,15 @@ func runBackupStart(ctx context.Context, request BackupRequest) error {
 		stages = []metric.BackupStage{request.Stage}
 	}
 	started := time.Now()
-	expires := backupExpiry(request.Config, started, request.Timeout)
+	expires, capped := backupExpiry(request.Config, started, request.Timeout)
 	host := scribe.SubjectHost(config.Load(request.Config).Host())
 	scribe.Log(scribe.SourceBackup, host, scribe.ActionStart).Infof("schedule", started,
 		"[%s] backup run over [%d] stages triggered by [%s]", request.RunID, len(stages), request.Trigger)
+	if capped {
+		scribe.Log(scribe.SourceBackup, host, scribe.ActionStart).Infof("schedule", started,
+			"[%s] deadline capped at [%s], [%s] before the scheduled [%02d:00] run", request.RunID,
+			expires.Format(backupTimeFormat), backupScheduleMargin, backupScheduledHour)
+	}
 
 	var stageErr error
 	for _, stage := range stages {
@@ -170,68 +176,71 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 		return err
 	}
 	runPath := backupRunPath(root, runID)
-	orphaned := false
-	if lock, lockErr := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644); lockErr == nil {
-		defer func() { _ = lock.Close() }()
-		if syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) == nil {
-			orphaned = true
-			defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()
-		}
-	}
-	stopped, refused := 0, 0
+	active := map[metric.BackupStage]backupSummary{}
 	for _, stage := range backupStages {
-		document := readBackupSummary(stageStatusPath(runPath, stage))
-		if document == nil || document.State != metric.BackupStateRunning {
-			continue
+		if document := readBackupSummary(stageStatusPath(runPath, stage)); document != nil && document.State == metric.BackupStateRunning {
+			active[stage] = *document
 		}
-		staged := stageRequest{Stage: stage, RunID: runID, RunPath: runPath, ConfigPath: request.Config}
-		if stopErr := stopStage(ctx, staged); stopErr != nil {
-			scribe.Log(scribe.SourceBackup, scribe.SubjectStage(stage), scribe.ActionStop).Warnf("faulting", time.Now(),
-				"[%s] stage stop reported [%v]", stage, stopErr)
-			refused++
-			continue
-		}
-		if orphaned {
-			halted := haltedStage(*document, metric.BackupStateStopped)
-			_ = writeAtomic(stageStatusPath(runPath, stage), halted)
-			publishStageStatus(request.Config, stage, halted)
-		}
-		stopped++
 	}
-	if stopped == 0 && refused == 0 {
+	if len(active) == 0 {
 		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("reported", started,
 			"[%s] carries no active stage, so there is nothing to stop", runID)
 		return nil
 	}
-	if orphaned && stopped > 0 {
-		if runStart, ok := runStarted(backupSummary{RunID: runID}); ok {
-			document := finishRun(root, runID, runStart)
-			_ = publishRunStatus(request.Config, document)
+	lock, err := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return fmt.Errorf("backup run lock [%s] could not be opened [%w]", lockPath(root), err)
+	}
+	defer func() { _ = lock.Close() }()
+	acquired := func() bool { return syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) == nil }
+	forced := func() error {
+		refused := 0
+		for _, stage := range backupStages {
+			if _, ok := active[stage]; !ok {
+				continue
+			}
+			if stopErr := stopStage(ctx, stageRequest{Stage: stage, RunID: runID, RunPath: runPath, ConfigPath: request.Config}); stopErr != nil {
+				scribe.Log(scribe.SourceBackup, scribe.SubjectStage(stage), scribe.ActionStop).Warnf("faulting", time.Now(),
+					"[%s] stage stop reported [%v]", stage, stopErr)
+				refused++
+			}
 		}
-	}
-	if refused > 0 {
-		return fmt.Errorf("stopped [%d] of [%d] active stage(s) of run [%s]", stopped, stopped+refused, runID)
-	}
-	if orphaned {
-		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("finished", started,
-			"[%s] held [%d] stage(s) of a run no process owns, finalised as [%s]", runID, stopped, metric.BackupStateStopped)
+		if refused > 0 {
+			return fmt.Errorf("forced [%d] of [%d] active stage(s) of run [%s] down", len(active)-refused, len(active), runID)
+		}
 		return nil
 	}
-	deadline := time.Now().Add(backupStopWait)
-	for {
-		if lock, lockErr := os.OpenFile(lockPath(root), os.O_CREATE|os.O_RDWR, 0o644); lockErr == nil {
-			released := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) == nil
-			if released {
-				_ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
-			}
-			_ = lock.Close()
-			if released {
-				break
+
+	if acquired() {
+		defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()
+		forceErr := forced()
+		for _, stage := range backupStages {
+			if document, ok := active[stage]; ok {
+				halted := haltedStage(document, metric.BackupStateStopped)
+				_ = writeAtomic(stageStatusPath(runPath, stage), halted)
+				publishStageStatus(request.Config, stage, halted)
 			}
 		}
+		if runStart, ok := runStarted(backupSummary{RunID: runID}); ok {
+			_ = publishRunStatus(request.Config, finishRun(root, runID, runStart))
+		}
+		scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("finished", started,
+			"[%s] held [%d] stage(s) of a run no process owns, finalised as [%s]", runID, len(active), metric.BackupStateStopped)
+		return forceErr
+	}
+
+	for stage := range active {
+		_ = os.WriteFile(filepath.Join(stageDir(runPath, stage), stageStoppedMarker), nil, 0o644)
+	}
+	deadline := time.Now().Add(backupStopWait)
+	for !acquired() {
 		if time.Now().After(deadline) {
-			return fmt.Errorf("stopped [%d] active stage(s) of run [%s] yet it still holds [%s] after [%s]",
-				stopped, runID, lockPath(root), backupStopWait)
+			scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Warnf("faulting", started,
+				"[%s] did not end within [%s] of its stop, forcing its stages down", runID, backupStopWait)
+			if forceErr := forced(); forceErr != nil {
+				return forceErr
+			}
+			return fmt.Errorf("run [%s] did not end within [%s] of its stop and was forced down", runID, backupStopWait)
 		}
 		select {
 		case <-ctx.Done():
@@ -239,8 +248,9 @@ func runBackupStop(ctx context.Context, request BackupRequest) error {
 		case <-time.After(backupStopPoll):
 		}
 	}
+	_ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 	scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Infof("finished", started,
-		"[%s] stopped [%d] active stage(s) and the run has ended", runID, stopped)
+		"[%s] stopped [%d] active stage(s) and the run has ended", runID, len(active))
 	return nil
 }
 
@@ -326,7 +336,7 @@ func discardRun(runPath string) {
 	_ = os.Remove(runPath)
 }
 
-func backupExpiry(configPath string, started time.Time, timeout time.Duration) time.Time {
+func backupExpiry(configPath string, started time.Time, timeout time.Duration) (time.Time, bool) {
 	expires := time.Time{}
 	if hours := config.Load(configPath).BackupTimeoutHours(); hours > 0 {
 		expires = started.Add(time.Duration(hours) * time.Hour)
@@ -339,7 +349,21 @@ func backupExpiry(configPath string, started time.Time, timeout time.Duration) t
 	if timeout > 0 {
 		expires = started.Add(timeout)
 	}
-	return expires
+	if expires.IsZero() {
+		return expires, false
+	}
+	scheduled := time.Date(started.Year(), started.Month(), started.Day(), backupScheduledHour, 0, 0, 0, started.Location())
+	if !scheduled.After(started) {
+		scheduled = scheduled.AddDate(0, 0, 1)
+	}
+	limit := scheduled.Add(-backupScheduleMargin)
+	if !expires.After(limit) {
+		return expires, false
+	}
+	if limit.Before(started) {
+		return started, true
+	}
+	return limit, true
 }
 
 func pruneRuns(root string, host scribe.Subject, started time.Time) {
@@ -395,6 +419,7 @@ const (
 	backupRunsKept        = 30
 	backupScheduledHour   = 1
 	backupTimeoutVariable = "BACKUP_TIMEOUT_HOURS"
+	backupScheduleMargin  = 10 * time.Minute
 	backupStopWait        = tertiaryCleanupWait + time.Minute
 	backupStopPoll        = 500 * time.Millisecond
 

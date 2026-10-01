@@ -2,6 +2,7 @@ package probe
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -558,6 +559,14 @@ func TestProbeUtilBackupStageScrub_AResumeBtrfsRefusesStartsAFreshPass(t *testin
 }
 
 func TestProbeUtilBackupStageScrub_AStopThatUnmountsTheDiskLeavesTheFilesystemBeneathAlone(t *testing.T) {
+	for _, cancelled := range []bool{true, false} {
+		t.Run(fmt.Sprintf("cancelled_%t", cancelled), func(t *testing.T) {
+			stopScrubUnderneath(t, cancelled)
+		})
+	}
+}
+
+func stopScrubUnderneath(t *testing.T, cancelled bool) {
 	originalStream, originalAvailable := stageStream, commandAvailable
 	t.Cleanup(func() { stageStream, commandAvailable = originalStream, originalAvailable })
 	commandAvailable = func(string) bool { return true }
@@ -592,10 +601,18 @@ func TestProbeUtilBackupStageScrub_AStopThatUnmountsTheDiskLeavesTheFilesystemBe
 		RunPath: t.TempDir(), Expires: time.Now().Add(time.Hour), Scrub: true, Trigger: metric.BackupTriggerManual,
 		ConfigPath: filepath.Join(t.TempDir(), "config.json")}
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stagePath := stageDir(request.RunPath, request.Stage)
+	if err := os.MkdirAll(stagePath, 0o755); err != nil {
+		t.Fatalf("mkdir stage: %v", err)
+	}
 	go func() {
 		time.Sleep(backupProgressHeartbeat + time.Second)
+		_ = os.WriteFile(filepath.Join(stagePath, stageStoppedMarker), nil, 0o644)
 		unmounted.Store(true)
-		cancel()
+		if cancelled {
+			cancel()
+		}
 	}()
 
 	if runScrub(ctx, request) {

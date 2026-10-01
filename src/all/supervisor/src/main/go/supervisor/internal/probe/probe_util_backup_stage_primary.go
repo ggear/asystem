@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"supervisor/internal/config"
@@ -89,6 +90,9 @@ func runOneService(ctx context.Context, request stageRequest, loaded *config.Con
 
 	script := moduleBackupScript(service)
 	command := exec.CommandContext(ctx, "bash", script)
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGTERM) }
+	command.WaitDelay = moduleStopGrace
 	command.Stdin = nil
 	command.Stdout = logFile
 	command.Stderr = logFile
