@@ -52,6 +52,17 @@ func TestProbeUtilMounts_Classification(t *testing.T) {
 			expectedError:      false,
 		},
 		{
+			name: "happy_may_mid_backup_leaves_the_backup_disk_to_the_backup_stage",
+			mounts: "/dev/mapper/fedora_macmini--may-root / ext4 rw 0 0\n" +
+				"/dev/mapper/fedora_macmini--may-share_07 /share/30 ext4 rw 0 0\n" +
+				"/dev/sdb1 /share/32 ext4 rw 0 0\n" +
+				"/dev/sdc1 /backup btrfs rw 0 0\n",
+			expectedSystem:     []string{"/"},
+			expectedShareLocal: []string{"/share/30", "/share/32"},
+			expectedRemote:     nil,
+			expectedError:      false,
+		},
+		{
 			name: "happy_jen_has_no_shares",
 			mounts: "/dev/sda2 / ext4 rw 0 0\n" +
 				"/dev/sda1 /boot/firmware vfat rw 0 0\n" +

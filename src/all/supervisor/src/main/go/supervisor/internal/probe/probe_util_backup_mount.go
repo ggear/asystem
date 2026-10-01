@@ -201,8 +201,10 @@ func detachAll(ctx context.Context, homeRoot string) {
 		}
 		if detachable(ctx, target, homeRoot) {
 			if code == 0 {
+				remaining, _, _ := bounded(ctx, stageBoundedWait, "findmnt", "-n", "-o", "ID,SOURCE,FSTYPE,PROPAGATION", target)
 				scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Warnf("faulting", time.Now(),
-					"[%s] unmount returned 0 yet it still reads as mounted, detaching forcibly and lazily", target)
+					"[%s] unmount returned 0 yet it still reads as mounted by [%s] with device [%d] against home [%d], detaching forcibly and lazily",
+					target, strings.Join(strings.Fields(remaining), " "), deviceID(target), deviceID(homeRoot))
 			} else {
 				scribe.Log(scribe.SourceBackup, scribe.SubjectNone, scribe.ActionStop).Warnf("faulting", time.Now(),
 					"[%s] unmount failed, detaching forcibly and lazily", target)

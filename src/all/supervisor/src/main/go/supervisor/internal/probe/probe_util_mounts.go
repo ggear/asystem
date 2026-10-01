@@ -544,7 +544,7 @@ func mountClass(fstype, mountpoint string) (bool, bool, bool) {
 	if strings.HasPrefix(mountpoint, config.DirShare+"/") {
 		return true, false, true
 	}
-	if mountpoint == mountBootRoot || strings.HasPrefix(mountpoint, mountBootRoot+"/") {
+	if mountpoint == mountBootRoot || strings.HasPrefix(mountpoint, mountBootRoot+"/") || mountpoint == config.DirBackup {
 		return false, false, false
 	}
 	return false, false, true
