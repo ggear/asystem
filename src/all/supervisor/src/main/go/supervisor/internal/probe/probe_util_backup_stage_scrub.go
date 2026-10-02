@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -195,21 +196,41 @@ finished:
 			"[%s] scrub made no progress past [%s] GiB, so resuming would never finish", config.DirBackup,
 			backupSizedGibibytes(intReading(int64(baseline.scrubbedMB))))
 	}
-	var corrupt []string
+	var files []scrubCorruptFile
 	if lastReading.found > 0 || lastReading.uncorrectable > 0 || deviceErrors > 0 {
 		state, success = metric.BackupStateFailure, false
 		logged := kernelSince(ctx, cursor)
-		corrupt = kernelCorrupted(logged)
-		scrubLog(ctx, stagePath, corrupt, kernelFaulted(logged))
-		if len(corrupt) > 0 {
-			scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-				"[%s] scrub found [%d] errors, [%d] uncorrectable, [%d] on the device, in [%d] files to delete and re-mirror, see stage [%s]",
-				config.DirBackup, lastReading.found, lastReading.uncorrectable, deviceErrors, len(corrupt), scrubLogLeaf)
-		} else {
-			scribe.Log(scribe.SourceBackup, subject, scribe.ActionCompute).Errorf("faulting", started,
-				"[%s] scrub found [%d] errors, [%d] uncorrectable, [%d] on the device, naming no file so the disk read badly, see stage [%s]",
-				config.DirBackup, lastReading.found, lastReading.uncorrectable, deviceErrors, scrubLogLeaf)
+		subvolumes := map[int64]string{}
+		if listed, code, abandoned := bounded(ctx, stageBoundedWait, "btrfs", "subvolume", "list", config.DirBackup); !abandoned && code == 0 {
+			for _, match := range scrubSubvolumePattern.FindAllStringSubmatch(listed, -1) {
+				if id, err := strconv.ParseInt(match[1], 10, 64); err == nil {
+					subvolumes[id] = strings.TrimSpace(match[2])
+				}
+			}
 		}
+		files = scrubCorruptFiles(kernelCorrupted(logged), subvolumes)
+		mounted := held && verified(ctx, config.DirBackup)
+		for index := range files {
+			file := &files[index]
+			switch {
+			case file.source == "":
+				file.outcome = scrubOutcomeUnmapped
+			case !file.live:
+				file.outcome = scrubOutcomeSnapshot
+			case !mounted:
+				file.outcome = scrubOutcomeKept
+			default:
+				file.outcome = scrubOutcomeDeleted
+				if _, code, abandoned := bounded(ctx, stageBoundedWait, "rm", "-f", "--", file.mirror); abandoned || code != 0 {
+					file.outcome = scrubOutcomeKept
+				}
+			}
+		}
+		listing := make([]string, 0, len(files))
+		for _, file := range files {
+			listing = append(listing, fmt.Sprintf("%-8s %4d %s", file.outcome, file.snapshots, file.mirror))
+		}
+		scrubLog(ctx, stagePath, listing, kernelFaulted(logged))
 	}
 	if deviceErrors > 0 || lastReading.found > 0 {
 		_, _, _ = bounded(ctx, stageBoundedWait, "btrfs", "device", "stats", "-z", config.DirBackup)
@@ -222,15 +243,21 @@ finished:
 	document.ResumedBool = resumed
 	document.DeviceErrors = deviceErrors
 	document.ChunksRelocated = relocated
-	document.FilesToDeleteCount = len(corrupt)
-	if len(corrupt) > kernelCorruptNamed {
-		corrupt = corrupt[:kernelCorruptNamed]
+	document.FilesToDeleteCount = len(files)
+	named := make([]string, 0, min(len(files), kernelCorruptNamed))
+	for _, file := range files[:min(len(files), kernelCorruptNamed)] {
+		named = append(named, file.mirror)
 	}
-	document.FilesToDelete = strings.Join(corrupt, ",")
+	document.FilesToDelete = strings.Join(named, ",")
 	publishScrubSummary(request, host, document)
-	scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Infof("scrubbed", started,
-		"[%s] scrub finished as [%s] at [%s] percent having scrubbed [%s] GiB with [%d] chunks relocated",
-		config.DirBackup, state, backupPercent(floatReading(lastReading.progress)), backupSizedGibibytes(intReading(int64(lastReading.scrubbedMB))), relocated)
+	for _, line := range scrubReport(state, resumed, lastReading, deviceErrors, counted, relocated, files) {
+		logger := scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop)
+		if line.fault {
+			logger.Errorf(line.verb, started, "%s", line.detail)
+		} else {
+			logger.Infof(line.verb, started, "%s", line.detail)
+		}
+	}
 	return success || state == metric.BackupStatePausing
 }
 
@@ -260,6 +287,106 @@ func scrubOrigin(action, status string) string {
 		return fmt.Sprintf("of the pass from [%s]", since)
 	}
 	return "of an unfinished pass"
+}
+
+func scrubCorruptFiles(corruptions []kernelCorruption, subvolumes map[int64]string) []scrubCorruptFile {
+	byMirror := map[string]*scrubCorruptFile{}
+	for _, corruption := range corruptions {
+		subvolume, snapshot := subvolumes[corruption.root], false
+		if rest, ok := strings.CutPrefix(subvolume, tertiarySnapshotDirectory+"/"); ok {
+			subvolume, snapshot = filepath.Dir(rest), true
+		}
+		relative := filepath.Join(subvolume, corruption.path)
+		mirror := filepath.Join(config.DirBackup, relative)
+		file, ok := byMirror[mirror]
+		if !ok {
+			file = &scrubCorruptFile{mirror: mirror}
+			if rest, under := strings.CutPrefix(relative, tertiaryShareDirectory+"/"); under && !strings.HasPrefix(rest, "..") {
+				file.source = filepath.Join(config.DirShare, rest)
+			}
+			byMirror[mirror] = file
+		}
+		if snapshot {
+			file.snapshots++
+		} else {
+			file.live = true
+		}
+	}
+	files := make([]scrubCorruptFile, 0, len(byMirror))
+	for _, file := range byMirror {
+		files = append(files, *file)
+	}
+	slices.SortFunc(files, func(left, right scrubCorruptFile) int { return strings.Compare(left.mirror, right.mirror) })
+	return files
+}
+
+func scrubReport(state string, resumed bool, reading scrubReading, deviceErrors int, counted bool, relocated int, files []scrubCorruptFile) []scrubReportLine {
+	pass := "fresh"
+	if resumed {
+		pass = "resumed"
+	}
+	lines := []scrubReportLine{{verb: "scrubbed", detail: fmt.Sprintf(
+		"[%s] scrub finished as [%s] at [%s] percent of [%s] GiB, a [%s] pass with [%d] chunks relocated",
+		config.DirBackup, state, backupPercent(floatReading(reading.progress)),
+		backupSizedGibibytes(intReading(int64(reading.scrubbedMB))), pass, relocated)}}
+	device := "-"
+	if counted {
+		device = strconv.Itoa(deviceErrors)
+	}
+	faulted := reading.found > 0 || reading.uncorrectable > 0 || deviceErrors > 0
+	verdict := ", the disk is clean"
+	switch {
+	case faulted:
+		verdict = fmt.Sprintf(", [%d] files corrupt, see [%s]", len(files), scrubLogLeaf)
+	case !counted:
+		verdict = ", its device stats unread"
+	}
+	lines = append(lines, scrubReportLine{fault: faulted, verb: "scrubbed", detail: fmt.Sprintf(
+		"[%s] scrub found [%d] errors, [%d] corrected, [%d] uncorrectable, [%s] on the device%s",
+		config.DirBackup, reading.found, reading.corrected, reading.uncorrectable, device, verdict)})
+	if !faulted {
+		return lines
+	}
+	tally := map[string]int{}
+	for index, file := range files {
+		tally[file.outcome]++
+		if index >= kernelCorruptNamed {
+			continue
+		}
+		var prefix string
+		switch file.outcome {
+		case scrubOutcomeDeleted:
+			prefix = fmt.Sprintf("[%-8s] corrupt in the mirror and [%3d] snapshots, the next run sends it again", file.outcome, file.snapshots)
+		case scrubOutcomeKept:
+			prefix = fmt.Sprintf("[%-8s] corrupt in the mirror and [%3d] snapshots, delete it then run [abackup start]", file.outcome, file.snapshots)
+		case scrubOutcomeSnapshot:
+			prefix = fmt.Sprintf("[%-8s] corrupt in [%3d] snapshots alone, never restore it from them", file.outcome, file.snapshots)
+		default:
+			prefix = fmt.Sprintf("[%-8s] corrupt outside the share mirror, nothing will send it again", file.outcome)
+		}
+		budget := scribe.Detailed() - len(prefix) - len(" []")
+		lines = append(lines, scrubReportLine{fault: true, verb: "faulting", detail: prefix + " [" + scribe.Tail(file.mirror, budget) + "]"})
+	}
+	if len(files) > kernelCorruptNamed {
+		lines = append(lines, scrubReportLine{fault: true, verb: "faulting", detail: fmt.Sprintf(
+			"[%d] more corrupt files are named in [%s] beside this run's stage log", len(files)-kernelCorruptNamed, scrubLogLeaf)})
+	}
+	if count := tally[scrubOutcomeDeleted]; count > 0 {
+		lines = append(lines, scrubReportLine{fault: true, verb: "faulting", detail: fmt.Sprintf(
+			"[%d] corrupt files deleted from [%s], run [abackup start] now to mirror them again, or the next scheduled run will",
+			count, config.DirBackup)})
+	}
+	if count := tally[scrubOutcomeKept]; count > 0 {
+		lines = append(lines, scrubReportLine{fault: true, verb: "faulting", detail: fmt.Sprintf(
+			"[%d] corrupt files could not be deleted from [%s], delete each by hand then run [abackup start]",
+			count, config.DirBackup)})
+	}
+	if len(files) == 0 {
+		lines = append(lines, scrubReportLine{fault: true, verb: "faulting", detail: fmt.Sprintf(
+			"[%s] errors name no file so the disk read badly, check its cable and SMART then run [abackup start --scrub]",
+			config.DirBackup)})
+	}
+	return lines
 }
 
 func scrubStateCleared(ctx context.Context) int {
@@ -479,6 +606,17 @@ func publishScrubSummary(request stageRequest, host string, document scrubSummar
 	}
 }
 
+type scrubCorruptFile struct {
+	mirror, source, outcome string
+	snapshots               int
+	live                    bool
+}
+
+type scrubReportLine struct {
+	fault        bool
+	verb, detail string
+}
+
 type scrubReading struct {
 	uuid                                        string
 	scrubbedMB, found, corrected, uncorrectable int
@@ -500,6 +638,8 @@ var (
 	scrubStartedPattern = regexp.MustCompile(`(?m)^Scrub (?:started|resumed):\s*(.+)$`)
 
 	scrubBalanceRelocatedPattern = regexp.MustCompile(`relocate (\d+) out of`)
+
+	scrubSubvolumePattern = regexp.MustCompile(`(?m)^ID (\d+) gen \d+ top level \d+ path (.+)$`)
 
 	scrubCounterPatterns = func() map[string]*regexp.Regexp {
 		patterns := map[string]*regexp.Regexp{}
@@ -533,4 +673,9 @@ const (
 	scrubActionResume = "resume"
 
 	scrubStateLeaves = "scrub.status.*"
+
+	scrubOutcomeDeleted  = "deleted"
+	scrubOutcomeKept     = "kept"
+	scrubOutcomeSnapshot = "snapshot"
+	scrubOutcomeUnmapped = "unmapped"
 )

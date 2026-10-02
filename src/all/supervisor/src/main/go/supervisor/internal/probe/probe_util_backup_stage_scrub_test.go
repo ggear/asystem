@@ -629,3 +629,202 @@ func stopScrubUnderneath(t *testing.T, cancelled bool) {
 		t.Errorf("issued %q, want no device stats read or reset once the scrubbed filesystem is gone", touched)
 	}
 }
+
+func TestProbeUtilBackupStageScrub_CorruptFilesMapEachSubvolumeBackOntoTheLiveMirror(t *testing.T) {
+	subvolumes := map[int64]string{
+		256: "share/10",
+		257: ".snapshots/share/10/2026-09-30_01-00-49",
+		258: ".snapshots/share/10/2026-10-01_01-00-11",
+		259: "share/11",
+	}
+	tests := []struct {
+		name        string
+		corruptions []kernelCorruption
+		expected    []scrubCorruptFile
+	}{
+		{name: "a_live_copy_and_its_snapshots_are_one_file",
+			corruptions: []kernelCorruption{{root: 256, path: "media/a.mkv"}, {root: 257, path: "media/a.mkv"}, {root: 258, path: "media/a.mkv"}},
+			expected:    []scrubCorruptFile{{mirror: "/backup/share/10/media/a.mkv", source: "/share/10/media/a.mkv", snapshots: 2, live: true}}},
+		{name: "a_file_named_by_snapshots_alone_is_not_live",
+			corruptions: []kernelCorruption{{root: 257, path: "media/gone.mkv"}},
+			expected:    []scrubCorruptFile{{mirror: "/backup/share/10/media/gone.mkv", source: "/share/10/media/gone.mkv", snapshots: 1}}},
+		{name: "files_sort_by_their_mirror_path",
+			corruptions: []kernelCorruption{{root: 259, path: "b.mkv"}, {root: 256, path: "Film (2010)/film.mkv"}},
+			expected: []scrubCorruptFile{
+				{mirror: "/backup/share/10/Film (2010)/film.mkv", source: "/share/10/Film (2010)/film.mkv", live: true},
+				{mirror: "/backup/share/11/b.mkv", source: "/share/11/b.mkv", live: true}}},
+		{name: "an_unlisted_root_reads_from_the_top_level",
+			corruptions: []kernelCorruption{{root: 5, path: "share/10/media/a.mkv"}},
+			expected:    []scrubCorruptFile{{mirror: "/backup/share/10/media/a.mkv", source: "/share/10/media/a.mkv", live: true}}},
+		{name: "a_file_outside_the_share_mirror_has_no_source",
+			corruptions: []kernelCorruption{{root: 5, path: "lost+found/x"}},
+			expected:    []scrubCorruptFile{{mirror: "/backup/lost+found/x", live: true}}},
+		{name: "a_path_climbing_out_of_the_share_has_no_source",
+			corruptions: []kernelCorruption{{root: 256, path: "../../../etc/passwd"}},
+			expected:    []scrubCorruptFile{{mirror: "/etc/passwd", live: true}}},
+		{name: "nothing_named_is_nothing_to_delete"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := scrubCorruptFiles(testCase.corruptions, subvolumes)
+			if !slices.Equal(got, testCase.expected) && (len(got) != 0 || len(testCase.expected) != 0) {
+				t.Errorf("scrubCorruptFiles() = %+v, want %+v", got, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupStageScrub_ReportStatesTheVerdictAndTheRepairOnLinesThatNeverWrap(t *testing.T) {
+	widest := strings.Repeat("/very-long-directory-name", 20) + "/film.mkv"
+	many := make([]scrubCorruptFile, kernelCorruptNamed+5)
+	for index := range many {
+		many[index] = scrubCorruptFile{mirror: fmt.Sprintf("/backup/share/10/media/%03d.mkv", index), source: "/share/10/x",
+			outcome: scrubOutcomeDeleted, snapshots: 999, live: true}
+	}
+	tests := []struct {
+		name      string
+		state     string
+		reading   scrubReading
+		device    int
+		counted   bool
+		files     []scrubCorruptFile
+		faults    int
+		contained []string
+	}{
+		{name: "a_clean_pass_says_so_with_its_chunks", state: metric.BackupStateSuccess, counted: true,
+			reading:   scrubReading{scrubbedMB: 8016038, progress: 100},
+			contained: []string{"finished as [success] at [100] percent of [7828.2] GiB, a [resumed] pass with [4] chunks relocated", "the disk is clean"}},
+		{name: "unread_device_stats_never_claim_clean", state: metric.BackupStateFailure,
+			contained: []string{"[-] on the device, its device stats unread"}},
+		{name: "a_deleted_file_names_the_next_run_and_the_command", state: metric.BackupStateFailure, counted: true,
+			reading: scrubReading{found: 2, uncorrectable: 2},
+			files:   []scrubCorruptFile{{mirror: "/backup/share/10/media/a.mkv", source: "/share/10/media/a.mkv", outcome: scrubOutcomeDeleted, snapshots: 3, live: true}},
+			faults:  3,
+			contained: []string{"[1] files corrupt, see [scrub.log]", "[deleted ] corrupt in the mirror and [  3] snapshots",
+				"[/backup/share/10/media/a.mkv]", "run [abackup start] now to mirror them again"}},
+		{name: "a_file_it_could_not_delete_is_left_to_the_operator", state: metric.BackupStateFailure, counted: true,
+			reading:   scrubReading{found: 1},
+			files:     []scrubCorruptFile{{mirror: "/backup/share/10/a.mkv", source: "/share/10/a.mkv", outcome: scrubOutcomeKept, live: true}},
+			faults:    3,
+			contained: []string{"[kept    ] corrupt in the mirror", "delete each by hand then run [abackup start]"}},
+		{name: "a_snapshot_only_file_warns_against_restoring_it", state: metric.BackupStateFailure, counted: true,
+			reading:   scrubReading{found: 1},
+			files:     []scrubCorruptFile{{mirror: "/backup/share/10/a.mkv", source: "/share/10/a.mkv", outcome: scrubOutcomeSnapshot, snapshots: 2}},
+			faults:    2,
+			contained: []string{"[snapshot] corrupt in [  2] snapshots alone, never restore it from them"}},
+		{name: "errors_naming_no_file_point_at_the_hardware", state: metric.BackupStateFailure, counted: true,
+			device: 4, faults: 2, contained: []string{"[4] on the device", "check its cable and SMART"}},
+		{name: "a_path_too_long_for_the_column_keeps_its_tail", state: metric.BackupStateFailure, counted: true,
+			reading:   scrubReading{found: 1},
+			files:     []scrubCorruptFile{{mirror: "/backup/share/10" + widest, source: "/share/10" + widest, outcome: scrubOutcomeKept, snapshots: 999, live: true}},
+			faults:    3,
+			contained: []string{"/film.mkv]", "[~"}},
+		{name: "more_files_than_are_named_point_at_the_log", state: metric.BackupStateFailure, counted: true,
+			reading: scrubReading{found: 999999, corrected: 999999, uncorrectable: 999999}, device: 999999, files: many,
+			faults: 2 + kernelCorruptNamed + 1, contained: []string{"[5] more corrupt files are named in [scrub.log]"}},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			resumed, relocated := false, 0
+			if testCase.state == metric.BackupStateSuccess {
+				resumed, relocated = true, 4
+			}
+			lines := scrubReport(testCase.state, resumed, testCase.reading, testCase.device, testCase.counted, relocated, testCase.files)
+			var rendered []string
+			faults := 0
+			for _, line := range lines {
+				rendered = append(rendered, line.detail)
+				if line.fault {
+					faults++
+				}
+				if !strings.HasPrefix(line.detail, "[") {
+					t.Errorf("report line does not lead with a bracketed value\n%s", line.detail)
+				}
+				if len(line.detail) > scribe.Detailed() {
+					t.Errorf("report line is [%d] characters against a [%d] detail column, so it wraps\n%s",
+						len(line.detail), scribe.Detailed(), line.detail)
+				}
+			}
+			if faults != testCase.faults {
+				t.Errorf("report raised [%d] error lines, want [%d]\n%s", faults, testCase.faults, strings.Join(rendered, "\n"))
+			}
+			joined := strings.Join(rendered, "\n")
+			for _, want := range testCase.contained {
+				if !strings.Contains(joined, want) {
+					t.Errorf("report does not say %q\n%s", want, joined)
+				}
+			}
+		})
+	}
+}
+
+func TestProbeUtilBackupStageScrub_CorruptionDeletesTheLiveMirrorCopyAndNeverASnapshotOne(t *testing.T) {
+	fstab := filepath.Join(t.TempDir(), "fstab")
+	if err := os.WriteFile(fstab, []byte("/dev/null  /backup  btrfs  noauto  0 2\n"), 0o644); err != nil {
+		t.Fatalf("write fstab: %v", err)
+	}
+	originalFstab, originalStream, originalAvailable := backupFstabPath, stageStream, commandAvailable
+	t.Cleanup(func() {
+		backupFstabPath, stageStream, commandAvailable = originalFstab, originalStream, originalAvailable
+	})
+	backupFstabPath = fstab
+	commandAvailable = func(string) bool { return true }
+	clean := fixtureStages(t, "btrfs/scrub-status-raw-running.txt")
+	finished := strings.Replace(strings.Replace(clean, "Status:           running", "Status:           finished", 1),
+		"csum_errors: 0", "csum_errors: 3", 1)
+	finished = strings.Replace(finished, "uncorrectable_errors: 0", "uncorrectable_errors: 3", 1)
+	finished = strings.Replace(finished, "data_bytes_scrubbed: 1050725752832", "data_bytes_scrubbed: 1060725752832", 1)
+	warning := "BTRFS warning (device sdb1): checksum error at logical 1 on dev /dev/sdb1, physical 1, root %d, inode 9, offset 0, length 4096, links 1 (path: %s)"
+	kernel := strings.Join([]string{"before the scrub",
+		fmt.Sprintf(warning, 256, "media/a.mkv"), fmt.Sprintf(warning, 257, "media/a.mkv"), fmt.Sprintf(warning, 257, "media/gone.mkv")}, "\n")
+	var removed []string
+	polled, dmesg := 0, 0
+	stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+		key := strings.TrimSpace(name + " " + strings.Join(args, " "))
+		switch {
+		case key == "btrfs scrub status /backup":
+			return fixtureStages(t, "btrfs/scrub-status-running.txt"), 0, false
+		case key == "btrfs scrub status -R /backup":
+			polled++
+			if polled == 1 {
+				return clean, 0, false
+			}
+			return finished, 0, false
+		case key == "dmesg":
+			dmesg++
+			if dmesg == 1 {
+				return "before the scrub", 0, false
+			}
+			return kernel, 0, false
+		case key == "btrfs subvolume list /backup":
+			return "ID 256 gen 9 top level 5 path share/10\nID 257 gen 9 top level 5 path .snapshots/share/10/2026-09-30_01-00-49\n", 0, false
+		case key == "btrfs device stats /backup":
+			return fixtureStages(t, "btrfs/device-stats-mounted-backup.txt"), 0, false
+		case key == "findmnt -M /backup -n -o SOURCE":
+			return "/dev/null", 0, false
+		case strings.HasPrefix(key, "rm -f -- "):
+			removed = append(removed, strings.TrimPrefix(key, "rm -f -- "))
+		}
+		return "", 0, false
+	}
+	request := stageRequest{Stage: metric.BackupStageTertiary, RunID: "2026-10-02_01-00-55",
+		RunPath: t.TempDir(), Expires: time.Now().Add(time.Hour), Scrub: true, Trigger: metric.BackupTriggerSystem,
+		ConfigPath: filepath.Join(t.TempDir(), "config.json")}
+
+	if runScrub(context.Background(), request) {
+		t.Errorf("runScrub() = true, want false for a pass that found corrupt files")
+	}
+	if !slices.Equal(removed, []string{"/backup/share/10/media/a.mkv"}) {
+		t.Errorf("removed %q, want only the live mirror copy, never one named by a read-only snapshot alone", removed)
+	}
+	document := readScrubSummary(scrubStatusPath(request.RunPath))
+	if document == nil || document.State != metric.BackupStateFailure || document.FilesToDeleteCount != 2 ||
+		document.FilesToDelete != "/backup/share/10/media/a.mkv,/backup/share/10/media/gone.mkv" {
+		t.Errorf("scrub document = %+v, want a failure naming both corrupt files", document)
+	}
+	listing, err := os.ReadFile(filepath.Join(stageDir(request.RunPath, request.Stage), scrubLogLeaf))
+	if err != nil || !strings.Contains(string(listing), "deleted     1 /backup/share/10/media/a.mkv") ||
+		!strings.Contains(string(listing), "snapshot    1 /backup/share/10/media/gone.mkv") {
+		t.Errorf("scrub log = %q, want each corrupt file with its outcome and full path", listing)
+	}
+}

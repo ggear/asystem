@@ -241,3 +241,48 @@ func TestProbeUtilBackupMount_UsageIsOnlyMeasuredWhileTheTargetIsMounted(t *test
 		})
 	}
 }
+
+func TestProbeUtilBackupMount_ABindOfAHostDirectoryIsNeverDetachedAsADisk(t *testing.T) {
+	tests := []struct {
+		name     string
+		mounted  bool
+		fsroot   string
+		code     int
+		expected bool
+	}{
+		{name: "the_containers_own_bind_of_the_host_directory", mounted: true, fsroot: "/backup", expected: false},
+		{name: "a_btrfs_subvolume_bind_of_the_host_directory", mounted: true, fsroot: "/root/backup", expected: false},
+		{name: "an_undeclared_disk_mounted_at_its_top_level", mounted: true, fsroot: "/", expected: true},
+		{name: "a_disk_stacked_over_the_bind_reads_its_top_mount", mounted: true, fsroot: "/backup\n/", expected: true},
+		{name: "an_unanswered_findmnt_falls_back_to_the_device", mounted: true, code: 1, expected: true},
+		{name: "nothing_mounted_has_nothing_to_detach", fsroot: "/", expected: false},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			fstab := filepath.Join(t.TempDir(), "fstab")
+			if err := os.WriteFile(fstab, nil, 0o644); err != nil {
+				t.Fatalf("write fstab: %v", err)
+			}
+			originalFstab, originalStream := backupFstabPath, stageStream
+			t.Cleanup(func() { backupFstabPath, stageStream = originalFstab, originalStream })
+			backupFstabPath = fstab
+			stageStream = func(_ context.Context, _ io.Writer, name string, args ...string) (string, int, bool) {
+				key := name + " " + strings.Join(args, " ")
+				switch {
+				case name == "mountpoint":
+					if testCase.mounted {
+						return "", 0, false
+					}
+					return "", 1, false
+				case strings.HasSuffix(key, "-o FSROOT"):
+					return testCase.fsroot, testCase.code, false
+				}
+				t.Fatalf("detachable shelled out to an unexpected [%s]", key)
+				return "", 0, false
+			}
+			if got := detachable(t.Context(), t.TempDir(), "/dev"); got != testCase.expected {
+				t.Errorf("detachable() = %v, want %v", got, testCase.expected)
+			}
+		})
+	}
+}

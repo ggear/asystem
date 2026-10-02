@@ -202,9 +202,10 @@ func detachAll(ctx context.Context, subject scribe.Subject, homeRoot string) {
 		if detachable(ctx, target, homeRoot) {
 			if code == 0 {
 				remaining, _, _ := bounded(ctx, stageBoundedWait, "findmnt", "-n", "-o", "ID,SOURCE,FSTYPE,PROPAGATION", target)
-				scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", time.Now(),
-					"[%s] still mounted by [%s] after unmount returned 0, device [%d] home [%d], detaching lazily",
-					target, strings.Join(strings.Fields(remaining), " "), deviceID(target), deviceID(homeRoot))
+				prefix := fmt.Sprintf("[%s] still mounted after unmount returned 0, device [%d] home [%d], detaching lazily from",
+					target, deviceID(target), deviceID(homeRoot))
+				scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", time.Now(), "%s [%s]",
+					prefix, scribe.Tail(strings.Join(strings.Fields(remaining), " "), scribe.Detailed()-len(prefix)-len(" []")))
 			} else {
 				scribe.Log(scribe.SourceBackup, subject, scribe.ActionStop).Warnf("faulting", time.Now(),
 					"[%s] unmount failed, detaching forcibly and lazily", target)
@@ -224,6 +225,12 @@ func detachable(ctx context.Context, target, homeRoot string) bool {
 	}
 	if verified(ctx, target) {
 		return true
+	}
+	if out, code, abandoned := bounded(ctx, stageBoundedWait, "findmnt", "-M", target, "-n", "-o", "FSROOT"); !abandoned && code == 0 {
+		lines := strings.Split(strings.TrimSpace(out), "\n")
+		if root := strings.TrimSpace(lines[len(lines)-1]); root != "" && root != "/" {
+			return false
+		}
 	}
 	targetDevice := deviceID(target)
 	homeDevice := deviceID(homeRoot)

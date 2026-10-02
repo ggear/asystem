@@ -379,6 +379,17 @@ func OverlayLines(line LogLine, width int) []string {
 	return wrapped(line, layoutFor(sinkOverlay(width)))
 }
 
+func Tail(text string, width int) string {
+	runes := []rune(text)
+	if len(runes) <= width {
+		return text
+	}
+	if width <= len(clipMarker) {
+		return string([]rune(clipMarker)[:max(width, 0)])
+	}
+	return clipMarker + string(runes[len(runes)-width+len(clipMarker):])
+}
+
 func (l Logger) log(level slog.Level, verb string, started time.Time, detail string, args ...any) {
 	if !slog.Default().Enabled(context.Background(), level) {
 		return
@@ -757,18 +768,7 @@ func tokens(text string, width int) string {
 			return token
 		}
 	}
-	return tail(text, width)
-}
-
-func tail(text string, width int) string {
-	runes := []rune(text)
-	if len(runes) <= width {
-		return text
-	}
-	if width <= len(clipMarker) {
-		return string([]rune(clipMarker)[:max(width, 0)])
-	}
-	return clipMarker + string(runes[len(runes)-width+len(clipMarker):])
+	return Tail(text, width)
 }
 
 func verb(word string) string {

@@ -25,23 +25,29 @@ func TestProbeUtilBackupKernel_ReplayedDetectsAnUncleanMountOnly(t *testing.T) {
 	}
 }
 
-func TestProbeUtilBackupKernel_CorruptedNamesEachPathOnceSorted(t *testing.T) {
+func TestProbeUtilBackupKernel_CorruptedNamesEachRootAndPathOnceSorted(t *testing.T) {
 	lines := []string{
-		"BTRFS warning (device sdb1): checksum error at logical 123 on dev /dev/sdb1, physical 1 (path: share/10/media/b.mkv)",
-		"BTRFS warning (device sdb1): checksum error at logical 456 on dev /dev/sdb1, physical 2 (path: share/10/media/a.mkv)",
-		"BTRFS warning (device sdb1): checksum error at logical 789 on dev /dev/sdb1, physical 3 (path: share/10/media/b.mkv)",
-		"BTRFS info (device sdb1): no error here",
+		"[ 812.1] BTRFS warning (device sdb1): checksum error at logical 123 on dev /dev/sdb1, physical 1, root 257, inode 300, offset 0, length 4096, links 1 (path: media/b.mkv)",
+		"[ 812.2] BTRFS warning (device sdb1): checksum error at logical 456 on dev /dev/sdb1, physical 2, root 257, inode 301, offset 0, length 4096, links 1 (path: media/Film (2010)/film.mkv)",
+		"[ 812.3] BTRFS warning (device sdb1): checksum error at logical 123 on dev /dev/sdb1, physical 1, root 258, inode 300, offset 0, length 4096, links 1 (path: media/b.mkv)",
+		"[ 812.4] BTRFS warning (device sdb1): checksum error at logical 123 on dev /dev/sdb1, physical 1, root 257, inode 300, offset 4096, length 4096, links 1 (path: media/b.mkv)",
+		"[ 812.5] BTRFS error (device sdb1): unable to fixup (regular) error at logical 123 on dev /dev/sdb1",
+		"[ 812.6] BTRFS info (device sdb1): no error here",
 	}
-	expected := []string{"share/10/media/a.mkv", "share/10/media/b.mkv"}
+	expected := []kernelCorruption{
+		{root: 257, path: "media/Film (2010)/film.mkv"},
+		{root: 257, path: "media/b.mkv"},
+		{root: 258, path: "media/b.mkv"},
+	}
 	if got := kernelCorrupted(lines); !slices.Equal(got, expected) {
 		t.Errorf("kernelCorrupted() = %v, want %v", got, expected)
 	}
 }
 
-func TestProbeUtilBackupKernel_CorruptedStripsControlCharactersFromAPath(t *testing.T) {
+func TestProbeUtilBackupKernel_CorruptedKeepsAPathWithNoRoot(t *testing.T) {
 	got := kernelCorrupted([]string{"BTRFS warning: csum failed (path: share/10/me\x01dia/a.mkv)"})
-	if len(got) != 1 || got[0] != "share/10/media/a.mkv" {
-		t.Errorf("kernelCorrupted() = %v, want the path with its control characters dropped", got)
+	if len(got) != 1 || got[0] != (kernelCorruption{path: "share/10/media/a.mkv"}) {
+		t.Errorf("kernelCorrupted() = %v, want the path at root [0] with its control characters dropped", got)
 	}
 }
 

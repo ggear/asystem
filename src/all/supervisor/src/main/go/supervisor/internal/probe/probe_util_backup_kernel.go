@@ -1,9 +1,11 @@
 package probe
 
 import (
+	"cmp"
 	"context"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -32,23 +34,29 @@ func kernelReplayed(lines []string) bool {
 	return slices.ContainsFunc(lines, kernelReplayPattern.MatchString)
 }
 
-func kernelCorrupted(lines []string) []string {
-	var paths []string
+func kernelCorrupted(lines []string) []kernelCorruption {
+	var corruptions []kernelCorruption
 	for _, line := range lines {
-		for _, match := range kernelPathPattern.FindAllStringSubmatch(line, -1) {
-			path := strings.Map(func(letter rune) rune {
-				if letter < ' ' {
-					return -1
-				}
-				return letter
-			}, match[1])
-			if path != "" && !slices.Contains(paths, path) {
-				paths = append(paths, path)
+		match := kernelPathPattern.FindStringSubmatch(line)
+		if match == nil {
+			continue
+		}
+		path := strings.Map(func(letter rune) rune {
+			if letter < ' ' {
+				return -1
 			}
+			return letter
+		}, match[2])
+		root, _ := strconv.ParseInt(match[1], 10, 64)
+		corruption := kernelCorruption{root: root, path: path}
+		if path != "" && !slices.Contains(corruptions, corruption) {
+			corruptions = append(corruptions, corruption)
 		}
 	}
-	slices.Sort(paths)
-	return paths
+	slices.SortFunc(corruptions, func(left, right kernelCorruption) int {
+		return cmp.Or(strings.Compare(left.path, right.path), cmp.Compare(left.root, right.root))
+	})
+	return corruptions
 }
 
 func kernelFaulted(lines []string) []string {
@@ -76,8 +84,13 @@ func kernelLines(ctx context.Context) []string {
 	return strings.Split(trimmed, "\n")
 }
 
+type kernelCorruption struct {
+	root int64
+	path string
+}
+
 var (
-	kernelPathPattern   = regexp.MustCompile(`\(path: ([^)]+)\)`)
+	kernelPathPattern   = regexp.MustCompile(`(?:root (\d+),[^(]*)?\(path: (.+)\)\s*$`)
 	kernelFaultPattern  = regexp.MustCompile(`(?i)btrfs.*(csum|checksum|unable to fixup)|usb.*(reset|disconnect)|i/o error|blk_update_request|tag#`)
 	kernelReplayPattern = regexp.MustCompile(`(?i)btrfs.*(tree-log replay|has been changed)`)
 )
