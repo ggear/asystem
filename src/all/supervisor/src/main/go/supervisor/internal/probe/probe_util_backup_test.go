@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -433,7 +434,7 @@ func TestProbeUtilBackup_APendingRunIsFollowedBeforeItHasWrittenAnything(t *test
 	}
 }
 
-func TestProbeUtilBackup_CleanRemovesTheHistoryAndTheScrubItWouldResume(t *testing.T) {
+func TestProbeUtilBackup_CleanRemovesTheHistoryAndAnUnfinishedScrubButKeepsAFinishedOne(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv(config.BackupHomeEnvVar, home)
 	root := backupRunRoot()
@@ -446,8 +447,15 @@ func TestProbeUtilBackup_CleanRemovesTheHistoryAndTheScrubItWouldResume(t *testi
 	original := scrubStateDirectory
 	t.Cleanup(func() { scrubStateDirectory = original })
 	scrubStateDirectory = stateDir
-	if err := os.WriteFile(filepath.Join(stateDir, "scrub.status.abc"), []byte("resume me"), 0o644); err != nil {
-		t.Fatalf("write scrub state: %v", err)
+	states := map[string]string{
+		"scrub.status.unfinished": "scrub status:1\nabc:1|t_start:1790824615|canceled:1|finished:0|data_bytes_scrubbed:9\n",
+		"scrub.status.finished":   "scrub status:1\ndef:1|t_start:1790824615|canceled:0|finished:1|data_bytes_scrubbed:9\n",
+		"scrub.status.unreadable": "resume me",
+	}
+	for leaf, body := range states {
+		if err := os.WriteFile(filepath.Join(stateDir, leaf), []byte(body), 0o644); err != nil {
+			t.Fatalf("write scrub state: %v", err)
+		}
 	}
 	stageStreamReturns(t, "", 1, false)
 
@@ -458,8 +466,9 @@ func TestProbeUtilBackup_CleanRemovesTheHistoryAndTheScrubItWouldResume(t *testi
 	if runs := backupRuns(root); len(runs) != 0 {
 		t.Errorf("backupRuns() = %v, want every run removed", runs)
 	}
-	if left, _ := filepath.Glob(filepath.Join(stateDir, scrubStateLeaves)); len(left) != 0 {
-		t.Errorf("scrub state = %v, want the next run to start a fresh pass", left)
+	left, _ := filepath.Glob(filepath.Join(stateDir, scrubStateLeaves))
+	if want := []string{filepath.Join(stateDir, "scrub.status.finished")}; !slices.Equal(left, want) {
+		t.Errorf("scrub state = %v, want %v so a finished pass still holds the quarter and an unfinished one restarts", left, want)
 	}
 }
 

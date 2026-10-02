@@ -281,7 +281,7 @@ func runBackupClean(ctx context.Context, request BackupRequest) error {
 		removed++
 	}
 	report("expunged", "[%d] of [%d] backup run directories under [%s]", removed, len(runs), root)
-	report("expunged", "[%d] scrub state file(s) under [%s], so the next run starts a fresh pass",
+	report("expunged", "[%d] unfinished scrub state file(s) under [%s], a finished pass is kept for the quarterly window",
 		scrubStateCleared(ctx), scrubStateDirectory)
 	topics, err := clearRetainedBackup(request.Config)
 	if err != nil {

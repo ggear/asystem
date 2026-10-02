@@ -396,6 +396,9 @@ func scrubStateCleared(ctx context.Context) int {
 	states, _ := filepath.Glob(filepath.Join(scrubStateDirectory, scrubStateLeaves))
 	cleared := 0
 	for _, state := range states {
+		if data, err := os.ReadFile(state); err == nil && strings.Contains(string(data), "finished:1") && !strings.Contains(string(data), "finished:0") {
+			continue
+		}
 		if os.Remove(state) == nil {
 			cleared++
 		}
