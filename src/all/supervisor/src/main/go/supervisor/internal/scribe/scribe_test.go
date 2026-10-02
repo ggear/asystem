@@ -361,9 +361,9 @@ func TestScribe_FormatColumns(t *testing.T) {
 				offset int
 				want   string
 			}{
-				{name: "source", offset: sourceOffset, want: head(testCase.source, l.source)},
+				{name: "source", offset: sourceOffset, want: Head(testCase.source, l.source)},
 				{name: "subject", offset: subjectOffset, want: tokens(testCase.subject, l.subject)},
-				{name: "action", offset: actionOffset, want: head(testCase.action, l.action)},
+				{name: "action", offset: actionOffset, want: Head(testCase.action, l.action)},
 				{name: "duration", offset: durationOffset, want: durationText(slog.DurationValue(time.Millisecond))},
 				{name: "verb", offset: verbOffset, want: testCase.verb},
 			} {

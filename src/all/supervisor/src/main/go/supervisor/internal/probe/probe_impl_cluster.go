@@ -83,16 +83,16 @@ func (p *clusterProbe) cluster() (bool, derivation, error) {
 	loaded := config.Load(p.configPath)
 	hosts := clusterMonitored(loaded.Hosts(), loaded.Services)
 	if len(hosts) == 0 {
-		return false, derivation{}, fmt.Errorf("no cluster status computed, [%s] configures no hosts running a service besides [%s] [%w]", p.configPath, clusterSelfService, errEnvironment)
+		return false, derivation{}, fmt.Errorf("config names no host running a service but [%s] [%w]", clusterSelfService, errEnvironment)
 	}
 	watch := p.watch.Load()
 	if watch == nil {
 		p.dial()
 		if failed := p.dialErr.Load(); failed != nil {
-			return false, derivation{}, fmt.Errorf("no cluster status computed, watching the cluster failed with [%v] [%w]", *failed, errEnvironment)
+			return false, derivation{}, fmt.Errorf("cluster watch failed with [%v] [%w]", *failed, errEnvironment)
 		}
 		if p.watched {
-			return false, derivation{}, fmt.Errorf("no cluster status computed, the cluster watch is being redialled [%w]", errEnvironment)
+			return false, derivation{}, fmt.Errorf("cluster watch is being redialled [%w]", errEnvironment)
 		}
 		return false, derivation{}, errProbeWarmingUp
 	}
@@ -109,7 +109,7 @@ func (p *clusterProbe) cluster() (bool, derivation, error) {
 		if !p.watched {
 			return false, derivation{}, errProbeWarmingUp
 		}
-		return false, derivation{}, fmt.Errorf("no cluster status computed, the cluster watch is not attached to the broker [%w]", errEnvironment)
+		return false, derivation{}, fmt.Errorf("cluster watch is not attached to the broker [%w]", errEnvironment)
 	}
 	p.unready = 0
 	p.watched = true

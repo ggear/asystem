@@ -514,19 +514,31 @@ func trackMetricFault(task cacheMetricTask, err error, errored bool) {
 	}
 	metricFaultsMu.Unlock()
 	logger := scribe.Log(scribe.SourceProbe, scribe.SubjectMetric(task.metricID), scribe.ActionSample)
+	scope := metricScope(task)
+	reason, items, _ := strings.Cut(fault.message, "\n")
+	var emit func(verb string, started time.Time, detail string, args ...any)
+	verb, detail := "faulting", ""
 	switch {
 	case errored && fault.polls == 1 && fault.warming:
-		logger.Debugf("faulting", fault.since, "%swith [%v]", metricScope(task), err)
+		emit, detail = logger.Debugf, fmt.Sprintf("%swith [%s]", scope, reason)
 	case errored && fault.polls == 1 && errors.Is(err, errEnvironment):
-		logger.Warnf("faulting", fault.since, "%swith [%v]", metricScope(task), err)
+		emit, detail = logger.Warnf, fmt.Sprintf("%swith [%s]", scope, reason)
 	case errored && fault.polls == 1:
-		logger.Errorf("faulting", fault.since, "%swith [%v]", metricScope(task), err)
+		emit, detail = logger.Errorf, fmt.Sprintf("%swith [%s]", scope, reason)
 	case errored && repeat:
-		logger.Debugf("faulting", fault.since, "%sfor [%d] polls with [%v]", metricScope(task), fault.polls, err)
+		emit, detail = logger.Debugf, fmt.Sprintf("%sfor [%d] polls with [%s]", scope, fault.polls, reason)
 	case !errored && faulting && fault.warming:
-		logger.Debugf("restored", fault.since, "%safter [%d] failed polls with [%s]", metricScope(task), fault.polls, fault.message)
+		emit, verb, detail, items = logger.Debugf, "restored", fmt.Sprintf("%safter [%d] failed polls with [%s]", scope, fault.polls, reason), ""
 	case !errored && faulting:
-		logger.Infof("restored", fault.since, "%safter [%d] failed polls with [%s]", metricScope(task), fault.polls, fault.message)
+		emit, verb, detail, items = logger.Infof, "restored", fmt.Sprintf("%safter [%d] failed polls with [%s]", scope, fault.polls, reason), ""
+	default:
+		return
+	}
+	emit(verb, fault.since, "%s", scribe.Head(detail, scribe.Detailed()))
+	for item := range strings.SplitSeq(items, "\n") {
+		if item != "" {
+			emit(verb, fault.since, "%s", scribe.Head(fmt.Sprintf("%sdetail [%s]", scope, item), scribe.Detailed()))
+		}
 	}
 }
 
@@ -616,7 +628,7 @@ const (
 var (
 	errProbeWarmingUp = errors.New("probe is still warming up")
 	errMountContent   = errors.New("mount answered but is not healthy")
-	errEnvironment    = errors.New("environment cannot supply this reading")
+	errEnvironment    = errors.New("not in this environment")
 	errProbeUnwired   = errors.New("probe reader was not wired, which is a code defect")
 
 	execConfigPath string

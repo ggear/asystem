@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -144,7 +145,7 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	if taken.table != nil {
-		return 0, derivation{}, fmt.Errorf("no home filesystem read, mount table [%s] unreadable with [%v] [%w]",
+		return 0, derivation{}, fmt.Errorf("mount table [%s] unreadable with [%v] [%w]",
 			filepath.Join(s.root, mountTablePath), taken.table, errEnvironment)
 	}
 	systems := 0
@@ -162,12 +163,12 @@ func (s *mountSet) usedHomeSpace() (int8, derivation, error) {
 		}
 	}
 	if home == nil {
-		return 0, derivation{}, fmt.Errorf("no home filesystem found holding [%s] of [%d] classed system and [%d] mounts scanned from [%s] [%w]",
-			config.DirServiceHome, systems, len(taken.mounts), filepath.Join(s.root, mountTablePath), errEnvironment)
+		return 0, derivation{}, fmt.Errorf("none of [%d] system mounts holds [%s] [%w]",
+			systems, config.DirServiceHome, errEnvironment)
 	}
 	if !home.measured || home.total == 0 {
-		return 0, derivation{}, fmt.Errorf("no home filesystem measured of [%s] holding [%s], failures [%s] [%w]",
-			home.mountpoint, config.DirServiceHome, mountReasons(taken.mounts, false), errEnvironment)
+		return 0, derivation{}, fmt.Errorf("[%s] holding [%s] unmeasured [%w]\n%s",
+			home.mountpoint, config.DirServiceHome, errEnvironment, strings.Join(mountReasons(taken.mounts, false), "\n"))
 	}
 	used := float64(home.used) / float64(home.total) * 100.0
 	return percentValue(used), derivedf(scribe.ActionSample, "computed [%d] pct used home, used [%d] MiB of total [%d] MiB on [%s] holding [%s] of [%d] filesystems, snapshot taken [%s] ago",
@@ -180,8 +181,8 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	if taken.unread > 0 {
-		return 0, derivation{}, fmt.Errorf("no share space read, [%d] of [%d] declared shares failed to answer a probe so the pool is unknown, failures [%s] [%w]",
-			taken.unread, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
+		return 0, derivation{}, fmt.Errorf("[%d] of [%d] shares failed a probe [%w]\n%s",
+			taken.unread, taken.shares, errEnvironment, strings.Join(mountReasons(taken.mounts, true), "\n"))
 	}
 	if taken.locals == 0 {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct used share, host mounts no local share so the metric is inert and always ok"), nil
@@ -198,8 +199,8 @@ func (s *mountSet) usedShareSpace() (int8, derivation, error) {
 		used += mount.used
 	}
 	if total == 0 {
-		return 0, derivation{}, fmt.Errorf("no local shares measured of [%d] mounted and [%d] declared, failures [%s] [%w]",
-			taken.locals, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
+		return 0, derivation{}, fmt.Errorf("none of [%d] mounted of [%d] shares measured [%w]\n%s",
+			taken.locals, taken.shares, errEnvironment, strings.Join(mountReasons(taken.mounts, true), "\n"))
 	}
 	return percentValue(float64(used) / float64(total) * 100.0), derivedf(scribe.ActionSample, "computed [%d] pct used share, used [%d] MiB of total [%d] MiB across [%d] measured of [%d] local shares",
 		percentValue(float64(used)/float64(total)*100.0), used/bytesPerMiB, total/bytesPerMiB, measured, taken.locals), nil
@@ -211,15 +212,15 @@ func (s *mountSet) failedShares() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	if taken.unread > 0 {
-		return 0, derivation{}, fmt.Errorf("no share failures counted, [%d] of [%d] declared shares are mounted but failed to answer a probe, failures [%s] [%w]",
-			taken.unread, taken.shares, mountReasons(taken.mounts, true), errEnvironment)
+		return 0, derivation{}, fmt.Errorf("[%d] of [%d] shares mounted but failed a probe [%w]\n%s",
+			taken.unread, taken.shares, errEnvironment, strings.Join(mountReasons(taken.mounts, true), "\n"))
 	}
 	if taken.shares == 0 {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct failed share, fstab [%s] declares no share so the metric is inert and always ok",
 			filepath.Join(s.root, mountFstabPath)), nil
 	}
 	return percentValue(float64(taken.failed) / float64(taken.shares) * 100.0), derivedf(scribe.ActionSample, "computed [%d] pct failed share, failed [%d] of declared [%d] in [%s], failures [%s], ok only at [0] pct",
-		percentValue(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath), mountReasons(taken.mounts, true)), nil
+		percentValue(float64(taken.failed)/float64(taken.shares)*100.0), taken.failed, taken.shares, filepath.Join(s.root, mountFstabPath), cmp.Or(strings.Join(mountReasons(taken.mounts, true), ", "), "none")), nil
 }
 
 func (s *mountSet) collect() *mountSnapshot {
@@ -467,7 +468,7 @@ func mountStatfs(path string) (uint64, uint64, error) {
 	return total, used, nil
 }
 
-func mountReasons(mounts []mountUsage, share bool) string {
+func mountReasons(mounts []mountUsage, share bool) []string {
 	reasons := make([]string, 0, len(mounts))
 	for _, mount := range mounts {
 		if mount.share != share || mount.measured {
@@ -482,10 +483,7 @@ func mountReasons(mounts []mountUsage, share bool) string {
 			break
 		}
 	}
-	if len(reasons) == 0 {
-		return "none"
-	}
-	return strings.Join(reasons, ", ")
+	return reasons
 }
 
 func mountClassLabel(mount mountUsage) string {

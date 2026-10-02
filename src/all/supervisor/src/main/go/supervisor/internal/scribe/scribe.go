@@ -379,6 +379,17 @@ func OverlayLines(line LogLine, width int) []string {
 	return wrapped(line, layoutFor(sinkOverlay(width)))
 }
 
+func Head(text string, width int) string {
+	runes := []rune(text)
+	if len(runes) <= width {
+		return text
+	}
+	if width <= len(clipMarker) {
+		return string([]rune(clipMarker)[:max(width, 0)])
+	}
+	return string(runes[:width-len(clipMarker)]) + clipMarker
+}
+
 func Tail(text string, width int) string {
 	runes := []rune(text)
 	if len(runes) <= width {
@@ -661,7 +672,7 @@ func render(line LogLine, l layout, timestamp, level string) string {
 	return strings.TrimRight(timestamp+" "+pad(level, l.level)+" "+
 		pad(stemmed(line.Source, l.source), l.source)+" "+
 		pad(tokens(line.Subject, l.subject), l.subject)+" "+
-		pad(head(line.Action, l.action), l.action)+" "+
+		pad(Head(line.Action, l.action), l.action)+" "+
 		pad(line.Duration, l.duration)+" "+
 		pad(line.Verb, l.verb)+detail, " ")
 }
@@ -748,18 +759,7 @@ func stemmed(text string, width int) string {
 	if cut := strings.IndexByte(text, '['); len(text) > width && cut > 0 && cut < width {
 		return text[:cut] + clipMarker
 	}
-	return head(text, width)
-}
-
-func head(text string, width int) string {
-	runes := []rune(text)
-	if len(runes) <= width {
-		return text
-	}
-	if width <= len(clipMarker) {
-		return string([]rune(clipMarker)[:max(width, 0)])
-	}
-	return string(runes[:width-len(clipMarker)]) + clipMarker
+	return Head(text, width)
 }
 
 func tokens(text string, width int) string {

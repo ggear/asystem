@@ -138,7 +138,7 @@ func (p *backupProbe) failedBackupStages() (int8, derivation, error) {
 	}
 	if snapshot == nil || snapshot.host == nil || snapshot.age() > p.staleWindow() {
 		if !p.everRolled() {
-			return 0, derivation{}, fmt.Errorf("no backup verdict, no scheduled run has ever rolled up under [%s], so no stage ratio can be computed [%w]", p.root, errEnvironment)
+			return 0, derivation{}, fmt.Errorf("no run has rolled up under [%s] yet [%w]", p.root, errEnvironment)
 		}
 		return 100, derivedf(scribe.ActionCompute, "computed [100] pct failed, no run directory under [%s] holds a status document inside the [%s] min window",
 			p.root, elapsedMinutes(p.staleWindow())), nil
@@ -181,9 +181,9 @@ func (p *backupProbe) usedBackupSpace() (int8, derivation, error) {
 				snapshot.dir, elapsedMinutes(snapshot.age())), nil
 		}
 		if snapshot != nil && snapshot.abandoned {
-			return 0, derivation{}, fmt.Errorf("no backup volume reading, scheduled run [%s] stopped reporting [%s] min ago so its last disk usage cannot be trusted [%w]", snapshot.dir, elapsedMinutes(snapshot.age()), errEnvironment)
+			return 0, derivation{}, fmt.Errorf("run [%s] silent for [%s] min, its disk usage untrusted [%w]", snapshot.dir, elapsedMinutes(snapshot.age()), errEnvironment)
 		}
-		return 0, derivation{}, fmt.Errorf("no backup volume reading, this host has written no tertiary stage document under [%s] [%w]", p.root, errEnvironment)
+		return 0, derivation{}, fmt.Errorf("no tertiary stage document under [%s] [%w]", p.root, errEnvironment)
 	}
 	value := percentValue(snapshot.tertiary.DiskUsagePerc)
 	return value, derivedf(scribe.ActionCompute, "computed [%d] pct used, tertiary stage of run [%s] aged [%s] min measured [%.1f] pct disk usage on /backup",

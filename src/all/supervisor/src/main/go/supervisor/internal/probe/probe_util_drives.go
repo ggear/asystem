@@ -70,8 +70,8 @@ func (s *mountSet) usedDriveLife() (int8, derivation, error) {
 		}
 	}
 	if unreadable := driveUnreadable(taken.drives); len(unreadable) > 0 {
-		return 0, derivation{}, fmt.Errorf("no drive wear read, [%d] of [%d] drives unreadable by smartctl [%s] [%w]",
-			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
+		return 0, derivation{}, fmt.Errorf("[%d] of [%d] drives unreadable by smartctl [%w]\n%s",
+			len(unreadable), len(taken.drives), errEnvironment, strings.Join(unreadable, "\n"))
 	}
 	if rated == 0 {
 		named := make([]string, 0, len(taken.drives))
@@ -99,8 +99,8 @@ func (s *mountSet) failedDrives() (int8, derivation, error) {
 		return 0, derivation{}, err
 	}
 	if unreadable := driveUnreadable(taken.drives); len(unreadable) > 0 {
-		return 0, derivation{}, fmt.Errorf("no drive errors read, [%d] of [%d] drives unreadable [%s] [%w]",
-			len(unreadable), len(taken.drives), strings.Join(unreadable, ", "), errEnvironment)
+		return 0, derivation{}, fmt.Errorf("[%d] of [%d] drives unreadable [%w]\n%s",
+			len(unreadable), len(taken.drives), errEnvironment, strings.Join(unreadable, "\n"))
 	}
 	if len(taken.drives) == 0 {
 		return 0, derivedInertf(scribe.ActionSample, "computed [  0] pct failed drive, host reports no drive so the metric is inert and always ok"), nil

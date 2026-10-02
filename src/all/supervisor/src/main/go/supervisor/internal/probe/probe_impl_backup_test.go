@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
+	"supervisor/internal/scribe"
 	"supervisor/internal/testutil"
 	"sync"
 	"testing"
@@ -840,5 +841,36 @@ func TestProbeImplBackup_ReapLocalStaleKeepsEveryFieldItRewrites(t *testing.T) {
 	expected.State, expected.ExpiresTS, expected.FinishedTS = reaped.State, reaped.ExpiresTS, reaped.FinishedTS
 	if *reaped != expected {
 		t.Errorf("reaped document = %+v, want every other field carried over from %+v", *reaped, expected)
+	}
+}
+
+func TestProbeImplBackup_AnUnreadableMetricReasonFitsOneDetailColumn(t *testing.T) {
+	abandoned := t.TempDir()
+	stuck := time.Now().Add(-8 * time.Hour).Format(backupTimestampFormat)
+	writeBackupStage(t, abandoned, stuck, "primary", backupSummary{
+		State: metric.BackupStateSuccess, Trigger: metric.BackupTriggerSystem})
+	writeBackupStage(t, abandoned, stuck, "tertiary", backupSummary{
+		State: metric.BackupStateRunning, Trigger: metric.BackupTriggerSystem})
+	production := filepath.Join(config.DirServiceHome, treeModule, treeBackupDirectory)
+	tests := []struct {
+		name string
+		read func() (int8, derivation, error)
+	}{
+		{"no run has rolled up", (&backupProbe{root: production}).failedBackupStages},
+		{"no tertiary document", (&backupProbe{root: production, serverHost: true}).usedBackupSpace},
+		{"a scheduled run went silent", (&backupProbe{root: abandoned, serverHost: true}).usedBackupSpace},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := tt.read()
+			if err == nil {
+				t.Fatalf("err: got nil want a reason the metric cannot be read")
+			}
+			line := fmt.Sprintf("[host] after [%d] failed polls with [%s]", 99999, err)
+			if len(line) > scribe.Detailed() {
+				t.Errorf("restored line is [%d] characters against a [%d] detail column, so it wraps\n%s",
+					len(line), scribe.Detailed(), line)
+			}
+		})
 	}
 }

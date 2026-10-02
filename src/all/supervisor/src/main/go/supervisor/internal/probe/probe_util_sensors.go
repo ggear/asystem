@@ -58,10 +58,10 @@ func resetSensors() {
 
 func (s *sensorSet) celsius() (float64, derivation, error) {
 	if s == nil {
-		return 0, derivation{}, fmt.Errorf("no temperature read, discovery found no package, soc, composite or thermal zone sensor, so this host exposes none this probe knows how to read [%w]", errEnvironment)
+		return 0, derivation{}, fmt.Errorf("no package, soc, composite or thermal zone sensor found [%w]", errEnvironment)
 	}
 	if len(s.temperatureInputs) == 0 {
-		return 0, derivation{}, fmt.Errorf("no temperature read, discovery found no package, soc, composite or thermal zone sensor under [%s], so this host exposes none this probe knows how to read [%w]", s.sysRoot, errEnvironment)
+		return 0, derivation{}, fmt.Errorf("no known temperature sensor under [%s] [%w]", s.sysRoot, errEnvironment)
 	}
 	hottest := 0.0
 	found := false

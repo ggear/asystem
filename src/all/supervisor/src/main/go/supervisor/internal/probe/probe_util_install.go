@@ -112,7 +112,7 @@ func (s *installSnapshot) service(name string) (installService, bool) {
 
 func (s *installSnapshot) allocation(names []string) (int64, int, error) {
 	if len(names) == 0 {
-		return 0, 0, fmt.Errorf("no memory ceiling summed, no services are configured for this host so the schema in the config file names none to read from [%s] [%w]", config.DirInstall, errEnvironment)
+		return 0, 0, fmt.Errorf("no services configured under [%s] [%w]", config.DirInstall, errEnvironment)
 	}
 	total := int64(0)
 	installed := 0

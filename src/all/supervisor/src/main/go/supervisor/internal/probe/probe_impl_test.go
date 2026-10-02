@@ -3,6 +3,9 @@ package probe
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -384,5 +387,44 @@ func TestProbeImpl_MetricStatusOf(t *testing.T) {
 				t.Errorf("status: got %v want %v", status, testCase.expectedStatus)
 			}
 		})
+	}
+}
+
+func TestProbeImpl_AFaultLogsOneLinePerListedItemAndNoneWraps(t *testing.T) {
+	buffer := scribe.EnableBuffer(slog.LevelDebug, 50)
+	t.Cleanup(func() { scribe.EnableStdout(slog.LevelInfo) })
+	task := cacheMetricTask{metricID: metric.MetricHostWarnTemperature, serviceName: metric.ServiceNameUnset}
+	key := metricFaultKey{metricID: task.metricID, serviceName: task.serviceName}
+	t.Cleanup(func() {
+		metricFaultsMu.Lock()
+		delete(metricFaults, key)
+		metricFaultsMu.Unlock()
+	})
+	err := fmt.Errorf("%s [%w]\n%s\n\n%s", strings.Repeat("a reason far too long ", 10), errEnvironment,
+		"sda=Crucial T705 unreadable", strings.Repeat("/share/10", 30))
+
+	trackMetricFault(task, err, true)
+	trackMetricFault(task, nil, false)
+
+	var faulting, restored []scribe.LogLine
+	for _, line := range buffer.Tail(50) {
+		switch line.Verb {
+		case "faulting":
+			faulting = append(faulting, line)
+		case "restored":
+			restored = append(restored, line)
+		}
+		if len(line.Detail) > scribe.Detailed() {
+			t.Errorf("detail is [%d] characters against a [%d] column, so it wraps\n%s", len(line.Detail), scribe.Detailed(), line.Detail)
+		}
+		if !strings.HasPrefix(line.Detail, "[") {
+			t.Errorf("detail does not lead with a bracketed value\n%s", line.Detail)
+		}
+	}
+	if len(faulting) != 3 || faulting[0].Level != slog.LevelWarn || !strings.Contains(faulting[1].Detail, "[sda=Crucial T705 unreadable]") {
+		t.Errorf("faulting lines = %+v, want a WARN reason then one line per listed item, the blank one skipped", faulting)
+	}
+	if len(restored) != 1 || strings.Contains(restored[0].Detail, "sda=") {
+		t.Errorf("restored lines = %+v, want the one reason line without its items", restored)
 	}
 }

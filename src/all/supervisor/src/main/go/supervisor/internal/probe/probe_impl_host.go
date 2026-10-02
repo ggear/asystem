@@ -424,7 +424,7 @@ func (p *hostProbe) upTime() (float64, derivation, error) {
 	}
 	seconds, err := p.hostUptime()
 	if err != nil {
-		return 0, derivation{}, fmt.Errorf("no up time read, host up time failed with [%w] [%w]", err, errEnvironment)
+		return 0, derivation{}, fmt.Errorf("up time failed with [%w] [%w]", err, errEnvironment)
 	}
 	running := time.Duration(seconds) * time.Second
 	return float64(seconds), derivedf(scribe.ActionSample, "computed [%d] s running, the host booted [%s] ago at [%s]",
@@ -486,7 +486,7 @@ type diskUsageSampler struct {
 func (s *diskUsageSampler) sample(ioCounters func(...string) (map[string]disk.IOCountersStat, error)) (int8, derivation, error) {
 	counters, err := ioCounters()
 	if err != nil {
-		return 0, derivation{}, fmt.Errorf("no disk operations sample taken, reading device counters failed with [%w] [%w]", err, errEnvironment)
+		return 0, derivation{}, fmt.Errorf("device counters failed with [%w] [%w]", err, errEnvironment)
 	}
 	current := make(map[string]uint64, len(counters))
 	for name, counter := range counters {
@@ -561,8 +561,8 @@ func (s *networkUsageSampler) sample(roots []string) (int8, derivation, error) {
 		current[link.name] = received + transmitted
 	}
 	if len(current) == 0 {
-		return 0, derivation{}, fmt.Errorf("no network sample taken, none of the [%d] discovered interfaces under [%s] answered, rejected [%s] [%w]",
-			len(s.links), s.root, strings.Join(rejected, ", "), errEnvironment)
+		return 0, derivation{}, fmt.Errorf("none of [%d] interfaces under [%s] answered [%w]\n%s",
+			len(s.links), s.root, errEnvironment, strings.Join(rejected, "\n"))
 	}
 	taken := config.NowIncludingSuspend()
 	previous, previousTaken, hadSample := s.samples, s.taken, s.hasSample
