@@ -97,7 +97,7 @@ func runTertiaryStage(ctx context.Context, request stageRequest, counters *stage
 		}
 		counters.addTransfer(0, 0, 0, expungeStats.filesDeleted, 0, 0, 0)
 		scribe.Log(scribe.SourceBackup, scribe.SubjectStage(metric.BackupStageTertiary), scribe.ActionStop).Infof("expunged", expungeStarted,
-			"[%s] stopping with %s", share, backupMoved(intReading(expunging.bytes()/bytesPerMebibyte), time.Since(expungeStarted)))
+			"[%s] stopping with [%s] GiB in [%s] s", share, backupSizedGibibytes(intReading(expunging.bytes()/bytesPerMebibyte)), elapsedSeconds(time.Since(expungeStarted)))
 
 		rsyncTemp := filepath.Join(target, ".rsync")
 		_ = os.MkdirAll(rsyncTemp, 0o755)

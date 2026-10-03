@@ -135,6 +135,26 @@ func TestProbeUtilBackupRender_EveryRowCarriesOneCellPerDeclaredColumn(t *testin
 	}
 }
 
+func TestProbeUtilBackupRender_EtaAddsTheUnroundedRemainder(t *testing.T) {
+	now := time.Date(2026, 10, 3, 1, 3, 33, 0, time.Local)
+	cases := []struct {
+		name      string
+		remaining reading
+		expected  string
+	}{
+		{name: "a_sub_minute_remainder_is_not_now", remaining: floatReading(0.3), expected: "01:03:51"},
+		{name: "a_fractional_minute_is_kept", remaining: floatReading(12.5), expected: "01:16:03"},
+		{name: "no_estimate_is_unknown", remaining: unknownReading(), expected: backupUnknownEta},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := backupEta(now, test.remaining); got != test.expected {
+				t.Errorf("backupEta() = %q, want %q", got, test.expected)
+			}
+		})
+	}
+}
+
 func TestProbeUtilBackupRender_BoundedStatesWhetherTheEstimateBeatsTheDeadline(t *testing.T) {
 	now := time.Date(2026, 9, 24, 10, 54, 19, 0, time.Local)
 	deadline := now.Add(2 * time.Hour)

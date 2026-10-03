@@ -160,8 +160,10 @@ func finishRun(root, runID string, started time.Time) backupSummary {
 		if staged == nil {
 			continue
 		}
-		document.StagesRun++
 		states[stage] = staged.State
+		if staged.State != metric.BackupStateSkipped {
+			document.StagesRun++
+		}
 		if document.Trigger == "" {
 			document.Trigger = staged.Trigger
 		}
@@ -191,7 +193,7 @@ func finishRun(root, runID string, started time.Time) backupSummary {
 		scrubState = scrubbed.State
 	}
 	state := resolvedState(states, scrubState)
-	if document.StagesRun == 0 {
+	if len(states) == 0 {
 		state = metric.BackupStateFailure
 	}
 	document.State = state

@@ -257,7 +257,7 @@ func backupBounded(now time.Time, remaining reading, deadline time.Time) string 
 	if !remaining.Known() || remaining.Value() < 0 || deadline.IsZero() {
 		return ""
 	}
-	if now.Add(time.Duration(remaining.Rounded()) * time.Minute).After(deadline) {
+	if now.Add(time.Duration(remaining.Value() * float64(time.Minute))).After(deadline) {
 		return fmt.Sprintf(" BEYOND timeout time [%s]", deadline.Format(backupTimeFormat))
 	}
 	return fmt.Sprintf(" within timeout time [%s]", deadline.Format(backupTimeFormat))
@@ -322,7 +322,7 @@ func backupEta(now time.Time, remainingMinutes reading) string {
 	if !remainingMinutes.known || remainingMinutes.value < 0 {
 		return backupUnknownEta
 	}
-	return now.Add(time.Duration(remainingMinutes.Rounded()) * time.Minute).Format(backupTimeFormat)
+	return now.Add(time.Duration(remainingMinutes.Value() * float64(time.Minute))).Format(backupTimeFormat)
 }
 
 func backupRated(megabytes, seconds reading) reading {

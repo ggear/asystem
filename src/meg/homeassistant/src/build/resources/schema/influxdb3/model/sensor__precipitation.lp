@@ -21,7 +21,8 @@
 #     bom_darlington_rain_amount_min_4,
 #     bom_darlington_rain_amount_min_5,
 #     bom_darlington_rain_amount_min_6,
-#     bom_darlington_rain_amount_min_7]
+#     bom_darlington_rain_amount_min_7,
+#     bom_darlington_rain_since_9am]
 #   tag unit_of_measurement [Home Assistant unit_of_measurement:
 #     mm]
 #   field value - <on-change> [Home Assistant value]

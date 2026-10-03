@@ -365,27 +365,42 @@ func TestProbeUtilBackupSummary_FinishRunOverAStageThatWroteNothing(t *testing.T
 }
 
 func TestProbeUtilBackupSummary_ASkippedStageIsNeitherFailedNorHalted(t *testing.T) {
-	root, run := t.TempDir(), "2026-09-22_01-00-00"
-	states := map[metric.BackupStage]string{
-		metric.BackupStagePrimary:   metric.BackupStateSuccess,
-		metric.BackupStageSecondary: metric.BackupStateSuccess,
-		metric.BackupStageTertiary:  metric.BackupStateSkipped,
+	tests := []struct {
+		name          string
+		secondary     string
+		expectedRun   int
+		expectedFail  int
+		expectedState string
+		expectedError bool
+	}{
+		{"clean edge host", metric.BackupStateSuccess, 2, 0, metric.BackupStateSuccess, false},
+		{"failed secondary on edge host", metric.BackupStateFailure, 2, 1, metric.BackupStateFailure, false},
 	}
-	for stage, state := range states {
-		path := stageStatusPath(backupRunPath(root, run), stage)
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatalf("mkdir stage: %v", err)
-		}
-		if err := writeAtomic(path, backupSummary{RunID: run, State: state, Trigger: metric.BackupTriggerSystem}); err != nil {
-			t.Fatalf("write stage: %v", err)
-		}
-	}
-	document := finishRun(root, run, time.Now())
-	if document.StagesRun != 3 || document.StagesFailed != 0 || document.StagesHalted != 0 {
-		t.Errorf("finishRun() = (run %d, failed %d, halted %d), want a host mirroring nowhere to read no fault",
-			document.StagesRun, document.StagesFailed, document.StagesHalted)
-	}
-	if document.State != metric.BackupStateSuccess {
-		t.Errorf("finishRun() state = %q, want %q", document.State, metric.BackupStateSuccess)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root, run := t.TempDir(), "2026-09-22_01-00-00"
+			states := map[metric.BackupStage]string{
+				metric.BackupStagePrimary:   metric.BackupStateSuccess,
+				metric.BackupStageSecondary: tt.secondary,
+				metric.BackupStageTertiary:  metric.BackupStateSkipped,
+			}
+			for stage, state := range states {
+				path := stageStatusPath(backupRunPath(root, run), stage)
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatalf("mkdir stage: %v", err)
+				}
+				if err := writeAtomic(path, backupSummary{RunID: run, State: state, Trigger: metric.BackupTriggerSystem}); err != nil {
+					t.Fatalf("write stage: %v", err)
+				}
+			}
+			document := finishRun(root, run, time.Now())
+			if document.StagesRun != tt.expectedRun || document.StagesFailed != tt.expectedFail || document.StagesHalted != 0 {
+				t.Errorf("finishRun() = (run %d, failed %d, halted %d), want (run %d, failed %d, halted 0)",
+					document.StagesRun, document.StagesFailed, document.StagesHalted, tt.expectedRun, tt.expectedFail)
+			}
+			if document.State != tt.expectedState {
+				t.Errorf("finishRun() state = %q, want %q", document.State, tt.expectedState)
+			}
+		})
 	}
 }

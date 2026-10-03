@@ -316,14 +316,20 @@ func measureUsage(ctx context.Context, subject scribe.Subject, target string) (p
 	if !mountpointCheck(ctx, target) {
 		return 0, 0, 0, false
 	}
-	uuid, found, wedged := btrfsUUID(ctx, subject, target)
-	if wedged {
+	fsType, _, abandoned := bounded(ctx, stageBoundedWait, "stat", "-f", "-c", "%T", target)
+	if abandoned {
 		return 0, 0, 0, false
 	}
-	if found {
-		total, used := btrfsSysfsUsage(uuid)
-		if total > 0 {
-			return float64(used) * 100 / float64(total), int(used / bytesPerMebibyte), int(total / bytesPerMebibyte), true
+	if strings.TrimSpace(fsType) == "btrfs" {
+		uuid, found, wedged := btrfsUUID(ctx, subject, target)
+		if wedged {
+			return 0, 0, 0, false
+		}
+		if found {
+			total, used := btrfsSysfsUsage(uuid)
+			if total > 0 {
+				return float64(used) * 100 / float64(total), int(used / bytesPerMebibyte), int(total / bytesPerMebibyte), true
+			}
 		}
 	}
 	out, code, abandoned := bounded(ctx, stageBoundedWait, "df", "--output=used,size", "-B1", target)

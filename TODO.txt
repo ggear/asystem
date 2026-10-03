@@ -30,6 +30,7 @@ Improve sys tests with datbase/broker asserts for all modules
 # Supervisor
 ###############################################################################################################################################################
 
+Increase Aloc RAM to warn at 90, error at 95 and increase supervisor mem
 
 code review this patch which is not in git yet.
 Make sure project guidleines are followed.
@@ -82,6 +83,7 @@ Integrate Withings scale direcltly, locally, it has been done here https://didac
 ###############################################################################################################################################################
 # Media
 ###############################################################################################################################################################
+Implement a parents->kids move style command when already in parents
 Have a 2-thread media transcode script, maybe do even/odd/every so can launch in two windows?
 Implement syncart.py to store artwork in /shares and save download after failure
 Formalise subtitle download and sync, add missing subtitles to common series
@@ -104,6 +106,7 @@ Issues today: mounts all work, mlflow creates a share/1, sonarr requires mad to 
 ###############################################################################################################################################################
 # InfluxDB3
 ###############################################################################################################################################################
+Enable explorer
 Tune influxdb compactor given real world inputs
 Rename to InfluxDB
 Move to mad and remove emulation env test/exec vars

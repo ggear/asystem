@@ -306,7 +306,7 @@ func (p *backupProbe) reap(ctx context.Context) {
 	}
 	if !strings.EqualFold(strings.TrimSpace(retained[stateTopic]), metric.CommandOn) {
 		if p.reapQuiet() {
-			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Infof("deferred", reapStart,
+			scribe.Log(scribe.SourceProbeBackup, scribe.SubjectHost(p.hostName), scribe.ActionStop).Debugf("deferred", reapStart,
 				"[%s] does not report the disk on, so there is nothing to power down", stateTopic)
 		}
 		return

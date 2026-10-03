@@ -113,8 +113,13 @@ func TestProbeUtilBackupMount_MeasureUsageFallsBackToCapturedDfWhenBtrfsCannotId
 	dfOutput := fixtureStages(t, "mounts/df-mounted-backup.txt")
 	original := stageStream
 	t.Cleanup(func() { stageStream = original })
+	asked := false
 	stageStream = func(_ context.Context, _ io.Writer, name string, _ ...string) (string, int, bool) {
-		if name == "btrfs" {
+		switch name {
+		case "stat":
+			return "btrfs\n", 0, false
+		case "btrfs":
+			asked = true
 			return showOutput, 1, false
 		}
 		return dfOutput, 0, false
@@ -123,11 +128,41 @@ func TestProbeUtilBackupMount_MeasureUsageFallsBackToCapturedDfWhenBtrfsCannotId
 	if !ok {
 		t.Fatalf("measureUsage() ok = false, want the df fallback to answer")
 	}
+	if !asked {
+		t.Errorf("measureUsage() never asked btrfs, want a btrfs filesystem tried before df")
+	}
 	if usedMB != 1072245374976/1048576 || totalMB != 4000785960960/1048576 {
 		t.Errorf("measureUsage() used = %d total = %d, want the captured df figures", usedMB, totalMB)
 	}
 	if percent < 26 || percent > 27 {
 		t.Errorf("measureUsage() percent = %.2f, want ~26.8 from the captured df", percent)
+	}
+}
+
+func TestProbeUtilBackupMount_MeasureUsageNeverAsksBtrfsAboutAnotherFilesystem(t *testing.T) {
+	for _, fsType := range []string{"ext2/ext3", "smb2"} {
+		t.Run(fsType, func(t *testing.T) {
+			btrfsUnidentified.Clear()
+			original := stageStream
+			t.Cleanup(func() { stageStream = original })
+			stageStream = func(_ context.Context, _ io.Writer, name string, _ ...string) (string, int, bool) {
+				switch name {
+				case "stat":
+					return fsType + "\n", 0, false
+				case "btrfs":
+					t.Fatalf("measureUsage() asked btrfs about a [%s] filesystem", fsType)
+				case "df":
+					return "used size\n1048576 2097152", 0, false
+				}
+				return "", 0, false
+			}
+			if _, _, totalMB, ok := measureUsage(t.Context(), scribe.SubjectNone, "/share/10"); !ok || totalMB != 2 {
+				t.Errorf("measureUsage() = (total %d, ok %v), want the df reading", totalMB, ok)
+			}
+			if _, recorded := btrfsUnidentified.Load("/share/10"); recorded {
+				t.Errorf("btrfsUnidentified records [/share/10], want a non-btrfs path never reported as unidentified")
+			}
+		})
 	}
 }
 

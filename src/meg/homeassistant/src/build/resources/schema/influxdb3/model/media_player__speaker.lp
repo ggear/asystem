@@ -8,6 +8,7 @@
 #   tag entity_id* [Home Assistant entity_id:
 #     ada_home,
 #     ada_tablet_2,
+#     edwin_group,
 #     edwin_home,
 #     kitchen_five,
 #     kitchen_move,
