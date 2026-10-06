@@ -25,6 +25,16 @@ done
 
 if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
   alias curl="curl -f --connect-timeout 2 --max-time 2"
+  HEALTHCHECK_SECRETS=()
+  for HEALTHCHECK_NAME in $(compgen -e); do
+    HEALTHCHECK_VALUE="${!HEALTHCHECK_NAME}"
+    if [[ "${HEALTHCHECK_NAME}" =~ (^|_)(TOKEN|KEY|PASSWORD|SECRET)(_|$) ]] && [ "${#HEALTHCHECK_VALUE}" -ge 4 ]; then
+      HEALTHCHECK_SECRETS+=("${HEALTHCHECK_VALUE}")
+    fi
+  done
+  exec {HEALTHCHECK_TRACE}> >(while IFS= read -r LINE; do for SECRET in "${HEALTHCHECK_SECRETS[@]}"; do LINE="${LINE//"${SECRET}"/********}"; done; printf '%s\n' "${LINE}"; done >&2)
+  HEALTHCHECK_TRACER=$!
+  BASH_XTRACEFD=${HEALTHCHECK_TRACE}
   set -x
 else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
@@ -36,10 +46,12 @@ if
   /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && curl -s -w '%{http_code}' -o >(jq -e 'length == 0' >/dev/null) "http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/health" -H "X-Api-Key: ${SONARR_API_KEY}" | grep -q '^200$'
 then
   set +x
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sonarr] is executing :)" >&2
   exit 0
 else
   set +x
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [sonarr] is *NOT* executing :(" >&2
   exit 1
 fi

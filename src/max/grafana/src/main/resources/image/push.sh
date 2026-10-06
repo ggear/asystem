@@ -29,4 +29,4 @@ for DASHBOARD in ${SERVED}; do
   fi
 done
 
-curl -sf "${GRAFANA_URL}/api/admin/stats" | jq
+gcx api /api/admin/stats

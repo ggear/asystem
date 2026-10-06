@@ -25,6 +25,16 @@ done
 
 if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
   alias curl="curl -f --connect-timeout 2 --max-time 2"
+  HEALTHCHECK_SECRETS=()
+  for HEALTHCHECK_NAME in $(compgen -e); do
+    HEALTHCHECK_VALUE="${!HEALTHCHECK_NAME}"
+    if [[ "${HEALTHCHECK_NAME}" =~ (^|_)(TOKEN|KEY|PASSWORD|SECRET)(_|$) ]] && [ "${#HEALTHCHECK_VALUE}" -ge 4 ]; then
+      HEALTHCHECK_SECRETS+=("${HEALTHCHECK_VALUE}")
+    fi
+  done
+  exec {HEALTHCHECK_TRACE}> >(while IFS= read -r LINE; do for SECRET in "${HEALTHCHECK_SECRETS[@]}"; do LINE="${LINE//"${SECRET}"/********}"; done; printf '%s\n' "${LINE}"; done >&2)
+  HEALTHCHECK_TRACER=$!
+  BASH_XTRACEFD=${HEALTHCHECK_TRACE}
   set -x
 else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
@@ -33,13 +43,15 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl -L -o /dev/null -s -w "%{http_code}" "https://grafana.proxy.janeandgraham.com")" = "200" ]
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && DATASOURCES="$(curl -K - "${GRAFANA_URL}/api/datasources" <<<"user = \"${GRAFANA_USER}:${GRAFANA_TOKEN}\"" | jq -er '.[].uid')" && HEALTHY="$(for DATASOURCE in ${DATASOURCES}; do curl -K - "${GRAFANA_URL}/api/datasources/uid/${DATASOURCE}/health" <<<"user = \"${GRAFANA_USER}:${GRAFANA_TOKEN}\"" | jq -r .status; done)" && [ "$(grep -cx OK <<<"${HEALTHY}")" -eq "$(wc -w <<<"${DATASOURCES}")" ] && curl "${GRAFANA_DOMAIN_URL}/api/search?limit=1" | jq -e 'length > 0' >/dev/null
 then
   set +x
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [grafana] is healthy :)" >&2
   exit 0
 else
   set +x
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [grafana] is *NOT* healthy :(" >&2
   exit 1
 fi

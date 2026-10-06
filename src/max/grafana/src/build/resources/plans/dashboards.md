@@ -1037,6 +1037,10 @@ dashboard now opens the same way, on current Grafana panel types:
 - SQLite retries a locked query (`GF_DATABASE_QUERY_RETRIES`, matching the default 10 transaction retries): on `max`
   the secrets store's key read logged `SQLITE_BUSY` at start, since Grafana retries locked transactions but not
   queries by default. WAL mode was tried first and dropped, as the errors persisted with it.
+- Viewing is anonymous with the Viewer role, since every release logged everyone out. `GRAFANA_URL` dropped its embedded
+  credentials, which the release's traced health checks printed; the checks pass them to `curl -K -` on a here-string.
+  `checkhealthy.sh` had passed on the login page (`curl -L` followed the redirect to a 200), so it now requires every
+  datasource healthy and an anonymous search to see a dashboard.
 - `push.sh` is hand-written in `src/main/resources/image/` like other modules' `entrypoint.sh`, not a
   `src/build/resources` fragment: it is a whole script, so wrapping it only added a banner and a copy step.
 - Rain is replaced by **Weather**, and the forecast panel moves there from Conditions, which keeps the indoor rooms.

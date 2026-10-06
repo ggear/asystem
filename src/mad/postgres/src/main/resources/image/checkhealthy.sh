@@ -25,6 +25,16 @@ done
 
 if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
   alias curl="curl -f --connect-timeout 2 --max-time 2"
+  HEALTHCHECK_SECRETS=()
+  for HEALTHCHECK_NAME in $(compgen -e); do
+    HEALTHCHECK_VALUE="${!HEALTHCHECK_NAME}"
+    if [[ "${HEALTHCHECK_NAME}" =~ (^|_)(TOKEN|KEY|PASSWORD|SECRET)(_|$) ]] && [ "${#HEALTHCHECK_VALUE}" -ge 4 ]; then
+      HEALTHCHECK_SECRETS+=("${HEALTHCHECK_VALUE}")
+    fi
+  done
+  exec {HEALTHCHECK_TRACE}> >(while IFS= read -r LINE; do for SECRET in "${HEALTHCHECK_SECRETS[@]}"; do LINE="${LINE//"${SECRET}"/********}"; done; printf '%s\n' "${LINE}"; done >&2)
+  HEALTHCHECK_TRACER=$!
+  BASH_XTRACEFD=${HEALTHCHECK_TRACE}
   set -x
 else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
@@ -36,10 +46,12 @@ if
   timeout "${ASYSTEM_HEALTHCHECK_TIMEOUT_SECONDS:-5}" bash -c 'while true; do /asystem/etc/checkexecuting.sh "$@" && PGPASSWORD="${POSTGRES_KEY_HASS}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER_HASS}" -d "${POSTGRES_DATABASE_HASS}" -c "SELECT 1;" >/dev/null 2>&1 && PGPASSWORD="${POSTGRES_KEY_MLFLOW}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER_MLFLOW}" -d "${POSTGRES_DATABASE_MLFLOW}" -c "SELECT 1;" >/dev/null 2>&1 && PGPASSWORD="${POSTGRES_KEY_WRANGLE}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER_WRANGLE}" -d "${POSTGRES_DATABASE_WRANGLE}" -c "SELECT 1;" >/dev/null 2>&1 && exit 0; sleep "${ASYSTEM_HEALTHCHECK_INTERVAL_SECONDS:-1}"; done' _ "${POSITIONAL_ARGS[@]}" || ( echo "Health check timed out after ${ASYSTEM_HEALTHCHECK_TIMEOUT_SECONDS:-5}s" >&2; false )
 then
   set +x
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [postgres] is healthy :)" >&2
   exit 0
 else
   set +x
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && exec {HEALTHCHECK_TRACE}>&- && wait "${HEALTHCHECK_TRACER}"
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [postgres] is *NOT* healthy :(" >&2
   exit 1
 fi
