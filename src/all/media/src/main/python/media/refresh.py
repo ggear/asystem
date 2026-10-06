@@ -158,7 +158,11 @@ def _refresh_plex(_share_paths):
 
 def _refresh_sabnzbd(_share_paths):
     def get_sabnzbd(**_parameters):
-        response = requests.get(f"{sabnzbd_url}/api", timeout=API_TIMEOUT_SECONDS, params={"output": "json", "apikey": sabnzbd_api_key, **_parameters})
+        response = requests.get(f"{sabnzbd_url}/api", timeout=API_TIMEOUT_SECONDS, params={
+            "output": "json",
+            "apikey": sabnzbd_api_key,
+            **_parameters,
+        })
         response.raise_for_status()
         payload = response.json()
         if isinstance(payload, dict) and payload.get("status") is False:

@@ -35,7 +35,7 @@ src/main/resources/bin/
   media.sh          the single entry point, ~400 lines
   .env_media        unchanged — still sourced by media.sh and by every generated script
   lib/
-    analyse.py  ingress.py  refresh.py      generated from src/main/python/media/ (unchanged)
+    analyse.py  stage.py    refresh.py      generated from src/main/python/media/ (unchanged)
     other-transcode.rb                      vendored (unchanged)
     history.sh                              scrapbook, never executed (unchanged)
 ```
@@ -82,9 +82,11 @@ Usage: amedia [command] [argument] [options]
   Library
     clean     [dir]    delete generated metadata and scripts     (default: from $PWD)
     normalise [dir]    fix ownership and modes, strip junk       (default: from $PWD)
-    ingress   [dir]    import the usb drive and downloads        (default: from $PWD)
+    load      [dir]    copy in the usb drive, rename file        (default: from $PWD)
     stow      [scope]  file staged content into the library      (default: parents)
-    move      <share>  copy to another share, drop the source
+    move      [scope] [share]
+                       refile this title in another scope, share or
+                       both, scope first, at least one of the two
     refresh            reconcile paths into Plex and scan
     truncate           trim the Google Sheet history
 
@@ -98,7 +100,9 @@ Usage: amedia [command] [argument] [options]
     home               print the install bin directory
     help               this text, and a bare amedia prints it
 
-  --force              analyse only, re-probe every file first   (default: off)
+  --force              analyse, re-probe every file first        (default: off)
+  --merge              analyse, merge transcodes past a check    (default: off)
+  --transcode          analyse in a title, transcode it anyway   (default: off)
   --keep-going         carry on past a failed pipeline stage     (default: off)
   --share <index>      one share, not the one you are in         (default: all local)
   --quiet              summaries only, the default below a share (default: off)
@@ -122,11 +126,23 @@ concept below is an *extent* and the defaults say `from $PWD` rather than "this 
 precondition, and a verb named for how it behaves rather than what it does; three pipeline verbs
 where two plus a flag will do is the repetition this refactor exists to remove.
 
-**The flag is what `force` did, which is not what its name suggests.** `--force` in `analyse.py` only
-changes how an already-probed file is *classified*; what makes a re-probe happen is deleting the
-cached `._metadata_*.yaml`, which is why `media-force.sh` runs `media-clean` before it. So
-`analyse --force` is `clean` then `analyse` over the resolved extent, and the help line says
-"re-probe every file first" rather than "ignore what was probed". Note plain `analyse` already
+**`force` was two decisions in one flag, so it is now three flags, one for each thing it did.**
+`media-force.sh` was `media-clean` then `analyse.py --force`, and only in a media file root. The python
+flag changed how a file is *classified* in two unrelated ways: checks were skipped, so a transcoded
+file that fails one (a low-resolution source, say) became a `merge`; and a file with nothing to do,
+or only a remux, became a `transcode`. The first is safe across a tree and the second is not, and
+one flag could not offer the first without the second, so the first was confined to a title and a
+merge past a check across a `movies` directory meant `cd`ing into each title in turn.
+
+- `--force` only cleans first, so analyse re-probes. It changes no classification, in any extent.
+- `--merge` lets a *transcoded* file past a check into `merge`. A check on an original stays a
+  check, so nothing destructive is queued but the merge asked for. It is accepted in the `file` and
+  `media` extents, which is where `analyse` classifies locally; `share`/`local` run the generated
+  per-host scripts, which take no classification flags, so it refuses there rather than being
+  silently dropped.
+- `--transcode` makes every original a re-encode: checks, remuxes and settled files become a
+  `transcode`, and it overrides `Transcode Action: Ignore`. It is accepted in the `file` extent only,
+  since anywhere wider it queues a transcode of every settled file beneath it. Note plain `analyse` already
 cleans in the `file`/`media` extents and does not in `share`/`local` — an inconsistency inherited
 from `media-analyse.sh`, kept deliberately so the merge changes no behaviour it was not asked to.
 
@@ -291,7 +307,7 @@ default macOS `PATH` via `/etc/paths`, and rue is form factor `client`, so it is
 
 **Platform-guarded verbs keep their guards**, all of which are absence-tolerant rather than
 `uname`-tested where they can be: `mount` is Darwin-only and additionally skips when `$HOSTNAME` is in
-`shares.csv`; `ingress` is Linux-only (`lsblk`, `mount -t exfat`) and now says so instead of exiting 0
+`shares.csv`; `load` is Linux-only (`lsblk`, `mount -t exfat`) and now says so instead of exiting 0
 silently; `normalise`'s ownership block is already inside a `Linux` test and its `setfacl` and
 `getent` uses are `command -v`/`id` guarded, which is what makes them no-ops on the Mac rather than
 errors; `space` calls `mount` first on Darwin only.
@@ -324,14 +340,21 @@ and the command you run to ask whether a share is full, and a dropped cifs share
 question with an empty directory and a plausible-looking table. The cost is one anchored mount-table
 check per mountpoint on a command that already shells out to `duf`.
 
-### `ingress` is extent-aware, in two phases
+### `load` is extent-aware, in two phases
+
+Named `ingress` when first folded in, then renamed `load`, a plain verb like its siblings (`import`
+was the first choice, ruled out to keep it apart from the python keyword). The python module is
+named for what it does rather than for this command: `stage.py` renames raw arrivals into
+`__RENAMED/`, ready for `stow` ("file staged content into the library"). It has two callers —
+the sweep phase below, and sabnzbd's post-processing script, which copies it in by that name at
+install and never touches the usb half — so naming it after `load` would read wrong from sabnzbd.
 
 `media-ingress.sh` hardcodes `/share/10` and returns 0 without a word on Darwin. Made extent-aware it
-resolves like its two `[dir]` siblings, so all three read by one rule — but **ingress's unit is a
-share, not a directory**, because `ingress.py` works on `<share>/tmp` and never on `media/`. So it is
+resolves like its two `[dir]` siblings, so all three read by one rule — but **load's unit is a
+share, not a directory**, because `stage.py` works on `<share>/tmp` and never on `media/`. So it is
 the one verb where the `file` and `media` extents do not mean `$PWD`:
 
-| Extent | What ingress operates on |
+| Extent | What load operates on |
 |---|---|
 | `file`, `media`, `share` | the enclosing share's `tmp` |
 | `local` | every local share's `tmp` |
@@ -342,7 +365,7 @@ the one verb where the `file` and `media` extents do not mean `$PWD`:
   runs once per invocation, into the **first share of the extent** — the lowest-numbered local share
   under the `local` extent, which on `mad` is `/share/10`, so today's hardcoded value falls out as the
   derived default and nothing has to name it.
-- **sweep** — `ingress.py` over `<share>/tmp`, which is genuinely per-share and runs for every share
+- **sweep** — `stage.py` over `<share>/tmp`, which is genuinely per-share and runs for every share
   in the extent. A share holding none of `usbdrive`, `usenet/finished` or `finished` is a real no-op:
   `_process` rglobs those three roots and renames nothing.
 
@@ -355,12 +378,12 @@ and the rsync and then runs `ingress.py` regardless, so a half-transferred file 
 sweep and the run continues to the other shares, which is the same per-share-independent policy the
 action loop uses.
 
-**`[dir]` is validated as a share root**, not merely as a directory — `ingress.py` derives
+**`[dir]` is validated as a share root**, not merely as a directory — `stage.py` derives
 `<dir>/tmp` from it, so any other directory silently sweeps nothing. Today's only check is `-d`; it
 becomes membership of `SHARE_DIRS`, refused by name otherwise.
 
 **Darwin skips, loudly.** The import phase is `lsblk` and `mount -t exfat`, neither of which exists
-there, and the sweep chowns `1000:100`, which a guest SMB mount cannot do — so ingress stays
+there, and the sweep chowns `1000:100`, which a guest SMB mount cannot do — so load stays
 Linux-only as a whole, but says so rather than exiting 0 in silence as it does now.
 
 ### Extent, resolved once
@@ -431,7 +454,7 @@ names the other verb, so the narrowing cannot strand anyone:
 
 ```
 $ cd /share/10/tmp/usbdrive/__RENAMED && amedia move parents
-amedia: [parents] is not a share index, did you mean [amedia stow parents]
+amedia: current directory is not nested in the library, did you mean [amedia stow <scope>]
 
 $ cd "/share/10/media/parents/movies/Dune (2021)" && amedia stow kids
 amedia: already in the library, did you mean [amedia move <share>]
@@ -440,6 +463,18 @@ amedia: already in the library, did you mean [amedia move <share>]
 **Ruled out: one `move` dispatching on the argument's shape** (numeric ⇒ share, word ⇒ scope). It
 reads well and removes the `$PWD` mystery, but it keeps one verb doing two very different amounts of
 damage, which is exactly what makes the current help text impossible to write.
+
+**Added later: `move [scope] [share]` inside the library** (`parents` → `kids` for a title already
+filed). This is not the ruled-out dispatch: each argument names one part of the destination, never
+the mechanism or the side of `media/` you must stand on, and both still refuse outside the library.
+The order is scope then share, the same scope-first position `stow` and `process` use, and at least
+one is required. The two vocabularies are disjoint (words against digits), so `move kids` and
+`move 20` are unambiguous alone, and `move 20 kids` is refused with the reordered command as its
+hint rather than quietly accepted. An omitted share keeps the current one; an omitted scope keeps
+the current one. On the same share,
+when nothing is at the destination yet, the delegated script does a plain `mv` rather than rsync then
+delete — same filesystem, instant, nothing copied. If the destination already exists (a series with
+some seasons already under `kids`), it falls through to the rsync merge, exactly as a share move does.
 
 Naming alternatives weighed and rejected: `adopt`/`transfer` (`transfer` is eight characters on a
 daily command, `adopt` competes with supervisor's backup stages); `shelve`/`relocate` (`shelve`
@@ -720,9 +755,9 @@ the checks are explicit:
    from a media directory must exit non-zero (it exits 0 today), `amedia process` must continue past it
    and still exit non-zero, and `amedia publish` must stop at that stage, name it, and exit with its
    code — with `--keep-going` running the remaining stages instead.
-6. `amedia ingress` from a title, a share root and an arbitrary directory, against a fixture with two
+6. `amedia load` from a title, a share root and an arbitrary directory, against a fixture with two
    share roots — the first two sweep one share, the third sweeps both, the usb import is attempted once
-   in each case, and `amedia ingress /tmp` is refused as not a share root.
+   in each case, and `amedia load /tmp` is refused as not a share root.
 7. `fab ut` from `src/test/python/unit` — add the `MEDIA_ACTIONS` equality assertion here, and the
    install-path one beside it (`SERVICE_INSTALL_LATEST` in `install.sh` against the
    `MEDIA_BIN_INSTALL` that `analyse.py` emits). **The
@@ -743,14 +778,14 @@ the checks are explicit:
    mechanical check that no link name survives anywhere, local or inside an ssh heredoc. Run it
    *after* the rewrite and before the release; it is the cheapest of these steps and the one that
    catches the site the reading missed, which is how `move.sh:84` was found in the first place.
-10. `fab generate` in this module, and confirm `bin/lib/{ingress,analyse,refresh}.py` come back
+10. `fab generate` in this module, and confirm `bin/lib/{load,analyse,refresh}.py` come back
    byte-identical apart from the intended `${MEDIA_BIN_DIR}` / `${MEDIA_BIN_INSTALL}` lines.
 11. `amedia analyse --force` from a share root, against a two-share fixture — it must clean and
    re-probe that share and **not** the other, and from an arbitrary directory it must do both. This
    is new behaviour (`media-force.sh` refuses outside a media file root), so it is asserted rather
    than assumed.
 12. On rue, `amedia find`, `amedia space`, `amedia metadata` and one action verb from a media directory
-   — the action must delegate over ssh to the owning macmini as it does today, and `amedia ingress`
+   — the action must delegate over ssh to the owning macmini as it does today, and `amedia load`
    must print a Linux-only skip rather than succeeding silently.
 13. `amedia truncate` from a checkout, and confirm it writes the `.env_exec` sheet and not the
    production one, having read `${MEDIA_GOOGLE_SHEET_GUID}` and `${SHARE_ROOT}` rather than the two
@@ -775,7 +810,9 @@ becomes an entry in `FileAction`, with no shell edit at all.
 **No loss of functionality.** Every one of the 21 commands survives: 19 keep their name as a verb,
 `force` becomes `analyse --force`, and `move` becomes the two commands it always was, `stow` and
 `move`. Three things are added — the `publish` pipeline, `--share`, and a forced re-probe of a whole
-share, which `--force` makes reachable for the first time — and nothing is dropped. **One behaviour
+share, which `--force` makes reachable for the first time — and nothing is dropped (`force`'s two
+classification effects became `--merge` and `--transcode`, so a merge past a check is now reachable
+from a `media` directory as well as a title). **One behaviour
 deliberately widens**: `media-force.sh` refuses outside a media file root and `analyse --force` does
 not, so this is not a pure refactor and the `--force` paragraph above states what that costs when it
 is typed from the wrong directory. The only removals anywhere are of things that never worked: the
@@ -788,7 +825,7 @@ its variables and adds no platform test of its own; `${FIND_CMD}` is used for ev
 and bare `find` only inside a remote heredoc, which always lands on Linux; and the shebang is
 `env bash`, which in a terminal is the 5.3 the three existing `env bash` scripts already rely on. Every platform-absent binary stays
 guarded the way it is today — `setfacl` and `getent` by `command -v`/`id`, `lsblk` by the Linux-only
-`ingress`, `mount_smbfs` and `diskutil` by the Darwin branch of `mount`.
+`load`, `mount_smbfs` and `diskutil` by the Darwin branch of `mount`.
 
 **rue and the macminis keep working despite their different `/share` layouts**, because no path is
 ever rebuilt from parts. The extent resolver reads `SHARE_DIRS_LOCAL` and never recomputes it, so

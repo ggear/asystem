@@ -34,6 +34,8 @@ const STATE_TOPIC: &str = "tempstat/data";
 const STATUS_TOPIC: &str = "tempstat/status";
 const LOG_LABEL_WIDTH: usize = 48;
 const MAX_CONSECUTIVE_TOTAL_FAILURES: u32 = 3;
+const REINIT_DELAY_MIN: Duration = Duration::from_secs(1);
+const REINIT_DELAY_MAX: Duration = Duration::from_secs(60);
 pub const DEFAULT_POLL_PERIOD: &str = "0";
 
 #[derive(Debug, Parser)]
@@ -130,6 +132,7 @@ impl Cli {
         );
         let state_topic = STATE_TOPIC.to_string();
         let status_topic = STATUS_TOPIC.to_string();
+        let mut delay = Duration::ZERO;
         loop {
             let ds2480b = match self.open_device(timeout) {
                 Ok(device) => device,
@@ -137,8 +140,9 @@ impl Cli {
                     if period.is_zero() {
                         return Err(format!("failed to open device [{}] [{err}]", self.device));
                     }
-                    error!("device unavailable [{}] [{err}], retrying in [{period:?}]", self.device);
-                    thread::sleep(period);
+                    delay = reinit_delay(delay, period);
+                    error!("device unavailable [{}] [{err}], retrying in [{delay:?}]", self.device);
+                    thread::sleep(delay);
                     continue;
                 }
             };
@@ -157,8 +161,9 @@ impl Cli {
                         if period.is_zero() {
                             return Err(err.to_string());
                         }
-                        error!("broker unavailable [{err}], retrying in [{period:?}]");
-                        thread::sleep(period);
+                        delay = reinit_delay(delay, period);
+                        error!("broker unavailable [{err}], retrying in [{delay:?}]");
+                        thread::sleep(delay);
                         continue;
                     }
                 };
@@ -166,17 +171,22 @@ impl Cli {
                 Ok(bus) => bus,
                 Err(err) => {
                     let _ = publisher.close(&status_topic);
+                    drop(publisher);
                     if period.is_zero() {
                         return Err(format!("failed to open device [{}] [{err}]", self.device));
                     }
-                    error!("device unavailable [{}] [{err}], retrying in [{period:?}]", self.device);
-                    thread::sleep(period);
+                    delay = reinit_delay(delay, period);
+                    error!("device unavailable [{}] [{err}], retrying in [{delay:?}]", self.device);
+                    thread::sleep(delay);
                     continue;
                 }
             };
             log_sensors(&sensors);
+            let polling = Instant::now();
             let poll_result = poll(period, &sensors, &mut publisher, bus.as_mut(), &state_topic);
             let close_result = publisher.close(&status_topic).map_err(|err| err.to_string());
+            drop(bus);
+            drop(publisher);
             let combined = poll_result.and(close_result);
             if period.is_zero() {
                 if let Err(ref err) = combined {
@@ -184,10 +194,14 @@ impl Cli {
                 }
                 return combined;
             }
-            if let Err(ref err) = combined {
-                error!("[{err}], reinitializing in [{period:?}]");
+            if polling.elapsed() >= period {
+                delay = Duration::ZERO;
             }
-            thread::sleep(period);
+            delay = reinit_delay(delay, period);
+            if let Err(ref err) = combined {
+                error!("[{err}], reinitializing in [{delay:?}]");
+            }
+            thread::sleep(delay);
         }
     }
 
@@ -317,6 +331,15 @@ pub fn parse_duration(raw: &str) -> Result<Duration, String> {
         return Ok(Duration::ZERO);
     }
     humantime::parse_duration(trimmed).map_err(|err| format!("invalid duration [{trimmed}] [{err}]"))
+}
+
+fn reinit_delay(previous: Duration, period: Duration) -> Duration {
+    let ceiling = REINIT_DELAY_MAX.min(period).max(REINIT_DELAY_MIN);
+    if previous.is_zero() {
+        REINIT_DELAY_MIN
+    } else {
+        previous.saturating_mul(2).min(ceiling)
+    }
 }
 
 fn usb_target(device: &str) -> bus_driver::Result<Option<(u16, u16)>> {
@@ -502,6 +525,27 @@ mod tests {
         for device in ["usb:", "usb:067B", "usb:067B:", "usb:zzzz:2303", "usb:067B:2303:0"] {
             let err = usb_target(device).unwrap_err().to_string();
             assert!(err.contains(device), "device {device}: got {err}");
+        }
+    }
+
+    #[test]
+    fn reinit_delay_backs_off_to_a_ceiling_bounded_by_the_poll_period() {
+        let secs = Duration::from_secs;
+        let millis = Duration::from_millis;
+        for (previous, period, want) in [
+            (Duration::ZERO, secs(900), secs(1)),
+            (secs(1), secs(900), secs(2)),
+            (secs(32), secs(900), secs(60)),
+            (secs(60), secs(900), secs(60)),
+            (secs(16), secs(30), secs(30)),
+            (Duration::ZERO, millis(1), secs(1)),
+            (secs(1), millis(1), secs(1)),
+        ] {
+            assert_eq!(
+                reinit_delay(previous, period),
+                want,
+                "previous {previous:?} period {period:?}"
+            );
         }
     }
 

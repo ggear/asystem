@@ -53,11 +53,12 @@ if __name__ == "__main__":
                         broker_document=document,
                         broker_entities=[
                             {
-                                "HOST": host, "SERVICE": services,
+                                "HOST": host,
+                                "SERVICE": services,
                                 "STAGE": stages_host[host],
                                 "SCRUB_HOST": [host] if "tertiary" in stages_host[host] else [],
                                 "LEADER_HOST": [host] if form_factors[host] == "server" else [],
-                                "BACKUP_SERVICE": sorted(set(services) & set(enrolled))
+                                "BACKUP_SERVICE": sorted(set(services) & set(enrolled)),
                             }
                             for host, services in sorted(modules_server.items())
                         ])

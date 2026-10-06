@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
 
+WARNING = "WARNING: This file is written by the build process, any manual edits will be lost!"
 NULL = "-"
 YES = "yes"
 NO = "no"
@@ -54,8 +55,7 @@ class SchemaDialect:
 
 def banner(prefix="#"):
     rule = prefix * (80 // len(prefix))
-    return "{0}\n{1} WARNING: This file is written by the build process, any manual edits will be lost!\n{0}".format(
-        rule, prefix)
+    return "{0}\n{1} {2}\n{0}".format(rule, prefix, WARNING)
 
 
 def vocabulary(relation, prefix="#", tags=(), entities=None):

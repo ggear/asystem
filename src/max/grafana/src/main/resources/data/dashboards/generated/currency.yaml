@@ -1,0 +1,1450 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+apiVersion: dashboard.grafana.app/v2
+kind: Dashboard
+metadata:
+  annotations:
+    grafana.app/folder: finance
+  name: currency
+spec:
+  annotations: []
+  cursorSync: Crosshair
+  editable: true
+  elements:
+    panel-1:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: table
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          EXTRACT(EPOCH FROM ($__timeTo()::timestamptz)::timestamptz) - EXTRACT(EPOCH FROM (max(time))::timestamptz) AS value
+                      FROM currency
+                      WHERE
+                          $__timeFilter(time)
+                          AND type IN ('delta', 'snapshot')
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: Time from the most recent report by any entity to the end of the window'
+        id: 1
+        links: []
+        title: Newest
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 0
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: yellow
+                    value: 518400
+                  - color: red
+                    value: 1036800
+                unit: s
+              overrides: []
+            options:
+              colorMode: background
+              graphMode: none
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-10:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
+                              'delta'                                                   AS measure,
+                              avg(10000.0 / (100 + value) - 100)                        AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'delta'
+                              AND period = '1d'
+                              AND unit = '%'
+                              AND entity IN ('AUD/GBP')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: change in the rate across [1 Day Delta]'
+        id: 10
+        links: []
+        title: GBP/AUD Day
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 1
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: green
+                    value: 0
+                unit: percent
+              overrides: []
+            options:
+              colorMode: value
+              graphMode: area
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-11:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
+                              'delta'                                                   AS measure,
+                              avg(10000.0 / (100 + value) - 100)                        AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'delta'
+                              AND period = '1d'
+                              AND unit = '%'
+                              AND entity IN ('AUD/USD')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: change in the rate across [1 Day Delta]'
+        id: 11
+        links: []
+        title: USD/AUD Day
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 1
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: green
+                    value: 0
+                unit: percent
+              overrides: []
+            options:
+              colorMode: value
+              graphMode: area
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-12:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/SGD' THEN 'SGD/AUD' ELSE entity END AS entity,
+                              'delta'                                                   AS measure,
+                              avg(10000.0 / (100 + value) - 100)                        AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'delta'
+                              AND period = '1d'
+                              AND unit = '%'
+                              AND entity IN ('AUD/SGD')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: change in the rate across [1 Day Delta]'
+        id: 12
+        links: []
+        title: SGD/AUD Day
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 1
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: green
+                    value: 0
+                unit: percent
+              overrides: []
+            options:
+              colorMode: value
+              graphMode: area
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-13:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          metric,
+                          (value / first_value(value) OVER (PARTITION BY metric ORDER BY time) - 1) * 100 AS value
+                      FROM (
+                          SELECT
+                              time,
+                              entity AS metric,
+                              value AS value
+                          FROM (
+                              SELECT
+                                  $__timeGroupAlias(time, $__interval),
+                                  CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' WHEN 'AUD/SGD' THEN 'SGD/AUD' WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
+                                  'snapshot'                                                                                                            AS measure,
+                                  avg(1.0 / value)                                                                                                      AS value
+                              FROM currency
+                              WHERE
+                                  $__timeFilter(time)
+                                  AND type = 'snapshot'
+                                  AND period = '1d'
+                                  AND unit = '$'
+                              GROUP BY 1, 2
+                          ) AS arms
+                      ) AS series
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: closing rate for the currency pair'
+        id: 13
+        links: []
+        title: CCY/AUD Range Deltas
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 1
+                unit: percent
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-14:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
+                              'snapshot'                                                AS measure,
+                              avg(1.0 / value)                                          AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'snapshot'
+                              AND period = '1d'
+                              AND unit = '$'
+                              AND entity IN ('AUD/GBP')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: closing rate for the currency pair'
+        id: 14
+        links: []
+        title: GBP/AUD End of Days
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 3
+                unit: currencyUSD
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-15:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
+                              'snapshot'                                                AS measure,
+                              avg(1.0 / value)                                          AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'snapshot'
+                              AND period = '1d'
+                              AND unit = '$'
+                              AND entity IN ('AUD/USD')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: closing rate for the currency pair'
+        id: 15
+        links: []
+        title: USD/AUD End of Days
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 3
+                unit: currencyUSD
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-16:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/SGD' THEN 'SGD/AUD' ELSE entity END AS entity,
+                              'snapshot'                                                AS measure,
+                              avg(1.0 / value)                                          AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'snapshot'
+                              AND period = '1d'
+                              AND unit = '$'
+                              AND entity IN ('AUD/SGD')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: closing rate for the currency pair'
+        id: 16
+        links: []
+        title: SGD/AUD End of Days
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 3
+                unit: currencyUSD
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-2:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: table
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          EXTRACT(EPOCH FROM ($__timeTo()::timestamptz)::timestamptz) - EXTRACT(EPOCH FROM (min(latest))::timestamptz) AS value
+                      FROM (
+                          SELECT
+                              entity    AS entity,
+                              max(time) AS latest
+                          FROM currency
+                          WHERE
+                              type IN ('delta', 'snapshot')
+                              AND time <= $__timeTo()::timestamptz
+                              AND time > $__timeTo()::timestamptz - INTERVAL '2592000 seconds'
+                          GROUP BY 1
+                      ) AS entities
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: Time from the stalest entity''s last report to the end of the window'
+        id: 2
+        links: []
+        title: Oldest
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 0
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: green
+                    value: null
+                  - color: yellow
+                    value: 518400
+                  - color: red
+                    value: 1036800
+                unit: s
+              overrides: []
+            options:
+              colorMode: background
+              graphMode: none
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-3:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: table
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          100.0 * sum(value * held) / NULLIF(sum(held), 0) AS value
+                      FROM (
+                          SELECT
+                              status                                                                                                                          AS value,
+                              to_unixtime(coalesce(lead(time) OVER (PARTITION BY concat(host, '/', service) ORDER BY time), $__timeTo())) - to_unixtime(time) AS held
+                          FROM supervisor
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'supervisor'
+                              AND host IS NOT NULL
+                              AND service IS NOT NULL
+                              AND status IS NOT NULL
+                              AND service IN ('wrangle')
+                      ) AS rows
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 6s
+            transformations: []
+        description: 'Generated: Share of the window the wrangle service was up'
+        id: 3
+        links: []
+        title: Availability
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 0
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 99
+                  - color: green
+                    value: 99.5
+                unit: percent
+              overrides: []
+            options:
+              colorMode: background
+              graphMode: none
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-4:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: table
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value
+                      FROM (
+                          SELECT
+                              (SELECT count(DISTINCT entity) FROM currency WHERE $__timeFilter(time) AND type IN ('delta', 'snapshot') AND time > (SELECT max(time) FROM currency WHERE $__timeFilter(time) AND type IN ('delta', 'snapshot')) - INTERVAL '518400 seconds') AS reported,
+                              (SELECT count(DISTINCT entity) FROM currency WHERE type IN ('delta', 'snapshot') AND time <= $__timeTo()::timestamptz AND time > $__timeTo()::timestamptz - INTERVAL '2592000 seconds') AS expected
+                      ) AS arms
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: Share of recently active entities reporting in the latest batch'
+        id: 4
+        links: []
+        title: Entities
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 0
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 80
+                  - color: green
+                    value: 100
+                unit: percent
+              overrides: []
+            options:
+              colorMode: background
+              graphMode: none
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-5:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: table
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value
+                      FROM (
+                          SELECT
+                              (SELECT count(DISTINCT type || '/' || period) FROM currency WHERE $__timeFilter(time) AND type IN ('delta', 'snapshot') AND time > (SELECT max(time) FROM currency WHERE $__timeFilter(time) AND type IN ('delta', 'snapshot')) - INTERVAL '518400 seconds') AS reported,
+                              (SELECT count(DISTINCT type || '/' || period) FROM currency WHERE $__timeFilter(time) AND type IN ('delta', 'snapshot')) AS expected
+                      ) AS arms
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: Share of measures written in the window that reported in the latest batch'
+        id: 5
+        links: []
+        title: Metrics
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 0
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 80
+                  - color: green
+                    value: 100
+                unit: percent
+              overrides: []
+            options:
+              colorMode: background
+              graphMode: none
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-6:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: table
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value
+                      FROM (
+                          SELECT
+                              (SELECT count(*) FROM currency WHERE $__timeFilter(time) AND type IN ('delta', 'snapshot') AND EXTRACT(EPOCH FROM (time)::timestamptz) > (3 * EXTRACT(EPOCH FROM ($__timeTo()::timestamptz)::timestamptz) + EXTRACT(EPOCH FROM ($__timeFrom()::timestamptz)::timestamptz)) / 4) AS reported,
+                              (SELECT count(*) FROM currency WHERE $__timeFilter(time) AND type IN ('delta', 'snapshot')) / 4.0 AS expected
+                      ) AS arms
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: Rows in the last quarter of the window as a share of the average quarter'
+        id: 6
+        links: []
+        title: Volume
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 0
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 50
+                  - color: green
+                    value: 80
+                  - color: yellow
+                    value: 120
+                  - color: red
+                    value: 150
+                unit: percent
+              overrides: []
+            options:
+              colorMode: background
+              graphMode: none
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-7:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/GBP' THEN 'GBP/AUD' ELSE entity END AS entity,
+                              'snapshot'                                                AS measure,
+                              avg(1.0 / value)                                          AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'snapshot'
+                              AND period = '1d'
+                              AND unit = '$'
+                              AND entity IN ('AUD/GBP')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: closing rate for the currency pair'
+        id: 7
+        links: []
+        title: GBP/AUD
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 3
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 1.71
+                  - color: green
+                    value: 2.09
+                unit: currencyUSD
+              overrides: []
+            options:
+              colorMode: value
+              graphMode: area
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-8:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/USD' THEN 'USD/AUD' ELSE entity END AS entity,
+                              'snapshot'                                                AS measure,
+                              avg(1.0 / value)                                          AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'snapshot'
+                              AND period = '1d'
+                              AND unit = '$'
+                              AND entity IN ('AUD/USD')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: closing rate for the currency pair'
+        id: 8
+        links: []
+        title: USD/AUD
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 3
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 1.26
+                  - color: green
+                    value: 1.54
+                unit: currencyUSD
+              overrides: []
+            options:
+              colorMode: value
+              graphMode: area
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-9:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: postgres-wrangle
+                  group: grafana-postgresql-datasource
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__timeGroupAlias(time, $__interval),
+                              CASE entity WHEN 'AUD/SGD' THEN 'SGD/AUD' ELSE entity END AS entity,
+                              'snapshot'                                                AS measure,
+                              avg(1.0 / value)                                          AS value
+                          FROM currency
+                          WHERE
+                              $__timeFilter(time)
+                              AND type = 'snapshot'
+                              AND period = '1d'
+                              AND unit = '$'
+                              AND entity IN ('AUD/SGD')
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 1d
+            transformations: []
+        description: 'Generated: closing rate for the currency pair'
+        id: 9
+        links: []
+        title: SGD/AUD
+        vizConfig:
+          group: stat
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                decimals: 3
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: yellow
+                    value: 0.99
+                  - color: green
+                    value: 1.21
+                unit: currencyUSD
+              overrides: []
+            options:
+              colorMode: value
+              graphMode: area
+              justifyMode: center
+              orientation: auto
+              percentChangeColorMode: standard
+              reduceOptions:
+                calcs:
+                - lastNotNull
+              showPercentChange: false
+              textMode: value
+              wideLayout: true
+          version: ''
+    panel-navigation:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries: []
+            queryOptions: {}
+            transformations: []
+        description: ''
+        id: 17
+        links: []
+        title: ''
+        transparent: true
+        vizConfig:
+          group: text
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults: {}
+              overrides: []
+            options:
+              content: <span style="color:#8e8e8e">**HOME**</span> · [Weather](/d/weather?${__url_time_range}) · [Conditions](/d/conditions?${__url_time_range}) · [Electricity](/d/electricity?${__url_time_range}) &nbsp;&nbsp;|&nbsp;&nbsp; <span style="color:#8e8e8e">**FINANCE**</span> · **Currency** · [Interest](/d/interest?${__url_time_range}) · [Equity](/d/equity?${__url_time_range}) &nbsp;&nbsp;|&nbsp;&nbsp; <span style="color:#8e8e8e">**SYSTEMS**</span> · [Containers](/d/containers?${__url_time_range}) · [Servers](/d/servers?${__url_time_range}) · [Network](/d/network?${__url_time_range}) · [Internet](/d/internet?${__url_time_range})
+              mode: markdown
+          version: ''
+  layout:
+    kind: GridLayout
+    spec:
+      items:
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-navigation
+          height: 2
+          width: 24
+          x: 0
+          y: 0
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-1
+          height: 3
+          width: 4
+          x: 0
+          y: 2
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-2
+          height: 3
+          width: 4
+          x: 4
+          y: 2
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-3
+          height: 3
+          width: 4
+          x: 8
+          y: 2
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-4
+          height: 3
+          width: 4
+          x: 12
+          y: 2
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-5
+          height: 3
+          width: 4
+          x: 16
+          y: 2
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-6
+          height: 3
+          width: 4
+          x: 20
+          y: 2
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-7
+          height: 4
+          width: 4
+          x: 0
+          y: 5
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-8
+          height: 4
+          width: 4
+          x: 4
+          y: 5
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-9
+          height: 4
+          width: 4
+          x: 8
+          y: 5
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-10
+          height: 4
+          width: 4
+          x: 12
+          y: 5
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-11
+          height: 4
+          width: 4
+          x: 16
+          y: 5
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-12
+          height: 4
+          width: 4
+          x: 20
+          y: 5
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-13
+          height: 10
+          width: 24
+          x: 0
+          y: 9
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-14
+          height: 10
+          width: 24
+          x: 0
+          y: 19
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-15
+          height: 10
+          width: 24
+          x: 0
+          y: 29
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-16
+          height: 10
+          width: 24
+          x: 0
+          y: 39
+  links: []
+  preload: false
+  tags:
+  - finance
+  - asystem
+  timeSettings:
+    autoRefresh: ''
+    autoRefreshIntervals:
+    - 15m
+    fiscalYearStartMonth: 0
+    from: now-1y
+    hideTimepicker: false
+    quickRanges:
+    - display: Last 7d
+      from: now-7d
+      to: now
+    - display: Last 30d
+      from: now-30d
+      to: now
+    - display: Last 90d
+      from: now-90d
+      to: now
+    - display: Last 180d
+      from: now-180d
+      to: now
+    - display: Last 1y
+      from: now-1y
+      to: now
+    - display: Last 5y
+      from: now-5y
+      to: now
+    - display: Last 10y
+      from: now-10y
+      to: now
+    - display: Last 25y
+      from: now-25y
+      to: now
+    - display: Last 50y
+      from: now-50y
+      to: now
+    timezone: browser
+    to: now
+  title: Currency
+  variables: []

@@ -572,9 +572,20 @@ const (
 )
 
 var (
-	mountBareRoot    = "/"
-	mountLocalTypes  = map[string]bool{"ext4": true, "xfs": true, "btrfs": true, "f2fs": true, "vfat": true}
-	mountRemoteTypes = map[string]bool{"cifs": true, "nfs": true, "nfs4": true, "smb3": true}
+	mountBareRoot   = "/"
+	mountLocalTypes = map[string]bool{
+		"ext4":  true,
+		"xfs":   true,
+		"btrfs": true,
+		"f2fs":  true,
+		"vfat":  true,
+	}
+	mountRemoteTypes = map[string]bool{
+		"cifs": true,
+		"nfs":  true,
+		"nfs4": true,
+		"smb3": true,
+	}
 
 	mountCache   = map[string]*mountSet{}
 	mountCacheMu sync.RWMutex

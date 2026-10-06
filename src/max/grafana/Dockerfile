@@ -1,5 +1,6 @@
-# NOTES: https://github.com/grafana/grafana/releases
-FROM grafana/grafana:13.2.2 AS image_upstream
+# DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
+ARG ASYSTEM_GRAFANA_VERSION="latest"
+FROM grafana/grafana:${ASYSTEM_GRAFANA_VERSION} AS image_upstream
 USER root
 RUN apk update && \
     apk add --upgrade --no-cache bash=5.3.9-r1 && \
@@ -13,16 +14,18 @@ RUN apk update && \
 
 FROM image_upstream AS image_base
 # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
-ARG ASYSTEM_GRIZZLY_VERSION
-RUN \
-    curl -sfSL -o "/usr/local/bin/grr" "https://github.com/grafana/grizzly/releases/download/${ASYSTEM_GRIZZLY_VERSION}/grr-linux-amd64" && \
-    chmod a+x "/usr/local/bin/grr" && \
-    mkdir -p /root/.config/grizzly && \
-    grr --version
+ARG ASYSTEM_GCX_VERSION
+ARG TARGETARCH
+RUN cd /tmp && \
+    curl -sfSLO "https://github.com/grafana/gcx/releases/download/v${ASYSTEM_GCX_VERSION}/gcx_${ASYSTEM_GCX_VERSION}_linux_${TARGETARCH}.tar.gz" && \
+    curl -sfSLO "https://github.com/grafana/gcx/releases/download/v${ASYSTEM_GCX_VERSION}/gcx_${ASYSTEM_GCX_VERSION}_checksums.txt" && \
+    grep "gcx_${ASYSTEM_GCX_VERSION}_linux_${TARGETARCH}.tar.gz" "gcx_${ASYSTEM_GCX_VERSION}_checksums.txt" | sha256sum -c - && \
+    tar -xzf "gcx_${ASYSTEM_GCX_VERSION}_linux_${TARGETARCH}.tar.gz" -C /usr/local/bin gcx && \
+    rm -f gcx_* && \
+    gcx --version
 
 FROM image_base AS image_build
 COPY target/package/main/resources/image/. /asystem/etc
-RUN cp -f /asystem/etc/config/grafana.ini /etc/grafana
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc

@@ -6,11 +6,14 @@ from os.path import abspath, basename, dirname, exists, join
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
 from asystem.schema.dialects import influxdb3, mariadb, postgres, vernemq
 from asystem.schema.document import (
+    ARTIFACT,
     SchemaBrokerOptions,
     SchemaDatabaseOptions,
     SchemaDocument,
     SchemaUnreachable,
     merge_schema_entities,
+    render_schema_artifact,
+    schema_source,
 )
 
 ENV = ".env"
@@ -60,6 +63,8 @@ def write_schema_database(document, module_name=None, schemas_dir=None,
         print("Build generate script [{}] could not connect to {} with error [{}]"
               .format(module_name, database_dialect, unreachable))
         return _skip_schema_dialect(module_name, schemas_dir, database_dialect)
+    artifacts[ARTIFACT] = (render_schema_artifact(document, "" if document.discovered else schema_source(module_root)),
+                           False)
     _write_schema_dialect(module_name, schemas_dir, database_dialect, artifacts)
     emitter.ship(document, module_name, module_root, schemas_dir, options)
 

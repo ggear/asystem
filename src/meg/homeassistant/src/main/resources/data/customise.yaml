@@ -117,16 +117,16 @@ sensor.roof_wind_chill_temperature:
   friendly_name: 'Wind Chill'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.dining_air_purifier_pm25:
+sensor.template_dining_air_purifier_pm25:
   friendly_name: 'Dining'
   icon: 'mdi:virus-outline'
-sensor.lounge_air_purifier_pm25:
+sensor.template_lounge_air_purifier_pm25:
   friendly_name: 'Lounge'
   icon: 'mdi:virus-outline'
-sensor.parents_air_purifier_pm25:
+sensor.template_parents_air_purifier_pm25:
   friendly_name: 'Parents'
   icon: 'mdi:virus-outline'
-sensor.kitchen_air_purifier_pm25:
+sensor.template_kitchen_air_purifier_pm25:
   friendly_name: 'Kitchen'
   icon: 'mdi:virus-outline'
 sensor.roof_humidity:
@@ -245,35 +245,35 @@ sensor.roof_wind_speed:
   icon: 'mdi:weather-windy'
   unit_of_measurement: 'km/h'
 sensor.roof_rain_rate:
-  friendly_name: 'Rate'
+  friendly_name: 'Rain Rate'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'mm/h'
 sensor.roof_hourly_rain:
-  friendly_name: 'Hourly'
+  friendly_name: 'Hourly Rain'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'mm'
 sensor.roof_daily_rain:
-  friendly_name: 'Daily'
+  friendly_name: 'Daily Rain'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'mm'
 sensor.roof_24hour_rain:
-  friendly_name: '24 Hour'
+  friendly_name: '24 Hour Rain'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'mm'
 sensor.roof_monthly_rain:
-  friendly_name: 'Monthly'
+  friendly_name: 'Monthly Rain'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
 sensor.roof_yearly_rain:
-  friendly_name: 'Yearly'
+  friendly_name: 'Yearly Rain'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
 sensor.roof_rain:
-  friendly_name: 'Total'
+  friendly_name: 'Total Rain'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
 sensor.roof_storm_rain:
-  friendly_name: 'Storm'
+  friendly_name: 'Storm Rain'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
 input_boolean.home_started:

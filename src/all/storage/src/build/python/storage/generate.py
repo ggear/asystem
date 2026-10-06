@@ -22,7 +22,11 @@ def parse_fstab(path):
             fields = line.split()
             if len(fields) < 4 or fields[2] == "swap":
                 continue
-            entries.append({"identifier": fields[0], "mount": fields[1], "fstype": fields[2]})
+            entries.append({
+                "identifier": fields[0],
+                "mount": fields[1],
+                "fstype": fields[2],
+            })
     return entries
 
 

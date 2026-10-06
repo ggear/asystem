@@ -273,7 +273,12 @@ _ACT_ENC = {
 }
 _ACT_DEC = {v: k for k, v in _ACT_ENC.items()}
 
-_CELL_ENC = {"sum": "s", "min": "n", "max": "x", "count": "c"}
+_CELL_ENC = {
+    "sum": "s",
+    "min": "n",
+    "max": "x",
+    "count": "c",
+}
 _CELL_DEC = {v: k for k, v in _CELL_ENC.items()}
 
 _SCHEMA = {
@@ -298,7 +303,12 @@ def _encode_raw_entry(entry: dict) -> dict:
         for source, actions in sources.items():
             encoded_sources[_SRC_ENC.get(source, source)] = {_ACT_ENC.get(action, action): value for action, value in actions.items()}
         encoded_plugins[plugin_name] = encoded_sources
-    return {"ts": entry["ts"], "bucket": entry.get("bucket"), "plugins": encoded_plugins, "errored": entry["errored"]}
+    return {
+        "ts": entry["ts"],
+        "bucket": entry.get("bucket"),
+        "plugins": encoded_plugins,
+        "errored": entry["errored"],
+    }
 
 
 def _decode_raw_entry(entry: dict) -> dict:
@@ -308,7 +318,12 @@ def _decode_raw_entry(entry: dict) -> dict:
         for src_key, actions in sources.items():
             decoded_sources[_SRC_DEC.get(src_key, src_key)] = {_ACT_DEC.get(act_key, act_key): value for act_key, value in actions.items()}
         decoded_plugins[plugin_name] = decoded_sources
-    return {"ts": entry["ts"], "bucket": entry.get("bucket"), "plugins": decoded_plugins, "errored": entry["errored"]}
+    return {
+        "ts": entry["ts"],
+        "bucket": entry.get("bucket"),
+        "plugins": decoded_plugins,
+        "errored": entry["errored"],
+    }
 
 
 def _encode_day_entry(entry: dict) -> dict:
@@ -321,7 +336,11 @@ def _encode_day_entry(entry: dict) -> dict:
                 encoded_actions[_ACT_ENC.get(action, action)] = {_CELL_ENC.get(k, k): v for k, v in cell.items()}
             encoded_sources[_SRC_ENC.get(source, source)] = encoded_actions
         encoded_buckets[plugin_name] = encoded_sources
-    return {"date": entry["date"], "errored_runs": entry["errored_runs"], "buckets": encoded_buckets}
+    return {
+        "date": entry["date"],
+        "errored_runs": entry["errored_runs"],
+        "buckets": encoded_buckets,
+    }
 
 
 def _decode_day_entry(entry: dict) -> dict:
@@ -334,7 +353,11 @@ def _decode_day_entry(entry: dict) -> dict:
                 decoded_actions[_ACT_DEC.get(act_key, act_key)] = {_CELL_DEC.get(k, k): v for k, v in cell.items()}
             decoded_sources[_SRC_DEC.get(src_key, src_key)] = decoded_actions
         decoded_buckets[plugin_name] = decoded_sources
-    return {"date": entry["date"], "errored_runs": entry["errored_runs"], "buckets": decoded_buckets}
+    return {
+        "date": entry["date"],
+        "errored_runs": entry["errored_runs"],
+        "buckets": decoded_buckets,
+    }
 
 
 @dataclass(frozen=True)
@@ -405,7 +428,12 @@ def _apply_cell_value(aggregator: str, cell: dict | None):
 
 def _merge_cells(accumulated: dict | None, cell: dict) -> dict:
     if accumulated is None:
-        return {"sum": cell["sum"], "min": cell["min"], "max": cell["max"], "count": cell["count"]}
+        return {
+            "sum": cell["sum"],
+            "min": cell["min"],
+            "max": cell["max"],
+            "count": cell["count"],
+        }
     return {
         "sum": accumulated["sum"] + cell["sum"],
         "min": cell["min"] if accumulated["min"] is None else (min(accumulated["min"], cell["min"]) if cell["min"] is not None else accumulated["min"]),
@@ -456,7 +484,12 @@ class RunHistory:
             all_counters = {"summary": summary, **plugin_counters}
             errored_map = {name: _plugin_is_errored(counters) for name, counters in all_counters.items()}
             ts_str = ts.isoformat()
-            raw_entry = {"ts": ts_str, "bucket": _period_bucket(start_ts if start_ts is not None else ts, self._poll_period_minutes), "plugins": all_counters, "errored": errored_map}
+            raw_entry = {
+                "ts": ts_str,
+                "bucket": _period_bucket(start_ts if start_ts is not None else ts, self._poll_period_minutes),
+                "plugins": all_counters,
+                "errored": errored_map,
+            }
             if self._raw and raw_entry["bucket"] is not None and self._raw[-1].get("bucket") == raw_entry["bucket"]:
                 self._raw[-1] = raw_entry
             else:
@@ -468,7 +501,11 @@ class RunHistory:
                     found_day_entry = existing
                     break
             if found_day_entry is None:
-                day_entry: dict[str, Any] = {"date": date_str, "errored_runs": {name: 0 for name in self._all_plugins}, "buckets": {}}
+                day_entry: dict[str, Any] = {
+                    "date": date_str,
+                    "errored_runs": {name: 0 for name in self._all_plugins},
+                    "buckets": {},
+                }
                 self._day.append(day_entry)
             else:
                 day_entry = found_day_entry
@@ -496,7 +533,12 @@ class RunHistory:
                             continue
                         value_num = value or 0
                         if action not in plugin_bucket[source]:
-                            plugin_bucket[source][action] = {"sum": value_num, "min": value_num, "max": value_num, "count": 1}
+                            plugin_bucket[source][action] = {
+                                "sum": value_num,
+                                "min": value_num,
+                                "max": value_num,
+                                "count": 1,
+                            }
                         else:
                             cell = plugin_bucket[source][action]
                             cell["sum"] += value_num
@@ -522,7 +564,11 @@ class RunHistory:
             timing_summary[CTR_ACT_TOTAL_MILLIS] = timing_summary.get(CTR_ACT_TOTAL_MILLIS, 0) + overhead_ms
             all_counters = {"summary": summary, **plugin_counters}
             errored_map = {name: _plugin_is_errored(counters) for name, counters in all_counters.items()}
-            entry = {"ts": ts.isoformat(), "plugins": all_counters, "errored": errored_map}
+            entry = {
+                "ts": ts.isoformat(),
+                "plugins": all_counters,
+                "errored": errored_map,
+            }
             self._adhoc = entry
             self._store_adhoc()
             print_log("Wrangle", "Execution Summary:")
@@ -601,7 +647,14 @@ class RunHistory:
 
     def snapshot(self) -> Snapshot:
         with self._lock:
-            counters_dict = {f"{source}|{action}": {"source": c.source, "action": c.action, "label": c.label, "aggregator": c.aggregator, "format": c.format, "error": c.error} for (source, action), c
+            counters_dict = {f"{source}|{action}": {
+                "source": c.source,
+                "action": c.action,
+                "label": c.label,
+                "aggregator": c.aggregator,
+                "format": c.format,
+                "error": c.error,
+            } for (source, action), c
                              in COUNTERS.items()}
             views = [
                 self._build_raw_view(),

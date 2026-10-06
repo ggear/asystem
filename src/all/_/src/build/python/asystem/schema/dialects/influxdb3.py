@@ -8,6 +8,7 @@ from requests import post
 from requests.exceptions import RequestException
 
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
+from asystem.schema import panel as panels
 from asystem.schema.document import SchemaDatabaseDimension, SchemaUnreachable, parse_schema_document
 from asystem.schema.query import (
     BUCKET,
@@ -37,6 +38,8 @@ from asystem.schema.runner import (
 )
 
 DIALECT = "influxdb3"
+GRAFANA = "influxdb"
+DISPLAY = "${__field.labels.metric}"
 TARGET = "INFLUXDB3_SERVICE_PROD"
 MODULE = "module"
 
@@ -221,10 +224,13 @@ class Discover:
         return document
 
     def json(self):
-        return json.dumps({"module": self.module or self.database,
-                           "database": {"relations": [relation for relation in
-                                                      (self.relation(table) for table in self.tables()) if relation]}},
-                          indent=2)
+        return json.dumps({
+            "module": self.module or self.database,
+            "database": {
+                "relations": [relation for relation in
+                              (self.relation(table) for table in self.tables()) if relation],
+            },
+        }, indent=2)
 
     def relation(self, table):
         columns = self.columns(table)
@@ -235,17 +241,29 @@ class Discover:
             if self.module and column == MODULE:
                 continue
             if dimension:
-                dimensions.append({"key": column, "description": self.described(column),
-                                   "entities": self.values(table, column)})
+                dimensions.append({
+                    "key": column,
+                    "description": self.described(column),
+                    "entities": self.values(table, column),
+                })
             else:
-                measures.append({"key": column, "kind": declared, "description": self.described("value")})
+                measures.append({
+                    "key": column,
+                    "kind": declared,
+                    "description": self.described("value"),
+                })
         if not measures:
             return None
         subject = max(dimensions, key=lambda dimension: (len(dimension["entities"]), dimension["key"]), default=None)
         if subject is not None:
             subject["subject"] = True
-        return {"path": table, "description": self.described(table),
-                "cadence": self.cadence, "dimensions": dimensions, "measures": measures}
+        return {
+            "path": table,
+            "description": self.described(table),
+            "cadence": self.cadence,
+            "dimensions": dimensions,
+            "measures": measures,
+        }
 
     def tables(self):
         return [row["table_name"] for row in self.query(
@@ -293,7 +311,11 @@ class Discover:
         try:
             response = post("http://{}:{}/api/v3/query_sql".format(self.target, self.port),
                             headers={"Authorization": "Bearer {}".format(self.token)},
-                            json={"db": self.database, "q": statement, "format": "json"}, timeout=self.timeout)
+                            json={
+                                "db": self.database,
+                                "q": statement,
+                                "format": "json",
+                            }, timeout=self.timeout)
         except RequestException as exception:
             raise SchemaUnreachable(exception) from exception
         if response.status_code != 200:
@@ -308,6 +330,54 @@ class Discover:
     @staticmethod
     def _env(name, module_root):
         return load_bootstrap_env_value(name, filename=ENV, module_root=module_root)
+
+
+def panel(relation, document, measures, entities=None, transforms=(), labels=None):
+    picked = panels.selected(relation, document, measures, KINDS)
+    entities = panels.subjected(relation, document, entities)
+    combine = panels.transformed(transforms, document, relation)
+    arms = []
+    for measure, label in picked:
+        arms.append(select(
+            [("$__dateBin(time)", TIME),
+             (panels.entitled(_entity(relation), subject(relation), entities, labels), "entity"),
+             ("'{}'".format((labels or {}).get(label, label)), "measure"),
+             (panels.aggregated(panels.valued(column(measure.key), measure, transforms), transforms), "value")],
+            relation.plugin, predicates(relation, document, measure, entities), group_by=["1", "2"]))
+    return panels.statement(arms, entities, picked, transforms, combine)
+
+
+def summary(sources, document, statistic, span):
+    arms = []
+    for relation, entities in sources:
+        carried = " + ".join("CASE WHEN count({}) > 0 THEN 1 ELSE 0 END".format(column(measure.key))
+                             for measure in relation.carried(KINDS)) or "0"
+        arms.append(panels.summary_arm(statistic, relation.plugin,
+                                       where(relation, document) + panels.restricted(subject(relation), entities),
+                                       subject(relation), carried, "$__timeTo()", "$__timeFrom()",
+                                       "to_unixtime({})".format, span))
+    return panels.combined(arms, statistic)
+
+
+def held(relation, document, measure, entities=None):
+    rows = select(
+        [(column(measure), "value"),
+         ("to_unixtime(coalesce(lead(time) OVER (PARTITION BY {} ORDER BY time), $__timeTo())) - to_unixtime(time)"
+          .format(_entity(relation)), "held")],
+        relation.plugin,
+        ["$__timeFilter(time)"] + where(relation, document) + ["{} IS NOT NULL".format(column(measure))]
+        + panels.restricted(subject(relation), entities))
+    return select([("100.0 * sum(value * held) / NULLIF(sum(held), 0)", "value")],
+                  "(\n{}\n) AS rows".format(panels.indented(rows)))
+
+
+def predicates(relation, document, measure, entities):
+    return (["$__timeFilter(time)"] + where(relation, document) + ["{} IS NOT NULL".format(column(measure.key))]
+            + panels.restricted(subject(relation), entities))
+
+
+def subject(relation):
+    return column(relation.subject.key) if relation.subject else _entity(relation)
 
 
 def named(relation):

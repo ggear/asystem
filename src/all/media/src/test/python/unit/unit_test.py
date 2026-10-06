@@ -10,7 +10,7 @@ import unittest
 import pytest
 from media import analyse
 from media.analyse import get_file_actions_dict as actions
-from media import ingress
+from media import stage
 from media import refresh
 from os.path import *
 from jproperties import Properties
@@ -97,8 +97,10 @@ class StaticTest(unittest.TestCase):
         self.assertIn("completion", complete(""))
         self.assertNotIn("complete", complete(""))
         self.assertEqual(complete("tr"), ["truncate", "transcode"])
-        self.assertEqual(complete("analyse", "--"), ["--share", "--force", "--quiet", "--verbose"])
-        self.assertEqual(complete("analyse", "--force", "--"), ["--share", "--quiet", "--verbose"])
+        self.assertEqual(complete("analyse", "--"),
+                         ["--share", "--force", "--merge", "--transcode", "--quiet", "--verbose"])
+        self.assertEqual(complete("analyse", "--merge", "--"),
+                         ["--share", "--force", "--transcode", "--quiet", "--verbose"])
         self.assertEqual(complete("process", ""), ["kids", "parents", "docos", "comedy"])
         self.assertEqual(complete("process", "kids", ""), ["--share", "--persistent", "--quiet", "--verbose"])
         self.assertEqual(complete("move", "--dryrun", "2"), ["20", "21"])
@@ -242,10 +244,9 @@ class InternetTest(unittest.TestCase):
                                   files_action_expected=actions(
                                       merge=1,
                                       upscale=1,
-                                      transcode=3,
-                                      reformat=1,
+                                      transcode=4,
                                       downscale=2
-                                  ), force=True)
+                                  ), transcode=True)
         self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=12,
                                   files_action_expected=actions(
                                       check=6,
@@ -267,7 +268,7 @@ class InternetTest(unittest.TestCase):
                                       merge=14,
                                       reformat=9,
                                       downscale=1,
-                                  ), scripts={"merge"}, force=True)
+                                  ), scripts={"merge"}, merge=True)
         self._test_analyse_assert(join(dir_test, "41/media"),
                                   files_action_expected=actions(
                                       check=8,
@@ -415,14 +416,14 @@ class InternetTest(unittest.TestCase):
             _dir.is_dir()
         ]):
             self._test_analyse_assert(join(dir_test, INDEX), asserts=False)
-            self._test_analyse_assert(join(dir_test, "{}/media".format(INDEX)), asserts=False, force=True)
+            self._test_analyse_assert(join(dir_test, "{}/media".format(INDEX)), asserts=False, merge=True, transcode=True)
             self._test_analyse_assert(join(dir_test, INDEX), asserts=False, files_expected_scripts={})
         self._test_analyse_assert(dir_test, asserts=False)
 
     def _test_analyse_assert(self, dir_test, files_expected=None, files_expected_scripts=None,
                              files_action_expected=None, asserts=True,
-                             scripts=MEDIA_FILE_SCRIPTS, extensions=MEDIA_FILE_EXTENSIONS, clean=False, force=False,
-                             defaults=False):
+                             scripts=MEDIA_FILE_SCRIPTS, extensions=MEDIA_FILE_EXTENSIONS, clean=False, merge=False,
+                             transcode=False, defaults=False):
 
         def _file_count():
             file_count = 0
@@ -435,7 +436,8 @@ class InternetTest(unittest.TestCase):
         sheet_guid = os.getenv("MEDIA_GOOGLE_SHEET_GUID")
         if clean:
             self.assertEqual(0, analyse._analyse("/share", sheet_guid, clean=True, verbose=True)[0])
-        files_actual, files_action_actual = analyse._analyse(dir_test, sheet_guid, verbose=True, force=force,
+        files_actual, files_action_actual = analyse._analyse(dir_test, sheet_guid, verbose=True, merge=merge,
+                                                             transcode=transcode,
                                                              defaults=defaults)
         if asserts:
             self.assertEqual(_file_count() if files_expected is None else files_expected, files_actual)
@@ -467,33 +469,33 @@ class InternetTest(unittest.TestCase):
                     self.assertGreaterEqual(_file_count() if files_expected_scripts is None else files_expected_scripts,
                                             file_count)
 
-    def test_ingress_comprehensive_1(self):
+    def test_stage_comprehensive_1(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 1)
-        self._test_ingress(dir_test, 174)
+        self._test_stage(dir_test, 174)
 
-    def test_ingress_comprehensive_2(self):
+    def test_stage_comprehensive_2(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 2)
-        self._test_ingress(dir_test, 1)
+        self._test_stage(dir_test, 1)
 
-    def test_ingress_comprehensive_3(self):
+    def test_stage_comprehensive_3(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 3)
-        self._test_ingress(dir_test, 7)
+        self._test_stage(dir_test, 7)
 
-    def test_ingress_comprehensive_4(self):
+    def test_stage_comprehensive_4(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 4)
-        self._test_ingress(dir_test, 5)
+        self._test_stage(dir_test, 5)
 
-    def test_ingress_comprehensive_5(self):
+    def test_stage_comprehensive_5(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 5)
-        self._test_ingress(dir_test, 8)
+        self._test_stage(dir_test, 8)
 
-    def test_ingress_comprehensive_6(self):
+    def test_stage_comprehensive_6(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 6)
-        self._test_ingress(dir_test, 5)
+        self._test_stage(dir_test, 5)
 
-    def _test_ingress(self, dir_test, files_renamed):
-        self.assertEqual(files_renamed, ingress._process(join(dir_test, "1/tmp"), True))
-        self.assertEqual(0, ingress._process(join(dir_test, "1/tmp"), True))
+    def _test_stage(self, dir_test, files_renamed):
+        self.assertEqual(files_renamed, stage._process(join(dir_test, "1/tmp"), True))
+        self.assertEqual(0, stage._process(join(dir_test, "1/tmp"), True))
 
     def test_refresh_happy(self):
         dir_test = self._test_prepare_dir("share_media_example", 2)
@@ -549,34 +551,55 @@ class InternetTest(unittest.TestCase):
                 "/share/30/media/docos/movies",
             ]
         }
-        completed_slot = {"status": "Completed", "name": "Some.Movie.2026", "fail_message": ""}
-        failed_slot = {"status": "Failed", "name": "Broken.Movie.2026", "fail_message": "Unpack failed"}
-        running_slot = {"status": "Extracting", "name": "Busy.Movie.2026", "fail_message": ""}
+        completed_slot = {
+            "status": "Completed",
+            "name": "Some.Movie.2026",
+            "fail_message": "",
+        }
+        failed_slot = {
+            "status": "Failed",
+            "name": "Broken.Movie.2026",
+            "fail_message": "Unpack failed",
+        }
+        running_slot = {
+            "status": "Extracting",
+            "name": "Busy.Movie.2026",
+            "fail_message": "",
+        }
 
         def archives(_sabnzbd):
             return [call for call in _sabnzbd.calls if call.get("name") == "delete"]
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[])
         self.assertEqual([], archives(sabnzbd))
-        self.assertEqual({"mode": "history", "limit": 1, "status": "Completed"}, sabnzbd.calls[0])
+        self.assertEqual({
+            "mode": "history",
+            "limit": 1,
+            "status": "Completed",
+        }, sabnzbd.calls[0])
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[completed_slot])
-        self.assertEqual([{"mode": "history", "name": "delete", "value": "completed", "archive": 1}], archives(sabnzbd))
+        self.assertEqual([{
+            "mode": "history",
+            "name": "delete",
+            "value": "completed",
+            "archive": 1,
+        }], archives(sabnzbd))
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[running_slot])
         self.assertEqual([], archives(sabnzbd))
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[failed_slot],
                                      return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
-        self.assertEqual(["failed"], [call["value"] for call in archives(sabnzbd)])
+        self.assertEqual([], archives(sabnzbd))
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[completed_slot, failed_slot],
                                      return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
-        self.assertEqual(["completed", "failed"], [call["value"] for call in archives(sabnzbd)])
+        self.assertEqual(["completed"], [call["value"] for call in archives(sabnzbd)])
 
         sabnzbd = self._test_refresh(dir_test, library_paths, history_slots=[failed_slot] * 250,
                                      return_value=refresh.Exit.FAIL_SABNZBD_DOWNLOAD)
-        self.assertEqual(["failed"], [call["value"] for call in archives(sabnzbd)])
+        self.assertEqual([], archives(sabnzbd))
         self.assertEqual([0, 100, 200], [call["start"] for call in sabnzbd.calls if "start" in call])
 
         self._test_refresh(dir_test, library_paths, connect_error=True,
@@ -595,7 +618,11 @@ class InternetTest(unittest.TestCase):
             ]
         }
         def resources(monitored=True):
-            return {"series": [{"id": 7, "title": "Ted Lasso", "monitored": monitored}]}
+            return {"series": [{
+                "id": 7,
+                "title": "Ted Lasso",
+                "monitored": monitored,
+            }]}
 
         sonarr = self._test_refresh(dir_test, library_paths, sonarr_resources=resources())
         self.assertEqual([], sonarr.puts)
@@ -636,9 +663,17 @@ class InternetTest(unittest.TestCase):
         }
 
         def series(_ended, _episodes, _files):
-            return {"id": 7, "title": "Ted Lasso", "monitored": True, "ended": _ended,
-                    "statistics": {"episodeCount": _episodes, "episodeFileCount": _files,
-                                   "percentOfEpisodes": _files * 100 // _episodes}}
+            return {
+                "id": 7,
+                "title": "Ted Lasso",
+                "monitored": True,
+                "ended": _ended,
+                "statistics": {
+                    "episodeCount": _episodes,
+                    "episodeFileCount": _files,
+                    "percentOfEpisodes": _files * 100 // _episodes,
+                },
+            }
 
         self._test_refresh(dir_test, library_paths,
                            sonarr_resources={"series": [series(False, 10, 10)], "queue": []})
@@ -673,8 +708,13 @@ class InternetTest(unittest.TestCase):
 
         def resources(_seasons, _profile_id=4):
             return {
-                "series": [{"id": 7, "title": "Ted Lasso", "monitored": True, "qualityProfileId": _profile_id,
-                            "seasons": _seasons}],
+                "series": [{
+                    "id": 7,
+                    "title": "Ted Lasso",
+                    "monitored": True,
+                    "qualityProfileId": _profile_id,
+                    "seasons": _seasons,
+                }],
                 "qualityProfile": [{"id": 4, "name": "HD-1080p"}, {"id": 1, "name": "Any"}],
                 "queue": [],
             }
@@ -716,7 +756,12 @@ class InternetTest(unittest.TestCase):
             ]
         }
         sabnzbd = self._test_refresh(dir_test, library_paths, queue_slots=[
-            {"filename": "Rose.of.Nevada.2025", "status": "Downloading", "percentage": "35", "timeleft": "0:46:09"},
+            {
+                "filename": "Rose.of.Nevada.2025",
+                "status": "Downloading",
+                "percentage": "35",
+                "timeleft": "0:46:09",
+            },
         ])
         self.assertEqual({"mode": "queue"}, sabnzbd.calls[-1])
 
@@ -751,9 +796,17 @@ class InternetTest(unittest.TestCase):
                 if sonarr_error is not None and sonarr_error in (resource, (_payload or {}).get("name")):
                     raise Exception(f"mocked sonarr [{sonarr_error}] failure")
                 if _payload is not None:
-                    return MockSabnzbdResponse({"id": 1, "status": sonarr_command_status, "result": "successful"})
+                    return MockSabnzbdResponse({
+                        "id": 1,
+                        "status": sonarr_command_status,
+                        "result": "successful",
+                    })
                 if resource.startswith("command/"):
-                    return MockSabnzbdResponse({"id": 1, "status": "completed", "result": "successful"})
+                    return MockSabnzbdResponse({
+                        "id": 1,
+                        "status": "completed",
+                        "result": "successful",
+                    })
                 if resource.startswith("series/"):
                     series_id = int(resource.split("/", 1)[1])
                     return MockSabnzbdResponse(

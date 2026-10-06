@@ -1,0 +1,9 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+apiVersion: folder.grafana.app/v1
+kind: Folder
+metadata:
+  name: home
+spec:
+  title: Home

@@ -251,8 +251,16 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _serve_dashboard(self):
         snapshot = self._history.snapshot()
-        plugin_sections = [{"id": "summary", "title": "Summary", "theme": "ghost-gray"}] + [
-            {"id": name, "title": name.capitalize(), "theme": THEMES[index % len(THEMES)]}
+        plugin_sections = [{
+            "id": "summary",
+            "title": "Summary",
+            "theme": "ghost-gray",
+        }] + [
+            {
+                "id": name,
+                "title": name.capitalize(),
+                "theme": THEMES[index % len(THEMES)],
+            }
             for index, name in enumerate(p for p in snapshot.plugins if p != "summary")
         ]
         snapshot_json = json.dumps(dataclasses.asdict(snapshot))

@@ -1,13 +1,18 @@
+import glob
+import hashlib
 import importlib
 import json
 import os
 import subprocess
 import sys
-from dataclasses import dataclass, field, fields, is_dataclass
-from os.path import abspath, basename, isabs, isdir, isfile, join
+from dataclasses import asdict, dataclass, field, fields, is_dataclass
+from os.path import abspath, basename, dirname, isabs, isdir, isfile, join, realpath, relpath
 
 from asystem.bootstrap import load_bootstrap_env_value, load_bootstrap_root
+from asystem.schema.query import WARNING
 
+ARTIFACT = "document.json"
+ARTIFACT_DIR = "src/build/resources/schema"
 KINDS = ("float", "int", "bool", "str")
 ROLES = ("state", "command", "availability")
 TYPES = {
@@ -145,6 +150,11 @@ def load_schema_document(module_root=None, config=None, args=None):
 
     {
         "module":      "<name>",            OPTIONAL  Owning module, defaults to the module directory name
+        "warning":     "<text>",            OPTIONAL  The build banner, carried by the [document.json] artifact only
+        "source":      "<sha256>",          OPTIONAL  Hash of the module source the artifact was reflected from,
+                                                      carried by the [document.json] artifact only
+        "discovered":  <true|false>,        OPTIONAL  Read from a live backend rather than declared, set by the
+                                                      [document.json] artifact only, defaults to false
         "database":    {                    OPTIONAL  What the service writes to a database backend
           "relations":   [{                 OPTIONAL  One per distinct row shape written
             "path":        "<path>",        REQUIRED  [<plugin>/<scope>], [<plugin>] is what the backend writes to,
@@ -184,6 +194,9 @@ def load_schema_document(module_root=None, config=None, args=None):
         }
     }
 
+    A go/rust or python reflector emits every [database] key above, empty or not, and the parser refuses one that
+    omits a key, so a field added here cannot silently take its default because an emitter was not updated.
+
     A [<kind>] is one of [float] [int] [bool] [str]. Which of them a backend carries is the dialect's
     call, declared as its [KINDS] and read through [carried] — influxdb3 carries all four since line
     protocol has a string field, postgres carries the numeric three since its long form pivots through
@@ -219,9 +232,11 @@ def load_schema_document(module_root=None, config=None, args=None):
     if isfile(python_path):
         document = _load_schema_python(module_root, module_name, python_path, config)
     elif isdir(go_path):
-        document = parse_schema_document(_run_schema_go(module_root, module_name, config, args), module_name)
+        document = parse_schema_document(_run_schema_go(module_root, module_name, config, args), module_name,
+                                          strict=True)
     elif isdir(rust_path):
-        document = parse_schema_document(_run_schema_rust(module_root, module_name, config, args), module_name)
+        document = parse_schema_document(_run_schema_rust(module_root, module_name, config, args), module_name,
+                                          strict=True)
     else:
         raise ValueError("Build generate script [{}] declares no schema reflector, expected one of [{}] [{}] [{}]"
                          .format(module_name, python_path, go_path, rust_path))
@@ -231,13 +246,14 @@ def load_schema_document(module_root=None, config=None, args=None):
     return document
 
 
-def parse_schema_document(text, module_name):
+def parse_schema_document(text, module_name, strict=False):
     try:
         parsed = json.loads(text)
     except ValueError as error:
         raise ValueError("Build generate script [{}] schema reflection emitted unparseable JSON [{}]"
                          .format(module_name, error)) from error
-    _reject_unknown(module_name, "document", parsed, ("module", "database", "broker"))
+    _reject_unknown(module_name, "document", parsed,
+                    ("warning", "source", "module", "discovered", "database", "broker"))
     database = _mapping(module_name, "document", parsed, "database")
     broker = _mapping(module_name, "document", parsed, "broker")
     _reject_unknown(module_name, "database", database, ("relations",))
@@ -246,9 +262,63 @@ def parse_schema_document(text, module_name):
         module=_text(module_name, "document", parsed, "module", module_name),
         relations=[_parse_relation(module_name, relation) for relation in _mappings(module_name, "database", database, "relations")],
         payloads=[_parse_payload(module_name, payload) for payload in _mappings(module_name, "broker", broker, "payloads")],
-        topics=[_parse_topic(module_name, topic) for topic in _mappings(module_name, "broker", broker, "topics")])
+        topics=[_parse_topic(module_name, topic) for topic in _mappings(module_name, "broker", broker, "topics")],
+        discovered=_flag(module_name, "document", parsed, "discovered", False))
     _validate(document)
+    if strict:
+        for relation in database.get("relations", []):
+            scope = _scope("", "relation", relation, "path")
+            _require(module_name, scope, relation, SchemaDatabaseRelation)
+            for dimension in relation.get("dimensions", []):
+                _require(module_name, _scope(scope, "dimension", dimension), dimension, SchemaDatabaseDimension)
+            for measure in relation.get("measures", []):
+                _require(module_name, _scope(scope, "measure", measure), measure, SchemaDatabaseMeasure)
     return document
+
+
+def load_schema_artifact(module_name, dialect, repository_root=None):
+    if repository_root is None:
+        repository_root = abspath(join(dirname(realpath(__file__)), "../../../../../../../.."))
+    paths = sorted(glob.glob(join(repository_root, "src/*", module_name, ARTIFACT_DIR, dialect, ARTIFACT)))
+    if len(paths) != 1:
+        raise ValueError("Build generate script [{}] expected one [{}] schema artifact for dialect [{}] found [{}], "
+                         "run [fab generate] in the module".format(module_name, ARTIFACT, dialect, len(paths)))
+    with open(paths[0]) as artifact_file:
+        text = artifact_file.read()
+    source = json.loads(text).get("source")
+    module_root = abspath(join(dirname(paths[0]), "../../../../.."))
+    if source and source != schema_source(module_root):
+        print("Build generate script [{}] schema artifact [{}] is older than its source, run [fab generate] in [{}]"
+              .format(module_name, paths[0], module_root), file=sys.stderr)
+        sys.stderr.flush()
+    return parse_schema_document(text, module_name)
+
+
+def schema_source(module_root):
+    module_name = basename(module_root)
+    paths = [join(module_root, "src/build/python", module_name, "generate.py")]
+    for language in ("go", "rust", "python"):
+        sources = glob.glob(join(module_root, "src/main", language, module_name, "**/*"), recursive=True)
+        paths += [path for path in sources
+                  if path.endswith((".go", ".rs", ".py", "go.mod", "Cargo.toml")) and not path.endswith("_test.go")]
+    digest = hashlib.sha256()
+    for path in sorted(path for path in paths if isfile(path)):
+        digest.update(relpath(path, module_root).encode())
+        with open(path, "rb") as source_file:
+            digest.update(source_file.read())
+    return digest.hexdigest()
+
+
+def render_schema_artifact(document, source=""):
+    return json.dumps({
+        "warning": WARNING,
+        "source": source,
+        "module": document.module,
+        "discovered": document.discovered,
+        "database": {
+            "relations": [asdict(relation) for relation in document.relations],
+        },
+    }, indent=2, ensure_ascii=False) + "\n"
 
 
 def merge_schema_entities(document, entities=None):
@@ -279,13 +349,20 @@ def _load_schema_python(module_root, module_name, python_path, config):
     except ImportError as error:
         raise ValueError("Build generate script [{}] could not import schema module [{}] [{}]"
                          .format(module_name, python_path, error)) from error
-    document = SchemaDocument(module=module_name)
+    relations, payloads = [], []
     if hasattr(module, "database_schema"):
-        document.relations = list(module.database_schema(config) if config is not None else module.database_schema())
+        relations = list(module.database_schema(config) if config is not None else module.database_schema())
     if hasattr(module, "broker_schema"):
-        document.payloads = list(module.broker_schema(config) if config is not None else module.broker_schema())
-    _validate(document)
-    return document
+        payloads = list(module.broker_schema(config) if config is not None else module.broker_schema())
+    return parse_schema_document(json.dumps({
+        "module": module_name,
+        "database": {
+            "relations": [asdict(relation) for relation in relations],
+        },
+        "broker": {
+            "payloads": [asdict(payload) for payload in payloads],
+        },
+    }), module_name, strict=True)
 
 
 def _run_schema_go(module_root, module_name, config, args=None):
@@ -403,6 +480,13 @@ def _parse_member(module_name, scope, member):
 
 def _scope(scope, noun, mapping, key="key"):
     return "{}{} [{}]".format(scope + " " if scope else "", noun, mapping.get(key, "") if isinstance(mapping, dict) else "")
+
+
+def _require(module_name, scope, mapping, declared):
+    missing = sorted(declared_field.name for declared_field in fields(declared) if declared_field.name not in mapping)
+    if missing:
+        raise ValueError("Build generate script [{}] schema reflection {} omits key(s) [{}], emit every key even when "
+                         "empty".format(module_name, scope, ",".join(missing)))
 
 
 def _reject_unknown(module_name, scope, mapping, allowed):

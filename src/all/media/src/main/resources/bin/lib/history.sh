@@ -154,3 +154,4 @@ find . -name "*.mkv" -exec echo ffmpeg -i "{}" -c:v copy -ac 6 -ar 48000 -ab 400
 IMPORT_MEDIA_DEV="/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
 umount -fq /media/usbdrive 2>&1 >/dev/null
 mount -t exfat ${IMPORT_MEDIA_DEV} /media/usbdrive
+mount -t ntfs3 -o ro /dev/sdb1 /media/usbdrive

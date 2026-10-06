@@ -16,8 +16,15 @@ func TestConfig_Resolution(t *testing.T) {
 		expectedError    bool
 	}{
 		{
-			name:             "full_resolution",
-			envVars:          map[string]string{"BROKER_HOST": "vernemq", "BROKER_PORT": "1883", "DATABASE_HOST": "influx", "DATABASE_PORT": "8181", "DATABASE_NAME": "netdb", "UNIFI_SITE": "home"},
+			name: "full_resolution",
+			envVars: map[string]string{
+				"BROKER_HOST":   "vernemq",
+				"BROKER_PORT":   "1883",
+				"DATABASE_HOST": "influx",
+				"DATABASE_PORT": "8181",
+				"DATABASE_NAME": "netdb",
+				"UNIFI_SITE":    "home",
+			},
 			expectedBroker:   "vernemq:1883",
 			expectedDatabase: "influx:8181",
 			expectedDBName:   "netdb",

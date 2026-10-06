@@ -373,7 +373,11 @@ def _run_plugins(filter_plugins=None):
             plugin_errored = True
         if plugin_errored and not any(action == CTR_ACT_ERRORED and value > 0 for source_actions in counters.values() for action, value in source_actions.items()):
             counters.setdefault(CTR_SRC_DATA, {})[CTR_ACT_ERRORED] = 1
-        plugin_results[plugin_name] = {"counters": counters, "runtime_sec": time.perf_counter() - plugin_started, "errored": plugin_errored}
+        plugin_results[plugin_name] = {
+            "counters": counters,
+            "runtime_sec": time.perf_counter() - plugin_started,
+            "errored": plugin_errored,
+        }
         if plugin_errored:
             plugin_errored_count += 1
     return plugin_count != 0 and plugin_errored_count == 0, plugin_results, plugin_count, plugin_errored_count
@@ -404,7 +408,11 @@ def _failed_run_results(plugin_names):
         for (source, action) in COUNTERS:
             counters.setdefault(source, {})[action] = 0
         counters[CTR_SRC_SOURCES][CTR_ACT_ERRORED] = 1
-        plugin_results[plugin_name] = {"counters": counters, "runtime_sec": 0.0, "errored": True}
+        plugin_results[plugin_name] = {
+            "counters": counters,
+            "runtime_sec": 0.0,
+            "errored": True,
+        }
     return plugin_results
 
 

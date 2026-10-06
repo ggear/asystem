@@ -51,7 +51,11 @@ REPOS_CURRENCY = plugin.Repos(
 class Currency(plugin.Plugin):
 
     def _run(self):
-        rba_df = self.dataframe_new(schema={"Date": pl.Date, **{pair: pl.Float64 for pair in PAIRS}, "Source": pl.Utf8})
+        rba_df = self.dataframe_new(schema={
+            "Date": pl.Date,
+            **{pair: pl.Float64 for pair in PAIRS},
+            "Source": pl.Utf8,
+        })
         rba_delta_df = self.dataframe_new()
         if not plugin.config.disable_source_downloads or plugin.config.force_reprocessing:
 

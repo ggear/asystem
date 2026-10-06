@@ -377,8 +377,16 @@ func TestProbeUtilBackupRender_APausingScrubReadsPausingBesideASuccessfulRun(t *
 		t.Fatalf("write scrub: %v", err)
 	}
 	columns := strings.Split(backupListRow(root, run), "|")
-	cells := map[string]string{"TERTIARY": columns[7], "SCRUB": columns[8], "RESULT": columns[len(columns)-2]}
-	expected := map[string]string{"TERTIARY": metric.BackupStateSuccess, "SCRUB": metric.BackupStatePausing, "RESULT": metric.BackupStateSuccess}
+	cells := map[string]string{
+		"TERTIARY": columns[7],
+		"SCRUB":    columns[8],
+		"RESULT":   columns[len(columns)-2],
+	}
+	expected := map[string]string{
+		"TERTIARY": metric.BackupStateSuccess,
+		"SCRUB":    metric.BackupStatePausing,
+		"RESULT":   metric.BackupStateSuccess,
+	}
 	for column, want := range expected {
 		if got := strings.TrimSpace(cells[column]); got != want {
 			t.Errorf("%s = %q, want %q", column, got, want)

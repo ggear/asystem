@@ -2,7 +2,9 @@
 
 How the `grafana` module builds, configures and deploys its dashboards, and the migration from the legacy
 jsonnet/grizzly/Flux stack to the Foundation SDK, the Grafana CLI (`gcx`) and SQL. Status is marked per section:
-**built** is in the repo today, **planned** is not. Nothing here is built yet.
+**built** is in the repo today, **planned** is not. Phases 1–6 are built in the working tree, unreleased; where the
+build departed from this design, *Deviations* below records what was done instead and why, and it wins over the
+section it amends.
 
 **The outcome.** The default org and nothing else — no public, private or default split, no anonymous access.
 One set of dashboards in one tree, `data/dashboards/`, all native `dashboard.grafana.app/v2` YAML, grouped by
@@ -49,14 +51,14 @@ The module is the oldest still running and predates every convention `supervisor
 | Conditions, Control, Diagnostics, Electricity, Rain | 16 | `home_private` by `entity_id`, field `value` | Home Assistant → InfluxDB 2 | Home Assistant → InfluxDB 3 `<domain>__<device_class>` |
 | Home ×3, Homes | 4 | dashboard lists, org-switch links | — | — |
 
-Only the xlsx five keep their identity (`entity_id`), and even they moved measurement: HA now writes one measurement
+Only the metadata five keep their identity (`entity_id`), and even they moved measurement: HA now writes one measurement
 per `domain__device_class` (`sensor__temperature`, `sensor__power`, …) with tag `module='homeassistant'`, field
 `value`.
 
 The shared header (`header_metadata.jsonnet`, 547 lines — freshness, poll age, point counts and four error stats on
 every dashboard) reads wrangle `type == "metadata"` rows that current wrangle neither declares nor writes.
 
-## Target — planned
+## Target — built
 
 ### Module layout
 
@@ -135,7 +137,7 @@ provisioning format is YAML anyway.
 | `data/dashboards/preferences/namespace.yaml` | yes | `generate.py`, common elements |
 | `data/provisioning/datasources/asystem.yaml` | yes | `generate.py`, common elements |
 | `image/{bootstrap,push,checkalive,checkexecuting,checkhealthy}.sh` | yes, already, via `write_container_*` | `src/build/resources/*.sh` fragments |
-| `_`: `schema/<dialect>/document.yaml` in each module (*C1*) | yes | the module's schema reflection |
+| `_`: `schema/<dialect>/document.json` in each module (*C1*) | yes | the module's schema reflection |
 | `data/dashboards/{snippets,custom}/<uid>.yaml` | **never** | hand-authored. The build rejects one that contains the banner, so a generated file pasted back as a source is caught |
 
 ### One writer, so every dashboard reads alike
@@ -169,17 +171,17 @@ fields, so stripping them would mean code that fights the SDK, for files that ar
 - **Navigation** by v2 dashboard `links` (by tag, as dropdown) on every dashboard, replacing the HTML text panels
   with `onClick` links — which also retires `disable_sanitize_html`. The home dashboard is one `dashboardlist`.
 
-## Catalogue — planned
+## Catalogue — built
 
 **Native formats only, and only the code the data forces.** Grafana sees one format, the native v2 dashboard
-YAML. Python exists only where panels must be computed from data: the xlsx, the schema relations, and the shared
+YAML. Python exists only where panels must be computed from data: the metadata, the schema relations, and the shared
 header. Nothing is invented: no DSL, no parser, no templating language.
 
 ### The three categories
 
 | Category | Lives in | Source format | Authored by | Edit it to |
 |---|---|---|---|---|
-| **generated** | output `data/dashboards/generated/<uid>.yaml`, source the `# Build dashboard [<uid>]` section of `generate.py` | Python + Foundation SDK | code, from data | add or restyle a panel over declared data, or (xlsx) add entities **in the xlsx** |
+| **generated** | output `data/dashboards/generated/<uid>.yaml`, source the `# Build dashboard [<uid>]` section of `generate.py` | Python + Foundation SDK | code, from data | add or restyle a panel over declared data, or (metadata) add entities **in the metadata** |
 | **snippets** | `data/dashboards/snippets/<uid>.yaml` | native v2 Dashboard | the Grafana UI | change the hand-written panels of generated dashboard `<uid>` |
 | **custom** | `data/dashboards/custom/<uid>.yaml` | native v2 Dashboard | the Grafana UI | change a dashboard that has no generated partner |
 
@@ -194,11 +196,11 @@ dashboard that wants a common element takes it from a generated example (*Forkin
 
 | Dashboard | Category | Source | Folder | Panels from |
 |---|---|---|---|---|
-| Control | generated | `generate.py` [control] | home | xlsx |
-| Diagnostics | generated | `generate.py` [diagnostics] | home | xlsx |
-| Electricity | generated | `generate.py` [electricity] | home | xlsx |
-| Rain | generated | `generate.py` [rain] | home | xlsx |
-| Conditions | generated + snippets | `generate.py` [conditions], `snippets/conditions.yaml` | home | xlsx; snippets *Temperature Forecast* (pivots `bom_darlington_temp_{max,min}_<n>` into days ahead) and *Lounge* (a composite across measurements), from today's `snippet_conditions.jsonnet` |
+| Control | generated | `generate.py` [control] | home | metadata |
+| Diagnostics | generated | `generate.py` [diagnostics] | home | metadata |
+| Electricity | generated | `generate.py` [electricity] | home | metadata |
+| Rain | generated | `generate.py` [rain] | home | metadata |
+| Conditions | generated + snippets | `generate.py` [conditions], `snippets/conditions.yaml` | home | metadata; snippets *Temperature Forecast* (pivots `bom_darlington_temp_{max,min}_<n>` into days ahead) and *Lounge* (a composite across measurements), from today's `snippet_conditions.jsonnet` |
 | Containers | generated | `generate.py` [containers] | infrastructure | supervisor/service |
 | Servers | generated | `generate.py` [servers] | infrastructure | supervisor/host, HA `rack_temperature` |
 | Network | generated | `generate.py` [network] | infrastructure | network wireless/ethernet/zigbee/weewx, supervisor/host, HA |
@@ -233,16 +235,16 @@ function, so the single-use-function rule never applies:
 ```
 
 `stat`, `series`, `bars` and the rest return the **SDK's own builders** with house defaults applied, so any SDK
-option can be chained on (`.thresholds(...)`, `.unit(...)`) without wrapping. The xlsx dashboards share one section:
+option can be chained on (`.thresholds(...)`, `.unit(...)`) without wrapping. The metadata dashboards share one section:
 
 ```python
     # Build dashboard [conditions] [control] [diagnostics] [electricity] [rain]
     for uid, title in [("conditions", "Conditions"), ("control", "Control"), ("diagnostics", "Diagnostics"),
                        ("electricity", "Electricity"), ("rain", "Rain")]:
-        DASHBOARDS[uid] = xlsx_dashboard(uid, title, HOME, WEEK)
+        DASHBOARDS[uid] = metadata_dashboard(uid, title, HOME, WEEK)
 ```
 
-`xlsx_dashboard` (a common element, used by all five) turns the group's xlsx rows into panels:
+`metadata_dashboard` (a common element, used by all five) turns the group's metadata rows into panels:
 - `entity_domain` is the panel;
 - `graph_break` splits it;
 - `grafana_display_type` picks line or step;
@@ -296,11 +298,11 @@ for hand authoring:
 | `FINANCE`, `INFRASTRUCTURE`, `HOME`, `SNIPPETS_FOLDER` | folders | `Private_*` folders |
 | `LIVE`, `HOURS`, `DAYS`, `WEEK`, `YEAR`, `YEARS` | range, refresh and picker options | 14 `//ASDASHBOARD_DEFAULTS` lines |
 | `dashboard(uid, title, folder, time, header, rows)` | `editable: true` (*D7*), shared crosshair, `timezone: browser`, folder tag, nav links; packs rows left to right by width into a `GridLayout` (about 15 lines, kept over v2 `AutoGrid` because today's dashboards mix widths) | `dashboard.new(...)` per file, absolute `gridPos` |
-| `xlsx_dashboard(uid, title, folder, time)` | the xlsx group's rows as panels | the Flux-emitting loop in today's `generate.py` |
+| `metadata_dashboard(uid, title, folder, time)` | the metadata group's rows as panels | the Flux-emitting loop in today's `generate.py` |
 | `stat`, `series`, `steps`, `bars`, `gauge`, `state`, `table` | the SDK panel builder plus house options: right-side legend table with min/max/mean, no fill, decimals | `graph.new(...)`/`stat.new(...)` blocks |
 | `higher_better(lo, hi)`, `lower_better(lo, hi)`, `DELTA`, `BINARY`, `PERCENT_USED` | threshold ladders by meaning | ~200 `.addThreshold(...)` chains |
-| `UNITS` | the unit table (*C3*), covering both schema units and the xlsx `unit_of_measurement` values (`W`, `kWh`, `mm`, `mm/h`, `ppm`, `dB`, `µg/m³`, `kg`, `°C`, `%`) | `unit=`/`formatY1=` literals |
-| `relation(module, path)` | loads the `document.yaml` relation; `.query(measures, entities, invert, baseline)` calls the dialect `panel()` (*C2*) | Flux per target |
+| `UNITS` | the unit table (*C3*), covering both schema units and the metadata `unit_of_measurement` values (`W`, `kWh`, `mm`, `mm/h`, `ppm`, `dB`, `µg/m³`, `kg`, `°C`, `%`) | `unit=`/`formatY1=` literals |
+| `relation(module, path)` | loads the `document.json` relation; `.query(measures, entities, invert, baseline)` calls the dialect `panel()` (*C2*) | Flux per target |
 | `header(relation, service)` | the twelve-slot header row (*Header row*) | the 547-line header |
 
 **What is native rather than ours.** A stat's reduction is the stat panel's own reducer, and series are split
@@ -311,10 +313,10 @@ no native "percent change from the first point".
 
 | To | Edit |
 |---|---|
-| add an HA entity to a home dashboard | the xlsx row, then `fab generate` |
+| add an HA entity to a home dashboard | the metadata row, then `fab generate` |
 | add a panel over existing declared data | its section of `generate.py`, one line |
 | add a bespoke panel to a generated dashboard | `snippets/<uid>.yaml` in the UI, then pull |
-| add a dashboard | a new `# Build dashboard [<uid>]` section in `generate.py` (or a row in the xlsx loop), or a UI-built `custom/<uid>.yaml` |
+| add a dashboard | a new `# Build dashboard [<uid>]` section in `generate.py` (or a row in the metadata loop), or a UI-built `custom/<uid>.yaml` |
 | restyle every stat, or change every legend | the helper at the top of `generate.py` |
 | change what "stale" means everywhere | `header` at the top of `generate.py` |
 | try something out | edit it in the Grafana UI. It is lost on the next push unless pulled |
@@ -324,8 +326,8 @@ no native "percent change from the first point".
 | Where | What | Size |
 |---|---|---|
 | `_` `dialects/{influxdb3,postgres}.py` | `panel()` with `invert`/`baseline`, and a `Dataquery` subclass each (*C2*) | ~60 lines each |
-| `_` `emit.py` + `document.py` | `document.yaml` write and `load_schema_artifact` (*C1*) | ~40 lines |
-| `generate.py` | common elements (~240), the xlsx section (~5), seven schema sections (~30–80 each), snippet merge, normalising writer, folders, preferences, provisioning (~140) | ~800 lines |
+| `_` `emit.py` + `document.py` | `document.json` write and `load_schema_artifact` (*C1*) | ~40 lines |
+| `generate.py` | common elements (~240), the metadata section (~5), seven schema sections (~30–80 each), snippet merge, normalising writer, folders, preferences, provisioning (~140) | ~800 lines |
 | `snippets/`, `custom/` | none — authored in Grafana | 0 |
 
 That is roughly 900 lines of Python (about 800 in `generate.py`, the rest in `_`), replacing 6,200 lines of jsonnet and the 547-line header library.
@@ -334,14 +336,14 @@ Rejected:
 
 - **Our own YAML format.** It is not native, and would need a parser, validator, templating and a schema of its
   own.
-- **Native YAML for every dashboard.** That means ~120 hand-maintained panels disconnected from the xlsx and the
+- **Native YAML for every dashboard.** That means ~120 hand-maintained panels disconnected from the metadata and the
   schema, and 12 copies of the header.
 - **Library panels for the header.** It differs per dashboard by relation and service, which would mean dashboard
   variables interpolated into table names.
 - **Single-panel snippets.** A v2 panel has no size or position, so they would need an invented field, and a
   copy-paste out of an export.
 - **Pruning empty defaults.** That is code that fights the SDK, for files only read in diffs.
-- **A Python module per dashboard** (`common.py` plus `generated/{xlsx,schema}/<uid>.py`). No other module splits
+- **A Python module per dashboard** (`common.py` plus `generated/{metadata,schema}/<uid>.py`). No other module splits
   its build Python. Shared build code belongs in `_`, the only place `fab` lints and type-checks, and grafana-only
   helpers do not qualify. The output tree already gives one file per dashboard.
 
@@ -350,13 +352,13 @@ Rejected:
 The SDK's typed builders reject malformed panels, so what remains is checking against the data, and the build
 fails loudly when:
 
-- a `relation(...)`, or a measure or entity passed to `.query(...)`, is absent from the module's `document.yaml`;
-- an xlsx `unique_id` is not an entity of any HA relation, an xlsx panel mixes units, or a `grafana_display_type`
+- a `relation(...)`, or a measure or entity passed to `.query(...)`, is absent from the module's `document.json`;
+- a metadata `unique_id` is not an entity of any HA relation, a metadata panel mixes units, or a `grafana_display_type`
   is outside the vocabulary;
 - a snippet has no generated partner, a custom uid collides with a generated one, or a snippet panel lacks a
   `description`;
 - a hand-authored file contains the banner, or a generated file is missing it;
-- an xlsx entity has no measurement in homeassistant's committed `document.yaml`. The error names the entity and
+- a metadata entity has no measurement in homeassistant's committed `document.json`. The error names the entity and
   the fix, `fab generate` in `src/meg/homeassistant` (*D19*);
 - a unit has no mapping, a row is wider than 24, or a uid is used twice.
 
@@ -369,7 +371,7 @@ that exists**, so every dashboard looks the same as today and the same as every 
 it:
 
 - the dashboard's **primary relation** (`relation`), for example `wrangle` `currency/rate`, `supervisor/host`, or
-  the HA measurements of an xlsx group;
+  the HA measurements of a metadata group;
 - the **producing service's** `supervisor/service` row (`service`), for example `wrangle`, `homeassistant`,
   `supervisor`, `network`. Every producer is a supervised service, so this source exists for every dashboard.
 
@@ -429,7 +431,7 @@ Each substitution is an ordinary `.query(...)` panel in its dashboard's section 
 Where a richer source appears later, for example if the network module grows gateway or speed-test relations,
 moving a panel back is a one-line change to its `schema:` key.
 
-## Schema contract — planned
+## Schema contract — built
 
 The catalogue reads the *declared* shape of the data — relation, dimensions, entities, measures, units, cadence.
 Today that shape exists only while a module's own `generate.py` reflects it (`go run ./tools/schema`, a Python
@@ -437,13 +439,12 @@ import, or for Home Assistant a live database discovery). `grafana` cannot re-ru
 would need that module's toolchain state and, for HA, a live InfluxDB.
 
 **C1. Emit the schema document as an artifact.** `write_schema_database` additionally writes
-`src/build/resources/schema/<dialect>/document.yaml` — the `SchemaDocument` after `merge_schema_entities`, with
-the entities `generate.py` filled in, in exactly the shape `load_schema_document`'s docstring specifies. It is
-YAML rather than JSON only so it can carry the build `banner()` like every other file under `schema/`.
-`parse_schema_document` is split so its dict-level half is shared: the reflectors keep `json.loads` on stdout, and
-the artifact reader uses `yaml.safe_load`. The validation path is the same, and there is no new parser. `_` owns the writer (`emit.py`) and the reader, a new
+`src/build/resources/schema/<dialect>/document.json` — the `SchemaDocument` after `merge_schema_entities`, with
+the entities `generate.py` filled in, in exactly the JSON shape `load_schema_document`'s docstring specifies, so
+the reflectors' stdout and the artifact are one format read by the one `parse_schema_document`. JSON has no
+comments, so the build banner rides as a `warning` field. `_` owns the writer (`emit.py`) and the reader, a new
 `load_schema_artifact(module, dialect)`. HA's discovered document is written the same way, so `grafana` gets the
-`entity_id → measurement` map from a committed file. Tested as a round trip: every committed `document.yaml`
+`entity_id → measurement` map from a committed file. Tested as a round trip: every committed `document.json`
 parses, and equals a fresh reflection for the module under test.
 
 **C2. Grafana SQL lives with the dialect.** `dialects/influxdb3.py` and `dialects/postgres.py` already own every
@@ -459,7 +460,7 @@ filter, `cadence` → interval floor and freshness thresholds, `entities` → se
 left out until a second consumer wants it.
 
 Units cross a boundary, so the unit table `UNITS` in `generate.py` is tested against every unit in every committed
-`document.yaml` — a producer adding a unit fails `grafana`'s build rather than rendering as `short`:
+`document.json` — a producer adding a unit fails `grafana`'s build rather than rendering as `short`:
 
 | Schema | Grafana |
 |---|---|
@@ -473,7 +474,7 @@ Units cross a boundary, so the unit table `UNITS` in `generate.py` is tested aga
 | `Mbps` | `Mbits` |
 | `-`, empty | `none` |
 
-## Queries — planned
+## Queries — built
 
 ### Datasources
 
@@ -502,7 +503,7 @@ own `$VAR` expansion so the file holds no secrets, and Grafana reads it from `/a
 | `createEmpty: true` for discrete | `Steps` kind (`stepAfter`), no gap filling in SQL |
 | `range(start: -100y)` totals | header totals are over the dashboard range, not all time; all-time counts over a `-100y` range were the slowest query on every dashboard |
 
-## Dependencies — planned
+## Dependencies — built
 
 Per the repo convention: tool versions pinned in `.env_fab` with a `# NOTES:` release-list line and passed into
 the Dockerfile as `ASYSTEM_<NAME>` build args by `fab`; build-library Python pinned in `py_deps_prod.txt`; an
@@ -520,7 +521,7 @@ upstream whose release is pinned is cloned into `.deps` by the module's `generat
 
 `gcx` (`v1.4.0`, 2026-10-02) is the Grafana CLI's successor to `grafanactl`, whose repo was archived 2026-06-01.
 
-## Image — planned
+## Image — built
 
 ```dockerfile
 # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
@@ -563,7 +564,7 @@ ENTRYPOINT [ "/run.sh" ]
 - The `cp config/grafana.ini /etc/grafana` line goes (*Config*); the image's own `/etc/grafana/grafana.ini` is
   the base.
 
-## Config — planned
+## Config — built
 
 **Rebaseline on the shipped file, customise over the top.** Our `grafana.ini` is a whole-file copy of an old
 `sample.ini` with eleven live settings; the rest is upstream's commented defaults, now stale — 13.2.2 (and so 13.2.3) adds
@@ -602,7 +603,7 @@ stale.
 rebuilt on every container recreation. With everything generated that is correct — code is the source of truth, no
 backup needed, and a dashboard deleted from the catalogue is gone on the next release without a prune. *D7.*
 
-## APIs — planned
+## APIs — built
 
 **Rule: the newest *stable* version of each API that the pinned Grafana serves.** Experimental (`v0alpha1`) and
 `v*beta*` versions are not used where a stable one exists. Older versions are not used just because a tool still
@@ -628,7 +629,7 @@ The emitted resources therefore carry three `apiVersion`s, all the latest stable
 `dashboard.grafana.app/v2`, `folder.grafana.app/v1` and `preferences.grafana.app/v1`. A test in `generate.py`
 asserts that set, so an SDK bump that silently moves a resource to a different version fails the build.
 
-## Push path — planned
+## Push path — built
 
 **One script, two callers.** `push.sh` (a `src/build/resources` fragment, wrapped into `image/` by the build like
 the others) is the only code that talks to Grafana's API. `bootstrap.sh` runs it at container start; `deploy.sh`
@@ -711,7 +712,7 @@ compose), and the `${SERVICE_DATA_DIR}/config/settings.yaml` volume line (*Delet
 `${SERVICE_DATA_DIR}:/asystem/mnt` volume, which now carries `provisioning/` and `resources/`; add the `GF_*`
 overrides and the Postgres connection vars.
 
-## Deleted — planned
+## Deleted — built
 
 The dead set after the refactor, found by listing every tracked file in the module and searching the repo for
 `grizzly`, `grr`, `grafonnet`, `jsonnet`, `GRAFANA_*_PRIVATE`, `admin_private`, `InfluxDB_V2`, `Private_*`,
@@ -738,7 +739,7 @@ dashboards are in `data/dashboards/` (*Catalogue*).
 
 | File | Dead | Kept |
 |---|---|---|
-| `src/build/python/grafana/generate.py` | everything after the two `write_container_*` calls: `DIR_DASHBOARD_ROOT`, `DIR_DASHBOARD_TEMPLATE_ROOT`, the `PREFIX*` constants, the Flux-in-jsonnet graph writer, the `dashboard_graphs.jsonnet` writer, and the `//AS*` form-factor specialiser loop | `load_bootstrap_entities()` and the xlsx filter (the filter feeds the new xlsx section), `write_container_healthchecks()`, `write_container_bootstrap()` |
+| `src/build/python/grafana/generate.py` | everything after the two `write_container_*` calls: `DIR_DASHBOARD_ROOT`, `DIR_DASHBOARD_TEMPLATE_ROOT`, the `PREFIX*` constants, the Flux-in-jsonnet graph writer, the `dashboard_graphs.jsonnet` writer, and the `//AS*` form-factor specialiser loop | `load_bootstrap_entities()` and the metadata filter (the filter feeds the new metadata section), `write_container_healthchecks()`, `write_container_bootstrap()` |
 | `src/build/resources/bootstrap.sh` | all of it: the `grr config` contexts, the org-2 create, the `admin_private` user, the `curl` datasource, the four `Private_*` folders, `grr apply`, and the preferences `PATCH` | replaced by the one-line call to `push.sh` |
 | `src/build/resources/checkexecuting.sh` | `orgs -eq 2`, and the dashboard count over `public`/`private` `graph_*.jsonnet` | rewritten (*Health checks*) |
 | `deploy.sh` | all of it: the Go 1.16 Homebrew `GOROOT`s, `GOPATH`, the `GRAFANA_URL_PRIVATE` export, `LIBRARIES_HOME`/`DASHBOARDS_HOME`, `make dev` in grizzly, and the image `bootstrap.sh` run from the laptop | rewritten (*deploy.sh*) |
@@ -782,7 +783,7 @@ rather than editing them.
 - `.env_{exec,prod,test}`, whose `GRAFANA_DOMAIN`/`GRAFANA_DOMAIN_URL` now feed the `GF_SERVER_*` overrides;
 - `src/resources.txt`.
 
-## Module CLAUDE.md — planned
+## Module CLAUDE.md — built
 
 Only what the code cannot say:
 
@@ -798,7 +799,7 @@ Only what the code cannot say:
 - Datasource uids are the contract between provisioning and panels, owned by `generate.py`.
 - `push.sh` is the only API client, and both bootstrap and deploy use it.
 - The `GRAFANA_TOKEN`/gcx credential collision.
-- The xlsx vocabulary (`Continuous`/`Discrete`, `graph_break`).
+- The metadata vocabulary (`Continuous`/`Discrete`, `graph_break`).
 - A new unit from a producer needs a row in `UNITS` in `generate.py`.
 
 ## Phases
@@ -807,8 +808,8 @@ Only what the code cannot say:
 instance goes from the legacy dashboards to the complete new set in a single `fab release`, so there is never a
 window with dashboards missing.
 
-1. **Contract** (`_`): *C1* `document.yaml` + `load_schema_artifact`; *C2* `panel()` and `Dataquery` per dialect;
-   unit-table test. Regenerate every module with a database schema. Only the new `document.yaml` files may differ;
+1. **Contract** (`_`): *C1* `document.json` + `load_schema_artifact`; *C2* `panel()` and `Dataquery` per dialect;
+   unit-table test. Regenerate every module with a database schema. Only the new `document.json` files may differ;
    every other artifact must be byte-identical. This touches other modules' generated artifacts only, so it can
    ship with any later release of those modules.
 2. **Runtime** (`grafana`): deps, Dockerfile, compose overrides, provisioning, `install_pre.sh`, `push.sh`,
@@ -818,11 +819,13 @@ window with dashboards missing.
      result is byte-identical;
    - gcx pushes from all five `-p` directories;
    - a push over a UI-edited dashboard behaves as *D22* expects.
-3. **Generated, xlsx**: `generate.py` common elements and the xlsx section, with the xlsx five and
+3. **Generated, metadata**: `generate.py` common elements and the metadata section, with the metadata five and
    `snippets/conditions.yaml`.
 4. **Finance**: Currency, Interest, Equity on Postgres.
 5. **Infrastructure**: Servers, Containers, Network, Internet on supervisor/network.
 6. **Delete** everything in *Deleted*, write the module `CLAUDE.md`, and the systest (*D18*).
+Phases 1–6 are done in the working tree. Phase 7 is ready; the two metadata faults under *Deviations* only warn.
+
 7. **Release once**: `fab release`, the production query probe (*D18*), a visual check of every dashboard at
    `https://grafana.proxy.janeandgraham.com`, then a `deploy.sh` round trip (add a panel, deploy, remove it, deploy).
    Then collapse this file to a record.
@@ -833,6 +836,267 @@ otherwise only be checked for shape. During development, `.env_exec` points the 
 real data under `fab execute`. Confirm in phase 2 that `_write_env` lets a module's `.env_exec` override run-dep
 connection vars. If it does not, the provisioning file takes a `GRAFANA_DATASOURCE_TARGET` switch instead.
 `.env_test` stays on the empty local run deps, so the systest is hermetic.
+
+## Deviations — built
+
+Found while building and verifying phases 1–6. Each amends the section named.
+
+**Metadata faults warn, they do not fail the build (amends Validation and D19).** A broken home graph is acceptable,
+a blocked release is not. `metadata_dashboard` prints a `warning` line and degrades instead: an entity with no
+measurement is left off its dashboard, a panel mixing units or holding a unit `UNITS` lacks draws with no unit, an
+unknown `grafana_display_type` draws lines, and a dashboard left with no measured entity is not generated. Today's
+`fab generate` warns on two data faults in `entity_metadata.xlsx`, both the user's edit:
+
+- `kitchen_air_purifier_pm25` (row index 1038, *Conditions / Air Quality*) is enabled with `grafana_display_type`
+  `Continuous`, but Home Assistant has never written it to InfluxDB, so no measurement declares it. Either the
+  purifier starts reporting PM2.5, or the row's `grafana_display_type` is cleared.
+- *Rain* mixes units in both of its panels: `roof_rain_rate` `mm/h` with `roof_hourly_rain` `mm`, then
+  `roof_daily_rain` `mm` with `roof_yearly_rain` `cm`. Add `graph_break` rows so that the rate, the `mm` totals and
+  the yearly `cm` total each get their own panel (a `graph_break` after 1350 and after 1353 does it).
+
+Faults outside the metadata (an undeclared measure or entity in a `.query(...)`, a relation's mixed units) still fail
+the build, since they are code faults.
+
+**No snippets, raw SQL in `generate.py` instead (amends Target, Catalogue, Push path, D3, D14 and D17).** The
+snippet workflow (edit in the UI, pull, normalise, merge at a marker, a Snippets folder of `snippets-<uid>`
+duplicates) was machinery for four panels. The four are now ordinary generated panels in their original places,
+and only the SQL no declared measure can express is hand-written, as `"""` templates in their sections of
+`generate.py`, rendered by `Relation.sql(template, unit, description, **values)`. The relation supplies the
+datasource, dialect and interval floor, so the same works for InfluxDB and Postgres. Nothing the schema owns is
+written into a template: `$table` and `$entity` come from the relation, and each `WHERE` is `Relation.scope(measure,
+entities)`, the dialect's `predicates()` that its generated panels also use, so a renamed measure, table or entity
+fails the build instead of emptying a panel. Placeholders are `$name` rather than `{name}`, since IntelliJ parses a
+`{` in injected SQL as an ODBC escape; Grafana's `$__` macros are left alone, and a placeholder with no value fails
+the build. A multi-line value is indented to its placeholder, so the rendered SQL reads as written. An interim layout
+of whole `.sql` files under `src/build/resources/dashboards/` with no substitutions was tried and dropped: guarding
+its literals against the schema took regex tests over the SQL text, where the template gets the same guarantee from
+the build itself.
+
+- *Forecast/Observed* (once *Temperature Forecast*) compares BOM's forecast issued the day before
+  (`bom_darlington_temp_{max,min}_1`, shifted onto the day it forecasts) with the observed daily max and min of the
+  roof temperature, per Perth day, and draws observed minus forecast as error bars on a right axis. Forecasts dash,
+  Max is orange and Min blue, and today is left unscored until it is complete. A template, since the shift and join
+  are beyond the declared measures. The roof sensor is sun-exposed, so expect observed highs to sit above BOM's
+  shade forecast.
+- *Lounge* needed no SQL at all: it is two declared queries, temperature and PM2.5, with the PM2.5 series moved to
+  a right axis by an override.
+- The equal-weight portfolio change and the ASX 200 change are one template scoped to `EQUITIES` and to `AXJO`,
+  each a KPI stat and together the two series of *Portfolio Performance*.
+
+`data/dashboards/snippets/`, the marker, the merge, the Snippets folder and the snippet checks in `push.sh` and
+the checks are gone. Hand-written SQL is reviewed in the `generate.py` diff, and each such panel's description says why
+it is hand-written. `custom/` remains for genuinely hand-built dashboards such as Home.
+
+**Schema contract.**
+
+- The artifact is `document.json` in the reflectors' own format rather than YAML: one parser, a `dataclasses.asdict`
+  writer, and the banner as a `warning` field, which the parser accepts and ignores. It also carries a top-level
+  `discovered` flag, which defaults to false. It is needed because a discovered document (homeassistant) must not get the
+  sibling `IS [NOT] NULL` predicates `where()` adds for a declared one.
+- The round trip test asserts every committed artifact parses and survives render then parse unchanged. "Equals a
+  fresh reflection" is guaranteed by construction instead: the artifact is written by the producer's own
+  `write_schema_database`, and phase 1's regeneration of supervisor, network, wrangle and homeassistant changed
+  nothing but adding `document.json`. Reflecting four producers from grafana's test would need Go and a live
+  InfluxDB.
+- Three guards keep the artifact honest. Reflector output is parsed strictly: every `database` key must be present,
+  so a Go or Rust emitter that omits a field fails its producer's `fab generate` instead of silently taking the
+  dataclass default (the Go `Dimension` gained `entities` and `Measure.period` lost `omitempty` for this). The
+  Python reflector (wrangle) is rendered and re-parsed through the same strict path, so all three languages get
+  one set of checks, and a test asserts wrangle's fresh reflection equals its committed artifact. And each
+  artifact carries a `source` hash of its producer's main sources and `generate.py`; `load_schema_artifact`
+  recomputes it and warns that the artifact is older than its source, naming the module to regenerate. Home
+  Assistant's discovered artifact has no source to hash.
+- The dialect-neutral half of *C2* is a new `_` module, `asystem/schema/panel.py`: the `Dataquery` and `Query`
+  builder (the SDK's missing InfluxDB and Postgres query kinds), measure and entity validation, transforms and
+  the outer statement. Each dialect owns its arms and adds `GRAFANA` (plugin id), `DISPLAY` and `dataquery()`.
+- Each dialect also gained `summary(sources, document, statistic, window)` for the header's relation-level
+  statistics, so no SQL at all is written in `generate.py`. `sources` is a list of `(relation, entities)` so an
+  metadata header can span several Home Assistant measurements.
+- `.query()` takes `transforms` rather than `invert=`/`baseline=` flags: `invert`, `baseline`, `percent` (×100,
+  for 0/1 measures), `complement` (1 − v), `counter` (bucket by `max` rather than `avg`, so a delta over a
+  monotonic counter counts whole restarts), and at most one of `sum`/`min`/`max`/`avg`, which combines entities into
+  one series per bin. `invert` on a `%` measure is the exact reciprocal change, `10000 / (100 + v) − 100`. A
+  measure may be named `key@period` to pick one period (`delta@1d`, `mean@10y`). `labels` renames entities and
+  measures, and `unit` overrides the declared one.
+- Units: `cm` and `mm/h` map to custom suffixes, and Home Assistant spells `μg/m³` with a Greek mu, so both it and
+  the micro sign map.
+
+**Queries.**
+
+- Postgres relations stored by `DATE` need a one day interval floor, or TimescaleDB rejects a sub-day
+  `time_bucket`. Every panel takes `queryOptions.interval` from its relation's cadence (*C3*).
+- InfluxDB's SQL datasource returns long data as `value` fields labelled `metric`, where Postgres names the
+  fields by `metric`, so InfluxDB panels set `displayName: ${__field.labels.metric}`.
+- *D11* confirmed: `$__dateBin` expands on 13.2.3.
+
+**Catalogue and common elements.**
+
+- Panel helpers are `stat`, `series`, `steps`, `bars`, `gauge` and `table`. Each returns a small `Panel` that
+  carries the size and queries and forwards any SDK option to the visualization builder, so chaining still
+  works. `state` was not built, as nothing used it. The SDK's `stat`, `gauge` and `table` modules are imported
+  under aliases because `from asystem import *` exports the stdlib `stat`.
+- Layout is a 24-column skyline packer, so a row wraps under its taller panels the way today's stats and gauges sit
+  beside a bar gauge. There is no "row wider than 24" check, only a panel wider than 24.
+- Every panel needs a unique `id`. The SDK emits `0` for all of them and Grafana then draws only one.
+- The writer also emits integral floats as ints, since the server stores them so, and the push, pull, normalise
+  round trip is then byte-identical (verified for all 15 dashboards).
+- The metadata section is the function `metadata_dashboard`, so it is unit tested at its boundary. It takes `lead` rows,
+  which put Conditions' two composite panels above its metadata panels.
+- Navigation and the home list use tags. Every generated dashboard is tagged with its folder and `asystem`, and
+  `custom/home.yaml` lists tag `asystem`.
+
+**Layout: one compact shape for every dashboard (amends Header row, Catalogue and Substitutions).** The legacy
+stats, gauges and bar gauge block mixed two visual languages for one job and varied per dashboard, so every
+dashboard now opens the same way, on current Grafana panel types:
+
+```
+| Newest  | Oldest       | Availability | Entities | Metrics | Volume |   header, stats w4 h3, background colour
+| KPI 1   | KPI 2        | KPI 3  | KPI 4  | KPI 5  | KPI 6    |   stats w4 h4, value colour and sparkline
+| time series ……………………………………………………………………………… legend → |   w24 h10
+| state timeline ………………………………………………………………………………… |   up/down history per entity
+```
+
+- The header is six slots, down from twelve, and describes the data and its producer, never a judgement on them
+  (a service's own healthcheck stays on Containers):
+  - **Newest**: time from the freshest entity's newest row to the window's end (`$__timeTo()`).
+  - **Oldest**: the same for the stalest entity, over the entities that reported in the lookback.
+  - **Availability**: the share of the window's *time* the producing service was up. Each `status` row holds until
+    the next (or the window's end), via the influxdb3 dialect's `held()`, so supervisor's burst of rows on a change
+    does not outweigh hours of steady heartbeats. Shown as a whole number, green from 99.5 %.
+  - **Entities**: entities in the newest batch ÷ entities that reported in the lookback.
+  - **Metrics**: measures with a value in the newest batch ÷ measures written in the window, so a measure only one
+    entity carries (supervisor's `cluster`, on `all`) does not hold it below 100 %.
+  - **Volume**: rows in the window's last quarter ÷ its quarterly average, banded both ways: green 80–120 %,
+    yellow 50–80 % or 120–150 %, red beyond, since a surge is as suspicious as a drop. On Home Assistant's
+    on-change data it tracks activity too (a dry week drops Rain).
+- The **newest batch** is rows within twice the header's span of the newest row in the window, the same span as
+  Newest's green threshold. The **lookback** that decides which entities are expected is the larger of 30 days and
+  four spans before the window's end, so an entity silent for longer (today `raspbpi-jil`, still `edge` in
+  `.hosts`) stops counting against the header without being undeclared, and a failure inside it still shows. The
+  span is each dashboard's ceiling: supervisor's 5 minute heartbeat, network's 15 minute cadence, 3 days for
+  Currency and Equity so weekends stay green, 45 days for Interest's monthly series, and 7 days for the home
+  dashboards, whose on-change sensors can be quiet for days. The dialects' `summary()` builds all five statistics
+  through one `panels.summary_arm`; combined sources take the minimum (Newest), maximum (Oldest) or summed
+  ratio (the rest).
+- Containers is scoped to supervisor's declared services, so one-shot `*_bootstrap`, test and randomly named
+  containers stay off its header and panels, and its entities count by service, so a service that moved host is one.
+- Gauges became stats in the KPI row, with short titles that fit at width 4 and the detail in the description. The
+  KPI rows: Currency, each pair's rate and its day change; Interest, each rate's month and ten year mean; Equity,
+  the portfolio and ASX 200 range change and MCK, MUK, MUS and VAS; Containers, running, not running, configured,
+  running and healthy rates, restarts; Servers, availability, CPU, RAM and temperature means, home and share
+  volume maxima; Network, gateway, wireless clients and experience, Zigbee link quality and availability, switch
+  ports up; Internet, reachability, resolution, certificate expiry, mean and max latency, max loss.
+- The metadata dashboards take their KPI row from a new optional metadata column, `grafana_kpi`, holding a reducer (`last`,
+  `mean`, `max`, `min`). Marked rows come first in metadata order, then the row fills to six with each panel's first
+  entity (the aggregate, by metadata convention) and then the remaining entities, skipping a repeated entity or
+  title. A row spanning several Home Assistant measurements names the measurement in each title (`Dining PM2.5`,
+  `Home Load Power`), from the device class rather than the long `entity_domain`, and a non-`last` reducer is named
+  too (`Roof Temperature Max`). Each KPI's hover names its entity and how it is reduced. A dashboard with fewer than six distinct entities spreads
+  its stats across the full width. Until the column is added, every KPI comes from the fill. A `max` or `min` KPI
+  also buckets with `max` or `min` (the `peak` and `trough` transforms), since a stat reduces the bucketed series
+  and averaged buckets hide the true extreme, and its description names the reducer. *Latency Max* and *Loss Max*
+  peak for the same reason.
+- Bar gauges are gone. The per-entity comparison they drew is in each time series' legend table, and Network's
+  *Wireless Experience* became a time series.
+- Status tables became state timelines (up/down bands per entity over the range, coloured by `BINARY`):
+  *Container Running*, *Container Healthy*, *Container Backed Up* (which keeps backup status surfaced now the header
+  dropped it), *Switch Ports Up*, *Switch Ports At Speed* (the complement of `degraded`), *Zigbee Devices
+  Available* and *Certificate Verified*. Internet's *Domain Resolution* and *Network Diagnosis* tables became a
+  time series and moved to Network respectively, and Internet gained *Internet Latency* and *Internet Loss*.
+- Servers surfaces every persisted `supervisor/host` measure, adding *Server Temperature Warning*, *Server Fan
+  Speed*, *Server Memory Allocated*, *Server Drive Life Used*, *Server Drive Failures*, *Server Share Failures*,
+  *Server Log Errors*, *Server Backup Stage Failures*, *Server Backup Stage Halts* and *Cluster Health*. The
+  `_trend` measures are smoothed copies and stay off.
+- Time series are 10 high, and every one shows the right-hand legend table with min, max and mean, a single series
+  included, so every graph reads the same. Decimals follow the unit (`DECIMALS`).
+- *Network*'s primary relation is `wireless/accesspoint` and *Internet*'s is `internet/target`.
+- The *Infrastructure* folder is **Systems** (uid and tag `systems`), a word as short as *Home* and *Finance*. The
+  nav links run Home, Finance, Systems, in the order `FOLDERS` declares them.
+
+**Substitutions beyond the table.**
+
+- Home Assistant's `rack_temperature` no longer exists. *Server Temperature* and *Network Device Temperature* use
+  `compensation_sensor_rack_{top,bottom}_temperature` and `compensation_sensor_utility_temperature`.
+- Containers: *Container IOPS Usage* is **Container Disk Usage** (`used_disk_rate`), and *Restarts* sums every
+  service's `restart_count`, bucketed by `max`, and reduces by delta.
+- Servers: the OS and data volume counts are **Home Volume Max** and **Share Volume Max** (`used_system_space` is
+  archived), and *Server IOPS Usage* is **Server Disk Usage** (`used_disk_time`).
+- Equity: *Equities Performance* is the baselined `price-close-spot` of the old ticker list less `MSG`, which wrangle
+  no longer declares. *Fund Performance* is spot and base for `MCK`, `MUK` and `MUS`. The portfolio panels
+  draw the equal-weight portfolio mean beside the ASX 200 (`AXJO`).
+- Conditions: *Forecast/Observed* is the 1-day-ahead forecast against observed, with error bars; longer-range
+  forecasts are left off.
+- Datasources and preferences moved under `data/dashboards/config/`: `GF_PATHS_PROVISIONING` points there, so the
+  datasources provision from `config/datasources/datasources.yaml` (Grafana only reads its fixed sub-folders) and
+  `push.sh` PUTs `config/preferences.yaml`. Pushing the datasources through the API as `DataSource` resources was
+  tried and dropped: it lost the provisioned lock and the datasources' presence at start, and needed `push.sh` to
+  expand `${...}` and split the file itself, for no gain over provisioning.
+- `push.sh` is hand-written in `src/main/resources/image/` like other modules' `entrypoint.sh`, not a
+  `src/build/resources` fragment: it is a whole script, so wrapping it only added a banner and a copy step.
+- Rain is replaced by **Weather**, and the forecast panel moves there from Conditions, which keeps the indoor rooms.
+  Rows reach them through a new optional metadata column, `grafana_group`: one group, or several comma separated so a
+  row (the roof temperature) sits on both, falling back to `entity_group` when empty. Regrouping through
+  `entity_group` itself was rejected because Home Assistant writes a Lovelace view per `entity_group`, and a `Weather`
+  group would overwrite its hand-written `ui-lovelace/weather.yaml`.
+- Wind direction is graphable. A `Points` `grafana_display_type` draws dots, so a swing through north draws no
+  stroke across the panel, and any panel in `°` is treated as an angle: a fixed 0 to 360 axis and a `bearing`
+  transform in `_` that averages each bucket as a circular mean (`atan2` of the mean sine and cosine), since a plain
+  mean of 350 and 10 is 180. Drawing and averaging are kept apart, the first in the display type and the second in
+  the unit. A panel mixing display types warns.
+- `grafana_display_type` values are Grafana's draw style names, `Lines`, `Steps` and `Points`, replacing
+  `Continuous` and `Discrete`, which described the data rather than the drawing.
+- Metadata panels split themselves: a change of unit or `grafana_display_type` between consecutive rows starts a
+  new panel, so mixed-unit panels and their warnings are gone and
+  `graph_break` is only for splitting rows that share both. A `Bars` display type draws bars of each bucket's peak,
+  for rain rates and per-interval amounts. A KPI title no longer falls back to the group name when the measurement
+  has no device class, which made titles like `Gust Direction Wind`.
+- One navigation bar replaces the three folder dropdowns: a generated text panel heading every generated dashboard,
+  sectioned HOME, FINANCE, SYSTEMS, marking the current dashboard instead of dropping it, links keeping the time
+  range. `FOLDERS` declares each section's dashboards and titles in nav order and is the only source of a
+  dashboard's title, folder and tag, so `dashboard()` takes neither title nor folder and registers itself; a rank derived from metadata `index` was tried and dropped as opaque. Hand-written home panels carry their own order number in
+  their block (`placed={name: (order, rows)}`), compared with the metadata panels' order, replacing the `lead` and
+  `after` arguments; a `grafana_panel` placement row was tried and dropped, since the panel is defined in code. Weather's gust direction is a
+  hand-written panel of gusts above 5 km/h only (calm reads as north), each paired with the latest gust speed at or
+  before it, plotted in 16 compass sectors so the axis ticks land on N, NE, E and on. Rain `mm` and pressure `mbar`
+  are plain suffixes, since Grafana scaled 0.2 mm to 200 um and 1014 mbar to 1.0 bar.
+- An optional `grafana_index` metadata column is a panel index for Grafana only: rows keep `index` order, a change
+  of `grafana_index` starts a new panel like a change of unit, and panels are laid out by it, falling back to their
+  first row's `index`. It accepts decimals, so panels move without renumbering rows Home Assistant
+  shares.
+- Control is retired. Its only graphed entities, the two hot water temperatures, lost their `grafana_display_type` in
+  the metadata, so it drops out of the metadata loop and push deletes it from the server. The metadata dashboards are
+  now four: Conditions, Diagnostics, Electricity and Rain.
+- Diagnostics is retired too. Its seven temperatures (the rack top and bottom, and Home Assistant's copies of each
+  host's temperature) are all on Servers, which reads the hosts from supervisor directly, so it duplicated Servers.
+- Every panel's info hover opens with its provenance, `Generated:` for SQL the dialects build from the schema and
+  `Hand-written:` for a template, then the short description. `Custom` was passed over since it already names the
+  hand-authored dashboards under `custom/`. A home dashboard panel reads `Generated: Home Assistant Group <domain>`,
+  since Home Assistant's discovered measures carry no description of their own.
+
+**Push path.**
+
+- `gcx resources push` cannot create the org preferences: it creates by POST, and Grafana refuses a nameless create
+  of the singleton. `push.sh` PUTs each `preferences/*.yaml` through `gcx api` (YAML body), which creates and
+  updates alike. The datasource reload also goes through `gcx api`, so gcx remains the only client.
+- *D12* and *D22* confirmed against 13.2.3. Push of v2 dashboards and v1 folders works with basic auth, and a push
+  over a UI-edited dashboard overwrites it without a conflict, so no delete-and-repush is needed.
+- `image/push.sh` is written by `generate.py` from the fragment (`write_container_*` only wraps bootstrap and the
+  checks). The bootstrap line is `"${ASYSTEM_HOME}/push.sh" || exit 1`, so a failed push fails the bootstrap rather
+  than waiting out the executing check.
+- `install_pre.sh` mirrors with `rm -rf` and `cp -rf`, the homeassistant shape, and is listed in `resources.txt`
+  for `${SERVICE_NAME}`.
+- The `_write_env` question is settled: a module's own env files come last, so `.env_exec` overriding
+  `INFLUXDB3_SERVICE` and `POSTGRES_SERVICE` with their `_PROD` values works.
+
+**Checks.** The systest is `src/test/python/system/system_test.py`. The production probe (*D18*) is
+`src/test/python/system/probe.py [server]`. It sizes each query's interval from the range like the UI does, and
+locally it ran all 242 queries against production with no fault, through both the probe instance and the built
+container's own provisioned datasources.
+
+**Image.** The apk pins resolve unchanged on 13.2.3, and both `linux/arm64` and `linux/amd64` build.
+
+**Still by hand.** `.deps/grafana/{grizzly,grafonnet-lib}` are left in place, untracked. The host's
+`config/settings.yaml` is removed by `install_pre.sh` on the first release.
 
 ## Gaps and decisions
 
@@ -919,8 +1183,8 @@ in a plainly named folder that is left out of the Home dashboard list and the na
 - A production probe, run by hand like `fab schema`, executes every panel query through `/api/ds/query` and
   reports panels returning empty frames. This replaces the per-phase manual query check.
 
-**D19. Home Assistant schema freshness — decided: fail with the fix.** Grafana's generate fails on an xlsx entity
-missing from homeassistant's committed `document.yaml`, naming the entity and `fab generate` in
+**D19. Home Assistant schema freshness — decided: fail with the fix.** Grafana's generate fails on a metadata entity
+missing from homeassistant's committed `document.json`, naming the entity and `fab generate` in
 `src/meg/homeassistant`. The order between the two modules is explicit, and nothing renders silently empty.
 
 **D20. Alerting — decided: out of scope.** Dashboards only. Supervisor and Home Assistant already own health

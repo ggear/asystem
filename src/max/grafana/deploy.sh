@@ -1,24 +1,9 @@
 #!/bin/bash
 
-WORKING_DIR=${PWD}
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-export $(xargs <.env)
+SERVICE_HOME="/home/asystem/$(basename "${ROOT_DIR}")/latest"
+HOST="$(grep "$(basename "$(dirname "${ROOT_DIR}")")" "${ROOT_DIR}/../../../.hosts" | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')"-"$(basename "$(dirname "${ROOT_DIR}")")"
 
-[ -d /usr/local/Cellar/go@1.16/1.16.15 ] && export GOROOT=/usr/local/Cellar/go@1.16/1.16.15/libexec
-[ -d /opt/homebrew/Cellar/go\@1.16/1.16.15 ] && export GOROOT=/opt/homebrew/Cellar/go\@1.16/1.16.15/libexec
-
-export GOPATH=${HOME}/.go
-export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
-
-export INFLUXDB3_SERVICE=${INFLUXDB3_SERVICE_PROD}
-
-export GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_TOKEN}@${GRAFANA_SERVICE_PROD}:${GRAFANA_HTTP_PORT}
-export GRAFANA_URL_PRIVATE=http://${GRAFANA_USER_PRIVATE}:${GRAFANA_TOKEN_PRIVATE}@${GRAFANA_SERVICE_PROD}:${GRAFANA_HTTP_PORT}
-
-export LIBRARIES_HOME=${WORKING_DIR}/src/main/resources/libraries
-export DASHBOARDS_HOME=${WORKING_DIR}/src/main/resources/image/dashboards
-
-cd ${LIBRARIES_HOME}/grizzly
-make dev
-
-${WORKING_DIR}/src/main/resources/image/bootstrap.sh
+rsync -av --delete "${ROOT_DIR}/src/main/resources/data/dashboards/" "root@${HOST}:${SERVICE_HOME}/dashboards/"
+ssh "root@${HOST}" docker exec "$(basename "${ROOT_DIR}")" /asystem/etc/push.sh

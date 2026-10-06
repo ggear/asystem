@@ -1,8 +1,8 @@
+#######################################################################################
 - id: rack_backup_plug_reaper_override
   alias: Rack Backup Plug Overrides Reaper
   description: >-
-    Turn on the backup switch and disable the supervisor reaper until the 
-    next scheduled backup. Turning off does the reverse.
+    Turn on the backup switch and disable the supervisor reaper until the next scheduled backup. Turning off does the reverse.
   mode: single
   triggers:
     - trigger: state
@@ -24,3 +24,4 @@
           {% set pausing = trigger.to_state.state == "on" %}
           {% set expires = (now() + timedelta(days=3650)).isoformat(timespec='seconds') if pausing else "" %}
           {{ {"state": "OFF" if pausing else "ON", "expires_ts": expires} | to_json }}
+#######################################################################################

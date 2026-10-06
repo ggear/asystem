@@ -486,7 +486,11 @@ class SourcesMixin(ContractMixin):
         max_pages = 1000
         token = os.environ.get("REDBARK_TOKEN", "")
         base_url = "https://api.redbark.com"
-        req_headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": "curl/8.0"}
+        req_headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "curl/8.0",
+        }
 
         def _request(path):
             url = f"{base_url}{path}"
@@ -768,10 +772,13 @@ class SourcesMixin(ContractMixin):
                     spreadsheetId=drive_key,
                     body={'requests': [
                         {'updateSheetProperties': {
-                            'properties': {'sheetId': worksheet.id, 'gridProperties': {
-                                'rowCount': max(len(all_values) + 10, 100),
-                                'columnCount': max(len(data_df.columns) + 5, 26),
-                            }},
+                            'properties': {
+                                'sheetId': worksheet.id,
+                                'gridProperties': {
+                                    'rowCount': max(len(all_values) + 10, 100),
+                                    'columnCount': max(len(data_df.columns) + 5, 26),
+                                },
+                            },
                             'fields': 'gridProperties.rowCount,gridProperties.columnCount',
                         }},
                         {'repeatCell': {

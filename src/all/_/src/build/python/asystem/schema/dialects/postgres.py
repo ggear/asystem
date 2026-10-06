@@ -3,6 +3,7 @@ import os
 import shutil
 from os.path import abspath, exists, join
 
+from asystem.schema import panel as panels
 from asystem.schema.query import (
     BUCKET,
     NULL,
@@ -29,6 +30,8 @@ from asystem.schema.runner import (
 )
 
 DIALECT = "postgres"
+GRAFANA = "grafana-postgresql-datasource"
+DISPLAY = ""
 SHIPPED = "database"
 KINDS = ("float", "int", "bool")
 TARGET = "POSTGRES_SERVICE_PROD"
@@ -256,6 +259,42 @@ def instance_connect(module_name):
         ("DATABASE_NAME", ("{}_DATABASE_NAME".format(prefix), "POSTGRES_DATABASE_MAINTENANCE")),
         ("DATABASE_PASSWORD", ("{}_DATABASE_PASSWORD".format(prefix), "POSTGRES_KEY")),
     )) + INSTANCE_CONNECT
+
+
+def panel(relation, document, measures, entities=None, transforms=(), labels=None):
+    picked = panels.selected(relation, document, measures, KINDS)
+    entities = panels.subjected(relation, document, entities)
+    combine = panels.transformed(transforms, document, relation)
+    arms = []
+    for measure, label in picked:
+        arms.append(select(
+            [("$__timeGroupAlias(time, $__interval)", ""),
+             (panels.entitled("entity", subject(relation), entities, labels), "entity"),
+             ("'{}'".format((labels or {}).get(label, label)), "measure"),
+             (panels.aggregated(panels.valued("value", measure, transforms), transforms), "value")],
+            relation.plugin, predicates(relation, document, measure, entities), group_by=["1", "2"]))
+    return panels.statement(arms, entities, picked, transforms, combine)
+
+
+def summary(sources, document, statistic, span):
+    arms = []
+    for relation, entities in sources:
+        arms.append(panels.summary_arm(statistic, relation.plugin,
+                                       [_types(relation, negate=False)] + panels.restricted(subject(relation), entities),
+                                       subject(relation), "count(DISTINCT type || '/' || period)",
+                                       "$__timeTo()::timestamptz", "$__timeFrom()::timestamptz",
+                                       "EXTRACT(EPOCH FROM ({})::timestamptz)".format, span))
+    return panels.combined(arms, statistic)
+
+
+def predicates(relation, document, measure, entities):
+    return (["$__timeFilter(time)", "type = '{}'".format(measure.key),
+             "period = '{}'".format(relation.span(measure) or NULL), "unit = '{}'".format(measure.unit or NULL)]
+            + panels.restricted(subject(relation), entities))
+
+
+def subject(relation):
+    return "entity"
 
 
 def connect(module_name):

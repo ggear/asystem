@@ -1,1 +1,1 @@
-python-kasa==0.10.2
+python-kasa==0.11.0.1

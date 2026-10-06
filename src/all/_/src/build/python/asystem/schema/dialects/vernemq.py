@@ -32,7 +32,11 @@ PLACEHOLDER = r"\$\{[^}]+}"
 
 BINDING = re.compile(r"\$([A-Z][A-Z0-9_]*)")
 
-ROLE_COLUMNS = {"state_topic": "state", "command_topic": "command", "availability_topic": "availability"}
+ROLE_COLUMNS = {
+    "state_topic": "state",
+    "command_topic": "command",
+    "availability_topic": "availability",
+}
 
 TOPIC_COLUMNS = ("discovery_topic", "state_topic", "command_topic", "availability_topic")
 

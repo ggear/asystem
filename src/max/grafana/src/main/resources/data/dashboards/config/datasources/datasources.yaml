@@ -1,0 +1,34 @@
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+apiVersion: 1
+datasources:
+- access: proxy
+  editable: false
+  isDefault: true
+  jsonData:
+    dbName: ${INFLUXDB3_DATABASE_HOME}
+    httpMode: POST
+    insecureGrpc: true
+    timeout: 60
+    version: SQL
+  name: InfluxDB3 Home
+  secureJsonData:
+    token: ${INFLUXDB3_TOKEN_HOME}
+  type: influxdb
+  uid: influxdb3-home
+  url: http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}
+- access: proxy
+  editable: false
+  jsonData:
+    database: ${POSTGRES_DATABASE_WRANGLE}
+    postgresVersion: 1600
+    sslmode: disable
+    timescaledb: true
+  name: Postgres Wrangle
+  secureJsonData:
+    password: ${POSTGRES_KEY_WRANGLE}
+  type: grafana-postgresql-datasource
+  uid: postgres-wrangle
+  url: ${POSTGRES_SERVICE}:${POSTGRES_API_PORT}
+  user: ${POSTGRES_USER_WRANGLE}

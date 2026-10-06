@@ -26,11 +26,20 @@ Retire nginx and use cloudflared for homeasistant?
 Improve sys tests with datbase/broker asserts for all modules
 
 
+Release grafana, media, supervisor, sab, tempstat
+
+Review updateability of dashbaords, generate.py locally collect each definition nicely? inline consts/queries etc?
+Validate Conditions, Diagnostics, electcirty, Rain
+Validte Currency, Equity, Interest
+Validate Containers, Internet, Network, Servers
+
+
 ###############################################################################################################################################################
 # Supervisor
 ###############################################################################################################################################################
 
 Increase Aloc RAM to warn at 90, error at 95 and increase supervisor mem
+Chnage yellow on rack screen to better colour
 
 code review this patch which is not in git yet.
 Make sure project guidleines are followed.
@@ -83,7 +92,6 @@ Integrate Withings scale direcltly, locally, it has been done here https://didac
 ###############################################################################################################################################################
 # Media
 ###############################################################################################################################################################
-Implement a parents->kids move style command when already in parents
 Have a 2-thread media transcode script, maybe do even/odd/every so can launch in two windows?
 Implement syncart.py to store artwork in /shares and save download after failure
 Formalise subtitle download and sync, add missing subtitles to common series

@@ -1,0 +1,599 @@
+{
+  "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
+  "source": "b98c6e2f051a6325be600d2ed85573067d5c261374b031c93da5859f1ed472d8",
+  "module": "supervisor",
+  "discovered": false,
+  "database": {
+    "relations": [
+      {
+        "path": "supervisor/host",
+        "description": "health and utilisation of one host",
+        "cadence": "6s",
+        "entities": [
+          "macmini-mad",
+          "macmini-max",
+          "macmini-may",
+          "macmini-meg",
+          "raspbpi-jen",
+          "raspbpi-jil",
+          "all"
+        ],
+        "dimensions": [
+          {
+            "key": "host",
+            "description": "name of the monitored host",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "cluster",
+            "kind": "bool",
+            "unit": "",
+            "description": "every host/service is reporting and all metrics are ok",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "cluster_trend",
+            "kind": "bool",
+            "unit": "",
+            "description": "every host/service is reporting and all metrics are ok, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "status",
+            "kind": "bool",
+            "unit": "",
+            "description": "host is reporting metrics and all host metrics are ok",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "status_trend",
+            "kind": "bool",
+            "unit": "",
+            "description": "host is reporting metrics and all host metrics are ok, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_processor",
+            "kind": "int",
+            "unit": "%",
+            "description": "processor time used across all cores",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_processor_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "processor time used across all cores, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_memory",
+            "kind": "int",
+            "unit": "%",
+            "description": "memory in use against the total installed",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_memory_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "memory in use against the total installed, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "allocated_memory",
+            "kind": "int",
+            "unit": "%",
+            "description": "configured memory ceilings of the installed services against the total installed, capped at 100",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "allocated_memory_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "configured memory ceilings of the installed services against the total installed, capped at 100, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "failed_log_messages",
+            "kind": "int",
+            "unit": "%",
+            "description": "kernel errors in the trend window against a 10 message budget",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "failed_log_messages_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "kernel errors in the trend window against a 10 message budget, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "failed_shares",
+            "kind": "int",
+            "unit": "%",
+            "description": "declared shares failing to mount or report, against those declared",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "failed_shares_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "declared shares failing to mount or report, against those declared, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "failed_backup_stages",
+            "kind": "int",
+            "unit": "%",
+            "description": "backup stages failing or timing out against the stages this host runs",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "failed_backup_stages_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "backup stages failing or timing out against the stages this host runs, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "warn_temperature",
+            "kind": "int",
+            "unit": "%",
+            "description": "hottest processor temperature against its warning ceiling, one percent per degree offset by 10, so full at 90 degrees",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "warn_temperature_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "hottest processor temperature against its warning ceiling, one percent per degree offset by 10, so full at 90 degrees, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "spin_fan_speed",
+            "kind": "int",
+            "unit": "%",
+            "description": "fastest fan speed across the 1500 to 4500 revolutions per minute window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "spin_fan_speed_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "fastest fan speed across the 1500 to 4500 revolutions per minute window, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_drive_life",
+            "kind": "int",
+            "unit": "%",
+            "description": "rated endurance consumed by the most worn drive mounted on this host",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_drive_life_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "rated endurance consumed by the most worn drive mounted on this host, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_home_space",
+            "kind": "int",
+            "unit": "%",
+            "description": "space used by the services homes",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_home_space_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "space used by the services homes, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_share_space",
+            "kind": "int",
+            "unit": "%",
+            "description": "space used across the local share volumes, summed as one pool",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_share_space_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "space used across the local share volumes, summed as one pool, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_backup_space",
+            "kind": "int",
+            "unit": "%",
+            "description": "space used for the backup volume",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_backup_space_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "space used for the backup volume, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_swap_space",
+            "kind": "int",
+            "unit": "%",
+            "description": "swap space in use against the total configured",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_swap_space_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "swap space in use against the total configured, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_disk_time",
+            "kind": "int",
+            "unit": "%",
+            "description": "busiest drive's time spent servicing requests",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_disk_time_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "busiest drive's time spent servicing requests, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_network",
+            "kind": "int",
+            "unit": "%",
+            "description": "busiest physical interface's throughput against its rated link speed",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_network_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "busiest physical interface's throughput against its rated link speed, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "up_time",
+            "kind": "float",
+            "unit": "s",
+            "description": "time the host has been up",
+            "persist": false,
+            "period": ""
+          },
+          {
+            "key": "temperature",
+            "kind": "float",
+            "unit": "°C",
+            "description": "the hosts processor temperature",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "temperature_trend",
+            "kind": "float",
+            "unit": "°C",
+            "description": "the hosts processor temperature, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "services_status",
+            "kind": "bool",
+            "unit": "",
+            "description": "every configured service is running and healthy",
+            "persist": false,
+            "period": ""
+          },
+          {
+            "key": "services_max_memory",
+            "kind": "float",
+            "unit": "MiB",
+            "description": "memory ceilings summed across the configured services",
+            "persist": false,
+            "period": ""
+          },
+          {
+            "key": "failed_drives",
+            "kind": "int",
+            "unit": "%",
+            "description": "drives reporting new errors since discovery, against those in scope",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "failed_drives_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "drives reporting new errors since discovery, against those in scope, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "halted_backup_stages",
+            "kind": "int",
+            "unit": "%",
+            "description": "backup stages halted by a stop or a timeout against the stages this host runs",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "halted_backup_stages_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "backup stages halted by a stop or a timeout against the stages this host runs, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "supervisor/service",
+        "description": "health and utilisation of one service on one host",
+        "cadence": "6s",
+        "entities": [
+          "cloudflare",
+          "grafana",
+          "homeassistant",
+          "influxdb3",
+          "letsencrypt",
+          "mariadb",
+          "mlflow",
+          "mlserver",
+          "network",
+          "nginx",
+          "openra",
+          "plex",
+          "postgres",
+          "sabnzbd",
+          "sonarr",
+          "supervisor",
+          "tasmota",
+          "tempstat",
+          "vernemq",
+          "weewx",
+          "wrangle",
+          "zigbee2mqtt"
+        ],
+        "dimensions": [
+          {
+            "key": "host",
+            "description": "name of the host running the service",
+            "subject": false,
+            "entities": []
+          },
+          {
+            "key": "service",
+            "description": "name of the monitored service",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "status",
+            "kind": "bool",
+            "unit": "",
+            "description": "service is running and reporting metrics",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "status_trend",
+            "kind": "bool",
+            "unit": "",
+            "description": "service is running and reporting metrics, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "backup_status",
+            "kind": "bool",
+            "unit": "",
+            "description": "module backup completed successfully in the latest run",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "backup_status_trend",
+            "kind": "bool",
+            "unit": "",
+            "description": "module backup completed successfully in the latest run, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "health_status",
+            "kind": "bool",
+            "unit": "",
+            "description": "service container healthcheck reported healthy",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "health_status_trend",
+            "kind": "bool",
+            "unit": "",
+            "description": "service container healthcheck reported healthy, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "configured_status",
+            "kind": "bool",
+            "unit": "",
+            "description": "this service is expected to be running on this host",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "configured_status_trend",
+            "kind": "bool",
+            "unit": "",
+            "description": "this service is expected to be running on this host, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "name",
+            "kind": "str",
+            "unit": "",
+            "description": "service container name",
+            "persist": false,
+            "period": ""
+          },
+          {
+            "key": "version",
+            "kind": "str",
+            "unit": "",
+            "description": "service installed version",
+            "persist": false,
+            "period": ""
+          },
+          {
+            "key": "used_processor",
+            "kind": "int",
+            "unit": "%",
+            "description": "processor time used by the service across all cores",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_processor_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "processor time used by the service across all cores, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_memory",
+            "kind": "int",
+            "unit": "%",
+            "description": "memory in use by the service, excluding page cache, against its configured ceiling",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_memory_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "memory in use by the service, excluding page cache, against its configured ceiling, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_disk_rate",
+            "kind": "int",
+            "unit": "%",
+            "description": "block device throughput used by the service against a 100 MiB per second budget",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_disk_rate_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "block device throughput used by the service against a 100 MiB per second budget, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_network",
+            "kind": "int",
+            "unit": "%",
+            "description": "network throughput used by the service against a 1000 Mbit per second budget",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "used_network_trend",
+            "kind": "int",
+            "unit": "%",
+            "description": "network throughput used by the service against a 1000 Mbit per second budget, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "up_time",
+            "kind": "float",
+            "unit": "s",
+            "description": "time the service container has been running",
+            "persist": false,
+            "period": ""
+          },
+          {
+            "key": "max_memory",
+            "kind": "float",
+            "unit": "MiB",
+            "description": "memory ceiling configured for this service",
+            "persist": false,
+            "period": ""
+          },
+          {
+            "key": "restart_count",
+            "kind": "float",
+            "unit": "",
+            "description": "restarts of the service container since it was created",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "restart_count_trend",
+            "kind": "float",
+            "unit": "",
+            "description": "restarts of the service container since it was created, smoothed across the trend window",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      }
+    ]
+  }
+}

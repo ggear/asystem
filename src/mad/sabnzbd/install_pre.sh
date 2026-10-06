@@ -18,5 +18,5 @@ else
   echo "Error: [${SABNZBD_SHARE_ROOT_DIR}] missing or not mounted"
 fi
 mkdir -p /home/asystem/sabnzbd/latest/scripts
-cp -rvf /var/lib/asystem/install/media/latest/bin/lib/ingress.py /home/asystem/sabnzbd/latest/scripts
+cp -rvf /var/lib/asystem/install/media/latest/bin/lib/stage.py /home/asystem/sabnzbd/latest/scripts
 chmod +x /home/asystem/sabnzbd/latest/scripts/*.sh

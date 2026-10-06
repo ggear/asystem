@@ -1,0 +1,369 @@
+{
+  "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
+  "source": "c72bad2bb47e3cc20cf81c310330f18bd4a2a50f21267e7130e71b64ed8e7220",
+  "module": "network",
+  "discovered": false,
+  "database": {
+    "relations": [
+      {
+        "path": "certificate/endpoint",
+        "description": "certificate health, one row per monitored endpoint",
+        "cadence": "15m",
+        "entities": [
+          "home.janeandgraham.com:443"
+        ],
+        "dimensions": [
+          {
+            "key": "endpoint",
+            "description": "monitored TLS endpoint",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "verified",
+            "kind": "bool",
+            "unit": "",
+            "description": "endpoint reachable and its certificate verified",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "expiry_days",
+            "kind": "float",
+            "unit": "d",
+            "description": "days until the certificate expires",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "validity_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "share of the certificate lifetime still remaining",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "diagnosis/plugin",
+        "description": "health and diagnosis score of one network plugin",
+        "cadence": "15m",
+        "entities": [
+          "certificate",
+          "domain",
+          "ethernet",
+          "internet",
+          "weewx",
+          "wireless",
+          "zigbee"
+        ],
+        "dimensions": [
+          {
+            "key": "plugin",
+            "description": "name of the diagnosed plugin",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "ok",
+            "kind": "bool",
+            "unit": "",
+            "description": "plugin reported a fit or sick diagnosis rather than dead",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "score",
+            "kind": "int",
+            "unit": "",
+            "description": "diagnosis score from 0 to 100",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "domain/resolver",
+        "description": "public DNS resolution of the monitored domain, one row per public resolver",
+        "cadence": "15m",
+        "entities": [
+          "cloudflare",
+          "google",
+          "quad9",
+          "opendns",
+          "adguard"
+        ],
+        "dimensions": [
+          {
+            "key": "resolver",
+            "description": "public DNS resolver queried",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "ok",
+            "kind": "bool",
+            "unit": "",
+            "description": "resolver agreed with the consensus address set",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "resolved",
+            "kind": "bool",
+            "unit": "",
+            "description": "resolver returned an address",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "latency_ms",
+            "kind": "float",
+            "unit": "ms",
+            "description": "time taken to resolve",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "ethernet/port",
+        "description": "switch port health, one row per monitored port",
+        "cadence": "15m",
+        "entities": [],
+        "dimensions": [
+          {
+            "key": "port",
+            "description": "switch name and port index of the monitored port",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "up",
+            "kind": "bool",
+            "unit": "",
+            "description": "port link is live",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "speed_mbps",
+            "kind": "int",
+            "unit": "Mbps",
+            "description": "negotiated link speed",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "full_duplex",
+            "kind": "bool",
+            "unit": "",
+            "description": "port negotiated full duplex",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "degraded",
+            "kind": "bool",
+            "unit": "",
+            "description": "port below expected speed or in half duplex",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "errors",
+            "kind": "int",
+            "unit": "",
+            "description": "link errors reported by the port this interval",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "internet/target",
+        "description": "internet reachability, one row per ping target",
+        "cadence": "15m",
+        "entities": [
+          "gateway",
+          "1.1.1.1",
+          "8.8.8.8",
+          "9.9.9.9"
+        ],
+        "dimensions": [
+          {
+            "key": "target",
+            "description": "ping target, either the local gateway or a public address",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "reachable",
+            "kind": "bool",
+            "unit": "",
+            "description": "target answered at least one ping across the window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "loss_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "packet loss across the window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "rtt_ms",
+            "kind": "float",
+            "unit": "ms",
+            "description": "mean round trip time across the window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "jitter_ms",
+            "kind": "float",
+            "unit": "ms",
+            "description": "mean jitter across the window",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "weewx/console",
+        "description": "weather station console link health, one row per console",
+        "cadence": "15m",
+        "entities": [
+          "weatherstation"
+        ],
+        "dimensions": [
+          {
+            "key": "console",
+            "description": "name of the weather station console",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "fresh",
+            "kind": "bool",
+            "unit": "",
+            "description": "console reported a pulse inside the freshness window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "quality_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "console coms signal quality",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "wireless/accesspoint",
+        "description": "access point health, one row per access point",
+        "cadence": "15m",
+        "entities": [],
+        "dimensions": [
+          {
+            "key": "accesspoint",
+            "description": "name of the access point",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "up",
+            "kind": "bool",
+            "unit": "",
+            "description": "access point reporting up",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "experience_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "client experience reported by the access point",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "clients",
+            "kind": "int",
+            "unit": "",
+            "description": "clients associated with the access point",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "zigbee/device",
+        "description": "mesh device state reported by the coordinator, one row per paired device",
+        "cadence": "15m",
+        "entities": [],
+        "dimensions": [
+          {
+            "key": "device",
+            "description": "friendly name of the paired device",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "available",
+            "kind": "bool",
+            "unit": "",
+            "description": "device reporting available",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "coordinator",
+            "kind": "bool",
+            "unit": "",
+            "description": "device is the coordinator itself",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "lqi",
+            "kind": "int",
+            "unit": "",
+            "description": "link quality reported for the device",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "weak",
+            "kind": "bool",
+            "unit": "",
+            "description": "device link quality below the weak threshold",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      }
+    ]
+  }
+}

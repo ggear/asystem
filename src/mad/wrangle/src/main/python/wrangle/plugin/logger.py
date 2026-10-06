@@ -6,7 +6,13 @@ import polars as pl
 
 from .config import PL_PRINT_ROWS, config
 
-LOG_LEVELS = {"debug": 10, "info": 20, "warning": 30, "error": 40, "fatal": 50}
+LOG_LEVELS = {
+    "debug": 10,
+    "info": 20,
+    "warning": 30,
+    "error": 40,
+    "fatal": 50,
+}
 
 
 def log_enabled(level):

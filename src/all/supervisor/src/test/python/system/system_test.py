@@ -135,7 +135,11 @@ def _await(topics, predicate, timeout, on_ready):
 
 def _name_payload(name):
     detail = {"ok": True, "value": name}
-    return json.dumps({"timestamp": int(time.time()), "pulse": detail, "trend": detail})
+    return json.dumps({
+        "timestamp": int(time.time()),
+        "pulse": detail,
+        "trend": detail,
+    })
 
 
 def _docker(*args):
@@ -260,7 +264,12 @@ def test_defers_to_an_incumbent_and_reclaims_when_it_leaves():
         while rival_standing.is_set():
             renewed = _stamp()
             client.publish(_candidate(RIVAL), json.dumps({"host": RIVAL, "renewed_ts": renewed}), 1, True).wait_for_publish()
-            client.publish(TOPIC_LEASE, json.dumps({"host": RIVAL, "epoch": 1, "claimed_ts": claimed, "renewed_ts": renewed}), 1, True).wait_for_publish()
+            client.publish(TOPIC_LEASE, json.dumps({
+                "host": RIVAL,
+                "epoch": 1,
+                "claimed_ts": claimed,
+                "renewed_ts": renewed,
+            }), 1, True).wait_for_publish()
             time.sleep(1)
         client.publish(_candidate(RIVAL), b"", 1, True).wait_for_publish()
         client.publish(TOPIC_LEASE, b"", 1, True).wait_for_publish()

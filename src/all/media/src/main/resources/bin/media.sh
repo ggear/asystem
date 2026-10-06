@@ -4,9 +4,9 @@ set -uo pipefail
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-MEDIA_COMMANDS=(process analyse clean normalise ingress stow move refresh truncate space find metadata home completion help)
+MEDIA_COMMANDS=(process analyse clean normalise load stow move refresh truncate space find metadata home completion help)
 
-MEDIA_OPTIONS=(--share --force --persistent --quiet --verbose --dryrun)
+MEDIA_OPTIONS=(--share --force --merge --transcode --persistent --quiet --verbose --dryrun)
 
 MEDIA_SCOPES=(kids parents docos comedy)
 
@@ -31,6 +31,8 @@ MEDIA_SCOPE_DEFAULT="parents"
 PROCESS_SCOPE="${MEDIA_SCOPE_DEFAULT}"
 
 OPT_FORCE=0
+OPT_MERGE=0
+OPT_TRANSCODE=0
 OPT_PERSISTENT=0
 OPT_SHARE=""
 OPT_QUIET=0
@@ -38,6 +40,7 @@ OPT_VERBOSE=0
 OPT_DRY_RUN=0
 
 COMMAND=""
+POSITIONALS=()
 POSITIONAL=""
 
 EXTENT=""
@@ -69,9 +72,11 @@ EOF
   Library
     clean     [dir]    delete generated metadata and scripts     (default: from \$PWD)
     normalise [dir]    fix ownership and modes, strip junk       (default: from \$PWD)
-    ingress   [dir]    import the usb drive and downloads        (default: from \$PWD)
+    load      [dir]    copy in the usb drive, rename file        (default: from \$PWD)
     stow      [scope]  file staged content into the library      (default: parents)
-    move      <share>  copy to another share, drop the source
+    move      [scope] [share]
+                       refile this title in another scope, share or
+                       both, scope first, at least one of the two
     refresh            reconcile paths into downstream stores
     truncate           trim the online shared history
 
@@ -86,7 +91,9 @@ EOF
     help               this text, and a bare ${prog} prints it
 
   --share      <index> one share, not the one you are in         (default: all local)
-  --force              analyse only, re-probe every file first   (default: off)
+  --force              analyse, re-probe every file first        (default: off)
+  --merge              analyse, merge transcodes past a check    (default: off)
+  --transcode          analyse in a title, transcode it anyway   (default: off)
   --persistent         carry on past a failed pipeline stage     (default: off)
   --quiet              summaries only, the default below a share (default: off)
   --verbose            one line per file, the default in a share (default: off)
@@ -196,11 +203,28 @@ command_analyse() {
   local result=0
   local verbosity
   verbosity="$(resolve_verbosity)"
+  if [ "${OPT_MERGE}" -eq 1 ] && [ "${EXTENT}" != "file" ] && [ "${EXTENT}" != "media" ]; then
+    echo "amedia option [--merge] needs a media directory, not extent [${EXTENT}]" >&2
+    return 2
+  fi
+  if [ "${OPT_TRANSCODE}" -eq 1 ] && [ "${EXTENT}" != "file" ]; then
+    echo "amedia option [--transcode] needs a title directory, not extent [${EXTENT}]" >&2
+    return 2
+  fi
   case "${EXTENT}" in
   file | media)
     print_header "$(hostname)" "analyse" 0
     library_clean "${PWD}" || result=1
-    "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "--${verbosity:-verbose}" "${PWD}" "${MEDIA_GOOGLE_SHEET_GUID}" || result=1
+    local classify=()
+    if [ "${OPT_MERGE}" -eq 1 ]; then
+      echo "amedia merge classifying extent [${EXTENT}] [${PWD}]"
+      classify+=(--merge)
+    fi
+    if [ "${OPT_TRANSCODE}" -eq 1 ]; then
+      echo "amedia transcode classifying extent [${EXTENT}] [${PWD}]"
+      classify+=(--transcode)
+    fi
+    "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "--${verbosity:-verbose}" ${classify[@]+"${classify[@]}"} "${PWD}" "${MEDIA_GOOGLE_SHEET_GUID}" || result=1
     ;;
   share)
     if [ "${OPT_FORCE}" -eq 1 ]; then
@@ -340,19 +364,19 @@ library_normalise() {
   return 0
 }
 
-library_ingress_import() {
+library_load_copy() {
   local share_dir="${1}"
   local result=0
   if [ "$(lsblk -ro name,label | grep -c GRAHAM)" -eq 1 ]; then
-    local import_dev
-    import_dev="/dev/$(lsblk -ro name,label | grep GRAHAM | awk '{print $1}')"
-    if [ -e "${import_dev}" ]; then
+    local copy_dev
+    copy_dev="/dev/$(lsblk -ro name,label | grep GRAHAM | awk '{print $1}')"
+    if [ -e "${copy_dev}" ]; then
       echo "#######################################################################################"
       echo "Starting rsync of /media/usbdrive to ${share_dir}/tmp"
       echo "#######################################################################################"
       mkdir -p /media/usbdrive
       umount -fq /media/usbdrive
-      mount -t exfat "${import_dev}" /media/usbdrive || result=1
+      mount -o ro "${copy_dev}" /media/usbdrive
       rsync -avP /media/usbdrive "${share_dir}/tmp" || result=1
       echo "" && echo "Completed rsync of /media/usbdrive to ${share_dir}/tmp" && date && echo ""
       echo "#######################################################################################"
@@ -362,7 +386,7 @@ library_ingress_import() {
   return ${result}
 }
 
-library_ingress_sweep() {
+library_load_sweep() {
   local share_dir="${1}"
   local result=0
   echo -n "Sweeping [${share_dir}/tmp] ... "
@@ -371,7 +395,7 @@ library_ingress_sweep() {
     "${share_dir}/tmp/usbdrive/\$RECYCLE.BIN" \
     "${share_dir}"/tmp/usbdrive/..?* \
     "${share_dir}"/tmp/usbdrive/.[!.]* || result=1
-  "${PYTHON_DIR}/python" "${LIB_ROOT}/ingress.py" "${share_dir}/tmp" || result=1
+  "${PYTHON_DIR}/python" "${LIB_ROOT}/stage.py" "${share_dir}/tmp" || result=1
   if [ ${result} -ne 0 ]; then
     echo "failed"
     return 1
@@ -380,10 +404,10 @@ library_ingress_sweep() {
   return 0
 }
 
-command_ingress() {
+command_load() {
   local dir="${1:-}"
   if [ "$(uname)" != "Linux" ]; then
-    echo "amedia ingress is Linux-only, skipping" >&2
+    echo "amedia load is Linux-only, skipping" >&2
     return 0
   fi
   local shares=()
@@ -401,21 +425,21 @@ command_ingress() {
     esac
   fi
   if [ ${#shares[@]} -eq 0 ]; then
-    echo "amedia no local share to ingress into" >&2
+    echo "amedia no local share to load into" >&2
     return 0
   fi
-  local result=0 import_ok=1
-  library_ingress_import "${shares[0]}" || {
-    import_ok=0
+  local result=0 copy_ok=1
+  library_load_copy "${shares[0]}" || {
+    copy_ok=0
     result=1
   }
   local _share
   for _share in "${shares[@]}"; do
-    if [ "${_share}" = "${shares[0]}" ] && [ ${import_ok} -eq 0 ]; then
-      echo "amedia skipping sweep of [${_share}], the import failed" >&2
+    if [ "${_share}" = "${shares[0]}" ] && [ ${copy_ok} -eq 0 ]; then
+      echo "amedia skipping sweep of [${_share}], the copy failed" >&2
       continue
     fi
-    library_ingress_sweep "${_share}" || result=1
+    library_load_sweep "${_share}" || result=1
   done
   return ${result}
 }
@@ -517,6 +541,7 @@ command_stow() {
   fi
   local result=0 share_type share_type_dir
   for share_type in series movies audio; do
+    [ -d "${PWD}" ] || break
     if [[ "${SHARE_PATH_SUFFIX}" == *"/${share_type}/"* ]]; then
       stow_type "${PWD%%/"${share_type}"/*}/${share_type}" "${PWD}" "${share_dest}/${share_type}" || result=1
     else
@@ -547,10 +572,23 @@ process_drives() {
 }
 
 command_move() {
-  local dest="${1:-}"
-  [ -n "${dest}" ] || refuse "move requires a <share> argument"
-  [[ "${dest}" =~ ^[0-9]+$ ]] || refuse "[${dest}] is not a share index, did you mean [amedia stow ${dest}]"
+  local dest_scope="" dest=""
+  [ $# -gt 0 ] || refuse "move requires a scope, a share or both"
+  if in_list "${1}" "${MEDIA_SCOPES[@]}"; then
+    dest_scope="${1}"
+    shift
+  fi
+  if [ $# -gt 0 ] && [[ "${1}" =~ ^[0-9]+$ ]]; then
+    dest="${1}"
+    shift
+  fi
+  if [ $# -gt 0 ]; then
+    in_list "${1}" "${MEDIA_SCOPES[@]}" && [ -n "${dest}" ] &&
+      refuse "scope comes before share, did you mean [amedia move ${1} ${dest}]"
+    refuse "[${1}] is neither a scope nor a share index"
+  fi
   [ -n "${SHARE_PATH_DIR}" ] || refuse "current directory [${PWD}] is not a share"
+  dest="${dest:-${SHARE_PATH_INDEX}}"
   share_path_is_outside_media && refuse "current directory is not nested in the library, did you mean [amedia stow <scope>]"
   local share_dashes
   share_dashes="$(path_slashes "${SHARE_PATH_SUFFIX}")"
@@ -583,10 +621,15 @@ command_move() {
   local share_src="/share/${SHARE_PATH_INDEX}/${SHARE_PATH_SUFFIX}/"
   local share_dest_suffix
   share_dest_suffix="$(echo "${SHARE_PATH_SUFFIX}" | cut -d '/' -f2-)"
+  [ -n "${dest_scope}" ] && share_dest_suffix="${dest_scope}/${share_dest_suffix#*/}"
   local share_dest="/share/${dest}/media/${share_dest_suffix}/"
   if [ "${OPT_DRY_RUN}" -eq 1 ]; then
-    echo "+ rsync '${share_src}' -> '${share_dest}'"
-    echo "+ rm -rvf '${share_src}'*"
+    if [ "${dest}" = "${SHARE_PATH_INDEX}" ]; then
+      echo "+ mv '${share_src}' -> '${share_dest}', or rsync then rm if it exists"
+    else
+      echo "+ rsync '${share_src}' -> '${share_dest}'"
+      echo "+ rm -rvf '${share_src}'*"
+    fi
     return 0
   fi
   local share_args=("${share_src}" "${share_dest}")
@@ -610,8 +653,19 @@ if [ -n "${share_src}" ] && [ -d "${share_src}" ] && [ -n "${share_dest}" ]; the
   if [ "${share_src}" == "${share_dest}" ]; then
     echo "Error: Source [${share_src}] and destination [${share_dest}] paths are the same"
     result=1
-  elif [[ "${share_src}" == /share/* ]] && [[ $(echo "${share_src}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${share_src}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
-     [[ "${share_dest}" == /share/* ]] && [[ $(echo "${share_dest}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${share_dest}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
+  elif ! { [[ "${share_src}" == /share/* ]] && [[ $(echo "${share_src}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${share_src}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
+       [[ "${share_dest}" == /share/* ]] && [[ $(echo "${share_dest}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${share_dest}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; }; then
+    echo "Error: Source [${share_src}] and or destination [${share_dest}] paths are invalid"
+    result=1
+  elif [ "$(echo "${share_src}" | cut -d'/' -f1-3)" == "$(echo "${share_dest}" | cut -d'/' -f1-3)" ] && [ ! -e "${share_dest}" ]; then
+    mkdir -p "$(dirname "${share_dest}")"
+    if mv -v "${share_src%/}" "${share_dest%/}"; then
+      [ -d "$(dirname "${share_src}")" ] && find "$(dirname "${share_src}")" -type d -empty -delete >/dev/null 2>&1
+    else
+      echo "Error: Failed to move source [${share_src}] to destination [${share_dest}]"
+      result=1
+    fi
+  else
     mkdir -p "${share_dest}"
     source_size=$(( $(du -s "${share_src}" | cut -f1) / 1048576 ))
     dest_free=$(( $(df "${share_dest}" | tail -1 | awk '{print $4}') / 1048576 ))
@@ -631,9 +685,6 @@ if [ -n "${share_src}" ] && [ -d "${share_src}" ] && [ -n "${share_dest}" ]; the
         result=1
       fi
     fi
-  else
-    echo "Error: Source [${share_src}] and or destination [${share_dest}] paths are invalid"
-    result=1
   fi
 else
   echo "Error: Source [${share_src}] and or destination [${share_dest}] paths are null"
@@ -766,6 +817,8 @@ parse_args() {
         refuse "option [${1}] is not accepted by command [${COMMAND}]"
       case "${1}" in
       --force) OPT_FORCE=1 ;;
+      --merge) OPT_MERGE=1 ;;
+      --transcode) OPT_TRANSCODE=1 ;;
       --persistent) OPT_PERSISTENT=1 ;;
       --share)
         [ $# -ge 2 ] || refuse "option [--share] requires an index"
@@ -777,10 +830,7 @@ parse_args() {
       --dryrun) OPT_DRY_RUN=1 ;;
       esac
       ;;
-    *)
-      [ -z "${POSITIONAL}" ] || refuse "unexpected argument [${1}]"
-      POSITIONAL="${1}"
-      ;;
+    *) POSITIONALS+=("${1}") ;;
     esac
     shift
   done
@@ -789,10 +839,10 @@ parse_args() {
 command_accepts_option() {
   local command="${1}" option="${2}"
   case "${option}" in
-  --force) [ "${command}" = "analyse" ] ;;
+  --force | --merge | --transcode) [ "${command}" = "analyse" ] ;;
   --persistent) [ "${command}" = "process" ] ;;
   --dryrun) [ "${command}" = "move" ] ;;
-  --share) in_list "${command}" analyse process clean normalise ingress space "${MEDIA_ACTIONS[@]}" ;;
+  --share) in_list "${command}" analyse process clean normalise load space "${MEDIA_ACTIONS[@]}" ;;
   --quiet | --verbose) in_list "${command}" analyse process "${MEDIA_ACTIONS[@]}" ;;
   *) return 1 ;;
   esac
@@ -801,8 +851,8 @@ command_accepts_option() {
 command_positional() {
   case "${1}" in
   process | stow) echo "scope" ;;
-  move) echo "share" ;;
-  clean | normalise | ingress) echo "dir" ;;
+  move) echo "scope share" ;;
+  clean | normalise | load) echo "dir" ;;
   find) echo "token" ;;
   esac
 }
@@ -853,7 +903,7 @@ command_complete() {
     [ ${#shares[@]} -gt 0 ] && complete_matching "${current}" "${shares[@]}"
     return 0
   fi
-  local position used=() positional=0
+  local position used=() positionals=()
   for ((position = 2; position < index; position++)); do
     case "${words[${position}]}" in
     --share)
@@ -861,7 +911,7 @@ command_complete() {
       position=$((position + 1))
       ;;
     --*) used+=("${words[${position}]}") ;;
-    *) positional=1 ;;
+    *) positionals+=("${words[${position}]}") ;;
     esac
   done
   local candidates=() option
@@ -870,15 +920,32 @@ command_complete() {
     [ ${#used[@]} -gt 0 ] && in_list "${option}" "${used[@]}" && continue
     candidates+=("${option}")
   done
-  local kind
-  kind="$(command_positional "${command}")"
-  if [[ "${current}" != -* ]]; then
-    [ "${positional}" -eq 1 ] && kind=""
-    case "${kind}" in
-    scope) candidates=("${MEDIA_SCOPES[@]}") ;;
-    share) mapfile -t candidates < <(share_indices_all) ;;
-    dir | token) return 0 ;;
-    esac
+  local kinds=() kind value next=0
+  read -r -a kinds <<<"$(command_positional "${command}")"
+  for value in ${positionals[@]+"${positionals[@]}"}; do
+    while [ "${next}" -lt ${#kinds[@]} ]; do
+      kind="${kinds[${next}]}"
+      next=$((next + 1))
+      case "${kind}" in
+      scope) in_list "${value}" "${MEDIA_SCOPES[@]}" && break ;;
+      share) [[ "${value}" =~ ^[0-9]+$ ]] && break ;;
+      *) break ;;
+      esac
+    done
+  done
+  if [[ "${current}" != -* ]] && [ "${next}" -lt ${#kinds[@]} ]; then
+    local values=() shares_all=()
+    for kind in "${kinds[@]:${next}}"; do
+      case "${kind}" in
+      scope) values+=("${MEDIA_SCOPES[@]}") ;;
+      share)
+        mapfile -t shares_all < <(share_indices_all)
+        values+=(${shares_all[@]+"${shares_all[@]}"})
+        ;;
+      dir | token) return 0 ;;
+      esac
+    done
+    candidates=(${values[@]+"${values[@]}"})
   fi
   [ ${#candidates[@]} -gt 0 ] && complete_matching "${current}" "${candidates[@]}"
   return 0
@@ -899,9 +966,12 @@ EOF
 
 main() {
   parse_args "$@"
-  if [ -n "${POSITIONAL}" ] && [ -z "$(command_positional "${COMMAND}")" ]; then
-    refuse "unexpected argument [${POSITIONAL}]"
+  local kinds=()
+  read -r -a kinds <<<"$(command_positional "${COMMAND}")"
+  if [ ${#POSITIONALS[@]} -gt ${#kinds[@]} ]; then
+    refuse "unexpected argument [${POSITIONALS[${#kinds[@]}]}]"
   fi
+  POSITIONAL="${POSITIONALS[0]:-}"
   resolve_extent
   case "${COMMAND}" in
   help)
@@ -912,9 +982,9 @@ main() {
   process) command_process "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
   analyse | refresh | space) run_stage "${COMMAND}" ;;
   clean | normalise) dispatch_library "${COMMAND}" "${POSITIONAL}" ;;
-  ingress) command_ingress "${POSITIONAL}" ;;
+  load) command_load "${POSITIONAL}" ;;
   stow) command_stow "${POSITIONAL:-${MEDIA_SCOPE_DEFAULT}}" ;;
-  move) command_move "${POSITIONAL}" ;;
+  move) command_move ${POSITIONALS[@]+"${POSITIONALS[@]}"} ;;
   truncate) command_truncate ;;
   find) command_find "${POSITIONAL}" ;;
   metadata) command_metadata ;;

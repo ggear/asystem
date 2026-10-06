@@ -1814,9 +1814,9 @@ configuration and tooling, with no container and no service state.
 | `homeassistant` | meg | ❌ | **yes** | prefer its backup integration — POST to the API with the `HOMEASSISTANT_API_TOKEN` already in its environment, then collect the tar it writes. Fallback: `INCLUDE=.storage` with `OFFLINE`. Note its native path is `/config/backups`, one letter from ours |
 | `sonarr` | may | ❌ | **yes** | `sonarr.db` and `config.xml`. Sonarr's v3 API is believed to expose a Backup command — verify before relying on it; otherwise `OFFLINE` with `backup_files` |
 | `sabnzbd` | mad | ❌ | **yes** | `sabnzbd.ini` and `admin/` (history and queue databases, written live) — `OFFLINE` with `backup_files` |
-| `grafana` | may | ❌ | **yes** | users, API keys and preferences in `grafana.db`; dashboards come from jsonnet so are not needed. `sqlite3 grafana.db ".backup $1"` is online-safe, else `OFFLINE` with `backup_files` |
 | `mlflow` | max | ❌ | **yes** | **not visible in a data-directory scan** — its backup root is a share mount, `/share/1/service/mlflow/backups` in production. Experiment metadata is in `postgres` and already covered; the backups are not. A tar of the backup root, or a deliberate decision that backups are reproducible |
 | `rhasspy` | zzz | ❌ | no | **declared derived** — a trained voice profile would not be, so this is the one of the four carrying residual risk; retrainable from the same inputs and nothing else here depends on it |
+| `grafana` | max | ❌ | no | **declared derived** — the database is ephemeral by design, dashboards, folders, preferences and datasources are all pushed from `data/dashboards/` and `data/provisioning/` in the repo on every start |
 | `openra` | max | ❌ | no | **declared derived** — settings and replays, of no operational value |
 | `appdaemon` | zzz | ❌ | no | **declared derived** — apps come from git, and nothing generated is kept alongside them |
 | `vernemq` | meg | ❌ | no | **declared derived** — the retained store persists on disk but is derived by design, flushed deliberately on every vernemq release and republished by every module on deploy, so there is nothing durable to copy |
@@ -1846,7 +1846,7 @@ mechanism question**, now that `zigbee2mqtt` has settled the pattern for a modul
 and `plex` has settled the `OFFLINE` file-copy pattern.
 
 Order of work, once confirmed: `homeassistant` (largest irreplaceable state), then `mlflow`
-(silently uncovered today), then `sonarr`, `sabnzbd`, `grafana` — all three of which are the same
+(silently uncovered today), then `sonarr` and `sabnzbd` — both of which are the same
 `OFFLINE` file-copy shape `plex` now demonstrates.
 
 ### 7 Nothing reports backup health — gap

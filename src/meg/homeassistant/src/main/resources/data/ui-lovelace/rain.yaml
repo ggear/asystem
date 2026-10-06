@@ -18,26 +18,26 @@
     fill: false
   entities:
     - entity: sensor.roof_rain_rate
-      name: Rate
+      name: Rain Rate
 ################################################################################
 - type: entities
   entities:
     - entity: sensor.roof_rain_rate
-      name: Rate
+      name: Rain Rate
       icon: mdi:weather-pouring
 ################################################################################
 - type: entities
   entities:
     - entity: sensor.roof_hourly_rain
-      name: Hourly
+      name: Hourly Rain
       icon: mdi:weather-pouring
     - entity: sensor.roof_daily_rain
-      name: Daily
+      name: Daily Rain
       icon: mdi:weather-pouring
     - entity: sensor.roof_monthly_rain
-      name: Monthly
+      name: Monthly Rain
       icon: mdi:weather-pouring
     - entity: sensor.roof_yearly_rain
-      name: Yearly
+      name: Yearly Rain
       icon: mdi:weather-pouring
 ################################################################################

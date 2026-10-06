@@ -1,0 +1,78 @@
+apiVersion: dashboard.grafana.app/v2
+kind: Dashboard
+metadata:
+  name: home
+spec:
+  annotations: []
+  cursorSync: 'Off'
+  editable: true
+  elements:
+    dashboards:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries: []
+            queryOptions: {}
+            transformations: []
+        description: ''
+        id: 0
+        links: []
+        title: Dashboards
+        vizConfig:
+          group: dashlist
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults: {}
+              overrides: []
+            options:
+              includeVars: false
+              keepTime: false
+              maxItems: 100
+              query: ''
+              showFolderNames: true
+              showHeadings: true
+              showRecentlyViewed: false
+              showSearch: true
+              showStarred: false
+              tags:
+              - asystem
+          version: ''
+  layout:
+    kind: GridLayout
+    spec:
+      items:
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: dashboards
+          height: 24
+          width: 24
+          x: 0
+          y: 0
+  links: []
+  preload: false
+  tags: []
+  timeSettings:
+    autoRefresh: ''
+    autoRefreshIntervals:
+    - 5s
+    - 10s
+    - 30s
+    - 1m
+    - 5m
+    - 15m
+    - 30m
+    - 1h
+    - 2h
+    - 1d
+    fiscalYearStartMonth: 0
+    from: now-6h
+    hideTimepicker: false
+    timezone: browser
+    to: now
+  title: Home
+  variables: []

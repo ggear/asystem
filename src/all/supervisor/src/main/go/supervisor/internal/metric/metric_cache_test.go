@@ -20,7 +20,11 @@ func TestMetricCache_Hosts(t *testing.T) {
 				NewRecordGUID(MetricHost, "alpha"),
 				NewRecordGUID(MetricHost, "gamma"),
 			},
-			expected: map[string]int{"alpha": 0, "beta": 1, "gamma": 2},
+			expected: map[string]int{
+				"alpha": 0,
+				"beta":  1,
+				"gamma": 2,
+			},
 		},
 		{
 			name: "happy_single_host",

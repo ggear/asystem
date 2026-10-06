@@ -1772,6 +1772,10 @@ Requires `ffprobe`, `ffmpeg` and `mkvpropedit`.
       encode_options = []
 
       if @encoder == 'copy'
+        if video['codec_name'] == 'mpeg4'
+          decode_options += ['-fflags', '+genpts']
+        end
+
         filter = ''
       else
         if video['codec_name'] == 'mpeg2video' and video['avg_frame_rate'] == '30000/1001'
@@ -1898,6 +1902,7 @@ Requires `ffprobe`, `ffmpeg` and `mkvpropedit`.
 
       Kernel.warn text
       encode_options += ['-c:v', @encoder]
+      encode_options += ['-bsf:v', 'mpeg4_unpack_bframes'] if @encoder == 'copy' and video['codec_name'] == 'mpeg4'
       encode_options += ['-pix_fmt:v', (@encoder =~ /(videotoolbox|nvenc|qsv)$/ ? 'p010le' : 'yuv420p10le')] if ten_bit and pix_fmt
       encode_options += (@nvenc_cq.nil? ? ['-b:v', "#{bitrate}k"] : ['-cq:v', @nvenc_cq]) unless @encoder == 'copy'
       encode_options += ['-maxrate:v', "#{maxrate}k"] if maxrate > 0

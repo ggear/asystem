@@ -30,9 +30,10 @@ const (
 )
 
 type Dimension struct {
-	Key         string `json:"key"`
-	Description string `json:"description"`
-	Subject     bool   `json:"subject"`
+	Key         string   `json:"key"`
+	Description string   `json:"description"`
+	Subject     bool     `json:"subject"`
+	Entities    []string `json:"entities"`
 }
 
 type Measure struct {
@@ -41,7 +42,7 @@ type Measure struct {
 	Unit        string `json:"unit"`
 	Description string `json:"description"`
 	Persist     bool   `json:"persist"`
-	Period      string `json:"period,omitempty"`
+	Period      string `json:"period"`
 }
 
 type Relation struct {

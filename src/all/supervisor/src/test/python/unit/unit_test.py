@@ -401,7 +401,10 @@ class InstallPostShellTest(unittest.TestCase):
             .replace("/var/lib/asystem/install", join(self.workdir, "install")) \
             .replace("/usr/local/bin", self.bin)
         done = subprocess.run(["bash", "-c", script], capture_output=True, text=True, env={
-            "PATH": os.environ["PATH"], "SERVICE_NAME": "supervisor", "SERVICE_FORM_FACTOR": form_factor})
+            "PATH": os.environ["PATH"],
+            "SERVICE_NAME": "supervisor",
+            "SERVICE_FORM_FACTOR": form_factor,
+        })
         self.assertEqual(done.returncode, 0, "stderr: {}".format(done.stderr))
 
     def test_abackup_execs_the_binary_with_the_module_environment(self):

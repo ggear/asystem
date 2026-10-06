@@ -1,0 +1,309 @@
+{
+  "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
+  "source": "f4f90731fa9578991fd5071764f5a9223bebbed1d578d122885598b1e0bbfeb4",
+  "module": "wrangle",
+  "discovered": false,
+  "database": {
+    "relations": [
+      {
+        "path": "currency/rate",
+        "description": "foreign exchange rates published by the Reserve Bank of Australia",
+        "cadence": "1d",
+        "entities": [
+          "AUD/USD",
+          "AUD/GBP",
+          "AUD/SGD"
+        ],
+        "dimensions": [
+          {
+            "key": "entity",
+            "description": "currency pair",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "snapshot",
+            "kind": "float",
+            "unit": "$",
+            "description": "closing rate for the currency pair",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "delta",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in the rate across [1 Day Delta]",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "delta",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in the rate across [1 Week Delta]",
+            "persist": true,
+            "period": "7d"
+          },
+          {
+            "key": "delta",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in the rate across [1 Month Delta]",
+            "persist": true,
+            "period": "30d"
+          },
+          {
+            "key": "delta",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in the rate across [1 Year Delta]",
+            "persist": true,
+            "period": "365d"
+          }
+        ]
+      },
+      {
+        "path": "interest/rate",
+        "description": "interest and inflation rates published by the Reserve Bank of Australia",
+        "cadence": "1d",
+        "entities": [
+          "Bank",
+          "Inflation",
+          "Net"
+        ],
+        "dimensions": [
+          {
+            "key": "entity",
+            "description": "rate series",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "mean",
+            "kind": "float",
+            "unit": "%",
+            "description": "mean rate across the month",
+            "persist": true,
+            "period": "1mo"
+          },
+          {
+            "key": "mean",
+            "kind": "float",
+            "unit": "%",
+            "description": "mean rate across [1 Year Mean]",
+            "persist": true,
+            "period": "1y"
+          },
+          {
+            "key": "mean",
+            "kind": "float",
+            "unit": "%",
+            "description": "mean rate across [5 Year Mean]",
+            "persist": true,
+            "period": "5y"
+          },
+          {
+            "key": "mean",
+            "kind": "float",
+            "unit": "%",
+            "description": "mean rate across [10 Year Mean]",
+            "persist": true,
+            "period": "10y"
+          },
+          {
+            "key": "mean",
+            "kind": "float",
+            "unit": "%",
+            "description": "mean rate across [20 Year Mean]",
+            "persist": true,
+            "period": "20y"
+          },
+          {
+            "key": "mean",
+            "kind": "float",
+            "unit": "%",
+            "description": "mean rate across [40 Year Mean]",
+            "persist": true,
+            "period": "40y"
+          }
+        ]
+      },
+      {
+        "path": "equity/ticker",
+        "description": "equity prices and volumes downloaded per ticker",
+        "cadence": "1d",
+        "entities": [
+          "ACDC",
+          "AORD",
+          "ATOI",
+          "AXJO",
+          "BANK",
+          "CLNE",
+          "EMKT",
+          "ERTH",
+          "GAME",
+          "GOLD",
+          "IAF",
+          "MCK",
+          "MUK",
+          "MUS",
+          "MVW",
+          "NDQ",
+          "QSML",
+          "SIG",
+          "URNM",
+          "VAE",
+          "VAS",
+          "VDHG",
+          "VGE",
+          "VGS",
+          "VHY",
+          "WDS"
+        ],
+        "dimensions": [
+          {
+            "key": "entity",
+            "description": "ticker symbol",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "market-volume-spot",
+            "kind": "float",
+            "unit": "$",
+            "description": "daily market volume spot reading",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "price-close",
+            "kind": "float",
+            "unit": "$",
+            "description": "daily price close reading",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "price-close-base",
+            "kind": "float",
+            "unit": "$",
+            "description": "daily price close base reading",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "price-close-spot",
+            "kind": "float",
+            "unit": "$",
+            "description": "daily price close spot reading",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "price-close-1d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close across [1] days",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "price-close-base-1d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close base across [1] days",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "price-close-spot-1d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close spot across [1] days",
+            "persist": true,
+            "period": "1d"
+          },
+          {
+            "key": "price-close-30d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close across [30] days",
+            "persist": true,
+            "period": "30d"
+          },
+          {
+            "key": "price-close-base-30d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close base across [30] days",
+            "persist": true,
+            "period": "30d"
+          },
+          {
+            "key": "price-close-spot-30d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close spot across [30] days",
+            "persist": true,
+            "period": "30d"
+          },
+          {
+            "key": "price-close-90d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close across [90] days",
+            "persist": true,
+            "period": "90d"
+          },
+          {
+            "key": "price-close-base-90d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close base across [90] days",
+            "persist": true,
+            "period": "90d"
+          },
+          {
+            "key": "price-close-spot-90d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close spot across [90] days",
+            "persist": true,
+            "period": "90d"
+          },
+          {
+            "key": "price-close-365d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close across [365] days",
+            "persist": true,
+            "period": "365d"
+          },
+          {
+            "key": "price-close-base-365d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close base across [365] days",
+            "persist": true,
+            "period": "365d"
+          },
+          {
+            "key": "price-close-spot-365d-change-percentage",
+            "kind": "float",
+            "unit": "%",
+            "description": "change in price close spot across [365] days",
+            "persist": true,
+            "period": "365d"
+          }
+        ]
+      }
+    ]
+  }
+}

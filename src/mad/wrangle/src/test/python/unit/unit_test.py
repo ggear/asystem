@@ -895,7 +895,12 @@ class WrangleTest(unittest.TestCase):
                     plugin_counters[source_key][action_key] = _synthetic_counter_value(action_key, counter, rand)
                 run_plugins[plugin_key] = plugin_counters
             errored = {plugin_id: any(run_plugins[plugin_id].get(source_id, {}).get(action_id, 0) > 0 for (source_id, action_id), c in COUNTERS.items() if c.error) for plugin_id in plugin_names}
-            return {"ts": run_ts.isoformat(), "bucket": int(run_ts.timestamp()) // (30 * 60), "plugins": run_plugins, "errored": errored}
+            return {
+                "ts": run_ts.isoformat(),
+                "bucket": int(run_ts.timestamp()) // (30 * 60),
+                "plugins": run_plugins,
+                "errored": errored,
+            }
 
         def _synthetic_day_entry(date, plugin_names, rand):
             buckets = {}
@@ -907,8 +912,17 @@ class WrangleTest(unittest.TestCase):
                         buckets[plugin_key][source_key] = {}
                     count = rand.randint(40, 48)
                     tmp_value = _synthetic_counter_value(action_key, counter, rand)
-                    buckets[plugin_key][source_key][action_key] = {"sum": tmp_value * count, "min": max(0, tmp_value - 3), "max": tmp_value + 3, "count": count}
-            return {"date": date.isoformat(), "errored_runs": errored_runs, "buckets": buckets}
+                    buckets[plugin_key][source_key][action_key] = {
+                        "sum": tmp_value * count,
+                        "min": max(0, tmp_value - 3),
+                        "max": tmp_value + 3,
+                        "count": count,
+                    }
+            return {
+                "date": date.isoformat(),
+                "errored_runs": errored_runs,
+                "buckets": buckets,
+            }
 
         plugins = ["balances", "currency", "equity", "interest"]
         all_plugin_names = ["summary"] + sorted(plugins)
@@ -937,8 +951,16 @@ class WrangleTest(unittest.TestCase):
                 ts = now - datetime.timedelta(minutes=30 * runs_ago)
                 history._raw.append(_synthetic_raw_entry(ts, all_plugin_names, rng))
             snapshot = history.snapshot()
-            plugin_sections = [{"id": "summary", "title": "Summary", "theme": "ghost-gray"}] + [
-                {"id": plugin_name, "title": plugin_name.capitalize(), "theme": THEMES[index % len(THEMES)]}
+            plugin_sections = [{
+                "id": "summary",
+                "title": "Summary",
+                "theme": "ghost-gray",
+            }] + [
+                {
+                    "id": plugin_name,
+                    "title": plugin_name.capitalize(),
+                    "theme": THEMES[index % len(THEMES)],
+                }
                 for index, plugin_name in enumerate(p for p in snapshot.plugins if p != "summary")
             ]
             snapshot_json = json.dumps(dataclasses.asdict(snapshot))
@@ -952,7 +974,11 @@ class WrangleTest(unittest.TestCase):
                     pcs[src][act] = _synthetic_counter_value(act, ctr, rng)
                 adhoc_plugins[plugin_name] = pcs
             adhoc_errored = {name: any(adhoc_plugins[name].get(src, {}).get(act, 0) > 0 for (src, act), c in COUNTERS.items() if c.error) for name in all_plugin_names}
-            latest_run_json = json.dumps({"ts": adhoc_ts.isoformat(), "plugins": adhoc_plugins, "errored": adhoc_errored})
+            latest_run_json = json.dumps({
+                "ts": adhoc_ts.isoformat(),
+                "plugins": adhoc_plugins,
+                "errored": adhoc_errored,
+            })
             html = TEMPLATE.render(
                 snapshot_json=snapshot_json,
                 latest_run_json=latest_run_json,
@@ -1332,7 +1358,11 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(df_empty_str.format("C1(Int16)"), test.dataframe_to_str(test.dataframe_new([], df_empty_type)))
 
         df_data_str = "[C1({}), C2({}), C3({})]"
-        df_data_type = {"C1": pl.Int64, "C2": pl.Utf8, "C3": pl.Utf8}
+        df_data_type = {
+            "C1": pl.Int64,
+            "C2": pl.Utf8,
+            "C3": pl.Utf8,
+        }
         df_data = [{"C1": 1, "C2": 1.1, "C3": "1"}, {"C1": 2, "C2": 2.2, "C3": "2"}, {"C1": None, "C2": None, "C3": None}]
         self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data)))
         self.assertEqual(df_data_str.format("Int64", "Float64", "String"), test.dataframe_to_str(test.dataframe_new(df_data, {})))
@@ -1362,7 +1392,15 @@ class WrangleTest(unittest.TestCase):
 
         def _history(dates):
             index = pd.DatetimeIndex([pd.Timestamp(stock_date) for stock_date in dates]).tz_localize("Australia/Sydney")
-            return pd.DataFrame({"Open": 1.0, "High": 1.0, "Low": 1.0, "Close": 1.0, "Volume": 1, "Dividends": 0.0, "Stock Splits": 0.0}, index=index)
+            return pd.DataFrame({
+                "Open": 1.0,
+                "High": 1.0,
+                "Low": 1.0,
+                "Close": 1.0,
+                "Volume": 1,
+                "Dividends": 0.0,
+                "Stock Splits": 0.0,
+            }, index=index)
 
         with tempfile.TemporaryDirectory() as cache_dir, mock.patch("wrangle.plugin._sources.yf.Ticker") as ticker:
             ticker.return_value.history.return_value = _history(["2025-09-30"])
@@ -2203,7 +2241,11 @@ class WrangleTest(unittest.TestCase):
                 _print("FINISHED (assert)")
 
     def _save_pass_snapshot(self, plugin_module, pass_number):
-        suffix_map = {1: "_1_run", 2: "_2_rerun", 3: "_3_reprocess"}
+        suffix_map = {
+            1: "_1_run",
+            2: "_2_rerun",
+            3: "_3_reprocess",
+        }
         for filename in os.listdir(plugin_module.local_cache):
             if re.match(r"^_.*\.csv$", filename) and not re.search(r"_\d_(run|rerun|reprocess)\.csv$", filename):
                 source_path = join(plugin_module.local_cache, filename)

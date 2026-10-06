@@ -1,0 +1,41 @@
+#######################################################################################
+template:
+  #####################################################################################
+  - sensor:
+      #################################################################################
+      - unique_id: dining_air_purifier_pm25
+        device_class: pm25
+        state_class: measurement
+        unit_of_measurement: µg/m³
+        state: >-
+          {{ states('sensor.dining_air_purifier_pm25') | int(-1) }}
+        availability: >-
+          {{ is_state('fan.dining_air_purifier', 'on') and states('sensor.dining_air_purifier_pm25') | int(-1) >= 0 }}
+      #################################################################################
+      - unique_id: lounge_air_purifier_pm25
+        device_class: pm25
+        state_class: measurement
+        unit_of_measurement: µg/m³
+        state: >-
+          {{ states('sensor.lounge_air_purifier_pm25') | int(-1) }}
+        availability: >-
+          {{ is_state('fan.lounge_air_purifier', 'on') and states('sensor.lounge_air_purifier_pm25') | int(-1) >= 0 }}
+      #################################################################################
+      - unique_id: parents_air_purifier_pm25
+        device_class: pm25
+        state_class: measurement
+        unit_of_measurement: µg/m³
+        state: >-
+          {{ states('sensor.parents_air_purifier_pm25') | int(-1) }}
+        availability: >-
+          {{ is_state('fan.parents_air_purifier', 'on') and states('sensor.parents_air_purifier_pm25') | int(-1) >= 0 }}
+      #################################################################################
+      - unique_id: kitchen_air_purifier_pm25
+        device_class: pm25
+        state_class: measurement
+        unit_of_measurement: µg/m³
+        state: >-
+          {{ states('sensor.kitchen_air_purifier_pm25') | int(-1) }}
+        availability: >-
+          {{ is_state('fan.kitchen_air_purifier', 'on') and states('sensor.kitchen_air_purifier_pm25') | int(-1) >= 0 }}
+#######################################################################################

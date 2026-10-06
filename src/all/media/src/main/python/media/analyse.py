@@ -80,7 +80,7 @@ BASH_EXIT_HANDLER = "shopt -s expand_aliases\n" \
 
 
 # noinspection PyUnresolvedReferences,PyUnusedLocal
-def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=False, verbose=False):
+def _analyse(file_path_root, sheet_guid, clean=False, merge=False, transcode=False, defaults=False, verbose=False):
     def _print_message(_prefix=None, _message=None, _context=None,
                        _header=True, _footer=True, _no_header_footer=False):
         hanging_header = False
@@ -1275,14 +1275,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Validity").str.starts_with("Rename"))
                 ).then(pl.lit(FileAction.RENAME.label))
                 .when(
-                    (
-                            force |
-                            (pl.col("Transcode Action") != "Ignore")
-                    ) &
+                    (~pl.lit(transcode)) &
+                    (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Reformat"))
                 ).then(pl.lit(FileAction.REFORMAT.label))
                 .when(
-                    (not force) &
+                    (~pl.lit(transcode)) &
+                    (~(pl.lit(merge) & (pl.col("File Version") == "Transcoded"))) &
                     (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Check"))
                 ).then(pl.lit(FileAction.CHECK.label))
@@ -1290,19 +1289,19 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Version") == "Transcoded")
                 ).then(pl.lit(FileAction.MERGE.label))
                 .when(
-                    (pl.col("Transcode Action") != "Ignore") &
+                    (pl.lit(transcode) | (pl.col("Transcode Action") != "Ignore")) &
                     (pl.col("File Validity").str.starts_with("Transcode"))
                 ).then(pl.lit(FileAction.TRANSCODE.label))
                 .when(
-                    (pl.col("Transcode Action") != "Ignore") &
+                    (pl.lit(transcode) | (pl.col("Transcode Action") != "Ignore")) &
                     (pl.col("File Validity").str.starts_with("Downscale"))
                 ).then(pl.lit(FileAction.DOWNSCALE.label))
                 .when(
-                    (pl.col("Transcode Action") != "Ignore") &
+                    (pl.lit(transcode) | (pl.col("Transcode Action") != "Ignore")) &
                     (pl.col("File Validity").str.starts_with("Upscale"))
                 ).then(pl.lit(FileAction.UPSCALE.label))
                 .when(
-                    force
+                    pl.lit(transcode)
                 ).then(pl.lit(FileAction.TRANSCODE.label))
                 .otherwise(pl.lit(FileAction.NOTHING.label))
             ).alias("File Action"))
@@ -1630,7 +1629,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("TRAN_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "-name \"._metadata_${ROOT_FILE_NAME%.*}_mkv.yaml\")\"\n"),
                     pl.lit("CHECK_REQUIRED=\"\"\n"),
-                    pl.lit("if [ \"" + str(force) + "\" != \"True\" ]; then\n"),
+                    pl.lit("if [ \"" + str(merge or transcode) + "\" != \"True\" ]; then\n"),
                     pl.lit("  if [ \"${ORIG_FILE_META}\" == \"\" ] || [ ! -f \"${ORIG_FILE_META}\" ]; then \n"),
                     pl.lit("    CHECK_REQUIRED=\"original-metadata-file-not-found\"\n"),
                     pl.lit("  elif [ \"${TRAN_FILE_META}\" == \"\" ] || [ ! -f \"${TRAN_FILE_META}\" ]; then \n"),
@@ -2280,7 +2279,8 @@ def get_file_actions_dict(rename=0, delete=0, check=0, merge=0, reformat=0, tran
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
     argument_parser.add_argument("--clean", default=False, action="store_true")
-    argument_parser.add_argument("--force", default=False, action="store_true")
+    argument_parser.add_argument("--merge", default=False, action="store_true")
+    argument_parser.add_argument("--transcode", default=False, action="store_true")
     argument_parser.add_argument("--defaults", default=False, action="store_true")
     argument_parser.add_argument("--verbose", default=False, action="store_true")
     argument_parser.add_argument("--quiet", default=True, action="store_true")
@@ -2291,7 +2291,8 @@ if __name__ == "__main__":
         Path(arguments.directory).absolute().as_posix(),
         arguments.sheetguid,
         arguments.clean,
-        arguments.force,
+        arguments.merge,
+        arguments.transcode,
         arguments.defaults,
         arguments.verbose or not arguments.quiet
     )[0] < 0 else 0)
