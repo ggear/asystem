@@ -26,7 +26,6 @@ Retire nginx and use cloudflared for homeasistant?
 Improve sys tests with datbase/broker asserts for all modules
 
 
-Release grafana, ha,  supervisor, sab, tempstat
 
 Review updateability of dashbaords, generate.py locally collect each definition nicely? inline consts/queries etc?
 Validate Conditions, Diagnostics, electcirty, Rain
