@@ -19,10 +19,6 @@ powercalc:
   #####################################################################################
   sensors:
     ###################################################################################
-    - entity_id: sensor.all_standby
-      power_sensor_id: sensor.all_standby_power
-      energy_sensor_id: sensor.all_standby_energy
-    ###################################################################################
     - entity_id: switch.rack_screen_plug
       standby_power: 0.6
       fixed:

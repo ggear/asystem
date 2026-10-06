@@ -2250,17 +2250,6 @@ sensor.template_garden_pool_filter_plug_proxy_energy_monthly:
 sensor.template_garden_pool_filter_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.all_standby_energy:
-  friendly_name: 'Total Energy'
-sensor.all_standby_energy_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.all_standby_energy_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.all_standby_energy_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
 sensor.template_lounge_tv_plug_proxy_power:
   friendly_name: 'Current Power'
 sensor.template_lounge_tv_plug_proxy_energy:
