@@ -9,9 +9,6 @@ gcx() {
     GRAFANA_USER="${GRAFANA_USER}" GRAFANA_PASSWORD="${GRAFANA_TOKEN}" gcx --no-color "$@"
 }
 
-echo "Reloading datasources ..."
-gcx api /api/admin/provisioning/datasources/reload -X POST
-
 echo "Pushing folders and dashboards ..."
 gcx resources push \
   -p "${DASHBOARDS_HOME}/folders" \

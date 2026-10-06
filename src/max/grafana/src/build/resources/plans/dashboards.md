@@ -1031,6 +1031,9 @@ dashboard now opens the same way, on current Grafana panel types:
   `push.sh` PUTs `config/preferences.yaml`. Pushing the datasources through the API as `DataSource` resources was
   tried and dropped: it lost the provisioned lock and the datasources' presence at start, and needed `push.sh` to
   expand `${...}` and split the file itself, for no gain over provisioning.
+- The provisioning root then moved into the image, `/asystem/etc/provisioning`, since Grafana logged an error at start
+  for each missing fixed sub-folder (`dashboards`, `plugins`, `alerting`): those hold hand-written empty files beside
+  the generated `datasources/`, a datasource change ships by release, and `push.sh` no longer reloads datasources.
 - `push.sh` is hand-written in `src/main/resources/image/` like other modules' `entrypoint.sh`, not a
   `src/build/resources` fragment: it is a whole script, so wrapping it only added a banner and a copy step.
 - Rain is replaced by **Weather**, and the forecast panel moves there from Conditions, which keeps the indoor rooms.

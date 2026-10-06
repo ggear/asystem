@@ -405,7 +405,7 @@ ORDER BY time
 
     # Build datasources
     # noinspection HttpUrlsUsage
-    write(join(DIR_CONFIG, "datasources/datasources.yaml"), {
+    write(join(DIR_PROVISIONING, "datasources/datasources.yaml"), {
         "apiVersion": 1,
         "datasources": [
             {
@@ -900,6 +900,7 @@ DIR_GENERATED = join(DIR_DASHBOARDS, "generated")
 DIR_CUSTOM = join(DIR_DASHBOARDS, "custom")
 DIR_FOLDERS = join(DIR_DASHBOARDS, "folders")
 DIR_CONFIG = join(DIR_DASHBOARDS, "config")
+DIR_PROVISIONING = join(DIR_ROOT, "src/main/resources/image/provisioning")
 
 BANNER = banner()
 FOLDER = "grafana.app/folder"
