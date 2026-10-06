@@ -161,6 +161,16 @@ Add additional local tests
 ###############################################################################################################################################################
 # Networks
 ###############################################################################################################################################################
+Make logs line up for certifcate:
+26/10/06 19:12:04 WARN  [zigbee]   diagnosed as ... [sick] .. with score ... [54] ... because [DEVICES_OFFLINE: only [33] of [53] devices online] in [2016ms]
+2026/10/06 19:27:18 ERROR [certificate] diagnosed as ... [dead] .. with score ... [0] .... because [PROBE_UNREACHABLE: no certificate endpoint reachable across window] in [2ms]
+2026/10/06 19:27:43 ERROR [domain]   diagnosed as ... [dead] .. with score ... [0] .... because [NO_RESOLUTION: no resolver returned an address for [home.janeandgraham.com]] in [25013ms]
+
+Myabe make -d publish even when not a deamon? or drop -d?
+  -d, --publish-data              publish aggregates to MQTT and InfluxDB when true, otherwise log only (ignored without --daemon, which logs only)
+
+When internet goes down, increase poll period?
+
 Validate all plugins, getting zigbee down when not:
   2026/08/31 09:57:49 ERROR [zigbee]   diagnosed as ... [dead] .. with score ... [0] .... because [COORDINATOR_DOWN: coordinator offline or no device reports across window] in [2006ms]
 test internet when downloading

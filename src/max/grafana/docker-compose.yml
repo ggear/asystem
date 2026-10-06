@@ -17,6 +17,8 @@ x-common: &common
     - GF_LOG_LEVEL=warn
     - GF_PATHS_PROVISIONING=/asystem/etc/provisioning
     - GF_DATABASE_QUERY_RETRIES=10
+    - GF_DATABASE_HIGH_AVAILABILITY=false
+    - GF_LOG_FILTERS=secrets:debug sqlstore:debug sqlstore.transactions:debug infra.lockservice:debug provisioning.datasources:debug
     - GF_PLUGINS_PREINSTALL_DISABLED=true
     - GF_AUTH_ANONYMOUS_ENABLED=true
     - GF_AUTH_ANONYMOUS_ORG_NAME=Main Org.
