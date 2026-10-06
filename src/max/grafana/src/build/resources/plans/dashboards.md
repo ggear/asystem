@@ -1041,6 +1041,9 @@ dashboard now opens the same way, on current Grafana panel types:
   credentials, which the release's traced health checks printed; the checks pass them to `curl -K -` on a here-string.
   `checkhealthy.sh` had passed on the login page (`curl -L` followed the redirect to a 200), so it now requires every
   datasource healthy and an anonymous search to see a dashboard.
+- Plugin preinstall is disabled. Grafana 13 downloaded 14 plugins into the ephemeral plugin folder on every start,
+  replacing the bundled `influxdb` and `grafana-postgresql-datasource` about a minute in, which emptied panels while
+  each swapped. A `SELECT 1` health query was considered and not added: it passed right up to each swap.
 - `push.sh` is hand-written in `src/main/resources/image/` like other modules' `entrypoint.sh`, not a
   `src/build/resources` fragment: it is a whole script, so wrapping it only added a banner and a copy step.
 - Rain is replaced by **Weather**, and the forecast panel moves there from Conditions, which keeps the indoor rooms.
