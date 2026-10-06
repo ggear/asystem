@@ -1,4 +1,5 @@
 {
+  "version": "1.0.0-ASYSTEM-ggear-tplink",
   "domain": "tplink",
   "name": "TP-Link Smart Home",
   "codeowners": ["@rytilahti", "@bdraco", "@sdb9696"],
