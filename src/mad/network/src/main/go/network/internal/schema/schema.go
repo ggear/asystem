@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"sort"
 	"strings"
@@ -284,9 +285,7 @@ func AmberAbove(limit float64) Levels {
 
 func (l Levels) Entity(name string, amber float64) Levels {
 	entities := make(map[string]Bounds, len(l.Entities)+1)
-	for entity, bounds := range l.Entities {
-		entities[entity] = bounds
-	}
+	maps.Copy(entities, l.Entities)
 	entities[name] = Bounds{Amber: &amber}
 	l.Entities = entities
 	return l
