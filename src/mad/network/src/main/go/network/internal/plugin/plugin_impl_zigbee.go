@@ -321,19 +321,19 @@ func diagnoseZigbee(samples []Sample) Aggregate {
 	case !latest.online || len(latest.devices) == 0:
 		result = Diagnose(StatusDead, 0, "COORDINATOR_DOWN: coordinator offline or no device reports")
 	case !newest.IsZero() && at.Sub(newest) > zigbeeStaleAfter:
-		result = Diagnose(StatusDead, 0, fmt.Sprintf("BRIDGE_STALE: newest device report is [%s] old", at.Sub(newest).Round(time.Minute)))
+		result = Diagnose(StatusDead, 0, fmt.Sprintf("BRIDGE_STALE: newest device report is %s old", at.Sub(newest).Round(time.Minute)))
 	case !alive:
-		result = Diagnose(StatusDead, 0, fmt.Sprintf("ROUTERS_DOWN: no router available with any link quality of [%d]", len(zigbeeRouters)))
+		result = Diagnose(StatusDead, 0, fmt.Sprintf("ROUTERS_DOWN: none of %d routers available with any link quality", len(zigbeeRouters)))
 	case len(offline) > 0:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("ROUTERS_OFFLINE: only [%d] of [%d] routers available [%s]", len(zigbeeRouters)-len(offline), len(zigbeeRouters), strings.Join(offline, ", ")))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("ROUTERS_OFFLINE: only %d of %d routers available (%s offline)", len(zigbeeRouters)-len(offline), len(zigbeeRouters), strings.Join(offline, ", ")))
 	case len(weak) > 0:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_ROUTERS: routers with median link quality below [%.0f] [%s]", zigbeeRouterWeakLQI, strings.Join(weak, ", ")))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_ROUTERS: routers with median link quality below %.0f (%s)", zigbeeRouterWeakLQI, strings.Join(weak, ", ")))
 	case routerShown < zigbeeRouterSickBelow:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_ROUTERS: router score [%.0f] below [%.0f]", routerShown, zigbeeRouterSickBelow))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_ROUTERS: router score %.0f%% below %.0f%%", routerShown, zigbeeRouterSickBelow))
 	case meshShown < zigbeeMeshSickBelow:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_MESH: mesh score [%.0f] below [%.0f] across [%d] available devices", meshShown, zigbeeMeshSickBelow, meshCount))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_MESH: mesh score %.0f%% below %.0f%% across %d available devices", meshShown, zigbeeMeshSickBelow, meshCount))
 	default:
-		result = Diagnose(StatusFit, score, fmt.Sprintf("HEALTHY: router score [%.0f] mesh score [%.0f] across [%d] available devices", routerShown, meshShown, meshCount))
+		result = Diagnose(StatusFit, score, fmt.Sprintf("HEALTHY: router score %.0f%% mesh score %.0f%% across %d available devices", routerShown, meshShown, meshCount))
 	}
 	result.Points = reportZigbee(latest, at, medians, router, mesh)
 	return result
@@ -358,8 +358,8 @@ func reportZigbee(latest zigbeeSample, at time.Time, medians map[string]float64,
 	}
 	if len(latest.devices) > 0 {
 		points = append(points,
-			zigbeeExperience.Point(zigbeeExperienceName.Of("router"), zigbeeExperiencePct.Of(round(router, 1))),
-			zigbeeExperience.Point(zigbeeExperienceName.Of("mesh"), zigbeeExperiencePct.Of(round(mesh, 1))))
+			zigbeeExperience.Point(zigbeeExperienceName.Of("router"), zigbeeExperiencePct.Of(round(router, 0))),
+			zigbeeExperience.Point(zigbeeExperienceName.Of("mesh"), zigbeeExperiencePct.Of(round(mesh, 0))))
 	}
 	return points
 }

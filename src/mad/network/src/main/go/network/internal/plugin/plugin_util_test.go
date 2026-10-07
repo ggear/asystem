@@ -427,6 +427,12 @@ func TestPluginUtilDevice_Report(t *testing.T) {
 	if len(points) != len(readings) {
 		t.Fatalf("points: got %d want %d (one per device)", len(points), len(readings))
 	}
+	if experience, _ := ethernetDevice.experience.Read(points[0]); experience != 100 {
+		t.Errorf("experience_pct[udm]: got %v want 100, a whole percentage", experience)
+	}
+	if cpu, _ := ethernetDevice.cpu.Read(points[0]); cpu != 19 {
+		t.Errorf("cpu_pct[udm]: got %v want 19, a whole percentage", cpu)
+	}
 	if throughput, ok := ethernetDevice.throughput.Read(points[0]); !ok || throughput != 4.57 {
 		t.Errorf("throughput_mbps[udm]: got %v (set %v) want 4.57", throughput, ok)
 	}

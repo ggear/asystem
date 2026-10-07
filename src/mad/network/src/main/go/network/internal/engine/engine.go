@@ -267,7 +267,7 @@ func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plug
 	aggregate, err := p.Aggregate(samples)
 	if err != nil {
 		scribe.LogWarn(p.Name(), "aggregate failed [%v]", err)
-		return plugin.Diagnose(plugin.StatusDead, 0, fmt.Sprintf("PLUGIN_ERROR: [%s]", err))
+		return plugin.Diagnose(plugin.StatusDead, 0, fmt.Sprintf("PLUGIN_ERROR: %s", err))
 	}
 	return aggregate
 }

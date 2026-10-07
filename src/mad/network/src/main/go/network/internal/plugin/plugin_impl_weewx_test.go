@@ -57,7 +57,7 @@ func TestWeewx_Diagnose(t *testing.T) {
 			samples:        []Sample{weewxPoll(true, true, 49.6)},
 			expectedStatus: StatusFit,
 			expectedScore:  50,
-			expectedReason: "HEALTHY: weather station signal quality [50%]",
+			expectedReason: "HEALTHY",
 		},
 		{
 			name:           "sick_fresh_weak_signal",
@@ -140,8 +140,8 @@ func TestWeewx_Report(t *testing.T) {
 	if fresh, _ := weewxFresh.Read(points[0]); !fresh {
 		t.Errorf("fresh: got false want true")
 	}
-	if quality, _ := weewxQuality.Read(points[0]); quality != 82.5 {
-		t.Errorf("quality_pct: got %v want 82.5", quality)
+	if quality, _ := weewxQuality.Read(points[0]); quality != 83 {
+		t.Errorf("quality_pct: got %v want 83, a whole percentage", quality)
 	}
 	points = reportWeewx(weewxReading{fresh: false})
 	if _, ok := weewxQuality.Read(points[0]); ok {

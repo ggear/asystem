@@ -267,7 +267,7 @@ func TestZigbee_Report(t *testing.T) {
 	for index, expected := range map[int]struct {
 		name  string
 		value float64
-	}{2: {"router", 61.3}, 3: {"mesh", 70}} {
+	}{2: {"router", 61}, 3: {"mesh", 70}} {
 		if name, _ := zigbeeExperienceName.Read(points[index]); name != expected.name {
 			t.Errorf("score[%d]: got %q want %q", index, name, expected.name)
 		}

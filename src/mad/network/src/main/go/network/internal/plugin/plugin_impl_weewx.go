@@ -153,9 +153,9 @@ func diagnoseWeewx(samples []Sample) Aggregate {
 	case !reading.hasQuality:
 		result = Diagnose(StatusDead, 0, "NO_DATA: no retained weather station signal quality on broker")
 	case quality >= weewxFitMin:
-		result = Diagnose(StatusFit, score, fmt.Sprintf("HEALTHY: weather station signal quality [%.0f%%]", quality))
+		result = Diagnose(StatusFit, score, fmt.Sprintf("HEALTHY: weather station signal quality %.0f%%", quality))
 	default:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_SIGNAL: weather station signal quality [%.0f%%]", quality))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_SIGNAL: weather station signal quality %.0f%%", quality))
 	}
 	result.Points = reportWeewx(reading)
 	return result
@@ -167,7 +167,7 @@ func reportWeewx(reading weewxReading) []schema.Point {
 		weewxFresh.Of(reading.fresh),
 	}
 	if reading.hasQuality {
-		point = append(point, weewxQuality.Of(round(reading.quality, 1)))
+		point = append(point, weewxQuality.Of(round(reading.quality, 0)))
 	}
 	return []schema.Point{weewxConsole.Point(point...)}
 }

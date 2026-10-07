@@ -13,6 +13,7 @@
 #     deck_fans_outlet,
 #     deck_freezer_plug,
 #     deck_freezer_plug_none,
+#     edwin_desk_outlet,
 #     garden_sewerage_blower_plug,
 #     garden_sewerage_blower_plug_none,
 #     host_all,

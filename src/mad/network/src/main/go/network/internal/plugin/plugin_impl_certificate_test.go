@@ -73,7 +73,7 @@ func TestCertificate_Diagnose(t *testing.T) {
 			samples:        []Sample{certificatePoll(endpointSample{"a:443", true, 20.6, 30})},
 			expectedStatus: StatusFit,
 			expectedScore:  30,
-			expectedReason: "VALID: nearest certificate valid for [21] days",
+			expectedReason: "VALID",
 		},
 		{
 			name:           "sick_expiring_soon",
@@ -130,8 +130,8 @@ func TestCertificate_Report(t *testing.T) {
 	if days, _ := certificateExpiryDays.Read(points[0]); days != 45.2 {
 		t.Errorf("expiry_days: got %v want 45.2", days)
 	}
-	if validity, _ := certificateValidityPct.Read(points[0]); validity != 62.5 {
-		t.Errorf("validity_pct: got %v want 62.5", validity)
+	if validity, _ := certificateValidityPct.Read(points[0]); validity != 63 {
+		t.Errorf("validity_pct: got %v want 63, a whole percentage", validity)
 	}
 	if _, ok := certificateExpiryDays.Read(points[1]); ok {
 		t.Errorf("expiry_days on unverified endpoint: got set want unset")

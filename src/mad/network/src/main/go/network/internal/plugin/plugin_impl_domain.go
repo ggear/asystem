@@ -138,13 +138,13 @@ func diagnoseDomain(samples []Sample) Aggregate {
 	result := Aggregate{}
 	switch {
 	case total == 0 || resolved == 0:
-		result = Diagnose(StatusDead, 0, fmt.Sprintf("NO_RESOLUTION: no resolver returned an address for [%s]", domainName))
+		result = Diagnose(StatusDead, 0, fmt.Sprintf("NO_RESOLUTION: no resolver returned an address for %s", domainName))
 	case failed > 0:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("PARTIAL_RESOLUTION: resolution failed on [%d] of [%d] resolvers", failed, total))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("PARTIAL_RESOLUTION: resolution failed on %d of %d resolvers", failed, total))
 	case agreeing < total:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("RECORD_MISMATCH: only [%d] of [%d] resolvers agree on the same address set", agreeing, total))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("RECORD_MISMATCH: only %d of %d resolvers agree on the same address set", agreeing, total))
 	default:
-		result = Diagnose(StatusFit, score, fmt.Sprintf("RESOLVED: all [%d] resolvers agree on [%s]", total, consensus))
+		result = Diagnose(StatusFit, score, fmt.Sprintf("RESOLVED: all %d resolvers agree on %s", total, consensus))
 	}
 	result.Points = reportDomain(readings, consensus)
 	return result

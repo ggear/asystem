@@ -48,6 +48,7 @@
 #     edwin_lights_power,
 #     edwin_main_fan_light_power,
 #     edwin_night_light_bulb_1_power,
+#     edwin_wardrobe_outlet_power,
 #     ensuite_lights_power,
 #     ensuite_main_bulb_1_power,
 #     ensuite_sconces_bulb_1_power,

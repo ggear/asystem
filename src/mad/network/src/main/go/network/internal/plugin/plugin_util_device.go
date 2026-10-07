@@ -193,17 +193,17 @@ func diagnoseDevices(readings []deviceReading, devices deviceSchema) Aggregate {
 	result := Aggregate{}
 	switch {
 	case len(down) > 0:
-		result = Diagnose(StatusDead, 0, fmt.Sprintf("DEVICE_DOWN: [%d] of [%d] devices down [%s]", len(down), len(readings), strings.Join(down, ", ")))
+		result = Diagnose(StatusDead, 0, fmt.Sprintf("DEVICE_DOWN: %d of %d devices down (%s)", len(down), len(readings), strings.Join(down, ", ")))
 	case len(quiet) > 0:
-		result = Diagnose(StatusDead, 0, fmt.Sprintf("NO_TRAFFIC: devices up but passing no traffic across window [%s]", strings.Join(quiet, ", ")))
+		result = Diagnose(StatusDead, 0, fmt.Sprintf("NO_TRAFFIC: devices up but passing no traffic since the previous check (%s)", strings.Join(quiet, ", ")))
 	case len(poor) > 0:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("POOR_EXPERIENCE: experience below [%.0f%%] on [%s]", deviceExperienceSickBelow, strings.Join(poor, ", ")))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("POOR_EXPERIENCE: experience below %.0f%% (%s)", deviceExperienceSickBelow, strings.Join(poor, ", ")))
 	case len(restarted) > 0:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("RESTARTED: devices restarted within window [%s]", strings.Join(restarted, ", ")))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("RESTARTED: devices restarted since the previous check (%s)", strings.Join(restarted, ", ")))
 	case len(overheating) > 0:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("OVERHEATING: devices overheating [%s]", strings.Join(overheating, ", ")))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("OVERHEATING: devices overheating (%s)", strings.Join(overheating, ", ")))
 	default:
-		result = Diagnose(StatusFit, score, fmt.Sprintf("UP: [%d] devices up with lowest experience [%.0f%%]", len(readings), lowest))
+		result = Diagnose(StatusFit, score, fmt.Sprintf("UP: %d devices up with lowest experience %.0f%%", len(readings), lowest))
 	}
 	result.Points = reportDevices(readings, devices)
 	return result
@@ -225,14 +225,14 @@ func reportDevices(readings []deviceReading, devices deviceSchema) []schema.Poin
 		values = append(values,
 			devices.restarted.Of(reading.restarted),
 			devices.overheating.Of(reading.overheating),
-			devices.experience.Of(round(reading.experience, 1)),
+			devices.experience.Of(round(reading.experience, 0)),
 			devices.clients.Of(reading.clients),
-			devices.cpu.Of(round(reading.cpu, 1)),
-			devices.memory.Of(round(reading.memory, 1)))
+			devices.cpu.Of(round(reading.cpu, 0)),
+			devices.memory.Of(round(reading.memory, 0)))
 		if reading.hasTraffic {
 			values = append(values,
 				devices.throughput.Of(round(reading.throughput, 2)),
-				devices.network.Of(round(reading.network, 1)))
+				devices.network.Of(round(reading.network, 0)))
 		}
 		if reading.hasTemperature && devices.temperature != nil {
 			values = append(values, devices.temperature.Of(round(reading.temperature, 1)))
@@ -240,7 +240,7 @@ func reportDevices(readings []deviceReading, devices deviceSchema) []schema.Poin
 		if reading.hasPoE && devices.poe != nil {
 			values = append(values,
 				devices.poe.Of(round(reading.poe, 1)),
-				devices.poeBudget.Of(round(reading.poeBudget, 1)))
+				devices.poeBudget.Of(round(reading.poeBudget, 0)))
 		}
 		points = append(points, devices.relation.Point(values...))
 	}

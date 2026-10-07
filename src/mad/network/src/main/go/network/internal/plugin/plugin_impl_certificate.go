@@ -128,11 +128,11 @@ func diagnoseCertificate(samples []Sample) Aggregate {
 	case failed == len(readings):
 		result = Diagnose(StatusDead, 0, "PROBE_UNREACHABLE: no certificate endpoint reachable")
 	case failed > 0:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("VERIFY_FAILED: verify or reachability failure on [%d] of [%d] endpoints", failed, len(readings)))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("VERIFY_FAILED: verify or reachability failure on %d of %d endpoints", failed, len(readings)))
 	case nearestDays < certificateWarnDays:
-		result = Diagnose(StatusSick, score, fmt.Sprintf("EXPIRING_SOON: nearest certificate expires in [%.0f] days", nearestDays))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("EXPIRING_SOON: nearest certificate expires in %.0f days", nearestDays))
 	default:
-		result = Diagnose(StatusFit, score, fmt.Sprintf("VALID: nearest certificate valid for [%.0f] days", nearestDays))
+		result = Diagnose(StatusFit, score, fmt.Sprintf("VALID: nearest certificate valid for %.0f days", nearestDays))
 	}
 	result.Points = reportCertificate(readings)
 	return result
@@ -148,7 +148,7 @@ func reportCertificate(readings []certificateReading) []schema.Point {
 		if reading.verified {
 			point = append(point,
 				certificateExpiryDays.Of(round(reading.days, 1)),
-				certificateValidityPct.Of(round(reading.validity, 1)))
+				certificateValidityPct.Of(round(reading.validity, 0)))
 		}
 		points = append(points, certificateEndpoint.Point(point...))
 	}

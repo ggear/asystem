@@ -295,7 +295,7 @@ func TestEngine_CycleAggregateErrorProducesDeadAggregate(t *testing.T) {
 	p := &fakePlugin{name: "broken", aggregateErr: errors.New("boom")}
 	e := newEngine(t, p)
 	aggregates := e.AggregateSamples(context.Background(), e.Plugins)
-	if aggregates[0].Status != plugin.StatusDead || aggregates[0].Reason != "PLUGIN_ERROR: [boom]" {
+	if aggregates[0].Status != plugin.StatusDead || aggregates[0].Reason != "PLUGIN_ERROR: boom" {
 		t.Fatalf("expected aggregate error diagnosis, got %+v", aggregates[0])
 	}
 }
