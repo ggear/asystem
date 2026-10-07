@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	for round := 0; round < 2; round++ {
+	for round := range 2 {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		devices, err := gateway.Devices(ctx)
 		cancel()
