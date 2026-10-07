@@ -40,15 +40,15 @@ class SchemaDatabaseDimension:
 
 @dataclass
 class SchemaDatabaseBounds:
-    amber: object = None
-    red: object = None
+    amber: float | None = None
+    red: float | None = None
 
 
 @dataclass
 class SchemaDatabaseLevels:
     better: str
-    amber: object = None
-    red: object = None
+    amber: float | None = None
+    red: float | None = None
     inclusive: bool = True
     entities: dict = field(default_factory=dict)
 
