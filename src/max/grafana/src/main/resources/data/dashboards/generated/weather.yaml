@@ -409,6 +409,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: stepAfter
                   lineWidth: 1
@@ -540,6 +541,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -617,6 +619,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -694,6 +697,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -771,6 +775,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -848,6 +853,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -925,6 +931,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   drawStyle: bars
                   fillOpacity: 80
                   lineInterpolation: linear
@@ -1148,6 +1155,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   drawStyle: points
                   fillOpacity: 0
                   lineInterpolation: linear
@@ -1332,6 +1340,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   drawStyle: bars
                   fillOpacity: 80
                   lineInterpolation: linear
@@ -1410,6 +1419,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: stepAfter
                   lineWidth: 1
@@ -1487,6 +1497,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: stepAfter
                   lineWidth: 1

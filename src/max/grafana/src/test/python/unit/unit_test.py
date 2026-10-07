@@ -3,6 +3,7 @@ import glob
 import importlib.util
 import io
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -78,7 +79,7 @@ class SchemaArtifactTest(unittest.TestCase):
             self.assertEqual(again, document, "{}: round trip got a different document".format(path))
 
     def test_a_reflector_that_omits_a_database_key_is_refused(self):
-        complete = {"key": "value", "kind": "float", "unit": "", "description": "", "persist": True, "period": ""}
+        complete = {"key": "value", "kind": "float", "unit": "", "description": "", "persist": True, "period": "", "levels": None}
         omitted = {key: value for key, value in complete.items() if key != "period"}
         for measure, refused in [(complete, False), (omitted, True)]:
             text = json.dumps({"module": "probe", "database": {"relations": [{
@@ -113,6 +114,96 @@ class SchemaArtifactTest(unittest.TestCase):
                                  "{}: warning got wrong".format(hashed))
         finally:
             shutil.rmtree(repository)
+
+
+class LevelsTest(unittest.TestCase):
+
+    def test_levels_parse_and_refuse_what_cannot_colour(self):
+        def parsed(kind, levels):
+            return parse_schema_document(json.dumps({"module": "probe", "database": {"relations": [{
+                "path": "probe/reading", "description": "", "cadence": "", "entities": ["a", "b"],
+                "dimensions": [{"key": "reading", "description": "", "subject": True, "entities": []}],
+                "measures": [{"key": "value", "kind": kind, "unit": "%", "description": "", "persist": True, "period": "", "levels": levels}]}]}}), "probe", True)
+        good = {"better": "higher", "amber": 85, "red": 50, "inclusive": True, "entities": {"a": {"amber": 35, "red": None}}}
+        levels = parsed("float", good).relations[0].measures[0].levels
+        self.assertEqual((levels.better, levels.amber, levels.red, levels.entities["a"].amber), ("higher", 85, 50, 35))
+        for kind, refused in [("float", {**good, "better": "sideways"}), ("float", {**good, "red": 90}), ("bool", good),
+                              ("float", {**good, "amber": "85"}), ("float", {**good, "entities": {"z": {"amber": 1, "red": None}}}),
+                              ("float", {key: value for key, value in good.items() if key != "inclusive"}),
+                              ("float", {"better": "higher", "amber": None, "red": None, "inclusive": True, "entities": {}})]:
+            with self.assertRaises(ValueError, msg=str(refused)):
+                parsed(kind, refused)
+
+    def test_a_ladder_puts_the_bound_on_the_side_the_schema_says_is_healthy(self):
+        epsilon = generate.LEVEL_EPSILON
+        for levels, ladder in [
+            (generate.Levels("higher", 85, None, True), [(None, "yellow"), (85, "green")]),
+            (generate.Levels("higher", 50, 35, True), [(None, "red"), (35, "yellow"), (50, "green")]),
+            (generate.Levels("higher", None, 35, False), [(None, "red"), (35 + epsilon, "green")]),
+            (generate.Levels("lower", 2, None, True), [(None, "green"), (2 + epsilon, "yellow")]),
+            (generate.Levels("lower", 70, 90, True), [(None, "green"), (70 + epsilon, "yellow"), (90 + epsilon, "red")]),
+            (generate.Levels("lower", None, 80, False), [(None, "green"), (80, "red")]),
+        ]:
+            self.assertEqual(generate.levelled(levels), ladder, str(levels))
+
+    def test_a_stat_colours_itself_from_the_levels_of_the_measure_it_shows(self):
+        switches = generate.Relation("network", "ethernet/switch")
+        declared = declared_levels(switches, "experience_pct")
+        defaults = generate.stat("Wired", switches.query(["experience_pct"], None, ("min",))).build(1).build().spec.viz_config.spec.field_config.defaults
+        self.assertEqual([(step.value, step.color) for step in defaults.thresholds.steps],
+                         generate.levelled(generate.Levels(declared.better, declared.amber, declared.red, declared.inclusive)))
+
+    def test_per_entity_levels_resolve_only_when_the_picked_entities_agree(self):
+        experience = generate.Relation("network", "zigbee/experience")
+        declared = declared_levels(experience, "experience_pct")
+        self.assertNotEqual(declared.entities["router"].amber, declared.entities["mesh"].amber)
+        for entity in ("router", "mesh"):
+            self.assertEqual(experience.query(["experience_pct"], [entity]).levels.amber, declared.entities[entity].amber, entity)
+        self.assertIsNone(experience.query(["experience_pct"]).levels)
+
+    def test_only_an_operation_that_shows_the_worst_side_keeps_levels(self):
+        experience, latency = generate.Relation("network", "ethernet/switch"), generate.Relation("network", "internet/target")
+        for relation, measure, kept, dropped in [(experience, "experience_pct", [("min",), ("trough",)], [("max",), ("peak",)]),
+                                                 (latency, "rtt_ms", [("max",), ("peak",)], [("min",), ("trough",)])]:
+            for transforms in kept:
+                self.assertIsNotNone(relation.query([measure], None, transforms).levels, f"{measure} {transforms}")
+            for transforms in dropped:
+                self.assertIsNone(relation.query([measure], None, transforms).levels, f"{measure} {transforms}")
+        for relation, measure, kept, dropped in [(experience, "experience_pct", "min", "max"), (latency, "rtt_ms", "max", "min")]:
+            self.assertIsNotNone(generate.stat("Kept", relation.query([measure]), kept).levels, f"{measure} reducer {kept}")
+            self.assertIsNone(generate.stat("Dropped", relation.query([measure]), dropped).levels, f"{measure} reducer {dropped}")
+
+    def test_the_levels_vocabulary_is_declared_alike_by_its_owner_and_every_go_emitter(self):
+        owner = Path(DIR_REPOSITORY, "src/all/_/src/build/python/asystem/schema/document.py").read_text()
+        declared = {"document.py": {(name, value) for name, value in re.findall(r'^BETTER_([A-Z]+) = "(\w+)"$', owner, re.M)}}
+        for emitter in ("src/mad/network/src/main/go/network/internal/schema/schema.go",
+                        "src/all/supervisor/src/main/go/supervisor/internal/schema/schema.go"):
+            source = Path(DIR_REPOSITORY, emitter).read_text()
+            declared[emitter] = {(name.upper(), value) for name, value in re.findall(r'^\s*Better([A-Z][a-z]+)\s+Better = "(\w+)"$', source, re.M)}
+        for origin, vocabulary in declared.items():
+            self.assertTrue(vocabulary, f"{origin}: parsed no levels vocabulary, the pattern no longer matches the source")
+        self.assertEqual(len({frozenset(vocabulary) for vocabulary in declared.values()}), 1, f"levels vocabulary disagrees {declared}")
+
+    def test_levels_drop_wherever_the_number_shown_is_not_the_number_judged(self):
+        switches = generate.Relation("network", "ethernet/switch")
+        for transforms in [("avg",), ("sum",), ("percent",), ("baseline",)]:
+            self.assertIsNone(switches.query(["experience_pct"], None, transforms).levels, str(transforms))
+        self.assertIsNone(switches.query(["experience_pct", "cpu_pct"]).levels)
+        defaults = generate.stat("Mean", switches.query(["experience_pct"]), "mean").build(1).build().spec.viz_config.spec.field_config.defaults
+        self.assertEqual([(step.value, step.color) for step in defaults.thresholds.steps], generate.NEUTRAL_LADDER)
+
+    def test_hand_written_thresholds_on_a_levelled_stat_are_refused_unless_deliberate(self):
+        query = generate.Relation("network", "ethernet/switch").query(["experience_pct"], None, ("min",))
+        with self.assertRaises(ValueError):
+            generate.stat("Wired", query).thresholds(generate.higher_better(85, 95))
+        generate.stat("Wired", query).thresholds(generate.higher_better(85, 95), override=True).build(1)
+
+    def test_queries_whose_levels_disagree_need_explicit_thresholds(self):
+        experience = generate.Relation("network", "zigbee/experience")
+        queries = [experience.query(["experience_pct"], ["router"]), experience.query(["experience_pct"], ["mesh"])]
+        with self.assertRaises(ValueError):
+            generate.stat("Zigbee", queries).build(1)
+        generate.stat("Zigbee", queries).thresholds(generate.higher_better(35, 50)).build(1)
 
 
 class PanelSqlTest(unittest.TestCase):
@@ -241,10 +332,16 @@ class SeriesTest(unittest.TestCase):
             self.assertEqual(defaults.decimals, decimals)
 
     def test_a_state_timeline_colours_by_the_binary_thresholds(self):
-        defaults = generate.state("Up", generate.Relation("network", "ethernet/port").query(["up"])) \
+        defaults = generate.state("Up", generate.Relation("network", "ethernet/switch").query(["up"])) \
             .build(1).build().spec.viz_config.spec.field_config.defaults
         self.assertEqual((defaults.color.mode, [(step.value, step.color) for step in defaults.thresholds.steps]),
                          ("thresholds", generate.STATE_LADDER))
+
+    def test_time_series_and_state_timelines_share_one_axis_width_so_their_plots_start_together(self):
+        query = generate.Series(influxdb3, generate.INFLUXDB3, "SELECT 1", "", "", "", "time_series")
+        widths = {build.__name__: build("Plot", query).build(1).build().spec.viz_config.spec.field_config.defaults.custom.axis_width
+                  for build in (generate.series, generate.steps, generate.points, generate.bars, generate.state)}
+        self.assertEqual(widths, dict.fromkeys(widths, generate.AXIS_WIDTH))
 
     def test_a_unit_maps_to_its_grafana_unit_or_falls_back_to_a_suffix(self):
         for unit, wanted in [("km/h", ("velocitykmh", 1)), ("furlong", ("suffix: furlong", 2)), ("", ("none", 2))]:
@@ -572,6 +669,10 @@ def panel(width, height):
 def laid(resource):
     return [(item["spec"]["x"], item["spec"]["y"], item["spec"]["width"], item["spec"]["height"])
             for item in resource["spec"]["layout"]["spec"]["items"]]
+
+
+def declared_levels(relation, measure):
+    return next(declared.levels for declared in relation.relation.measures if declared.key == measure)
 
 
 if __name__ == "__main__":

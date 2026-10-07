@@ -63,6 +63,7 @@ func Relations(hosts []string, services []string, cadence string) []schema.Relat
 			Unit:        builder.unit,
 			Description: builder.description,
 			Persist:     builder.persisted,
+			Levels:      levelsOf(builder.pulseRule, true),
 		})
 		if builder.persisted {
 			relation.Measures = append(relation.Measures, schema.Measure{
@@ -71,6 +72,7 @@ func Relations(hosts []string, services []string, cadence string) []schema.Relat
 				Unit:        builder.unit,
 				Description: builder.description + ", smoothed across the trend window",
 				Persist:     true,
+				Levels:      levelsOf(builder.trendRule, false),
 			})
 		}
 	}
@@ -384,3 +386,28 @@ const (
 	AvailabilityOnline  = "online"
 	AvailabilityOffline = "offline"
 )
+
+func levelsOf(rule Rule, red bool) *schema.Levels {
+	if rule.kind != ruleBounded || rule.target != Self {
+		return nil
+	}
+	levels := &schema.Levels{Better: schema.BetterLower, Inclusive: true}
+	switch rule.comparator {
+	case AtMost:
+	case Below:
+		levels.Inclusive = false
+	case AtLeast:
+		levels.Better = schema.BetterHigher
+	case Above:
+		levels.Better, levels.Inclusive = schema.BetterHigher, false
+	default:
+		return nil
+	}
+	limit := rule.limit
+	if red {
+		levels.Red = &limit
+	} else {
+		levels.Amber = &limit
+	}
+	return levels
+}

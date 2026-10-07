@@ -412,6 +412,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -497,6 +498,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -582,6 +584,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -667,6 +670,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -754,6 +758,7 @@ spec:
                 color:
                   mode: thresholds
                 custom:
+                  axisWidth: 200
                   fillOpacity: 80
                   lineWidth: 0
                 decimals: 2
@@ -787,8 +792,9 @@ spec:
               legend:
                 calcs: []
                 displayMode: list
-                placement: bottom
-                showLegend: false
+                placement: right
+                showLegend: true
+                width: 400
               mergeValues: true
               perPage: 20
               rowHeight: 0.8
@@ -861,6 +867,7 @@ spec:
                 color:
                   mode: thresholds
                 custom:
+                  axisWidth: 200
                   fillOpacity: 80
                   lineWidth: 0
                 decimals: 2
@@ -894,8 +901,9 @@ spec:
               legend:
                 calcs: []
                 displayMode: list
-                placement: bottom
-                showLegend: false
+                placement: right
+                showLegend: true
+                width: 400
               mergeValues: true
               perPage: 20
               rowHeight: 0.8
@@ -968,6 +976,7 @@ spec:
                 color:
                   mode: thresholds
                 custom:
+                  axisWidth: 200
                   fillOpacity: 80
                   lineWidth: 0
                 decimals: 2
@@ -986,8 +995,9 @@ spec:
               legend:
                 calcs: []
                 displayMode: list
-                placement: bottom
-                showLegend: false
+                placement: right
+                showLegend: true
+                width: 400
               mergeValues: true
               perPage: 20
               rowHeight: 0.8

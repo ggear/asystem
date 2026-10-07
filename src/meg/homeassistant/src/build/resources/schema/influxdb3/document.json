@@ -65,7 +65,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "last_triggered_str",
@@ -73,7 +74,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "state",
@@ -81,7 +83,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -89,7 +92,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -149,7 +153,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -157,7 +162,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -185,7 +191,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -193,7 +200,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -220,7 +228,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -228,7 +237,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -273,7 +283,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -281,7 +292,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -308,7 +320,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -316,7 +329,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -347,7 +361,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -355,7 +370,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -392,7 +408,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -400,7 +417,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -431,7 +449,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "hvac_action_str",
@@ -439,7 +458,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "state",
@@ -447,7 +467,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "temperature",
@@ -455,7 +476,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -485,7 +507,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -493,7 +516,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -529,7 +553,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "percentage",
@@ -537,7 +562,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "percentage_str",
@@ -545,7 +571,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "state",
@@ -553,7 +580,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -561,7 +589,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -651,7 +680,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -659,7 +689,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -686,7 +717,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -694,7 +726,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -728,7 +761,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -736,7 +770,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -774,7 +809,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -782,7 +818,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -808,7 +845,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "state",
@@ -816,7 +854,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -824,7 +863,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -1004,7 +1044,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "color_fill_str",
@@ -1012,7 +1053,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "color_text",
@@ -1020,7 +1062,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "color_text_str",
@@ -1028,7 +1071,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "state",
@@ -1036,7 +1080,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -1044,7 +1089,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -1083,7 +1129,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -1140,7 +1187,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -1182,7 +1230,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -1223,7 +1272,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2050,7 +2100,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2086,7 +2137,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2134,7 +2186,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2171,7 +2224,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2356,7 +2410,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2406,7 +2461,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2445,7 +2501,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2479,7 +2536,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2518,7 +2576,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2635,7 +2694,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2686,7 +2746,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2732,7 +2793,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2770,7 +2832,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -2855,7 +2918,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "value",
@@ -2863,7 +2927,8 @@
             "unit": "",
             "description": "Home Assistant value",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       }

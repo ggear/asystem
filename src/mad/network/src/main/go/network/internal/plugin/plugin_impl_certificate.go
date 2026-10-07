@@ -25,7 +25,7 @@ var (
 	certificateEndpoint    = schema.Declare("certificate/endpoint", "certificate health, one row per monitored endpoint", aggregateCadence).Entities(certificateEndpoints...)
 	certificateName        = certificateEndpoint.Subject("endpoint", "monitored TLS endpoint")
 	certificateVerified    = certificateEndpoint.Bool("verified", "endpoint reachable and its certificate verified")
-	certificateExpiryDays  = certificateEndpoint.Float("expiry_days", "d", "days until the certificate expires")
+	certificateExpiryDays  = certificateEndpoint.Float("expiry_days", "d", "days until the certificate expires").Levels(schema.AmberBelow(certificateWarnDays))
 	certificateValidityPct = certificateEndpoint.Float("validity_pct", "%", "share of the certificate lifetime still remaining")
 )
 

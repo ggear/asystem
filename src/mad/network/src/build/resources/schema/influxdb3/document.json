@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "0e84e79ae047afcb55d362f1f85fc74299ee4a3223ef7049e0804c6118f34f31",
+  "source": "70fff04ffeb78dcb39fefd34e2219a8508e1468777744116cd4095aa0e29e269",
   "module": "network",
   "discovered": false,
   "database": {
@@ -27,7 +27,8 @@
             "unit": "",
             "description": "endpoint reachable and its certificate verified",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "expiry_days",
@@ -35,7 +36,14 @@
             "unit": "d",
             "description": "days until the certificate expires",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": {
+              "better": "higher",
+              "amber": 21,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "validity_pct",
@@ -43,7 +51,8 @@
             "unit": "%",
             "description": "share of the certificate lifetime still remaining",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -75,7 +84,8 @@
             "unit": "",
             "description": "plugin reported a fit or sick diagnosis rather than dead",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "score",
@@ -83,7 +93,8 @@
             "unit": "",
             "description": "diagnosis score from 0 to 100",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -113,7 +124,8 @@
             "unit": "",
             "description": "resolver agreed with the consensus address set",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "resolved",
@@ -121,7 +133,8 @@
             "unit": "",
             "description": "resolver returned an address",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "latency_ms",
@@ -129,7 +142,8 @@
             "unit": "ms",
             "description": "time taken to resolve",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -153,7 +167,8 @@
             "unit": "W",
             "description": "power the device draws from its switch port",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -180,7 +195,8 @@
             "unit": "",
             "description": "device connected and seen by the controller recently",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "restarted",
@@ -188,7 +204,8 @@
             "unit": "",
             "description": "device came up since the previous check",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "overheating",
@@ -196,7 +213,8 @@
             "unit": "",
             "description": "controller flags the device as overheating",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "experience_pct",
@@ -204,7 +222,14 @@
             "unit": "%",
             "description": "experience reported by the controller, capped by processor, memory and busiest link headroom",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": {
+              "better": "higher",
+              "amber": 85,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "throughput_mbps",
@@ -212,7 +237,8 @@
             "unit": "Mbps",
             "description": "traffic in both directions on the busiest link across the window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "network_pct",
@@ -220,7 +246,8 @@
             "unit": "%",
             "description": "busier direction of the busiest link against its negotiated speed across the window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "clients",
@@ -228,7 +255,8 @@
             "unit": "",
             "description": "clients associated with the device, or for a gateway every client on the site",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "cpu_pct",
@@ -236,7 +264,8 @@
             "unit": "%",
             "description": "processor in use",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "memory_pct",
@@ -244,7 +273,8 @@
             "unit": "%",
             "description": "memory in use",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "temperature",
@@ -252,7 +282,8 @@
             "unit": "°C",
             "description": "hottest temperature sensor the device reports",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "poe_w",
@@ -260,7 +291,8 @@
             "unit": "W",
             "description": "power over ethernet drawn by the powered ports",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "poe_pct",
@@ -268,7 +300,8 @@
             "unit": "%",
             "description": "power over ethernet drawn against the device's budget",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -297,7 +330,8 @@
             "unit": "",
             "description": "target answered at least one ping across the window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "loss_pct",
@@ -305,7 +339,14 @@
             "unit": "%",
             "description": "packet loss across the window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": {
+              "better": "lower",
+              "amber": 2,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "rtt_ms",
@@ -313,7 +354,14 @@
             "unit": "ms",
             "description": "mean round trip time across the window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": {
+              "better": "lower",
+              "amber": 100,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "jitter_ms",
@@ -321,7 +369,14 @@
             "unit": "ms",
             "description": "mean jitter across the window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": {
+              "better": "lower",
+              "amber": 30,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           }
         ]
       },
@@ -347,7 +402,8 @@
             "unit": "",
             "description": "console reported a pulse inside the freshness window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "quality_pct",
@@ -355,7 +411,14 @@
             "unit": "%",
             "description": "console coms signal quality",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": {
+              "better": "higher",
+              "amber": 50,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           }
         ]
       },
@@ -383,7 +446,8 @@
             "unit": "",
             "description": "device connected and seen by the controller recently",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "restarted",
@@ -391,7 +455,8 @@
             "unit": "",
             "description": "device came up since the previous check",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "overheating",
@@ -399,7 +464,8 @@
             "unit": "",
             "description": "controller flags the device as overheating",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "experience_pct",
@@ -407,7 +473,14 @@
             "unit": "%",
             "description": "experience reported by the controller, capped by processor, memory and busiest link headroom",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": {
+              "better": "higher",
+              "amber": 85,
+              "red": null,
+              "inclusive": true,
+              "entities": {}
+            }
           },
           {
             "key": "throughput_mbps",
@@ -415,7 +488,8 @@
             "unit": "Mbps",
             "description": "traffic in both directions on the busiest link across the window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "network_pct",
@@ -423,7 +497,8 @@
             "unit": "%",
             "description": "busier direction of the busiest link against its negotiated speed across the window",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "clients",
@@ -431,7 +506,8 @@
             "unit": "",
             "description": "clients associated with the device, or for a gateway every client on the site",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "cpu_pct",
@@ -439,7 +515,8 @@
             "unit": "%",
             "description": "processor in use",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "memory_pct",
@@ -447,7 +524,8 @@
             "unit": "%",
             "description": "memory in use",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -471,7 +549,8 @@
             "unit": "",
             "description": "device reporting available",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "lqi",
@@ -479,7 +558,8 @@
             "unit": "",
             "description": "median link quality across the window while available",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "weak",
@@ -487,7 +567,8 @@
             "unit": "",
             "description": "device median link quality below the weak threshold",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           },
           {
             "key": "last_seen_s",
@@ -495,7 +576,8 @@
             "unit": "s",
             "description": "age of the device's latest report",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": null
           }
         ]
       },
@@ -522,7 +604,23 @@
             "unit": "%",
             "description": "share of full link quality across that part of the mesh",
             "persist": true,
-            "period": ""
+            "period": "",
+            "levels": {
+              "better": "higher",
+              "amber": null,
+              "red": null,
+              "inclusive": true,
+              "entities": {
+                "mesh": {
+                  "amber": 50,
+                  "red": null
+                },
+                "router": {
+                  "amber": 35,
+                  "red": null
+                }
+              }
+            }
           }
         ]
       }

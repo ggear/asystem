@@ -225,9 +225,7 @@ spec:
                   - color: green
                     value: null
                   - color: yellow
-                    value: 50
-                  - color: red
-                    value: 100
+                    value: 100.000001
                 unit: ms
               overrides: []
             options:
@@ -307,9 +305,7 @@ spec:
                   - color: green
                     value: null
                   - color: yellow
-                    value: 1
-                  - color: red
-                    value: 5
+                    value: 2.000001
                 unit: percent
               overrides: []
             options:
@@ -380,6 +376,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -458,6 +455,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -536,6 +534,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -614,6 +613,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -694,6 +694,7 @@ spec:
                 color:
                   mode: thresholds
                 custom:
+                  axisWidth: 200
                   fillOpacity: 80
                   lineWidth: 0
                 decimals: 2
@@ -712,8 +713,9 @@ spec:
               legend:
                 calcs: []
                 displayMode: list
-                placement: bottom
-                showLegend: false
+                placement: right
+                showLegend: true
+                width: 400
               mergeValues: true
               perPage: 20
               rowHeight: 0.8
@@ -1299,12 +1301,10 @@ spec:
                 thresholds:
                   mode: absolute
                   steps:
-                  - color: red
-                    value: null
                   - color: yellow
-                    value: 14
+                    value: null
                   - color: green
-                    value: 30
+                    value: 21
                 unit: d
               overrides: []
             options:

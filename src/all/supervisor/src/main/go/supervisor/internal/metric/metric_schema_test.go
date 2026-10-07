@@ -81,6 +81,47 @@ func TestMetricSchema_PersistMirrorsSkipHist(t *testing.T) {
 	}
 }
 
+func TestMetricSchema_LevelsOf(t *testing.T) {
+	limit := 90.0
+	tests := []struct {
+		name     string
+		rule     Rule
+		red      bool
+		expected *schema.Levels
+	}{
+		{name: "at_most_pulse_is_inclusive_red", rule: Bounded(Self, AtMost, limit), red: true, expected: &schema.Levels{Better: schema.BetterLower, Red: &limit, Inclusive: true}},
+		{name: "at_most_trend_is_inclusive_amber", rule: Bounded(Self, AtMost, limit), expected: &schema.Levels{Better: schema.BetterLower, Amber: &limit, Inclusive: true}},
+		{name: "below_is_strict", rule: Bounded(Self, Below, limit), red: true, expected: &schema.Levels{Better: schema.BetterLower, Red: &limit}},
+		{name: "at_least_is_higher_better", rule: Bounded(Self, AtLeast, limit), red: true, expected: &schema.Levels{Better: schema.BetterHigher, Red: &limit, Inclusive: true}},
+		{name: "above_is_strict_higher_better", rule: Bounded(Self, Above, limit), red: true, expected: &schema.Levels{Better: schema.BetterHigher, Red: &limit}},
+		{name: "exactly_exports_nothing", rule: Bounded(Self, Exactly, 0), red: true},
+		{name: "a_sibling_bound_exports_nothing", rule: Bounded(MetricHostUsedMemory, AtMost, limit), red: true},
+		{name: "a_compound_rule_exports_nothing", rule: All(Bounded(Self, AtMost, limit), Healthy(MetricHostFailedDrives)), red: true},
+		{name: "truthy_exports_nothing", rule: Truthy(), red: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := levelsOf(test.rule, test.red)
+			if (got == nil) != (test.expected == nil) {
+				t.Fatalf("levels: got %+v want %+v", got, test.expected)
+			}
+			if got == nil {
+				return
+			}
+			if got.Better != test.expected.Better || got.Inclusive != test.expected.Inclusive ||
+				(got.Red == nil) != (test.expected.Red == nil) || (got.Amber == nil) != (test.expected.Amber == nil) {
+				t.Errorf("levels: got %+v want %+v", got, test.expected)
+			}
+			if bound := got.Red; bound != nil && *bound != *test.expected.Red {
+				t.Errorf("red: got %v want %v", *bound, *test.expected.Red)
+			}
+			if bound := got.Amber; bound != nil && *bound != *test.expected.Amber {
+				t.Errorf("amber: got %v want %v", *bound, *test.expected.Amber)
+			}
+		})
+	}
+}
+
 func TestMetricSchema_Cadence(t *testing.T) {
 	tests := []struct {
 		name        string

@@ -46,7 +46,7 @@ var (
 
 	zigbeeExperience     = schema.Declare("zigbee/experience", "mesh experience, one row per part of the mesh", aggregateCadence).Entities("router", "mesh")
 	zigbeeExperienceName = zigbeeExperience.Subject("experience", "router is the always on outlets weighted by availability, mesh is every available device")
-	zigbeeExperiencePct  = zigbeeExperience.Float("experience_pct", "%", "share of full link quality across that part of the mesh")
+	zigbeeExperiencePct  = zigbeeExperience.Float("experience_pct", "%", "share of full link quality across that part of the mesh").Levels(schema.Levels{Better: schema.BetterHigher, Inclusive: true}.Entity("router", zigbeeRouterSickBelow).Entity("mesh", zigbeeMeshSickBelow))
 )
 
 type zigbeeSample struct {

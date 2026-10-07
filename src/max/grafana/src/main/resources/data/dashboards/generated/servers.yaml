@@ -237,10 +237,8 @@ spec:
                   steps:
                   - color: green
                     value: null
-                  - color: yellow
-                    value: 70
                   - color: red
-                    value: 90
+                    value: 90.000001
                 unit: percent
               overrides: []
             options:
@@ -323,10 +321,8 @@ spec:
                   steps:
                   - color: green
                     value: null
-                  - color: yellow
-                    value: 70
                   - color: red
-                    value: 90
+                    value: 90.000001
                 unit: percent
               overrides: []
             options:
@@ -402,6 +398,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -485,6 +482,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -568,6 +566,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -687,6 +686,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -770,6 +770,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -853,6 +854,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -973,6 +975,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1135,6 +1138,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1218,6 +1222,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1301,6 +1306,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1384,6 +1390,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1467,6 +1474,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1550,6 +1558,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1633,6 +1642,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1716,6 +1726,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1799,6 +1810,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1
@@ -1878,6 +1890,7 @@ spec:
             fieldConfig:
               defaults:
                 custom:
+                  axisWidth: 200
                   fillOpacity: 0
                   lineInterpolation: linear
                   lineWidth: 1

@@ -14,6 +14,9 @@ from asystem.schema.query import WARNING
 ARTIFACT = "document.json"
 ARTIFACT_DIR = "src/build/resources/schema"
 KINDS = ("float", "int", "bool", "str")
+BETTER_HIGHER = "higher"
+BETTER_LOWER = "lower"
+LEVELS_BETTER = (BETTER_HIGHER, BETTER_LOWER)
 ROLES = ("state", "command", "availability")
 TYPES = {
     str: "text",
@@ -36,6 +39,21 @@ class SchemaDatabaseDimension:
 
 
 @dataclass
+class SchemaDatabaseBounds:
+    amber: object = None
+    red: object = None
+
+
+@dataclass
+class SchemaDatabaseLevels:
+    better: str
+    amber: object = None
+    red: object = None
+    inclusive: bool = True
+    entities: dict = field(default_factory=dict)
+
+
+@dataclass
 class SchemaDatabaseMeasure:
     key: str
     kind: str
@@ -43,6 +61,7 @@ class SchemaDatabaseMeasure:
     description: str = ""
     persist: bool = True
     period: str = ""
+    levels: object = None
 
 
 @dataclass
@@ -174,7 +193,17 @@ def load_schema_document(module_root=None, config=None, args=None):
               "unit":        "<text>",      OPTIONAL  Unit of the value, e.g. [%] [$] [Celsius] [seconds]
               "description": "<text>",      OPTIONAL  What the measure records
               "persist":     <true|false>,  OPTIONAL  Declared but never written when false, defaults to true
-              "period":      "<duration>"   OPTIONAL  Span the value covers, part of the row key, defaults to cadence
+              "period":      "<duration>",  OPTIONAL  Span the value covers, part of the row key, defaults to cadence
+              "levels":      {              OPTIONAL  Where the service's own judgement of the value turns amber or
+                                                      red, null where it judges the value by no simple bound
+                "better":      "<better>",  REQUIRED  [higher|lower], the direction a healthier value moves
+                "amber":       <number>,    REQUIRED  Bound past which the value is amber, null when none
+                "red":         <number>,    REQUIRED  Bound past which the value is red, null when none
+                "inclusive":   <bool>,      REQUIRED  The bound itself is still on the healthier side
+                "entities":    {            REQUIRED  Per subject value bounds replacing [amber] and [red], may be
+                  "<entity>":    {"amber": <number>, "red": <number>}   empty
+                }
+              }
             }]
           }]
         },
@@ -448,7 +477,37 @@ def _parse_measure(module_name, scope, measure):
         unit=_text(module_name, scope, measure, "unit", ""),
         description=_text(module_name, scope, measure, "description", ""),
         persist=_flag(module_name, scope, measure, "persist", True),
-        period=_text(module_name, scope, measure, "period", ""))
+        period=_text(module_name, scope, measure, "period", ""),
+        levels=_parse_levels(module_name, scope, measure.get("levels")))
+
+
+def _parse_levels(module_name, scope, levels):
+    if levels is None:
+        return None
+    scope = scope + " levels"
+    _reject_unknown(module_name, scope, levels, SchemaDatabaseLevels)
+    _require(module_name, scope, levels, SchemaDatabaseLevels)
+    return SchemaDatabaseLevels(
+        better=_text(module_name, scope, levels, "better"),
+        amber=_bound(module_name, scope, levels, "amber"),
+        red=_bound(module_name, scope, levels, "red"),
+        inclusive=_flag(module_name, scope, levels, "inclusive", True),
+        entities={entity: _parse_bounds(module_name, "{} entity [{}]".format(scope, entity), bounds)
+                  for entity, bounds in _mapping(module_name, scope, levels, "entities").items()})
+
+
+def _parse_bounds(module_name, scope, bounds):
+    _reject_unknown(module_name, scope, bounds, SchemaDatabaseBounds)
+    _require(module_name, scope, bounds, SchemaDatabaseBounds)
+    return SchemaDatabaseBounds(amber=_bound(module_name, scope, bounds, "amber"), red=_bound(module_name, scope, bounds, "red"))
+
+
+def _bound(module_name, scope, mapping, key):
+    value = mapping.get(key)
+    if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))):
+        raise ValueError("Build generate script [{}] schema reflection {} emitted key [{}] as [{}] expected a number or null"
+                         .format(module_name, scope, key, type(value).__name__))
+    return value
 
 
 def _parse_payload(module_name, payload):
@@ -555,6 +614,8 @@ def _validate(document):
             if measure.kind not in KINDS:
                 raise ValueError("Build generate script [{}] relation [{}] measure [{}] declares unknown kind [{}]"
                                  .format(document.module, relation.path, measure.key, measure.kind))
+            if measure.levels is not None:
+                _validate_levels(document, relation, measure)
     for payload in document.payloads:
         if payload.role not in ROLES:
             raise ValueError("Build generate script [{}] payload declares unknown role [{}]"
@@ -572,6 +633,29 @@ def _validate(document):
             raise ValueError("Build generate script [{}] duplicate topic template [{}]"
                              .format(document.module, topic.template))
         templates.add(topic.template)
+
+
+def _validate_levels(document, relation, measure):
+    levels = measure.levels
+    owner = "relation [{}] measure [{}] levels".format(relation.path, measure.key)
+    if measure.kind not in ("float", "int"):
+        raise ValueError("Build generate script [{}] {} on a [{}] measure, only a number has levels"
+                         .format(document.module, owner, measure.kind))
+    if levels.better not in LEVELS_BETTER:
+        raise ValueError("Build generate script [{}] {} declare unknown better [{}] expected one of [{}]"
+                         .format(document.module, owner, levels.better, ",".join(LEVELS_BETTER)))
+    bounds = [SchemaDatabaseBounds(levels.amber, levels.red)] + list(levels.entities.values())
+    if not any(bound.amber is not None or bound.red is not None for bound in bounds):
+        raise ValueError("Build generate script [{}] {} declare no amber or red bound".format(document.module, owner))
+    for bound in bounds:
+        if bound.amber is not None and bound.red is not None and \
+                (bound.red > bound.amber if levels.better == "higher" else bound.red < bound.amber):
+            raise ValueError("Build generate script [{}] {} put red [{}] on the healthier side of amber [{}]"
+                             .format(document.module, owner, bound.red, bound.amber))
+    unknown = sorted(set(levels.entities) - set(relation.entities)) if relation.entities else []
+    if unknown:
+        raise ValueError("Build generate script [{}] {} name entities [{}] the relation does not declare"
+                         .format(document.module, owner, ",".join(unknown)))
 
 
 def _validate_member(document, member):

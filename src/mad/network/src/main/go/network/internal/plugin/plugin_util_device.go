@@ -65,7 +65,7 @@ func declareDevices(path, description, subject, subjectDescription string, names
 		up:          relation.Bool("up", "device connected and seen by the controller recently"),
 		restarted:   relation.Bool("restarted", "device came up since the previous check"),
 		overheating: relation.Bool("overheating", "controller flags the device as overheating"),
-		experience:  relation.Float("experience_pct", "%", "experience reported by the controller, capped by processor, memory and busiest link headroom"),
+		experience:  relation.Float("experience_pct", "%", "experience reported by the controller, capped by processor, memory and busiest link headroom").Levels(schema.AmberBelow(deviceExperienceSickBelow)),
 		throughput:  relation.Float("throughput_mbps", "Mbps", "traffic in both directions on the busiest link across the window"),
 		network:     relation.Float("network_pct", "%", "busier direction of the busiest link against its negotiated speed across the window"),
 		clients:     relation.Int("clients", "", "clients associated with the device, or for a gateway every client on the site"),

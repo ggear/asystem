@@ -18,6 +18,7 @@ from grafana_foundation_sdk.models import dashboardv2 as models
 from grafana_foundation_sdk.models import text as textkinds
 
 from asystem import *
+from asystem.schema.document import BETTER_HIGHER, BETTER_LOWER
 from asystem.schema.panel import Query, aggregated, entitled, selected, subjected
 from asystem.schema.query import duration, expanded
 
@@ -42,11 +43,12 @@ def main():
     host_names = server_hosts.entities(("all",))
     internet_targets = Relation("network", "internet/target")
     hass_temperatures = Relation("homeassistant", "sensor__temperature")
-    rack_temperatures = friendly_names(metadata_df, [
-        "template_utility_temperature_proxy",
-        "compensation_sensor_rack_top_temperature",
-        "compensation_sensor_rack_bottom_temperature",
-    ])
+    rack_group = "Rack"
+    rack_ids = [unique_id for unique_id, grouped in zip(metadata_df["unique_id"], metadata_df["grafana_group"], strict=True)
+                if rack_group in [group.strip() for group in str(grouped).split(",")]]
+    if not rack_ids:
+        raise failed(f"no entity has [grafana_group] [{rack_group}], tag the rack temperature sensors in the entity metadata")
+    rack_temperatures = friendly_names(metadata_df, rack_ids)
 
     # Build Home dashboard [weather]
     perth_midnight = "TIMESTAMP '1969-12-31T16:00:00'"
@@ -282,8 +284,8 @@ ORDER BY time
             stat("CPU Mean", server_hosts.query(["used_processor"], host_names, ("avg",)), "mean").thresholds(used_ladder),
             stat("RAM Mean", server_hosts.query(["used_memory"], host_names, ("avg",)), "mean").thresholds(used_ladder),
             stat("Temperature Mean", server_hosts.query(["temperature"], host_names, ("avg",)), "mean").thresholds(lower_better(70, 85)),
-            stat("Home Volume Max", server_hosts.query(["used_home_space"], host_names, ("max",))).thresholds(used_ladder),
-            stat("Share Volume Max", server_hosts.query(["used_share_space"], host_names, ("max",))).thresholds(used_ladder),
+            stat("Home Volume Max", server_hosts.query(["used_home_space"], host_names, ("max",))),
+            stat("Share Volume Max", server_hosts.query(["used_share_space"], host_names, ("max",))),
         ],
         [series("Server CPU Usage", server_hosts.query(["used_processor"], host_names))],
         [series("Server RAM Usage", server_hosts.query(["used_memory"], host_names))],
@@ -319,9 +321,9 @@ ORDER BY time
         [
             stat("Gateway", internet_targets.query(["reachable"], ["gateway"], ("percent",)), "mean").thresholds(higher_better(95, 99.9)),
             stat("Wireless Clients", access_points.query(["clients"], None, ("sum",))),
-            stat("Wireless Experience", access_points.query(["experience_pct"], None, ("min",))).thresholds(higher_better(85, 95)),
-            stat("Wired Experience", wired_switches.query(["experience_pct"], None, ("min",))).thresholds(higher_better(85, 95)),
-            stat("Zigbee Experience", zigbee_experience.query(["experience_pct"], ["router"])).thresholds(higher_better(35, 50)),
+            stat("Wireless Experience", access_points.query(["experience_pct"], None, ("min",))),
+            stat("Wired Experience", wired_switches.query(["experience_pct"], None, ("min",))),
+            stat("Zigbee Experience", zigbee_experience.query(["experience_pct"], ["router"])),
             stat("PoE Budget", wired_switches.query(["poe_pct"], None, ("max",))).thresholds(lower_better(80, 95)),
         ],
         [series("Network Utilisation", server_hosts.query(["used_network"], host_names))],
@@ -349,10 +351,10 @@ ORDER BY time
         [
             stat("Reachability", internet_targets.query(["reachable"], public_targets, ("percent", "avg")), "mean").thresholds(higher_better(95, 99.9)),
             stat("Resolution", dns_resolvers.query(["ok"], None, ("percent", "avg")), "mean").thresholds(higher_better(95, 99.9)),
-            stat("Certificate", certificate_endpoints.query(["expiry_days"], None, ("min",))).thresholds(higher_better(14, 30)),
+            stat("Certificate", certificate_endpoints.query(["expiry_days"], None, ("min",))),
             stat("Latency Mean", internet_targets.query(["rtt_ms"], public_targets, ("avg",)), "mean").thresholds(lower_better(50, 100)),
-            stat("Latency Max", internet_targets.query(["rtt_ms"], public_targets, ("peak", "max")), "max").thresholds(lower_better(50, 100)),
-            stat("Loss Max", internet_targets.query(["loss_pct"], public_targets, ("peak", "max")), "max").thresholds(lower_better(1, 5)),
+            stat("Latency Max", internet_targets.query(["rtt_ms"], public_targets, ("peak", "max")), "max"),
+            stat("Loss Max", internet_targets.query(["loss_pct"], public_targets, ("peak", "max")), "max"),
         ],
         [series("Internet Latency", internet_targets.query(["rtt_ms"]))],
         [series("Internet Jitter", internet_targets.query(["jitter_ms"]))],
@@ -490,6 +492,13 @@ class Relation:
         picked = [measure for measure, _ in selected(self.relation, self.document, measures, self.dialect.KINDS)]
         units = {"%"} if "percent" in transforms or "baseline" in transforms else {measure.unit for measure in picked}
         descriptions = sorted({measure.description for measure in picked if measure.description})
+        levels = None
+        if len(picked) == 1 and picked[0].levels is not None and set(transforms) <= WORST_TRANSFORMS[picked[0].levels.better]:
+            judged = picked[0].levels
+            bounds = {(judged.entities[entity].amber, judged.entities[entity].red) if entity in judged.entities else (judged.amber, judged.red)
+                      for entity in (entities or self.relation.entities or [None])}
+            if len(bounds) == 1 and bounds != {(None, None)}:
+                levels = Levels(judged.better, *bounds.pop(), judged.inclusive)
         return Series(
             self.dialect,
             self.datasource,
@@ -498,6 +507,7 @@ class Relation:
             self.interval,
             "; ".join(descriptions) if description is None else description,
             "time_series",
+            levels=levels,
         )
 
     def sql(self, statement, unit, description, **values):
@@ -554,6 +564,26 @@ def lower_better(low, high):
     return [(None, GREEN)] + ([(low, YELLOW)] if low != high else []) + [(high, RED)]
 
 
+def levelled(levels):
+    rising_is_healthier = levels.better == BETTER_HIGHER
+
+    def onset(bound):
+        return bound if levels.inclusive == rising_is_healthier else bound + LEVEL_EPSILON
+
+    if rising_is_healthier:
+        ladder = [(None, RED if levels.red is not None else YELLOW)]
+        if levels.red is not None and levels.amber is not None:
+            ladder.append((onset(levels.red), YELLOW))
+        ladder.append((onset(levels.amber if levels.amber is not None else levels.red), GREEN))
+        return ladder
+    ladder = [(None, GREEN)]
+    if levels.amber is not None:
+        ladder.append((onset(levels.amber), YELLOW))
+    if levels.red is not None:
+        ladder.append((onset(levels.red), RED))
+    return ladder
+
+
 class Panel:
 
     def __init__(self, title, queries, width, height, visualization, unit=None):
@@ -566,6 +596,10 @@ class Panel:
         displays = {query.dialect.DISPLAY for query in self.queries}
         if len(displays) == 1 and "" not in displays and all(query.form == "time_series" for query in self.queries):
             self.visualization.display_name(displays.pop())
+        judged = {query.levels for query in self.queries}
+        self.levels = next(iter(judged)) if len(judged) == 1 else None
+        self.disagreeing = len(judged) > 1 and judged != {None}
+        self.explicit = False
 
     def __getattr__(self, name):
         method = getattr(self.visualization, name)
@@ -580,13 +614,22 @@ class Panel:
         self.visualization.override_by_regexp(pattern, [models.DynamicConfigValue(id_val=key, value=value) for key, value in properties.items()])
         return self
 
-    def thresholds(self, ladder):
+    def thresholds(self, ladder, override=False):
+        if self.levels is not None and not override:
+            raise failed(f"panel [{self.title}] takes its thresholds from its measure's levels, "
+                         f"declare them in the owning schema or pass override=True to replace them deliberately")
+        self.explicit = True
+        return self._coloured(ladder)
+
+    def _coloured(self, ladder):
         self.visualization.thresholds(dashboardv2.ThresholdsConfig().mode(models.ThresholdsMode.ABSOLUTE).steps([
             models.Threshold(value=value, color=color) for value, color in ladder
         ]))
         return self
 
     def build(self, identifier):
+        if self.disagreeing and not self.explicit:
+            raise failed(f"panel [{self.title}] combines queries whose measure levels disagree, give it explicit thresholds")
         group = dashboardv2.QueryGroup().targets([
             dashboardv2.Target().ref_id(chr(ord("A") + index)).query(Query(query.dialect.GRAFANA, query.datasource, query.sql, query.form))
             for index, query in enumerate(self.queries)
@@ -611,7 +654,10 @@ def stat(title, queries, reducer="lastNotNull", unit=None, height=4):
                      .text_mode(kinds.BigValueTextMode.VALUE)
                      .justify_mode(kinds.BigValueJustifyMode.CENTER)
                      .reduce_options(common.ReduceDataOptions().calcs([reducer])))
-    return Panel(title, queries, 4, height, visualization, unit).thresholds(NEUTRAL_LADDER)
+    panel = Panel(title, queries, 4, height, visualization, unit)
+    if panel.levels is not None and reducer not in WORST_REDUCERS[panel.levels.better]:
+        panel.levels, panel.disagreeing = None, False
+    return panel._coloured(levelled(panel.levels) if panel.levels is not None else NEUTRAL_LADDER)
 
 
 def series(title, queries, unit=None, interpolation=kinds.LineInterpolation.LINEAR):
@@ -621,14 +667,17 @@ def series(title, queries, unit=None, interpolation=kinds.LineInterpolation.LINE
                      .line_width(1)
                      .show_points(kinds.VisibilityMode.NEVER)
                      .span_nulls(True)
+                     .axis_width(AXIS_WIDTH)
                      .tooltip(common.VizTooltipOptions().mode(kinds.TooltipDisplayMode.MULTI).sort(kinds.SortOrder.DESCENDING))
                      .legend(common.VizLegendOptions()
                              .show_legend(True)
                              .display_mode(kinds.LegendDisplayMode.TABLE)
                              .placement(kinds.LegendPlacement.RIGHT)
-                             .width(400)
+                             .width(LEGEND_WIDTH)
                              .calcs(["min", "max", "mean"])))
-    return Panel(title, queries, GRID_WIDTH, 10, visualization, unit)
+    panel = Panel(title, queries, GRID_WIDTH, 10, visualization, unit)
+    panel.levels, panel.disagreeing = None, False
+    return panel
 
 
 def steps(title, queries, unit=None):
@@ -655,8 +704,15 @@ def state(title, queries, height=10):
                      .fill_opacity(80)
                      .line_width(0)
                      .color_scheme(dashboardv2.FieldColor().mode(models.FieldColorModeId.THRESHOLDS))
-                     .legend(common.VizLegendOptions().show_legend(False)))
-    return Panel(title, queries, GRID_WIDTH, height, visualization).thresholds(STATE_LADDER)
+                     .axis_width(AXIS_WIDTH)
+                     .legend(common.VizLegendOptions()
+                             .show_legend(True)
+                             .display_mode(kinds.LegendDisplayMode.LIST)
+                             .placement(kinds.LegendPlacement.RIGHT)
+                             .width(LEGEND_WIDTH)))
+    panel = Panel(title, queries, GRID_WIDTH, height, visualization)
+    panel.levels, panel.disagreeing = None, False
+    return panel._coloured(STATE_LADDER)
 
 
 def header(sources, service, ceiling=None):
@@ -938,6 +994,8 @@ TITLES = {uid: title for declared in FOLDERS.values() for uid, title in declared
 DASHBOARD_TAG = "asystem"
 
 GRID_WIDTH = 24
+AXIS_WIDTH = 200
+LEGEND_WIDTH = 400
 TimeRange = namedtuple("TimeRange", "start refresh options")
 SHORT_RANGES = ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d", "60d", "90d"]
 LONG_RANGES = ["7d", "30d", "90d", "180d", "1y", "5y", "10y", "25y", "50y"]
@@ -1020,7 +1078,11 @@ REDUCERS = {
 SQL_PLACEHOLDER = r"\$([a-z]\w*)"
 ORIGIN_GENERATED = "Generated"
 ORIGIN_WRITTEN = "Hand-written"
-Series = namedtuple("Series", "dialect datasource sql unit interval description form origin", defaults=[ORIGIN_GENERATED])
+Series = namedtuple("Series", "dialect datasource sql unit interval description form origin levels", defaults=[ORIGIN_GENERATED, None])
+Levels = namedtuple("Levels", "better amber red inclusive")
+WORST_TRANSFORMS = {BETTER_HIGHER: {"trough", "min"}, BETTER_LOWER: {"peak", "max"}}
+WORST_REDUCERS = {BETTER_HIGHER: {"lastNotNull", "min"}, BETTER_LOWER: {"lastNotNull", "max"}}
+LEVEL_EPSILON = 1e-6
 SCHEMA_ARTIFACTS = {}
 
 

@@ -31,7 +31,7 @@ var (
 	weewxConsole = schema.Declare("weewx/console", "weather station console link health, one row per console", aggregateCadence).Entities(weewxConsoleName)
 	weewxName    = weewxConsole.Subject("console", "name of the weather station console")
 	weewxFresh   = weewxConsole.Bool("fresh", "console reported a pulse inside the freshness window")
-	weewxQuality = weewxConsole.Float("quality_pct", "%", "console coms signal quality")
+	weewxQuality = weewxConsole.Float("quality_pct", "%", "console coms signal quality").Levels(schema.AmberBelow(weewxFitMin))
 )
 
 type weewxReading struct {

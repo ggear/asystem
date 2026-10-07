@@ -29,7 +29,8 @@
             "unit": "$",
             "description": "closing rate for the currency pair",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "delta",
@@ -37,7 +38,8 @@
             "unit": "%",
             "description": "change in the rate across [1 Day Delta]",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "delta",
@@ -45,7 +47,8 @@
             "unit": "%",
             "description": "change in the rate across [1 Week Delta]",
             "persist": true,
-            "period": "7d"
+            "period": "7d",
+            "levels": null
           },
           {
             "key": "delta",
@@ -53,7 +56,8 @@
             "unit": "%",
             "description": "change in the rate across [1 Month Delta]",
             "persist": true,
-            "period": "30d"
+            "period": "30d",
+            "levels": null
           },
           {
             "key": "delta",
@@ -61,7 +65,8 @@
             "unit": "%",
             "description": "change in the rate across [1 Year Delta]",
             "persist": true,
-            "period": "365d"
+            "period": "365d",
+            "levels": null
           }
         ]
       },
@@ -89,7 +94,8 @@
             "unit": "%",
             "description": "mean rate across the month",
             "persist": true,
-            "period": "1mo"
+            "period": "1mo",
+            "levels": null
           },
           {
             "key": "mean",
@@ -97,7 +103,8 @@
             "unit": "%",
             "description": "mean rate across [1 Year Mean]",
             "persist": true,
-            "period": "1y"
+            "period": "1y",
+            "levels": null
           },
           {
             "key": "mean",
@@ -105,7 +112,8 @@
             "unit": "%",
             "description": "mean rate across [5 Year Mean]",
             "persist": true,
-            "period": "5y"
+            "period": "5y",
+            "levels": null
           },
           {
             "key": "mean",
@@ -113,7 +121,8 @@
             "unit": "%",
             "description": "mean rate across [10 Year Mean]",
             "persist": true,
-            "period": "10y"
+            "period": "10y",
+            "levels": null
           },
           {
             "key": "mean",
@@ -121,7 +130,8 @@
             "unit": "%",
             "description": "mean rate across [20 Year Mean]",
             "persist": true,
-            "period": "20y"
+            "period": "20y",
+            "levels": null
           },
           {
             "key": "mean",
@@ -129,7 +139,8 @@
             "unit": "%",
             "description": "mean rate across [40 Year Mean]",
             "persist": true,
-            "period": "40y"
+            "period": "40y",
+            "levels": null
           }
         ]
       },
@@ -180,7 +191,8 @@
             "unit": "$",
             "description": "daily market volume spot reading",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "price-close",
@@ -188,7 +200,8 @@
             "unit": "$",
             "description": "daily price close reading",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "price-close-base",
@@ -196,7 +209,8 @@
             "unit": "$",
             "description": "daily price close base reading",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "price-close-spot",
@@ -204,7 +218,8 @@
             "unit": "$",
             "description": "daily price close spot reading",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "price-close-1d-change-percentage",
@@ -212,7 +227,8 @@
             "unit": "%",
             "description": "change in price close across [1] days",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "price-close-base-1d-change-percentage",
@@ -220,7 +236,8 @@
             "unit": "%",
             "description": "change in price close base across [1] days",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "price-close-spot-1d-change-percentage",
@@ -228,7 +245,8 @@
             "unit": "%",
             "description": "change in price close spot across [1] days",
             "persist": true,
-            "period": "1d"
+            "period": "1d",
+            "levels": null
           },
           {
             "key": "price-close-30d-change-percentage",
@@ -236,7 +254,8 @@
             "unit": "%",
             "description": "change in price close across [30] days",
             "persist": true,
-            "period": "30d"
+            "period": "30d",
+            "levels": null
           },
           {
             "key": "price-close-base-30d-change-percentage",
@@ -244,7 +263,8 @@
             "unit": "%",
             "description": "change in price close base across [30] days",
             "persist": true,
-            "period": "30d"
+            "period": "30d",
+            "levels": null
           },
           {
             "key": "price-close-spot-30d-change-percentage",
@@ -252,7 +272,8 @@
             "unit": "%",
             "description": "change in price close spot across [30] days",
             "persist": true,
-            "period": "30d"
+            "period": "30d",
+            "levels": null
           },
           {
             "key": "price-close-90d-change-percentage",
@@ -260,7 +281,8 @@
             "unit": "%",
             "description": "change in price close across [90] days",
             "persist": true,
-            "period": "90d"
+            "period": "90d",
+            "levels": null
           },
           {
             "key": "price-close-base-90d-change-percentage",
@@ -268,7 +290,8 @@
             "unit": "%",
             "description": "change in price close base across [90] days",
             "persist": true,
-            "period": "90d"
+            "period": "90d",
+            "levels": null
           },
           {
             "key": "price-close-spot-90d-change-percentage",
@@ -276,7 +299,8 @@
             "unit": "%",
             "description": "change in price close spot across [90] days",
             "persist": true,
-            "period": "90d"
+            "period": "90d",
+            "levels": null
           },
           {
             "key": "price-close-365d-change-percentage",
@@ -284,7 +308,8 @@
             "unit": "%",
             "description": "change in price close across [365] days",
             "persist": true,
-            "period": "365d"
+            "period": "365d",
+            "levels": null
           },
           {
             "key": "price-close-base-365d-change-percentage",
@@ -292,7 +317,8 @@
             "unit": "%",
             "description": "change in price close base across [365] days",
             "persist": true,
-            "period": "365d"
+            "period": "365d",
+            "levels": null
           },
           {
             "key": "price-close-spot-365d-change-percentage",
@@ -300,7 +326,8 @@
             "unit": "%",
             "description": "change in price close spot across [365] days",
             "persist": true,
-            "period": "365d"
+            "period": "365d",
+            "levels": null
           }
         ]
       }

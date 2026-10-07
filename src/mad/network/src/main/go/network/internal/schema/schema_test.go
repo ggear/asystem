@@ -145,6 +145,28 @@ func TestSchema_Reflect(t *testing.T) {
 	}
 }
 
+func TestSchema_Levels(t *testing.T) {
+	relation := Declare("levelstest/reading", "relation used by the levels test", "15m").Entities("router", "mesh")
+	relation.Subject("reading", "subject used by the levels test")
+	relation.Float("fit", "%", "measure judged against one bound").Levels(AmberBelow(85))
+	relation.Float("loss", "%", "measure judged lower is better").Levels(AmberAbove(2))
+	relation.Float("mesh", "%", "measure judged per entity").Levels(Levels{Better: BetterHigher, Inclusive: true}.Entity("router", 35).Entity("mesh", 50))
+	relation.Float("plain", "%", "measure judged by no bound")
+	measures := relation.Relation().Measures
+	if levels := measures[0].Levels; levels == nil || levels.Better != BetterHigher || *levels.Amber != 85 || levels.Red != nil || !levels.Inclusive {
+		t.Errorf("fit levels: got %+v want amber below 85, the bound itself fit", levels)
+	}
+	if levels := measures[1].Levels; levels == nil || levels.Better != BetterLower || *levels.Amber != 2 {
+		t.Errorf("loss levels: got %+v want amber above 2", levels)
+	}
+	if levels := measures[2].Levels; levels == nil || levels.Amber != nil || *levels.Entities["router"].Amber != 35 || *levels.Entities["mesh"].Amber != 50 {
+		t.Errorf("mesh levels: got %+v want router 35 and mesh 50 with no measure wide bound", levels)
+	}
+	if measures[3].Levels != nil {
+		t.Errorf("plain levels: got %+v want none", measures[3].Levels)
+	}
+}
+
 func TestSchema_Registered(t *testing.T) {
 	relations := Registered()
 	paths := make([]string, 0, len(relations))

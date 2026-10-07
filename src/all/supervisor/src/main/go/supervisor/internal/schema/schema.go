@@ -19,6 +19,14 @@ const (
 	KindStr   Kind = "str"
 )
 
+// Better mirrors BETTER_* in src/all/_/src/build/python/asystem/schema/document.py, which owns the levels vocabulary.
+type Better string
+
+const (
+	BetterHigher Better = "higher"
+	BetterLower  Better = "lower"
+)
+
 type Role string
 
 const (
@@ -35,12 +43,26 @@ type Dimension struct {
 }
 
 type Measure struct {
-	Key         string `json:"key"`
-	Kind        Kind   `json:"kind"`
-	Unit        string `json:"unit"`
-	Description string `json:"description"`
-	Persist     bool   `json:"persist"`
-	Period      string `json:"period"`
+	Key         string  `json:"key"`
+	Kind        Kind    `json:"kind"`
+	Unit        string  `json:"unit"`
+	Description string  `json:"description"`
+	Persist     bool    `json:"persist"`
+	Period      string  `json:"period"`
+	Levels      *Levels `json:"levels"`
+}
+
+type Levels struct {
+	Better    Better            `json:"better"`
+	Amber     *float64          `json:"amber"`
+	Red       *float64          `json:"red"`
+	Inclusive bool              `json:"inclusive"`
+	Entities  map[string]Bounds `json:"entities"`
+}
+
+type Bounds struct {
+	Amber *float64 `json:"amber"`
+	Red   *float64 `json:"red"`
 }
 
 type Relation struct {
