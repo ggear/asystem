@@ -24,6 +24,10 @@ if [ ! -f /etc/modprobe.d/blacklist-brcmfmac.conf ]; then
   echo "blacklist brcmfmac" | tee -a /etc/modprobe.d/blacklist-brcmfmac.conf
   echo "blacklist bcm2835-wifi" | tee -a /etc/modprobe.d/blacklist-brcmfmac.conf
 fi
+if [ ! -f /etc/modprobe.d/blacklist-bluetooth.conf ]; then
+  echo "blacklist hci_uart" | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
+  echo "blacklist btbcm" | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
+fi
 
 ################################################################################
 # Unused services

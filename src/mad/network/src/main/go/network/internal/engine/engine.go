@@ -22,7 +22,10 @@ type Engine struct {
 	AggregatePeriod    time.Duration
 	sampleMu           sync.Mutex
 	sampleWindow       int
+	sampleWindows      map[string]int
 	sampleBuffers      map[string][]plugin.Sample
+	pollStrides        map[string]int
+	polls              int
 	lineProtocolMu     sync.Mutex
 	lineProtocolBuffer bytes.Buffer
 	broker             *remote.Broker
@@ -46,7 +49,9 @@ func Create(e *Engine) error {
 		return fmt.Errorf("invalid aggregate period [%s] must be a whole multiple of poll period [%s]", e.AggregatePeriod, e.PollPeriod)
 	}
 	e.sampleWindow = int(e.AggregatePeriod / e.PollPeriod)
+	e.sampleWindows = map[string]int{}
 	e.sampleBuffers = map[string][]plugin.Sample{}
+	e.pollStrides = map[string]int{}
 	pluginNames := make(map[string]struct{}, len(e.Plugins))
 	for _, p := range e.Plugins {
 		if p == nil {
@@ -67,6 +72,14 @@ func Create(e *Engine) error {
 		pluginNames[name] = struct{}{}
 		if p.Mode() == plugin.ModeWindowed {
 			e.sampleBuffers[name] = nil
+			if paced, ok := p.(plugin.Paced); ok && paced.PollPeriod() > e.PollPeriod {
+				period := paced.PollPeriod()
+				if period%e.PollPeriod != 0 || e.AggregatePeriod%period != 0 {
+					return fmt.Errorf("invalid poll period [%s] of plugin [%s] must be a whole multiple of poll period [%s] dividing aggregate period [%s]", period, name, e.PollPeriod, e.AggregatePeriod)
+				}
+				e.pollStrides[name] = int(period / e.PollPeriod)
+				e.sampleWindows[name] = int(e.AggregatePeriod / period)
+			}
 		}
 	}
 	return nil
@@ -122,15 +135,26 @@ func (e *Engine) Run(ctx context.Context) error {
 				for _, v := range e.AggregateSamples(ctx, e.Plugins) {
 					e.publishAggregate(ctx, v)
 				}
+				continue
+			}
+			for _, v := range e.AggregateChanges() {
+				e.publishAggregate(ctx, v)
 			}
 		}
 	}
 }
 
 func (e *Engine) PollSamples(ctx context.Context) {
+	e.sampleMu.Lock()
+	tick := e.polls
+	e.polls++
+	e.sampleMu.Unlock()
 	var wg sync.WaitGroup
 	for _, p := range e.Plugins {
 		if p.Mode() != plugin.ModeWindowed {
+			continue
+		}
+		if stride, paced := e.pollStrides[p.Name()]; paced && tick%stride != 0 {
 			continue
 		}
 		wg.Add(1)
@@ -182,13 +206,41 @@ func (e *Engine) AggregateSamples(ctx context.Context, plugins []plugin.Plugin) 
 	return aggregates
 }
 
+func (e *Engine) AggregateChanges() []plugin.Aggregate {
+	var aggregates []plugin.Aggregate
+	for _, p := range e.Plugins {
+		tracker := p.State()
+		if p.Mode() != plugin.ModeWindowed || tracker == nil {
+			continue
+		}
+		start := time.Now()
+		e.sampleMu.Lock()
+		samples := e.copySamples(p.Name())
+		e.sampleMu.Unlock()
+		if len(samples) == 0 {
+			continue
+		}
+		v := e.safeAggregate(p, samples)
+		state := plugin.StateOff
+		if v.OK {
+			state = plugin.StateOn
+		}
+		if tracker.Get() == state {
+			continue
+		}
+		tracker.Set(state)
+		aggregates = append(aggregates, v)
+		scribe.LogDiagnosis(p.Name(), string(v.Status), v.Score, time.Since(start), v.Reason)
+	}
+	return aggregates
+}
+
 func (e *Engine) safePoll(ctx context.Context, p plugin.Plugin) (m plugin.Sample) {
 	defer func() {
 		if r := recover(); r != nil {
 			scribe.LogError(p.Name(), "panicked during poll [%v]", r)
 			m = plugin.Sample{}
 		}
-		m.Plugin = p.Name()
 		if m.Timestamp.IsZero() {
 			m.Timestamp = time.Now()
 		}
@@ -207,7 +259,6 @@ func (e *Engine) safeAggregate(p plugin.Plugin, samples []plugin.Sample) (v plug
 			v = plugin.Diagnose(plugin.StatusDead, 0, "PLUGIN_PANIC: plugin panicked during aggregate")
 		}
 		v.Plugin = p.Name()
-		v.WindowSeconds = int(e.AggregatePeriod / time.Second)
 		if v.Timestamp.IsZero() {
 			v.Timestamp = time.Now()
 		}
@@ -295,9 +346,13 @@ func (e *Engine) findPlugin(name string) (plugin.Plugin, bool) {
 }
 
 func (e *Engine) addSample(name string, m plugin.Sample) {
+	window := e.sampleWindow
+	if paced, ok := e.sampleWindows[name]; ok {
+		window = paced
+	}
 	buffer := append(e.sampleBuffers[name], m)
-	if len(buffer) > e.sampleWindow {
-		buffer = buffer[len(buffer)-e.sampleWindow:]
+	if len(buffer) > window {
+		buffer = buffer[len(buffer)-window:]
 	}
 	e.sampleBuffers[name] = buffer
 }

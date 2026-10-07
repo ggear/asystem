@@ -1,4 +1,4 @@
-package plugins
+package plugin
 
 import (
 	"context"
@@ -8,14 +8,13 @@ import (
 	"net"
 	"time"
 
-	"network/internal/plugin"
 	"network/internal/schema"
 	"network/internal/scribe"
 )
 
 const (
-	warnDays     = 21
-	probeTimeout = 5 * time.Second
+	certificateWarnDays = 21
+	certificateTimeout  = 5 * time.Second
 )
 
 var certificateEndpoints = []string{
@@ -44,18 +43,18 @@ type certificateResult struct {
 
 type certificatePlugin struct {
 	probe func(ctx context.Context, address string) (certificateResult, error)
-	state *plugin.StateTracker
+	state *StateTracker
 }
 
 func newCertificatePlugin() *certificatePlugin {
-	return &certificatePlugin{probe: probeCertificate, state: plugin.NewStateTracker(plugin.StateOn)}
+	return &certificatePlugin{probe: probeCertificate, state: NewStateTracker(StateOn)}
 }
 
 func (p *certificatePlugin) Name() string { return "certificate" }
 
-func (p *certificatePlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
+func (p *certificatePlugin) Mode() Mode { return ModeSnapshot }
 
-func (p *certificatePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
+func (p *certificatePlugin) Poll(ctx context.Context) (Sample, error) {
 	now := time.Now()
 	readings := make([]certificateReading, 0, len(certificateEndpoints))
 	for _, address := range certificateEndpoints {
@@ -67,42 +66,31 @@ func (p *certificatePlugin) Poll(ctx context.Context) (plugin.Sample, error) {
 		}
 		scribe.LogDebug("certificate", "probed endpoint [%s] not_after [%s]", address, result.notAfter)
 		daysToExpiry := result.notAfter.Sub(now).Hours() / 24
-		validityPercentage := 100.0
-		total := result.notAfter.Sub(result.notBefore).Seconds()
-		if total > 0 {
-			validityPercentage = 100 * result.notAfter.Sub(now).Seconds() / total
+		validity := 100.0
+		if lifetime := result.notAfter.Sub(result.notBefore).Seconds(); lifetime > 0 {
+			validity = math.Min(math.Max(100*result.notAfter.Sub(now).Seconds()/lifetime, 0), 100)
 		}
-		if validityPercentage < 0 {
-			validityPercentage = 0
-		} else if validityPercentage > 100 {
-			validityPercentage = 100
-		}
-		readings = append(readings, certificateReading{
-			endpoint: address,
-			days:     plugin.Round(daysToExpiry, 1),
-			validity: plugin.Round(validityPercentage, 1),
-			verified: true,
-		})
+		readings = append(readings, certificateReading{endpoint: address, days: daysToExpiry, validity: validity, verified: true})
 	}
-	return plugin.Sample{Readings: readings}, nil
+	return Sample{Readings: readings}, nil
 }
 
-func (p *certificatePlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
+func (p *certificatePlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseCertificate(samples), nil
 }
 
-func (p *certificatePlugin) Command(_ context.Context, _ plugin.State) error {
+func (p *certificatePlugin) Command(context.Context, State) error {
 	return nil
 }
 
-func (p *certificatePlugin) State() *plugin.StateTracker { return p.state }
+func (p *certificatePlugin) State() *StateTracker { return p.state }
 
 func probeCertificate(ctx context.Context, address string) (certificateResult, error) {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
 		return certificateResult{}, fmt.Errorf("invalid endpoint [%s] [%w]", address, err)
 	}
-	dialer := tls.Dialer{NetDialer: &net.Dialer{Timeout: probeTimeout}, Config: &tls.Config{ServerName: host}}
+	dialer := tls.Dialer{NetDialer: &net.Dialer{Timeout: certificateTimeout}, Config: &tls.Config{ServerName: host}}
 	connection, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
 		return certificateResult{}, err
@@ -120,36 +108,31 @@ func probeCertificate(ctx context.Context, address string) (certificateResult, e
 	return certificateResult{notBefore: leaf.NotBefore, notAfter: leaf.NotAfter}, nil
 }
 
-func diagnoseCertificate(samples []plugin.Sample) plugin.Aggregate {
-	stats := certificateStats{minDays: math.MaxFloat64}
-	nearestPercent := 100.0
-	readings := plugin.Latest[[]certificateReading](samples)
+func diagnoseCertificate(samples []Sample) Aggregate {
+	readings := latestReading[[]certificateReading](samples)
+	failed := 0
+	nearestDays, nearestValidity := math.MaxFloat64, 100.0
 	for _, reading := range readings {
 		if !reading.verified {
-			stats.failed++
+			failed++
 			continue
 		}
-		stats.reachable++
-		if reading.days < warnDays {
-			stats.warning++
-		}
-		if reading.days < stats.minDays {
-			stats.minDays = reading.days
-			nearestPercent = reading.validity
+		if reading.days < nearestDays {
+			nearestDays, nearestValidity = reading.days, reading.validity
 		}
 	}
-	score := plugin.Clamp(int(math.Round(nearestPercent)))
-	result := plugin.Aggregate{}
+	nearestDays = math.Round(nearestDays)
+	score := clamp(int(math.Round(nearestValidity)))
+	result := Aggregate{}
 	switch {
-	case len(readings) == 0 || stats.reachable == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "PROBE_UNREACHABLE: no certificate endpoint reachable across window")
-		stats.minDays = 0
-	case stats.failed > 0:
-		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("VERIFY_FAILED: verify or reachability failure on [%d] of [%d] endpoints", stats.failed, stats.failed+stats.reachable))
-	case stats.minDays < warnDays:
-		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("EXPIRING_SOON: nearest certificate expires in [%.0f] days", stats.minDays))
+	case failed == len(readings):
+		result = Diagnose(StatusDead, 0, "PROBE_UNREACHABLE: no certificate endpoint reachable")
+	case failed > 0:
+		result = Diagnose(StatusSick, score, fmt.Sprintf("VERIFY_FAILED: verify or reachability failure on [%d] of [%d] endpoints", failed, len(readings)))
+	case nearestDays < certificateWarnDays:
+		result = Diagnose(StatusSick, score, fmt.Sprintf("EXPIRING_SOON: nearest certificate expires in [%.0f] days", nearestDays))
 	default:
-		result = plugin.Diagnose(plugin.StatusFit, score, fmt.Sprintf("VALID: nearest certificate valid for [%.0f] days", stats.minDays))
+		result = Diagnose(StatusFit, score, fmt.Sprintf("VALID: nearest certificate valid for [%.0f] days", nearestDays))
 	}
 	result.Points = reportCertificate(readings)
 	return result
@@ -164,21 +147,14 @@ func reportCertificate(readings []certificateReading) []schema.Point {
 		}
 		if reading.verified {
 			point = append(point,
-				certificateExpiryDays.Of(plugin.Round(reading.days, 1)),
-				certificateValidityPct.Of(plugin.Round(reading.validity, 1)))
+				certificateExpiryDays.Of(round(reading.days, 1)),
+				certificateValidityPct.Of(round(reading.validity, 1)))
 		}
 		points = append(points, certificateEndpoint.Point(point...))
 	}
 	return points
 }
 
-type certificateStats struct {
-	minDays   float64
-	warning   int
-	failed    int
-	reachable int
-}
-
 func init() {
-	plugin.Register(newCertificatePlugin())
+	register(newCertificatePlugin())
 }

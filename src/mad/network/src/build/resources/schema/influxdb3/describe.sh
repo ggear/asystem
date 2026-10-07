@@ -224,9 +224,9 @@ WHERE
     AND resolver IS NOT NULL
 UNION ALL
 SELECT
-    'ethernet/port'            AS relation,
-    'port*'                    AS dimension,
-    5                          AS measures,
+    'ethernet/powered'         AS relation,
+    'powered*'                 AS dimension,
+    1                          AS measures,
     '15m'                      AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -234,7 +234,22 @@ SELECT
 FROM ethernet
 WHERE
     module = 'network'
-    AND port IS NOT NULL
+    AND powered IS NOT NULL
+    AND switch IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'          AS relation,
+    'switch*'                  AS dimension,
+    12                         AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
 UNION ALL
 SELECT
     'internet/target'          AS relation,
@@ -265,7 +280,7 @@ UNION ALL
 SELECT
     'wireless/accesspoint'     AS relation,
     'accesspoint*'             AS dimension,
-    3                          AS measures,
+    9                          AS measures,
     '15m'                      AS cadence,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -287,6 +302,21 @@ FROM zigbee
 WHERE
     module = 'network'
     AND device IS NOT NULL
+    AND experience IS NULL
+UNION ALL
+SELECT
+    'zigbee/experience'        AS relation,
+    'experience*'              AS dimension,
+    1                          AS measures,
+    '15m'                      AS cadence,
+    count(*)                   AS rows,
+    CAST(min(time) AS VARCHAR) AS oldest,
+    CAST(max(time) AS VARCHAR) AS newest
+FROM zigbee
+WHERE
+    module = 'network'
+    AND experience IS NOT NULL
+    AND device IS NULL
 ORDER BY rows DESC;
 
 -- measures
@@ -344,7 +374,12 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'certificate'
-    AND column_name NOT IN ('endpoint', 'expiry_days', 'module', 'time', 'validity_pct', 'verified')
+    AND column_name NOT IN (
+        'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend', 'endpoint',
+        'errors', 'errors_trend', 'expiry_days', 'full_duplex', 'full_duplex_trend',
+        'module', 'port', 'port_trend', 'speed_mbps', 'speed_mbps_trend', 'time',
+        'validity_pct', 'verified'
+    )
 UNION ALL
 SELECT
     'diagnosis/plugin'                                       AS relation,
@@ -386,7 +421,11 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'diagnosis'
-    AND column_name NOT IN ('module', 'ok', 'plugin', 'score', 'time')
+    AND column_name NOT IN (
+        'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend', 'errors',
+        'errors_trend', 'full_duplex', 'full_duplex_trend', 'module', 'ok', 'plugin',
+        'port', 'port_trend', 'score', 'speed_mbps', 'speed_mbps_trend', 'time'
+    )
 UNION ALL
 SELECT
     'domain/resolver'                                        AS relation,
@@ -442,10 +481,30 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'domain'
-    AND column_name NOT IN ('latency_ms', 'module', 'ok', 'resolved', 'resolver', 'time')
+    AND column_name NOT IN (
+        'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend', 'errors',
+        'errors_trend', 'full_duplex', 'full_duplex_trend', 'latency_ms', 'module', 'ok',
+        'port', 'port_trend', 'resolved', 'resolver', 'speed_mbps', 'speed_mbps_trend',
+        'time'
+    )
 UNION ALL
 SELECT
-    'ethernet/port'                                          AS relation,
+    'ethernet/powered'                                            AS relation,
+    'power_w'                                                     AS measure,
+    'float'                                                       AS kind,
+    'W'                                                           AS unit,
+    '15m'                                                         AS period,
+    count(power_w)                                                AS rows,
+    CAST(min(time) FILTER (WHERE power_w IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE power_w IS NOT NULL) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND powered IS NOT NULL
+    AND switch IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'                                        AS relation,
     'up'                                                     AS measure,
     'bool'                                                   AS kind,
     '-'                                                      AS unit,
@@ -456,63 +515,173 @@ SELECT
 FROM ethernet
 WHERE
     module = 'network'
-    AND port IS NOT NULL
+    AND switch IS NOT NULL
+    AND powered IS NULL
 UNION ALL
 SELECT
-    'ethernet/port'                                                  AS relation,
-    'speed_mbps'                                                     AS measure,
-    'int'                                                            AS kind,
-    'Mbps'                                                           AS unit,
-    '15m'                                                            AS period,
-    count(speed_mbps)                                                AS rows,
-    CAST(min(time) FILTER (WHERE speed_mbps IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE speed_mbps IS NOT NULL) AS VARCHAR) AS newest
+    'ethernet/switch'                                               AS relation,
+    'restarted'                                                     AS measure,
+    'bool'                                                          AS kind,
+    '-'                                                             AS unit,
+    '15m'                                                           AS period,
+    count(restarted)                                                AS rows,
+    CAST(min(time) FILTER (WHERE restarted IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE restarted IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
     module = 'network'
-    AND port IS NOT NULL
+    AND switch IS NOT NULL
+    AND powered IS NULL
 UNION ALL
 SELECT
-    'ethernet/port'                                                   AS relation,
-    'full_duplex'                                                     AS measure,
+    'ethernet/switch'                                                 AS relation,
+    'overheating'                                                     AS measure,
     'bool'                                                            AS kind,
     '-'                                                               AS unit,
     '15m'                                                             AS period,
-    count(full_duplex)                                                AS rows,
-    CAST(min(time) FILTER (WHERE full_duplex IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE full_duplex IS NOT NULL) AS VARCHAR) AS newest
+    count(overheating)                                                AS rows,
+    CAST(min(time) FILTER (WHERE overheating IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE overheating IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
     module = 'network'
-    AND port IS NOT NULL
+    AND switch IS NOT NULL
+    AND powered IS NULL
 UNION ALL
 SELECT
-    'ethernet/port'                                                AS relation,
-    'degraded'                                                     AS measure,
-    'bool'                                                         AS kind,
-    '-'                                                            AS unit,
-    '15m'                                                          AS period,
-    count(degraded)                                                AS rows,
-    CAST(min(time) FILTER (WHERE degraded IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE degraded IS NOT NULL) AS VARCHAR) AS newest
+    'ethernet/switch'                                                    AS relation,
+    'experience_pct'                                                     AS measure,
+    'float'                                                              AS kind,
+    '%'                                                                  AS unit,
+    '15m'                                                                AS period,
+    count(experience_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE experience_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE experience_pct IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
     module = 'network'
-    AND port IS NOT NULL
+    AND switch IS NOT NULL
+    AND powered IS NULL
 UNION ALL
 SELECT
-    'ethernet/port'                                              AS relation,
-    'errors'                                                     AS measure,
-    'int'                                                        AS kind,
-    '-'                                                          AS unit,
-    '15m'                                                        AS period,
-    count(errors)                                                AS rows,
-    CAST(min(time) FILTER (WHERE errors IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE errors IS NOT NULL) AS VARCHAR) AS newest
+    'ethernet/switch'                                                     AS relation,
+    'throughput_mbps'                                                     AS measure,
+    'float'                                                               AS kind,
+    'Mbps'                                                                AS unit,
+    '15m'                                                                 AS period,
+    count(throughput_mbps)                                                AS rows,
+    CAST(min(time) FILTER (WHERE throughput_mbps IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE throughput_mbps IS NOT NULL) AS VARCHAR) AS newest
 FROM ethernet
 WHERE
     module = 'network'
-    AND port IS NOT NULL
+    AND switch IS NOT NULL
+    AND powered IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'                                                 AS relation,
+    'network_pct'                                                     AS measure,
+    'float'                                                           AS kind,
+    '%'                                                               AS unit,
+    '15m'                                                             AS period,
+    count(network_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE network_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE network_pct IS NOT NULL) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'                                             AS relation,
+    'clients'                                                     AS measure,
+    'int'                                                         AS kind,
+    '-'                                                           AS unit,
+    '15m'                                                         AS period,
+    count(clients)                                                AS rows,
+    CAST(min(time) FILTER (WHERE clients IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE clients IS NOT NULL) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'                                             AS relation,
+    'cpu_pct'                                                     AS measure,
+    'float'                                                       AS kind,
+    '%'                                                           AS unit,
+    '15m'                                                         AS period,
+    count(cpu_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE cpu_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE cpu_pct IS NOT NULL) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'                                                AS relation,
+    'memory_pct'                                                     AS measure,
+    'float'                                                          AS kind,
+    '%'                                                              AS unit,
+    '15m'                                                            AS period,
+    count(memory_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE memory_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE memory_pct IS NOT NULL) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'                                                 AS relation,
+    'temperature'                                                     AS measure,
+    'float'                                                           AS kind,
+    '°C'                                                              AS unit,
+    '15m'                                                             AS period,
+    count(temperature)                                                AS rows,
+    CAST(min(time) FILTER (WHERE temperature IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE temperature IS NOT NULL) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'                                           AS relation,
+    'poe_w'                                                     AS measure,
+    'float'                                                     AS kind,
+    'W'                                                         AS unit,
+    '15m'                                                       AS period,
+    count(poe_w)                                                AS rows,
+    CAST(min(time) FILTER (WHERE poe_w IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE poe_w IS NOT NULL) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
+UNION ALL
+SELECT
+    'ethernet/switch'                                             AS relation,
+    'poe_pct'                                                     AS measure,
+    'float'                                                       AS kind,
+    '%'                                                           AS unit,
+    '15m'                                                         AS period,
+    count(poe_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE poe_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE poe_pct IS NOT NULL) AS VARCHAR) AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -526,7 +695,14 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
-    AND column_name NOT IN ('degraded', 'errors', 'full_duplex', 'module', 'port', 'speed_mbps', 'time', 'up')
+    AND column_name NOT IN (
+        'clients', 'coordinator', 'coordinator_trend', 'cpu_pct', 'degraded',
+        'degraded_trend', 'errors', 'errors_trend', 'experience_pct', 'full_duplex',
+        'full_duplex_trend', 'memory_pct', 'module', 'network_pct', 'overheating',
+        'poe_pct', 'poe_w', 'port', 'port_trend', 'power_w', 'powered', 'restarted',
+        'speed_mbps', 'speed_mbps_trend', 'switch', 'temperature', 'throughput_mbps',
+        'time', 'up'
+    )
 UNION ALL
 SELECT
     'internet/target'                                               AS relation,
@@ -596,7 +772,12 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'internet'
-    AND column_name NOT IN ('jitter_ms', 'loss_pct', 'module', 'reachable', 'rtt_ms', 'target', 'time')
+    AND column_name NOT IN (
+        'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend', 'errors',
+        'errors_trend', 'full_duplex', 'full_duplex_trend', 'jitter_ms', 'loss_pct',
+        'module', 'port', 'port_trend', 'reachable', 'rtt_ms', 'speed_mbps',
+        'speed_mbps_trend', 'target', 'time'
+    )
 UNION ALL
 SELECT
     'weewx/console'                                             AS relation,
@@ -638,7 +819,11 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'weewx'
-    AND column_name NOT IN ('console', 'fresh', 'module', 'quality_pct', 'time')
+    AND column_name NOT IN (
+        'console', 'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend',
+        'errors', 'errors_trend', 'fresh', 'full_duplex', 'full_duplex_trend', 'module',
+        'port', 'port_trend', 'quality_pct', 'speed_mbps', 'speed_mbps_trend', 'time'
+    )
 UNION ALL
 SELECT
     'wireless/accesspoint'                                   AS relation,
@@ -649,6 +834,34 @@ SELECT
     count(up)                                                AS rows,
     CAST(min(time) FILTER (WHERE up IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE up IS NOT NULL) AS VARCHAR) AS newest
+FROM wireless
+WHERE
+    module = 'network'
+    AND accesspoint IS NOT NULL
+UNION ALL
+SELECT
+    'wireless/accesspoint'                                          AS relation,
+    'restarted'                                                     AS measure,
+    'bool'                                                          AS kind,
+    '-'                                                             AS unit,
+    '15m'                                                           AS period,
+    count(restarted)                                                AS rows,
+    CAST(min(time) FILTER (WHERE restarted IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE restarted IS NOT NULL) AS VARCHAR) AS newest
+FROM wireless
+WHERE
+    module = 'network'
+    AND accesspoint IS NOT NULL
+UNION ALL
+SELECT
+    'wireless/accesspoint'                                            AS relation,
+    'overheating'                                                     AS measure,
+    'bool'                                                            AS kind,
+    '-'                                                               AS unit,
+    '15m'                                                             AS period,
+    count(overheating)                                                AS rows,
+    CAST(min(time) FILTER (WHERE overheating IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE overheating IS NOT NULL) AS VARCHAR) AS newest
 FROM wireless
 WHERE
     module = 'network'
@@ -669,6 +882,34 @@ WHERE
     AND accesspoint IS NOT NULL
 UNION ALL
 SELECT
+    'wireless/accesspoint'                                                AS relation,
+    'throughput_mbps'                                                     AS measure,
+    'float'                                                               AS kind,
+    'Mbps'                                                                AS unit,
+    '15m'                                                                 AS period,
+    count(throughput_mbps)                                                AS rows,
+    CAST(min(time) FILTER (WHERE throughput_mbps IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE throughput_mbps IS NOT NULL) AS VARCHAR) AS newest
+FROM wireless
+WHERE
+    module = 'network'
+    AND accesspoint IS NOT NULL
+UNION ALL
+SELECT
+    'wireless/accesspoint'                                            AS relation,
+    'network_pct'                                                     AS measure,
+    'float'                                                           AS kind,
+    '%'                                                               AS unit,
+    '15m'                                                             AS period,
+    count(network_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE network_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE network_pct IS NOT NULL) AS VARCHAR) AS newest
+FROM wireless
+WHERE
+    module = 'network'
+    AND accesspoint IS NOT NULL
+UNION ALL
+SELECT
     'wireless/accesspoint'                                        AS relation,
     'clients'                                                     AS measure,
     'int'                                                         AS kind,
@@ -677,6 +918,34 @@ SELECT
     count(clients)                                                AS rows,
     CAST(min(time) FILTER (WHERE clients IS NOT NULL) AS VARCHAR) AS oldest,
     CAST(max(time) FILTER (WHERE clients IS NOT NULL) AS VARCHAR) AS newest
+FROM wireless
+WHERE
+    module = 'network'
+    AND accesspoint IS NOT NULL
+UNION ALL
+SELECT
+    'wireless/accesspoint'                                        AS relation,
+    'cpu_pct'                                                     AS measure,
+    'float'                                                       AS kind,
+    '%'                                                           AS unit,
+    '15m'                                                         AS period,
+    count(cpu_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE cpu_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE cpu_pct IS NOT NULL) AS VARCHAR) AS newest
+FROM wireless
+WHERE
+    module = 'network'
+    AND accesspoint IS NOT NULL
+UNION ALL
+SELECT
+    'wireless/accesspoint'                                           AS relation,
+    'memory_pct'                                                     AS measure,
+    'float'                                                          AS kind,
+    '%'                                                              AS unit,
+    '15m'                                                            AS period,
+    count(memory_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE memory_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE memory_pct IS NOT NULL) AS VARCHAR) AS newest
 FROM wireless
 WHERE
     module = 'network'
@@ -694,7 +963,13 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
-    AND column_name NOT IN ('accesspoint', 'clients', 'experience_pct', 'module', 'time', 'up')
+    AND column_name NOT IN (
+        'accesspoint', 'clients', 'coordinator', 'coordinator_trend', 'cpu_pct', 'degraded',
+        'degraded_trend', 'errors', 'errors_trend', 'experience_pct', 'full_duplex',
+        'full_duplex_trend', 'memory_pct', 'module', 'network_pct', 'overheating', 'port',
+        'port_trend', 'restarted', 'speed_mbps', 'speed_mbps_trend', 'throughput_mbps',
+        'time', 'up'
+    )
 UNION ALL
 SELECT
     'zigbee/device'                                                 AS relation,
@@ -709,20 +984,7 @@ FROM zigbee
 WHERE
     module = 'network'
     AND device IS NOT NULL
-UNION ALL
-SELECT
-    'zigbee/device'                                                   AS relation,
-    'coordinator'                                                     AS measure,
-    'bool'                                                            AS kind,
-    '-'                                                               AS unit,
-    '15m'                                                             AS period,
-    count(coordinator)                                                AS rows,
-    CAST(min(time) FILTER (WHERE coordinator IS NOT NULL) AS VARCHAR) AS oldest,
-    CAST(max(time) FILTER (WHERE coordinator IS NOT NULL) AS VARCHAR) AS newest
-FROM zigbee
-WHERE
-    module = 'network'
-    AND device IS NOT NULL
+    AND experience IS NULL
 UNION ALL
 SELECT
     'zigbee/device'                                           AS relation,
@@ -737,6 +999,7 @@ FROM zigbee
 WHERE
     module = 'network'
     AND device IS NOT NULL
+    AND experience IS NULL
 UNION ALL
 SELECT
     'zigbee/device'                                            AS relation,
@@ -751,6 +1014,37 @@ FROM zigbee
 WHERE
     module = 'network'
     AND device IS NOT NULL
+    AND experience IS NULL
+UNION ALL
+SELECT
+    'zigbee/device'                                                   AS relation,
+    'last_seen_s'                                                     AS measure,
+    'int'                                                             AS kind,
+    's'                                                               AS unit,
+    '15m'                                                             AS period,
+    count(last_seen_s)                                                AS rows,
+    CAST(min(time) FILTER (WHERE last_seen_s IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE last_seen_s IS NOT NULL) AS VARCHAR) AS newest
+FROM zigbee
+WHERE
+    module = 'network'
+    AND device IS NOT NULL
+    AND experience IS NULL
+UNION ALL
+SELECT
+    'zigbee/experience'                                                  AS relation,
+    'experience_pct'                                                     AS measure,
+    'float'                                                              AS kind,
+    '%'                                                                  AS unit,
+    '15m'                                                                AS period,
+    count(experience_pct)                                                AS rows,
+    CAST(min(time) FILTER (WHERE experience_pct IS NOT NULL) AS VARCHAR) AS oldest,
+    CAST(max(time) FILTER (WHERE experience_pct IS NOT NULL) AS VARCHAR) AS newest
+FROM zigbee
+WHERE
+    module = 'network'
+    AND experience IS NOT NULL
+    AND device IS NULL
 UNION ALL
 SELECT
     '-'                   AS relation,
@@ -764,7 +1058,12 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'zigbee'
-    AND column_name NOT IN ('available', 'coordinator', 'device', 'lqi', 'module', 'time', 'weak')
+    AND column_name NOT IN (
+        'available', 'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend',
+        'device', 'errors', 'errors_trend', 'experience', 'experience_pct', 'full_duplex',
+        'full_duplex_trend', 'last_seen_s', 'lqi', 'module', 'port', 'port_trend',
+        'speed_mbps', 'speed_mbps_trend', 'time', 'weak'
+    )
 ORDER BY rows DESC NULLS LAST;
 
 -- entities
@@ -811,9 +1110,9 @@ WHERE
 GROUP BY resolver, CASE WHEN resolver IN ('cloudflare', 'google', 'quad9', 'opendns', 'adguard') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
-    'ethernet/port'            AS relation,
-    'port*'                    AS dimension,
-    port                       AS entity,
+    'ethernet/powered'         AS relation,
+    'powered*'                 AS dimension,
+    powered                    AS entity,
     '-'                        AS declared,
     count(*)                   AS rows,
     CAST(min(time) AS VARCHAR) AS oldest,
@@ -821,8 +1120,24 @@ SELECT
 FROM ethernet
 WHERE
     module = 'network'
-    AND port IS NOT NULL
-GROUP BY port
+    AND powered IS NOT NULL
+    AND switch IS NULL
+GROUP BY powered
+UNION ALL
+SELECT
+    'ethernet/switch'                                                           AS relation,
+    'switch*'                                                                   AS dimension,
+    switch                                                                      AS entity,
+    CASE WHEN switch IN ('udm-dar', 'usw-dar-ceiling') THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                                                                    AS rows,
+    CAST(min(time) AS VARCHAR)                                                  AS oldest,
+    CAST(max(time) AS VARCHAR)                                                  AS newest
+FROM ethernet
+WHERE
+    module = 'network'
+    AND switch IS NOT NULL
+    AND powered IS NULL
+GROUP BY switch, CASE WHEN switch IN ('udm-dar', 'usw-dar-ceiling') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
     'internet/target'                                                                         AS relation,
@@ -853,18 +1168,18 @@ WHERE
 GROUP BY console, CASE WHEN console IN ('weatherstation') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
-    'wireless/accesspoint'     AS relation,
-    'accesspoint*'             AS dimension,
-    accesspoint                AS entity,
-    '-'                        AS declared,
-    count(*)                   AS rows,
-    CAST(min(time) AS VARCHAR) AS oldest,
-    CAST(max(time) AS VARCHAR) AS newest
+    'wireless/accesspoint'                                                                                            AS relation,
+    'accesspoint*'                                                                                                    AS dimension,
+    accesspoint                                                                                                       AS entity,
+    CASE WHEN accesspoint IN ('uap-dar-hallway', 'uap-dar-deck-north', 'uap-dar-deck-south') THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                                                                                                          AS rows,
+    CAST(min(time) AS VARCHAR)                                                                                        AS oldest,
+    CAST(max(time) AS VARCHAR)                                                                                        AS newest
 FROM wireless
 WHERE
     module = 'network'
     AND accesspoint IS NOT NULL
-GROUP BY accesspoint
+GROUP BY accesspoint, CASE WHEN accesspoint IN ('uap-dar-hallway', 'uap-dar-deck-north', 'uap-dar-deck-south') THEN 'yes' ELSE 'no' END
 UNION ALL
 SELECT
     'zigbee/device'            AS relation,
@@ -878,7 +1193,23 @@ FROM zigbee
 WHERE
     module = 'network'
     AND device IS NOT NULL
+    AND experience IS NULL
 GROUP BY device
+UNION ALL
+SELECT
+    'zigbee/experience'                                                 AS relation,
+    'experience*'                                                       AS dimension,
+    experience                                                          AS entity,
+    CASE WHEN experience IN ('router', 'mesh') THEN 'yes' ELSE 'no' END AS declared,
+    count(*)                                                            AS rows,
+    CAST(min(time) AS VARCHAR)                                          AS oldest,
+    CAST(max(time) AS VARCHAR)                                          AS newest
+FROM zigbee
+WHERE
+    module = 'network'
+    AND experience IS NOT NULL
+    AND device IS NULL
+GROUP BY experience, CASE WHEN experience IN ('router', 'mesh') THEN 'yes' ELSE 'no' END
 ORDER BY rows DESC;
 SCHEMA_SQL
 }

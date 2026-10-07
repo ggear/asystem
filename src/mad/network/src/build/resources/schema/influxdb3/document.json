@@ -1,6 +1,6 @@
 {
   "warning": "WARNING: This file is written by the build process, any manual edits will be lost!",
-  "source": "c72bad2bb47e3cc20cf81c310330f18bd4a2a50f21267e7130e71b64ed8e7220",
+  "source": "298c2610e39bce38a5a8c48428558419c31dc5dc045e836d279e6af5a99fb169",
   "module": "network",
   "discovered": false,
   "database": {
@@ -134,14 +134,41 @@
         ]
       },
       {
-        "path": "ethernet/port",
-        "description": "switch port health, one row per monitored port",
+        "path": "ethernet/powered",
+        "description": "power drawn over ethernet, one row per device a monitored switch powers",
         "cadence": "15m",
         "entities": [],
         "dimensions": [
           {
-            "key": "port",
-            "description": "switch name and port index of the monitored port",
+            "key": "powered",
+            "description": "name of the device on the powered port, or the switch and port name where no device is known",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "power_w",
+            "kind": "float",
+            "unit": "W",
+            "description": "power the device draws from its switch port",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "ethernet/switch",
+        "description": "wired network health, one row per gateway or switch",
+        "cadence": "15m",
+        "entities": [
+          "udm-dar",
+          "usw-dar-ceiling"
+        ],
+        "dimensions": [
+          {
+            "key": "switch",
+            "description": "name of the gateway or switch",
             "subject": true,
             "entities": []
           }
@@ -151,39 +178,95 @@
             "key": "up",
             "kind": "bool",
             "unit": "",
-            "description": "port link is live",
+            "description": "device connected and seen by the controller recently",
             "persist": true,
             "period": ""
           },
           {
-            "key": "speed_mbps",
-            "kind": "int",
+            "key": "restarted",
+            "kind": "bool",
+            "unit": "",
+            "description": "device came up since the previous check",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "overheating",
+            "kind": "bool",
+            "unit": "",
+            "description": "controller flags the device as overheating",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "experience_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "experience reported by the controller, capped by processor, memory and busiest link headroom",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "throughput_mbps",
+            "kind": "float",
             "unit": "Mbps",
-            "description": "negotiated link speed",
+            "description": "traffic in both directions on the busiest link across the window",
             "persist": true,
             "period": ""
           },
           {
-            "key": "full_duplex",
-            "kind": "bool",
-            "unit": "",
-            "description": "port negotiated full duplex",
+            "key": "network_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "busier direction of the busiest link against its negotiated speed across the window",
             "persist": true,
             "period": ""
           },
           {
-            "key": "degraded",
-            "kind": "bool",
-            "unit": "",
-            "description": "port below expected speed or in half duplex",
-            "persist": true,
-            "period": ""
-          },
-          {
-            "key": "errors",
+            "key": "clients",
             "kind": "int",
             "unit": "",
-            "description": "link errors reported by the port this interval",
+            "description": "clients associated with the device, or for a gateway every client on the site",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "cpu_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "processor in use",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "memory_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "memory in use",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "temperature",
+            "kind": "float",
+            "unit": "°C",
+            "description": "hottest temperature sensor the device reports",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "poe_w",
+            "kind": "float",
+            "unit": "W",
+            "description": "power over ethernet drawn by the powered ports",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "poe_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "power over ethernet drawn against the device's budget",
             "persist": true,
             "period": ""
           }
@@ -280,7 +363,11 @@
         "path": "wireless/accesspoint",
         "description": "access point health, one row per access point",
         "cadence": "15m",
-        "entities": [],
+        "entities": [
+          "uap-dar-hallway",
+          "uap-dar-deck-north",
+          "uap-dar-deck-south"
+        ],
         "dimensions": [
           {
             "key": "accesspoint",
@@ -294,7 +381,23 @@
             "key": "up",
             "kind": "bool",
             "unit": "",
-            "description": "access point reporting up",
+            "description": "device connected and seen by the controller recently",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "restarted",
+            "kind": "bool",
+            "unit": "",
+            "description": "device came up since the previous check",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "overheating",
+            "kind": "bool",
+            "unit": "",
+            "description": "controller flags the device as overheating",
             "persist": true,
             "period": ""
           },
@@ -302,7 +405,23 @@
             "key": "experience_pct",
             "kind": "float",
             "unit": "%",
-            "description": "client experience reported by the access point",
+            "description": "experience reported by the controller, capped by processor, memory and busiest link headroom",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "throughput_mbps",
+            "kind": "float",
+            "unit": "Mbps",
+            "description": "traffic in both directions on the busiest link across the window",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "network_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "busier direction of the busiest link against its negotiated speed across the window",
             "persist": true,
             "period": ""
           },
@@ -310,7 +429,23 @@
             "key": "clients",
             "kind": "int",
             "unit": "",
-            "description": "clients associated with the access point",
+            "description": "clients associated with the device, or for a gateway every client on the site",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "cpu_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "processor in use",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "memory_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "memory in use",
             "persist": true,
             "period": ""
           }
@@ -339,18 +474,10 @@
             "period": ""
           },
           {
-            "key": "coordinator",
-            "kind": "bool",
-            "unit": "",
-            "description": "device is the coordinator itself",
-            "persist": true,
-            "period": ""
-          },
-          {
             "key": "lqi",
             "kind": "int",
             "unit": "",
-            "description": "link quality reported for the device",
+            "description": "median link quality across the window while available",
             "persist": true,
             "period": ""
           },
@@ -358,7 +485,42 @@
             "key": "weak",
             "kind": "bool",
             "unit": "",
-            "description": "device link quality below the weak threshold",
+            "description": "device median link quality below the weak threshold",
+            "persist": true,
+            "period": ""
+          },
+          {
+            "key": "last_seen_s",
+            "kind": "int",
+            "unit": "s",
+            "description": "age of the device's latest report",
+            "persist": true,
+            "period": ""
+          }
+        ]
+      },
+      {
+        "path": "zigbee/experience",
+        "description": "mesh experience, one row per part of the mesh",
+        "cadence": "15m",
+        "entities": [
+          "router",
+          "mesh"
+        ],
+        "dimensions": [
+          {
+            "key": "experience",
+            "description": "router is the always on outlets weighted by availability, mesh is every available device",
+            "subject": true,
+            "entities": []
+          }
+        ],
+        "measures": [
+          {
+            "key": "experience_pct",
+            "kind": "float",
+            "unit": "%",
+            "description": "share of full link quality across that part of the mesh",
             "persist": true,
             "period": ""
           }

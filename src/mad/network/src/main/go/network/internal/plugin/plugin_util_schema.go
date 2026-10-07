@@ -1,15 +1,20 @@
-package plugins
+package plugin
 
 import (
 	"network/internal/config"
-	"network/internal/plugin"
+	"network/internal/remote"
 	"network/internal/schema"
 )
 
 const aggregateCadence = config.DefaultAggregatePeriod
 
 func Schema() schema.Database {
-	plugin.DiagnosisEntities()
+	plugins := registered()
+	names := make([]string, 0, len(plugins))
+	for _, p := range plugins {
+		names = append(names, p.Name())
+	}
+	diagnosis.Entities(names...)
 	return schema.Registered()
 }
 
@@ -21,16 +26,16 @@ var brokerPayloads = []schema.Payload{
 		Root: schema.Member{Members: []schema.Member{
 			{Key: "timestamp", Kind: schema.KindInt},
 			{Key: "ok", Kind: schema.KindBool},
-			{Key: "status", Kind: schema.KindStr, Enum: []string{"fit", "sick", "dead"}},
+			{Key: "status", Kind: schema.KindStr, Enum: []string{string(StatusFit), string(StatusSick), string(StatusDead)}},
 			{Key: "score", Kind: schema.KindInt, Enum: []string{"0-100"}},
 		}},
 	},
 	{
 		Role: schema.RoleCommand,
-		Root: schema.Member{Enum: []string{"ON", "OFF"}},
+		Root: schema.Member{Enum: []string{StateOn.String(), StateOff.String()}},
 	},
 	{
 		Role: schema.RoleAvailability,
-		Root: schema.Member{Enum: []string{"online", "offline"}},
+		Root: schema.Member{Enum: []string{remote.BrokerStatusOnline, remote.BrokerStatusOffline}},
 	},
 }

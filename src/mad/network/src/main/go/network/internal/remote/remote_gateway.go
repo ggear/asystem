@@ -26,24 +26,58 @@ type Gateway struct {
 }
 
 type GatewayDevice struct {
-	Name         string        `json:"name"`
-	Mac          string        `json:"mac"`
-	Type         string        `json:"type"`
-	State        int           `json:"state"`
-	Satisfaction int           `json:"satisfaction"`
-	NumSta       int           `json:"num_sta"`
-	PortTable    []GatewayPort `json:"port_table"`
+	Name               string               `json:"name"`
+	Mac                string               `json:"mac"`
+	Type               string               `json:"type"`
+	State              int                  `json:"state"`
+	LastSeen           int64                `json:"last_seen"`
+	Uptime             int64                `json:"uptime"`
+	Satisfaction       *int                 `json:"satisfaction"`
+	NumSta             int                  `json:"num_sta"`
+	Overheating        bool                 `json:"overheating"`
+	HasTemperature     bool                 `json:"has_temperature"`
+	TotalUsedPower     *float64             `json:"total_used_power"`
+	TotalMaxPower      *float64             `json:"total_max_power"`
+	GeneralTemperature *float64             `json:"general_temperature"`
+	Temperatures       []GatewayTemperature `json:"temperatures"`
+	SystemStats        GatewaySystemStats   `json:"system-stats"`
+	Uplink             GatewayUplink        `json:"uplink"`
+	PortTable          []GatewayPort        `json:"port_table"`
+}
+
+type GatewaySystemStats struct {
+	CPU    string `json:"cpu"`
+	Memory string `json:"mem"`
+}
+
+type GatewayTemperature struct {
+	Name  string  `json:"name"`
+	Value float64 `json:"value"`
+}
+
+type GatewayUplink struct {
+	Speed            int    `json:"speed"`
+	RxBytes          int64  `json:"rx_bytes"`
+	TxBytes          int64  `json:"tx_bytes"`
+	UplinkDeviceName string `json:"uplink_device_name"`
+	UplinkRemotePort int    `json:"uplink_remote_port"`
+}
+
+type GatewayClient struct {
+	Name     string `json:"name"`
+	Hostname string `json:"hostname"`
+	SwMac    string `json:"sw_mac"`
+	SwPort   int    `json:"sw_port"`
 }
 
 type GatewayPort struct {
-	PortIdx    int    `json:"port_idx"`
-	Name       string `json:"name"`
-	Up         bool   `json:"up"`
-	Enable     bool   `json:"enable"`
-	Speed      int    `json:"speed"`
-	FullDuplex bool   `json:"full_duplex"`
-	RxErrors   int64  `json:"rx_errors"`
-	TxErrors   int64  `json:"tx_errors"`
+	PortIdx  int    `json:"port_idx"`
+	Name     string `json:"name"`
+	Up       bool   `json:"up"`
+	Speed    int    `json:"speed"`
+	RxBytes  int64  `json:"rx_bytes"`
+	TxBytes  int64  `json:"tx_bytes"`
+	PoePower string `json:"poe_power"`
 }
 
 func NewGateway(base, site, user, token string) (*Gateway, error) {
@@ -62,6 +96,16 @@ func (g *Gateway) Devices(ctx context.Context) ([]GatewayDevice, error) {
 		Data []GatewayDevice `json:"data"`
 	}
 	if err := g.get(ctx, "/proxy/network/api/s/"+url.PathEscape(g.site)+"/stat/device", &body); err != nil {
+		return nil, err
+	}
+	return body.Data, nil
+}
+
+func (g *Gateway) Clients(ctx context.Context) ([]GatewayClient, error) {
+	var body struct {
+		Data []GatewayClient `json:"data"`
+	}
+	if err := g.get(ctx, "/proxy/network/api/s/"+url.PathEscape(g.site)+"/stat/sta", &body); err != nil {
 		return nil, err
 	}
 	return body.Data, nil

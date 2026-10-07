@@ -1,4 +1,4 @@
-package plugins
+package plugin
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"network/internal/plugin"
 )
 
 func TestDomain_Poll(t *testing.T) {
@@ -19,8 +17,8 @@ func TestDomain_Poll(t *testing.T) {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
 	readings, _ := msg.Readings.([]domainReading)
-	if len(readings) != len(domainResolvers) {
-		t.Fatalf("readings: got %d want %d (one per resolver)", len(readings), len(domainResolvers))
+	if len(readings) != len(domainServers) {
+		t.Fatalf("readings: got %d want %d (one per resolver)", len(readings), len(domainServers))
 	}
 	reading := readings[0]
 	if !reading.resolved {
@@ -40,8 +38,8 @@ func TestDomain_PollUnresolved(t *testing.T) {
 		t.Fatalf("poll: unexpected error %v", err)
 	}
 	readings, _ := msg.Readings.([]domainReading)
-	if len(readings) != len(domainResolvers) {
-		t.Fatalf("readings: got %d want %d", len(readings), len(domainResolvers))
+	if len(readings) != len(domainServers) {
+		t.Fatalf("readings: got %d want %d", len(readings), len(domainServers))
 	}
 	if readings[0].resolved {
 		t.Errorf("resolved: got true want false on probe failure")
@@ -54,72 +52,56 @@ func TestDomain_PollUnresolved(t *testing.T) {
 func TestDomain_Diagnose(t *testing.T) {
 	tests := []struct {
 		name           string
-		samples        []plugin.Sample
-		expectedStatus plugin.Status
-		expectedOK     bool
+		samples        []Sample
+		expectedStatus Status
 		expectedScore  int
 		expectedReason string
-		expectedError  bool
 	}{
 		{
 			name: "fit_all_agree",
-			samples: []plugin.Sample{domainPoll(
+			samples: []Sample{domainPoll(
 				resolverSample{"cloudflare", true, "10.0.0.1", 8},
 				resolverSample{"google", true, "10.0.0.1", 9},
 				resolverSample{"quad9", true, "10.0.0.1", 11})},
-			expectedStatus: plugin.StatusFit,
-			expectedOK:     true,
+			expectedStatus: StatusFit,
 			expectedScore:  100,
 			expectedReason: "RESOLVED",
-			expectedError:  false,
 		},
 		{
 			name: "sick_partial_resolution",
-			samples: []plugin.Sample{domainPoll(
+			samples: []Sample{domainPoll(
 				resolverSample{"cloudflare", true, "10.0.0.1", 8},
 				resolverSample{"google", true, "10.0.0.1", 9},
 				resolverSample{name: "quad9", resolved: false})},
-			expectedStatus: plugin.StatusSick,
-			expectedOK:     true,
+			expectedStatus: StatusSick,
 			expectedScore:  67,
 			expectedReason: "PARTIAL_RESOLUTION",
-			expectedError:  false,
 		},
 		{
 			name: "sick_record_mismatch",
-			samples: []plugin.Sample{domainPoll(
+			samples: []Sample{domainPoll(
 				resolverSample{"cloudflare", true, "10.0.0.1", 8},
 				resolverSample{"google", true, "10.0.0.1", 9},
 				resolverSample{"quad9", true, "10.0.0.2", 11})},
-			expectedStatus: plugin.StatusSick,
-			expectedOK:     true,
+			expectedStatus: StatusSick,
 			expectedScore:  67,
 			expectedReason: "RECORD_MISMATCH",
-			expectedError:  false,
 		},
 		{
 			name: "dead_no_resolution",
-			samples: []plugin.Sample{domainPoll(
+			samples: []Sample{domainPoll(
 				resolverSample{name: "cloudflare", resolved: false},
 				resolverSample{name: "google", resolved: false})},
-			expectedStatus: plugin.StatusDead,
-			expectedOK:     false,
+			expectedStatus: StatusDead,
 			expectedScore:  0,
 			expectedReason: "NO_RESOLUTION",
-			expectedError:  false,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := newDomainPlugin().Aggregate(test.samples)
-			if (err != nil) != test.expectedError {
-				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
-			}
+			got := diagnoseDomain(test.samples)
 			if got.Status != test.expectedStatus {
 				t.Errorf("status: got %s want %s", got.Status, test.expectedStatus)
-			}
-			if got.OK != test.expectedOK {
-				t.Errorf("ok: got %v want %v", got.OK, test.expectedOK)
 			}
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
@@ -129,22 +111,6 @@ func TestDomain_Diagnose(t *testing.T) {
 			}
 		})
 	}
-}
-
-type resolverSample struct {
-	name      string
-	resolved  bool
-	addresses string
-	latency   float64
-}
-
-func domainPoll(samples ...resolverSample) plugin.Sample {
-	readings := make([]domainReading, 0, len(samples))
-	for _, s := range samples {
-		readings = append(readings, domainReading{
-			resolver: s.name, addresses: s.addresses, resolved: s.resolved, latencyMs: s.latency})
-	}
-	return plugin.Sample{Plugin: "domain", Readings: readings}
 }
 
 func TestDomain_Report(t *testing.T) {
@@ -174,4 +140,20 @@ func TestDomain_Report(t *testing.T) {
 	if latency, _ := domainLatencyMs.Read(points[0]); latency != 12 {
 		t.Errorf("latency_ms[cloudflare]: got %v want 12", latency)
 	}
+}
+
+type resolverSample struct {
+	name      string
+	resolved  bool
+	addresses string
+	latency   float64
+}
+
+func domainPoll(samples ...resolverSample) Sample {
+	readings := make([]domainReading, 0, len(samples))
+	for _, s := range samples {
+		readings = append(readings, domainReading{
+			resolver: s.name, addresses: s.addresses, resolved: s.resolved, latencyMs: s.latency})
+	}
+	return Sample{Readings: readings}
 }

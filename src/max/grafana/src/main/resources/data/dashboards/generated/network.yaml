@@ -105,16 +105,17 @@ spec:
                           min(value) AS value
                       FROM (
                           SELECT
-                              $__dateBin(time) AS time,
-                              device           AS entity,
-                              'lqi'            AS measure,
-                              avg(lqi)         AS value
-                          FROM zigbee
+                              $__dateBin(time)    AS time,
+                              switch              AS entity,
+                              'experience_pct'    AS measure,
+                              avg(experience_pct) AS value
+                          FROM ethernet
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND device IS NOT NULL
-                              AND lqi IS NOT NULL
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND experience_pct IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       GROUP BY time, measure
@@ -124,17 +125,17 @@ spec:
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: link quality reported for the device'
+        description: 'Generated: experience reported by the controller, capped by processor, memory and busiest link headroom'
         id: 10
         links: []
-        title: Zigbee Quality
+        title: Wired Experience
         vizConfig:
           group: stat
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                decimals: 2
+                decimals: 1
                 displayName: ${__field.labels.metric}
                 thresholds:
                   mode: absolute
@@ -142,10 +143,10 @@ spec:
                   - color: red
                     value: null
                   - color: yellow
-                    value: 50
+                    value: 85
                   - color: green
-                    value: 100
-                unit: none
+                    value: 95
+                unit: percent
               overrides: []
             options:
               colorMode: value
@@ -182,47 +183,52 @@ spec:
                     rawSql: |-
                       SELECT
                           time,
-                          measure AS metric,
-                          sum(value) AS value
+                          entity AS metric,
+                          value AS value
                       FROM (
                           SELECT
-                              $__dateBin(time) AS time,
-                              device           AS entity,
-                              'available'      AS measure,
-                              avg(available)   AS value
+                              $__dateBin(time)    AS time,
+                              experience          AS entity,
+                              'experience_pct'    AS measure,
+                              avg(experience_pct) AS value
                           FROM zigbee
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND device IS NOT NULL
-                              AND available IS NOT NULL
+                              AND experience IS NOT NULL
+                              AND device IS NULL
+                              AND experience_pct IS NOT NULL
+                              AND experience IN ('router')
                           GROUP BY 1, 2
                       ) AS arms
-                      GROUP BY time, measure
                       ORDER BY time
                   version: v0
                 refId: A
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: device reporting available'
+        description: 'Generated: share of full link quality across that part of the mesh'
         id: 11
         links: []
-        title: Zigbee Available
+        title: Zigbee Experience
         vizConfig:
           group: stat
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                decimals: 2
+                decimals: 1
                 displayName: ${__field.labels.metric}
                 thresholds:
                   mode: absolute
                   steps:
-                  - color: blue
+                  - color: red
                     value: null
-                unit: none
+                  - color: yellow
+                    value: 35
+                  - color: green
+                    value: 50
+                unit: percent
               overrides: []
             options:
               colorMode: value
@@ -260,19 +266,20 @@ spec:
                       SELECT
                           time,
                           measure AS metric,
-                          sum(value) AS value
+                          max(value) AS value
                       FROM (
                           SELECT
                               $__dateBin(time) AS time,
-                              port             AS entity,
-                              'up'             AS measure,
-                              avg(up)          AS value
+                              switch           AS entity,
+                              'poe_pct'        AS measure,
+                              avg(poe_pct)     AS value
                           FROM ethernet
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND port IS NOT NULL
-                              AND up IS NOT NULL
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND poe_pct IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       GROUP BY time, measure
@@ -282,24 +289,28 @@ spec:
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: port link is live'
+        description: 'Generated: power over ethernet drawn against the device''s budget'
         id: 12
         links: []
-        title: Switch Ports Up
+        title: PoE Budget
         vizConfig:
           group: stat
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                decimals: 2
+                decimals: 1
                 displayName: ${__field.labels.metric}
                 thresholds:
                   mode: absolute
                   steps:
-                  - color: blue
+                  - color: green
                     value: null
-                unit: none
+                  - color: yellow
+                    value: 80
+                  - color: red
+                    value: 95
+                unit: percent
               overrides: []
             options:
               colorMode: value
@@ -424,6 +435,41 @@ spec:
                       FROM (
                           SELECT
                               $__dateBin(time)    AS time,
+                              switch              AS entity,
+                              'experience_pct'    AS measure,
+                              avg(experience_pct) AS value
+                          FROM ethernet
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND experience_pct IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time)    AS time,
                               accesspoint         AS entity,
                               'experience_pct'    AS measure,
                               avg(experience_pct) AS value
@@ -437,14 +483,14 @@ spec:
                       ) AS arms
                       ORDER BY time
                   version: v0
-                refId: A
+                refId: B
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: client experience reported by the access point'
+        description: 'Generated: experience reported by the controller, capped by processor, memory and busiest link headroom'
         id: 14
         links: []
-        title: Wireless Experience
+        title: Network Device Experience
         vizConfig:
           group: timeseries
           kind: VizConfig
@@ -501,28 +547,63 @@ spec:
                           value AS value
                       FROM (
                           SELECT
-                              $__dateBin(time) AS time,
-                              accesspoint      AS entity,
-                              'clients'        AS measure,
-                              avg(clients)     AS value
-                          FROM wireless
+                              $__dateBin(time)     AS time,
+                              switch               AS entity,
+                              'throughput_mbps'    AS measure,
+                              avg(throughput_mbps) AS value
+                          FROM ethernet
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND accesspoint IS NOT NULL
-                              AND clients IS NOT NULL
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND throughput_mbps IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
                   version: v0
                 refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time)     AS time,
+                              accesspoint          AS entity,
+                              'throughput_mbps'    AS measure,
+                              avg(throughput_mbps) AS value
+                          FROM wireless
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND accesspoint IS NOT NULL
+                              AND throughput_mbps IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: clients associated with the access point'
+        description: 'Generated: traffic in both directions on the busiest link across the window'
         id: 15
         links: []
-        title: Access Point Clients
+        title: Network Device Throughput
         vizConfig:
           group: timeseries
           kind: VizConfig
@@ -537,7 +618,7 @@ spec:
                   spanNulls: true
                 decimals: 2
                 displayName: ${__field.labels.metric}
-                unit: none
+                unit: Mbits
               overrides: []
             options:
               legend:
@@ -580,27 +661,62 @@ spec:
                       FROM (
                           SELECT
                               $__dateBin(time) AS time,
-                              plugin           AS entity,
-                              'score'          AS measure,
-                              avg(score)       AS value
-                          FROM diagnosis
+                              switch           AS entity,
+                              'network_pct'    AS measure,
+                              avg(network_pct) AS value
+                          FROM ethernet
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND plugin IS NOT NULL
-                              AND score IS NOT NULL
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND network_pct IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
                   version: v0
                 refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              accesspoint      AS entity,
+                              'network_pct'    AS measure,
+                              avg(network_pct) AS value
+                          FROM wireless
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND accesspoint IS NOT NULL
+                              AND network_pct IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: diagnosis score from 0 to 100'
+        description: 'Generated: busier direction of the busiest link against its negotiated speed across the window'
         id: 16
         links: []
-        title: Network Diagnosis
+        title: Network Device Link Utilisation
         vizConfig:
           group: timeseries
           kind: VizConfig
@@ -613,9 +729,9 @@ spec:
                   lineWidth: 1
                   showPoints: never
                   spanNulls: true
-                decimals: 2
+                decimals: 1
                 displayName: ${__field.labels.metric}
-                unit: none
+                unit: percent
               overrides: []
             options:
               legend:
@@ -657,30 +773,63 @@ spec:
                           value AS value
                       FROM (
                           SELECT
-                              $__dateBin(time)                                                                                                                                                                                                                                                        AS time,
-                              CASE entity_id WHEN 'compensation_sensor_rack_bottom_temperature' THEN 'Rack Bottom' WHEN 'compensation_sensor_rack_top_temperature' THEN 'Rack Top' WHEN 'template_utility_temperature_proxy' THEN 'Rack Ambient' ELSE concat(entity_id, '/', unit_of_measurement) END AS entity,
-                              'value'                                                                                                                                                                                                                                                                 AS measure,
-                              avg(value)                                                                                                                                                                                                                                                              AS value
-                          FROM sensor__temperature
+                              $__dateBin(time) AS time,
+                              switch           AS entity,
+                              'cpu_pct'        AS measure,
+                              avg(cpu_pct)     AS value
+                          FROM ethernet
                           WHERE
                               $__timeFilter(time)
-                              AND module = 'homeassistant'
-                              AND value IS NOT NULL
-                              AND entity_id IN (
-                                  'template_utility_temperature_proxy', 'compensation_sensor_rack_top_temperature',
-                                  'compensation_sensor_rack_bottom_temperature'
-                              )
+                              AND module = 'network'
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND cpu_pct IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
                   version: v0
                 refId: A
-            queryOptions: {}
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              accesspoint      AS entity,
+                              'cpu_pct'        AS measure,
+                              avg(cpu_pct)     AS value
+                          FROM wireless
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND accesspoint IS NOT NULL
+                              AND cpu_pct IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
+            queryOptions:
+              interval: 15m
             transformations: []
-        description: 'Generated: Home Assistant value'
+        description: 'Generated: processor in use'
         id: 17
         links: []
-        title: Network Device Temperature
+        title: Network Device Processor
         vizConfig:
           group: timeseries
           kind: VizConfig
@@ -695,7 +844,7 @@ spec:
                   spanNulls: true
                 decimals: 1
                 displayName: ${__field.labels.metric}
-                unit: celsius
+                unit: percent
               overrides: []
             options:
               legend:
@@ -738,63 +887,91 @@ spec:
                       FROM (
                           SELECT
                               $__dateBin(time) AS time,
-                              port             AS entity,
-                              'up'             AS measure,
-                              avg(up)          AS value
+                              switch           AS entity,
+                              'memory_pct'     AS measure,
+                              avg(memory_pct)  AS value
                           FROM ethernet
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND port IS NOT NULL
-                              AND up IS NOT NULL
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND memory_pct IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
                   version: v0
                 refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              accesspoint      AS entity,
+                              'memory_pct'     AS measure,
+                              avg(memory_pct)  AS value
+                          FROM wireless
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND accesspoint IS NOT NULL
+                              AND memory_pct IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: port link is live'
+        description: 'Generated: memory in use'
         id: 18
         links: []
-        title: Switch Ports Up
+        title: Network Device Memory
         vizConfig:
-          group: state-timeline
+          group: timeseries
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                color:
-                  mode: thresholds
                 custom:
-                  fillOpacity: 80
-                  lineWidth: 0
-                decimals: 2
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 1
                 displayName: ${__field.labels.metric}
-                thresholds:
-                  mode: absolute
-                  steps:
-                  - color: red
-                    value: null
-                  - color: green
-                    value: 1
-                unit: none
+                unit: percent
               overrides: []
             options:
-              alignValue: left
               legend:
-                calcs: []
-                displayMode: list
-                placement: bottom
-                showLegend: false
-              mergeValues: true
-              perPage: 20
-              rowHeight: 0.8
-              showValue: never
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
               tooltip:
-                mode: single
-                sort: asc
+                mode: multi
+                sort: desc
           version: ''
     panel-19:
       kind: Panel
@@ -822,64 +999,93 @@ spec:
                           value AS value
                       FROM (
                           SELECT
-                              $__dateBin(time)  AS time,
-                              port              AS entity,
-                              'degraded'        AS measure,
-                              avg(1 - degraded) AS value
+                              $__dateBin(time) AS time,
+                              switch           AS entity,
+                              'poe_w'          AS measure,
+                              avg(poe_w)       AS value
                           FROM ethernet
                           WHERE
                               $__timeFilter(time)
                               AND module = 'network'
-                              AND port IS NOT NULL
-                              AND degraded IS NOT NULL
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND poe_w IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
                       ORDER BY time
                   version: v0
                 refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              powered          AS entity,
+                              'power_w'        AS measure,
+                              avg(power_w)     AS value
+                          FROM ethernet
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND powered IS NOT NULL
+                              AND switch IS NULL
+                              AND power_w IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: port below expected speed or in half duplex'
+        description: 'Generated: power over ethernet drawn by the powered ports; power the device draws from its switch port'
         id: 19
         links: []
-        title: Switch Ports At Speed
+        title: Network Device Power
         vizConfig:
-          group: state-timeline
+          group: timeseries
           kind: VizConfig
           spec:
             fieldConfig:
               defaults:
-                color:
-                  mode: thresholds
                 custom:
-                  fillOpacity: 80
-                  lineWidth: 0
-                decimals: 2
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 0
                 displayName: ${__field.labels.metric}
-                thresholds:
-                  mode: absolute
-                  steps:
-                  - color: red
-                    value: null
-                  - color: green
-                    value: 1
-                unit: none
+                unit: watt
               overrides: []
             options:
-              alignValue: left
               legend:
-                calcs: []
-                displayMode: list
-                placement: bottom
-                showLegend: false
-              mergeValues: true
-              perPage: 20
-              rowHeight: 0.8
-              showValue: never
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
               tooltip:
-                mode: single
-                sort: asc
+                mode: multi
+                sort: desc
           version: ''
     panel-2:
       kind: Panel
@@ -982,6 +1188,597 @@ spec:
                       FROM (
                           SELECT
                               $__dateBin(time) AS time,
+                              accesspoint      AS entity,
+                              'clients'        AS measure,
+                              avg(clients)     AS value
+                          FROM wireless
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND accesspoint IS NOT NULL
+                              AND clients IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: clients associated with the device, or for a gateway every client on the site'
+        id: 20
+        links: []
+        title: Access Point Clients
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                unit: none
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-21:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              plugin           AS entity,
+                              'score'          AS measure,
+                              avg(score)       AS value
+                          FROM diagnosis
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND plugin IS NOT NULL
+                              AND score IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: diagnosis score from 0 to 100'
+        id: 21
+        links: []
+        title: Network Diagnosis
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                unit: none
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-22:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time)    AS time,
+                              experience          AS entity,
+                              'experience_pct'    AS measure,
+                              avg(experience_pct) AS value
+                          FROM zigbee
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND experience IS NOT NULL
+                              AND device IS NULL
+                              AND experience_pct IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: share of full link quality across that part of the mesh'
+        id: 22
+        links: []
+        title: Zigbee Experience
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 1
+                displayName: ${__field.labels.metric}
+                unit: percent
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-23:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time)                                                                                                                                                                                                                                                        AS time,
+                              CASE entity_id WHEN 'compensation_sensor_rack_bottom_temperature' THEN 'Rack Bottom' WHEN 'compensation_sensor_rack_top_temperature' THEN 'Rack Top' WHEN 'template_utility_temperature_proxy' THEN 'Rack Ambient' ELSE concat(entity_id, '/', unit_of_measurement) END AS entity,
+                              'value'                                                                                                                                                                                                                                                                 AS measure,
+                              avg(value)                                                                                                                                                                                                                                                              AS value
+                          FROM sensor__temperature
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'homeassistant'
+                              AND value IS NOT NULL
+                              AND entity_id IN (
+                                  'template_utility_temperature_proxy', 'compensation_sensor_rack_top_temperature',
+                                  'compensation_sensor_rack_bottom_temperature'
+                              )
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              switch           AS entity,
+                              'temperature'    AS measure,
+                              avg(temperature) AS value
+                          FROM ethernet
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND temperature IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: Home Assistant value; hottest temperature sensor the device reports'
+        id: 23
+        links: []
+        title: Network Device Temperature
+        vizConfig:
+          group: timeseries
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                custom:
+                  fillOpacity: 0
+                  lineInterpolation: linear
+                  lineWidth: 1
+                  showPoints: never
+                  spanNulls: true
+                decimals: 1
+                displayName: ${__field.labels.metric}
+                unit: celsius
+              overrides: []
+            options:
+              legend:
+                calcs:
+                - min
+                - max
+                - mean
+                displayMode: table
+                placement: right
+                showLegend: true
+                width: 400
+              tooltip:
+                mode: multi
+                sort: desc
+          version: ''
+    panel-24:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              switch           AS entity,
+                              'up'             AS measure,
+                              avg(up)          AS value
+                          FROM ethernet
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND up IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
+                              accesspoint      AS entity,
+                              'up'             AS measure,
+                              avg(up)          AS value
+                          FROM wireless
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND accesspoint IS NOT NULL
+                              AND up IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: device connected and seen by the controller recently'
+        id: 24
+        links: []
+        title: Network Devices Up
+        vizConfig:
+          group: state-timeline
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                color:
+                  mode: thresholds
+                custom:
+                  fillOpacity: 80
+                  lineWidth: 0
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: green
+                    value: 1
+                unit: none
+              overrides: []
+            options:
+              alignValue: left
+              legend:
+                calcs: []
+                displayMode: list
+                placement: bottom
+                showLegend: false
+              mergeValues: true
+              perPage: 20
+              rowHeight: 0.8
+              showValue: never
+              tooltip:
+                mode: single
+                sort: asc
+          version: ''
+    panel-25:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time)   AS time,
+                              switch             AS entity,
+                              'restarted'        AS measure,
+                              avg(1 - restarted) AS value
+                          FROM ethernet
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND switch IS NOT NULL
+                              AND powered IS NULL
+                              AND restarted IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: A
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time)   AS time,
+                              accesspoint        AS entity,
+                              'restarted'        AS measure,
+                              avg(1 - restarted) AS value
+                          FROM wireless
+                          WHERE
+                              $__timeFilter(time)
+                              AND module = 'network'
+                              AND accesspoint IS NOT NULL
+                              AND restarted IS NOT NULL
+                          GROUP BY 1, 2
+                      ) AS arms
+                      ORDER BY time
+                  version: v0
+                refId: B
+            queryOptions:
+              interval: 15m
+            transformations: []
+        description: 'Generated: device came up since the previous check'
+        id: 25
+        links: []
+        title: Network Devices Restarted
+        vizConfig:
+          group: state-timeline
+          kind: VizConfig
+          spec:
+            fieldConfig:
+              defaults:
+                color:
+                  mode: thresholds
+                custom:
+                  fillOpacity: 80
+                  lineWidth: 0
+                decimals: 2
+                displayName: ${__field.labels.metric}
+                thresholds:
+                  mode: absolute
+                  steps:
+                  - color: red
+                    value: null
+                  - color: green
+                    value: 1
+                unit: none
+              overrides: []
+            options:
+              alignValue: left
+              legend:
+                calcs: []
+                displayMode: list
+                placement: bottom
+                showLegend: false
+              mergeValues: true
+              perPage: 20
+              rowHeight: 0.8
+              showValue: never
+              tooltip:
+                mode: single
+                sort: asc
+          version: ''
+    panel-26:
+      kind: Panel
+      spec:
+        data:
+          kind: QueryGroup
+          spec:
+            queries:
+            - kind: PanelQuery
+              spec:
+                hidden: false
+                query:
+                  datasource:
+                    name: influxdb3-home
+                  group: influxdb
+                  kind: DataQuery
+                  spec:
+                    editorMode: code
+                    format: time_series
+                    rawQuery: true
+                    rawSql: |-
+                      SELECT
+                          time,
+                          entity AS metric,
+                          value AS value
+                      FROM (
+                          SELECT
+                              $__dateBin(time) AS time,
                               device           AS entity,
                               'available'      AS measure,
                               avg(available)   AS value
@@ -990,6 +1787,7 @@ spec:
                               $__timeFilter(time)
                               AND module = 'network'
                               AND device IS NOT NULL
+                              AND experience IS NULL
                               AND available IS NOT NULL
                           GROUP BY 1, 2
                       ) AS arms
@@ -1000,7 +1798,7 @@ spec:
               interval: 15m
             transformations: []
         description: 'Generated: device reporting available'
-        id: 20
+        id: 26
         links: []
         title: Zigbee Devices Available
         vizConfig:
@@ -1206,8 +2004,8 @@ spec:
                           100.0 * sum(reported) / NULLIF(sum(expected), 0) AS value
                       FROM (
                           SELECT
-                              (SELECT CASE WHEN count(up) > 0 THEN 1 ELSE 0 END + CASE WHEN count(experience_pct) > 0 THEN 1 ELSE 0 END + CASE WHEN count(clients) > 0 THEN 1 ELSE 0 END FROM wireless WHERE $__timeFilter(time) AND module = 'network' AND accesspoint IS NOT NULL AND time > (SELECT max(time) FROM wireless WHERE $__timeFilter(time) AND module = 'network' AND accesspoint IS NOT NULL) - INTERVAL '1800 seconds') AS reported,
-                              (SELECT CASE WHEN count(up) > 0 THEN 1 ELSE 0 END + CASE WHEN count(experience_pct) > 0 THEN 1 ELSE 0 END + CASE WHEN count(clients) > 0 THEN 1 ELSE 0 END FROM wireless WHERE $__timeFilter(time) AND module = 'network' AND accesspoint IS NOT NULL) AS expected
+                              (SELECT CASE WHEN count(up) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restarted) > 0 THEN 1 ELSE 0 END + CASE WHEN count(overheating) > 0 THEN 1 ELSE 0 END + CASE WHEN count(experience_pct) > 0 THEN 1 ELSE 0 END + CASE WHEN count(throughput_mbps) > 0 THEN 1 ELSE 0 END + CASE WHEN count(network_pct) > 0 THEN 1 ELSE 0 END + CASE WHEN count(clients) > 0 THEN 1 ELSE 0 END + CASE WHEN count(cpu_pct) > 0 THEN 1 ELSE 0 END + CASE WHEN count(memory_pct) > 0 THEN 1 ELSE 0 END FROM wireless WHERE $__timeFilter(time) AND module = 'network' AND accesspoint IS NOT NULL AND time > (SELECT max(time) FROM wireless WHERE $__timeFilter(time) AND module = 'network' AND accesspoint IS NOT NULL) - INTERVAL '1800 seconds') AS reported,
+                              (SELECT CASE WHEN count(up) > 0 THEN 1 ELSE 0 END + CASE WHEN count(restarted) > 0 THEN 1 ELSE 0 END + CASE WHEN count(overheating) > 0 THEN 1 ELSE 0 END + CASE WHEN count(experience_pct) > 0 THEN 1 ELSE 0 END + CASE WHEN count(throughput_mbps) > 0 THEN 1 ELSE 0 END + CASE WHEN count(network_pct) > 0 THEN 1 ELSE 0 END + CASE WHEN count(clients) > 0 THEN 1 ELSE 0 END + CASE WHEN count(cpu_pct) > 0 THEN 1 ELSE 0 END + CASE WHEN count(memory_pct) > 0 THEN 1 ELSE 0 END FROM wireless WHERE $__timeFilter(time) AND module = 'network' AND accesspoint IS NOT NULL) AS expected
                       ) AS arms
                   version: v0
                 refId: A
@@ -1446,7 +2244,7 @@ spec:
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: clients associated with the access point'
+        description: 'Generated: clients associated with the device, or for a gateway every client on the site'
         id: 8
         links: []
         title: Wireless Clients
@@ -1523,7 +2321,7 @@ spec:
             queryOptions:
               interval: 15m
             transformations: []
-        description: 'Generated: client experience reported by the access point'
+        description: 'Generated: experience reported by the controller, capped by processor, memory and busiest link headroom'
         id: 9
         links: []
         title: Wireless Experience
@@ -1541,7 +2339,7 @@ spec:
                   - color: red
                     value: null
                   - color: yellow
-                    value: 80
+                    value: 85
                   - color: green
                     value: 95
                 unit: percent
@@ -1569,7 +2367,7 @@ spec:
             queryOptions: {}
             transformations: []
         description: ''
-        id: 21
+        id: 27
         links: []
         title: ''
         transparent: true
@@ -1773,10 +2571,64 @@ spec:
           element:
             kind: ElementReference
             name: panel-20
-          height: 16
+          height: 10
           width: 24
           x: 0
           y: 79
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-21
+          height: 10
+          width: 24
+          x: 0
+          y: 89
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-22
+          height: 10
+          width: 24
+          x: 0
+          y: 99
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-23
+          height: 10
+          width: 24
+          x: 0
+          y: 109
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-24
+          height: 5
+          width: 24
+          x: 0
+          y: 119
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-25
+          height: 5
+          width: 24
+          x: 0
+          y: 124
+      - kind: GridLayoutItem
+        spec:
+          element:
+            kind: ElementReference
+            name: panel-26
+          height: 16
+          width: 24
+          x: 0
+          y: 129
   links: []
   preload: false
   tags:

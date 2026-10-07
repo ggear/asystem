@@ -1,4 +1,4 @@
-package plugins
+package plugin
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"network/internal/config"
-	"network/internal/plugin"
 	"network/internal/remote"
 	"network/internal/schema"
 	"network/internal/scribe"
@@ -24,7 +23,7 @@ const (
 	weewxCollectWait = 2 * time.Second
 	weewxConnectWait = 5 * time.Second
 	weewxFreshWindow = time.Hour
-	signalFitMin     = 50.0
+	weewxFitMin      = 50.0
 	weewxConsoleName = "weatherstation"
 )
 
@@ -43,36 +42,35 @@ type weewxReading struct {
 
 type weewxPlugin struct {
 	probe func(ctx context.Context) (quality float64, hasQuality bool, fresh bool, err error)
-	state *plugin.StateTracker
+	state *StateTracker
 }
 
 func newWeewxPlugin() *weewxPlugin {
-	return &weewxPlugin{probe: probeWeewx, state: plugin.NewStateTracker(plugin.StateOn)}
+	return &weewxPlugin{probe: probeWeewx, state: NewStateTracker(StateOn)}
 }
 
 func (p *weewxPlugin) Name() string { return "weewx" }
 
-func (p *weewxPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
+func (p *weewxPlugin) Mode() Mode { return ModeSnapshot }
 
-func (p *weewxPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
+func (p *weewxPlugin) Poll(ctx context.Context) (Sample, error) {
 	quality, hasQuality, fresh, err := p.probe(ctx)
 	if err != nil {
-		return plugin.Sample{}, err
+		return Sample{}, err
 	}
 	scribe.LogDebug("weewx", "polled quality [%v] has_quality [%v] fresh [%v]", quality, hasQuality, fresh)
-	return plugin.Sample{Readings: weewxReading{
-		quality: plugin.Round(quality, 1), hasQuality: hasQuality, fresh: fresh}}, nil
+	return Sample{Readings: weewxReading{quality: quality, hasQuality: hasQuality, fresh: fresh}}, nil
 }
 
-func (p *weewxPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
+func (p *weewxPlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseWeewx(samples), nil
 }
 
-func (p *weewxPlugin) Command(ctx context.Context, newState plugin.State) error {
+func (p *weewxPlugin) Command(context.Context, State) error {
 	return nil
 }
 
-func (p *weewxPlugin) State() *plugin.StateTracker { return p.state }
+func (p *weewxPlugin) State() *StateTracker { return p.state }
 
 func probeWeewx(ctx context.Context) (float64, bool, bool, error) {
 	cfg := config.Load()
@@ -144,22 +142,20 @@ func readWeewx(signal, status []byte, now time.Time) (quality float64, hasQualit
 	return quality, hasQuality, fresh
 }
 
-func diagnoseWeewx(samples []plugin.Sample) plugin.Aggregate {
-	reading := plugin.Latest[weewxReading](samples)
-	fresh := reading.fresh
-	quality := reading.quality
-	hasQuality := reading.hasQuality
-	score := plugin.Clamp(int(math.Round(quality)))
-	result := plugin.Aggregate{}
+func diagnoseWeewx(samples []Sample) Aggregate {
+	reading := latestReading[weewxReading](samples)
+	quality := math.Round(reading.quality)
+	score := clamp(int(quality))
+	result := Aggregate{}
 	switch {
-	case !fresh:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "STALE: weather station not reporting or last update older than one hour")
-	case !hasQuality:
-		result = plugin.Diagnose(plugin.StatusDead, 0, "NO_DATA: no retained weather station signal quality on broker")
-	case quality >= signalFitMin:
-		result = plugin.Diagnose(plugin.StatusFit, score, fmt.Sprintf("HEALTHY: weather station signal quality [%.0f%%]", quality))
+	case !reading.fresh:
+		result = Diagnose(StatusDead, 0, "STALE: weather station not reporting or last update older than one hour")
+	case !reading.hasQuality:
+		result = Diagnose(StatusDead, 0, "NO_DATA: no retained weather station signal quality on broker")
+	case quality >= weewxFitMin:
+		result = Diagnose(StatusFit, score, fmt.Sprintf("HEALTHY: weather station signal quality [%.0f%%]", quality))
 	default:
-		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("WEAK_SIGNAL: weather station signal quality [%.0f%%]", quality))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("WEAK_SIGNAL: weather station signal quality [%.0f%%]", quality))
 	}
 	result.Points = reportWeewx(reading)
 	return result
@@ -171,11 +167,11 @@ func reportWeewx(reading weewxReading) []schema.Point {
 		weewxFresh.Of(reading.fresh),
 	}
 	if reading.hasQuality {
-		point = append(point, weewxQuality.Of(plugin.Round(reading.quality, 1)))
+		point = append(point, weewxQuality.Of(round(reading.quality, 1)))
 	}
 	return []schema.Point{weewxConsole.Point(point...)}
 }
 
 func init() {
-	plugin.Register(newWeewxPlugin())
+	register(newWeewxPlugin())
 }

@@ -17,8 +17,8 @@ const (
 	brokerDataTopicPrefix   = "network/data/"
 	brokerCommandFilter     = "network/command/#"
 	brokerCommandPrefix     = "network/command"
-	brokerStatusOnline      = "online"
-	brokerStatusOffline     = "offline"
+	BrokerStatusOnline      = "online"
+	BrokerStatusOffline     = "offline"
 	brokerPublishTimeout    = 2 * time.Second
 	brokerSubscribeQosMax   = 2
 	brokerSubscribeAttempts = 5
@@ -54,7 +54,7 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 		SetMaxReconnectInterval(30 * time.Second).
 		SetPassword(token).
 		SetOnConnectHandler(func(client mqtt.Client) {
-			if err := waitForBrokerToken(client.Publish(brokerStatusTopic, 1, true, brokerStatusOnline)); err != nil {
+			if err := waitForBrokerToken(client.Publish(brokerStatusTopic, 1, true, BrokerStatusOnline)); err != nil {
 				scribe.LogWarn(scribe.Global, "publishing online status to broker [%s] failed [%v]", address, err)
 			}
 			broker.republish(client)
@@ -88,7 +88,7 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 	if token != "" {
 		options.SetUsername("network")
 	}
-	options.SetWill(brokerStatusTopic, brokerStatusOffline, 1, true)
+	options.SetWill(brokerStatusTopic, BrokerStatusOffline, 1, true)
 	client := mqtt.NewClient(options)
 	broker.client = client
 	tk := client.Connect()
@@ -101,7 +101,7 @@ func NewBroker(address, token string, onCommand func(name string, payload []byte
 }
 
 func (b *Broker) PublishStatus() error {
-	return waitForBrokerToken(b.client.Publish(brokerStatusTopic, 1, true, brokerStatusOnline))
+	return waitForBrokerToken(b.client.Publish(brokerStatusTopic, 1, true, BrokerStatusOnline))
 }
 
 func (b *Broker) Publish(topic string, payload []byte) {
@@ -112,7 +112,7 @@ func (b *Broker) Publish(topic string, payload []byte) {
 }
 
 func (b *Broker) Close() error {
-	tk := b.client.Publish(brokerStatusTopic, 1, true, brokerStatusOffline)
+	tk := b.client.Publish(brokerStatusTopic, 1, true, BrokerStatusOffline)
 	err := waitForBrokerToken(tk)
 	b.client.Disconnect(2500)
 	return err

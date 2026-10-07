@@ -1,4 +1,4 @@
-package plugins
+package plugin
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"network/internal/plugin"
 )
 
 func TestWeewx_Poll(t *testing.T) {
@@ -42,56 +40,52 @@ func TestWeewx_PollError(t *testing.T) {
 func TestWeewx_Diagnose(t *testing.T) {
 	tests := []struct {
 		name           string
-		samples        []plugin.Sample
-		expectedStatus plugin.Status
-		expectedOK     bool
+		samples        []Sample
+		expectedStatus Status
 		expectedScore  int
 		expectedReason string
 	}{
 		{
 			name:           "fit_fresh_strong_signal",
-			samples:        []plugin.Sample{weewxPoll(true, true, 82)},
-			expectedStatus: plugin.StatusFit,
-			expectedOK:     true,
+			samples:        []Sample{weewxPoll(true, true, 82)},
+			expectedStatus: StatusFit,
 			expectedScore:  82,
 			expectedReason: "HEALTHY",
 		},
 		{
+			name:           "fit_judged_on_the_rounded_quality_it_prints",
+			samples:        []Sample{weewxPoll(true, true, 49.6)},
+			expectedStatus: StatusFit,
+			expectedScore:  50,
+			expectedReason: "HEALTHY: weather station signal quality [50%]",
+		},
+		{
 			name:           "sick_fresh_weak_signal",
-			samples:        []plugin.Sample{weewxPoll(true, true, 30)},
-			expectedStatus: plugin.StatusSick,
-			expectedOK:     true,
+			samples:        []Sample{weewxPoll(true, true, 30)},
+			expectedStatus: StatusSick,
 			expectedScore:  30,
 			expectedReason: "WEAK_SIGNAL",
 		},
 		{
 			name:           "dead_stale_ignores_signal",
-			samples:        []plugin.Sample{weewxPoll(false, true, 82)},
-			expectedStatus: plugin.StatusDead,
-			expectedOK:     false,
+			samples:        []Sample{weewxPoll(false, true, 82)},
+			expectedStatus: StatusDead,
 			expectedScore:  0,
 			expectedReason: "STALE",
 		},
 		{
 			name:           "dead_fresh_no_signal",
-			samples:        []plugin.Sample{weewxPoll(true, false, 0)},
-			expectedStatus: plugin.StatusDead,
-			expectedOK:     false,
+			samples:        []Sample{weewxPoll(true, false, 0)},
+			expectedStatus: StatusDead,
 			expectedScore:  0,
 			expectedReason: "NO_DATA",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := newWeewxPlugin().Aggregate(test.samples)
-			if err != nil {
-				t.Fatalf("aggregate: unexpected error %v", err)
-			}
+			got := diagnoseWeewx(test.samples)
 			if got.Status != test.expectedStatus {
 				t.Errorf("status: got %s want %s", got.Status, test.expectedStatus)
-			}
-			if got.OK != test.expectedOK {
-				t.Errorf("ok: got %v want %v", got.OK, test.expectedOK)
 			}
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
@@ -135,11 +129,6 @@ func TestWeewx_Read(t *testing.T) {
 	}
 }
 
-func weewxPoll(fresh, hasQuality bool, quality float64) plugin.Sample {
-	return plugin.Sample{Plugin: "weewx", Readings: weewxReading{
-		quality: quality, hasQuality: hasQuality, fresh: fresh}}
-}
-
 func TestWeewx_Report(t *testing.T) {
 	points := reportWeewx(weewxReading{quality: 82.5, hasQuality: true, fresh: true})
 	if len(points) != 1 {
@@ -158,4 +147,9 @@ func TestWeewx_Report(t *testing.T) {
 	if _, ok := weewxQuality.Read(points[0]); ok {
 		t.Errorf("quality_pct without a retained reading: got set want unset")
 	}
+}
+
+func weewxPoll(fresh, hasQuality bool, quality float64) Sample {
+	return Sample{Readings: weewxReading{
+		quality: quality, hasQuality: hasQuality, fresh: fresh}}
 }

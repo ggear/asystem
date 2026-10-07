@@ -25,4 +25,4 @@ FROM image_upstream AS image_runtime
 COPY --from=image_build /asystem/bin/network /asystem/bin/network
 COPY src/main/resources/image /asystem/etc
 WORKDIR /asystem/etc
-CMD ["/asystem/bin/network", "--daemon", "--publish-data"]
+CMD ["/asystem/bin/network", "--daemon"]

@@ -1,4 +1,4 @@
-package plugins
+package plugin
 
 import (
 	"context"
@@ -9,22 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"network/internal/plugin"
 	"network/internal/schema"
 	"network/internal/scribe"
 )
 
 const (
-	checkDomain        = "home.janeandgraham.com"
-	domainProbeTimeout = 5 * time.Second
+	domainName    = "home.janeandgraham.com"
+	domainTimeout = 5 * time.Second
 )
 
-type resolver struct {
-	name    string
-	address string
-}
-
-var domainResolvers = []resolver{
+var domainServers = []domainServer{
 	{name: "cloudflare", address: "1.1.1.1:53"},
 	{name: "google", address: "8.8.8.8:53"},
 	{name: "quad9", address: "9.9.9.9:53"},
@@ -33,7 +27,7 @@ var domainResolvers = []resolver{
 }
 
 var (
-	domainResolver     = schema.Declare("domain/resolver", "public DNS resolution of the monitored domain, one row per public resolver", aggregateCadence).Entities(resolverNames()...)
+	domainResolver     = schema.Declare("domain/resolver", "public DNS resolution of the monitored domain, one row per public resolver", aggregateCadence).Entities(domainServerNames()...)
 	domainResolverName = domainResolver.Subject("resolver", "public DNS resolver queried")
 	domainOK           = domainResolver.Bool("ok", "resolver agreed with the consensus address set")
 	domainResolved     = domainResolver.Bool("resolved", "resolver returned an address")
@@ -54,54 +48,54 @@ type domainResult struct {
 
 type domainPlugin struct {
 	probe func(ctx context.Context, server, domain string) (domainResult, error)
-	state *plugin.StateTracker
+	state *StateTracker
 }
 
 func newDomainPlugin() *domainPlugin {
-	return &domainPlugin{probe: probeDomain, state: plugin.NewStateTracker(plugin.StateOn)}
+	return &domainPlugin{probe: probeDomain, state: NewStateTracker(StateOn)}
 }
 
 func (p *domainPlugin) Name() string { return "domain" }
 
-func (p *domainPlugin) Mode() plugin.Mode { return plugin.ModeSnapshot }
+func (p *domainPlugin) Mode() Mode { return ModeSnapshot }
 
-func (p *domainPlugin) Poll(ctx context.Context) (plugin.Sample, error) {
-	readings := make([]domainReading, 0, len(domainResolvers))
-	for _, r := range domainResolvers {
-		result, err := p.probe(ctx, r.address, checkDomain)
+func (p *domainPlugin) Poll(ctx context.Context) (Sample, error) {
+	readings := make([]domainReading, 0, len(domainServers))
+	for _, r := range domainServers {
+		result, err := p.probe(ctx, r.address, domainName)
 		if err != nil || len(result.addresses) == 0 {
 			scribe.LogDebug("domain", "probe of resolver [%s] server [%s] failed [%v]", r.name, r.address, err)
 			readings = append(readings, domainReading{resolver: r.name})
 			continue
 		}
 		addresses := strings.Join(result.addresses, ",")
-		latency := plugin.Round(float64(result.latency)/float64(time.Millisecond), 1)
-		scribe.LogDebug("domain", "probed resolver [%s] server [%s] addresses [%s] latency_ms [%v]", r.name, r.address, addresses, latency)
+		latency := float64(result.latency) / float64(time.Millisecond)
+		scribe.LogDebug("domain", "probed resolver [%s] server [%s] addresses [%s] latency_ms [%.1f]", r.name, r.address, addresses, latency)
 		readings = append(readings, domainReading{
 			resolver: r.name, addresses: addresses, resolved: true, latencyMs: latency})
 	}
-	return plugin.Sample{Readings: readings}, nil
+	return Sample{Readings: readings}, nil
 }
 
-func (p *domainPlugin) Aggregate(samples []plugin.Sample) (plugin.Aggregate, error) {
+func (p *domainPlugin) Aggregate(samples []Sample) (Aggregate, error) {
 	return diagnoseDomain(samples), nil
 }
 
-func (p *domainPlugin) Command(ctx context.Context, newState plugin.State) error {
+func (p *domainPlugin) Command(context.Context, State) error {
 	return nil
 }
 
-func (p *domainPlugin) State() *plugin.StateTracker { return p.state }
+func (p *domainPlugin) State() *StateTracker { return p.state }
 
 func probeDomain(ctx context.Context, server, domain string) (domainResult, error) {
 	dnsResolver := &net.Resolver{
 		PreferGo: true,
 		Dial: func(dialCtx context.Context, network, _ string) (net.Conn, error) {
-			dialer := net.Dialer{Timeout: domainProbeTimeout}
+			dialer := net.Dialer{Timeout: domainTimeout}
 			return dialer.DialContext(dialCtx, network, server)
 		},
 	}
-	queryCtx, cancel := context.WithTimeout(ctx, domainProbeTimeout)
+	queryCtx, cancel := context.WithTimeout(ctx, domainTimeout)
 	defer cancel()
 	start := time.Now()
 	ips, err := dnsResolver.LookupIP(queryCtx, "ip4", domain)
@@ -116,8 +110,8 @@ func probeDomain(ctx context.Context, server, domain string) (domainResult, erro
 	return domainResult{addresses: addresses, latency: time.Since(start)}, nil
 }
 
-func diagnoseDomain(samples []plugin.Sample) plugin.Aggregate {
-	readings := plugin.Latest[[]domainReading](samples)
+func diagnoseDomain(samples []Sample) Aggregate {
+	readings := latestReading[[]domainReading](samples)
 	total := len(readings)
 	resolved := 0
 	counts := map[string]int{}
@@ -139,18 +133,18 @@ func diagnoseDomain(samples []plugin.Sample) plugin.Aggregate {
 	failed := total - resolved
 	score := 0
 	if total > 0 {
-		score = plugin.Clamp(int(math.Round(100 * float64(agreeing) / float64(total))))
+		score = clamp(int(math.Round(100 * float64(agreeing) / float64(total))))
 	}
-	result := plugin.Aggregate{}
+	result := Aggregate{}
 	switch {
 	case total == 0 || resolved == 0:
-		result = plugin.Diagnose(plugin.StatusDead, 0, fmt.Sprintf("NO_RESOLUTION: no resolver returned an address for [%s]", checkDomain))
+		result = Diagnose(StatusDead, 0, fmt.Sprintf("NO_RESOLUTION: no resolver returned an address for [%s]", domainName))
 	case failed > 0:
-		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("PARTIAL_RESOLUTION: resolution failed on [%d] of [%d] resolvers", failed, total))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("PARTIAL_RESOLUTION: resolution failed on [%d] of [%d] resolvers", failed, total))
 	case agreeing < total:
-		result = plugin.Diagnose(plugin.StatusSick, score, fmt.Sprintf("RECORD_MISMATCH: only [%d] of [%d] resolvers agree on the same address set", agreeing, total))
+		result = Diagnose(StatusSick, score, fmt.Sprintf("RECORD_MISMATCH: only [%d] of [%d] resolvers agree on the same address set", agreeing, total))
 	default:
-		result = plugin.Diagnose(plugin.StatusFit, score, fmt.Sprintf("RESOLVED: all [%d] resolvers agree on [%s]", total, consensus))
+		result = Diagnose(StatusFit, score, fmt.Sprintf("RESOLVED: all [%d] resolvers agree on [%s]", total, consensus))
 	}
 	result.Points = reportDomain(readings, consensus)
 	return result
@@ -163,19 +157,24 @@ func reportDomain(readings []domainReading, consensus string) []schema.Point {
 			domainResolverName.Of(reading.resolver),
 			domainOK.Of(reading.resolved && reading.addresses == consensus),
 			domainResolved.Of(reading.resolved),
-			domainLatencyMs.Of(plugin.Round(reading.latencyMs, 1))))
+			domainLatencyMs.Of(round(reading.latencyMs, 1))))
 	}
 	return points
 }
 
-func resolverNames() []string {
-	names := make([]string, 0, len(domainResolvers))
-	for _, r := range domainResolvers {
+type domainServer struct {
+	name    string
+	address string
+}
+
+func domainServerNames() []string {
+	names := make([]string, 0, len(domainServers))
+	for _, r := range domainServers {
 		names = append(names, r.name)
 	}
 	return names
 }
 
 func init() {
-	plugin.Register(newDomainPlugin())
+	register(newDomainPlugin())
 }

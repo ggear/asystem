@@ -57,6 +57,54 @@ func TestEngine_CreatePluginValidation(t *testing.T) {
 	}
 }
 
+func TestEngine_CreatePacedValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		period        time.Duration
+		expectedError bool
+	}{
+		{name: "paced_multiple", period: 5 * time.Minute, expectedError: false},
+		{name: "paced_at_poll", period: time.Minute, expectedError: false},
+		{name: "paced_below_poll", period: time.Second, expectedError: false},
+		{name: "paced_not_multiple_of_poll", period: 90 * time.Second, expectedError: true},
+		{name: "paced_not_dividing_aggregate", period: 4 * time.Minute, expectedError: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := &fakePlugin{name: "paced", mode: plugin.ModeWindowed, pollPeriod: test.period}
+			err := Create(&Engine{Plugins: []plugin.Plugin{p}, PollPeriod: time.Minute, AggregatePeriod: 15 * time.Minute})
+			if (err != nil) != test.expectedError {
+				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
+			}
+		})
+	}
+}
+
+func TestEngine_PollSamplesPacedStride(t *testing.T) {
+	pacedCount, everyCount := 0, 0
+	paced := &fakePlugin{name: "paced", mode: plugin.ModeWindowed, pollCount: &pacedCount, pollPeriod: 5 * time.Minute}
+	every := &fakePlugin{name: "every", mode: plugin.ModeWindowed, pollCount: &everyCount}
+	e := &Engine{Plugins: []plugin.Plugin{paced, every}, PollPeriod: time.Minute, AggregatePeriod: 15 * time.Minute}
+	if err := Create(e); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	for range 31 {
+		e.PollSamples(context.Background())
+	}
+	if pacedCount != 7 {
+		t.Errorf("paced poll count over 31 ticks: got %d want 7 (ticks 0, 5, … 30)", pacedCount)
+	}
+	if everyCount != 31 {
+		t.Errorf("unpaced poll count over 31 ticks: got %d want 31", everyCount)
+	}
+	if got := len(e.copySamples("paced")); got != 3 {
+		t.Errorf("paced window: got %d samples want 3 (15m aggregate over 5m polls)", got)
+	}
+	if got := len(e.copySamples("every")); got != 15 {
+		t.Errorf("unpaced window: got %d samples want 15", got)
+	}
+}
+
 func TestEngine_CreateBuffersOnlyWindowed(t *testing.T) {
 	e := newEngine(t,
 		&fakePlugin{name: "windowed", mode: plugin.ModeWindowed},
@@ -190,15 +238,6 @@ func TestEngine_CycleAggregateOnly(t *testing.T) {
 	}
 }
 
-func TestEngine_CycleStampsWindowSeconds(t *testing.T) {
-	p := &fakePlugin{name: "agg"}
-	e := newEngine(t, p)
-	aggregates := e.AggregateSamples(context.Background(), e.Plugins)
-	if aggregates[0].WindowSeconds != 180 {
-		t.Fatalf("window seconds: got %d want 180", aggregates[0].WindowSeconds)
-	}
-}
-
 func TestEngine_CycleWindowedFallbackPolls(t *testing.T) {
 	count := 0
 	p := &fakePlugin{name: "windowed", mode: plugin.ModeWindowed, pollCount: &count}
@@ -295,6 +334,49 @@ func TestEngine_CycleConcurrentSafe(t *testing.T) {
 	}
 }
 
+func TestEngine_AggregateChangesPublishesOnlyStateChanges(t *testing.T) {
+	ok := true
+	windowed := &fakePlugin{name: "windowed", mode: plugin.ModeWindowed, state: plugin.NewStateTracker(plugin.StateOn), aggregate: func([]plugin.Sample) plugin.Aggregate {
+		if ok {
+			return plugin.Diagnose(plugin.StatusFit, 100, "UP")
+		}
+		return plugin.Diagnose(plugin.StatusDead, 0, "DOWN")
+	}}
+	snapshotCount := 0
+	snapshot := &fakePlugin{name: "snapshot", mode: plugin.ModeSnapshot, pollCount: &snapshotCount, state: plugin.NewStateTracker(plugin.StateOff)}
+	e := newEngine(t, windowed, snapshot)
+	if got := e.AggregateChanges(); len(got) != 0 {
+		t.Fatalf("changes before any poll: got %d want 0", len(got))
+	}
+	steps := []struct {
+		ok       bool
+		changes  int
+		expected plugin.State
+	}{
+		{ok: true, changes: 0, expected: plugin.StateOn},
+		{ok: false, changes: 1, expected: plugin.StateOff},
+		{ok: false, changes: 0, expected: plugin.StateOff},
+		{ok: true, changes: 1, expected: plugin.StateOn},
+	}
+	for index, step := range steps {
+		ok = step.ok
+		e.PollSamples(context.Background())
+		got := e.AggregateChanges()
+		if len(got) != step.changes {
+			t.Fatalf("step %d changes: got %d want %d", index, len(got), step.changes)
+		}
+		if len(got) == 1 && got[0].Plugin != "windowed" {
+			t.Fatalf("step %d changed plugin: got %q want windowed", index, got[0].Plugin)
+		}
+		if state := windowed.state.Get(); state != step.expected {
+			t.Fatalf("step %d state: got %s want %s", index, state, step.expected)
+		}
+	}
+	if snapshotCount != 0 {
+		t.Fatalf("snapshot poll count: got %d want 0", snapshotCount)
+	}
+}
+
 func TestEngine_HandleCommand(t *testing.T) {
 	p := &fakePlugin{name: "agg"}
 	e := newEngine(t, p)
@@ -338,6 +420,7 @@ type fakePlugin struct {
 	commandErr    error
 	commandStates []plugin.State
 	state         *plugin.StateTracker
+	pollPeriod    time.Duration
 }
 
 func (f *fakePlugin) Name() string { return f.name }
@@ -373,6 +456,8 @@ func (f *fakePlugin) Command(_ context.Context, state plugin.State) error {
 }
 
 func (f *fakePlugin) State() *plugin.StateTracker { return f.state }
+
+func (f *fakePlugin) PollPeriod() time.Duration { return f.pollPeriod }
 
 func newEngine(t *testing.T, plugins ...plugin.Plugin) *Engine {
 	t.Helper()

@@ -8,15 +8,15 @@
 #   tag device* [friendly name of the paired device:
 #     <string>]
 #   field available - 15m [device reporting available]
-#   field coordinator - 15m [device is the coordinator itself]
-#   field lqi - 15m [link quality reported for the device]
-#   field weak - 15m [device link quality below the weak threshold]
+#   field lqi - 15m [median link quality across the window while available]
+#   field weak - 15m [device median link quality below the weak threshold]
+#   field last_seen_s s 15m [age of the device's latest report]
 
 zigbee,
   module=network,
   device=<string>
     available=<0|1>,
-    coordinator=<0|1>,
     lqi=<int>,
-    weak=<0|1>
+    weak=<0|1>,
+    last_seen_s=<int>
   <timestamp>

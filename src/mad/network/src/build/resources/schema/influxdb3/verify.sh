@@ -226,7 +226,12 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'certificate'
-    AND column_name NOT IN ('endpoint', 'expiry_days', 'module', 'time', 'validity_pct', 'verified')
+    AND column_name NOT IN (
+        'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend', 'endpoint',
+        'errors', 'errors_trend', 'expiry_days', 'full_duplex', 'full_duplex_trend',
+        'module', 'port', 'port_trend', 'speed_mbps', 'speed_mbps_trend', 'time',
+        'validity_pct', 'verified'
+    )
 ORDER BY fault, measure;
 
 SELECT
@@ -260,7 +265,11 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'diagnosis'
-    AND column_name NOT IN ('module', 'ok', 'plugin', 'score', 'time')
+    AND column_name NOT IN (
+        'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend', 'errors',
+        'errors_trend', 'full_duplex', 'full_duplex_trend', 'module', 'ok', 'plugin',
+        'port', 'port_trend', 'score', 'speed_mbps', 'speed_mbps_trend', 'time'
+    )
 ORDER BY fault, measure;
 
 SELECT
@@ -305,63 +314,156 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'domain'
-    AND column_name NOT IN ('latency_ms', 'module', 'ok', 'resolved', 'resolver', 'time')
+    AND column_name NOT IN (
+        'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend', 'errors',
+        'errors_trend', 'full_duplex', 'full_duplex_trend', 'latency_ms', 'module', 'ok',
+        'port', 'port_trend', 'resolved', 'resolver', 'speed_mbps', 'speed_mbps_trend',
+        'time'
+    )
 ORDER BY fault, measure;
 
 SELECT
-    'ethernet/port' AS relation,
-    'up'            AS measure,
-    '15m'           AS period,
-    '-'             AS unit,
-    'missing'       AS fault
+    'ethernet/powered' AS relation,
+    'power_w'          AS measure,
+    '15m'              AS period,
+    'W'                AS unit,
+    'missing'          AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'ethernet'
+HAVING count(*) FILTER (WHERE column_name = 'power_w') = 0
+UNION ALL
+SELECT
+    'ethernet/switch' AS relation,
+    'up'              AS measure,
+    '15m'             AS period,
+    '-'               AS unit,
+    'missing'         AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
 HAVING count(*) FILTER (WHERE column_name = 'up') = 0
 UNION ALL
 SELECT
-    'ethernet/port' AS relation,
-    'speed_mbps'    AS measure,
-    '15m'           AS period,
-    'Mbps'          AS unit,
-    'missing'       AS fault
+    'ethernet/switch' AS relation,
+    'restarted'       AS measure,
+    '15m'             AS period,
+    '-'               AS unit,
+    'missing'         AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
-HAVING count(*) FILTER (WHERE column_name = 'speed_mbps') = 0
+HAVING count(*) FILTER (WHERE column_name = 'restarted') = 0
 UNION ALL
 SELECT
-    'ethernet/port' AS relation,
-    'full_duplex'   AS measure,
-    '15m'           AS period,
-    '-'             AS unit,
-    'missing'       AS fault
+    'ethernet/switch' AS relation,
+    'overheating'     AS measure,
+    '15m'             AS period,
+    '-'               AS unit,
+    'missing'         AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
-HAVING count(*) FILTER (WHERE column_name = 'full_duplex') = 0
+HAVING count(*) FILTER (WHERE column_name = 'overheating') = 0
 UNION ALL
 SELECT
-    'ethernet/port' AS relation,
-    'degraded'      AS measure,
-    '15m'           AS period,
-    '-'             AS unit,
-    'missing'       AS fault
+    'ethernet/switch' AS relation,
+    'experience_pct'  AS measure,
+    '15m'             AS period,
+    '%'               AS unit,
+    'missing'         AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
-HAVING count(*) FILTER (WHERE column_name = 'degraded') = 0
+HAVING count(*) FILTER (WHERE column_name = 'experience_pct') = 0
 UNION ALL
 SELECT
-    'ethernet/port' AS relation,
-    'errors'        AS measure,
-    '15m'           AS period,
-    '-'             AS unit,
-    'missing'       AS fault
+    'ethernet/switch' AS relation,
+    'throughput_mbps' AS measure,
+    '15m'             AS period,
+    'Mbps'            AS unit,
+    'missing'         AS fault
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
-HAVING count(*) FILTER (WHERE column_name = 'errors') = 0
+HAVING count(*) FILTER (WHERE column_name = 'throughput_mbps') = 0
+UNION ALL
+SELECT
+    'ethernet/switch' AS relation,
+    'network_pct'     AS measure,
+    '15m'             AS period,
+    '%'               AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'ethernet'
+HAVING count(*) FILTER (WHERE column_name = 'network_pct') = 0
+UNION ALL
+SELECT
+    'ethernet/switch' AS relation,
+    'clients'         AS measure,
+    '15m'             AS period,
+    '-'               AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'ethernet'
+HAVING count(*) FILTER (WHERE column_name = 'clients') = 0
+UNION ALL
+SELECT
+    'ethernet/switch' AS relation,
+    'cpu_pct'         AS measure,
+    '15m'             AS period,
+    '%'               AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'ethernet'
+HAVING count(*) FILTER (WHERE column_name = 'cpu_pct') = 0
+UNION ALL
+SELECT
+    'ethernet/switch' AS relation,
+    'memory_pct'      AS measure,
+    '15m'             AS period,
+    '%'               AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'ethernet'
+HAVING count(*) FILTER (WHERE column_name = 'memory_pct') = 0
+UNION ALL
+SELECT
+    'ethernet/switch' AS relation,
+    'temperature'     AS measure,
+    '15m'             AS period,
+    '°C'              AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'ethernet'
+HAVING count(*) FILTER (WHERE column_name = 'temperature') = 0
+UNION ALL
+SELECT
+    'ethernet/switch' AS relation,
+    'poe_w'           AS measure,
+    '15m'             AS period,
+    'W'               AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'ethernet'
+HAVING count(*) FILTER (WHERE column_name = 'poe_w') = 0
+UNION ALL
+SELECT
+    'ethernet/switch' AS relation,
+    'poe_pct'         AS measure,
+    '15m'             AS period,
+    '%'               AS unit,
+    'missing'         AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'ethernet'
+HAVING count(*) FILTER (WHERE column_name = 'poe_pct') = 0
 UNION ALL
 SELECT
     'ethernet'   AS relation,
@@ -372,7 +474,14 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'ethernet'
-    AND column_name NOT IN ('degraded', 'errors', 'full_duplex', 'module', 'port', 'speed_mbps', 'time', 'up')
+    AND column_name NOT IN (
+        'clients', 'coordinator', 'coordinator_trend', 'cpu_pct', 'degraded',
+        'degraded_trend', 'errors', 'errors_trend', 'experience_pct', 'full_duplex',
+        'full_duplex_trend', 'memory_pct', 'module', 'network_pct', 'overheating',
+        'poe_pct', 'poe_w', 'port', 'port_trend', 'power_w', 'powered', 'restarted',
+        'speed_mbps', 'speed_mbps_trend', 'switch', 'temperature', 'throughput_mbps',
+        'time', 'up'
+    )
 ORDER BY fault, measure;
 
 SELECT
@@ -428,7 +537,12 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'internet'
-    AND column_name NOT IN ('jitter_ms', 'loss_pct', 'module', 'reachable', 'rtt_ms', 'target', 'time')
+    AND column_name NOT IN (
+        'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend', 'errors',
+        'errors_trend', 'full_duplex', 'full_duplex_trend', 'jitter_ms', 'loss_pct',
+        'module', 'port', 'port_trend', 'reachable', 'rtt_ms', 'speed_mbps',
+        'speed_mbps_trend', 'target', 'time'
+    )
 ORDER BY fault, measure;
 
 SELECT
@@ -462,7 +576,11 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'weewx'
-    AND column_name NOT IN ('console', 'fresh', 'module', 'quality_pct', 'time')
+    AND column_name NOT IN (
+        'console', 'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend',
+        'errors', 'errors_trend', 'fresh', 'full_duplex', 'full_duplex_trend', 'module',
+        'port', 'port_trend', 'quality_pct', 'speed_mbps', 'speed_mbps_trend', 'time'
+    )
 ORDER BY fault, measure;
 
 SELECT
@@ -478,6 +596,28 @@ HAVING count(*) FILTER (WHERE column_name = 'up') = 0
 UNION ALL
 SELECT
     'wireless/accesspoint' AS relation,
+    'restarted'            AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'wireless'
+HAVING count(*) FILTER (WHERE column_name = 'restarted') = 0
+UNION ALL
+SELECT
+    'wireless/accesspoint' AS relation,
+    'overheating'          AS measure,
+    '15m'                  AS period,
+    '-'                    AS unit,
+    'missing'              AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'wireless'
+HAVING count(*) FILTER (WHERE column_name = 'overheating') = 0
+UNION ALL
+SELECT
+    'wireless/accesspoint' AS relation,
     'experience_pct'       AS measure,
     '15m'                  AS period,
     '%'                    AS unit,
@@ -486,6 +626,28 @@ FROM information_schema.columns
 WHERE
     table_name = 'wireless'
 HAVING count(*) FILTER (WHERE column_name = 'experience_pct') = 0
+UNION ALL
+SELECT
+    'wireless/accesspoint' AS relation,
+    'throughput_mbps'      AS measure,
+    '15m'                  AS period,
+    'Mbps'                 AS unit,
+    'missing'              AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'wireless'
+HAVING count(*) FILTER (WHERE column_name = 'throughput_mbps') = 0
+UNION ALL
+SELECT
+    'wireless/accesspoint' AS relation,
+    'network_pct'          AS measure,
+    '15m'                  AS period,
+    '%'                    AS unit,
+    'missing'              AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'wireless'
+HAVING count(*) FILTER (WHERE column_name = 'network_pct') = 0
 UNION ALL
 SELECT
     'wireless/accesspoint' AS relation,
@@ -499,6 +661,28 @@ WHERE
 HAVING count(*) FILTER (WHERE column_name = 'clients') = 0
 UNION ALL
 SELECT
+    'wireless/accesspoint' AS relation,
+    'cpu_pct'              AS measure,
+    '15m'                  AS period,
+    '%'                    AS unit,
+    'missing'              AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'wireless'
+HAVING count(*) FILTER (WHERE column_name = 'cpu_pct') = 0
+UNION ALL
+SELECT
+    'wireless/accesspoint' AS relation,
+    'memory_pct'           AS measure,
+    '15m'                  AS period,
+    '%'                    AS unit,
+    'missing'              AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'wireless'
+HAVING count(*) FILTER (WHERE column_name = 'memory_pct') = 0
+UNION ALL
+SELECT
     'wireless'   AS relation,
     column_name  AS measure,
     '-'          AS period,
@@ -507,7 +691,13 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'wireless'
-    AND column_name NOT IN ('accesspoint', 'clients', 'experience_pct', 'module', 'time', 'up')
+    AND column_name NOT IN (
+        'accesspoint', 'clients', 'coordinator', 'coordinator_trend', 'cpu_pct', 'degraded',
+        'degraded_trend', 'errors', 'errors_trend', 'experience_pct', 'full_duplex',
+        'full_duplex_trend', 'memory_pct', 'module', 'network_pct', 'overheating', 'port',
+        'port_trend', 'restarted', 'speed_mbps', 'speed_mbps_trend', 'throughput_mbps',
+        'time', 'up'
+    )
 ORDER BY fault, measure;
 
 SELECT
@@ -520,17 +710,6 @@ FROM information_schema.columns
 WHERE
     table_name = 'zigbee'
 HAVING count(*) FILTER (WHERE column_name = 'available') = 0
-UNION ALL
-SELECT
-    'zigbee/device' AS relation,
-    'coordinator'   AS measure,
-    '15m'           AS period,
-    '-'             AS unit,
-    'missing'       AS fault
-FROM information_schema.columns
-WHERE
-    table_name = 'zigbee'
-HAVING count(*) FILTER (WHERE column_name = 'coordinator') = 0
 UNION ALL
 SELECT
     'zigbee/device' AS relation,
@@ -555,6 +734,28 @@ WHERE
 HAVING count(*) FILTER (WHERE column_name = 'weak') = 0
 UNION ALL
 SELECT
+    'zigbee/device' AS relation,
+    'last_seen_s'   AS measure,
+    '15m'           AS period,
+    's'             AS unit,
+    'missing'       AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'zigbee'
+HAVING count(*) FILTER (WHERE column_name = 'last_seen_s') = 0
+UNION ALL
+SELECT
+    'zigbee/experience' AS relation,
+    'experience_pct'    AS measure,
+    '15m'               AS period,
+    '%'                 AS unit,
+    'missing'           AS fault
+FROM information_schema.columns
+WHERE
+    table_name = 'zigbee'
+HAVING count(*) FILTER (WHERE column_name = 'experience_pct') = 0
+UNION ALL
+SELECT
     'zigbee'     AS relation,
     column_name  AS measure,
     '-'          AS period,
@@ -563,7 +764,12 @@ SELECT
 FROM information_schema.columns
 WHERE
     table_name = 'zigbee'
-    AND column_name NOT IN ('available', 'coordinator', 'device', 'lqi', 'module', 'time', 'weak')
+    AND column_name NOT IN (
+        'available', 'coordinator', 'coordinator_trend', 'degraded', 'degraded_trend',
+        'device', 'errors', 'errors_trend', 'experience', 'experience_pct', 'full_duplex',
+        'full_duplex_trend', 'last_seen_s', 'lqi', 'module', 'port', 'port_trend',
+        'speed_mbps', 'speed_mbps_trend', 'time', 'weak'
+    )
 ORDER BY fault, measure;
 SCHEMA_SQL
 }

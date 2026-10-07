@@ -75,16 +75,21 @@ func LogDiagnosis(subject, status string, score int, took time.Duration, reason 
 	case "dead":
 		level = slog.LevelError
 	}
-	emit(level,
-		subject,
-		"diagnosed as ... [%s] %s with score ... [%s] %s because [%s] in [%s]",
+	logger := slog.Default()
+	ctx := context.Background()
+	if !logger.Enabled(ctx, level) {
+		return
+	}
+	message := fmt.Sprintf("diagnosed as ... [%s] %s with score ... [%s] %s in [%s] %s because [%s]",
 		status,
 		leader(6-len(status)),
 		scoreText,
 		leader(5-len(scoreText)),
-		reason,
 		tookText,
+		leader(tookWidth+1-len(tookText)),
+		reason,
 	)
+	logger.LogAttrs(ctx, level, message, slog.String(subjectKey, subject), slog.Bool(leaderKey, true))
 }
 
 func emit(level slog.Level, subject, format string, args ...any) {
@@ -113,10 +118,15 @@ func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
 
 func (h *handler) Handle(_ context.Context, record slog.Record) error {
 	subject := Global
+	dotted := false
 	var attrs strings.Builder
 	record.Attrs(func(attr slog.Attr) bool {
-		if attr.Key == subjectKey {
+		switch attr.Key {
+		case subjectKey:
 			subject = attr.Value.String()
+			return true
+		case leaderKey:
+			dotted = attr.Value.Bool()
 			return true
 		}
 		fmt.Fprintf(&attrs, " %s=[%v]", attr.Key, attr.Value.Any())
@@ -127,8 +137,12 @@ func (h *handler) Handle(_ context.Context, record slog.Record) error {
 	line.WriteByte(' ')
 	fmt.Fprintf(&line, "%-5s", record.Level.String())
 	line.WriteByte(' ')
-	fmt.Fprintf(&line, "%-10s", "["+subject+"]")
-	line.WriteByte(' ')
+	tag := "[" + subject + "]"
+	if fill := subjectWidth - len(tag); dotted && fill > 1 {
+		line.WriteString(tag + " " + leader(fill-1) + " ")
+	} else {
+		fmt.Fprintf(&line, "%-*s ", subjectWidth, tag)
+	}
 	line.WriteString(record.Message)
 	line.WriteString(attrs.String())
 	line.WriteByte('\n')
@@ -146,7 +160,12 @@ func (h *handler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
 
 func (h *handler) WithGroup(_ string) slog.Handler { return h }
 
-const subjectKey = "subject"
+const (
+	subjectKey   = "subject"
+	leaderKey    = "leader"
+	subjectWidth = len("[certificate]")
+	tookWidth    = len("99999ms")
+)
 
 var (
 	scribeMutex  sync.Mutex

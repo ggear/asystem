@@ -310,25 +310,33 @@ ORDER BY time
     # Build Systems dashboard [network]
     access_points = Relation("network", "wireless/accesspoint")
     zigbee_devices = Relation("network", "zigbee/device")
+    zigbee_experience = Relation("network", "zigbee/experience")
     network_diagnosis = Relation("network", "diagnosis/plugin")
-    switch_ports = Relation("network", "ethernet/port")
+    wired_switches = Relation("network", "ethernet/switch")
+    powered_devices = Relation("network", "ethernet/powered")
     header_panels = header([(access_points, None)], "network")
     dashboard("network", HOURS_WINDOW, header_panels, [
         [
             stat("Gateway", internet_targets.query(["reachable"], ["gateway"], ("percent",)), "mean").thresholds(higher_better(95, 99.9)),
             stat("Wireless Clients", access_points.query(["clients"], None, ("sum",))),
-            stat("Wireless Experience", access_points.query(["experience_pct"], None, ("min",))).thresholds(higher_better(80, 95)),
-            stat("Zigbee Quality", zigbee_devices.query(["lqi"], None, ("min",))).thresholds(higher_better(50, 100)),
-            stat("Zigbee Available", zigbee_devices.query(["available"], None, ("sum",))),
-            stat("Switch Ports Up", switch_ports.query(["up"], None, ("sum",))),
+            stat("Wireless Experience", access_points.query(["experience_pct"], None, ("min",))).thresholds(higher_better(85, 95)),
+            stat("Wired Experience", wired_switches.query(["experience_pct"], None, ("min",))).thresholds(higher_better(85, 95)),
+            stat("Zigbee Experience", zigbee_experience.query(["experience_pct"], ["router"])).thresholds(higher_better(35, 50)),
+            stat("PoE Budget", wired_switches.query(["poe_pct"], None, ("max",))).thresholds(lower_better(80, 95)),
         ],
         [series("Network Utilisation", server_hosts.query(["used_network"], host_names))],
-        [series("Wireless Experience", access_points.query(["experience_pct"]))],
+        [series("Network Device Experience", [wired_switches.query(["experience_pct"]), access_points.query(["experience_pct"])])],
+        [series("Network Device Throughput", [wired_switches.query(["throughput_mbps"]), access_points.query(["throughput_mbps"])])],
+        [series("Network Device Link Utilisation", [wired_switches.query(["network_pct"]), access_points.query(["network_pct"])])],
+        [series("Network Device Processor", [wired_switches.query(["cpu_pct"]), access_points.query(["cpu_pct"])])],
+        [series("Network Device Memory", [wired_switches.query(["memory_pct"]), access_points.query(["memory_pct"])])],
+        [series("Network Device Power", [wired_switches.query(["poe_w"]), powered_devices.query(["power_w"])])],
         [series("Access Point Clients", access_points.query(["clients"]))],
         [series("Network Diagnosis", network_diagnosis.query(["score"]))],
-        [series("Network Device Temperature", hass_temperatures.query(["value"], list(rack_temperatures), (), rack_temperatures, "°C"))],
-        [state("Switch Ports Up", switch_ports.query(["up"]))],
-        [state("Switch Ports At Speed", switch_ports.query(["degraded"], None, ("complement",)))],
+        [series("Zigbee Experience", zigbee_experience.query(["experience_pct"]))],
+        [series("Network Device Temperature", [hass_temperatures.query(["value"], list(rack_temperatures), (), rack_temperatures, "°C"), wired_switches.query(["temperature"])])],
+        [state("Network Devices Up", [wired_switches.query(["up"]), access_points.query(["up"])], 5)],
+        [state("Network Devices Restarted", [wired_switches.query(["restarted"], None, ("complement",)), access_points.query(["restarted"], None, ("complement",))], 5)],
         [state("Zigbee Devices Available", zigbee_devices.query(["available"]), 16)],
     ])
 

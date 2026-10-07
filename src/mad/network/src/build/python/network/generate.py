@@ -24,4 +24,11 @@ if __name__ == "__main__":
                         broker_document=document)
 
     # Build database schema
-    write_schema_database(document, database_dialect="influxdb3")
+    write_schema_database(document, database_dialect="influxdb3", database_archive_measures=[
+        "port",
+        "speed_mbps",
+        "full_duplex",
+        "degraded",
+        "errors",
+        "coordinator"
+    ])

@@ -1,4 +1,4 @@
-package plugins
+package plugin
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"network/internal/plugin"
 )
 
 func TestCertificate_Poll(t *testing.T) {
@@ -58,61 +56,52 @@ func TestCertificate_PollUnverified(t *testing.T) {
 func TestCertificate_Diagnose(t *testing.T) {
 	tests := []struct {
 		name           string
-		samples        []plugin.Sample
-		expectedStatus plugin.Status
-		expectedOK     bool
+		samples        []Sample
+		expectedStatus Status
 		expectedScore  int
 		expectedReason string
-		expectedError  bool
 	}{
 		{
 			name:           "fit_valid",
-			samples:        []plugin.Sample{certificatePoll(endpointSample{"a:443", true, 90, 60})},
-			expectedStatus: plugin.StatusFit,
-			expectedOK:     true,
+			samples:        []Sample{certificatePoll(endpointSample{"a:443", true, 90, 60})},
+			expectedStatus: StatusFit,
 			expectedScore:  60,
 			expectedReason: "VALID",
-			expectedError:  false,
+		},
+		{
+			name:           "fit_judged_on_the_rounded_days_it_prints",
+			samples:        []Sample{certificatePoll(endpointSample{"a:443", true, 20.6, 30})},
+			expectedStatus: StatusFit,
+			expectedScore:  30,
+			expectedReason: "VALID: nearest certificate valid for [21] days",
 		},
 		{
 			name:           "sick_expiring_soon",
-			samples:        []plugin.Sample{certificatePoll(endpointSample{"a:443", true, 10, 5})},
-			expectedStatus: plugin.StatusSick,
-			expectedOK:     true,
+			samples:        []Sample{certificatePoll(endpointSample{"a:443", true, 10, 5})},
+			expectedStatus: StatusSick,
 			expectedScore:  5,
 			expectedReason: "EXPIRING_SOON",
-			expectedError:  false,
 		},
 		{
 			name:           "sick_verify_failed",
-			samples:        []plugin.Sample{certificatePoll(endpointSample{"a:443", true, 90, 60}, endpointSample{addr: "b:443", verified: false})},
-			expectedStatus: plugin.StatusSick,
-			expectedOK:     true,
+			samples:        []Sample{certificatePoll(endpointSample{"a:443", true, 90, 60}, endpointSample{addr: "b:443", verified: false})},
+			expectedStatus: StatusSick,
 			expectedScore:  60,
 			expectedReason: "VERIFY_FAILED",
-			expectedError:  false,
 		},
 		{
 			name:           "dead_unreachable",
-			samples:        []plugin.Sample{certificatePoll(endpointSample{addr: "a:443", verified: false})},
-			expectedStatus: plugin.StatusDead,
-			expectedOK:     false,
+			samples:        []Sample{certificatePoll(endpointSample{addr: "a:443", verified: false})},
+			expectedStatus: StatusDead,
 			expectedScore:  0,
 			expectedReason: "PROBE_UNREACHABLE",
-			expectedError:  false,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := newCertificatePlugin().Aggregate(test.samples)
-			if (err != nil) != test.expectedError {
-				t.Fatalf("error mismatch: got %v want error=%v", err, test.expectedError)
-			}
+			got := diagnoseCertificate(test.samples)
 			if got.Status != test.expectedStatus {
 				t.Errorf("status: got %s want %s", got.Status, test.expectedStatus)
-			}
-			if got.OK != test.expectedOK {
-				t.Errorf("ok: got %v want %v", got.OK, test.expectedOK)
 			}
 			if got.Score != test.expectedScore {
 				t.Errorf("score: got %d want %d", got.Score, test.expectedScore)
@@ -122,22 +111,6 @@ func TestCertificate_Diagnose(t *testing.T) {
 			}
 		})
 	}
-}
-
-type endpointSample struct {
-	addr     string
-	verified bool
-	days     float64
-	pct      float64
-}
-
-func certificatePoll(samples ...endpointSample) plugin.Sample {
-	readings := make([]certificateReading, 0, len(samples))
-	for _, s := range samples {
-		readings = append(readings, certificateReading{
-			endpoint: s.addr, days: s.days, validity: s.pct, verified: s.verified})
-	}
-	return plugin.Sample{Plugin: "certificate", Readings: readings}
 }
 
 func TestCertificate_Report(t *testing.T) {
@@ -163,4 +136,20 @@ func TestCertificate_Report(t *testing.T) {
 	if _, ok := certificateExpiryDays.Read(points[1]); ok {
 		t.Errorf("expiry_days on unverified endpoint: got set want unset")
 	}
+}
+
+type endpointSample struct {
+	addr     string
+	verified bool
+	days     float64
+	pct      float64
+}
+
+func certificatePoll(samples ...endpointSample) Sample {
+	readings := make([]certificateReading, 0, len(samples))
+	for _, s := range samples {
+		readings = append(readings, certificateReading{
+			endpoint: s.addr, days: s.days, validity: s.pct, verified: s.verified})
+	}
+	return Sample{Readings: readings}
 }
